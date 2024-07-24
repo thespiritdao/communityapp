@@ -8,10 +8,17 @@ type UseWriteContractsParams = {
   setTransactionId: (id: string) => void;
 };
 
-const genericErrorMessage = 'Something went wrong. Please try again.';
+export const genericErrorMessage = 'Something went wrong. Please try again.';
 const uncaughtErrorCode = 'UNCAUGHT_WRITE_TRANSACTIONS_ERROR';
 const errorCode = 'WRITE_TRANSACTIONS_ERROR';
+const eoaErrorMesssage = 'this request method is not supported';
 
+/**
+ * useWriteContracts: Experimental Wagmi hook for batching transactions.
+ * Supports Smart Wallets.
+ * Supports batch operations and capabilities such as paymasters.
+ * Does not support EOAs.
+ */
 export function useWriteContracts({
   onError,
   setErrorMessage,
@@ -21,6 +28,11 @@ export function useWriteContracts({
     const { status, writeContracts } = useWriteContractsWagmi({
       mutation: {
         onError: (e) => {
+          // Ignore EOA-specific error to fallback to writeContract
+          if (e.message.includes(eoaErrorMesssage)) {
+            return;
+          }
+
           if (
             (e as TransactionExecutionError)?.cause?.name ===
             'UserRejectedRequestError'
