@@ -160,3 +160,5 @@ export function TransactionButton({
     </button>
   );
 }
+
+export default TransactionButton;

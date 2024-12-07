@@ -28,3 +28,5 @@ export function WalletProvider({ children }: WalletProviderReact) {
 export function useWalletContext() {
   return useContext(WalletContext);
 }
+
+export default WalletProvider;

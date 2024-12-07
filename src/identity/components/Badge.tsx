@@ -6,7 +6,6 @@ import type { BadgeReact } from '../types';
  * Badge component.
  */
 export function Badge({ className }: BadgeReact) {
-  // TODO: Implement the Badge component as span and CSS without an SVG element.
   const badgeSize = '12px';
   return (
     <span

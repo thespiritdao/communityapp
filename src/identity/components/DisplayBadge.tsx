@@ -10,18 +10,13 @@ type DisplayBadgeReact = {
 };
 
 export function DisplayBadge({ children, address }: DisplayBadgeReact) {
-  const { chain, schemaId } = useOnchainKit();
-  const { schemaId: contextSchemaId, address: contextAddress } =
-    useIdentityContext();
-  if (!contextSchemaId && !schemaId) {
-    throw new Error(
-      'Name: a SchemaId must be provided to the OnchainKitProvider or Identity component.',
-    );
-  }
+  const { chain } = useOnchainKit();
+  const { address: contextAddress } = useIdentityContext();
+
+  // Update to no longer require schemaId
   const attestations = useAttestations({
     address: address ?? contextAddress,
     chain: chain,
-    schemaId: contextSchemaId ?? schemaId,
   });
 
   if (attestations.length === 0) {

@@ -31,3 +31,5 @@ export function WalletDropdownLink({
     </a>
   );
 }
+
+export default WalletDropdownLink;

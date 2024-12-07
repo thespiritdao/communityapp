@@ -4,3 +4,5 @@ export enum Capabilities {
   AuxiliaryFunds = 'auxiliaryFunds',
   PaymasterService = 'paymasterService',
 }
+
+export const ONCHAINKIT_LINK = "https://onchainkit.xyz";

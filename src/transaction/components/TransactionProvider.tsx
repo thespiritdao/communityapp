@@ -328,3 +328,5 @@ export function TransactionProvider({
     </TransactionContext.Provider>
   );
 }
+
+export default TransactionProvider;
