@@ -12,19 +12,19 @@ export function useIdentityContext() {
   return useContext(IdentityContext);
 }
 
-export function IdentityProvider(props: IdentityProviderReact) {
+export function IdentityProvider({ address, chain, children, schemaId }: IdentityProviderReact) {
   const { chain: contextChain } = useOnchainKit();
-  const accountChain = props.chain ?? contextChain;
+  const accountChain = chain ?? contextChain;
 
   const value = useValue({
-    address: props.address || ('' as Address),
+    address: address || ('' as Address),
     chain: accountChain,
-    schemaId: props.schemaId,
+    schemaId,
   });
 
   return (
     <IdentityContext.Provider value={value}>
-      {props.children}
+      {children}
     </IdentityContext.Provider>
   );
 }

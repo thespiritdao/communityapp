@@ -1,3 +1,5 @@
+// src/transaction/components/Transaction.tsx
+
 import { cn } from '../../styles/theme';
 import { useIsMounted } from '../../useIsMounted';
 import { useOnchainKit } from '../../useOnchainKit';
@@ -5,7 +7,7 @@ import { useTheme } from '../../useTheme';
 import type { TransactionReact } from '../types';
 import { TransactionProvider } from './TransactionProvider';
 
-export function Transaction({
+const Transaction = ({
   calls,
   capabilities,
   chainId,
@@ -16,18 +18,17 @@ export function Transaction({
   onError,
   onStatus,
   onSuccess,
-}: TransactionReact) {
+}: TransactionReact) => {
   const isMounted = useIsMounted();
   const componentTheme = useTheme();
   const { chain } = useOnchainKit();
 
-  // prevents SSR hydration issue
+  // Prevent SSR hydration issue
   if (!isMounted) {
     return null;
   }
 
-  // If chainId is not provided,
-  // use the default chainId from the OnchainKit context
+  // If chainId is not provided, use the default chainId from the OnchainKit context
   const accountChainId = chainId ? chainId : chain.id;
 
   return (
@@ -48,4 +49,6 @@ export function Transaction({
       </div>
     </TransactionProvider>
   );
-}
+};
+
+export default Transaction;

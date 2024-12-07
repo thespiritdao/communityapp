@@ -48,3 +48,5 @@ export function WalletDropdown({ children, className }: WalletDropdownReact) {
     </div>
   );
 }
+
+export default WalletDropdown;

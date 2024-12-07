@@ -1,3 +1,5 @@
+// Wallet.tsx
+
 import { Children, useEffect, useMemo, useRef } from 'react';
 import { findComponent } from '../../internal/utils/findComponent';
 import { cn } from '../../styles/theme';
@@ -20,7 +22,6 @@ const WalletContent = ({ children, className }: WalletReact) => {
     };
   }, [children]);
 
-  // Handle clicking outside the wallet component to close the dropdown.
   useEffect(() => {
     const handleClickOutsideComponent = (event: MouseEvent) => {
       if (
@@ -52,7 +53,6 @@ export const Wallet = ({ children, className }: WalletReact) => {
   const componentTheme = useTheme();
   const isMounted = useIsMounted();
 
-  // prevents SSR hydration issue
   if (!isMounted) {
     return null;
   }

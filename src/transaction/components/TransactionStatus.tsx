@@ -9,3 +9,4 @@ export function TransactionStatus({
     <div className={cn('flex justify-between', className)}>{children}</div>
   );
 }
+export default TransactionStatus;

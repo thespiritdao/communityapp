@@ -23,7 +23,7 @@ export function ConnectWallet({
   className,
   // In a few version we will officially deprecate this prop,
   // but for now we will keep it for backward compatibility.
-  text = 'Connect Wallet',
+  text = 'Login',
   withWalletAggregator = false,
   onConnect,
 }: ConnectWalletReact) {
@@ -156,3 +156,5 @@ export function ConnectWallet({
     </IdentityProvider>
   );
 }
+
+export default ConnectWallet;

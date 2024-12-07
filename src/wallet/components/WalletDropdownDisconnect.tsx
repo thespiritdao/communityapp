@@ -32,3 +32,5 @@ export function WalletDropdownDisconnect({
     </button>
   );
 }
+
+export default WalletDropdownDisconnect;

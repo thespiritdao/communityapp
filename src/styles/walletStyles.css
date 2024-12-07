@@ -1,0 +1,57 @@
+/* Custom styles for Wallet Creation/Login Page */
+
+body, html {
+  height: 100%;
+  margin: 0;
+  font-family: Arial, sans-serif;
+}
+
+.wallet-page {
+  height: 100vh;
+  background: url('path/to/your/background-image.jpg') no-repeat center center/cover;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.wallet-container {
+  background: rgba(255, 255, 255, 0.8);
+  padding: 30px;
+  border-radius: 10px;
+  text-align: center;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+}
+
+.wallet-title {
+  font-size: 2em;
+  margin-bottom: 20px;
+}
+
+.wallet-buttons {
+  display: flex;
+  gap: 15px;
+  justify-content: center;
+}
+
+.wallet-button {
+  padding: 12px 24px;
+  font-size: 1em;
+  background-color: #0052FF;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.wallet-button:hover {
+  background-color: #003dbf;
+}
+
+.wallet-button.secondary {
+  background-color: #757575;
+}
+
+.wallet-button.secondary:hover {
+  background-color: #565656;
+}
