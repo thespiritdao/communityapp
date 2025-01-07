@@ -14,7 +14,7 @@
     "cp": "cp -R src site/docs/pages",
     "dev": "next dev",
     "dev:watch": "concurrently \"tailwind -i ./src/styles/index-with-tailwind.css -o ./src/styles.css --watch\" \"tsup\"",
-    "fix-react": "npx npm-force-resolutions", // <-- Kept from HEAD
+    "fix-react": "npx npm-force-resolutions",
     "format": "biome format --write .",
     "lint": "biome lint --write .",
     "lint:unsafe": "biome lint --write --unsafe .",
@@ -115,11 +115,7 @@
   "publishConfig": {
     "access": "public"
   },
-  "files": [
-    "esm/**/*",
-    "src/",
-    "src/**/*"
-  ],
+  "files": ["esm/**/*", "src/", "src/**/*"],
   "main": "./esm/index.js",
   "types": "./esm/index.d.ts",
   "module": "./esm/index.js",

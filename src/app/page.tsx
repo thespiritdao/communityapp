@@ -1,12 +1,13 @@
 // src/app/page.tsx
 
 'use client';
+
 import React, { useState, useEffect } from 'react';
 import { Footer } from 'src/components/Footer';
 import { Wallet } from 'src/wallet/components/Wallet';
 import { useAccount } from 'wagmi';
 import 'src/styles/transactionStyles.css';
-import { OnchainProviders } from 'src/wallet/components/OnchainProviders'; // Change to named import
+import { OnchainProviders } from 'src/wallet/components/OnchainProviders'; // Named import for consistency
 import { ConnectWallet } from 'src/wallet/components/ConnectWallet';
 import { useRouter } from 'next/navigation';
 
@@ -21,37 +22,35 @@ export default function Page() {
 
 // The content of the page
 function PageContent() {
-	const { address } = useAccount();
-	const [hasRedirected, setHasRedirected] = useState(false);
-	const [isClient, setIsClient] = useState(false);
-	const router = useRouter();
+  const { address } = useAccount();
+  const [hasRedirected, setHasRedirected] = useState(false);
+  const [isClient, setIsClient] = useState(false);
+  const router = useRouter();
 
-	useEffect(() => {
-<<<<<<< HEAD
-		setIsClient(true);
-	}, []);
+  useEffect(() => {
+    setIsClient(true); // Ensures the component is running on the client side
+  }, []);
 
-	useEffect(() => {
-=======
->>>>>>> f7c82eaeab60ec2a9faa7b220126f2f5045f3151
-	  if (address && !hasRedirected) {
-		router.push('/identity');
-		setHasRedirected(true);
-	  }
-	}, [isClient, address, hasRedirected, router]);
+  useEffect(() => {
+    if (address && !hasRedirected) {
+      router.push('/identity'); // Redirect to the identity page
+      setHasRedirected(true);
+    }
+  }, [address, hasRedirected, router]);
 
-	if (!isClient) {
-	return null; // Prevent server-side rendering issues
-	}
-<<<<<<< HEAD
-	
-	  // If user already connected and redirecting, 
-	  // optionally show a loading state or a message
-	if (address && !hasRedirected) {
-		return <p className="text-center text-white">Redirecting to your profile...</p>;
-	}
-=======
->>>>>>> f7c82eaeab60ec2a9faa7b220126f2f5045f3151
+  // Prevent rendering during server-side rendering
+  if (!isClient) {
+    return null;
+  }
+
+  // Show a loading message if the user is being redirected
+  if (address && !hasRedirected) {
+    return (
+      <p className="text-center text-white">
+        Redirecting to your profile...
+      </p>
+    );
+  }
 
   return (
     <div>
@@ -72,7 +71,7 @@ function PageContent() {
               <p className="text-center text-white">
                 Welcome, your wallet is connected!
               </p>
-              <Wallet /> {/* This component might display wallet information or give options for managing the wallet */}
+              <Wallet />
             </div>
           )}
         </div>

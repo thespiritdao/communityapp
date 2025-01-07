@@ -65,7 +65,6 @@ export const Wallet = ({ children, className }: WalletReact) => {
     </WalletProvider>
   );
 };
-<<<<<<< HEAD
 
 export const useWallet = () => {
   const context = useWalletContext();
@@ -74,5 +73,3 @@ export const useWallet = () => {
   }
   return context;
 };
-=======
->>>>>>> f7c82eaeab60ec2a9faa7b220126f2f5045f3151
