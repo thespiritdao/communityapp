@@ -104,7 +104,11 @@ describe('SwapSettings', () => {
     await waitFor(() => {
       expect(screen.getByTestId('ockSwapSettingsDropdown')).toBeInTheDocument();
     });
+<<<<<<< HEAD
     fireEvent.click(screen.getByTestId('outside'));
+=======
+    fireEvent.mouseDown(screen.getByTestId('outside'));
+>>>>>>> f7c82eaeab60ec2a9faa7b220126f2f5045f3151
     await waitFor(() => {
       expect(
         screen.queryByTestId('ockSwapSettingsDropdown'),
@@ -172,9 +176,14 @@ describe('SwapSettings', () => {
     const { unmount } = renderComponent();
     unmount();
     expect(removeEventListenerSpy).toHaveBeenCalledWith(
+<<<<<<< HEAD
       'click',
       expect.any(Function),
       { capture: true },
+=======
+      'mousedown',
+      expect.any(Function),
+>>>>>>> f7c82eaeab60ec2a9faa7b220126f2f5045f3151
     );
     removeEventListenerSpy.mockRestore();
   });

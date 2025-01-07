@@ -27,7 +27,11 @@ describe('SwapSettingsSlippageDescription', () => {
     );
     const paragraph = screen.getByText('Test');
     expect(paragraph.className).toContain(
+<<<<<<< HEAD
       'ock-font-family text-xs ock-text-foreground-muted mb-2 ',
+=======
+      'ock-font-family text-xs leading-4 ock-text-foreground-muted mb-2 ',
+>>>>>>> f7c82eaeab60ec2a9faa7b220126f2f5045f3151
     );
   });
 
@@ -40,7 +44,11 @@ describe('SwapSettingsSlippageDescription', () => {
     const paragraph = screen.getByText('Test');
     expect(paragraph.className).toContain('custom-class');
     expect(paragraph.className).toContain(
+<<<<<<< HEAD
       'ock-font-family text-xs ock-text-foreground-muted mb-2 custom-class',
+=======
+      'ock-font-family text-xs leading-4 ock-text-foreground-muted mb-2 custom-class',
+>>>>>>> f7c82eaeab60ec2a9faa7b220126f2f5045f3151
     );
   });
 

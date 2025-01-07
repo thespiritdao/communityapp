@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 {
   "extends": "./tsconfig.json",
   "compilerOptions": {
@@ -5,3 +6,12 @@
   },
   "include": ["src"]
 }
+=======
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "outDir": "esm"
+  },
+  "include": ["src"]
+}
+>>>>>>> f7c82eaeab60ec2a9faa7b220126f2f5045f3151

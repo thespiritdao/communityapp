@@ -12,6 +12,7 @@
   border-color: var(--ock-bg-default-active);
 }
 
+<<<<<<< HEAD
 .ock-border-line-primary {
   border-color: var(--ock-line-primary);
 }
@@ -28,6 +29,8 @@
   border-color: var(--ock-line-inverse);
 }
 
+=======
+>>>>>>> f7c82eaeab60ec2a9faa7b220126f2f5045f3151
 .ock-border-radius {
   border-radius: var(--ock-border-radius);
 }
@@ -182,3 +185,22 @@
   background-color: var(--ock-bg-primary-disabled);
 }
 
+<<<<<<< HEAD
+=======
+/* Line */
+.ock-line-primary {
+  border-color: var(--ock-line-primary);
+}
+
+.ock-line-default {
+  border-color: var(--ock-line-default);
+}
+
+.ock-line-heavy {
+  border-color: var(--ock-line-heavy);
+}
+
+.ock-line-inverse {
+  border-color: var(--ock-line-inverse);
+}
+>>>>>>> f7c82eaeab60ec2a9faa7b220126f2f5045f3151

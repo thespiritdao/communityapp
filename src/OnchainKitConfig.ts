@@ -15,11 +15,14 @@ export const ONCHAIN_KIT_CONFIG: OnchainKitConfig = {
       theme: null,
     },
     paymaster: null,
+<<<<<<< HEAD
     wallet: {
       display: null,
       termsUrl: null,
       privacyUrl: null,
     },
+=======
+>>>>>>> f7c82eaeab60ec2a9faa7b220126f2f5045f3151
   },
   rpcUrl: null,
   schemaId: null,
