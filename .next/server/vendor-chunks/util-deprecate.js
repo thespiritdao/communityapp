@@ -16,11 +16,7 @@ exports.modules = {
   \*********************************************/
 /***/ ((module, __unused_webpack_exports, __webpack_require__) => {
 
-<<<<<<< HEAD
 eval("\n/**\n * For Node.js, simply re-export the core `util.deprecate` function.\n */\n\nmodule.exports = __webpack_require__(/*! util */ \"util\").deprecate;\n//# sourceURL=[module]\n//# sourceMappingURL=data:application/json;charset=utf-8;base64,eyJ2ZXJzaW9uIjozLCJmaWxlIjoiKHNzcikvLi9ub2RlX21vZHVsZXMvdXRpbC1kZXByZWNhdGUvbm9kZS5qcyIsIm1hcHBpbmdzIjoiO0FBQ0E7QUFDQTtBQUNBOztBQUVBLGtFQUEwQyIsInNvdXJjZXMiOlsiQzpcXFVzZXJzXFxQQ1xcRG9jdW1lbnRzXFxEQU9cXEFwcFxcY29tbWFwcFxcbm9kZV9tb2R1bGVzXFx1dGlsLWRlcHJlY2F0ZVxcbm9kZS5qcyJdLCJzb3VyY2VzQ29udGVudCI6WyJcbi8qKlxuICogRm9yIE5vZGUuanMsIHNpbXBseSByZS1leHBvcnQgdGhlIGNvcmUgYHV0aWwuZGVwcmVjYXRlYCBmdW5jdGlvbi5cbiAqL1xuXG5tb2R1bGUuZXhwb3J0cyA9IHJlcXVpcmUoJ3V0aWwnKS5kZXByZWNhdGU7XG4iXSwibmFtZXMiOltdLCJpZ25vcmVMaXN0IjpbMF0sInNvdXJjZVJvb3QiOiIifQ==\n//# sourceURL=webpack-internal:///(ssr)/./node_modules/util-deprecate/node.js\n");
-=======
-eval("\n/**\n * For Node.js, simply re-export the core `util.deprecate` function.\n */\n\nmodule.exports = __webpack_require__(/*! util */ \"util\").deprecate;\n//# sourceURL=[module]\n//# sourceMappingURL=data:application/json;charset=utf-8;base64,eyJ2ZXJzaW9uIjozLCJmaWxlIjoiKHNzcikvLi9ub2RlX21vZHVsZXMvdXRpbC1kZXByZWNhdGUvbm9kZS5qcyIsIm1hcHBpbmdzIjoiO0FBQ0E7QUFDQTtBQUNBOztBQUVBLGtFQUEwQyIsInNvdXJjZXMiOlsiQzpcXFVzZXJzXFxQQ1xcRG9jdW1lbnRzXFxEQU9cXEFwcFxcb25jaGFpbmtpdFxcbm9kZV9tb2R1bGVzXFx1dGlsLWRlcHJlY2F0ZVxcbm9kZS5qcyJdLCJzb3VyY2VzQ29udGVudCI6WyJcbi8qKlxuICogRm9yIE5vZGUuanMsIHNpbXBseSByZS1leHBvcnQgdGhlIGNvcmUgYHV0aWwuZGVwcmVjYXRlYCBmdW5jdGlvbi5cbiAqL1xuXG5tb2R1bGUuZXhwb3J0cyA9IHJlcXVpcmUoJ3V0aWwnKS5kZXByZWNhdGU7XG4iXSwibmFtZXMiOltdLCJpZ25vcmVMaXN0IjpbMF0sInNvdXJjZVJvb3QiOiIifQ==\n//# sourceURL=webpack-internal:///(ssr)/./node_modules/util-deprecate/node.js\n");
->>>>>>> f7c82eaeab60ec2a9faa7b220126f2f5045f3151
 
 /***/ })
 

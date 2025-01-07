@@ -2,10 +2,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { createContext, useMemo } from 'react';
 import { WagmiProvider } from 'wagmi';
 import { ONCHAIN_KIT_CONFIG, setOnchainKitConfig } from './OnchainKitConfig';
-<<<<<<< HEAD
 import { DEFAULT_PRIVACY_URL, DEFAULT_TERMS_URL } from './constants';
-=======
->>>>>>> f7c82eaeab60ec2a9faa7b220126f2f5045f3151
 import { createWagmiConfig } from './createWagmiConfig';
 import { COINBASE_VERIFIED_ACCOUNT_SCHEMA_ID } from './identity/constants';
 import { checkHashLength } from './internal/utils/checkHashLength';
@@ -32,7 +29,6 @@ export function OnchainKitProvider({
     throw Error('EAS schemaId must be 64 characters prefixed with "0x"');
   }
 
-  // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: ignore
   const value = useMemo(() => {
     const defaultPaymasterUrl = apiKey
       ? `https://api.developer.coinbase.com/rpc/v1/${chain.name
@@ -51,14 +47,11 @@ export function OnchainKitProvider({
           theme: config?.appearance?.theme ?? 'default',
         },
         paymaster: config?.paymaster || defaultPaymasterUrl,
-<<<<<<< HEAD
         wallet: {
           display: config?.wallet?.display ?? 'classic',
           termsUrl: config?.wallet?.termsUrl || DEFAULT_TERMS_URL,
           privacyUrl: config?.wallet?.privacyUrl || DEFAULT_PRIVACY_URL,
         },
-=======
->>>>>>> f7c82eaeab60ec2a9faa7b220126f2f5045f3151
       },
       projectId: projectId ?? null,
       rpcUrl: rpcUrl ?? null,
@@ -68,13 +61,10 @@ export function OnchainKitProvider({
     return onchainKitConfig;
   }, [address, apiKey, chain, config, projectId, rpcUrl, schemaId]);
 
-  // Check the React context for WagmiProvider and QueryClientProvider
   const { providedWagmiConfig, providedQueryClient } =
     useProviderDependencies();
 
   const defaultConfig = useMemo(() => {
-    // IMPORTANT: Don't create a new Wagmi configuration if one already exists
-    // This prevents the user-provided WagmiConfig from being overriden
     return (
       providedWagmiConfig ||
       createWagmiConfig({
@@ -89,14 +79,11 @@ export function OnchainKitProvider({
     value.config.appearance.name,
     value.config.appearance.logo,
   ]);
+
   const defaultQueryClient = useMemo(() => {
-    // IMPORTANT: Don't create a new QueryClient if one already exists
-    // This prevents the user-provided QueryClient from being overriden
     return providedQueryClient || new QueryClient();
   }, [providedQueryClient]);
 
-  // If both dependencies are missing, return a context with default parent providers
-  // If only one dependency is provided, expect the user to also provide the missing one
   if (!providedWagmiConfig && !providedQueryClient) {
     return (
       <WagmiProvider config={defaultConfig}>
@@ -114,8 +101,4 @@ export function OnchainKitProvider({
       {children}
     </OnchainKitContext.Provider>
   );
-<<<<<<< HEAD
 }
-=======
-}
->>>>>>> f7c82eaeab60ec2a9faa7b220126f2f5045f3151

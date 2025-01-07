@@ -1,8 +1,4 @@
-<<<<<<< HEAD
 // File: C:\Users\PC\Documents\DAO\App\commapp\src\app\identity\page.tsx
-=======
-// File: C:\Users\PC\Documents\DAO\App\onchainkit\src\app\identity\page.tsx
->>>>>>> f7c82eaeab60ec2a9faa7b220126f2f5045f3151
 import * as entry from '../../../../src/app/identity/page.js'
 import type { ResolvingMetadata, ResolvingViewport } from 'next/dist/lib/metadata/types/metadata-interface.js'
 

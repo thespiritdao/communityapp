@@ -13,14 +13,12 @@ export type AppConfig = {
     theme?: ComponentTheme | null; // Optionally sets the visual style for components
   };
   paymaster?: string | null; // Paymaster URL for gas sponsorship
-<<<<<<< HEAD
   wallet?: {
     display?: ConnectWalletDisplay | null; // Determines the display style of the wallet modal
     termsUrl?: string | null; // URL to the terms of service for the wallet modal
     privacyUrl?: string | null; // URL to the privacy policy for the wallet modal
   };
-=======
->>>>>>> f7c82eaeab60ec2a9faa7b220126f2f5045f3151
+
 };
 
 export type CreateWagmiConfigParams = {
@@ -102,8 +100,5 @@ export type OnchainKitProviderReact = {
 export type UseCapabilitiesSafeParams = {
   chainId: number;
 };
-<<<<<<< HEAD
 
 export type ConnectWalletDisplay = 'modal' | 'classic';
-=======
->>>>>>> f7c82eaeab60ec2a9faa7b220126f2f5045f3151

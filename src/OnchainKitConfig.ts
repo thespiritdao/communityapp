@@ -2,7 +2,7 @@ import { baseSepolia } from 'viem/chains';
 import type { OnchainKitConfig, SetOnchainKitConfig } from './types';
 
 // The ONCHAIN_KIT_CONFIG is not exported at index.ts,
-// but only acccessed through the get and set functions.
+// but only accessed through the get and set functions.
 export const ONCHAIN_KIT_CONFIG: OnchainKitConfig = {
   address: null,
   apiKey: null,
@@ -15,14 +15,11 @@ export const ONCHAIN_KIT_CONFIG: OnchainKitConfig = {
       theme: null,
     },
     paymaster: null,
-<<<<<<< HEAD
     wallet: {
       display: null,
       termsUrl: null,
       privacyUrl: null,
     },
-=======
->>>>>>> f7c82eaeab60ec2a9faa7b220126f2f5045f3151
   },
   rpcUrl: null,
   schemaId: null,

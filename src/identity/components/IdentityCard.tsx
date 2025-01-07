@@ -8,7 +8,7 @@ import { Socials } from './Socials';
 
 import { background, border, cn, line } from '../../styles/theme';
 
-type IdentityCardReact = {
+type IdentityCardProps = {
   address?: Address;
   chain?: Chain;
   className?: string;
@@ -20,11 +20,9 @@ export function IdentityCard({
   chain,
   className = '',
   schemaId,
-}: IdentityCardReact) {
+}: IdentityCardProps) {
   return (
-    <Identity
-      address={address}
-      chain={chain}
+    <div
       className={cn(
         border.radius,
         background.default,
@@ -32,17 +30,15 @@ export function IdentityCard({
         'items-left flex min-w-[300px] p-4',
         className,
       )}
-      schemaId={schemaId}
     >
-      <Avatar />
-      <Name>
-        <Badge />
-      </Name>
-<<<<<<< HEAD
-=======
-      <AddressComponent />
->>>>>>> f7c82eaeab60ec2a9faa7b220126f2f5045f3151
-      <Socials />
-    </Identity>
+      <Avatar address={address} chain={chain} />
+      <div className="flex flex-col ml-4">
+        <Name address={address}>
+          <Badge schemaId={schemaId} />
+        </Name>
+        <AddressComponent address={address} chain={chain} />
+        <Socials address={address} />
+      </div>
+    </div>
   );
 }
