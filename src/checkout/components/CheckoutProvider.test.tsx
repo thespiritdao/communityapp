@@ -12,7 +12,10 @@ import { useAccount, useConnect, useSwitchChain } from 'wagmi';
 import { useWaitForTransactionReceipt } from 'wagmi';
 import { useCallsStatus } from 'wagmi/experimental';
 import { useWriteContracts } from 'wagmi/experimental';
+<<<<<<< HEAD
 import { openPopup } from '../../internal/utils/openPopup';
+=======
+>>>>>>> f7c82eaeab60ec2a9faa7b220126f2f5045f3151
 import { useOnchainKit } from '../../useOnchainKit';
 import { useIsWalletACoinbaseSmartWallet } from '../../wallet/hooks/useIsWalletACoinbaseSmartWallet';
 import { GENERIC_ERROR_MESSAGE } from '../constants';
@@ -43,10 +46,13 @@ vi.mock('../../useOnchainKit', () => ({
   useOnchainKit: vi.fn(),
 }));
 
+<<<<<<< HEAD
 vi.mock('../../internal/utils/openPopup', () => ({
   openPopup: vi.fn(),
 }));
 
+=======
+>>>>>>> f7c82eaeab60ec2a9faa7b220126f2f5045f3151
 const windowOpenMock = vi.fn();
 
 const TestComponent = () => {
@@ -202,6 +208,26 @@ describe('CheckoutProvider', () => {
     });
   });
 
+<<<<<<< HEAD
+=======
+  it('should handle insufficient balance', async () => {
+    (useCommerceContracts as Mock).mockReturnValue(() =>
+      Promise.resolve({ insufficientBalance: true, priceInUSDC: '10' }),
+    );
+    render(
+      <CheckoutProvider>
+        <TestComponent />
+      </CheckoutProvider>,
+    );
+    fireEvent.click(screen.getByText('Submit'));
+    await waitFor(() => {
+      expect(screen.getByTestId('error-message').textContent).toBe(
+        'You need at least 10 USDC to continue with payment',
+      );
+    });
+  });
+
+>>>>>>> f7c82eaeab60ec2a9faa7b220126f2f5045f3151
   it('should handle successful transaction', async () => {
     (useWaitForTransactionReceipt as Mock).mockReturnValue({
       data: { status: 'success' },
@@ -419,12 +445,25 @@ describe('CheckoutProvider', () => {
     );
     fireEvent.click(screen.getByText('Submit'));
     await waitFor(() => {
+<<<<<<< HEAD
       expect(openPopup as Mock).toHaveBeenCalledWith(
         expect.objectContaining({
           url: 'https://keys.coinbase.com/fund?asset=USDC&chainId=8453&presetCryptoAmount=10',
         }),
       );
     });
+=======
+      expect(screen.getByTestId('error-message').textContent).toBe(
+        'You need at least 10 USDC to continue with payment',
+      );
+    });
+    fireEvent.click(screen.getByText('Submit'));
+    expect(windowOpenMock).toHaveBeenCalledWith(
+      'https://keys.coinbase.com/fund?asset=USDC&chainId=8453&presetCryptoAmount=10',
+      '_blank',
+      'noopener,noreferrer',
+    );
+>>>>>>> f7c82eaeab60ec2a9faa7b220126f2f5045f3151
   });
 
   it('should handle errors when fetching contracts', async () => {

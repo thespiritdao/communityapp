@@ -14,8 +14,11 @@ import { coinbaseWallet } from 'wagmi/connectors';
 import { useWriteContracts } from 'wagmi/experimental';
 import { useCallsStatus } from 'wagmi/experimental';
 import { useValue } from '../../internal/hooks/useValue';
+<<<<<<< HEAD
 import { getWindowDimensions } from '../../internal/utils/getWindowDimensions';
 import { openPopup } from '../../internal/utils/openPopup';
+=======
+>>>>>>> f7c82eaeab60ec2a9faa7b220126f2f5045f3151
 import { isUserRejectedRequestError } from '../../transaction/utils/isUserRejectedRequestError';
 import { useOnchainKit } from '../../useOnchainKit';
 import { useIsWalletACoinbaseSmartWallet } from '../../wallet/hooks/useIsWalletACoinbaseSmartWallet';
@@ -25,7 +28,16 @@ import {
   NO_CONTRACTS_ERROR,
   USER_REJECTED_ERROR,
 } from '../constants';
+<<<<<<< HEAD
 import { CHECKOUT_LIFECYCLESTATUS, CheckoutErrorCode } from '../constants';
+=======
+import {
+  CHECKOUT_INSUFFICIENT_BALANCE_ERROR,
+  CHECKOUT_INSUFFICIENT_BALANCE_ERROR_MESSAGE,
+  CHECKOUT_LIFECYCLESTATUS,
+  CheckoutErrorCode,
+} from '../constants';
+>>>>>>> f7c82eaeab60ec2a9faa7b220126f2f5045f3151
 import { useCommerceContracts } from '../hooks/useCommerceContracts';
 import { useLifecycleStatus } from '../hooks/useLifecycleStatus';
 import type { CheckoutContextType, CheckoutProviderReact } from '../types';
@@ -209,6 +221,29 @@ export function CheckoutProvider({
         );
         return;
       }
+<<<<<<< HEAD
+=======
+      // Open funding flow
+      // TODO: Deprecate this once we have USDC Magic Spend
+      if (
+        lifecycleStatus.statusName === CHECKOUT_LIFECYCLESTATUS.ERROR &&
+        lifecycleStatus.statusData?.code ===
+          CheckoutErrorCode.INSUFFICIENT_BALANCE
+      ) {
+        window.open(
+          `https://keys.coinbase.com/fund?asset=USDC&chainId=8453&presetCryptoAmount=${priceInUSDCRef.current}`,
+          '_blank',
+          'noopener,noreferrer',
+        );
+        // Reset status
+        setErrorMessage('');
+        updateLifecycleStatus({
+          statusName: CHECKOUT_LIFECYCLESTATUS.INIT,
+          statusData: {},
+        });
+        return;
+      }
+>>>>>>> f7c82eaeab60ec2a9faa7b220126f2f5045f3151
       if (errorMessage === USER_REJECTED_ERROR) {
         // Reset status if previous request was a rejection
         setErrorMessage('');
@@ -262,6 +297,7 @@ export function CheckoutProvider({
 
       // Check for sufficient balance
       if (insufficientBalanceRef.current && priceInUSDCRef.current) {
+<<<<<<< HEAD
         const { height, width } = getWindowDimensions('md');
         openPopup({
           url: `https://keys.coinbase.com/fund?asset=USDC&chainId=8453&presetCryptoAmount=${priceInUSDCRef.current}`,
@@ -273,6 +309,21 @@ export function CheckoutProvider({
         insufficientBalanceRef.current = false;
         priceInUSDCRef.current = undefined;
         fetchedDataUseEffect.current = false;
+=======
+        setErrorMessage(
+          CHECKOUT_INSUFFICIENT_BALANCE_ERROR_MESSAGE(priceInUSDCRef.current),
+        );
+        updateLifecycleStatus({
+          statusName: CHECKOUT_LIFECYCLESTATUS.ERROR,
+          statusData: {
+            code: CheckoutErrorCode.INSUFFICIENT_BALANCE,
+            error: CHECKOUT_INSUFFICIENT_BALANCE_ERROR,
+            message: CHECKOUT_INSUFFICIENT_BALANCE_ERROR_MESSAGE(
+              priceInUSDCRef.current,
+            ),
+          },
+        });
+>>>>>>> f7c82eaeab60ec2a9faa7b220126f2f5045f3151
         return;
       }
 
@@ -337,6 +388,10 @@ export function CheckoutProvider({
     isConnected,
     isSmartWallet,
     isSponsored,
+<<<<<<< HEAD
+=======
+    lifecycleStatus.statusData,
+>>>>>>> f7c82eaeab60ec2a9faa7b220126f2f5045f3151
     lifecycleStatus.statusName,
     paymaster,
     switchChainAsync,

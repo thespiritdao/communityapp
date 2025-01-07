@@ -27,10 +27,13 @@ function PageContent() {
 	const router = useRouter();
 
 	useEffect(() => {
+<<<<<<< HEAD
 		setIsClient(true);
 	}, []);
 
 	useEffect(() => {
+=======
+>>>>>>> f7c82eaeab60ec2a9faa7b220126f2f5045f3151
 	  if (address && !hasRedirected) {
 		router.push('/identity');
 		setHasRedirected(true);
@@ -40,12 +43,15 @@ function PageContent() {
 	if (!isClient) {
 	return null; // Prevent server-side rendering issues
 	}
+<<<<<<< HEAD
 	
 	  // If user already connected and redirecting, 
 	  // optionally show a loading state or a message
 	if (address && !hasRedirected) {
 		return <p className="text-center text-white">Redirecting to your profile...</p>;
 	}
+=======
+>>>>>>> f7c82eaeab60ec2a9faa7b220126f2f5045f3151
 
   return (
     <div>

@@ -1,8 +1,15 @@
+<<<<<<< HEAD
 import { useCallback, useRef, useState } from 'react';
 import { useIcon } from '../../internal/hooks/useIcon';
 import { background, border, cn, pressable, text } from '../../styles/theme';
 import { useBreakpoints } from '../../useBreakpoints';
 import { useOutsideClick } from '../../useOutsideClick';
+=======
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { useIcon } from '../../internal/hooks/useIcon';
+import { background, border, cn, pressable, text } from '../../styles/theme';
+import { useBreakpoints } from '../../useBreakpoints';
+>>>>>>> f7c82eaeab60ec2a9faa7b220126f2f5045f3151
 import type { SwapSettingsReact } from '../types';
 import { SwapSettingsSlippageLayout } from './SwapSettingsSlippageLayout';
 import { SwapSettingsSlippageLayoutBottomSheet } from './SwapSettingsSlippageLayoutBottomSheet';
@@ -18,12 +25,33 @@ export function SwapSettings({
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   const handleToggle = useCallback(() => {
+<<<<<<< HEAD
     setIsOpen((prev) => !prev);
   }, []);
 
   useOutsideClick(dropdownRef, () => {
     setIsOpen(false);
   });
+=======
+    setIsOpen(!isOpen);
+  }, [isOpen]);
+
+  const handleClickOutsideComponent = useCallback((event: MouseEvent) => {
+    if (
+      dropdownRef.current &&
+      !dropdownRef.current.contains(event.target as Node)
+    ) {
+      setIsOpen(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    document.addEventListener('mousedown', handleClickOutsideComponent);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutsideComponent);
+    };
+  }, [handleClickOutsideComponent]);
+>>>>>>> f7c82eaeab60ec2a9faa7b220126f2f5045f3151
 
   const iconSvg = useIcon({ icon });
 

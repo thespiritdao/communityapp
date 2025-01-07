@@ -35,8 +35,19 @@ export function CheckoutButton({
     if (lifecycleStatus?.statusName === CHECKOUT_LIFECYCLESTATUS.SUCCESS) {
       return 'View payment details';
     }
+<<<<<<< HEAD
     return text;
   }, [lifecycleStatus?.statusName, text]);
+=======
+    if (
+      lifecycleStatus?.statusName === CHECKOUT_LIFECYCLESTATUS.ERROR &&
+      lifecycleStatus?.statusData.error === 'User has insufficient balance'
+    ) {
+      return 'Get USDC';
+    }
+    return text;
+  }, [lifecycleStatus?.statusName, lifecycleStatus?.statusData, text]);
+>>>>>>> f7c82eaeab60ec2a9faa7b220126f2f5045f3151
   const shouldRenderIcon = buttonText === text && iconSvg;
 
   return (

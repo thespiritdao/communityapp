@@ -47,7 +47,11 @@ export function TokenSelectDropdown({
   }, [handleBlur]);
 
   return (
+<<<<<<< HEAD
     <div className="relative max-w-fit shrink-0">
+=======
+    <div className="relative shrink-0">
+>>>>>>> f7c82eaeab60ec2a9faa7b220126f2f5045f3151
       <TokenSelectButton
         ref={buttonRef}
         onClick={handleToggle}

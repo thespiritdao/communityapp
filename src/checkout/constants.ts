@@ -8,6 +8,14 @@ export const CHECKOUT_TOO_MANY_REQUESTS_ERROR_MESSAGE =
 
 export const CHECKOUT_INSUFFICIENT_BALANCE_ERROR =
   'User has insufficient balance';
+<<<<<<< HEAD
+=======
+export const CHECKOUT_INSUFFICIENT_BALANCE_ERROR_MESSAGE = (
+  priceInUSD: string,
+) => {
+  return `You need at least ${priceInUSD} USDC to continue with payment`;
+};
+>>>>>>> f7c82eaeab60ec2a9faa7b220126f2f5045f3151
 export const CHECKOUT_INVALID_CHARGE_ERROR_MESSAGE =
   'CHECKOUT_INVALID_CHARGE_ERROR';
 export const CHECKOUT_INVALID_PARAMETER_ERROR_MESSAGE =

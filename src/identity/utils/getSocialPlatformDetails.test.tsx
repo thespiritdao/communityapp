@@ -19,7 +19,11 @@ describe('PLATFORM_CONFIG', () => {
 
   it('should generate correct Farcaster URL', () => {
     const url = PLATFORM_CONFIG.farcaster.href('username');
+<<<<<<< HEAD
     expect(url).toBe('https://warpcast.com/username');
+=======
+    expect(url).toBe('username');
+>>>>>>> f7c82eaeab60ec2a9faa7b220126f2f5045f3151
   });
 
   it('should return website URL as-is', () => {

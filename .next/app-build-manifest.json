@@ -16,6 +16,7 @@
       "static/chunks/main-app.js",
       "static/css/app/identity/page.css",
       "static/chunks/app/identity/page.js"
+<<<<<<< HEAD
     ],
     "/chat/layout": [
       "static/chunks/webpack.js",
@@ -27,6 +28,8 @@
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
       "static/chunks/app/chat/page.js"
+=======
+>>>>>>> f7c82eaeab60ec2a9faa7b220126f2f5045f3151
     ]
   }
 }

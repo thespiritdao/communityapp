@@ -2,7 +2,10 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { createContext, useMemo } from 'react';
 import { WagmiProvider } from 'wagmi';
 import { ONCHAIN_KIT_CONFIG, setOnchainKitConfig } from './OnchainKitConfig';
+<<<<<<< HEAD
 import { DEFAULT_PRIVACY_URL, DEFAULT_TERMS_URL } from './constants';
+=======
+>>>>>>> f7c82eaeab60ec2a9faa7b220126f2f5045f3151
 import { createWagmiConfig } from './createWagmiConfig';
 import { COINBASE_VERIFIED_ACCOUNT_SCHEMA_ID } from './identity/constants';
 import { checkHashLength } from './internal/utils/checkHashLength';
@@ -48,11 +51,14 @@ export function OnchainKitProvider({
           theme: config?.appearance?.theme ?? 'default',
         },
         paymaster: config?.paymaster || defaultPaymasterUrl,
+<<<<<<< HEAD
         wallet: {
           display: config?.wallet?.display ?? 'classic',
           termsUrl: config?.wallet?.termsUrl || DEFAULT_TERMS_URL,
           privacyUrl: config?.wallet?.privacyUrl || DEFAULT_PRIVACY_URL,
         },
+=======
+>>>>>>> f7c82eaeab60ec2a9faa7b220126f2f5045f3151
       },
       projectId: projectId ?? null,
       rpcUrl: rpcUrl ?? null,
@@ -108,4 +114,8 @@ export function OnchainKitProvider({
       {children}
     </OnchainKitContext.Provider>
   );
+<<<<<<< HEAD
 }
+=======
+}
+>>>>>>> f7c82eaeab60ec2a9faa7b220126f2f5045f3151

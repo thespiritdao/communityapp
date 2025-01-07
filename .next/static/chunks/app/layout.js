@@ -8,6 +8,7 @@
  */
 (self["webpackChunk_N_E"] = self["webpackChunk_N_E"] || []).push([["app/layout"],{
 
+<<<<<<< HEAD
 /***/ "(app-pages-browser)/./node_modules/next/dist/build/webpack/loaders/next-flight-client-entry-loader.js?modules=%7B%22request%22%3A%22C%3A%5C%5CUsers%5C%5CPC%5C%5CDocuments%5C%5CDAO%5C%5CApp%5C%5Ccommapp%5C%5Csrc%5C%5Capp%5C%5Clayout.tsx%22%2C%22ids%22%3A%5B%5D%7D&server=false!":
 /*!************************************************************************************************************************************************************************************************************************************************************************!*\
   !*** ./node_modules/next/dist/build/webpack/loaders/next-flight-client-entry-loader.js?modules=%7B%22request%22%3A%22C%3A%5C%5CUsers%5C%5CPC%5C%5CDocuments%5C%5CDAO%5C%5CApp%5C%5Ccommapp%5C%5Csrc%5C%5Capp%5C%5Clayout.tsx%22%2C%22ids%22%3A%5B%5D%7D&server=false! ***!
@@ -59,13 +60,26 @@ eval(__webpack_require__.ts("/**\n * @license React\n * react-jsx-dev-runtime.de
 
 "use strict";
 eval(__webpack_require__.ts("\n\nif (false) {} else {\n  module.exports = __webpack_require__(/*! ./cjs/react-jsx-dev-runtime.development.js */ \"(app-pages-browser)/./node_modules/next/dist/compiled/react/cjs/react-jsx-dev-runtime.development.js\");\n}\n//# sourceURL=[module]\n//# sourceMappingURL=data:application/json;charset=utf-8;base64,eyJ2ZXJzaW9uIjozLCJmaWxlIjoiKGFwcC1wYWdlcy1icm93c2VyKS8uL25vZGVfbW9kdWxlcy9uZXh0L2Rpc3QvY29tcGlsZWQvcmVhY3QvanN4LWRldi1ydW50aW1lLmpzIiwibWFwcGluZ3MiOiJBQUFhOztBQUViLElBQUksS0FBcUMsRUFBRSxFQUUxQyxDQUFDO0FBQ0YsRUFBRSw4TEFBc0U7QUFDeEUiLCJzb3VyY2VzIjpbIkM6XFxVc2Vyc1xcUENcXERvY3VtZW50c1xcREFPXFxBcHBcXGNvbW1hcHBcXG5vZGVfbW9kdWxlc1xcbmV4dFxcZGlzdFxcY29tcGlsZWRcXHJlYWN0XFxqc3gtZGV2LXJ1bnRpbWUuanMiXSwic291cmNlc0NvbnRlbnQiOlsiJ3VzZSBzdHJpY3QnO1xuXG5pZiAocHJvY2Vzcy5lbnYuTk9ERV9FTlYgPT09ICdwcm9kdWN0aW9uJykge1xuICBtb2R1bGUuZXhwb3J0cyA9IHJlcXVpcmUoJy4vY2pzL3JlYWN0LWpzeC1kZXYtcnVudGltZS5wcm9kdWN0aW9uLmpzJyk7XG59IGVsc2Uge1xuICBtb2R1bGUuZXhwb3J0cyA9IHJlcXVpcmUoJy4vY2pzL3JlYWN0LWpzeC1kZXYtcnVudGltZS5kZXZlbG9wbWVudC5qcycpO1xufVxuIl0sIm5hbWVzIjpbXSwiaWdub3JlTGlzdCI6WzBdLCJzb3VyY2VSb290IjoiIn0=\n//# sourceURL=webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react/jsx-dev-runtime.js\n"));
+=======
+/***/ "(app-pages-browser)/./node_modules/next/dist/build/webpack/loaders/next-flight-client-entry-loader.js?server=false!":
+/*!*******************************************************************************************************!*\
+  !*** ./node_modules/next/dist/build/webpack/loaders/next-flight-client-entry-loader.js?server=false! ***!
+  \*******************************************************************************************************/
+/***/ ((__unused_webpack_module, __unused_webpack_exports, __webpack_require__) => {
+
+
+>>>>>>> f7c82eaeab60ec2a9faa7b220126f2f5045f3151
 
 /***/ })
 
 },
 /******/ __webpack_require__ => { // webpackRuntimeModules
 /******/ var __webpack_exec__ = (moduleId) => (__webpack_require__(__webpack_require__.s = moduleId))
+<<<<<<< HEAD
 /******/ __webpack_require__.O(0, ["main-app"], () => (__webpack_exec__("(app-pages-browser)/./node_modules/next/dist/build/webpack/loaders/next-flight-client-entry-loader.js?modules=%7B%22request%22%3A%22C%3A%5C%5CUsers%5C%5CPC%5C%5CDocuments%5C%5CDAO%5C%5CApp%5C%5Ccommapp%5C%5Csrc%5C%5Capp%5C%5Clayout.tsx%22%2C%22ids%22%3A%5B%5D%7D&server=false!")));
+=======
+/******/ __webpack_require__.O(0, ["main-app"], () => (__webpack_exec__("(app-pages-browser)/./node_modules/next/dist/build/webpack/loaders/next-flight-client-entry-loader.js?server=false!")));
+>>>>>>> f7c82eaeab60ec2a9faa7b220126f2f5045f3151
 /******/ var __webpack_exports__ = __webpack_require__.O();
 /******/ _N_E = __webpack_exports__;
 /******/ }
