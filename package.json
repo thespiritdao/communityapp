@@ -14,10 +14,7 @@
     "cp": "cp -R src site/docs/pages",
     "dev": "next dev",
     "dev:watch": "concurrently \"tailwind -i ./src/styles/index-with-tailwind.css -o ./src/styles.css --watch\" \"tsup\"",
-<<<<<<< HEAD
-    "fix-react": "npx npm-force-resolutions",
-=======
->>>>>>> f7c82eaeab60ec2a9faa7b220126f2f5045f3151
+    "fix-react": "npx npm-force-resolutions", // <-- Kept from HEAD
     "format": "biome format --write .",
     "lint": "biome lint --write .",
     "lint:unsafe": "biome lint --write --unsafe .",
@@ -37,7 +34,6 @@
   "peerDependencies": {
     "@types/react": "^18",
     "@xmtp/frames-validator": "^0.6.0",
-<<<<<<< HEAD
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
   },
@@ -70,24 +66,6 @@
     "react-hook-form": "^7.54.0",
     "react-redux": "^9.2.0",
     "reselect": "^5.1.1",
-=======
-    "react": "^18",
-    "react-dom": "^18"
-  },
-  "dependencies": {
-    "@coinbase/onchainkit": "^0.35.6",
-    "@rainbow-me/rainbowkit": "^2.1.3",
-    "@supabase/supabase-js": "^2.47.2",
-    "@tanstack/react-query": "^5",
-    "@wagmi/core": "^2.15.0",
-    "clsx": "^2.1.1",
-    "ethers": "^6.13.4",
-    "graphql": "^14 || ^15 || ^16",
-    "graphql-request": "^6.1.0",
-    "install": "^0.13.0",
-    "next": "^15.0.3",
-    "npm": "^10.9.2",
->>>>>>> f7c82eaeab60ec2a9faa7b220126f2f5045f3151
     "tailwind-merge": "^2.3.0",
     "viem": "^2.21.33",
     "wagmi": "^2.12.24"
@@ -119,14 +97,8 @@
     "graphql-request": "^6.1.0",
     "jsdom": "^24.1.0",
     "packemon": "3.3.1",
-<<<<<<< HEAD
     "rimraf": "^5.0.5",
     "shadcn-ui": "^0.9.4",
-=======
-    "react": "^18",
-    "react-dom": "^18",
-    "rimraf": "^5.0.5",
->>>>>>> f7c82eaeab60ec2a9faa7b220126f2f5045f3151
     "storybook": "^8.2.9",
     "tailwindcss": "^3.4.3",
     "tsup": "^8.3.5",
@@ -134,18 +106,10 @@
     "vite": "^5.3.3",
     "vitest": "^2.0.5"
   },
-<<<<<<< HEAD
-=======
-  "resolutions": {
-    "react": "npm:react@^18"
-  },
->>>>>>> f7c82eaeab60ec2a9faa7b220126f2f5045f3151
   "packemon": [
     {
       "bundle": false,
-      "platform": [
-        "browser"
-      ]
+      "platform": ["browser"]
     }
   ],
   "publishConfig": {
@@ -169,99 +133,6 @@
       "module": "./esm/index.js",
       "import": "./esm/index.js",
       "default": "./esm/index.js"
-<<<<<<< HEAD
-=======
-    },
-    "./api": {
-      "types": "./esm/api/index.d.ts",
-      "module": "./esm/api/index.js",
-      "import": "./esm/api/index.js",
-      "default": "./esm/api/index.js"
-    },
-    "./checkout": {
-      "types": "./esm/checkout/index.d.ts",
-      "module": "./esm/checkout/index.js",
-      "import": "./esm/checkout/index.js",
-      "default": "./esm/checkout/index.js"
-    },
-    "./core": {
-      "types": "./esm/core/index.d.ts",
-      "module": "./esm/core/index.js",
-      "import": "./esm/core/index.js",
-      "default": "./esm/core/index.js"
-    },
-    "./farcaster": {
-      "types": "./esm/farcaster/index.d.ts",
-      "module": "./esm/farcaster/index.js",
-      "import": "./esm/farcaster/index.js",
-      "default": "./esm/farcaster/index.js"
-    },
-    "./frame": {
-      "types": "./esm/frame/index.d.ts",
-      "module": "./esm/frame/index.js",
-      "import": "./esm/frame/index.js",
-      "default": "./esm/frame/index.js"
-    },
-    "./fund": {
-      "types": "./esm/fund/index.d.ts",
-      "module": "./esm/fund/index.js",
-      "import": "./esm/fund/index.js",
-      "default": "./esm/fund/index.js"
-    },
-    "./identity": {
-      "types": "./esm/identity/index.d.ts",
-      "module": "./esm/identity/index.js",
-      "import": "./esm/identity/index.js",
-      "default": "./esm/identity/index.js"
-    },
-    "./nft": {
-      "types": "./esm/nft/index.d.ts",
-      "module": "./esm/nft/index.js",
-      "import": "./esm/nft/index.js",
-      "default": "./esm/nft/index.js"
-    },
-    "./nft/view": {
-      "types": "./esm/nft/components/view/index.d.ts",
-      "module": "./esm/nft/components/view/index.js",
-      "import": "./esm/nft/components/view/index.js",
-      "default": "./esm/nft/components/view/index.js"
-    },
-    "./nft/mint": {
-      "types": "./esm/nft/components/mint/index.d.ts",
-      "module": "./esm/nft/components/mint/index.js",
-      "import": "./esm/nft/components/mint/index.js",
-      "default": "./esm/nft/components/mint/index.js"
-    },
-    "./swap": {
-      "types": "./esm/swap/index.d.ts",
-      "module": "./esm/swap/index.js",
-      "import": "./esm/swap/index.js",
-      "default": "./esm/swap/index.js"
-    },
-    "./token": {
-      "types": "./esm/token/index.d.ts",
-      "module": "./esm/token/index.js",
-      "import": "./esm/token/index.js",
-      "default": "./esm/token/index.js"
-    },
-    "./transaction": {
-      "types": "./esm/transaction/index.d.ts",
-      "module": "./esm/transaction/index.js",
-      "import": "./esm/transaction/index.js",
-      "default": "./esm/transaction/index.js"
-    },
-    "./xmtp": {
-      "types": "./esm/xmtp/index.d.ts",
-      "module": "./esm/xmtp/index.js",
-      "import": "./esm/xmtp/index.js",
-      "default": "./esm/xmtp/index.js"
-    },
-    "./wallet": {
-      "types": "./esm/wallet/index.d.ts",
-      "module": "./esm/wallet/index.js",
-      "import": "./esm/wallet/index.js",
-      "default": "./esm/wallet/index.js"
->>>>>>> f7c82eaeab60ec2a9faa7b220126f2f5045f3151
     }
   },
   "packageManager": "yarn@4.0.2"
