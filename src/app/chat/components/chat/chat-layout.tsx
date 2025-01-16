@@ -1,46 +1,69 @@
+//src/app/chat/components/chat/chat-layout.tsx
+
 "use client";
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { ThemeProvider } from "next-themes";
-import Examples from "src/app/chat/components/examples";
-import { ModeToggle } from "src/app/chat/components/mode-toggle";
-import Link from "next/link";
-import { cn } from "src/app/chat/lib/utils";
-import { buttonVariants } from "src/app/chat/components/ui/button";
-import { GitHubLogoIcon } from "@radix-ui/react-icons";
+import { supabase } from "src/utils/supabaseClient"; // Ensure this utility is set up correctly
 import "./chatcss.css";
 
 export default function ChatLayout({
-    children,
+  children,
 }: {
   children: React.ReactNode;
 }) {
-  return (
   const [users, setUsers] = useState<UserData[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchUsers = async () => {
+      setIsLoading(true);
+      try {
+        const { data, error } = await supabase
+          .from("user_profiles")
+          .select("wallet_address, first_name, last_name, profile_picture");
+
+        if (error) {
+          setError(error.message);
+        } else if (data) {
+          setUsers(data);
+        }
+      } catch (err) {
+        setError("An unexpected error occurred. Please try again.");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchUsers();
+  }, []);
+
+  return (
     <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
-      useEffect(() => {
-  const fetchUsers = async () => {
-    const { data, error } = await supabase
-      .from("users") // Replace "users" with your actual user table name
-      .select("id, name, avatar"); // Adjust columns based on your schema
-
-    if (!error) {
-      setUsers(data || []);
-    }
-  };
-
-  fetchUsers();
-}, []);
-
-        {/* Main content */}
-        <div className="z-10 border rounded-lg max-w-5xl w-full h-full text-sm flex">
-          {children}
+      <div className="flex flex-col items-center justify-center h-full">
+        <div className="z-10 border rounded-lg max-w-5xl w-full h-full text-sm flex p-4">
+          {isLoading ? (
+            <p className="text-muted-foreground">Loading users...</p>
+          ) : error ? (
+            <p className="text-red-500">{error}</p>
+          ) : (
+            children
+          )}
         </div>
-
-        {/* Footer */}
-        <div className="flex justify-between max-w-5xl w-full items-start text-xs md:text-sm text-muted-foreground">
-
-        </div>
+        <footer className="flex justify-between max-w-5xl w-full items-center text-xs md:text-sm text-muted-foreground mt-4">
+          <p>© 2025 SpiritDAO</p>
+          <p>
+            <a
+              href="https://github.com/your-repo"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline"
+            >
+              GitHub
+            </a>
+          </p>
+        </footer>
       </div>
     </ThemeProvider>
   );

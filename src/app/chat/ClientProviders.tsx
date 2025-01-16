@@ -1,3 +1,5 @@
+//src/app/chat/ClientProviders.tsx
+
 "use client";
 
 import React from "react";

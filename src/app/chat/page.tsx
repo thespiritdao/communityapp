@@ -1,83 +1,146 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
-import { useSupabaseClient } from "@supabase/auth-helpers-react";
-import { ChatList } from "./components/chat/chat-list";
-import { ChatInput } from "./components/ui/chat/chat-input";
-import { WalletProvider } from "src/wallet/components/WalletProvider";
+import { useState, useEffect } from "react";
+import { createClient } from "@supabase/supabase-js";
+import { Sidebar } from "./components/sidebar";
+import { Chat } from "./components/chat/chat";
+import { WalletProvider, useWalletContext } from "src/wallet/components/WalletProvider";
 import { ConnectButton } from "src/wallet/components/ConnectButton";
-import { useWallet } from "src/wallet/components/Wallet";
-import ChatTopbar from "./components/chat/chat-topbar";
+import { OnchainProviders } from "src/wallet/components/OnchainProviders";
+
+// Initialize Supabase client
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
+const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 export default function ChatPage() {
-  const supabase = useSupabaseClient();
-  const { walletAddress, isConnected } = useWallet();
+  return (
+    <OnchainProviders>
+      <WalletProvider>
+        <ChatPageContent />
+      </WalletProvider>
+    </OnchainProviders>
+  );
+}
 
+function ChatPageContent() {
+  const { walletAddress, isConnected, setIsOpen } = useWalletContext();
+
+  // State variables
   const [users, setUsers] = useState<UserData[]>([]);
   const [selectedUser, setSelectedUser] = useState<UserData | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
-  const [inputMessage, setInputMessage] = useState("");
+  const [loadingMessages, setLoadingMessages] = useState(false);
 
-  const messagesContainerRef = useRef<HTMLDivElement>(null);
+  console.log("Rendering ChatPage...");
+  console.log("Supabase URL:", supabaseUrl);
+  console.log("Supabase Key:", supabaseAnonKey ? "Present" : "Missing");
+  console.log("Wallet Address:", walletAddress);
+  console.log("Is Connected:", isConnected);
+
+  useEffect(() => {
+    if (!isConnected) {
+      console.log("Wallet is not connected. Prompting user to connect.");
+      setIsOpen(true); // Opens the wallet connection modal
+    }
+  }, [isConnected, setIsOpen]);
 
   // Fetch Users
   useEffect(() => {
     const fetchUsers = async () => {
+      console.log("Fetching users...");
       const { data, error } = await supabase
-        .from("users") // Replace "users" with your actual table name
-        .select("id, name, avatar"); // Adjust columns based on your schema
+        .from("user_profiles")
+        .select("wallet_address, profile_picture, first_name, last_name, desired_involvement");
 
-      if (!error) {
-        setUsers(data || []);
+      if (error) {
+        console.error("Error fetching users:", error.message);
+        return;
       }
+
+      // Combine `first_name` and `last_name` to form `userName`
+      const formattedUsers = (data || []).map((user) => ({
+        wallet_address: user.wallet_address,
+        profile_picture: user.profile_picture,
+        userName: `${user.first_name || ""} ${user.last_name || ""}`.trim() || "Guest",
+        desired_involvement: user.desired_involvement,
+      }));
+
+      console.log("Formatted users:", formattedUsers);
+      setUsers(formattedUsers);
     };
 
     fetchUsers();
-  }, [supabase]);
+  }, []);
 
   // Fetch Messages
   useEffect(() => {
-    if (!isConnected || !selectedUser) return;
+    if (!isConnected || !selectedUser) {
+      console.log("Skipping message fetch. isConnected:", isConnected, "selectedUser:", selectedUser);
+      return;
+    }
 
     const fetchMessages = async () => {
+      console.log("Fetching messages for selected user:", selectedUser.wallet_address);
+      setLoadingMessages(true);
+
       const { data, error } = await supabase
         .from("messages")
         .select("*")
-        .eq("sender_wallet_id", selectedUser.id) // Adjust filter as needed
+        .or(
+          `and(sender_wallet_id.eq.${walletAddress},receiver_wallet_id.eq.${selectedUser.wallet_address}),
+           and(sender_wallet_id.eq.${selectedUser.wallet_address},receiver_wallet_id.eq.${walletAddress})`
+        )
         .order("created_at", { ascending: true });
 
-      if (!error) {
-        setMessages(data || []);
+      setLoadingMessages(false);
+
+      if (error) {
+        console.error("Error fetching messages:", error.message);
+        return;
       }
+
+      console.log("Fetched messages:", data);
+      setMessages(data || []);
     };
 
     fetchMessages();
-  }, [isConnected, supabase, selectedUser]);
+  }, [isConnected, selectedUser]);
 
   // Send Message
-  const handleSendMessage = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    if (!inputMessage.trim()) return;
+  const sendMessage = async (newMessageContent: string) => {
+    if (!newMessageContent.trim()) {
+      console.log("Message content is empty. Aborting send.");
+      return;
+    }
+
+    console.log("Sending message:", newMessageContent);
 
     const newMessage = {
-      content: inputMessage,
+      content: newMessageContent,
       sender_wallet_id: walletAddress,
-      receiver_wallet_id: selectedUser?.id, // Assuming you store this in your schema
+      receiver_wallet_id: selectedUser?.wallet_address,
       created_at: new Date().toISOString(),
+      is_read: false,
     };
 
-    const { data, error } = await supabase.from("messages").insert([newMessage]);
+    // Optimistically update local state
+    setMessages((prevMessages) => [...prevMessages, { ...newMessage, id: Date.now() }]);
 
-    if (!error) {
-      setMessages((prevMessages) => [
-        ...prevMessages,
-        { ...newMessage, id: data[0]?.id || Date.now() },
-      ]);
-      setInputMessage("");
+    // Persist the message to Supabase
+    const { error } = await supabase.from("messages").insert([newMessage]);
+    if (error) {
+      console.error("Error sending message:", error.message);
+    } else {
+      console.log("Message sent successfully:", newMessage);
     }
   };
 
+  // Log rendering condition
+  console.log("Is connected:", isConnected, "Selected user:", selectedUser);
+
   if (!isConnected) {
+    console.log("Wallet is not connected. Showing ConnectButton.");
     return (
       <div className="flex justify-center items-center h-screen">
         <ConnectButton />
@@ -89,66 +152,39 @@ export default function ChatPage() {
     <div className="flex h-screen">
       {/* Sidebar */}
       <aside className="w-1/4 bg-muted p-4 overflow-y-auto">
-        <h2 className="text-lg font-bold mb-4">Chats</h2>
-        <ul>
-          {users.map((user) => (
-            <li
-              key={user.id}
-              onClick={() => setSelectedUser(user)}
-              className="p-2 hover:bg-primary rounded-md cursor-pointer"
-            >
-              {user.name}
-            </li>
-          ))}
-        </ul>
+        <Sidebar
+          chats={users.map((user) => ({
+            wallet_address: user.wallet_address,
+            name: user.userName || "Unknown User",
+            avatar: user.profile_picture,
+            lastMessage: messages.length
+              ? messages[messages.length - 1].content
+              : "No messages yet",
+          }))}
+          onSelectChat={(walletAddress) => {
+            const user = users.find((u) => u.wallet_address === walletAddress);
+            console.log("Selected user:", user);
+            setSelectedUser(user || null);
+          }}
+          isCollapsed={false}
+        />
       </aside>
 
       {/* Main Chat Window */}
-      <div className="flex-1 bg-background flex flex-col">
+      <main className="flex-1 bg-background flex flex-col">
         {selectedUser ? (
-          <>
-            {/* Topbar */}
-            <ChatTopbar
-              userName={selectedUser.name || "Guest"} // Ensure a fallback for userName
-              userAvatar={selectedUser.avatar || ""}
-            />
-            {/* Chat Messages */}
-            <div
-              className="flex-1 overflow-y-auto p-4"
-              ref={messagesContainerRef}
-            >
-              <ChatList
-                messages={messages}
-                selectedUser={selectedUser}
-                sendMessage={handleSendMessage}
-                isMobile={false}
-              />
-            </div>
-            {/* Chat Input */}
-            <form
-              onSubmit={handleSendMessage}
-              className="p-4 border-t flex items-center space-x-2"
-            >
-              <ChatInput
-                value={inputMessage}
-                onChange={(e) => setInputMessage(e.target.value)}
-                placeholder="Type your message..."
-                className="flex-1"
-              />
-              <button
-                type="submit"
-                className="bg-primary text-white px-4 py-2 rounded-lg"
-              >
-                Send
-              </button>
-            </form>
-          </>
+          <Chat
+            messages={messages}
+            selectedUser={selectedUser}
+            isMobile={false}
+            sendMessage={sendMessage}
+          />
         ) : (
           <div className="flex items-center justify-center h-full">
             <p className="text-muted-foreground">Select a user to start chatting.</p>
           </div>
         )}
-      </div>
+      </main>
     </div>
   );
 }

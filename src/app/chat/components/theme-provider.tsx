@@ -1,9 +1,24 @@
+//src/app/chat/components/theme-provider.tsx
+
 "use client";
 
-import * as React from "react";
+import React from "react";
 import { ThemeProvider as NextThemesProvider } from "next-themes";
 import { type ThemeProviderProps } from "next-themes/dist/types";
 
-export function ThemeProvider({ children, ...props }: ThemeProviderProps) {
-  return <NextThemesProvider {...props}>{children}</NextThemesProvider>;
+export function ThemeProvider({
+  children,
+  defaultTheme = "system",
+  attribute = "class",
+  ...props
+}: ThemeProviderProps) {
+  return (
+    <NextThemesProvider
+      defaultTheme={defaultTheme}
+      attribute={attribute}
+      {...props}
+    >
+      {children}
+    </NextThemesProvider>
+  );
 }

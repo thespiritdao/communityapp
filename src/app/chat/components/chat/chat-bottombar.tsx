@@ -1,3 +1,5 @@
+// /src/app/chat/components/chat/chat-bottombar.tsx
+
 import {
   FileImage,
   Mic,
@@ -18,6 +20,7 @@ import useChatStore from "src/app/chat/hooks/useChatStore";
 
 interface ChatBottombarProps {
   isMobile: boolean;
+  sendMessage: (newMessage: Message) => void;
 }
 
 export const BottombarIcons = [{ icon: FileImage }, { icon: Paperclip }];
@@ -53,22 +56,33 @@ export default function ChatBottombar({ isMobile }: ChatBottombarProps) {
     setMessage("");
   };
 
-  const handleSend = () => {
-    if (message.trim()) {
-      const newMessage: Message = {
-        id: message.length + 1,
-        name: loggedInUserData.name,
-        avatar: loggedInUserData.avatar,
-        message: message.trim(),
-      };
-      sendMessage(newMessage);
-      setMessage("");
+	const handleSend = async () => {
+	  if (!message.trim()) return; // Prevent sending empty messages
 
-      if (inputRef.current) {
-        inputRef.current.focus();
-      }
-    }
-  };
+	  const newMessage: Message = {
+		  content: message.trim(),
+		  sender_wallet_id: loggedInUser.wallet_address, // Define this based on logged-in user
+		  receiver_wallet_id: selectedUser.wallet_address, // Define this based on the selected user
+		  created_at: new Date().toISOString(),
+	  };
+
+	  try {
+		// Insert message into Supabase
+		const { data, error } = await supabase.from("messages").insert(newMessage);
+
+		if (error) {
+		  console.error("Failed to send message:", error.message);
+		  return;
+		}
+
+		// Call the provided sendMessage prop to update state in the parent
+		sendMessage(data[0]); // Supabase returns the inserted row
+
+		setMessage(""); // Clear the input
+	  } catch (error) {
+		console.error("Unexpected error while sending message:", error);
+	  }
+	};
 
   const formattedTime = new Date().toLocaleTimeString("en-US", {
     hour: "numeric",
