@@ -16,7 +16,7 @@ type ProfileData = {
   interests?: string | null; // comma-separated
   seeking?: string | null;   // comma-separated
   occupation?: string | null;
-  skills_expertise?: string | null; // now superpowers, just label changed
+  skills_expertise?: string | null; // "superpowers" - label changed
   workplace_organization?: string | null;
   projects_or_initiatives?: string | null;
   linkedin?: string | null;
@@ -80,29 +80,33 @@ const involvementOptions = [
 ];
 
 interface ProfileEditFormProps {
-  initialData: ProfileData;
-  onSave: (data: ProfileData) => Promise<void>;
-  onCancel: () => void;
-  refetch?: () => Promise<void>;
+  initialData: ProfileData; // Typed object for the user's profile data
+  walletAddress: string; // The user's wallet address
+  onSave: (data: ProfileData) => Promise<void>; // Function that handles saving the updated profile
+  onCancel: () => void; // Function that cancels editing the profile
 }
 
-export function ProfileEditForm({ initialData, onSave, onCancel }: ProfileEditFormProps) {
+
+export function ProfileEditForm({
+  initialData,
+  onSave,
+  onCancel,
+  walletAddress,
+}: ProfileEditFormProps) {
+  const { register, handleSubmit, formState: { errors } } = useForm<ProfileData>({
+	  defaultValues: initialData,
+	});
   const initialInterests = initialData.interests ? initialData.interests.split(',') : [];
   const initialSeeking = initialData.seeking ? initialData.seeking.split(',') : [];
   const initialInvolvement = initialData.desired_involvement ? initialData.desired_involvement.split(',') : [];
-
+  
   const [selectedInterests, setSelectedInterests] = useState<string[]>(initialInterests);
   const [selectedSeeking, setSelectedSeeking] = useState<string[]>(initialSeeking);
   const [selectedInvolvement, setSelectedInvolvement] = useState<string[]>(initialInvolvement);
   const [selectedOpenness, setSelectedOpenness] = useState<string>(initialData.open_to_connect || '');
-
-  const { register, handleSubmit } = useForm<ProfileData>({
-    defaultValues: initialData
-  });
-
-  const [selectedProfileImage, setSelectedProfileImage] = useState<File | null>(null);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [profileImagePreview, setProfileImagePreview] = useState<string | null>(initialData.profile_picture || null);
+  const [selectedProfileImage, setSelectedProfileImage] = useState<File | null>(null);
 
   const handleCheckboxChange = (
     value: string,
@@ -124,7 +128,6 @@ export function ProfileEditForm({ initialData, onSave, onCancel }: ProfileEditFo
     const file = e.target.files?.[0] || null;
     setSelectedProfileImage(file);
     if (file) {
-      // Show preview
       const reader = new FileReader();
       reader.onload = (evt) => {
         if (evt.target?.result) {
@@ -137,273 +140,334 @@ export function ProfileEditForm({ initialData, onSave, onCancel }: ProfileEditFo
     }
   };
 
-  const onSubmit = async (data: ProfileData) => {
-    data.interests = selectedInterests.join(',');
-    data.seeking = selectedSeeking.join(',');
-    data.desired_involvement = selectedInvolvement.join(',');
-    data.open_to_connect = selectedOpenness;
+  const uploadProfileImage = async () => {
+	if (!selectedProfileImage || !walletAddress) {
+      console.warn("No file selected or wallet address missing.");
+      return null;
+    }
+	
+	  try {
+		// 1. Check the current session/user
+		const {
+		  data: { user },
+		  error: getUserError,
+		} = await supabase.auth.getUser();
+		if (getUserError) {
+		  console.error("Error fetching user:", getUserError);
+		}
+		console.log("uploadProfileImage => Current supabase user:", user);
 
-    // Fields we decided not to use
-    delete data.identity_verification;
-    delete data.notification_preferences;
-    delete data.badges;
-    delete data.reputation;
-
-    // If a new file is selected, upload it to Supabase from 'profile_images' bucket
-    if (selectedProfileImage) {
       setUploadingImage(true);
-      const fileName = `${data.wallet_address || 'user'}-${Date.now()}-${selectedProfileImage.name}`;
-
-      const { data: uploadData, error: uploadError } = await supabase.storage
-        .from('profile_images')
+      const fileName = `${walletAddress}-${Date.now()}-${selectedProfileImage.name}`;
+      const { error: uploadError } = await supabase.storage
+        .from("profile_images")
         .upload(fileName, selectedProfileImage, {
-          upsert: true
+          contentType: selectedProfileImage.type,
+          upsert: true,
         });
 
-      setUploadingImage(false);
-
       if (uploadError) {
-        console.error('Error uploading image:', uploadError);
-        // Handle error gracefully (e.g., show a toast)
-      } else if (uploadData) {
-        // Get public URL from 'profile_images' bucket
-        const { data: publicURLData } = supabase.storage
-          .from('profile_images')
-          .getPublicUrl(fileName);
-
-        if (publicURLData) {
-          data.profile_picture = publicURLData.publicUrl;
-        }
+        console.error("Error uploading image:", uploadError);
+        return null;
       }
-    }
 
-    await onSave(data);
-	refetch();
+      const { data: publicUrlData, error: publicUrlError } = supabase.storage
+        .from("profile_images")
+        .getPublicUrl(fileName);
+
+      if (publicUrlError) {
+        console.error("Error fetching public URL:", publicUrlError);
+        return null;
+      }
+
+      return publicUrlData?.publicUrl || null;
+    } catch (err) {
+      console.error("Unexpected error during image upload:", err);
+      return null;
+    } finally {
+      setUploadingImage(false);
+    }
   };
+
+	  const onSubmit = async (data: ProfileData) => {
+		console.log("Submitted Data:", data);
+
+		// Attempt to upload the profile image if one is selected
+		const imageUrl = await uploadProfileImage();
+		
+		
+		if (imageUrl) {
+		  data.profile_picture = imageUrl;
+		}
+		
+
+		
+		// Add wallet address and save
+		data.wallet_address = walletAddress;
+		await onSave(data);
+	  };
+
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col">
-      {/* Basic Information Section */}
-      <div className="form-section">
-        <h3 className="form-section-header">Basic Information</h3>
-        <div className="form-group">
-          <label>First Name</label>
-          <input type="text" {...register('first_name')} className="input" />
-        </div>
-
-        <div className="form-group">
-          <label>Last Name</label>
-          <input type="text" {...register('last_name')} className="input" />
-        </div>
-
-        <div className="form-group">
-          <label>Profile Picture</label>
-          <input
-            type="file"
-            accept="image/*"
-            onChange={handleFileChange}
-            className="input"
-            style={{ marginTop: '0.5rem' }}
+      {/* Profile fields */}
+      <div>
+        <label>Profile Picture</label>
+        <input type="file" accept="image/*" onChange={handleFileChange} />
+        {profileImagePreview && (
+          <img
+            src={profileImagePreview}
+            alt="Preview"
+            style={{ maxWidth: "150px", marginTop: "10px", borderRadius: "8px" }}
           />
-          {profileImagePreview && (
-            <div style={{ marginTop: '0.5rem' }}>
-              <img src={profileImagePreview} alt="Preview" style={{ maxWidth: '150px', borderRadius: '8px' }} />
-            </div>
-          )}
-          {uploadingImage && <p>Uploading image, please wait...</p>}
-        </div>
+        )}
 
-        <div className="form-group">
-          <label>Date of Birth</label>
-          <input type="date" {...register('date_of_birth')} className="input" style={{ marginTop: '0.5rem' }} />
-        </div>
-      </div>
+		  {/* Additional form inputs */}
+		  <div>
+			<button type="submit" disabled={uploadingImage}>
+			  Save
+			</button>
+			<button type="button" onClick={onCancel}>
+			  Cancel
+			</button>
+		  </div>
 
-      {/* Contact Information Section */}
-      <div className="form-section">
-        <h3 className="form-section-header">Contact Information</h3>
-        <div className="form-group">
-          <label>Email</label>
-          <input type="email" {...register('email')} className="input" />
-        </div>
+		  {/* Basic Information Section */}
+		  <div className="form-section">
+			<h3 className="form-section-header">Basic Information</h3>
+			<div className="form-group">
+			  <label>First Name</label>
+			<input
+				  type="text"
+				  {...register("first_name", { required: "First name is required" })}
+				/>
+				{errors.first_name && <p>{errors.first_name.message}</p>}
+			</div>
 
-        <div className="form-group">
-          <label>Phone</label>
-          <input type="tel" {...register('phone')} className="input" style={{ marginTop: '0.5rem' }} />
-        </div>
+			<div className="form-group">
+			  <label>Last Name</label>
+			   <input
+				  type="text"
+				  {...register("last_name", { required: "Last name is required" })}
+				/>
+				{errors.last_name && <p>{errors.last_name.message}</p>}
+			  </div>
 
-        <div className="form-group">
-          <label>Address</label>
-          <input type="text" {...register('address')} className="input" />
-        </div>
+			</div>
 
-        <div className="form-group">
-          <label>Website</label>
-          <input type="url" {...register('website')} className="input" style={{ marginTop: '0.5rem' }} placeholder="https://yourwebsite.com" />
-          <small style={{ fontSize: '0.85rem', color: '#555' }}>Please include https://</small>
-        </div>
-      </div>
+			<div className="form-group">
+			  <label>Profile Picture</label>
+			  <input
+				type="file"
+				accept="image/*"
+				onChange={handleFileChange}
+				className="input"
+				style={{ marginTop: '0.5rem' }}
+			  />
+			  {profileImagePreview && (
+				<div style={{ marginTop: '0.5rem' }}>
+				  <img src={profileImagePreview} alt="Preview" style={{ maxWidth: '150px', borderRadius: '8px' }} />
+				</div>
+			  )}
+			  {uploadingImage && <p>Uploading image, please wait...</p>}
+			</div>
 
-      {/* Profile Details Section */}
-      <div className="form-section">
-        <h3 className="form-section-header">Profile Details & Preferences</h3>
-        <div className="form-group">
-          <label>Bio</label>
-          <textarea {...register('bio')} className="input" style={{ height: '150px', marginTop: '0.5rem' }}></textarea>
-        </div>
+			<div className="form-group">
+			  <label>Date of Birth</label>
+			  <input type="date" {...register('date_of_birth')} className="input" style={{ marginTop: '0.5rem' }} />
+			</div>
+		  </div>
 
-        <div className="form-group">
-          <label>Occupation</label>
-          <input type="text" {...register('occupation')} className="input" />
-        </div>
+		  {/* Contact Information Section */}
+		  <div className="form-section">
+			<h3 className="form-section-header">Contact Information</h3>
+			<div className="form-group">
+			  <label>Email</label>
+			  <input type="email" {...register('email')} className="input" />
+			</div>
 
-        <div className="form-group">
-          <label>Superpowers (formerly Skills/Expertise)</label>
-          <textarea {...register('skills_expertise')} className="input" style={{ height: '150px', marginTop: '0.5rem' }}></textarea>
-        </div>
+			<div className="form-group">
+			  <label>Phone</label>
+			  <input type="tel" {...register('phone')} className="input" style={{ marginTop: '0.5rem' }} />
+			</div>
 
-        <div className="form-group">
-          <label>Workplace/Organization</label>
-          <input type="text" {...register('workplace_organization')} className="input" />
-        </div>
+			<div className="form-group">
+			  <label>Address</label>
+			  <input type="text" {...register('address')} className="input" />
+			</div>
 
-        <div className="form-group">
-          <label>Projects or Initiatives</label>
-          <textarea {...register('projects_or_initiatives')} className="input" style={{ height: '150px', marginTop: '0.5rem' }}></textarea>
-        </div>
+			<div className="form-group">
+			  <label>Website</label>
+			  <input type="url" {...register('website')} className="input" style={{ marginTop: '0.5rem' }} placeholder="https://yourwebsite.com" />
+			  <small style={{ fontSize: '0.85rem', color: '#555' }}>Please include https://</small>
+			</div>
+		  </div>
 
-        {/* Interests Section with Dropdown */}
-        <div className="form-group">
-          <details>
-            <summary style={{ cursor: 'pointer', marginBottom: '0.5rem' }}>Interests</summary>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-              {interestsOptions.map(opt => (
-                <label key={opt.value} style={{ backgroundColor: opt.color, padding: '4px', borderRadius: '4px' }}>
-                  <input
-                    type="checkbox"
-                    checked={selectedInterests.includes(opt.value)}
-                    onChange={() => handleCheckboxChange(opt.value, selectedInterests, setSelectedInterests)}
-                    style={{ marginRight: '4px' }}
-                  />
-                  {opt.label}
-                </label>
-              ))}
-            </div>
-          </details>
-        </div>
+		  {/* Profile Details Section */}
+		  <div className="form-section">
+			<h3 className="form-section-header">Profile Details & Preferences</h3>
+			<div className="form-group">
+			  <label>Bio</label>
+			  <textarea {...register('bio')} className="input" style={{ height: '150px', marginTop: '0.5rem' }}></textarea>
+			</div>
 
-        {/* Seeking Section with Dropdown */}
-        <div className="form-group">
-          <details>
-            <summary style={{ cursor: 'pointer', marginBottom: '0.5rem' }}>Seeking</summary>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-              {seekingOptions.map(opt => (
-                <label key={opt.value} style={{ backgroundColor: opt.color, padding: '4px', borderRadius: '4px' }}>
-                  <input
-                    type="checkbox"
-                    checked={selectedSeeking.includes(opt.value)}
-                    onChange={() => handleCheckboxChange(opt.value, selectedSeeking, setSelectedSeeking)}
-                    style={{ marginRight: '4px' }}
-                  />
-                  {opt.label}
-                </label>
-              ))}
-            </div>
-          </details>
-        </div>
+			<div className="form-group">
+			  <label>Occupation</label>
+			  <input type="text" {...register('occupation')} className="input" />
+			</div>
 
-        {/* Openness to Connect dropdown (single choice) */}
-        <div className="form-group">
-          <details>
-            <summary style={{ cursor: 'pointer', marginBottom: '0.5rem' }}>Openness to Connect</summary>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginTop: '0.5rem' }}>
-              {opennessOptions.map(opt => (
-                <label key={opt.value}>
-                  <input
-                    type="radio"
-                    name="open_to_connect"
-                    value={opt.value}
-                    checked={selectedOpenness === opt.value}
-                    onChange={() => handleRadioChange(opt.value)}
-                  />
-                  {opt.label}
-                </label>
-              ))}
-            </div>
-          </details>
-        </div>
+			<div className="form-group">
+			  <label>Superpowers (formerly Skills/Expertise)</label>
+			  <textarea {...register('skills_expertise')} className="input" style={{ height: '150px', marginTop: '0.5rem' }}></textarea>
+			</div>
 
-        {/* Desired Involvement dropdown (multiple choice) */}
-        <div className="form-group">
-          <details>
-            <summary style={{ cursor: 'pointer', marginBottom: '0.5rem' }}>Desired Involvement</summary>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '0.5rem' }}>
-              {involvementOptions.map(opt => (
-                <label key={opt.value} style={{ backgroundColor: opt.color, padding: '4px', borderRadius: '4px' }}>
-                  <input
-                    type="checkbox"
-                    checked={selectedInvolvement.includes(opt.value)}
-                    onChange={() => handleCheckboxChange(opt.value, selectedInvolvement, setSelectedInvolvement)}
-                    style={{ marginRight: '4px' }}
-                  />
-                  {opt.label}
-                </label>
-              ))}
-            </div>
-          </details>
-        </div>
-      </div>
+			<div className="form-group">
+			  <label>Workplace/Organization</label>
+			  <input type="text" {...register('workplace_organization')} className="input" />
+			</div>
 
-      {/* Social Links Section */}
-      <div className="form-section">
-        <h3 className="form-section-header">Social Links</h3>
-        <div className="form-group">
-          <label>LinkedIn</label>
-          <input type="text" {...register('linkedin')} className="input" />
-        </div>
-        <div className="form-group">
-          <label>Twitter</label>
-          <input type="text" {...register('twitter')} className="input" />
-        </div>
-        <div className="form-group">
-          <label>Instagram</label>
-          <input type="text" {...register('instagram')} className="input" />
-        </div>
-        <div className="form-group">
-          <label>Facebook</label>
-          <input type="text" {...register('facebook')} className="input" />
-        </div>
-        <div className="form-group">
-          <label>TikTok</label>
-          <input type="text" {...register('tiktok')} className="input" />
-        </div>
-        <div className="form-group">
-          <label>Discord</label>
-          <input type="text" {...register('discord')} className="input" />
-        </div>
-        <div className="form-group">
-          <label>GitHub</label>
-          <input type="text" {...register('github')} className="input" />
-        </div>
-        <div className="form-group">
-          <label>YouTube</label>
-          <input type="text" {...register('youtube')} className="input" />
-        </div>
-        <div className="form-group">
-          <label>Twitch</label>
-          <input type="text" {...register('twitch')} className="input" />
-        </div>
-      </div>
+			<div className="form-group">
+			  <label>Projects or Initiatives</label>
+			  <textarea {...register('projects_or_initiatives')} className="input" style={{ height: '150px', marginTop: '0.5rem' }}></textarea>
+			</div>
 
-      {/* Additional Settings */}
-      <div className="form-section">
-        <h3 className="form-section-header">Additional Settings</h3>
-      </div>
+			{/* Interests Section with Dropdown */}
+			<div className="form-group">
+			  <details>
+				<summary style={{ cursor: 'pointer', marginBottom: '0.5rem' }}>Interests</summary>
+				<div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+				  {interestsOptions.map(opt => (
+					<label key={opt.value} style={{ backgroundColor: opt.color, padding: '4px', borderRadius: '4px' }}>
+					  <input
+						type="checkbox"
+						checked={selectedInterests.includes(opt.value)}
+						onChange={() => handleCheckboxChange(opt.value, selectedInterests, setSelectedInterests)}
+						style={{ marginRight: '4px' }}
+					  />
+					  {opt.label}
+					</label>
+				  ))}
+				</div>
+			  </details>
+			</div>
 
-      <div className="flex justify-end space-x-2 mt-4">
-        <button type="button" onClick={onCancel} className="button button-cancel">Cancel</button>
-        <button type="submit" className="button button-enter">Save Changes</button>
-      </div>
-    </form>
-  );
+			{/* Seeking Section with Dropdown */}
+			<div className="form-group">
+			  <details>
+				<summary style={{ cursor: 'pointer', marginBottom: '0.5rem' }}>Seeking</summary>
+				<div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+				  {seekingOptions.map(opt => (
+					<label key={opt.value} style={{ backgroundColor: opt.color, padding: '4px', borderRadius: '4px' }}>
+					  <input
+						type="checkbox"
+						checked={selectedSeeking.includes(opt.value)}
+						onChange={() => handleCheckboxChange(opt.value, selectedSeeking, setSelectedSeeking)}
+						style={{ marginRight: '4px' }}
+					  />
+					  {opt.label}
+					</label>
+				  ))}
+				</div>
+			  </details>
+			</div>
+
+			{/* Openness to Connect dropdown (single choice) */}
+			<div className="form-group">
+			  <details>
+				<summary style={{ cursor: 'pointer', marginBottom: '0.5rem' }}>Openness to Connect</summary>
+				<div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginTop: '0.5rem' }}>
+				  {opennessOptions.map(opt => (
+					<label key={opt.value}>
+					  <input
+						type="radio"
+						name="open_to_connect"
+						value={opt.value}
+						checked={selectedOpenness === opt.value}
+						onChange={() => handleRadioChange(opt.value)}
+					  />
+					  {opt.label}
+					</label>
+				  ))}
+				</div>
+			  </details>
+			</div>
+
+			{/* Desired Involvement dropdown (multiple choice) */}
+			<div className="form-group">
+			  <details>
+				<summary style={{ cursor: 'pointer', marginBottom: '0.5rem' }}>Desired Involvement</summary>
+				<div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '0.5rem' }}>
+				  {involvementOptions.map(opt => (
+					<label key={opt.value} style={{ backgroundColor: opt.color, padding: '4px', borderRadius: '4px' }}>
+					  <input
+						type="checkbox"
+						checked={selectedInvolvement.includes(opt.value)}
+						onChange={() => handleCheckboxChange(opt.value, selectedInvolvement, setSelectedInvolvement)}
+						style={{ marginRight: '4px' }}
+					  />
+					  {opt.label}
+					</label>
+				  ))}
+				</div>
+			  </details>
+			</div>
+		  </div>
+
+		  {/* Social Links Section */}
+		  <div className="form-section">
+			<h3 className="form-section-header">Social Links</h3>
+			<div className="form-group">
+			  <label>LinkedIn</label>
+			  <input type="text" {...register('linkedin')} className="input" />
+			</div>
+			<div className="form-group">
+			  <label>Twitter</label>
+			  <input type="text" {...register('twitter')} className="input" />
+			</div>
+			<div className="form-group">
+			  <label>Instagram</label>
+			  <input type="text" {...register('instagram')} className="input" />
+			</div>
+			<div className="form-group">
+			  <label>Facebook</label>
+			  <input type="text" {...register('facebook')} className="input" />
+			</div>
+			<div className="form-group">
+			  <label>TikTok</label>
+			  <input type="text" {...register('tiktok')} className="input" />
+			</div>
+			<div className="form-group">
+			  <label>Discord</label>
+			  <input type="text" {...register('discord')} className="input" />
+			</div>
+			<div className="form-group">
+			  <label>GitHub</label>
+			  <input type="text" {...register('github')} className="input" />
+			</div>
+			<div className="form-group">
+			  <label>YouTube</label>
+			  <input type="text" {...register('youtube')} className="input" />
+			</div>
+			<div className="form-group">
+			  <label>Twitch</label>
+			  <input type="text" {...register('twitch')} className="input" />
+			</div>
+		  </div>
+
+		  {/* Additional Settings */}
+		  <div className="form-section">
+			<h3 className="form-section-header">Additional Settings</h3>
+		  </div>
+
+		  <div className="flex justify-end space-x-2 mt-4">
+
+				<button type="submit" disabled={uploadingImage}>
+				  Save
+				</button>
+				<button type="button" onClick={onCancel}>
+				  Cancel
+				</button>
+			  </div>
+		</form>
+	  );
 }

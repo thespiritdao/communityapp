@@ -10,23 +10,35 @@ import {
   TooltipTrigger,
   TooltipProvider,
 } from "src/app/chat/components/ui/tooltip";
-import { Avatar, AvatarImage } from "./ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 
-interface SidebarProps {
-  chats: {
-    name: string;
-    messages: { name: string; message: string; isLoading: boolean }[];
-    avatar: string;
-    variant: "secondary" | "ghost";
-  }[];
-  isCollapsed?: boolean;
+interface Chat {
+  wallet_address: string;
+  name: string; // Derived from `desired_involvement` or similar field
+  avatar?: string; // Optional field for profile picture
+  lastMessage?: string; // The last message content
+  lastMessageSender?: string; // Name of the sender of the last message
+  isTyping?: boolean; // If the user is currently typing
 }
 
-export default function Sidebar({ chats, isCollapsed = false }: SidebarProps) {
+interface SidebarProps {
+  chats: Chat[];
+  isCollapsed?: boolean;
+  onSelectChat: (walletAddress: string) => void; // Callback to set selected user
+}
+
+export function Sidebar({
+  chats,
+  isCollapsed = false,
+  onSelectChat,
+}: SidebarProps) {
   return (
     <div
       data-collapsed={isCollapsed}
-      className="relative flex flex-col h-full bg-muted/10 dark:bg-muted/20 gap-4 p-2"
+      className={cn(
+        "relative flex flex-col h-full bg-muted/10 dark:bg-muted/20 gap-4 p-2",
+        isCollapsed ? "w-16" : "w-64"
+      )}
     >
       {!isCollapsed && (
         <div className="flex justify-between p-2 items-center">
@@ -65,53 +77,63 @@ export default function Sidebar({ chats, isCollapsed = false }: SidebarProps) {
             <TooltipProvider key={index}>
               <Tooltip delayDuration={0}>
                 <TooltipTrigger asChild>
-                  <Link
-                    href="#"
+                  <button
+                    onClick={() => onSelectChat(chat.wallet_address)}
                     className={cn(
-                      buttonVariants({ variant: chat.variant, size: "icon" }),
+                      buttonVariants({ variant: "ghost", size: "icon" }),
                       "h-11 w-11 md:h-16 md:w-16"
                     )}
                   >
                     <Avatar>
-                      <AvatarImage
-                        src={chat.avatar}
-                        alt={`${chat.name} avatar`}
-                        className="w-10 h-10"
-                      />
+                      {chat.avatar ? (
+                        <AvatarImage
+                          src={chat.avatar}
+                          alt={`${chat.name}'s avatar`}
+                          className="w-10 h-10"
+                        />
+                      ) : (
+                        <AvatarFallback>
+                          {chat.name.charAt(0).toUpperCase()}
+                        </AvatarFallback>
+                      )}
                     </Avatar>
-                  </Link>
+                  </button>
                 </TooltipTrigger>
                 <TooltipContent side="right">{chat.name}</TooltipContent>
               </Tooltip>
             </TooltipProvider>
           ) : (
-            <Link
+            <button
               key={index}
-              href="#"
+              onClick={() => onSelectChat(chat.wallet_address)}
               className={cn(
-                buttonVariants({ variant: chat.variant, size: "xl" }),
+                buttonVariants({ variant: "ghost", size: "xl" }),
                 "flex items-center gap-4 p-2 rounded-md hover:bg-primary"
               )}
             >
               <Avatar>
-                <AvatarImage
-                  src={chat.avatar}
-                  alt={`${chat.name} avatar`}
-                  className="w-10 h-10"
-                />
+                {chat.avatar ? (
+                  <AvatarImage
+                    src={chat.avatar}
+                    alt={`${chat.name}'s avatar`}
+                    className="w-10 h-10"
+                  />
+                ) : (
+                  <AvatarFallback>
+                    {chat.name.charAt(0).toUpperCase()}
+                  </AvatarFallback>
+                )}
               </Avatar>
               <div className="flex flex-col max-w-28">
-                <span>{chat.name}</span>
-                {chat.messages.length > 0 && (
+                <span className="font-semibold truncate">{chat.name}</span>
+                {chat.lastMessage && (
                   <span className="text-sm text-zinc-500 truncate">
-                    {chat.messages[chat.messages.length - 1].name}:{" "}
-                    {chat.messages[chat.messages.length - 1].isLoading
-                      ? "Typing..."
-                      : chat.messages[chat.messages.length - 1].message}
+                    {chat.lastMessageSender || "Unknown"}:{" "}
+                    {chat.isTyping ? "Typing..." : chat.lastMessage}
                   </span>
                 )}
               </div>
-            </Link>
+            </button>
           )
         )}
       </nav>

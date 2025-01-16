@@ -8,27 +8,38 @@ import {
 import { SmileIcon } from "lucide-react";
 import Picker from "@emoji-mart/react";
 import data from "@emoji-mart/data";
-import { useTheme } from "next-themes"
+import { useTheme } from "next-themes";
 
 interface EmojiPickerProps {
-  onChange: (value: string) => void;
+  onChange: (value: string) => void; // Callback when an emoji is selected
 }
 
 export const EmojiPicker = ({ onChange }: EmojiPickerProps) => {
-  const { theme } = useTheme()
+  const { theme } = useTheme();
 
   return (
     <Popover>
-      <PopoverTrigger>
-        <SmileIcon className="h-5 w-5 text-muted-foreground hover:text-foreground transition" />
+      {/* Emoji Button */}
+      <PopoverTrigger aria-label="Select an emoji">
+        <button className="p-2 rounded-full bg-muted hover:bg-accent transition">
+          <SmileIcon className="h-5 w-5 text-muted-foreground hover:text-foreground transition" />
+        </button>
       </PopoverTrigger>
-      <PopoverContent className="w-full">
+
+      {/* Emoji Picker */}
+      <PopoverContent className="w-80">
         <Picker
           emojiSize={18}
-          theme={theme || "light"}
+          theme={theme === "dark" ? "dark" : "light"} // Default to "light" if theme is undefined
           data={data}
           maxFrequentRows={1}
-          onEmojiSelect={(emoji: any) => onChange(emoji.native)}
+          onEmojiSelect={(emoji: any) => {
+            if (emoji?.native) {
+              onChange(emoji.native); // Pass the native emoji to the callback
+            } else {
+              console.warn("Selected emoji does not have a native property:", emoji);
+            }
+          }}
         />
       </PopoverContent>
     </Popover>
