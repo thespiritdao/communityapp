@@ -25,6 +25,6 @@ def list_directory(start_path, prefix=''):
             list_directory(full_path, prefix + extension)
 
 if __name__ == "__main__":
-    base_directory = r"C:\Users\PC\Documents\DAO\App\commapp"
+    base_directory = r"C:\Users\PC\Documents\DAO\App\commapp\src\identity"
     print(base_directory)
     list_directory(base_directory)

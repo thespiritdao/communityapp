@@ -13,7 +13,7 @@ import { useUserProfile } from 'src/identity/hooks/useUserProfile';
 import { updateProfile } from 'src/identity/utils/updateProfile';
 import { ProfileEditForm } from 'src/identity/components/ProfileEditForm';
 import { supabase } from 'src/utils/supabaseClient';
-import 'src/styles/identityStyles.css';
+import 'src/identity/styles/identityStyles.css';
 
 export default function IdentityPage() {
   return (
@@ -149,19 +149,16 @@ function IdentityPageContent() {
         )}
       </div>
 
-      <div className="identity-card-section">
-        <IdentityCard address={address} />
-      </div>
-
       <div className="badges-section">
-        <h2>Badges</h2>
+        <h2>Memberships</h2>
+        <Badge address={address} />
+      </div>
+	  
+	  <div className="badges-section">
+        <h2>Credentials</h2>
         <Badge address={address} />
       </div>
 
-      <div className="socials-section">
-        <h2>Socials</h2>
-        <Socials address={address} />
-      </div>
 
       <Footer />
     </div>

@@ -1,65 +1,60 @@
-import type { Address, Chain } from 'viem';
-import { border, cn } from '../../styles/theme';
-import { useName } from '../hooks/useName';
-import { useSocials } from '../hooks/useSocials';
-import { GetSocialPlatformDetails } from '../utils/getSocialPlatformDetails';
-import type { SocialPlatform } from '../utils/getSocialPlatformDetails';
-import { useIdentityContext } from './IdentityProvider';
+import React from 'react';
+import { cn } from '../../styles/theme'; // If you still need this
+import type { UserProfile } from '@/identity/types'; 
+// ^ Adjust import path/types as needed
 
-type SocialsReact = {
-  address?: Address | null;
-  ensName?: string;
-  chain?: Chain;
+interface SocialsProps {
+  user: UserProfile;             // The user object with social fields
   className?: string;
-};
+}
 
-export function Socials({ address, chain, className }: SocialsReact) {
-  const { address: contextAddress, chain: contextChain } = useIdentityContext();
+const SOCIAL_PLATFORMS = [
+  'twitter',
+  'tiktok',
+  'instagram',
+  'facebook',
+  'discord',
+  'youtube',
+  'twitch',
+  'github',
+  'linkedin',
+  'email', // If you store email as a link
+];
 
-  const accountAddress = address ?? contextAddress;
-  const accountChain = chain ?? contextChain;
-
-  if (!accountAddress) {
-    console.error(
-      'Socials: an Ethereum address must be provided to the Socials component.',
-    );
-    return null;
-  }
-
-  const { data: name, isLoading: isLoadingName } = useName({
-    address: accountAddress,
-    chain: accountChain,
-  });
-
-  const { data: socials, isLoading: isLoadingSocials } = useSocials(
-    {
-      ensName: name ?? '',
-      chain: accountChain,
-    },
-    { enabled: !!name },
-  );
-
-  if (isLoadingName || isLoadingSocials) {
-    return <span className={className} />;
-  }
-
-  if (!socials || Object.values(socials).every((value) => !value)) {
+export function Socials({ user, className }: SocialsProps) {
+  // If there's no user or no social fields, return null or handle gracefully
+  if (!user) {
     return null;
   }
 
   return (
-    <div className={cn(border.default, 'mt-2 w-full pl-1', className)}>
-      <div className={'left-4 flex space-x-2'}>
-        {Object.entries(socials).map(
-          ([platform, value]) =>
-            value && (
-              <GetSocialPlatformDetails
-                key={platform}
-                platform={platform as SocialPlatform}
-                value={value}
+    <div className={cn('mt-2 w-full pl-1', className)}>
+      <div className="flex space-x-2">
+        {SOCIAL_PLATFORMS.map((platform) => {
+          const value = (user as any)[platform]; 
+          // Or define user type more precisely if needed
+          
+          // If there's no value for that platform, skip it
+          if (!value) return null;
+
+          // Build a link; for 'email', you might do mailto: instead
+          const href = platform === 'email' ? `mailto:${value}` : value;
+
+          return (
+            <a
+              key={platform}
+              href={href}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <img
+                src={`/images/socialicons/${platform}.png`}
+                alt={platform}
+                className="social-icon"
               />
-            ),
-        )}
+            </a>
+          );
+        })}
       </div>
     </div>
   );
