@@ -20,23 +20,22 @@ type AppProps = {
   children: ReactNode;
 };
 
-const App: React.FC<AppProps> = ({ children }) => {
-  const { address, isConnecting, isDisconnected } = useAccount();
-
-  useEffect(() => {
-    const initiateSupabaseSession = async () => {
-      if (address && !isConnecting && !isDisconnected) {
-        console.log('Wallet connected. Creating Supabase session...');
-        try {
-          await createSupabaseSession(address);
-        } catch (err) {
-          console.error('Failed to create Supabase session:', err);
-        }
+useEffect(() => {
+  const initiateSupabaseSession = async () => {
+    if (address && !isConnecting && !isDisconnected) {
+      console.log('Wallet connected. Creating Supabase session...');
+      try {
+        const session = await createSupabaseSession(address);
+        console.log('Supabase session:', session); // Log the session for debugging
+      } catch (err) {
+        console.error('Failed to create Supabase session:', err);
       }
-    };
+    }
+  };
 
-    initiateSupabaseSession();
-  }, [address, isConnecting, isDisconnected]);
+  initiateSupabaseSession();
+}, [address, isConnecting, isDisconnected]);
+
 
   return (
     <WagmiConfig config={wagmiConfig}>
