@@ -248,6 +248,14 @@
     --ock-line-heavy: theme(colors.zinc.500);
     --ock-line-inverse: theme(colors.zinc.700);
   }
+  
+.footer-links a:-webkit-any-link,
+.footer-links a:link,
+.footer-links a:visited {
+  color: #888 !important;
+  text-decoration: none !important;
+}
+
 }
 
 @tailwind utilities;

@@ -4,7 +4,7 @@ import { WagmiProvider } from 'wagmi';
 import { ONCHAIN_KIT_CONFIG, setOnchainKitConfig } from './OnchainKitConfig';
 import { DEFAULT_PRIVACY_URL, DEFAULT_TERMS_URL } from './constants';
 import { createWagmiConfig } from './createWagmiConfig';
-import { COINBASE_VERIFIED_ACCOUNT_SCHEMA_ID } from './identity/constants';
+import { COINBASE_VERIFIED_ACCOUNT_SCHEMA_ID } from 'src/features/identity/constants';
 import { checkHashLength } from './internal/utils/checkHashLength';
 import type { OnchainKitContextType, OnchainKitProviderReact } from './types';
 import { useProviderDependencies } from './useProviderDependencies';

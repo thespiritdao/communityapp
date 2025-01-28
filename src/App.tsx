@@ -10,7 +10,7 @@ import { OnchainKitProvider } from '@coinbase/onchainkit';
 import { RainbowKitProvider } from '@rainbow-me/rainbowkit';
 import type { ReactNode } from 'react';
 import { base } from 'viem/chains';
-import { supabase } from 'src/identity/utils/supabaseClient';
+import { supabase } from 'src/features/identity/utils/supabaseClient';
 import { createSupabaseSession } from 'src/auth/utils/createSupabaseSession';
 import { useAccount } from 'wagmi';
 

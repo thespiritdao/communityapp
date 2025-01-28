@@ -5,15 +5,20 @@ import React, { useState, useEffect } from 'react';
 import { useAccount } from 'wagmi';
 import { OnchainProviders } from 'src/wallet/components/OnchainProviders';
 import { Footer } from 'src/components/Footer';
-import { Badge } from 'src/identity/components/Badge';
-import { IdentityCard } from 'src/identity/components/IdentityCard';
-import { Socials } from 'src/identity/components/Socials';
-import { ProfileHeader } from 'src/identity/components/ProfileHeader';
-import { useUserProfile } from 'src/identity/hooks/useUserProfile';
-import { updateProfile } from 'src/identity/utils/updateProfile';
-import { ProfileEditForm } from 'src/identity/components/ProfileEditForm';
+import { Badge } from 'src/features/identity/components/Badge';
+import { IdentityCard } from 'src/features/identity/components/IdentityCard';
+import { Socials } from 'src/features/identity/components/Socials';
+import { ProfileHeader } from 'src/features/identity/components/ProfileHeader';
+import { useUserProfile } from 'src/features/identity/hooks/useUserProfile';
+import { updateProfile } from 'src/features/identity/utils/updateProfile';
+import { ProfileEditForm } from 'src/features/identity/components/ProfileEditForm';
 import { supabase } from 'src/utils/supabaseClient';
-import 'src/identity/styles/identityStyles.css';
+import { Balances } from 'src/features/identity/components/Balances'; 
+import 'src/features/identity/styles/identityStyles.css';
+
+
+
+
 
 export default function IdentityPage() {
   return (
@@ -122,30 +127,38 @@ function IdentityPageContent() {
 
   return (
     <div className="identity-container">
+	
+      <div className="profile-section"> {/* or .balances-section if you prefer */}
+        <h2>Balances</h2>
+        <Balances walletAddress={address} />
+      </div>
+	
       <div className="profile-section">
-        <div className="flex items-center justify-between">
-          <h2>Profile</h2>
-          {!isEditing && (
-            <>
-              <button className="button button-enter" onClick={handleEditClick}>
-                Edit Profile
-              </button>
-              <button onClick={handleLogout} className="button">
-                Logout
-              </button>
-            </>
-          )}
-        </div>
+        <h2>Profile</h2>
         {isEditing ? (
           <ProfileEditForm
             initialData={profile || {}}
-            authSession={authSession} // Pass session to ProfileEditForm
-            walletAddress={address} // Pass wallet address explicitly
+            authSession={authSession}
+            walletAddress={address}
             onSave={handleSave}
             onCancel={handleCancel}
           />
         ) : (
-          <ProfileHeader address={address} profile={profile} />
+          <>
+            {/* We can remove the 'copy' button in ProfileHeader if it had one. */}
+            <ProfileHeader address={address} profile={profile} showCopy={false} />
+            
+            {/* Show short user bio if you want here, or it's in ProfileHeader */}
+            {profile?.bio && <p>{profile.bio}</p>}
+
+            <button 
+              className="button button-enter" 
+              style={{ marginTop: '10px' }}
+              onClick={handleEditClick}
+            >
+              Edit Profile
+            </button>
+          </>
         )}
       </div>
 
@@ -159,6 +172,11 @@ function IdentityPageContent() {
         <Badge address={address} />
       </div>
 
+	    <div className="form-buttons" style={{ display: 'flex', justifyContent: 'center' }}>
+        <button type="button" onClick={handleLogout}>
+          Logout
+        </button>
+      </div>
 
       <Footer />
     </div>

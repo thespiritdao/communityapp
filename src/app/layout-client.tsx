@@ -3,13 +3,18 @@
 
 import React from "react";
 import { CommunityProvider } from "src/context/CommunityContext";
+import { OnchainProviders } from "src/wallet/components/OnchainProviders";
 
 interface LayoutClientProps {
   children: React.ReactNode;
 }
 
-const LayoutClient: React.FC<LayoutClientProps> = ({ children }) => {
-  return <CommunityProvider>{children}</CommunityProvider>;
-};
-
-export default LayoutClient;
+export default function LayoutClient({ children }: LayoutClientProps) {
+  return (
+    <OnchainProviders>
+      <CommunityProvider>
+        {children}
+      </CommunityProvider>
+    </OnchainProviders>
+  );
+}
