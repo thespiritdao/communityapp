@@ -1,6 +1,6 @@
 //src/app/chat-new/page.tsx
 
-import ChatContainer from './components/ChatContainer';
+import ChatContainer from 'src/features/chat/components/ChatContainer';
 
 export default function ChatPage() {
   return (

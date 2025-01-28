@@ -1,6 +1,6 @@
 // src/wallet/components/SignInWithEthereumButton.tsx
 import React from 'react';
-import { supabase } from 'src/identity/utils/supabaseClient';
+import { supabase } from 'src/features/identity/utils/supabaseClient';
 import { signMessage, useAccount } from 'wagmi'; 
 
 export const SignInWithEthereumButton: React.FC = () => {
