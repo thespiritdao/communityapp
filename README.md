@@ -198,104 +198,94 @@ const getUserProfile = async () => {
     </ul>
 
 
-<div align="center">
-  <p>
-    <a href="https://onchainkit.xyz">
-      <img src="./site/docs/public/logo/v0-33.png" width="100%" height="100%" alt="OnchainKit logo vibes"/>
-    </a>
-  </p>
 
-## ✨ Documentation
+<h2> Token Balance <h2>
+Fetch Token Balances Utility
+This utility provides a simple function to fetch ERC20 and ERC721 token balances for a given wallet address. It’s built using Web3.js and bn.js to query minimal JSON ABI contracts on an Ethereum-compatible network. It also includes fallback logic so that if any contract address is a known placeholder (or if a call fails) the balance will default to "0".
 
-For documentation and guides, visit [onchainkit.xyz](https://onchainkit.xyz/).
+Overview
+ERC20 and ERC721 Support:
+The utility defines minimal ABIs for both ERC20 and ERC721 standards. This is enough to call the balanceOf function on each contract.
 
-<br />
+Environment Variables:
+The function relies on several environment variables to determine which contract addresses and RPC endpoint to use:
 
-## 🌁 Team and Community
+NEXT_PUBLIC_PROOF_OF_CURIOSITY – Address of the ERC721 “Proof of Curiosity” token.
+NEXT_PUBLIC_SYSTEM_TOKEN – Address of the ERC20 “System” token.
+NEXT_PUBLIC_SELF_TOKEN – Address of the ERC20 “Self” token.
+NEXT_PUBLIC_MARKET_ADMIN – Address of the ERC20 “Market Admin” token.
+NEXT_PUBLIC_RPC_URL – The RPC endpoint (e.g., provided by Infura) for your network.
+NEXT_PUBLIC_CHAIN_ID – The network chain ID (defaults to 8453 if not provided).
+Fallback Logic:
+If any of the contract addresses are still placeholders (such as 0x0000000000000000000000000000000000000000 or 0x0000000000000000000000000000000000000001), the function logs a warning and falls back to a balance of "0". Similarly, any errors during the call will be caught and logged, ensuring that the application remains robust even if one of the calls fails.
 
-- **OnchainKit** ([X](https://x.com/Onchainkit), [Warpcast](https://warpcast.com/onchainkit))
-- [Tina He](https://github.com/fakepixels) ([X](https://twitter.com/fkpxls))
-- [Mind Apivessa](https://github.com/mindapivessa) ([X](https://twitter.com/spicypaprika_))
-- [Alissa Crane](https://github.com/abcrane123) ([X](https://twitter.com/abcrane123))
-- [Alec Chen](https://github.com/0xAlec) ([X](https://twitter.com/0xAlec))
-- [Paul Cramer](https://github.com/cpcramer) ([X](https://twitter.com/PaulCramer_))
-- [Shelley Lai](https://github.com/0xchiaroscuro) ([X](https://twitter.com/hey_shells), [Warpcast](https://warpcast.com/chiaroscuro))
-- [Léo Galley](https://github.com/kirkas)
-- [Adam Lessey](https://github.com/alessey) ([X](https://twitter.com/alessey))
+Balance Conversion:
+The raw string balances returned from the contract calls are converted to BigNumber (using bn.js) so that we can easily check if they’re greater than zero. The final returned object provides:
 
-## 💫  Contributors
+hasProofOfCuriosity: boolean — True if the wallet holds at least 1 Proof of Curiosity token.
+hasMarketAdmin: boolean — True if the wallet holds at least 1 Market Admin token.
+systemBalance: string — The raw balance (as a string) for the System token.
+selfBalance: string — The raw balance (as a string) for the Self token.
+Setup
+Install Dependencies:
+Make sure you have both Web3.js and bn.js installed:
 
-<a href="https://github.com/coinbase/onchainkit/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=coinbase/onchainkit" />
-</a>
+bash
+Copy
+npm install web3 bn.js
+# or
+yarn add web3 bn.js
+Configure Environment Variables:
+Create or update your environment file (e.g., .env.local) with the following values:
 
-## 🌊 License
+env
+Copy
+NEXT_PUBLIC_PROOF_OF_CURIOSITY=0xYourERC721ContractAddress
+NEXT_PUBLIC_SYSTEM_TOKEN=0xYourERC20SystemTokenAddress
+NEXT_PUBLIC_SELF_TOKEN=0xYourERC20SelfTokenAddress
+NEXT_PUBLIC_MARKET_ADMIN=0xYourERC20MarketAdminAddress
+NEXT_PUBLIC_RPC_URL=https://your-rpc-endpoint
+NEXT_PUBLIC_CHAIN_ID=8453
+Note: Until your contracts are live, you can leave the addresses as placeholders (e.g., 0x0000000000000000000000000000000000000000). The utility will detect these and default balances to zero.
 
-This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md) file for details
-=======
-<div align="center">
-  <p>
-    <a href="https://onchainkit.xyz">
-      <img src="./site/docs/public/logo/v0-33.png" width="100%" height="100%" alt="OnchainKit logo vibes"/>
-    </a>
-  </p>
+Usage in Code:
+Import and use the fetchTokenBalances function in your application:
 
-  <h1 style="font-size: 3em; margin-bottom: 20px;">
-    OnchainKit
-  </h1>
+ts
+Copy
+import { fetchTokenBalances, TokenBalances } from "src/utils/fetchTokenBalances";
 
-  <p style="font-size: 1.2em; max-width: 600px; margin: 0 auto 20px;">
-    React components and TypeScript utilities to help you build top-tier onchain apps.
-  </p>
+async function checkUserTokens(walletAddress: string): Promise<void> {
+  try {
+    const balances: TokenBalances = await fetchTokenBalances(walletAddress);
+    console.log("Token Balances:", balances);
+    // Use balances.hasProofOfCuriosity, balances.systemBalance, etc.
+  } catch (error) {
+    console.error("Failed to fetch token balances:", error);
+  }
+}
+Code Explanation
+Web3 Initialization:
 
-<p>
-  <a href="https://www.npmjs.com/package/@coinbase/onchainkit" target="_blank" rel="noopener noreferrer">
-    <img src="https://img.shields.io/npm/v/@coinbase/onchainkit?style=flat-square&color=0052FF" alt="Version" />
-  </a>
-  <a href="https://github.com/coinbase/onchainkit/commits/main">
-    <img src="https://img.shields.io/github/last-commit/coinbase/onchainkit?color=0052FF&style=flat-square" alt="last update" />
-  </a>
-  <a href="https://www.npmjs.com/package/@coinbase/onchainkit" target="_blank" rel="noopener noreferrer">
-    <img src="https://img.shields.io/npm/dm/@coinbase/onchainkit?style=flat-square&color=0052FF" alt="Downloads per month" />
-  </a>
-  <a href="https://onchainkit.xyz/coverage">
-    <img src="https://img.shields.io/badge/coverage-100%25-0052FF?style=flat-square" alt="Code coverage" />
-  </a>
-  <a href="https://github.com/coinbase/onchainkit/blob/main/LICENSE.md" target="_blank" rel="noopener noreferrer">
-    <img src="https://img.shields.io/npm/l/@coinbase/onchainkit?style=flat-square&color=0052FF" alt="MIT License" />
-  </a>
-</p>
+ts
+Copy
+import Web3 from 'web3';
+import BN from 'bn.js';
 
-<p>
-  <a href="https://twitter.com/OnchainKit">
-    <img src="https://img.shields.io/twitter/follow/OnchainKit.svg?style=social" alt="Follow @OnchainKit" />
-  </a>
-  <a href="https://discord.gg/vbpeXpkPkw">
-      <img src="https://img.shields.io/badge/Chat%20on-Discord-5865F2?style=flat-square&logo=discord&logoColor=white" alt="Chat on Discord" />
-  </a>
-  <a href="https://github.com/coinbase/onchainkit/stargazers">
-    <img src="https://img.shields.io/github/stars/coinbase/onchainkit" alt="stars" />
-  </a>
-  <a href="https://github.com/coinbase/onchainkit/network/members">
-    <img src="https://img.shields.io/github/forks/coinbase/onchainkit" alt="forks" />
-  </a>
-</p>
-</div>
+const provider = new Web3.providers.HttpProvider(RPC_URL, { chainId: NETWORK_CHAIN_ID });
+const web3 = new Web3(provider);
+This sets up a Web3 provider with the provided RPC URL and chain ID.
 
-<br />
+Minimal ABIs:
+The ABIs include only the necessary method balanceOf required for fetching balances.
 
-## ✨ Documentation
+Balance Fetching and Fallbacks:
+For each token (Proof of Curiosity, System, Self, and Market Admin), the function checks if the contract address is valid (i.e., not a placeholder). If valid, it attempts to fetch the balance; if not, it logs a warning and uses "0".
 
-For documentation and guides, visit [onchainkit.xyz](https://onchainkit.xyz/).
+BN.js Conversion:
+The raw string balances are converted to BN numbers for comparison. The boolean fields (hasProofOfCuriosity and hasMarketAdmin) are determined by checking if the balance is greater than zero.
 
-<br />
+Summary
+This utility is designed to help developers quickly integrate token gating functionality into their applications. By abstracting the Web3 calls and incorporating fallback logic for placeholder addresses, it simplifies the process of fetching and interpreting token balances.
 
-## 🌁 Team and Community
-
-
-
-## 💫  Contributors
-
-
-
-## 🌊 License
+Feel free to modify or extend this utility as your contracts go live or if you need to support additional token types.

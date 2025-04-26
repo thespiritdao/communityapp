@@ -1,0 +1,145 @@
+html, body {
+  margin: 10px;
+
+  font-family: Arial, sans-serif;
+  background-color: #f5f4ed; /* Soft gray background (kept from original) */
+  color: #333;
+  background-image: url('/images/chatbg.png'); /* Update path if needed */
+}
+
+
+/* -------------------------------------------------------------------------
+   1) Overall Page Container
+   ------------------------------------------------------------------------- */
+.home-container {
+  max-width: 900px;
+  margin: 20px auto; 
+  padding: 30px;
+  background-color: #fff; /* White or very light background */
+  border-radius: 10px; 
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+  
+}
+
+/* Large heading for your home page */
+.home-header {
+  display: flex;
+  align-items: center; 
+  gap: 1rem; /* space between logo and text block */
+  margin-bottom: 20px; /* spacing under the header */
+}
+
+/* Keep the logo small & consistent */
+.home-logo {
+  width: 75px;
+  height: 75px;
+  object-fit: contain; /* or 'cover', if you prefer */
+  border-radius: 8px; /* optional, if you want rounded corners */
+}
+
+/* Subtext or welcome message near the top */
+.home-subtitle {
+  font-size: 1rem;
+  color: #666;
+  text-align: center;
+  margin-bottom: 30px;
+}
+
+/* -------------------------------------------------------------------------
+   2) Modular Sections (For user-specific or community sections)
+   ------------------------------------------------------------------------- */
+.home-section {
+  margin-bottom: 20px;
+  padding: 20px;
+  background-color: #e8fcff; 
+  color: #000;
+  border-radius: 10px;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+}
+
+.home-section-2 {
+  margin-bottom: 20px;
+  padding: 20px;
+  background-color: #e9f9ec; 
+  border-radius: 10px;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+}
+
+/* Section Title */
+.home-section h2 {
+  color: #4a4a4a; 
+  margin-bottom: 15px;
+}
+
+.home-module-list {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr); /* 3 equal-width columns */
+  gap: 16px;
+  place-items: center; /* centers each item horizontally (and vertically if needed) */
+}
+
+/* Each “module card” or icon area */
+.home-module-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  cursor: pointer;
+  text-decoration: none; /* Removes underline */
+  padding: 10px;
+  border-radius: 8px;
+  transition: transform 0.2s ease-in-out;
+}
+
+
+/* On hover, slightly “lift” the card */
+.home-module-card:hover {
+  transform: scale(1.05); /* Slight zoom on hover */
+}
+
+.home-module-icon {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.home-module-title {
+  margin-top: 8px;
+  font-size: 14px;
+  font-weight: bold;
+  color: #333;
+}
+
+/* Optional descriptive text in the card */
+.home-module-description {
+  font-size: 0.875rem;
+  color: #666;
+}
+
+/* -------------------------------------------------------------------------
+   3) Footer or Additional Panels
+   ------------------------------------------------------------------------- */
+.home-footer {
+  text-align: center;
+  margin-top: 30px;
+  color: #666;
+  font-size: 0.9rem;
+}
+
+/* Adjust if you want a custom button at the bottom of the home page */
+.home-footer-button {
+  padding: 10px 20px;
+  border-radius: 25px;
+  border: none;
+  cursor: pointer;
+  font-weight: bold;
+  transition: all 0.3s ease;
+  background-color: #bfe7c6;
+  color: #fff;
+  margin-top: 10px;
+}
+
+.home-footer-button:hover {
+  background-color: #4a6fb0;
+}

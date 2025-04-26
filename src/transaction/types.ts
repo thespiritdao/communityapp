@@ -164,6 +164,7 @@ export type TransactionReact = {
   capabilities?: WalletCapabilities; // Capabilities that a wallet supports (e.g. paymasters, session keys, etc).
   chainId?: number; // The chainId for the transaction.
   children: ReactNode; // The child components to be rendered within the transaction component.
+  isSponsored?: boolean;
   className?: string; // An optional CSS class name for styling the component.
   /**
    * @deprecated Use `calls` instead.

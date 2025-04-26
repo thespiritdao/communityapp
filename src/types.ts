@@ -1,3 +1,5 @@
+// src/types.ts
+
 import type { ReactNode } from 'react';
 import type { Address, Chain } from 'viem';
 import type { EASSchemaUid } from './identity/types';

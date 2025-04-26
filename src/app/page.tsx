@@ -1,19 +1,17 @@
 // src/app/page.tsx
-
 'use client';
 
 import React, { useState, useEffect } from 'react';
 import { Footer } from 'src/components/Footer';
 import { Wallet } from 'src/wallet/components/Wallet';
 import { useAccount } from 'wagmi';
-import { supabase } from 'src/utils/supabaseClient'; // Updated Import Path
+import { supabase } from 'src/utils/supabaseClient';
 import 'src/styles/transactionStyles.css';
 import { OnchainProviders } from 'src/wallet/components/OnchainProviders';
 import { ConnectWallet } from 'src/wallet/components/ConnectWallet';
 import { useRouter } from 'next/navigation';
-import { createSupabaseSession } from 'src/utils/createSupabaseSession'; // Ensure Correct Relative Path
+import { createSupabaseSession } from 'src/utils/createSupabaseSession';
 
-// -- Main Page component (wraps everything in OnchainProviders)
 export default function Page() {
   return (
     <OnchainProviders>
@@ -22,69 +20,63 @@ export default function Page() {
   );
 }
 
-// -- Actual page content, including sign-in logic
 function PageContent() {
-  // Wagmi hook: gets the currently connected wallet
+  // useAccount returns the connected wallet address and connection state.
   const { address, isConnecting, isDisconnected } = useAccount();
-
-  // Track if we've completed signing in and if we've redirected
-  const [hasSignedIn, setHasSignedIn] = useState(false);
-  const [hasRedirected, setHasRedirected] = useState(false);
-
   const router = useRouter();
 
-  // Track if the component is mounted on the client side
+  // Local state: track if a Supabase session has been created and if a redirect has occurred.
+  const [hasSignedIn, setHasSignedIn] = useState(false);
+  const [hasRedirected, setHasRedirected] = useState(false);
+  // Also track client-side mounting to avoid SSR hydration issues.
   const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
-    setIsClient(true); // Ensures the component is running on the client side
+    setIsClient(true);
   }, []);
 
-  // 1) As soon as we see "address" and we haven't signed in yet, run createSupabaseSession
-useEffect(() => {
-  const initiateSupabaseSession = async () => {
-    if (address && !hasSignedIn && !isConnecting && !isDisconnected) {
-      console.log('Wallet is connected. Attempting to create Supabase session...');
-      try {
-        // 1. First, get the tokens from our API
-        const response = await fetch('/api/auth/onchainkit', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ address }),
-        });
-
-        if (!response.ok) {
-          throw new Error(`API call failed: ${response.statusText}`);
+  // As soon as a wallet is connected and we're not already signed in, create a Supabase session.
+  useEffect(() => {
+    const initiateSupabaseSession = async () => {
+      if (address && !hasSignedIn && !isConnecting && !isDisconnected) {
+        console.log('Wallet is connected. Attempting to create Supabase session...');
+        try {
+          // Call your API to get the tokens.
+          const response = await fetch('/api/auth/onchainkit', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ address }),
+          });
+          if (!response.ok) {
+            throw new Error(`API call failed: ${response.statusText}`);
+          }
+          // Retrieve tokens.
+          const { supabaseToken, supabaseRefreshToken } = await response.json();
+          // Create the Supabase session.
+          await createSupabaseSession(supabaseToken, supabaseRefreshToken);
+          setHasSignedIn(true);
+        } catch (err) {
+          console.error('Failed to create Supabase session:', err);
         }
-
-        // 2. Get the tokens from the response
-        const { supabaseToken, supabaseRefreshToken } = await response.json();
-
-        // 3. Now create the Supabase session with both tokens
-        await createSupabaseSession(supabaseToken, supabaseRefreshToken);
-        setHasSignedIn(true);
-      } catch (err) {
-        console.error('Failed to create Supabase session:', err);
       }
-    }
-  };
+    };
 
-  initiateSupabaseSession();
-}, [address, hasSignedIn, isConnecting, isDisconnected]);
+    initiateSupabaseSession();
+  }, [address, hasSignedIn, isConnecting, isDisconnected]);
 
-  // 2) After sign-in, redirect to /identity (and mark hasRedirected = true)
+  // Once the wallet is connected and session has been created, redirect the user.
   useEffect(() => {
     if (address && hasSignedIn && !hasRedirected) {
+      console.log(`User logged in: ${address}. Redirecting...`);
       setHasRedirected(true);
-      router.push('/identity');
+      router.push('/home');
     }
   }, [address, hasSignedIn, hasRedirected, router]);
 
   if (!isClient) return null;
 
-  // 3) If no wallet is connected, show the connect button
+  // If no wallet is connected, show the ConnectWallet component.
+  // This component (from your old, working code) should trigger the Coinbase wallet login via OnchainKit.
   if (!address) {
     return (
       <div>
@@ -95,8 +87,8 @@ useEffect(() => {
         />
         <div className="wrapper">
           <div className="button-container">
-            {/* "Enter" Button - For Wallet Creation or Login */}
-            <ConnectWallet className="button button-enter" text="Enter" />
+            {/* Old ConnectWallet button that previously triggered the Coinbase login flow */}
+            <ConnectWallet className="button enter-button" text="Enter" />
           </div>
         </div>
         <Footer />
@@ -104,7 +96,7 @@ useEffect(() => {
     );
   }
 
-  // 4) If wallet is connected but hasn't signed in yet, show a "Creating your session..." message
+  // If the wallet is connected but the Supabase session is still being created...
   if (address && !hasSignedIn) {
     return (
       <div>
@@ -115,9 +107,7 @@ useEffect(() => {
         />
         <div className="wrapper">
           <div className="button-container">
-            <p className="text-center text-white">
-              Creating your session...
-            </p>
+            <p className="text-center text-white">Creating your session...</p>
           </div>
         </div>
         <Footer />
@@ -125,7 +115,7 @@ useEffect(() => {
     );
   }
 
-  // 5) If wallet is connected and signed in but not yet redirected, show "Redirecting..."
+  // If the wallet is connected and signed in but not yet redirected, show a redirect message.
   if (address && hasSignedIn && !hasRedirected) {
     return (
       <div>
@@ -136,9 +126,7 @@ useEffect(() => {
         />
         <div className="wrapper">
           <div className="button-container">
-            <p className="text-center text-white">
-              Redirecting to your profile...
-            </p>
+            <p className="text-center text-white">Redirecting to your profile...</p>
           </div>
         </div>
         <Footer />
@@ -146,7 +134,7 @@ useEffect(() => {
     );
   }
 
-  // 6) If all conditions are met, show the Wallet component
+  // Finally, if everything is ready, show the Wallet component (for dashboard use).
   return (
     <div>
       <img
@@ -156,9 +144,7 @@ useEffect(() => {
       />
       <div className="wrapper">
         <div className="button-container">
-          <p className="text-center text-white">
-            Welcome, your wallet is connected!
-          </p>
+          <p className="text-center text-white">Welcome, your wallet is connected!</p>
           <Wallet />
         </div>
       </div>
