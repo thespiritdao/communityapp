@@ -10,7 +10,7 @@ import { useTransactionContext } from './TransactionProvider';
 export function TransactionButton({
   className,
   disabled = false,
-  text: idleText = 'Transact',
+  text: idleText = 'Approve',
   errorOverride,
   successOverride,
   pendingOverride,

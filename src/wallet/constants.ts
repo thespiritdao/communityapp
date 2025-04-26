@@ -10,8 +10,8 @@ export const ERC_1967_PROXY_IMPLEMENTATION_SLOT =
 // The Coinbase Smart Wallet factory address.
 export const CB_SW_FACTORY_ADDRESS =
   '0x0BA5ED0c6AA8c49038F819E587E2633c4A9F428a';
-<<<<<<< HEAD
+
 export const ONCHAINKIT_WALLETCONNECT_PROJECT_ID =
   'c652d0148879353d7e965d7f6f361e59';
-=======
->>>>>>> f7c82eaeab60ec2a9faa7b220126f2f5045f3151
+
+

@@ -1,0 +1,31 @@
+// src/utils/purchaseBurnABI.ts
+
+
+// This ABI is derived from your PurchaseBurn contract,
+// which has a function purchaseArtifact(uint256, uint256, string)
+// and emits an event PurchaseArtifact.
+export const purchaseBurnABI = [
+  {
+    "inputs": [
+      { "internalType": "uint256", "name": "systemAmount", "type": "uint256" },
+      { "internalType": "uint256", "name": "selfAmount", "type": "uint256" },
+      { "internalType": "string", "name": "productId", "type": "string" }
+    ],
+    "name": "purchaseArtifact",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      { "indexed": true, "internalType": "address", "name": "user", "type": "address" },
+      { "indexed": false, "internalType": "uint256", "name": "systemAmount", "type": "uint256" },
+      { "indexed": false, "internalType": "uint256", "name": "selfAmount", "type": "uint256" },
+      { "indexed": false, "internalType": "string", "name": "productId", "type": "string" },
+      { "indexed": false, "internalType": "uint256", "name": "timestamp", "type": "uint256" }
+    ],
+    "name": "PurchaseArtifact",
+    "type": "event"
+  }
+];

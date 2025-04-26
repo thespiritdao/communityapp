@@ -1,0 +1,769 @@
+C:\Users\PC\Documents\DAO\App\commapp\src
+├── app
+│   ├── api
+│   │   ├── airdrop
+│   │   │   └── route.ts
+│   │   ├── auth
+│   │   │   ├── nonce
+│   │   │   │   └── route.ts
+│   │   │   ├── onchainkit
+│   │   │   │   └── route.ts
+│   │   │   └── verify
+│   │   │       └── route.ts
+│   │   ├── buildMintTransaction.test.ts
+│   │   ├── buildMintTransaction.ts
+│   │   ├── buildPayTransaction.test.ts
+│   │   ├── buildPayTransaction.ts
+│   │   ├── buildSwapTransaction.test.ts
+│   │   ├── buildSwapTransaction.ts
+│   │   ├── chat-groups
+│   │   │   └── route.ts
+│   │   ├── chat-messages
+│   │   │   └── route.ts
+│   │   ├── getMintDetails.test.ts
+│   │   ├── getMintDetails.ts
+│   │   ├── getSwapQuote.test.ts
+│   │   ├── getSwapQuote.ts
+│   │   ├── getTokenDetails.test.ts
+│   │   ├── getTokenDetails.ts
+│   │   ├── getTokens.test.ts
+│   │   ├── getTokens.ts
+│   │   ├── index.ts
+│   │   ├── mocks.ts
+│   │   ├── notifyPurchase.ts
+│   │   ├── types.ts
+│   │   ├── userProfile.js
+│   │   └── utils
+│   │       ├── contractABI.ts
+│   │       ├── gelatoSetup.ts
+│   │       ├── getAPIParamsForToken.test.ts
+│   │       ├── getAPIParamsForToken.ts
+│   │       ├── getPayErrorMessage.test.ts
+│   │       ├── getPayErrorMessage.ts
+│   │       ├── getSwapTransaction.test.ts
+│   │       ├── getSwapTransaction.ts
+│   │       └── supabaseAdminClient.ts
+│   ├── chat
+│   │   ├── page.tsx
+│   │   └── [id]
+│   │       └── page.tsx
+│   ├── Documents - Shortcut.lnk
+│   ├── forum
+│   │   ├── category
+│   │   │   └── [id]
+│   │   │       └── page.tsx
+│   │   ├── create-thread
+│   │   │   └── page.tsx
+│   │   ├── page.tsx
+│   │   └── thread
+│   │       └── [id]
+│   │           └── page.tsx
+│   ├── home
+│   │   └── page.tsx
+│   ├── identity
+│   │   └── page.tsx
+│   ├── layout-client.tsx
+│   ├── layout.tsx
+│   ├── market
+│   │   └── page.tsx
+│   ├── page.tsx
+│   ├── pods
+│   ├── sensemaker-ai
+│   │   ├── page.tsx
+│   │   └── SensemakerAI.module.css
+│   └── test
+│       ├── page.tsx
+│       └── testbalance.tsx
+├── app - Shortcut.lnk
+├── App.tsx
+├── components
+│   ├── AuthPage.tsx
+│   ├── BottomNav.tsx
+│   ├── BottomNavWrapper.tsx
+│   ├── ErrorBoundary
+│   │   └── CartErrorBoundary.tsx
+│   ├── Footer.tsx
+│   ├── styles
+│   │   └── UserTagging.module.css
+│   ├── ui
+│   │   ├── button.module.css
+│   │   ├── button.tsx
+│   │   └── use-toast.tsx
+│   ├── UserTagging.tsx
+│   └── WalletPage.tsx
+├── config
+│   └── wagmi.client.ts
+├── constants.ts
+├── context
+│   ├── CommunityContext.tsx
+│   └── TokenBalancesContext.tsx
+├── contracts
+│   ├── SelfToken.sol
+│   └── SystemToken.sol
+├── core
+│   └── index.ts
+├── createWagmiConfig.ts
+├── farcaster
+│   ├── getFarcasterUserAddress.test.ts
+│   ├── getFarcasterUserAddress.ts
+│   ├── index.ts
+│   └── types.ts
+├── features
+│   ├── chat
+│   │   ├── api
+│   │   ├── components
+│   │   │   ├── ChatContainer.tsx
+│   │   │   ├── ChatInput.tsx
+│   │   │   ├── MessageList.tsx
+│   │   │   └── UserList.tsx
+│   │   ├── hooks
+│   │   ├── styles
+│   │   │   └── Chat.css
+│   │   └── types
+│   │       └── index.ts
+│   ├── forum
+│   │   ├── admin
+│   │   │   ├── adminMiddleware.ts
+│   │   │   ├── middleware.ts
+│   │   │   └── TemplateManagement.tsx
+│   │   ├── api
+│   │   │   ├── createPost.ts
+│   │   │   ├── createThread.ts
+│   │   │   ├── fetchPosts.ts
+│   │   │   └── fetchThreads.ts
+│   │   ├── components
+│   │   │   ├── category.tsx
+│   │   │   ├── CategoryList.tsx
+│   │   │   ├── ForumContainer.tsx
+│   │   │   ├── NewThreadForm.tsx
+│   │   │   ├── post.tsx
+│   │   │   ├── PostCard.tsx
+│   │   │   ├── PostList.tsx
+│   │   │   ├── ReplyForm.tsx
+│   │   │   ├── thread.tsx
+│   │   │   ├── ThreadCard.tsx
+│   │   │   └── ThreadList.tsx
+│   │   ├── hooks
+│   │   │   ├── useExtendedTokenGate.ts
+│   │   │   ├── useForum.ts
+│   │   │   ├── useForumTemplates.ts
+│   │   │   └── useTokenGate.ts
+│   │   ├── middleware.ts
+│   │   └── styles
+│   │       └── Forum.module.css
+│   ├── home
+│   │   └── styles
+│   │       └── HomePage.css
+│   ├── identity
+│   │   ├── abis
+│   │   │   └── L2ResolverAbi.ts
+│   │   ├── components
+│   │   │   ├── Address.stories.ts
+│   │   │   ├── Address.tsx
+│   │   │   ├── Avatar.stories.tsx
+│   │   │   ├── Avatar.tsx
+│   │   │   ├── Badge.stories.ts
+│   │   │   ├── Badge.tsx
+│   │   │   ├── Balances.tsx
+│   │   │   ├── DisplayBadge.tsx
+│   │   │   ├── EditProfileForm.js
+│   │   │   ├── EthBalance.stories.tsx
+│   │   │   ├── EthBalance.tsx
+│   │   │   ├── Identity.tsx
+│   │   │   ├── IdentityCard.tsx
+│   │   │   ├── IdentityLayout.tsx
+│   │   │   ├── IdentityProvider.tsx
+│   │   │   ├── Name.stories.tsx
+│   │   │   ├── Name.tsx
+│   │   │   ├── ProfileEditForm.tsx
+│   │   │   ├── ProfileHeader.tsx
+│   │   │   ├── ProfileModal.tsx
+│   │   │   ├── Socials.tsx
+│   │   │   ├── TokenGallery.tsx
+│   │   │   └── UnlockMembership.tsx
+│   │   ├── constants
+│   │   │   └── profileOptions.ts
+│   │   ├── constants.ts
+│   │   ├── hooks
+│   │   │   ├── getNewReactQueryTestProvider.tsx
+│   │   │   ├── useAddress.ts
+│   │   │   ├── useAttestations.ts
+│   │   │   ├── useAvatar.ts
+│   │   │   ├── useName.ts
+│   │   │   ├── useSocials.tsx
+│   │   │   └── useUserProfile.ts
+│   │   ├── index.ts
+│   │   ├── styles
+│   │   │   ├── identityStyles.css
+│   │   │   ├── ProfileModal.css
+│   │   │   └── TokenGallery.css
+│   │   ├── types.ts
+│   │   └── utils
+│   │       ├── convertChainIdToCoinType.ts
+│   │       ├── convertReverseNodeToBytes.ts
+│   │       ├── easSupportedChains.ts
+│   │       ├── formatProfileValues.ts
+│   │       ├── getAddress.ts
+│   │       ├── getAttestations.ts
+│   │       ├── getAvatar.ts
+│   │       ├── getBaseDefaultProfilePicture.tsx
+│   │       ├── getBaseDefaultProfilePictureIndex.tsx
+│   │       ├── getName.ts
+│   │       ├── getSlicedAddress.ts
+│   │       ├── getSocialPlatformDetails.tsx
+│   │       ├── getSocials.ts
+│   │       ├── isBasename.tsx
+│   │       ├── supabaseClient.ts
+│   │       └── updateProfile.ts
+│   ├── pods
+│   └── shopping-cart
+│       ├── .circleci
+│       │   └── config.yml
+│       ├── commons
+│       │   ├── Checkbox
+│       │   │   ├── Checkbox.test.tsx
+│       │   │   ├── Checkbox.tsx
+│       │   │   └── index.ts
+│       │   └── style
+│       │       ├── global-style.tsx
+│       │       ├── index.d.ts
+│       │       ├── styled-components.ts
+│       │       └── theme.ts
+│       ├── components
+│       │   ├── Cart
+│       │   │   ├── Cart.tsx
+│       │   │   ├── CartProducts
+│       │   │   │   ├── CartProduct
+│       │   │   │   │   ├── CartProduct.tsx
+│       │   │   │   │   ├── index.ts
+│       │   │   │   │   ├── style.ts
+│       │   │   │   │   └── __snapshots__
+│       │   │   │   │       └── CartProduct.test.tsx.snap
+│       │   │   │   ├── CartProducts.tsx
+│       │   │   │   ├── index.ts
+│       │   │   │   ├── style.ts
+│       │   │   │   └── __snapshots__
+│       │   │   │       └── CartProducts.test.tsx.snap
+│       │   │   ├── index.ts
+│       │   │   ├── style.ts
+│       │   │   ├── TopBar.style.ts
+│       │   │   ├── TopBar.tsx
+│       │   │   └── __snapshots__
+│       │   │       └── Cart.test.tsx.snap
+│       │   ├── Filter
+│       │   │   ├── Filter.tsx
+│       │   │   ├── index.ts
+│       │   │   ├── style.ts
+│       │   │   └── __snapshots__
+│       │   │       └── Filter.test.tsx.snap
+│       │   ├── Loader
+│       │   │   ├── index.ts
+│       │   │   ├── Loader.tsx
+│       │   │   └── style.ts
+│       │   ├── Marketplace
+│       │   │   ├── Marketplace.tsx
+│       │   │   └── styles.ts
+│       │   └── Products
+│       │       ├── page.tsx
+│       │       ├── Product
+│       │       │   ├── page.tsx
+│       │       │   ├── Product.tsx
+│       │       │   ├── style.ts
+│       │       │   └── __snapshots__
+│       │       │       └── Product.test.tsx.snap
+│       │       ├── Products.tsx
+│       │       ├── style.ts
+│       │       └── __snapshots__
+│       │           └── Products.test.tsx.snap
+│       ├── contexts
+│       │   ├── cart-context
+│       │   │   ├── CartContextProvider.tsx
+│       │   │   ├── index.ts
+│       │   │   ├── useCart.ts
+│       │   │   ├── useCartProducts.ts
+│       │   │   ├── useCartTotal.ts
+│       │   │   └── __tests__
+│       │   │       ├── CartContextProvider.test.tsx
+│       │   │       ├── useCart.test.tsx
+│       │   │       ├── useCartProducts.test.tsx
+│       │   │       ├── useCartTotal.test.tsx
+│       │   │       └── __snapshots__
+│       │   │           └── CartContextProvider.test.tsx.snap
+│       │   └── products-context
+│       │       ├── index.ts
+│       │       ├── ProductsContextProvider.tsx
+│       │       └── useProducts.tsx
+│       ├── models
+│       │   └── index.ts
+│       ├── services
+│       │   └── products.ts
+│       ├── static
+│       └── utils
+│           ├── formatPrice.ts
+│           ├── test
+│           │   ├── mocks
+│           │   │   ├── cart-products.ts
+│           │   │   ├── cart-total.ts
+│           │   │   ├── index.ts
+│           │   │   └── products.ts
+│           │   └── test-utils.tsx
+│           └── __tests__
+│               └── formatPrice.test.ts
+├── frame
+│   ├── components
+│   │   ├── FrameMetadata.test.tsx
+│   │   └── FrameMetadata.tsx
+│   ├── index.ts
+│   ├── types.ts
+│   └── utils
+│       ├── getFrameHtmlResponse.test.ts
+│       ├── getFrameHtmlResponse.ts
+│       ├── getFrameMessage.test.ts
+│       ├── getFrameMessage.ts
+│       ├── getFrameMetadata.test.ts
+│       ├── getFrameMetadata.ts
+│       ├── getMockFrameRequest.ts
+│       ├── setFrameHtmlButtons.test.ts
+│       ├── setFrameHtmlButtons.ts
+│       ├── setFrameMetadataButtons.test.ts
+│       └── setFrameMetadataButtons.ts
+├── fund
+│   ├── components
+│   │   ├── FundButton.test.tsx
+│   │   └── FundButton.tsx
+│   ├── constants.ts
+│   ├── hooks
+│   │   ├── useGetFundingUrl.test.ts
+│   │   └── useGetFundingUrl.ts
+│   ├── index.ts
+│   ├── types.ts
+│   └── utils
+│       ├── getCoinbaseSmartWalletFundUrl.test.ts
+│       ├── getCoinbaseSmartWalletFundUrl.ts
+│       ├── getFundingPopupSize.test.ts
+│       ├── getFundingPopupSize.ts
+│       ├── getOnrampBuyUrl.test.ts
+│       ├── getOnrampBuyUrl.ts
+│       ├── setupOnrampEventListeners.test.ts
+│       ├── setupOnrampEventListeners.ts
+│       ├── subscribeToWindowMessage.test.ts
+│       └── subscribeToWindowMessage.ts
+├── index.ts
+├── internal
+│   ├── components
+│   │   ├── QuantitySelector.test.tsx
+│   │   ├── QuantitySelector.tsx
+│   │   ├── Spinner.test.tsx
+│   │   ├── Spinner.tsx
+│   │   ├── TextInput.tsx
+│   │   ├── Toast.test.tsx
+│   │   └── Toast.tsx
+│   ├── hooks
+│   │   ├── useCapabilitiesSafe.test.ts
+│   │   ├── useCapabilitiesSafe.ts
+│   │   ├── useDebounce.ts
+│   │   ├── useIcon.test.tsx
+│   │   ├── useIcon.tsx
+│   │   ├── usePreferredColorScheme.test.ts
+│   │   ├── usePreferredColorScheme.ts
+│   │   └── useValue.ts
+│   ├── svg
+│   │   ├── addSvg.tsx
+│   │   ├── badgeSvg.tsx
+│   │   ├── basenameSvg.tsx
+│   │   ├── baseSvg.tsx
+│   │   ├── caretDownSvg.tsx
+│   │   ├── caretUpSvg.tsx
+│   │   ├── checkmarkSvg.tsx
+│   │   ├── closeSvg.tsx
+│   │   ├── coinbasePaySvg.tsx
+│   │   ├── coinbaseWalletSvg.tsx
+│   │   ├── defaultAvatarSVG.tsx
+│   │   ├── defaultLoadingSVG.tsx
+│   │   ├── defaultNFTSvg.tsx
+│   │   ├── disconnectSvg.stories.ts
+│   │   ├── disconnectSvg.tsx
+│   │   ├── errorSvg.tsx
+│   │   ├── fundWallet.tsx
+│   │   ├── githubSvg.tsx
+│   │   ├── infoSvg.tsx
+│   │   ├── searchIconSvg.tsx
+│   │   ├── successSvg.tsx
+│   │   ├── swapSettings.tsx
+│   │   ├── toggleSvg.tsx
+│   │   ├── twitterSvg.tsx
+│   │   ├── walletConnectSvg.tsx
+│   │   ├── walletSvg.tsx
+│   │   ├── warpcastSvg.tsx
+│   │   └── websiteSvg.tsx
+│   └── utils
+│       ├── checkHashLength.test.ts
+│       ├── checkHashLength.ts
+│       ├── findComponent.test.tsx
+│       ├── findComponent.ts
+│       ├── formatTokenAmount.test.ts
+│       ├── formatTokenAmount.ts
+│       ├── getRoundedAmount.test.ts
+│       ├── getRoundedAmount.ts
+│       ├── getToastPosition.test.ts
+│       ├── getToastPosition.ts
+│       ├── getWindowDimensions.test.ts
+│       ├── getWindowDimensions.ts
+│       ├── isValidAmount.test.ts
+│       ├── isValidAmount.ts
+│       ├── multiplyFloats.test.ts
+│       ├── multiplyFloats.ts
+│       ├── openPopup.test.ts
+│       └── openPopup.ts
+├── isBase.ts
+├── isEthereum.ts
+├── lib
+│   └── supabase.ts
+├── network
+│   ├── attestations.test.ts
+│   ├── attestations.ts
+│   ├── client.ts
+│   ├── constants.ts
+│   ├── createEasGraphQLClient.test.ts
+│   ├── createEasGraphQLClient.ts
+│   ├── definitions
+│   │   ├── base.ts
+│   │   ├── baseSepolia.ts
+│   │   ├── nft.ts
+│   │   ├── optimism.ts
+│   │   ├── pay.ts
+│   │   └── swap.ts
+│   ├── getChainExplorer.test.ts
+│   ├── getChainExplorer.ts
+│   ├── getChainPublicClient.test.ts
+│   ├── getChainPublicClient.ts
+│   ├── getRPCUrl.test.ts
+│   ├── getRPCUrl.ts
+│   ├── neynar
+│   │   ├── convertToNeynarResponseModel.test.ts
+│   │   ├── convertToNeynarResponseModel.ts
+│   │   ├── convertToNeynarUserModel.test.ts
+│   │   ├── convertToNeynarUserModel.ts
+│   │   ├── convertToNeynarUserResponseModel.test.ts
+│   │   ├── convertToNeynarUserResponseModel.ts
+│   │   ├── FetchError.ts
+│   │   ├── getCustodyAddressForFidNeynar.test.ts
+│   │   ├── getCustodyAddressForFidNeynar.ts
+│   │   ├── getDataFromNeynar.test.ts
+│   │   ├── getDataFromNeynar.ts
+│   │   ├── getVerifiedAddressesForFidNeynar.test.ts
+│   │   ├── getVerifiedAddressesForFidNeynar.ts
+│   │   ├── neynarBulkUserLookup.test.ts
+│   │   ├── neynarBulkUserLookup.ts
+│   │   ├── neynarFrameValidation.test.ts
+│   │   ├── neynarFrameValidation.ts
+│   │   ├── postDataToNeynar.test.ts
+│   │   ├── postDataToNeynar.ts
+│   │   └── types.ts
+│   ├── request.test.ts
+│   └── request.ts
+├── nft
+│   ├── components
+│   │   ├── mint
+│   │   │   ├── index.ts
+│   │   │   ├── NFTAssetCost.test.tsx
+│   │   │   ├── NFTAssetCost.tsx
+│   │   │   ├── NFTCollectionTitle.test.tsx
+│   │   │   ├── NFTCollectionTitle.tsx
+│   │   │   ├── NFTCreator.test.tsx
+│   │   │   ├── NFTCreator.tsx
+│   │   │   ├── NFTMintButton.test.tsx
+│   │   │   ├── NFTMintButton.tsx
+│   │   │   ├── NFTMinters.test.tsx
+│   │   │   ├── NFTMinters.tsx
+│   │   │   ├── NFTQuantitySelector.test.tsx
+│   │   │   ├── NFTQuantitySelector.tsx
+│   │   │   ├── NFTTotalCost.test.tsx
+│   │   │   └── NFTTotalCost.tsx
+│   │   ├── NFTCard.test.tsx
+│   │   ├── NFTCard.tsx
+│   │   ├── NFTCardDefault.test.tsx
+│   │   ├── NFTCardDefault.tsx
+│   │   ├── NFTErrorBoundary.test.tsx
+│   │   ├── NFTErrorBoundary.tsx
+│   │   ├── NFTErrorFallback.test.tsx
+│   │   ├── NFTErrorFallback.tsx
+│   │   ├── NFTLifecycleProvider.test.tsx
+│   │   ├── NFTLifecycleProvider.tsx
+│   │   ├── NFTMintCard.test.tsx
+│   │   ├── NFTMintCard.tsx
+│   │   ├── NFTMintCardDefault.test.tsx
+│   │   ├── NFTMintCardDefault.tsx
+│   │   ├── NFTProvider.test.tsx
+│   │   ├── NFTProvider.tsx
+│   │   └── view
+│   │       ├── index.ts
+│   │       ├── NFTAudio.test.tsx
+│   │       ├── NFTAudio.tsx
+│   │       ├── NFTImage.test.tsx
+│   │       ├── NFTImage.tsx
+│   │       ├── NFTLastSoldPrice.test.tsx
+│   │       ├── NFTLastSoldPrice.tsx
+│   │       ├── NFTMedia.test.tsx
+│   │       ├── NFTMedia.tsx
+│   │       ├── NFTMintDate.test.tsx
+│   │       ├── NFTMintDate.tsx
+│   │       ├── NFTNetwork.test.tsx
+│   │       ├── NFTNetwork.tsx
+│   │       ├── NFTOwner.test.tsx
+│   │       ├── NFTOwner.tsx
+│   │       ├── NFTTitle.test.tsx
+│   │       ├── NFTTitle.tsx
+│   │       ├── NFTVideo.test.tsx
+│   │       └── NFTVideo.tsx
+│   ├── hooks
+│   │   ├── useLifecycleStatus.test.ts
+│   │   ├── useLifecycleStatus.ts
+│   │   ├── useMintData.test.ts
+│   │   ├── useMintData.ts
+│   │   ├── useMintDetails.test.ts
+│   │   ├── useMintDetails.ts
+│   │   ├── useNFTData.test.ts
+│   │   ├── useNFTData.ts
+│   │   ├── useTokenDetails.test.ts
+│   │   └── useTokenDetails.ts
+│   ├── index.ts
+│   ├── types.ts
+│   └── utils
+│       ├── buildMintTransactionData.test.ts
+│       ├── buildMintTransactionData.ts
+│       ├── ipfs.test.ts
+│       ├── ipfs.ts
+│       ├── isNFTError.test.ts
+│       └── isNFTError.ts
+├── OnchainKitConfig.ts
+├── OnchainKitProvider.tsx
+├── providers
+│   └── Providers.tsx
+├── styles
+│   ├── index-with-tailwind.css
+│   ├── index.css
+│   ├── tailwind-base.css
+│   ├── theme.ts
+│   ├── transactionStyles.css
+│   └── walletStyles.css
+├── swap
+│   ├── components
+│   │   ├── Swap.test.tsx
+│   │   ├── Swap.tsx
+│   │   ├── SwapAmountInput.test.tsx
+│   │   ├── SwapAmountInput.tsx
+│   │   ├── SwapButton.stories.tsx
+│   │   ├── SwapButton.test.tsx
+│   │   ├── SwapButton.tsx
+│   │   ├── SwapDefault.test.tsx
+│   │   ├── SwapDefault.tsx
+│   │   ├── SwapMessage.test.tsx
+│   │   ├── SwapMessage.tsx
+│   │   ├── SwapProvider.test.tsx
+│   │   ├── SwapProvider.tsx
+│   │   ├── SwapSettings.test.tsx
+│   │   ├── SwapSettings.tsx
+│   │   ├── SwapSettingsSlippageDescription.test.tsx
+│   │   ├── SwapSettingsSlippageDescription.tsx
+│   │   ├── SwapSettingsSlippageInput.test.tsx
+│   │   ├── SwapSettingsSlippageInput.tsx
+│   │   ├── SwapSettingsSlippageLayout.test.tsx
+│   │   ├── SwapSettingsSlippageLayout.tsx
+│   │   ├── SwapSettingsSlippageLayoutBottomSheet.test.tsx
+│   │   ├── SwapSettingsSlippageLayoutBottomSheet.tsx
+│   │   ├── SwapSettingsSlippageTitle.test.tsx
+│   │   ├── SwapSettingsSlippageTitle.tsx
+│   │   ├── SwapToast.test.tsx
+│   │   ├── SwapToast.tsx
+│   │   ├── SwapToggleButton.stories.tsx
+│   │   ├── SwapToggleButton.test.tsx
+│   │   └── SwapToggleButton.tsx
+│   ├── constants.ts
+│   ├── hooks
+│   │   ├── useAwaitCalls.test.ts
+│   │   ├── useAwaitCalls.ts
+│   │   ├── useFromTo.test.ts
+│   │   ├── useFromTo.ts
+│   │   ├── useLifecycleStatus.test.ts
+│   │   ├── useLifecycleStatus.ts
+│   │   ├── useResetInputs.test.ts
+│   │   ├── useResetInputs.ts
+│   │   ├── useSwapBalances.test.tsx
+│   │   └── useSwapBalances.tsx
+│   ├── index.ts
+│   ├── mocks.ts
+│   ├── types.ts
+│   └── utils
+│       ├── formatAmount.test.ts
+│       ├── formatAmount.ts
+│       ├── formatDecimals.test.ts
+│       ├── formatDecimals.ts
+│       ├── fromReadableAmount.test.ts
+│       ├── fromReadableAmount.ts
+│       ├── getErrorMessage.test.ts
+│       ├── getErrorMessage.ts
+│       ├── getSwapErrorCode.test.ts
+│       ├── getSwapErrorCode.ts
+│       ├── getSwapMessage.test.ts
+│       ├── getSwapMessage.ts
+│       ├── getTokenBalanceErrorState.test.ts
+│       ├── getTokenBalanceErrorState.ts
+│       ├── getTokenBalances.test.ts
+│       ├── getTokenBalances.ts
+│       ├── isSwapError.test.ts
+│       ├── isSwapError.ts
+│       ├── processSwapTransaction.test.ts
+│       ├── processSwapTransaction.ts
+│       ├── sendSingleTransactions.test.ts
+│       ├── sendSingleTransactions.ts
+│       ├── sendSwapTransactions.test.ts
+│       ├── sendSwapTransactions.ts
+│       ├── toReadableAmount.test.ts
+│       └── toReadableAmount.ts
+├── token
+│   ├── components
+│   │   ├── TokenChip.stories.ts
+│   │   ├── TokenChip.tsx
+│   │   ├── TokenImage.stories.ts
+│   │   ├── TokenImage.tsx
+│   │   ├── TokenRow.stories.ts
+│   │   ├── TokenRow.tsx
+│   │   ├── TokenSearch.stories.tsx
+│   │   ├── TokenSearch.tsx
+│   │   ├── TokenSelectButton.stories.ts
+│   │   ├── TokenSelectButton.tsx
+│   │   ├── TokenSelectDropdown.stories.tsx
+│   │   ├── TokenSelectDropdown.tsx
+│   │   └── TokenSelectModal.tsx
+│   ├── index.ts
+│   ├── types.ts
+│   └── utils
+│       ├── formatAmount.test.ts
+│       ├── formatAmount.ts
+│       ├── getTokenImageColor.test.ts
+│       └── getTokenImageColor.ts
+├── transaction
+│   ├── components
+│   │   ├── Transaction.tsx
+│   │   ├── TransactionButton.stories.tsx
+│   │   ├── TransactionButton.tsx
+│   │   ├── TransactionDefault.tsx
+│   │   ├── TransactionProvider.tsx
+│   │   ├── TransactionSponsor.tsx
+│   │   ├── TransactionStatus.tsx
+│   │   ├── TransactionStatusAction.tsx
+│   │   ├── TransactionStatusLabel.tsx
+│   │   ├── TransactionToast.test.tsx
+│   │   ├── TransactionToast.tsx
+│   │   ├── TransactionToastAction.tsx
+│   │   ├── TransactionToastIcon.tsx
+│   │   ├── TransactionToastLabel.tsx
+│   │   └── TransactionWrapper.tsx
+│   ├── constants.ts
+│   ├── hooks
+│   │   ├── useCallsStatus.test.ts
+│   │   ├── useCallsStatus.ts
+│   │   ├── useGetTransactionStatusAction.test.tsx
+│   │   ├── useGetTransactionStatusAction.tsx
+│   │   ├── useGetTransactionStatusLabel.test.tsx
+│   │   ├── useGetTransactionStatusLabel.tsx
+│   │   ├── useGetTransactionToastAction.test.tsx
+│   │   ├── useGetTransactionToastAction.tsx
+│   │   ├── useGetTransactionToastLabel.test.tsx
+│   │   ├── useGetTransactionToastLabel.tsx
+│   │   ├── useSendCall.test.ts
+│   │   ├── useSendCall.ts
+│   │   ├── useSendCalls.test.ts
+│   │   ├── useSendCalls.ts
+│   │   ├── useSendWalletTransactions.test.tsx
+│   │   ├── useSendWalletTransactions.tsx
+│   │   ├── useWriteContract.test.ts
+│   │   ├── useWriteContract.ts
+│   │   ├── useWriteContracts.test.ts
+│   │   └── useWriteContracts.ts
+│   ├── index.ts
+│   ├── types.ts
+│   └── utils
+│       ├── getPaymasterUrl.test.ts
+│       ├── getPaymasterUrl.ts
+│       ├── isContract.ts
+│       ├── isSpinnerDisplayed.test.ts
+│       ├── isSpinnerDisplayed.ts
+│       ├── isUserRejectedRequestError.test.ts
+│       ├── isUserRejectedRequestError.ts
+│       ├── sendBatchedTransactions.test.ts
+│       ├── sendBatchedTransactions.ts
+│       ├── sendSingleTransactions.test.ts
+│       └── sendSingleTransactions.ts
+├── types.ts
+├── useBreakpoints.ts
+├── useIsMounted.ts
+├── useOnchainKit.tsx
+├── useOutsideClick.ts
+├── useProviderDependencies.tsx
+├── useTheme.ts
+├── utils
+│   ├── airdrop.ts
+│   ├── airdropService.ts
+│   ├── auth.ts
+│   ├── createSupabaseSession.ts
+│   ├── erc1155ABI.ts
+│   ├── erc20ABI.ts
+│   ├── erc721ABI.ts
+│   ├── fetchTokenBalances.ts
+│   ├── formatPrice.ts
+│   ├── gelatoRelay.ts
+│   ├── purchaseBurnABI.ts
+│   ├── safe.ts
+│   ├── safeTransaction.ts
+│   ├── supabaseAdminClient.ts
+│   ├── supabaseClient.js
+│   ├── supabaseClient.ts
+│   ├── tokenCheck.ts
+│   ├── tokenGateService.ts
+│   └── tokenPricing.ts
+├── version.ts
+├── wallet
+│   ├── components
+│   │   ├── ConnectButton.tsx
+│   │   ├── ConnectWallet.tsx
+│   │   ├── ConnectWalletText.tsx
+│   │   ├── OnChainProviders.tsx
+│   │   ├── SignInWithEthereumButton.tsx
+│   │   ├── Wallet.test.tsx
+│   │   ├── Wallet.tsx
+│   │   ├── WalletBottomSheet.tsx
+│   │   ├── WalletDefault.tsx
+│   │   ├── WalletDropdown.tsx
+│   │   ├── WalletDropdownBasename.tsx
+│   │   ├── WalletDropdownDisconnect.stories.tsx
+│   │   ├── WalletDropdownDisconnect.tsx
+│   │   ├── WalletDropdownFundLink.tsx
+│   │   ├── WalletDropdownLink.tsx
+│   │   ├── WalletModal.tsx
+│   │   ├── WalletProvider.tsx
+│   │   ├── WalletStatus.tsx
+│   │   └── WalletWrapper.tsx
+│   ├── constants.ts
+│   ├── hooks
+│   │   ├── useGetETHBalance.test.ts
+│   │   ├── useGetETHBalance.ts
+│   │   ├── useGetTokenBalance.test.ts
+│   │   ├── useGetTokenBalance.ts
+│   │   ├── useIsWalletACoinbaseSmartWallet.test.ts
+│   │   └── useIsWalletACoinbaseSmartWallet.ts
+│   ├── index.ts
+│   ├── types.ts
+│   └── utils
+│       ├── isValidAAEntrypoint.test.ts
+│       ├── isValidAAEntrypoint.ts
+│       ├── isWalletACoinbaseSmartWallet.test.ts
+│       └── isWalletACoinbaseSmartWallet.ts
+└── xmtp
+    ├── getXmtpFrameMessage.test.ts
+    ├── getXmtpFrameMessage.ts
+    ├── index.ts
+    ├── isXmtpFrameRequest.test.ts
+    ├── isXmtpFrameRequest.ts
+    └── types.ts

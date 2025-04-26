@@ -1,0 +1,816 @@
+/* Global utility and common styles */
+
+/* Common utility classes */
+.loading, .error, .emptyState {
+  text-align: center;
+  padding: 2rem;
+  border-radius: 0.5rem;
+  margin: 1rem 0;
+}
+
+.loading {
+  background-color: rgba(0, 0, 0, 0.05);
+}
+
+.error {
+  background-color: rgba(255, 0, 0, 0.1);
+  color: #d32f2f;
+}
+
+.emptyState {
+  background-color: rgba(0, 0, 0, 0.05);
+  color: #757575;
+}
+
+.sectionTitle {
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+}
+
+/* Container styles inspired by chat.css */
+.forum-container {
+  background-color: #fff;
+  border-radius: 10px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+  margin: 1rem auto;
+  max-width: 1200px;
+  padding: 1.5rem;
+}
+
+/* Category List styles */
+.categoryListContainer {
+  padding: 1rem;
+  background-color: #e9f9ec;
+  border-radius: 8px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.08);
+}
+
+.categoryList {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.categoryItem {
+  margin-bottom: 1rem;
+  border-radius: 0.5rem;
+  overflow: hidden;
+  background-color: #ffffff;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.categoryItem:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.categoryLink {
+  display: block;
+  padding: 1rem;
+  color: inherit;
+  text-decoration: none;
+}
+
+.categoryHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.categoryName {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin: 0;
+}
+
+.threadCount {
+  font-size: 0.875rem;
+  color: #757575;
+  background-color: rgba(0, 0, 0, 0.05);
+  padding: 0.25rem 0.5rem;
+  border-radius: 1rem;
+}
+
+.categoryDescription {
+  color: #757575;
+  margin: 0;
+  font-size: 0.875rem;
+}
+
+/* Thread List styles */
+.threadListContainer {
+  padding: 1rem;
+  background-color: #e9f5f9;
+  border-radius: 8px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.08);
+  margin-bottom: 5rem;
+}
+
+.categoryHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+}
+
+.categoryTitle {
+  font-size: 1.75rem;
+  font-weight: 700;
+  margin: 0;
+}
+
+.backLink {
+  font-size: 0.875rem;
+  color: #2196f3;
+  text-decoration: none;
+}
+
+.backLink:hover {
+  text-decoration: underline;
+}
+
+.threadListHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+/* NEW: Updated New Thread Button style */
+.newThreadButton {
+  display: inline-block;
+  background-color: #d7f8fd;
+  color: #000;
+  border: none;
+  border-radius: 6px;
+  padding: 0.75rem 1.5rem;
+  font-size: 1rem;
+  cursor: pointer;
+  opacity: 1;
+  transition: background-color 0.2s ease;
+  text-decoration: none;
+}
+
+.newThreadButton:hover {
+  background-color: #e9f9ec;
+}
+
+/* NEW: Updated New Thread Button style */
+.ForumBackButton {
+  display: block;
+  margin: 0 auto;
+  background-color: #bfe7c6 !important;
+  color: #000;
+  border: none;
+  border-radius: 6px;
+  padding: 0.75rem 1.5rem;
+  font-size: 1rem;
+  cursor: pointer;
+  opacity: 1;
+  transition: background-color 0.2s ease;
+  text-decoration: none;
+}
+
+.ForumBackButton:hover {
+  background-color: #005bb5;
+}
+
+.submitButton {
+  display: inline-block;
+  background-color: #d7f8fd !important;
+  color: #000;
+  border: none;
+  border-radius: 6px;
+  padding: 0.75rem 1.5rem;
+  font-size: 1rem;
+  cursor: pointer;
+  opacity: 1;
+  transition: background-color 0.2s ease;
+  text-decoration: none;
+}
+
+.submitButton:hover {
+  background-color: #aceef8;
+}
+
+.threadList {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.threadItem {
+  margin-bottom: 0.75rem;
+}
+
+/* Thread Card styles */
+.threadCard {
+  display: block;
+  padding: 1rem;
+  border-radius: 0.5rem;
+  background-color: #ffffff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  text-decoration: none;
+  color: inherit;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.threadCard:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.15);
+}
+
+.threadTitle {
+  font-size: 1.125rem;
+  font-weight: 600;
+  margin: 0 0 0.5rem 0;
+  color: #212121;
+}
+
+.threadMeta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.875rem;
+}
+
+.authorInfo {
+  display: flex;
+  flex-direction: column;
+}
+
+.authorName {
+  font-weight: 500;
+  margin-right: 0.5rem;
+}
+
+.threadDate {
+  color: #757575;
+  font-size: 0.75rem;
+}
+
+.postCountBadge {
+  background-color: rgba(0, 0, 0, 0.05);
+  color: #616161;
+  padding: 0.25rem 0.5rem;
+  border-radius: 1rem;
+  font-size: 0.75rem;
+}
+
+/* Thread and Posts styles */
+.threadContainer {
+  padding: 1rem;
+}
+
+.threadHeader {
+  margin-bottom: 1.5rem;
+}
+
+.threadNavigation {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.breadcrumbSeparator {
+  color: #757575;
+}
+
+.threadTitle {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin: 0.5rem 0;
+}
+
+.postsContainer {
+  margin-bottom: 2rem;
+}
+
+.postsList {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.postItem {
+  margin-bottom: 1rem;
+}
+
+/* Post Card styles */
+.postCard {
+  background-color: #ffffff;
+  border-radius: 0.5rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+}
+
+.postHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem 1rem;
+  background-color: rgba(0, 0, 0, 0.025);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.postDate {
+  font-size: 0.75rem;
+  color: #757575;
+}
+
+.postContent {
+  padding: 1rem;
+}
+
+.contentText {
+  line-height: 1.5;
+  word-break: break-word;
+}
+
+.contentText code {
+  background-color: rgba(0, 0, 0, 0.05);
+  padding: 0.125rem 0.25rem;
+  border-radius: 0.25rem;
+  font-family: monospace;
+}
+
+/* NEW: Updated Edit Button style */
+.editButton {
+  background: none;
+  border: none;
+  font-size: 0.75rem;
+  color: #f4c96b; /* New edit button color */
+  cursor: pointer;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.25rem;
+}
+
+.editButton:hover {
+  background-color: rgba(244, 201, 107, 0.2); /* Lighter hover for edit button */
+}
+
+.editContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.editTextarea {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 0.25rem;
+  font-family: inherit;
+  font-size: inherit;
+  resize: vertical;
+}
+
+.editActions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.saveButton, .cancelButton {
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: 0.25rem;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.saveButton {
+  background-color: #2196f3;
+  color: white;
+}
+
+.saveButton:hover:not(:disabled) {
+  background-color: #1976d2;
+}
+
+.cancelButton {
+  background-color: #e0e0e0;
+  color: #424242;
+}
+
+.cancelButton:hover:not(:disabled) {
+  background-color: #bdbdbd;
+}
+
+.saveButton:disabled, .cancelButton:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.editError {
+  color: #d32f2f;
+  font-size: 0.875rem;
+  padding: 0.5rem;
+  background-color: rgba(255, 0, 0, 0.05);
+  border-radius: 0.25rem;
+}
+
+/* Reply Form styles */
+.replyFormContainer {
+  background-color: #ffffff;
+  border-radius: 0.5rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  padding: 1rem;
+  margin-top: 1.5rem;
+}
+
+.replyFormTitle {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin-top: 0;
+  margin-bottom: 1rem;
+}
+
+.replyForm {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.replyTextarea {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 0.25rem;
+  font-family: inherit;
+  font-size: inherit;
+  resize: vertical;
+}
+
+
+
+.submitButton:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.submitError {
+  color: #d32f2f;
+  font-size: 0.875rem;
+  padding: 0.75rem;
+  background-color: rgba(255, 0, 0, 0.05);
+  border-radius: 0.25rem;
+}
+
+/* Template selector styles */
+.templateSelector {
+  margin-bottom: 1.5rem;
+}
+
+.selectLabel {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: 500;
+}
+
+.templateSelect {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 0.25rem;
+  background-color: #fff;
+  font-size: 0.875rem;
+  margin-bottom: 1rem;
+}
+
+/* Placeholder fields styles */
+.placeholdersContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.placeholderField {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.placeholderLabel {
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+  color: #333;
+}
+
+.placeholderInput {
+  padding: 0.5rem;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 1rem;
+  transition: border-color 0.2s ease;
+}
+
+.placeholderInput:focus {
+  outline: none;
+  border-color: #0070f3;
+}
+
+.placeholderTextarea {
+  padding: 0.5rem;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 1rem;
+  transition: border-color 0.2s ease;
+  resize: vertical;
+}
+
+.placeholderTextarea:focus {
+  outline: none;
+  border-color: #0070f3;
+}
+
+.inputFootnote {
+  font-size: 0.875rem;
+  color: #666;
+  margin-top: 0.25rem;
+  line-height: 1.2;
+}
+
+/* Additional styles for preview container */
+.previewContainer {
+  margin-top: 1.5rem;
+  padding: 1rem;
+  border: 1px solid #eaeaea;
+  border-radius: 4px;
+  background-color: #fafafa;
+}
+
+.previewTitle {
+  font-size: 1.125rem;
+  font-weight: 600;
+  margin-bottom: 0.75rem;
+}
+
+.contentPreview {
+  font-size: 1rem;
+  line-height: 1.5;
+  color: #444;
+}
+
+.replyTextarea {
+  width: 100%;
+  box-sizing: border-box;  /* Add this line */
+  padding: 0.75rem;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 0.25rem;
+  font-family: inherit;
+  font-size: inherit;
+  resize: vertical;
+}
+
+/* Forum.module.css */
+
+/* Container for the thread content (markdown) */
+.threadContentContainer {
+  background-color: #ffffff;
+  border-radius: 0.5rem;
+  padding: 1rem;
+  margin-bottom: 1.5rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+/* Optionally, style markdown elements inside the container */
+.threadContentContainer h1,
+.threadContentContainer h2,
+.threadContentContainer h3 {
+  margin-top: 1em;
+  margin-bottom: 0.5em;
+}
+.threadContentContainer p {
+  margin-bottom: 0.75em;
+}
+
+.field {
+  display: flex;
+  align-items: center; /* Keeps label and select aligned */
+  gap: 8px; /* Creates slight spacing between label and dropdown */
+  margin-bottom: 16px; /* Adds space below for separation */
+}
+
+.label {
+  font-weight: bold;
+}
+
+.select {
+  padding: 6px 12px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 16px;
+  margin-left: 10px; 
+  min-width: 200px; 
+}
+/* Enhanced template form styles */
+.templateForm {
+  margin-top: 1.5rem;
+}
+
+.fieldGroup {
+  margin-bottom: 2rem;
+  background-color: #f9f9f9;
+  border-radius: 8px;
+  padding: 1.5rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.groupTitle {
+  font-size: 1.2rem;
+  font-weight: 600;
+  margin-top: 0;
+  margin-bottom: 1.25rem;
+  color: #333;
+  border-bottom: 1px solid #e0e0e0;
+  padding-bottom: 0.75rem;
+}
+
+.groupFields {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+  gap: 1.5rem;
+}
+
+/* Override for full-width fields like textareas */
+.placeholderField:has(.placeholderTextarea) {
+  grid-column: 1 / -1;
+}
+
+.placeholderLabel {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+  color: #333;
+}
+
+.placeholderInput,
+.placeholderTextarea,
+.templateSelect {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  font-size: 1rem;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  box-sizing: border-box;
+}
+
+.placeholderInput:focus,
+.placeholderTextarea:focus,
+.templateSelect:focus {
+  outline: none;
+  border-color: #4bb6d1;
+  box-shadow: 0 0 0 3px rgba(75, 182, 209, 0.1);
+}
+
+.placeholderTextarea {
+  min-height: 120px;
+  resize: vertical;
+}
+
+/* Specific styles for date picker */
+.datePickerWrapper {
+  position: relative;
+}
+
+.datePicker {
+  cursor: pointer;
+}
+
+.inputFootnote {
+  font-size: 0.875rem;
+  color: #666;
+  margin-top: 0.5rem;
+  line-height: 1.4;
+  font-style: italic;
+}
+
+/* Form actions */
+.formActions {
+  display: flex;
+  gap: 1rem;
+  margin-top: 2rem;
+  justify-content: flex-end;
+}
+
+.previewButton {
+  background-color: #e0e0e0;
+  color: #333;
+  border: none;
+  border-radius: 6px;
+  padding: 0.75rem 1.5rem;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.previewButton:hover {
+  background-color: #d0d0d0;
+}
+
+
+/* Enhanced preview container */
+.previewContainer {
+  margin-top: 2rem;
+  padding: 2rem;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  background-color: white;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.previewTitle {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin-top: 0;
+  margin-bottom: 1.5rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid #eaeaea;
+}
+
+.contentPreview {
+  font-size: 1rem;
+  line-height: 1.6;
+  color: #333;
+  white-space: pre-line;
+}
+
+/* Template selector styles */
+.templateSelector {
+  margin-bottom: 2rem;
+  background-color: #f0f9fa;
+  padding: 1.25rem;
+  border-radius: 8px;
+  border-left: 4px solid #4bb6d1;
+}
+
+.selectLabel {
+  display: block;
+  margin-bottom: 0.75rem;
+  font-weight: 600;
+  color: #333;
+}
+
+.templateSelect {
+  width: 100%;
+  max-width: 400px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .groupFields {
+    grid-template-columns: 1fr;
+  }
+  
+  .formActions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .formActions button {
+    width: 100%;
+  }
+}
+
+
+/* Mobile optimizations */
+@media (max-width: 640px) {
+  .categoryHeader, .threadListHeader {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+  
+  .threadMeta {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+  
+  .postCountBadge {
+    align-self: flex-start;
+  }
+  
+  .postHeader {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+  
+	.threadNavigation {
+	  display: flex;
+	  align-items: center;
+	  flex-wrap: wrap; /* This can cause each item to wrap onto its own line */
+	  gap: 0.5rem;
+	  margin-bottom: 1rem;
+	}
+
+}

@@ -1,3 +1,5 @@
+//src/OnChainKitConfig.ts
+
 import { baseSepolia } from 'viem/chains';
 import type { OnchainKitConfig, SetOnchainKitConfig } from './types';
 
@@ -21,7 +23,6 @@ export const ONCHAIN_KIT_CONFIG: OnchainKitConfig = {
       privacyUrl: null,
     },
   },
-  rpcUrl: null,
   schemaId: null,
   projectId: null,
 };

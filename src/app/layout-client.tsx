@@ -2,18 +2,18 @@
 "use client";
 
 import React from "react";
-import { CommunityProvider } from "src/context/CommunityContext";
 import { OnchainProviders } from "src/wallet/components/OnchainProviders";
+import { CommunityProvider } from "src/context/CommunityContext";
+import BottomNav from "src/components/BottomNav";
 
-interface LayoutClientProps {
-  children: React.ReactNode;
-}
-
-export default function LayoutClient({ children }: LayoutClientProps) {
+export default function LayoutClient({ children }: { children: React.ReactNode }) {
   return (
     <OnchainProviders>
       <CommunityProvider>
-        {children}
+        <div className="relative min-h-screen">
+          {children}
+          <BottomNav />
+        </div>
       </CommunityProvider>
     </OnchainProviders>
   );

@@ -1,4 +1,4 @@
-//src/app/chat-new/page.tsx
+//src/app/chat/page.tsx
 
 import ChatContainer from 'src/features/chat/components/ChatContainer';
 

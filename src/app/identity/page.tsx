@@ -14,11 +14,10 @@ import { updateProfile } from 'src/features/identity/utils/updateProfile';
 import { ProfileEditForm } from 'src/features/identity/components/ProfileEditForm';
 import { supabase } from 'src/utils/supabaseClient';
 import { Balances } from 'src/features/identity/components/Balances'; 
+import { TokenGallery } from 'src/features/identity/components/TokenGallery';
+import { UnlockMembership } from 'src/features/identity/components/UnlockMembership';
 import 'src/features/identity/styles/identityStyles.css';
-
-
-
-
+import 'src/features/identity/styles/TokenGallery.css';
 
 export default function IdentityPage() {
   return (
@@ -127,8 +126,7 @@ function IdentityPageContent() {
 
   return (
     <div className="identity-container">
-	
-      <div className="profile-section"> {/* or .balances-section if you prefer */}
+      <div className="profile-section">
         <h2>Balances</h2>
         <Balances walletAddress={address} />
       </div>
@@ -145,10 +143,8 @@ function IdentityPageContent() {
           />
         ) : (
           <>
-            {/* We can remove the 'copy' button in ProfileHeader if it had one. */}
             <ProfileHeader address={address} profile={profile} showCopy={false} />
             
-            {/* Show short user bio if you want here, or it's in ProfileHeader */}
             {profile?.bio && <p>{profile.bio}</p>}
 
             <button 
@@ -163,16 +159,22 @@ function IdentityPageContent() {
       </div>
 
       <div className="badges-section">
-        <h2>Memberships</h2>
-        <Badge address={address} />
+        <h2>Membership</h2>
+        <TokenGallery walletAddress={address} category="membership" />
+        <div className="legacy-badges" style={{ marginTop: '20px' }}>
+          <Badge address={address} />
+        </div>
       </div>
 	  
-	  <div className="badges-section">
+      <div className="badges-section">
         <h2>Credentials</h2>
-        <Badge address={address} />
+        <TokenGallery walletAddress={address} category="credential" />
+        <div className="legacy-badges" style={{ marginTop: '20px' }}>
+          <Badge address={address} />
+        </div>
       </div>
 
-	    <div className="form-buttons" style={{ display: 'flex', justifyContent: 'center' }}>
+      <div className="form-buttons" style={{ display: 'flex', justifyContent: 'center' }}>
         <button type="button" onClick={handleLogout}>
           Logout
         </button>

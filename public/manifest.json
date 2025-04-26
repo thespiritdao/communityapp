@@ -1,0 +1,16 @@
+{
+  "short_name": "SpiritDAO",
+  "name": "SpiritDAO",
+  "description": "SpiritDAO Community Application",
+  "icons": [
+    {
+      "src": "logo.svg",
+      "sizes": "any",
+      "type": "public/images/spiritdaosymbol.png"
+    }
+  ],
+  "start_url": ".",
+  "display": "standalone",
+  "theme_color": "#000000",
+  "background_color": "#ffffff"
+}

@@ -1,4 +1,31 @@
 /* Font */
+@font-face {
+  font-family: 'Source Sans Pro';
+  src: url('/fonts/SourceSansPro/SourceSansPro-Regular.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'Source Sans Pro';
+  src: url('/fonts/SourceSansPro/SourceSansPro-Bold.otf') format('opentype');
+  font-weight: 700;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'Source Sans Pro';
+  src: url('/fonts/SourceSansPro/SourceSansPro-It.otf') format('opentype');
+  font-weight: 400;
+  font-style: italic;
+}
+
+
+body {
+  font-family: 'Source Sans Pro', Arial, sans-serif;
+  background-color: #f5f4ed;
+}
+
 .ock-font-family {
   font-family: var(--ock-font-family);
 }
@@ -12,7 +39,7 @@
   border-color: var(--ock-bg-default-active);
 }
 
-<<<<<<< HEAD
+
 .ock-border-line-primary {
   border-color: var(--ock-line-primary);
 }
@@ -29,8 +56,8 @@
   border-color: var(--ock-line-inverse);
 }
 
-=======
->>>>>>> f7c82eaeab60ec2a9faa7b220126f2f5045f3151
+
+
 .ock-border-radius {
   border-radius: var(--ock-border-radius);
 }
@@ -185,8 +212,8 @@
   background-color: var(--ock-bg-primary-disabled);
 }
 
-<<<<<<< HEAD
-=======
+
+
 /* Line */
 .ock-line-primary {
   border-color: var(--ock-line-primary);
@@ -203,4 +230,44 @@
 .ock-line-inverse {
   border-color: var(--ock-line-inverse);
 }
->>>>>>> f7c82eaeab60ec2a9faa7b220126f2f5045f3151
+
+/* Bottom Navigation Bar */
+.bottom-nav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  background-color: #f5f4ed; 
+  display: flex;
+  justify-content: space-around; /* Evenly distribute icons */
+  align-items: center;
+  padding: 10px 0;
+  box-shadow: 0 -2px 5px rgba(0, 0, 0, 0.1);
+  z-index: 10;
+}
+
+/* Navigation Icons */
+.bottom-nav-link {
+  color: #333; /* Dark gray */
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.bottom-nav-link svg {
+  width: 32px; /* Increase icon size */
+  height: 32px;
+  color: #333; /* Ensure icon color is dark */
+}
+
+/* Remove text below icons */
+.bottom-nav-link span {
+  display: none;
+}
+
+.custom-token-dropdown {
+  border: none !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}

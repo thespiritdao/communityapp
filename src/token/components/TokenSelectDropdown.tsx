@@ -1,9 +1,10 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { background, border, cn } from '../../styles/theme';
-import { useTheme } from '../../useTheme';
-import type { TokenSelectDropdownReact } from '../types';
-import { TokenRow } from './TokenRow';
-import { TokenSelectButton } from './TokenSelectButton';
+// src/token/components/TokenSelectDropdown.tsx
+import { useCallback, useEffect, useRef, useState } from "react";
+import { background, border, cn } from "../../styles/theme";
+import { useTheme } from "../../useTheme";
+import type { TokenSelectDropdownReact } from "../types";
+import { TokenRow } from "./TokenRow";
+import { TokenSelectButton } from "./TokenSelectButton";
 
 export function TokenSelectDropdown({
   options,
@@ -11,7 +12,6 @@ export function TokenSelectDropdown({
   token,
 }: TokenSelectDropdownReact) {
   const componentTheme = useTheme();
-
   const [isOpen, setIsOpen] = useState(false);
 
   const handleToggle = useCallback(() => {
@@ -21,11 +21,9 @@ export function TokenSelectDropdown({
   const dropdownRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
 
-  /* v8 ignore next 11 */
   const handleBlur = useCallback((event: MouseEvent) => {
     const isOutsideDropdown =
-      dropdownRef.current &&
-      !dropdownRef.current.contains(event.target as Node);
+      dropdownRef.current && !dropdownRef.current.contains(event.target as Node);
     const isOutsideButton =
       buttonRef.current && !buttonRef.current.contains(event.target as Node);
 
@@ -35,23 +33,16 @@ export function TokenSelectDropdown({
   }, []);
 
   useEffect(() => {
-    // NOTE: this ensures that handleBlur doesn't get called on initial mount
-    //       We need to use non-div elements to properly handle onblur events
     setTimeout(() => {
-      document.addEventListener('click', handleBlur);
+      document.addEventListener("click", handleBlur);
     }, 0);
-
     return () => {
-      document.removeEventListener('click', handleBlur);
+      document.removeEventListener("click", handleBlur);
     };
   }, [handleBlur]);
 
   return (
-<<<<<<< HEAD
     <div className="relative max-w-fit shrink-0">
-=======
-    <div className="relative shrink-0">
->>>>>>> f7c82eaeab60ec2a9faa7b220126f2f5045f3151
       <TokenSelectButton
         ref={buttonRef}
         onClick={handleToggle}
@@ -65,14 +56,14 @@ export function TokenSelectDropdown({
           className={cn(
             componentTheme,
             border.radius,
-            'absolute right-0 z-10 mt-1 flex max-h-80 w-[200px] flex-col overflow-y-hidden',
-            'ock-scrollbar',
+            "absolute right-0 z-10 mt-1 flex max-h-80 w-[200px] flex-col overflow-y-hidden",
+            "ock-scrollbar"
           )}
         >
           <div className="overflow-y-auto bg-[#ffffff]">
             {options.map((token) => (
               <TokenRow
-                className={cn(background.inverse, 'px-4 py-2')}
+                className={cn(background.inverse, "px-4 py-2")}
                 key={token.name + token.address}
                 token={token}
                 onClick={() => {

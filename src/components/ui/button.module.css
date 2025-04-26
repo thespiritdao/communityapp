@@ -1,0 +1,47 @@
+/* src/components/ui/button.module.css */ 
+
+.button {
+  padding: 0.5rem 1rem;
+  font-size: 1rem;
+  border-radius: 4px;
+  border: none;
+  cursor: pointer;
+  transition: background-color 0.2s ease, border 0.2s ease;
+}
+
+/* Default variant */
+.default {
+  background-color: #0070f3;
+  color: white;
+}
+
+/* Outline variant */
+.outline {
+  background-color: transparent;
+  color: #0070f3;
+  border: 2px solid #0070f3;
+}
+
+/* Destructive variant */
+.destructive {
+  background-color: #e00;
+  color: white;
+}
+
+/* Size small */
+.sm {
+  padding: 0.25rem 0.5rem;
+  font-size: 0.875rem;
+}
+
+/* Size medium */
+.md {
+  padding: 0.5rem 1rem;
+  font-size: 1rem;
+}
+
+/* Size large */
+.lg {
+  padding: 0.75rem 1.5rem;
+  font-size: 1.125rem;
+}

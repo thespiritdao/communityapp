@@ -1,0 +1,72 @@
+/* src/features/identity/styles/TokenGallery.css */
+
+.token-gallery {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-top: 16px;
+}
+
+.token-card {
+  width: 80px;
+  background-color: rgba(255, 255, 255, 0.05);
+  border-radius: 6px;
+  padding: 5px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.token-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+}
+
+.token-image {
+  width: 60px;
+  height: 60px;
+  overflow: hidden;
+  border-radius: 50%;
+  margin-bottom: 6px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  
+}
+
+.token-placeholder {
+  width: 80px;
+  height: 180px;
+  background-color: rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.placeholder-text {
+  color: #999;
+  text-align: center;
+  padding: 0 10px;
+}
+
+.token-name {
+  font-size: 12px;
+  font-weight: 600;
+  text-align: center;
+  margin-top: 6px;
+  word-break: break-word;
+}
+
+.loading {
+  font-style: italic;
+  color: #999;
+  margin: 16px 0;
+}
+
+.no-tokens {
+  color: #999;
+  margin: 16px 0;
+}

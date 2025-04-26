@@ -1,3 +1,4 @@
+// src/OnChainKitProvider.tsx
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { createContext, useMemo } from 'react';
 import { WagmiProvider } from 'wagmi';
@@ -22,7 +23,6 @@ export function OnchainKitProvider({
   children,
   config,
   projectId,
-  rpcUrl,
   schemaId,
 }: OnchainKitProviderReact) {
   if (schemaId && !checkHashLength(schemaId, 64)) {
@@ -35,13 +35,14 @@ export function OnchainKitProvider({
           .replace(' ', '-')
           .toLowerCase()}/${apiKey}`
       : null;
+
     const onchainKitConfig = {
       address: address ?? null,
       apiKey: apiKey ?? null,
       chain: chain,
       config: {
         appearance: {
-          name: config?.appearance?.name ?? 'Dapp',
+          name: config?.appearance?.name ?? 'SpiritDAO',
           logo: config?.appearance?.logo ?? '',
           mode: config?.appearance?.mode ?? 'auto',
           theme: config?.appearance?.theme ?? 'default',
@@ -54,15 +55,15 @@ export function OnchainKitProvider({
         },
       },
       projectId: projectId ?? null,
-      rpcUrl: rpcUrl ?? null,
       schemaId: schemaId ?? COINBASE_VERIFIED_ACCOUNT_SCHEMA_ID,
+    
     };
+
     setOnchainKitConfig(onchainKitConfig);
     return onchainKitConfig;
-  }, [address, apiKey, chain, config, projectId, rpcUrl, schemaId]);
+  }, [address, apiKey, chain, config, projectId, schemaId]);
 
-  const { providedWagmiConfig, providedQueryClient } =
-    useProviderDependencies();
+  const { providedWagmiConfig, providedQueryClient } = useProviderDependencies();
 
   const defaultConfig = useMemo(() => {
     return (

@@ -1,0 +1,56 @@
+
+
+@font-face {
+  font-family: 'Source Sans Pro';
+  src: url('/fonts/SourceSansPro/SourceSansPro-Regular.ttf') format('truetype'),
+       url('/fonts/SourceSansPro/SourceSansPro-Bold.otf') format('truetype'),
+       url('/fonts/SourceSansPro/SourceSansPro-It.otf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+}
+@font-face {
+  font-family: 'Source Sans Pro';
+  src: url('/fonts/SourceSansPro/SourceSansPro-Bold.otf') format('truetype');
+  font-weight: bold;
+  font-style: normal;
+}
+@font-face {
+  font-family: 'Source Sans Pro';
+  src: url('/fonts/SourceSansPro/SourceSansPro-It.otf') format('truetype');
+  font-weight: normal;
+  font-style: italic;
+}
+
+
+.pageContainer {
+  background-color: #f5f4ed;
+  /* Instead of height: 100vh */
+  min-height: 100vh; 
+  
+  display: flex;
+  flex-direction: column;
+ 
+  
+  background-image: url('/images/chatbg.png'); 
+  background-repeat: no-repeat;
+  background-size: cover;
+  background-position: center;
+}
+
+
+.header {
+  text-align: center;
+  margin-bottom: 1rem;
+}
+
+.iframeWrapper {
+  display: flex;
+  justify-content: center;
+  align-items: center; /* center vertically */
+  width: 100%;
+  max-width: 800px;
+  flex-grow: 1;
+  margin: 0 auto;
+}
+
+

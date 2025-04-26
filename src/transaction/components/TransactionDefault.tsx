@@ -1,3 +1,4 @@
+// src/transaction/components/TransactionDefault.tsx
 import type { TransactionDefaultReact } from '../types';
 import { Transaction } from './Transaction';
 import { TransactionButton } from './TransactionButton';
@@ -16,6 +17,7 @@ export function TransactionDefault({
   onError,
   onStatus,
   onSuccess,
+  isSponsored = true, // Default to true for gas abstraction
 }: TransactionDefaultReact) {
   return (
     <Transaction
@@ -27,6 +29,7 @@ export function TransactionDefault({
       onError={onError}
       onStatus={onStatus}
       onSuccess={onSuccess}
+      isSponsored={isSponsored} 
     >
       <TransactionButton disabled={disabled} />
       <TransactionToast>
