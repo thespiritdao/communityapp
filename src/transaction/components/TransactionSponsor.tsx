@@ -2,6 +2,9 @@ import { cn, color, text } from '../../styles/theme';
 import type { TransactionSponsorReact } from '../types';
 import { useTransactionContext } from './TransactionProvider';
 
+
+console.log('[TransactionSponsor] paymasterUrl:', paymasterUrl, 'lifecycleStatus:', lifecycleStatus, 'error:', errorMessage, 'txInProgress:', transactionInProgress, 'receipt:', receipt);
+
 export function TransactionSponsor({ className }: TransactionSponsorReact) {
   const {
     errorMessage,

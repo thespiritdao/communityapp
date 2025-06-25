@@ -1,5 +1,5 @@
-import { CDP_GET_TOKEN_DETAILS } from '../network/definitions/nft';
-import { sendRequest } from '../network/request';
+import { CDP_GET_TOKEN_DETAILS } from 'src/network/definitions/nft';
+import { sendRequest } from 'src/network/request';
 import type { GetTokenDetailsParams, GetTokenDetailsResponse } from './types';
 
 /**

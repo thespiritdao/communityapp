@@ -1,5 +1,28 @@
 /* src/components/styles/UserTagging.module.css */
 
+/* Wrapper for the mentions input */
+.mentionsWrapper {
+  position: relative;
+  width: 100%;
+}
+
+.loadingIndicator {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: #666;
+  font-size: 0.875rem;
+}
+
+.profilePicture {
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.userName {
+  font-weight: 500;
+}
 
 /* //src/components/UserTagging.tsx */
 

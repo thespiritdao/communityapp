@@ -6,7 +6,7 @@ import {
   useMemo,
   useState,
 } from 'react';
-import type { Address } from 'viem';
+import type { Address, WalletCapabilities } from 'viem';
 import {
   useAccount,
   useConfig,
@@ -124,17 +124,28 @@ export function TransactionProvider({
     return statusSendCall;
   }, [statusSendCall, statusSendCalls, walletCapabilities]);
 
+  function isHexAddress(address: string | undefined | null): address is `0x${string}` {
+    return typeof address === 'string' && /^0x[a-fA-F0-9]{40}$/.test(address);
+  }
+
   const capabilities = useMemo(() => {
     if (isSponsored && paymaster) {
       return {
-        paymasterService: { url: paymaster },
+        paymasterService: { 
+          url: paymaster,
+          // Add paymaster configuration
+          paymasterAndData: {
+            type: 'paymaster',
+            ...(isHexAddress(account.address) ? { paymaster: account.address } : {}),
+          }
+        },
         // this needs to be below so devs can override default paymaster
         // with their personal paymaster in production playgroundd
         ...transactionCapabilities,
-      };
+      } as WalletCapabilities;
     }
     return transactionCapabilities;
-  }, [isSponsored, paymaster, transactionCapabilities]);
+  }, [isSponsored, paymaster, transactionCapabilities, account.address]);
 
   // useSendWalletTransactions
   // Used to send transactions based on the transaction type. Can be of type calls or contracts.

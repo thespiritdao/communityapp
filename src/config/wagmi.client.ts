@@ -1,23 +1,21 @@
-// src/config/wagmi.ts
-import { createConfig, http } from 'wagmi';
-import { base } from 'viem/chains';
+// src/config/wagmi.client.ts
+import { http, createConfig } from 'wagmi';
+import { base, baseSepolia } from 'wagmi/chains';
 import { coinbaseWallet } from 'wagmi/connectors';
 
+// Configure Coinbase Wallet with Smart Wallet support
+const coinbaseWalletConnector = coinbaseWallet({
+  appName: 'SpiritDAO',
+  appLogoUrl: '/spiritdaosymbol.png',
+  preference: 'smartWalletOnly', // forces Smart Wallet only
+  version: '4',
+});
+
 export const wagmiConfig = createConfig({
-  chains: [base],
+  chains: [base, baseSepolia],
+  connectors: [coinbaseWalletConnector],
   transports: {
-    // Use your RPC URL from the environment variable
-    [base.id]: http(process.env.NEXT_PUBLIC_RPC_URL as string),
+    [base.id]: http(),
+    [baseSepolia.id]: http(),
   },
-  autoConnect: true,
-  connectors: [
-    coinbaseWallet({
-      chainId: base.id,
-      options: {
-        appName: process.env.NEXT_PUBLIC_APP_NAME || 'SpiritDAO',
-        // (Optionally, set preference if you need smart wallet behavior)
-        // preference: 'smartWalletOnly',
-      },
-    }),
-  ],
 });

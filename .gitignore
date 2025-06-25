@@ -130,4 +130,7 @@ docs/.vitepress/cache
 docs/.vitepress/dist
 
 *storybook.log
-storybook-static/
+storybook-static/.env 
+node_modules/ 
+.env.local 
+.env.production 

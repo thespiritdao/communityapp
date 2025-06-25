@@ -2,33 +2,48 @@
 	{
 		"inputs": [
 			{
-				"internalType": "string",
-				"name": "name_",
-				"type": "string"
-			},
-			{
-				"internalType": "address",
-				"name": "advocateTokenAddress",
+				"internalType": "contract IVotes",
+				"name": "_token",
 				"type": "address"
 			},
 			{
+				"internalType": "contract TimelockController",
+				"name": "_timelock",
+				"type": "address"
+			},
+			{
+				"internalType": "string",
+				"name": "_name",
+				"type": "string"
+			},
+			{
+				"internalType": "uint48",
+				"name": "_votingDelay",
+				"type": "uint48"
+			},
+			{
+				"internalType": "uint32",
+				"name": "_votingPeriod",
+				"type": "uint32"
+			},
+			{
 				"internalType": "uint256",
-				"name": "votingDelay_",
+				"name": "_proposalThreshold",
 				"type": "uint256"
 			},
 			{
 				"internalType": "uint256",
-				"name": "votingPeriod_",
-				"type": "uint256"
-			},
-			{
-				"internalType": "uint256",
-				"name": "proposalThreshold_",
+				"name": "_quorumPercentage",
 				"type": "uint256"
 			}
 		],
 		"stateMutability": "nonpayable",
 		"type": "constructor"
+	},
+	{
+		"inputs": [],
+		"name": "CheckpointUnorderedInsertion",
+		"type": "error"
 	},
 	{
 		"inputs": [],
@@ -102,6 +117,22 @@
 			}
 		],
 		"name": "GovernorInvalidProposalLength",
+		"type": "error"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "quorumNumerator",
+				"type": "uint256"
+			},
+			{
+				"internalType": "uint256",
+				"name": "quorumDenominator",
+				"type": "uint256"
+			}
+		],
+		"name": "GovernorInvalidQuorumFraction",
 		"type": "error"
 	},
 	{
@@ -358,6 +389,43 @@
 				"internalType": "uint256",
 				"name": "proposalId",
 				"type": "uint256"
+			},
+			{
+				"indexed": false,
+				"internalType": "address",
+				"name": "proposer",
+				"type": "address"
+			},
+			{
+				"indexed": false,
+				"internalType": "string",
+				"name": "title",
+				"type": "string"
+			},
+			{
+				"indexed": false,
+				"internalType": "string",
+				"name": "forumThreadId",
+				"type": "string"
+			},
+			{
+				"indexed": false,
+				"internalType": "uint256",
+				"name": "createdAt",
+				"type": "uint256"
+			}
+		],
+		"name": "ProposalCreatedWithMetadata",
+		"type": "event"
+	},
+	{
+		"anonymous": false,
+		"inputs": [
+			{
+				"indexed": false,
+				"internalType": "uint256",
+				"name": "proposalId",
+				"type": "uint256"
 			}
 		],
 		"name": "ProposalExecuted",
@@ -399,6 +467,44 @@
 			}
 		],
 		"name": "ProposalThresholdSet",
+		"type": "event"
+	},
+	{
+		"anonymous": false,
+		"inputs": [
+			{
+				"indexed": false,
+				"internalType": "uint256",
+				"name": "oldQuorumNumerator",
+				"type": "uint256"
+			},
+			{
+				"indexed": false,
+				"internalType": "uint256",
+				"name": "newQuorumNumerator",
+				"type": "uint256"
+			}
+		],
+		"name": "QuorumNumeratorUpdated",
+		"type": "event"
+	},
+	{
+		"anonymous": false,
+		"inputs": [
+			{
+				"indexed": false,
+				"internalType": "address",
+				"name": "oldTimelock",
+				"type": "address"
+			},
+			{
+				"indexed": false,
+				"internalType": "address",
+				"name": "newTimelock",
+				"type": "address"
+			}
+		],
+		"name": "TimelockChange",
 		"type": "event"
 	},
 	{
@@ -542,7 +648,7 @@
 				"type": "string"
 			}
 		],
-		"stateMutability": "pure",
+		"stateMutability": "view",
 		"type": "function"
 	},
 	{
@@ -566,19 +672,6 @@
 				"internalType": "bytes32",
 				"name": "",
 				"type": "bytes32"
-			}
-		],
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"inputs": [],
-		"name": "advocateToken",
-		"outputs": [
-			{
-				"internalType": "contract IERC721",
-				"name": "",
-				"type": "address"
 			}
 		],
 		"stateMutability": "view",
@@ -916,7 +1009,7 @@
 			},
 			{
 				"internalType": "uint256",
-				"name": "",
+				"name": "timepoint",
 				"type": "uint256"
 			}
 		],
@@ -1208,6 +1301,45 @@
 				"type": "uint256"
 			}
 		],
+		"name": "proposalMetadata",
+		"outputs": [
+			{
+				"internalType": "string",
+				"name": "title",
+				"type": "string"
+			},
+			{
+				"internalType": "string",
+				"name": "forumThreadId",
+				"type": "string"
+			},
+			{
+				"internalType": "address",
+				"name": "proposer",
+				"type": "address"
+			},
+			{
+				"internalType": "uint256",
+				"name": "proposalId",
+				"type": "uint256"
+			},
+			{
+				"internalType": "uint256",
+				"name": "createdAt",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "proposalId",
+				"type": "uint256"
+			}
+		],
 		"name": "proposalNeedsQueuing",
 		"outputs": [
 			{
@@ -1351,6 +1483,50 @@
 				"type": "bytes[]"
 			},
 			{
+				"internalType": "string",
+				"name": "description",
+				"type": "string"
+			},
+			{
+				"internalType": "string",
+				"name": "title",
+				"type": "string"
+			},
+			{
+				"internalType": "string",
+				"name": "forumThreadId",
+				"type": "string"
+			}
+		],
+		"name": "proposeWithMetadata",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address[]",
+				"name": "targets",
+				"type": "address[]"
+			},
+			{
+				"internalType": "uint256[]",
+				"name": "values",
+				"type": "uint256[]"
+			},
+			{
+				"internalType": "bytes[]",
+				"name": "calldatas",
+				"type": "bytes[]"
+			},
+			{
 				"internalType": "bytes32",
 				"name": "descriptionHash",
 				"type": "bytes32"
@@ -1371,7 +1547,7 @@
 		"inputs": [
 			{
 				"internalType": "uint256",
-				"name": "",
+				"name": "blockNumber",
 				"type": "uint256"
 			}
 		],
@@ -1383,7 +1559,52 @@
 				"type": "uint256"
 			}
 		],
-		"stateMutability": "pure",
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "quorumDenominator",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "timepoint",
+				"type": "uint256"
+			}
+		],
+		"name": "quorumNumerator",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "quorumNumerator",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "view",
 		"type": "function"
 	},
 	{
@@ -1484,6 +1705,58 @@
 			}
 		],
 		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "timelock",
+		"outputs": [
+			{
+				"internalType": "address",
+				"name": "",
+				"type": "address"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "token",
+		"outputs": [
+			{
+				"internalType": "contract IERC5805",
+				"name": "",
+				"type": "address"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "newQuorumNumerator",
+				"type": "uint256"
+			}
+		],
+		"name": "updateQuorumNumerator",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "contract TimelockController",
+				"name": "newTimelock",
+				"type": "address"
+			}
+		],
+		"name": "updateTimelock",
+		"outputs": [],
+		"stateMutability": "nonpayable",
 		"type": "function"
 	},
 	{

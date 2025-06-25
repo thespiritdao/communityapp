@@ -1,8 +1,7 @@
 // src/providers/Providers.tsx
 "use client";
-
 import { ReactNode } from "react";
-import { WagmiConfig } from "wagmi";
+import { WagmiProvider } from "wagmi";
 import { wagmiConfig } from "src/config/wagmi.client";
 import { RainbowKitProvider } from "@rainbow-me/rainbowkit";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -13,13 +12,12 @@ const queryClient = new QueryClient();
 
 export default function Providers({ children }: { children: ReactNode }) {
   return (
-    <WagmiConfig config={wagmiConfig}>
+    <WagmiProvider config={wagmiConfig}>
       <QueryClientProvider client={queryClient}>
         <OnchainKitProvider
           apiKey={process.env.NEXT_PUBLIC_CDP_API_CLIENT as string}
           chain={base}
           config={{
-            paymaster: process.env.NEXT_PUBLIC_PAYMASTER_AND_BUNDLER_ENDPOINT,
             appearance: {
               name: "SpiritDAO",
               logo: "/spiritdaosymbol.png",
@@ -29,8 +27,9 @@ export default function Providers({ children }: { children: ReactNode }) {
             wallet: {
               display: "classic",
               termsUrl: "https://yourapp.com/terms",
-              privacyUrl: "https://yourapp.com/privacy",
+              privacyUrl: "https://yourapp.com/privacy", // FIXED: was "privacUrl"
             },
+            paymaster: process.env.NEXT_PUBLIC_PAYMASTER as string,
           }}
         >
           <RainbowKitProvider modalSize="compact">
@@ -38,6 +37,6 @@ export default function Providers({ children }: { children: ReactNode }) {
           </RainbowKitProvider>
         </OnchainKitProvider>
       </QueryClientProvider>
-    </WagmiConfig>
+    </WagmiProvider>
   );
 }

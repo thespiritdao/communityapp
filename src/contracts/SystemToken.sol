@@ -1,40 +1,33 @@
-// src/contracts/SystemToken.sol
+// File: src/contracts/SystemToken.sol
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.0;
+pragma solidity ^0.8.20;
 
-import "@openzeppelin/contracts/token/ERC20/ERC20.sol"; 
-import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Burnable.sol"; 
+import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
 
-/**
- * @title SystemToken
- * @notice ERC20 token representing $SYSTEM (fiat-backed 1:1) with minting and burning functionality.
- *         Minting is restricted to addresses holding the EXECUTIVE_ROLE.
- */
-contract SystemToken is ERC20, ERC20Burnable, AccessControl {
-    // Define the role for governance—addresses with this role can mint tokens.
+/// @title SystemToken
+/// @notice ERC20 “SYSTEM” token pegged 1:1 to fiat. Minting controlled via EXECUTIVE_ROLE.
+contract SystemToken is ERC20, AccessControl {
+    /// @notice Role identifier for accounts allowed to mint new tokens.
     bytes32 public constant EXECUTIVE_ROLE = keccak256("EXECUTIVE_ROLE");
 
-    /**
-     * @notice Constructor that mints an initial supply and grants EXECUTIVE_ROLE.
-     * @param initialSupply The initial number of tokens (in wei).
-     * @param executiveAddress The address that will hold the EXECUTIVE_ROLE.
-     */
-    constructor(uint256 initialSupply, address executiveAddress) ERC20("SystemToken", "$SYSTEM") {
-        // Grant the deployer the default admin role.
-        _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
-        // Grant EXECUTIVE_ROLE to the designated executive pod address.
-        _setupRole(EXECUTIVE_ROLE, executiveAddress);
-        // Mint the initial supply to the community vault (executive address).
+    /// @param initialSupply   Amount of tokens (in wei) to mint initially.
+    /// @param executiveAddress Address to receive EXECUTIVE_ROLE and initialSupply.
+    constructor(uint256 initialSupply, address executiveAddress) ERC20("SystemToken", "SYSTEM") {
+        require(executiveAddress != address(0), "SystemToken: invalid executive address");
+
+        // Grant deployer the admin role so they can grant/revoke EXECUTIVE_ROLE
+        _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
+        // Grant minting/executive permission
+        _grantRole(EXECUTIVE_ROLE, executiveAddress);
+
+        // Mint the initial supply to the executive
         _mint(executiveAddress, initialSupply);
     }
 
-    /**
-     * @notice Mint additional $SYSTEM tokens.
-     * @dev Only callable by accounts with EXECUTIVE_ROLE.
-     * @param to The address to receive the minted tokens.
-     * @param amount The amount of tokens to mint.
-     */
+    /// @notice Creates `amount` new tokens for `to`. Caller must have EXECUTIVE_ROLE.
+    /// @param to      Recipient of the newly minted tokens.
+    /// @param amount  Number of tokens to mint (in wei).
     function mint(address to, uint256 amount) external onlyRole(EXECUTIVE_ROLE) {
         _mint(to, amount);
     }

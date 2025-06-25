@@ -1,7 +1,7 @@
 import { type UseQueryResult, useQuery } from '@tanstack/react-query';
-import { getMintDetails } from '../../api/getMintDetails';
-import type { GetMintDetailsParams, MintDetails } from '../../api/types';
-import { isNFTError } from '../utils/isNFTError';
+import { getMintDetails } from 'src/app/api/getMintDetails';
+import type { GetMintDetailsParams, MintDetails } from 'src/app/api/types';
+import { isNFTError } from 'src/nft/utils/isNFTError';
 
 export function useMintDetails({
   contractAddress,

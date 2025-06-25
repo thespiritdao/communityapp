@@ -1,37 +1,60 @@
-import { background, border, cn, color } from '../../styles/theme';
-import { useIsMounted } from '../../useIsMounted';
-import { useTheme } from '../../useTheme';
-import { useMintData as defaultUseMintData } from '../hooks/useMintData';
-import { LifecycleType, type NFTMintCardReact } from '../types';
-import { buildMintTransactionData as defaultBuildMintTransaction } from '../utils/buildMintTransactionData';
-import NFTErrorBoundary from './NFTErrorBoundary';
-import { NFTErrorFallback } from './NFTErrorFallback';
-import { NFTLifecycleProvider } from './NFTLifecycleProvider';
-import { NFTProvider } from './NFTProvider';
+// src/nft/components/NFTMintCard.tsx
+'use client';
+import React, { ReactNode, ReactElement } from 'react';
+import { background, border, cn, color } from 'src/styles/theme';
+import { useIsMounted } from 'src/useIsMounted';
+import { useTheme } from 'src/useTheme';
+import { LifecycleType, NFTMintCardReact } from 'src/nft/types';
+import NFTErrorBoundary from 'src/nft/components/NFTErrorBoundary';
+import { NFTErrorFallback } from 'src/nft/components/NFTErrorFallback';
+import { NFTLifecycleProvider } from 'src/nft/components/NFTLifecycleProvider';
+import { NFTProvider, useNFTContext } from 'src/nft/components/NFTProvider';
+import AdvocateMembershipABI from 'src/abis/AdvocateMembershipABI.json';
 
-export function NFTMintCard({
-  children,
-  className,
+export interface AdvocateMintCardProps
+  extends Omit<NFTMintCardReact, 'buildMintTransaction'> {
+  memberType: number;
+  tokenURI: string;
+  /**
+   * children can be either plain JSX or a render-prop function
+   * which receives `{ mint, isLoading }` from the NFTProvider context.
+   */
+  children:
+    | ReactNode
+    | ((opts: { mint: () => Promise<void>; isLoading: boolean }) => ReactElement);
+}
+
+export function AdvocateMintCard({
   contractAddress,
   tokenId,
   isSponsored,
-  useNFTData = defaultUseMintData,
-  buildMintTransaction = defaultBuildMintTransaction,
+  useNFTData,
   onStatus,
   onError,
   onSuccess,
-}: NFTMintCardReact) {
-  const componentTheme = useTheme();
-
+  memberType,
+  tokenURI,
+  children,
+  className,
+}: AdvocateMintCardProps) {
+  // 1) hooks in a stable order
+  const theme = useTheme();
   const isMounted = useIsMounted();
+  const { mint, isLoading } = useNFTContext(); // always after the provider
 
-  // prevents SSR hydration issue
-  if (!isMounted) {
-    return null;
-  }
+  // 2) bail after hooks
+  if (!isMounted) return null;
+
+  // 3) our custom mint‐tx builder for Advocate
+  const buildMintTransaction = () => ({
+    address: contractAddress,
+    abi: AdvocateMembershipABI,
+    functionName: 'mint',
+    args: [undefined as any, memberType, tokenURI] as any[],
+  });
 
   return (
-    <NFTErrorBoundary fallback={NFTErrorFallback}>
+    <NFTErrorBoundary fallback={<NFTErrorFallback />}>
       <NFTLifecycleProvider
         type={LifecycleType.MINT}
         onStatus={onStatus}
@@ -47,20 +70,23 @@ export function NFTMintCard({
         >
           <div
             className={cn(
-              componentTheme,
+              theme,
               color.foreground,
               background.default,
               border.defaultActive,
               border.radius,
               'flex w-full max-w-[500px] flex-col gap-2 border p-4',
-              className,
+              className
             )}
             data-testid="ockNFTMintCard_Container"
           >
-            {children}
+            {typeof children === 'function'
+              ? children({ mint, isLoading })
+              : children}
           </div>
         </NFTProvider>
       </NFTLifecycleProvider>
     </NFTErrorBoundary>
   );
 }
+

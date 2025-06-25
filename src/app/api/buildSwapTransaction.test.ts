@@ -1,6 +1,6 @@
 import { type Mock, beforeEach, describe, expect, it, vi } from 'vitest';
-import { CDP_GET_SWAP_TRADE } from '../network/definitions/swap';
-import { sendRequest } from '../network/request';
+import { CDP_GET_SWAP_TRADE } from 'src/network/definitions/swap';
+import { sendRequest } from 'src/network/request';
 import { DEGEN_TOKEN, ETH_TOKEN } from '../swap/mocks';
 import type { BuildSwapTransaction } from '../swap/types';
 import { buildSwapTransaction } from './buildSwapTransaction';
@@ -10,7 +10,7 @@ import { buildSwapTransaction } from './buildSwapTransaction';
 import { getAPIParamsForToken } from './utils/getAPIParamsForToken';
 import { getSwapTransaction } from './utils/getSwapTransaction';
 
-vi.mock('../network/request');
+vi.mock('src/network/request');
 
 const testFromAddress = '0x6Cd01c0F55ce9E0Bf78f5E90f72b4345b16d515d';
 const testAmount = '3305894409732200';

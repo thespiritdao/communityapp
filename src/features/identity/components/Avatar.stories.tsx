@@ -87,14 +87,14 @@ export const BaseSepolia: Story = {
 
 export const BaseDefaultToMainnet: Story = {
   args: {
-    address: '0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045',
+    address: '0x592E560171D2a882474cdfc3BbeeDb21cEB4015d',
     chain: base,
   },
 };
 
 export const BaseSepoliaDefaultToMainnet: Story = {
   args: {
-    address: '0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045',
+    address: '0x592E560171D2a882474cdfc3BbeeDb21cEB4015d',
     chain: baseSepolia,
   },
 };
