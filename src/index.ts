@@ -1,4 +1,4 @@
-// 🌲☀️🌲
+// src/index.ts
 export { isBase } from './isBase';
 export { isEthereum } from './isEthereum';
 export { getOnchainKitConfig, setOnchainKitConfig } from './OnchainKitConfig';

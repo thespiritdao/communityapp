@@ -1,0 +1,13 @@
+npx hardhat run scripts/deploy.js --network localhost
+console.log("Size (bytes):", (code.length - 2) / 2);
+console.log("Bytecode:", code);
+const code = await ethers.provider.getCode(governorAddress);
+const governorAddress = "0xBe6738A7Df07BA1E2F33be2dB6B55BDe49bAca0a";
+console.log("Size (bytes):", (code.length - 2) / 2);
+console.log("Bytecode:", code);
+const code = await ethers.provider.getCode(governorAddress);
+const governorAddress = "0xBe6738A7Df07BA1E2F33be2dB6B55BDe49bAca0a";
+console.log("Size (bytes):", (code.length - 2) / 2);
+console.log("Bytecode:", code);
+const code = await ethers.provider.getCode(governorAddress);
+const governorAddress = "0xBe6738A7Df07BA1E2F33be2dB6B55BDe49bAca0a";

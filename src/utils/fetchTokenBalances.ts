@@ -1,6 +1,8 @@
 // src/utils/fetchTokenBalances.ts
 import Web3 from "web3";
 import BN from "bn.js";
+import { useContractRead } from 'wagmi';
+import { HATS_ABI } from '@/contracts/abis/Hats';
 
 // Minimal JSON ABIs for ERC20 and ERC721
 const erc20Abi = [
@@ -79,59 +81,110 @@ const HATS_CONTRACT = process.env.NEXT_PUBLIC_HATS_CONTRACT;
 const EXECUTIVE_POD_HAT_ID = process.env.NEXT_PUBLIC_EXECUTIVE_POD_HAT_ID; // raw hat id (hex string)
 const DEV_POD_HAT_ID = process.env.NEXT_PUBLIC_DEV_POD_HAT_ID; // raw hat id (hex string)
 
+// Add bounty hat ID
+const BOUNTY_HAT_ID = process.env.NEXT_PUBLIC_BOUNTY_MANAGEMENT;
 
 // Create a Web3 provider and instance.
 const provider = new Web3.providers.HttpProvider(RPC_URL, { chainId: NETWORK_CHAIN_ID });
 const web3 = new Web3(provider);
 
-// Define the return interface.
-export interface TokenBalances {
+// Add type for contract result
+type ContractResult = [bigint, string[]];
+
+// Add type for token balance
+interface TokenBalance {
   hasProofOfCuriosity: boolean;
   hasMarketAdmin: boolean;
   hasExecutivePod: boolean;
   hasDevPod: boolean;
-  systemBalance: string; // human-readable token amount
-  selfBalance: string;   // human-readable token amount
+  hasBountyHat: boolean;
+  systemBalance: string;
+  selfBalance: string;
+}
+
+// Add type for cache entry
+interface CacheEntry {
+  data: TokenBalance;
+  timestamp: number;
+}
+
+// Add type for contract call
+interface ContractCall {
+  target: string;
+  callData: string;
+}
+
+// Add rate limiting and retry configuration
+const RATE_LIMIT = {
+  maxRequests: 5,
+  timeWindow: 1000, // 1 second
+  retryAttempts: 3,
+  retryDelay: 1000, // 1 second
+};
+
+// Add request tracking
+const requestTracker = {
+  requests: [] as number[],
+  addRequest() {
+    const now = Date.now();
+    this.requests = this.requests.filter(time => now - time < RATE_LIMIT.timeWindow);
+    this.requests.push(now);
+    return this.requests.length <= RATE_LIMIT.maxRequests;
+  }
+};
+
+// Add delay utility
+const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+// Add retry utility with proper typing
+async function withRetry<T>(
+  operation: () => Promise<T>,
+  context: string,
+  maxAttempts: number = RATE_LIMIT.retryAttempts
+): Promise<T> {
+  let lastError: Error | null = null;
+  
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      // Check rate limit
+      if (!requestTracker.addRequest()) {
+        console.log(`Rate limit reached, waiting ${RATE_LIMIT.timeWindow}ms...`);
+        await delay(RATE_LIMIT.timeWindow);
+      }
+      
+      return await operation();
+    } catch (error) {
+      lastError = error as Error;
+      console.error(`Attempt ${attempt}/${maxAttempts} failed for ${context}:`, error);
+      
+      if (attempt < maxAttempts) {
+        const delayTime = RATE_LIMIT.retryDelay * attempt;
+        console.log(`Retrying in ${delayTime}ms...`);
+        await delay(delayTime);
+      }
+    }
+  }
+  
+  throw new Error(`Failed after ${maxAttempts} attempts: ${lastError?.message}`);
 }
 
 /**
  * Returns true if the given address is not a known placeholder.
  */
 function isValidAddress(addr: string | undefined): boolean {
-  if (!addr) return false;
+  const safeAddr = addr ?? "";
+  if (!safeAddr) return false;
   return (
-    addr !== "0x0000000000000000000000000000000000000000" &&
-    addr !== "0x0000000000000000000000000000000000000001"
+    safeAddr !== "0x0000000000000000000000000000000000000000" &&
+    safeAddr !== "0x0000000000000000000000000000000000000001"
   );
 }
 
 // --- Basic In-Memory Cache Setup ---
-const tokenBalancesCache: Record<string, { data: TokenBalances; timestamp: number }> = {};
+const tokenBalancesCache: Record<string, CacheEntry> = {};
 const CACHE_TTL = 30 * 1000; // 30 seconds
 
-/**
- * Fetch token balances for the given wallet address using multicall.
- */
-export async function fetchERC1155Balance(
-  walletAddress: string,
-  contractAddress: string,
-  tokenId: string // expecting a hex string representing a uint256
-): Promise<bigint> {
-  try {
-    const balance = await readContract({
-      address: contractAddress,
-      abi: erc1155Abi,
-      functionName: "balanceOf",
-      args: [walletAddress, tokenId],
-      chainId: NETWORK_CHAIN_ID,
-    });
-    return balance;
-  } catch (error) {
-    console.error("❌ Error fetching ERC-1155 balance:", error);
-    return 0n;
-  }}
-
-export async function fetchTokenBalances(walletAddress: string): Promise<TokenBalances> {
+export async function fetchTokenBalances(walletAddress: string): Promise<TokenBalance> {
   if (!walletAddress) {
     throw new Error("No wallet address provided");
   }
@@ -141,193 +194,263 @@ export async function fetchTokenBalances(walletAddress: string): Promise<TokenBa
     return tokenBalancesCache[walletAddress].data;
   }
 
-  const calls: { target: string; callData: string }[] = [];
-  let proofIndex = -1;
-  let systemIndex = -1;
-  let selfIndex = -1;
-  let marketAdminIndex = -1;
-  let executivePodIndex = -1;
-  let devPodIndex = -1;
-
-  // --- Proof of Curiosity (ERC721) ---
-  if (isValidAddress(PROOF_OF_CURIOSITY_CONTRACT)) {
-    try {
-      const proofContract = new web3.eth.Contract(erc721Abi as any, PROOF_OF_CURIOSITY_CONTRACT);
-      proofIndex = calls.length;
-      calls.push({
-        target: PROOF_OF_CURIOSITY_CONTRACT,
-        callData: proofContract.methods.balanceOf(walletAddress).encodeABI(),
-      });
-    } catch (error) {
-      console.error("Error setting up Proof of Curiosity call:", error);
-    }
-  } else {
-    console.warn("Proof of Curiosity contract address is a placeholder. Using balance 0.");
-  }
-
-  // --- System Token (ERC20) ---
-  if (isValidAddress(SYSTEM_TOKEN_CONTRACT)) {
-    try {
-      const systemContract = new web3.eth.Contract(erc20Abi as any, SYSTEM_TOKEN_CONTRACT);
-      systemIndex = calls.length;
-      calls.push({
-        target: SYSTEM_TOKEN_CONTRACT,
-        callData: systemContract.methods.balanceOf(walletAddress).encodeABI(),
-      });
-    } catch (error) {
-      console.error("Error setting up System Token call:", error);
-    }
-  } else {
-    console.warn("System Token contract address is a placeholder. Using balance 0.");
-  }
-
-  // --- Self Token (ERC20) ---
-  if (isValidAddress(SELF_TOKEN_CONTRACT)) {
-    try {
-      const selfContract = new web3.eth.Contract(erc20Abi as any, SELF_TOKEN_CONTRACT);
-      selfIndex = calls.length;
-      calls.push({
-        target: SELF_TOKEN_CONTRACT,
-        callData: selfContract.methods.balanceOf(walletAddress).encodeABI(),
-      });
-    } catch (error) {
-      console.error("Error setting up Self Token call:", error);
-    }
-  } else {
-    console.warn("Self Token contract address is a placeholder. Using balance 0.");
-  }
-
-  // --- Market Admin Token (ERC20) ---
-  if (isValidAddress(MARKET_ADMIN_TOKEN_CONTRACT)) {
-    try {
-      const marketAdminContract = new web3.eth.Contract(erc20Abi as any, MARKET_ADMIN_TOKEN_CONTRACT);
-      marketAdminIndex = calls.length;
-      calls.push({
-        target: MARKET_ADMIN_TOKEN_CONTRACT,
-        callData: marketAdminContract.methods.balanceOf(walletAddress).encodeABI(),
-      });
-    } catch (error) {
-      console.error("Error setting up Market Admin Token call:", error);
-    }
-  } else {
-    console.warn("Market Admin Token contract address is a placeholder or not set. Using balance 0.");
-  }
-
-	// --- Executive Pod Token (ERC1155) ---
-	if (isValidAddress(HATS_CONTRACT)) {
-	  const execHatId = process.env.NEXT_PUBLIC_EXECUTIVE_POD_HAT_ID;
-	  if (execHatId) {
-		try {
-		  const hatsContract = new web3.eth.Contract(erc1155Abi as any, HATS_CONTRACT);
-		  executivePodIndex = calls.length;
-		  calls.push({
-			target: HATS_CONTRACT,
-			callData: hatsContract.methods.balanceOf(walletAddress, execHatId).encodeABI(),
-		  });
-		} catch (error) {
-		  console.error("Error setting up Executive Pod Token call:", error);
-		}
-	  } else {
-		console.warn("Executive Pod Hat ID is not defined; defaulting to balance 0.");
-	  }
-	} else {
-	  console.warn("HATS_CONTRACT is not valid; cannot check Executive Pod Token.");
-	}
-
-  // --- Dev Pod Token (ERC1155) ---
-
-	if (isValidAddress(HATS_CONTRACT)) {
-	  const devHatId = process.env.NEXT_PUBLIC_DEV_POD_HAT_ID;
-	  if (devHatId) {
-		try {
-		  const hatsContract = new web3.eth.Contract(erc1155Abi as any, HATS_CONTRACT);
-		  devPodIndex = calls.length;
-		  calls.push({
-			target: HATS_CONTRACT,
-			callData: hatsContract.methods.balanceOf(walletAddress, devHatId).encodeABI(),
-		  });
-		} catch (error) {
-		  console.error("Error setting up Dev Pod Token call:", error);
-		}
-	  } else {
-		console.warn("Dev Pod Hat ID is not defined; defaulting to balance 0.");
-	  }
-	} else {
-	  console.warn("HATS_CONTRACT is not valid; cannot check Dev Pod Token.");
-	}
-
-
-  // --- Perform Multicall ---
-  const multicallContract = new web3.eth.Contract(multicallAbi as any, MULTICALL_ADDRESS);
-  let returnData: string[] = [];
   try {
-    const result = await multicallContract.methods.aggregate(calls).call();
-    returnData = result.returnData;
+    const calls: ContractCall[] = [];
+    let proofIndex = -1;
+    let systemIndex = -1;
+    let selfIndex = -1;
+    let marketAdminIndex = -1;
+    let executivePodIndex = -1;
+    let devPodIndex = -1;
+
+    // --- Proof of Curiosity (ERC721) ---
+    if (isValidAddress((PROOF_OF_CURIOSITY_CONTRACT ?? "") as string)) {
+      try {
+        const proofContract = new web3.eth.Contract(erc721Abi as any, (PROOF_OF_CURIOSITY_CONTRACT ?? "") as string);
+        proofIndex = calls.length;
+        calls.push({
+          target: (PROOF_OF_CURIOSITY_CONTRACT ?? "") as string,
+          callData: proofContract.methods.balanceOf(walletAddress).encodeABI(),
+        });
+      } catch (error) {
+        console.error("Error setting up Proof of Curiosity call:", error);
+      }
+    }
+
+    // --- System Token (ERC20) ---
+    if (isValidAddress(SYSTEM_TOKEN_CONTRACT ?? "")) {
+      try {
+        const systemContract = new web3.eth.Contract(erc20Abi as any, (SYSTEM_TOKEN_CONTRACT ?? "") as string);
+        systemIndex = calls.length;
+        calls.push({
+          target: (SYSTEM_TOKEN_CONTRACT ?? "") as string,
+          callData: systemContract.methods.balanceOf(walletAddress).encodeABI(),
+        });
+      } catch (error) {
+        console.error("Error setting up System Token call:", error);
+      }
+    } else {
+      console.warn("System Token contract address is a placeholder. Using balance 0.");
+    }
+
+    // --- Self Token (ERC20) ---
+    if (isValidAddress(SELF_TOKEN_CONTRACT ?? "")) {
+      try {
+        const selfContract = new web3.eth.Contract(erc20Abi as any, (SELF_TOKEN_CONTRACT ?? "") as string);
+        selfIndex = calls.length;
+        calls.push({
+          target: (SELF_TOKEN_CONTRACT ?? "") as string,
+          callData: selfContract.methods.balanceOf(walletAddress).encodeABI(),
+        });
+      } catch (error) {
+        console.error("Error setting up Self Token call:", error);
+      }
+    } else {
+      console.warn("Self Token contract address is a placeholder. Using balance 0.");
+    }
+
+    // --- Market Admin Token (ERC20) ---
+    if (isValidAddress(MARKET_ADMIN_TOKEN_CONTRACT ?? "")) {
+      try {
+        const marketAdminContract = new web3.eth.Contract(erc20Abi as any, (MARKET_ADMIN_TOKEN_CONTRACT ?? "") as string);
+        marketAdminIndex = calls.length;
+        calls.push({
+          target: (MARKET_ADMIN_TOKEN_CONTRACT ?? "") as string,
+          callData: marketAdminContract.methods.balanceOf(walletAddress).encodeABI(),
+        });
+      } catch (error) {
+        console.error("Error setting up Market Admin Token call:", error);
+      }
+    } else {
+      console.warn("Market Admin Token contract address is a placeholder or not set. Using balance 0.");
+    }
+
+    // --- Executive Pod Token (ERC1155) ---
+    if (isValidAddress(HATS_CONTRACT ?? "")) {
+      const execHatId = process.env.NEXT_PUBLIC_EXECUTIVE_POD_HAT_ID ?? "0";
+      if (execHatId) {
+        try {
+          const hatsContract = new web3.eth.Contract(erc1155Abi as any, (HATS_CONTRACT ?? "") as string);
+          executivePodIndex = calls.length;
+          calls.push({
+            target: (HATS_CONTRACT ?? "") as string,
+            callData: hatsContract.methods.balanceOf(walletAddress, execHatId).encodeABI(),
+          });
+        } catch (error) {
+          console.error("Error setting up Executive Pod Token call:", error);
+        }
+      } else {
+        console.warn("Executive Pod Hat ID is not defined; defaulting to balance 0.");
+      }
+    } else {
+      console.warn("HATS_CONTRACT is not valid; cannot check Executive Pod Token.");
+    }
+
+    // --- Dev Pod Token (ERC1155) ---
+    if (isValidAddress(HATS_CONTRACT ?? "")) {
+      const devHatId = process.env.NEXT_PUBLIC_DEV_POD_HAT_ID ?? "0";
+      if (devHatId) {
+        try {
+          const hatsContract = new web3.eth.Contract(erc1155Abi as any, (HATS_CONTRACT ?? "") as string);
+          devPodIndex = calls.length;
+          calls.push({
+            target: (HATS_CONTRACT ?? "") as string,
+            callData: hatsContract.methods.balanceOf(walletAddress, devHatId).encodeABI(),
+          });
+        } catch (error) {
+          console.error("Error setting up Dev Pod Token call:", error);
+        }
+      } else {
+        console.warn("Dev Pod Hat ID is not defined; defaulting to balance 0.");
+      }
+    } else {
+      console.warn("HATS_CONTRACT is not valid; cannot check Dev Pod Token.");
+    }
+
+    // --- Bounty Hat Token (ERC1155) ---
+    let bountyHatIndex = -1;
+    if (isValidAddress(HATS_CONTRACT ?? "")) {
+      const bountyHatId = BOUNTY_HAT_ID ?? "0";
+      if (bountyHatId) {
+        try {
+          const hatsContract = new web3.eth.Contract(erc1155Abi as any, (HATS_CONTRACT ?? "") as string);
+          bountyHatIndex = calls.length;
+          calls.push({
+            target: (HATS_CONTRACT ?? "") as string,
+            callData: hatsContract.methods.balanceOf(walletAddress, bountyHatId).encodeABI(),
+          });
+        } catch (error) {
+          console.error("Error setting up Bounty Hat Token call:", error);
+        }
+      } else {
+        console.warn("Bounty Hat ID is not defined; defaulting to balance 0.");
+      }
+    } else {
+      console.warn("HATS_CONTRACT is not valid; cannot check Bounty Hat Token.");
+    }
+
+    // Execute multicall with retry logic and proper typing
+    const multicallContract = new web3.eth.Contract(multicallAbi as any, (MULTICALL_ADDRESS ?? "") as string);
+    
+    type MulticallResult = { blockNumber: string; returnData: string[] };
+    const result = await withRetry<MulticallResult>(
+      () => multicallContract.methods.aggregate(calls).call(),
+      'multicall aggregate'
+    );
+
+    const blockNumber = result.blockNumber;
+    const returnData = result.returnData;
+    console.log(`Multicall successful at block ${blockNumber}`);
+
+    // Process results with error handling and proper typing
+    const balances: TokenBalance = {
+      hasProofOfCuriosity: false,
+      hasMarketAdmin: false,
+      hasExecutivePod: false,
+      hasDevPod: false,
+      hasBountyHat: false,
+      systemBalance: "0",
+      selfBalance: "0",
+    };
+
+    try {
+      if (proofIndex >= 0 && returnData[proofIndex]) {
+        const proofBalance = web3.utils.hexToNumberString((returnData[proofIndex] ?? "0") as string);
+        balances.hasProofOfCuriosity = Number(proofBalance) > 0;
+      }
+    } catch (error) {
+      console.error("Error processing Proof of Curiosity balance:", error);
+    }
+
+    try {
+      if (systemIndex >= 0 && returnData[systemIndex]) {
+        const systemBalance = (returnData[systemIndex] ?? "0") as string;
+        balances.systemBalance = web3.utils.fromWei(systemBalance, 'ether');
+      }
+    } catch (error) {
+      console.error("Error processing System Token balance:", error);
+    }
+
+    try {
+      if (selfIndex >= 0 && returnData[selfIndex]) {
+        const selfBalance = (returnData[selfIndex] ?? "0") as string;
+        balances.selfBalance = web3.utils.fromWei(selfBalance, 'ether');
+      }
+    } catch (error) {
+      console.error("Error processing Self Token balance:", error);
+    }
+
+    try {
+      if (marketAdminIndex >= 0 && returnData[marketAdminIndex]) {
+        const marketAdminBalance = web3.utils.hexToNumberString((returnData[marketAdminIndex] ?? "0") as string);
+        balances.hasMarketAdmin = Number(marketAdminBalance) > 0;
+      }
+    } catch (error) {
+      console.error("Error processing Market Admin Token balance:", error);
+    }
+
+    try {
+      if (executivePodIndex >= 0 && returnData[executivePodIndex]) {
+        const execPodBalance = web3.utils.hexToNumberString((returnData[executivePodIndex] ?? "0") as string);
+        balances.hasExecutivePod = Number(execPodBalance) > 0;
+      }
+    } catch (error) {
+      console.error("Error processing Executive Pod Token balance:", error);
+    }
+
+    try {
+      if (devPodIndex >= 0 && returnData[devPodIndex]) {
+        const devPodBalance = web3.utils.hexToNumberString((returnData[devPodIndex] ?? "0") as string);
+        balances.hasDevPod = Number(devPodBalance) > 0;
+      }
+    } catch (error) {
+      console.error("Error processing Dev Pod Token balance:", error);
+    }
+
+    try {
+      if (bountyHatIndex >= 0 && returnData[bountyHatIndex]) {
+        const bountyHatBalance = web3.utils.hexToNumberString((returnData[bountyHatIndex] ?? "0") as string);
+        balances.hasBountyHat = Number(bountyHatBalance) > 0;
+      }
+    } catch (error) {
+      console.error("Error processing Bounty Hat balance:", error);
+    }
+
+    // Cache the results
+    tokenBalancesCache[walletAddress] = {
+      data: balances,
+      timestamp: now
+    };
+
+    return balances;
   } catch (error) {
-    console.error("Error during multicall aggregate:", error);
+    console.error("Error in fetchTokenBalances:", error);
+    // Return default values on error
+    return {
+      hasProofOfCuriosity: false,
+      hasMarketAdmin: false,
+      hasExecutivePod: false,
+      hasDevPod: false,
+      hasBountyHat: false,
+      systemBalance: "0",
+      selfBalance: "0",
+    };
   }
-
-  // --- Decode Return Data ---
-  let proofBalanceRaw = "0";
-  if (proofIndex >= 0 && returnData[proofIndex]) {
-    try {
-      proofBalanceRaw = web3.eth.abi.decodeParameter("uint256", returnData[proofIndex]);
-    } catch (e) {
-      console.error("Error decoding Proof of Curiosity balance:", e);
-      console.error("Raw return data for PoC:", returnData[proofIndex]);
-      proofBalanceRaw = "0";
-    }
-  }
-  
-  const systemBalanceRaw =
-    systemIndex >= 0 && returnData[systemIndex]
-      ? web3.eth.abi.decodeParameter("uint256", returnData[systemIndex])
-      : "0";
-  const selfBalanceRaw =
-    selfIndex >= 0 && returnData[selfIndex]
-      ? web3.eth.abi.decodeParameter("uint256", returnData[selfIndex])
-      : "0";
-  const marketAdminBalanceRaw =
-    marketAdminIndex >= 0 && returnData[marketAdminIndex]
-      ? web3.eth.abi.decodeParameter("uint256", returnData[marketAdminIndex])
-      : "0";
-  
-  let executivePodBalanceRaw = "0";
-  if (executivePodIndex >= 0 && returnData[executivePodIndex]) {
-    try {
-      executivePodBalanceRaw = web3.eth.abi.decodeParameter("uint256", returnData[executivePodIndex]);
-    } catch (e) {
-      console.error("Error decoding Executive Pod balance:", e);
-      console.error("Raw return data for Executive Pod:", returnData[executivePodIndex]);
-      executivePodBalanceRaw = "0";
-    }
-  }
-  
-  let devPodBalanceRaw = "0";
-  if (devPodIndex >= 0 && returnData[devPodIndex]) {
-    try {
-      devPodBalanceRaw = web3.eth.abi.decodeParameter("uint256", returnData[devPodIndex]);
-    } catch (e) {
-      console.error("Error decoding Dev Pod balance:", e);
-      console.error("Raw return data for Dev Pod:", returnData[devPodIndex]);
-      devPodBalanceRaw = "0";
-    }
-  }
-
-  const systemBalanceHuman = web3.utils.fromWei(systemBalanceRaw, "ether");
-  const selfBalanceHuman = web3.utils.fromWei(selfBalanceRaw, "ether");
-
-	const balances: TokenBalances = {
-	  hasProofOfCuriosity: BigInt(proofBalanceRaw) > 0n,
-	  hasMarketAdmin: BigInt(marketAdminBalanceRaw) > 0n,
-	  hasExecutivePod: BigInt(executivePodBalanceRaw) > 0n,
-	  hasDevPod: BigInt(devPodBalanceRaw) > 0n,
-	  systemBalance: systemBalanceHuman,
-	  selfBalance: selfBalanceHuman,
-	};
-
-
-  tokenBalancesCache[walletAddress] = { data: balances, timestamp: now };
-
-  return balances;
 }
+
+// Export the bounty-specific interface for the bounty system
+export interface BountyTokenBalances {
+  hasExecutivePod: boolean;
+  hasDevPod: boolean;
+  hasMarketAdmin: boolean;
+}
+
+// Helper function for bounty system to check if user can create bounties
+export const checkBountyPermissions = async (address: string): Promise<BountyTokenBalances> => {
+  const balances = await fetchTokenBalances(address);
+  return {
+    hasExecutivePod: balances.hasExecutivePod,
+    hasDevPod: balances.hasDevPod,
+    hasMarketAdmin: balances.hasMarketAdmin,
+  };
+};

@@ -52,7 +52,7 @@ contract DAO_Governor is
         uint256[] memory values,
         bytes[] memory calldatas,
         string memory description
-    ) public override(Governor) returns (uint256) {
+    ) public override returns (uint256) {
         require(
             advocateToken.getVotes(msg.sender) > 0,
             "Must hold an Advocate NFT to propose"
@@ -115,15 +115,18 @@ contract DAO_Governor is
     }
 
     /// @notice Block non-holders from even calling the vote functions
-    function _canVote(uint256 proposalId, address account)
-        internal
-        view
-        override(Governor, GovernorCountingSimple)
-        returns (bool)
-    {
-        return
-            advocateToken.getPastVotes(account, block.number) > 0 &&
-            Governor._canVote(proposalId, account);
+    function _castVote(
+        uint256 proposalId,
+        address account,
+        uint8 support,
+        string memory reason,
+        bytes memory params
+    ) internal override returns (uint256) {
+        require(
+            advocateToken.getPastVotes(account, block.number) > 0,
+            "Must hold an Advocate NFT to vote"
+        );
+        return super._castVote(proposalId, account, support, reason, params);
     }
 
     // Boilerplate overrides to satisfy Solidity's linearization requirements
@@ -164,22 +167,16 @@ contract DAO_Governor is
         return super.state(proposalId);
     }
 
-    function _execute(
-        uint256 proposalId,
-        address[] memory targets,
-        uint256[] memory values,
-        bytes[] memory calldatas,
-        bytes32 descriptionHash
-    ) internal override(Governor, GovernorTimelockControl) {
-        super._execute(proposalId, targets, values, calldatas, descriptionHash);
-    }
-
     function _cancel(
         address[] memory targets,
         uint256[] memory values,
-        bytes[] memory calldatas,
-        bytes32 descriptionHash
-    ) internal override(Governor, GovernorTimelockControl) returns (uint256) {
+        bytes[]  memory calldatas,
+        bytes32  descriptionHash
+    )
+        internal
+        override(Governor, GovernorTimelockControl)          // (Timelock no longer declares _cancel in OZ-v5)
+        returns (uint256)
+    {
         return super._cancel(targets, values, calldatas, descriptionHash);
     }
 
@@ -192,10 +189,12 @@ contract DAO_Governor is
         return super._executor();
     }
 
+
+
     function supportsInterface(bytes4 interfaceId)
         public
         view
-        override(Governor, GovernorTimelockControl)
+        override(Governor)
         returns (bool)
     {
         return super.supportsInterface(interfaceId);

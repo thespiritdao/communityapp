@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { useAccount, usePublicClient } from 'wagmi';
 import { useToast } from 'src/components/ui/use-toast';
+import { getWalletClient } from 'wagmi/actions'; 
 import DAOGovernorABI from 'src/abis/DAO_GovernorABI.json';
 import {
   Transaction,
@@ -50,20 +51,21 @@ const VoteButton: React.FC<VoteButtonProps> = ({ proposalId, choice }) => {
 		address: GOVERNOR_ADDRESS,
 		abi: DAOGovernorABI,
 		functionName: 'castVote',
-		args: [BigInt(proposalId), BigInt(choice)],
+		args: [BigInt(proposalId), Number(choice)],
 	  });
 	  
       
       console.log("Simulation successful, executing transaction");
       
       // Execute the transaction
-      const hash = await publicClient.writeContract(request);
+      const walletClient = await getWalletClient({ chainId: BASE_CHAIN_ID });
+	  const hash = await walletClient.writeContract(request);
       
       console.log(`Transaction submitted: ${hash}`);
       
       toast({
         title: "Vote submitted",
-        description: `Transaction sent: ${hash.substring(0, 8)}...`,
+        description: `Transaction sent: ${hash.substring(0, 8) ?? hash}`,
         variant: "success"
       });
       
@@ -89,7 +91,7 @@ const VoteButton: React.FC<VoteButtonProps> = ({ proposalId, choice }) => {
       address: GOVERNOR_ADDRESS,
       abi: DAOGovernorABI,
       functionName: 'castVote',
-      args: [BigInt(proposalId), BigInt(choice)],
+      args: [BigInt(proposalId), Number(choice)],
     },
   ];
 

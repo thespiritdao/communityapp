@@ -1,3 +1,7 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
 /* Font */
 @font-face {
   font-family: 'Source Sans Pro';

@@ -18,6 +18,7 @@ const Transaction = ({
   onError,
   onStatus,
   onSuccess,
+  address,
 }: TransactionReact) => {
   const isMounted = useIsMounted();
   const componentTheme = useTheme();
@@ -31,16 +32,20 @@ const Transaction = ({
   // If chainId is not provided, use the default chainId from the OnchainKit context
   const accountChainId = chainId ? chainId : chain.id;
 
+  // Ensure address is properly formatted for paymaster transactions
+  const formattedAddress = address?.toLowerCase() as `0x${string}`;
+
   return (
     <TransactionProvider
       calls={calls}
       capabilities={capabilities}
       chainId={accountChainId}
-      contracts={contracts}
       isSponsored={isSponsored}
+      contracts={contracts}
       onError={onError}
       onStatus={onStatus}
       onSuccess={onSuccess}
+      address={formattedAddress}
     >
       <div
         className={cn(componentTheme, 'flex w-full flex-col gap-2', className)}

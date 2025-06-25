@@ -3,7 +3,6 @@
 import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { Home, Vote, Bell } from "lucide-react"; // Lucide for icons
-import "src/styles/index.css";
 
 export default function BottomNav() {
   const pathname = usePathname();

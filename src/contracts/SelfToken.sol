@@ -1,39 +1,34 @@
-// contracts/SelfToken.sol
+// File: src/contracts/SelfToken.sol
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.0;
+pragma solidity ^0.8.20;
 
-import "@openzeppelin/contracts/token/ERC20/ERC20.sol"; 
-import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Burnable.sol"; 
+import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Burnable.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
 
-/**
- * @title SelfToken
- * @notice ERC20 token representing $SELF (timebound). Minting is controlled by MINTER_ROLE.
- */
+/// @title SelfToken
+/// @notice ERC20 “SELF” token with minting controlled by MINTER_ROLE.
 contract SelfToken is ERC20, ERC20Burnable, AccessControl {
-    // Define a role that allows minting.
+    /// @notice Role identifier for accounts allowed to mint new tokens.
     bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
 
-    /**
-     * @notice Constructor that mints an initial supply and sets up roles.
-     * @param initialSupply The initial number of tokens to mint (in wei units).
-     * @param initialMinter The address that will receive the MINTER_ROLE.
-     */
-    constructor(uint256 initialSupply, address initialMinter) ERC20("SelfToken", "$SELF") {
-        // Grant the deployer the default admin role.
-        _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
-        // Grant the MINTER_ROLE to the designated address.
-        _setupRole(MINTER_ROLE, initialMinter);
-        // Mint the initial supply to the deployer (or you can mint to another address if needed).
-        _mint(msg.sender, initialSupply);
+    /// @param initialSupply  Amount of tokens (in wei) to mint initially.
+    /// @param initialMinter  Address to receive initialSupply and be granted MINTER_ROLE.
+    constructor(uint256 initialSupply, address initialMinter) ERC20("SelfToken", "SELF") {
+        require(initialMinter != address(0), "SelfToken: invalid minter address");
+
+        // Grant deployer the default admin role
+        _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
+        // Grant minting permission to the designated minter
+        _grantRole(MINTER_ROLE, initialMinter);
+
+        // Mint the initial supply to the minter
+        _mint(initialMinter, initialSupply);
     }
 
-    /**
-     * @notice Mint additional $SELF tokens.
-     * @param to The address to receive the minted tokens.
-     * @param amount The amount of tokens to mint.
-     * @dev Only accounts with MINTER_ROLE can call this function.
-     */
+    /// @notice Mints `amount` new tokens to `to`. Caller must have MINTER_ROLE.
+    /// @param to      Recipient of the newly minted tokens.
+    /// @param amount  Number of tokens to mint (in wei).
     function mint(address to, uint256 amount) external onlyRole(MINTER_ROLE) {
         _mint(to, amount);
     }

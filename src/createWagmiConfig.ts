@@ -1,3 +1,5 @@
+//src/createWagmiConfig.ts
+
 import { http, cookieStorage, createConfig, createStorage } from 'wagmi';
 import { base, baseSepolia } from 'wagmi/chains';
 import { coinbaseWallet } from 'wagmi/connectors';

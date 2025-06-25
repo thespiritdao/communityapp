@@ -1,109 +1,125 @@
-// src/App.tsx
+// src/App.tsx — Corrected OnchainKit configuration
 'use client';
 import React, { useEffect, useState } from 'react';
 import { WagmiConfig, useAccount } from 'wagmi';
-import { wagmiConfig } from './config/wagmi';
+import { wagmiConfig } from 'src/config/wagmi';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { OnchainKitProvider } from '@coinbase/onchainkit';
-import { RainbowKitProvider } from '@rainbow-me/rainbowkit';
 import { base } from 'viem/chains';
 import { supabase } from 'src/utils/supabaseClient';
 import { createSupabaseSession } from 'src/utils/createSupabaseSession';
 import { SafeAppsProvider } from '@safe-global/safe-apps-react';
-import { TokenBalancesProvider } from "src/context/TokenBalancesContext";
+import { TokenBalancesProvider } from 'src/context/TokenBalancesContext';
 import { SnapshotProvider } from 'src/context/SnapshotContext';
-import "src/styles/index.css";
-
-// Define the constant to match with components
-const BASE_CHAIN_ID = 8453; // Match with the constant used in Cart.tsx
+import { ProposalProvider } from 'src/context/ProposalContext';
 
 const queryClient = new QueryClient();
 
-export default function App({ children }) {
+export default function App({ children }: { children: React.ReactNode }) {
   const { address, isConnecting, isDisconnected } = useAccount();
-  const [session, setSession] = useState(null);
+  const [session, setSession] = useState<any>(null);
 
   // Debug OnchainKit configuration on mount
   useEffect(() => {
-    console.log("OnchainKit Provider Config:", {
+    console.log('OnchainKit Provider Config:', {
       isApiKeyConfigured: Boolean(process.env.NEXT_PUBLIC_CDP_API_CLIENT),
-      apiKey: process.env.NEXT_PUBLIC_CDP_API_CLIENT?.substring(0, 5) + "...",
-      isPaymasterConfigured: Boolean(process.env.NEXT_PUBLIC_PAYMASTER_AND_BUNDLER_ENDPOINT),
-      paymasterEndpoint: process.env.NEXT_PUBLIC_PAYMASTER_AND_BUNDLER_ENDPOINT?.substring(0, 20) + "...",
-      chainId: BASE_CHAIN_ID,
+      apiKey: process.env.NEXT_PUBLIC_CDP_API_CLIENT?.substring(0, 5) + '...',
+      isPaymasterConfigured: Boolean(process.env.NEXT_PUBLIC_PAYMASTER),
+      paymasterUrl: process.env.NEXT_PUBLIC_PAYMASTER
+        ?.substring(0, 20) + '...',
+      chainId: base.id,
+      governorContract: process.env.NEXT_PUBLIC_DAO_GOVERNOR?.substring(0, 10) + '...',
+      advocateContract: process.env.NEXT_PUBLIC_ADVOCATE?.substring(0, 10) + '...',
     });
+
+    if (!process.env.NEXT_PUBLIC_CDP_API_CLIENT) {
+      console.error('Missing NEXT_PUBLIC_CDP_API_CLIENT — OnchainKit features may not work');
+    }
+    if (!process.env.NEXT_PUBLIC_PAYMASTER) {
+      console.warn('Missing NEXT_PUBLIC_PAYMASTER — Gas sponsorship disabled');
+    }
+    if (!process.env.NEXT_PUBLIC_DAO_GOVERNOR) {
+      console.warn('Missing NEXT_PUBLIC_DAO_GOVERNOR — Proposal submission disabled');
+    }
+    if (!process.env.NEXT_PUBLIC_ADVOCATE) {
+      console.warn('Missing NEXT_PUBLIC_ADVOCATE — Proposal validation disabled');
+    }
   }, []);
-  
+
+  // Refresh Supabase session when wallet connects/disconnects
   useEffect(() => {
     const refreshAuth = async () => {
       if (address && !isConnecting && !isDisconnected) {
-        console.log('Checking Supabase session...');
-        const storedSession = await supabase.auth.getSession();
-        if (!storedSession || storedSession.session?.expires_at < Date.now() / 1000) {
-          console.warn('Session expired or missing. Refreshing...');
+        console.log('Checking Supabase session…');
+        const { data: { session: storedSession } } = await supabase.auth.getSession();
+        if (!storedSession || storedSession.expires_at < Date.now() / 1000) {
+          console.warn('Session expired or missing. Refreshing…');
           try {
             const newSession = await createSupabaseSession(
-              storedSession?.session?.access_token,
-              storedSession?.session?.refresh_token
+              storedSession?.access_token,
+              storedSession?.refresh_token
             );
             setSession(newSession);
           } catch (err) {
             console.error('Error refreshing Supabase session:', err);
           }
         } else {
-          setSession(storedSession.session);
+          setSession(storedSession);
         }
       }
     };
+
     refreshAuth();
     const { data: authListener } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        if (event === 'SIGNED_OUT') {
+      (_event, newSession) => {
+        if (newSession) {
+          console.log('Session updated:', newSession);
+          setSession(newSession);
+        } else {
           console.log('User signed out. Clearing session.');
           setSession(null);
-        } else if (session) {
-          console.log('Session updated:', session);
-          setSession(session);
         }
       }
     );
+
     return () => {
-      authListener?.subscription?.unsubscribe();
+      authListener.subscription?.unsubscribe();
     };
   }, [address, isConnecting, isDisconnected]);
 
   return (
     <WagmiConfig config={wagmiConfig}>
       <QueryClientProvider client={queryClient}>
-        <TokenBalancesProvider>
-          {/* Wrap with OnchainKitProvider to enable paymaster and sponsored transaction features */}
-          <OnchainKitProvider
-            apiKey={process.env.NEXT_PUBLIC_CDP_API_CLIENT as string}
-            chain={base} // Make sure base.id === BASE_CHAIN_ID (8453)
-            config={{
-              paymaster: process.env.NEXT_PUBLIC_PAYMASTER_AND_BUNDLER_ENDPOINT,
-              appearance: {
-                name: 'SpiritDAO',
-                logo: '/spiritdaosymbol.png',
-                mode: 'auto',
-                theme: 'default'
-              },
-              wallet: {
-                display: 'classic',
-                termsUrl: 'https://yourapp.com/terms',
-                privacyUrl: 'https://yourapp.com/privacy'
-              }
-            }}
-          >
-            <RainbowKitProvider modalSize="compact">
-              <SnapshotProvider>
-                <div style={{ padding: '1rem' }}>
-                  {children}
-                </div>
-              </SnapshotProvider>
-            </RainbowKitProvider>
-          </OnchainKitProvider>
-        </TokenBalancesProvider>
+        <SafeAppsProvider>
+          <TokenBalancesProvider>
+            <OnchainKitProvider
+              apiKey={process.env.NEXT_PUBLIC_CDP_API_CLIENT!}
+              chain={base}
+              config={{
+                appearance: {
+                  name: 'SpiritDAO',
+                  logo: '/spiritdaosymbol.png',
+                  mode: 'auto',
+                  theme: 'default',
+                },
+                paymasterAndBundlerUrl: process.env.NEXT_PUBLIC_PAYMASTER,
+                wallet: {
+                  display: 'classic',
+                  termsUrl: 'https://yourapp.com/terms',
+                  privacyUrl: 'https://yourapp.com/privacy',
+                },
+              }}
+            >
+                <SnapshotProvider>
+                  <ProposalProvider>
+                    <div style={{ padding: '1rem' }}>
+                      {children}
+                    </div>
+                  </ProposalProvider>
+                </SnapshotProvider>
+            </OnchainKitProvider>
+          </TokenBalancesProvider>
+        </SafeAppsProvider>
       </QueryClientProvider>
     </WagmiConfig>
   );

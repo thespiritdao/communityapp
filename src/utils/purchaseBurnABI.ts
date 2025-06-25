@@ -1,9 +1,3 @@
-// src/utils/purchaseBurnABI.ts
-
-
-// This ABI is derived from your PurchaseBurn contract,
-// which has a function purchaseArtifact(uint256, uint256, string)
-// and emits an event PurchaseArtifact.
 export const purchaseBurnABI = [
   {
     "inputs": [

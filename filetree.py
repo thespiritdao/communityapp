@@ -10,5 +10,5 @@ def list_files_and_folders(directory):
             print(f'{sub_indent}{file}')
 
 if __name__ == "__main__":
-    directory = r"C:\Users\PC\Documents\DAO\App\commapp\src\app"
+    directory = r"C:\Users\PC\Documents\DAO\App\commapp\src"
     list_files_and_folders(directory)

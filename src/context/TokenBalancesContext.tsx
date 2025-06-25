@@ -1,4 +1,4 @@
-// src/contexts/TokenBalancesContext.tsx
+// src/context/TokenBalancesContext.tsx
 // used for token balances throughout app without causing infura errors 
 
 import React, { createContext, useState, useEffect, useCallback, useContext } from "react";
@@ -8,6 +8,8 @@ import { useAccount } from "wagmi";
 interface TokenBalancesContextValue {
   balances: TokenBalances | null;
   refreshBalances: () => Promise<void>;
+  isLoading: boolean;
+  error: Error | null;
 }
 
 const TokenBalancesContext = createContext<TokenBalancesContextValue | undefined>(undefined);
@@ -15,27 +17,52 @@ const TokenBalancesContext = createContext<TokenBalancesContextValue | undefined
 export const TokenBalancesProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { address } = useAccount();
   const [balances, setBalances] = useState<TokenBalances | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<Error | null>(null);
 
-	const refreshBalances = useCallback(async () => {
-	  if (address) {
-		try {
-		  const tokenData = await fetchTokenBalances(address);
-		  console.log("Fetched token balances:", tokenData);
-		  setBalances(tokenData);
-		} catch (error) {
-		  console.error("Error fetching token balances:", error);
-		}
-	  }
-	}, [address]);
+  const refreshBalances = useCallback(async () => {
+    if (!address) {
+      console.log("No wallet address available, skipping balance fetch");
+      return;
+    }
 
+    setIsLoading(true);
+    setError(null);
+    
+    try {
+      console.log("Fetching token balances for address:", address);
+      const tokenData = await fetchTokenBalances(address);
+      console.log("Successfully fetched token balances:", {
+        hasProofOfCuriosity: tokenData.hasProofOfCuriosity,
+        hasMarketAdmin: tokenData.hasMarketAdmin,
+        hasExecutivePod: tokenData.hasExecutivePod,
+        hasDevPod: tokenData.hasDevPod,
+        hasBountyHat: tokenData.hasBountyHat,
+        systemBalance: tokenData.systemBalance,
+        selfBalance: tokenData.selfBalance
+      });
+      setBalances(tokenData);
+    } catch (error) {
+      console.error("Error fetching token balances:", error);
+      setError(error instanceof Error ? error : new Error(String(error)));
+    } finally {
+      setIsLoading(false);
+    }
+  }, [address]);
 
   // Fetch balances when the address is set (i.e. on load)
   useEffect(() => {
-    refreshBalances();
-  }, [refreshBalances]);
+    if (address) {
+      console.log("Address changed, refreshing balances");
+      refreshBalances();
+    } else {
+      console.log("No address available, clearing balances");
+      setBalances(null);
+    }
+  }, [address, refreshBalances]);
 
   return (
-    <TokenBalancesContext.Provider value={{ balances, refreshBalances }}>
+    <TokenBalancesContext.Provider value={{ balances, refreshBalances, isLoading, error }}>
       {children}
     </TokenBalancesContext.Provider>
   );

@@ -28,7 +28,7 @@ const TransactionWrapper = ({
 
   return (
     <Transaction
-      isSponsored={true}
+      isSponsored
       address={address}
       contracts={contracts}
       className="w-[450px]"

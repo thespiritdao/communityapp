@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import type { Address, Hex, TransactionReceipt } from 'viem';
-import type { Call, TransactionError } from '../transaction/types';
+import type { Call, TransactionError } from 'src/transaction/types';
+import type { NFTContextType } from 'src/nft/components/NFTProvider';
 
 export type ContractType = 'ERC721' | 'ERC1155';
 
@@ -44,10 +45,12 @@ export type NFTContextType = {
 } & NFTData;
 
 export type NFTProviderReact = {
-  children: ReactNode;
+  children:
+    | ReactNode
+    | ((ctx: NFTContextType) => ReactNode);
   contractAddress: `0x${string}`;
   tokenId?: string;
-  isSponsored?: boolean; // Optional boolean to determine if the mint is sponsored by paymaster
+  isSponsored?: boolean;
   useNFTData: UseNFTData;
   buildMintTransaction?: BuildMintTransaction;
 };
@@ -142,16 +145,18 @@ export type NFTCardDefaultReact = Omit<NFTCardReact, 'children'>;
  * NFTMint must be used if the NFTMintButton is included
  */
 export type NFTMintCardReact = {
-  children: ReactNode;
-  className?: string; // Optional className override for top div element.
-  contractAddress: Hex; // Contract address of the NFT
-  tokenId?: string; // Token ID of the NFT only required for ERC1155
-  isSponsored?: boolean; // Optional boolean to determine if the mint is sponsored by paymaster
-  useNFTData?: UseNFTData; // Optional hook to override the default useNFTData hook
-  buildMintTransaction?: BuildMintTransaction; // Optional function to override the default function that builds the mint transaction
-  onError?: (error: NFTError) => void; // An optional callback function that handles errors within the provider.
-  onStatus?: (lifecycleStatus: LifecycleStatus) => void; // An optional callback function that exposes the component lifecycle state
-  onSuccess?: (transactionReceipt?: TransactionReceipt) => void; // mint will pass transactionReceipt
+  children:
+    | ReactNode
+    | ((ctx: NFTContextType) => ReactNode);
+  className?: string;
+  contractAddress: Hex;
+  tokenId?: string;
+  isSponsored?: boolean;
+  useNFTData?: UseNFTData;
+  buildMintTransaction?: BuildMintTransaction;
+  onError?: (error: NFTError) => void;
+  onStatus?: (lifecycleStatus: LifecycleStatus) => void;
+  onSuccess?: (tx?: TransactionReceipt) => void;
 };
 
 /**

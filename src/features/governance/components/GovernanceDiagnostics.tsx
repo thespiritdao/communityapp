@@ -1,166 +1,95 @@
-// src/features/governance/components/GovernanceDiagnostics.tsx
+// src/components/PaymasterTest.tsx
 'use client';
-import React, { useState, useEffect } from 'react';
-import { useAccount, usePublicClient } from 'wagmi';
-import DAOGovernorABI from 'src/abis/DAO_GovernorABI.json';
+import React from 'react';
+import { useAccount } from 'wagmi';
+import { Transaction, TransactionButton, TransactionSponsor } from '@coinbase/onchainkit/transaction';
 
-interface DiagnosticsProps {
-  proposalId: number;
-}
-
-const GovernanceDiagnostics: React.FC<DiagnosticsProps> = ({ proposalId }) => {
+const PaymasterTest: React.FC = () => {
   const { address } = useAccount();
-  const publicClient = usePublicClient();
-  const [diagnosticResults, setDiagnosticResults] = useState<Record<string, any>>({});
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  
-  const GOVERNOR_ADDRESS = process.env.NEXT_PUBLIC_DAO_GOVERNOR as `0x${string}`;
-  
-  const runDiagnostics = async () => {
-    if (!address || !publicClient || !GOVERNOR_ADDRESS) {
-      setError("Missing required connection data");
-      return;
-    }
-    
-    setLoading(true);
-    setError(null);
-    
-    const results: Record<string, any> = {
-      wallet: address,
-      governorContract: GOVERNOR_ADDRESS,
-      proposalId: proposalId,
-      timestamp: new Date().toISOString(),
-    };
-    
-    try {
-      // 1. Check if proposal exists
-      try {
-        const proposalState = await publicClient.readContract({
-          address: GOVERNOR_ADDRESS,
-          abi: DAOGovernorABI,
-          functionName: 'state',
-          args: [BigInt(proposalId)],
-        });
-        
-        // Map state number to state name (adjust according to your contract's enum)
-        const stateNames = [
-          'Pending', 'Active', 'Canceled', 'Defeated', 'Succeeded', 
-          'Queued', 'Expired', 'Executed'
-        ];
-        
-        results.proposalState = {
-          stateNumber: Number(proposalState),
-          stateName: stateNames[Number(proposalState)] || 'Unknown',
-        };
-        
-        // Check if the proposal is actually active for voting
-        results.canVote = Number(proposalState) === 1; // 1 typically means Active
-      } catch (err: any) {
-        results.proposalState = { error: err.message };
-        results.proposalExists = false;
+
+  // Simple test contract call - using a basic ERC20 transfer or similar
+  const testContract = {
+    address: '0xa3DA6AfAD125eA5b2D11c89b7643a0D5956e7e17' as `0x${string}`, // Your Governor contract
+    abi: [
+      {
+        "inputs": [],
+        "name": "name",
+        "outputs": [{"internalType": "string", "name": "", "type": "string"}],
+        "stateMutability": "view",
+        "type": "function"
       }
-      
-      // 2. Check if account has already voted
-      try {
-        const hasVoted = await publicClient.readContract({
-          address: GOVERNOR_ADDRESS,
-          abi: DAOGovernorABI,
-          functionName: 'hasVoted',
-          args: [BigInt(proposalId), address],
-        });
-        
-        results.hasVoted = Boolean(hasVoted);
-      } catch (err: any) {
-        results.hasVoted = { error: err.message };
-      }
-      
-      // 3. Get voting power
-      try {
-        // Get the proposal snapshot block
-        const proposal = await publicClient.readContract({
-          address: GOVERNOR_ADDRESS,
-          abi: DAOGovernorABI,
-          functionName: 'proposals',
-          args: [BigInt(proposalId)],
-        });
-        
-        // This depends on your contract's proposal struct
-        // Adjust the index based on where snapshot is stored
-        const snapshotBlock = proposal[0]; // May need adjustment based on contract
-        
-        results.proposal = {
-          snapshotBlock: Number(snapshotBlock),
-        };
-        
-        // Get voting power at snapshot
-        const votingPower = await publicClient.readContract({
-          address: GOVERNOR_ADDRESS,
-          abi: DAOGovernorABI,
-          functionName: 'getVotes',
-          args: [address, BigInt(snapshotBlock)],
-        });
-        
-        results.votingPower = String(votingPower);
-        results.hasVotingPower = Number(votingPower) > 0;
-      } catch (err: any) {
-        results.votingPower = { error: err.message };
-      }
-      
-      // 4. Check if account can cast vote
-      try {
-        const { request } = await publicClient.simulateContract({
-          account: address,
-          address: GOVERNOR_ADDRESS,
-          abi: DAOGovernorABI,
-          functionName: 'castVote',
-          args: [BigInt(proposalId), BigInt(1)], // Simulate voting "yes"
-        });
-        
-        results.canCastVote = true;
-        results.simulationSuccess = true;
-      } catch (err: any) {
-        results.canCastVote = false;
-        results.simulationError = {
-          message: err.message,
-          shortMessage: err.shortMessage,
-        };
-      }
-      
-    } catch (err: any) {
-      setError(err.message);
-    } finally {
-      setDiagnosticResults(results);
-      setLoading(false);
-    }
+    ],
+    functionName: 'name',
+    args: [],
   };
-  
+
+  console.log('=== PAYMASTER TEST DEBUG ===');
+  console.log('Connected address:', address);
+  console.log('Paymaster URL from env:', process.env.NEXT_PUBLIC_PAYMASTER?.substring(0, 30) + '...');
+  console.log('CDP API Key from env:', process.env.NEXT_PUBLIC_CDP_API_CLIENT?.substring(0, 10) + '...');
+
   return (
-    <div className="mt-6 p-4 bg-gray-50 rounded-lg">
-      <h2 className="text-lg font-medium mb-4">Governance Diagnostics</h2>
+    <div className="p-6 max-w-md mx-auto bg-white rounded-lg shadow-lg">
+      <h2 className="text-xl font-bold mb-4">Paymaster Test</h2>
       
-      <button 
-        onClick={runDiagnostics}
-        className="px-4 py-2 bg-blue-600 text-white rounded mb-4"
-        disabled={loading}
-      >
-        {loading ? 'Running Diagnostics...' : 'Run Diagnostics'}
-      </button>
-      
-      {error && (
-        <div className="text-red-500 mb-4">Error: {error}</div>
-      )}
-      
-      {Object.keys(diagnosticResults).length > 0 && (
-        <div className="mt-4">
-          <h3 className="font-medium mb-2">Results:</h3>
-          <pre className="bg-gray-100 p-4 rounded overflow-auto max-h-96 text-sm">
-            {JSON.stringify(diagnosticResults, null, 2)}
-          </pre>
+      {/* Environment Check */}
+      <div className="mb-4 p-3 bg-gray-100 rounded">
+        <h3 className="font-medium mb-2">Environment Check:</h3>
+        <div className="text-sm space-y-1">
+          <div>CDP API Key: {process.env.NEXT_PUBLIC_CDP_API_CLIENT ? '✅ Set' : '❌ Missing'}</div>
+          <div>Paymaster URL: {process.env.NEXT_PUBLIC_PAYMASTER ? '✅ Set' : '❌ Missing'}</div>
+          <div>Wallet Connected: {address ? '✅ Connected' : '❌ Not Connected'}</div>
         </div>
-      )}
+      </div>
+
+      {/* Test Transaction */}
+      <div className="mb-4">
+        <h3 className="font-medium mb-2">Paymaster Test Transaction:</h3>
+        <p className="text-sm text-gray-600 mb-3">
+          This will test if paymaster sponsorship is working by calling a simple view function.
+        </p>
+        
+        <Transaction
+          isSponsored={true}
+          address={address}
+          contracts={[testContract]}
+          onSuccess={(receipt) => {
+            console.log('✅ PAYMASTER TEST SUCCESS:', receipt);
+            alert('Paymaster test successful! Check console for details.');
+          }}
+          onError={(error) => {
+            console.error('❌ PAYMASTER TEST FAILED:', error);
+            alert(`Paymaster test failed: ${error.message}`);
+          }}
+          onTransactionStarted={() => {
+            console.log('🚀 PAYMASTER TEST STARTED');
+          }}
+        >
+          <TransactionButton
+            text="Test Paymaster"
+            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded"
+          />
+          <TransactionSponsor className="mt-2 text-center" />
+        </Transaction>
+      </div>
+
+      {/* Manual Debug Button */}
+      <button
+        onClick={() => {
+          console.log('=== MANUAL DEBUG ===');
+          console.log('Window location:', window.location.href);
+          console.log('All env vars:', {
+            PAYMASTER_URL: process.env.NEXT_PUBLIC_PAYMASTER,
+            CDP_API_KEY: process.env.NEXT_PUBLIC_CDP_API_CLIENT,
+            WALLETCONNECT_PROJECT_ID: process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID,
+          });
+        }}
+        className="w-full bg-gray-600 hover:bg-gray-700 text-white font-medium py-2 px-4 rounded"
+      >
+        Debug Environment
+      </button>
     </div>
   );
 };
 
-export default GovernanceDiagnostics;
+export default PaymasterTest;

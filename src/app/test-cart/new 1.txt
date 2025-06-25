@@ -1,0 +1,34 @@
+// src/pages/test-cart/page.tsx
+import React from 'react';
+import { ProductList } from '../../features/test-cart/components/ProductList';
+import { Cart } from '../../features/test-cart/components/Cart';
+import { Checkout } from '../../features/test-cart/components/Checkout';
+import { useCart } from '../../features/test-cart/hooks/useCart';
+
+const TestCartPage: React.FC = () => {
+  const { cartState, addToCart, removeFromCart, updateQuantity, setSelectedToken } = useCart();
+
+  return (
+    <div className="container mx-auto p-4">
+      <h1 className="text-3xl font-bold mb-6">Test Cart</h1>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <ProductList onAddToCart={addToCart} />
+        <Cart
+          items={cartState.items}
+          total={cartState.total}
+          onUpdateQuantity={updateQuantity}
+          onRemoveItem={removeFromCart}
+          onCheckout={() => {}}
+        />
+      </div>
+      <Checkout
+        items={cartState.items}
+        total={cartState.total}
+        selectedToken={cartState.selectedToken}
+        onTokenSelect={setSelectedToken}
+      />
+    </div>
+  );
+};
+
+export default TestCartPage;

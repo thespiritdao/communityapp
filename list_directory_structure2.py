@@ -16,6 +16,5 @@ def print_directory_tree(root_path, indent=""):
 # Paths to print the directory trees for
 path_chat = "C:\Users\PC\Documents\DAO\App\commapp\src"
 
-
 print("Directory tree for 'src\\identity':")
 print_directory_tree(path_chat)

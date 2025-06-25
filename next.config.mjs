@@ -1,7 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  reactStrictMode: true,
   transpilePackages: ['@coinbase/onchainkit'],
-
   images: {
     remotePatterns: [
       {
@@ -14,9 +14,26 @@ const nextConfig = {
         hostname: 'storage.unlock-protocol.com',
         pathname: '/**',
       },
+      {
+        protocol: 'https',
+        hostname: '*.coinbase.com',
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: '*.wallet.coinbase.com',
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'yqgqodofeliuurrmxlks.supabase.co',
+        pathname: '/**',
+      },
+    ],
+    domains: [
+      "yqgqodofeliuurrmxlks.supabase.co"
     ],
   },
-
   async headers() {
     return [
       {
@@ -28,6 +45,29 @@ const nextConfig = {
           { key: 'Content-Security-Policy', value: "frame-ancestors 'self' https://app.safe.global;" },
         ],
       },
+      {
+        source: '/:path*',
+        headers: [
+          {
+            key: 'Content-Security-Policy',
+            value: `
+              default-src 'self';
+              script-src 'self' 'unsafe-eval' 'unsafe-inline' https://keys.coinbase.com;
+              connect-src 'self' 
+                https://*.coinbase.com 
+                https://*.wallet.coinbase.com 
+                wss://*.wallet.coinbase.com
+                https://mainnet.base.org
+                https://*.infura.io
+                https://base-mainnet.infura.io
+                https://yqgqodofeliuurrmxlks.supabase.co;
+              img-src 'self' data: https:;
+              style-src 'self' 'unsafe-inline';
+              frame-src 'self' https://*.coinbase.com;
+            `.replace(/\s+/g, ' ').trim()
+          }
+        ]
+      }
     ];
   },
 };
