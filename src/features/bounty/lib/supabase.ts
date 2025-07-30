@@ -479,6 +479,13 @@ export const convertBidToDb = (bid: any): Omit<Bid, 'id' | 'submitted_at'> => {
 
 // Helper function to convert database bid format to frontend format
 export const convertBidFromDb = (bid: Bid & { user_profile?: { first_name?: string; last_name?: string } }): any => {
+  console.log('🔍 convertBidFromDb - Original bid data:', {
+    proposed_amount: bid.proposed_amount,
+    proposed_amount_type: typeof bid.proposed_amount,
+    payment_details: bid.payment_details,
+    payment_details_type: typeof bid.payment_details
+  });
+
   // Parse deliverables - handle various formats
   let parsedDeliverables = [];
   if (bid.deliverables) {
@@ -501,7 +508,30 @@ export const convertBidFromDb = (bid: Bid & { user_profile?: { first_name?: stri
     }
   }
 
-  return {
+  // Parse payment details and ensure all numeric values are strings
+  let parsedPaymentDetails: any = {};
+  if (bid.payment_details) {
+    if (typeof bid.payment_details === 'string') {
+      try {
+        parsedPaymentDetails = JSON.parse(bid.payment_details);
+      } catch (error) {
+        console.log('Payment details is plain string, using empty object:', bid.payment_details);
+        parsedPaymentDetails = {};
+      }
+    } else if (typeof bid.payment_details === 'object') {
+      parsedPaymentDetails = bid.payment_details;
+    }
+    
+    // Ensure all numeric values in payment details are strings
+    if (parsedPaymentDetails.upfrontAmount !== undefined) {
+      parsedPaymentDetails.upfrontAmount = String(parsedPaymentDetails.upfrontAmount);
+    }
+    if (parsedPaymentDetails.completionAmount !== undefined) {
+      parsedPaymentDetails.completionAmount = String(parsedPaymentDetails.completionAmount);
+    }
+  }
+
+  const convertedBid = {
     id: bid.id,
     bountyId: bid.bounty_id,
     bidderAddress: bid.bidder_address,
@@ -511,9 +541,9 @@ export const convertBidFromDb = (bid: Bid & { user_profile?: { first_name?: stri
     planOfAction: bid.plan_of_action,
     deliverables: parsedDeliverables,
     timeline: bid.timeline,
-    proposedAmount: bid.proposed_amount,
+    proposedAmount: String(bid.proposed_amount), // Ensure this is always a string
     paymentOption: bid.payment_option,
-    paymentDetails: bid.payment_details || {},
+    paymentDetails: parsedPaymentDetails,
     answers: bid.answers || {},
     additionalNotes: bid.additional_notes || '',
     status: bid.status,
@@ -523,4 +553,13 @@ export const convertBidFromDb = (bid: Bid & { user_profile?: { first_name?: stri
     reviewedAt: bid.reviewed_at ? new Date(bid.reviewed_at) : undefined,
     reviewedBy: bid.reviewed_by,
   };
+
+  console.log('🔍 convertBidFromDb - Converted bid data:', {
+    proposedAmount: convertedBid.proposedAmount,
+    proposedAmount_type: typeof convertedBid.proposedAmount,
+    paymentDetails: convertedBid.paymentDetails,
+    paymentDetails_type: typeof convertedBid.paymentDetails
+  });
+
+  return convertedBid;
 }; 

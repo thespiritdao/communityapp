@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { supabase } from 'src/utils/supabaseClient';
 import UserTagging from 'src/components/UserTagging';
 import '../styles/Chat.css';
@@ -13,9 +13,10 @@ import EmojiPicker from 'emoji-picker-react';
 
 interface ChatInputProps {
   onSendMessage: (content: string, attachments?: string[]) => void;
+  chatId?: string;
 }
 
-export default function ChatInput({ onSendMessage }: ChatInputProps) {
+export default function ChatInput({ onSendMessage, chatId }: ChatInputProps) {
   const [message, setMessage] = useState('');
   const [attachments, setAttachments] = useState<string[]>([]);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
@@ -23,6 +24,11 @@ export default function ChatInput({ onSendMessage }: ChatInputProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const hasText = message.trim().length > 0;
+
+  // Debug logging for chatId
+  useEffect(() => {
+    console.log('ChatInput received chatId:', chatId);
+  }, [chatId]);
 
   const handleSendMessage = (e: React.FormEvent) => {
     e.preventDefault();
@@ -141,6 +147,17 @@ export default function ChatInput({ onSendMessage }: ChatInputProps) {
             placeholder="Type your message..."
             className="chat-mentions-input"
             onKeyDown={handleKeyDown}
+            contextType="chat"
+            contextId={chatId || 'general'}
+            contextUrl={chatId ? `/chat/${chatId}` : undefined}
+            onMentionsChange={(mentions) => {
+              console.log('ChatInput: Mentions changed:', mentions);
+              console.log('ChatInput: Context info:', {
+                chatId,
+                contextType: 'chat',
+                contextUrl: chatId ? `/chat/${chatId}` : undefined
+              });
+            }}
           />
         </div>
 

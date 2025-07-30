@@ -1,15 +1,14 @@
 "use client"
 
 import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from 'src/components/ui/card';
-import { Badge } from 'src/components/ui/badge';
-import { Button } from 'src/components/ui/button';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from 'src/components/ui/tabs';
-import { BountyAcceptance } from './BountyAcceptance';
+import { Card, CardContent, CardHeader, CardTitle } from '../../../components/ui/card';
+import { Badge } from '../../../components/ui/badge';
+import { Button } from '../../../components/ui/button';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../../components/ui/tabs';
 import { BountyCompletion } from './BountyCompletion';
 import { bidApi, convertBidFromDb, type Bid as DbBid } from '../lib/supabase';
-import { supabase } from '@/lib/supabase';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from 'src/components/ui/dialog';
+import { supabase } from '../../../utils/supabaseClient';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '../../../components/ui/dialog';
 import { format } from 'date-fns';
 
 interface FrontendBid {
@@ -44,7 +43,6 @@ interface BountyDetails {
 
 interface BidViewerProps {
   bounty: BountyDetails;
-  onBidAccepted?: (bidId: string, bidderAddress: string) => void;
   onBountyCompleted?: () => void;
 }
 
@@ -72,13 +70,10 @@ async function mergeUserNamesIntoBids(bids: any[]) {
 
 export const BidViewer: React.FC<BidViewerProps> = ({ 
   bounty, 
-  onBidAccepted, 
   onBountyCompleted 
 }) => {
   const [bids, setBids] = useState<FrontendBid[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedBid, setSelectedBid] = useState<FrontendBid | null>(null);
-  const [showAcceptance, setShowAcceptance] = useState(false);
   const [showCompletion, setShowCompletion] = useState(false);
 
   useEffect(() => {
@@ -97,17 +92,6 @@ export const BidViewer: React.FC<BidViewerProps> = ({
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleAcceptBid = (bid: FrontendBid) => {
-    setSelectedBid(bid);
-    setShowAcceptance(true);
-  };
-
-  const handleBidAccepted = () => {
-    setShowAcceptance(false);
-    setSelectedBid(null);
-    onBidAccepted?.(selectedBid!.id, selectedBid!.bidderAddress);
   };
 
   const handleCompleteBounty = () => {
@@ -197,15 +181,19 @@ export const BidViewer: React.FC<BidViewerProps> = ({
                   <div className="bg-gray-50 p-4 rounded-lg">
                     <h5 className="font-medium mb-2">Deliverables</h5>
                     <div className="space-y-2">
-                      {Array.isArray(bid.deliverables) ? bid.deliverables.map((deliverable, index) => (
-                        <div key={index} className="border-b border-gray-200 pb-2 last:border-0">
-                          <p className="text-gray-700">{deliverable.description}</p>
-                          <div className="text-sm text-gray-600 mt-1">
-                            <span className="mr-4">Due: {format(new Date(deliverable.due_date), 'MMM dd, yyyy')}</span>
-                            <span>Amount: {deliverable.payment_amount}</span>
+                      {Array.isArray(bid.deliverables) ? bid.deliverables.map((deliverable, index) => {
+                        let dateObj = new Date(deliverable.due_date);
+                        const isValidDate = !isNaN(dateObj.getTime());
+                        return (
+                          <div key={index} className="border-b border-gray-200 pb-2 last:border-0">
+                            <p className="text-gray-700">{deliverable.description}</p>
+                            <div className="text-sm text-gray-600 mt-1">
+                              <span className="mr-4">Due: {isValidDate ? format(dateObj, 'MMM dd, yyyy') : 'N/A'}</span>
+                              <span>Amount: {deliverable.payment_amount}</span>
+                            </div>
                           </div>
-                        </div>
-                      )) : (
+                        );
+                      }) : (
                         <p className="text-gray-700">No deliverables specified</p>
                       )}
                     </div>
@@ -247,14 +235,6 @@ export const BidViewer: React.FC<BidViewerProps> = ({
 
               {/* Action Buttons */}
               <div className="flex gap-2 mt-6">
-                {bounty.status === 'open' && (
-                  <Button 
-                    onClick={() => handleAcceptBid(bid)}
-                    className="flex-1"
-                  >
-                    Accept Bid
-                  </Button>
-                )}
                 {bounty.status === 'in-progress' && (
                   <Button 
                     onClick={() => setShowCompletion(true)}
@@ -268,34 +248,6 @@ export const BidViewer: React.FC<BidViewerProps> = ({
           </Card>
         ))}
       </div>
-
-      {/* Acceptance Modal */}
-      {showAcceptance && selectedBid && (
-        <Dialog open={showAcceptance} onOpenChange={() => setShowAcceptance(false)}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Review & Approve Bid</DialogTitle>
-              <DialogDescription id="review-dialog-desc">
-                Review the bid details and assign reviewers before approval.
-              </DialogDescription>
-            </DialogHeader>
-            <BountyAcceptance
-              bountyId={bounty.id}
-              bountyTitle={bounty.title}
-              bountyValue={bounty.value}
-              bidderAddress={selectedBid.bidderAddress}
-              onAccept={handleBidAccepted}
-            />
-            <Button 
-              variant="outline" 
-              onClick={() => setShowAcceptance(false)}
-              className="w-full mt-4"
-            >
-              Cancel
-            </Button>
-          </DialogContent>
-        </Dialog>
-      )}
 
       {/* Completion Modal */}
       {showCompletion && (

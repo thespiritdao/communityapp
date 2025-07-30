@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useForum } from 'src/features/forum/hooks/useForum';
 import { supabase } from 'src/utils/supabaseClient';
-import UserMentionsInput from 'src/components/UserMentionsInput';
+import UserTagging from 'src/components/UserTagging';
 import styles from '../styles/Forum.module.css';
 
 type ReplyFormProps = {
@@ -116,12 +116,14 @@ export function ReplyForm({ threadId, onReplySuccess }: ReplyFormProps) {
         </div>
       )}
      <form className={styles.replyForm} onSubmit={handleSubmit}>
-		  <UserMentionsInput
+		  <UserTagging
 			value={content}
-			onChange={(e) => setContent(e.target.value)}
+			onChange={(value) => setContent(value)}
 			placeholder="Write your reply here... Use @ to mention someone"
 			className={styles.replyTextarea}
-			disabled={isLoading || !isReady}
+			contextType="forum"
+			contextId={threadId}
+			contextUrl={`/forum/thread/${threadId}`}
 		  />
 		  {error && <div className={styles.submitError}>{error}</div>}
 		  <button

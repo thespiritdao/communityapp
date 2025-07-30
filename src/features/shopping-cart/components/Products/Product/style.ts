@@ -6,14 +6,29 @@ export const ProductCard = styled.div`
   padding: 1rem;
   border-radius: 8px;
   text-align: center;
-  max-width: 250px;
+  width: 275px;
+  height: 400px;
   margin: 1rem;
   box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+`;
+
+export const ProductImageContainer = styled.div`
+  width: 100%;
+  height: 150px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border-radius: 4px;
+  margin-bottom: 1rem;
 `;
 
 export const ProductImage = styled.img`
-  max-width: 150px;
-  max-height: 150px;
+  width: 100%;
+  height: 100%;
   object-fit: cover;
   border-radius: 4px;
 `;

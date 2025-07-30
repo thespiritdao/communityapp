@@ -6,10 +6,7 @@ import { Input } from 'src/components/ui/input';
 import { Textarea } from 'src/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from 'src/components/ui/select';
 import { Label } from 'src/components/ui/label';
-import { Transaction, TransactionButton } from '@coinbase/onchainkit/transaction';
 import { useAccount } from 'wagmi';
-import { parseEther } from 'viem';
-import BountyManagerABI from '../../../contracts/BountyManager.json';
 import { FrontendBounty } from '../types/bounty';
 
 const BASE_CHAIN_ID = 8453; // Base mainnet chain ID
@@ -87,24 +84,6 @@ export const BountyForm: React.FC<BountyFormProps> = ({ onSubmit, categories }) 
     }));
   };
 
-  // Prepare the contract call for bounty creation
-  const createBountyCall = {
-    address: process.env.NEXT_PUBLIC_BOUNTY_MANAGER_ADDRESS as `0x${string}`,
-    abi: BountyManagerABI,
-    functionName: 'createBounty',
-    args: [
-      formData.title,
-      formData.category,
-      parseEther(formData.value.amount),
-      formData.value.token === 'SYSTEM' 
-        ? process.env.NEXT_PUBLIC_SYSTEM_TOKEN 
-        : process.env.NEXT_PUBLIC_SELF_TOKEN,
-      0, // PaymentStructure.Completion
-      parseEther('0'), // upfrontAmount
-      parseEther(formData.value.amount), // completionAmount
-    ],
-  };
-
   const isFormValid = formData.title.trim() && 
                      formData.description.trim() && 
                      formData.category && 
@@ -144,7 +123,7 @@ export const BountyForm: React.FC<BountyFormProps> = ({ onSubmit, categories }) 
           <SelectTrigger className="form-select">
             <SelectValue placeholder="Select a category" />
           </SelectTrigger>
-          <SelectContent>
+          <SelectContent className="bg-white">
             {categories.map((category) => (
               <SelectItem key={category} value={category}>
                 {category}
@@ -186,7 +165,7 @@ export const BountyForm: React.FC<BountyFormProps> = ({ onSubmit, categories }) 
             <SelectTrigger className="form-select">
               <SelectValue />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent className="bg-white">
               <SelectItem value="SYSTEM">SYSTEM</SelectItem>
               <SelectItem value="SELF">SELF</SelectItem>
             </SelectContent>
@@ -198,7 +177,7 @@ export const BountyForm: React.FC<BountyFormProps> = ({ onSubmit, categories }) 
       <div className="space-y-4 form-group">
         <div className="flex justify-between items-center">
           <Label className="form-label">Requirements</Label>
-          <Button type="button" variant="outline" size="sm" onClick={addRequirement} className="bounty-btn secondary">
+          <Button type="button" variant="outline" size="sm" onClick={addRequirement} className="bounty-btn primary">
             Add Requirement
           </Button>
         </div>
@@ -216,7 +195,7 @@ export const BountyForm: React.FC<BountyFormProps> = ({ onSubmit, categories }) 
                 variant="outline"
                 size="sm"
                 onClick={() => removeRequirement(index)}
-                className="bounty-btn secondary"
+                className="bounty-btn primary"
               >
                 Remove
               </Button>
@@ -229,7 +208,7 @@ export const BountyForm: React.FC<BountyFormProps> = ({ onSubmit, categories }) 
       <div className="space-y-4 form-group">
         <div className="flex justify-between items-center">
           <Label className="form-label">Questions for Bidders</Label>
-          <Button type="button" variant="outline" size="sm" onClick={addQuestion} className="bounty-btn secondary">
+          <Button type="button" variant="outline" size="sm" onClick={addQuestion} className="bounty-btn primary">
             Add Question
           </Button>
         </div>
@@ -247,7 +226,7 @@ export const BountyForm: React.FC<BountyFormProps> = ({ onSubmit, categories }) 
                 variant="outline"
                 size="sm"
                 onClick={() => removeQuestion(index)}
-                className="bounty-btn secondary"
+                className="bounty-btn primary"
               >
                 Remove
               </Button>
@@ -256,36 +235,13 @@ export const BountyForm: React.FC<BountyFormProps> = ({ onSubmit, categories }) 
         ))}
       </div>
 
-      {/* Sponsored Transaction Button */}
-      <Transaction
-        isSponsored={true}
-        address={address?.toLowerCase() as `0x${string}`}
-        chainId={BASE_CHAIN_ID}
-        calls={[createBountyCall]}
-        onSuccess={(receipt) => {
-          console.log('✅ Bounty created successfully:', receipt);
-          const filteredData = {
-            ...formData,
-            requirements: formData.requirements.filter(req => req.trim() !== ''),
-            questions: formData.questions.filter(q => q.trim() !== ''),
-          };
-          onSubmit(filteredData);
-        }}
-        onError={(error) => {
-          console.error('❌ Failed to create bounty:', error);
-        }}
-        onTransactionStarted={() => {
-          console.log('🚀 Creating bounty...');
-        }}
+      <Button
+        type="submit"
+        className="w-full bounty-btn primary"
+        disabled={!isFormValid}
       >
-        <TransactionButton
-          text="Create Bounty"
-          className="w-full bounty-btn primary"
-          disabled={!isFormValid}
-        >
-          Create Bounty
-        </TransactionButton>
-      </Transaction>
+        Create Bounty
+      </Button>
     </form>
   );
 }; 

@@ -71,7 +71,7 @@ export const TokenDebugger: React.FC = () => {
             <p><strong>EXECUTIVE_POD_HAT_ID:</strong> {process.env.NEXT_PUBLIC_EXECUTIVE_POD_HAT_ID || 'Not set'}</p>
             <p><strong>DEV_POD_HAT_ID:</strong> {process.env.NEXT_PUBLIC_DEV_POD_HAT_ID || 'Not set'}</p>
             <p><strong>PROOF_OF_CURIOSITY:</strong> {process.env.NEXT_PUBLIC_PROOF_OF_CURIOSITY || 'Not set'}</p>
-            <p><strong>MARKET_ADMIN:</strong> {process.env.NEXT_PUBLIC_MARKET_ADMIN || 'Not set'}</p>
+            <p><strong>MARKET_MANAGEMENT:</strong> {process.env.NEXT_PUBLIC_MARKET_MANAGEMENT || 'Not set'}</p>
           </div>
         </div>
 

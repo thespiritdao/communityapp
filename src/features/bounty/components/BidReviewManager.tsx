@@ -26,9 +26,348 @@ import { useBountySupabase } from '../hooks/useBountySupabase';
 import { type FrontendBid, type FrontendBounty, type FrontendNotification } from '../types/bounty';
 import UserTagging from '../../../components/UserTagging';
 import { isAddress } from 'viem';
-import { Transaction, TransactionButton } from '@coinbase/onchainkit/transaction';
+import { PaymentStructure } from '../hooks/useBountyContractEnhanced';
+import { Transaction, TransactionButton, TransactionSponsor, TransactionStatus, TransactionStatusLabel, TransactionStatusAction } from '@coinbase/onchainkit/transaction';
+import { getPublicClient } from '@wagmi/core';
+import { BaseError } from 'viem';
 
 const BASE_CHAIN_ID = 8453; // Base mainnet chain ID
+
+// Add error logging utility with rate limiting
+const ERROR_LOG_KEY = 'commapp_bounty_error_logs';
+const MAX_LOGS = 100; // Maximum number of logs to keep
+
+const logError = async (error: unknown, context: string) => {
+  try {
+    const timestamp = new Date().toISOString();
+    const errorLog = {
+      timestamp,
+      context,
+      error: error instanceof Error ? {
+        name: error.name,
+        message: error.message,
+        stack: error.stack,
+        ...(error instanceof BaseError && {
+          details: error.details,
+          shortMessage: error.shortMessage,
+        })
+      } : error
+    };
+
+    // Log to console with grouping
+    console.group(`Error Log - ${context}`);
+    console.log('Timestamp:', timestamp);
+    console.log('Context:', context);
+    console.log('Error Details:', errorLog.error);
+    console.groupEnd();
+
+    // Store in localStorage with rate limiting
+    try {
+      const existingLogsStr = localStorage.getItem(ERROR_LOG_KEY);
+      const existingLogs = existingLogsStr ? JSON.parse(existingLogsStr) : [];
+      
+      // Add new log and maintain max size
+      existingLogs.unshift(errorLog);
+      if (existingLogs.length > MAX_LOGS) {
+        existingLogs.length = MAX_LOGS;
+      }
+      
+      localStorage.setItem(ERROR_LOG_KEY, JSON.stringify(existingLogs));
+    } catch (storageError) {
+      console.error('Failed to store error log:', storageError);
+    }
+
+    // Additional error details for debugging
+    if (error instanceof Error) {
+      console.error('Additional error details:', {
+        name: error.name,
+        message: error.message,
+        stack: error.stack,
+        ...(error instanceof BaseError && {
+          details: error.details,
+          shortMessage: error.shortMessage,
+        })
+      });
+    }
+  } catch (e) {
+    console.error('Error in logError:', e);
+  }
+};
+
+// Add transaction data validation utility
+const validateTransactionData = (data: any) => {
+  const validation = {
+    isValid: true,
+    issues: [] as string[],
+    data: {} as any
+  };
+
+  try {
+    // Deep clone the data to avoid modifying the original
+    validation.data = JSON.parse(JSON.stringify(data, (key, value) => {
+      if (typeof value === 'bigint') {
+        return value.toString();
+      }
+      return value;
+    }));
+
+    // Validate required fields
+    if (!validation.data.address) validation.issues.push('Missing address');
+    if (!validation.data.chainId) validation.issues.push('Missing chainId');
+    if (!validation.data.calls) validation.issues.push('Missing calls');
+    
+    // Validate calls array
+    if (Array.isArray(validation.data.calls)) {
+      validation.data.calls.forEach((call: any, index: number) => {
+        if (!call.address) validation.issues.push(`Call ${index}: Missing address`);
+        if (!call.abi) validation.issues.push(`Call ${index}: Missing ABI`);
+        if (!call.functionName) validation.issues.push(`Call ${index}: Missing functionName`);
+        if (!Array.isArray(call.args)) validation.issues.push(`Call ${index}: Missing args array`);
+      });
+    } else {
+      validation.issues.push('Calls is not an array');
+    }
+
+    validation.isValid = validation.issues.length === 0;
+  } catch (e) {
+    validation.isValid = false;
+    validation.issues.push(`Serialization error: ${e instanceof Error ? e.message : String(e)}`);
+  }
+
+  return validation;
+};
+
+const validatePaymasterConfig = () => {
+  const paymasterEndpoint = process.env.NEXT_PUBLIC_PAYMASTER;
+  if (!paymasterEndpoint) {
+    console.error('Paymaster endpoint not configured');
+    return false;
+  }
+  
+  // Validate paymaster endpoint format
+  try {
+    new URL(paymasterEndpoint);
+    return true;
+  } catch (e) {
+    console.error('Invalid paymaster endpoint URL:', paymasterEndpoint);
+    return false;
+  }
+};
+
+const logTransactionLifecycle = (stage: string, data: any) => {
+  const timestamp = new Date().toISOString();
+  console.log(`[${timestamp}] Transaction ${stage}:`, {
+    ...data,
+    paymasterConfig: {
+      endpoint: process.env.NEXT_PUBLIC_PAYMASTER,
+      isValid: validatePaymasterConfig()
+    }
+  });
+};
+
+const simulateTransaction = async (calls: any[], publicClient: any, userAddress: string) => {
+  try {
+    const simulation = await publicClient.simulateContract({
+      ...calls[0],
+      account: userAddress,
+    });
+    
+    console.log('Transaction simulation successful:', {
+      simulation,
+      calls: calls[0],
+      account: userAddress
+    });
+    
+    return true;
+  } catch (error) {
+    console.error('Transaction simulation failed:', {
+      error,
+      calls: calls[0],
+      account: userAddress
+    });
+    return false;
+  }
+};
+
+const isCoinbaseWalletError = (error: any): boolean => {
+  return error?.message?.includes('scanTxTimeout') || 
+         error?.message?.includes('api.wallet.coinbase.com');
+};
+
+const checkETHBalance = async (address: string, publicClient: any): Promise<boolean> => {
+  try {
+    const balance = await publicClient.getBalance({ address: address as `0x${string}` });
+    // We need at least 0.001 ETH for gas
+    const minRequired = BigInt('1000000000000000'); // 0.001 ETH in wei
+    return balance >= minRequired;
+  } catch (error) {
+    console.error('Error checking ETH balance:', error);
+    return false;
+  }
+};
+
+const logWalletState = async (userAddress: string, publicClient: any) => {
+  try {
+    const [balance, blockNumber] = await Promise.all([
+      publicClient.getBalance({ address: userAddress as `0x${string}` }),
+      publicClient.getBlockNumber()
+    ]);
+
+    console.log('Wallet State:', {
+      address: userAddress,
+      balance: balance.toString(),
+      balanceInEth: Number(balance) / 1e18,
+      blockNumber: blockNumber.toString(),
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Error logging wallet state:', error);
+  }
+};
+
+const logNetworkConditions = async (publicClient: any) => {
+  try {
+    const [gasPrice, block] = await Promise.all([
+      publicClient.getGasPrice(),
+      publicClient.getBlock()
+    ]);
+
+    console.log('Network Conditions:', {
+      gasPrice: gasPrice.toString(),
+      gasPriceInGwei: Number(gasPrice) / 1e9,
+      blockNumber: block.number.toString(),
+      blockTimestamp: new Date(Number(block.timestamp) * 1000).toISOString(),
+      baseFeePerGas: block.baseFeePerGas?.toString(),
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Error logging network conditions:', error);
+  }
+};
+
+const logTransactionParameters = (calls: any[], isSponsored: boolean) => {
+  console.log('Transaction Parameters:', {
+    calls: calls.map(call => ({
+      address: call.address,
+      functionName: call.functionName,
+      args: call.args.map((arg: any) => {
+        if (typeof arg === 'bigint') {
+          return {
+            value: arg.toString(),
+            type: 'bigint'
+          };
+        }
+        return arg;
+      })
+    })),
+    isSponsored,
+    timestamp: new Date().toISOString()
+  });
+};
+
+const getTransactionConfig = async (userAddress: string, publicClient: any) => {
+  try {
+    // Log initial state
+    await logWalletState(userAddress, publicClient);
+    await logNetworkConditions(publicClient);
+
+    const hasETH = await checkETHBalance(userAddress, publicClient);
+    const paymasterStatus = validatePaymasterConfig();
+    
+    console.log('Transaction Configuration Decision:', {
+      hasETH,
+      paymasterStatus,
+      address: userAddress,
+      timestamp: new Date().toISOString(),
+      decision: hasETH && !paymasterStatus ? 'non-sponsored' :
+                hasETH && paymasterStatus ? 'sponsored-with-fallback' :
+                !hasETH && paymasterStatus ? 'sponsored-only' : 'cannot-proceed'
+    });
+
+    // If we have ETH and paymaster is not working, use non-sponsored
+    if (hasETH && !paymasterStatus) {
+      console.log('Using non-sponsored transaction due to paymaster issues');
+      return { isSponsored: false };
+    }
+
+    // If we have ETH but paymaster is working, try sponsored first
+    if (hasETH && paymasterStatus) {
+      console.log('Using sponsored transaction with ETH fallback available');
+      return { isSponsored: true, hasFallback: true };
+    }
+
+    // If no ETH, we must use sponsored
+    if (!hasETH && paymasterStatus) {
+      console.log('Using sponsored transaction (no ETH available)');
+      return { isSponsored: true, hasFallback: false };
+    }
+
+    // If no ETH and no paymaster, we can't proceed
+    throw new Error('No ETH for gas and paymaster not available');
+  } catch (error) {
+    console.error('Error getting transaction config:', error);
+    throw error;
+  }
+};
+
+const handleTransactionError = async (error: Error, context: string, calls: any[], userAddress: string, publicClient: any) => {
+  try {
+    if (!userAddress) {
+      throw new Error('No user address available');
+    }
+
+    // Log state before error handling
+    await logWalletState(userAddress, publicClient);
+    await logNetworkConditions(publicClient);
+
+    const simulationSuccess = await simulateTransaction(calls, publicClient, userAddress);
+    
+    // Get current transaction config
+    const txConfig = await getTransactionConfig(userAddress, publicClient);
+    const isCoinbaseError = isCoinbaseWalletError(error);
+    
+    // Log transaction parameters
+    logTransactionParameters(calls, txConfig.isSponsored);
+    
+    logTransactionLifecycle('Error', {
+      type: context,
+      error: {
+        name: error.name,
+        message: error.message,
+        stack: error.stack,
+        isCoinbaseError,
+        ...(error instanceof BaseError && {
+          details: error.details,
+          shortMessage: error.shortMessage,
+        })
+      },
+      transactionData: {
+        address: userAddress,
+        chainId: BASE_CHAIN_ID,
+        calls,
+        ...txConfig,
+        simulationSuccess,
+        walletType: 'coinbase',
+        timestamp: new Date().toISOString()
+      }
+    });
+
+    // If it's a Coinbase Wallet error and we have a fallback available
+    if (isCoinbaseError && txConfig.hasFallback) {
+      console.warn('Coinbase Wallet error detected with fallback available. Retrying with non-sponsored transaction...', {
+        error: error.message,
+        timestamp: new Date().toISOString()
+      });
+      return { shouldRetry: true, useSponsored: false };
+    }
+
+    await logError(error, `${context} Transaction Error`);
+    return { shouldRetry: false };
+  } catch (e) {
+    console.error(`Error in ${context} error handler:`, e);
+    return { shouldRetry: false };
+  }
+};
 
 interface BidReviewManagerProps {
   onBidStatusChange?: () => void;
@@ -47,11 +386,12 @@ export const BidReviewManager: React.FC<BidReviewManagerProps> = ({
   const [rejectionReason, setRejectionReason] = useState('');
   const [selectedBid, setSelectedBid] = useState<FrontendBid | null>(null);
   const [selectedReviewers, setSelectedReviewers] = useState<string[]>([]);
-  const { bids, bounties, loadAllBids, updateBidStatus, createBidReview } = useBountySupabase();
+  const { bids, bounties, loadAllBids, loadBounties, updateBidStatus, createBidReview } = useBountySupabase();
 
   useEffect(() => {
     loadAllBids();
-  }, [loadAllBids]);
+    loadBounties();
+  }, [loadAllBids, loadBounties]);
 
   const getBountyTitle = (bountyId: string) => {
     const bounty = bounties.find(b => b.id === bountyId);
@@ -113,66 +453,6 @@ export const BidReviewManager: React.FC<BidReviewManagerProps> = ({
     }
   };
 
-  const handleApproveBid = async () => {
-    if (!selectedBid || selectedReviewers.length < 2) return;
-
-    const techReviewerAddress = extractAddress(selectedReviewers[0]);
-    const finalApproverAddress = extractAddress(selectedReviewers[1]);
-
-    if (!techReviewerAddress || !finalApproverAddress) {
-      console.error('Invalid reviewer or approver address');
-      console.log('Selected reviewers:', selectedReviewers);
-      // TODO: Show an error to the user
-      return;
-    }
-
-    // Update status in Supabase
-    await updateBidStatus(selectedBid.id, 'approved', techReviewerAddress, finalApproverAddress);
-    onBidStatusChange?.();
-
-    // Send notifications
-    onNotificationSent?.({
-      id: '',
-      recipientAddress: selectedBid.bidderAddress,
-      bountyId: selectedBid.bountyId,
-      bidId: selectedBid.id,
-      notificationType: 'bid_approved',
-      title: 'Bid Approved!',
-      message: `Your bid for "${getBountyTitle(selectedBid.bountyId)}" has been approved.`,
-      isRead: false,
-      createdAt: new Date()
-    });
-
-    onNotificationSent?.({
-      id: '',
-      recipientAddress: techReviewerAddress,
-      bountyId: selectedBid.bountyId,
-      bidId: selectedBid.id,
-      notificationType: 'review_requested',
-      title: 'Review Assignment',
-      message: `You have been assigned as Technical Reviewer for "${getBountyTitle(selectedBid.bountyId)}".`,
-      isRead: false,
-      createdAt: new Date()
-    });
-    
-    onNotificationSent?.({
-      id: '',
-      recipientAddress: finalApproverAddress,
-      bountyId: selectedBid.bountyId,
-      bidId: selectedBid.id,
-      notificationType: 'review_requested',
-      title: 'Review Assignment',
-      message: `You have been assigned as Final Approver for "${getBountyTitle(selectedBid.bountyId)}".`,
-      isRead: false,
-      createdAt: new Date()
-    });
-
-    setReviewDialogOpen(false);
-    setSelectedBid(null);
-    setSelectedReviewers([]);
-    await loadAllBids();
-  };
-
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'pending':
@@ -207,10 +487,11 @@ export const BidReviewManager: React.FC<BidReviewManagerProps> = ({
   useEffect(() => {
     console.log('🔍 BidReviewManager Debug:');
     console.log('All bids:', bids);
+    console.log('All bounties:', bounties);
     console.log('Active tab:', activeTab);
     console.log('Filtered bids:', filteredBids);
     console.log('Bid statuses:', bids.map(bid => ({ id: bid.id, status: bid.status, bountyId: bid.bountyId })));
-  }, [bids, activeTab, filteredBids]);
+  }, [bids, bounties, activeTab, filteredBids]);
 
   return (
     <div className="space-y-6">
@@ -384,6 +665,9 @@ export const BidReviewManager: React.FC<BidReviewManagerProps> = ({
                     value={selectedReviewers[0] || ''}
                     onChange={(value) => setSelectedReviewers([value, selectedReviewers[1]])}
                     placeholder="Type @ to mention a reviewer..."
+                    contextType="bounty"
+                    contextId={selectedBid?.bountyId || 'review'}
+                    contextUrl={selectedBid?.bountyId ? `/bounty/${selectedBid.bountyId}` : undefined}
                   />
                 </div>
                 <div>
@@ -392,6 +676,9 @@ export const BidReviewManager: React.FC<BidReviewManagerProps> = ({
                     value={selectedReviewers[1] || ''}
                     onChange={(value) => setSelectedReviewers([selectedReviewers[0], value])}
                     placeholder="Type @ to mention an approver..."
+                    contextType="bounty"
+                    contextId={selectedBid?.bountyId || 'review'}
+                    contextUrl={selectedBid?.bountyId ? `/bounty/${selectedBid.bountyId}` : undefined}
                   />
                 </div>
               </div>
@@ -401,81 +688,262 @@ export const BidReviewManager: React.FC<BidReviewManagerProps> = ({
                 <Button onClick={() => setReviewDialogOpen(false)} variant="outline">
                   Cancel
                 </Button>
-                {selectedBid && selectedReviewers.length >= 2 && (() => {
+                {(() => {
+                  // Debug logging to understand the state
+                  console.log('Button render state:', {
+                    selectedBid: !!selectedBid,
+                    selectedReviewers: selectedReviewers,
+                    reviewersLength: selectedReviewers.length,
+                    reviewer0: selectedReviewers[0],
+                    reviewer1: selectedReviewers[1],
+                    techReviewerAddress: extractAddress(selectedReviewers[0]),
+                    finalApproverAddress: extractAddress(selectedReviewers[1]),
+                    bounty: bounties.find(b => b.id === selectedBid?.bountyId)
+                  });
+
+                  // Check if we have both reviewers selected
+                  const hasBothReviewers = selectedReviewers.length >= 2 && 
+                    selectedReviewers[0] && selectedReviewers[1];
+                  
+                  if (!hasBothReviewers) {
+                    return (
+                      <Button
+                        disabled
+                        style={{ backgroundColor: '#e8fcff', color: '#000' }}
+                      >
+                        <CheckCircle className="w-4 h-4 mr-1" />
+                        Approve
+                      </Button>
+                    );
+                  }
+
                   const techReviewerAddress = extractAddress(selectedReviewers[0]);
                   const finalApproverAddress = extractAddress(selectedReviewers[1]);
                   
-                  // Only show Transaction if both addresses are valid
-                  if (techReviewerAddress && finalApproverAddress) {
+                  // Get the bounty for this bid
+                  const bounty = bounties.find(b => b.id === selectedBid?.bountyId);
+                  
+                  // Check if addresses are valid and bounty exists
+                  if (!techReviewerAddress || !finalApproverAddress || !bounty) {
+                    return (
+                      <Button
+                        disabled
+                        style={{ backgroundColor: '#e8fcff', color: '#000' }}
+                      >
+                        <CheckCircle className="w-4 h-4 mr-1" />
+                        {!bounty ? 'Bounty not found' : 'Invalid reviewer addresses'}
+                      </Button>
+                    );
+                  }
+
+                  // Create transaction calls
+                  const contractAddress = process.env.NEXT_PUBLIC_BOUNTY_MANAGER_ADDRESS as `0x${string}`;
+                  const tokenAddress = bounty.value.token === 'SYSTEM' 
+                    ? process.env.NEXT_PUBLIC_SYSTEM_TOKEN as `0x${string}`
+                    : process.env.NEXT_PUBLIC_SELF_TOKEN as `0x${string}`;
+
+                  const paymentStructure =
+                    selectedBid.paymentOption === 'milestones' ? PaymentStructure.Milestones :
+                    selectedBid.paymentOption === 'split' ? PaymentStructure.Split :
+                    PaymentStructure.Completion;
+                  
+                  const upfrontAmount = selectedBid.paymentDetails?.upfrontAmount || '0';
+                  const completionAmount = selectedBid.paymentDetails?.completionAmount || selectedBid.proposedAmount;
+
+                  const calls = [{
+                    address: contractAddress,
+                    abi: BountyManagerABI,
+                    functionName: 'createBounty',
+                    args: [
+                      bounty.title,
+                      bounty.category,
+                      String(selectedBid.proposedAmount),
+                      tokenAddress,
+                      paymentStructure,
+                      String(upfrontAmount),
+                      String(completionAmount),
+                    ],
+                  }];
+
+                  // Debug sponsorship config like Cart component
+                  console.log("Bounty transaction sponsorship config:", {
+                    isPaymasterConfigured: Boolean(process.env.NEXT_PUBLIC_PAYMASTER),
+                    paymasterEndpoint: process.env.NEXT_PUBLIC_PAYMASTER?.substring(0, 20) + "...",
+                    chainId: BASE_CHAIN_ID,
+                    contracts: {
+                      bountyManager: process.env.NEXT_PUBLIC_BOUNTY_MANAGER_ADDRESS,
+                      system: process.env.NEXT_PUBLIC_SYSTEM_TOKEN,
+                      self: process.env.NEXT_PUBLIC_SELF_TOKEN,
+                    },
+                  });
+
+                  // Validate transaction data
+                  const transactionData = {
+                    address: address?.toLowerCase() as `0x${string}`,
+                    chainId: BASE_CHAIN_ID,
+                    calls,
+                    isSponsored: true
+                  };
+
+                  const validation = validateTransactionData(transactionData);
+                  if (!validation.isValid) {
+                    console.error('Invalid transaction data:', validation.issues);
+                    return (
+                      <Button disabled style={{ backgroundColor: '#e8fcff', color: '#000' }}>
+                        <CheckCircle className="w-4 h-4 mr-1" />
+                        Invalid transaction data
+                      </Button>
+                    );
+                  }
+
+                  // Dynamic sponsorship component
+                  const DynamicTransaction = () => {
+                    const [isLoading, setIsLoading] = useState(true);
+                    const [txConfig, setTxConfig] = useState<{ isSponsored: boolean; hasFallback: boolean } | null>(null);
+
+                    useEffect(() => {
+                      const loadTransactionConfig = async () => {
+                        try {
+                          if (address) {
+                            // Always use sponsored transactions when paymaster is configured
+                            const config = { isSponsored: true, hasFallback: false };
+                            console.log('Transaction config loaded:', config);
+                            setTxConfig(config);
+                          }
+                        } catch (error) {
+                          console.error('Error loading transaction config:', error);
+                          setTxConfig(null);
+                        } finally {
+                          setIsLoading(false);
+                        }
+                      };
+
+                      loadTransactionConfig();
+                    }, [address, publicClient]);
+
+                    if (isLoading) {
+                      return (
+                        <Button disabled style={{ backgroundColor: '#e8fcff', color: '#000' }}>
+                          <CheckCircle className="w-4 h-4 mr-1" />
+                          Loading transaction config...
+                        </Button>
+                      );
+                    }
+
+                    if (!txConfig) {
+                      return (
+                        <Button disabled style={{ backgroundColor: '#e8fcff', color: '#000' }}>
+                          <CheckCircle className="w-4 h-4 mr-1" />
+                          Failed to load transaction config
+                        </Button>
+                      );
+                    }
+
+                    console.log('Using transaction config:', txConfig);
+
                     return (
                       <Transaction
-                        isSponsored={true}
                         address={address?.toLowerCase() as `0x${string}`}
                         chainId={BASE_CHAIN_ID}
-                        calls={[{
-                          address: process.env.NEXT_PUBLIC_BOUNTY_MANAGER_ADDRESS as `0x${string}`,
-                          abi: BountyManagerABI,
-                          functionName: 'assignBounty',
-                          args: [
-                            parseInt(selectedBid.bountyId),
-                            selectedBid.bidderAddress.toLowerCase() as `0x${string}`,
-                            techReviewerAddress.toLowerCase() as `0x${string}`,
-                            finalApproverAddress.toLowerCase() as `0x${string}`,
-                          ],
-                        }]}
-                        onSuccess={async (receipt) => {
-                          console.log('✅ Bounty assigned successfully:', receipt);
-                          await handleApproveBid();
+                        calls={calls}
+                        isSponsored={true}
+                        onSuccess={async () => {
+                          console.log('Bounty creation transaction succeeded');
+                          logTransactionLifecycle('Success', {
+                            type: 'bounty_creation',
+                            address: address?.toLowerCase(),
+                            chainId: BASE_CHAIN_ID,
+                            sponsorshipUsed: true
+                          });
+                          
+                          // Update status in Supabase
+                          await updateBidStatus(selectedBid.id, 'approved', techReviewerAddress, finalApproverAddress);
+                          onBidStatusChange?.();
+
+                          // Send notifications
+                          onNotificationSent?.({
+                            id: '',
+                            recipientAddress: selectedBid.bidderAddress,
+                            bountyId: selectedBid.bountyId,
+                            bidId: selectedBid.id,
+                            notificationType: 'bid_approved',
+                            title: 'Bid Approved!',
+                            message: `Your bid for "${getBountyTitle(selectedBid.bountyId)}" has been approved.`,
+                            isRead: false,
+                            createdAt: new Date()
+                          });
+
+                          onNotificationSent?.({
+                            id: '',
+                            recipientAddress: techReviewerAddress,
+                            bountyId: selectedBid.bountyId,
+                            bidId: selectedBid.id,
+                            notificationType: 'review_requested',
+                            title: 'Review Assignment',
+                            message: `You have been assigned as Technical Reviewer for "${getBountyTitle(selectedBid.bountyId)}".`,
+                            isRead: false,
+                            createdAt: new Date()
+                          });
+                          
+                          onNotificationSent?.({
+                            id: '',
+                            recipientAddress: finalApproverAddress,
+                            bountyId: selectedBid.bountyId,
+                            bidId: selectedBid.id,
+                            notificationType: 'review_requested',
+                            title: 'Review Assignment',
+                            message: `You have been assigned as Final Approver for "${getBountyTitle(selectedBid.bountyId)}".`,
+                            isRead: false,
+                            createdAt: new Date()
+                          });
+
+                          setReviewDialogOpen(false);
+                          setSelectedBid(null);
+                          setSelectedReviewers([]);
+                          await loadAllBids();
                         }}
-                        onError={(error) => {
-                          console.error('❌ Failed to assign bounty:', error);
-                          console.log('🔍 Debug Info:');
-                          console.log('Bounty ID:', selectedBid.bountyId);
-                          console.log('Bidder address:', selectedBid.bidderAddress);
-                          console.log('Tech reviewer:', selectedReviewers[0]);
-                          console.log('Final approver:', selectedReviewers[1]);
-                        }}
-                        onTransactionStarted={() => {
-                          console.log('🚀 Assigning bounty...');
-                          console.log('🔍 Debug Info:');
-                          console.log('Bounty ID:', selectedBid.bountyId);
-                          console.log('Bidder address:', selectedBid.bidderAddress);
-                          console.log('Tech reviewer:', selectedReviewers[0]);
-                          console.log('Final approver:', selectedReviewers[1]);
+                        onError={async (error: Error) => {
+                          console.error('Bounty creation transaction failed:', error);
+                          
+                          // Handle transaction error with fallback logic
+                          const errorResult = await handleTransactionError(
+                            error, 
+                            'bounty_creation', 
+                            calls, 
+                            address?.toLowerCase() || '',
+                            publicClient
+                          );
+                          
+                          if (errorResult.shouldRetry) {
+                            console.log('Retrying transaction with non-sponsored configuration...');
+                            // Here we would implement the retry logic with the new config
+                            // For now, just show an error message
+                            alert(`Transaction failed but retry is available. Error: ${error.message}`);
+                          } else {
+                            alert(`Failed to create bounty: ${error.message}`);
+                          }
                         }}
                       >
                         <TransactionButton
-                          text="Approve & Assign"
+                          text="Approve & Create Bounty (Sponsored)"
                           className="flex-1"
                           style={{ backgroundColor: '#e8fcff', color: '#000' }}
-                        >
-                          <CheckCircle className="w-4 h-4 mr-1" />
-                          Approve & Assign
-                        </TransactionButton>
+                        />
+                        <TransactionSponsor />
+                        <TransactionStatus>
+                          <TransactionStatusLabel />
+                          <TransactionStatusAction />
+                        </TransactionStatus>
+                        {/* DEBUG BUTTON: Should always show */}
+                        <Button style={{ background: 'red', color: '#fff', width: '100%' }}>
+                          DEBUG: Should always show
+                        </Button>
                       </Transaction>
                     );
-                  }
-                  
-                  // Show disabled button if addresses are invalid
-                  return (
-                    <Button
-                      disabled
-                      style={{ backgroundColor: '#e8fcff', color: '#000' }}
-                    >
-                      <CheckCircle className="w-4 h-4 mr-1" />
-                      Approve & Assign
-                    </Button>
-                  );
+                  };
+
+                  return <DynamicTransaction />;
                 })()}
-                {selectedReviewers.length < 2 && (
-                  <Button
-                    disabled
-                    style={{ backgroundColor: '#e8fcff', color: '#000' }}
-                  >
-                    <CheckCircle className="w-4 h-4 mr-1" />
-                    Approve & Assign
-                  </Button>
-                )}
               </div>
             </div>
           ) : (

@@ -9,7 +9,28 @@ export const Container = styled.div`
   padding: 10px;
   background: ${({ theme }) => theme.colors.secondaryLight};
   border-radius: 5px;
-  gap: 10px;
+`;
+
+export const FilterGrid = styled.div`
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  width: 100%;
+
+  @media (max-width: 768px) {
+    grid-template-columns: 1fr;
+    gap: 0.5rem;
+  }
+`;
+
+export const FilterGroup = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+
+  @media (max-width: 768px) {
+    gap: 0.25rem;
+  }
 `;
 export const Checkbox = styled(CB)`
   display: inline-block;

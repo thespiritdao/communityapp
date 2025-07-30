@@ -6,6 +6,7 @@ import Image from "next/image";
 import * as S from "./TopBar.style";
 import { useCart } from "src/features/shopping-cart/contexts/cart-context"; // Ensure default export
 import { useTokenBalances } from "src/context/TokenBalancesContext";
+import AddProductButton from "src/features/marketplace/components/AddProductButton";
 
 interface TopBarProps {
   address: string;
@@ -40,18 +41,22 @@ const TopBar = ({ address }: TopBarProps) => {
           <span>$SELF: {balances?.selfBalance || "0"}</span>
         </S.SelfBalances>
       </S.LeftSection>
-      <S.CartToggleButton onClick={handleCartToggle}>
-        <Image
-          src="/images/cart/cart-icon.png"
-          alt="Cart"
-          width={40}
-          height={40}
-        />
-        {/* Show badge if there are items in the cart */}
-        {products.length > 0 && (
-          <S.CartBadge>{products.length}</S.CartBadge>
-        )}
-      </S.CartToggleButton>
+      
+      <S.RightSection>
+        <AddProductButton />
+        <S.CartToggleButton onClick={handleCartToggle}>
+          <Image
+            src="/images/cart/cart-icon.png"
+            alt="Cart"
+            width={40}
+            height={40}
+          />
+          {/* Show badge if there are items in the cart */}
+          {products.length > 0 && (
+            <S.CartBadge>{products.length}</S.CartBadge>
+          )}
+        </S.CartToggleButton>
+      </S.RightSection>
     </S.TopBarContainer>
   );
 };

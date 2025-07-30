@@ -6,6 +6,9 @@ import { Message, UserProfile, ChatGroup } from "../types"; // Ensure ChatGroup 
 import ChatInput from "./ChatInput";
 import MessageList from "./MessageList";
 import "../styles/Chat.css";
+// Removed direct notificationService import - using context instead
+import { extractMentionedWalletsEnhanced } from 'src/utils/mentions';
+import { useNotifications } from 'src/context/NotificationContext';
 
 interface ChatContainerProps {
   chatGroupId?: string;
@@ -18,6 +21,7 @@ export default function ChatContainer({ chatGroupId }: ChatContainerProps) {
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
+  const { createUserMentionNotification } = useNotifications();
 
   // Fetch current user session & profile once on mount.
   useEffect(() => {
@@ -119,12 +123,29 @@ export default function ChatContainer({ chatGroupId }: ChatContainerProps) {
             filter: `chat_group_id=eq.${selectedChatGroup.id}`,
           },
           (payload) => {
+            console.log('Realtime event received! (INSERT)', payload);
+            console.log('New message received (INSERT):', payload.new);
             setMessages((prev) => [...prev, payload.new as Message]);
+          }
+        )
+        .on(
+          "postgres_changes",
+          {
+            event: "UPDATE",
+            schema: "public",
+            table: "messages",
+            filter: `chat_group_id=eq.${selectedChatGroup.id}`,
+          },
+          (payload) => {
+            console.log('Realtime event received! (UPDATE)', payload);
+            console.log('Message updated (UPDATE):', payload.new);
+            setMessages((prev) => prev.map(msg => msg.id === payload.new.id ? { ...msg, ...payload.new } : msg));
           }
         )
         .subscribe();
 
       return () => {
+        console.log('Cleaning up subscription for chat group:', selectedChatGroup.id);
         supabase.removeChannel(subscription);
       };
     }
@@ -136,6 +157,14 @@ export default function ChatContainer({ chatGroupId }: ChatContainerProps) {
 		console.error("No current user or chat group selected.");
 		return;
 	  }
+	  
+	  console.log('Sending message:', {
+	    content,
+	    attachments,
+	    sender: currentUser.wallet_address,
+	    chatGroup: selectedChatGroup.id
+	  });
+	  
 	  try {
 		const messagePayload = {
 		  content,
@@ -146,8 +175,35 @@ export default function ChatContainer({ chatGroupId }: ChatContainerProps) {
 		  created_at: new Date().toISOString(),
 		  required_token: selectedChatGroup.required_token || null,
 		};
-		const { error } = await supabase.from("messages").insert([messagePayload]);
-		if (error) throw error;
+		console.log('Message payload:', messagePayload);
+		
+		const { data, error } = await supabase.from("messages").insert([messagePayload]);
+		if (error) {
+		  console.error('Error inserting message:', error);
+		  throw error;
+		}
+		console.log('Message sent successfully:', data);
+
+        // Extract mentions and send notifications via context (handles both DB and local state)
+        console.log('Processing mentions in message:', content);
+        const mentionedWallets = await extractMentionedWalletsEnhanced(content);
+        console.log('Extracted mentioned wallets:', mentionedWallets);
+        
+        for (const wallet of mentionedWallets) {
+          // TODO: Re-enable self-mention rejection before launch
+          // if (wallet.toLowerCase() !== currentUser.wallet_address.toLowerCase()) {
+            console.log('Creating chat mention notification for:', wallet.toLowerCase());
+            await createUserMentionNotification(
+              wallet.toLowerCase(),
+              currentUser.wallet_address.toLowerCase(),
+              'chat',
+              selectedChatGroup.id,
+              `/chat/${selectedChatGroup.id}`
+            );
+          // } else {
+          //   console.log('Skipping self-mention for:', wallet.toLowerCase());
+          // }
+        }
 	  } catch (error) {
 		console.error("Error sending message:", error);
 	  }
@@ -197,7 +253,7 @@ export default function ChatContainer({ chatGroupId }: ChatContainerProps) {
         </section>
       </main>
       <footer className="chat-input-section">
-        <ChatInput onSendMessage={sendMessage} />
+        <ChatInput onSendMessage={sendMessage} chatId={selectedChatGroup?.id} />
       </footer>
     </div>
   );

@@ -60,7 +60,8 @@ const nextConfig = {
                 https://mainnet.base.org
                 https://*.infura.io
                 https://base-mainnet.infura.io
-                https://yqgqodofeliuurrmxlks.supabase.co;
+                https://yqgqodofeliuurrmxlks.supabase.co
+                wss://yqgqodofeliuurrmxlks.supabase.co;
               img-src 'self' data: https:;
               style-src 'self' 'unsafe-inline';
               frame-src 'self' https://*.coinbase.com;

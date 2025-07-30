@@ -39,13 +39,18 @@ const markMessagesAsRead = async (receiver_wallet_id: string) => {
   }
 };
 
+// Utility to format message with mentions
+function formatMessageWithMentions(message: string): string {
+  // Replace @[Name](wallet) with <span class="mention">@Name</span>
+  return message.replace(/@\[([^\]]+)\]\([^\)]+\)/g, '<span class="mention">@$1</span>');
+}
+
 export default function MessageList({
   messages,
   currentUser,
   users,
 }: MessageListProps) {
   const [selectedUser, setSelectedUser] = useState<UserProfile | null>(null);
-  const [localMessages, setLocalMessages] = useState<Message[]>(messages);
   const [profilePictures, setProfilePictures] = useState<Record<string, string>>({});
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -56,12 +61,11 @@ export default function MessageList({
   };
 
   useEffect(() => {
-    setLocalMessages(messages || []);
     scrollToBottom();
     if (currentUser?.wallet_address) {
       markMessagesAsRead(currentUser.wallet_address);
     }
-  }, [messages]);
+  }, [messages, currentUser?.wallet_address]);
 
   useEffect(() => {
     const fetchProfilePictures = async () => {
@@ -80,38 +84,6 @@ export default function MessageList({
     fetchProfilePictures();
   }, [messages, users]);
 
-  useEffect(() => {
-    const syncRealtimeMessages = async () => {
-      const { data: session } = await supabase.auth.getSession();
-      if (!session?.session || session.session.expires_at < Date.now() / 1000) {
-        await supabase.auth.refreshSession();
-      }
-
-      const channel = supabase
-        .channel('public:messages')
-        .on(
-          'postgres_changes',
-          { event: 'UPDATE', schema: 'public', table: 'messages' },
-          (payload) => {
-            console.log('Real-time payload structure:', payload);
-			const updatedMessage = payload.new;
-            setLocalMessages((prevMessages) =>
-              prevMessages.map((msg) =>
-                msg.id === updatedMessage.id ? { ...msg, ...updatedMessage } : msg
-              )
-            );
-          }
-        )
-        .subscribe();
-
-      return () => {
-        supabase.removeChannel(channel);
-      };
-    };
-
-    syncRealtimeMessages();
-  }, []);
-
   const handleProfileClick = (walletAddress: string) => {
     const user = users.find((user) => user.wallet_address === walletAddress);
     if (user) {
@@ -125,8 +97,8 @@ export default function MessageList({
 
   return (
     <div className="message-list">
-      {localMessages && localMessages.length > 0 ? (
-        localMessages.map((message) => {
+      {messages && messages.length > 0 ? (
+        messages.map((message) => {
 		  const profilePicture =
 			  message.sender_profile_picture ||
 			  profilePictures[message.sender_wallet_id] ||
@@ -158,7 +130,7 @@ export default function MessageList({
               <div className="message-content">
                 <div
                   className="message-text"
-                  dangerouslySetInnerHTML={{ __html: message.content }}
+                  dangerouslySetInnerHTML={{ __html: formatMessageWithMentions(message.content) }}
                 ></div>
                 {message.attachments && (
                   <div className="message-attachments">

@@ -31,9 +31,9 @@ export const BountyCard: React.FC<BountyCardProps> = ({
       case 'open':
         return 'bg-green-500';
       case 'in-progress':
-        return 'bg-yellow-500';
+        return 'bg-orange-500';
       case 'completed':
-        return 'bg-blue-500';
+        return 'bg-orange-300';
       default:
         return 'bg-gray-500';
     }

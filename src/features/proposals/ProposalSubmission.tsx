@@ -22,6 +22,9 @@ import { useAccount } from 'wagmi';
 import { encodeFunctionData, Address } from 'viem';
 import { base } from 'wagmi/chains';
 import { useProposal } from 'src/context/ProposalContext';
+import UserTagging from 'src/components/UserTagging';
+import { supabase } from 'src/lib/supabase';
+import DAOGovernorABI from 'src/abis/DAO_GovernorABI.json';
 
 interface ProposalSubmissionProps {
   className?: string;
@@ -29,24 +32,6 @@ interface ProposalSubmissionProps {
   onError?: (error: Error) => void;
   variant?: 'full' | 'compact' | 'minimal';
 }
-
-// ABI for the proposeWithMetadata function
-const GOVERNOR_ABI = [
-  {
-    name: 'proposeWithMetadata',
-    type: 'function',
-    stateMutability: 'nonpayable',
-    inputs: [
-      { name: 'targets', type: 'address[]' },
-      { name: 'values', type: 'uint256[]' },
-      { name: 'calldatas', type: 'bytes[]' },
-      { name: 'description', type: 'string' },
-      { name: 'title', type: 'string' },
-      { name: 'forumThreadId', type: 'string' },
-    ],
-    outputs: [{ name: '', type: 'uint256' }],
-  },
-] as const;
 
 export const ProposalSubmission: React.FC<ProposalSubmissionProps> = ({ 
   className = '',
@@ -68,21 +53,20 @@ export const ProposalSubmission: React.FC<ProposalSubmissionProps> = ({
     formErrors,
   } = useProposal();
 
-  // Prepare transaction data using the context
-  const prepareProposalTransaction = useCallback(() => {
+  // Prepare transaction data with correct structure
+  const prepareTransaction = useCallback(() => {
     if (!isFormValid || !canPropose) return null;
-
     try {
-      // For a simple proposal without specific execution, we use empty arrays
+      // For simple governance proposals, use empty execution arrays
       const targets: Address[] = [];
       const values: bigint[] = [];
       const calldatas: `0x${string}`[] = [];
-      
-      // Create the full description with title and body
+      // Format description with markdown
       const description = `# ${formData.title}\n\n${formData.body}`;
-      
-      const calldata = encodeFunctionData({
-        abi: GOVERNOR_ABI,
+      // Debug log
+      console.log('[ProposalSubmission] Transaction object:', {
+        address: process.env.NEXT_PUBLIC_DAO_GOVERNOR,
+        abi: DAOGovernorABI,
         functionName: 'proposeWithMetadata',
         args: [
           targets,
@@ -93,11 +77,22 @@ export const ProposalSubmission: React.FC<ProposalSubmissionProps> = ({
           formData.forumThreadId || '',
         ],
       });
-
+      console.log('[ProposalSubmission] Env:', {
+        NEXT_PUBLIC_PAYMASTER: process.env.NEXT_PUBLIC_PAYMASTER,
+        NEXT_PUBLIC_DAO_GOVERNOR: process.env.NEXT_PUBLIC_DAO_GOVERNOR,
+      });
       return {
-        to: process.env.NEXT_PUBLIC_DAO_GOVERNOR as Address,
-        data: calldata,
-        value: BigInt(0),
+        address: process.env.NEXT_PUBLIC_DAO_GOVERNOR as Address,
+        abi: DAOGovernorABI,
+        functionName: 'proposeWithMetadata',
+        args: [
+          targets,
+          values,
+          calldatas,
+          description,
+          formData.title,
+          formData.forumThreadId || '',
+        ],
       };
     } catch (error) {
       console.error('Error preparing transaction:', error);
@@ -118,7 +113,7 @@ export const ProposalSubmission: React.FC<ProposalSubmissionProps> = ({
     onError?.(error);
   }, [setIsSubmitting, onError]);
 
-  const transactionData = prepareProposalTransaction();
+  const transactionData = prepareTransaction();
 
   // Render different variants
   if (variant === 'minimal') {
@@ -143,16 +138,25 @@ export const ProposalSubmission: React.FC<ProposalSubmissionProps> = ({
           />
           {isConnected && canPropose ? (
             <Transaction
+              address={address?.toLowerCase() as `0x${string}`}
               chainId={base.id}
+              isSponsored={true}
               calls={transactionData ? [transactionData] : []}
               onSuccess={handleTransactionSuccess}
               onError={handleTransactionError}
             >
               <TransactionButton
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-md transition-colors disabled:opacity-50"
+                className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold py-4 px-8 rounded-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl"
                 disabled={!isFormValid || isSubmitting}
-                text={isSubmitting ? "Submitting..." : "Submit"}
+                text={isSubmitting ? "Submitting Proposal..." : "Submit Proposal to DAO"}
               />
+              <TransactionSponsor />
+              <div className="mt-4">
+                <TransactionStatus>
+                  <TransactionStatusLabel />
+                  <TransactionStatusAction />
+                </TransactionStatus>
+              </div>
             </Transaction>
           ) : (
             <button disabled className="w-full bg-gray-300 text-gray-500 py-2 px-4 rounded-md cursor-not-allowed">
@@ -217,13 +221,15 @@ export const ProposalSubmission: React.FC<ProposalSubmissionProps> = ({
 
           {isConnected ? (
             <Transaction
+              address={address?.toLowerCase() as `0x${string}`}
               chainId={base.id}
+              isSponsored={true}
               calls={transactionData ? [transactionData] : []}
               onSuccess={handleTransactionSuccess}
               onError={handleTransactionError}
             >
               <TransactionButton
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-6 rounded-lg transition-colors disabled:opacity-50"
+                className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors disabled:opacity-50"
                 disabled={!isFormValid || isSubmitting}
                 text={isSubmitting ? "Submitting..." : "Submit Proposal"}
               />
@@ -352,20 +358,22 @@ export const ProposalSubmission: React.FC<ProposalSubmissionProps> = ({
           <label htmlFor="body" className="block text-sm font-medium text-gray-700 mb-2">
             Proposal Description *
           </label>
-          <textarea
-            id="body"
-            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+          <UserTagging
             value={formData.body}
-            onChange={e => updateFormField('body', e.target.value)}
-            required
-            rows={8}
-            placeholder="Provide a detailed description of your proposal...&#10;&#10;Include:&#10;• Background and motivation&#10;• Specific actions or changes requested&#10;• Expected outcomes and benefits&#10;• Implementation timeline&#10;• Any relevant links or references"
-            disabled={isSubmitting}
-            maxLength={10000}
+            onChange={(value) => updateFormField('body', value)}
+            placeholder="Provide a detailed description of your proposal... Use @ to mention someone&#10;&#10;Include:&#10;• Background and motivation&#10;• Specific actions or changes requested&#10;• Expected outcomes and benefits&#10;• Implementation timeline&#10;• Any relevant links or references"
+            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+            multiLine={true}
+            contextType="proposal"
+            contextId="new-proposal"
+            contextUrl="/proposals"
+            onMentionsChange={(mentions) => {
+              console.log('Mentions in proposal:', mentions);
+            }}
           />
           <div className="flex justify-between mt-1">
             <p className="text-xs text-gray-500">
-              Supports Markdown formatting. Be thorough - voters need enough detail to make informed decisions.
+              Supports Markdown formatting and @mentions. Be thorough - voters need enough detail to make informed decisions.
             </p>
             <span className="text-xs text-gray-400">
               {formData.body.length}/10,000
@@ -397,8 +405,9 @@ export const ProposalSubmission: React.FC<ProposalSubmissionProps> = ({
         <div className="pt-4">
           {isConnected && canPropose ? (
             <Transaction
+              address={address?.toLowerCase() as `0x${string}`}
               chainId={base.id}
-			  isSponsored
+              isSponsored={true}
               calls={transactionData ? [transactionData] : []}
               onSuccess={handleTransactionSuccess}
               onError={handleTransactionError}
@@ -505,15 +514,18 @@ export const ProposalFormInputs: React.FC = () => {
         <label htmlFor="body" className="block text-sm font-medium mb-1">
           Proposal Description *
         </label>
-        <textarea
-          id="body"
-          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+        <UserTagging
           value={formData.body}
-          onChange={e => updateFormField('body', e.target.value)}
-          placeholder="Provide a detailed description of your proposal"
-          rows={6}
-          disabled={isSubmitting}
-          maxLength={10000}
+          onChange={(value) => updateFormField('body', value)}
+          placeholder="Provide a detailed description of your proposal... Use @ to mention someone"
+          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          multiLine={true}
+          contextType="proposal"
+          contextId="new-proposal"
+          contextUrl="/proposals"
+          onMentionsChange={(mentions) => {
+            console.log('Mentions in proposal:', mentions);
+          }}
         />
         <div className="text-xs text-gray-400 mt-1">
           {formData.body.length}/10,000

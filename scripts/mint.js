@@ -8,7 +8,7 @@ dotenv.config();
 async function main() {
   // ─── YOUR CONFIG ──────────────────────────────────────────────────────────
   // 1) The RPC URL for Base (or whichever network you deployed to):
-  const RPC_URL = process.env.RPC_URL || "https://mainnet.base.org";
+  const RPC_URL = process.env.NEXT_PUBLIC_RPC_URL || process.env.RPC_URL || "https://mainnet.base.org";
   // 2) Your private key (the one that has the minting permissions):
   const PK      = process.env.PRIVATE_KEY!;
   // 3) Your deployed AdvocateMembership address:
