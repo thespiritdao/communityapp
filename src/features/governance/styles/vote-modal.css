@@ -1,0 +1,68 @@
+/* Modal Overlay */
+.vote-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Modal Container */
+.vote-modal-container {
+  background: #f5f4ed; /* Standard app bg */
+  border-radius: 16px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.25);
+  max-width: 420px;
+  width: 95vw;
+  padding: 32px 24px 24px 24px;
+  position: relative;
+  z-index: 2100;
+  outline: none;
+}
+
+.vote-modal-close {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  color: #888;
+}
+
+/* Vote Option Buttons */
+.vote-option {
+  border-width: 2px;
+  border-radius: 8px;
+  padding: 0.75rem 0;
+  font-weight: 600;
+  font-size: 1rem;
+  background: transparent;
+  color: #000;
+  transition: border-color 0.2s, background 0.2s;
+  cursor: pointer;
+}
+.vote-option.for {
+  border-color: #22c55e; /* green-600 */
+}
+.vote-option.against {
+  border-color: #ef4444; /* red-600 */
+}
+.vote-option.abstain {
+  border-color: #6b7280; /* gray-500 */
+}
+.vote-option.selected {
+  background: rgba(34, 197, 94, 0.07); /* very subtle green tint for selected, or keep transparent if preferred */
+}
+.vote-option.against.selected {
+  background: rgba(239, 68, 68, 0.07); /* very subtle red tint for selected */
+}
+.vote-option.abstain.selected {
+  background: rgba(107, 114, 128, 0.07); /* very subtle gray tint for selected */
+} 

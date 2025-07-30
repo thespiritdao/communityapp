@@ -80,7 +80,16 @@ export const BidForm: React.FC<BidFormProps> = ({ bounty, onSubmit, onCancel }) 
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSubmit(formData);
+    // Map deliverables to correct format for Supabase
+    const mappedDeliverables = formData.deliverables.map(d => ({
+      description: d.description,
+      due_date: d.dueDate instanceof Date ? d.dueDate.toISOString() : d.dueDate,
+      payment_amount: d.paymentAmount
+    }));
+    onSubmit({
+      ...formData,
+      deliverables: mappedDeliverables
+    });
   };
 
   const handleQuestionAnswer = (question: string, answer: string) => {
@@ -126,7 +135,10 @@ export const BidForm: React.FC<BidFormProps> = ({ bounty, onSubmit, onCancel }) 
     setFormData(prev => ({
       ...prev,
       paymentOption: option,
-      paymentDetails: option === 'split' ? { upfrontAmount: '0', completionAmount: prev.proposedAmount } : {}
+      paymentDetails: option === 'split' ? { 
+        upfrontAmount: '0', 
+        completionAmount: String(prev.proposedAmount) 
+      } : {}
     }));
   };
 

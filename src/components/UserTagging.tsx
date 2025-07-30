@@ -1,8 +1,10 @@
 //src/components/UserTagging.tsx
 import { useEffect, useState } from 'react';
 import { MentionsInput, Mention } from 'react-mentions';
-import { supabase } from 'src/utils/supabaseClient';
-import styles from 'src/components/styles/UserTagging.module.css';
+import { supabase } from '../utils/supabaseClient';
+import { useNotifications } from '../context/NotificationContext';
+import { useAccount } from 'wagmi';
+import styles from './styles/UserTagging.module.css';
 
 interface UserTaggingProps {
   value: string;
@@ -11,6 +13,10 @@ interface UserTaggingProps {
   className?: string;
   onKeyDown?: (e: React.KeyboardEvent) => void;
   multiLine?: boolean;
+  contextType?: 'forum' | 'chat' | 'bounty' | 'governance';
+  contextId?: string;
+  contextUrl?: string;
+  onMentionsChange?: (mentions: Array<{ id: string; display: string }>) => void;
 }
 
 export default function UserTagging({
@@ -20,9 +26,16 @@ export default function UserTagging({
   className,
   onKeyDown,
   multiLine = false,
+  contextType,
+  contextId,
+  contextUrl,
+  onMentionsChange,
 }: UserTaggingProps) {
   const [users, setUsers] = useState<Array<any>>([]);
   const [loading, setLoading] = useState(true);
+  const [previousMentions, setPreviousMentions] = useState<Array<{ id: string; display: string }>>([]);
+  const { createUserMentionNotification } = useNotifications();
+  const { address } = useAccount();
 
   useEffect(() => {
     async function fetchUsers() {
@@ -42,6 +55,7 @@ export default function UserTagging({
           }));
           setUsers(mentionUsers);
           console.log('Loaded users for mentions:', mentionUsers.length);
+          console.debug('Mention users array:', mentionUsers);
         }
       } catch (err) {
         console.error('Exception fetching users:', err);
@@ -54,8 +68,9 @@ export default function UserTagging({
   }, []);
 
   const handleMentionsChange = (event, newValue, newPlainTextValue, mentions) => {
-    console.log('Mentions changed:', mentions);
     onChange?.(newValue);
+    onMentionsChange?.(mentions);
+    setPreviousMentions(mentions);
   };
 
   const fetchMentionSuggestions = (query, callback) => {
@@ -81,7 +96,6 @@ export default function UserTagging({
     callback(matchingUsers);
   };
 
-  // Custom styling to remove border and blend with container
   const mentionsInputStyle = {
     input: {
       overflow: 'auto',
@@ -133,20 +147,23 @@ export default function UserTagging({
           appendSpaceOnAdd={true}
           markup="@[__display__](__id__)"
           displayTransform={(id, display) => `@${display}`}
-          renderSuggestion={(suggestion, search, highlightedDisplay, index, focused) => (
-            <div className={focused ? styles.focusedSuggestion : styles.suggestion}>
-              {suggestion.profile_picture && (
+          renderSuggestion={(suggestion, search, highlightedDisplay, index, focused) => {
+            return (
+              <div className={focused ? styles.focusedSuggestion : styles.suggestion}>
                 <img
-                  src={suggestion.profile_picture}
+                  src={suggestion.profile_picture || '/observableinfinities.png'}
                   alt=""
                   className={styles.profilePicture}
                   width={24}
                   height={24}
+                  onError={(e) => {
+                    e.currentTarget.src = '/observableinfinities.png';
+                  }}
                 />
-              )}
-              <span className={styles.userName}>{highlightedDisplay}</span>
-            </div>
-          )}
+                <span className={styles.userName}>{highlightedDisplay}</span>
+              </div>
+            );
+          }}
         />
       </MentionsInput>
       {loading && <div className={styles.loadingIndicator}>Loading users...</div>}
@@ -155,6 +172,5 @@ export default function UserTagging({
 }
 
 export function formatMessageWithMentions(message: string): string {
-  // Replace @[Name](id) format with just @Name
   return message.replace(/@\[(.*?)\]\(.*?\)/g, '@$1');
 }

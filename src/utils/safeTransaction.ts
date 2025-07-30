@@ -9,7 +9,7 @@ const SAFE_ADDRESS = process.env.SAFE_ADDRESS!;
 const SAFE_API_URL = process.env.SAFE_API_URL!;
 const UNLOCK_CONTRACT = process.env.UNLOCK_CONTRACT!;
 
-const provider = new ethers.JsonRpcProvider('https://mainnet.base.org');
+const provider = new ethers.JsonRpcProvider(process.env.NEXT_PUBLIC_RPC_URL!);
 
 export async function sendSafeTransaction(to: string, amount: string) {
   try {

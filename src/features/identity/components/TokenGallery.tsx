@@ -126,7 +126,7 @@ export const TokenGallery: React.FC<TokenGalleryProps> = ({ walletAddress, categ
 			  return { uri: '', image: '', name: token.label, owned: true };
 			}
 
-			const provider = new ethers.providers.JsonRpcProvider(publicClient.transport.url);
+			const provider = new ethers.JsonRpcProvider(publicClient.transport.url);
           if (token.type === 'erc721') {
             const contract = new ethers.Contract(token.address, erc721ABI, provider);
             const tokenId = await contract.tokenOfOwnerByIndex(walletAddress, 0).catch(() => null);

@@ -2,8 +2,9 @@
 import { useQuery } from '@tanstack/react-query';
 import { usePublicClient } from 'wagmi';
 import { keccak256, decodeEventLog } from 'viem';
-import DAOGovernorABI from 'src/abis/DAO_GovernorABI.json';
+import DAOGovernorABI from '../../../abis/DAO_GovernorABI.json';
 import { base } from 'viem/chains';
+import { supabase } from '../../../utils/supabaseClient';
 
 interface Proposal {
   id: string;
@@ -13,6 +14,7 @@ interface Proposal {
   end: number;
   choices: string[];
   scores: number[];
+  state: number; // Add state field
 }
 
 const GOVERNOR_ADDRESS = process.env.NEXT_PUBLIC_DAO_GOVERNOR as `0x${string}`;
@@ -63,12 +65,28 @@ const fetchProposalsOnChain = async (publicClient: ReturnType<typeof usePublicCl
       canceled: boolean;
     };
 
-    // 4) Parse title/body from the markdown description
+    // 4) Get proposal state
+    let state = 0; // Default to Pending
+    try {
+      state = await publicClient.readContract({
+        chainId: base.id,
+        address: GOVERNOR_ADDRESS,
+        abi: DAOGovernorABI,
+        functionName: 'state',
+        args: [BigInt(id)],
+      }) as number;
+    } catch (error) {
+      console.error(`Error fetching state for proposal ${id}:`, error);
+      // If we can't get the state, assume it's active (state 1)
+      state = 1;
+    }
+
+    // 5) Parse title/body from the markdown description
     const parts = description.split('\n\n');
     const title = parts[0].replace(/^#\s*/, '');
     const body = parts[1] || '';
 
-    // 5) Use on‑chain tallies for scores
+    // 6) Use on‑chain tallies for scores
     const choices = ['Against', 'For', 'Abstain'];
     const scores = [
       Number(core.againstVotes),
@@ -84,6 +102,7 @@ const fetchProposalsOnChain = async (publicClient: ReturnType<typeof usePublicCl
       end: Number(core.endBlock),
       choices,
       scores,
+      state, // Include the state
     });
   }
 
@@ -92,10 +111,20 @@ const fetchProposalsOnChain = async (publicClient: ReturnType<typeof usePublicCl
 
 export const useProposals = () => {
   const publicClient = usePublicClient();
-  return useQuery<Proposal[]>({
+  return useQuery<any[]>({
     queryKey: ['proposals', GOVERNOR_ADDRESS],
-    queryFn: () => fetchProposalsOnChain(publicClient),
-    staleTime: 60_000,          // 1 minute
-    refetchInterval: 2 * 60_000 // every 2 minutes
+    queryFn: async () => {
+      const onChainProposals = await fetchProposalsOnChain(publicClient);
+      const { data: metadata } = await supabase
+        .from('proposal_metadata')
+        .select('*')
+        .in('onchain_proposal_id', onChainProposals.map(p => p.id));
+      return onChainProposals.map(proposal => ({
+        ...proposal,
+        metadata: metadata?.find(m => m.onchain_proposal_id === proposal.id) || null
+      }));
+    },
+    staleTime: 60_000,
+    refetchInterval: 2 * 60_000
   });
 };

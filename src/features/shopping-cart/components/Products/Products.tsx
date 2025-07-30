@@ -19,6 +19,10 @@ const Products = ({ products }: IProps) => {
   const [ownedTokens, setOwnedTokens] = useState<TokenBalances>({
     hasProofOfCuriosity: false,
     hasMarketAdmin: false,
+    hasMarketManagement: false,
+    hasExecutivePod: false,
+    hasDevPod: false,
+    hasBountyHat: false,
     systemBalance: "0",
     selfBalance: "0",
   });
@@ -50,8 +54,8 @@ const Products = ({ products }: IProps) => {
     if (product.requiredToken === process.env.NEXT_PUBLIC_SYSTEM_TOKEN) {
       return Number(ownedTokens.systemBalance) > 0;
     }
-    if (product.requiredToken === process.env.NEXT_PUBLIC_MARKET_ADMIN) {
-      return ownedTokens.hasMarketAdmin;
+    if (product.requiredToken === process.env.NEXT_PUBLIC_MARKET_MANAGEMENT) {
+      return ownedTokens.hasMarketAdmin; // Using backward compatibility property
     }
     return false;
   };

@@ -11,6 +11,7 @@ const useCart = () => {
     removeProduct,
     increaseProductQuantity,
     decreaseProductQuantity,
+    clearCart,
   } = useCartProducts();
   const { total, updateCartTotal } = useCartTotal();
 
@@ -26,6 +27,7 @@ const useCart = () => {
     removeProduct,
     increaseProductQuantity,
     decreaseProductQuantity,
+    clearCart,
     total,
     updateCartTotal,
   };

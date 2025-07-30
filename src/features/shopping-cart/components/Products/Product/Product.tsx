@@ -21,26 +21,34 @@ const Product = ({ product, isAccessible }: ProductProps) => {
 
   return (
     <S.ProductCard>
-      <S.ProductImage
-        src={product.image_url} // using 'image_url' from Supabase.
-        alt={product.name}
-      />
-	
-	  <S.ProductName>{product.name}</S.ProductName>
-	  <S.ProductDescription>{product.description}</S.ProductDescription> <br />
-	  <S.ProductPrice>
-		<span>$SYSTEM: {product.price_system}</span>
-		<span>$SELF: {product.price_self}</span>
-	  </S.ProductPrice>
-	  {isAccessible ? (
-		<S.AddButton onClick={handleAddToCart}>
-		  Add to Cart
-		</S.AddButton>
-	  ) : (
-		<S.AddButton disabled>
-		  Add to Cart (Token Required)
-		</S.AddButton>
-	  )}
+      <div>
+        <S.ProductImageContainer>
+          <S.ProductImage
+            src={product.image_url} // using 'image_url' from Supabase.
+            alt={product.name}
+          />
+        </S.ProductImageContainer>
+        
+        <S.ProductName>{product.name}</S.ProductName>
+        <S.ProductDescription>{product.description}</S.ProductDescription>
+        
+        <S.ProductPrice>
+          <span>$SYSTEM: {product.price_system}</span>
+          <span>$SELF: {product.price_self}</span>
+        </S.ProductPrice>
+      </div>
+      
+      <div>
+        {isAccessible ? (
+          <S.AddButton onClick={handleAddToCart}>
+            Add to Cart
+          </S.AddButton>
+        ) : (
+          <S.AddButton disabled>
+            Add to Cart (Token Required)
+          </S.AddButton>
+        )}
+      </div>
     </S.ProductCard>
   );
 };

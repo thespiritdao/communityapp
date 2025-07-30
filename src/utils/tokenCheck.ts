@@ -28,18 +28,18 @@ export const erc721Abi = [
 const SYSTEM_TOKEN_CONTRACT = process.env.NEXT_PUBLIC_SYSTEM_TOKEN as `0x${string}`;
 const SELF_TOKEN_CONTRACT = process.env.NEXT_PUBLIC_SELF_TOKEN as `0x${string}`;
 const PROOF_OF_CURIOSITY_CONTRACT = process.env.NEXT_PUBLIC_PROOF_OF_CURIOSITY as `0x${string}`;
-const MARKET_ADMIN_TOKEN_CONTRACT = process.env.NEXT_PUBLIC_MARKET_ADMIN as `0x${string}`;
+// MARKET_ADMIN_TOKEN_CONTRACT removed - replaced by MARKET_MANAGEMENT Hat token
 const NETWORK_CHAIN_ID = Number(process.env.NEXT_PUBLIC_CHAIN_ID || "8453"); // Base Chain
 
 // Debug logging (optional)
 console.log("SYSTEM_TOKEN_CONTRACT:", SYSTEM_TOKEN_CONTRACT);
 console.log("SELF_TOKEN_CONTRACT:", SELF_TOKEN_CONTRACT);
 console.log("PROOF_OF_CURIOSITY_CONTRACT:", PROOF_OF_CURIOSITY_CONTRACT);
-console.log("MARKET_ADMIN_TOKEN_CONTRACT:", MARKET_ADMIN_TOKEN_CONTRACT);
+// MARKET_ADMIN_TOKEN_CONTRACT debug logging removed
 
 export async function fetchTokenBalances(walletAddress: string): Promise<{
   hasProofOfCuriosity: boolean;
-  hasMarketAdmin: boolean;
+  hasMarketManagement: boolean;
   systemBalance: bigint;
   selfBalance: bigint;
 }> {
@@ -47,21 +47,13 @@ export async function fetchTokenBalances(walletAddress: string): Promise<{
     // Ensure required contract addresses are available
     if (!SYSTEM_TOKEN_CONTRACT || !SELF_TOKEN_CONTRACT || !PROOF_OF_CURIOSITY_CONTRACT) {
       console.error("❌ Missing required token contract addresses in .env.");
-      return { hasProofOfCuriosity: false, hasMarketAdmin: false, systemBalance: 0n, selfBalance: 0n };
+      return { hasProofOfCuriosity: false, hasMarketManagement: false, systemBalance: 0n, selfBalance: 0n };
     }
 
-    // Prepare market admin call only if address is provided
-    const marketAdminCall = MARKET_ADMIN_TOKEN_CONTRACT
-      ? readContract({
-          address: MARKET_ADMIN_TOKEN_CONTRACT,
-          abi: erc20Abi,
-          functionName: "balanceOf",
-          args: [walletAddress],
-          chainId: NETWORK_CHAIN_ID,
-        })
-      : Promise.resolve(0n);
+    // Market admin call removed - this function now only handles basic tokens
+    // Market management is checked via Hat tokens in the main fetchTokenBalances function
 
-    const [proofOfCuriosity, systemBalance, selfBalance, marketAdminBalance] = await Promise.all([
+    const [proofOfCuriosity, systemBalance, selfBalance] = await Promise.all([
       readContract({
         address: PROOF_OF_CURIOSITY_CONTRACT,
         abi: erc721Abi, // Using ERC721 ABI for membership token
@@ -82,21 +74,20 @@ export async function fetchTokenBalances(walletAddress: string): Promise<{
         functionName: "balanceOf",
         args: [walletAddress],
         chainId: NETWORK_CHAIN_ID,
-      }),
-      marketAdminCall,
+      })
     ]);
 
     console.log("ProofOfCuriosity balance:", proofOfCuriosity.toString());
-    console.log("MarketAdmin balance:", marketAdminBalance.toString());
+    // Market admin balance logging removed
 
     return {
       hasProofOfCuriosity: proofOfCuriosity > 0n,
-      hasMarketAdmin: marketAdminBalance > 0n,
+      hasMarketManagement: false, // This simplified function doesn't check Hat tokens
       systemBalance,
       selfBalance,
     };
   } catch (error) {
     console.error("❌ Error fetching token balances:", error);
-    return { hasProofOfCuriosity: false, hasMarketAdmin: false, systemBalance: 0n, selfBalance: 0n };
+    return { hasProofOfCuriosity: false, hasMarketManagement: false, systemBalance: 0n, selfBalance: 0n };
   }
 }

@@ -1,0 +1,10 @@
+/* src/features/governance/styles/vote.css */
+
+.vote-bg {
+  min-height: 100vh;
+  background-color: #f5f4ed;
+  background-image: url('/images/chatbg.png');
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: cover;
+} 

@@ -35,6 +35,7 @@ export const TokenBalancesProvider: React.FC<{ children: React.ReactNode }> = ({
       console.log("Successfully fetched token balances:", {
         hasProofOfCuriosity: tokenData.hasProofOfCuriosity,
         hasMarketAdmin: tokenData.hasMarketAdmin,
+        hasMarketManagement: tokenData.hasMarketManagement,
         hasExecutivePod: tokenData.hasExecutivePod,
         hasDevPod: tokenData.hasDevPod,
         hasBountyHat: tokenData.hasBountyHat,

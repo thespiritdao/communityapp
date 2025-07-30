@@ -64,7 +64,7 @@ export const BountyCompletion: React.FC<BountyCompletionProps> = ({
         >
           <TransactionButton
             text="Complete Bounty"
-            className="w-full"
+            className="w-full bounty-btn primary"
           />
         </Transaction>
       </CardContent>

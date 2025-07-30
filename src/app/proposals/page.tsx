@@ -1,5 +1,5 @@
 'use client';
-import React, { useCallback } from 'react';
+import React, { useCallback, useState } from 'react';
 import { useAccount } from 'wagmi';
 import {
   Transaction,
@@ -21,6 +21,9 @@ import {
 import { encodeFunctionData, Address } from 'viem';
 import { base } from 'wagmi/chains';
 import { useProposal, ProposalProvider } from 'src/context/ProposalContext';
+import UserTagging from 'src/components/UserTagging';
+import { supabase } from 'src/lib/supabase';
+import { ProposalThreadSelector } from 'src/features/governance/components/ProposalThreadSelector';
 
 // Governor contract ABI
 const GOVERNOR_ABI = [
@@ -39,6 +42,41 @@ const GOVERNOR_ABI = [
     outputs: [{ name: '', type: 'uint256' }],
   },
 ] as const;
+
+// Add validation utility (copied from Cart.tsx)
+const validateTransactionData = (data: any) => {
+  const validation = {
+    isValid: true,
+    issues: [] as string[],
+    data: {} as any
+  };
+  try {
+    validation.data = JSON.parse(JSON.stringify(data, (key, value) => {
+      if (typeof value === 'bigint') {
+        return value.toString();
+      }
+      return value;
+    }));
+    if (!validation.data.address) validation.issues.push('Missing address');
+    if (!validation.data.chainId) validation.issues.push('Missing chainId');
+    if (!validation.data.calls) validation.issues.push('Missing calls');
+    if (Array.isArray(validation.data.calls)) {
+      validation.data.calls.forEach((call: any, index: number) => {
+        if (!call.address) validation.issues.push(`Call ${index}: Missing address`);
+        if (!call.abi) validation.issues.push(`Call ${index}: Missing ABI`);
+        if (!call.functionName) validation.issues.push(`Call ${index}: Missing functionName`);
+        if (!Array.isArray(call.args)) validation.issues.push(`Call ${index}: Missing args array`);
+      });
+    } else {
+      validation.issues.push('Calls is not an array');
+    }
+    validation.isValid = validation.issues.length === 0;
+  } catch (e) {
+    validation.isValid = false;
+    validation.issues.push(`Serialization error: ${e instanceof Error ? e.message : String(e)}`);
+  }
+  return validation;
+};
 
 // Outer component wraps with ProposalProvider
 export default function ProposalSubmissionPage() {
@@ -78,7 +116,8 @@ function InnerProposalSubmissionPage() {
       // Format description with markdown
       const description = `# ${formData.title}\n\n${formData.body}`;
       
-      const calldata = encodeFunctionData({
+      return {
+        address: process.env.NEXT_PUBLIC_DAO_GOVERNOR as Address,
         abi: GOVERNOR_ABI,
         functionName: 'proposeWithMetadata',
         args: [
@@ -89,12 +128,6 @@ function InnerProposalSubmissionPage() {
           formData.title,
           formData.forumThreadId || '',
         ],
-      });
-
-      return {
-        to: process.env.NEXT_PUBLIC_DAO_GOVERNOR as Address,
-        data: calldata,
-        value: BigInt(0),
       };
     } catch (error) {
       console.error('Error preparing transaction:', error);
@@ -102,20 +135,68 @@ function InnerProposalSubmissionPage() {
     }
   }, [formData, isFormValid, canPropose]);
 
-  const handleSuccess = useCallback(() => {
+  const handleSuccess = useCallback(async (txResult) => {
+    console.group('✅ Proposal Transaction Success');
+    console.log('📋 Transaction Response:', txResult);
+    console.log('📋 Transaction Hash:', txResult?.transactionReceipts?.[0]?.transactionHash);
+    console.log('📋 Block Number:', txResult?.transactionReceipts?.[0]?.blockNumber);
+    console.log('📋 Status:', txResult?.transactionReceipts?.[0]?.status);
+    console.log('📋 Gas Used:', txResult?.transactionReceipts?.[0]?.gasUsed);
+    console.log('📋 To Address:', txResult?.transactionReceipts?.[0]?.to);
+    console.log('📋 From Address:', txResult?.transactionReceipts?.[0]?.from);
+    console.log('📋 Logs Count:', txResult?.transactionReceipts?.[0]?.logs?.length);
+    console.groupEnd();
+    
     setIsSubmitting(false);
     resetForm();
+    // Extract on-chain proposal ID from txResult if available
+    const proposalId = txResult?.transactionReceipts?.[0]?.logs?.find(
+      (log) => log.topics && log.topics.length > 0 && log.topics[0].startsWith('0x')
+    )?.topics?.[1];
+    // Save metadata to Supabase
+    if (proposalId) {
+      await supabase.from('proposal_metadata').insert([
+        {
+          onchain_proposal_id: proposalId,
+          title: formData.title,
+          description: formData.body,
+          proposer_address: address,
+          forum_thread_id: formData.forumThreadId || null,
+          mentions: formData.mentions || [],
+        }
+      ]);
+    }
     console.log('Proposal submitted successfully!');
-    // You can add a toast notification here or redirect
-  }, [resetForm, setIsSubmitting]);
+  }, [resetForm, setIsSubmitting, formData, address]);
 
   const handleError = useCallback((error: Error) => {
+    console.group('❌ Proposal Transaction Error');
+    console.error('📋 Error Details:', {
+      name: error.name,
+      message: error.message,
+      stack: error.stack
+    });
+    console.error('📋 Error Type:', typeof error);
+    console.error('📋 Error Constructor:', error.constructor.name);
+    console.groupEnd();
+    
     setIsSubmitting(false);
     console.error('Transaction failed:', error);
     // You can add error notification here
   }, [setIsSubmitting]);
 
   const transactionData = prepareTransaction();
+  const validation = validateTransactionData({
+    address: address?.toLowerCase() as `0x${string}`,
+    chainId: base.id,
+    calls: transactionData ? [transactionData] : [],
+    isSponsored: true
+  });
+  if (!validation.isValid) {
+    console.error('Invalid transaction data:', validation.issues);
+  } else {
+    console.log('Validated transaction data:', validation.data);
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 py-8">
@@ -226,19 +307,22 @@ function InnerProposalSubmissionPage() {
                 <label htmlFor="body" className="block text-sm font-semibold text-gray-700 mb-2">
                   Proposal Description *
                 </label>
-                <textarea
-                  id="body"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors resize-none"
+                <UserTagging
                   value={formData.body}
-                  onChange={e => updateFormField('body', e.target.value)}
-                  placeholder="Provide a detailed description of your proposal...&#10;&#10;Include:&#10;• Background and motivation&#10;• Specific actions or changes requested&#10;• Expected outcomes and benefits&#10;• Implementation timeline&#10;• Any relevant links or references"
-                  disabled={isSubmitting}
-                  rows={12}
-                  maxLength={10000}
+                  onChange={(value) => updateFormField('body', value)}
+                  placeholder="Provide a detailed description of your proposal... Use @ to mention someone&#10;&#10;Include:&#10;• Background and motivation&#10;• Specific actions or changes requested&#10;• Expected outcomes and benefits&#10;• Implementation timeline&#10;• Any relevant links or references"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors resize-none"
+                  multiLine={true}
+                  contextType="proposal"
+                  contextId="new-proposal"
+                  contextUrl="/proposals"
+                  onMentionsChange={(mentions) => {
+                    console.log('Mentions in proposal:', mentions);
+                  }}
                 />
                 <div className="flex justify-between mt-1">
                   <p className="text-xs text-gray-500">
-                    Supports Markdown formatting. Be thorough - voters need enough detail to make informed decisions.
+                    Supports Markdown formatting and @mentions. Be thorough - voters need enough detail to make informed decisions.
                   </p>
                   <span className="text-xs text-gray-400">
                     {formData.body.length}/10,000
@@ -246,24 +330,19 @@ function InnerProposalSubmissionPage() {
                 </div>
               </div>
 
-              {/* Forum Thread ID */}
+              {/* Forum Thread Selection */}
               <div>
-                <label htmlFor="forumThreadId" className="block text-sm font-semibold text-gray-700 mb-2">
-                  Forum Thread ID (Optional)
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Forum Discussion (Optional)
                 </label>
-                <input
-                  id="forumThreadId"
-                  type="text"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
-                  value={formData.forumThreadId}
-                  onChange={e => updateFormField('forumThreadId', e.target.value)}
-                  placeholder="e.g., forum-thread-123, discussion-456"
-                  disabled={isSubmitting}
-                  maxLength={100}
+                <ProposalThreadSelector
+                  onThreadSelect={threadId => updateFormField('forumThreadId', threadId)}
                 />
-                <p className="text-xs text-gray-500 mt-1">
-                  Link to an existing forum discussion for additional context and community feedback
-                </p>
+                {formData.forumThreadId && (
+                  <p className="mt-1 text-sm text-gray-600">
+                    Selected: {formData.forumThreadId}
+                  </p>
+                )}
               </div>
             </div>
 
@@ -271,9 +350,13 @@ function InnerProposalSubmissionPage() {
             <div className="mt-8 pt-6 border-t border-gray-200">
               {isConnected && canPropose ? (
                 <Transaction
+                  address={address?.toLowerCase() as `0x${string}`}
                   chainId={base.id}
-
-				  calls={transactionData ? [transactionData] : []}
+                  isSponsored={true}
+                  calls={transactionData ? [transactionData] : []}
+                  onStatus={(status) => {
+                    console.log('Transaction lifecycle status:', status);
+                  }}
                   onSuccess={handleSuccess}
                   onError={handleError}
                 >

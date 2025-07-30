@@ -38,6 +38,7 @@ function PageContent() {
   const [isSmartWallet, setIsSmartWallet] = useState(false);
   const [isVerifyingWallet, setIsVerifyingWallet] = useState(false);
   const [isVerificationComplete, setIsVerificationComplete] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
   const verificationRef = useRef({ isComplete: false, isSmartWallet: false });
   // Also track client-side mounting to avoid SSR hydration issues.
   const [isClient, setIsClient] = useState(false);
@@ -214,6 +215,7 @@ function PageContent() {
     const initiateSupabaseSession = async () => {
       if (address && isSmartWallet && !hasSignedIn && !isConnecting && !isDisconnected) {
         console.log('Smart Wallet is connected. Attempting to create Supabase session...');
+        setIsProcessing(true);
         try {
           // Call your API to get the tokens.
           const response = await fetch('/api/auth/onchainkit', {
@@ -231,6 +233,7 @@ function PageContent() {
           setHasSignedIn(true);
         } catch (err) {
           console.error('Failed to create Supabase session:', err);
+          setIsProcessing(false);
         }
       }
     };
@@ -258,6 +261,7 @@ function PageContent() {
     
     if (coinbaseConnector) {
       console.log('Connecting with Coinbase Smart Wallet:', coinbaseConnector);
+      setIsProcessing(true);
       connect({ connector: coinbaseConnector });
     } else {
       console.error('Coinbase Wallet connector not found. Available connectors:', 
@@ -265,115 +269,25 @@ function PageContent() {
     }
   };
 
+  // Function to handle Enter button click
+  const handleEnter = () => {
+    if (!address) {
+      // New user - trigger wallet connection
+      connectSmartWallet();
+    } else if (address && isSmartWallet && !hasSignedIn) {
+      // Existing wallet connected but no session - this will be handled by useEffect
+      setIsProcessing(true);
+    }
+  };
+
   if (!isClient) return null;
 
-  // If no wallet is connected, show the Smart Wallet connect button.
-  if (!address) {
-    return (
-      <div>
-        <img
-          src="/images/doyoudare.png"
-          alt="Background"
-          className="background-image"
-        />
-        <div className="wrapper">
-          <div className="button-container">
-            <div className="text-center mb-4">
-              <h2 className="text-white text-xl mb-2">Create Your Smart Wallet</h2>
-              <p className="text-white text-sm mb-4">
-                Smart Wallets provide enhanced security and no seed phrases required.
-                You'll use your device's biometrics or passkey to access your wallet.
-              </p>
-            </div>
-            <button
-              onClick={connectSmartWallet}
-              className="button enter-button"
-              disabled={isConnecting}
-            >
-              {isConnecting ? 'Connecting...' : 'Create Smart Wallet'}
-            </button>
-            <div className="text-center mt-4">
-              <p className="text-white text-xs">
-                Only Smart Wallets are supported. Traditional wallets will be disconnected.
-              </p>
-            </div>
-          </div>
-        </div>
-        <Footer />
-      </div>
-    );
-  }
+  // Show loading state during any processing
+  const isLoading = isConnecting || isVerifyingWallet || isProcessing || 
+                   (address && isSmartWallet && !hasSignedIn) || 
+                   (address && isSmartWallet && hasSignedIn && !hasRedirected);
 
-  // If a wallet is connected but we're still verifying if it's a Smart Wallet
-  if (address && isVerifyingWallet) {
-    return (
-      <div>
-        <img
-          src="/images/doyoudare.png"
-          alt="Background"
-          className="background-image"
-        />
-        <div className="wrapper">
-          <div className="button-container">
-            <p className="text-center text-white">Verifying Smart Wallet...</p>
-          </div>
-        </div>
-        <Footer />
-      </div>
-    );
-  }
-
-  // If a wallet is connected but it's not a Smart Wallet
-  if (address && !isSmartWallet && !isVerifyingWallet) {
-    return (
-      <div>
-        <img
-          src="/images/doyoudare.png"
-          alt="Background"
-          className="background-image"
-        />
-        <div className="wrapper">
-          <div className="button-container">
-            <div className="text-center mb-4">
-              <h2 className="text-white text-xl mb-2">Smart Wallet Required</h2>
-              <p className="text-white text-sm mb-4">
-                This application requires a Smart Wallet. Your current wallet type is not supported.
-                Please create a Smart Wallet to continue.
-              </p>
-            </div>
-            <button
-              onClick={connectSmartWallet}
-              className="button enter-button"
-            >
-              Create Smart Wallet
-            </button>
-          </div>
-        </div>
-        <Footer />
-      </div>
-    );
-  }
-
-  // If the Smart Wallet is connected but the Supabase session is still being created...
-  if (address && isSmartWallet && !hasSignedIn) {
-    return (
-      <div>
-        <img
-          src="/images/doyoudare.png"
-          alt="Background"
-          className="background-image"
-        />
-        <div className="wrapper">
-          <div className="button-container">
-            <p className="text-center text-white">Creating your session...</p>
-          </div>
-        </div>
-        <Footer />
-      </div>
-    );
-  }
-
-  // If the Smart Wallet is connected and signed in but not yet redirected, show a redirect message.
+  // If everything is ready and user should be redirected, show redirect message
   if (address && isSmartWallet && hasSignedIn && !hasRedirected) {
     return (
       <div>
@@ -384,7 +298,7 @@ function PageContent() {
         />
         <div className="wrapper">
           <div className="button-container">
-            <p className="text-center text-white">Redirecting to your profile...</p>
+            <p className="text-center text-white">Redirecting...</p>
           </div>
         </div>
         <Footer />
@@ -392,7 +306,7 @@ function PageContent() {
     );
   }
 
-  // Finally, if everything is ready, show the Wallet component (for dashboard use).
+  // Main display - single Enter button for all states
   return (
     <div>
       <img
@@ -402,8 +316,13 @@ function PageContent() {
       />
       <div className="wrapper">
         <div className="button-container">
-          <p className="text-center text-white">Welcome, your Smart Wallet is connected!</p>
-          <Wallet />
+          <button
+            onClick={handleEnter}
+            className="button enter-button"
+            disabled={isLoading}
+          >
+            {isLoading ? 'Loading...' : 'Enter'}
+          </button>
         </div>
       </div>
       <Footer />

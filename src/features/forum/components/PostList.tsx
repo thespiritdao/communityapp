@@ -6,6 +6,8 @@ import { supabase } from 'src/utils/supabaseClient';
 import PostCard from './PostCard';
 import { useRouter } from 'next/navigation';
 import styles from '../styles/Forum.module.css';
+import UserTagging from 'src/components/UserTagging';
+import { useForum } from 'src/features/forum/hooks/useForum';
 
 interface Post {
   id: string;
@@ -37,6 +39,7 @@ const PostList: React.FC<PostListProps> = ({ threadId }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const router = useRouter();
+  const { submitPost, isLoading: forumLoading, address } = useForum();
 
   useEffect(() => {
     const fetchThreadAndPosts = async () => {
@@ -107,64 +110,17 @@ const PostList: React.FC<PostListProps> = ({ threadId }) => {
       setIsSubmitting(true);
       setSubmitError(null);
 
-      // 1) Get current user's session
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        throw new Error('You must be logged in to reply');
-      }
-
-      // 2) Look up user's on-chain wallet address
-      const { data: profileData, error: profileError } = await supabase
-        .from('user_profiles')
-        .select('first_name, last_name, wallet_address')
-        .eq('user_id', session.user.id)
-        .single();
-
-      if (profileError || !profileData?.wallet_address) {
-        throw new Error('User profile not found or wallet address missing');
-      }
-
-      // 3) Fetch the required token for the thread from forum_threads joined with forum_categories.
-      // If thread.required_token is null, fall back to forum_categories.required_token.
-      const { data: threadTokenData, error: threadTokenError } = await supabase
-        .from('forum_threads')
-        .select(`
-          required_token,
-          forum_categories (
-            required_token
-          )
-        `)
-        .eq('id', threadId)
-        .single();
-
-      if (threadTokenError || !threadTokenData) {
-        throw new Error('Error fetching required token for thread');
-      }
-      const requiredToken =
-        threadTokenData.required_token ||
-        threadTokenData.forum_categories.required_token ||
-        null;
-
-      // 4) Insert new post (reply) including the required_token
-      const { error: insertError } = await supabase
-        .from('forum_posts')
-        .insert({
-          thread_id: threadId,
-          content: replyContent,
-          author_wallet: profileData.wallet_address,
-          author_first_name: profileData.first_name || null,
-          author_last_name: profileData.last_name || null,
-          required_token: requiredToken,
-        });
-
-      if (insertError) {
-        throw insertError;
+      // Use submitPost from useForum to handle reply, tagging, and notifications
+      const result = await submitPost(threadId, replyContent);
+      if (!result.success) {
+        setSubmitError(result.error || 'Failed to post reply');
+        return;
       }
 
       // Reset form
       setReplyContent('');
 
-      // 5) Refresh posts
+      // Refresh posts
       const { data: updatedPosts, error: fetchError } = await supabase
         .from('forum_posts')
         .select(`
@@ -250,13 +206,15 @@ const PostList: React.FC<PostListProps> = ({ threadId }) => {
       <div className={styles.replyFormContainer}>
         <h3 className={styles.replyFormTitle}>Post a Reply</h3>
         <form onSubmit={handleSubmitReply} className={styles.replyForm}>
-          <textarea
-            className={styles.replyTextarea}
+          <UserTagging
             value={replyContent}
-            onChange={(e) => setReplyContent(e.target.value)}
-            placeholder="Write your reply here..."
-            rows={5}
-            required
+            onChange={setReplyContent}
+            placeholder="Write your reply here... Use @ to mention someone"
+            className={styles.replyTextarea}
+            multiLine={true}
+            contextType="forum"
+            contextId={threadId}
+            contextUrl={`/forum/thread/${threadId}`}
           />
           {submitError && (
             <div className={styles.submitError}>{submitError}</div>

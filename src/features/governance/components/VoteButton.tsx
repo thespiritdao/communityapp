@@ -130,10 +130,36 @@ const VoteButton: React.FC<VoteButtonProps> = ({ proposalId, choice }) => {
           isSponsored={false} // Try without sponsorship first
           address={address}
           chainId={BASE_CHAIN_ID}
-          contracts={voteCall}
-          onProgress={(step) => console.log('[VoteButton] step →', step)}
-          onSuccess={handleSuccess}
-          onError={handleError}
+          calls={voteCall}
+          onTransactionStarted={() => {
+            console.group('🚀 Vote Transaction Started (Non-Sponsored)');
+            console.log('📋 Proposal ID:', proposalId);
+            console.log('📋 Choice:', choice);
+            console.log('📋 Contract Address:', GOVERNOR_ADDRESS);
+            console.log('📋 User Address:', address);
+            console.log('📋 Chain ID:', BASE_CHAIN_ID);
+            console.log('📋 Timestamp:', new Date().toISOString());
+            console.groupEnd();
+          }}
+          onSuccess={(response) => {
+            console.group('✅ Vote Transaction Success (Non-Sponsored)');
+            console.log('📋 Transaction Response:', response);
+            console.log('📋 Transaction Hash:', response?.transactionReceipts?.[0]?.transactionHash);
+            console.log('📋 Block Number:', response?.transactionReceipts?.[0]?.blockNumber);
+            console.log('📋 Status:', response?.transactionReceipts?.[0]?.status);
+            console.groupEnd();
+            handleSuccess(response?.transactionReceipts?.[0]?.transactionHash || '');
+          }}
+          onError={(error) => {
+            console.group('❌ Vote Transaction Error (Non-Sponsored)');
+            console.error('📋 Error Details:', {
+              name: error.name,
+              message: error.message,
+              stack: error.stack
+            });
+            console.groupEnd();
+            handleError(error);
+          }}
         >
           <TransactionButton
             text="Vote with Smart Wallet (No Sponsorship)"
@@ -149,13 +175,39 @@ const VoteButton: React.FC<VoteButtonProps> = ({ proposalId, choice }) => {
       
       {/* Sponsored transaction button */}
 		<Transaction
-		  isSponsored
+		  isSponsored={true}
 		  address={address}
 		  chainId={BASE_CHAIN_ID}
-		  contracts={voteCall}
-		  onProgress={(step) => console.log('[VoteButton] step →', step)}
-		  onSuccess={handleSuccess}
-		  onError={handleError}
+		  calls={voteCall}
+		  onTransactionStarted={() => {
+            console.group('🚀 Vote Transaction Started (Sponsored)');
+            console.log('📋 Proposal ID:', proposalId);
+            console.log('📋 Choice:', choice);
+            console.log('📋 Contract Address:', GOVERNOR_ADDRESS);
+            console.log('📋 User Address:', address);
+            console.log('📋 Chain ID:', BASE_CHAIN_ID);
+            console.log('📋 Timestamp:', new Date().toISOString());
+            console.groupEnd();
+          }}
+          onSuccess={(response) => {
+            console.group('✅ Vote Transaction Success (Sponsored)');
+            console.log('📋 Transaction Response:', response);
+            console.log('📋 Transaction Hash:', response?.transactionReceipts?.[0]?.transactionHash);
+            console.log('📋 Block Number:', response?.transactionReceipts?.[0]?.blockNumber);
+            console.log('📋 Status:', response?.transactionReceipts?.[0]?.status);
+            console.groupEnd();
+            handleSuccess(response?.transactionReceipts?.[0]?.transactionHash || '');
+          }}
+          onError={(error) => {
+            console.group('❌ Vote Transaction Error (Sponsored)');
+            console.error('📋 Error Details:', {
+              name: error.name,
+              message: error.message,
+              stack: error.stack
+            });
+            console.groupEnd();
+            handleError(error);
+          }}
 		>
 		  <TransactionButton
 			text="Vote with Smart Wallet (Sponsored)"

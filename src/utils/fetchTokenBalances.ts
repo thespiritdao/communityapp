@@ -67,7 +67,7 @@ const multicallAbi = [
 const PROOF_OF_CURIOSITY_CONTRACT = process.env.NEXT_PUBLIC_PROOF_OF_CURIOSITY;
 const SYSTEM_TOKEN_CONTRACT = process.env.NEXT_PUBLIC_SYSTEM_TOKEN;
 const SELF_TOKEN_CONTRACT = process.env.NEXT_PUBLIC_SELF_TOKEN;
-const MARKET_ADMIN_TOKEN_CONTRACT = process.env.NEXT_PUBLIC_MARKET_ADMIN;
+// MARKET_ADMIN_TOKEN_CONTRACT removed - replaced by MARKET_MANAGEMENT_HAT_ID (Hat token)
 const RPC_URL = process.env.NEXT_PUBLIC_RPC_URL;
 const NETWORK_CHAIN_ID = Number(process.env.NEXT_PUBLIC_CHAIN_ID || "8453");
 // Set the multicall contract address – deploy your own or use a known one.
@@ -84,6 +84,12 @@ const DEV_POD_HAT_ID = process.env.NEXT_PUBLIC_DEV_POD_HAT_ID; // raw hat id (he
 // Add bounty hat ID
 const BOUNTY_HAT_ID = process.env.NEXT_PUBLIC_BOUNTY_MANAGEMENT;
 
+// Add market management hat ID  
+const MARKET_MANAGEMENT_HAT_ID = process.env.NEXT_PUBLIC_MARKET_MANAGEMENT;
+
+// Add event management hat ID
+const EVENT_MANAGEMENT_HAT_ID = process.env.NEXT_PUBLIC_EVENT_MANAGEMENT;
+
 // Create a Web3 provider and instance.
 const provider = new Web3.providers.HttpProvider(RPC_URL, { chainId: NETWORK_CHAIN_ID });
 const web3 = new Web3(provider);
@@ -94,10 +100,12 @@ type ContractResult = [bigint, string[]];
 // Add type for token balance
 interface TokenBalance {
   hasProofOfCuriosity: boolean;
-  hasMarketAdmin: boolean;
+  hasMarketAdmin: boolean; // Kept for backward compatibility - maps to hasMarketManagement
+  hasMarketManagement: boolean;
   hasExecutivePod: boolean;
   hasDevPod: boolean;
   hasBountyHat: boolean;
+  hasEventManagement: boolean;
   systemBalance: string;
   selfBalance: string;
 }
@@ -199,7 +207,6 @@ export async function fetchTokenBalances(walletAddress: string): Promise<TokenBa
     let proofIndex = -1;
     let systemIndex = -1;
     let selfIndex = -1;
-    let marketAdminIndex = -1;
     let executivePodIndex = -1;
     let devPodIndex = -1;
 
@@ -249,21 +256,7 @@ export async function fetchTokenBalances(walletAddress: string): Promise<TokenBa
       console.warn("Self Token contract address is a placeholder. Using balance 0.");
     }
 
-    // --- Market Admin Token (ERC20) ---
-    if (isValidAddress(MARKET_ADMIN_TOKEN_CONTRACT ?? "")) {
-      try {
-        const marketAdminContract = new web3.eth.Contract(erc20Abi as any, (MARKET_ADMIN_TOKEN_CONTRACT ?? "") as string);
-        marketAdminIndex = calls.length;
-        calls.push({
-          target: (MARKET_ADMIN_TOKEN_CONTRACT ?? "") as string,
-          callData: marketAdminContract.methods.balanceOf(walletAddress).encodeABI(),
-        });
-      } catch (error) {
-        console.error("Error setting up Market Admin Token call:", error);
-      }
-    } else {
-      console.warn("Market Admin Token contract address is a placeholder or not set. Using balance 0.");
-    }
+    // Market Admin Token (ERC20) removed - replaced by Market Management Hat (ERC1155)
 
     // --- Executive Pod Token (ERC1155) ---
     if (isValidAddress(HATS_CONTRACT ?? "")) {
@@ -329,6 +322,50 @@ export async function fetchTokenBalances(walletAddress: string): Promise<TokenBa
       console.warn("HATS_CONTRACT is not valid; cannot check Bounty Hat Token.");
     }
 
+    // --- Market Management Hat Token (ERC1155) ---
+    let marketManagementIndex = -1;
+    if (isValidAddress(HATS_CONTRACT ?? "")) {
+      const marketMgmtHatId = MARKET_MANAGEMENT_HAT_ID ?? "0";
+      if (marketMgmtHatId) {
+        try {
+          const hatsContract = new web3.eth.Contract(erc1155Abi as any, (HATS_CONTRACT ?? "") as string);
+          marketManagementIndex = calls.length;
+          calls.push({
+            target: (HATS_CONTRACT ?? "") as string,
+            callData: hatsContract.methods.balanceOf(walletAddress, marketMgmtHatId).encodeABI(),
+          });
+        } catch (error) {
+          console.error("Error setting up Market Management Hat Token call:", error);
+        }
+      } else {
+        console.warn("Market Management Hat ID is not defined; defaulting to balance 0.");
+      }
+    } else {
+      console.warn("HATS_CONTRACT is not valid; cannot check Market Management Hat Token.");
+    }
+
+    // --- Event Management Hat Token (ERC1155) ---
+    let eventManagementIndex = -1;
+    if (isValidAddress(HATS_CONTRACT ?? "")) {
+      const eventMgmtHatId = EVENT_MANAGEMENT_HAT_ID ?? "0";
+      if (eventMgmtHatId) {
+        try {
+          const hatsContract = new web3.eth.Contract(erc1155Abi as any, (HATS_CONTRACT ?? "") as string);
+          eventManagementIndex = calls.length;
+          calls.push({
+            target: (HATS_CONTRACT ?? "") as string,
+            callData: hatsContract.methods.balanceOf(walletAddress, eventMgmtHatId).encodeABI(),
+          });
+        } catch (error) {
+          console.error("Error setting up Event Management Hat Token call:", error);
+        }
+      } else {
+        console.warn("Event Management Hat ID is not defined; defaulting to balance 0.");
+      }
+    } else {
+      console.warn("HATS_CONTRACT is not valid; cannot check Event Management Hat Token.");
+    }
+
     // Execute multicall with retry logic and proper typing
     const multicallContract = new web3.eth.Contract(multicallAbi as any, (MULTICALL_ADDRESS ?? "") as string);
     
@@ -345,10 +382,12 @@ export async function fetchTokenBalances(walletAddress: string): Promise<TokenBa
     // Process results with error handling and proper typing
     const balances: TokenBalance = {
       hasProofOfCuriosity: false,
-      hasMarketAdmin: false,
+      hasMarketAdmin: false, // Backward compatibility
+      hasMarketManagement: false,
       hasExecutivePod: false,
       hasDevPod: false,
       hasBountyHat: false,
+      hasEventManagement: false,
       systemBalance: "0",
       selfBalance: "0",
     };
@@ -380,14 +419,7 @@ export async function fetchTokenBalances(walletAddress: string): Promise<TokenBa
       console.error("Error processing Self Token balance:", error);
     }
 
-    try {
-      if (marketAdminIndex >= 0 && returnData[marketAdminIndex]) {
-        const marketAdminBalance = web3.utils.hexToNumberString((returnData[marketAdminIndex] ?? "0") as string);
-        balances.hasMarketAdmin = Number(marketAdminBalance) > 0;
-      }
-    } catch (error) {
-      console.error("Error processing Market Admin Token balance:", error);
-    }
+    // Market Admin balance processing removed - replaced by Market Management Hat processing
 
     try {
       if (executivePodIndex >= 0 && returnData[executivePodIndex]) {
@@ -416,6 +448,26 @@ export async function fetchTokenBalances(walletAddress: string): Promise<TokenBa
       console.error("Error processing Bounty Hat balance:", error);
     }
 
+    try {
+      if (marketManagementIndex >= 0 && returnData[marketManagementIndex]) {
+        const marketManagementBalance = web3.utils.hexToNumberString((returnData[marketManagementIndex] ?? "0") as string);
+        const hasMarketMgmt = Number(marketManagementBalance) > 0;
+        balances.hasMarketManagement = hasMarketMgmt;
+        balances.hasMarketAdmin = hasMarketMgmt; // Backward compatibility mapping
+      }
+    } catch (error) {
+      console.error("Error processing Market Management Hat balance:", error);
+    }
+
+    try {
+      if (eventManagementIndex >= 0 && returnData[eventManagementIndex]) {
+        const eventManagementBalance = web3.utils.hexToNumberString((returnData[eventManagementIndex] ?? "0") as string);
+        balances.hasEventManagement = Number(eventManagementBalance) > 0;
+      }
+    } catch (error) {
+      console.error("Error processing Event Management Hat balance:", error);
+    }
+
     // Cache the results
     tokenBalancesCache[walletAddress] = {
       data: balances,
@@ -428,10 +480,12 @@ export async function fetchTokenBalances(walletAddress: string): Promise<TokenBa
     // Return default values on error
     return {
       hasProofOfCuriosity: false,
-      hasMarketAdmin: false,
+      hasMarketAdmin: false, // Backward compatibility
+      hasMarketManagement: false,
       hasExecutivePod: false,
       hasDevPod: false,
       hasBountyHat: false,
+      hasEventManagement: false,
       systemBalance: "0",
       selfBalance: "0",
     };
@@ -442,7 +496,7 @@ export async function fetchTokenBalances(walletAddress: string): Promise<TokenBa
 export interface BountyTokenBalances {
   hasExecutivePod: boolean;
   hasDevPod: boolean;
-  hasMarketAdmin: boolean;
+  hasMarketManagement: boolean;
 }
 
 // Helper function for bounty system to check if user can create bounties
@@ -451,6 +505,75 @@ export const checkBountyPermissions = async (address: string): Promise<BountyTok
   return {
     hasExecutivePod: balances.hasExecutivePod,
     hasDevPod: balances.hasDevPod,
-    hasMarketAdmin: balances.hasMarketAdmin,
+    hasMarketManagement: balances.hasMarketManagement,
   };
+};
+
+// Helper function for event system to check if user can manage events
+export const checkEventManagementPermissions = async (address: string): Promise<{ hasEventManagement: boolean }> => {
+  const balances = await fetchTokenBalances(address);
+  return {
+    hasEventManagement: balances.hasEventManagement,
+  };
+};
+
+// Extended token balances function for ERC1155/Hat token checks (used by forum admin middleware)
+export const fetchExtendedTokenBalances = async (
+  walletAddress: string,
+  erc1155Address?: `0x${string}`,
+  tokenId?: number
+): Promise<{
+  hasProofOfCuriosity: boolean;
+  hasMarketAdmin: boolean;
+  hasERC1155Token: boolean;
+  systemBalance: bigint;
+  selfBalance: bigint;
+}> => {
+  try {
+    // Get base token balances
+    const baseBalances = await fetchTokenBalances(walletAddress);
+    
+    // Check specific ERC1155 token if provided
+    let hasERC1155Token = false;
+    if (erc1155Address && tokenId !== undefined && isValidAddress(erc1155Address)) {
+      try {
+        const calls: ContractCall[] = [];
+        const hatsContract = new web3.eth.Contract(erc1155Abi as any, erc1155Address);
+        calls.push({
+          target: erc1155Address,
+          callData: hatsContract.methods.balanceOf(walletAddress, tokenId).encodeABI(),
+        });
+
+        const multicallContract = new web3.eth.Contract(multicallAbi as any, (MULTICALL_ADDRESS ?? "") as string);
+        const result = await withRetry<{blockNumber: string; returnData: string[]}>(
+          () => multicallContract.methods.aggregate(calls).call(),
+          'fetchExtendedTokenBalances multicall'
+        );
+
+        if (result.returnData[0]) {
+          const balance = web3.utils.hexToNumberString(result.returnData[0]);
+          hasERC1155Token = Number(balance) > 0;
+        }
+      } catch (error) {
+        console.error('Error checking ERC1155 token balance:', error);
+      }
+    }
+
+    return {
+      hasProofOfCuriosity: baseBalances.hasProofOfCuriosity,
+      hasMarketAdmin: baseBalances.hasMarketManagement, // Map to market management since hasMarketAdmin is deprecated
+      hasERC1155Token,
+      systemBalance: BigInt(parseFloat(baseBalances.systemBalance) * 1e18), // Convert to wei
+      selfBalance: BigInt(parseFloat(baseBalances.selfBalance) * 1e18), // Convert to wei
+    };
+  } catch (error) {
+    console.error('Error in fetchExtendedTokenBalances:', error);
+    return {
+      hasProofOfCuriosity: false,
+      hasMarketAdmin: false,
+      hasERC1155Token: false,
+      systemBalance: 0n,
+      selfBalance: 0n,
+    };
+  }
 };

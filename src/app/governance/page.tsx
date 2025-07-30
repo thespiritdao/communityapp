@@ -51,12 +51,6 @@ export default function GovernancePage() {
 
       {/* Create Proposal */}
       <section aria-labelledby="create-proposal-heading" className="mb-12">
-        <h2
-          id="create-proposal-heading"
-          className="text-2xl font-semibold mb-4"
-        >
-          Create Proposal
-        </h2>
         <CreateProposalForm onSuccess={handleProposalCreated} />
       </section>
 

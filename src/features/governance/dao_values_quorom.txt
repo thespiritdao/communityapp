@@ -1,0 +1,4 @@
+_votingDelay: 7200     // ~1 day (assuming 12s blocks)
+_votingPeriod: 50400   // ~1 week (assuming 12s blocks)  
+_proposalThreshold: 1000 // 1000 votes required
+_quorumPercentage: 4   // 4% quorum required

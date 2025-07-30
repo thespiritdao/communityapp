@@ -13,7 +13,7 @@
   gap: 1.5rem;
   margin-top: 2rem;
   padding: 1rem;
-  background-color: #e9f5f9; /* Match forum's blue background */
+  background-color: #fff; /* Orange background */
   border-radius: 8px;
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.08);
   margin-bottom: 5rem;
@@ -49,7 +49,7 @@
 }
 
 .bounty-card[data-status="in-progress"] {
-  border-left: 4px solid #3b82f6; /* Blue for in-progress */
+  border-left: 4px solid #f59e0b; /* Orange for in-progress */
 }
 
 .bounty-card[data-status="completed"] {
@@ -87,8 +87,8 @@
 }
 
 .bounty-status.in-progress {
-  background-color: #dbeafe;
-  color: #1e40af;
+  background-color: #fef3c7;
+  color: #b45309;
 }
 
 .bounty-status.completed {
@@ -210,8 +210,8 @@
 }
 
 .tab-trigger.active {
-  color: #3b82f6;
-  border-bottom-color: #3b82f6;
+  color: #f59e0b;
+  border-bottom-color: #f59e0b;
 }
 
 .tab-content {
@@ -266,13 +266,13 @@
 }
 
 .status-filter-btn.in-progress {
-  border-color: #3b82f6;
-  color: #3b82f6;
+  border-color: #f59e0b;
+  color: #f59e0b;
 }
 
 .status-filter-btn.in-progress:hover,
 .status-filter-btn.in-progress.active {
-  background-color: #3b82f6;
+  background-color: #f59e0b;
   color: #ffffff;
 }
 
@@ -397,12 +397,12 @@
 }
 
 .bounty-btn.primary {
-  background-color: #3b82f6;
+  background-color: #f59e0b;
   color: #ffffff;
 }
 
 .bounty-btn.primary:hover {
-  background-color: #2563eb;
+  background-color: #b45309;
 }
 
 .bounty-btn.secondary {
@@ -412,4 +412,64 @@
 
 .bounty-btn.secondary:hover {
   background-color: #e5e7eb;
+}
+
+/* Fix for OnchainKit TransactionButton in BidReviewManager dialog */
+.DialogContent .onchainkit-transaction-button,
+.DialogContent [class*="TransactionButton"] {
+  display: block !important;
+  width: 100% !important;
+  min-width: 200px;
+  max-width: 100%;
+  opacity: 1 !important;
+  pointer-events: auto !important;
+  background: #e8fcff !important;
+  color: #000 !important;
+  margin-top: 1rem;
+}
+
+.DialogContent .onchainkit-transaction-status,
+.DialogContent [class*="TransactionStatus"] {
+  width: 100%;
+  max-width: 100%;
+}
+
+/* Center the dialog and make it responsive */
+.DialogContent,
+.fixed.z-50.left-1\/2.top-1\/2,
+.fixed.z-50 {
+  position: fixed !important;
+  top: 50% !important;
+  left: 50% !important;
+  transform: translate(-50%, -50%) !important;
+  background: #fff !important;
+  border-radius: 16px !important;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.18) !important;
+  width: 95vw !important;
+  max-width: 500px !important;
+  min-width: 0 !important;
+  padding: 2rem 1rem !important;
+  z-index: 50 !important;
+  box-sizing: border-box;
+}
+
+@media (min-width: 600px) {
+  .DialogContent,
+  .fixed.z-50.left-1\/2.top-1\/2,
+  .fixed.z-50 {
+    width: 500px !important;
+    max-width: 95vw !important;
+    min-width: 350px !important;
+    padding: 2rem !important;
+  }
+}
+
+/* If you have a .DialogOverlay, style only that for the background */
+.DialogOverlay {
+  position: fixed !important;
+  inset: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  background: rgba(0,0,0,0.3) !important;
+  z-index: 40 !important;
 } 

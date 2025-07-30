@@ -32,12 +32,12 @@ export async function middleware(request: NextRequest) {
   }
 
   try {
-    // Use our extended token balances function to check for the ERC-1155 admin token.
-    // For example, we assume token ID 1 is the admin token and the contract address is in env.
+    // Use our extended token balances function to check for the Market Management Hat token.
+    // Check if user has the market management hat from the HATS contract
     const { hasERC1155Token } = await fetchExtendedTokenBalances(
       walletAddress,
-      process.env.NEXT_PUBLIC_MARKET_ADMIN as `0x${string}`,
-      1
+      process.env.NEXT_PUBLIC_HATS_CONTRACT as `0x${string}`,
+      parseInt(process.env.NEXT_PUBLIC_MARKET_MANAGEMENT || '0', 16)
     );
 
     if (!hasERC1155Token) {

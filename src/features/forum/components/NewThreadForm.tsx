@@ -3,6 +3,7 @@ import { useRouter } from 'next/navigation';
 import { useForum } from 'src/features/forum/hooks/useForum';
 import { useTokenGate } from 'src/features/forum/hooks/useTokenGate';
 import { supabase } from 'src/utils/supabaseClient';
+import UserTagging from 'src/components/UserTagging';
 import styles from '../styles/Forum.module.css';
 import DatePicker from 'react-datepicker';
 import "react-datepicker/dist/react-datepicker.css";
@@ -49,6 +50,7 @@ export function NewThreadForm({ categoryId, customTemplates = [] }: NewThreadFor
   const [content, setContent] = useState('');
   const [selectedTemplate, setSelectedTemplate] = useState<ThreadTemplate | null>(null);
   const [placeholderValues, setPlaceholderValues] = useState<Record<string, string>>({});
+  const [templateContent, setTemplateContent] = useState('');
   
   // Initialize local state with the incoming prop
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(categoryId || null);
@@ -133,6 +135,7 @@ export function NewThreadForm({ categoryId, customTemplates = [] }: NewThreadFor
         initialPlaceholders[placeholder.id] = placeholder.defaultValue || '';
       });
       setPlaceholderValues(initialPlaceholders);
+      setTemplateContent('');
     }
   };
 
@@ -147,7 +150,21 @@ export function NewThreadForm({ categoryId, customTemplates = [] }: NewThreadFor
 
   const generateContent = () => {
     if (!selectedTemplate) return content;
-    return selectedTemplate.contentTemplate.replace(/\{(.*?)\}/g, (_, key) => placeholderValues[key] || `{${key}}`);
+    let result = selectedTemplate.contentTemplate;
+    selectedTemplate.placeholders.forEach((placeholder) => {
+      if (placeholder.type === 'textarea' && placeholder.id === 'content') {
+        result = result.replace(
+          new RegExp(`\\{${placeholder.id}\\}`, 'g'),
+          templateContent
+        );
+      } else {
+        result = result.replace(
+          new RegExp(`\\{${placeholder.id}\\}`, 'g'),
+          placeholderValues[placeholder.id] || `{${placeholder.id}}`
+        );
+      }
+    });
+    return result;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -301,24 +318,24 @@ export function NewThreadForm({ categoryId, customTemplates = [] }: NewThreadFor
                   </div>
                 );
               }
-              if (placeholder.type === 'textarea') {
+              if (placeholder.type === 'textarea' || placeholder.type === 'text') {
                 return (
                   <div key={placeholder.id} className={styles.placeholderField}>
                     <label>{placeholder.label}</label>
-                    <textarea
+                    <UserTagging
                       value={placeholderValues[placeholder.id] || ''}
-                      placeholder={placeholder.helpText}
-                      onChange={(e) =>
-                        handlePlaceholderChange(placeholder.id, e.target.value)
-                      }
-                      className={styles.placeholderInput}
-                      rows={8}
-                      style={{ resize: 'vertical', overflowY: 'auto' }}
+                      onChange={(val) => handlePlaceholderChange(placeholder.id, val)}
+                      placeholder={placeholder.helpText || ''}
+                      className={styles.replyTextarea}
+                      multiLine={placeholder.type === 'textarea'}
+                      contextType="forum"
+                      contextId={selectedCategoryId || 'new-thread'}
+                      contextUrl={selectedCategoryId ? `/forum/category/${selectedCategoryId}` : undefined}
                     />
                   </div>
                 );
               }
-              // Default for text, number, etc.
+              // Default for number, radio, etc.
               return (
                 <div key={placeholder.id} className={styles.placeholderField}>
                   <label>{placeholder.label}</label>
@@ -344,12 +361,15 @@ export function NewThreadForm({ categoryId, customTemplates = [] }: NewThreadFor
               onChange={(e) => setTitle(e.target.value)}
               className={styles.replyTextarea}
             />
-            <textarea
-              placeholder="Thread details"
+            <UserTagging
               value={content}
-              onChange={(e) => setContent(e.target.value)}
+              onChange={(value) => setContent(value)}
+              placeholder="Thread details... Use @ to mention someone"
               className={styles.replyTextarea}
-              rows={8}
+              multiLine={true}
+              contextType="forum"
+              contextId={selectedCategoryId || 'new-thread'}
+              contextUrl={selectedCategoryId ? `/forum/category/${selectedCategoryId}` : undefined}
             />
           </>
         )}

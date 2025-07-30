@@ -5,6 +5,9 @@ import { supabase } from 'src/utils/supabaseClient';
 import { useAccount } from 'wagmi';
 import { useToast } from 'src/components/ui/use-toast';
 import { useTokenGate } from 'src/features/forum/hooks/useTokenGate';
+// Removed direct notificationService import - using context instead
+import { useNotifications } from 'src/context/NotificationContext';
+import { extractMentionedWalletsEnhanced } from 'src/utils/mentions';
 
 // Debug mode flag - set to false in production
 const DEBUG = true;
@@ -34,6 +37,33 @@ const getRequiredTokenForCategory = (categoryId: string) => {
   return categoryTokenMap[categoryId] || null;
 };
 
+// Helper to extract @mentions from text
+function extractMentions(text: string): string[] {
+  const regex = /@([a-zA-Z0-9_\-]+)/g;
+  const mentions = [];
+  let match;
+  while ((match = regex.exec(text)) !== null) {
+    mentions.push(match[1]);
+  }
+  return Array.from(new Set(mentions));
+}
+
+// Helper to look up wallet addresses by first/last name (for now, as username is not present)
+async function lookupWalletsByNames(names: string[]): Promise<string[]> {
+  if (!names.length) return [];
+  // Try to match first_name or last_name (case-insensitive)
+  const { data, error } = await supabase
+    .from('user_profiles')
+    .select('wallet_address, first_name, last_name')
+    .in('first_name', names)
+    .or(`last_name.in.(${names.map(n => `'${n}'`).join(',')})`);
+  if (error) {
+    console.error('Error looking up mentioned users:', error);
+    return [];
+  }
+  return (data || []).map(u => u.wallet_address).filter(Boolean);
+}
+
 export function useForum() {
   const [isLoading, setIsLoading] = useState(false);
   const [userWalletAddress, setUserWalletAddress] = useState<string | null>(null);
@@ -42,6 +72,7 @@ export function useForum() {
   
   // Get token balances from the token gate hook
   const { tokenBalances } = useTokenGate();
+  const { createUserMentionNotification } = useNotifications();
 
   // Log environment variables for debugging
   useEffect(() => {
@@ -456,6 +487,26 @@ export function useForum() {
 		  throw postError;
 		}
 
+		// --- Mention notification logic ---
+		// Extract mentions from initialPostContent using extractMentionedWalletsEnhanced
+		const mentionedWallets = await extractMentionedWalletsEnhanced(initialPostContent);
+		for (const wallet of mentionedWallets) {
+		  if (wallet) {
+			// TODO: Re-enable self-mention rejection before launch
+			// if (wallet !== profileData.wallet_address) {
+			  console.log('Creating forum mention notification for:', wallet.toLowerCase());
+			  await createUserMentionNotification(
+				wallet.toLowerCase(),
+				profileData.wallet_address.toLowerCase(),
+				'forum',  
+				newThread.id,
+				`/forum/thread/${newThread.id}`
+			  );
+			// }
+		  }
+		}
+		// --- End mention notification logic ---
+
 		debug('Initial post created successfully');
 		toast({
 		  title: 'Thread created',
@@ -557,8 +608,26 @@ export function useForum() {
 		  throw error;
 		}
 		
+		// --- Mention notification logic ---
+		const mentionedWalletsPost = await extractMentionedWalletsEnhanced(content);
+		for (const wallet of mentionedWalletsPost) {
+		  if (wallet) {
+			// TODO: Re-enable self-mention rejection before launch  
+			// if (wallet !== userWalletAddress) {
+			  console.log('Creating forum reply mention notification for:', wallet.toLowerCase());
+			  await createUserMentionNotification(
+				wallet.toLowerCase(),
+				userWalletAddress.toLowerCase(),
+				'forum',
+				threadId,
+				`/forum/thread/${threadId}`
+			  );
+			// }
+		  }
+		}
+		// --- End mention notification logic ---
+
 		console.log("Post successfully created:", data);
-		
 		toast({ title: 'Post created', description: 'Your reply has been successfully added' });
 		return { success: true, post: data };
 	  } catch (error: any) {

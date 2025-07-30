@@ -21,19 +21,19 @@ import { base } from 'viem/chains';
 import { encodeFunctionData } from 'viem';
 import AdvocateMembershipABI from 'src/abis/AdvocateMembershipABI.json';
 import DAOGovernorABI from 'src/abis/DAO_GovernorABI.json';
-import { ProposalThreadSelector } from 'src/features/governance/components/ProposalThreadSelector';
+import { ProposalThreadSelector } from './ProposalThreadSelector';
 import { useToast } from 'src/components/ui/use-toast';
 import { createPublicClient, http } from 'viem';
+import { useForum } from 'src/features/forum/hooks/useForum';
+import { supabase } from 'src/utils/supabaseClient';
+import { fetchTokenBalances } from 'src/utils/fetchTokenBalances';
+import UserTagging from 'src/components/UserTagging';
+import { useGovernanceNotifications } from 'src/context/GovernanceNotificationContext';
+import { governanceNotificationService } from 'src/utils/governanceNotificationService';
+import { parseAbiItem, parseEventLogs } from 'viem';
 
 const GOVERNOR_ADDRESS = process.env.NEXT_PUBLIC_DAO_GOVERNOR as `0x${string}`;
 const ADVOCATE_ADDRESS = process.env.NEXT_PUBLIC_ADVOCATE as `0x${string}`;
-
-console.log('🔍 Environment Check:');
-console.log('GOVERNOR_ADDRESS:', GOVERNOR_ADDRESS, typeof GOVERNOR_ADDRESS);
-console.log('ADVOCATE_ADDRESS:', ADVOCATE_ADDRESS, typeof ADVOCATE_ADDRESS);
-
-const RATE_LIMIT_MODE = true;
-const BASE_CHAIN_ID = 8453;
 
 if (!GOVERNOR_ADDRESS || !ADVOCATE_ADDRESS) {
   throw new Error('Missing contract addresses');
@@ -43,6 +43,7 @@ interface ProposalFormData {
   title: string;
   body: string;
   forumThreadId: string;
+  selectedToken: string; // token gating
 }
 
 interface CreateProposalFormProps {
@@ -51,7 +52,6 @@ interface CreateProposalFormProps {
 
 // Helper function to validate BigInt values
 const validateBigIntArray = (values: any[], fieldName: string): bigint[] => {
-  console.log(`🔍 Validating ${fieldName}:`, values);
   
   if (!Array.isArray(values)) {
     console.error(`❌ ${fieldName} is not an array:`, values);
@@ -59,7 +59,6 @@ const validateBigIntArray = (values: any[], fieldName: string): bigint[] => {
   }
   
   return values.map((value, index) => {
-    console.log(`🔍 Validating ${fieldName}[${index}]:`, value, typeof value);
     
     if (value === null || value === undefined) {
       console.error(`❌ ${fieldName}[${index}] is null/undefined`);
@@ -67,7 +66,6 @@ const validateBigIntArray = (values: any[], fieldName: string): bigint[] => {
     }
     
     if (typeof value === 'bigint') {
-      console.log(`✅ ${fieldName}[${index}] is already BigInt:`, value.toString());
       return value;
     }
     
@@ -77,7 +75,6 @@ const validateBigIntArray = (values: any[], fieldName: string): bigint[] => {
         throw new Error(`${fieldName}[${index}] cannot be NaN or infinite`);
       }
       const bigIntValue = BigInt(value);
-      console.log(`🔄 Converted ${fieldName}[${index}] from number to BigInt:`, value, '->', bigIntValue.toString());
       return bigIntValue;
     }
     
@@ -88,7 +85,6 @@ const validateBigIntArray = (values: any[], fieldName: string): bigint[] => {
       }
       try {
         const bigIntValue = BigInt(value);
-        console.log(`🔄 Converted ${fieldName}[${index}] from string to BigInt:`, value, '->', bigIntValue.toString());
         return bigIntValue;
       } catch (error) {
         console.error(`❌ Failed to convert ${fieldName}[${index}] string to BigInt:`, value, error);
@@ -103,7 +99,6 @@ const validateBigIntArray = (values: any[], fieldName: string): bigint[] => {
 
 // Helper function to validate address arrays
 const validateAddressArray = (addresses: any[], fieldName: string): `0x${string}`[] => {
-  console.log(`🔍 Validating ${fieldName}:`, addresses);
   
   if (!Array.isArray(addresses)) {
     console.error(`❌ ${fieldName} is not an array:`, addresses);
@@ -111,7 +106,6 @@ const validateAddressArray = (addresses: any[], fieldName: string): `0x${string}
   }
   
   return addresses.map((address, index) => {
-    console.log(`🔍 Validating ${fieldName}[${index}]:`, address, typeof address);
     
     if (typeof address !== 'string') {
       console.error(`❌ ${fieldName}[${index}] is not a string:`, typeof address, address);
@@ -128,14 +122,12 @@ const validateAddressArray = (addresses: any[], fieldName: string): `0x${string}
       throw new Error(`${fieldName}[${index}] must be 42 characters long`);
     }
     
-    console.log(`✅ ${fieldName}[${index}] is valid:`, address);
     return address as `0x${string}`;
   });
 };
 
 // Helper function to validate calldata arrays
 const validateCalldataArray = (calldatas: any[], fieldName: string): `0x${string}`[] => {
-  console.log(`🔍 Validating ${fieldName}:`, calldatas);
   
   if (!Array.isArray(calldatas)) {
     console.error(`❌ ${fieldName} is not an array:`, calldatas);
@@ -143,7 +135,6 @@ const validateCalldataArray = (calldatas: any[], fieldName: string): `0x${string
   }
   
   return calldatas.map((calldata, index) => {
-    console.log(`🔍 Validating ${fieldName}[${index}]:`, calldata, typeof calldata);
     
     if (typeof calldata !== 'string') {
       console.error(`❌ ${fieldName}[${index}] is not a string:`, typeof calldata, calldata);
@@ -155,9 +146,43 @@ const validateCalldataArray = (calldatas: any[], fieldName: string): `0x${string
       throw new Error(`${fieldName}[${index}] must start with 0x`);
     }
     
-    console.log(`✅ ${fieldName}[${index}] is valid:`, calldata);
     return calldata as `0x${string}`;
   });
+};
+
+// Add validation utility (copied from Cart.tsx)
+const validateTransactionData = (data: any) => {
+  const validation = {
+    isValid: true,
+    issues: [] as string[],
+    data: {} as any
+  };
+  try {
+    validation.data = JSON.parse(JSON.stringify(data, (key, value) => {
+      if (typeof value === 'bigint') {
+        return value.toString();
+      }
+      return value;
+    }));
+    if (!validation.data.address) validation.issues.push('Missing address');
+    if (!validation.data.chainId) validation.issues.push('Missing chainId');
+    if (!validation.data.calls) validation.issues.push('Missing calls');
+    if (Array.isArray(validation.data.calls)) {
+      validation.data.calls.forEach((call: any, index: number) => {
+        if (!call.address) validation.issues.push(`Call ${index}: Missing address`);
+        if (!call.abi) validation.issues.push(`Call ${index}: Missing ABI`);
+        if (!call.functionName) validation.issues.push(`Call ${index}: Missing functionName`);
+        if (!Array.isArray(call.args)) validation.issues.push(`Call ${index}: Missing args array`);
+      });
+    } else {
+      validation.issues.push('Calls is not an array');
+    }
+    validation.isValid = validation.issues.length === 0;
+  } catch (e) {
+    validation.isValid = false;
+    validation.issues.push(`Serialization error: ${e instanceof Error ? e.message : String(e)}`);
+  }
+  return validation;
 };
 
 export const CreateProposalForm: React.FC<CreateProposalFormProps> = ({ onSuccess }) => {
@@ -167,18 +192,21 @@ export const CreateProposalForm: React.FC<CreateProposalFormProps> = ({ onSucces
   const queryClient = useQueryClient();
 
   const [formData, setFormData] = useState<ProposalFormData>({
-    title: 'Test Proposal',
-    body: 'This is a test proposal for debugging gas estimation issues',
-    forumThreadId: 'test-123',
-    targets: [],
-    values: [],
-    calldatas: [],
+    title: '',
+    body: '',
+    forumThreadId: '',
+    selectedToken: '',
   });
+  const [userTokens, setUserTokens] = useState<{ id: string; label: string }[]>([]);
+  const { loadPosts } = useForum();
+  const { createProposalMentionNotification, createProposalCreatedNotification, refreshNotifications } = useGovernanceNotifications();
 
   const [debugMode, setDebugMode] = useState(true);
   const [isDelegating, setIsDelegating] = useState(false);
   const [delegationTxHash, setDelegationTxHash] = useState<`0x${string}` | undefined>();
   const [validationError, setValidationError] = useState<string | null>(null);
+  const [hasInteracted, setHasInteracted] = useState(false);
+  const [hasProcessedProposal, setHasProcessedProposal] = useState<string | null>(null);
 
   // Get the latest block number (Base chain)
   const { data: latestBlock } = useBlockNumber();
@@ -282,13 +310,13 @@ export const CreateProposalForm: React.FC<CreateProposalFormProps> = ({ onSucces
   // Public client for direct RPC test
   const publicClient = createPublicClient({
     chain: base,
-    transport: http('https://mainnet.base.org'),
+    transport: http(process.env.NEXT_PUBLIC_RPC_URL!),
   });
 
 	// Handle delegation transaction completion
 	useEffect(() => {
 	  if (isDelegationSuccess && delegationTxHash) {
-		console.log('Delegation transaction confirmed:', delegationTxHash);
+		        // Delegation transaction confirmed
 		
 		// Clear caches and refetch after delegation success
 		setTimeout(async () => {
@@ -312,28 +340,64 @@ export const CreateProposalForm: React.FC<CreateProposalFormProps> = ({ onSucces
 	  }
 	}, [isDelegationSuccess, delegationTxHash, queryClient, refetchVotingPower, refetchDelegate, refetchBalance, toast]); // ❌ Removed votingPowerQueryKey from dependencies
 
+  // Fetch user tokens on mount or address change
+  useEffect(() => {
+    async function fetchTokens() {
+      if (!address) return;
+      try {
+        const balances = await fetchTokenBalances(address);
+        const tokens: { id: string; label: string }[] = [];
+        if (balances.hasProofOfCuriosity) tokens.push({ id: 'poc', label: 'Proof of Curiosity' });
+        if (balances.hasExecutivePod) tokens.push({ id: 'exec', label: 'Executive Pod' });
+        if (balances.hasDevPod) tokens.push({ id: 'dev', label: 'Dev Pod' });
+        if (balances.hasMarketAdmin) tokens.push({ id: 'market', label: 'Market Admin' });
+        if (balances.hasBountyHat) tokens.push({ id: 'bounty', label: 'Bounty Hat' });
+        setUserTokens(tokens);
+      } catch (error) {
+        console.error('Error fetching user tokens:', error);
+        setUserTokens([]);
+      }
+    }
+    fetchTokens();
+  }, [address]);
+
   // Determine delegation needs with enhanced logic
   const needsDelegation = React.useMemo(() => {
-    if (!address || !nftBalance || !votingPower || !currentDelegate) {
-      return false; // Don't show delegation if data isn't loaded
+    // If we're still loading data, don't make a decision yet
+    if (isLoadingBalance || isLoadingVotingPower) {
+      return false;
     }
 
-    const hasNFTs = BigInt(nftBalance.toString()) > 0n;
-    const hasVotingPower = BigInt(votingPower.toString()) > 0n;
-    const isNotDelegated = currentDelegate === '0x0000000000000000000000000000000000000000' ||
-      currentDelegate.toLowerCase() !== address.toLowerCase();
+    // If we don't have an address, no delegation needed
+    if (!address) {
+      return false;
+    }
 
-    return hasNFTs && (!hasVotingPower || isNotDelegated);
-  }, [address, nftBalance, votingPower, currentDelegate]);
+    // If we have no NFT balance, no delegation needed (but also can't propose)
+    if (!nftBalance || BigInt(nftBalance.toString()) === 0n) {
+      return false;
+    }
+
+    // If we have voting power, check if we're properly delegated
+    if (votingPower && BigInt(votingPower.toString()) > 0n) {
+      // Check if we're delegated to ourselves
+      const isDelegatedToSelf = currentDelegate && 
+        currentDelegate.toLowerCase() === address.toLowerCase();
+      return !isDelegatedToSelf;
+    }
+
+    // If we have NFTs but no voting power, we need delegation
+    return true;
+  }, [address, nftBalance, votingPower, currentDelegate, isLoadingBalance, isLoadingVotingPower]);
 
   // Enhanced delegation handlers
   const handleDelegationStart = () => {
-    console.log('Starting delegation process...');
+    // Starting delegation process
     setIsDelegating(true);
   };
 
   const handleDelegationSuccess = (transactionHash: `0x${string}`) => {
-    console.log('Delegation transaction submitted:', transactionHash);
+          // Delegation transaction submitted
     setDelegationTxHash(transactionHash);
     // Don't set isDelegating to false here - wait for confirmation
   };
@@ -361,9 +425,21 @@ export const CreateProposalForm: React.FC<CreateProposalFormProps> = ({ onSucces
     });
   };
 
+  // Handler for thread selection
+  const handleThreadSelect = async (threadId: string) => {
+    setFormData(prev => ({ ...prev, forumThreadId: threadId }));
+    if (threadId) {
+      const result = await loadPosts(threadId, 0, 1);
+      if (result.success && result.posts && result.posts.length > 0) {
+        setFormData(prev => ({ ...prev, body: result.posts[0].content }));
+      }
+    }
+  };
+
   // Form handlers
   const handleFormChange = (field: keyof ProposalFormData, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }));
+    setHasInteracted(true);
     // Clear validation error when form changes
     if (validationError) {
       setValidationError(null);
@@ -371,31 +447,26 @@ export const CreateProposalForm: React.FC<CreateProposalFormProps> = ({ onSucces
   };
 
   // Check if user can create proposals
-	const canCreateProposal = React.useMemo(() => {
-	  // ✅ Add explicit null/undefined checks
-	  if (!votingPower || !proposalThreshold || 
-		  votingPower === undefined || proposalThreshold === undefined) {
-		return false;
-	  }
-	  
-	  try {
-		return BigInt(votingPower.toString()) >= BigInt(proposalThreshold.toString());
-	  } catch (error) {
-		console.error('BigInt conversion error:', error);
-		return false;
-	  }
-	}, [votingPower, proposalThreshold]);
+  const canCreateProposal = React.useMemo(() => {
+    
+    // Proper null/undefined checks
+    if (votingPower === undefined || proposalThreshold === undefined) {
+      return false;
+    }
+    try {
+      const votingPowerBigInt = BigInt(votingPower.toString());
+      const thresholdBigInt = BigInt(proposalThreshold.toString());
+      const canCreate = votingPowerBigInt >= thresholdBigInt;
+      return canCreate;
+    } catch (error) {
+      console.error('BigInt conversion error:', error);
+      return false;
+    }
+  }, [votingPower, proposalThreshold, isLoadingThreshold]);
 
   // ENHANCED: Memoized proposal arguments with comprehensive validation and logging
 	const proposalArgs = React.useMemo(() => {
-	  console.log('🚀 === PROPOSAL ARGS PREPARATION START ===');
-	  // These are always valid, so we can construct directly
 	  
-	   // Validate environment variables first
-	  if (!ADVOCATE_ADDRESS || ADVOCATE_ADDRESS === 'undefined') {
-		throw new Error('ADVOCATE_ADDRESS is not defined');
-	  }
-		  
 	  
 	  const targets = [ADVOCATE_ADDRESS];
 	  const values = [0n];
@@ -405,38 +476,38 @@ export const CreateProposalForm: React.FC<CreateProposalFormProps> = ({ onSucces
 		args: [],
 	  })];
 	  
-	    console.log('Pre-validation:');
-		  console.log('targets:', targets, 'types:', targets.map(t => typeof t));
-		  console.log('values:', values, 'types:', values.map(v => typeof v));
-		  console.log('calldatas:', calldatas, 'types:', calldatas.map(c => typeof c));
 	  
 	  const description = `# ${formData.title}\n\n${formData.body}${formData.forumThreadId ? `\n\nForum: ${formData.forumThreadId}` : ''}`;
 	  try {
 		setValidationError(null);
 
-		// Check required fields (title/body)
-		if (!formData.title?.trim()) throw new Error('Title is required and cannot be empty');
-		if (!formData.body?.trim()) throw new Error('Body is required and cannot be empty');
+		// Only validate if user has actually started filling out the form and the form is not empty
+		if (hasInteracted && (formData.title || formData.body)) {
+			if (!formData.title?.trim()) throw new Error('Title is required and cannot be empty');
+			if (!formData.body?.trim()) throw new Error('Body is required and cannot be empty');
+		}
 		if (targets.length !== values.length || targets.length !== calldatas.length) {
 		  throw new Error(`Array length mismatch: targets(${targets.length}), values(${values.length}), calldatas(${calldatas.length})`);
 		}
 
 		// Log the constructed values for debug
-		console.log('  📍 targets:', targets);
-		console.log('  💰 values:', values.map(v => v.toString()));
-		console.log('  📞 calldatas:', calldatas);
-		console.log('  📝 description length:', description.length);
+		  // Removed console.log statements for cleaner output
 
 		return [
 		  targets,
 		  values,
 		  calldatas,
 		  description,
+		  formData.title,
+		  formData.forumThreadId || '',
 		] as const;
 	  } catch (error) {
-		console.error('❌ === PROPOSAL ARGS PREPARATION FAILED ===');
-		console.error('Error:', error);
-		setValidationError(error instanceof Error ? error.message : 'Unknown validation error');
+		// Only log error if user is actively editing and form is not empty
+		if (hasInteracted && (formData.title || formData.body)) {
+			console.error('❌ === PROPOSAL ARGS PREPARATION FAILED ===');
+			console.error('Error:', error);
+			setValidationError(error instanceof Error ? error.message : 'Unknown validation error');
+		}
 		// Return safe defaults so the component doesn't crash (but this proposal will fail to send)
 		return [
 		  targets,
@@ -444,15 +515,14 @@ export const CreateProposalForm: React.FC<CreateProposalFormProps> = ({ onSucces
 		  calldatas,
 		  description,
 		  formData.title,
-		  formData.forumThreadId || "no-forum",
+		  formData.forumThreadId || '',
 		] as const;
 	  }
-	}, [formData, ADVOCATE_ADDRESS, AdvocateMembershipABI]);
+	}, [formData, ADVOCATE_ADDRESS, AdvocateMembershipABI, hasInteracted]);
 
 
   // Enhanced validation for submit button
   const canSubmitProposal = React.useMemo(() => {
-    console.log('🔒 === SUBMIT VALIDATION CHECK ===');
     
     const checks = {
       canCreateProposal,
@@ -464,12 +534,14 @@ export const CreateProposalForm: React.FC<CreateProposalFormProps> = ({ onSucces
       argsValid: proposalArgs && proposalArgs[0].length > 0 && proposalArgs[1].length > 0
     };
     
-    console.log('Submit validation checks:', checks);
     
     const canSubmit = Object.values(checks).every(Boolean);
-    console.log('Can submit proposal:', canSubmit);
     
-    return canSubmit;
+    return (
+      canSubmit &&
+      !!formData.forumThreadId &&
+      !!formData.selectedToken
+    );
   }, [canCreateProposal, needsDelegation, formData.title, formData.body, isDelegating, validationError, proposalArgs]);
 
   // Early return for connection issues
@@ -506,142 +578,152 @@ export const CreateProposalForm: React.FC<CreateProposalFormProps> = ({ onSucces
     );
   }
   
-  console.log('🔍 Final Args Pre-Transaction:', {
-  governor: GOVERNOR_ADDRESS,
-  advocate: ADVOCATE_ADDRESS,
-  args: proposalArgs,
-  argsTypes: proposalArgs.map((arg, i) => `${i}: ${typeof arg} ${Array.isArray(arg) ? `[${arg.length}]` : ''}`),
-});
-
-console.log('[DEBUG] Transaction call:', {
-  contract: GOVERNOR_ADDRESS,
-  abi: DAOGovernorABI,
-  functionName: 'propose',
-  args: proposalArgs,
-});
-
-console.log("🚨 FINAL proposalArgs", proposalArgs);
-console.log("typeof proposalArgs[0][0]", typeof proposalArgs[0][0]);
-console.log("typeof proposalArgs[1][0]", typeof proposalArgs[1][0], proposalArgs[1][0]);
-console.log("typeof proposalArgs[2][0]", typeof proposalArgs[2][0]);
-console.log("typeof proposalArgs[3]", typeof proposalArgs[3], proposalArgs[3]);
-
-
-console.log("[ARGS DUMP]");
-console.log("targets (Array):", proposalArgs[0], proposalArgs[0].map((t,i)=>[i,typeof t, t, t.length]));
-console.log("values  (Array):", proposalArgs[1], proposalArgs[1].map((v,i)=>[i,typeof v, v, v.toString?.()]));
-console.log("calldatas (Array):", proposalArgs[2], proposalArgs[2].map((c,i)=>[i,typeof c, c, c.length]));
-console.log("description (String):", proposalArgs[3], typeof proposalArgs[3], proposalArgs[3].length);
-
-
-console.log("[ACTUAL TX ARGS] Will send:", {
-  args: [
-    ['0x592E560171D2a882474cdfc3BbeeDb21cEB4015d'],
-    [0n],
-    ['0x06fdde03'],
-    "# Test Proposal\n\nThis is a test proposal for debugging gas estimation issues\n\nForum: test-123"
-  ],
-  proposalArgs,
-  types: proposalArgs.map(arg =>
-    Array.isArray(arg)
-      ? arg.map(v => [typeof v, v])
-      : [typeof arg, arg]
-  ),
-});
-
-proposalArgs.forEach((arg, idx) => {
-  if (Array.isArray(arg)) {
-    arg.forEach((v, i) => {
-      console.log(`[CHECK] args[${idx}][${i}]:`, v, typeof v, v === undefined, Number.isNaN(v));
-    });
-  } else {
-    console.log(`[CHECK] args[${idx}]:`, arg, typeof arg, arg === undefined, Number.isNaN(arg));
-  }
-});
-
   const proposeCall = {
     address: GOVERNOR_ADDRESS,
     abi: DAOGovernorABI,
-    functionName: 'propose',
-    args: proposalArgs,
+    functionName: 'proposeWithMetadata',
+    args: [...proposalArgs] as unknown as any[], // flatten tuple to array to avoid deep type recursion
   };
 
-  return (
-    <div className="proposal-form p-6 max-w-2xl mx-auto">
-      <h2 className="text-2xl font-bold mb-6">Create a New Proposal</h2>
-      
-      {/* Validation Error Display */}
-      {validationError && (
-        <div className="p-4 border-2 border-red-300 bg-red-50 rounded-lg mb-6">
-          <h3 className="font-semibold text-red-800 mb-2">❌ Validation Error</h3>
-          <p className="text-sm text-red-700">{validationError}</p>
-        </div>
-      )}
-      
-      {/* Status Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-        {/* Connection Status */}
-        <div className="p-4 border rounded-lg">
-          <h3 className="font-semibold text-green-600 mb-2">✓ Connected</h3>
-          <div className="text-sm text-gray-600">
-            <div>Address: {address?.slice(0, 6)}...{address?.slice(-4)}</div>
-            <div>Chain: Base ({chainId})</div>
-            <div>Wallet: {connector?.name || 'Unknown'}</div>
-          </div>
-        </div>
-        
-        {/* Voting Power Status */}
-        <div className={`p-4 border rounded-lg ${canCreateProposal ? 'border-green-200 bg-green-50' : 'border-red-200 bg-red-50'}`}>
-          <h3 className={`font-semibold mb-2 ${canCreateProposal ? 'text-green-600' : 'text-red-600'}`}>
-            {canCreateProposal ? '✓ Can Create Proposals' : '✗ Insufficient Voting Power'}
-          </h3>
-          <div className="text-sm">
-            <div>NFT Balance: {isLoadingBalance ? 'Loading...' : nftBalance?.toString() || '0'}</div>
-            <div>Voting Power: {isLoadingVotingPower ? 'Loading...' : votingPower?.toString() || '0'}</div>
-            <div>Required: {isLoadingThreshold ? 'Loading...' : proposalThreshold?.toString() || '1'}</div>
-            <div>Delegate: {currentDelegate?.slice(0, 6)}...{currentDelegate?.slice(-4) || 'N/A'}</div>
-          </div>
-        </div>
-      </div>
+  // Validate transaction data before rendering Transaction
+  const transactionData = {
+    address: address?.toLowerCase() as `0x${string}`,
+    chainId: base.id, // Use base.id for Base
+    calls: [proposeCall],
+    isSponsored: true
+  };
+  const validation = validateTransactionData(transactionData);
+  if (!validation.isValid) {
+    console.error('Invalid transaction data:', validation.issues);
+  } else {
+    // Transaction data validated successfully
+  }
 
-      {/* Enhanced Delegation Section */}
-      {needsDelegation && (
-        <div className="p-4 border-2 border-yellow-300 bg-yellow-50 rounded-lg mb-6">
-          <h3 className="font-semibold text-yellow-800 mb-2">⚠️ Delegation Required</h3>
-          <p className="text-sm text-yellow-700 mb-3">
-            You own {nftBalance?.toString()} NFT(s) but need to delegate voting power to yourself to create proposals.
+  return (
+    <div className="min-h-screen bg-gray-50 py-8">
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+        {/* Header */}
+        <div className="text-center mb-8">
+          <h1 className="text-4xl font-bold text-gray-900 mb-4">
+            Submit Proposal
+          </h1>
+          <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+            Create a new proposal for the SpiritDAO community to vote on. 
           </p>
-          
-          {isDelegating && (
-            <div className="mb-3 p-2 bg-blue-50 border border-blue-200 rounded text-sm text-blue-700">
-              {isDelegationPending ? '⏳ Waiting for transaction confirmation...' : '🔄 Delegation in progress...'}
+        </div>
+
+        <div className="bg-white rounded-xl shadow-lg overflow-hidden">
+          {/* Status Bar */}
+          <div className="px-6 py-4" style={{ backgroundColor: '#e9f9ec', color: '#000' }}>
+                          <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-4">
+                <div className="flex items-center space-x-2">
+                  <div className={`w-3 h-3 rounded-full ${isConnected ? 'bg-green-400' : 'bg-red-400'}`} />
+                  <span className="text-sm font-medium">
+                    {isConnected ? 'Identity Confirmed' : 'Identity Unconfirmed'}
+                  </span>
+                </div>
+                {isConnected && (
+                  <div className="text-sm">
+                    <span className="opacity-75">Advocate NFTs: </span>
+                    <span className="font-semibold">{nftBalance?.toString() || '0'}</span>
+                  </div>
+                )}
+              </div>
             </div>
-          )}
+          </div>
+
+          {/* Form Content */}
+          <div className="p-8">
+      
+            {/* Validation Error Display */}
+            {validationError && (
+              <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+                <h4 className="text-red-800 font-medium mb-2">Validation Error</h4>
+                <p className="text-red-700 text-sm">{validationError}</p>
+              </div>
+            )}
+      
+
+
+            {/* Requirements */}
+            <div className="mb-8 p-6 bg-blue-50 border border-blue-200 rounded-lg">
+              <h4 className="text-blue-900 font-semibold mb-3">📋 Proposal Requirements</h4>
+              <div className="grid md:grid-cols-2 gap-4 text-sm text-blue-800">
+                <div className="space-y-2">
+                  <div className="flex items-center">
+                    <span className={`w-2 h-2 rounded-full mr-2 ${isConnected ? 'bg-green-500' : 'bg-red-500'}`} />
+                    Wallet connected
+                  </div>
+                  <div className="flex items-center">
+                    <span className={`w-2 h-2 rounded-full mr-2 ${nftBalance && BigInt(nftBalance.toString()) > 0n ? 'bg-green-500' : 'bg-red-500'}`} />
+                    Hold at least 1 Advocate NFT
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <div className="flex items-center">
+                    <span className={`w-2 h-2 rounded-full mr-2 ${formData.title.length >= 10 ? 'bg-green-500' : 'bg-yellow-500'}`} />
+                    Clear, descriptive title
+                  </div>
+                  <div className="flex items-center">
+                    <span className={`w-2 h-2 rounded-full mr-2 ${formData.body.length >= 50 ? 'bg-green-500' : 'bg-yellow-500'}`} />
+                    Detailed description (50+ chars)
+                  </div>
+                </div>
+              </div>
+            </div>
+
+                        {/* Enhanced Delegation Section */}
+            {needsDelegation && (
+              <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                <div className="flex items-center">
+                  <div className="w-5 h-5 text-yellow-600 mr-3">⚠️</div>
+                  <p className="text-yellow-800 font-medium">Delegation Required</p>
+                </div>
+                <p className="text-sm text-yellow-700 mt-2">
+                  You own {nftBalance?.toString()} NFT(s) but need to delegate voting power to yourself to create proposals.
+                </p>
+          
+                {isDelegating && (
+                  <div className="mb-3 p-2 bg-blue-50 border border-blue-200 rounded text-sm text-blue-700">
+                    {isDelegationPending ? '⏳ Waiting for transaction confirmation...' : '🔄 Delegation in progress...'}
+                  </div>
+                )}
           
           <div className="flex flex-col space-y-2">
             <Transaction
-              isSponsored
-              address={address}
-              contracts={[{
+              isSponsored={true}
+              chainId={base.id} // Use base.id for Base
+              calls={[{
                 address: ADVOCATE_ADDRESS,
                 abi: AdvocateMembershipABI,
                 functionName: 'delegate',
                 args: [address as `0x${string}`], // Explicit type casting to ensure it's not undefined
-                gas: 150000n, // Increased gas limit
               }]}
-              onSuccess={(result) => {
-                if (result.transactionReceipts?.[0]?.transactionHash) {
-                  handleDelegationSuccess(result.transactionReceipts[0].transactionHash as `0x${string}`);
+              onStatus={(status) => {
+                if (status.statusName === 'buildingTransaction') {
+                  handleDelegationStart();
                 }
               }}
-              onError={handleDelegationError}
-              onTransactionStarted={handleDelegationStart}
+              onSuccess={async (response) => {
+                if (response?.transactionReceipts?.[0]?.transactionHash) {
+                  handleDelegationSuccess(response.transactionReceipts[0].transactionHash as `0x${string}`);
+                }
+              }}
+              onError={(error) => {
+                handleDelegationError(error);
+              }}
             >
               <TransactionButton
                 text={isDelegating ? "Delegating..." : "Delegate Voting Power to Myself"}
                 disabled={isDelegating || !address}
                 className="w-full bg-yellow-600 hover:bg-yellow-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-medium py-2 px-4 rounded transition-colors"
               />
+              <TransactionSponsor />
+              <TransactionStatus>
+                <TransactionStatusLabel />
+                <TransactionStatusAction />
+              </TransactionStatus>
             </Transaction>
             <div className="text-xs text-yellow-600">
               This transaction will delegate your NFT voting power to yourself, enabling you to vote and create proposals.
@@ -651,22 +733,84 @@ proposalArgs.forEach((arg, idx) => {
         </div>
       )}
 
-      {/* Enhanced Debug Info */}
-      <details className="mb-6">
-        <summary className="cursor-pointer text-sm text-gray-600 hover:text-gray-800 flex items-center gap-2">
-          <input
-            type="checkbox"
-            checked={debugMode}
-            onChange={(e) => setDebugMode(e.target.checked)}
-            className="mr-2"
-          />
-          Enhanced Debug Information
-        </summary>
-        <div className="mt-2 p-3 bg-gray-100 rounded text-xs font-mono space-y-1">
+            {/* Force Delegation Section - for when user has NFTs but no voting power */}
+            {!needsDelegation && nftBalance && BigInt(nftBalance.toString()) > 0n && 
+             (!votingPower || BigInt(votingPower.toString()) === 0n) && (
+              <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+                <div className="flex items-center">
+                  <div className="w-5 h-5 text-red-600 mr-3">🚨</div>
+                  <p className="text-red-800 font-medium">Voting Power Issue Detected</p>
+                </div>
+                <p className="text-sm text-red-700 mt-2">
+                  You own {nftBalance.toString()} NFT(s) but have {votingPower?.toString() || '0'} voting power. 
+                  This may be due to a contract redeployment. Please delegate your voting power.
+                </p>
+          
+          <div className="flex flex-col space-y-2">
+            <Transaction
+              isSponsored={true}
+              chainId={base.id} // Use base.id for Base
+              calls={[{
+                address: ADVOCATE_ADDRESS,
+                abi: AdvocateMembershipABI,
+                functionName: 'delegate',
+                args: [address as `0x${string}`],
+              }]}
+              onSuccess={async (response) => {
+                // Force delegation successful
+                toast({
+                  title: "Delegation Successful!",
+                  description: "Your voting power should now be active. Please refresh the page.",
+                });
+                // Force refetch after a delay
+                setTimeout(() => {
+                  refetchVotingPower();
+                  refetchDelegate();
+                  refetchBalance();
+                }, 3000);
+              }}
+              onError={(error) => {
+                toast({
+                  title: "Delegation Failed",
+                  description: error.message || 'Unknown error',
+                  variant: 'destructive',
+                });
+              }}
+            >
+              <TransactionButton
+                text="Force Delegate Voting Power"
+                className="w-full bg-red-600 hover:bg-red-700 text-white font-medium py-2 px-4 rounded transition-colors"
+              />
+              <TransactionSponsor />
+              <TransactionStatus>
+                <TransactionStatusLabel />
+                <TransactionStatusAction />
+              </TransactionStatus>
+            </Transaction>
+            <div className="text-xs text-red-600">
+              This will delegate your NFT voting power to yourself. This is needed after contract redeployments.
+            </div>
+          </div>
+        </div>
+      )}
+
+            {/* Enhanced Debug Info */}
+            <details className="mb-6">
+              <summary className="cursor-pointer text-sm text-gray-600 hover:text-gray-800 flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={debugMode}
+                  onChange={(e) => setDebugMode(e.target.checked)}
+                  className="mr-2"
+                />
+                Enhanced Debug Information
+              </summary>
+              <div className="mt-2 p-3 bg-gray-100 rounded text-xs font-mono space-y-1">
           <div>Address: {address || 'N/A'}</div>
           <div>Connector: {connector?.name || 'N/A'}</div>
           <div>NFT Balance: {nftBalance?.toString() || 'N/A'}</div>
           <div>Voting Power: {votingPower?.toString() || 'N/A'}</div>
+          <div>Proposal Threshold: {proposalThreshold?.toString() || 'N/A'}</div>
           <div>Current Delegate: {currentDelegate || 'N/A'}</div>
           <div>Needs Delegation: {needsDelegation ? 'Yes' : 'No'}</div>
           <div>Can Create Proposal: {canCreateProposal ? 'Yes' : 'No'}</div>
@@ -684,106 +828,340 @@ proposalArgs.forEach((arg, idx) => {
         </div>
       </details>
 
-      {/* Form */}
-      <form onSubmit={e => e.preventDefault()} className="space-y-4">
-        <div>
-          <label htmlFor="title" className="block text-sm font-medium mb-1">
-            Proposal Title *
-          </label>
-          <input
-            id="title"
-            type="text"
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            value={formData.title}
-            onChange={e => handleFormChange('title', e.target.value)}
-            required
-            placeholder="Enter a clear, descriptive title"
-          />
-        </div>
-        <div>
-          <label htmlFor="body" className="block text-sm font-medium mb-1">
-            Proposal Description *
-          </label>
-          <textarea
-            id="body"
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            value={formData.body}
-            onChange={e => handleFormChange('body', e.target.value)}
-            required
-            rows={6}
-            placeholder="Provide a detailed description of your proposal"
-          />
-        </div>
-        <div>
-          <label className="block text-sm font-medium mb-1">
-            Forum Discussion (Optional)
-          </label>
-          <ProposalThreadSelector
-            onThreadSelect={threadId => handleFormChange('forumThreadId', threadId)}
-          />
-          {formData.forumThreadId && (
-            <p className="mt-1 text-sm text-gray-600">
-              Selected: {formData.forumThreadId}
-            </p>
-          )}
-        </div>
-        
-        {/* Submit Button with Enhanced Validation */}
-        <div className="pt-4">
-          {/* Show specific blocking reasons */}
-          {!canSubmitProposal && (
-            <div className="mb-4 p-3 border border-orange-300 bg-orange-50 rounded-lg">
-              <h4 className="font-semibold text-orange-800 mb-2">Cannot Submit Proposal:</h4>
-              <ul className="text-sm text-orange-700 space-y-1">
-                {!canCreateProposal && <li>• Insufficient voting power</li>}
-                {needsDelegation && <li>• Need to delegate voting power first</li>}
-                {!formData.title.trim() && <li>• Title is required</li>}
-                {!formData.body.trim() && <li>• Description is required</li>}
-                {isDelegating && <li>• Delegation in progress</li>}
-                {validationError && <li>• Validation error: {validationError}</li>}
-                {(!proposalArgs || proposalArgs[0].length === 0) && <li>• Invalid proposal arguments</li>}
-              </ul>
+            {/* Proposal Form */}
+            <div className="space-y-6">
+              {/* Forum Thread Selection (now required and above) */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Link Forum Discussion
+                </label>
+                <ProposalThreadSelector
+                  onThreadSelect={handleThreadSelect}
+                />
+                {!formData.forumThreadId && (
+                  <p className="text-red-600 text-xs mt-1">Forum thread is required.</p>
+                )}
+              </div>
+              {/* Title */}
+              <div>
+                <label htmlFor="title" className="block text-sm font-semibold text-gray-700 mb-2">
+                  Proposal Title *
+                </label>
+                <input
+                  id="title"
+                  type="text"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+                  value={formData.title}
+                  onChange={e => handleFormChange('title', e.target.value)}
+                  placeholder="Enter a clear, descriptive title for your proposal"
+                  disabled={isDelegating}
+                  maxLength={200}
+                />
+                <div className="flex justify-between mt-1">
+                  <p className="text-xs text-gray-500">
+                    Make it clear and specific - this will be the main identifier for your proposal
+                  </p>
+                  <span className="text-xs text-gray-400">
+                    {formData.title.length}/200
+                  </span>
+                </div>
+              </div>
+              {/* Description */}
+              <div>
+                <label htmlFor="body" className="block text-sm font-semibold text-gray-700 mb-2">
+                  Proposal Description *
+                </label>
+                <UserTagging
+                  value={formData.body}
+                  onChange={(value) => handleFormChange('body', value)}
+                  placeholder="Provide a detailed description of your proposal... Use @ to mention someone"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors resize-none"
+                  multiLine={true}
+                  contextType="governance"
+                  contextId="new-proposal"
+                  contextUrl="/governance"
+                />
+                <div className="flex justify-between mt-1">
+                  <p className="text-xs text-gray-500">
+                    Supports Markdown formatting. One paragraph summarizing the proposal purpose and the impact.
+                  </p>
+                  <span className="text-xs text-gray-400">
+                    {formData.body.length}/10,000
+                  </span>
+                </div>
+              </div>
+              {/* Pod/Token Dropdown */}
+              <div>
+                <label htmlFor="token" className="block text-sm font-semibold text-gray-700 mb-2">
+                  Accessible To (Pod/Token) *
+                </label>
+                <select
+                  id="token"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+                  value={formData.selectedToken}
+                  onChange={e => handleFormChange('selectedToken', e.target.value)}
+                  required
+                >
+                  <option value="">Select a token</option>
+                  {userTokens.map(token => (
+                    <option key={token.id} value={token.id}>{token.label}</option>
+                  ))}
+                </select>
+                {!formData.selectedToken && (
+                  <p className="text-red-600 text-xs mt-1">Token selection is required.</p>
+                )}
+              </div>
             </div>
-          )}	  
-		  
+        
+            {/* Submit Section */}
+            <div className="mt-8 pt-6 border-t border-gray-200">
+              {/* Show specific blocking reasons */}
+              {!canSubmitProposal && hasInteracted && (
+                <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                  <h4 className="text-yellow-800 font-medium mb-2">Cannot Submit Proposal:</h4>
+                  <ul className="text-yellow-700 text-sm space-y-1">
+                    {!canCreateProposal && <li>• Insufficient voting power</li>}
+                    {needsDelegation && <li>• Need to delegate voting power first</li>}
+                    {!formData.title.trim() && <li>• Title is required</li>}
+                    {!formData.body.trim() && <li>• Description is required</li>}
+                    {!formData.forumThreadId && <li>• Forum thread is required</li>}
+                    {!formData.selectedToken && <li>• Token selection is required</li>}
+                    {isDelegating && <li>• Delegation in progress</li>}
+                    {validationError && <li>• Validation error: {validationError}</li>}
+                    {(!proposalArgs || proposalArgs[0].length === 0) && <li>• Invalid proposal arguments</li>}
+                  </ul>
+                </div>
+              )}
 
-		<Transaction
-		  address={address?.toLowerCase() as `0x${string}`}
-		  chainId={BASE_CHAIN_ID}
-		  calls={[proposeCall]}
-		  onTransactionStarted={() =>
-			console.log('🔔 Proposal tx starting:', proposalArgs)
-		  }
-		  onSuccess={() => {
-			toast({ title: '✅ Proposal Created!', description: '' });
-			onSuccess?.();
-		  }}
-		  onError={(error) => {
-			console.error('❌ Proposal error', error);
-			toast({
-			  title: 'Proposal Failed',
-			  description: error.message || 'Unknown error',
-			  variant: 'destructive',
-			});
-		  }}
-		>
-		  <TransactionButton
-			text="Create Proposal"
-			disabled={!canSubmitProposal}
-			className={`w-full py-3 rounded ${
-			  canSubmitProposal
-				? 'bg-blue-600 hover:bg-blue-700 text-white'
-				: 'bg-gray-400 text-gray-600 cursor-not-allowed'
-			}`}
-		  />
-		  <TransactionSponsor />
-		  <TransactionStatus>
-			<TransactionStatusLabel />
-			<TransactionStatusAction />
-		  </TransactionStatus>
-		</Transaction>
+              {isConnected && canCreateProposal ? (
+                <Transaction
+                  chainId={base.id} // Use base.id for Base
+                  calls={[proposeCall]}
+                  isSponsored={true}
+                  onStatus={(status) => {
+                    if (status.statusName === 'buildingTransaction') {
+                      handleDelegationStart();
+                    }
+                  }}
+                  onSuccess={async (txResult) => {
+                    setHasInteracted(false);
+                    if (hasProcessedProposal === txResult?.transactionReceipts?.[0]?.transactionHash) {
+                      return;
+                    }
+                    setHasProcessedProposal(txResult?.transactionReceipts?.[0]?.transactionHash || null);
+                    toast({ title: '✅ Proposal Created!', description: '' });
+                    // --- Begin polling for proposal state ---
+                    const transactionHash = txResult?.transactionReceipts?.[0]?.transactionHash;
+                    const logs = txResult?.transactionReceipts?.[0]?.logs || [];
+                    let realProposalId: string | null = null;
+                    try {
+                      const eventAbi = parseAbiItem(
+                        'event ProposalCreatedWithMetadata(uint256 proposalId, address proposer, string title, string forumThreadId, uint256 createdAt)'
+                      );
+                      const parsedLogs = parseEventLogs({
+                        abi: [eventAbi],
+                        logs: logs,
+                      });
+                      for (const parsed of parsedLogs) {
+                        if (parsed.eventName === 'ProposalCreatedWithMetadata') {
+                          realProposalId = parsed.args.proposalId.toString();
+                          break;
+                        }
+                      }
+                      if (!realProposalId) {
+                        const fallbackEventAbi = parseAbiItem(
+                          'event ProposalCreated(uint256 proposalId, address proposer, address[] targets, uint256[] values, string[] signatures, bytes[] calldatas, uint256 startBlock, uint256 endBlock, string description)'
+                        );
+                        const fallbackParsedLogs = parseEventLogs({
+                          abi: [fallbackEventAbi],
+                          logs: logs,
+                        });
+                        for (const parsed of fallbackParsedLogs) {
+                          if (parsed.eventName === 'ProposalCreated') {
+                            realProposalId = parsed.args.proposalId.toString();
+                            break;
+                          }
+                        }
+                      }
+                    } catch (e) {
+                      console.error('Error parsing logs for proposal events:', e);
+                    }
+                    if (!realProposalId) {
+                      realProposalId = transactionHash ? `temp_${transactionHash.slice(2, 10)}` : null;
+                    }
+                    // --- Insert metadata and notifications immediately ---
+                    if (realProposalId) {
+                      try {
+                        // Check if proposal metadata already exists
+                        const { data: existingMetadata } = await supabase
+                          .from('proposal_metadata')
+                          .select('id')
+                          .eq('onchain_proposal_id', realProposalId)
+                          .single();
+
+                        if (!existingMetadata) {
+                          // Extract mentions from the proposal body
+                          const mentionRegex = /@\[([^\]]+)\]\(([^)]+)\)/g;
+                          const mentions: string[] = [];
+                          let match;
+                          while ((match = mentionRegex.exec(formData.body)) !== null) {
+                            mentions.push(match[2]); // match[2] is the wallet address
+                          }
+                          // Insert proposal metadata with status: 'active'
+                          const { error: metadataError } = await supabase.from('proposal_metadata').insert([
+                            {
+                              onchain_proposal_id: realProposalId,
+                              title: formData.title,
+                              description: formData.body,
+                              proposer_address: address,
+                              forum_thread_id: formData.forumThreadId,
+                              token_id: formData.selectedToken,
+                              created_at: new Date().toISOString(),
+                              transaction_hash: transactionHash,
+                              mentions: mentions, // Store the mentions array
+                              status: 'active', // Always set to active for new proposals
+                            }
+                          ]);
+                          if (metadataError) {
+                            console.error('❌ Error inserting proposal metadata:', metadataError);
+                          }
+                        }
+                        // Create notifications for token holders if a token is selected
+                        if (formData.selectedToken) {
+                          try {
+                            await governanceNotificationService.createTokenHolderNotifications(
+                              formData.selectedToken,
+                              address!,
+                              realProposalId,
+                              formData.title,
+                              transactionHash
+                            );
+                          } catch (tokenNotificationError) {
+                            console.error('❌ Error creating token holder notifications:', tokenNotificationError);
+                          }
+                        }
+                        // Handle mentions in the proposal description
+                        const mentionRegex = /@\[([^\]]+)\]\(([^)]+)\)/g;
+                        const mentions: string[] = [];
+                        let match;
+                        while ((match = mentionRegex.exec(formData.body)) !== null) {
+                          mentions.push(match[2]); // match[2] is the wallet address
+                        }
+                        // Create notifications for mentioned users
+                        for (const mentionedAddress of mentions) {
+                          try {
+                            await governanceNotificationService.createProposalMentionNotification(
+                              mentionedAddress,
+                              address!,
+                              realProposalId,
+                              formData.title,
+                              transactionHash
+                            );
+                          } catch (mentionError) {
+                            console.error(`❌ Error creating mention notification for ${mentionedAddress}:`, mentionError);
+                          }
+                        }
+                        // --- Ensure notification is sent ---
+                        try {
+                          await governanceNotificationService.createProposalCreatedNotification(
+                            address!,
+                            realProposalId,
+                            formData.title,
+                            transactionHash
+                          );
+                        } catch (notifErr) {
+                          console.error('Error creating proposal created notification:', notifErr);
+                        }
+                        // --- End notification logic ---
+                      } catch (error) {
+                        console.error('❌ Error in post-transaction processing:', error);
+                      }
+                    }
+                    // --- Poll for proposal state ---
+                    if (realProposalId) {
+                      let attempts = 0;
+                      const maxAttempts = 15; // ~30 seconds
+                      const poll = async () => {
+                        try {
+                          const state = await publicClient.readContract({
+                            address: GOVERNOR_ADDRESS,
+                            abi: DAOGovernorABI,
+                            functionName: 'state',
+                            args: [BigInt(realProposalId)],
+                          });
+                          if (state === 1) {
+                            // Active
+                            onSuccess?.();
+                            setTimeout(() => {
+                              refreshNotifications();
+                              window.location.reload();
+                            }, 500);
+                            return;
+                          }
+                        } catch (err) {
+                          // Ignore errors, keep polling
+                        }
+                        attempts++;
+                        if (attempts < maxAttempts) {
+                          setTimeout(poll, 2000);
+                        } else {
+                          // Give up after maxAttempts, just refresh
+                          onSuccess?.();
+                          setTimeout(() => {
+                            refreshNotifications();
+                            window.location.reload();
+                          }, 500);
+                        }
+                      };
+                      poll();
+                    } else {
+                      // Could not get proposalId, fallback
+                      onSuccess?.();
+                      setTimeout(() => {
+                        refreshNotifications();
+                        window.location.reload();
+                      }, 500);
+                    }
+                    // --- End polling logic ---
+                  }}
+                  onError={(error) => {
+                    console.error('❌ Proposal Transaction Error:', error.message);
+                    toast({
+                      title: 'Proposal Failed',
+                      description: error.message || 'Unknown error',
+                      variant: 'destructive',
+                    });
+                  }}
+                >
+                  <TransactionButton
+                    className="w-full font-semibold py-4 px-8 rounded-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl !bg-[#d7f8fd] !text-black"
+                    disabled={!canSubmitProposal}
+                    text={isDelegating ? "Delegating..." : "Submit Proposal to DAO"}
+                  />
+                  <TransactionSponsor />
+                  <div className="mt-4">
+                    <TransactionStatus>
+                      <TransactionStatusLabel />
+                      <TransactionStatusAction />
+                    </TransactionStatus>
+                  </div>
+                </Transaction>
+              ) : (
+                <div className="text-center">
+                  <button
+                    disabled
+                    className="w-full bg-gray-300 text-gray-500 font-semibold py-4 px-8 rounded-lg cursor-not-allowed"
+                  >
+                    {!isConnected ? 'Connect Wallet to Submit' : 'Requirements Not Met'}
+                  </button>
+                </div>
+              )}
+
+
+            </div>
+          </div>
         </div>
-      </form>
+      </div>
     </div>
   );
 };

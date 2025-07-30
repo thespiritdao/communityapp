@@ -1,15 +1,17 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useAccount, usePublicClient, useContractRead } from 'wagmi';
+import { useAccount, usePublicClient, useContractRead, useContractWrite } from 'wagmi';
 import { parseAbiItem } from 'viem';
 import DAOGovernorABI from '@/abis/DAOGovernorABI.json';
-import MembershipNFTABI from '@/abis/MembershipNFTABI.json';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { AlertTriangle, Clock, Calendar } from 'lucide-react';
 import Link from 'next/link';
+import { createPublicClient, http } from 'viem';
 
 // Contract addresses from environment variables
 const GOVERNOR_ADDRESS = process.env.NEXT_PUBLIC_DAO_GOVERNOR as `0x${string}`;
@@ -27,6 +29,10 @@ interface ProposalData {
   abstainVotes: bigint;
   forumThreadId?: string;
   createdAt?: bigint;
+  metadata?: {
+    forum_thread_id?: string;
+    mentions?: { address?: string }[];
+  };
 }
 
 export const ProposalsList: React.FC = () => {
@@ -34,6 +40,16 @@ export const ProposalsList: React.FC = () => {
   const publicClient = usePublicClient();
   const [proposals, setProposals] = useState<ProposalData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
+  const [selectedProposal, setSelectedProposal] = useState<ProposalData | null>(null);
+  const [hasVotedMap, setHasVotedMap] = useState<Record<string, boolean>>({});
+
+  // Cancel proposal function
+  const { write: cancelProposal, isLoading: isCancelling } = useContractWrite({
+    address: GOVERNOR_ADDRESS,
+    abi: DAOGovernorABI,
+    functionName: 'cancel',
+  });
 
   // Fetch proposals from on-chain events
   useEffect(() => {
@@ -137,7 +153,8 @@ export const ProposalsList: React.FC = () => {
             againstVotes,
             abstainVotes,
             forumThreadId: metadata?.forumThreadId || '',
-            createdAt: metadata?.createdAt || 0n
+            createdAt: metadata?.createdAt || 0n,
+            metadata: metadata
           };
         });
 
@@ -152,6 +169,22 @@ export const ProposalsList: React.FC = () => {
           });
 
         setProposals(fetchedProposals);
+        // --- Fetch hasVoted for each proposal ---
+        if (address && fetchedProposals.length > 0) {
+          const hasVotedCalls = fetchedProposals.map((p) => ({
+            address: GOVERNOR_ADDRESS,
+            abi: DAOGovernorABI,
+            functionName: 'hasVoted',
+            args: [BigInt(p.id), address],
+          }));
+          const results = await publicClient.multicall({ contracts: hasVotedCalls });
+          const map: Record<string, boolean> = {};
+          fetchedProposals.forEach((p, i) => {
+            map[p.id] = Boolean(results[i].result);
+          });
+          setHasVotedMap(map);
+        }
+        // --- End fetch hasVoted ---
       } catch (error) {
         console.error('Error fetching proposals:', error);
       } finally {
@@ -160,7 +193,41 @@ export const ProposalsList: React.FC = () => {
     };
 
     fetchProposals();
-  }, [publicClient]);
+  }, [publicClient, address]);
+
+  // Handle proposal cancellation
+  const handleCancelProposal = async () => {
+    if (!cancelProposal || !selectedProposal) return;
+    
+    try {
+      await cancelProposal();
+      setCancelDialogOpen(false);
+      setSelectedProposal(null);
+      // Refresh proposals after cancellation
+      // You might want to add a refetch mechanism here
+    } catch (error) {
+      console.error('Error cancelling proposal:', error);
+    }
+  };
+
+  // Check if user can cancel proposal
+  const canCancelProposal = (proposal: ProposalData) => {
+    return address?.toLowerCase() === proposal.proposer.toLowerCase() && 
+           proposal.state === 0; // Pending state
+  };
+
+  // Format voting deadline
+  const formatVotingDeadline = (endBlock: bigint) => {
+    // Convert block number to estimated date
+    // This is a rough estimation - you might want to use actual block timestamps
+    const estimatedEndTime = Date.now() + (Number(endBlock) * 12 * 1000); // Assuming 12s block time
+    return new Date(estimatedEndTime).toLocaleDateString();
+  };
+
+  // Check if voting is active
+  const isVotingActive = (proposal: ProposalData) => {
+    return proposal.state === 1; // Active state
+  };
 
   // Utility function to get state badge color
   const getStateBadgeVariant = (state: number) => {
@@ -251,9 +318,17 @@ export const ProposalsList: React.FC = () => {
             <CardHeader>
               <div className="flex justify-between items-start">
                 <CardTitle>{proposal.title}</CardTitle>
-                <Badge variant={getStateBadgeVariant(proposal.state)}>
-                  {getProposalStateText(proposal.state)}
-                </Badge>
+                <div className="flex items-center gap-2">
+                  <Badge variant={getStateBadgeVariant(proposal.state)}>
+                    {getProposalStateText(proposal.state)}
+                  </Badge>
+                  {isVotingActive(proposal) && (
+                    <Badge variant="outline" className="flex items-center gap-1">
+                      <Clock className="w-3 h-3" />
+                      Ends: {formatVotingDeadline(proposal.endBlock)}
+                    </Badge>
+                  )}
+                </div>
               </div>
               <CardDescription>
                 Proposed by {proposal.proposer.substring(0, 6)}...{proposal.proposer.substring(38)}
@@ -266,6 +341,25 @@ export const ProposalsList: React.FC = () => {
                   ? `${proposal.description.substring(0, 200)}...` 
                   : proposal.description}
               </p>
+              
+              {proposal.metadata && (
+                <div className="mt-2 text-xs text-gray-500">
+                  {proposal.metadata.forum_thread_id && (
+                    <div>
+                      <span>Forum Thread: </span>
+                      <a href={`/forum/thread/${proposal.metadata.forum_thread_id}`} className="underline text-blue-600">{proposal.metadata.forum_thread_id}</a>
+                    </div>
+                  )}
+                  {proposal.metadata.mentions && proposal.metadata.mentions.length > 0 && (
+                    <div>
+                      <span>Mentions: </span>
+                      {proposal.metadata.mentions.map((mention: any, idx: number) => (
+                        <span key={idx} className="inline-block bg-gray-200 rounded px-2 py-1 mr-1">{mention.address || mention}</span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
               
               <div className="grid grid-cols-3 gap-2 text-center">
                 <div>
@@ -284,14 +378,49 @@ export const ProposalsList: React.FC = () => {
             </CardContent>
             
             <CardFooter className="flex justify-between">
-              {proposal.forumThreadId && (
-                <Link 
-                  href={`/forum/${proposal.forumThreadId}`} 
-                  className="text-sm text-blue-600 hover:underline"
-                >
-                  View Discussion
-                </Link>
-              )}
+              <div className="flex gap-2">
+                {proposal.forumThreadId && (
+                  <Link 
+                    href={`/forum/${proposal.forumThreadId}`} 
+                    className="text-sm text-blue-600 hover:underline"
+                  >
+                    View Discussion
+                  </Link>
+                )}
+                {canCancelProposal(proposal) && (
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={() => {
+                      setSelectedProposal(proposal);
+                      setCancelDialogOpen(true);
+                    }}
+                  >
+                    Cancel Proposal
+                  </Button>
+                )}
+              </div>
+              {/* --- Vote button logic --- */}
+              {isVotingActive(proposal) ? (
+                hasVotedMap[proposal.id] ? (
+                  <button
+                    className="w-full py-2 px-4 bg-green-600 text-white rounded-lg font-semibold cursor-not-allowed opacity-60"
+                    disabled
+                    title="You have already voted on this proposal."
+                    style={{ pointerEvents: 'none' }}
+                  >
+                    ✓ Voted
+                  </button>
+                ) : (
+                  <Button
+                    variant="outline"
+                    onClick={() => {/* open vote modal or handle vote */}}
+                  >
+                    Vote
+                  </Button>
+                )
+              ) : null}
+              {/* --- End vote button logic --- */}
               <Link href={`/governance/proposal/${proposal.id}`}>
                 <Button variant="outline">View Details</Button>
               </Link>
@@ -299,6 +428,33 @@ export const ProposalsList: React.FC = () => {
           </Card>
         ))}
       </div>
+
+      {/* Cancel Proposal Dialog */}
+      <Dialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="w-5 h-5 text-red-500" />
+              Cancel Proposal
+            </DialogTitle>
+            <DialogDescription>
+              Are you sure you want to cancel "{selectedProposal?.title}"? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex gap-2 justify-end">
+            <Button variant="outline" onClick={() => setCancelDialogOpen(false)}>
+              Keep Proposal
+            </Button>
+            <Button 
+              variant="destructive" 
+              onClick={handleCancelProposal}
+              disabled={isCancelling}
+            >
+              {isCancelling ? 'Cancelling...' : 'Cancel Proposal'}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

@@ -54,33 +54,16 @@ export const useBountySupabase = () => {
   }, []);
 
   const createBounty = useCallback(async (bountyData: Omit<FrontendBounty, 'id' | 'createdAt' | 'onchain_id'>) => {
-    if (!address) throw new Error('Wallet not connected');
-
     setLoading(true);
     setError(null);
-
     try {
-      // 1. Create bounty on-chain
-      const { bountyId } = await createBountyOnChain(
-        bountyData.title,
-        bountyData.category,
-        bountyData.value.amount,
-        bountyData.value.token,
-        PaymentStructure.Completion, // Example, you might need to get this from form
-        '0',
-        bountyData.value.amount
-      );
-
-      // 2. Create bounty off-chain in Supabase with the on-chain ID
+      // Only create bounty in Supabase
       const dbBountyData = convertBountyToDb({
         ...bountyData,
-        onchain_id: Number(bountyId), // Store the on-chain ID
         creator_address: address,
       });
-      
       const newDbBounty = await bountyApi.createBounty(dbBountyData);
       const newFrontendBounty = convertBountyFromDb(newDbBounty);
-      
       setBounties(prev => [newFrontendBounty, ...prev]);
       return newFrontendBounty;
     } catch (err) {
@@ -91,7 +74,7 @@ export const useBountySupabase = () => {
     } finally {
       setLoading(false);
     }
-  }, [address, createBountyOnChain]);
+  }, [address]);
 
   const submitBid = useCallback(async (bidData: Omit<FrontendBid, 'id' | 'submittedAt' | 'bidderAddress' | 'status'>) => {
     if (!address) throw new Error('Wallet not connected');

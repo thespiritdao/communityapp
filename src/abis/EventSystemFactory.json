@@ -1,0 +1,826 @@
+[
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "_registrationFactory",
+				"type": "address"
+			},
+			{
+				"internalType": "address",
+				"name": "_completionFactory",
+				"type": "address"
+			},
+			{
+				"internalType": "address",
+				"name": "_eventEscrow",
+				"type": "address"
+			},
+			{
+				"internalType": "address",
+				"name": "initialOwner",
+				"type": "address"
+			}
+		],
+		"stateMutability": "nonpayable",
+		"type": "constructor"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "owner",
+				"type": "address"
+			}
+		],
+		"name": "OwnableInvalidOwner",
+		"type": "error"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "account",
+				"type": "address"
+			}
+		],
+		"name": "OwnableUnauthorizedAccount",
+		"type": "error"
+	},
+	{
+		"anonymous": false,
+		"inputs": [
+			{
+				"indexed": true,
+				"internalType": "string",
+				"name": "eventId",
+				"type": "string"
+			},
+			{
+				"indexed": true,
+				"internalType": "address",
+				"name": "eventOrganizer",
+				"type": "address"
+			},
+			{
+				"indexed": false,
+				"internalType": "address",
+				"name": "registrationContract",
+				"type": "address"
+			},
+			{
+				"indexed": false,
+				"internalType": "address",
+				"name": "completionContract",
+				"type": "address"
+			},
+			{
+				"indexed": false,
+				"internalType": "uint256",
+				"name": "timestamp",
+				"type": "uint256"
+			}
+		],
+		"name": "CompleteEventSystemCreated",
+		"type": "event"
+	},
+	{
+		"anonymous": false,
+		"inputs": [
+			{
+				"indexed": false,
+				"internalType": "string",
+				"name": "message",
+				"type": "string"
+			},
+			{
+				"indexed": false,
+				"internalType": "address",
+				"name": "contractAddress",
+				"type": "address"
+			}
+		],
+		"name": "DebugLog",
+		"type": "event"
+	},
+	{
+		"anonymous": false,
+		"inputs": [
+			{
+				"indexed": false,
+				"internalType": "string",
+				"name": "message",
+				"type": "string"
+			},
+			{
+				"indexed": false,
+				"internalType": "uint256",
+				"name": "timestamp",
+				"type": "uint256"
+			}
+		],
+		"name": "DebugTimestamp",
+		"type": "event"
+	},
+	{
+		"anonymous": false,
+		"inputs": [
+			{
+				"indexed": true,
+				"internalType": "address",
+				"name": "previousOwner",
+				"type": "address"
+			},
+			{
+				"indexed": true,
+				"internalType": "address",
+				"name": "newOwner",
+				"type": "address"
+			}
+		],
+		"name": "OwnershipTransferred",
+		"type": "event"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"name": "allEventIds",
+		"outputs": [
+			{
+				"internalType": "string",
+				"name": "",
+				"type": "string"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "completionFactory",
+		"outputs": [
+			{
+				"internalType": "contract EventCompletionNFTFactory",
+				"name": "",
+				"type": "address"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "string",
+				"name": "eventId",
+				"type": "string"
+			},
+			{
+				"internalType": "string",
+				"name": "eventTitle",
+				"type": "string"
+			},
+			{
+				"internalType": "uint256",
+				"name": "eventDate",
+				"type": "uint256"
+			},
+			{
+				"internalType": "address",
+				"name": "eventOrganizer",
+				"type": "address"
+			},
+			{
+				"internalType": "address",
+				"name": "fundRecipient",
+				"type": "address"
+			},
+			{
+				"internalType": "uint256",
+				"name": "priceSystem",
+				"type": "uint256"
+			},
+			{
+				"internalType": "uint256",
+				"name": "priceSelf",
+				"type": "uint256"
+			}
+		],
+		"name": "createCompleteEventSystem",
+		"outputs": [
+			{
+				"internalType": "address",
+				"name": "registrationContract",
+				"type": "address"
+			},
+			{
+				"internalType": "address",
+				"name": "completionContract",
+				"type": "address"
+			}
+		],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "string",
+				"name": "eventId",
+				"type": "string"
+			},
+			{
+				"internalType": "string",
+				"name": "eventTitle",
+				"type": "string"
+			},
+			{
+				"internalType": "uint256",
+				"name": "eventDate",
+				"type": "uint256"
+			},
+			{
+				"internalType": "address",
+				"name": "eventOrganizer",
+				"type": "address"
+			},
+			{
+				"internalType": "address",
+				"name": "fundRecipient",
+				"type": "address"
+			}
+		],
+		"name": "createFreeEventSystem",
+		"outputs": [
+			{
+				"internalType": "address",
+				"name": "registrationContract",
+				"type": "address"
+			},
+			{
+				"internalType": "address",
+				"name": "completionContract",
+				"type": "address"
+			}
+		],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "string",
+				"name": "eventId",
+				"type": "string"
+			},
+			{
+				"internalType": "string",
+				"name": "eventTitle",
+				"type": "string"
+			},
+			{
+				"internalType": "uint256",
+				"name": "eventDate",
+				"type": "uint256"
+			},
+			{
+				"internalType": "address",
+				"name": "eventOrganizer",
+				"type": "address"
+			},
+			{
+				"internalType": "address",
+				"name": "fundRecipient",
+				"type": "address"
+			}
+		],
+		"name": "debugCompletionDeployment",
+		"outputs": [
+			{
+				"internalType": "address",
+				"name": "",
+				"type": "address"
+			}
+		],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "string",
+				"name": "eventId",
+				"type": "string"
+			},
+			{
+				"internalType": "string",
+				"name": "eventTitle",
+				"type": "string"
+			},
+			{
+				"internalType": "uint256",
+				"name": "eventDate",
+				"type": "uint256"
+			},
+			{
+				"internalType": "address",
+				"name": "eventOrganizer",
+				"type": "address"
+			},
+			{
+				"internalType": "address",
+				"name": "fundRecipient",
+				"type": "address"
+			}
+		],
+		"name": "debugCreateFreeEventRelaxed",
+		"outputs": [
+			{
+				"internalType": "address",
+				"name": "registrationContract",
+				"type": "address"
+			},
+			{
+				"internalType": "address",
+				"name": "completionContract",
+				"type": "address"
+			}
+		],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "debugMinimalNFTDeploy",
+		"outputs": [
+			{
+				"internalType": "address",
+				"name": "",
+				"type": "address"
+			}
+		],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "string",
+				"name": "eventId",
+				"type": "string"
+			},
+			{
+				"internalType": "string",
+				"name": "eventTitle",
+				"type": "string"
+			},
+			{
+				"internalType": "uint256",
+				"name": "eventDate",
+				"type": "uint256"
+			},
+			{
+				"internalType": "address",
+				"name": "eventOrganizer",
+				"type": "address"
+			}
+		],
+		"name": "debugParameterValidation",
+		"outputs": [
+			{
+				"internalType": "bool",
+				"name": "eventIdValid",
+				"type": "bool"
+			},
+			{
+				"internalType": "bool",
+				"name": "eventTitleValid",
+				"type": "bool"
+			},
+			{
+				"internalType": "bool",
+				"name": "tokenNameValid",
+				"type": "bool"
+			},
+			{
+				"internalType": "bool",
+				"name": "tokenSymbolValid",
+				"type": "bool"
+			},
+			{
+				"internalType": "bool",
+				"name": "eventDateValid",
+				"type": "bool"
+			},
+			{
+				"internalType": "bool",
+				"name": "organizerValid",
+				"type": "bool"
+			},
+			{
+				"internalType": "string",
+				"name": "tokenName",
+				"type": "string"
+			},
+			{
+				"internalType": "string",
+				"name": "tokenSymbol",
+				"type": "string"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "string",
+				"name": "eventId",
+				"type": "string"
+			},
+			{
+				"internalType": "string",
+				"name": "eventTitle",
+				"type": "string"
+			},
+			{
+				"internalType": "uint256",
+				"name": "eventDate",
+				"type": "uint256"
+			},
+			{
+				"internalType": "address",
+				"name": "eventOrganizer",
+				"type": "address"
+			}
+		],
+		"name": "debugRegistrationDeployment",
+		"outputs": [
+			{
+				"internalType": "address",
+				"name": "",
+				"type": "address"
+			}
+		],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "string",
+				"name": "eventTitle",
+				"type": "string"
+			}
+		],
+		"name": "debugStringGeneration",
+		"outputs": [
+			{
+				"internalType": "string",
+				"name": "tokenName",
+				"type": "string"
+			},
+			{
+				"internalType": "string",
+				"name": "tokenSymbol",
+				"type": "string"
+			},
+			{
+				"internalType": "uint256",
+				"name": "tokenNameLength",
+				"type": "uint256"
+			},
+			{
+				"internalType": "uint256",
+				"name": "tokenSymbolLength",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "pure",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "eventEscrow",
+		"outputs": [
+			{
+				"internalType": "contract EventEscrow",
+				"name": "",
+				"type": "address"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "string",
+				"name": "",
+				"type": "string"
+			}
+		],
+		"name": "eventSystems",
+		"outputs": [
+			{
+				"internalType": "string",
+				"name": "eventId",
+				"type": "string"
+			},
+			{
+				"internalType": "string",
+				"name": "eventTitle",
+				"type": "string"
+			},
+			{
+				"internalType": "uint256",
+				"name": "eventDate",
+				"type": "uint256"
+			},
+			{
+				"internalType": "address",
+				"name": "eventOrganizer",
+				"type": "address"
+			},
+			{
+				"internalType": "address",
+				"name": "registrationContract",
+				"type": "address"
+			},
+			{
+				"internalType": "address",
+				"name": "completionContract",
+				"type": "address"
+			},
+			{
+				"internalType": "bool",
+				"name": "escrowCreated",
+				"type": "bool"
+			},
+			{
+				"internalType": "uint256",
+				"name": "createdAt",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "getAllEventIds",
+		"outputs": [
+			{
+				"internalType": "string[]",
+				"name": "eventIds",
+				"type": "string[]"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "string",
+				"name": "eventId",
+				"type": "string"
+			}
+		],
+		"name": "getEventContracts",
+		"outputs": [
+			{
+				"internalType": "address",
+				"name": "registrationContract",
+				"type": "address"
+			},
+			{
+				"internalType": "address",
+				"name": "completionContract",
+				"type": "address"
+			},
+			{
+				"internalType": "address",
+				"name": "escrowContract",
+				"type": "address"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "getEventCount",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "count",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "string",
+				"name": "eventId",
+				"type": "string"
+			}
+		],
+		"name": "getEventSystem",
+		"outputs": [
+			{
+				"components": [
+					{
+						"internalType": "string",
+						"name": "eventId",
+						"type": "string"
+					},
+					{
+						"internalType": "string",
+						"name": "eventTitle",
+						"type": "string"
+					},
+					{
+						"internalType": "uint256",
+						"name": "eventDate",
+						"type": "uint256"
+					},
+					{
+						"internalType": "address",
+						"name": "eventOrganizer",
+						"type": "address"
+					},
+					{
+						"internalType": "address",
+						"name": "registrationContract",
+						"type": "address"
+					},
+					{
+						"internalType": "address",
+						"name": "completionContract",
+						"type": "address"
+					},
+					{
+						"internalType": "bool",
+						"name": "escrowCreated",
+						"type": "bool"
+					},
+					{
+						"internalType": "uint256",
+						"name": "createdAt",
+						"type": "uint256"
+					}
+				],
+				"internalType": "struct EventSystemFactory.EventSystem",
+				"name": "system",
+				"type": "tuple"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "organizer",
+				"type": "address"
+			}
+		],
+		"name": "getEventsByOrganizer",
+		"outputs": [
+			{
+				"internalType": "string[]",
+				"name": "organizerEvents",
+				"type": "string[]"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "getFactoryAddresses",
+		"outputs": [
+			{
+				"internalType": "address",
+				"name": "regFactory",
+				"type": "address"
+			},
+			{
+				"internalType": "address",
+				"name": "compFactory",
+				"type": "address"
+			},
+			{
+				"internalType": "address",
+				"name": "escrow",
+				"type": "address"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "string",
+				"name": "eventId",
+				"type": "string"
+			}
+		],
+		"name": "hasEventSystem",
+		"outputs": [
+			{
+				"internalType": "bool",
+				"name": "exists",
+				"type": "bool"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "owner",
+		"outputs": [
+			{
+				"internalType": "address",
+				"name": "",
+				"type": "address"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "registrationFactory",
+		"outputs": [
+			{
+				"internalType": "contract EventRegistrationNFTFactory",
+				"name": "",
+				"type": "address"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "renounceOwnership",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "eventDate",
+				"type": "uint256"
+			}
+		],
+		"name": "testTimestampValidation",
+		"outputs": [
+			{
+				"internalType": "bool",
+				"name": "isValid",
+				"type": "bool"
+			},
+			{
+				"internalType": "uint256",
+				"name": "currentTime",
+				"type": "uint256"
+			},
+			{
+				"internalType": "uint256",
+				"name": "difference",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "newOwner",
+				"type": "address"
+			}
+		],
+		"name": "transferOwnership",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	}
+]
