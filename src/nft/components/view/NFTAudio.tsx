@@ -82,13 +82,17 @@ export function NFTAudio({
       >
         <div
           className={cn(
-            'ml-px box-border h-[18px] transition-all duration-100 ease-linear will-change-[border-width]',
-            'border-transparent border-l-[var(--ock-bg-default)] hover:border-l-[var(--ock-bg-default-hover)]',
-            {
-              'border-[length:0_0_0_16px] border-double': isPlaying,
-              '-mr-px border-[length:9px_0_9px_16px] border-solid': !isPlaying,
-            },
+            'ml-px box-border h-[18px] transition-all duration-100 ease-linear',
+            'border-transparent',
           )}
+          style={{
+            borderLeft: isPlaying
+              ? '16px double var(--ock-bg-default)'
+              : '16px solid var(--ock-bg-default)',
+            borderTop: isPlaying ? '0' : '9px solid transparent',
+            borderBottom: isPlaying ? '0' : '9px solid transparent',
+            marginRight: isPlaying ? '0' : '-1px',
+          }}
         />
       </button>
       <audio
