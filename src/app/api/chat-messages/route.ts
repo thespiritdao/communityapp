@@ -3,23 +3,31 @@ import { NextResponse } from 'next/server';
 import { supabase } from '@/utils/supabaseClient';
 
 // Proof of Curiosity token for special access (same as ChatContainer.tsx)
-const POC = process.env.NEXT_PUBLIC_PROOF_OF_CURIOSITY_TOKEN?.toLowerCase() || '';
+const POC =
+  process.env.NEXT_PUBLIC_PROOF_OF_CURIOSITY_TOKEN?.toLowerCase() || '';
 
 export async function POST(request: Request) {
   const body = await request.json();
   const { content, attachments, sender_wallet_id, chat_group_id } = body;
 
   if (!content || !sender_wallet_id || !chat_group_id) {
-    return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+    return NextResponse.json(
+      { error: 'Missing required fields' },
+      { status: 400 },
+    );
   }
 
   try {
     // ✅ SECURITY: Step 1 - Verify authenticated session
-    const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+    const { data: sessionData, error: sessionError } =
+      await supabase.auth.getSession();
 
     if (sessionError || !sessionData?.session) {
       console.error('❌ Chat message POST: No authenticated session');
-      return NextResponse.json({ error: 'Unauthorized - Please sign in' }, { status: 401 });
+      return NextResponse.json(
+        { error: 'Unauthorized - Please sign in' },
+        { status: 401 },
+      );
     }
 
     // ✅ SECURITY: Step 2 - Verify sender wallet matches authenticated user
@@ -29,12 +37,19 @@ export async function POST(request: Request) {
       .eq('user_id', sessionData.session.user.id)
       .single();
 
-    if (!userProfile || userProfile.wallet_address.toLowerCase() !== sender_wallet_id.toLowerCase()) {
+    if (
+      !userProfile ||
+      userProfile.wallet_address.toLowerCase() !==
+        sender_wallet_id.toLowerCase()
+    ) {
       console.error('❌ Chat message POST: Wallet mismatch', {
         authenticated: userProfile?.wallet_address,
-        claimed: sender_wallet_id
+        claimed: sender_wallet_id,
       });
-      return NextResponse.json({ error: 'Unauthorized - Wallet mismatch' }, { status: 403 });
+      return NextResponse.json(
+        { error: 'Unauthorized - Wallet mismatch' },
+        { status: 403 },
+      );
     }
 
     console.log('✅ Chat message POST: User authenticated:', sender_wallet_id);
@@ -47,7 +62,10 @@ export async function POST(request: Request) {
       .single();
 
     if (groupError || !groupData) {
-      return NextResponse.json({ error: 'Invalid chat group' }, { status: 400 });
+      return NextResponse.json(
+        { error: 'Invalid chat group' },
+        { status: 400 },
+      );
     }
 
     const required_token = groupData.required_token?.toLowerCase() || '';
@@ -55,7 +73,7 @@ export async function POST(request: Request) {
 
     console.log('📋 Chat message POST: Validating access to', groupData.title, {
       required_token: required_token.slice(0, 10) + '...',
-      pod_id: pod_id
+      pod_id: pod_id,
     });
 
     // ✅ SECURITY: Step 3 - Check if user has permission to send messages
@@ -91,7 +109,7 @@ export async function POST(request: Request) {
       if (membership) {
         console.log('📋 Chat message POST: Found pod membership:', {
           hat_id: membership.hat_id?.slice(0, 10) + '...',
-          type: membership.membership_type
+          type: membership.membership_type,
         });
 
         // Get role permissions for this HAT
@@ -103,16 +121,17 @@ export async function POST(request: Request) {
           .single();
 
         if (rolePermissions) {
-          const permissions = typeof rolePermissions.permissions === 'string'
-            ? JSON.parse(rolePermissions.permissions)
-            : rolePermissions.permissions;
+          const permissions =
+            typeof rolePermissions.permissions === 'string'
+              ? JSON.parse(rolePermissions.permissions)
+              : rolePermissions.permissions;
 
           hasPermission = permissions.chatAccess === true;
 
           console.log('🔐 Chat message POST: Permission check:', {
             role: rolePermissions.role_name,
             chatAccess: permissions.chatAccess,
-            hasPermission
+            hasPermission,
           });
         }
       }
@@ -121,12 +140,18 @@ export async function POST(request: Request) {
     // ✅ SECURITY: Step 4 - Reject if no permission
     if (!hasPermission) {
       console.error('❌ Chat message POST: User lacks chatAccess permission');
-      return NextResponse.json({
-        error: 'Forbidden - You do not have permission to send messages in this chat'
-      }, { status: 403 });
+      return NextResponse.json(
+        {
+          error:
+            'Forbidden - You do not have permission to send messages in this chat',
+        },
+        { status: 403 },
+      );
     }
 
-    console.log('✅ Chat message POST: Permission validated, inserting message');
+    console.log(
+      '✅ Chat message POST: Permission validated, inserting message',
+    );
 
     // Insert the new message with its associated chat_group_id and inherited required_token
     const { data, error } = await supabase
@@ -150,7 +175,6 @@ export async function POST(request: Request) {
 
     console.log('✅ Chat message POST: Message sent successfully');
     return NextResponse.json({ message: data });
-
   } catch (error: any) {
     console.error('❌ Chat message POST: Unexpected error:', error);
     return NextResponse.json({ error: error.message }, { status: 500 });

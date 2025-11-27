@@ -30,12 +30,14 @@ export class AgreementIPFSService {
     agreementText: string,
     agreementId: string,
     podId?: string,
-    roleType?: 'leader' | 'member'
+    roleType?: 'leader' | 'member',
   ): Promise<string> {
     const jwt = process.env.NEXT_PUBLIC_PINATA_JWT;
 
     if (!jwt) {
-      throw new Error('Pinata JWT not configured - add NEXT_PUBLIC_PINATA_JWT to environment variables');
+      throw new Error(
+        'Pinata JWT not configured - add NEXT_PUBLIC_PINATA_JWT to environment variables',
+      );
     }
 
     if (!agreementText || agreementText.trim().length === 0) {
@@ -46,7 +48,7 @@ export class AgreementIPFSService {
       console.log('📤 Uploading agreement to IPFS...', {
         agreementId,
         textLength: agreementText.length,
-        podId
+        podId,
       });
 
       // Create metadata object
@@ -56,37 +58,42 @@ export class AgreementIPFSService {
         pod_id: podId,
         role_type: roleType,
         created_at: new Date().toISOString(),
-        version: '1.0'
+        version: '1.0',
       };
 
-      const response = await fetch(`${this.PINATA_API_URL}/pinning/pinJSONToIPFS`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${jwt}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          pinataContent: metadata,
-          pinataMetadata: {
-            name: `agreement-${agreementId}-${Date.now()}`,
-            keyvalues: {
-              type: 'pod_agreement',
-              agreement_id: agreementId,
-              pod_id: podId || 'unknown',
-              role_type: roleType || 'member',
-              created: new Date().toISOString()
-            }
+      const response = await fetch(
+        `${this.PINATA_API_URL}/pinning/pinJSONToIPFS`,
+        {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${jwt}`,
+            'Content-Type': 'application/json',
           },
-          pinataOptions: {
-            cidVersion: 1 // Use CIDv1 for better compatibility
-          }
-        })
-      });
+          body: JSON.stringify({
+            pinataContent: metadata,
+            pinataMetadata: {
+              name: `agreement-${agreementId}-${Date.now()}`,
+              keyvalues: {
+                type: 'pod_agreement',
+                agreement_id: agreementId,
+                pod_id: podId || 'unknown',
+                role_type: roleType || 'member',
+                created: new Date().toISOString(),
+              },
+            },
+            pinataOptions: {
+              cidVersion: 1, // Use CIDv1 for better compatibility
+            },
+          }),
+        },
+      );
 
       if (!response.ok) {
         const errorText = await response.text();
         console.error('❌ Pinata upload failed:', errorText);
-        throw new Error(`Pinata API error: ${response.status} ${response.statusText}`);
+        throw new Error(
+          `Pinata API error: ${response.status} ${response.statusText}`,
+        );
       }
 
       const data: PinataResponse = await response.json();
@@ -95,7 +102,9 @@ export class AgreementIPFSService {
       return data.IpfsHash;
     } catch (error: any) {
       console.error('Error uploading agreement to IPFS:', error);
-      throw new Error(`Failed to upload agreement to IPFS: ${error.message || error}`);
+      throw new Error(
+        `Failed to upload agreement to IPFS: ${error.message || error}`,
+      );
     }
   }
 
@@ -124,7 +133,9 @@ export class AgreementIPFSService {
       return metadata.agreement_text;
     } catch (error: any) {
       console.error('Error fetching agreement from IPFS:', error);
-      throw new Error(`Failed to fetch agreement from IPFS: ${error.message || error}`);
+      throw new Error(
+        `Failed to fetch agreement from IPFS: ${error.message || error}`,
+      );
     }
   }
 

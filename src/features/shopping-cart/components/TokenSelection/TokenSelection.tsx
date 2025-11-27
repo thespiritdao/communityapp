@@ -51,7 +51,7 @@ export interface TokenSelectionProps {
 
 /**
  * TokenSelection component for choosing between available payment tokens
- * 
+ *
  * Features:
  * - Radio button selection between tokens
  * - Visual token icons and symbols
@@ -63,7 +63,7 @@ export const TokenSelection: React.FC<TokenSelectionProps> = ({
   onTokenChange,
   tokenOptions,
   disabled = false,
-  className = ''
+  className = '',
 }) => {
   return (
     <TokenSelectionContainer className={className}>
@@ -77,10 +77,7 @@ export const TokenSelection: React.FC<TokenSelectionProps> = ({
             onChange={() => onTokenChange(token)}
             disabled={disabled}
           />
-          <TokenImage
-            src={token.image}
-            alt={token.symbol}
-          />
+          <TokenImage src={token.image} alt={token.symbol} />
           <TokenSymbol>{token.symbol}</TokenSymbol>
         </TokenRadioLabel>
       ))}

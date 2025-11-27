@@ -16,25 +16,25 @@ const SYNC_HATS_ABI = [
     type: 'function',
     inputs: [
       { name: 'account', type: 'address' },
-      { name: 'hatId', type: 'uint256' }
+      { name: 'hatId', type: 'uint256' },
     ],
     outputs: [{ name: '', type: 'uint256' }],
-    stateMutability: 'view'
+    stateMutability: 'view',
   },
   {
     name: 'isActive',
     type: 'function',
     inputs: [{ name: 'hatId', type: 'uint256' }],
     outputs: [{ name: '', type: 'bool' }],
-    stateMutability: 'view'
+    stateMutability: 'view',
   },
   {
     name: 'uri',
     type: 'function',
     inputs: [{ name: 'hatId', type: 'uint256' }],
     outputs: [{ name: '', type: 'string' }],
-    stateMutability: 'view'
-  }
+    stateMutability: 'view',
+  },
 ] as const;
 
 export interface SyncResult {
@@ -67,7 +67,7 @@ class HatSyncService {
   constructor() {
     this.publicClient = createPublicClient({
       chain: base,
-      transport: http()
+      transport: http(),
     });
   }
 
@@ -76,7 +76,7 @@ class HatSyncService {
    */
   startPeriodicSync(intervalHours = 24): void {
     this.syncInterval = intervalHours * 60 * 60 * 1000;
-    
+
     if (this.syncTimer) {
       clearInterval(this.syncTimer);
     }
@@ -111,7 +111,7 @@ class HatSyncService {
         updated: 0,
         errors: 0,
         duration: 0,
-        details: { podsProcessed: [], updatedPods: [], errorPods: [] }
+        details: { podsProcessed: [], updatedPods: [], errorPods: [] },
       };
     }
 
@@ -131,7 +131,7 @@ class HatSyncService {
         errors: 0,
         podsProcessed: [] as string[],
         updatedPods: [] as string[],
-        errorPods: [] as string[]
+        errorPods: [] as string[],
       };
 
       // Process each pod
@@ -141,20 +141,19 @@ class HatSyncService {
           results.podsProcessed.push(pod.id);
 
           const syncResult = await this.syncPodHats(pod);
-          
+
           if (syncResult.updated) {
             results.updated++;
             results.updatedPods.push(pod.id);
           }
-
         } catch (error) {
           results.errors++;
           results.errorPods.push(pod.id);
-          
+
           logHatError(error, {
             userAddress: 'system',
             hatId: pod.management_hat_id || 'unknown',
-            action: 'sync_pod_hats'
+            action: 'sync_pod_hats',
           });
         }
       }
@@ -171,8 +170,8 @@ class HatSyncService {
         details: {
           podsProcessed: results.podsProcessed,
           updatedPods: results.updatedPods,
-          errorPods: results.errorPods
-        }
+          errorPods: results.errorPods,
+        },
       };
 
       // Log sync completion
@@ -185,19 +184,18 @@ class HatSyncService {
         details: {
           processed: results.processed,
           updated: results.updated,
-          errors: results.errors
-        }
+          errors: results.errors,
+        },
       });
 
       console.log('✅ HAT synchronization completed:', {
         duration: `${duration}ms`,
         processed: results.processed,
         updated: results.updated,
-        errors: results.errors
+        errors: results.errors,
       });
 
       return syncResult;
-
     } finally {
       this.isRunning = false;
     }
@@ -217,7 +215,7 @@ class HatSyncService {
           address: HATS_CONFIG.CONTRACT_ADDRESS,
           abi: SYNC_HATS_ABI,
           functionName: 'isActive',
-          args: [BigInt(pod.management_hat_id)]
+          args: [BigInt(pod.management_hat_id)],
         });
 
         // Update pod metadata with current HAT status
@@ -236,10 +234,12 @@ class HatSyncService {
           address: HATS_CONFIG.CONTRACT_ADDRESS,
           abi: SYNC_HATS_ABI,
           functionName: 'isActive',
-          args: [BigInt(pod.membership_hat_id)]
+          args: [BigInt(pod.membership_hat_id)],
         });
 
-        const currentMetadata = JSON.parse(updates.pod_metadata || pod.pod_metadata || '{}');
+        const currentMetadata = JSON.parse(
+          updates.pod_metadata || pod.pod_metadata || '{}',
+        );
         if (currentMetadata.membership_hat_active !== isActive) {
           currentMetadata.membership_hat_active = isActive;
           currentMetadata.last_sync = new Date().toISOString();
@@ -256,9 +256,8 @@ class HatSyncService {
 
       return {
         updated: hasUpdates,
-        details: updates
+        details: updates,
       };
-
     } catch (error) {
       console.error(`❌ Failed to sync HATs for pod ${pod.name}:`, error);
       throw error;
@@ -268,7 +267,9 @@ class HatSyncService {
   /**
    * Sync specific HAT on user action (e.g., when loading management page)
    */
-  async syncPodOnDemand(podId: string): Promise<{ success: boolean; details: any }> {
+  async syncPodOnDemand(
+    podId: string,
+  ): Promise<{ success: boolean; details: any }> {
     const startTime = Date.now();
 
     try {
@@ -290,21 +291,20 @@ class HatSyncService {
         userAddress: 'user_triggered',
         details: {
           podId,
-          updated: syncResult.updated
-        }
+          updated: syncResult.updated,
+        },
       });
 
       return {
         success: true,
-        details: syncResult
+        details: syncResult,
       };
-
     } catch (error) {
       const duration = Date.now() - startTime;
-      
+
       logHatError(error, {
         userAddress: 'user_triggered',
-        action: 'on_demand_sync'
+        action: 'on_demand_sync',
       });
 
       logHatTransaction({
@@ -313,12 +313,16 @@ class HatSyncService {
         success: false,
         duration,
         userAddress: 'user_triggered',
-        details: { error: error instanceof Error ? error.message : 'Unknown error' }
+        details: {
+          error: error instanceof Error ? error.message : 'Unknown error',
+        },
       });
 
       return {
         success: false,
-        details: { error: error instanceof Error ? error.message : 'Unknown error' }
+        details: {
+          error: error instanceof Error ? error.message : 'Unknown error',
+        },
       };
     }
   }
@@ -330,10 +334,11 @@ class HatSyncService {
     return {
       isActive: this.syncTimer !== null,
       lastSync: this.lastSync?.toISOString() || null,
-      nextSync: this.syncTimer && this.lastSync 
-        ? new Date(this.lastSync.getTime() + this.syncInterval).toISOString()
-        : null,
-      syncInterval: this.syncInterval
+      nextSync:
+        this.syncTimer && this.lastSync
+          ? new Date(this.lastSync.getTime() + this.syncInterval).toISOString()
+          : null,
+      syncInterval: this.syncInterval,
     };
   }
 
@@ -350,14 +355,12 @@ class HatSyncService {
 export const hatSyncService = new HatSyncService();
 
 // Convenience functions
-export const startHatSync = (intervalHours = 24) => 
+export const startHatSync = (intervalHours = 24) =>
   hatSyncService.startPeriodicSync(intervalHours);
 
-export const stopHatSync = () => 
-  hatSyncService.stopPeriodicSync();
+export const stopHatSync = () => hatSyncService.stopPeriodicSync();
 
-export const syncPodNow = (podId: string) => 
+export const syncPodNow = (podId: string) =>
   hatSyncService.syncPodOnDemand(podId);
 
-export const syncAllHatsNow = () => 
-  hatSyncService.triggerImmediateSync();
+export const syncAllHatsNow = () => hatSyncService.triggerImmediateSync();

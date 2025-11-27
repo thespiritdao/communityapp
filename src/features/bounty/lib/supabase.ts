@@ -13,10 +13,10 @@ export interface Bounty {
   status: 'open' | 'in-progress' | 'completed' | 'cancelled' | 'draft';
   creator_address: string;
   required_pod_id?: string;
-  pod_id?: string;  // Pod this bounty belongs to
-  funding_source?: 'personal_wallet' | 'pod_treasury';  // Funding source for bounty
+  pod_id?: string; // Pod this bounty belongs to
+  funding_source?: 'personal_wallet' | 'pod_treasury'; // Funding source for bounty
   ipfs_hash?: string;
-  onchain_id?: number;  // On-chain bounty ID from BountyManagerV2
+  onchain_id?: number; // On-chain bounty ID from BountyManagerV2
   created_at: string;
   updated_at: string;
 }
@@ -62,7 +62,14 @@ export interface BountyNotification {
   recipient_address: string;
   bounty_id?: string;
   bid_id?: string;
-  notification_type: 'bid_submitted' | 'bid_approved' | 'bid_rejected' | 'review_requested' | 'deliverable_due' | 'milestone_completed' | 'bounty_completed';
+  notification_type:
+    | 'bid_submitted'
+    | 'bid_approved'
+    | 'bid_rejected'
+    | 'review_requested'
+    | 'deliverable_due'
+    | 'milestone_completed'
+    | 'bounty_completed';
   title: string;
   message: string;
   is_read: boolean;
@@ -86,7 +93,9 @@ export interface Milestone {
 export const bountyApi = {
   // Get all bounties
   async getAllBounties(): Promise<Bounty[]> {
-    console.log('📥 bountyApi.getAllBounties: Fetching all bounties from database...');
+    console.log(
+      '📥 bountyApi.getAllBounties: Fetching all bounties from database...',
+    );
     const { data, error } = await supabase
       .from('bounties')
       .select('*')
@@ -97,8 +106,17 @@ export const bountyApi = {
       throw error;
     }
 
-    console.log(`✅ bountyApi.getAllBounties: Fetched ${data?.length || 0} bounties from database`);
-    console.log('📋 Raw bounty IDs:', data?.map(b => ({ id: b.id, title: b.title, created_at: b.created_at })));
+    console.log(
+      `✅ bountyApi.getAllBounties: Fetched ${data?.length || 0} bounties from database`,
+    );
+    console.log(
+      '📋 Raw bounty IDs:',
+      data?.map((b) => ({
+        id: b.id,
+        title: b.title,
+        created_at: b.created_at,
+      })),
+    );
     return data || [];
   },
 
@@ -119,7 +137,9 @@ export const bountyApi = {
   },
 
   // Create new bounty
-  async createBounty(bountyData: Omit<Bounty, 'id' | 'created_at' | 'updated_at'>): Promise<Bounty> {
+  async createBounty(
+    bountyData: Omit<Bounty, 'id' | 'created_at' | 'updated_at'>,
+  ): Promise<Bounty> {
     const { data, error } = await supabase
       .from('bounties')
       .insert([bountyData])
@@ -135,7 +155,10 @@ export const bountyApi = {
   },
 
   // Update bounty status
-  async updateBountyStatus(id: string, status: Bounty['status']): Promise<void> {
+  async updateBountyStatus(
+    id: string,
+    status: Bounty['status'],
+  ): Promise<void> {
     const { error } = await supabase
       .from('bounties')
       .update({ status, updated_at: new Date().toISOString() })
@@ -222,13 +245,16 @@ export const bidApi = {
         // Use upsert to handle potential race conditions
         const { error: upsertError } = await supabase
           .from('user_profiles')
-          .upsert({
-            wallet_address: normalizedAddress,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          }, {
-            onConflict: 'wallet_address'
-          });
+          .upsert(
+            {
+              wallet_address: normalizedAddress,
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString(),
+            },
+            {
+              onConflict: 'wallet_address',
+            },
+          );
 
         if (upsertError) {
           console.error('❌ Failed to upsert user profile:', upsertError);
@@ -236,12 +262,18 @@ export const bidApi = {
           const { error: insertError } = await supabase
             .from('user_profiles')
             .insert({
-              wallet_address: normalizedAddress
+              wallet_address: normalizedAddress,
             });
 
-          if (insertError && insertError.code !== '23505') { // 23505 is duplicate key
-            console.error('❌ Failed to create user profile on retry:', insertError);
-            throw new Error('Unable to create user profile. Please try refreshing and signing in again.');
+          if (insertError && insertError.code !== '23505') {
+            // 23505 is duplicate key
+            console.error(
+              '❌ Failed to create user profile on retry:',
+              insertError,
+            );
+            throw new Error(
+              'Unable to create user profile. Please try refreshing and signing in again.',
+            );
           }
         }
         console.log('✅ User profile created/upserted for bid submission');
@@ -255,7 +287,10 @@ export const bidApi = {
 
     // DEDUPLICATION: Check if bid already exists with same transaction hash
     if (bidData.placement_tx_hash) {
-      console.log('🔍 Checking for duplicate bid with txHash:', bidData.placement_tx_hash);
+      console.log(
+        '🔍 Checking for duplicate bid with txHash:',
+        bidData.placement_tx_hash,
+      );
 
       const { data: existingBid, error: checkError } = await supabase
         .from('bids')
@@ -271,7 +306,10 @@ export const bidApi = {
       }
 
       if (existingBid) {
-        console.log('⚠️ Bid already exists with this transaction hash:', existingBid.id);
+        console.log(
+          '⚠️ Bid already exists with this transaction hash:',
+          existingBid.id,
+        );
         console.log('✅ Returning existing bid instead of creating duplicate');
         return existingBid as Bid;
       }
@@ -280,14 +318,14 @@ export const bidApi = {
     // Ensure bidder_address is normalized before inserting
     const bidDataWithNormalizedAddress = {
       ...bidData,
-      bidder_address: normalizedAddress
+      bidder_address: normalizedAddress,
     };
 
     console.log('💾 Inserting new bid to database:', {
       bounty_id: bidDataWithNormalizedAddress.bounty_id,
       bidder: normalizedAddress,
       txHash: bidDataWithNormalizedAddress.placement_tx_hash,
-      bidIndex: bidDataWithNormalizedAddress.onchain_bid_index
+      bidIndex: bidDataWithNormalizedAddress.onchain_bid_index,
     });
 
     const { data, error } = await supabase
@@ -306,7 +344,10 @@ export const bidApi = {
   },
 
   // Update an existing bid (for editing)
-  async updateBid(id: string, bidData: Partial<Omit<Bid, 'id' | 'submitted_at' | 'bidder_address'>>): Promise<Bid> {
+  async updateBid(
+    id: string,
+    bidData: Partial<Omit<Bid, 'id' | 'submitted_at' | 'bidder_address'>>,
+  ): Promise<Bid> {
     const { data, error } = await supabase
       .from('bids')
       .update(bidData)
@@ -323,11 +364,16 @@ export const bidApi = {
   },
 
   // Update bid status
-  async updateBidStatus(id: string, status: Bid['status'], reviewer?: string, finalApprover?: string): Promise<void> {
-    const updateData: any = { 
-      status, 
+  async updateBidStatus(
+    id: string,
+    status: Bid['status'],
+    reviewer?: string,
+    finalApprover?: string,
+  ): Promise<void> {
+    const updateData: any = {
+      status,
       reviewed_at: new Date().toISOString(),
-      reviewed_by: reviewer || finalApprover
+      reviewed_by: reviewer || finalApprover,
     };
 
     if (reviewer) updateData.reviewer_address = reviewer;
@@ -371,7 +417,10 @@ export const bidApi = {
         .eq('id', bid.bounty_id);
 
       if (bountyError) {
-        console.error('Error updating bounty status to in-progress:', bountyError);
+        console.error(
+          'Error updating bounty status to in-progress:',
+          bountyError,
+        );
         throw bountyError;
       }
 
@@ -417,7 +466,9 @@ export const bidApi = {
 // Bid Review API functions
 export const bidReviewApi = {
   // Create a bid review
-  async createReview(reviewData: Omit<BidReview, 'id' | 'created_at' | 'updated_at'>): Promise<BidReview> {
+  async createReview(
+    reviewData: Omit<BidReview, 'id' | 'created_at' | 'updated_at'>,
+  ): Promise<BidReview> {
     const { data, error } = await supabase
       .from('bid_reviews')
       .insert([reviewData])
@@ -449,7 +500,11 @@ export const bidReviewApi = {
   },
 
   // Update review status
-  async updateReviewStatus(id: string, status: BidReview['status'], comments?: string): Promise<void> {
+  async updateReviewStatus(
+    id: string,
+    status: BidReview['status'],
+    comments?: string,
+  ): Promise<void> {
     const { error } = await supabase
       .from('bid_reviews')
       .update({ status, comments, updated_at: new Date().toISOString() })
@@ -465,7 +520,9 @@ export const bidReviewApi = {
 // Notification API functions
 export const notificationApi = {
   // Create a notification
-  async createNotification(notificationData: Omit<BountyNotification, 'id' | 'created_at'>): Promise<BountyNotification> {
+  async createNotification(
+    notificationData: Omit<BountyNotification, 'id' | 'created_at'>,
+  ): Promise<BountyNotification> {
     const { data, error } = await supabase
       .from('bounty_notifications')
       .insert([notificationData])
@@ -481,7 +538,9 @@ export const notificationApi = {
   },
 
   // Get notifications for a user
-  async getNotificationsForUser(recipientAddress: string): Promise<BountyNotification[]> {
+  async getNotificationsForUser(
+    recipientAddress: string,
+  ): Promise<BountyNotification[]> {
     const { data, error } = await supabase
       .from('bounty_notifications')
       .select('*')
@@ -529,7 +588,9 @@ export const notificationApi = {
 // Milestone API functions
 export const milestoneApi = {
   // Create milestones for a bid
-  async createMilestones(milestonesData: Omit<Milestone, 'id' | 'created_at'>[]): Promise<Milestone[]> {
+  async createMilestones(
+    milestonesData: Omit<Milestone, 'id' | 'created_at'>[],
+  ): Promise<Milestone[]> {
     const { data, error } = await supabase
       .from('milestones')
       .insert(milestonesData)
@@ -560,14 +621,19 @@ export const milestoneApi = {
   },
 
   // Update milestone status
-  async updateMilestoneStatus(id: string, status: Milestone['status'], completedBy?: string, reviewComments?: string): Promise<void> {
+  async updateMilestoneStatus(
+    id: string,
+    status: Milestone['status'],
+    completedBy?: string,
+    reviewComments?: string,
+  ): Promise<void> {
     const updateData: any = { status };
-    
+
     if (status === 'completed') {
       updateData.completed_at = new Date().toISOString();
       if (completedBy) updateData.completed_by = completedBy;
     }
-    
+
     if (reviewComments) updateData.review_comments = reviewComments;
 
     const { error } = await supabase
@@ -583,7 +649,9 @@ export const milestoneApi = {
 };
 
 // Helper function to convert frontend bounty format to database format
-export const convertBountyToDb = (bounty: any): Omit<Bounty, 'id' | 'created_at' | 'updated_at'> => {
+export const convertBountyToDb = (
+  bounty: any,
+): Omit<Bounty, 'id' | 'created_at' | 'updated_at'> => {
   return {
     title: bounty.title,
     description: bounty.description,
@@ -616,10 +684,10 @@ export const convertBountyFromDb = (bounty: Bounty): any => {
     createdAt: new Date(bounty.created_at),
     creator_address: bounty.creator_address,
     podId: bounty.required_pod_id,
-    pod_id: bounty.pod_id,  // Include pod_id
-    funding_source: bounty.funding_source,  // Include funding_source
+    pod_id: bounty.pod_id, // Include pod_id
+    funding_source: bounty.funding_source, // Include funding_source
     ipfs_hash: bounty.ipfs_hash,
-    onchain_id: bounty.onchain_id,  // Map on-chain bounty ID
+    onchain_id: bounty.onchain_id, // Map on-chain bounty ID
   };
 };
 
@@ -648,12 +716,14 @@ export const convertBidToDb = (bid: any): Omit<Bid, 'id' | 'submitted_at'> => {
 };
 
 // Helper function to convert database bid format to frontend format
-export const convertBidFromDb = (bid: Bid & { user_profile?: { first_name?: string; last_name?: string } }): any => {
+export const convertBidFromDb = (
+  bid: Bid & { user_profile?: { first_name?: string; last_name?: string } },
+): any => {
   console.log('🔍 convertBidFromDb - Original bid data:', {
     proposed_amount: bid.proposed_amount,
     proposed_amount_type: typeof bid.proposed_amount,
     payment_details: bid.payment_details,
-    payment_details_type: typeof bid.payment_details
+    payment_details_type: typeof bid.payment_details,
   });
 
   // Parse deliverables - handle various formats
@@ -666,12 +736,17 @@ export const convertBidFromDb = (bid: Bid & { user_profile?: { first_name?: stri
         parsedDeliverables = Array.isArray(parsed) ? parsed : [];
       } catch (error) {
         // If it's not valid JSON, treat it as a plain string and create a single deliverable
-        console.log('Deliverables is plain string, converting to array format:', bid.deliverables);
-        parsedDeliverables = [{
-          description: bid.deliverables,
-          due_date: new Date().toISOString().split('T')[0], // Default to today
-          payment_amount: '0'
-        }];
+        console.log(
+          'Deliverables is plain string, converting to array format:',
+          bid.deliverables,
+        );
+        parsedDeliverables = [
+          {
+            description: bid.deliverables,
+            due_date: new Date().toISOString().split('T')[0], // Default to today
+            payment_amount: '0',
+          },
+        ];
       }
     } else if (Array.isArray(bid.deliverables)) {
       parsedDeliverables = bid.deliverables;
@@ -685,19 +760,26 @@ export const convertBidFromDb = (bid: Bid & { user_profile?: { first_name?: stri
       try {
         parsedPaymentDetails = JSON.parse(bid.payment_details);
       } catch (error) {
-        console.log('Payment details is plain string, using empty object:', bid.payment_details);
+        console.log(
+          'Payment details is plain string, using empty object:',
+          bid.payment_details,
+        );
         parsedPaymentDetails = {};
       }
     } else if (typeof bid.payment_details === 'object') {
       parsedPaymentDetails = bid.payment_details;
     }
-    
+
     // Ensure all numeric values in payment details are strings
     if (parsedPaymentDetails.upfrontAmount !== undefined) {
-      parsedPaymentDetails.upfrontAmount = String(parsedPaymentDetails.upfrontAmount);
+      parsedPaymentDetails.upfrontAmount = String(
+        parsedPaymentDetails.upfrontAmount,
+      );
     }
     if (parsedPaymentDetails.completionAmount !== undefined) {
-      parsedPaymentDetails.completionAmount = String(parsedPaymentDetails.completionAmount);
+      parsedPaymentDetails.completionAmount = String(
+        parsedPaymentDetails.completionAmount,
+      );
     }
   }
 
@@ -732,8 +814,8 @@ export const convertBidFromDb = (bid: Bid & { user_profile?: { first_name?: stri
     proposedAmount: convertedBid.proposedAmount,
     proposedAmount_type: typeof convertedBid.proposedAmount,
     paymentDetails: convertedBid.paymentDetails,
-    paymentDetails_type: typeof convertedBid.paymentDetails
+    paymentDetails_type: typeof convertedBid.paymentDetails,
   });
 
   return convertedBid;
-}; 
+};

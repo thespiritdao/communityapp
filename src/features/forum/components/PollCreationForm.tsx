@@ -26,7 +26,7 @@ interface PollCreationFormProps {
 export function PollCreationForm({
   threadId,
   onPollCreated,
-  onCancel
+  onCancel,
 }: PollCreationFormProps) {
   const { address } = useAccount();
   const [question, setQuestion] = useState('');
@@ -68,7 +68,7 @@ export function PollCreationForm({
       return;
     }
 
-    const validOptions = options.filter(opt => opt.trim());
+    const validOptions = options.filter((opt) => opt.trim());
     if (validOptions.length < 2) {
       setError('Please provide at least 2 options');
       return;
@@ -81,10 +81,10 @@ export function PollCreationForm({
       const result = await createPoll(
         threadId,
         question.trim(),
-        validOptions.map(opt => opt.trim()),
+        validOptions.map((opt) => opt.trim()),
         address,
         allowMultiple,
-        hasExpiration ? parseInt(expiresInDays) : undefined
+        hasExpiration ? parseInt(expiresInDays) : undefined,
       );
 
       if (result.success && result.pollId) {
@@ -201,16 +201,14 @@ export function PollCreationForm({
 
           {/* Error */}
           {error && (
-            <p className="text-sm" style={{ color: '#8B3A3A' }}>{error}</p>
+            <p className="text-sm" style={{ color: '#8B3A3A' }}>
+              {error}
+            </p>
           )}
 
           {/* Actions */}
           <div className="flex gap-2">
-            <Button
-              type="submit"
-              disabled={isSubmitting}
-              className="flex-1"
-            >
+            <Button type="submit" disabled={isSubmitting} className="flex-1">
               {isSubmitting ? 'Creating...' : 'Create Poll'}
             </Button>
             {onCancel && (

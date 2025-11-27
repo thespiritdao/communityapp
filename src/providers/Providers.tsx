@@ -1,13 +1,13 @@
 // src/providers/Providers.tsx
-"use client";
-import type { ReactNode } from "react";
-import { WagmiProvider } from "wagmi";
-import { wagmiConfig } from "@/config/wagmi.client";
-import { RainbowKitProvider } from "@rainbow-me/rainbowkit";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { OnchainKitProvider } from "@coinbase/onchainkit";
-import { base } from "viem/chains";
-import { ProfilesProvider } from "../features/identity/context/ProfilesProvider";
+'use client';
+import type { ReactNode } from 'react';
+import { WagmiProvider } from 'wagmi';
+import { wagmiConfig } from '@/config/wagmi.client';
+import { RainbowKitProvider } from '@rainbow-me/rainbowkit';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { OnchainKitProvider } from '@coinbase/onchainkit';
+import { base } from 'viem/chains';
+import { ProfilesProvider } from '../features/identity/context/ProfilesProvider';
 
 function makeQueryClient() {
   return new QueryClient({
@@ -35,7 +35,7 @@ function getQueryClient() {
 
 export default function Providers({ children }: { children: ReactNode }) {
   const queryClient = getQueryClient();
-  
+
   return (
     <WagmiProvider config={wagmiConfig}>
       <QueryClientProvider client={queryClient}>
@@ -44,23 +44,21 @@ export default function Providers({ children }: { children: ReactNode }) {
           chain={base}
           config={{
             appearance: {
-              name: "SpiritDAO",
-              logo: "/spiritdaosymbol.png",
-              mode: "auto",
-              theme: "default",
+              name: 'SpiritDAO',
+              logo: '/spiritdaosymbol.png',
+              mode: 'auto',
+              theme: 'default',
             },
             wallet: {
-              display: "classic",
-              termsUrl: "https://yourapp.com/terms",
-              privacyUrl: "https://yourapp.com/privacy", // FIXED: was "privacUrl"
+              display: 'classic',
+              termsUrl: 'https://yourapp.com/terms',
+              privacyUrl: 'https://yourapp.com/privacy', // FIXED: was "privacUrl"
             },
             paymaster: process.env.NEXT_PUBLIC_PAYMASTER as string,
           }}
         >
           <RainbowKitProvider modalSize="compact">
-            <ProfilesProvider>
-              {children}
-            </ProfilesProvider>
+            <ProfilesProvider>{children}</ProfilesProvider>
           </RainbowKitProvider>
         </OnchainKitProvider>
       </QueryClientProvider>

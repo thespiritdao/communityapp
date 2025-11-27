@@ -130,7 +130,7 @@ export default function CategoryPage() {
       if (error) {
         console.error('Error loading more threads:', error);
       } else {
-        setThreads(prev => [...prev, ...(data || [])]);
+        setThreads((prev) => [...prev, ...(data || [])]);
         setPage(nextPage);
         // If we got fewer threads than requested, there are no more
         setHasMore((data?.length || 0) === THREADS_PER_PAGE);
@@ -163,139 +163,157 @@ export default function CategoryPage() {
       categoryId={typeof categoryId === 'string' ? categoryId : ''}
       fallbackMessage="This category is restricted to specific pod members or token holders."
     >
-    <ForumContainer>
-      <h2 className={styles.categoryTitle}>
-        {/* If categoryName is available, show it; otherwise fallback to the ID */}
-        {categoryName || `Category: ${categoryId}`}
-      </h2>
+      <ForumContainer>
+        <h2 className={styles.categoryTitle}>
+          {/* If categoryName is available, show it; otherwise fallback to the ID */}
+          {categoryName || `Category: ${categoryId}`}
+        </h2>
 
-      {/* Featured Content */}
-      {typeof categoryId === 'string' && (
-        <FeaturedContent categoryId={categoryId} limit={3} />
-      )}
+        {/* Featured Content */}
+        {typeof categoryId === 'string' && (
+          <FeaturedContent categoryId={categoryId} limit={3} />
+        )}
 
-      {/* Optional: Add a "Create Thread" button that pre-fills categoryId */}
-      <div className={styles.threadListHeader}>
-        <button
-          className={styles.newThreadButton}
-          onClick={() => router.push(`/forum/create-thread?categoryId=${categoryId}`)}
-        >
-          Create Thread
-        </button>
-      </div>
+        {/* Optional: Add a "Create Thread" button that pre-fills categoryId */}
+        <div className={styles.threadListHeader}>
+          <button
+            className={styles.newThreadButton}
+            onClick={() =>
+              router.push(`/forum/create-thread?categoryId=${categoryId}`)
+            }
+          >
+            Create Thread
+          </button>
+        </div>
 
-      {threads.length === 0 ? (
-        <p className={styles.emptyState}>No threads found in this category.</p>
-      ) : (
-        <>
-          <ul className={styles.threadList}>
-          {threads.map((thread) => {
-            const profile = profileMap?.[thread.author_address];
-            const authorName = profile
-              ? [profile.first_name, profile.last_name].filter(Boolean).join(' ') || 'Anonymous'
-              : 'Anonymous';
+        {threads.length === 0 ? (
+          <p className={styles.emptyState}>
+            No threads found in this category.
+          </p>
+        ) : (
+          <>
+            <ul className={styles.threadList}>
+              {threads.map((thread) => {
+                const profile = profileMap?.[thread.author_address];
+                const authorName = profile
+                  ? [profile.first_name, profile.last_name]
+                      .filter(Boolean)
+                      .join(' ') || 'Anonymous'
+                  : 'Anonymous';
 
-            // Strip HTML and truncate content to ~150 characters (fits 2 lines)
-            const plainText = stripHtml(thread.content || '');
-            const description = plainText.length > 150
-              ? plainText.substring(0, 150) + '...'
-              : plainText;
+                // Strip HTML and truncate content to ~150 characters (fits 2 lines)
+                const plainText = stripHtml(thread.content || '');
+                const description =
+                  plainText.length > 150
+                    ? plainText.substring(0, 150) + '...'
+                    : plainText;
 
-            return (
-              <li key={thread.id} className={styles.threadItem}>
-                <a href={`/forum/thread/${thread.id}`} className={styles.threadCard}>
-                  <div className={styles.threadTitle}>
-                    {thread.is_pinned && '📌 '}
-                    {thread.title}
-                  </div>
+                return (
+                  <li key={thread.id} className={styles.threadItem}>
+                    <a
+                      href={`/forum/thread/${thread.id}`}
+                      className={styles.threadCard}
+                    >
+                      <div className={styles.threadTitle}>
+                        {thread.is_pinned && '📌 '}
+                        {thread.title}
+                      </div>
 
-                  {/* Thread Description */}
-                  {description && (
-                    <div className={styles.threadDescription}>
-                      {description}
-                    </div>
-                  )}
-
-                  <div className={styles.threadMeta}>
-                    <div className={styles.authorSection}>
-                      {/* Profile Picture */}
-                      {profile?.profile_picture ? (
-                        <img
-                          src={profile.profile_picture}
-                          alt={authorName}
-                          className={styles.authorAvatar}
-                          onClick={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            setSelectedProfile(profile);
-                          }}
-                        />
-                      ) : (
-                        <div
-                          className={styles.authorAvatarPlaceholder}
-                          onClick={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            if (profile) setSelectedProfile(profile);
-                          }}
-                        >
-                          {authorName.charAt(0).toUpperCase()}
+                      {/* Thread Description */}
+                      {description && (
+                        <div className={styles.threadDescription}>
+                          {description}
                         </div>
                       )}
-                      <span
-                        className={styles.authorName}
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          if (profile) setSelectedProfile(profile);
-                        }}
-                      >
-                        {authorName}
-                      </span>
-                    </div>
-                    <span className={styles.threadDate}>
-                      {new Date(thread.created_at).toLocaleDateString()}
-                    </span>
-                  </div>
-                </a>
-              </li>
-            );
-          })}
-        </ul>
 
-          {/* Load More Button */}
-          {hasMore && (
-            <div style={{ display: 'flex', justifyContent: 'center', marginTop: '2rem' }}>
-              <button
-                className={styles.newThreadButton}
-                onClick={loadMoreThreads}
-                disabled={loadingMore}
+                      <div className={styles.threadMeta}>
+                        <div className={styles.authorSection}>
+                          {/* Profile Picture */}
+                          {profile?.profile_picture ? (
+                            <img
+                              src={profile.profile_picture}
+                              alt={authorName}
+                              className={styles.authorAvatar}
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                setSelectedProfile(profile);
+                              }}
+                            />
+                          ) : (
+                            <div
+                              className={styles.authorAvatarPlaceholder}
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                if (profile) setSelectedProfile(profile);
+                              }}
+                            >
+                              {authorName.charAt(0).toUpperCase()}
+                            </div>
+                          )}
+                          <span
+                            className={styles.authorName}
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              if (profile) setSelectedProfile(profile);
+                            }}
+                          >
+                            {authorName}
+                          </span>
+                        </div>
+                        <span className={styles.threadDate}>
+                          {new Date(thread.created_at).toLocaleDateString()}
+                        </span>
+                      </div>
+                    </a>
+                  </li>
+                );
+              })}
+            </ul>
+
+            {/* Load More Button */}
+            {hasMore && (
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'center',
+                  marginTop: '2rem',
+                }}
               >
-                {loadingMore ? 'Loading...' : `Load More (${threads.length} loaded)`}
-              </button>
-            </div>
-          )}
-        </>
-      )}
-      <div>
-        <button
-          className={styles.ForumBackButton}
-          onClick={() => router.push('/forum')}
-          style={{ marginTop: '1rem' }}
-        >
-          Back to Forum
-        </button>
-      </div>
+                <button
+                  className={styles.newThreadButton}
+                  onClick={loadMoreThreads}
+                  disabled={loadingMore}
+                >
+                  {loadingMore
+                    ? 'Loading...'
+                    : `Load More (${threads.length} loaded)`}
+                </button>
+              </div>
+            )}
+          </>
+        )}
+        <div>
+          <button
+            className={styles.ForumBackButton}
+            onClick={() => router.push('/forum')}
+            style={{ marginTop: '1rem' }}
+          >
+            Back to Forum
+          </button>
+        </div>
 
-      {/* Profile Modal */}
-      {selectedProfile && (
-        <ProfileModal
-          user={selectedProfile}
-          users={selectedProfile ? [selectedProfile] : []}
-          onClose={() => setSelectedProfile(null)}
-        />
-      )}
-    </ForumContainer>
+        {/* Profile Modal */}
+        {selectedProfile && (
+          <ProfileModal
+            user={selectedProfile}
+            users={selectedProfile ? [selectedProfile] : []}
+            onClose={() => setSelectedProfile(null)}
+          />
+        )}
+      </ForumContainer>
     </ForumAccessGate>
   );
 }

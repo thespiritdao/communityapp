@@ -1,4 +1,8 @@
-import { useContractRead, useContractWrite, usePrepareContractWrite } from 'wagmi';
+import {
+  useContractRead,
+  useContractWrite,
+  usePrepareContractWrite,
+} from 'wagmi';
 import { parseEther } from 'viem';
 import BountyManagerABI from '@/abis/BountyManager.json';
 
@@ -35,7 +39,9 @@ export const useBountyContract = () => {
     functionName: 'approveCompletion',
   });
 
-  const { write: approveCompletion } = useContractWrite(approveCompletionConfig);
+  const { write: approveCompletion } = useContractWrite(
+    approveCompletionConfig,
+  );
 
   const { config: cancelBountyConfig } = usePrepareContractWrite({
     address: BOUNTY_MANAGER_ADDRESS as `0x${string}`,
@@ -75,7 +81,7 @@ export const useBountyContract = () => {
     category: string,
     value: string,
     token: 'SYSTEM' | 'SELF',
-    reviewers: string[]
+    reviewers: string[],
   ) => {
     if (!createBounty) return;
 
@@ -135,4 +141,4 @@ export const useBountyContract = () => {
     bountyParticipants,
     hasApproved,
   };
-}; 
+};

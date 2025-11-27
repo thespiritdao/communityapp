@@ -11,7 +11,7 @@ import {
   getAccessibleEvents,
   hasEventAccess,
   canRegisterForEvents,
-  logUserIdentity
+  logUserIdentity,
 } from '@/utils/accessControlUtils';
 
 export function usePods() {
@@ -40,13 +40,14 @@ export function usePods() {
     pods,
     loading,
     error,
-    refetch: fetchPods
+    refetch: fetchPods,
   };
 }
 
 export function useEventAccess(event: Event | null) {
   const { address } = useAccount();
-  const { balances: tokenBalances, error: tokenBalancesError } = useTokenBalances();
+  const { balances: tokenBalances, error: tokenBalancesError } =
+    useTokenBalances();
   const { userHats, isLoading: hatPermissionsLoading } = useHatPermissions();
   const [canView, setCanView] = useState(false);
   const [canRegister, setCanRegister] = useState(false);
@@ -68,37 +69,48 @@ export function useEventAccess(event: Event | null) {
       setError(null);
 
       // Check if user is the creator
-      const isCreator = event.creator_address.toLowerCase() === address.toLowerCase();
+      const isCreator =
+        event.creator_address.toLowerCase() === address.toLowerCase();
       setCanManage(isCreator);
 
       // NEW: Use normalized access control system
-      const effectiveTokenBalances = tokenBalances || await fetchTokenBalances(address);
-      const identity = await getUserIdentity(address, effectiveTokenBalances, userHats);
+      const effectiveTokenBalances =
+        tokenBalances || (await fetchTokenBalances(address));
+      const identity = await getUserIdentity(
+        address,
+        effectiveTokenBalances,
+        userHats,
+      );
       logUserIdentity(identity, 'Event Access Check');
 
       // Check if user has access to this specific event
       const hasAccess = await hasEventAccess(event.id, identity);
       console.log(`🎪 User has access to event "${event.title}": ${hasAccess}`);
-      
+
       setCanView(hasAccess);
-      
+
       if (hasAccess) {
         // Check if user can register based on other requirements (date, capacity, etc.)
         try {
-          const canRegisterForEvent = await EventService.canUserRegisterForEvent(event.id, address);
+          const canRegisterForEvent =
+            await EventService.canUserRegisterForEvent(event.id, address);
           const generalRegistrationPermission = canRegisterForEvents(identity);
           setCanRegister(canRegisterForEvent && generalRegistrationPermission);
         } catch (registrationError) {
-          console.warn('Error checking registration permission, defaulting to true:', registrationError);
+          console.warn(
+            'Error checking registration permission, defaulting to true:',
+            registrationError,
+          );
           setCanRegister(canRegisterForEvents(identity));
         }
       } else {
         setCanRegister(false);
       }
-
     } catch (err) {
       console.error('Error in event access check:', err);
-      setError(err instanceof Error ? err.message : 'Failed to check event access');
+      setError(
+        err instanceof Error ? err.message : 'Failed to check event access',
+      );
       setCanView(false);
       setCanRegister(false);
       setCanManage(false);
@@ -118,14 +130,18 @@ export function useEventAccess(event: Event | null) {
     userTokens,
     loading,
     error,
-    recheckAccess: checkAccess
+    recheckAccess: checkAccess,
   };
 }
 
 export function useEventManagementAccess() {
   const { address } = useAccount();
   const { balances: tokenBalances } = useTokenBalances();
-  const { userHats, isLoading: hatPermissionsLoading, userRoles } = useHatPermissions();
+  const {
+    userHats,
+    isLoading: hatPermissionsLoading,
+    userRoles,
+  } = useHatPermissions();
   const { modules, loading: modulesLoading } = usePodModules();
   const [canManageEvents, setCanManageEvents] = useState(false);
   const [canCreateEvents, setCanCreateEvents] = useState(false);
@@ -137,7 +153,9 @@ export function useEventManagementAccess() {
   // This prevents infinite loops while still updating when module data changes
   const eventsModulesKey = useMemo(() => {
     const podIds = Object.keys(modules).sort();
-    return podIds.map(podId => `${podId}:${modules[podId]?.events_enabled ? '1' : '0'}`).join(',');
+    return podIds
+      .map((podId) => `${podId}:${modules[podId]?.events_enabled ? '1' : '0'}`)
+      .join(',');
   }, [modules]);
 
   const checkManagementAccess = useCallback(async () => {
@@ -158,22 +176,28 @@ export function useEventManagementAccess() {
       // Filter pods to only include those where:
       // 1. Pod module for Events is enabled (pod-wide)
       // 2. User has eventCreation permission (role-specific)
-      const podsWithPermission = allPods.filter(pod => {
+      const podsWithPermission = allPods.filter((pod) => {
         // Check 1: Does pod have Events module enabled?
         // Use modules object directly instead of isModuleEnabled function to avoid dependency issues
         const hasEventsModule = modules[pod.id]?.events_enabled ?? false;
 
         // Check 2: Does user have eventCreation permission in this pod?
-        const podRoles = userRoles.filter(role => role.podId === pod.id);
-        const hasPermission = podRoles.some(role => role.permissions?.eventCreation);
+        const podRoles = userRoles.filter((role) => role.podId === pod.id);
+        const hasPermission = podRoles.some(
+          (role) => role.permissions?.eventCreation,
+        );
 
-        console.log(`🎪 [Events] Pod ${pod.name} (${pod.id}): module=${hasEventsModule}, permission=${hasPermission}`);
+        console.log(
+          `🎪 [Events] Pod ${pod.name} (${pod.id}): module=${hasEventsModule}, permission=${hasPermission}`,
+        );
 
         // Must satisfy BOTH conditions (module is pod-wide, overrides permission)
         return hasEventsModule && hasPermission;
       });
 
-      console.log(`🎪 [Events] User can create events in ${podsWithPermission.length}/${allPods.length} pods`);
+      console.log(
+        `🎪 [Events] User can create events in ${podsWithPermission.length}/${allPods.length} pods`,
+      );
 
       // User can manage events if they have permission in at least one pod
       const hasAnyPermission = podsWithPermission.length > 0;
@@ -181,17 +205,26 @@ export function useEventManagementAccess() {
       setCanManageEvents(hasAnyPermission);
       setCanCreateEvents(hasAnyPermission);
       setManagedPods(podsWithPermission);
-
     } catch (err) {
       console.error('Error in event management access check:', err);
-      setError(err instanceof Error ? err.message : 'Failed to check management access');
+      setError(
+        err instanceof Error
+          ? err.message
+          : 'Failed to check management access',
+      );
       setCanManageEvents(false);
       setCanCreateEvents(false);
       setManagedPods([]);
     } finally {
       setLoading(false);
     }
-  }, [address, userRoles, hatPermissionsLoading, modulesLoading, eventsModulesKey]);
+  }, [
+    address,
+    userRoles,
+    hatPermissionsLoading,
+    modulesLoading,
+    eventsModulesKey,
+  ]);
 
   useEffect(() => {
     checkManagementAccess();
@@ -203,7 +236,7 @@ export function useEventManagementAccess() {
     managedPods,
     loading,
     error,
-    recheckAccess: checkManagementAccess
+    recheckAccess: checkManagementAccess,
   };
 }
 
@@ -212,7 +245,7 @@ export function useTokenGatedEvents(userAddress?: string) {
   const { balances: contextTokenBalances } = useTokenBalances();
   const { userHats, isLoading: hatPermissionsLoading } = useHatPermissions();
   const effectiveAddress = userAddress || address;
-  
+
   const [visibleEvents, setVisibleEvents] = useState<Event[]>([]);
   const [registrableEvents, setRegistrableEvents] = useState<Event[]>([]);
   const [registeredEvents, setRegisteredEvents] = useState<Event[]>([]);
@@ -232,25 +265,31 @@ export function useTokenGatedEvents(userAddress?: string) {
       setError(null);
 
       // NEW: Use normalized access control system with RPC
-      const effectiveTokenBalances = (contextTokenBalances && address === effectiveAddress) 
-        ? contextTokenBalances 
-        : await fetchTokenBalances(effectiveAddress);
-      
+      const effectiveTokenBalances =
+        contextTokenBalances && address === effectiveAddress
+          ? contextTokenBalances
+          : await fetchTokenBalances(effectiveAddress);
+
       const identity = await getUserIdentity(
-        effectiveAddress, 
-        effectiveTokenBalances, 
-        address === effectiveAddress ? userHats : []
+        effectiveAddress,
+        effectiveTokenBalances,
+        address === effectiveAddress ? userHats : [],
       );
       logUserIdentity(identity, 'Token Gated Events Check');
 
       // Get accessible events using the new RPC function
       const accessibleEvents = await getAccessibleEvents(identity);
-      console.log(`🎪 User has access to ${accessibleEvents.length} events via RPC`);
-      
-      // Get user's registrations 
-      const userRegistrations = await EventService.getUserRegistrations(effectiveAddress);
-      const registeredEventIds = new Set(userRegistrations.map(reg => reg.event_id));
-      
+      console.log(
+        `🎪 User has access to ${accessibleEvents.length} events via RPC`,
+      );
+
+      // Get user's registrations
+      const userRegistrations =
+        await EventService.getUserRegistrations(effectiveAddress);
+      const registeredEventIds = new Set(
+        userRegistrations.map((reg) => reg.event_id),
+      );
+
       // Process accessible events
       const visible: Event[] = [];
       const registrable: Event[] = [];
@@ -265,19 +304,27 @@ export function useTokenGatedEvents(userAddress?: string) {
 
         // All events from RPC are visible
         visible.push(event);
-        
+
         // Check if user can register for this event
         const now = new Date();
-        const eventEndDate = event.event_end_date 
-          ? new Date(event.event_end_date) 
+        const eventEndDate = event.event_end_date
+          ? new Date(event.event_end_date)
           : new Date(new Date(event.event_date).getTime() + 8 * 60 * 60 * 1000);
         const hasNotEnded = eventEndDate > now;
         const isNotRegistered = !registeredEventIds.has(event.id);
         const isPublished = event.status === 'published';
-        const hasCapacity = !event.max_attendees || (event.registration_count || 0) < event.max_attendees;
+        const hasCapacity =
+          !event.max_attendees ||
+          (event.registration_count || 0) < event.max_attendees;
         const canRegister = canRegisterForEvents(identity);
-        
-        if (hasNotEnded && isNotRegistered && isPublished && hasCapacity && canRegister) {
+
+        if (
+          hasNotEnded &&
+          isNotRegistered &&
+          isPublished &&
+          hasCapacity &&
+          canRegister
+        ) {
           registrable.push(event);
         }
       }
@@ -285,17 +332,24 @@ export function useTokenGatedEvents(userAddress?: string) {
       setVisibleEvents(visible);
       setRegistrableEvents(registrable);
       setRegisteredEvents(registered);
-
     } catch (err) {
       console.error('Error in token gated events check:', err);
-      setError(err instanceof Error ? err.message : 'Failed to check event access');
+      setError(
+        err instanceof Error ? err.message : 'Failed to check event access',
+      );
       setVisibleEvents([]);
       setRegistrableEvents([]);
       setRegisteredEvents([]);
     } finally {
       setLoading(false);
     }
-  }, [effectiveAddress, contextTokenBalances, address, userHats, hatPermissionsLoading]);
+  }, [
+    effectiveAddress,
+    contextTokenBalances,
+    address,
+    userHats,
+    hatPermissionsLoading,
+  ]);
 
   useEffect(() => {
     checkEventAccess();
@@ -307,7 +361,7 @@ export function useTokenGatedEvents(userAddress?: string) {
     registeredEvents,
     loading,
     error,
-    refetch: checkEventAccess
+    refetch: checkEventAccess,
   };
 }
 
@@ -316,7 +370,9 @@ export function useTokenRequirements(requiredTokens: string[]) {
   const { address } = useAccount();
   const { balances: contextTokenBalances } = useTokenBalances();
   const [hasRequiredTokens, setHasRequiredTokens] = useState(false);
-  const [userTokenBalances, setUserTokenBalances] = useState<Record<string, string>>({});
+  const [userTokenBalances, setUserTokenBalances] = useState<
+    Record<string, string>
+  >({});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -339,25 +395,37 @@ export function useTokenRequirements(requiredTokens: string[]) {
       let tokenBalances;
       if (contextTokenBalances) {
         tokenBalances = contextTokenBalances;
-        console.log('🔄 Using cached token balances from context for token requirements');
+        console.log(
+          '🔄 Using cached token balances from context for token requirements',
+        );
       } else {
-        console.log('⚠️ Context balances not available, fetching directly for token requirements');
+        console.log(
+          '⚠️ Context balances not available, fetching directly for token requirements',
+        );
         tokenBalances = await fetchTokenBalances(address);
       }
-      
+
       const balances: Record<string, string> = {};
       let hasAll = true;
 
       for (const tokenId of requiredTokens) {
         let hasToken = false;
-        
+
         // Check against known token IDs (both shorthand and full hat ID)
-        if ((tokenId === 'exec' || tokenId === process.env.NEXT_PUBLIC_EXECUTIVE_POD_LEADER) && tokenBalances.hasExecutivePod) {
+        if (
+          (tokenId === 'exec' ||
+            tokenId === process.env.NEXT_PUBLIC_EXECUTIVE_POD_LEADER) &&
+          tokenBalances.hasExecutivePod
+        ) {
           hasToken = true;
-        } else if ((tokenId === 'event_management' || tokenId === process.env.NEXT_PUBLIC_EVENT_MANAGEMENT) && tokenBalances.hasEventManagement) {
+        } else if (
+          (tokenId === 'event_management' ||
+            tokenId === process.env.NEXT_PUBLIC_EVENT_MANAGEMENT) &&
+          tokenBalances.hasEventManagement
+        ) {
           hasToken = true;
         }
-        
+
         balances[tokenId] = hasToken ? '1' : '0';
         if (!hasToken) {
           hasAll = false;
@@ -366,9 +434,12 @@ export function useTokenRequirements(requiredTokens: string[]) {
 
       setUserTokenBalances(balances);
       setHasRequiredTokens(hasAll);
-
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to check token requirements');
+      setError(
+        err instanceof Error
+          ? err.message
+          : 'Failed to check token requirements',
+      );
       setHasRequiredTokens(false);
     } finally {
       setLoading(false);
@@ -384,6 +455,6 @@ export function useTokenRequirements(requiredTokens: string[]) {
     userTokenBalances,
     loading,
     error,
-    recheck: checkTokenRequirements
+    recheck: checkTokenRequirements,
   };
 }

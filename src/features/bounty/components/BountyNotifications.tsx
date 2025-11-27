@@ -62,14 +62,20 @@ export const BountyNotifications: React.FC<BountyNotificationsProps> = ({
           category: 'general',
           contextType: 'bounty',
           limit: 50,
-          includeRead: false // Only show unread notifications
+          includeRead: false, // Only show unread notifications
         });
 
-        console.log(`✅ Loaded ${result.notifications.length} bounty notifications`);
+        console.log(
+          `✅ Loaded ${result.notifications.length} bounty notifications`,
+        );
         setNotifications(result.notifications);
       } catch (error) {
         console.error('❌ Failed to load bounty notifications:', error);
-        setError(error instanceof Error ? error.message : 'Failed to load notifications');
+        setError(
+          error instanceof Error
+            ? error.message
+            : 'Failed to load notifications',
+        );
       } finally {
         setIsLoading(false);
       }
@@ -85,10 +91,13 @@ export const BountyNotifications: React.FC<BountyNotificationsProps> = ({
       (notification) => {
         // Only process bounty notifications
         if (notification.context_type === 'bounty') {
-          console.log('📨 New bounty notification received:', notification.title);
+          console.log(
+            '📨 New bounty notification received:',
+            notification.title,
+          );
 
           // Add to list
-          setNotifications(prev => [notification, ...prev]);
+          setNotifications((prev) => [notification, ...prev]);
 
           // Show toast notification
           toast({
@@ -97,7 +106,7 @@ export const BountyNotifications: React.FC<BountyNotificationsProps> = ({
             duration: 5000,
           });
         }
-      }
+      },
     );
 
     return () => {
@@ -115,7 +124,7 @@ export const BountyNotifications: React.FC<BountyNotificationsProps> = ({
       console.log('✅ Notification marked as read');
 
       // Remove from unread list
-      setNotifications(prev => prev.filter(n => n.id !== notification.id));
+      setNotifications((prev) => prev.filter((n) => n.id !== notification.id));
 
       // Call parent handler if provided
       onNotificationClick?.(notification);
@@ -150,11 +159,23 @@ export const BountyNotifications: React.FC<BountyNotificationsProps> = ({
     return (
       <div className="p-8 text-center">
         <div className="mb-4" style={{ color: '#8B3A3A' }}>
-          <svg className="mx-auto h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+          <svg
+            className="mx-auto h-12 w-12"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+            />
           </svg>
         </div>
-        <p className="font-semibold" style={{ color: '#8B3A3A' }}>Error Loading Notifications</p>
+        <p className="font-semibold" style={{ color: '#8B3A3A' }}>
+          Error Loading Notifications
+        </p>
         <p className="text-gray-600 mt-2">{error}</p>
       </div>
     );
@@ -164,8 +185,18 @@ export const BountyNotifications: React.FC<BountyNotificationsProps> = ({
   if (!address) {
     return (
       <div className="p-8 text-center text-gray-500">
-        <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        <svg
+          className="mx-auto h-12 w-12 text-gray-400"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+          />
         </svg>
         <p className="mt-4">Connect your wallet to view bounty notifications</p>
       </div>
@@ -176,8 +207,18 @@ export const BountyNotifications: React.FC<BountyNotificationsProps> = ({
   if (notifications.length === 0) {
     return (
       <div className="p-8 text-center text-gray-500">
-        <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+        <svg
+          className="mx-auto h-12 w-12 text-gray-400"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"
+          />
         </svg>
         <p className="mt-4 font-medium">No unread bounty notifications</p>
         <p className="text-sm mt-2">You're all caught up!</p>
@@ -210,9 +251,11 @@ export const BountyNotifications: React.FC<BountyNotificationsProps> = ({
                 <span
                   className="inline-block px-2 py-1 rounded-full text-xs font-medium mb-2"
                   style={
-                    notification.priority === 'urgent' ? { backgroundColor: '#F5E6E6', color: '#5C1F1F' } :
-                    notification.priority === 'high' ? { backgroundColor: '#FAF4EC', color: '#8F6B2F' } :
-                    { backgroundColor: '#E8F1EE', color: '#1F453A' }
+                    notification.priority === 'urgent'
+                      ? { backgroundColor: '#F5E6E6', color: '#5C1F1F' }
+                      : notification.priority === 'high'
+                        ? { backgroundColor: '#FAF4EC', color: '#8F6B2F' }
+                        : { backgroundColor: '#E8F1EE', color: '#1F453A' }
                   }
                 >
                   {notification.priority.toUpperCase()}
@@ -220,7 +263,9 @@ export const BountyNotifications: React.FC<BountyNotificationsProps> = ({
               )}
 
               {/* Title */}
-              <h3 className="font-semibold text-gray-900">{notification.title}</h3>
+              <h3 className="font-semibold text-gray-900">
+                {notification.title}
+              </h3>
 
               {/* Message */}
               <p className="text-sm text-gray-600 mt-1 leading-relaxed">
@@ -238,23 +283,32 @@ export const BountyNotifications: React.FC<BountyNotificationsProps> = ({
             {/* Timestamp */}
             <div className="ml-4 text-right flex-shrink-0">
               <span className="text-xs text-gray-500 whitespace-nowrap">
-                {new Date(notification.created_at).toLocaleDateString(undefined, {
-                  month: 'short',
-                  day: 'numeric',
-                  year: 'numeric'
-                })}
+                {new Date(notification.created_at).toLocaleDateString(
+                  undefined,
+                  {
+                    month: 'short',
+                    day: 'numeric',
+                    year: 'numeric',
+                  },
+                )}
               </span>
               <div className="text-xs text-gray-400 mt-1">
-                {new Date(notification.created_at).toLocaleTimeString(undefined, {
-                  hour: '2-digit',
-                  minute: '2-digit'
-                })}
+                {new Date(notification.created_at).toLocaleTimeString(
+                  undefined,
+                  {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                  },
+                )}
               </div>
             </div>
           </div>
 
           {/* Unread indicator */}
-          <div className="absolute top-4 right-4 w-2 h-2 rounded-full" style={{ backgroundColor: '#2F5D50' }}></div>
+          <div
+            className="absolute top-4 right-4 w-2 h-2 rounded-full"
+            style={{ backgroundColor: '#2F5D50' }}
+          ></div>
         </div>
       ))}
     </div>

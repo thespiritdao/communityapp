@@ -1,5 +1,5 @@
 // src/features/marketplace/components/AddProductModal/AddProductModal.style.ts
-import styled from "styled-components";
+import styled from 'styled-components';
 
 export const ModalOverlay = styled.div`
   position: fixed;

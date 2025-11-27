@@ -2,13 +2,13 @@ import QRCode from 'qrcode';
 import { supabase } from '@/utils/supabaseClient';
 import { EventService } from '../lib/supabase';
 import { fetchTokenBalances } from '@/utils/fetchTokenBalances';
-import type { 
-  QRCodeData, 
-  QRValidationResult, 
+import type {
+  QRCodeData,
+  QRValidationResult,
   AttendeeExportData,
   EventRegistration,
   EventWithStats,
-  UserProfile 
+  UserProfile,
 } from '../types/qr-types';
 
 export class QRCodeService {
@@ -21,19 +21,24 @@ export class QRCodeService {
   static async generateUserQRCode(
     eventId: string,
     registration: EventRegistration,
-    userProfile?: UserProfile
+    userProfile?: UserProfile,
   ): Promise<string> {
     try {
       const now = Date.now();
-      const expiresAt = now + (this.QR_EXPIRY_HOURS * 60 * 60 * 1000);
+      const expiresAt = now + this.QR_EXPIRY_HOURS * 60 * 60 * 1000;
 
       // If no user profile provided, try to fetch it
       let resolvedUserProfile = userProfile;
       if (!resolvedUserProfile) {
         try {
-          resolvedUserProfile = await this.getUserProfile(registration.user_address);
+          resolvedUserProfile = await this.getUserProfile(
+            registration.user_address,
+          );
         } catch (error) {
-          console.warn('Could not fetch user profile for QR generation:', error);
+          console.warn(
+            'Could not fetch user profile for QR generation:',
+            error,
+          );
         }
       }
 
@@ -44,14 +49,14 @@ export class QRCodeService {
         registrationId: registration.id,
         timestamp: now,
         expiresAt,
-        version: this.QR_VERSION
+        version: this.QR_VERSION,
       };
 
       console.log('🎫 Generating QR code with data:', {
         eventId: qrData.eventId,
         walletAddress: qrData.walletAddress,
         userId: qrData.userId,
-        registrationId: qrData.registrationId
+        registrationId: qrData.registrationId,
       });
 
       // Add signature for validation (basic implementation)
@@ -62,14 +67,17 @@ export class QRCodeService {
         margin: 2,
         color: {
           dark: '#000000',
-          light: '#FFFFFF'
+          light: '#FFFFFF',
         },
-        errorCorrectionLevel: 'M'
+        errorCorrectionLevel: 'M',
       });
 
       return qrCodeURL;
     } catch (error) {
-      console.log('Error generating enhanced QR code:', error instanceof Error ? error.message : 'Unknown error');
+      console.log(
+        'Error generating enhanced QR code:',
+        error instanceof Error ? error.message : 'Unknown error',
+      );
       throw new Error('Failed to generate QR code');
     }
   }
@@ -85,22 +93,25 @@ export class QRCodeService {
         checkInUrl: `${window.location.origin}/events/${event.id}/checkin`,
         organizerMode: true,
         timestamp: Date.now(),
-        version: this.QR_VERSION
+        version: this.QR_VERSION,
       };
-      
+
       const qrCodeURL = await QRCode.toDataURL(JSON.stringify(qrData), {
         width: 300,
         margin: 2,
         color: {
           dark: '#000000',
-          light: '#FFFFFF'
+          light: '#FFFFFF',
         },
-        errorCorrectionLevel: 'H'
+        errorCorrectionLevel: 'H',
       });
-      
+
       return qrCodeURL;
     } catch (error) {
-      console.log('Error generating event QR code:', error instanceof Error ? error.message : 'Unknown error');
+      console.log(
+        'Error generating event QR code:',
+        error instanceof Error ? error.message : 'Unknown error',
+      );
       throw new Error('Failed to generate event QR code');
     }
   }
@@ -110,13 +121,18 @@ export class QRCodeService {
    */
   static async validateQRCode(
     qrDataString: string,
-    eventId: string
+    eventId: string,
   ): Promise<QRValidationResult> {
     try {
       // Safely truncate QR data for logging
-      const safeQRString = qrDataString ? qrDataString.substring(0, 100) + '...' : 'undefined';
-      console.log('🔄 Validating QR code:', { qrDataString: safeQRString, eventId });
-      
+      const safeQRString = qrDataString
+        ? qrDataString.substring(0, 100) + '...'
+        : 'undefined';
+      console.log('🔄 Validating QR code:', {
+        qrDataString: safeQRString,
+        eventId,
+      });
+
       let qrData: QRCodeData;
       try {
         if (!qrDataString || typeof qrDataString !== 'string') {
@@ -128,18 +144,21 @@ export class QRCodeService {
           walletAddress: qrData.walletAddress,
           userId: qrData.userId,
           registrationId: qrData.registrationId,
-          hasSignature: !!qrData.signature
+          hasSignature: !!qrData.signature,
         });
       } catch (parseError) {
-        console.log('❌ Failed to parse QR data as JSON:', parseError instanceof Error ? parseError.message : 'Parse error');
+        console.log(
+          '❌ Failed to parse QR data as JSON:',
+          parseError instanceof Error ? parseError.message : 'Parse error',
+        );
         return {
           isValid: false,
           error: 'Invalid QR code format - not valid JSON',
           canCheckIn: false,
-          hasTokenAccess: false
+          hasTokenAccess: false,
         };
       }
-      
+
       // Basic validation
       if (!qrData.eventId || !qrData.walletAddress || !qrData.registrationId) {
         console.log('❌ Basic validation failed - missing required fields');
@@ -147,18 +166,23 @@ export class QRCodeService {
           isValid: false,
           error: 'Invalid QR code format - missing required fields',
           canCheckIn: false,
-          hasTokenAccess: false
+          hasTokenAccess: false,
         };
       }
 
       // Check if QR code is for the correct event
       if (qrData.eventId !== eventId) {
-        console.log('❌ Event ID mismatch - QR:', qrData.eventId, 'Expected:', eventId);
+        console.log(
+          '❌ Event ID mismatch - QR:',
+          qrData.eventId,
+          'Expected:',
+          eventId,
+        );
         return {
           isValid: false,
           error: `QR code is for a different event. Expected: ${eventId}, Got: ${qrData.eventId}`,
           canCheckIn: false,
-          hasTokenAccess: false
+          hasTokenAccess: false,
         };
       }
 
@@ -168,7 +192,7 @@ export class QRCodeService {
           isValid: false,
           error: 'QR code has expired',
           canCheckIn: false,
-          hasTokenAccess: false
+          hasTokenAccess: false,
         };
       }
 
@@ -176,25 +200,27 @@ export class QRCodeService {
       console.log('🔐 Validating signature...');
       const isSignatureValid = await this.validateSignature(qrData);
       console.log('🔐 Signature validation result:', isSignatureValid);
-      
+
       if (!isSignatureValid) {
         console.log('❌ Signature validation failed for QR code');
         return {
           isValid: false,
           error: 'Invalid QR code signature',
           canCheckIn: false,
-          hasTokenAccess: false
+          hasTokenAccess: false,
         };
       }
 
       // Get registration details
-      const registration = await this.getRegistrationById(qrData.registrationId);
+      const registration = await this.getRegistrationById(
+        qrData.registrationId,
+      );
       if (!registration) {
         return {
           isValid: false,
           error: 'Registration not found',
           canCheckIn: false,
-          hasTokenAccess: false
+          hasTokenAccess: false,
         };
       }
 
@@ -204,27 +230,30 @@ export class QRCodeService {
       // Check token gating
       const hasTokenAccess = await this.validateTokenAccess(
         qrData.walletAddress,
-        eventId
+        eventId,
       );
 
       // Determine if user can check in
-      const canCheckIn = registration.registration_status === 'registered' && hasTokenAccess;
+      const canCheckIn =
+        registration.registration_status === 'registered' && hasTokenAccess;
 
       return {
         isValid: true,
         registration,
         userProfile,
         canCheckIn,
-        hasTokenAccess
+        hasTokenAccess,
       };
-
     } catch (error) {
-      console.log('Error validating QR code:', error instanceof Error ? error.message : 'Unknown error');
+      console.log(
+        'Error validating QR code:',
+        error instanceof Error ? error.message : 'Unknown error',
+      );
       return {
         isValid: false,
         error: 'Failed to validate QR code',
         canCheckIn: false,
-        hasTokenAccess: false
+        hasTokenAccess: false,
       };
     }
   }
@@ -234,36 +263,36 @@ export class QRCodeService {
    */
   static async processCheckIn(
     qrDataString: string,
-    eventId: string
+    eventId: string,
   ): Promise<CheckInProcessingResult> {
     try {
       // Safe logging to prevent console errors
       console.log('🚀 Starting processCheckIn');
       console.log('📋 Event ID:', eventId || 'undefined');
       console.log('📋 QR Data length:', qrDataString?.length || 0);
-      
+
       if (!qrDataString || !eventId) {
         return {
           success: false,
           message: 'Missing QR data or event ID',
-          error: 'Invalid parameters'
+          error: 'Invalid parameters',
         };
       }
-      
+
       const validation = await this.validateQRCode(qrDataString, eventId);
       console.log('🔍 Validation result:', {
         isValid: validation?.isValid || false,
         hasRegistration: !!validation?.registration,
-        canCheckIn: validation?.canCheckIn || false
+        canCheckIn: validation?.canCheckIn || false,
       });
-      
+
       if (!validation.isValid) {
         const errorMsg = validation.error || 'Invalid QR code';
         console.log('❌ QR code validation failed:', errorMsg);
         return {
           success: false,
           message: errorMsg,
-          error: errorMsg
+          error: errorMsg,
         };
       }
 
@@ -271,34 +300,42 @@ export class QRCodeService {
         console.log('❌ User cannot check in - validation failed');
         return {
           success: false,
-          message: 'User cannot check in. Please verify registration and token requirements.',
-          error: 'Check-in not allowed'
+          message:
+            'User cannot check in. Please verify registration and token requirements.',
+          error: 'Check-in not allowed',
         };
       }
 
-      console.log('✅ Validation passed, attempting check-in for registration:', validation.registration?.id);
+      console.log(
+        '✅ Validation passed, attempting check-in for registration:',
+        validation.registration?.id,
+      );
 
       // Perform check-in with safety check
       if (!validation.registration) {
         throw new Error('Registration not found in validation result');
       }
-      
-      const updatedRegistration = await EventService.checkInUser(validation.registration.id);
+
+      const updatedRegistration = await EventService.checkInUser(
+        validation.registration.id,
+      );
       console.log('✅ Check-in successful');
 
       return {
         success: true,
         registration: updatedRegistration,
         userProfile: validation.userProfile,
-        message: `Successfully checked in ${validation.userProfile?.first_name || 'user'}`
+        message: `Successfully checked in ${validation.userProfile?.first_name || 'user'}`,
       };
-
     } catch (error) {
-      console.log('❌ Error processing check-in:', error instanceof Error ? error.message : 'Unknown error');
+      console.log(
+        '❌ Error processing check-in:',
+        error instanceof Error ? error.message : 'Unknown error',
+      );
       return {
         success: false,
         message: 'Failed to process check-in',
-        error: error instanceof Error ? error.message : 'Unknown error'
+        error: error instanceof Error ? error.message : 'Unknown error',
       };
     }
   }
@@ -308,28 +345,36 @@ export class QRCodeService {
    */
   static async exportAttendeeList(
     eventId: string,
-    includeTokenData = true
+    includeTokenData = true,
   ): Promise<AttendeeExportData[]> {
     try {
       const registrations = await EventService.getEventRegistrations(eventId);
       const exportData: AttendeeExportData[] = [];
 
       for (const registration of registrations) {
-        const userProfile = await this.getUserProfile(registration.user_address);
-        
+        const userProfile = await this.getUserProfile(
+          registration.user_address,
+        );
+
         let hasRequiredTokens = true;
         let tokenBalances: Record<string, string> | undefined;
 
         if (includeTokenData) {
           try {
-            const balances = await fetchTokenBalances(registration.user_address);
-            hasRequiredTokens = balances.hasEventManagement || balances.hasExecutivePod;
+            const balances = await fetchTokenBalances(
+              registration.user_address,
+            );
+            hasRequiredTokens =
+              balances.hasEventManagement || balances.hasExecutivePod;
             tokenBalances = {
               hasEventManagement: balances.hasEventManagement.toString(),
-              hasExecutivePod: balances.hasExecutivePod.toString()
+              hasExecutivePod: balances.hasExecutivePod.toString(),
             };
           } catch (error) {
-            console.warn('Failed to fetch token balances for', registration.user_address);
+            console.warn(
+              'Failed to fetch token balances for',
+              registration.user_address,
+            );
             hasRequiredTokens = false;
           }
         }
@@ -345,13 +390,16 @@ export class QRCodeService {
           checkedInAt: registration.checked_in_at,
           completedAt: registration.completed_at,
           hasRequiredTokens,
-          tokenBalances
+          tokenBalances,
         });
       }
 
       return exportData;
     } catch (error) {
-      console.log('Error exporting attendee list:', error instanceof Error ? error.message : 'Unknown error');
+      console.log(
+        'Error exporting attendee list:',
+        error instanceof Error ? error.message : 'Unknown error',
+      );
       throw new Error('Failed to export attendee list');
     }
   }
@@ -371,24 +419,28 @@ export class QRCodeService {
       'Checked In At',
       'Completed At',
       'Has Required Tokens',
-      'Token Balances'
+      'Token Balances',
     ];
 
     const csvRows = [
       headers.join(','),
-      ...attendeeData.map(attendee => [
-        attendee.registrationId,
-        attendee.walletAddress,
-        attendee.firstName || '',
-        attendee.lastName || '',
-        attendee.email || '',
-        attendee.registrationStatus,
-        attendee.registeredAt,
-        attendee.checkedInAt || '',
-        attendee.completedAt || '',
-        attendee.hasRequiredTokens.toString(),
-        JSON.stringify(attendee.tokenBalances || {}).replace(/,/g, ';')
-      ].map(field => `"${field}"`).join(','))
+      ...attendeeData.map((attendee) =>
+        [
+          attendee.registrationId,
+          attendee.walletAddress,
+          attendee.firstName || '',
+          attendee.lastName || '',
+          attendee.email || '',
+          attendee.registrationStatus,
+          attendee.registeredAt,
+          attendee.checkedInAt || '',
+          attendee.completedAt || '',
+          attendee.hasRequiredTokens.toString(),
+          JSON.stringify(attendee.tokenBalances || {}).replace(/,/g, ';'),
+        ]
+          .map((field) => `"${field}"`)
+          .join(','),
+      ),
     ];
 
     return csvRows.join('\n');
@@ -407,31 +459,33 @@ export class QRCodeService {
       console.log('🔐 No signature provided');
       return false;
     }
-    
+
     const expectedSignature = await this.generateSignature(qrData);
     const isValid = qrData.signature === expectedSignature;
-    
+
     console.log('🔐 Signature comparison:', {
       provided: qrData.signature,
       expected: expectedSignature,
-      isValid
+      isValid,
     });
-    
+
     return isValid;
   }
 
-  private static async getRegistrationById(registrationId: string): Promise<EventRegistration | null> {
+  private static async getRegistrationById(
+    registrationId: string,
+  ): Promise<EventRegistration | null> {
     try {
       console.log('🔍 Looking for registration with ID:', registrationId);
-      
+
       // First, let's see what registrations exist in the database
       const { data: allRegistrations } = await supabase
         .from('event_registrations')
         .select('id, user_address, registration_status')
         .limit(10);
-      
+
       console.log('📊 Sample registrations in database:', allRegistrations);
-      
+
       const { data, error } = await supabase
         .from('event_registrations')
         .select('*')
@@ -441,8 +495,11 @@ export class QRCodeService {
       console.log('📋 Database query result:', { data, error, registrationId });
 
       if (error) {
-        console.log('❌ Error fetching registration:', error?.message || 'Unknown error');
-        
+        console.log(
+          '❌ Error fetching registration:',
+          error?.message || 'Unknown error',
+        );
+
         // Try to find by partial ID match as a fallback
         console.log('🔄 Trying partial ID search...');
         const { data: partialMatch } = await supabase
@@ -450,7 +507,7 @@ export class QRCodeService {
           .select('*')
           .ilike('id', `%${registrationId}%`)
           .limit(5);
-        
+
         console.log('🔍 Partial matches found:', partialMatch);
         return null;
       }
@@ -463,12 +520,17 @@ export class QRCodeService {
 
       return data;
     } catch (error) {
-      console.log('❌ Error getting registration by ID:', error instanceof Error ? error.message : 'Unknown error');
+      console.log(
+        '❌ Error getting registration by ID:',
+        error instanceof Error ? error.message : 'Unknown error',
+      );
       return null;
     }
   }
 
-  private static async getUserProfile(walletAddress: string): Promise<UserProfile | null> {
+  private static async getUserProfile(
+    walletAddress: string,
+  ): Promise<UserProfile | null> {
     try {
       const { data, error } = await supabase
         .from('user_profiles')
@@ -477,20 +539,26 @@ export class QRCodeService {
         .single();
 
       if (error) {
-        console.log('Error fetching user profile:', error?.message || 'Unknown error');
+        console.log(
+          'Error fetching user profile:',
+          error?.message || 'Unknown error',
+        );
         return null;
       }
 
       return data;
     } catch (error) {
-      console.log('Error getting user profile:', error instanceof Error ? error.message : 'Unknown error');
+      console.log(
+        'Error getting user profile:',
+        error instanceof Error ? error.message : 'Unknown error',
+      );
       return null;
     }
   }
 
   private static async validateTokenAccess(
     walletAddress: string,
-    eventId: string
+    eventId: string,
   ): Promise<boolean> {
     try {
       // Get event to check token requirements
@@ -504,13 +572,15 @@ export class QRCodeService {
 
       // Check user's token balances
       const balances = await fetchTokenBalances(walletAddress);
-      
+
       // Basic implementation - check if user has any required tokens
       // This should be enhanced based on specific token requirements
       return balances.hasEventManagement || balances.hasExecutivePod;
-
     } catch (error) {
-      console.log('Error validating token access:', error instanceof Error ? error.message : 'Unknown error');
+      console.log(
+        'Error validating token access:',
+        error instanceof Error ? error.message : 'Unknown error',
+      );
       return false;
     }
   }

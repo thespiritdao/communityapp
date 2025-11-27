@@ -19,7 +19,11 @@
 import React, { useEffect, useState } from 'react';
 import { useAccount } from 'wagmi';
 import { RefreshCw } from 'lucide-react';
-import { checkPodFeatureAccess, type PodFeature, type FeatureAccessResult } from '@/utils/podFeatureAccess';
+import {
+  checkPodFeatureAccess,
+  type PodFeature,
+  type FeatureAccessResult,
+} from '@/utils/podFeatureAccess';
 import { AccessDenied } from './AccessDenied';
 
 interface PodFeatureWrapperProps {
@@ -43,7 +47,7 @@ export const PodFeatureWrapper: React.FC<PodFeatureWrapperProps> = ({
   children,
   loadingMessage,
   userAddress: overrideAddress,
-  onAccessCheckComplete
+  onAccessCheckComplete,
 }) => {
   const { address: walletAddress } = useAccount();
   const address = overrideAddress || walletAddress;
@@ -59,30 +63,32 @@ export const PodFeatureWrapper: React.FC<PodFeatureWrapperProps> = ({
         loading: false,
         result: {
           allowed: false,
-          reason: 'Please connect your wallet to access this feature'
-        }
+          reason: 'Please connect your wallet to access this feature',
+        },
       });
       return;
     }
 
-    console.log(`[PodFeatureWrapper] Checking ${feature} access for ${address} in pod ${podId}`);
+    console.log(
+      `[PodFeatureWrapper] Checking ${feature} access for ${address} in pod ${podId}`,
+    );
 
     setAccessCheck({ loading: true });
 
     checkPodFeatureAccess(feature, address, podId)
-      .then(result => {
+      .then((result) => {
         console.log(`[PodFeatureWrapper] Access check result:`, result);
         setAccessCheck({ loading: false, result });
         onAccessCheckComplete?.(result);
       })
-      .catch(error => {
+      .catch((error) => {
         console.error('[PodFeatureWrapper] Error checking access:', error);
         setAccessCheck({
           loading: false,
           result: {
             allowed: false,
-            reason: 'Error checking access permissions. Please try again.'
-          }
+            reason: 'Error checking access permissions. Please try again.',
+          },
         });
       });
   }, [feature, address, podId, onAccessCheckComplete]);
@@ -119,7 +125,11 @@ export const PodFeatureWrapper: React.FC<PodFeatureWrapperProps> = ({
 /**
  * Hook version for imperative access checks
  */
-export function usePodFeatureAccess(feature: PodFeature, podId?: string, userAddress?: string) {
+export function usePodFeatureAccess(
+  feature: PodFeature,
+  podId?: string,
+  userAddress?: string,
+) {
   const { address: walletAddress } = useAccount();
   const address = userAddress || walletAddress;
 
@@ -134,13 +144,13 @@ export function usePodFeatureAccess(feature: PodFeature, podId?: string, userAdd
         loading: false,
         result: {
           allowed: false,
-          reason: 'Wallet not connected or pod not specified'
-        }
+          reason: 'Wallet not connected or pod not specified',
+        },
       });
       return;
     }
 
-    checkPodFeatureAccess(feature, address, podId).then(result => {
+    checkPodFeatureAccess(feature, address, podId).then((result) => {
       setAccessCheck({ loading: false, result });
     });
   }, [feature, address, podId]);

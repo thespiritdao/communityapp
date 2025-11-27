@@ -13,7 +13,13 @@ export type FetchThreadsParams = {
   offset?: number;
 };
 
-export const fetchThreads = async ({ categoryId, walletAddress, tokenBalances, limit = 20, offset = 0 }: FetchThreadsParams) => {
+export const fetchThreads = async ({
+  categoryId,
+  walletAddress,
+  tokenBalances,
+  limit = 20,
+  offset = 0,
+}: FetchThreadsParams) => {
   try {
     let query = supabase
       .from('forum_threads')
@@ -37,7 +43,8 @@ export const fetchThreads = async ({ categoryId, walletAddress, tokenBalances, l
     if (error) throw new Error(`Failed to fetch threads: ${error.message}`);
 
     // Normalize token IDs for comparison
-    const normalize = (value: string | null) => value?.trim().toLowerCase() || '';
+    const normalize = (value: string | null) =>
+      value?.trim().toLowerCase() || '';
     const pocToken = normalize(process.env.NEXT_PUBLIC_PROOF_OF_CURIOSITY);
     const execHatId = normalize(process.env.NEXT_PUBLIC_EXECUTIVE_POD_LEADER);
     const devHatId = normalize(process.env.NEXT_PUBLIC_DEV_POD_HAT_ID);
@@ -69,7 +76,8 @@ export const fetchThreads = async ({ categoryId, walletAddress, tokenBalances, l
     console.error('Error in fetchThreads:', error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'An unknown error occurred',
+      error:
+        error instanceof Error ? error.message : 'An unknown error occurred',
       threads: [],
       total: 0,
       hasMore: false,

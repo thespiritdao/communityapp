@@ -82,14 +82,18 @@ export async function generateUniqueInviteCode(): Promise<string> {
     attempts++;
   }
 
-  throw new Error('Failed to generate unique invite code after multiple attempts');
+  throw new Error(
+    'Failed to generate unique invite code after multiple attempts',
+  );
 }
 
 /**
  * Assign an invite code to a user's profile
  * Called after user profile is created
  */
-export async function assignInviteCodeToUser(walletAddress: string): Promise<string> {
+export async function assignInviteCodeToUser(
+  walletAddress: string,
+): Promise<string> {
   const code = await generateUniqueInviteCode();
 
   const { error } = await supabase
@@ -125,7 +129,7 @@ export function isFirstUser(walletAddress: string): boolean {
  */
 export async function validateInviteCode(
   inviteCode: string,
-  newUserWallet: string
+  newUserWallet: string,
 ): Promise<InviteValidationResult> {
   try {
     // Normalize inputs
@@ -198,16 +202,14 @@ export async function validateInviteCode(
 export async function recordInviteCodeUsage(
   inviteCode: string,
   newUserWallet: string,
-  referrerWallet?: string
+  referrerWallet?: string,
 ): Promise<void> {
   try {
-    const { error } = await supabase
-      .from('referral_validations')
-      .insert({
-        invite_code: inviteCode.toUpperCase(),
-        used_by_wallet: newUserWallet.toLowerCase(),
-        referrer_wallet: referrerWallet?.toLowerCase(),
-      });
+    const { error } = await supabase.from('referral_validations').insert({
+      invite_code: inviteCode.toUpperCase(),
+      used_by_wallet: newUserWallet.toLowerCase(),
+      referrer_wallet: referrerWallet?.toLowerCase(),
+    });
 
     if (error) {
       console.error('Error recording invite code usage:', error);
@@ -222,7 +224,7 @@ export async function recordInviteCodeUsage(
  */
 export async function updateUserWithReferrer(
   newUserWallet: string,
-  referrerWallet: string
+  referrerWallet: string,
 ): Promise<void> {
   try {
     const { error } = await supabase
@@ -250,7 +252,7 @@ export async function updateUserWithReferrer(
  * Shows how many people they've invited
  */
 export async function getUserReferralStats(
-  walletAddress: string
+  walletAddress: string,
 ): Promise<ReferralStats> {
   try {
     const { data, error } = await supabase
@@ -277,7 +279,9 @@ export async function getUserReferralStats(
 /**
  * Get user's own invite code for sharing
  */
-export async function getUserInviteCode(walletAddress: string): Promise<string | null> {
+export async function getUserInviteCode(
+  walletAddress: string,
+): Promise<string | null> {
   try {
     const { data, error } = await supabase
       .from('user_profiles')
@@ -299,7 +303,9 @@ export async function getUserInviteCode(walletAddress: string): Promise<string |
 /**
  * Check if user has completed onboarding
  */
-export async function hasCompletedOnboarding(walletAddress: string): Promise<boolean> {
+export async function hasCompletedOnboarding(
+  walletAddress: string,
+): Promise<boolean> {
   try {
     const { data, error } = await supabase
       .from('user_profiles')

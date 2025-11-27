@@ -18,8 +18,10 @@ const publicClient = createPublicClient({
   transport: http(),
 });
 
-const POD_FACTORY_V2_ADDRESS = process.env.NEXT_PUBLIC_POD_FACTORY_V2_ADDRESS as Address;
-const HATS_PROTOCOL_ADDRESS = '0x3bc1A0Ad72417f2d411118085256fC53CBdDd137' as const;
+const POD_FACTORY_V2_ADDRESS = process.env
+  .NEXT_PUBLIC_POD_FACTORY_V2_ADDRESS as Address;
+const HATS_PROTOCOL_ADDRESS =
+  '0x3bc1A0Ad72417f2d411118085256fC53CBdDd137' as const;
 
 const POD_FACTORY_ABI = [
   {
@@ -27,31 +29,33 @@ const POD_FACTORY_ABI = [
     name: 'getAllPodIds',
     outputs: [{ name: '', type: 'bytes32[]' }],
     stateMutability: 'view',
-    type: 'function'
+    type: 'function',
   },
   {
     inputs: [{ name: 'podId', type: 'bytes32' }],
     name: 'getPod',
-    outputs: [{
-      components: [
-        { name: 'podId', type: 'bytes32' },
-        { name: 'name', type: 'string' },
-        { name: 'description', type: 'string' },
-        { name: 'imageURI', type: 'string' },
-        { name: 'creator', type: 'address' },
-        { name: 'leaders', type: 'address[]' },
-        { name: 'topHatId', type: 'uint256' },
-        { name: 'adminHatId', type: 'uint256' },
-        { name: 'memberHatId', type: 'uint256' },
-        { name: 'createdAt', type: 'uint256' },
-        { name: 'isLinked', type: 'bool' },
-        { name: 'status', type: 'uint8' }
-      ],
-      name: '',
-      type: 'tuple'
-    }],
+    outputs: [
+      {
+        components: [
+          { name: 'podId', type: 'bytes32' },
+          { name: 'name', type: 'string' },
+          { name: 'description', type: 'string' },
+          { name: 'imageURI', type: 'string' },
+          { name: 'creator', type: 'address' },
+          { name: 'leaders', type: 'address[]' },
+          { name: 'topHatId', type: 'uint256' },
+          { name: 'adminHatId', type: 'uint256' },
+          { name: 'memberHatId', type: 'uint256' },
+          { name: 'createdAt', type: 'uint256' },
+          { name: 'isLinked', type: 'bool' },
+          { name: 'status', type: 'uint8' },
+        ],
+        name: '',
+        type: 'tuple',
+      },
+    ],
     stateMutability: 'view',
-    type: 'function'
+    type: 'function',
   },
   {
     anonymous: false,
@@ -63,43 +67,43 @@ const POD_FACTORY_ABI = [
       { indexed: false, name: 'memberHatId', type: 'uint256' },
       { indexed: true, name: 'creator', type: 'address' },
       { indexed: false, name: 'leaders', type: 'address[]' },
-      { indexed: false, name: 'isLinked', type: 'bool' }
+      { indexed: false, name: 'isLinked', type: 'bool' },
     ],
     name: 'PodCreated',
-    type: 'event'
-  }
+    type: 'event',
+  },
 ] as const;
 
 const HATS_ABI = [
   {
     inputs: [
       { name: 'wearer', type: 'address' },
-      { name: 'hatId', type: 'uint256' }
+      { name: 'hatId', type: 'uint256' },
     ],
     name: 'isWearerOfHat',
     outputs: [{ name: '', type: 'bool' }],
     stateMutability: 'view',
-    type: 'function'
+    type: 'function',
   },
   {
     inputs: [
       { name: 'wearer', type: 'address' },
-      { name: 'hatId', type: 'uint256' }
+      { name: 'hatId', type: 'uint256' },
     ],
     name: 'isEligible',
     outputs: [{ name: '', type: 'bool' }],
     stateMutability: 'view',
-    type: 'function'
+    type: 'function',
   },
   {
     inputs: [
       { name: 'wearer', type: 'address' },
-      { name: 'hatId', type: 'uint256' }
+      { name: 'hatId', type: 'uint256' },
     ],
     name: 'isInGoodStanding',
     outputs: [{ name: '', type: 'bool' }],
     stateMutability: 'view',
-    type: 'function'
+    type: 'function',
   },
 ] as const;
 
@@ -114,9 +118,13 @@ export async function POST(request: NextRequest) {
     const { fromBlock, toBlock, fullResync = false } = body;
 
     // Get deployment block from env or use default
-    const deploymentBlock = BigInt(process.env.POD_FACTORY_V2_DEPLOYMENT_BLOCK || '0');
+    const deploymentBlock = BigInt(
+      process.env.POD_FACTORY_V2_DEPLOYMENT_BLOCK || '0',
+    );
     const startBlock = fromBlock ? BigInt(fromBlock) : deploymentBlock;
-    const endBlock = toBlock ? BigInt(toBlock) : await publicClient.getBlockNumber();
+    const endBlock = toBlock
+      ? BigInt(toBlock)
+      : await publicClient.getBlockNumber();
 
     console.log(`Syncing pods from block ${startBlock} to ${endBlock}`);
 
@@ -136,7 +144,16 @@ export async function POST(request: NextRequest) {
 
     for (const log of logs) {
       try {
-        const { podId, name, topHatId, adminHatId, memberHatId, creator, leaders, isLinked } = log.args;
+        const {
+          podId,
+          name,
+          topHatId,
+          adminHatId,
+          memberHatId,
+          creator,
+          leaders,
+          isLinked,
+        } = log.args;
 
         if (!podId) continue;
 
@@ -153,12 +170,12 @@ export async function POST(request: NextRequest) {
         }
 
         // Read full pod data from contract
-        const podData = await publicClient.readContract({
+        const podData = (await publicClient.readContract({
           address: POD_FACTORY_V2_ADDRESS,
           abi: POD_FACTORY_ABI,
           functionName: 'getPod',
           args: [podId],
-        }) as any;
+        })) as any;
 
         // Upsert pod
         const { data: pod, error: podError } = await supabase
@@ -172,7 +189,9 @@ export async function POST(request: NextRequest) {
             admin_hat_id: adminHatId!.toString(),
             member_hat_id: memberHatId!.toString(),
             creator_address: creator!.toLowerCase(),
-            leader_addresses: leaders!.map((addr: string) => addr.toLowerCase()),
+            leader_addresses: leaders!.map((addr: string) =>
+              addr.toLowerCase(),
+            ),
             status: podData.status === 0 ? 'active' : 'inactive',
             is_linked_tree: isLinked!,
             created_at_block: log.blockNumber.toString(),
@@ -195,23 +214,21 @@ export async function POST(request: NextRequest) {
 
         // Insert leaders as admin members
         for (const leader of leaders!) {
-          await supabase
-            .from('pod_members2')
-            .upsert(
-              {
-                pod_id: pod.id,
-                wallet_address: leader.toLowerCase(),
-                hat_id: adminHatId!.toString(),
-                role: 'admin',
-                is_active: true,
-                is_eligible: true,
-                in_good_standing: true,
-                last_verified_at: new Date().toISOString(),
-              },
-              {
-                onConflict: 'pod_id,wallet_address,hat_id',
-              }
-            );
+          await supabase.from('pod_members2').upsert(
+            {
+              pod_id: pod.id,
+              wallet_address: leader.toLowerCase(),
+              hat_id: adminHatId!.toString(),
+              role: 'admin',
+              is_active: true,
+              is_eligible: true,
+              in_good_standing: true,
+              last_verified_at: new Date().toISOString(),
+            },
+            {
+              onConflict: 'pod_id,wallet_address,hat_id',
+            },
+          );
         }
 
         // Log sync
@@ -230,7 +247,6 @@ export async function POST(request: NextRequest) {
           success: true,
           dbId: pod.id,
         });
-
       } catch (err) {
         console.error('Error syncing pod:', err);
         errorCount++;
@@ -254,12 +270,14 @@ export async function POST(request: NextRequest) {
       },
       results: syncResults,
     });
-
   } catch (error) {
     console.error('POST /api/pods2/sync error:', error);
     return NextResponse.json(
-      { error: 'Sync failed', details: error instanceof Error ? error.message : 'Unknown error' },
-      { status: 500 }
+      {
+        error: 'Sync failed',
+        details: error instanceof Error ? error.message : 'Unknown error',
+      },
+      { status: 500 },
     );
   }
 }
@@ -274,10 +292,7 @@ export async function PUT(request: NextRequest) {
     const { podId, fromBlock } = body;
 
     if (!podId) {
-      return NextResponse.json(
-        { error: 'podId required' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'podId required' }, { status: 400 });
     }
 
     // Get pod
@@ -288,10 +303,7 @@ export async function PUT(request: NextRequest) {
       .single();
 
     if (podError || !pod) {
-      return NextResponse.json(
-        { error: 'Pod not found' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: 'Pod not found' }, { status: 404 });
     }
 
     console.log(`Syncing members for pod ${pod.name}`);
@@ -348,7 +360,6 @@ export async function PUT(request: NextRequest) {
           isEligible,
           inGoodStanding,
         });
-
       } catch (err) {
         console.error(`Failed to verify member ${member.wallet_address}:`, err);
         errors.push({
@@ -364,7 +375,10 @@ export async function PUT(request: NextRequest) {
       sync_type: 'members_updated',
       block_number: '0',
       status: errors.length === 0 ? 'success' : 'error',
-      error_message: errors.length > 0 ? `${errors.length} member(s) failed verification` : null,
+      error_message:
+        errors.length > 0
+          ? `${errors.length} member(s) failed verification`
+          : null,
     });
 
     return NextResponse.json({
@@ -381,12 +395,14 @@ export async function PUT(request: NextRequest) {
       members: verifiedMembers,
       errors: errors.length > 0 ? errors : undefined,
     });
-
   } catch (error) {
     console.error('PUT /api/pods2/sync/members error:', error);
     return NextResponse.json(
-      { error: 'Member sync failed', details: error instanceof Error ? error.message : 'Unknown error' },
-      { status: 500 }
+      {
+        error: 'Member sync failed',
+        details: error instanceof Error ? error.message : 'Unknown error',
+      },
+      { status: 500 },
     );
   }
 }

@@ -10,7 +10,7 @@ import {
   isImageFile,
   formatFileSize,
   getFileIcon,
-  type MediaAttachment
+  type MediaAttachment,
 } from '../services/MediaUploadService';
 import { Button } from '@/components/ui/button';
 
@@ -25,7 +25,7 @@ export function MediaUpload({
   threadId,
   postId,
   onUploadComplete,
-  maxFiles = 5
+  maxFiles = 5,
 }: MediaUploadProps) {
   const { address } = useAccount();
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
@@ -61,12 +61,15 @@ export function MediaUpload({
         selectedFiles,
         address,
         threadId,
-        postId
+        postId,
       );
 
       if (result.success && result.attachments) {
         setUploadProgress(`Uploaded ${result.attachments.length} files`);
-        console.log('[MediaUpload] Calling onUploadComplete with attachments:', result.attachments);
+        console.log(
+          '[MediaUpload] Calling onUploadComplete with attachments:',
+          result.attachments,
+        );
         onUploadComplete?.(result.attachments);
         setSelectedFiles([]);
 
@@ -98,15 +101,8 @@ export function MediaUpload({
           className="hidden"
         />
         <label htmlFor="file-upload">
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            asChild
-          >
-            <span className="cursor-pointer">
-              📎 Attach Files
-            </span>
+          <Button type="button" variant="outline" size="sm" asChild>
+            <span className="cursor-pointer">📎 Attach Files</span>
           </Button>
         </label>
 
@@ -117,7 +113,9 @@ export function MediaUpload({
             onClick={handleUpload}
             disabled={isUploading || !address}
           >
-            {isUploading ? 'Uploading...' : `Upload ${selectedFiles.length} file${selectedFiles.length > 1 ? 's' : ''}`}
+            {isUploading
+              ? 'Uploading...'
+              : `Upload ${selectedFiles.length} file${selectedFiles.length > 1 ? 's' : ''}`}
           </Button>
         )}
       </div>
@@ -157,10 +155,14 @@ export function MediaUpload({
 
       {/* Progress/Error messages */}
       {uploadProgress && (
-        <p className="text-sm" style={{ color: '#3F7A5A' }}>{uploadProgress}</p>
+        <p className="text-sm" style={{ color: '#3F7A5A' }}>
+          {uploadProgress}
+        </p>
       )}
       {error && (
-        <p className="text-sm" style={{ color: '#8B3A3A' }}>{error}</p>
+        <p className="text-sm" style={{ color: '#8B3A3A' }}>
+          {error}
+        </p>
       )}
 
       <p className="text-xs text-gray-500">
@@ -182,7 +184,7 @@ interface AttachmentDisplayProps {
 export function AttachmentDisplay({
   attachments,
   onDelete,
-  canDelete = false
+  canDelete = false,
 }: AttachmentDisplayProps) {
   if (attachments.length === 0) return null;
 
@@ -214,7 +216,9 @@ export function AttachmentDisplay({
                 rel="noopener noreferrer"
                 className="flex flex-col items-center justify-center h-24"
               >
-                <span className="text-3xl">{getFileIcon(attachment.file_type)}</span>
+                <span className="text-3xl">
+                  {getFileIcon(attachment.file_type)}
+                </span>
                 <p className="text-xs text-center truncate w-full mt-1">
                   {attachment.file_name}
                 </p>

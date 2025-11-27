@@ -25,55 +25,61 @@ export function useFundingModal() {
   const [modalState, setModalState] = useState<FundingModalState>({
     isOpen: false,
     recipientType: null,
-    recipient: null
+    recipient: null,
   });
 
-  const openFundingModal = useCallback((
-    type: 'member' | 'pod',
-    recipient: FundingRecipient
-  ) => {
-    setModalState({
-      isOpen: true,
-      recipientType: type,
-      recipient
-    });
-  }, []);
+  const openFundingModal = useCallback(
+    (type: 'member' | 'pod', recipient: FundingRecipient) => {
+      setModalState({
+        isOpen: true,
+        recipientType: type,
+        recipient,
+      });
+    },
+    [],
+  );
 
   const closeFundingModal = useCallback(() => {
     setModalState({
       isOpen: false,
       recipientType: null,
-      recipient: null
+      recipient: null,
     });
   }, []);
 
   // Convenience methods for specific types
-  const openMemberFunding = useCallback((member: FundingRecipient) => {
-    openFundingModal('member', member);
-  }, [openFundingModal]);
+  const openMemberFunding = useCallback(
+    (member: FundingRecipient) => {
+      openFundingModal('member', member);
+    },
+    [openFundingModal],
+  );
 
-  const openPodFunding = useCallback((pod: FundingRecipient) => {
-    openFundingModal('pod', pod);
-  }, [openFundingModal]);
+  const openPodFunding = useCallback(
+    (pod: FundingRecipient) => {
+      openFundingModal('pod', pod);
+    },
+    [openFundingModal],
+  );
 
   return {
     // State
     isOpen: modalState.isOpen,
     recipientType: modalState.recipientType,
     recipient: modalState.recipient,
-    
+
     // Actions
     openFundingModal,
     openMemberFunding,
     openPodFunding,
     closeFundingModal,
-    
+
     // Modal props (ready to spread into FundingModal component)
     modalProps: {
       isOpen: modalState.isOpen,
       onClose: closeFundingModal,
       recipientType: modalState.recipientType,
-      recipient: modalState.recipient
-    }
+      recipient: modalState.recipient,
+    },
   };
 }

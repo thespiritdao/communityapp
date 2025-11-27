@@ -5,7 +5,8 @@
  */
 
 // Hats Protocol contract address on Base mainnet
-export const HATS_PROTOCOL_ADDRESS = '0x3bc1A0Ad72417f2d411118085256fC53CBdDd137' as const;
+export const HATS_PROTOCOL_ADDRESS =
+  '0x3bc1A0Ad72417f2d411118085256fC53CBdDd137' as const;
 
 /**
  * HAT ID mappings for permission types
@@ -16,7 +17,9 @@ export const HATS_PROTOCOL_ADDRESS = '0x3bc1A0Ad72417f2d411118085256fC53CBdDd137
  */
 export const HAT_ID_PERMISSIONS = {
   // Example HAT IDs - actual IDs should be fetched from database per pod
-  EXAMPLE_EXECUTIVE_POD_LEADER: BigInt(process.env.NEXT_PUBLIC_EXECUTIVE_POD_LEADER || '0'),
+  EXAMPLE_EXECUTIVE_POD_LEADER: BigInt(
+    process.env.NEXT_PUBLIC_EXECUTIVE_POD_LEADER || '0',
+  ),
   EXAMPLE_DEV_POD_LEADER: BigInt(process.env.NEXT_PUBLIC_DEV_POD_HAT_ID || '0'),
 } as const;
 
@@ -32,7 +35,7 @@ export const HAT_ID_PERMISSIONS = {
  */
 export async function getHatIdForPodRole(
   podId: string,
-  roleName: string
+  roleName: string,
 ): Promise<bigint | null> {
   // TODO: Query database to get HAT ID from pod_role_permissions
   // For now, return null and let the hook handle it

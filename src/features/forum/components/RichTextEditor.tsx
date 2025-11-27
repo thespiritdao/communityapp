@@ -20,25 +20,25 @@ export function RichTextEditor({
   onChange,
   placeholder = 'Write something...',
   className = '',
-  minHeight = '200px'
+  minHeight = '200px',
 }: RichTextEditorProps) {
   const editor = useEditor({
     extensions: [
       StarterKit.configure({
         heading: {
-          levels: [1, 2, 3]
-        }
+          levels: [1, 2, 3],
+        },
       }),
       Placeholder.configure({
-        placeholder
+        placeholder,
       }),
       Link.configure({
         openOnClick: false,
         HTMLAttributes: {
           class: 'underline',
-          style: 'color: #2F5D50'
-        }
-      })
+          style: 'color: #2F5D50',
+        },
+      }),
     ],
     content: value,
     immediatelyRender: false, // ✅ Fix for SSR hydration mismatch
@@ -49,9 +49,9 @@ export function RichTextEditor({
     editorProps: {
       attributes: {
         class: `${styles.editor} ${className}`,
-        style: `min-height: ${minHeight}`
-      }
-    }
+        style: `min-height: ${minHeight}`,
+      },
+    },
   });
 
   // Update editor content when value changes externally
@@ -98,24 +98,36 @@ export function RichTextEditor({
 
         <button
           type="button"
-          onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}
-          className={editor.isActive('heading', { level: 1 }) ? styles.active : ''}
+          onClick={() =>
+            editor.chain().focus().toggleHeading({ level: 1 }).run()
+          }
+          className={
+            editor.isActive('heading', { level: 1 }) ? styles.active : ''
+          }
           title="Heading 1"
         >
           H1
         </button>
         <button
           type="button"
-          onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
-          className={editor.isActive('heading', { level: 2 }) ? styles.active : ''}
+          onClick={() =>
+            editor.chain().focus().toggleHeading({ level: 2 }).run()
+          }
+          className={
+            editor.isActive('heading', { level: 2 }) ? styles.active : ''
+          }
           title="Heading 2"
         >
           H2
         </button>
         <button
           type="button"
-          onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}
-          className={editor.isActive('heading', { level: 3 }) ? styles.active : ''}
+          onClick={() =>
+            editor.chain().focus().toggleHeading({ level: 3 }).run()
+          }
+          className={
+            editor.isActive('heading', { level: 3 }) ? styles.active : ''
+          }
           title="Heading 3"
         >
           H3

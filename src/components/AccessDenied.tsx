@@ -17,7 +17,11 @@ interface AccessDeniedProps {
   details?: FeatureAccessResult['details'];
 }
 
-export const AccessDenied: React.FC<AccessDeniedProps> = ({ feature, reason, details }) => {
+export const AccessDenied: React.FC<AccessDeniedProps> = ({
+  feature,
+  reason,
+  details,
+}) => {
   return (
     <Card className="max-w-2xl mx-auto mt-8">
       <CardContent className="p-8">
@@ -40,8 +44,12 @@ export const AccessDenied: React.FC<AccessDeniedProps> = ({ feature, reason, det
             <div className="bg-gray-50 rounded-lg p-4 mb-6">
               <div className="text-sm text-left space-y-2">
                 <div className="flex items-center justify-between">
-                  <span className="text-gray-700">Feature enabled for pod:</span>
-                  <Badge variant={details.moduleEnabled ? 'default' : 'secondary'}>
+                  <span className="text-gray-700">
+                    Feature enabled for pod:
+                  </span>
+                  <Badge
+                    variant={details.moduleEnabled ? 'default' : 'secondary'}
+                  >
                     {details.moduleEnabled ? '✅ Yes' : '❌ No'}
                   </Badge>
                 </div>
@@ -53,7 +61,9 @@ export const AccessDenied: React.FC<AccessDeniedProps> = ({ feature, reason, det
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-gray-700">Role permission:</span>
-                  <Badge variant={details.hasPermission ? 'default' : 'secondary'}>
+                  <Badge
+                    variant={details.hasPermission ? 'default' : 'secondary'}
+                  >
                     {details.hasPermission ? '✅ Yes' : '❌ No'}
                   </Badge>
                 </div>
@@ -76,13 +86,26 @@ export const AccessDenied: React.FC<AccessDeniedProps> = ({ feature, reason, det
               <div className="text-sm text-blue-900 text-left">
                 <p className="font-semibold mb-1">Need Access?</p>
                 {!details?.moduleEnabled && (
-                  <p>Ask pod leaders to enable {feature} in the <strong>Modules</strong> tab.</p>
+                  <p>
+                    Ask pod leaders to enable {feature} in the{' '}
+                    <strong>Modules</strong> tab.
+                  </p>
                 )}
                 {!details?.hasHat && (
-                  <p>You need to be a member of this pod. Contact pod leaders to receive a membership Hat.</p>
+                  <p>
+                    You need to be a member of this pod. Contact pod leaders to
+                    receive a membership Hat.
+                  </p>
                 )}
                 {details?.hasHat && !details?.hasPermission && (
-                  <p>Your role doesn't have permission for this action. Ask pod leaders to update role permissions in <strong>Manager Controls → Membership & Verification → Access</strong>.</p>
+                  <p>
+                    Your role doesn't have permission for this action. Ask pod
+                    leaders to update role permissions in{' '}
+                    <strong>
+                      Manager Controls → Membership & Verification → Access
+                    </strong>
+                    .
+                  </p>
                 )}
               </div>
             </div>
@@ -96,7 +119,10 @@ export const AccessDenied: React.FC<AccessDeniedProps> = ({ feature, reason, det
 /**
  * Compact version for inline use
  */
-export const AccessDeniedInline: React.FC<AccessDeniedProps> = ({ feature, reason }) => {
+export const AccessDeniedInline: React.FC<AccessDeniedProps> = ({
+  feature,
+  reason,
+}) => {
   return (
     <div className="flex items-center gap-3 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
       <Lock className="h-5 w-5 text-yellow-600 flex-shrink-0" />

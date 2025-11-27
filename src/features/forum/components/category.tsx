@@ -9,11 +9,12 @@ const ForumCategoriesPage: React.FC = () => {
     <div className={styles.forumPageContainer}>
       <header className={styles.header}>
         <nav className={styles.breadcrumbs}>
-          <Link href="/">Home</Link> &gt; <Link href="/forum">Forum</Link> &gt; Categories
+          <Link href="/">Home</Link> &gt; <Link href="/forum">Forum</Link> &gt;
+          Categories
         </nav>
         <h1 className={styles.pageTitle}>Forum Categories</h1>
       </header>
-      
+
       <main className={styles.mainContent}>
         <CategoryList />
       </main>

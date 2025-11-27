@@ -20,12 +20,14 @@ export function AdvocateMintCardOnchainKit({
 }) {
   if (!address) return null;
 
-  const contracts = [{
-    address: contractAddress,
-    abi: AdvocateMembershipABI,
-    functionName: 'mint',
-    args: [address, memberType, tokenURI],
-  }];
+  const contracts = [
+    {
+      address: contractAddress,
+      abi: AdvocateMembershipABI,
+      functionName: 'mint',
+      args: [address, memberType, tokenURI],
+    },
+  ];
 
   return (
     <Transaction

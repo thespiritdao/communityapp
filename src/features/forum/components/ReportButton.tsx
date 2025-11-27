@@ -29,7 +29,11 @@ interface ReportButtonProps {
   threadId?: string; // Required if targetType is 'post'
 }
 
-export function ReportButton({ targetType, targetId, threadId }: ReportButtonProps) {
+export function ReportButton({
+  targetType,
+  targetId,
+  threadId,
+}: ReportButtonProps) {
   const { address } = useAccount();
   const [isOpen, setIsOpen] = useState(false);
   const [reportType, setReportType] = useState<
@@ -50,7 +54,7 @@ export function ReportButton({ targetType, targetId, threadId }: ReportButtonPro
         reportType,
         description,
         targetType === 'post' ? targetId : undefined,
-        targetType === 'thread' ? targetId : threadId
+        targetType === 'thread' ? targetId : threadId,
       );
 
       if (result.success) {
@@ -72,18 +76,27 @@ export function ReportButton({ targetType, targetId, threadId }: ReportButtonPro
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
-        <Button variant="ghost" size="sm" className="text-gray-500 hover:text-gray-700">
+        <Button
+          variant="ghost"
+          size="sm"
+          className="text-gray-500 hover:text-gray-700"
+        >
           🚩 Report
         </Button>
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Report {targetType === 'thread' ? 'Thread' : 'Post'}</DialogTitle>
+          <DialogTitle>
+            Report {targetType === 'thread' ? 'Thread' : 'Post'}
+          </DialogTitle>
         </DialogHeader>
         <div className="space-y-4">
           <div>
             <Label htmlFor="reportType">Report Type</Label>
-            <Select value={reportType} onValueChange={(val: any) => setReportType(val)}>
+            <Select
+              value={reportType}
+              onValueChange={(val: any) => setReportType(val)}
+            >
               <SelectTrigger id="reportType">
                 <SelectValue />
               </SelectTrigger>
@@ -108,7 +121,11 @@ export function ReportButton({ targetType, targetId, threadId }: ReportButtonPro
             />
           </div>
 
-          <Button onClick={handleSubmit} disabled={isSubmitting} className="w-full">
+          <Button
+            onClick={handleSubmit}
+            disabled={isSubmitting}
+            className="w-full"
+          >
             {isSubmitting ? 'Submitting...' : 'Submit Report'}
           </Button>
         </div>

@@ -1,5 +1,5 @@
 // src/components/UserProfileDisplay.tsx
-"use client";
+'use client';
 
 import type React from 'react';
 import { useState, useEffect } from 'react';
@@ -25,11 +25,12 @@ export const UserProfileDisplay: React.FC<UserProfileDisplayProps> = ({
   walletAddress,
   size = 'sm',
   showModal = true,
-  className = ''
+  className = '',
 }) => {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const { selectedUser, users, isOpen, openProfileModal, closeProfileModal } = useProfileModal();
+  const { selectedUser, users, isOpen, openProfileModal, closeProfileModal } =
+    useProfileModal();
 
   useEffect(() => {
     fetchUserProfile();
@@ -49,7 +50,8 @@ export const UserProfileDisplay: React.FC<UserProfileDisplayProps> = ({
         .eq('wallet_address', walletAddress.toLowerCase())
         .single();
 
-      if (error && error.code !== 'PGRST116') { // PGRST116 means no rows found
+      if (error && error.code !== 'PGRST116') {
+        // PGRST116 means no rows found
         console.error('Error fetching user profile:', error);
         setProfile(null);
       } else {
@@ -69,15 +71,15 @@ export const UserProfileDisplay: React.FC<UserProfileDisplayProps> = ({
 
   const getDisplayName = () => {
     if (!profile) return formatAddress(walletAddress);
-    
+
     if (profile.first_name && profile.last_name) {
       return `${profile.first_name} ${profile.last_name}`;
     }
-    
+
     if (profile.first_name) {
       return profile.first_name;
     }
-    
+
     return formatAddress(walletAddress);
   };
 
@@ -85,12 +87,12 @@ export const UserProfileDisplay: React.FC<UserProfileDisplayProps> = ({
     if (!profile?.profile_picture) {
       return '/observableinfinities.png';
     }
-    
+
     // If it's already a full URL, return as is
     if (profile.profile_picture.startsWith('http')) {
       return profile.profile_picture;
     }
-    
+
     // Otherwise, construct the Supabase storage URL
     return `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/profile_images/${profile.profile_picture}`;
   };
@@ -100,22 +102,22 @@ export const UserProfileDisplay: React.FC<UserProfileDisplayProps> = ({
       case 'sm':
         return {
           image: 'w-6 h-6',
-          text: 'text-sm'
+          text: 'text-sm',
         };
       case 'md':
         return {
           image: 'w-8 h-8',
-          text: 'text-base'
+          text: 'text-base',
         };
       case 'lg':
         return {
           image: 'w-10 h-10',
-          text: 'text-lg'
+          text: 'text-lg',
         };
       default:
         return {
           image: 'w-6 h-6',
-          text: 'text-sm'
+          text: 'text-sm',
         };
     }
   };
@@ -125,7 +127,9 @@ export const UserProfileDisplay: React.FC<UserProfileDisplayProps> = ({
   if (isLoading) {
     return (
       <div className={`flex items-center space-x-2 ${className}`}>
-        <div className={`${sizeClasses.image} bg-gray-200 rounded-full animate-pulse`}></div>
+        <div
+          className={`${sizeClasses.image} bg-gray-200 rounded-full animate-pulse`}
+        ></div>
         <div className={`h-4 bg-gray-200 rounded animate-pulse w-20`}></div>
       </div>
     );
@@ -139,7 +143,7 @@ export const UserProfileDisplay: React.FC<UserProfileDisplayProps> = ({
 
   return (
     <>
-      <div 
+      <div
         className={`flex items-center space-x-2 ${showModal ? 'cursor-pointer hover:opacity-80' : ''} ${className}`}
         onClick={handleClick}
       >
@@ -148,10 +152,13 @@ export const UserProfileDisplay: React.FC<UserProfileDisplayProps> = ({
           alt={getDisplayName()}
           className={`${sizeClasses.image} rounded-full object-cover border border-gray-200`}
           onError={(e) => {
-            (e.currentTarget as HTMLImageElement).src = '/observableinfinities.png';
+            (e.currentTarget as HTMLImageElement).src =
+              '/observableinfinities.png';
           }}
         />
-        <span className={`${sizeClasses.text} font-medium text-gray-900 truncate`}>
+        <span
+          className={`${sizeClasses.text} font-medium text-gray-900 truncate`}
+        >
           {getDisplayName()}
         </span>
       </div>

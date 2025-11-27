@@ -34,7 +34,7 @@ async function setupPineconeIndex() {
 
   // Initialize Pinecone client
   const pinecone = new Pinecone({
-    apiKey: process.env.PINECONE_API_KEY!
+    apiKey: process.env.PINECONE_API_KEY!,
   });
 
   try {
@@ -42,7 +42,7 @@ async function setupPineconeIndex() {
     console.log('🔍 Checking if index exists...');
     const existingIndexes = await pinecone.listIndexes();
     const indexExists = existingIndexes.indexes?.some(
-      (index) => index.name === INDEX_NAME
+      (index) => index.name === INDEX_NAME,
     );
 
     if (indexExists) {
@@ -62,9 +62,9 @@ async function setupPineconeIndex() {
       spec: {
         serverless: {
           cloud: 'aws',
-          region: 'us-east-1'
-        }
-      }
+          region: 'us-east-1',
+        },
+      },
     });
 
     console.log('✅ Index created successfully!');
@@ -77,7 +77,7 @@ async function setupPineconeIndex() {
     const maxAttempts = 30; // 30 attempts * 2 seconds = 1 minute max wait
 
     while (!ready && attempts < maxAttempts) {
-      await new Promise(resolve => setTimeout(resolve, 2000)); // Wait 2 seconds
+      await new Promise((resolve) => setTimeout(resolve, 2000)); // Wait 2 seconds
 
       try {
         const indexDescription = await pinecone.describeIndex(INDEX_NAME);
@@ -103,14 +103,17 @@ async function setupPineconeIndex() {
       console.log(`\nYou can now run: npm run embed:spiritdao\n`);
     } else {
       console.log('⚠️  Index created but still initializing.');
-      console.log('   Wait a minute and try running: npm run embed:spiritdao\n');
+      console.log(
+        '   Wait a minute and try running: npm run embed:spiritdao\n',
+      );
     }
-
   } catch (error: any) {
     console.error('\n❌ ERROR:', error.message);
 
     if (error.message.includes('ALREADY_EXISTS')) {
-      console.log('\n✅ Index already exists! You can proceed with embedding.\n');
+      console.log(
+        '\n✅ Index already exists! You can proceed with embedding.\n',
+      );
     } else {
       console.error('\nDetails:', error);
       process.exit(1);
@@ -119,7 +122,7 @@ async function setupPineconeIndex() {
 }
 
 // Run the setup
-setupPineconeIndex().catch(error => {
+setupPineconeIndex().catch((error) => {
   console.error('\n❌ FATAL ERROR:', error.message);
   process.exit(1);
 });

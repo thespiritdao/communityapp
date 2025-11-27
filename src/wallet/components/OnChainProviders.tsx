@@ -28,15 +28,17 @@ export function OnchainProviders({ children }: OnchainProvidersProps) {
 
     if (!validation.isValid) {
       console.error('❌ MISSING REQUIRED CONTRACT ADDRESSES:');
-      validation.missing.forEach(addr => {
+      validation.missing.forEach((addr) => {
         console.error(`  - ${addr}`);
       });
-      console.error('\n⚠️ Application features will fail until these are configured in .env');
+      console.error(
+        '\n⚠️ Application features will fail until these are configured in .env',
+      );
     }
 
     if (validation.warnings.length > 0) {
       console.warn('⚠️ CONTRACT CONFIGURATION WARNINGS:');
-      validation.warnings.forEach(warning => {
+      validation.warnings.forEach((warning) => {
         console.warn(`  - ${warning}`);
       });
     }
@@ -50,23 +52,28 @@ export function OnchainProviders({ children }: OnchainProvidersProps) {
   const paymasterEndpoint = process.env.NEXT_PUBLIC_PAYMASTER;
 
   // Memoize the OnchainKit config to prevent re-renders
-  const onchainKitConfig = useMemo(() => ({
-    appearance: {
-      name: 'SpiritDAO',
-      logo: '/spiritdaosymbol.png',
-      mode: 'auto' as const,
-      theme: 'minimal' as const,
-    },
-    wallet: {
-      display: 'modal' as const,
-      termsUrl: DEFAULT_TERMS_URL,
-      privacyUrl: DEFAULT_PRIVACY_URL,
-    },
-    paymaster: paymasterEndpoint,
-  }), [paymasterEndpoint]);
+  const onchainKitConfig = useMemo(
+    () => ({
+      appearance: {
+        name: 'SpiritDAO',
+        logo: '/spiritdaosymbol.png',
+        mode: 'auto' as const,
+        theme: 'minimal' as const,
+      },
+      wallet: {
+        display: 'modal' as const,
+        termsUrl: DEFAULT_TERMS_URL,
+        privacyUrl: DEFAULT_PRIVACY_URL,
+      },
+      paymaster: paymasterEndpoint,
+    }),
+    [paymasterEndpoint],
+  );
 
   if (!paymasterEndpoint) {
-    console.warn('⚠️ Paymaster endpoint not configured. Sponsorship will not work.');
+    console.warn(
+      '⚠️ Paymaster endpoint not configured. Sponsorship will not work.',
+    );
   }
 
   return (

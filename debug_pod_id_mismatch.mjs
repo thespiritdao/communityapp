@@ -17,13 +17,15 @@ const BLOCKCHAIN_POD_ID = 'pod-1762310879258-3naytgade';
 // Supabase client
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
 );
 
 // Viem client
 const publicClient = createPublicClient({
   chain: base,
-  transport: http(process.env.NEXT_PUBLIC_BASE_RPC_URL || 'https://mainnet.base.org')
+  transport: http(
+    process.env.NEXT_PUBLIC_BASE_RPC_URL || 'https://mainnet.base.org',
+  ),
 });
 
 // Factory ABI (minimal)
@@ -33,8 +35,8 @@ const FACTORY_ABI = [
     type: 'function',
     stateMutability: 'view',
     inputs: [{ name: 'podId', type: 'string' }],
-    outputs: [{ name: '', type: 'address' }]
-  }
+    outputs: [{ name: '', type: 'address' }],
+  },
 ];
 
 async function checkPodIdMismatch() {
@@ -80,12 +82,14 @@ async function checkPodIdMismatch() {
             address: FACTORY_ADDRESS,
             abi: FACTORY_ABI,
             functionName: 'getProxyAddress',
-            args: [role.pod_id]
+            args: [role.pod_id],
           });
 
           console.log(`Pod ID: ${role.pod_id}`);
           console.log(`  Proxy: ${proxyAddress}`);
-          console.log(`  Status: ${proxyAddress === '0x0000000000000000000000000000000000000000' ? '❌ NOT ON BLOCKCHAIN' : '✅ ON BLOCKCHAIN'}`);
+          console.log(
+            `  Status: ${proxyAddress === '0x0000000000000000000000000000000000000000' ? '❌ NOT ON BLOCKCHAIN' : '✅ ON BLOCKCHAIN'}`,
+          );
           console.log('');
         } catch (err) {
           console.log(`Pod ID: ${role.pod_id}`);
@@ -115,7 +119,7 @@ async function checkPodIdMismatch() {
         address: FACTORY_ADDRESS,
         abi: FACTORY_ABI,
         functionName: 'getProxyAddress',
-        args: [role.pod_id]
+        args: [role.pod_id],
       });
 
       console.log(`   - Proxy Address: ${proxyAddress}`);
@@ -132,14 +136,16 @@ async function checkPodIdMismatch() {
   }
 
   // Step 3: Verify the blockchain pod ID works
-  console.log(`\n\n📋 Step 2: Verifying blockchain pod ID: ${BLOCKCHAIN_POD_ID}`);
+  console.log(
+    `\n\n📋 Step 2: Verifying blockchain pod ID: ${BLOCKCHAIN_POD_ID}`,
+  );
 
   try {
     const proxyAddress = await publicClient.readContract({
       address: FACTORY_ADDRESS,
       abi: FACTORY_ABI,
       functionName: 'getProxyAddress',
-      args: [BLOCKCHAIN_POD_ID]
+      args: [BLOCKCHAIN_POD_ID],
     });
 
     console.log(`   Proxy Address: ${proxyAddress}`);
@@ -157,7 +163,9 @@ async function checkPodIdMismatch() {
   console.log('\nThe error "Pod proxy does not exist" means:');
   console.log('  1. The pod_id stored in database does NOT match blockchain');
   console.log('  2. When frontend sends transaction, it uses database pod_id');
-  console.log('  3. Factory contract checks blockchain and says "no proxy for this pod_id"');
+  console.log(
+    '  3. Factory contract checks blockchain and says "no proxy for this pod_id"',
+  );
   console.log('\nSOLUTION:');
   console.log('  Update the database pod_id to match the blockchain pod_id:');
   console.log(`  ${BLOCKCHAIN_POD_ID}`);

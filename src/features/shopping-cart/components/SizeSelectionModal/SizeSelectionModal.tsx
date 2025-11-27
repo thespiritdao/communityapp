@@ -1,5 +1,5 @@
 // src/features/shopping-cart/components/SizeSelectionModal/SizeSelectionModal.tsx
-"use client";
+'use client';
 
 import type React from 'react';
 import { useState } from 'react';
@@ -85,9 +85,9 @@ const SizeGrid = styled.div`
 
 const SizeOption = styled.button<{ selected: boolean }>`
   padding: 0.75rem;
-  border: 2px solid ${props => props.selected ? '#007bff' : '#ddd'};
-  background: ${props => props.selected ? '#007bff' : 'white'};
-  color: ${props => props.selected ? 'white' : '#333'};
+  border: 2px solid ${(props) => (props.selected ? '#007bff' : '#ddd')};
+  background: ${(props) => (props.selected ? '#007bff' : 'white')};
+  color: ${(props) => (props.selected ? 'white' : '#333')};
   border-radius: 8px;
   cursor: pointer;
   font-weight: 500;
@@ -148,14 +148,15 @@ const SizeSelectionModal: React.FC<SizeSelectionModalProps> = ({
   product,
   isOpen,
   onSizeSelect,
-  onClose
+  onClose,
 }) => {
   const [selectedSize, setSelectedSize] = useState<string>('');
 
   if (!isOpen) return null;
 
-  const availableSizes = product.available_sizes || product.availableSizes || [];
-  
+  const availableSizes =
+    product.available_sizes || product.availableSizes || [];
+
   const handleSizeClick = (size: string) => {
     setSelectedSize(size);
   };
@@ -179,13 +180,14 @@ const SizeSelectionModal: React.FC<SizeSelectionModalProps> = ({
     <ModalOverlay onClick={handleClose}>
       <ModalContent onClick={(e) => e.stopPropagation()}>
         <CloseButton onClick={handleClose}>&times;</CloseButton>
-        
+
         <Title>Select Size</Title>
-        
+
         <ProductInfo>
           <ProductName>{product.title || product.name}</ProductName>
           <ProductPrice>
-            {product.price_system > 0 && formatPrice(product.price_system, '$SYSTEM')}
+            {product.price_system > 0 &&
+              formatPrice(product.price_system, '$SYSTEM')}
             {product.price_system > 0 && product.price_self > 0 && ' • '}
             {product.price_self > 0 && formatPrice(product.price_self, '$SELF')}
           </ProductPrice>
@@ -204,13 +206,8 @@ const SizeSelectionModal: React.FC<SizeSelectionModalProps> = ({
         </SizeGrid>
 
         <ButtonGroup>
-          <CancelButton onClick={handleClose}>
-            Cancel
-          </CancelButton>
-          <AddToCartButton 
-            onClick={handleAddToCart}
-            disabled={!selectedSize}
-          >
+          <CancelButton onClick={handleClose}>Cancel</CancelButton>
+          <AddToCartButton onClick={handleAddToCart} disabled={!selectedSize}>
             Add to Cart
           </AddToCartButton>
         </ButtonGroup>

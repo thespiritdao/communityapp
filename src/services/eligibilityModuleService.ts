@@ -1,4 +1,10 @@
-import { createPublicClient, http, parseAbi, keccak256, encodePacked } from 'viem';
+import {
+  createPublicClient,
+  http,
+  parseAbi,
+  keccak256,
+  encodePacked,
+} from 'viem';
 import { base } from 'viem/chains';
 import type { EligibilityCriteria } from '@/features/pods/services/EligibilityService';
 import { supabase } from '@/utils/supabaseClient';
@@ -14,12 +20,19 @@ import { supabase } from '@/utils/supabaseClient';
  * - Calls are routed through PodAuthProxy for proper authorization
  */
 export class EligibilityModuleService {
-  private static readonly ELIGIBILITY_MODULE_ADDRESS = process.env.NEXT_PUBLIC_ELIGIBILITY_MODULE_ADDRESS as `0x${string}`;
+  private static readonly ELIGIBILITY_MODULE_ADDRESS = process.env
+    .NEXT_PUBLIC_ELIGIBILITY_MODULE_ADDRESS as `0x${string}`;
 
   // Allowed community tokens - ONLY $SELF and $SYSTEM
   private static readonly ALLOWED_TOKENS = {
-    SELF: (process.env.NEXT_PUBLIC_SELF_TOKEN || '0xe9b4aB2eB9397fa41AC3223e96f9d988BeFF5D21').toLowerCase(),
-    SYSTEM: (process.env.NEXT_PUBLIC_SYSTEM_TOKEN || '0x1317Ae277266D38C4E492558f8693F14143a6A65').toLowerCase()
+    SELF: (
+      process.env.NEXT_PUBLIC_SELF_TOKEN ||
+      '0xe9b4aB2eB9397fa41AC3223e96f9d988BeFF5D21'
+    ).toLowerCase(),
+    SYSTEM: (
+      process.env.NEXT_PUBLIC_SYSTEM_TOKEN ||
+      '0x1317Ae277266D38C4E492558f8693F14143a6A65'
+    ).toLowerCase(),
   } as const;
 
   // Extended ABI with support for multiple criterion types
@@ -50,12 +63,14 @@ export class EligibilityModuleService {
     'event CriterionAdded(uint256 indexed hatId, uint8 criterionType, bytes32 criterionHash)',
     'event CriterionRemoved(uint256 indexed hatId, bytes32 criterionHash)',
     'event EligibilityChecked(uint256 indexed hatId, address indexed wearer, bool eligible)',
-    'event AgreementSigned(bytes32 indexed agreementHash, address indexed signer, uint256 timestamp)'
+    'event AgreementSigned(bytes32 indexed agreementHash, address indexed signer, uint256 timestamp)',
   ]);
 
   private static publicClient = createPublicClient({
     chain: base,
-    transport: http(process.env.NEXT_PUBLIC_RPC_URL || 'https://mainnet.base.org')
+    transport: http(
+      process.env.NEXT_PUBLIC_RPC_URL || 'https://mainnet.base.org',
+    ),
   });
 
   // 🚀 V3 PodAuthorizationFactory ABI - ERC-4337 Compatible
@@ -68,7 +83,8 @@ export class EligibilityModuleService {
     'function clearAllCriteriaViaFactory(string calldata podId, address eligibilityModule, uint256 hatId, address actualUser) external',
   ]);
 
-  private static readonly FACTORY_ADDRESS = process.env.NEXT_PUBLIC_POD_AUTH_FACTORY as `0x${string}`;
+  private static readonly FACTORY_ADDRESS = process.env
+    .NEXT_PUBLIC_POD_AUTH_FACTORY as `0x${string}`;
 
   // Criterion type enum (matches Solidity contract)
   static readonly CriterionType = {
@@ -77,7 +93,7 @@ export class EligibilityModuleService {
     AGREEMENT_SIGNED: 2,
     CREDENTIAL_OWNERSHIP: 3,
     REPUTATION_SCORE: 4,
-    STAKING: 5
+    STAKING: 5,
   } as const;
 
   /**
@@ -88,7 +104,7 @@ export class EligibilityModuleService {
     validFrom: Date | null,
     validUntil: Date | null,
     requireAll = true,
-    walletClient: any
+    walletClient: any,
   ): Promise<{ success: boolean; txHash?: string; error?: string }> {
     try {
       if (!this.ELIGIBILITY_MODULE_ADDRESS) {
@@ -96,8 +112,12 @@ export class EligibilityModuleService {
       }
 
       // Convert dates to timestamps (0 means no restriction)
-      const validFromTimestamp = validFrom ? BigInt(Math.floor(validFrom.getTime() / 1000)) : 0n;
-      const validUntilTimestamp = validUntil ? BigInt(Math.floor(validUntil.getTime() / 1000)) : 0n;
+      const validFromTimestamp = validFrom
+        ? BigInt(Math.floor(validFrom.getTime() / 1000))
+        : 0n;
+      const validUntilTimestamp = validUntil
+        ? BigInt(Math.floor(validUntil.getTime() / 1000))
+        : 0n;
 
       console.log('🕐 Adding time-bound criterion:', {
         hatId: hatId.toString(),
@@ -105,25 +125,24 @@ export class EligibilityModuleService {
         validUntil: validUntil?.toISOString(),
         validFromTimestamp: validFromTimestamp.toString(),
         validUntilTimestamp: validUntilTimestamp.toString(),
-        requireAll
+        requireAll,
       });
 
       const txHash = await walletClient.writeContract({
         address: this.ELIGIBILITY_MODULE_ADDRESS,
         abi: this.ABI,
         functionName: 'addTimeCriterion',
-        args: [hatId, validFromTimestamp, validUntilTimestamp, requireAll]
+        args: [hatId, validFromTimestamp, validUntilTimestamp, requireAll],
       });
 
       console.log('✅ Time-bound criterion added:', txHash);
 
       return { success: true, txHash };
-
     } catch (error: any) {
       console.error('❌ Failed to add time-bound criterion:', error);
-      return { 
-        success: false, 
-        error: error.message || 'Failed to add time-bound criterion' 
+      return {
+        success: false,
+        error: error.message || 'Failed to add time-bound criterion',
       };
     }
   }
@@ -133,7 +152,7 @@ export class EligibilityModuleService {
    */
   static async checkEligibility(
     wearerAddress: `0x${string}`,
-    hatId: bigint
+    hatId: bigint,
   ): Promise<{ eligible: boolean; standing: boolean; error?: string }> {
     try {
       if (!this.ELIGIBILITY_MODULE_ADDRESS) {
@@ -144,20 +163,19 @@ export class EligibilityModuleService {
         address: this.ELIGIBILITY_MODULE_ADDRESS,
         abi: this.ABI,
         functionName: 'getWearerStatus',
-        args: [wearerAddress, hatId]
+        args: [wearerAddress, hatId],
       });
 
       return {
         eligible: result[0],
-        standing: result[1]
+        standing: result[1],
       };
-
     } catch (error: any) {
       console.error('❌ Failed to check eligibility:', error);
       return {
         eligible: false,
         standing: false,
-        error: error.message || 'Failed to check eligibility'
+        error: error.message || 'Failed to check eligibility',
       };
     }
   }
@@ -175,11 +193,10 @@ export class EligibilityModuleService {
         address: this.ELIGIBILITY_MODULE_ADDRESS,
         abi: this.ABI,
         functionName: 'getHatCriteria',
-        args: [hatId]
+        args: [hatId],
       });
 
-      return criteria.map(c => c.toString());
-
+      return criteria.map((c) => c.toString());
     } catch (error: any) {
       console.error('❌ Failed to get HAT criteria:', error);
       return [];
@@ -193,7 +210,7 @@ export class EligibilityModuleService {
     hatId: bigint,
     criterionType: number,
     criterionHash: `0x${string}`,
-    walletClient: any
+    walletClient: any,
   ): Promise<{ success: boolean; txHash?: string; error?: string }> {
     try {
       if (!this.ELIGIBILITY_MODULE_ADDRESS) {
@@ -204,18 +221,17 @@ export class EligibilityModuleService {
         address: this.ELIGIBILITY_MODULE_ADDRESS,
         abi: this.ABI,
         functionName: 'removeCriterion',
-        args: [hatId, criterionType, criterionHash]
+        args: [hatId, criterionType, criterionHash],
       });
 
       console.log('✅ Criterion removed:', txHash);
 
       return { success: true, txHash };
-
     } catch (error: any) {
       console.error('❌ Failed to remove criterion:', error);
-      return { 
-        success: false, 
-        error: error.message || 'Failed to remove criterion' 
+      return {
+        success: false,
+        error: error.message || 'Failed to remove criterion',
       };
     }
   }
@@ -225,7 +241,7 @@ export class EligibilityModuleService {
    */
   static async signAgreement(
     agreementHash: `0x${string}`,
-    walletClient: any
+    walletClient: any,
   ): Promise<{ success: boolean; txHash?: string; error?: string }> {
     try {
       if (!this.ELIGIBILITY_MODULE_ADDRESS) {
@@ -236,18 +252,17 @@ export class EligibilityModuleService {
         address: this.ELIGIBILITY_MODULE_ADDRESS,
         abi: this.ABI,
         functionName: 'signAgreement',
-        args: [agreementHash]
+        args: [agreementHash],
       });
 
       console.log('✅ Agreement signed:', txHash);
 
       return { success: true, txHash };
-
     } catch (error: any) {
       console.error('❌ Failed to sign agreement:', error);
-      return { 
-        success: false, 
-        error: error.message || 'Failed to sign agreement' 
+      return {
+        success: false,
+        error: error.message || 'Failed to sign agreement',
       };
     }
   }
@@ -257,7 +272,7 @@ export class EligibilityModuleService {
    */
   static async hasSignedAgreement(
     agreementHash: `0x${string}`,
-    userAddress: `0x${string}`
+    userAddress: `0x${string}`,
   ): Promise<boolean> {
     try {
       if (!this.ELIGIBILITY_MODULE_ADDRESS) {
@@ -268,11 +283,10 @@ export class EligibilityModuleService {
         address: this.ELIGIBILITY_MODULE_ADDRESS,
         abi: this.ABI,
         functionName: 'hasSignedAgreement',
-        args: [agreementHash, userAddress]
+        args: [agreementHash, userAddress],
       });
 
       return result;
-
     } catch (error: any) {
       console.error('❌ Failed to check agreement signature:', error);
       return false;
@@ -283,11 +297,23 @@ export class EligibilityModuleService {
    * Generate criterion hash for time-based criteria
    * Matches the Solidity implementation: keccak256(abi.encodePacked(_validFrom, _validUntil))
    */
-  static generateTimeCriterionHash(validFrom: Date | null, validUntil: Date | null): `0x${string}` {
-    const validFromTimestamp = validFrom ? BigInt(Math.floor(validFrom.getTime() / 1000)) : 0n;
-    const validUntilTimestamp = validUntil ? BigInt(Math.floor(validUntil.getTime() / 1000)) : 0n;
+  static generateTimeCriterionHash(
+    validFrom: Date | null,
+    validUntil: Date | null,
+  ): `0x${string}` {
+    const validFromTimestamp = validFrom
+      ? BigInt(Math.floor(validFrom.getTime() / 1000))
+      : 0n;
+    const validUntilTimestamp = validUntil
+      ? BigInt(Math.floor(validUntil.getTime() / 1000))
+      : 0n;
 
-    return keccak256(encodePacked(['uint256', 'uint256'], [validFromTimestamp, validUntilTimestamp]));
+    return keccak256(
+      encodePacked(
+        ['uint256', 'uint256'],
+        [validFromTimestamp, validUntilTimestamp],
+      ),
+    );
   }
 
   /**
@@ -300,21 +326,31 @@ export class EligibilityModuleService {
   /**
    * Generate hash for token balance criterion
    */
-  static generateTokenBalanceHash(tokenContract: string, minimumAmount: string): `0x${string}` {
-    return keccak256(encodePacked(
-      ['address', 'uint256'],
-      [tokenContract as `0x${string}`, BigInt(minimumAmount)]
-    ));
+  static generateTokenBalanceHash(
+    tokenContract: string,
+    minimumAmount: string,
+  ): `0x${string}` {
+    return keccak256(
+      encodePacked(
+        ['address', 'uint256'],
+        [tokenContract as `0x${string}`, BigInt(minimumAmount)],
+      ),
+    );
   }
 
   /**
    * Generate hash for credential criterion
    */
-  static generateCredentialHash(credentialContract: string, tokenId: string): `0x${string}` {
-    return keccak256(encodePacked(
-      ['address', 'uint256'],
-      [credentialContract as `0x${string}`, BigInt(tokenId || '0')]
-    ));
+  static generateCredentialHash(
+    credentialContract: string,
+    tokenId: string,
+  ): `0x${string}` {
+    return keccak256(
+      encodePacked(
+        ['address', 'uint256'],
+        [credentialContract as `0x${string}`, BigInt(tokenId || '0')],
+      ),
+    );
   }
 
   /**
@@ -323,13 +359,14 @@ export class EligibilityModuleService {
    */
   static validateTokenAddress(tokenAddress: string): void {
     const normalizedAddress = tokenAddress.toLowerCase();
-    const isAllowed = normalizedAddress === this.ALLOWED_TOKENS.SELF ||
-                      normalizedAddress === this.ALLOWED_TOKENS.SYSTEM;
+    const isAllowed =
+      normalizedAddress === this.ALLOWED_TOKENS.SELF ||
+      normalizedAddress === this.ALLOWED_TOKENS.SYSTEM;
 
     if (!isAllowed) {
       const allowedNames = `$SELF (${this.ALLOWED_TOKENS.SELF}) or $SYSTEM (${this.ALLOWED_TOKENS.SYSTEM})`;
       throw new Error(
-        `Invalid token address: ${tokenAddress}. Only community tokens are allowed: ${allowedNames}`
+        `Invalid token address: ${tokenAddress}. Only community tokens are allowed: ${allowedNames}`,
       );
     }
   }
@@ -373,7 +410,10 @@ export class EligibilityModuleService {
    */
   private static async getPodId(hatId: bigint): Promise<string | null> {
     try {
-      console.log('🔍 Looking up blockchain pod ID for HAT ID:', hatId.toString());
+      console.log(
+        '🔍 Looking up blockchain pod ID for HAT ID:',
+        hatId.toString(),
+      );
 
       // Query Supabase for blockchain_pod_id using hat_id
       const { data, error } = await supabase
@@ -388,23 +428,37 @@ export class EligibilityModuleService {
       }
 
       if (!data?.blockchain_pod_id) {
-        console.error('❌ No blockchain_pod_id found for HAT:', hatId.toString());
-        console.error('   This pod may have been created before the blockchain_pod_id migration.');
-        console.error('   Solution: Recreate this pod using the latest pod creation flow.');
+        console.error(
+          '❌ No blockchain_pod_id found for HAT:',
+          hatId.toString(),
+        );
+        console.error(
+          '   This pod may have been created before the blockchain_pod_id migration.',
+        );
+        console.error(
+          '   Solution: Recreate this pod using the latest pod creation flow.',
+        );
         return null;
       }
 
-      if (!data.proxy_contract_address || data.proxy_contract_address === 'pending' || data.proxy_contract_address === 'pending_creation') {
+      if (
+        !data.proxy_contract_address ||
+        data.proxy_contract_address === 'pending' ||
+        data.proxy_contract_address === 'pending_creation'
+      ) {
         console.warn('⚠️ Pod proxy is still pending deployment:', data.name);
         return null;
       }
 
-      console.log(`✅ Found blockchain pod ID for pod "${data.name}":`, data.blockchain_pod_id);
+      console.log(
+        `✅ Found blockchain pod ID for pod "${data.name}":`,
+        data.blockchain_pod_id,
+      );
       console.log('🔍 TRACE: getPodId() returning:', {
         blockchain_pod_id: data.blockchain_pod_id,
         pod_name: data.name,
         proxy_address: data.proxy_contract_address,
-        query_hat_id: hatId.toString()
+        query_hat_id: hatId.toString(),
       });
       return data.blockchain_pod_id;
     } catch (error) {
@@ -426,7 +480,7 @@ export class EligibilityModuleService {
     hatId: string | bigint,
     criteria: EligibilityCriteria[],
     walletClient: any,
-    clearExisting = true
+    clearExisting = true,
   ): Promise<{
     success: boolean;
     syncedCount: number;
@@ -437,7 +491,7 @@ export class EligibilityModuleService {
       success: false,
       syncedCount: 0,
       errors: [] as string[],
-      txHashes: [] as string[]
+      txHashes: [] as string[],
     };
 
     try {
@@ -451,7 +505,9 @@ export class EligibilityModuleService {
           try {
             this.validateTokenAddress(criterion.contract_address);
             const tokenName = this.getTokenName(criterion.contract_address);
-            console.log(`  ✅ ${tokenName} token validated: ${criterion.contract_address}`);
+            console.log(
+              `  ✅ ${tokenName} token validated: ${criterion.contract_address}`,
+            );
           } catch (validationError) {
             const error = validationError as Error;
             console.error(`  ❌ Token validation failed:`, error.message);
@@ -469,7 +525,9 @@ export class EligibilityModuleService {
 
       if (!this.ELIGIBILITY_MODULE_ADDRESS) {
         result.errors.push('Eligibility module address not configured');
-        console.log('⚠️ Module address not configured - validation passed but cannot sync on-chain');
+        console.log(
+          '⚠️ Module address not configured - validation passed but cannot sync on-chain',
+        );
         return result;
       }
 
@@ -479,14 +537,22 @@ export class EligibilityModuleService {
       const podId = await this.getPodId(hatIdBigInt);
 
       if (!podId) {
-        result.errors.push('No pod found for this HAT - cannot manage criteria');
-        console.error('❌ Pod must exist with a deployed proxy contract to manage eligibility criteria');
-        console.error('   Ensure the pod was created with the latest pod creation flow');
+        result.errors.push(
+          'No pod found for this HAT - cannot manage criteria',
+        );
+        console.error(
+          '❌ Pod must exist with a deployed proxy contract to manage eligibility criteria',
+        );
+        console.error(
+          '   Ensure the pod was created with the latest pod creation flow',
+        );
         return result;
       }
 
       if (!this.FACTORY_ADDRESS) {
-        result.errors.push('Factory address not configured (NEXT_PUBLIC_POD_AUTH_FACTORY)');
+        result.errors.push(
+          'Factory address not configured (NEXT_PUBLIC_POD_AUTH_FACTORY)',
+        );
         return result;
       }
 
@@ -496,24 +562,34 @@ export class EligibilityModuleService {
         criteriaCount: criteria.length,
         clearExisting,
         moduleAddress: this.ELIGIBILITY_MODULE_ADDRESS,
-        routingViaFactory: this.FACTORY_ADDRESS
+        routingViaFactory: this.FACTORY_ADDRESS,
       });
 
       // Step 1: Optionally clear existing criteria (via factory - SPONSORED)
       if (clearExisting) {
         try {
-          console.log('🧹 Clearing existing criteria via factory (sponsored)...');
+          console.log(
+            '🧹 Clearing existing criteria via factory (sponsored)...',
+          );
           const actualUser = await walletClient.account.address;
           const clearTx = await walletClient.writeContract({
-            address: this.FACTORY_ADDRESS,  // ← Route through factory (sponsored)
+            address: this.FACTORY_ADDRESS, // ← Route through factory (sponsored)
             abi: this.FACTORY_ABI,
             functionName: 'clearAllCriteriaViaFactory',
-            args: [podId, this.ELIGIBILITY_MODULE_ADDRESS, hatIdBigInt, actualUser]  // ✅ FIXED: Added actualUser
+            args: [
+              podId,
+              this.ELIGIBILITY_MODULE_ADDRESS,
+              hatIdBigInt,
+              actualUser,
+            ], // ✅ FIXED: Added actualUser
           });
           result.txHashes.push(clearTx);
           console.log('✅ Cleared existing criteria via factory:', clearTx);
         } catch (error: any) {
-          console.warn('⚠️ Could not clear existing criteria (may not exist):', error.message);
+          console.warn(
+            '⚠️ Could not clear existing criteria (may not exist):',
+            error.message,
+          );
         }
       }
 
@@ -527,48 +603,59 @@ export class EligibilityModuleService {
               if (criterion.contract_address && criterion.minimum_amount) {
                 // Token already validated in pre-validation step
                 const tokenName = this.getTokenName(criterion.contract_address);
-                console.log(`🎫 Syncing ${tokenName} token balance requirement: ${criterion.minimum_amount} (SPONSORED)`);
+                console.log(
+                  `🎫 Syncing ${tokenName} token balance requirement: ${criterion.minimum_amount} (SPONSORED)`,
+                );
 
                 const actualUser = await walletClient.account.address;
                 txHash = await walletClient.writeContract({
-                  address: this.FACTORY_ADDRESS,  // ← Route through factory (sponsored)
+                  address: this.FACTORY_ADDRESS, // ← Route through factory (sponsored)
                   abi: this.FACTORY_ABI,
                   functionName: 'addTokenBalanceCriterionViaFactory',
                   args: [
-                    podId,  // ← Pod ID required for factory routing
+                    podId, // ← Pod ID required for factory routing
                     this.ELIGIBILITY_MODULE_ADDRESS,
                     hatIdBigInt,
                     criterion.contract_address as `0x${string}`,
                     BigInt(criterion.minimum_amount),
                     criterion.required !== false, // Default to required
-                    actualUser  // ✅ FIXED: Added actualUser
-                  ]
+                    actualUser, // ✅ FIXED: Added actualUser
+                  ],
                 });
-                console.log(`✅ Added token balance criterion via factory (sponsored): ${txHash}`);
+                console.log(
+                  `✅ Added token balance criterion via factory (sponsored): ${txHash}`,
+                );
               }
               break;
 
             case 'time_based':
-              if (criterion.valid_until) { // At least expiration is required
-                const validFrom = criterion.valid_from ? new Date(criterion.valid_from) : null;
+              if (criterion.valid_until) {
+                // At least expiration is required
+                const validFrom = criterion.valid_from
+                  ? new Date(criterion.valid_from)
+                  : null;
                 const validUntil = new Date(criterion.valid_until);
 
                 const actualUser = await walletClient.account.address;
                 txHash = await walletClient.writeContract({
-                  address: this.FACTORY_ADDRESS,  // ← Route through factory (sponsored)
+                  address: this.FACTORY_ADDRESS, // ← Route through factory (sponsored)
                   abi: this.FACTORY_ABI,
                   functionName: 'addTimeLimitCriterionViaFactory',
                   args: [
-                    podId,  // ← Pod ID required for factory routing
+                    podId, // ← Pod ID required for factory routing
                     this.ELIGIBILITY_MODULE_ADDRESS,
                     hatIdBigInt,
-                    validFrom ? BigInt(Math.floor(validFrom.getTime() / 1000)) : 0n,
+                    validFrom
+                      ? BigInt(Math.floor(validFrom.getTime() / 1000))
+                      : 0n,
                     BigInt(Math.floor(validUntil.getTime() / 1000)),
                     criterion.required !== false,
-                    actualUser  // ✅ FIXED: Added actualUser
-                  ]
+                    actualUser, // ✅ FIXED: Added actualUser
+                  ],
                 });
-                console.log(`✅ Added time-based criterion via factory (sponsored): ${txHash}`);
+                console.log(
+                  `✅ Added time-based criterion via factory (sponsored): ${txHash}`,
+                );
               }
               break;
 
@@ -576,8 +663,12 @@ export class EligibilityModuleService {
               if (criterion.agreement_text) {
                 // Note: Factory expects agreementCid (string) not hash (bytes32)
                 // This will need to be adjusted based on your actual implementation
-                result.errors.push('Agreement criteria not yet supported via factory - requires IPFS CID format');
-                console.warn('⚠️ Agreement criteria requires IPFS CID format for factory routing');
+                result.errors.push(
+                  'Agreement criteria not yet supported via factory - requires IPFS CID format',
+                );
+                console.warn(
+                  '⚠️ Agreement criteria requires IPFS CID format for factory routing',
+                );
               }
               break;
 
@@ -585,12 +676,18 @@ export class EligibilityModuleService {
             case 'nft_ownership':
               // Note: Credential/NFT criteria use addHatsWornCriterionViaFactory in the factory
               // But requires different argument structure (array of hat IDs)
-              result.errors.push('Credential/NFT criteria not yet supported via factory - requires implementation update');
-              console.warn('⚠️ Credential criteria requires factory implementation update');
+              result.errors.push(
+                'Credential/NFT criteria not yet supported via factory - requires implementation update',
+              );
+              console.warn(
+                '⚠️ Credential criteria requires factory implementation update',
+              );
               break;
 
             case 'staking':
-              result.errors.push(`Staking criteria not yet supported on-chain: ${criterion.name}`);
+              result.errors.push(
+                `Staking criteria not yet supported on-chain: ${criterion.name}`,
+              );
               break;
 
             default:
@@ -601,7 +698,6 @@ export class EligibilityModuleService {
             result.txHashes.push(txHash);
             result.syncedCount++;
           }
-
         } catch (error: any) {
           const errorMsg = `Failed to sync criterion ${criterion.name || criterion.type}: ${error.message}`;
           console.error('❌', errorMsg);
@@ -615,11 +711,10 @@ export class EligibilityModuleService {
         syncedCount: result.syncedCount,
         totalCriteria: criteria.length,
         errors: result.errors.length,
-        txHashes: result.txHashes.length
+        txHashes: result.txHashes.length,
       });
 
       return result;
-
     } catch (error: any) {
       console.error('❌ Criteria sync failed:', error);
       result.errors.push(error.message || 'Unknown error during sync');
@@ -642,7 +737,7 @@ export class EligibilityModuleService {
   static async buildSyncCriteriaCalls(
     hatId: string | bigint,
     criteria: EligibilityCriteria[],
-    clearExisting = true
+    clearExisting = true,
   ): Promise<{
     success: boolean;
     calls: any[];
@@ -655,7 +750,7 @@ export class EligibilityModuleService {
       calls: [] as any[],
       criteriaCount: 0,
       errors: [] as string[],
-      podId: undefined as string | undefined
+      podId: undefined as string | undefined,
     };
 
     try {
@@ -667,7 +762,9 @@ export class EligibilityModuleService {
           try {
             this.validateTokenAddress(criterion.contract_address);
             const tokenName = this.getTokenName(criterion.contract_address);
-            console.log(`  ✅ ${tokenName} token validated: ${criterion.contract_address}`);
+            console.log(
+              `  ✅ ${tokenName} token validated: ${criterion.contract_address}`,
+            );
           } catch (validationError) {
             const error = validationError as Error;
             console.error(`  ❌ Token validation failed:`, error.message);
@@ -695,15 +792,21 @@ export class EligibilityModuleService {
       const podId = await this.getPodId(hatIdBigInt);
 
       if (!podId) {
-        result.errors.push('No pod found for this HAT - cannot manage criteria');
-        console.error('❌ Pod must exist with a deployed proxy contract to manage eligibility criteria');
+        result.errors.push(
+          'No pod found for this HAT - cannot manage criteria',
+        );
+        console.error(
+          '❌ Pod must exist with a deployed proxy contract to manage eligibility criteria',
+        );
         return result;
       }
 
       result.podId = podId;
 
       if (!this.FACTORY_ADDRESS) {
-        result.errors.push('Factory address not configured (NEXT_PUBLIC_POD_AUTH_FACTORY)');
+        result.errors.push(
+          'Factory address not configured (NEXT_PUBLIC_POD_AUTH_FACTORY)',
+        );
         return result;
       }
 
@@ -713,7 +816,7 @@ export class EligibilityModuleService {
         criteriaCount: criteria.length,
         clearExisting,
         moduleAddress: this.ELIGIBILITY_MODULE_ADDRESS,
-        routingViaFactory: this.FACTORY_ADDRESS
+        routingViaFactory: this.FACTORY_ADDRESS,
       });
 
       console.log('🔍 TRACE: buildSyncCriteriaCalls received podId:', podId);
@@ -724,13 +827,18 @@ export class EligibilityModuleService {
       if (clearExisting) {
         console.log('🧹 Adding clear criteria call...');
 
-        const clearCallArgs = [podId, this.ELIGIBILITY_MODULE_ADDRESS, hatIdBigInt, '__USER_ADDRESS__'];
+        const clearCallArgs = [
+          podId,
+          this.ELIGIBILITY_MODULE_ADDRESS,
+          hatIdBigInt,
+          '__USER_ADDRESS__',
+        ];
 
         console.log('🔍 TRACE: clearAllCriteriaViaFactory args:', {
           arg0_podId: clearCallArgs[0],
           arg1_moduleAddress: clearCallArgs[1],
           arg2_hatId: clearCallArgs[2].toString(),
-          arg3_userPlaceholder: clearCallArgs[3]
+          arg3_userPlaceholder: clearCallArgs[3],
         });
 
         // Get user's wallet address for authorization
@@ -739,7 +847,7 @@ export class EligibilityModuleService {
           address: this.FACTORY_ADDRESS,
           abi: this.FACTORY_ABI,
           functionName: 'clearAllCriteriaViaFactory',
-          args: clearCallArgs
+          args: clearCallArgs,
         });
       }
 
@@ -750,11 +858,15 @@ export class EligibilityModuleService {
             case 'token_balance':
               if (criterion.contract_address && criterion.minimum_amount) {
                 const tokenName = this.getTokenName(criterion.contract_address);
-                console.log(`🎫 Adding ${tokenName} token balance call: ${criterion.minimum_amount}`);
+                console.log(
+                  `🎫 Adding ${tokenName} token balance call: ${criterion.minimum_amount}`,
+                );
 
                 // Convert human-readable amount to Wei (multiply by 10^18)
                 // e.g., "99.998" → "99998000000000000000"
-                const amountInWei = this.parseTokenAmount(criterion.minimum_amount);
+                const amountInWei = this.parseTokenAmount(
+                  criterion.minimum_amount,
+                );
 
                 result.calls.push({
                   address: this.FACTORY_ADDRESS,
@@ -765,10 +877,10 @@ export class EligibilityModuleService {
                     this.ELIGIBILITY_MODULE_ADDRESS,
                     hatIdBigInt,
                     criterion.contract_address as `0x${string}`,
-                    amountInWei,  // ✅ FIXED: Use Wei amount
+                    amountInWei, // ✅ FIXED: Use Wei amount
                     criterion.required !== false,
-                    '__USER_ADDRESS__'  // ← Placeholder for user's wallet
-                  ]
+                    '__USER_ADDRESS__', // ← Placeholder for user's wallet
+                  ],
                 });
                 result.criteriaCount++;
               }
@@ -776,10 +888,14 @@ export class EligibilityModuleService {
 
             case 'time_based':
               if (criterion.valid_until) {
-                const validFrom = criterion.valid_from ? new Date(criterion.valid_from) : null;
+                const validFrom = criterion.valid_from
+                  ? new Date(criterion.valid_from)
+                  : null;
                 const validUntil = new Date(criterion.valid_until);
 
-                console.log(`⏰ Adding time-based call: ${validFrom ? validFrom.toISOString() : 'no start'} to ${validUntil.toISOString()}`);
+                console.log(
+                  `⏰ Adding time-based call: ${validFrom ? validFrom.toISOString() : 'no start'} to ${validUntil.toISOString()}`,
+                );
 
                 result.calls.push({
                   address: this.FACTORY_ADDRESS,
@@ -789,11 +905,13 @@ export class EligibilityModuleService {
                     podId,
                     this.ELIGIBILITY_MODULE_ADDRESS,
                     hatIdBigInt,
-                    validFrom ? BigInt(Math.floor(validFrom.getTime() / 1000)) : 0n,
+                    validFrom
+                      ? BigInt(Math.floor(validFrom.getTime() / 1000))
+                      : 0n,
                     BigInt(Math.floor(validUntil.getTime() / 1000)),
                     criterion.required !== false,
-                    '__USER_ADDRESS__'  // ← Placeholder for user's wallet
-                  ]
+                    '__USER_ADDRESS__', // ← Placeholder for user's wallet
+                  ],
                 });
                 result.criteriaCount++;
               }
@@ -801,7 +919,9 @@ export class EligibilityModuleService {
 
             case 'agreement_signed':
               if (criterion.agreement_cid) {
-                console.log(`📜 Adding agreement criterion with CID: ${criterion.agreement_cid}`);
+                console.log(
+                  `📜 Adding agreement criterion with CID: ${criterion.agreement_cid}`,
+                );
 
                 result.calls.push({
                   address: this.FACTORY_ADDRESS,
@@ -813,22 +933,31 @@ export class EligibilityModuleService {
                     hatIdBigInt,
                     criterion.agreement_cid, // IPFS CID (e.g., "QmXk7...abc123")
                     criterion.required !== false,
-                    '__USER_ADDRESS__'  // ← Placeholder for user's wallet
-                  ]
+                    '__USER_ADDRESS__', // ← Placeholder for user's wallet
+                  ],
                 });
                 result.criteriaCount++;
               } else {
-                result.errors.push('Agreement criteria requires IPFS CID - please upload agreement text to IPFS first');
+                result.errors.push(
+                  'Agreement criteria requires IPFS CID - please upload agreement text to IPFS first',
+                );
                 console.warn('⚠️ Agreement missing IPFS CID');
               }
               break;
 
             case 'credential_ownership':
               // HAT-based credentials (multiple HAT IDs required)
-              if (criterion.required_hat_ids && criterion.required_hat_ids.length > 0) {
-                console.log(`🎩 Adding HAT-worn criterion: ${criterion.required_hat_ids.length} HATs required`);
+              if (
+                criterion.required_hat_ids &&
+                criterion.required_hat_ids.length > 0
+              ) {
+                console.log(
+                  `🎩 Adding HAT-worn criterion: ${criterion.required_hat_ids.length} HATs required`,
+                );
 
-                const requiredHatsBigInt = criterion.required_hat_ids.map(id => BigInt(id));
+                const requiredHatsBigInt = criterion.required_hat_ids.map(
+                  (id) => BigInt(id),
+                );
 
                 result.calls.push({
                   address: this.FACTORY_ADDRESS,
@@ -840,23 +969,31 @@ export class EligibilityModuleService {
                     hatIdBigInt,
                     requiredHatsBigInt, // Array of required HAT IDs
                     criterion.required !== false,
-                    '__USER_ADDRESS__'  // ← Placeholder for user's wallet
-                  ]
+                    '__USER_ADDRESS__', // ← Placeholder for user's wallet
+                  ],
                 });
                 result.criteriaCount++;
               } else {
-                result.errors.push('Credential criteria requires either required_hat_ids (HAT-based) or contract_address (NFT-based)');
+                result.errors.push(
+                  'Credential criteria requires either required_hat_ids (HAT-based) or contract_address (NFT-based)',
+                );
                 console.warn('⚠️ Credential criteria missing required fields');
               }
               break;
 
             case 'nft_ownership':
-              result.errors.push('NFT ownership criteria not yet supported via factory - use HAT-based credentials instead');
-              console.warn('⚠️ NFT criteria requires factory implementation update');
+              result.errors.push(
+                'NFT ownership criteria not yet supported via factory - use HAT-based credentials instead',
+              );
+              console.warn(
+                '⚠️ NFT criteria requires factory implementation update',
+              );
               break;
 
             case 'staking':
-              result.errors.push(`Staking criteria not yet supported on-chain: ${criterion.name}`);
+              result.errors.push(
+                `Staking criteria not yet supported on-chain: ${criterion.name}`,
+              );
               break;
 
             default:
@@ -874,11 +1011,10 @@ export class EligibilityModuleService {
       console.log('✅ Criteria sync calls built:', {
         totalCalls: result.calls.length,
         criteriaCount: result.criteriaCount,
-        errors: result.errors.length
+        errors: result.errors.length,
       });
 
       return result;
-
     } catch (error: any) {
       console.error('❌ Failed to build criteria sync calls:', error);
       result.errors.push(error.message || 'Unknown error during call building');
@@ -890,7 +1026,10 @@ export class EligibilityModuleService {
    * Check if Phase 7 (setHatAdmin) has been executed for a given HAT
    * Returns true if the proxy is set as admin for the HAT on the eligibility module
    */
-  static async checkIfProxyIsAdmin(hatId: bigint, proxyAddress: `0x${string}`): Promise<{
+  static async checkIfProxyIsAdmin(
+    hatId: bigint,
+    proxyAddress: `0x${string}`,
+  ): Promise<{
     isAdmin: boolean;
     currentAdmin?: string;
     error?: string;
@@ -899,56 +1038,59 @@ export class EligibilityModuleService {
       if (!this.ELIGIBILITY_MODULE_ADDRESS) {
         return {
           isAdmin: false,
-          error: 'Eligibility module address not configured'
+          error: 'Eligibility module address not configured',
         };
       }
 
       console.log('🔍 Checking if proxy is admin for HAT:', {
         hatId: hatId.toString(),
         proxyAddress,
-        moduleAddress: this.ELIGIBILITY_MODULE_ADDRESS
+        moduleAddress: this.ELIGIBILITY_MODULE_ADDRESS,
       });
 
       // Read hatAdmins[hatId] from eligibility module
       const hatAdminAbi = parseAbi([
-        'function hatAdmins(uint256) external view returns (address)'
+        'function hatAdmins(uint256) external view returns (address)',
       ]);
 
-      const currentAdmin = await this.publicClient.readContract({
+      const currentAdmin = (await this.publicClient.readContract({
         address: this.ELIGIBILITY_MODULE_ADDRESS,
         abi: hatAdminAbi,
         functionName: 'hatAdmins',
-        args: [hatId]
-      }) as `0x${string}`;
+        args: [hatId],
+      })) as `0x${string}`;
 
       console.log('📋 Current eligibility admin for HAT:', {
         hatId: hatId.toString(),
         currentAdmin,
         expectedProxy: proxyAddress,
-        isMatch: currentAdmin.toLowerCase() === proxyAddress.toLowerCase()
+        isMatch: currentAdmin.toLowerCase() === proxyAddress.toLowerCase(),
       });
 
       const isAdmin = currentAdmin.toLowerCase() === proxyAddress.toLowerCase();
-      const isZeroAddress = currentAdmin === '0x0000000000000000000000000000000000000000';
+      const isZeroAddress =
+        currentAdmin === '0x0000000000000000000000000000000000000000';
 
       if (isZeroAddress) {
         console.log('⚠️ Phase 7 was never executed - no admin set');
       } else if (!isAdmin) {
-        console.log('⚠️ Phase 7 was executed, but with different admin:', currentAdmin);
+        console.log(
+          '⚠️ Phase 7 was executed, but with different admin:',
+          currentAdmin,
+        );
       } else {
         console.log('✅ Phase 7 completed - proxy is correctly set as admin');
       }
 
       return {
         isAdmin,
-        currentAdmin
+        currentAdmin,
       };
-
     } catch (error: any) {
       console.error('❌ Failed to check if proxy is admin:', error);
       return {
         isAdmin: false,
-        error: error.message || 'Failed to read hatAdmins mapping'
+        error: error.message || 'Failed to read hatAdmins mapping',
       };
     }
   }
@@ -957,7 +1099,10 @@ export class EligibilityModuleService {
    * Build Phase 7 setHatAdmin call for OnchainKit Transaction
    * This call authorizes the proxy to manage eligibility criteria for a HAT
    */
-  static buildPhase7SetAdminCall(hatId: bigint, proxyAddress: `0x${string}`): {
+  static buildPhase7SetAdminCall(
+    hatId: bigint,
+    proxyAddress: `0x${string}`,
+  ): {
     address: `0x${string}`;
     abi: any[];
     functionName: string;
@@ -970,23 +1115,25 @@ export class EligibilityModuleService {
     console.log('🔨 Building Phase 7 setHatAdmin call:', {
       hatId: hatId.toString(),
       proxyAddress,
-      moduleAddress: this.ELIGIBILITY_MODULE_ADDRESS
+      moduleAddress: this.ELIGIBILITY_MODULE_ADDRESS,
     });
 
     return {
       address: this.ELIGIBILITY_MODULE_ADDRESS,
-      abi: [{
-        name: 'setHatAdmin',
-        type: 'function',
-        inputs: [
-          { name: '_hatId', type: 'uint256' },
-          { name: '_admin', type: 'address' }
-        ],
-        outputs: [],
-        stateMutability: 'nonpayable'
-      }],
+      abi: [
+        {
+          name: 'setHatAdmin',
+          type: 'function',
+          inputs: [
+            { name: '_hatId', type: 'uint256' },
+            { name: '_admin', type: 'address' },
+          ],
+          outputs: [],
+          stateMutability: 'nonpayable',
+        },
+      ],
       functionName: 'setHatAdmin',
-      args: [hatId, proxyAddress]
+      args: [hatId, proxyAddress],
     };
   }
 
@@ -1013,36 +1160,42 @@ export class EligibilityModuleService {
         return {
           proxyAddress: null,
           podId: null,
-          error: error.message
+          error: error.message,
         };
       }
 
-      if (!data?.proxy_contract_address || data.proxy_contract_address === 'pending' || data.proxy_contract_address === 'pending_creation') {
-        console.warn('⚠️ Proxy address not available for HAT:', hatId.toString());
+      if (
+        !data?.proxy_contract_address ||
+        data.proxy_contract_address === 'pending' ||
+        data.proxy_contract_address === 'pending_creation'
+      ) {
+        console.warn(
+          '⚠️ Proxy address not available for HAT:',
+          hatId.toString(),
+        );
         return {
           proxyAddress: null,
           podId: data?.blockchain_pod_id || null,
-          error: 'Proxy address not yet deployed'
+          error: 'Proxy address not yet deployed',
         };
       }
 
       console.log('✅ Found proxy address:', {
         hatId: hatId.toString(),
         proxyAddress: data.proxy_contract_address,
-        podId: data.blockchain_pod_id
+        podId: data.blockchain_pod_id,
       });
 
       return {
         proxyAddress: data.proxy_contract_address as `0x${string}`,
-        podId: data.blockchain_pod_id
+        podId: data.blockchain_pod_id,
       };
-
     } catch (error: any) {
       console.error('❌ Failed to get proxy address:', error);
       return {
         proxyAddress: null,
         podId: null,
-        error: error.message || 'Unknown error'
+        error: error.message || 'Unknown error',
       };
     }
   }
@@ -1061,7 +1214,8 @@ export class EligibilityModuleService {
         return {
           configured: false,
           accessible: false,
-          error: 'NEXT_PUBLIC_ELIGIBILITY_MODULE_ADDRESS not set in environment'
+          error:
+            'NEXT_PUBLIC_ELIGIBILITY_MODULE_ADDRESS not set in environment',
         };
       }
 
@@ -1071,21 +1225,20 @@ export class EligibilityModuleService {
         address: this.ELIGIBILITY_MODULE_ADDRESS,
         abi: this.ABI,
         functionName: 'getHatCriteria',
-        args: [testHatId]
+        args: [testHatId],
       });
 
       return {
         configured: true,
         accessible: true,
-        address: this.ELIGIBILITY_MODULE_ADDRESS
+        address: this.ELIGIBILITY_MODULE_ADDRESS,
       };
-
     } catch (error: any) {
       return {
         configured: true,
         accessible: false,
         address: this.ELIGIBILITY_MODULE_ADDRESS,
-        error: error.message || 'Module contract not accessible'
+        error: error.message || 'Module contract not accessible',
       };
     }
   }
@@ -1100,9 +1253,15 @@ export class EligibilityModuleService {
   /**
    * Validate time range
    */
-  static validateTimeRange(validFrom: Date | null, validUntil: Date | null): { valid: boolean; error?: string } {
+  static validateTimeRange(
+    validFrom: Date | null,
+    validUntil: Date | null,
+  ): { valid: boolean; error?: string } {
     if (validFrom && validUntil && validFrom >= validUntil) {
-      return { valid: false, error: 'Valid from date must be before valid until date' };
+      return {
+        valid: false,
+        error: 'Valid from date must be before valid until date',
+      };
     }
 
     if (validFrom && validFrom < new Date()) {
@@ -1115,16 +1274,25 @@ export class EligibilityModuleService {
   /**
    * Format time criterion for display
    */
-  static formatTimeCriterion(validFrom: Date | null, validUntil: Date | null): string {
+  static formatTimeCriterion(
+    validFrom: Date | null,
+    validUntil: Date | null,
+  ): string {
     if (!validFrom && !validUntil) {
       return 'No time restrictions';
     }
 
-    const fromStr = validFrom ? validFrom.toLocaleDateString() : 'No start date';
-    const untilStr = validUntil ? validUntil.toLocaleDateString() : 'No end date';
+    const fromStr = validFrom
+      ? validFrom.toLocaleDateString()
+      : 'No start date';
+    const untilStr = validUntil
+      ? validUntil.toLocaleDateString()
+      : 'No end date';
 
     if (validFrom && validUntil) {
-      const duration = Math.ceil((validUntil.getTime() - validFrom.getTime()) / (1000 * 60 * 60 * 24));
+      const duration = Math.ceil(
+        (validUntil.getTime() - validFrom.getTime()) / (1000 * 60 * 60 * 24),
+      );
       return `${fromStr} to ${untilStr} (${duration} days)`;
     }
 

@@ -3,7 +3,7 @@ import { createClient } from '@supabase/supabase-js';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
+  process.env.SUPABASE_SERVICE_ROLE_KEY!,
 );
 
 export async function POST(request: NextRequest) {
@@ -24,18 +24,21 @@ export async function POST(request: NextRequest) {
       deadline,
       funding_source,
       requirements,
-      questions
+      questions,
     } = body;
 
     console.log('📝 Saving bounty to database:', {
       bountyId,
       transactionHash,
       creator,
-      podId
+      podId,
     });
 
     // Determine token name for value_token field
-    const valueToken = token === '0x1317Ae277266D38C4E492558f8693F14143a6A65' ? 'SYSTEM' : 'SELF';
+    const valueToken =
+      token === '0x1317Ae277266D38C4E492558f8693F14143a6A65'
+        ? 'SYSTEM'
+        : 'SELF';
 
     // Check if blockchain fields exist in schema
     const { error: schemaError } = await supabase
@@ -57,7 +60,7 @@ export async function POST(request: NextRequest) {
       status: 'open',
       creator_address: creator,
       created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
+      updated_at: new Date().toISOString(),
     };
 
     // Add blockchain fields if they exist (after migration)
@@ -73,7 +76,11 @@ export async function POST(request: NextRequest) {
       insertData.deadline = deadline ? new Date(deadline).toISOString() : null;
     }
 
-    console.log('📋 Insert data prepared (hasBlockchainFields:', hasBlockchainFields, ')');
+    console.log(
+      '📋 Insert data prepared (hasBlockchainFields:',
+      hasBlockchainFields,
+      ')',
+    );
 
     // Insert bounty into database
     const { data, error } = await supabase
@@ -86,7 +93,7 @@ export async function POST(request: NextRequest) {
       console.error('❌ Error saving bounty to database:', error);
       return NextResponse.json(
         { error: 'Failed to save bounty to database', details: error.message },
-        { status: 500 }
+        { status: 500 },
       );
     }
 
@@ -94,14 +101,16 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      bounty: data
+      bounty: data,
     });
-
   } catch (error) {
     console.error('❌ Error in bounty creation API:', error);
     return NextResponse.json(
-      { error: 'Internal server error', details: error instanceof Error ? error.message : 'Unknown error' },
-      { status: 500 }
+      {
+        error: 'Internal server error',
+        details: error instanceof Error ? error.message : 'Unknown error',
+      },
+      { status: 500 },
     );
   }
 }

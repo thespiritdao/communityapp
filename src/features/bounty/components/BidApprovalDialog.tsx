@@ -19,7 +19,7 @@
  * @module BidApprovalDialog
  */
 
-"use client"
+'use client';
 
 import React, { useState } from 'react';
 import {
@@ -27,7 +27,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogDescription
+  DialogDescription,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -58,7 +58,10 @@ export interface BidApprovalDialogProps {
   tokenSymbol: string;
 
   /** Callback triggered when user approves bid with reviewers selected */
-  onApprove: (techReviewer: `0x${string}`, finalApprover: `0x${string}`) => void;
+  onApprove: (
+    techReviewer: `0x${string}`,
+    finalApprover: `0x${string}`,
+  ) => void;
 
   /** Whether approval is currently in progress */
   isApproving?: boolean;
@@ -79,7 +82,7 @@ const extractAddress = (mention: string | undefined): `0x${string}` | null => {
   if (!mention) return null;
   const match = mention.match(/@\[.*?\]\((0x[a-fA-F0-9]{40})\)/);
   const address = match ? match[1] : mention;
-  return isAddress(address) ? address as `0x${string}` : null;
+  return isAddress(address) ? (address as `0x${string}`) : null;
 };
 
 /**
@@ -102,7 +105,8 @@ const getPaymentOptionLabel = (option: string): string => {
  * Formats date for deliverable display
  */
 const formatDeliverableDate = (dateValue: string | Date): string => {
-  const dateObj = typeof dateValue === 'string' ? parseISO(dateValue) : dateValue;
+  const dateObj =
+    typeof dateValue === 'string' ? parseISO(dateValue) : dateValue;
   return isValid(dateObj) ? format(dateObj, 'MMM dd, yyyy') : 'Invalid date';
 };
 
@@ -118,7 +122,7 @@ export const BidApprovalDialog: React.FC<BidApprovalDialogProps> = ({
   tokenSymbol,
   onApprove,
   isApproving = false,
-  readOnly = false
+  readOnly = false,
 }) => {
   const [techReviewer, setTechReviewer] = useState<string>('');
   const [finalApprover, setFinalApprover] = useState<string>('');
@@ -162,9 +166,7 @@ export const BidApprovalDialog: React.FC<BidApprovalDialogProps> = ({
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="fixed z-50 left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-white rounded-lg shadow-lg focus:outline-none max-w-5xl">
         <DialogHeader>
-          <DialogTitle>
-            {readOnly ? 'Bid Details' : 'Bid Approval'}
-          </DialogTitle>
+          <DialogTitle>{readOnly ? 'Bid Details' : 'Bid Approval'}</DialogTitle>
           <DialogDescription>
             {readOnly
               ? 'View the approved bid details and assigned reviewers.'
@@ -187,10 +189,12 @@ export const BidApprovalDialog: React.FC<BidApprovalDialogProps> = ({
                 <strong>Amount:</strong> {bid.proposedAmount} {tokenSymbol}
               </p>
               <p>
-                <strong>Payment:</strong> {getPaymentOptionLabel(bid.paymentOption)}
+                <strong>Payment:</strong>{' '}
+                {getPaymentOptionLabel(bid.paymentOption)}
               </p>
               <p>
-                <strong>Submitted:</strong> {format(bid.submittedAt, 'MMM dd, yyyy')}
+                <strong>Submitted:</strong>{' '}
+                {format(bid.submittedAt, 'MMM dd, yyyy')}
               </p>
             </div>
           </div>
@@ -199,7 +203,9 @@ export const BidApprovalDialog: React.FC<BidApprovalDialogProps> = ({
           <div>
             <h4 className="font-medium mb-2">Relevant Experience</h4>
             <div className="bg-gray-50 p-4 rounded-lg">
-              <p className="text-gray-700 whitespace-pre-wrap">{bid.experience}</p>
+              <p className="text-gray-700 whitespace-pre-wrap">
+                {bid.experience}
+              </p>
             </div>
           </div>
 
@@ -207,7 +213,9 @@ export const BidApprovalDialog: React.FC<BidApprovalDialogProps> = ({
           <div>
             <h4 className="font-medium mb-2">Plan of Action</h4>
             <div className="bg-gray-50 p-4 rounded-lg">
-              <p className="text-gray-700 whitespace-pre-wrap">{bid.planOfAction}</p>
+              <p className="text-gray-700 whitespace-pre-wrap">
+                {bid.planOfAction}
+              </p>
             </div>
           </div>
 
@@ -215,14 +223,19 @@ export const BidApprovalDialog: React.FC<BidApprovalDialogProps> = ({
           <div>
             <h4 className="font-medium mb-2">Deliverables</h4>
             <div className="space-y-2">
-              {Array.isArray(bid.deliverables) && bid.deliverables.length > 0 ? (
+              {Array.isArray(bid.deliverables) &&
+              bid.deliverables.length > 0 ? (
                 bid.deliverables.map((deliverable, index) => (
                   <div key={index} className="bg-gray-50 p-4 rounded-lg">
                     <div className="flex justify-between items-start">
                       <div className="flex-grow">
-                        <p className="text-gray-700">{deliverable.description}</p>
+                        <p className="text-gray-700">
+                          {deliverable.description}
+                        </p>
                         <div className="text-sm text-gray-600 mt-1">
-                          <p>Due: {formatDeliverableDate(deliverable.due_date)}</p>
+                          <p>
+                            Due: {formatDeliverableDate(deliverable.due_date)}
+                          </p>
                           <p>
                             Amount: {deliverable.payment_amount} {tokenSymbol}
                           </p>
@@ -233,7 +246,9 @@ export const BidApprovalDialog: React.FC<BidApprovalDialogProps> = ({
                 ))
               ) : (
                 <div className="bg-gray-50 p-4 rounded-lg">
-                  <p className="text-gray-500 italic">No deliverables specified</p>
+                  <p className="text-gray-500 italic">
+                    No deliverables specified
+                  </p>
                 </div>
               )}
             </div>
@@ -243,16 +258,16 @@ export const BidApprovalDialog: React.FC<BidApprovalDialogProps> = ({
           <div>
             <h4 className="font-medium mb-2">Timeline</h4>
             <div className="bg-gray-50 p-4 rounded-lg">
-              <p className="text-gray-700 whitespace-pre-wrap">{bid.timeline}</p>
+              <p className="text-gray-700 whitespace-pre-wrap">
+                {bid.timeline}
+              </p>
             </div>
           </div>
 
           {/* Reviewer Assignment */}
           <div className="space-y-4">
             <div>
-              <Label>
-                Technical Reviewer {readOnly && '(Assigned)'}
-              </Label>
+              <Label>Technical Reviewer {readOnly && '(Assigned)'}</Label>
               {readOnly ? (
                 <div className="p-2 bg-gray-100 rounded border text-gray-700">
                   {bid.technical_reviewer || 'Not assigned'}
@@ -275,9 +290,7 @@ export const BidApprovalDialog: React.FC<BidApprovalDialogProps> = ({
             </div>
 
             <div>
-              <Label>
-                Final Approver {readOnly && '(Assigned)'}
-              </Label>
+              <Label>Final Approver {readOnly && '(Assigned)'}</Label>
               {readOnly ? (
                 <div className="p-2 bg-gray-100 rounded border text-gray-700">
                   {bid.final_approver || 'Not assigned'}

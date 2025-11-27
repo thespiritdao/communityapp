@@ -13,13 +13,13 @@ export enum BountyStatus {
   Open = 0,
   InProgress = 1,
   Completed = 2,
-  Cancelled = 3
+  Cancelled = 3,
 }
 
 export enum MilestoneStatus {
   Pending = 0,
   Completed = 1,
-  Overdue = 2
+  Overdue = 2,
 }
 
 export const useBountyContractEnhanced = () => {
@@ -33,7 +33,7 @@ export const useBountyContractEnhanced = () => {
     if (!publicClient) {
       throw new Error('Public client not available');
     }
-    
+
     const contractAddress = CONTRACT_ADDRESSES.BOUNTY_MANAGER;
     if (!contractAddress) {
       throw new Error('Bounty manager contract address not configured');
@@ -48,18 +48,20 @@ export const useBountyContractEnhanced = () => {
   };
 
   const createBountyOnChain = async (
-    params: CreateBountyParams
-  ): Promise<{hash: `0x${string}`, bountyId: bigint}> => {
+    params: CreateBountyParams,
+  ): Promise<{ hash: `0x${string}`; bountyId: bigint }> => {
     const { contractAddress, account } = preflightCheck();
-    
+
     console.log('🔍 createBountyOnChain received params:', params);
 
-    const calls = [{
-      address: contractAddress,
-      abi: BountyManagerABI,
-      functionName: 'createBounty',
-      args: [params], // Single struct parameter
-    }];
+    const calls = [
+      {
+        address: contractAddress,
+        abi: BountyManagerABI,
+        functionName: 'createBounty',
+        args: [params], // Single struct parameter
+      },
+    ];
 
     console.log('🔍 Transaction calls:', calls);
 
@@ -75,13 +77,14 @@ export const useBountyContractEnhanced = () => {
     token: 'SYSTEM' | 'SELF',
     paymentStructure: PaymentStructure,
     upfrontAmount = '0',
-    completionAmount = '0'
+    completionAmount = '0',
   ): CreateBountyParams => {
     const decimals = 18; // Standard for both SYSTEM and SELF tokens
-    
-    const tokenAddress = token === 'SYSTEM'
-      ? CONTRACT_ADDRESSES.SYSTEM_TOKEN
-      : CONTRACT_ADDRESSES.SELF_TOKEN;
+
+    const tokenAddress =
+      token === 'SYSTEM'
+        ? CONTRACT_ADDRESSES.SYSTEM_TOKEN
+        : CONTRACT_ADDRESSES.SELF_TOKEN;
 
     return {
       title,
@@ -98,19 +101,23 @@ export const useBountyContractEnhanced = () => {
     bountyId: number,
     descriptions: string[],
     dueDates: number[],
-    paymentAmounts: string[]
-  ): Promise<{hash: `0x${string}`}> => {
+    paymentAmounts: string[],
+  ): Promise<{ hash: `0x${string}` }> => {
     const { contractAddress, account } = preflightCheck();
 
     // Convert payment amounts to strings and parse them
-    const parsedPaymentAmounts = paymentAmounts.map(amount => parseEther(String(amount)));
+    const parsedPaymentAmounts = paymentAmounts.map((amount) =>
+      parseEther(String(amount)),
+    );
 
-    const calls = [{
-      address: contractAddress,
-      abi: BountyManagerABI,
-      functionName: 'createMilestones',
-      args: [bountyId, descriptions, dueDates, parsedPaymentAmounts],
-    }];
+    const calls = [
+      {
+        address: contractAddress,
+        abi: BountyManagerABI,
+        functionName: 'createMilestones',
+        args: [bountyId, descriptions, dueDates, parsedPaymentAmounts],
+      },
+    ];
 
     // For now, return a placeholder since we're using Transaction component
     return { hash: '0x' as `0x${string}` };
@@ -122,10 +129,10 @@ export const useBountyContractEnhanced = () => {
   };
 
   const assignBountyOnChain = async (
-    bountyId: number, 
+    bountyId: number,
     bidder: string,
     technicalReviewer: string,
-    finalApprover: string
+    finalApprover: string,
   ) => {
     const { contractAddress, account, chain } = preflightCheck();
     // Implementation of assignBountyOnChain
@@ -133,32 +140,36 @@ export const useBountyContractEnhanced = () => {
 
   const approveMilestoneOnChain = async (
     bountyId: number,
-    milestoneId: number
-  ): Promise<{hash: `0x${string}`}> => {
+    milestoneId: number,
+  ): Promise<{ hash: `0x${string}` }> => {
     const { contractAddress, account } = preflightCheck();
 
-    const calls = [{
-      address: contractAddress,
-      abi: BountyManagerABI,
-      functionName: 'approveMilestone',
-      args: [bountyId, milestoneId],
-    }];
+    const calls = [
+      {
+        address: contractAddress,
+        abi: BountyManagerABI,
+        functionName: 'approveMilestone',
+        args: [bountyId, milestoneId],
+      },
+    ];
 
     // For now, return a placeholder since we're using Transaction component
     return { hash: '0x' as `0x${string}` };
   };
 
   const approveCompletionOnChain = async (
-    bountyId: number
-  ): Promise<{hash: `0x${string}`}> => {
+    bountyId: number,
+  ): Promise<{ hash: `0x${string}` }> => {
     const { contractAddress, account } = preflightCheck();
 
-    const calls = [{
-      address: contractAddress,
-      abi: BountyManagerABI,
-      functionName: 'approveCompletion',
-      args: [bountyId],
-    }];
+    const calls = [
+      {
+        address: contractAddress,
+        abi: BountyManagerABI,
+        functionName: 'approveCompletion',
+        args: [bountyId],
+      },
+    ];
 
     // For now, return a placeholder since we're using Transaction component
     return { hash: '0x' as `0x${string}` };
@@ -182,4 +193,4 @@ export const useBountyContractEnhanced = () => {
     BountyStatus,
     MilestoneStatus,
   };
-}; 
+};

@@ -16,7 +16,7 @@ export class HatsCoreService {
 
   constructor(
     private publicClient: PublicClient,
-    private walletClient?: WalletClient
+    private walletClient?: WalletClient,
   ) {}
 
   /**
@@ -51,14 +51,15 @@ export class HatsCoreService {
       this.subgraphClient = new HatsSubgraphClient({
         config: {
           [this.publicClient.chain?.id || base.id]: {
-            endpoint: this.getSubgraphEndpoint(this.publicClient.chain?.id || base.id)
-          }
-        }
+            endpoint: this.getSubgraphEndpoint(
+              this.publicClient.chain?.id || base.id,
+            ),
+          },
+        },
       });
 
       this.isInitialized = true;
       console.log('✅ HATS Core Service initialized successfully');
-
     } catch (error) {
       console.error('❌ Failed to initialize HATS Core Service:', error);
       this.initializationPromise = null;
@@ -75,11 +76,13 @@ export class HatsCoreService {
       8453: 'https://api.thegraph.com/subgraphs/name/hats-protocol/hats-v1-base', // Base
       10: 'https://api.thegraph.com/subgraphs/name/hats-protocol/hats-v1-optimism',
       137: 'https://api.thegraph.com/subgraphs/name/hats-protocol/hats-v1-polygon',
-      42161: 'https://api.thegraph.com/subgraphs/name/hats-protocol/hats-v1-arbitrum',
+      42161:
+        'https://api.thegraph.com/subgraphs/name/hats-protocol/hats-v1-arbitrum',
       100: 'https://api.thegraph.com/subgraphs/name/hats-protocol/hats-v1-gnosis',
-      42220: 'https://api.thegraph.com/subgraphs/name/hats-protocol/hats-v1-celo',
+      42220:
+        'https://api.thegraph.com/subgraphs/name/hats-protocol/hats-v1-celo',
     };
-    
+
     return endpoints[chainId] || endpoints[8453]; // Default to Base
   }
 
@@ -88,7 +91,9 @@ export class HatsCoreService {
    */
   private ensureInitialized(): void {
     if (!this.isInitialized || !this.coreClient || !this.subgraphClient) {
-      throw new Error('HatsCoreService not initialized. Call initialize() first.');
+      throw new Error(
+        'HatsCoreService not initialized. Call initialize() first.',
+      );
     }
   }
 
@@ -109,27 +114,32 @@ export class HatsCoreService {
     imageURI?: string;
   }): Promise<{ hatId: string; transactionHash: string }> {
     this.ensureInitialized();
-    
+
     if (!this.walletClient) {
       throw new Error('Wallet client required for creating hats');
     }
 
-    const account = await this.walletClient.getAddresses().then(addrs => addrs[0]);
+    const account = await this.walletClient
+      .getAddresses()
+      .then((addrs) => addrs[0]);
 
     // CRITICAL FIX: Use creator address as toggle module for proper permission management
     // The toggle module must be an ADDRESS (20 bytes), not a hat ID (32 bytes)
     const toggleModule = params.toggle || account;
-    
+
     console.log('🎯 Hats SDK hat creation parameters:', {
       admin: params.admin,
-      eligibility: params.eligibility || '0x0000000000000000000000000000000000000001',
+      eligibility:
+        params.eligibility || '0x0000000000000000000000000000000000000001',
       toggle: toggleModule,
       mutable: params.mutable ?? true,
-      maxSupply: params.maxSupply || 1
+      maxSupply: params.maxSupply || 1,
     });
-    
+
     if (toggleModule === account) {
-      console.log('✅ Using creator address as toggle module (enables permission management)');
+      console.log(
+        '✅ Using creator address as toggle module (enables permission management)',
+      );
     }
 
     const result = await this.coreClient!.createHat({
@@ -137,15 +147,16 @@ export class HatsCoreService {
       admin: BigInt(params.admin),
       details: params.details,
       maxSupply: params.maxSupply || 1,
-      eligibility: (params.eligibility || '0x0000000000000000000000000000000000000001') as `0x${string}`,
+      eligibility: (params.eligibility ||
+        '0x0000000000000000000000000000000000000001') as `0x${string}`,
       toggle: toggleModule as `0x${string}`,
       mutable: params.mutable ?? true,
-      imageURI: params.imageURI || ''
+      imageURI: params.imageURI || '',
     });
 
     return {
       hatId: result.hatId.toString(),
-      transactionHash: result.transactionHash
+      transactionHash: result.transactionHash,
     };
   }
 
@@ -172,17 +183,19 @@ export class HatsCoreService {
     wearer: string;
   }): Promise<{ transactionHash: string }> {
     this.ensureInitialized();
-    
+
     if (!this.walletClient) {
       throw new Error('Wallet client required for minting hats');
     }
 
-    const account = await this.walletClient.getAddresses().then(addrs => addrs[0]);
+    const account = await this.walletClient
+      .getAddresses()
+      .then((addrs) => addrs[0]);
 
     const result = await this.coreClient!.mintHat({
       account,
       hatId: BigInt(params.hatId),
-      wearer: params.wearer as `0x${string}`
+      wearer: params.wearer as `0x${string}`,
     });
 
     return { transactionHash: result.transactionHash };
@@ -196,17 +209,19 @@ export class HatsCoreService {
     wearers: string[];
   }): Promise<{ transactionHash: string }> {
     this.ensureInitialized();
-    
+
     if (!this.walletClient) {
       throw new Error('Wallet client required for batch minting hats');
     }
 
-    const account = await this.walletClient.getAddresses().then(addrs => addrs[0]);
+    const account = await this.walletClient
+      .getAddresses()
+      .then((addrs) => addrs[0]);
 
     const result = await this.coreClient!.batchMintHats({
       account,
       hatIds: params.wearers.map(() => BigInt(params.hatId)),
-      wearers: params.wearers as `0x${string}`[]
+      wearers: params.wearers as `0x${string}`[],
     });
 
     return { transactionHash: result.transactionHash };
@@ -221,18 +236,20 @@ export class HatsCoreService {
     to: string;
   }): Promise<{ transactionHash: string }> {
     this.ensureInitialized();
-    
+
     if (!this.walletClient) {
       throw new Error('Wallet client required for transferring hats');
     }
 
-    const account = await this.walletClient.getAddresses().then(addrs => addrs[0]);
+    const account = await this.walletClient
+      .getAddresses()
+      .then((addrs) => addrs[0]);
 
     const result = await this.coreClient!.transferHat({
       account,
       hatId: BigInt(params.hatId),
       from: params.from as `0x${string}`,
-      to: params.to as `0x${string}`
+      to: params.to as `0x${string}`,
     });
 
     return { transactionHash: result.transactionHash };
@@ -246,28 +263,32 @@ export class HatsCoreService {
     wearer: string;
   }): Promise<{ transactionHash: string }> {
     this.ensureInitialized();
-    
+
     if (!this.walletClient) {
       throw new Error('Wallet client required for revoking hats');
     }
 
-    const account = await this.walletClient.getAddresses().then(addrs => addrs[0]);
+    const account = await this.walletClient
+      .getAddresses()
+      .then((addrs) => addrs[0]);
 
     // Check if the hat can be revoked
     const canRevoke = await this.coreClient!.isInGoodStanding({
       hatId: BigInt(params.hatId),
-      wearer: params.wearer as `0x${string}`
+      wearer: params.wearer as `0x${string}`,
     });
 
     if (!canRevoke) {
-      throw new Error('Cannot revoke hat: wearer is not in good standing or hat is not revocable');
+      throw new Error(
+        'Cannot revoke hat: wearer is not in good standing or hat is not revocable',
+      );
     }
 
     // Use setHatStatus to revoke
     const result = await this.coreClient!.setHatStatus({
       account,
       hatId: BigInt(params.hatId),
-      newStatus: false
+      newStatus: false,
     });
 
     return { transactionHash: result.transactionHash };
@@ -281,23 +302,25 @@ export class HatsCoreService {
     newStatus: boolean;
   }): Promise<{ transactionHash: string }> {
     this.ensureInitialized();
-    
+
     if (!this.walletClient) {
       throw new Error('Wallet client required for toggling hat status');
     }
 
-    const account = await this.walletClient.getAddresses().then(addrs => addrs[0]);
+    const account = await this.walletClient
+      .getAddresses()
+      .then((addrs) => addrs[0]);
 
     console.log('🎩 Executing setHatStatus via Hats SDK:', {
       account,
       hatId: params.hatId,
-      newStatus: params.newStatus
+      newStatus: params.newStatus,
     });
 
     const result = await this.coreClient!.setHatStatus({
       account,
       hatId: BigInt(params.hatId),
-      newStatus: params.newStatus
+      newStatus: params.newStatus,
     });
 
     return { transactionHash: result.transactionHash };
@@ -311,19 +334,19 @@ export class HatsCoreService {
     hatId: string;
   }): Promise<boolean> {
     this.ensureInitialized();
-    
+
     try {
       // Get HAT details to find admin HAT
       const hatDetails = await this.getHatDetails(params.hatId);
-      
+
       if (!hatDetails?.admin?.id) {
         console.log('❌ No admin HAT found for this HAT');
         return false;
       }
-      
+
       const adminHatId = hatDetails.admin.id;
       console.log('🔍 Admin HAT ID:', adminHatId);
-      
+
       // Check if user wears the admin HAT
       const adminHat = await this.subgraphClient!.getWearer({
         chainId: this.publicClient.chain?.id || base.id,
@@ -332,38 +355,42 @@ export class HatsCoreService {
           currentHats: {
             props: {
               prettyId: true,
-              status: true
-            }
-          }
-        }
+              status: true,
+            },
+          },
+        },
       });
-      
+
       const hasAdminHat = adminHat?.currentHats?.some(
-        (hat: any) => hat.id === adminHatId && hat.status
+        (hat: any) => hat.id === adminHatId && hat.status,
       );
-      
+
       console.log('🔐 Admin HAT check result:', {
         userAddress: params.userAddress,
         adminHatId,
         hasAdminHat,
-        currentHats: adminHat?.currentHats?.length || 0
+        currentHats: adminHat?.currentHats?.length || 0,
       });
-      
+
       return Boolean(hasAdminHat);
-      
     } catch (error) {
       console.error('Failed to check admin permissions:', error);
-      
+
       // Check if it's a CORS-related error and provide helpful info
-      if (error instanceof Error && (
-          error.message.includes('CORS') || 
+      if (
+        error instanceof Error &&
+        (error.message.includes('CORS') ||
           error.message.includes('Failed to fetch') ||
-          error.message.includes('Redirect is not allowed')
-        )) {
-        console.log('🚫 CORS error detected - subgraph API unavailable. Admin permissions cannot be verified.');
-        console.log('💡 This is expected in development. For production, ensure proper CORS configuration.');
+          error.message.includes('Redirect is not allowed'))
+      ) {
+        console.log(
+          '🚫 CORS error detected - subgraph API unavailable. Admin permissions cannot be verified.',
+        );
+        console.log(
+          '💡 This is expected in development. For production, ensure proper CORS configuration.',
+        );
       }
-      
+
       return false;
     }
   }
@@ -373,8 +400,9 @@ export class HatsCoreService {
    */
   private detectCorsIssues(): boolean {
     // In development with localhost, CORS redirects commonly fail
-    return typeof window !== 'undefined' && 
-           window.location.hostname === 'localhost';
+    return (
+      typeof window !== 'undefined' && window.location.hostname === 'localhost'
+    );
   }
 
   /**
@@ -386,43 +414,51 @@ export class HatsCoreService {
     newStatus: boolean;
   }): Promise<{ transactionHash: string }> {
     this.ensureInitialized();
-    
+
     if (!this.walletClient) {
       throw new Error('Wallet client required for toggling hat status');
     }
 
-    const account = await this.walletClient.getAddresses().then(addrs => addrs[0]);
+    const account = await this.walletClient
+      .getAddresses()
+      .then((addrs) => addrs[0]);
 
     // Try to check admin permissions, but proceed if CORS blocks it
     try {
       const isAdmin = await this.isHatAdmin({
         userAddress: account,
-        hatId: params.hatId
+        hatId: params.hatId,
       });
 
       if (isAdmin) {
         console.log('✅ Admin permissions verified');
       } else {
-        console.log('⚠️  Admin permission check failed - trying direct toggle anyway (may be due to CORS)');
+        console.log(
+          '⚠️  Admin permission check failed - trying direct toggle anyway (may be due to CORS)',
+        );
         // Don't throw here - try the transaction anyway since CORS may be blocking verification
       }
     } catch (error) {
-      console.log('⚠️  Admin permission check failed due to technical issues - proceeding with toggle attempt');
-      console.log('🔄 This may succeed if you actually have the required permissions');
+      console.log(
+        '⚠️  Admin permission check failed due to technical issues - proceeding with toggle attempt',
+      );
+      console.log(
+        '🔄 This may succeed if you actually have the required permissions',
+      );
     }
 
     console.log('🎩 Using admin permissions to toggle HAT status:', {
       account,
       hatId: params.hatId,
       newStatus: params.newStatus,
-      method: 'admin'
+      method: 'admin',
     });
 
     // Use admin method to change HAT status via setHatStatus
     const result = await this.coreClient!.setHatStatus({
       account,
       hatId: BigInt(params.hatId),
-      newStatus: params.newStatus
+      newStatus: params.newStatus,
     });
 
     return { transactionHash: result.transactionHash };
@@ -433,7 +469,7 @@ export class HatsCoreService {
    */
   async getHatDetails(hatId: string) {
     this.ensureInitialized();
-    
+
     return await this.subgraphClient!.getHat({
       chainId: this.publicClient.chain?.id || base.id,
       hatId: BigInt(hatId),
@@ -447,11 +483,11 @@ export class HatsCoreService {
         imageUri: true,
         admin: {
           prettyId: true,
-          status: true
+          status: true,
         },
         eligibility: true,
-        toggle: true
-      }
+        toggle: true,
+      },
     });
   }
 
@@ -464,7 +500,7 @@ export class HatsCoreService {
    */
   async getHat(hatId: string) {
     this.ensureInitialized();
-    
+
     return await this.subgraphClient!.getHat({
       chainId: this.publicClient.chain?.id || base.id,
       hatId: BigInt(hatId),
@@ -478,7 +514,7 @@ export class HatsCoreService {
         mutable: true,
         imageUri: true,
         admin: {
-          prettyId: true
+          prettyId: true,
         },
         eligibility: true,
         toggle: true,
@@ -486,12 +522,12 @@ export class HatsCoreService {
           props: {
             currentHats: {
               props: {
-                prettyId: true
-              }
-            }
-          }
-        }
-      }
+                prettyId: true,
+              },
+            },
+          },
+        },
+      },
     });
   }
 
@@ -500,7 +536,7 @@ export class HatsCoreService {
    */
   async getWearerHats(wearerAddress: string) {
     this.ensureInitialized();
-    
+
     return await this.subgraphClient!.getWearer({
       chainId: this.publicClient.chain?.id || base.id,
       wearerAddress: wearerAddress.toLowerCase() as `0x${string}`,
@@ -512,11 +548,11 @@ export class HatsCoreService {
             details: true,
             imageUri: true,
             admin: {
-              prettyId: true
-            }
-          }
-        }
-      }
+              prettyId: true,
+            },
+          },
+        },
+      },
     });
   }
 
@@ -525,7 +561,7 @@ export class HatsCoreService {
    */
   async getHatWearers(hatId: string) {
     this.ensureInitialized();
-    
+
     const hat = await this.getHat(hatId);
     return hat?.wearers || [];
   }
@@ -535,10 +571,10 @@ export class HatsCoreService {
    */
   async isWearingHat(wearerAddress: string, hatId: string): Promise<boolean> {
     this.ensureInitialized();
-    
+
     return await this.coreClient!.isWearerOfHat({
       wearer: wearerAddress as `0x${string}`,
-      hatId: BigInt(hatId)
+      hatId: BigInt(hatId),
     });
   }
 
@@ -547,7 +583,7 @@ export class HatsCoreService {
    */
   async getHatTree(topHatId: string) {
     this.ensureInitialized();
-    
+
     return await this.subgraphClient!.getTree({
       chainId: this.publicClient.chain?.id || base.id,
       treeId: Number.parseInt(topHatId),
@@ -561,14 +597,14 @@ export class HatsCoreService {
             currentSupply: true,
             imageUri: true,
             admin: {
-              prettyId: true
+              prettyId: true,
             },
             wearers: {
-              props: {}
-            }
-          }
-        }
-      }
+              props: {},
+            },
+          },
+        },
+      },
     });
   }
 
@@ -613,7 +649,7 @@ export class HatsCoreService {
    */
   async isHatActive(hatId: string): Promise<boolean> {
     this.ensureInitialized();
-    
+
     return await this.coreClient!.isActive(BigInt(hatId));
   }
 
@@ -639,12 +675,12 @@ let hatsCoreService: HatsCoreService | null = null;
 
 export const getHatsCoreService = (
   publicClient: PublicClient,
-  walletClient?: WalletClient
+  walletClient?: WalletClient,
 ): HatsCoreService => {
   if (!hatsCoreService) {
     hatsCoreService = new HatsCoreService(publicClient, walletClient);
   }
-  
+
   return hatsCoreService;
 };
 

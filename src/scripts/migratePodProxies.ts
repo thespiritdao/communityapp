@@ -24,7 +24,12 @@
  * ```
  */
 
-import { createPublicClient, createWalletClient, http, type WalletClient } from 'viem';
+import {
+  createPublicClient,
+  createWalletClient,
+  http,
+  type WalletClient,
+} from 'viem';
 import { base } from 'viem/chains';
 import { privateKeyToAccount } from 'viem/accounts';
 import { ProxyAdminHatService } from '../features/pods/services/ProxyAdminHatService';
@@ -37,7 +42,9 @@ const MIGRATION_CONFIG = {
   DRY_RUN: process.env.DRY_RUN === 'true',
 
   // Exec pod address for toggle module
-  EXEC_POD_ADDRESS: process.env.NEXT_PUBLIC_EXEC_POD_ADDRESS || '0x0000000000000000000000000000000000000000',
+  EXEC_POD_ADDRESS:
+    process.env.NEXT_PUBLIC_EXEC_POD_ADDRESS ||
+    '0x0000000000000000000000000000000000000000',
 
   // Batch size for processing (to avoid rate limits)
   BATCH_SIZE: 5,
@@ -65,7 +72,7 @@ async function getWalletClient(): Promise<WalletClient> {
   if (!privateKey) {
     throw new Error(
       'MIGRATION_PRIVATE_KEY environment variable not set.\n' +
-      'This should be the private key of an account with parent pod admin rights.'
+        'This should be the private key of an account with parent pod admin rights.',
     );
   }
 
@@ -74,7 +81,7 @@ async function getWalletClient(): Promise<WalletClient> {
   const walletClient = createWalletClient({
     account,
     chain: base,
-    transport: http()
+    transport: http(),
   });
 
   return walletClient;
@@ -87,16 +94,16 @@ async function hasProxyAdminHat(proxyAddress: string): Promise<boolean> {
   try {
     const publicClient = createPublicClient({
       chain: base,
-      transport: http()
+      transport: http(),
     });
 
     const PodAuthProxyABI = await import('../abis/PodAuthProxy.json');
 
-    const proxyAdminHatId = await publicClient.readContract({
+    const proxyAdminHatId = (await publicClient.readContract({
       address: proxyAddress as `0x${string}`,
       abi: PodAuthProxyABI.default,
-      functionName: 'getProxyAdminHatId'
-    }) as bigint;
+      functionName: 'getProxyAdminHatId',
+    })) as bigint;
 
     return proxyAdminHatId > 0n;
   } catch (error) {
@@ -110,12 +117,12 @@ async function hasProxyAdminHat(proxyAddress: string): Promise<boolean> {
  */
 async function migratePod(
   pod: any,
-  walletClient: WalletClient
+  walletClient: WalletClient,
 ): Promise<MigrationResult> {
   const result: MigrationResult = {
     podId: pod.id,
     podName: pod.name,
-    status: 'failed'
+    status: 'failed',
   };
 
   try {
@@ -125,9 +132,13 @@ async function migratePod(
     console.log('   Step 1: Getting proxy address...');
     const proxyAddress = await PodBlockchainSyncService.getPodProxy(pod.id);
 
-    if (!proxyAddress || proxyAddress === '0x0000000000000000000000000000000000000000') {
+    if (
+      !proxyAddress ||
+      proxyAddress === '0x0000000000000000000000000000000000000000'
+    ) {
       result.status = 'skipped';
-      result.reason = 'No proxy found - pod may not have bounty/treasury features enabled';
+      result.reason =
+        'No proxy found - pod may not have bounty/treasury features enabled';
       console.log(`   ⏭️ Skipped: ${result.reason}`);
       return result;
     }
@@ -166,8 +177,8 @@ async function migratePod(
       return result;
     }
 
-    const availablePods = await EventService.getPods() as any[];
-    const parentPod = availablePods.find(p => p.id === pod.parent_pod_id);
+    const availablePods = (await EventService.getPods()) as any[];
+    const parentPod = availablePods.find((p) => p.id === pod.parent_pod_id);
 
     if (!parentPod || !parentPod.management_hat_id) {
       result.status = 'skipped';
@@ -176,7 +187,9 @@ async function migratePod(
       return result;
     }
 
-    console.log(`   ✅ Parent pod: ${parentPod.name} (HAT: ${parentPod.management_hat_id})`);
+    console.log(
+      `   ✅ Parent pod: ${parentPod.name} (HAT: ${parentPod.management_hat_id})`,
+    );
 
     // DRY RUN - Stop here if enabled
     if (MIGRATION_CONFIG.DRY_RUN) {
@@ -194,11 +207,13 @@ async function migratePod(
       parentPodHatId: parentPod.management_hat_id,
       proxyAddress,
       execPodAddress: MIGRATION_CONFIG.EXEC_POD_ADDRESS,
-      walletClient
+      walletClient,
     });
 
     if (!adminHatResult.success || !adminHatResult.proxyAdminHatId) {
-      throw new Error(`Failed to setup proxy admin HAT: ${adminHatResult.error}`);
+      throw new Error(
+        `Failed to setup proxy admin HAT: ${adminHatResult.error}`,
+      );
     }
 
     result.proxyAdminHatId = adminHatResult.proxyAdminHatId;
@@ -206,7 +221,9 @@ async function migratePod(
 
     // Step 6: Set admin HAT ID in proxy
     console.log('   Step 6: Setting admin HAT ID in proxy...');
-    const { writeContract, waitForTransactionReceipt } = await import('wagmi/actions');
+    const { writeContract, waitForTransactionReceipt } = await import(
+      'wagmi/actions'
+    );
     const PodAuthProxyABI = (await import('../abis/PodAuthProxy.json')).default;
 
     // Note: This requires a wagmi config, which might not be available in a script
@@ -224,7 +241,6 @@ async function migratePod(
     console.log(`   ✅ Migration complete!`);
 
     return result;
-
   } catch (error: any) {
     result.status = 'failed';
     result.error = error?.message || error?.toString() || 'Unknown error';
@@ -252,11 +268,11 @@ async function main() {
 
   // Step 2: Fetch all pods
   console.log('Step 2: Fetching all pods from database...');
-  const allPods = await EventService.getPods() as any[];
+  const allPods = (await EventService.getPods()) as any[];
   console.log(`✅ Found ${allPods.length} pods\n`);
 
   // Filter pods that need migration
-  const podsToMigrate = allPods.filter(pod => {
+  const podsToMigrate = allPods.filter((pod) => {
     // Skip pods without management HAT
     if (!pod.management_hat_id) return false;
 
@@ -279,9 +295,13 @@ async function main() {
   for (let i = 0; i < podsToMigrate.length; i += MIGRATION_CONFIG.BATCH_SIZE) {
     const batch = podsToMigrate.slice(i, i + MIGRATION_CONFIG.BATCH_SIZE);
     const batchNum = Math.floor(i / MIGRATION_CONFIG.BATCH_SIZE) + 1;
-    const totalBatches = Math.ceil(podsToMigrate.length / MIGRATION_CONFIG.BATCH_SIZE);
+    const totalBatches = Math.ceil(
+      podsToMigrate.length / MIGRATION_CONFIG.BATCH_SIZE,
+    );
 
-    console.log(`\n📦 Batch ${batchNum}/${totalBatches} (${batch.length} pods)`);
+    console.log(
+      `\n📦 Batch ${batchNum}/${totalBatches} (${batch.length} pods)`,
+    );
     console.log('='.repeat(50));
 
     for (const pod of batch) {
@@ -291,8 +311,12 @@ async function main() {
 
     // Delay between batches
     if (i + MIGRATION_CONFIG.BATCH_SIZE < podsToMigrate.length) {
-      console.log(`\n⏱️ Waiting ${MIGRATION_CONFIG.BATCH_DELAY / 1000}s before next batch...`);
-      await new Promise(resolve => setTimeout(resolve, MIGRATION_CONFIG.BATCH_DELAY));
+      console.log(
+        `\n⏱️ Waiting ${MIGRATION_CONFIG.BATCH_DELAY / 1000}s before next batch...`,
+      );
+      await new Promise((resolve) =>
+        setTimeout(resolve, MIGRATION_CONFIG.BATCH_DELAY),
+      );
     }
   }
 
@@ -300,9 +324,9 @@ async function main() {
   console.log('\n\n📊 Migration Summary');
   console.log('='.repeat(50));
 
-  const successful = results.filter(r => r.status === 'success');
-  const skipped = results.filter(r => r.status === 'skipped');
-  const failed = results.filter(r => r.status === 'failed');
+  const successful = results.filter((r) => r.status === 'success');
+  const skipped = results.filter((r) => r.status === 'skipped');
+  const failed = results.filter((r) => r.status === 'failed');
 
   console.log(`✅ Successful: ${successful.length}`);
   console.log(`⏭️ Skipped: ${skipped.length}`);
@@ -311,7 +335,7 @@ async function main() {
 
   if (successful.length > 0) {
     console.log('\n✅ Successfully Migrated Pods:');
-    successful.forEach(r => {
+    successful.forEach((r) => {
       console.log(`   - ${r.podName} (${r.podId})`);
       console.log(`     Proxy: ${r.proxyAddress}`);
       console.log(`     Admin HAT: ${r.proxyAdminHatId}`);
@@ -320,14 +344,14 @@ async function main() {
 
   if (skipped.length > 0) {
     console.log('\n⏭️ Skipped Pods:');
-    skipped.forEach(r => {
+    skipped.forEach((r) => {
       console.log(`   - ${r.podName} (${r.podId}): ${r.reason}`);
     });
   }
 
   if (failed.length > 0) {
     console.log('\n❌ Failed Pods:');
-    failed.forEach(r => {
+    failed.forEach((r) => {
       console.log(`   - ${r.podName} (${r.podId}): ${r.error}`);
     });
   }

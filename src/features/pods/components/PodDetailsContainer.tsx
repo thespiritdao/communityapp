@@ -1,9 +1,15 @@
-
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
-import { Check, PenTool, Shield, FileText, ExternalLink, Users } from 'lucide-react';
+import {
+  Check,
+  PenTool,
+  Shield,
+  FileText,
+  ExternalLink,
+  Users,
+} from 'lucide-react';
 import FundButton from '@/components/FundButton';
 import { useProfiles } from '@/features/identity/hooks/useProfiles';
 import { useProfileModal } from '@/features/identity/hooks/useProfileModal';
@@ -40,7 +46,6 @@ export function PodDetailsContainer({
   onOpenMembershipModal,
   onOpenPodFunding,
 }: PodDetailsContainerProps) {
-  
   // Use accountability hook for signature management
   const {
     signatures,
@@ -50,25 +55,36 @@ export function PodDetailsContainer({
     handleSign,
     canSign,
     hasSigned,
-    error: accountabilityError
-  } = useAccountability({ 
-    podId: pod.id, 
-    podName: pod.name 
+    error: accountabilityError,
+  } = useAccountability({
+    podId: pod.id,
+    podName: pod.name,
   });
 
   // Profile management
   const allLeadAddresses = pod?.pod_leads || [];
   const { getProfile } = useProfiles(allLeadAddresses);
-  const { selectedUser, users, isOpen: isProfileModalOpen, openProfileModal, closeProfileModal } = useProfileModal();
+  const {
+    selectedUser,
+    users,
+    isOpen: isProfileModalOpen,
+    openProfileModal,
+    closeProfileModal,
+  } = useProfileModal();
 
   // Utility functions
   const getStatusColor = (status?: string) => {
     switch (status) {
-      case 'active': return 'bg-[#E8F1EE] text-[#1F453A]';
-      case 'inactive': return 'bg-[#F5E6E6] text-[#5C1F1F]';
-      case 'proposed': return 'bg-[#E8F1EE] text-[#1F453A]';
-      case 'draft': return 'bg-[#FAF4EC] text-[#7A5F3F]';
-      default: return 'bg-gray-100 text-gray-800';
+      case 'active':
+        return 'bg-[#E8F1EE] text-[#1F453A]';
+      case 'inactive':
+        return 'bg-[#F5E6E6] text-[#5C1F1F]';
+      case 'proposed':
+        return 'bg-[#E8F1EE] text-[#1F453A]';
+      case 'draft':
+        return 'bg-[#FAF4EC] text-[#7A5F3F]';
+      default:
+        return 'bg-gray-100 text-gray-800';
     }
   };
 
@@ -86,7 +102,6 @@ export function PodDetailsContainer({
   return (
     <div className="home-container">
       <div className="space-y-8">
-        
         {/* Pod Header */}
         <Card>
           <CardHeader>
@@ -107,7 +122,7 @@ export function PodDetailsContainer({
                   <p className="text-gray-600">{pod.description}</p>
                 </div>
               </div>
-              
+
               {/* Treasury Actions */}
               {treasuryAddress && (
                 <div className="flex items-center space-x-2">
@@ -115,15 +130,20 @@ export function PodDetailsContainer({
                     fundingType="pod"
                     fundingTarget={{ podId: pod.id, treasuryAddress }}
                     buttonProps={{
-                      variant: "outline",
-                      size: "sm",
-                      disabled: treasuryLoading
+                      variant: 'outline',
+                      size: 'sm',
+                      disabled: treasuryLoading,
                     }}
                   />
                   <Button
                     size="sm"
                     variant="outline"
-                    onClick={() => window.open(`https://basescan.org/address/${treasuryAddress}`, '_blank')}
+                    onClick={() =>
+                      window.open(
+                        `https://basescan.org/address/${treasuryAddress}`,
+                        '_blank',
+                      )
+                    }
                   >
                     <ExternalLink className="h-3 w-3 mr-1" />
                     Treasury
@@ -148,7 +168,7 @@ export function PodDetailsContainer({
                 {pod.pod_leads.map((lead, index) => {
                   const profile = getProfile(lead);
                   const displayName = getUserDisplayName(lead);
-                  
+
                   return (
                     <div
                       key={index}
@@ -162,14 +182,20 @@ export function PodDetailsContainer({
                           className="w-10 h-10 rounded-full object-cover"
                         />
                       ) : (
-                        <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ backgroundColor: '#2F5D50' }}>
+                        <div
+                          className="w-10 h-10 rounded-full flex items-center justify-center"
+                          style={{ backgroundColor: '#2F5D50' }}
+                        >
                           <span className="text-white font-medium">
-                            {profile?.first_name?.charAt(0)?.toUpperCase() || '?'}
+                            {profile?.first_name?.charAt(0)?.toUpperCase() ||
+                              '?'}
                           </span>
                         </div>
                       )}
                       <div>
-                        <p className="font-medium text-gray-900">{displayName}</p>
+                        <p className="font-medium text-gray-900">
+                          {displayName}
+                        </p>
                         <p className="text-sm text-gray-500">{lead}</p>
                       </div>
                     </div>
@@ -192,16 +218,24 @@ export function PodDetailsContainer({
             <CardContent>
               {hasSigned ? (
                 <div className="text-center py-6">
-                  <Check className="h-12 w-12 mx-auto mb-4" style={{ color: '#3F7A5A' }} />
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">Agreement Signed</h3>
-                  <p className="text-gray-600">You have successfully signed the accountability agreement.</p>
+                  <Check
+                    className="h-12 w-12 mx-auto mb-4"
+                    style={{ color: '#3F7A5A' }}
+                  />
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">
+                    Agreement Signed
+                  </h3>
+                  <p className="text-gray-600">
+                    You have successfully signed the accountability agreement.
+                  </p>
                 </div>
               ) : (
                 <div className="space-y-4">
                   <p className="text-gray-600">
-                    As a pod leader, please review and sign the accountability agreement to proceed with pod activation.
+                    As a pod leader, please review and sign the accountability
+                    agreement to proceed with pod activation.
                   </p>
-                  
+
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Accountability Statement
@@ -214,7 +248,7 @@ export function PodDetailsContainer({
                       placeholder="Enter your acknowledgment statement..."
                     />
                   </div>
-                  
+
                   <div>
                     <Button onClick={handleSign} disabled={signing}>
                       {signing ? 'Signing...' : 'Sign and Submit'}
@@ -222,7 +256,9 @@ export function PodDetailsContainer({
                   </div>
 
                   {accountabilityError && (
-                    <div className="text-sm" style={{ color: '#8B3A3A' }}>{accountabilityError}</div>
+                    <div className="text-sm" style={{ color: '#8B3A3A' }}>
+                      {accountabilityError}
+                    </div>
                   )}
                 </div>
               )}
@@ -242,14 +278,20 @@ export function PodDetailsContainer({
             <CardContent>
               <div className="space-y-4">
                 {signatures.map((sig, index) => (
-                  <div key={index} className="border-l-4 pl-4 py-2" style={{ borderLeftColor: '#3F7A5A' }}>
+                  <div
+                    key={index}
+                    className="border-l-4 pl-4 py-2"
+                    style={{ borderLeftColor: '#3F7A5A' }}
+                  >
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="font-medium text-gray-900">
                           {getUserDisplayName(sig.address)}
                         </p>
                         <p className="text-sm text-gray-500">{sig.address}</p>
-                        <p className="text-sm text-gray-600 mt-1">{sig.statement}</p>
+                        <p className="text-sm text-gray-600 mt-1">
+                          {sig.statement}
+                        </p>
                       </div>
                       <div className="text-xs text-gray-500">
                         {new Date(sig.timestamp).toLocaleDateString()}
@@ -274,7 +316,8 @@ export function PodDetailsContainer({
             <CardContent>
               <div className="text-center py-6">
                 <p className="text-gray-600 mb-4">
-                  This pod is accepting new members. Apply to join and contribute to the community.
+                  This pod is accepting new members. Apply to join and
+                  contribute to the community.
                 </p>
                 <Button onClick={onOpenMembershipModal}>
                   Apply to Join Pod
@@ -293,15 +336,14 @@ export function PodDetailsContainer({
             <CardContent>
               <div className="flex space-x-4">
                 <Button
-                  onClick={() => window.location.href = `/pods/${pod.id}/manage`}
+                  onClick={() =>
+                    (window.location.href = `/pods/${pod.id}/manage`)
+                  }
                   variant="default"
                 >
                   Manage Pod
                 </Button>
-                <Button
-                  onClick={onOpenAgreementModal}
-                  variant="outline"
-                >
+                <Button onClick={onOpenAgreementModal} variant="outline">
                   View Agreement
                 </Button>
               </div>

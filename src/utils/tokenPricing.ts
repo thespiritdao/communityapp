@@ -1,5 +1,3 @@
-
-
 // Placeholder values for token rates until contracts are live
 const DEFAULT_SYSTEM_RATE = 1.0; // $SYSTEM is pegged 1:1 to fiat
 const DEFAULT_SELF_RATE = 0.1; // $SELF conversion placeholder
@@ -17,7 +15,7 @@ export async function getTokenExchangeRate(tokenAddress: string) {
     }
     return 1.0; // Fallback
   } catch (error) {
-    console.error("Error fetching token exchange rate:", error);
+    console.error('Error fetching token exchange rate:', error);
     return 1.0;
   }
 }

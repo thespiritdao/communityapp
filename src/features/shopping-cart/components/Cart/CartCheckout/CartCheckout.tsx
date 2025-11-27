@@ -1,8 +1,8 @@
-"use client";
+'use client';
 
-import { memo, useState, useCallback, lazy, Suspense } from "react";
-import styled from "styled-components";
-import type { ICartProduct, ICartTotal } from "../../../models";
+import { memo, useState, useCallback, lazy, Suspense } from 'react';
+import styled from 'styled-components';
+import type { ICartProduct, ICartTotal } from '../../../models';
 
 // Lazy load heavy checkout components
 const PaymentOptions = lazy(() => import('./PaymentOptions'));
@@ -15,7 +15,7 @@ const CheckoutContainer = styled.div`
 `;
 
 const CheckoutStep = styled.div<{ isActive: boolean }>`
-  opacity: ${props => props.isActive ? 1 : 0.6};
+  opacity: ${(props) => (props.isActive ? 1 : 0.6)};
   transition: opacity 0.2s ease;
   margin-bottom: 1rem;
 `;
@@ -80,70 +80,69 @@ interface CartCheckoutProps {
  * - Step-by-step checkout process
  * - Optimized for performance
  */
-const CartCheckout = memo(({ 
-  products, 
-  total, 
-  tokenBalances, 
-  userAddress 
-}: CartCheckoutProps) => {
-  const [currentStep, setCurrentStep] = useState<'payment' | 'transaction'>('payment');
-  const [selectedToken, setSelectedToken] = useState<Token | null>(null);
+const CartCheckout = memo(
+  ({ products, total, tokenBalances, userAddress }: CartCheckoutProps) => {
+    const [currentStep, setCurrentStep] = useState<'payment' | 'transaction'>(
+      'payment',
+    );
+    const [selectedToken, setSelectedToken] = useState<Token | null>(null);
 
-  const handlePaymentSelection = useCallback((token: Token) => {
-    setSelectedToken(token);
-    setCurrentStep('transaction');
-  }, []);
+    const handlePaymentSelection = useCallback((token: Token) => {
+      setSelectedToken(token);
+      setCurrentStep('transaction');
+    }, []);
 
-  const handleBackToPayment = useCallback(() => {
-    setCurrentStep('payment');
-  }, []);
+    const handleBackToPayment = useCallback(() => {
+      setCurrentStep('payment');
+    }, []);
 
-  const totalSystemPrice = total?.totalSystemPrice ?? 0;
-  const totalSelfPrice = total?.totalSelfPrice ?? 0;
+    const totalSystemPrice = total?.totalSystemPrice ?? 0;
+    const totalSelfPrice = total?.totalSelfPrice ?? 0;
 
-  return (
-    <CheckoutContainer>
-      {/* Step 1: Payment Method Selection */}
-      <CheckoutStep isActive={currentStep === 'payment'}>
-        <StepHeader>
-          <StepNumber>1</StepNumber>
-          Select Payment Method
-        </StepHeader>
-        
-        <Suspense fallback={<LoadingSkeleton />}>
-          <PaymentOptions
-            totalSystemPrice={totalSystemPrice}
-            totalSelfPrice={totalSelfPrice}
-            tokenBalances={tokenBalances}
-            onTokenSelect={handlePaymentSelection}
-            disabled={currentStep !== 'payment'}
-          />
-        </Suspense>
-      </CheckoutStep>
-
-      {/* Step 2: Transaction Processing */}
-      {selectedToken && (
-        <CheckoutStep isActive={currentStep === 'transaction'}>
+    return (
+      <CheckoutContainer>
+        {/* Step 1: Payment Method Selection */}
+        <CheckoutStep isActive={currentStep === 'payment'}>
           <StepHeader>
-            <StepNumber>2</StepNumber>
-            Complete Purchase
+            <StepNumber>1</StepNumber>
+            Select Payment Method
           </StepHeader>
-          
+
           <Suspense fallback={<LoadingSkeleton />}>
-            <TransactionFlow
-              products={products}
-              selectedToken={selectedToken}
+            <PaymentOptions
               totalSystemPrice={totalSystemPrice}
               totalSelfPrice={totalSelfPrice}
-              userAddress={userAddress}
-              onBack={handleBackToPayment}
+              tokenBalances={tokenBalances}
+              onTokenSelect={handlePaymentSelection}
+              disabled={currentStep !== 'payment'}
             />
           </Suspense>
         </CheckoutStep>
-      )}
-    </CheckoutContainer>
-  );
-});
+
+        {/* Step 2: Transaction Processing */}
+        {selectedToken && (
+          <CheckoutStep isActive={currentStep === 'transaction'}>
+            <StepHeader>
+              <StepNumber>2</StepNumber>
+              Complete Purchase
+            </StepHeader>
+
+            <Suspense fallback={<LoadingSkeleton />}>
+              <TransactionFlow
+                products={products}
+                selectedToken={selectedToken}
+                totalSystemPrice={totalSystemPrice}
+                totalSelfPrice={totalSelfPrice}
+                userAddress={userAddress}
+                onBack={handleBackToPayment}
+              />
+            </Suspense>
+          </CheckoutStep>
+        )}
+      </CheckoutContainer>
+    );
+  },
+);
 
 CartCheckout.displayName = 'CartCheckout';
 

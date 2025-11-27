@@ -39,7 +39,9 @@ interface BackupResult {
 /**
  * Create a timestamped backup of the database
  */
-async function backupDatabase(options: BackupOptions = {}): Promise<BackupResult> {
+async function backupDatabase(
+  options: BackupOptions = {},
+): Promise<BackupResult> {
   const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
   const outputDir = options.outputDir || path.join(__dirname, '..', 'backups');
   const backupDir = path.join(outputDir, timestamp);
@@ -57,7 +59,7 @@ async function backupDatabase(options: BackupOptions = {}): Promise<BackupResult
       timestamp,
       backupDir,
       files: [],
-      error: 'SUPABASE_DB_URL environment variable not set'
+      error: 'SUPABASE_DB_URL environment variable not set',
     };
   }
 
@@ -71,21 +73,27 @@ async function backupDatabase(options: BackupOptions = {}): Promise<BackupResult
     // Backup roles
     console.log('1/4 Backing up roles...');
     const rolesFile = path.join(backupDir, 'roles.sql');
-    await execAsync(`npx supabase db dump --db-url "${dbUrl}" -f "${rolesFile}" --role-only`);
+    await execAsync(
+      `npx supabase db dump --db-url "${dbUrl}" -f "${rolesFile}" --role-only`,
+    );
     files.push(rolesFile);
     console.log('✅ Roles backed up');
 
     // Backup schema
     console.log('2/4 Backing up schema...');
     const schemaFile = path.join(backupDir, 'schema.sql');
-    await execAsync(`npx supabase db dump --db-url "${dbUrl}" -f "${schemaFile}"`);
+    await execAsync(
+      `npx supabase db dump --db-url "${dbUrl}" -f "${schemaFile}"`,
+    );
     files.push(schemaFile);
     console.log('✅ Schema backed up');
 
     // Backup data
     console.log('3/4 Backing up data...');
     const dataFile = path.join(backupDir, 'data.sql');
-    await execAsync(`npx supabase db dump --db-url "${dbUrl}" -f "${dataFile}" --use-copy --data-only`);
+    await execAsync(
+      `npx supabase db dump --db-url "${dbUrl}" -f "${dataFile}" --use-copy --data-only`,
+    );
     files.push(dataFile);
     console.log('✅ Data backed up');
 
@@ -95,8 +103,8 @@ async function backupDatabase(options: BackupOptions = {}): Promise<BackupResult
       timestamp,
       date: new Date().toISOString(),
       type: 'manual',
-      files: files.map(f => path.basename(f)),
-      totalSize: files.reduce((acc, f) => acc + fs.statSync(f).size, 0)
+      files: files.map((f) => path.basename(f)),
+      totalSize: files.reduce((acc, f) => acc + fs.statSync(f).size, 0),
     };
 
     const metadataFile = path.join(backupDir, 'metadata.json');
@@ -191,17 +199,20 @@ echo Database restore completed successfully!
     console.log(`  Total Size: ${formatBytes(metadata.totalSize)}`);
     console.log('');
     console.log('📝 To restore this backup:');
-    console.log(`  Linux/Mac: cd "${backupDir}" && ./restore.sh "[CONNECTION_STRING]"`);
-    console.log(`  Windows:   cd "${backupDir}" && restore.bat "[CONNECTION_STRING]"`);
+    console.log(
+      `  Linux/Mac: cd "${backupDir}" && ./restore.sh "[CONNECTION_STRING]"`,
+    );
+    console.log(
+      `  Windows:   cd "${backupDir}" && restore.bat "[CONNECTION_STRING]"`,
+    );
     console.log('');
 
     return {
       success: true,
       timestamp,
       backupDir,
-      files
+      files,
     };
-
   } catch (error) {
     console.error('❌ Backup failed:', error);
 
@@ -210,7 +221,7 @@ echo Database restore completed successfully!
       timestamp,
       backupDir,
       files,
-      error: error instanceof Error ? error.message : 'Unknown error'
+      error: error instanceof Error ? error.message : 'Unknown error',
     };
   }
 }
@@ -223,7 +234,7 @@ function formatBytes(bytes: number): string {
   const k = 1024;
   const sizes = ['Bytes', 'KB', 'MB', 'GB'];
   const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+  return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + ' ' + sizes[i];
 }
 
 // Run backup if executed directly
@@ -242,10 +253,10 @@ if (require.main === module) {
   }
 
   backupDatabase(options)
-    .then(result => {
+    .then((result) => {
       process.exit(result.success ? 0 : 1);
     })
-    .catch(error => {
+    .catch((error) => {
       console.error('Fatal error:', error);
       process.exit(1);
     });

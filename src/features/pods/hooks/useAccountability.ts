@@ -1,6 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useAccount, useConfig } from 'wagmi';
-import { PodCoreService, type AccountabilitySignature } from '../services/PodCoreService';
+import {
+  PodCoreService,
+  type AccountabilitySignature,
+} from '../services/PodCoreService';
 import { AccountabilitySignatureService } from '../services/AccountabilitySignatureService';
 
 export interface UseAccountabilityConfig {
@@ -24,19 +27,19 @@ export interface UseAccountabilityReturn {
  * Hook for managing accountability signatures for pods
  * Consolidates accountability logic from pod detail page
  */
-export function useAccountability({ 
-  podId, 
-  podName 
+export function useAccountability({
+  podId,
+  podName,
 }: UseAccountabilityConfig): UseAccountabilityReturn {
   const { address } = useAccount();
   const config = useConfig();
-  
+
   const [signatures, setSignatures] = useState<AccountabilitySignature[]>([]);
   const [loading, setLoading] = useState(true);
   const [signing, setSigning] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [agreementText, setAgreementText] = useState<string>(
-    'I acknowledge and agree to the SpiritDAO Accountability Agreement.'
+    'I acknowledge and agree to the SpiritDAO Accountability Agreement.',
   );
 
   /**
@@ -44,16 +47,18 @@ export function useAccountability({
    */
   const loadSignatures = useCallback(async () => {
     if (!podId) return;
-    
+
     try {
       setLoading(true);
       setError(null);
-      
+
       const sigs = await PodCoreService.getAccountabilitySignatures(podId);
       setSignatures(sigs);
     } catch (err) {
       console.error('Failed to load accountability signatures:', err);
-      setError(err instanceof Error ? err.message : 'Failed to load signatures');
+      setError(
+        err instanceof Error ? err.message : 'Failed to load signatures',
+      );
     } finally {
       setLoading(false);
     }
@@ -71,22 +76,22 @@ export function useAccountability({
 
       // Import signMessage dynamically to avoid SSR issues
       const { signMessage } = await import('wagmi/actions');
-      
+
       // Create accountability message
       const message = `SpiritDAO Pod Leadership Accountability Statement\n\nAddress: ${address}\nTimestamp: ${new Date().toISOString()}\n\n${agreementText}`;
-      
+
       // Sign the message
-      const signature = await signMessage(config, { 
-        message, 
-        account: address as `0x${string}` 
+      const signature = await signMessage(config, {
+        message,
+        account: address as `0x${string}`,
       });
-      
+
       // Store signature using AccountabilitySignatureService
       const result = await AccountabilitySignatureService.createSignature({
         pod_id: podId,
         signer_address: address,
         signature_data: signature,
-        accountability_statement: agreementText
+        accountability_statement: agreementText,
       });
 
       if (!result.success) {
@@ -102,28 +107,42 @@ export function useAccountability({
       const currentSignatureCount = signatures.length + 1;
       if (currentSignatureCount >= 1 && podName) {
         try {
-          await PodCoreService.notifyExecutiveForApproval(podId, podName, address);
+          await PodCoreService.notifyExecutiveForApproval(
+            podId,
+            podName,
+            address,
+          );
           console.log('✅ Executive notification sent for pod approval');
         } catch (notificationError) {
           console.warn('Failed to notify executives:', notificationError);
           // Don't fail the signing process
         }
       }
-
     } catch (err) {
       console.error('❌ Signing failed:', err);
       setError(err instanceof Error ? err.message : 'Could not sign agreement');
     } finally {
       setSigning(false);
     }
-  }, [address, podId, podName, agreementText, config, signatures.length, loadSignatures]);
+  }, [
+    address,
+    podId,
+    podName,
+    agreementText,
+    config,
+    signatures.length,
+    loadSignatures,
+  ]);
 
   // Computed properties
   const canSign = Boolean(address && podId);
-  
+
   // Check if user has signed - use the same logic as the pod display for consistency
   const hasSigned = Boolean(
-    address && signatures.some(s => s.address && s.address.toLowerCase() === address.toLowerCase())
+    address &&
+      signatures.some(
+        (s) => s.address && s.address.toLowerCase() === address.toLowerCase(),
+      ),
   );
 
   // Load signatures on mount and when podId changes

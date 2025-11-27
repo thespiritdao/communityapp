@@ -32,11 +32,17 @@ export const MarketplaceService: MarketplaceService = {
       throw error;
     }
 
-    console.log('🏪 [Marketplace] Loaded pods from database:', data?.length || 0);
-    console.log('🏪 [Marketplace] Pod names:', data?.map(p => `${p.name} (${p.id})`).join(', '));
+    console.log(
+      '🏪 [Marketplace] Loaded pods from database:',
+      data?.length || 0,
+    );
+    console.log(
+      '🏪 [Marketplace] Pod names:',
+      data?.map((p) => `${p.name} (${p.id})`).join(', '),
+    );
 
     return data || [];
-  }
+  },
 };
 
 export interface UseMarketplaceManagementAccessReturn {
@@ -66,7 +72,12 @@ export function useMarketplaceManagementAccess(): UseMarketplaceManagementAccess
   // Create stable string representation of marketplace modules to prevent infinite loops
   const marketplaceModulesKey = useMemo(() => {
     const podIds = Object.keys(modules).sort();
-    return podIds.map(podId => `${podId}:${modules[podId]?.marketplace_enabled ? '1' : '0'}`).join(',');
+    return podIds
+      .map(
+        (podId) =>
+          `${podId}:${modules[podId]?.marketplace_enabled ? '1' : '0'}`,
+      )
+      .join(',');
   }, [modules]);
 
   const checkManagementAccess = useCallback(async () => {
@@ -83,24 +94,31 @@ export function useMarketplaceManagementAccess(): UseMarketplaceManagementAccess
       console.log('🏪 [Marketplace] Modules data:', {
         modulesCount: Object.keys(modules).length,
         modulesPodIds: Object.keys(modules),
-        modulesData: modules
+        modulesData: modules,
       });
 
       // Fetch all pods
       const allPods = await MarketplaceService.getPods();
-      console.log(`🏪 [Marketplace] Checking ${allPods.length} pods for marketplace access...`);
+      console.log(
+        `🏪 [Marketplace] Checking ${allPods.length} pods for marketplace access...`,
+      );
 
       // Filter pods where user has both module enabled AND marketplace management permission
-      const podsWithPermission = allPods.filter(pod => {
+      const podsWithPermission = allPods.filter((pod) => {
         // Filter out Top Hat and system pods
-        if (pod.name === 'Top Hat' || pod.name?.toLowerCase().includes('top hat')) {
+        if (
+          pod.name === 'Top Hat' ||
+          pod.name?.toLowerCase().includes('top hat')
+        ) {
           console.log(`🏪 [Marketplace] Filtered out ${pod.name}: Top Hat`);
           return false;
         }
 
         // Filter out pods with hat IDs ending in all zeros (root/system hats)
         if (pod.hat_id?.endsWith('000000000000000000000000')) {
-          console.log(`🏪 [Marketplace] Filtered out ${pod.name}: System pod (hat ends in zeros)`);
+          console.log(
+            `🏪 [Marketplace] Filtered out ${pod.name}: System pod (hat ends in zeros)`,
+          );
           return false;
         }
 
@@ -109,16 +127,21 @@ export function useMarketplaceManagementAccess(): UseMarketplaceManagementAccess
         const hasMarketplaceModule = moduleData?.marketplace_enabled ?? false;
 
         // Check 2: User has marketplaceAccess permission (role-specific)
-        const podRoles = userRoles.filter(role => role.podId === pod.id);
-        const hasPermission = podRoles.some(role => role.permissions?.marketplaceAccess);
+        const podRoles = userRoles.filter((role) => role.podId === pod.id);
+        const hasPermission = podRoles.some(
+          (role) => role.permissions?.marketplaceAccess,
+        );
 
-        console.log(`🏪 [Marketplace] Pod "${pod.name}" (${pod.id.substring(0, 8)}...):`, {
-          module: hasMarketplaceModule,
-          permission: hasPermission,
-          moduleDataExists: !!moduleData,
-          moduleData: moduleData,
-          podIdInModules: pod.id in modules
-        });
+        console.log(
+          `🏪 [Marketplace] Pod "${pod.name}" (${pod.id.substring(0, 8)}...):`,
+          {
+            module: hasMarketplaceModule,
+            permission: hasPermission,
+            moduleDataExists: !!moduleData,
+            moduleData: moduleData,
+            podIdInModules: pod.id in modules,
+          },
+        );
 
         // Must satisfy BOTH conditions
         return hasMarketplaceModule && hasPermission;
@@ -127,18 +150,31 @@ export function useMarketplaceManagementAccess(): UseMarketplaceManagementAccess
       setManagedPods(podsWithPermission);
 
       if (podsWithPermission.length === 0) {
-        console.log('🏪 [Marketplace] No pods with marketplace management access found');
+        console.log(
+          '🏪 [Marketplace] No pods with marketplace management access found',
+        );
       } else {
-        console.log(`🏪 [Marketplace] Found ${podsWithPermission.length} manageable pods:`,
-          podsWithPermission.map(p => p.name).join(', '));
+        console.log(
+          `🏪 [Marketplace] Found ${podsWithPermission.length} manageable pods:`,
+          podsWithPermission.map((p) => p.name).join(', '),
+        );
       }
     } catch (error) {
-      console.error('🏪 [Marketplace] Error checking management access:', error);
+      console.error(
+        '🏪 [Marketplace] Error checking management access:',
+        error,
+      );
       setManagedPods([]);
     } finally {
       setIsLoading(false);
     }
-  }, [address, userRoles, hatPermissionsLoading, modulesLoading, marketplaceModulesKey]);
+  }, [
+    address,
+    userRoles,
+    hatPermissionsLoading,
+    modulesLoading,
+    marketplaceModulesKey,
+  ]);
 
   // Check access when dependencies change
   useEffect(() => {
@@ -146,14 +182,17 @@ export function useMarketplaceManagementAccess(): UseMarketplaceManagementAccess
   }, [checkManagementAccess]);
 
   // Helper function to check if user has access to a specific pod
-  const hasAccessToPod = useCallback((podId: string): boolean => {
-    return managedPods.some(pod => pod.id === podId);
-  }, [managedPods]);
+  const hasAccessToPod = useCallback(
+    (podId: string): boolean => {
+      return managedPods.some((pod) => pod.id === podId);
+    },
+    [managedPods],
+  );
 
   return {
     managedPods,
     isLoading,
     refreshAccess: checkManagementAccess,
-    hasAccessToPod
+    hasAccessToPod,
   };
 }

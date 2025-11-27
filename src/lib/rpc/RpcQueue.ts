@@ -1,6 +1,6 @@
 /**
  * RPC Queue - Rate-limited blockchain RPC request management
- * 
+ *
  * Provides intelligent queuing and retry logic for blockchain operations
  * with exponential backoff and jitter to handle rate limits gracefully.
  */
@@ -41,21 +41,18 @@ export class RpcQueue {
   /**
    * Enqueue an RPC operation with automatic retry and rate limiting
    */
-  async enqueue<T>(
-    fn: () => Promise<T>, 
-    priority = 0
-  ): Promise<T> {
+  async enqueue<T>(fn: () => Promise<T>, priority = 0): Promise<T> {
     return new Promise((resolve, reject) => {
       const item: QueueItem<T> = {
         fn,
         resolve,
         reject,
         retryCount: 0,
-        priority
+        priority,
       };
 
       // Insert with priority (higher numbers = higher priority)
-      const insertIndex = this.queue.findIndex(q => q.priority < priority);
+      const insertIndex = this.queue.findIndex((q) => q.priority < priority);
       if (insertIndex === -1) {
         this.queue.push(item);
       } else {
@@ -94,11 +91,10 @@ export class RpcQueue {
     const operation = this.executeWithRetry(item);
     this.running.add(operation);
 
-    operation
-      .finally(() => {
-        this.running.delete(operation);
-        this.processQueue(); // Process next item
-      });
+    operation.finally(() => {
+      this.running.delete(operation);
+      this.processQueue(); // Process next item
+    });
   }
 
   /**
@@ -125,7 +121,11 @@ export class RpcQueue {
     const isRetryable = this.isRetryableError(error);
 
     if (item.retryCount >= this.maxRetries) {
-      item.reject(new Error(`RPC operation failed after ${this.maxRetries} retries: ${error?.message || 'Unknown error'}`));
+      item.reject(
+        new Error(
+          `RPC operation failed after ${this.maxRetries} retries: ${error?.message || 'Unknown error'}`,
+        ),
+      );
       return;
     }
 
@@ -136,11 +136,13 @@ export class RpcQueue {
 
     // Calculate retry delay with exponential backoff
     let retryDelay = this.retryBackoffMs * Math.pow(2, item.retryCount);
-    
+
     // Add extra delay for rate limits
     if (isRateLimit) {
       retryDelay *= 2;
-      console.warn(`🚦 Rate limit detected, retrying in ${retryDelay}ms (attempt ${item.retryCount + 1}/${this.maxRetries})`);
+      console.warn(
+        `🚦 Rate limit detected, retrying in ${retryDelay}ms (attempt ${item.retryCount + 1}/${this.maxRetries})`,
+      );
     }
 
     // Add jitter to prevent thundering herd
@@ -150,7 +152,7 @@ export class RpcQueue {
 
     // Increment retry count and re-queue with same priority
     item.retryCount++;
-    const insertIndex = this.queue.findIndex(q => q.priority < item.priority);
+    const insertIndex = this.queue.findIndex((q) => q.priority < item.priority);
     if (insertIndex === -1) {
       this.queue.push(item);
     } else {
@@ -163,10 +165,10 @@ export class RpcQueue {
    */
   private isRateLimitError(error: any): boolean {
     if (!error) return false;
-    
+
     const errorMessage = error.message?.toLowerCase() || '';
     const errorCode = error.code;
-    
+
     return (
       errorCode === 429 ||
       errorMessage.includes('rate limit') ||
@@ -181,10 +183,10 @@ export class RpcQueue {
    */
   private isRetryableError(error: any): boolean {
     if (!error) return false;
-    
+
     const errorMessage = error.message?.toLowerCase() || '';
     const errorCode = error.code;
-    
+
     // Network and temporary errors that should be retried
     return (
       errorCode === 'NETWORK_ERROR' ||
@@ -204,7 +206,7 @@ export class RpcQueue {
    * Sleep utility with Promise
    */
   private sleep(ms: number): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms));
+    return new Promise((resolve) => setTimeout(resolve, ms));
   }
 
   /**
@@ -218,7 +220,7 @@ export class RpcQueue {
     return {
       queueLength: this.queue.length,
       runningCount: this.running.size,
-      maxConcurrent: this.maxConcurrent
+      maxConcurrent: this.maxConcurrent,
     };
   }
 
@@ -226,7 +228,7 @@ export class RpcQueue {
    * Clear the queue (for cleanup)
    */
   clear(): void {
-    this.queue.forEach(item => {
+    this.queue.forEach((item) => {
       item.reject(new Error('Queue cleared'));
     });
     this.queue.length = 0;
@@ -239,5 +241,5 @@ export const globalRpcQueue = new RpcQueue({
   baseDelayMs: 250,
   maxRetries: 3,
   retryBackoffMs: 1000,
-  jitterMs: 100
+  jitterMs: 100,
 });

@@ -2,7 +2,11 @@
 
 import type { ReactNode } from 'react';
 import { useAccount } from 'wagmi';
-import type { LifecycleStatus, TransactionError, TransactionResponse } from '@coinbase/onchainkit/transaction';
+import type {
+  LifecycleStatus,
+  TransactionError,
+  TransactionResponse,
+} from '@coinbase/onchainkit/transaction';
 
 type TransactionWrapperChildren = {
   address: string | undefined;
@@ -34,12 +38,12 @@ export default function TransactionWrapper({
 
   return (
     <div className="transaction-wrapper">
-      {children({ 
-        address, 
-        onError, 
-        onSuccess, 
-        onStatus 
+      {children({
+        address,
+        onError,
+        onSuccess,
+        onStatus,
       })}
     </div>
   );
-} 
+}

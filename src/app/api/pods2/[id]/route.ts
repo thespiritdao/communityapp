@@ -18,40 +18,43 @@ const publicClient = createPublicClient({
   transport: http(),
 });
 
-const POD_FACTORY_V2_ADDRESS = process.env.NEXT_PUBLIC_POD_FACTORY_V2_ADDRESS as Address;
+const POD_FACTORY_V2_ADDRESS = process.env
+  .NEXT_PUBLIC_POD_FACTORY_V2_ADDRESS as Address;
 
 const POD_FACTORY_ABI = [
   {
     inputs: [{ name: 'podId', type: 'bytes32' }],
     name: 'getPod',
-    outputs: [{
-      components: [
-        { name: 'podId', type: 'bytes32' },
-        { name: 'name', type: 'string' },
-        { name: 'description', type: 'string' },
-        { name: 'imageURI', type: 'string' },
-        { name: 'creator', type: 'address' },
-        { name: 'leaders', type: 'address[]' },
-        { name: 'topHatId', type: 'uint256' },
-        { name: 'adminHatId', type: 'uint256' },
-        { name: 'memberHatId', type: 'uint256' },
-        { name: 'createdAt', type: 'uint256' },
-        { name: 'isLinked', type: 'bool' },
-        { name: 'status', type: 'uint8' }
-      ],
-      name: '',
-      type: 'tuple'
-    }],
+    outputs: [
+      {
+        components: [
+          { name: 'podId', type: 'bytes32' },
+          { name: 'name', type: 'string' },
+          { name: 'description', type: 'string' },
+          { name: 'imageURI', type: 'string' },
+          { name: 'creator', type: 'address' },
+          { name: 'leaders', type: 'address[]' },
+          { name: 'topHatId', type: 'uint256' },
+          { name: 'adminHatId', type: 'uint256' },
+          { name: 'memberHatId', type: 'uint256' },
+          { name: 'createdAt', type: 'uint256' },
+          { name: 'isLinked', type: 'bool' },
+          { name: 'status', type: 'uint8' },
+        ],
+        name: '',
+        type: 'tuple',
+      },
+    ],
     stateMutability: 'view',
-    type: 'function'
+    type: 'function',
   },
   {
     inputs: [{ name: 'topHatId', type: 'uint256' }],
     name: 'getPodIdFromTopHat',
     outputs: [{ name: '', type: 'bytes32' }],
     stateMutability: 'view',
-    type: 'function'
-  }
+    type: 'function',
+  },
 ] as const;
 
 /**
@@ -61,17 +64,18 @@ const POD_FACTORY_ABI = [
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: { id: string } },
 ) {
   try {
     const { id } = params;
 
     // Check if ID is UUID format or bytes32 hash
-    const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+    const isUUID =
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+        id,
+      );
 
-    let query = supabase
-      .from('pods2')
-      .select(`
+    let query = supabase.from('pods2').select(`
         *,
         pod_members2(
           wallet_address,
@@ -94,14 +98,12 @@ export async function GET(
     const { data: pod, error } = await query.single();
 
     if (error || !pod) {
-      return NextResponse.json(
-        { error: 'Pod not found' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: 'Pod not found' }, { status: 404 });
     }
 
     // Verify against blockchain (optional, for real-time accuracy)
-    const verifyBlockchain = request.nextUrl.searchParams.get('verify') === 'true';
+    const verifyBlockchain =
+      request.nextUrl.searchParams.get('verify') === 'true';
 
     let blockchainData = null;
     if (verifyBlockchain) {
@@ -119,8 +121,12 @@ export async function GET(
 
     // Aggregate member statistics
     const members = pod.pod_members2 || [];
-    const admins = members.filter((m: any) => m.role === 'admin' && m.is_active);
-    const regularMembers = members.filter((m: any) => m.role === 'member' && m.is_active);
+    const admins = members.filter(
+      (m: any) => m.role === 'admin' && m.is_active,
+    );
+    const regularMembers = members.filter(
+      (m: any) => m.role === 'member' && m.is_active,
+    );
 
     return NextResponse.json({
       pod: {
@@ -156,18 +162,23 @@ export async function GET(
         memberCount: regularMembers.length,
         totalMembers: admins.length + regularMembers.length,
       },
-      blockchainData: blockchainData ? {
-        status: (blockchainData as any).status === 0 ? 'active' : 'inactive',
-        leaderCount: (blockchainData as any).leaders.length,
-        // Add more fields as needed
-      } : null,
+      blockchainData: blockchainData
+        ? {
+            status:
+              (blockchainData as any).status === 0 ? 'active' : 'inactive',
+            leaderCount: (blockchainData as any).leaders.length,
+            // Add more fields as needed
+          }
+        : null,
     });
-
   } catch (error) {
     console.error('GET /api/pods2/[id] error:', error);
     return NextResponse.json(
-      { error: 'Internal server error', details: error instanceof Error ? error.message : 'Unknown error' },
-      { status: 500 }
+      {
+        error: 'Internal server error',
+        details: error instanceof Error ? error.message : 'Unknown error',
+      },
+      { status: 500 },
     );
   }
 }
@@ -179,7 +190,7 @@ export async function GET(
  */
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: { id: string } },
 ) {
   try {
     const { id } = params;
@@ -189,7 +200,7 @@ export async function PATCH(
     if (updateType === 'status' && !transactionHash) {
       return NextResponse.json(
         { error: 'Transaction hash required for status updates' },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -203,7 +214,7 @@ export async function PATCH(
       if (receipt.status !== 'success') {
         return NextResponse.json(
           { error: 'Transaction failed' },
-          { status: 400 }
+          { status: 400 },
         );
       }
     }
@@ -216,19 +227,16 @@ export async function PATCH(
       .single();
 
     if (fetchError || !pod) {
-      return NextResponse.json(
-        { error: 'Pod not found' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: 'Pod not found' }, { status: 404 });
     }
 
     // Read latest data from blockchain
-    const blockchainData = await publicClient.readContract({
+    const blockchainData = (await publicClient.readContract({
       address: POD_FACTORY_V2_ADDRESS,
       abi: POD_FACTORY_ABI,
       functionName: 'getPod',
       args: [pod.pod_id_hash as `0x${string}`],
-    }) as any;
+    })) as any;
 
     // Update database with blockchain state
     const { data: updatedPod, error: updateError } = await supabase
@@ -244,7 +252,7 @@ export async function PATCH(
     if (updateError) {
       return NextResponse.json(
         { error: 'Failed to update pod', details: updateError.message },
-        { status: 500 }
+        { status: 500 },
       );
     }
 
@@ -265,12 +273,14 @@ export async function PATCH(
         lastSyncedAt: updatedPod.last_synced_at,
       },
     });
-
   } catch (error) {
     console.error('PATCH /api/pods2/[id] error:', error);
     return NextResponse.json(
-      { error: 'Internal server error', details: error instanceof Error ? error.message : 'Unknown error' },
-      { status: 500 }
+      {
+        error: 'Internal server error',
+        details: error instanceof Error ? error.message : 'Unknown error',
+      },
+      { status: 500 },
     );
   }
 }

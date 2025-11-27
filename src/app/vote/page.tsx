@@ -75,16 +75,22 @@ export default function VotePage() {
   const [selectedProfile, setSelectedProfile] = useState<any | null>(null);
   const [profileUsers, setProfileUsers] = useState<any[]>([]);
   const [votingProposal, setVotingProposal] = useState<Proposal | null>(null);
-  const [proposalStates, setProposalStates] = useState<Record<string, { state: number, hasVoted: boolean }>>({});
+  const [proposalStates, setProposalStates] = useState<
+    Record<string, { state: number; hasVoted: boolean }>
+  >({});
   const refreshInterval = useRef<NodeJS.Timeout | null>(null);
-  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'passed' | 'failed' | 'executed' | 'expired'>('active');
+  const [statusFilter, setStatusFilter] = useState<
+    'all' | 'active' | 'passed' | 'failed' | 'executed' | 'expired'
+  >('active');
 
   // Add a cache for user profiles
   const userProfileCache: Record<string, any> = {};
 
   const fetchProposalStates = async (userAddress: string, force = false) => {
     if (!userAddress) return;
-    const url = force ? `/api/proposalStates?user=${userAddress}&force=true` : `/api/proposalStates?user=${userAddress}`;
+    const url = force
+      ? `/api/proposalStates?user=${userAddress}&force=true`
+      : `/api/proposalStates?user=${userAddress}`;
     const res = await fetch(url);
     const data = await res.json();
     console.log('API /api/proposalStates response:', data); // <-- Add this line
@@ -121,7 +127,10 @@ export default function VotePage() {
         // Transform the data and fetch user profiles separately
         const transformedProposals: Proposal[] = await Promise.all(
           (proposalData || []).map(async (proposal: ProposalMetadata) => {
-            let proposerName = proposal.proposer_address.slice(0, 6) + '...' + proposal.proposer_address.slice(-4);
+            let proposerName =
+              proposal.proposer_address.slice(0, 6) +
+              '...' +
+              proposal.proposer_address.slice(-4);
             let proposerProfile = null;
             try {
               const queryAddress = proposal.proposer_address.toLowerCase();
@@ -130,7 +139,9 @@ export default function VotePage() {
               } else {
                 const { data: userProfile } = await supabase
                   .from('user_profiles')
-                  .select('first_name, last_name, wallet_address, profile_picture, bio, website, interests, seeking, open_to_connect, twitter, tiktok, instagram, facebook, discord, youtube, twitch, github, linkedin, email')
+                  .select(
+                    'first_name, last_name, wallet_address, profile_picture, bio, website, interests, seeking, open_to_connect, twitter, tiktok, instagram, facebook, discord, youtube, twitch, github, linkedin, email',
+                  )
                   .eq('wallet_address', queryAddress)
                   .single();
                 if (userProfile) {
@@ -139,7 +150,8 @@ export default function VotePage() {
                 }
               }
               if (proposerProfile) {
-                const fullName = `${proposerProfile.first_name || ''} ${proposerProfile.last_name || ''}`.trim();
+                const fullName =
+                  `${proposerProfile.first_name || ''} ${proposerProfile.last_name || ''}`.trim();
                 if (fullName) {
                   proposerName = fullName;
                 }
@@ -147,7 +159,10 @@ export default function VotePage() {
             } catch (error) {
               // Only log once per address
               if (!userProfileCache[proposal.proposer_address.toLowerCase()]) {
-                console.log('Could not fetch user profile for:', proposal.proposer_address);
+                console.log(
+                  'Could not fetch user profile for:',
+                  proposal.proposer_address,
+                );
               }
             }
             return {
@@ -158,7 +173,9 @@ export default function VotePage() {
               proposer: {
                 address: proposal.proposer_address,
                 name: proposerName,
-                profile: proposerProfile || { wallet_address: proposal.proposer_address },
+                profile: proposerProfile || {
+                  wallet_address: proposal.proposer_address,
+                },
               },
               forumThreadId: proposal.forum_thread_id,
               tokenId: proposal.token_id,
@@ -167,7 +184,7 @@ export default function VotePage() {
               transactionHash: proposal.transactionHash,
               voting_end: proposal.voting_end,
             };
-          })
+          }),
         );
 
         setProposals(transformedProposals);
@@ -178,7 +195,9 @@ export default function VotePage() {
         setProposalStates(data);
       } catch (err) {
         console.error('Error fetching proposals:', err);
-        setError(err instanceof Error ? err.message : 'Failed to load proposals');
+        setError(
+          err instanceof Error ? err.message : 'Failed to load proposals',
+        );
       } finally {
         setLoading(false);
       }
@@ -196,7 +215,7 @@ export default function VotePage() {
     let pendingInterval: NodeJS.Timeout | null = null;
     const pollPending = () => {
       const hasPending = Object.values(proposalStates).some(
-        (v) => v && v.state === 0
+        (v) => v && v.state === 0,
       );
       if (hasPending) {
         pendingInterval = setInterval(() => {
@@ -215,7 +234,7 @@ export default function VotePage() {
   }, [isConnected, address]);
 
   const handleProposalClick = async (proposalId: string) => {
-      // Mark governance notifications as read when viewing a proposal (not needed here)
+    // Mark governance notifications as read when viewing a proposal (not needed here)
   };
 
   const getBasescanUrl = (transactionHash: string) => {
@@ -228,17 +247,18 @@ export default function VotePage() {
       month: 'short',
       day: 'numeric',
       hour: '2-digit',
-      minute: '2-digit'
+      minute: '2-digit',
     }).format(date);
   };
 
   // Helper to get the correct key for proposalStates
-  const getProposalKey = (proposal: Proposal) => proposal.onchain_proposal_id?.toString() || proposal.id?.toString();
+  const getProposalKey = (proposal: Proposal) =>
+    proposal.onchain_proposal_id?.toString() || proposal.id?.toString();
 
   // Filter proposals based on status
-  const filteredProposals = proposals.filter(proposal => {
+  const filteredProposals = proposals.filter((proposal) => {
     if (statusFilter === 'all') return true;
-    
+
     const proposalKey = getProposalKey(proposal);
     const state = proposalStates[proposalKey]?.state;
     switch (statusFilter) {
@@ -258,17 +278,25 @@ export default function VotePage() {
   });
 
   // Get status counts for filter buttons
-  const getStatusCount = (status: 'active' | 'passed' | 'failed' | 'executed' | 'expired') => {
-    return proposals.filter(proposal => {
+  const getStatusCount = (
+    status: 'active' | 'passed' | 'failed' | 'executed' | 'expired',
+  ) => {
+    return proposals.filter((proposal) => {
       const proposalKey = getProposalKey(proposal);
       const state = proposalStates[proposalKey]?.state;
       switch (status) {
-        case 'active': return state === 1;
-        case 'passed': return state === 4;
-        case 'failed': return state === 3;
-        case 'executed': return state === 7;
-        case 'expired': return state === 6;
-        default: return false;
+        case 'active':
+          return state === 1;
+        case 'passed':
+          return state === 4;
+        case 'failed':
+          return state === 3;
+        case 'executed':
+          return state === 7;
+        case 'expired':
+          return state === 6;
+        default:
+          return false;
       }
     }).length;
   };
@@ -278,7 +306,9 @@ export default function VotePage() {
       <div className="min-h-screen bg-gray-50 p-4">
         <div className="max-w-6xl mx-auto">
           <h1 className="text-2xl font-bold mb-4">Governance Proposals</h1>
-          <p className="text-gray-600">Please connect your wallet to view proposals.</p>
+          <p className="text-gray-600">
+            Please connect your wallet to view proposals.
+          </p>
         </div>
       </div>
     );
@@ -312,290 +342,337 @@ export default function VotePage() {
     <div className="vote-bg min-h-screen p-4 bottom-nav-spacing">
       <div className="max-w-6xl mx-auto pr-2">
         <div className="flex justify-center mb-8 mt-8">
-            <div className="w-1/5" />
-            <div className="flex-1 flex justify-center">
-              <Link
-                href="/governance"
-                className="px-6 py-3 text-white rounded-lg transition-colors text-lg font-semibold shadow-md text-center hover:bg-[#254A40]"
-                style={{ minWidth: 340, backgroundColor: '#2F5D50' }}
-              >
-                Create Proposal
-              </Link>
-            </div>
-            <div className="w-1/5" />
+          <div className="w-1/5" />
+          <div className="flex-1 flex justify-center">
+            <Link
+              href="/governance"
+              className="px-6 py-3 text-white rounded-lg transition-colors text-lg font-semibold shadow-md text-center hover:bg-[#254A40]"
+              style={{ minWidth: 340, backgroundColor: '#2F5D50' }}
+            >
+              Create Proposal
+            </Link>
           </div>
+          <div className="w-1/5" />
+        </div>
 
-          {/* Status Filter Buttons */}
-          <div className="mb-6 flex flex-wrap gap-2">
-            <button
-              onClick={() => setStatusFilter('all')}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                statusFilter === 'all'
-                  ? 'text-white'
-                  : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-300'
-              }`}
-              style={statusFilter === 'all' ? { backgroundColor: '#2F5D50' } : {}}
+        {/* Status Filter Buttons */}
+        <div className="mb-6 flex flex-wrap gap-2">
+          <button
+            onClick={() => setStatusFilter('all')}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+              statusFilter === 'all'
+                ? 'text-white'
+                : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-300'
+            }`}
+            style={statusFilter === 'all' ? { backgroundColor: '#2F5D50' } : {}}
+          >
+            All ({proposals.length})
+          </button>
+          <button
+            onClick={() => setStatusFilter('active')}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+              statusFilter === 'active'
+                ? 'text-white'
+                : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-300'
+            }`}
+            style={
+              statusFilter === 'active' ? { backgroundColor: '#2F5D50' } : {}
+            }
+          >
+            Active ({getStatusCount('active')})
+          </button>
+          <button
+            onClick={() => setStatusFilter('passed')}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+              statusFilter === 'passed'
+                ? 'text-white'
+                : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-300'
+            }`}
+            style={
+              statusFilter === 'passed' ? { backgroundColor: '#3F7A5A' } : {}
+            }
+          >
+            Passed ({getStatusCount('passed')})
+          </button>
+          <button
+            onClick={() => setStatusFilter('failed')}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+              statusFilter === 'failed'
+                ? 'text-white'
+                : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-300'
+            }`}
+            style={
+              statusFilter === 'failed' ? { backgroundColor: '#8B3A3A' } : {}
+            }
+          >
+            Failed ({getStatusCount('failed')})
+          </button>
+          <button
+            onClick={() => setStatusFilter('executed')}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+              statusFilter === 'executed'
+                ? 'bg-purple-600 text-white'
+                : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-300'
+            }`}
+          >
+            Executed ({getStatusCount('executed')})
+          </button>
+          <button
+            onClick={() => setStatusFilter('expired')}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+              statusFilter === 'expired'
+                ? 'bg-yellow-600 text-white'
+                : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-300'
+            }`}
+          >
+            Expired ({getStatusCount('expired')})
+          </button>
+        </div>
+
+        {filteredProposals.length === 0 ? (
+          <div className="text-center py-12">
+            <div className="text-gray-400 text-6xl mb-4">🗳️</div>
+            <h2 className="text-xl font-semibold text-gray-600 mb-2">
+              No proposals yet
+            </h2>
+            <p className="text-gray-500">
+              Be the first to create a proposal for the DAO community to vote
+              on.
+            </p>
+            <Link
+              href="/governance"
+              className="inline-block mt-4 px-6 py-2 text-white rounded-lg transition-colors hover:bg-[#254A40]"
+              style={{ backgroundColor: '#2F5D50' }}
             >
-              All ({proposals.length})
-            </button>
-            <button
-              onClick={() => setStatusFilter('active')}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                statusFilter === 'active'
-                  ? 'text-white'
-                  : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-300'
-              }`}
-              style={statusFilter === 'active' ? { backgroundColor: '#2F5D50' } : {}}
-            >
-              Active ({getStatusCount('active')})
-            </button>
-            <button
-              onClick={() => setStatusFilter('passed')}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                statusFilter === 'passed'
-                  ? 'text-white'
-                  : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-300'
-              }`}
-              style={statusFilter === 'passed' ? { backgroundColor: '#3F7A5A' } : {}}
-            >
-              Passed ({getStatusCount('passed')})
-            </button>
-            <button
-              onClick={() => setStatusFilter('failed')}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                statusFilter === 'failed'
-                  ? 'text-white'
-                  : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-300'
-              }`}
-              style={statusFilter === 'failed' ? { backgroundColor: '#8B3A3A' } : {}}
-            >
-              Failed ({getStatusCount('failed')})
-            </button>
-            <button
-              onClick={() => setStatusFilter('executed')}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                statusFilter === 'executed'
-                  ? 'bg-purple-600 text-white'
-                  : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-300'
-              }`}
-            >
-              Executed ({getStatusCount('executed')})
-            </button>
-            <button
-              onClick={() => setStatusFilter('expired')}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                statusFilter === 'expired'
-                  ? 'bg-yellow-600 text-white'
-                  : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-300'
-              }`}
-            >
-              Expired ({getStatusCount('expired')})
-            </button>
+              Create First Proposal
+            </Link>
           </div>
-
-          {filteredProposals.length === 0 ? (
-            <div className="text-center py-12">
-              <div className="text-gray-400 text-6xl mb-4">🗳️</div>
-              <h2 className="text-xl font-semibold text-gray-600 mb-2">No proposals yet</h2>
-              <p className="text-gray-500">Be the first to create a proposal for the DAO community to vote on.</p>
-              <Link
-                href="/governance"
-                className="inline-block mt-4 px-6 py-2 text-white rounded-lg transition-colors hover:bg-[#254A40]"
-                style={{ backgroundColor: '#2F5D50' }}
+        ) : (
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            {filteredProposals.map((proposal) => (
+              <div
+                key={proposal.id}
+                className="bg-white rounded-xl shadow-md border border-gray-200 hover:shadow-lg transition-shadow cursor-pointer relative"
+                onClick={() => handleProposalClick(proposal.id)}
               >
-                Create First Proposal
-              </Link>
-            </div>
-          ) : (
-            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-              {filteredProposals.map((proposal) => (
-                <div
-                  key={proposal.id}
-                  className="bg-white rounded-xl shadow-md border border-gray-200 hover:shadow-lg transition-shadow cursor-pointer relative"
-                  onClick={() => handleProposalClick(proposal.id)}
-                >
-                  <div className="p-4">
-                    {/* Title and Status */}
-                    <h2 className="text-xl font-bold mb-2 flex items-center gap-2">
-                      {proposal.title}
+                <div className="p-4">
+                  {/* Title and Status */}
+                  <h2 className="text-xl font-bold mb-2 flex items-center gap-2">
+                    {proposal.title}
+                    <span
+                      className={`ml-2 px-2 py-1 text-xs font-medium rounded-full ${
+                        proposalStates[getProposalKey(proposal)]?.state === 1
+                          ? 'bg-gradient-to-r from-blue-200 to-blue-300 text-blue-900' // Active
+                          : proposalStates[getProposalKey(proposal)]?.state ===
+                              4
+                            ? 'bg-gradient-to-r from-green-200 to-green-300 text-green-900' // Succeeded/Passed
+                            : proposalStates[getProposalKey(proposal)]
+                                  ?.state === 3
+                              ? 'bg-gradient-to-r from-red-200 to-red-300 text-red-900' // Defeated/Failed
+                              : proposalStates[getProposalKey(proposal)]
+                                    ?.state === 7
+                                ? 'bg-gradient-to-r from-purple-200 to-purple-300 text-purple-900' // Executed
+                                : proposalStates[getProposalKey(proposal)]
+                                      ?.state === 2
+                                  ? 'bg-gradient-to-r from-gray-200 to-gray-300 text-gray-900' // Canceled
+                                  : proposalStates[getProposalKey(proposal)]
+                                        ?.state === 6
+                                    ? 'bg-gradient-to-r from-yellow-200 to-yellow-300 text-yellow-900' // Expired
+                                    : proposalStates[getProposalKey(proposal)]
+                                          ?.state === 5
+                                      ? 'bg-gradient-to-r from-orange-200 to-orange-300 text-orange-900' // Queued
+                                      : proposalStates[getProposalKey(proposal)]
+                                            ?.state === 0
+                                        ? 'bg-gradient-to-r from-gray-200 to-gray-300 text-gray-900' // Pending
+                                        : 'bg-gradient-to-r from-gray-200 to-gray-300 text-gray-900' // Unknown
+                      }`}
+                    >
+                      {proposalStates[getProposalKey(proposal)]?.state !==
+                        undefined &&
+                      proposalStates[getProposalKey(proposal)]?.state >= 0
+                        ? (() => {
+                            const state =
+                              proposalStates[getProposalKey(proposal)]?.state;
+                            // Map contract states to user-friendly labels
+                            switch (state) {
+                              case 0:
+                                return 'Pending';
+                              case 1:
+                                return 'Active';
+                              case 2:
+                                return 'Canceled';
+                              case 3:
+                                return 'Failed';
+                              case 4:
+                                return 'Passed';
+                              case 5:
+                                return 'Queued';
+                              case 6:
+                                return 'Expired';
+                              case 7:
+                                return 'Executed';
+                              default:
+                                return 'Unknown';
+                            }
+                          })()
+                        : 'Unpublished'}
+                    </span>
+                  </h2>
+                  {/* Icon Row */}
+                  <div className="flex flex-col gap-2 mb-4 text-sm text-gray-600">
+                    <div className="flex items-center gap-2">
+                      <User className="w-4 h-4 mr-1" />
                       <span
-                        className={`ml-2 px-2 py-1 text-xs font-medium rounded-full ${
-                          proposalStates[getProposalKey(proposal)]?.state === 1
-                            ? 'bg-gradient-to-r from-blue-200 to-blue-300 text-blue-900'     // Active
-                          : proposalStates[getProposalKey(proposal)]?.state === 4
-                            ? 'bg-gradient-to-r from-green-200 to-green-300 text-green-900'  // Succeeded/Passed
-                          : proposalStates[getProposalKey(proposal)]?.state === 3
-                            ? 'bg-gradient-to-r from-red-200 to-red-300 text-red-900'        // Defeated/Failed
-                          : proposalStates[getProposalKey(proposal)]?.state === 7
-                            ? 'bg-gradient-to-r from-purple-200 to-purple-300 text-purple-900' // Executed
-                          : proposalStates[getProposalKey(proposal)]?.state === 2
-                            ? 'bg-gradient-to-r from-gray-200 to-gray-300 text-gray-900'     // Canceled
-                          : proposalStates[getProposalKey(proposal)]?.state === 6
-                            ? 'bg-gradient-to-r from-yellow-200 to-yellow-300 text-yellow-900' // Expired
-                          : proposalStates[getProposalKey(proposal)]?.state === 5
-                            ? 'bg-gradient-to-r from-orange-200 to-orange-300 text-orange-900' // Queued
-                          : proposalStates[getProposalKey(proposal)]?.state === 0
-                            ? 'bg-gradient-to-r from-gray-200 to-gray-300 text-gray-900'     // Pending
-                          : 'bg-gradient-to-r from-gray-200 to-gray-300 text-gray-900'       // Unknown
-                        }`}
+                        className="hover:text-blue-600 transition-colors font-medium cursor-pointer"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedProfile(proposal.proposer.profile);
+                        }}
                       >
-
-                        {proposalStates[getProposalKey(proposal)]?.state !== undefined && proposalStates[getProposalKey(proposal)]?.state >= 0 
-                          ? (() => {
-                              const state = proposalStates[getProposalKey(proposal)]?.state;
-                              // Map contract states to user-friendly labels
-                              switch (state) {
-                                case 0: return 'Pending';
-                                case 1: return 'Active';
-                                case 2: return 'Canceled';
-                                case 3: return 'Failed';
-                                case 4: return 'Passed';
-                                case 5: return 'Queued';
-                                case 6: return 'Expired';
-                                case 7: return 'Executed';
-                                default: return 'Unknown';
-                              }
-                            })()
-                          : 'Unpublished'
-                        }
+                        {proposal.proposer.name}
                       </span>
-                    </h2>
-                    {/* Icon Row */}
-                    <div className="flex flex-col gap-2 mb-4 text-sm text-gray-600">
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Clock className="w-4 h-4 mr-1" />
+                      <span>{formatDate(proposal.createdAt)}</span>
+                    </div>
+                    {proposal.tokenId && (
                       <div className="flex items-center gap-2">
-                        <User className="w-4 h-4 mr-1" />
-                        <span
-                          className="hover:text-blue-600 transition-colors font-medium cursor-pointer"
-                          onClick={e => {
-                            e.stopPropagation();
-                            setSelectedProfile(proposal.proposer.profile);
-                          }}
-                        >
-                          {proposal.proposer.name}
+                        <Key className="w-4 h-4 mr-1 text-blue-400" />
+                        <span>
+                          {POD_NAMES[proposal.tokenId] || proposal.tokenId}
                         </span>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <Clock className="w-4 h-4 mr-1" />
-                        <span>{formatDate(proposal.createdAt)}</span>
-                      </div>
-                      {proposal.tokenId && (
-                        <div className="flex items-center gap-2">
-                          <Key className="w-4 h-4 mr-1 text-blue-400" />
-                          <span>{POD_NAMES[proposal.tokenId] || proposal.tokenId}</span>
-                        </div>
-                      )}
-                      {proposal.forumThreadId && (
-                        <div className="flex items-center gap-2">
-                          <MessageSquare className="w-4 h-4 mr-1" />
-                          <Link
-                            href={`/forum/thread/${proposal.forumThreadId}`}
-                            className="hover:text-blue-600 transition-colors"
-                            onClick={e => e.stopPropagation()}
-                          >
-                            View Discussion
-                          </Link>
-                        </div>
-                      )}
-                      {proposal.transactionHash && (
-                        <div className="flex items-center gap-2">
-                          <ExternalLink className="w-4 h-4 mr-1" />
-                          <a
-                            href={getBasescanUrl(proposal.transactionHash)}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="hover:text-blue-600 transition-colors"
-                            onClick={e => e.stopPropagation()}
-                          >
-                            View on Basescan
-                          </a>
-                        </div>
-                      )}
-                    </div>
-                    {/* Description */}
-                    <div className="mb-4 text-gray-700 text-sm line-clamp-4">{proposal.description}</div>
-                    {/* Voting Countdown */}
-                    {proposal.voting_end && (
-                      <VotingCountdown votingEnd={proposal.voting_end} />
                     )}
-                    {/* Vote Button: only enabled if proposal is Active and user hasn't voted */}
-                    {proposalStates[getProposalKey(proposal)]?.state === 1 ? (
-                      proposalStates[getProposalKey(proposal)]?.hasVoted ? (
-                        <button
-                          className="w-full py-2 px-4 text-white rounded-lg font-semibold cursor-not-allowed opacity-60"
-                          disabled={true}
-                          title="You have already voted on this proposal."
-                          style={{ pointerEvents: 'none', backgroundColor: '#3F7A5A' }}
+                    {proposal.forumThreadId && (
+                      <div className="flex items-center gap-2">
+                        <MessageSquare className="w-4 h-4 mr-1" />
+                        <Link
+                          href={`/forum/thread/${proposal.forumThreadId}`}
+                          className="hover:text-blue-600 transition-colors"
+                          onClick={(e) => e.stopPropagation()}
                         >
-                          ✓ Voted
-                        </button>
-                      ) : (
-                        <button
-                          className="w-full py-2 px-4 text-white rounded-lg font-semibold transition-colors hover:bg-[#254A40]"
-                          onClick={e => {
-                            e.stopPropagation();
-                            setVotingProposal(proposal);
-                          }}
-                          style={{ backgroundColor: '#2F5D50' }}
+                          View Discussion
+                        </Link>
+                      </div>
+                    )}
+                    {proposal.transactionHash && (
+                      <div className="flex items-center gap-2">
+                        <ExternalLink className="w-4 h-4 mr-1" />
+                        <a
+                          href={getBasescanUrl(proposal.transactionHash)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="hover:text-blue-600 transition-colors"
+                          onClick={(e) => e.stopPropagation()}
                         >
-                          Vote
-                        </button>
-                      )
-                    ) : (
-                      <button
-                        className="w-full py-2 px-4 bg-gray-300 text-gray-500 rounded-lg font-semibold cursor-not-allowed"
-                        disabled={true}
-                        title="Voting is only available for active proposals."
-                      >
-                        Vote (Not Active)
-                      </button>
+                          View on Basescan
+                        </a>
+                      </div>
                     )}
                   </div>
+                  {/* Description */}
+                  <div className="mb-4 text-gray-700 text-sm line-clamp-4">
+                    {proposal.description}
+                  </div>
+                  {/* Voting Countdown */}
+                  {proposal.voting_end && (
+                    <VotingCountdown votingEnd={proposal.voting_end} />
+                  )}
+                  {/* Vote Button: only enabled if proposal is Active and user hasn't voted */}
+                  {proposalStates[getProposalKey(proposal)]?.state === 1 ? (
+                    proposalStates[getProposalKey(proposal)]?.hasVoted ? (
+                      <button
+                        className="w-full py-2 px-4 text-white rounded-lg font-semibold cursor-not-allowed opacity-60"
+                        disabled={true}
+                        title="You have already voted on this proposal."
+                        style={{
+                          pointerEvents: 'none',
+                          backgroundColor: '#3F7A5A',
+                        }}
+                      >
+                        ✓ Voted
+                      </button>
+                    ) : (
+                      <button
+                        className="w-full py-2 px-4 text-white rounded-lg font-semibold transition-colors hover:bg-[#254A40]"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setVotingProposal(proposal);
+                        }}
+                        style={{ backgroundColor: '#2F5D50' }}
+                      >
+                        Vote
+                      </button>
+                    )
+                  ) : (
+                    <button
+                      className="w-full py-2 px-4 bg-gray-300 text-gray-500 rounded-lg font-semibold cursor-not-allowed"
+                      disabled={true}
+                      title="Voting is only available for active proposals."
+                    >
+                      Vote (Not Active)
+                    </button>
+                  )}
                 </div>
-              ))}
-            </div>
-          )}
-        </div>
-        {/* Profile Modal */}
-        {selectedProfile && (
-          <ProfileModal
-            user={selectedProfile}
-            users={profileUsers}
-            onClose={() => setSelectedProfile(null)}
-          />
-        )}
-        {/* Voting Modal */}
-        {votingProposal && (
-          <div className="vote-modal-overlay">
-            <div className="vote-modal-container" tabIndex={-1}>
-              <button className="vote-modal-close" onClick={() => setVotingProposal(null)} aria-label="Close">✖</button>
-              <ProposalVoteForm
-                proposalId={votingProposal.onchain_proposal_id || votingProposal.id}
-                proposalTitle={votingProposal.title}
-                proposalState={proposalStates[getProposalKey(votingProposal)]?.state}
-                hasVoted={proposalStates[getProposalKey(votingProposal)]?.hasVoted}
-                onSuccess={async () => {
-                  // Immediately update local state to show "✓ Voted"
-                  const proposalKey = getProposalKey(votingProposal);
-                  setProposalStates(prev => ({
-                    ...prev,
-                    [proposalKey]: {
-                      ...prev[proposalKey],
-                      hasVoted: true
-                    }
-                  }));
-                  // Force a fresh fetch from the API (bypass cache)
-                  await fetchProposalStates(address, true);
-                  // Force refresh participation data to update notification count
-                  forceRefreshParticipation();
-                  // Close the modal
-                  setVotingProposal(null);
-                  // Force a page refresh to ensure all components update
-                  window.location.reload();
-                }}
-              />
-            </div>
+              </div>
+            ))}
           </div>
         )}
       </div>
+      {/* Profile Modal */}
+      {selectedProfile && (
+        <ProfileModal
+          user={selectedProfile}
+          users={profileUsers}
+          onClose={() => setSelectedProfile(null)}
+        />
+      )}
+      {/* Voting Modal */}
+      {votingProposal && (
+        <div className="vote-modal-overlay">
+          <div className="vote-modal-container" tabIndex={-1}>
+            <button
+              className="vote-modal-close"
+              onClick={() => setVotingProposal(null)}
+              aria-label="Close"
+            >
+              ✖
+            </button>
+            <ProposalVoteForm
+              proposalId={
+                votingProposal.onchain_proposal_id || votingProposal.id
+              }
+              proposalTitle={votingProposal.title}
+              proposalState={
+                proposalStates[getProposalKey(votingProposal)]?.state
+              }
+              hasVoted={
+                proposalStates[getProposalKey(votingProposal)]?.hasVoted
+              }
+              onSuccess={async () => {
+                // Immediately update local state to show "✓ Voted"
+                const proposalKey = getProposalKey(votingProposal);
+                setProposalStates((prev) => ({
+                  ...prev,
+                  [proposalKey]: {
+                    ...prev[proposalKey],
+                    hasVoted: true,
+                  },
+                }));
+                // Force a fresh fetch from the API (bypass cache)
+                await fetchProposalStates(address, true);
+                // Force refresh participation data to update notification count
+                forceRefreshParticipation();
+                // Close the modal
+                setVotingProposal(null);
+                // Force a page refresh to ensure all components update
+                window.location.reload();
+              }}
+            />
+          </div>
+        </div>
+      )}
+    </div>
   );
-} 
+}

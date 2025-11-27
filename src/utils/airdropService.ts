@@ -30,13 +30,13 @@ export class AirdropService {
       await supabase.from('relay_tasks').insert({
         wallet_address: recipientAddress,
         task_id: relayResponse.taskId,
-        status: 'pending'
+        status: 'pending',
       });
 
       return {
         status: 'submitted',
         taskId: relayResponse.taskId,
-        message: 'Airdrop relay request submitted'
+        message: 'Airdrop relay request submitted',
       };
     } catch (error) {
       console.error('Airdrop processing error:', error);
@@ -46,13 +46,16 @@ export class AirdropService {
 
   async checkAirdropStatus(taskId: string) {
     const status = await this.gelato.checkRelayStatus(taskId);
-    
+
     if (status.task?.taskState === 'ExecSuccess') {
       // Update database with success status
-      await supabase.from('relay_tasks').update({
-        status: 'completed',
-        transaction_hash: status.task.transactionHash
-      }).eq('task_id', taskId);
+      await supabase
+        .from('relay_tasks')
+        .update({
+          status: 'completed',
+          transaction_hash: status.task.transactionHash,
+        })
+        .eq('task_id', taskId);
     }
 
     return status;

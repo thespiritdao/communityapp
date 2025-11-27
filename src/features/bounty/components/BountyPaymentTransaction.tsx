@@ -15,7 +15,7 @@
  * @module BountyPaymentTransaction
  */
 
-"use client"
+'use client';
 
 import React, { useState, useEffect } from 'react';
 import { useAccount, usePublicClient } from 'wagmi';
@@ -25,7 +25,7 @@ import {
   TransactionSponsor,
   TransactionStatus,
   TransactionStatusLabel,
-  TransactionStatusAction
+  TransactionStatusAction,
 } from '@coinbase/onchainkit/transaction';
 import type { TransactionReceipt } from 'viem';
 import { parseEther } from 'viem';
@@ -38,12 +38,9 @@ import {
   pollForTransactionReceipt,
   createTransactionStatusHandler,
   type TransactionCallData,
-  BASE_CHAIN_ID
+  BASE_CHAIN_ID,
 } from '../utils/transactionUtils';
-import {
-  syncPaymentState,
-  type PaymentStateUpdate
-} from '../utils/stateSync';
+import { syncPaymentState, type PaymentStateUpdate } from '../utils/stateSync';
 
 // ============================================================================
 // TYPE DEFINITIONS
@@ -91,7 +88,9 @@ export interface BountyPaymentTransactionProps {
 // COMPONENT
 // ============================================================================
 
-export const BountyPaymentTransaction: React.FC<BountyPaymentTransactionProps> = ({
+export const BountyPaymentTransaction: React.FC<
+  BountyPaymentTransactionProps
+> = ({
   onchainBountyId,
   bountyId,
   bidId,
@@ -103,7 +102,7 @@ export const BountyPaymentTransaction: React.FC<BountyPaymentTransactionProps> =
   onSuccess,
   onError,
   onComplete,
-  onRefreshData
+  onRefreshData,
 }) => {
   const { address } = useAccount();
   const publicClient = usePublicClient();
@@ -149,7 +148,7 @@ export const BountyPaymentTransaction: React.FC<BountyPaymentTransactionProps> =
         paymentAmount,
         paymentToken,
         status: 'completed',
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       };
 
       console.log('🔄 Syncing payment state to database...');
@@ -178,7 +177,7 @@ export const BountyPaymentTransaction: React.FC<BountyPaymentTransactionProps> =
           context_type: 'bounty',
           context_id: bountyId,
           context_url: `/bounty/${bountyId}`,
-          priority: 'high'
+          priority: 'high',
         }),
 
         // Notify creator
@@ -191,8 +190,8 @@ export const BountyPaymentTransaction: React.FC<BountyPaymentTransactionProps> =
           context_type: 'bounty',
           context_id: bountyId,
           context_url: `/bounty/${bountyId}`,
-          priority: 'high'
-        })
+          priority: 'high',
+        }),
       ]);
 
       console.log('✅ All notifications sent successfully');
@@ -212,7 +211,7 @@ export const BountyPaymentTransaction: React.FC<BountyPaymentTransactionProps> =
         bidId,
         bidder: bidderAddress,
         paymentAmount,
-        paymentToken
+        paymentToken,
       });
     } catch (error) {
       console.error('❌ Error in post-payment processing:', error);
@@ -234,12 +233,15 @@ export const BountyPaymentTransaction: React.FC<BountyPaymentTransactionProps> =
       }
 
       // Prepare transaction calls for error handler
-      const calls: TransactionCallData[] = [{
-        address: process.env.NEXT_PUBLIC_BOUNTY_MANAGER_ADDRESS as `0x${string}`,
-        abi: BountyManagerABI,
-        functionName: 'releasePayment',
-        args: [BigInt(onchainBountyId), parseEther(paymentAmount)]
-      }];
+      const calls: TransactionCallData[] = [
+        {
+          address: process.env
+            .NEXT_PUBLIC_BOUNTY_MANAGER_ADDRESS as `0x${string}`,
+          abi: BountyManagerABI,
+          functionName: 'releasePayment',
+          args: [BigInt(onchainBountyId), parseEther(paymentAmount)],
+        },
+      ];
 
       // Handle error with comprehensive logging
       await handleTransactionError(
@@ -247,7 +249,7 @@ export const BountyPaymentTransaction: React.FC<BountyPaymentTransactionProps> =
         'Bounty Payment',
         calls,
         address,
-        publicClient
+        publicClient,
       );
 
       onError(error);
@@ -264,9 +266,9 @@ export const BountyPaymentTransaction: React.FC<BountyPaymentTransactionProps> =
   const transactionStatusHandler = createTransactionStatusHandler(
     {
       onSuccess: handleSuccess,
-      onError: handleError
+      onError: handleError,
     },
-    'Bounty Payment'
+    'Bounty Payment',
   );
 
   const onStatusWithPolling = async (status: any) => {
@@ -275,22 +277,29 @@ export const BountyPaymentTransaction: React.FC<BountyPaymentTransactionProps> =
 
     // Start polling as fallback when transaction becomes pending
     if (status.statusName === 'transactionPending' && publicClient) {
-      const txHash = status.transactionHash || status.statusData?.transactionHash;
+      const txHash =
+        status.transactionHash || status.statusData?.transactionHash;
 
       if (txHash) {
-        console.log('⏱️ Starting fallback polling for payment transaction:', txHash);
+        console.log(
+          '⏱️ Starting fallback polling for payment transaction:',
+          txHash,
+        );
 
         const cleanup = await pollForTransactionReceipt(
           txHash,
           publicClient,
           (receipt) => {
-            console.log('✅ Receipt found via polling:', receipt.transactionHash);
+            console.log(
+              '✅ Receipt found via polling:',
+              receipt.transactionHash,
+            );
             handleSuccess(receipt);
           },
           () => {
             console.log('⏱️ Polling timed out for payment transaction');
             // Don't call onError - transaction might still succeed
-          }
+          },
         );
 
         setPollCleanup(() => cleanup);
@@ -310,15 +319,22 @@ export const BountyPaymentTransaction: React.FC<BountyPaymentTransactionProps> =
   // RENDER
   // ============================================================================
 
-  const contractAddress = process.env.NEXT_PUBLIC_BOUNTY_MANAGER_ADDRESS as `0x${string}`;
-
+  const contractAddress = process.env
+    .NEXT_PUBLIC_BOUNTY_MANAGER_ADDRESS as `0x${string}`;
 
   return (
     <div className="space-y-4">
       {/* Payment Details */}
-      <div className="p-4 rounded-lg space-y-3 text-sm" style={{ backgroundColor: '#E8F1EE' }}>
-        <p><strong>Bounty:</strong> {bountyTitle}</p>
-        <p><strong>Amount:</strong> {paymentAmount} {paymentToken}</p>
+      <div
+        className="p-4 rounded-lg space-y-3 text-sm"
+        style={{ backgroundColor: '#E8F1EE' }}
+      >
+        <p>
+          <strong>Bounty:</strong> {bountyTitle}
+        </p>
+        <p>
+          <strong>Amount:</strong> {paymentAmount} {paymentToken}
+        </p>
         <div className="flex items-center gap-2">
           <strong>Recipient:</strong>
           <UserProfileDisplay
@@ -329,10 +345,18 @@ export const BountyPaymentTransaction: React.FC<BountyPaymentTransactionProps> =
         </div>
       </div>
 
-      <div className="rounded-lg p-4" style={{ backgroundColor: '#FAF4EC', borderWidth: '1px', borderStyle: 'solid', borderColor: '#E8D7B8' }}>
+      <div
+        className="rounded-lg p-4"
+        style={{
+          backgroundColor: '#FAF4EC',
+          borderWidth: '1px',
+          borderStyle: 'solid',
+          borderColor: '#E8D7B8',
+        }}
+      >
         <p className="text-sm" style={{ color: '#8F6B2F' }}>
-          <strong>⚠️ Important:</strong> This will release payment from escrow to the bounty worker.
-          This action cannot be undone.
+          <strong>⚠️ Important:</strong> This will release payment from escrow to
+          the bounty worker. This action cannot be undone.
         </p>
       </div>
 
@@ -346,32 +370,42 @@ export const BountyPaymentTransaction: React.FC<BountyPaymentTransactionProps> =
               address: contractAddress,
               abi: BountyManagerABI,
               functionName: 'releasePayment',
-              args: [BigInt(onchainBountyId), parseEther(paymentAmount)]
-            }
+              args: [BigInt(onchainBountyId), parseEther(paymentAmount)],
+            },
           ]}
           isSponsored={true}
           onStatus={onStatusWithPolling}
         >
-        <TransactionButton
-          text="Release Payment"
-          className="w-full"
-          style={{ backgroundColor: '#2F5D50', color: '#FFFFFF' }}
-          disabled={isProcessing}
-        />
-        <TransactionSponsor />
-        <TransactionStatus>
-          <TransactionStatusLabel />
-          <TransactionStatusAction />
-        </TransactionStatus>
-      </Transaction>
+          <TransactionButton
+            text="Release Payment"
+            className="w-full"
+            style={{ backgroundColor: '#2F5D50', color: '#FFFFFF' }}
+            disabled={isProcessing}
+          />
+          <TransactionSponsor />
+          <TransactionStatus>
+            <TransactionStatusLabel />
+            <TransactionStatusAction />
+          </TransactionStatus>
+        </Transaction>
       ) : (
-        <div className="rounded-lg p-4" style={{ backgroundColor: '#F5E6E6', borderWidth: '1px', borderStyle: 'solid', borderColor: '#D9B3B3' }}>
+        <div
+          className="rounded-lg p-4"
+          style={{
+            backgroundColor: '#F5E6E6',
+            borderWidth: '1px',
+            borderStyle: 'solid',
+            borderColor: '#D9B3B3',
+          }}
+        >
           <p className="text-sm" style={{ color: '#5C1F1F' }}>
-            <strong>Configuration Error:</strong> Missing wallet connection or contract address.
-            Please check your connection and environment configuration.
+            <strong>Configuration Error:</strong> Missing wallet connection or
+            contract address. Please check your connection and environment
+            configuration.
           </p>
           <div className="mt-2 text-xs" style={{ color: '#8B3A3A' }}>
-            Address: {address ? '✓' : '✗'} | Contract: {contractAddress ? '✓' : '✗'}
+            Address: {address ? '✓' : '✗'} | Contract:{' '}
+            {contractAddress ? '✓' : '✗'}
           </div>
         </div>
       )}

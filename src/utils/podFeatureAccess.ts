@@ -18,7 +18,13 @@
 import { supabase } from '@/utils/supabaseClient';
 import { fetchTokenBalances } from '@/utils/fetchTokenBalances';
 
-export type PodFeature = 'chat' | 'forum' | 'events' | 'bounties' | 'treasury' | 'marketplace';
+export type PodFeature =
+  | 'chat'
+  | 'forum'
+  | 'events'
+  | 'bounties'
+  | 'treasury'
+  | 'marketplace';
 
 export interface FeatureAccessResult {
   allowed: boolean;
@@ -42,11 +48,12 @@ export interface FeatureAccessResult {
 export async function checkPodFeatureAccess(
   feature: PodFeature,
   userAddress: string,
-  podId: string
+  podId: string,
 ): Promise<FeatureAccessResult> {
-
   try {
-    console.log(`[PodFeatureAccess] Checking ${feature} access for ${userAddress} in pod ${podId}`);
+    console.log(
+      `[PodFeatureAccess] Checking ${feature} access for ${userAddress} in pod ${podId}`,
+    );
 
     // ============================================
     // TIER 1: Check Module Toggle (Pod-Level)
@@ -59,11 +66,16 @@ export async function checkPodFeatureAccess(
       .single();
 
     if (moduleError) {
-      console.error('[PodFeatureAccess] Error fetching module config:', moduleError);
+      console.error(
+        '[PodFeatureAccess] Error fetching module config:',
+        moduleError,
+      );
 
       // If no module config found, create default
       if (moduleError.code === 'PGRST116') {
-        console.log('[PodFeatureAccess] No module config found, creating defaults');
+        console.log(
+          '[PodFeatureAccess] No module config found, creating defaults',
+        );
         const { error: insertError } = await supabase
           .from('pod_modules')
           .insert({
@@ -72,11 +84,14 @@ export async function checkPodFeatureAccess(
             forum_enabled: false,
             treasury_enabled: true, // Treasury always enabled by default
             events_enabled: false,
-            bounties_enabled: false
+            bounties_enabled: false,
           });
 
         if (insertError) {
-          console.error('[PodFeatureAccess] Error creating module config:', insertError);
+          console.error(
+            '[PodFeatureAccess] Error creating module config:',
+            insertError,
+          );
         }
 
         // After creation, check if requested feature is enabled (treasury only)
@@ -85,14 +100,14 @@ export async function checkPodFeatureAccess(
           return {
             allowed: false,
             reason: `${formatFeatureName(feature)} is not enabled for this pod`,
-            details: { moduleEnabled: false }
+            details: { moduleEnabled: false },
           };
         }
       } else {
         return {
           allowed: false,
           reason: 'Error loading pod module configuration',
-          details: { moduleEnabled: false }
+          details: { moduleEnabled: false },
         };
       }
     }
@@ -104,7 +119,7 @@ export async function checkPodFeatureAccess(
       return {
         allowed: false,
         reason: `${formatFeatureName(feature)} is not enabled for this pod. Ask pod leaders to enable it in the Modules tab.`,
-        details: { moduleEnabled: false }
+        details: { moduleEnabled: false },
       };
     }
 
@@ -127,7 +142,7 @@ export async function checkPodFeatureAccess(
       return {
         allowed: false,
         reason: 'Pod not found',
-        details: { moduleEnabled: true, hasHat: false }
+        details: { moduleEnabled: true, hasHat: false },
       };
     }
 
@@ -142,17 +157,26 @@ export async function checkPodFeatureAccess(
         details: {
           moduleEnabled: true,
           hasHat: false,
-          userRole: null
-        }
+          userRole: null,
+        },
       };
     }
 
     // Determine if user is leader or member
     const isLeader = userHatId === pod.management_hat_id;
     const isMember = userHatId === pod.membership_hat_id;
-    const userRole: 'leader' | 'member' | null = isLeader ? 'leader' : (isMember ? 'member' : null);
+    const userRole: 'leader' | 'member' | null = isLeader
+      ? 'leader'
+      : isMember
+        ? 'member'
+        : null;
 
-    console.log('[PodFeatureAccess] User role:', userRole, 'Hat ID:', userHatId);
+    console.log(
+      '[PodFeatureAccess] User role:',
+      userRole,
+      'Hat ID:',
+      userHatId,
+    );
 
     if (!userRole) {
       return {
@@ -161,8 +185,8 @@ export async function checkPodFeatureAccess(
         details: {
           moduleEnabled: true,
           hasHat: false,
-          userRole: null
-        }
+          userRole: null,
+        },
       };
     }
 
@@ -178,7 +202,10 @@ export async function checkPodFeatureAccess(
       .single();
 
     if (permError) {
-      console.warn('[PodFeatureAccess] No role permissions found, using defaults for', userRole);
+      console.warn(
+        '[PodFeatureAccess] No role permissions found, using defaults for',
+        userRole,
+      );
 
       // Default permissions if not configured
       if (userRole === 'leader') {
@@ -189,8 +216,8 @@ export async function checkPodFeatureAccess(
             moduleEnabled: true,
             hasHat: true,
             hasPermission: true,
-            userRole: 'leader'
-          }
+            userRole: 'leader',
+          },
         };
       }
     }
@@ -206,13 +233,17 @@ export async function checkPodFeatureAccess(
           moduleEnabled: true,
           hasHat: true,
           hasPermission: true,
-          userRole
-        }
+          userRole,
+        },
       };
     }
 
-    const hasPermission = rolePermissions?.permissions?.[permissionKey] || false;
-    console.log(`[PodFeatureAccess] Permission ${permissionKey}:`, hasPermission);
+    const hasPermission =
+      rolePermissions?.permissions?.[permissionKey] || false;
+    console.log(
+      `[PodFeatureAccess] Permission ${permissionKey}:`,
+      hasPermission,
+    );
 
     if (!hasPermission) {
       return {
@@ -222,8 +253,8 @@ export async function checkPodFeatureAccess(
           moduleEnabled: true,
           hasHat: true,
           hasPermission: false,
-          userRole
-        }
+          userRole,
+        },
       };
     }
 
@@ -235,15 +266,14 @@ export async function checkPodFeatureAccess(
         moduleEnabled: true,
         hasHat: true,
         hasPermission: true,
-        userRole
-      }
+        userRole,
+      },
     };
-
   } catch (error) {
     console.error('[PodFeatureAccess] Unexpected error:', error);
     return {
       allowed: false,
-      reason: 'Error checking access permissions. Please try again.'
+      reason: 'Error checking access permissions. Please try again.',
     };
   }
 }
@@ -251,7 +281,10 @@ export async function checkPodFeatureAccess(
 /**
  * Get user's Hat ID in a specific pod
  */
-async function getUserHatIdInPod(userAddress: string, podId: string): Promise<string | null> {
+async function getUserHatIdInPod(
+  userAddress: string,
+  podId: string,
+): Promise<string | null> {
   try {
     // Check pod_members table for user's Hat assignment
     const { data: member, error } = await supabase
@@ -277,33 +310,39 @@ async function getUserHatIdInPod(userAddress: string, podId: string): Promise<st
 /**
  * Map feature + role to specific permission key
  */
-function getPermissionKey(feature: PodFeature, role: 'leader' | 'member'): string | null {
+function getPermissionKey(
+  feature: PodFeature,
+  role: 'leader' | 'member',
+): string | null {
   // Permission key mapping based on feature and role
-  const permissionMap: Record<PodFeature, { leader: string | null; member: string | null }> = {
+  const permissionMap: Record<
+    PodFeature,
+    { leader: string | null; member: string | null }
+  > = {
     chat: {
       leader: 'chatAccess',
-      member: 'chatAccess'
+      member: 'chatAccess',
     },
     forum: {
       leader: 'forumModeration',
-      member: 'chatAccess' // Members need basic chat access to view forum
+      member: 'chatAccess', // Members need basic chat access to view forum
     },
     events: {
       leader: 'eventCreation',
-      member: null // Members can view events without special permission
+      member: null, // Members can view events without special permission
     },
     bounties: {
       leader: 'bountyManagement',
-      member: null // Members can view bounties without special permission
+      member: null, // Members can view bounties without special permission
     },
     treasury: {
       leader: 'treasuryManagement',
-      member: 'treasuryViewing'
+      member: 'treasuryViewing',
     },
     marketplace: {
       leader: 'marketplaceManage',
-      member: 'marketplaceAccess'
-    }
+      member: 'marketplaceAccess',
+    },
   };
 
   return permissionMap[feature]?.[role] || null;
@@ -319,7 +358,7 @@ function formatFeatureName(feature: PodFeature): string {
     events: 'Events',
     bounties: 'Bounties',
     treasury: 'Treasury',
-    marketplace: 'Marketplace'
+    marketplace: 'Marketplace',
   };
   return names[feature] || feature;
 }
@@ -327,8 +366,14 @@ function formatFeatureName(feature: PodFeature): string {
 /**
  * Hook for React components to check feature access
  */
-export function usePodFeatureAccess(feature: PodFeature, userAddress: string | undefined, podId: string | undefined) {
-  const [accessCheck, setAccessCheck] = React.useState<{ loading: true } | { loading: false; result: FeatureAccessResult }>({ loading: true });
+export function usePodFeatureAccess(
+  feature: PodFeature,
+  userAddress: string | undefined,
+  podId: string | undefined,
+) {
+  const [accessCheck, setAccessCheck] = React.useState<
+    { loading: true } | { loading: false; result: FeatureAccessResult }
+  >({ loading: true });
 
   React.useEffect(() => {
     if (!userAddress || !podId) {
@@ -336,13 +381,13 @@ export function usePodFeatureAccess(feature: PodFeature, userAddress: string | u
         loading: false,
         result: {
           allowed: false,
-          reason: 'Wallet not connected'
-        }
+          reason: 'Wallet not connected',
+        },
       });
       return;
     }
 
-    checkPodFeatureAccess(feature, userAddress, podId).then(result => {
+    checkPodFeatureAccess(feature, userAddress, podId).then((result) => {
       setAccessCheck({ loading: false, result });
     });
   }, [feature, userAddress, podId]);

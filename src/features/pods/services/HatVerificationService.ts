@@ -48,8 +48,9 @@ export interface HatHierarchyResult {
  * Service for verifying HAT IDs exist onchain and validating HAT hierarchies
  */
 export class HatVerificationService {
-  private static readonly HATS_PROTOCOL_ADDRESS =
-    (process.env.NEXT_PUBLIC_HATS_CONTRACT || '0x3bc1A0Ad72417f2d411118085256fC53CBdDd137') as `0x${string}`;
+  private static readonly HATS_PROTOCOL_ADDRESS = (process.env
+    .NEXT_PUBLIC_HATS_CONTRACT ||
+    '0x3bc1A0Ad72417f2d411118085256fC53CBdDd137') as `0x${string}`;
 
   // ⚠️ CRITICAL: viewHat returns INDIVIDUAL values, NOT a tuple!
   // Source: Hats Protocol docs - llms-full.txt line 1389
@@ -67,20 +68,20 @@ export class HatVerificationService {
         { name: 'imageURI', type: 'string' },
         { name: 'lastHatId', type: 'uint16' },
         { name: 'mutable', type: 'bool' },
-        { name: 'active', type: 'bool' }
+        { name: 'active', type: 'bool' },
       ],
-      stateMutability: 'view'
+      stateMutability: 'view',
     },
     {
       name: 'isAdminOfHat',
       type: 'function',
       inputs: [
         { name: '_user', type: 'address' },
-        { name: '_hatId', type: 'uint256' }
+        { name: '_hatId', type: 'uint256' },
       ],
       outputs: [{ name: '', type: 'bool' }],
-      stateMutability: 'view'
-    }
+      stateMutability: 'view',
+    },
   ] as const;
 
   /**
@@ -92,7 +93,9 @@ export class HatVerificationService {
    * @param hatId - HAT ID to verify (decimal string or hex)
    * @returns Verification result with exists/active status
    */
-  static async verifyHatExistsOnchain(hatId: string): Promise<HatVerificationResult> {
+  static async verifyHatExistsOnchain(
+    hatId: string,
+  ): Promise<HatVerificationResult> {
     try {
       console.log('🔍 Verifying HAT exists onchain:', hatId);
 
@@ -101,7 +104,7 @@ export class HatVerificationService {
         return {
           exists: false,
           error: 'HAT ID is empty',
-          errorType: 'invalid_format'
+          errorType: 'invalid_format',
         };
       }
 
@@ -113,14 +116,14 @@ export class HatVerificationService {
         'placeholder',
         'null',
         'undefined',
-        'none'
+        'none',
       ];
 
       if (placeholderValues.includes(hatId.toLowerCase())) {
         return {
           exists: false,
           error: `HAT ID is a placeholder value: ${hatId}`,
-          errorType: 'invalid_format'
+          errorType: 'invalid_format',
         };
       }
 
@@ -132,23 +135,23 @@ export class HatVerificationService {
         return {
           exists: false,
           error: `Invalid HAT ID format: ${hatId}`,
-          errorType: 'invalid_format'
+          errorType: 'invalid_format',
         };
       }
 
       // Create public client
       const publicClient = createPublicClient({
         chain: base,
-        transport: http()
+        transport: http(),
       });
 
       // Call viewHat on Hats Protocol contract
-      const hatDetails = await publicClient.readContract({
+      const hatDetails = (await publicClient.readContract({
         address: this.HATS_PROTOCOL_ADDRESS,
         abi: this.HATS_ABI,
         functionName: 'viewHat',
-        args: [hatIdBigInt]
-      }) as any;
+        args: [hatIdBigInt],
+      })) as any;
 
       // Parse response
       const details: HatDetails = {
@@ -160,14 +163,14 @@ export class HatVerificationService {
         imageURI: hatDetails[5],
         lastHatId: Number(hatDetails[6]),
         mutable: hatDetails[7],
-        active: hatDetails[8]
+        active: hatDetails[8],
       };
 
       console.log('✅ HAT verified onchain:', {
         hatId,
         active: details.active,
         supply: details.supply,
-        maxSupply: details.maxSupply
+        maxSupply: details.maxSupply,
       });
 
       return {
@@ -175,9 +178,8 @@ export class HatVerificationService {
         active: details.active,
         details,
         error: details.active ? undefined : 'HAT exists but is not active',
-        errorType: details.active ? undefined : 'inactive'
+        errorType: details.active ? undefined : 'inactive',
       };
-
     } catch (error: any) {
       console.error('❌ HAT verification failed:', error);
 
@@ -188,14 +190,19 @@ export class HatVerificationService {
 
       // Note: "Position out of bounds" error previously indicated ABI mismatch
       // With correct ABI (individual values not tuple), this should not occur
-      if (fullErrorText.includes('out of bounds') ||
-          fullErrorText.includes('reverted') ||
-          fullErrorText.includes('does not exist')) {
-        console.warn('⚠️ HAT ID does not exist onchain or call reverted:', hatId);
+      if (
+        fullErrorText.includes('out of bounds') ||
+        fullErrorText.includes('reverted') ||
+        fullErrorText.includes('does not exist')
+      ) {
+        console.warn(
+          '⚠️ HAT ID does not exist onchain or call reverted:',
+          hatId,
+        );
         return {
           exists: false,
           error: 'HAT ID does not exist on blockchain',
-          errorType: 'not_found'
+          errorType: 'not_found',
         };
       }
 
@@ -203,7 +210,7 @@ export class HatVerificationService {
       return {
         exists: false,
         error: `Contract error: ${errorMessage}`,
-        errorType: 'contract_error'
+        errorType: 'contract_error',
       };
     }
   }
@@ -220,31 +227,31 @@ export class HatVerificationService {
    */
   static async verifyHatHierarchy(
     childHatId: string,
-    expectedParentHatId: string
+    expectedParentHatId: string,
   ): Promise<HatHierarchyResult> {
     try {
       console.log('🔍 Verifying HAT hierarchy:', {
         child: childHatId,
-        expectedParent: expectedParentHatId
+        expectedParent: expectedParentHatId,
       });
 
       // First verify both HATs exist
       const [childVerification, parentVerification] = await Promise.all([
         this.verifyHatExistsOnchain(childHatId),
-        this.verifyHatExistsOnchain(expectedParentHatId)
+        this.verifyHatExistsOnchain(expectedParentHatId),
       ]);
 
       if (!childVerification.exists) {
         return {
           isValid: false,
-          error: `Child HAT does not exist: ${childHatId}`
+          error: `Child HAT does not exist: ${childHatId}`,
         };
       }
 
       if (!parentVerification.exists) {
         return {
           isValid: false,
-          error: `Parent HAT does not exist: ${expectedParentHatId}`
+          error: `Parent HAT does not exist: ${expectedParentHatId}`,
         };
       }
 
@@ -255,20 +262,21 @@ export class HatVerificationService {
 
       const isValid = childVerification.active && parentVerification.active;
 
-      console.log(isValid ? '✅ HAT hierarchy valid' : '⚠️ HAT hierarchy invalid');
+      console.log(
+        isValid ? '✅ HAT hierarchy valid' : '⚠️ HAT hierarchy invalid',
+      );
 
       return {
         isValid,
         actualAdmin: 'pending_implementation', // TODO: Query actual admin
         expectedAdmin: expectedParentHatId,
-        error: isValid ? undefined : 'One or both HATs are not active'
+        error: isValid ? undefined : 'One or both HATs are not active',
       };
-
     } catch (error: any) {
       console.error('❌ HAT hierarchy verification failed:', error);
       return {
         isValid: false,
-        error: error?.message || 'Failed to verify HAT hierarchy'
+        error: error?.message || 'Failed to verify HAT hierarchy',
       };
     }
   }
@@ -281,7 +289,7 @@ export class HatVerificationService {
    * @returns Map of hatId -> verification result
    */
   static async batchVerifyHats(
-    hatIds: string[]
+    hatIds: string[],
   ): Promise<Map<string, HatVerificationResult>> {
     console.log(`🔍 Batch verifying ${hatIds.length} HATs...`);
 
@@ -296,14 +304,16 @@ export class HatVerificationService {
         batch.map(async (hatId) => {
           const result = await this.verifyHatExistsOnchain(hatId);
           return { hatId, result };
-        })
+        }),
       );
 
       batchResults.forEach(({ hatId, result }) => {
         results.set(hatId, result);
       });
 
-      console.log(`✅ Verified ${Math.min(i + BATCH_SIZE, hatIds.length)}/${hatIds.length} HATs`);
+      console.log(
+        `✅ Verified ${Math.min(i + BATCH_SIZE, hatIds.length)}/${hatIds.length} HATs`,
+      );
     }
 
     return results;

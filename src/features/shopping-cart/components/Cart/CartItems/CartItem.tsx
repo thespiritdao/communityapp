@@ -1,10 +1,10 @@
-"use client";
+'use client';
 
-import { memo, useCallback } from "react";
-import styled from "styled-components";
-import type { ICartProduct } from "../../../models";
-import useCart from "../../../contexts/cart-context/useCart";
-import formatPrice from "@/utils/formatPrice";
+import { memo, useCallback } from 'react';
+import styled from 'styled-components';
+import type { ICartProduct } from '../../../models';
+import useCart from '../../../contexts/cart-context/useCart';
+import formatPrice from '@/utils/formatPrice';
 
 const ItemContainer = styled.div`
   display: flex;
@@ -144,19 +144,24 @@ const CartItem = memo(({ product }: CartItemProps) => {
   }, [product.id, removeProduct]);
 
   const quantity = product.quantity || 1;
-  const systemPrice = (product.priceSystem || product.price_system || 0) * quantity;
+  const systemPrice =
+    (product.priceSystem || product.price_system || 0) * quantity;
   const selfPrice = (product.priceSelf || product.price_self || 0) * quantity;
 
   return (
     <ItemContainer>
-      <ItemImage 
-        src={product.image || product.image_url || '/images/placeholder-product.jpg'} 
+      <ItemImage
+        src={
+          product.image ||
+          product.image_url ||
+          '/images/placeholder-product.jpg'
+        }
         alt={product.name || product.title}
         onError={(e) => {
           e.currentTarget.src = '/images/placeholder-product.jpg';
         }}
       />
-      
+
       <ItemDetails>
         <ItemName>{product.name || product.title}</ItemName>
         <ItemMeta>
@@ -170,12 +175,12 @@ const CartItem = memo(({ product }: CartItemProps) => {
 
       <ItemActions>
         <PriceDisplay>
-          {systemPrice > 0 && <div>${formatPrice(systemPrice, "")} SYSTEM</div>}
-          {selfPrice > 0 && <div>${formatPrice(selfPrice, "")} SELF</div>}
+          {systemPrice > 0 && <div>${formatPrice(systemPrice, '')} SYSTEM</div>}
+          {selfPrice > 0 && <div>${formatPrice(selfPrice, '')} SELF</div>}
         </PriceDisplay>
 
         <QuantityControls>
-          <QuantityButton 
+          <QuantityButton
             onClick={handleDecreaseQuantity}
             disabled={quantity <= 1}
             aria-label="Decrease quantity"
@@ -183,7 +188,7 @@ const CartItem = memo(({ product }: CartItemProps) => {
             −
           </QuantityButton>
           <QuantityDisplay>{quantity}</QuantityDisplay>
-          <QuantityButton 
+          <QuantityButton
             onClick={handleIncreaseQuantity}
             aria-label="Increase quantity"
           >
@@ -191,7 +196,7 @@ const CartItem = memo(({ product }: CartItemProps) => {
           </QuantityButton>
         </QuantityControls>
 
-        <RemoveButton 
+        <RemoveButton
           onClick={handleRemove}
           aria-label={`Remove ${product.name || product.title} from cart`}
         >

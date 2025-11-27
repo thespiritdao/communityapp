@@ -1,6 +1,12 @@
 // src/features/shopping-cart/contexts/products-context/index.tsx
 
-import { createContext, useContext, useState, type ReactNode, type FC } from 'react';
+import {
+  createContext,
+  useContext,
+  useState,
+  type ReactNode,
+  type FC,
+} from 'react';
 import type { IProduct } from 'models';
 
 export interface IProductsContext {
@@ -19,7 +25,9 @@ const ProductsContext = createContext<IProductsContext | undefined>(undefined);
 export const useProductsContext = (): IProductsContext => {
   const context = useContext(ProductsContext);
   if (!context) {
-    throw new Error('useProductsContext must be used within a ProductsProvider');
+    throw new Error(
+      'useProductsContext must be used within a ProductsProvider',
+    );
   }
   return context;
 };

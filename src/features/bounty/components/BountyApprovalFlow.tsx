@@ -7,15 +7,18 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/components/ui/use-toast';
-import { 
-  AlertTriangle, 
-  CheckCircle, 
+import {
+  AlertTriangle,
+  CheckCircle,
   Users,
   Clock,
   UserCheck,
   DollarSign,
 } from 'lucide-react';
-import { BountyApprovalService, type BountyApprovalWorkflow } from '../services/BountyApprovalService';
+import {
+  BountyApprovalService,
+  type BountyApprovalWorkflow,
+} from '../services/BountyApprovalService';
 import { supabase } from '@/utils/supabaseClient';
 import { MemberCard } from '@/features/pods/components/MembersPanel/MemberCard';
 import { EventService } from '@/features/events/lib/supabase';
@@ -32,7 +35,7 @@ export const BountyApprovalFlow: React.FC<BountyApprovalFlowProps> = ({
   bountyId,
   bountyTitle,
   bountyValue,
-  onApprovalComplete
+  onApprovalComplete,
 }) => {
   const { address } = useAccount();
   const { data: walletClient } = useWalletClient();
@@ -40,32 +43,48 @@ export const BountyApprovalFlow: React.FC<BountyApprovalFlowProps> = ({
   const { toast } = useToast();
 
   const [isLoading, setIsLoading] = useState(false);
-  const [activeWorkflows, setActiveWorkflows] = useState<BountyApprovalWorkflow[]>([]);
-  const [userProfiles, setUserProfiles] = useState<Map<string, UserProfile>>(new Map());
+  const [activeWorkflows, setActiveWorkflows] = useState<
+    BountyApprovalWorkflow[]
+  >([]);
+  const [userProfiles, setUserProfiles] = useState<Map<string, UserProfile>>(
+    new Map(),
+  );
   const [canApprove, setCanApprove] = useState<Map<string, boolean>>(new Map());
 
   // Fetch active workflows for this bounty
   useEffect(() => {
     const fetchWorkflows = async () => {
       // Validate bountyId to prevent NaN issues
-      if (!bountyId || bountyId === 0 || bountyId === '' || (typeof bountyId === 'number' && isNaN(bountyId))) {
-        console.warn('⚠️ Invalid bountyId provided to BountyApprovalFlow:', bountyId);
+      if (
+        !bountyId ||
+        bountyId === 0 ||
+        bountyId === '' ||
+        (typeof bountyId === 'number' && isNaN(bountyId))
+      ) {
+        console.warn(
+          '⚠️ Invalid bountyId provided to BountyApprovalFlow:',
+          bountyId,
+        );
         setActiveWorkflows([]);
         return;
       }
-      
+
       console.log('🔍 Fetching approval workflows for bounty:', bountyId);
-      
-      const workflows = await BountyApprovalService.getActiveWorkflows(bountyId);
+
+      const workflows =
+        await BountyApprovalService.getActiveWorkflows(bountyId);
       setActiveWorkflows(workflows);
-      
+
       console.log('✅ Found workflows:', workflows.length);
-      
+
       // Check approval permissions for each workflow
       if (address) {
         const permissions = new Map<string, boolean>();
         for (const workflow of workflows) {
-          const canUserApprove = await BountyApprovalService.canUserApprove(workflow.id, address);
+          const canUserApprove = await BountyApprovalService.canUserApprove(
+            workflow.id,
+            address,
+          );
           permissions.set(workflow.id, canUserApprove);
         }
         setCanApprove(permissions);
@@ -73,21 +92,30 @@ export const BountyApprovalFlow: React.FC<BountyApprovalFlowProps> = ({
     };
 
     fetchWorkflows();
-    
+
     // Set up real-time subscription for workflow updates (only if valid bountyId)
     let subscription: any;
-    if (bountyId && bountyId !== 0 && bountyId !== '' && !(typeof bountyId === 'number' && isNaN(bountyId))) {
+    if (
+      bountyId &&
+      bountyId !== 0 &&
+      bountyId !== '' &&
+      !(typeof bountyId === 'number' && isNaN(bountyId))
+    ) {
       subscription = supabase
         .channel(`bounty-approvals-${bountyId}`)
-        .on('postgres_changes', {
-          event: '*',
-          schema: 'public',
-          table: 'bounty_approval_workflows',
-          filter: `bounty_id=eq.${bountyId}`
-        }, (payload) => {
-          console.log('🔄 Bounty workflow updated:', payload);
-          fetchWorkflows(); // Refresh workflows
-        })
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'bounty_approval_workflows',
+            filter: `bounty_id=eq.${bountyId}`,
+          },
+          (payload) => {
+            console.log('🔄 Bounty workflow updated:', payload);
+            fetchWorkflows(); // Refresh workflows
+          },
+        )
         .subscribe();
     }
 
@@ -102,14 +130,14 @@ export const BountyApprovalFlow: React.FC<BountyApprovalFlowProps> = ({
   useEffect(() => {
     const loadUserProfiles = async () => {
       const allAddresses = new Set<string>();
-      
-      activeWorkflows.forEach(workflow => {
+
+      activeWorkflows.forEach((workflow) => {
         allAddresses.add(workflow.proposed_by);
-        workflow.current_approvals.forEach(addr => allAddresses.add(addr));
+        workflow.current_approvals.forEach((addr) => allAddresses.add(addr));
       });
 
       const profiles = new Map<string, UserProfile>();
-      
+
       for (const address of allAddresses) {
         try {
           const profile = await EventService.getUserProfileByWallet(address);
@@ -120,7 +148,7 @@ export const BountyApprovalFlow: React.FC<BountyApprovalFlowProps> = ({
           console.error(`Failed to load profile for ${address}:`, error);
         }
       }
-      
+
       setUserProfiles(profiles);
     };
 
@@ -133,9 +161,9 @@ export const BountyApprovalFlow: React.FC<BountyApprovalFlowProps> = ({
   const approveWorkflow = async (workflow: BountyApprovalWorkflow) => {
     if (!address || !walletClient) {
       toast({
-        title: "Wallet Required",
-        description: "Please connect your wallet to approve this workflow.",
-        variant: "destructive"
+        title: 'Wallet Required',
+        description: 'Please connect your wallet to approve this workflow.',
+        variant: 'destructive',
       });
       return;
     }
@@ -143,23 +171,23 @@ export const BountyApprovalFlow: React.FC<BountyApprovalFlowProps> = ({
     setIsLoading(true);
     try {
       console.log(`🔏 Approving bounty workflow: ${workflow.id}`);
-      
+
       const result = await BountyApprovalService.approveWorkflow(
         workflow.id,
         address,
-        walletClient
+        walletClient,
       );
 
       if (result.success) {
         if (result.approved) {
           toast({
-            title: "Workflow Fully Approved!",
+            title: 'Workflow Fully Approved!',
             description: `The ${workflow.approval_type} workflow for bounty "${bountyTitle}" is now approved and ready for execution.`,
           });
           onApprovalComplete?.(workflow.id);
         } else {
           toast({
-            title: "Approval Recorded",
+            title: 'Approval Recorded',
             description: `Your approval has been recorded. ${workflow.current_approvals.length + 1}/${workflow.required_approvals} approvals received.`,
           });
         }
@@ -169,9 +197,9 @@ export const BountyApprovalFlow: React.FC<BountyApprovalFlowProps> = ({
     } catch (error) {
       console.error('Failed to approve workflow:', error);
       toast({
-        title: "Approval Failed",
+        title: 'Approval Failed',
         description: error instanceof Error ? error.message : 'Unknown error',
-        variant: "destructive"
+        variant: 'destructive',
       });
     } finally {
       setIsLoading(false);
@@ -184,7 +212,9 @@ export const BountyApprovalFlow: React.FC<BountyApprovalFlowProps> = ({
         <CardContent className="p-6">
           <div className="flex items-center gap-3 text-blue-600">
             <CheckCircle className="h-5 w-5" />
-            <span className="text-sm">No approval workflows required for this bounty.</span>
+            <span className="text-sm">
+              No approval workflows required for this bounty.
+            </span>
           </div>
         </CardContent>
       </Card>
@@ -199,9 +229,15 @@ export const BountyApprovalFlow: React.FC<BountyApprovalFlowProps> = ({
             <div className="flex items-center justify-between">
               <CardTitle className="text-lg flex items-center gap-2">
                 <DollarSign className="h-5 w-5 text-orange-500" />
-                {workflow.approval_type.charAt(0).toUpperCase() + workflow.approval_type.slice(1)} Approval Required
+                {workflow.approval_type.charAt(0).toUpperCase() +
+                  workflow.approval_type.slice(1)}{' '}
+                Approval Required
               </CardTitle>
-              <Badge variant={workflow.status === 'approved' ? 'default' : 'secondary'}>
+              <Badge
+                variant={
+                  workflow.status === 'approved' ? 'default' : 'secondary'
+                }
+              >
                 {workflow.status}
               </Badge>
             </div>
@@ -217,17 +253,18 @@ export const BountyApprovalFlow: React.FC<BountyApprovalFlowProps> = ({
                   <div className="font-medium">{workflow.threshold_value}</div>
                 </div>
               </div>
-              
+
               <div className="flex items-center gap-2">
                 <Users className="h-4 w-4 text-orange-600" />
                 <div>
                   <div className="text-xs text-gray-600">Approvals</div>
                   <div className="font-medium">
-                    {workflow.current_approvals.length}/{workflow.required_approvals}
+                    {workflow.current_approvals.length}/
+                    {workflow.required_approvals}
                   </div>
                 </div>
               </div>
-              
+
               <div className="flex items-center gap-2">
                 <Clock className="h-4 w-4 text-orange-600" />
                 <div>
@@ -241,7 +278,9 @@ export const BountyApprovalFlow: React.FC<BountyApprovalFlowProps> = ({
 
             {/* Proposed by */}
             <div>
-              <div className="text-sm font-medium text-gray-700 mb-2">Proposed by:</div>
+              <div className="text-sm font-medium text-gray-700 mb-2">
+                Proposed by:
+              </div>
               <MemberCard
                 address={workflow.proposed_by}
                 profile={userProfiles.get(workflow.proposed_by)}
@@ -284,8 +323,17 @@ export const BountyApprovalFlow: React.FC<BountyApprovalFlowProps> = ({
             )}
 
             {workflow.status === 'approved' && (
-              <div className="p-3 rounded" style={{ backgroundColor: '#D1E6DC', border: '1px solid #B8D9CA' }}>
-                <div className="flex items-center gap-2" style={{ color: '#1F453A' }}>
+              <div
+                className="p-3 rounded"
+                style={{
+                  backgroundColor: '#D1E6DC',
+                  border: '1px solid #B8D9CA',
+                }}
+              >
+                <div
+                  className="flex items-center gap-2"
+                  style={{ color: '#1F453A' }}
+                >
                   <CheckCircle className="h-4 w-4" />
                   <span className="text-sm font-medium">
                     Workflow fully approved - ready for execution
@@ -299,7 +347,8 @@ export const BountyApprovalFlow: React.FC<BountyApprovalFlowProps> = ({
                 <div className="flex items-center gap-2 text-gray-600">
                   <AlertTriangle className="h-4 w-4" />
                   <span className="text-sm">
-                    You are not authorized to approve this workflow or have already approved.
+                    You are not authorized to approve this workflow or have
+                    already approved.
                   </span>
                 </div>
               </div>
@@ -315,8 +364,9 @@ export const BountyApprovalFlow: React.FC<BountyApprovalFlowProps> = ({
           <div>
             <p className="font-medium text-sm">Multi-Signature Required</p>
             <p className="text-xs mt-1">
-              High-value bounty operations require consensus from multiple managers for security.
-              All approvals are cryptographically signed for audit trail.
+              High-value bounty operations require consensus from multiple
+              managers for security. All approvals are cryptographically signed
+              for audit trail.
             </p>
           </div>
         </div>

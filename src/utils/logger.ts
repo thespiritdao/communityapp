@@ -144,7 +144,7 @@ class Logger {
 
     // Handle arrays
     if (Array.isArray(data)) {
-      return data.map(item => this.redactSensitiveData(item));
+      return data.map((item) => this.redactSensitiveData(item));
     }
 
     // Handle objects
@@ -153,7 +153,7 @@ class Logger {
       // Check if key matches sensitive patterns
       const isSensitive =
         SENSITIVE_KEYS.includes(key.toLowerCase()) ||
-        SENSITIVE_PATTERNS.some(pattern => pattern.test(key));
+        SENSITIVE_PATTERNS.some((pattern) => pattern.test(key));
 
       if (isSensitive && typeof value === 'string' && value.length > 0) {
         // Redact but show partial value for debugging
@@ -179,7 +179,7 @@ class Logger {
     level: LogLevel,
     emoji: string,
     message: string,
-    data?: any
+    data?: any,
   ): void {
     if (!this.shouldLog(level)) return;
 
@@ -290,7 +290,7 @@ class Logger {
       debug: '🔍',
       info: 'ℹ️',
       warn: '⚠️',
-      error: '❌'
+      error: '❌',
     }[level];
 
     this.log(level, emoji, message, data);
@@ -324,7 +324,7 @@ class Logger {
    * Clear all debounce state (useful for testing)
    */
   clearDebounce(): void {
-    this.debounceTimers.forEach(timer => clearTimeout(timer));
+    this.debounceTimers.forEach((timer) => clearTimeout(timer));
     this.debounceTimers.clear();
     this.seenMessages.clear();
   }
@@ -337,11 +337,17 @@ export const logger = new Logger();
 export { Logger };
 
 // Convenience exports for common operations
-export const logDebug = (message: string, data?: any) => logger.debug(message, data);
-export const logInfo = (message: string, data?: any) => logger.info(message, data);
-export const logWarn = (message: string, data?: any) => logger.warn(message, data);
-export const logError = (message: string, data?: any) => logger.error(message, data);
-export const logSuccess = (message: string, data?: any) => logger.success(message, data);
+export const logDebug = (message: string, data?: any) =>
+  logger.debug(message, data);
+export const logInfo = (message: string, data?: any) =>
+  logger.info(message, data);
+export const logWarn = (message: string, data?: any) =>
+  logger.warn(message, data);
+export const logError = (message: string, data?: any) =>
+  logger.error(message, data);
+export const logSuccess = (message: string, data?: any) =>
+  logger.success(message, data);
 export const logGroup = (title: string) => logger.group(title);
 export const logGroupEnd = () => logger.groupEnd();
-export const logOnce = (level: LogLevel, message: string, data?: any) => logger.once(level, message, data);
+export const logOnce = (level: LogLevel, message: string, data?: any) =>
+  logger.once(level, message, data);

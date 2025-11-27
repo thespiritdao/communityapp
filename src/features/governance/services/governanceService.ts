@@ -31,18 +31,19 @@ export class GovernanceService {
    */
   static async submitVote(vote: GovernanceVote): Promise<void> {
     try {
-      const { error } = await supabase
-        .from('governance_votes')
-        .upsert({
+      const { error } = await supabase.from('governance_votes').upsert(
+        {
           proposal_id: vote.proposal_id,
           voter_address: vote.voter_address,
           vote: vote.vote,
           timestamp: vote.timestamp,
           hat_id: vote.hat_id,
-          signature: vote.signature
-        }, {
-          onConflict: 'proposal_id,voter_address'
-        });
+          signature: vote.signature,
+        },
+        {
+          onConflict: 'proposal_id,voter_address',
+        },
+      );
 
       if (error) throw error;
 
@@ -50,15 +51,19 @@ export class GovernanceService {
         proposal_id: vote.proposal_id,
         vote: vote.vote,
         has_signature: !!vote.signature,
-        signature_preview: vote.signature ? vote.signature.substring(0, 20) + '...' : 'null',
+        signature_preview: vote.signature
+          ? vote.signature.substring(0, 20) + '...'
+          : 'null',
         full_vote_data: {
           proposal_id: vote.proposal_id,
           voter_address: vote.voter_address,
           vote: vote.vote,
           timestamp: vote.timestamp,
           hat_id: vote.hat_id,
-          signature: vote.signature ? vote.signature.substring(0, 20) + '...' : 'null'
-        }
+          signature: vote.signature
+            ? vote.signature.substring(0, 20) + '...'
+            : 'null',
+        },
       });
 
       // Update proposal approval count
@@ -91,7 +96,10 @@ export class GovernanceService {
   /**
    * Get user's vote for a specific proposal
    */
-  static async getUserVote(proposalId: string, userAddress: string): Promise<GovernanceVote | null> {
+  static async getUserVote(
+    proposalId: string,
+    userAddress: string,
+  ): Promise<GovernanceVote | null> {
     try {
       const { data, error } = await supabase
         .from('governance_votes')
@@ -105,7 +113,11 @@ export class GovernanceService {
         if (error.code === 'PGRST116') {
           // No rows found - user hasn't voted yet
           return null;
-        } else if (error.code === 'PGRST301' || error.message?.includes('No acceptable') || error.message?.includes('Not Acceptable')) {
+        } else if (
+          error.code === 'PGRST301' ||
+          error.message?.includes('No acceptable') ||
+          error.message?.includes('Not Acceptable')
+        ) {
           // 406 Not Acceptable - silently return null, user hasn't voted
           return null;
         } else {
@@ -115,7 +127,10 @@ export class GovernanceService {
       return data || null;
     } catch (error) {
       // Only log unexpected errors, not the common 406 ones
-      if (!error.message?.includes('Not Acceptable') && !error.message?.includes('No acceptable')) {
+      if (
+        !error.message?.includes('Not Acceptable') &&
+        !error.message?.includes('No acceptable')
+      ) {
         console.error('Failed to get user vote:', error);
       }
       return null;
@@ -128,7 +143,7 @@ export class GovernanceService {
   static async updateProposalApprovalCount(proposalId: string): Promise<void> {
     try {
       console.log(`🔄 Updating approval count for proposal: ${proposalId}`);
-      
+
       // Count 'for' votes
       const { count: forCount, error: forError } = await supabase
         .from('governance_votes')
@@ -157,11 +172,13 @@ export class GovernanceService {
       const rejectionCount = againstCount || 0;
       const totalVotes = approvalCount + rejectionCount;
 
-      console.log(`📊 Proposal ${proposalId} vote count: ${approvalCount} for, ${rejectionCount} against, ${totalVotes} total`);
+      console.log(
+        `📊 Proposal ${proposalId} vote count: ${approvalCount} for, ${rejectionCount} against, ${totalVotes} total`,
+      );
 
       // Determine new status based on votes
       let newStatus = 'proposed'; // default
-      
+
       // For initial deployment: 1 approval vote moves to active (simplified workflow)
       // In production, you'd want more sophisticated thresholds
       if (approvalCount >= 1 && approvalCount > rejectionCount) {
@@ -175,27 +192,39 @@ export class GovernanceService {
       }
 
       // Validate the new status is allowed
-      const allowedStatuses = ['draft', 'proposed', 'active', 'approved', 'rejected', 'executed', 'archived'];
+      const allowedStatuses = [
+        'draft',
+        'proposed',
+        'active',
+        'approved',
+        'rejected',
+        'executed',
+        'archived',
+      ];
       if (!allowedStatuses.includes(newStatus)) {
-        console.warn(`⚠️ Invalid status '${newStatus}' - falling back to 'proposed'`);
+        console.warn(
+          `⚠️ Invalid status '${newStatus}' - falling back to 'proposed'`,
+        );
         newStatus = 'proposed';
       }
 
-      console.log(`📝 Attempting to update pod ${proposalId} to status: ${newStatus}`);
+      console.log(
+        `📝 Attempting to update pod ${proposalId} to status: ${newStatus}`,
+      );
 
       // Update the pod status - use maybeSingle() instead of single() to handle no results
-      const updateData: any = { 
+      const updateData: any = {
         status: newStatus,
-        updated_at: new Date().toISOString()
+        updated_at: new Date().toISOString(),
       };
-      
+
       // Set is_active based on status
       if (newStatus === 'active') {
         updateData.is_active = true;
       } else if (newStatus === 'rejected') {
         updateData.is_active = false;
       }
-      
+
       const { data: updatedPod, error: updateError } = await supabase
         .from('pods')
         .update(updateData)
@@ -205,20 +234,26 @@ export class GovernanceService {
 
       if (updateError) {
         console.error('❌ Failed to update pod status:', updateError);
-        
+
         // If it's a constraint violation, provide helpful context
         if (updateError.code === '23514') {
-          console.error('💡 Database constraint violation - the status value may not be allowed by the pods_status_check constraint');
+          console.error(
+            '💡 Database constraint violation - the status value may not be allowed by the pods_status_check constraint',
+          );
           console.error('   Current attempt to set status to:', newStatus);
-          console.error('   Allowed values should include: draft, proposed, active, approved, rejected, executed, archived');
+          console.error(
+            '   Allowed values should include: draft, proposed, active, approved, rejected, executed, archived',
+          );
         }
-        
+
         throw updateError;
       }
-      
+
       if (updatedPod) {
-        console.log(`✅ Pod "${updatedPod.name}" (${proposalId}) status successfully updated to: ${newStatus}`);
-        
+        console.log(
+          `✅ Pod "${updatedPod.name}" (${proposalId}) status successfully updated to: ${newStatus}`,
+        );
+
         // If approved, we could trigger additional actions here
         if (newStatus === 'approved') {
           console.log('🎉 Pod approved! Ready for activation.');
@@ -276,15 +311,22 @@ export class GovernanceService {
             title: `Create Pod: ${pod.name}`,
             description: pod.description,
             proposal_type: 'pod_creation' as const,
-            status: pod.status === 'approved' ? 'approved' as const : 
-                    pod.status === 'rejected' ? 'rejected' as const :
-                    pod.status === 'proposed' ? 'active' as const : 'draft' as const,
+            status:
+              pod.status === 'approved'
+                ? ('approved' as const)
+                : pod.status === 'rejected'
+                  ? ('rejected' as const)
+                  : pod.status === 'proposed'
+                    ? ('active' as const)
+                    : ('draft' as const),
             created_by: pod.created_by_address,
             created_at: pod.created_at,
-            voting_deadline: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(), // 7 days from now
+            voting_deadline: new Date(
+              Date.now() + 7 * 24 * 60 * 60 * 1000,
+            ).toISOString(), // 7 days from now
             required_approvals: 1, // Simple threshold for demo
             current_approvals: forCount || 0,
-            pod_id: pod.id
+            pod_id: pod.id,
           };
 
           return {
@@ -293,10 +335,11 @@ export class GovernanceService {
               for: forCount || 0,
               against: againstCount || 0,
               abstain: abstainCount || 0,
-              total: (forCount || 0) + (againstCount || 0) + (abstainCount || 0)
-            }
+              total:
+                (forCount || 0) + (againstCount || 0) + (abstainCount || 0),
+            },
           };
-        })
+        }),
       );
 
       return proposalsWithVotes;
@@ -309,24 +352,27 @@ export class GovernanceService {
   /**
    * Create a new governance proposal (for future use)
    */
-  static async createProposal(proposal: Omit<GovernanceProposal, 'id' | 'created_at' | 'current_approvals'>): Promise<string> {
+  static async createProposal(
+    proposal: Omit<
+      GovernanceProposal,
+      'id' | 'created_at' | 'current_approvals'
+    >,
+  ): Promise<string> {
     try {
       const proposalId = `proposal-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-      
-      const { error } = await supabase
-        .from('governance_proposals')
-        .insert({
-          id: proposalId,
-          title: proposal.title,
-          description: proposal.description,
-          proposal_type: proposal.proposal_type,
-          status: proposal.status,
-          created_by: proposal.created_by,
-          voting_deadline: proposal.voting_deadline,
-          required_approvals: proposal.required_approvals,
-          pod_id: proposal.pod_id,
-          contract_call: proposal.contract_call
-        });
+
+      const { error } = await supabase.from('governance_proposals').insert({
+        id: proposalId,
+        title: proposal.title,
+        description: proposal.description,
+        proposal_type: proposal.proposal_type,
+        status: proposal.status,
+        created_by: proposal.created_by,
+        voting_deadline: proposal.voting_deadline,
+        required_approvals: proposal.required_approvals,
+        pod_id: proposal.pod_id,
+        contract_call: proposal.contract_call,
+      });
 
       if (error) throw error;
       return proposalId;

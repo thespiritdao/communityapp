@@ -7,7 +7,9 @@ interface CommunityContextType {
   setCommunityId: (id: string) => void;
 }
 
-const CommunityContext = createContext<CommunityContextType | undefined>(undefined);
+const CommunityContext = createContext<CommunityContextType | undefined>(
+  undefined,
+);
 
 export const CommunityProvider = ({ children }: { children: ReactNode }) => {
   const [communityId, setCommunityId] = useState<string | null>(null);

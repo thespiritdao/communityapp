@@ -19,7 +19,8 @@ export interface CreateBountyParams {
 }
 
 // Constants for common addresses
-export const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000" as const;
+export const ZERO_ADDRESS =
+  '0x0000000000000000000000000000000000000000' as const;
 
 // Helper type for form data (before conversion to contract params)
 export interface BountyFormData {
@@ -56,11 +57,10 @@ export interface BountyFormData {
 export function formDataToContractParams(
   formData: BountyFormData,
   systemTokenAddress: string,
-  selfTokenAddress: string
+  selfTokenAddress: string,
 ): CreateBountyParams {
-  const tokenAddress = formData.value.token === 'SYSTEM' 
-    ? systemTokenAddress 
-    : selfTokenAddress;
+  const tokenAddress =
+    formData.value.token === 'SYSTEM' ? systemTokenAddress : selfTokenAddress;
 
   return {
     title: formData.title,

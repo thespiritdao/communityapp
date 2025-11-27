@@ -1,12 +1,19 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Transaction, TransactionButton, TransactionStatus, TransactionStatusAction, TransactionStatusLabel } from '@coinbase/onchainkit/transaction';
+import {
+  Transaction,
+  TransactionButton,
+  TransactionStatus,
+  TransactionStatusAction,
+  TransactionStatusLabel,
+} from '@coinbase/onchainkit/transaction';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import PodBountyServiceABI from '@/abis/PodBountyService.json';
 
-const POD_BOUNTY_SERVICE = '0xbccee13f13Ca4f97758c79C8FF05ff7EB9290396' as `0x${string}`;
+const POD_BOUNTY_SERVICE =
+  '0xbccee13f13Ca4f97758c79C8FF05ff7EB9290396' as `0x${string}`;
 
 interface RegisterPodButtonProps {
   pod: {
@@ -23,7 +30,10 @@ interface RegisterPodButtonProps {
  * Component to register a pod with PodBountyService
  * This is required before the pod can create bounties
  */
-export const RegisterPodButton: React.FC<RegisterPodButtonProps> = ({ pod, onSuccess }) => {
+export const RegisterPodButton: React.FC<RegisterPodButtonProps> = ({
+  pod,
+  onSuccess,
+}) => {
   const [showTransaction, setShowTransaction] = useState(false);
 
   const registerPodCall = {
@@ -34,18 +44,23 @@ export const RegisterPodButton: React.FC<RegisterPodButtonProps> = ({ pod, onSuc
       pod.id, // podId (string - UUID)
       pod.created_by_address, // creator (address)
       pod.pod_leads || [], // leaders (address[])
-      pod.treasury_contract_address || '0x0000000000000000000000000000000000000000' // treasuryAddress
-    ]
+      pod.treasury_contract_address ||
+        '0x0000000000000000000000000000000000000000', // treasuryAddress
+    ],
   };
 
   if (!showTransaction) {
     return (
       <div className="space-y-2">
-        <Alert className="border" style={{ backgroundColor: '#FAF4EC', borderColor: '#E8D7B8' }}>
+        <Alert
+          className="border"
+          style={{ backgroundColor: '#FAF4EC', borderColor: '#E8D7B8' }}
+        >
           <AlertDescription>
             <strong>Pod Not Registered for Bounties</strong>
             <br />
-            This pod must be registered with the bounty system before you can create bounties.
+            This pod must be registered with the bounty system before you can
+            create bounties.
             <br />
             <span className="text-xs text-gray-600">
               This is a one-time setup step.
@@ -53,10 +68,7 @@ export const RegisterPodButton: React.FC<RegisterPodButtonProps> = ({ pod, onSuc
           </AlertDescription>
         </Alert>
 
-        <Button
-          onClick={() => setShowTransaction(true)}
-          className="w-full"
-        >
+        <Button onClick={() => setShowTransaction(true)} className="w-full">
           Register Pod for Bounties
         </Button>
       </div>

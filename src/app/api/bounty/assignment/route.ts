@@ -10,7 +10,10 @@ export async function GET(request: NextRequest) {
     const bountyId = searchParams.get('id');
 
     if (!bountyId) {
-      return NextResponse.json({ error: 'Bounty ID is required' }, { status: 400 });
+      return NextResponse.json(
+        { error: 'Bounty ID is required' },
+        { status: 400 },
+      );
     }
 
     const supabase = createClient(supabaseUrl, supabaseAnonKey);
@@ -30,9 +33,13 @@ export async function GET(request: NextRequest) {
       .eq('status', 'approved')
       .single();
 
-    if (error && error.code !== 'PGRST116') { // PGRST116 = not found
+    if (error && error.code !== 'PGRST116') {
+      // PGRST116 = not found
       console.error('Error fetching assignment:', error);
-      return NextResponse.json({ error: 'Failed to fetch assignment' }, { status: 500 });
+      return NextResponse.json(
+        { error: 'Failed to fetch assignment' },
+        { status: 500 },
+      );
     }
 
     if (!bid) {
@@ -47,12 +54,15 @@ export async function GET(request: NextRequest) {
       escrowAmount: bid.bounties.value_amount?.toString() || '0',
       paidAmount: '0', // TODO: Track this separately if needed
       onchainBountyId: bid.bounties.onchain_id,
-      onchainBidIndex: bid.onchain_bid_index
+      onchainBidIndex: bid.onchain_bid_index,
     };
 
     return NextResponse.json(assignmentData);
   } catch (error) {
     console.error('Error in assignment API:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 },
+    );
   }
 }

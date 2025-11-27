@@ -39,14 +39,14 @@ export interface RetryOptions {
  */
 export async function retryContractRead<T>(
   operation: () => Promise<T>,
-  options: RetryOptions = {}
+  options: RetryOptions = {},
 ): Promise<T> {
   const {
     retries = 3,
     initialDelay = 500,
     maxDelay = 5000,
     backoffMultiplier = 2,
-    onRetry
+    onRetry,
   } = options;
 
   let lastError: Error | null = null;
@@ -70,7 +70,7 @@ export async function retryContractRead<T>(
       }
 
       // Wait before retrying with exponential backoff
-      await new Promise(resolve => setTimeout(resolve, delay));
+      await new Promise((resolve) => setTimeout(resolve, delay));
 
       // Increase delay for next attempt (capped at maxDelay)
       delay = Math.min(delay * backoffMultiplier, maxDelay);
@@ -94,9 +94,9 @@ export function isRetryableError(error: Error): boolean {
     /502/,
     /ECONNRESET/,
     /ETIMEDOUT/,
-    /fetch failed/i
+    /fetch failed/i,
   ];
 
   const errorMessage = error.message || error.toString();
-  return retryablePatterns.some(pattern => pattern.test(errorMessage));
+  return retryablePatterns.some((pattern) => pattern.test(errorMessage));
 }

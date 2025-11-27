@@ -1,10 +1,10 @@
 // src/token/components/TokenSelectDropdown.tsx
-import { useCallback, useEffect, useRef, useState } from "react";
-import { background, border, cn } from "../../styles/theme";
-import { useTheme } from "../../useTheme";
-import type { TokenSelectDropdownReact } from "../types";
-import { TokenRow } from "./TokenRow";
-import { TokenSelectButton } from "./TokenSelectButton";
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { background, border, cn } from '../../styles/theme';
+import { useTheme } from '../../useTheme';
+import type { TokenSelectDropdownReact } from '../types';
+import { TokenRow } from './TokenRow';
+import { TokenSelectButton } from './TokenSelectButton';
 
 export function TokenSelectDropdown({
   options,
@@ -23,7 +23,8 @@ export function TokenSelectDropdown({
 
   const handleBlur = useCallback((event: MouseEvent) => {
     const isOutsideDropdown =
-      dropdownRef.current && !dropdownRef.current.contains(event.target as Node);
+      dropdownRef.current &&
+      !dropdownRef.current.contains(event.target as Node);
     const isOutsideButton =
       buttonRef.current && !buttonRef.current.contains(event.target as Node);
 
@@ -34,10 +35,10 @@ export function TokenSelectDropdown({
 
   useEffect(() => {
     setTimeout(() => {
-      document.addEventListener("click", handleBlur);
+      document.addEventListener('click', handleBlur);
     }, 0);
     return () => {
-      document.removeEventListener("click", handleBlur);
+      document.removeEventListener('click', handleBlur);
     };
   }, [handleBlur]);
 
@@ -56,14 +57,14 @@ export function TokenSelectDropdown({
           className={cn(
             componentTheme,
             border.radius,
-            "absolute right-0 z-10 mt-1 flex max-h-80 w-[200px] flex-col overflow-y-hidden",
-            "ock-scrollbar"
+            'absolute right-0 z-10 mt-1 flex max-h-80 w-[200px] flex-col overflow-y-hidden',
+            'ock-scrollbar',
           )}
         >
           <div className="overflow-y-auto bg-[#ffffff]">
             {options.map((token) => (
               <TokenRow
-                className={cn(background.inverse, "px-4 py-2")}
+                className={cn(background.inverse, 'px-4 py-2')}
                 key={token.name + token.address}
                 token={token}
                 onClick={() => {

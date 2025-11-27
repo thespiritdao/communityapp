@@ -2,7 +2,13 @@
 
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
 import { AlertCircle, CheckCircle2, Loader2 } from 'lucide-react';
 import { EligibilityCriteria } from '../services/EligibilityService';
 import { useToast } from '@/components/ui/use-toast';
@@ -27,7 +33,7 @@ export default function PodSetupRequired({
   criteriaStatus,
   onCheckAndMint,
   onSignAgreement,
-  podName
+  podName,
 }: PodSetupRequiredProps) {
   const { toast } = useToast();
   const [isChecking, setIsChecking] = useState(false);
@@ -40,15 +46,18 @@ export default function PodSetupRequired({
       console.error('Error during check and mint:', error);
       toast({
         title: 'Check Failed',
-        description: error instanceof Error ? error.message : 'Failed to verify eligibility',
-        variant: 'destructive'
+        description:
+          error instanceof Error
+            ? error.message
+            : 'Failed to verify eligibility',
+        variant: 'destructive',
       });
     } finally {
       setIsChecking(false);
     }
   };
 
-  const allMet = criteriaStatus.every(c => c.met);
+  const allMet = criteriaStatus.every((c) => c.met);
 
   return (
     <div className="w-full max-w-2xl mx-auto p-6">
@@ -107,7 +116,8 @@ export default function PodSetupRequired({
 
             {!allMet && (
               <p className="text-sm text-gray-500 text-center mt-2">
-                Complete all requirements above, then click to verify and mint your HAT
+                Complete all requirements above, then click to verify and mint
+                your HAT
               </p>
             )}
           </div>
@@ -120,7 +130,7 @@ export default function PodSetupRequired({
 // Individual Criterion Card
 function CriterionCard({
   status,
-  onSignAgreement
+  onSignAgreement,
 }: {
   status: CriteriaStatus;
   onSignAgreement?: (agreementId: string) => Promise<void>;
@@ -137,14 +147,15 @@ function CriterionCard({
       toast({
         title: 'Agreement Signed',
         description: 'Your signature has been recorded',
-        variant: 'default'
+        variant: 'default',
       });
     } catch (error) {
       console.error('Error signing agreement:', error);
       toast({
         title: 'Signing Failed',
-        description: error instanceof Error ? error.message : 'Failed to sign agreement',
-        variant: 'destructive'
+        description:
+          error instanceof Error ? error.message : 'Failed to sign agreement',
+        variant: 'destructive',
       });
     } finally {
       setIsSigning(false);
@@ -156,7 +167,7 @@ function CriterionCard({
       className="p-4 rounded-lg border"
       style={{
         backgroundColor: status.met ? '#D1E6DC' : '#FAF4EC',
-        borderColor: status.met ? '#B8D9CA' : '#E8D7B8'
+        borderColor: status.met ? '#B8D9CA' : '#E8D7B8',
       }}
     >
       <div className="flex items-start gap-3">
@@ -177,7 +188,7 @@ function CriterionCard({
               className="text-xs px-2 py-1 rounded"
               style={{
                 backgroundColor: status.met ? '#D1E6DC' : '#FAF4EC',
-                color: status.met ? '#3F7A5A' : '#C6933F'
+                color: status.met ? '#3F7A5A' : '#C6933F',
               }}
             >
               {status.met ? 'Met' : 'Required'}
@@ -187,29 +198,32 @@ function CriterionCard({
           <p className="text-sm text-gray-600 mt-1">{status.details}</p>
 
           {/* Agreement Signing Button */}
-          {status.type === 'agreement_signed' && !status.met && onSignAgreement && (
-            <Button
-              onClick={handleSignAgreement}
-              disabled={isSigning}
-              size="sm"
-              className="mt-3"
-            >
-              {isSigning ? (
-                <>
-                  <Loader2 className="mr-2 h-3 w-3 animate-spin" />
-                  Signing...
-                </>
-              ) : (
-                'Sign Agreement'
-              )}
-            </Button>
-          )}
+          {status.type === 'agreement_signed' &&
+            !status.met &&
+            onSignAgreement && (
+              <Button
+                onClick={handleSignAgreement}
+                disabled={isSigning}
+                size="sm"
+                className="mt-3"
+              >
+                {isSigning ? (
+                  <>
+                    <Loader2 className="mr-2 h-3 w-3 animate-spin" />
+                    Signing...
+                  </>
+                ) : (
+                  'Sign Agreement'
+                )}
+              </Button>
+            )}
 
           {/* Token Balance Info */}
           {status.type === 'token_balance' && !status.met && (
             <div className="mt-2 text-xs text-gray-500">
               You need to acquire {status.criterion.minimum_amount || '1'}{' '}
-              {status.criterion.token_symbol || 'tokens'} to meet this requirement.
+              {status.criterion.token_symbol || 'tokens'} to meet this
+              requirement.
             </div>
           )}
         </div>

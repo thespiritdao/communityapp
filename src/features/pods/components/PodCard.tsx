@@ -20,27 +20,32 @@ interface PodCardProps {
  * Reusable Pod Card Component
  * Extracted from main pods page for better modularity
  */
-export function PodCard({ 
-  pod, 
-  canManage, 
-  getProfile
-}: PodCardProps) {
+export function PodCard({ pod, canManage, getProfile }: PodCardProps) {
   const router = useRouter();
-  const [selectedProfile, setSelectedProfile] = useState<UserProfile | null>(null);
+  const [selectedProfile, setSelectedProfile] = useState<UserProfile | null>(
+    null,
+  );
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
 
   // Get all profiles for the modal
   const allLeadAddresses = pod.pod_leads || [];
-  const allProfiles = allLeadAddresses.map(address => getProfile(address)).filter((p): p is UserProfile => p !== null);
+  const allProfiles = allLeadAddresses
+    .map((address) => getProfile(address))
+    .filter((p): p is UserProfile => p !== null);
 
   // Status color utility
   const getStatusColor = (status?: string) => {
     switch (status) {
-      case 'active': return 'bg-[#E8F1EE] text-[#1F453A]';
-      case 'inactive': return 'bg-[#F5E6E6] text-[#5C1F1F]';
-      case 'proposed': return 'bg-[#E8F1EE] text-[#1F453A]';
-      case 'draft': return 'bg-[#FAF4EC] text-[#7A5F3F]';
-      default: return 'bg-gray-100 text-gray-800';
+      case 'active':
+        return 'bg-[#E8F1EE] text-[#1F453A]';
+      case 'inactive':
+        return 'bg-[#F5E6E6] text-[#5C1F1F]';
+      case 'proposed':
+        return 'bg-[#E8F1EE] text-[#1F453A]';
+      case 'draft':
+        return 'bg-[#FAF4EC] text-[#7A5F3F]';
+      default:
+        return 'bg-gray-100 text-gray-800';
     }
   };
 
@@ -103,68 +108,81 @@ export function PodCard({
           </div>
         </div>
       </CardHeader>
-      
+
       <CardContent>
         <p className="text-gray-600 text-sm mb-4 line-clamp-3">
           {pod.description}
         </p>
-        
+
         {/* Pod Leaders Display */}
         {pod.pod_leads && pod.pod_leads.length > 0 && (
           <div className="mb-4">
             <p className="text-xs text-gray-500 mb-2">Pod Leads</p>
             <div className="flex flex-wrap gap-2">
-              {pod.pod_leads.slice(0, 3).map((lead, index) => {
-                const profile = getProfile(lead);
-                const profileImage = getUserProfileImage(lead);
-                const displayName = getUserDisplayName(lead);
-                
-                // Don't render if no profile found - clean display without wallet addresses
-                if (!profile) {
-                  return null;
-                }
-                
-                return (
-                  <div 
-                    key={index} 
-                    className="flex items-center space-x-1.5 bg-gray-50 rounded-full px-2 py-1 cursor-pointer hover:bg-gray-100 transition-colors"
-                    onClick={() => handleProfileClick(profile)}
-                  >
-                    {/* Profile Image */}
-                    {profileImage ? (
-                      <img 
-                        src={profileImage} 
-                        alt={displayName || profile.first_name || 'Lead'}
-                        className="w-6 h-6 rounded-full object-cover border border-gray-200"
-                        onError={(e) => {
-                          const target = e.target as HTMLImageElement;
-                          target.style.display = 'none';
-                          target.nextElementSibling?.classList.remove('hidden');
-                        }}
-                      />
-                    ) : (
-                      <div className="w-6 h-6 rounded-full flex items-center justify-center" style={{ backgroundColor: '#2F5D50' }}>
-                        <span className="text-white text-xs font-medium">
-                          {profile.first_name?.charAt(0)?.toUpperCase() || '?'}
-                        </span>
+              {pod.pod_leads
+                .slice(0, 3)
+                .map((lead, index) => {
+                  const profile = getProfile(lead);
+                  const profileImage = getUserProfileImage(lead);
+                  const displayName = getUserDisplayName(lead);
+
+                  // Don't render if no profile found - clean display without wallet addresses
+                  if (!profile) {
+                    return null;
+                  }
+
+                  return (
+                    <div
+                      key={index}
+                      className="flex items-center space-x-1.5 bg-gray-50 rounded-full px-2 py-1 cursor-pointer hover:bg-gray-100 transition-colors"
+                      onClick={() => handleProfileClick(profile)}
+                    >
+                      {/* Profile Image */}
+                      {profileImage ? (
+                        <img
+                          src={profileImage}
+                          alt={displayName || profile.first_name || 'Lead'}
+                          className="w-6 h-6 rounded-full object-cover border border-gray-200"
+                          onError={(e) => {
+                            const target = e.target as HTMLImageElement;
+                            target.style.display = 'none';
+                            target.nextElementSibling?.classList.remove(
+                              'hidden',
+                            );
+                          }}
+                        />
+                      ) : (
+                        <div
+                          className="w-6 h-6 rounded-full flex items-center justify-center"
+                          style={{ backgroundColor: '#2F5D50' }}
+                        >
+                          <span className="text-white text-xs font-medium">
+                            {profile.first_name?.charAt(0)?.toUpperCase() ||
+                              '?'}
+                          </span>
+                        </div>
+                      )}
+
+                      {/* Name Display - First Name + Full Last Name */}
+                      <div className="flex items-center space-x-1 text-xs">
+                        {profile.first_name && (
+                          <span className="font-medium text-gray-700">
+                            {profile.first_name}
+                          </span>
+                        )}
+                        {profile.last_name && (
+                          <span className="text-gray-700">
+                            {profile.last_name}
+                          </span>
+                        )}
+                        {!profile.first_name && !profile.last_name && (
+                          <span className="text-gray-500 italic">No Name</span>
+                        )}
                       </div>
-                    )}
-                    
-                    {/* Name Display - First Name + Full Last Name */}
-                    <div className="flex items-center space-x-1 text-xs">
-                      {profile.first_name && (
-                        <span className="font-medium text-gray-700">{profile.first_name}</span>
-                      )}
-                      {profile.last_name && (
-                        <span className="text-gray-700">{profile.last_name}</span>
-                      )}
-                      {!profile.first_name && !profile.last_name && (
-                        <span className="text-gray-500 italic">No Name</span>
-                      )}
                     </div>
-                  </div>
-                );
-              }).filter(Boolean)}
+                  );
+                })
+                .filter(Boolean)}
               {pod.pod_leads.length > 3 && (
                 <div className="flex items-center justify-center w-8 h-8 bg-gray-100 rounded-full">
                   <span className="text-xs text-gray-500 font-medium">
@@ -175,7 +193,7 @@ export function PodCard({
             </div>
           </div>
         )}
-        
+
         {/* Action Buttons */}
         <div className="flex space-x-2">
           <Button
@@ -187,7 +205,7 @@ export function PodCard({
             <Eye className="h-3 w-3 mr-1" />
             View
           </Button>
-          
+
           {canManage && (
             <Button
               size="sm"
@@ -197,15 +215,9 @@ export function PodCard({
               <Settings className="h-3 w-3" />
             </Button>
           )}
-          
-          
+
           {/* Pod Delete Button - Show for pods that can be managed */}
-          {canManage && (
-            <PodDeletionButtonV2
-              pod={pod}
-              canManage={true}
-            />
-          )}
+          {canManage && <PodDeletionButtonV2 pod={pod} canManage={true} />}
         </div>
       </CardContent>
 
@@ -230,10 +242,10 @@ interface PodCardGridProps {
   getProfile: (address: string) => UserProfile | null;
 }
 
-export function PodCardGrid({ 
-  pods, 
-  canUserManagePod, 
-  getProfile
+export function PodCardGrid({
+  pods,
+  canUserManagePod,
+  getProfile,
 }: PodCardGridProps) {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

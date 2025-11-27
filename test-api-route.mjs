@@ -1,6 +1,6 @@
 // Quick test to verify API route is accessible
 const response = await fetch('http://localhost:3000/api/sensemaker/chat', {
-  method: 'GET'
+  method: 'GET',
 });
 
 console.log('Status:', response.status);

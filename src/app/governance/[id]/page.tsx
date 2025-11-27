@@ -34,7 +34,7 @@ interface ProposalDetail {
 }
 
 export default function ProposalDetailPage() {
-  const { id } = useParams();                    // proposalId as string
+  const { id } = useParams(); // proposalId as string
   const { address } = useAccount();
   const publicClient = usePublicClient();
 
@@ -42,12 +42,13 @@ export default function ProposalDetailPage() {
   const [userVote, setUserVote] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const GOVERNOR_ADDRESS = process.env.NEXT_PUBLIC_DAO_GOVERNOR as `0x${string}`;
+  const GOVERNOR_ADDRESS = process.env
+    .NEXT_PUBLIC_DAO_GOVERNOR as `0x${string}`;
   const PROPOSAL_CREATED_TOPIC = keccak256(
-    'ProposalCreated(uint256,address,address[],uint256[],bytes[],uint256,uint256,string)'
+    'ProposalCreated(uint256,address,address[],uint256[],bytes[],uint256,uint256,string)',
   );
   const eventAbi = DAOGovernorABI.find(
-    (item) => item.type === 'event' && item.name === 'ProposalCreated'
+    (item) => item.type === 'event' && item.name === 'ProposalCreated',
   )!;
 
   // Fetch on‑chain proposal core + metadata
@@ -70,22 +71,18 @@ export default function ProposalDetailPage() {
               abi: [eventAbi],
               data: log.data,
               topics: log.topics,
-            })
+            }),
           )
           .find((ev) => Number((ev.args as any).proposalId) === Number(id));
         const description = decoded
-          ? (decoded.args as any).description as string
+          ? ((decoded.args as any).description as string)
           : '';
         // parse title/body/forumPostId out of markdown description
         const parts = description.split('\n\n');
         const title = parts[0]?.replace(/^#\s*/, '') || '';
         const body = parts[1] || '';
-        const forumPostIdMatch = description.match(
-          /Forum Discussion:\s*(\S+)/
-        );
-        const forumPostId = forumPostIdMatch
-          ? forumPostIdMatch[1]
-          : null;
+        const forumPostIdMatch = description.match(/Forum Discussion:\s*(\S+)/);
+        const forumPostId = forumPostIdMatch ? forumPostIdMatch[1] : null;
 
         // 3) Read core proposal struct
         const core = (await publicClient.readContract({
@@ -144,23 +141,25 @@ export default function ProposalDetailPage() {
     })();
   }, [id, address, publicClient]);
 
-  if (loading) return (
-    <div className="max-w-4xl mx-auto p-4 bottom-nav-spacing">
-      <div className="flex justify-center items-center min-h-[200px]">
-        <div>Loading proposal...</div>
+  if (loading)
+    return (
+      <div className="max-w-4xl mx-auto p-4 bottom-nav-spacing">
+        <div className="flex justify-center items-center min-h-[200px]">
+          <div>Loading proposal...</div>
+        </div>
       </div>
-    </div>
-  );
-  if (!proposal) return (
-    <div className="max-w-4xl mx-auto p-4 bottom-nav-spacing">
-      <div className="flex justify-center items-center min-h-[200px]">
-        <div>Proposal not found.</div>
+    );
+  if (!proposal)
+    return (
+      <div className="max-w-4xl mx-auto p-4 bottom-nav-spacing">
+        <div className="flex justify-center items-center min-h-[200px]">
+          <div>Proposal not found.</div>
+        </div>
       </div>
-    </div>
-  );
+    );
 
   const { data: forumTitle } = useForumPostTitle(
-    proposal.metadata.forumPostId || undefined
+    proposal.metadata.forumPostId || undefined,
   );
   const now = Math.floor(Date.now() / 1000);
   const isOpen = now >= proposal.start && now <= proposal.end;
@@ -189,12 +188,9 @@ export default function ProposalDetailPage() {
 
       {proposal.metadata.forumPostId && (
         <div style={{ marginTop: '1rem' }}>
-          <Link
-            href={`/forum/thread/${proposal.metadata.forumPostId}`}
-          >
+          <Link href={`/forum/thread/${proposal.metadata.forumPostId}`}>
             <span style={{ color: '#5ba3f4' }}>
-              🔗 View Discussion:{' '}
-              <strong>{forumTitle || 'View Thread'}</strong>
+              🔗 View Discussion: <strong>{forumTitle || 'View Thread'}</strong>
             </span>
           </Link>
         </div>
@@ -214,18 +210,14 @@ export default function ProposalDetailPage() {
               key={idx}
               style={{
                 marginBottom: '10px',
-                backgroundColor: isUser
-                  ? '#e0ffe0'
-                  : 'transparent',
+                backgroundColor: isUser ? '#e0ffe0' : 'transparent',
                 padding: '4px',
                 borderRadius: '4px',
               }}
             >
               <strong>{choice}</strong>: {score} votes ({percent}%)
               {isUser && (
-                <span style={{ marginLeft: '8px' }}>
-                  ✅ You voted this
-                </span>
+                <span style={{ marginLeft: '8px' }}>✅ You voted this</span>
               )}
             </div>
           );
@@ -236,11 +228,7 @@ export default function ProposalDetailPage() {
         <div style={{ marginTop: '2rem' }}>
           <h3>Cast Your Vote</h3>
           {proposal.choices.map((_, idx) => (
-            <VoteButton
-              key={idx}
-              proposalId={proposal.id}
-              choice={idx + 1}
-            />
+            <VoteButton key={idx} proposalId={proposal.id} choice={idx + 1} />
           ))}
         </div>
       )}

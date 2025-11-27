@@ -1,5 +1,9 @@
 import type { NextRequest } from 'next/server';
-import { withPodManagement, PodAuthResponse, type PodAuthContext } from '@/features/pods/middleware/podAuthMiddleware';
+import {
+  withPodManagement,
+  PodAuthResponse,
+  type PodAuthContext,
+} from '@/features/pods/middleware/podAuthMiddleware';
 import { PodRolePermissionsService } from '@/features/pods/services/PodRolePermissionsService';
 import { PodAccessControlService } from '@/features/pods/services/PodAccessControlService';
 
@@ -13,25 +17,28 @@ export async function GET(request: NextRequest): Promise<Response> {
       console.log(`📋 Fetching permissions for pod ${context.podId}`);
 
       // Get all role permissions for this pod
-      const rolePermissions = await PodRolePermissionsService.getPodRolePermissions(context.podId);
+      const rolePermissions =
+        await PodRolePermissionsService.getPodRolePermissions(context.podId);
 
       // Get user's current access summary
       const userAccess = await PodAccessControlService.getPodAccessSummary(
         context.userWallet,
-        context.podId
+        context.podId,
       );
 
       return PodAuthResponse.success({
         roles: rolePermissions,
         userAccess,
         podId: context.podId,
-        requestedBy: context.userWallet
+        requestedBy: context.userWallet,
       });
-
     } catch (error) {
-      console.error(`Failed to fetch permissions for pod ${context.podId}:`, error);
+      console.error(
+        `Failed to fetch permissions for pod ${context.podId}:`,
+        error,
+      );
       return PodAuthResponse.error(
-        error instanceof Error ? error.message : 'Failed to fetch permissions'
+        error instanceof Error ? error.message : 'Failed to fetch permissions',
       );
     }
   });
@@ -56,11 +63,13 @@ export async function PUT(request: NextRequest): Promise<Response> {
       // Check if user can assign roles
       const canAssignRoles = await PodAccessControlService.canAssignRoles(
         context.userWallet,
-        context.podId
+        context.podId,
       );
 
       if (!canAssignRoles) {
-        return PodAuthResponse.forbidden('You do not have permission to modify role assignments');
+        return PodAuthResponse.forbidden(
+          'You do not have permission to modify role assignments',
+        );
       }
 
       // Update the role permissions
@@ -69,8 +78,8 @@ export async function PUT(request: NextRequest): Promise<Response> {
         {
           permissions,
           max_holders: maxHolders,
-          updated_by: context.userWallet
-        }
+          updated_by: context.userWallet,
+        },
       );
 
       // Mark as pending sync with blockchain
@@ -81,13 +90,15 @@ export async function PUT(request: NextRequest): Promise<Response> {
       return PodAuthResponse.success({
         role: updatedRole,
         message: 'Role permissions updated successfully',
-        syncStatus: 'pending'
+        syncStatus: 'pending',
       });
-
     } catch (error) {
-      console.error(`Failed to update permissions for pod ${context.podId}:`, error);
+      console.error(
+        `Failed to update permissions for pod ${context.podId}:`,
+        error,
+      );
       return PodAuthResponse.error(
-        error instanceof Error ? error.message : 'Failed to update permissions'
+        error instanceof Error ? error.message : 'Failed to update permissions',
       );
     }
   });
@@ -107,11 +118,16 @@ export async function POST(request: NextRequest): Promise<Response> {
         return PodAuthResponse.error('Role ID is required');
       }
 
-      console.log(`🔄 Syncing role permissions with blockchain for pod ${context.podId}`);
+      console.log(
+        `🔄 Syncing role permissions with blockchain for pod ${context.podId}`,
+      );
 
       // Get the role permission
-      const role = await PodRolePermissionsService.getRolePermissionByHatId(context.podId, roleId);
-      
+      const role = await PodRolePermissionsService.getRolePermissionByHatId(
+        context.podId,
+        roleId,
+      );
+
       if (!role) {
         return PodAuthResponse.notFound('Role not found');
       }
@@ -122,7 +138,7 @@ export async function POST(request: NextRequest): Promise<Response> {
         roleId: roleId,
         hatId: role.hat_id,
         permissions: role.permissions,
-        action: 'This will sync with HATs Protocol smart contract'
+        action: 'This will sync with HATs Protocol smart contract',
       });
 
       // For now, just mark as synced
@@ -132,13 +148,15 @@ export async function POST(request: NextRequest): Promise<Response> {
         message: 'Role permissions sync initiated',
         roleId: roleId,
         hatId: role.hat_id,
-        syncStatus: 'synced'
+        syncStatus: 'synced',
       });
-
     } catch (error) {
-      console.error(`Failed to sync permissions for pod ${context.podId}:`, error);
+      console.error(
+        `Failed to sync permissions for pod ${context.podId}:`,
+        error,
+      );
       return PodAuthResponse.error(
-        error instanceof Error ? error.message : 'Failed to sync permissions'
+        error instanceof Error ? error.message : 'Failed to sync permissions',
       );
     }
   });

@@ -12,8 +12,16 @@ import Link from 'next/link';
 
 export default function EventsPage() {
   const { canManageEvents } = useEventManagementAccess();
-  const { upcomingEvents, totalParticipants, completedEvents, loading: statsLoading, error: statsError } = useEventStats();
-  const [activeTab, setActiveTab] = useState<'all' | 'my-events' | 'past' | 'calendar'>('my-events');
+  const {
+    upcomingEvents,
+    totalParticipants,
+    completedEvents,
+    loading: statsLoading,
+    error: statsError,
+  } = useEventStats();
+  const [activeTab, setActiveTab] = useState<
+    'all' | 'my-events' | 'past' | 'calendar'
+  >('my-events');
 
   return (
     <div className="min-h-screen bg-gray-50 p-4 bottom-nav-spacing">
@@ -25,8 +33,9 @@ export default function EventsPage() {
               Community Events
             </h1>
             <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              Discover and participate in events organized by our DAO community. 
-              From workshops to social gatherings, find events that match your interests and token holdings.
+              Discover and participate in events organized by our DAO community.
+              From workshops to social gatherings, find events that match your
+              interests and token holdings.
             </p>
           </div>
 
@@ -38,31 +47,37 @@ export default function EventsPage() {
                 {statsLoading ? (
                   <div className="h-5 sm:h-6 bg-gray-200 rounded animate-pulse mb-1"></div>
                 ) : (
-                  <p className="text-lg sm:text-xl font-bold text-gray-900">{upcomingEvents}</p>
+                  <p className="text-lg sm:text-xl font-bold text-gray-900">
+                    {upcomingEvents}
+                  </p>
                 )}
                 <p className="text-xs text-gray-600">Upcoming</p>
               </CardContent>
             </Card>
-            
+
             <Card className="shadow-sm">
               <CardContent className="p-3 sm:p-4 text-center">
                 <Users className="w-4 h-4 sm:w-5 sm:h-5 mx-auto text-green-500 mb-1" />
                 {statsLoading ? (
                   <div className="h-5 sm:h-6 bg-gray-200 rounded animate-pulse mb-1"></div>
                 ) : (
-                  <p className="text-lg sm:text-xl font-bold text-gray-900">{totalParticipants}</p>
+                  <p className="text-lg sm:text-xl font-bold text-gray-900">
+                    {totalParticipants}
+                  </p>
                 )}
                 <p className="text-xs text-gray-600">Participants</p>
               </CardContent>
             </Card>
-            
+
             <Card className="shadow-sm">
               <CardContent className="p-3 sm:p-4 text-center">
                 <Trophy className="w-4 h-4 sm:w-5 sm:h-5 mx-auto text-purple-500 mb-1" />
                 {statsLoading ? (
                   <div className="h-5 sm:h-6 bg-gray-200 rounded animate-pulse mb-1"></div>
                 ) : (
-                  <p className="text-lg sm:text-xl font-bold text-gray-900">{completedEvents}</p>
+                  <p className="text-lg sm:text-xl font-bold text-gray-900">
+                    {completedEvents}
+                  </p>
                 )}
                 <p className="text-xs text-gray-600">Completed</p>
               </CardContent>
@@ -82,35 +97,35 @@ export default function EventsPage() {
           <div className="flex flex-col sm:flex-row justify-center items-center space-y-4 sm:space-y-0 pt-4">
             <div className="flex justify-center mb-4 sm:mb-0">
               <div className="flex space-x-1 bg-white rounded-lg p-1 shadow-sm">
-              <Button
-                variant={activeTab === 'my-events' ? 'default' : 'ghost'}
-                size="sm"
-                onClick={() => setActiveTab('my-events')}
-              >
-                My Events
-              </Button>
-              <Button
-                variant={activeTab === 'all' ? 'default' : 'ghost'}
-                size="sm"
-                onClick={() => setActiveTab('all')}
-              >
-                All Events
-              </Button>
-              <Button
-                variant={activeTab === 'calendar' ? 'default' : 'ghost'}
-                size="sm"
-                onClick={() => setActiveTab('calendar')}
-              >
-                <CalendarDays className="w-4 h-4 mr-1" />
-                Calendar
-              </Button>
-              <Button
-                variant={activeTab === 'past' ? 'default' : 'ghost'}
-                size="sm"
-                onClick={() => setActiveTab('past')}
-              >
-                Past Events
-              </Button>
+                <Button
+                  variant={activeTab === 'my-events' ? 'default' : 'ghost'}
+                  size="sm"
+                  onClick={() => setActiveTab('my-events')}
+                >
+                  My Events
+                </Button>
+                <Button
+                  variant={activeTab === 'all' ? 'default' : 'ghost'}
+                  size="sm"
+                  onClick={() => setActiveTab('all')}
+                >
+                  All Events
+                </Button>
+                <Button
+                  variant={activeTab === 'calendar' ? 'default' : 'ghost'}
+                  size="sm"
+                  onClick={() => setActiveTab('calendar')}
+                >
+                  <CalendarDays className="w-4 h-4 mr-1" />
+                  Calendar
+                </Button>
+                <Button
+                  variant={activeTab === 'past' ? 'default' : 'ghost'}
+                  size="sm"
+                  onClick={() => setActiveTab('past')}
+                >
+                  Past Events
+                </Button>
               </div>
             </div>
 
@@ -168,15 +183,17 @@ export default function EventsPage() {
           )}
         </div>
 
-
         {/* Call to Action for Event Management */}
         {canManageEvents && (
           <Card className="mt-8 bg-gradient-to-r from-blue-50 to-purple-50 border-blue-200">
             <CardContent className="p-8 text-center">
-              <h3 className="text-xl font-semibold mb-4">Ready to Create an Event?</h3>
+              <h3 className="text-xl font-semibold mb-4">
+                Ready to Create an Event?
+              </h3>
               <p className="text-gray-600 mb-6 max-w-2xl mx-auto">
-                As an event manager, you can create and organize events for the community. 
-                Set up token gating, manage registrations, and distribute funds to the right pods.
+                As an event manager, you can create and organize events for the
+                community. Set up token gating, manage registrations, and
+                distribute funds to the right pods.
               </p>
               <div className="flex flex-col sm:flex-row justify-center space-y-2 sm:space-y-0 sm:space-x-4">
                 <Button asChild={true}>
@@ -186,9 +203,7 @@ export default function EventsPage() {
                   </Link>
                 </Button>
                 <Button variant="outline" asChild={true}>
-                  <Link href="/events/manage">
-                    Manage My Events
-                  </Link>
+                  <Link href="/events/manage">Manage My Events</Link>
                 </Button>
               </div>
             </CardContent>

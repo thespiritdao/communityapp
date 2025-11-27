@@ -31,23 +31,30 @@ export const useForumCategories = () =>
             .eq('category_id', cat.id);
 
           if (countError) {
-            console.warn(`⚠️ Error counting threads for ${cat.name}:`, countError);
+            console.warn(
+              `⚠️ Error counting threads for ${cat.name}:`,
+              countError,
+            );
           }
 
           return {
             ...cat,
-            thread_count: count || 0
+            thread_count: count || 0,
           };
-        })
+        }),
       );
 
       // Filter out categories with 0 threads for governance proposal selection
-      const activeCategories = categoriesWithCounts.filter(cat => cat.thread_count > 0);
+      const activeCategories = categoriesWithCounts.filter(
+        (cat) => cat.thread_count > 0,
+      );
 
       console.log('✅ Found categories:', {
         total: categories.length,
         withThreads: activeCategories.length,
-        categories: activeCategories.map(c => `${c.name} (${c.thread_count} threads)`)
+        categories: activeCategories.map(
+          (c) => `${c.name} (${c.thread_count} threads)`,
+        ),
       });
 
       return activeCategories;

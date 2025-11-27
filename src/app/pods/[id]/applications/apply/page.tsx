@@ -8,7 +8,14 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/utils/supabaseClient';
-import { UserPlus, Crown, Users, Clock, ArrowLeft, CheckCircle } from 'lucide-react';
+import {
+  UserPlus,
+  Crown,
+  Users,
+  Clock,
+  ArrowLeft,
+  CheckCircle,
+} from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 
 interface Pod {
@@ -38,9 +45,12 @@ export default function ApplyToPodPage() {
   const [pod, setPod] = useState<Pod | null>(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
-  const [selectedRole, setSelectedRole] = useState<'member' | 'leader'>('member');
+  const [selectedRole, setSelectedRole] = useState<'member' | 'leader'>(
+    'member',
+  );
   const [accountabilityStatement, setAccountabilityStatement] = useState('');
-  const [existingApplication, setExistingApplication] = useState<ExistingApplication | null>(null);
+  const [existingApplication, setExistingApplication] =
+    useState<ExistingApplication | null>(null);
 
   useEffect(() => {
     loadPodAndCheckApplication();
@@ -80,7 +90,7 @@ export default function ApplyToPodPage() {
       toast({
         title: 'Error',
         description: 'Failed to load pod information',
-        variant: 'destructive'
+        variant: 'destructive',
       });
     } finally {
       setLoading(false);
@@ -94,7 +104,7 @@ export default function ApplyToPodPage() {
       toast({
         title: 'Required Field',
         description: 'Please provide an accountability statement',
-        variant: 'destructive'
+        variant: 'destructive',
       });
       return;
     }
@@ -103,9 +113,8 @@ export default function ApplyToPodPage() {
       setSubmitting(true);
 
       // Calculate required votes based on role
-      const requiredVotes = selectedRole === 'leader'
-        ? Math.ceil(pod.pod_leads.length / 2)
-        : 1;
+      const requiredVotes =
+        selectedRole === 'leader' ? Math.ceil(pod.pod_leads.length / 2) : 1;
 
       // Create signature payload
       const signaturePayload = {
@@ -114,7 +123,7 @@ export default function ApplyToPodPage() {
         intendedRole: selectedRole,
         accountabilityStatement,
         applicantAddress: address,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       };
 
       const messageToSign = JSON.stringify(signaturePayload, null, 2);
@@ -123,11 +132,11 @@ export default function ApplyToPodPage() {
       toast({
         title: 'Please Sign',
         description: 'Please sign your application in your wallet.',
-        duration: 3000
+        duration: 3000,
       });
 
       const signature = await signMessageAsync({
-        message: messageToSign
+        message: messageToSign,
       });
 
       console.log('✍️ Application signed:', signature);
@@ -144,7 +153,7 @@ export default function ApplyToPodPage() {
           status: 'pending',
           current_votes: 0,
           required_votes: requiredVotes,
-          voting_leaders: []
+          voting_leaders: [],
         })
         .select()
         .single();
@@ -163,7 +172,7 @@ export default function ApplyToPodPage() {
       toast({
         title: 'Submission Failed',
         description: error.message || 'Failed to submit application',
-        variant: 'destructive'
+        variant: 'destructive',
       });
     } finally {
       setSubmitting(false);
@@ -186,9 +195,7 @@ export default function ApplyToPodPage() {
         <Card>
           <CardContent className="p-8 text-center">
             <p className="text-gray-600 mb-4">Pod not found</p>
-            <Button onClick={() => router.push('/pods')}>
-              Back to Pods
-            </Button>
+            <Button onClick={() => router.push('/pods')}>Back to Pods</Button>
           </CardContent>
         </Card>
       </div>
@@ -202,7 +209,9 @@ export default function ApplyToPodPage() {
           <CardContent className="p-8 text-center">
             <UserPlus className="w-16 h-16 text-gray-400 mx-auto mb-4" />
             <h2 className="text-xl font-semibold mb-2">Connect Wallet</h2>
-            <p className="text-gray-600 mb-4">Please connect your wallet to apply for membership</p>
+            <p className="text-gray-600 mb-4">
+              Please connect your wallet to apply for membership
+            </p>
             <Button onClick={() => router.push(`/pods/${podId}`)}>
               Back to Pod
             </Button>
@@ -214,9 +223,16 @@ export default function ApplyToPodPage() {
 
   // Show existing application status
   if (existingApplication && existingApplication.status !== 'rejected') {
-    const roleIcon = existingApplication.intended_role === 'leader' ? Crown : Users;
-    const roleColor = existingApplication.intended_role === 'leader' ? 'text-purple-600' : 'text-[#2F5D50]';
-    const roleBgColor = existingApplication.intended_role === 'leader' ? 'bg-purple-50' : 'bg-[#E8F1EE]';
+    const roleIcon =
+      existingApplication.intended_role === 'leader' ? Crown : Users;
+    const roleColor =
+      existingApplication.intended_role === 'leader'
+        ? 'text-purple-600'
+        : 'text-[#2F5D50]';
+    const roleBgColor =
+      existingApplication.intended_role === 'leader'
+        ? 'bg-purple-50'
+        : 'bg-[#E8F1EE]';
     const RoleIcon = roleIcon;
 
     return (
@@ -246,18 +262,26 @@ export default function ApplyToPodPage() {
                   </>
                 )}
               </CardTitle>
-              <div className={`flex items-center gap-2 px-3 py-1 rounded-full ${roleBgColor}`}>
+              <div
+                className={`flex items-center gap-2 px-3 py-1 rounded-full ${roleBgColor}`}
+              >
                 <RoleIcon className={`w-4 h-4 ${roleColor}`} />
                 <span className={`text-sm font-medium ${roleColor}`}>
-                  {existingApplication.intended_role === 'leader' ? 'Leader' : 'Member'}
+                  {existingApplication.intended_role === 'leader'
+                    ? 'Leader'
+                    : 'Member'}
                 </span>
               </div>
             </div>
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="border-l-4 border-yellow-400 pl-4 py-2">
-              <p className="text-sm font-medium text-gray-900 mb-1">Your Accountability Statement</p>
-              <p className="text-sm text-gray-700">{existingApplication.accountability_statement}</p>
+              <p className="text-sm font-medium text-gray-900 mb-1">
+                Your Accountability Statement
+              </p>
+              <p className="text-sm text-gray-700">
+                {existingApplication.accountability_statement}
+              </p>
             </div>
 
             {existingApplication.status === 'pending' && (
@@ -265,9 +289,12 @@ export default function ApplyToPodPage() {
                 <div className="flex items-center gap-3">
                   <Clock className="h-6 w-6 text-yellow-600" />
                   <div>
-                    <p className="font-medium text-gray-900">Awaiting Leader Votes</p>
+                    <p className="font-medium text-gray-900">
+                      Awaiting Leader Votes
+                    </p>
                     <p className="text-sm text-gray-600">
-                      {existingApplication.current_votes} / {existingApplication.required_votes} votes received
+                      {existingApplication.current_votes} /{' '}
+                      {existingApplication.required_votes} votes received
                     </p>
                   </div>
                 </div>
@@ -276,7 +303,7 @@ export default function ApplyToPodPage() {
                     <div
                       className="bg-yellow-600 h-2 rounded-full transition-all"
                       style={{
-                        width: `${(existingApplication.current_votes / existingApplication.required_votes) * 100}%`
+                        width: `${(existingApplication.current_votes / existingApplication.required_votes) * 100}%`,
                       }}
                     />
                   </div>
@@ -289,9 +316,12 @@ export default function ApplyToPodPage() {
                 <div className="flex items-center gap-3">
                   <CheckCircle className="h-6 w-6 text-[#3F7A5A]" />
                   <div>
-                    <p className="font-medium text-green-900">Application Approved!</p>
+                    <p className="font-medium text-green-900">
+                      Application Approved!
+                    </p>
                     <p className="text-sm text-green-700">
-                      You can now access {pod.name}. Return to the pod page to get started.
+                      You can now access {pod.name}. Return to the pod page to
+                      get started.
                     </p>
                   </div>
                 </div>
@@ -299,7 +329,8 @@ export default function ApplyToPodPage() {
             )}
 
             <p className="text-xs text-gray-500 text-center">
-              Submitted {new Date(existingApplication.submitted_at).toLocaleDateString()}
+              Submitted{' '}
+              {new Date(existingApplication.submitted_at).toLocaleDateString()}
             </p>
 
             <div className="flex justify-center">
@@ -349,8 +380,12 @@ export default function ApplyToPodPage() {
                 }`}
               >
                 <div className="flex flex-col items-center gap-2">
-                  <Users className={`w-8 h-8 ${selectedRole === 'member' ? 'text-blue-600' : 'text-gray-400'}`} />
-                  <span className={`font-medium ${selectedRole === 'member' ? 'text-blue-900' : 'text-gray-700'}`}>
+                  <Users
+                    className={`w-8 h-8 ${selectedRole === 'member' ? 'text-blue-600' : 'text-gray-400'}`}
+                  />
+                  <span
+                    className={`font-medium ${selectedRole === 'member' ? 'text-blue-900' : 'text-gray-700'}`}
+                  >
                     Member
                   </span>
                   <span className="text-xs text-gray-500 text-center">
@@ -368,12 +403,17 @@ export default function ApplyToPodPage() {
                 }`}
               >
                 <div className="flex flex-col items-center gap-2">
-                  <Crown className={`w-8 h-8 ${selectedRole === 'leader' ? 'text-purple-600' : 'text-gray-400'}`} />
-                  <span className={`font-medium ${selectedRole === 'leader' ? 'text-purple-900' : 'text-gray-700'}`}>
+                  <Crown
+                    className={`w-8 h-8 ${selectedRole === 'leader' ? 'text-purple-600' : 'text-gray-400'}`}
+                  />
+                  <span
+                    className={`font-medium ${selectedRole === 'leader' ? 'text-purple-900' : 'text-gray-700'}`}
+                  >
                     Leader
                   </span>
                   <span className="text-xs text-gray-500 text-center">
-                    Requires majority vote ({Math.ceil(pod.pod_leads.length / 2)} leaders)
+                    Requires majority vote (
+                    {Math.ceil(pod.pod_leads.length / 2)} leaders)
                   </span>
                 </div>
               </button>
@@ -393,7 +433,8 @@ export default function ApplyToPodPage() {
               placeholder="Tell the pod leaders why you want to join and how you plan to contribute. This statement shows your commitment to the pod's mission and values."
             />
             <p className="text-xs text-gray-500 mt-1">
-              Be specific about your skills, experience, and commitment to the pod.
+              Be specific about your skills, experience, and commitment to the
+              pod.
             </p>
           </div>
 
@@ -418,7 +459,8 @@ export default function ApplyToPodPage() {
           </Button>
 
           <p className="text-xs text-gray-500 text-center">
-            By submitting, you agree to the pod's accountability requirements and community guidelines.
+            By submitting, you agree to the pod's accountability requirements
+            and community guidelines.
           </p>
         </CardContent>
       </Card>

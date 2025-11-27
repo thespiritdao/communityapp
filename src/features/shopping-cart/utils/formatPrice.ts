@@ -1,4 +1,3 @@
-
 export default function formatPrice(price: any, currency: string): string {
   let numPrice: number;
   try {

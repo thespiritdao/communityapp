@@ -40,14 +40,14 @@ function formatTokenAmount(amount: number): bigint {
 
 /**
  * Hook to calculate cart totals and approval amounts
- * 
+ *
  * IMPORTANT: This hook extracts the exact calculation logic from Cart.tsx
  * without changing any behavior. All calculations must remain identical.
  */
 export const useCartCalculations = (
   products: ICartProduct[],
   selectedToken: Token,
-  total?: { totalSystemPrice?: number; totalSelfPrice?: number }
+  total?: { totalSystemPrice?: number; totalSelfPrice?: number },
 ): CartCalculations => {
   return useMemo(() => {
     // Extract totals from cart context (same as original)
@@ -56,12 +56,22 @@ export const useCartCalculations = (
 
     // Calculate approval amounts based on selected token for single-token payment
     // CRITICAL: This logic must match Cart.tsx exactly
-    const systemApprovalAmount = selectedToken.symbol === "$SYSTEM" ? formatTokenAmount(totalSystemPrice) : BigInt(0);
-    const selfApprovalAmount = selectedToken.symbol === "$SELF" ? formatTokenAmount(totalSelfPrice) : BigInt(0);
+    const systemApprovalAmount =
+      selectedToken.symbol === '$SYSTEM'
+        ? formatTokenAmount(totalSystemPrice)
+        : BigInt(0);
+    const selfApprovalAmount =
+      selectedToken.symbol === '$SELF'
+        ? formatTokenAmount(totalSelfPrice)
+        : BigInt(0);
 
     // Additional derived calculations
-    const selectedTokenAmount = selectedToken.symbol === "$SYSTEM" ? systemApprovalAmount : selfApprovalAmount;
-    const selectedTokenPrice = selectedToken.symbol === "$SYSTEM" ? totalSystemPrice : totalSelfPrice;
+    const selectedTokenAmount =
+      selectedToken.symbol === '$SYSTEM'
+        ? systemApprovalAmount
+        : selfApprovalAmount;
+    const selectedTokenPrice =
+      selectedToken.symbol === '$SYSTEM' ? totalSystemPrice : totalSelfPrice;
 
     return {
       systemApprovalAmount,
@@ -81,7 +91,7 @@ export const useCartCalculations = (
 export const useCartCalculationsDebug = (
   calculations: CartCalculations,
   selectedToken: Token,
-  products: ICartProduct[]
+  products: ICartProduct[],
 ) => {
   useMemo(() => {
     console.log('🔍 Cart Amount Debug:', {
@@ -93,18 +103,22 @@ export const useCartCalculationsDebug = (
       systemIsZero: calculations.systemApprovalAmount === BigInt(0),
       selfIsZero: calculations.selfApprovalAmount === BigInt(0),
       singleTokenLogic: {
-        payingWithSystem: selectedToken.symbol === "$SYSTEM",
-        payingWithSelf: selectedToken.symbol === "$SELF",
-        expectedSystemAmount: selectedToken.symbol === "$SYSTEM" ? calculations.totalSystemPrice : 0,
-        expectedSelfAmount: selectedToken.symbol === "$SELF" ? calculations.totalSelfPrice : 0
+        payingWithSystem: selectedToken.symbol === '$SYSTEM',
+        payingWithSelf: selectedToken.symbol === '$SELF',
+        expectedSystemAmount:
+          selectedToken.symbol === '$SYSTEM'
+            ? calculations.totalSystemPrice
+            : 0,
+        expectedSelfAmount:
+          selectedToken.symbol === '$SELF' ? calculations.totalSelfPrice : 0,
       },
-      products: products?.map(p => ({
+      products: products?.map((p) => ({
         id: p.id,
         name: p.name,
         price_system: p.price_system,
         price_self: p.price_self,
-        quantity: p.quantity
-      }))
+        quantity: p.quantity,
+      })),
     });
   }, [calculations, selectedToken, products]);
 };

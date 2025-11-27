@@ -23,7 +23,7 @@ export function UserSelector({
   value,
   onChange,
   placeholder = 'Search by name or paste wallet address...',
-  excludeAddresses = []
+  excludeAddresses = [],
 }: UserSelectorProps) {
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [filteredUsers, setFilteredUsers] = useState<UserProfile[]>([]);
@@ -56,7 +56,9 @@ export function UserSelector({
   // Find selected user when value changes
   useEffect(() => {
     if (value && users.length > 0) {
-      const user = users.find(u => u.wallet_address.toLowerCase() === value.toLowerCase());
+      const user = users.find(
+        (u) => u.wallet_address.toLowerCase() === value.toLowerCase(),
+      );
       setSelectedUser(user || null);
       if (!user && value.startsWith('0x')) {
         // User manually entered a wallet address
@@ -75,19 +77,21 @@ export function UserSelector({
     }
 
     const query = searchQuery.toLowerCase();
-    const filtered = users.filter(user => {
-      // Exclude already selected addresses
-      if (excludeAddresses.includes(user.wallet_address.toLowerCase())) {
-        return false;
-      }
+    const filtered = users
+      .filter((user) => {
+        // Exclude already selected addresses
+        if (excludeAddresses.includes(user.wallet_address.toLowerCase())) {
+          return false;
+        }
 
-      // Match name or wallet address
-      const fullName = `${user.first_name} ${user.last_name}`.toLowerCase();
-      const walletMatch = user.wallet_address.toLowerCase().includes(query);
-      const nameMatch = fullName.includes(query);
+        // Match name or wallet address
+        const fullName = `${user.first_name} ${user.last_name}`.toLowerCase();
+        const walletMatch = user.wallet_address.toLowerCase().includes(query);
+        const nameMatch = fullName.includes(query);
 
-      return walletMatch || nameMatch;
-    }).slice(0, 10); // Limit to 10 results
+        return walletMatch || nameMatch;
+      })
+      .slice(0, 10); // Limit to 10 results
 
     setFilteredUsers(filtered);
   }, [searchQuery, users, excludeAddresses]);
@@ -95,7 +99,10 @@ export function UserSelector({
   // Close dropdown when clicking outside
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
-      if (wrapperRef.current && !wrapperRef.current.contains(event.target as Node)) {
+      if (
+        wrapperRef.current &&
+        !wrapperRef.current.contains(event.target as Node)
+      ) {
         setShowDropdown(false);
       }
     }

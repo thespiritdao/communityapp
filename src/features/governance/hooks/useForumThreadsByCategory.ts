@@ -9,11 +9,18 @@ interface Thread {
   created_at: string;
 }
 
-export const useForumThreadsByCategory = (categoryId: string, filterByUser?: string) =>
+export const useForumThreadsByCategory = (
+  categoryId: string,
+  filterByUser?: string,
+) =>
   useQuery({
     queryKey: ['forumThreads', categoryId, filterByUser],
     queryFn: async () => {
-      console.log('🔍 Fetching threads for category:', categoryId, filterByUser ? `(user: ${filterByUser})` : '');
+      console.log(
+        '🔍 Fetching threads for category:',
+        categoryId,
+        filterByUser ? `(user: ${filterByUser})` : '',
+      );
 
       let query = supabase
         .from('forum_threads')
@@ -32,10 +39,18 @@ export const useForumThreadsByCategory = (categoryId: string, filterByUser?: str
         throw new Error(error.message);
       }
 
-      console.log(`✅ Found ${data?.length || 0} threads for category ${categoryId}`);
+      console.log(
+        `✅ Found ${data?.length || 0} threads for category ${categoryId}`,
+      );
 
       if (data && data.length > 0) {
-        console.log('   Threads:', data.map(t => t.title).slice(0, 3).join(', '));
+        console.log(
+          '   Threads:',
+          data
+            .map((t) => t.title)
+            .slice(0, 3)
+            .join(', '),
+        );
       }
 
       return data || [];

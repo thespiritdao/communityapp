@@ -2,7 +2,7 @@
 
 import type React from 'react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, } from '@/components/ui/card';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { X, Scroll } from 'lucide-react';
 
 interface AccountabilityAgreementModalProps {
@@ -36,12 +36,9 @@ The Member acknowledges and agrees that any intentional misconduct, fraud, or ma
 
 By participating in the Pod, the Member affirms that they have read, understood, and agreed to be bound by the terms of this Agreement.`;
 
-export const AccountabilityAgreementModal: React.FC<AccountabilityAgreementModalProps> = ({
-  isOpen,
-  onClose,
-  onProceedToSign,
-  podName
-}) => {
+export const AccountabilityAgreementModal: React.FC<
+  AccountabilityAgreementModalProps
+> = ({ isOpen, onClose, onProceedToSign, podName }) => {
   if (!isOpen) return null;
 
   return (
@@ -52,18 +49,15 @@ export const AccountabilityAgreementModal: React.FC<AccountabilityAgreementModal
           <div className="flex items-center gap-3">
             <Scroll className="h-6 w-6" style={{ color: '#2F5D50' }} />
             <div>
-              <h2 className="text-xl font-semibold">Accountability Agreement</h2>
+              <h2 className="text-xl font-semibold">
+                Accountability Agreement
+              </h2>
               {podName && (
                 <p className="text-sm text-gray-600">For {podName}</p>
               )}
             </div>
           </div>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={onClose}
-            className="p-2"
-          >
+          <Button variant="ghost" size="sm" onClick={onClose} className="p-2">
             <X className="h-5 w-5" />
           </Button>
         </div>
@@ -100,8 +94,12 @@ export const AccountabilityAgreementModal: React.FC<AccountabilityAgreementModal
                 onClick={onProceedToSign}
                 className="text-white"
                 style={{ backgroundColor: '#2F5D50' }}
-                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#6F8F86'}
-                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#2F5D50'}
+                onMouseEnter={(e) =>
+                  (e.currentTarget.style.backgroundColor = '#6F8F86')
+                }
+                onMouseLeave={(e) =>
+                  (e.currentTarget.style.backgroundColor = '#2F5D50')
+                }
               >
                 Proceed to Sign
               </Button>

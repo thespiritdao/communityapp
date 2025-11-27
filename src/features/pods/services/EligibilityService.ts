@@ -1,28 +1,34 @@
 import { supabase } from '@/utils/supabaseClient';
 import { fetchTokenBalances } from '@/utils/fetchTokenBalances';
-import { ScalableTokenService, } from '@/services/ScalableTokenService';
+import { ScalableTokenService } from '@/services/ScalableTokenService';
 import { EligibilityModuleService } from '@/services/eligibilityModuleService';
 
 // Enhanced eligibility criteria types
 export interface EligibilityCriteria {
-  type: 'token_balance' | 'nft_ownership' | 'staking' | 'agreement_signed' | 'time_based' | 'credential_ownership';
-  
+  type:
+    | 'token_balance'
+    | 'nft_ownership'
+    | 'staking'
+    | 'agreement_signed'
+    | 'time_based'
+    | 'credential_ownership';
+
   // Common fields
   id?: string;
   name?: string;
   description?: string;
   required?: boolean;
-  
+
   // Token balance criteria
   contract_address?: string;
   minimum_amount?: string;
   token_type?: 'ERC20' | 'ERC721' | 'ERC1155';
   token_id?: string;
-  
+
   // Database token fields (populated by enhanced queries)
   token_name?: string;
   token_symbol?: string;
-  
+
   // Agreement criteria
   agreement_hash?: string;
   agreement_text?: string;
@@ -37,12 +43,12 @@ export interface EligibilityCriteria {
   valid_from?: string;
   valid_until?: string;
   duration_days?: number;
-  
+
   // Staking criteria
   staking_pool?: string;
   minimum_staked?: string;
   lock_period?: number;
-  
+
   // Logic operators for compound criteria
   logic_operator?: 'AND' | 'OR';
   nested_criteria?: EligibilityCriteria[];
@@ -77,63 +83,79 @@ export interface EligibilityCheck {
 }
 
 export class EligibilityService {
-  
   /**
    * Validate and clean criteria before evaluation
    */
-  static validateAndCleanCriteria(criteria: EligibilityCriteria[]): EligibilityCriteria[] {
-    return criteria.map(criterion => {
-      // Clean up token balance criteria
-      if (criterion.type === 'token_balance') {
-        // Set default minimum_amount if missing
-        if (!criterion.minimum_amount) {
-          criterion.minimum_amount = '1';
-        }
-        
-        // Check for invalid contract addresses
-        const invalidAddresses = [
-          '0xyourmembershiptokenaddress',
-          '0xYOURMEMBERSHIPTOKENADDRESS',
-          'yourmembershiptokenaddress',
-          'YOUR_TOKEN_ADDRESS_HERE',
-          '0x0000000000000000000000000000000000000000'
-        ];
-        
-        if (!criterion.contract_address || 
-            invalidAddresses.includes(criterion.contract_address.toLowerCase()) ||
+  static validateAndCleanCriteria(
+    criteria: EligibilityCriteria[],
+  ): EligibilityCriteria[] {
+    return criteria
+      .map((criterion) => {
+        // Clean up token balance criteria
+        if (criterion.type === 'token_balance') {
+          // Set default minimum_amount if missing
+          if (!criterion.minimum_amount) {
+            criterion.minimum_amount = '1';
+          }
+
+          // Check for invalid contract addresses
+          const invalidAddresses = [
+            '0xyourmembershiptokenaddress',
+            '0xYOURMEMBERSHIPTOKENADDRESS',
+            'yourmembershiptokenaddress',
+            'YOUR_TOKEN_ADDRESS_HERE',
+            '0x0000000000000000000000000000000000000000',
+          ];
+
+          if (
+            !criterion.contract_address ||
+            invalidAddresses.includes(
+              criterion.contract_address.toLowerCase(),
+            ) ||
             criterion.contract_address.length !== 42 ||
-            !criterion.contract_address.startsWith('0x')) {
-          // Mark as invalid but keep for user feedback
-          criterion.contract_address = criterion.contract_address || 'INVALID_ADDRESS';
-          console.warn('⚠️ Invalid contract address detected in saved criteria:', criterion.contract_address);
+            !criterion.contract_address.startsWith('0x')
+          ) {
+            // Mark as invalid but keep for user feedback
+            criterion.contract_address =
+              criterion.contract_address || 'INVALID_ADDRESS';
+            console.warn(
+              '⚠️ Invalid contract address detected in saved criteria:',
+              criterion.contract_address,
+            );
+          }
         }
-      }
-      
-      return criterion;
-    }).filter(criterion => {
-      // Remove completely invalid criteria
-      if (criterion.type === 'token_balance') {
-        return criterion.contract_address && criterion.contract_address !== 'INVALID_ADDRESS';
-      }
-      return true;
-    });
+
+        return criterion;
+      })
+      .filter((criterion) => {
+        // Remove completely invalid criteria
+        if (criterion.type === 'token_balance') {
+          return (
+            criterion.contract_address &&
+            criterion.contract_address !== 'INVALID_ADDRESS'
+          );
+        }
+        return true;
+      });
   }
-  
+
   /**
    * Main method to evaluate user eligibility against criteria
    */
-  static async evaluateCriteria(check: EligibilityCheck): Promise<EligibilityEvaluation> {
+  static async evaluateCriteria(
+    check: EligibilityCheck,
+  ): Promise<EligibilityEvaluation> {
     const { userAddress, podId, roleId } = check;
-    
+
     // Validate and clean criteria before evaluation
     const cleanCriteria = this.validateAndCleanCriteria(check.criteria);
-    
+
     console.log('🔍 Evaluating eligibility:', {
       userAddress,
       podId,
       roleId,
       originalCriteriaCount: check.criteria.length,
-      cleanCriteriaCount: cleanCriteria.length
+      cleanCriteriaCount: cleanCriteria.length,
     });
 
     const evaluation: EligibilityEvaluation = {
@@ -142,11 +164,11 @@ export class EligibilityService {
       overallResult: {
         passed: 0,
         total: cleanCriteria.length,
-        message: ''
+        message: '',
       },
       evaluatedAt: new Date().toISOString(),
       userAddress,
-      roleId: roleId || ''
+      roleId: roleId || '',
     };
 
     try {
@@ -158,45 +180,51 @@ export class EligibilityService {
           return `${baseId}_${index + 1}`;
         };
 
-        const criteriaId = criterion.id || generateStableId(criterion.type, cleanCriteria.indexOf(criterion));
+        const criteriaId =
+          criterion.id ||
+          generateStableId(criterion.type, cleanCriteria.indexOf(criterion));
 
         try {
-          const result = await this.evaluateSingleCriterion(userAddress, podId, criterion);
+          const result = await this.evaluateSingleCriterion(
+            userAddress,
+            podId,
+            criterion,
+          );
           evaluation.criteriaResults[criteriaId] = result;
-          
+
           if (result.passed) {
             evaluation.overallResult.passed++;
           }
-          
         } catch (error) {
           console.error(`❌ Error evaluating criterion ${criteriaId}:`, error);
           evaluation.criteriaResults[criteriaId] = {
             passed: false,
-            error: error instanceof Error ? error.message : 'Unknown error'
+            error: error instanceof Error ? error.message : 'Unknown error',
           };
         }
       }
 
       // Determine overall eligibility
       const { passed, total } = evaluation.overallResult;
-      
+
       // Default logic: ALL criteria must pass (AND logic)
       evaluation.eligible = passed === total && total > 0;
-      evaluation.overallResult.message = evaluation.eligible 
+      evaluation.overallResult.message = evaluation.eligible
         ? `All ${total} eligibility criteria met`
         : `${passed}/${total} criteria met - ${total - passed} requirements missing`;
 
       console.log('✅ Eligibility evaluation complete:', {
         eligible: evaluation.eligible,
         passed: evaluation.overallResult.passed,
-        total: evaluation.overallResult.total
+        total: evaluation.overallResult.total,
       });
 
       return evaluation;
-
     } catch (error) {
       console.error('❌ Eligibility evaluation failed:', error);
-      evaluation.overallResult.message = 'Evaluation failed: ' + (error instanceof Error ? error.message : 'Unknown error');
+      evaluation.overallResult.message =
+        'Evaluation failed: ' +
+        (error instanceof Error ? error.message : 'Unknown error');
       return evaluation;
     }
   }
@@ -207,9 +235,13 @@ export class EligibilityService {
   private static async evaluateSingleCriterion(
     userAddress: string,
     podId: string,
-    criterion: EligibilityCriteria
-  ): Promise<{ passed: boolean; value?: any; error?: string; details?: string }> {
-
+    criterion: EligibilityCriteria,
+  ): Promise<{
+    passed: boolean;
+    value?: any;
+    error?: string;
+    details?: string;
+  }> {
     switch (criterion.type) {
       case 'token_balance':
         return await this.evaluateTokenBalance(userAddress, criterion);
@@ -218,20 +250,24 @@ export class EligibilityService {
         return await this.evaluateNFTOwnership(userAddress, criterion);
 
       case 'agreement_signed':
-        return await this.evaluateAgreementSigned(userAddress, podId, criterion);
-      
+        return await this.evaluateAgreementSigned(
+          userAddress,
+          podId,
+          criterion,
+        );
+
       case 'time_based':
         return await this.evaluateTimeBased(userAddress, criterion);
-      
+
       case 'reputation_score':
         return await this.evaluateReputationScore(userAddress, criterion);
-      
+
       case 'staking':
         return await this.evaluateStaking(userAddress, criterion);
-      
+
       case 'credential_ownership':
         return await this.evaluateCredentialOwnership(userAddress, criterion);
-      
+
       default:
         throw new Error(`Unsupported criterion type: ${criterion.type}`);
     }
@@ -241,23 +277,29 @@ export class EligibilityService {
    * Evaluate token balance requirements
    */
   private static async evaluateTokenBalance(
-    userAddress: string, 
-    criterion: EligibilityCriteria
+    userAddress: string,
+    criterion: EligibilityCriteria,
   ): Promise<{ passed: boolean; value?: any; details?: string }> {
-    
     // Validate required fields and set defaults
     if (!criterion.contract_address) {
-      console.warn('⚠️ Token balance criterion missing contract_address:', criterion);
+      console.warn(
+        '⚠️ Token balance criterion missing contract_address:',
+        criterion,
+      );
       return {
         passed: false,
-        details: 'Token balance criterion is missing required contract_address field'
+        details:
+          'Token balance criterion is missing required contract_address field',
       };
     }
 
     // Set default minimum_amount if missing (backwards compatibility)
     const minimumAmount = criterion.minimum_amount || '1';
     if (!criterion.minimum_amount) {
-      console.info('ℹ️ Using default minimum_amount of 1 for criterion:', criterion.contract_address);
+      console.info(
+        'ℹ️ Using default minimum_amount of 1 for criterion:',
+        criterion.contract_address,
+      );
     }
 
     // Check for invalid placeholder addresses
@@ -266,59 +308,80 @@ export class EligibilityService {
       '0xYOURMEMBERSHIPTOKENADDRESS',
       'yourmembershiptokenaddress',
       'YOUR_TOKEN_ADDRESS_HERE',
-      '0x0000000000000000000000000000000000000000'
+      '0x0000000000000000000000000000000000000000',
     ];
-    
-    if (invalidAddresses.includes(criterion.contract_address.toLowerCase()) || 
-        criterion.contract_address.length !== 42 || 
-        !criterion.contract_address.startsWith('0x')) {
-      console.warn('⚠️ Invalid or placeholder contract address detected:', criterion.contract_address);
+
+    if (
+      invalidAddresses.includes(criterion.contract_address.toLowerCase()) ||
+      criterion.contract_address.length !== 42 ||
+      !criterion.contract_address.startsWith('0x')
+    ) {
+      console.warn(
+        '⚠️ Invalid or placeholder contract address detected:',
+        criterion.contract_address,
+      );
       return {
         passed: false,
-        details: `Invalid contract address: ${criterion.contract_address}. Please configure a valid token contract address.`
+        details: `Invalid contract address: ${criterion.contract_address}. Please configure a valid token contract address.`,
       };
     }
 
     try {
       // Use existing token balance fetching service
       const balances = await fetchTokenBalances(userAddress);
-      
+
       console.log('🔍 Token balance evaluation:', {
         userAddress: userAddress.slice(0, 6) + '...' + userAddress.slice(-4),
         criterion: criterion.contract_address,
-        balances
+        balances,
       });
-      
+
       // Check specific token based on contract address
       const targetContract = criterion.contract_address.toLowerCase();
       const minimumAmountNum = Number.parseFloat(minimumAmount);
-      
+
       // Map environment contract addresses to balance checks
-      const execPodLeader = process.env.NEXT_PUBLIC_EXECUTIVE_POD_LEADER?.toLowerCase();
-      const execPodMember = process.env.NEXT_PUBLIC_EXECUTIVE_POD_MEMBER?.toLowerCase();
+      const execPodLeader =
+        process.env.NEXT_PUBLIC_EXECUTIVE_POD_LEADER?.toLowerCase();
+      const execPodMember =
+        process.env.NEXT_PUBLIC_EXECUTIVE_POD_MEMBER?.toLowerCase();
       const systemToken = process.env.NEXT_PUBLIC_SYSTEM_TOKEN?.toLowerCase();
       const selfToken = process.env.NEXT_PUBLIC_SELF_TOKEN?.toLowerCase();
-      const proofOfCuriosity = process.env.NEXT_PUBLIC_PROOF_OF_CURIOSITY?.toLowerCase();
+      const proofOfCuriosity =
+        process.env.NEXT_PUBLIC_PROOF_OF_CURIOSITY?.toLowerCase();
 
       // Check Executive Pod tokens (HAT tokens)
-      if (targetContract === execPodLeader || targetContract === execPodMember) {
+      if (
+        targetContract === execPodLeader ||
+        targetContract === execPodMember
+      ) {
         const passed = balances.hasExecutivePod;
-        console.log('✅ Executive Pod token check:', { passed, hasExecutivePod: balances.hasExecutivePod });
+        console.log('✅ Executive Pod token check:', {
+          passed,
+          hasExecutivePod: balances.hasExecutivePod,
+        });
         return {
           passed,
           value: passed ? '1' : '0',
-          details: passed ? 'Executive Pod HAT token ownership verified' : 'Executive Pod HAT token not found'
+          details: passed
+            ? 'Executive Pod HAT token ownership verified'
+            : 'Executive Pod HAT token not found',
         };
       }
 
       // Check Proof of Curiosity NFT
       if (targetContract === proofOfCuriosity) {
         const passed = balances.hasProofOfCuriosity;
-        console.log('✅ Proof of Curiosity check:', { passed, hasProofOfCuriosity: balances.hasProofOfCuriosity });
+        console.log('✅ Proof of Curiosity check:', {
+          passed,
+          hasProofOfCuriosity: balances.hasProofOfCuriosity,
+        });
         return {
           passed,
           value: passed ? '1' : '0',
-          details: passed ? 'Proof of Curiosity NFT ownership verified' : 'Proof of Curiosity NFT not found'
+          details: passed
+            ? 'Proof of Curiosity NFT ownership verified'
+            : 'Proof of Curiosity NFT not found',
         };
       }
 
@@ -326,11 +389,15 @@ export class EligibilityService {
       if (targetContract === systemToken) {
         const systemBalance = Number.parseFloat(balances.systemBalance);
         const passed = systemBalance >= minimumAmountNum;
-        console.log('✅ System token check:', { passed, systemBalance, minimumAmount: minimumAmountNum });
+        console.log('✅ System token check:', {
+          passed,
+          systemBalance,
+          minimumAmount: minimumAmountNum,
+        });
         return {
           passed,
           value: systemBalance.toString(),
-          details: `Required: ${minimumAmountNum} SYSTEM, Available: ${systemBalance}`
+          details: `Required: ${minimumAmountNum} SYSTEM, Available: ${systemBalance}`,
         };
       }
 
@@ -338,69 +405,84 @@ export class EligibilityService {
       if (targetContract === selfToken) {
         const selfBalance = Number.parseFloat(balances.selfBalance);
         const passed = selfBalance >= minimumAmountNum;
-        console.log('✅ Self token check:', { 
-          passed, 
-          selfBalance, 
+        console.log('✅ Self token check:', {
+          passed,
+          selfBalance,
           minimumAmount: minimumAmountNum,
           rawMinimum: minimumAmount,
-          criterion: criterion.minimum_amount
+          criterion: criterion.minimum_amount,
         });
         return {
           passed,
           value: selfBalance.toString(),
-          details: `Required: ${minimumAmountNum} SELF, Available: ${selfBalance}`
+          details: `Required: ${minimumAmountNum} SELF, Available: ${selfBalance}`,
         };
       }
 
       // Check other HAT tokens
-      if (targetContract === process.env.NEXT_PUBLIC_MARKET_MANAGEMENT?.toLowerCase()) {
+      if (
+        targetContract ===
+        process.env.NEXT_PUBLIC_MARKET_MANAGEMENT?.toLowerCase()
+      ) {
         const passed = balances.hasMarketManagement;
         return {
           passed,
           value: passed ? '1' : '0',
-          details: passed ? 'Market Management HAT token ownership verified' : 'Market Management HAT token not found'
+          details: passed
+            ? 'Market Management HAT token ownership verified'
+            : 'Market Management HAT token not found',
         };
       }
 
-      if (targetContract === process.env.NEXT_PUBLIC_BOUNTY_MANAGEMENT?.toLowerCase()) {
+      if (
+        targetContract ===
+        process.env.NEXT_PUBLIC_BOUNTY_MANAGEMENT?.toLowerCase()
+      ) {
         const passed = balances.hasBountyHat;
         return {
           passed,
           value: passed ? '1' : '0',
-          details: passed ? 'Bounty Management HAT token ownership verified' : 'Bounty Management HAT token not found'
+          details: passed
+            ? 'Bounty Management HAT token ownership verified'
+            : 'Bounty Management HAT token not found',
         };
       }
 
-      if (targetContract === process.env.NEXT_PUBLIC_EVENT_MANAGEMENT?.toLowerCase()) {
+      if (
+        targetContract ===
+        process.env.NEXT_PUBLIC_EVENT_MANAGEMENT?.toLowerCase()
+      ) {
         const passed = balances.hasEventManagement;
         return {
           passed,
           value: passed ? '1' : '0',
-          details: passed ? 'Event Management HAT token ownership verified' : 'Event Management HAT token not found'
+          details: passed
+            ? 'Event Management HAT token ownership verified'
+            : 'Event Management HAT token not found',
         };
       }
 
       // Unknown contract - provide helpful feedback
       console.warn('⚠️ Unknown contract address:', targetContract);
-      
+
       // Check if it looks like a real contract address
       if (targetContract.startsWith('0x') && targetContract.length === 42) {
         return {
           passed: false,
-          details: `Token contract ${criterion.contract_address.slice(0, 10)}... is not configured in the system. Please contact an administrator to add support for this token.`
+          details: `Token contract ${criterion.contract_address.slice(0, 10)}... is not configured in the system. Please contact an administrator to add support for this token.`,
         };
       } else {
         return {
           passed: false,
-          details: `Invalid contract address format: ${criterion.contract_address}. Please select a valid token from the dropdown.`
+          details: `Invalid contract address format: ${criterion.contract_address}. Please select a valid token from the dropdown.`,
         };
       }
-
     } catch (error) {
       console.error('Token balance evaluation failed:', error);
       return {
         passed: false,
-        error: error instanceof Error ? error.message : 'Token balance check failed'
+        error:
+          error instanceof Error ? error.message : 'Token balance check failed',
       };
     }
   }
@@ -409,8 +491,8 @@ export class EligibilityService {
    * Evaluate NFT ownership requirements - Legacy wrapper
    */
   private static async evaluateNFTOwnership(
-    userAddress: string, 
-    criterion: EligibilityCriteria
+    userAddress: string,
+    criterion: EligibilityCriteria,
   ): Promise<{ passed: boolean; value?: any; details?: string }> {
     // Redirect to the new credential ownership method for consistency
     return await this.evaluateCredentialOwnership(userAddress, criterion);
@@ -422,9 +504,8 @@ export class EligibilityService {
   private static async evaluateAgreementSigned(
     userAddress: string,
     podId: string,
-    criterion: EligibilityCriteria
+    criterion: EligibilityCriteria,
   ): Promise<{ passed: boolean; value?: any; details?: string }> {
-
     try {
       console.log('🔍 EligibilityService: Checking agreement signature for:', {
         userAddress,
@@ -432,8 +513,8 @@ export class EligibilityService {
         criterion: {
           agreement_hash: criterion.agreement_hash,
           name: criterion.name,
-          type: criterion.type
-        }
+          type: criterion.type,
+        },
       });
 
       // Check if user has signed the required agreement in pod_accountability_signatures table
@@ -446,11 +527,17 @@ export class EligibilityService {
         .eq('is_valid', true);
 
       if (error) {
-        console.error('❌ EligibilityService: Database error checking signatures:', error);
+        console.error(
+          '❌ EligibilityService: Database error checking signatures:',
+          error,
+        );
         throw error;
       }
 
-      console.log('🔍 EligibilityService: Found signatures for THIS pod:', signatures?.length || 0);
+      console.log(
+        '🔍 EligibilityService: Found signatures for THIS pod:',
+        signatures?.length || 0,
+      );
 
       // Signatures are already filtered by pod_id, so any signature found is valid for this pod
       const relevantSignatures = signatures || [];
@@ -459,23 +546,26 @@ export class EligibilityService {
       // This would allow checking for specific agreement versions
 
       const hasSigned = relevantSignatures.length > 0;
-      
+
       const result = {
         passed: hasSigned,
         value: hasSigned ? relevantSignatures[0].signature_data : null,
-        details: hasSigned 
-          ? `Agreement signed on ${new Date(relevantSignatures[0].signed_at).toLocaleDateString()}` 
-          : 'Agreement signature required'
+        details: hasSigned
+          ? `Agreement signed on ${new Date(relevantSignatures[0].signed_at).toLocaleDateString()}`
+          : 'Agreement signature required',
       };
 
-      console.log('✅ EligibilityService: Agreement evaluation result:', result);
+      console.log(
+        '✅ EligibilityService: Agreement evaluation result:',
+        result,
+      );
       return result;
-
     } catch (error) {
       console.error('Agreement evaluation failed:', error);
       return {
         passed: false,
-        error: error instanceof Error ? error.message : 'Agreement check failed'
+        error:
+          error instanceof Error ? error.message : 'Agreement check failed',
       };
     }
   }
@@ -484,12 +574,11 @@ export class EligibilityService {
    * Evaluate time-based requirements
    */
   private static async evaluateTimeBased(
-    userAddress: string, 
-    criterion: EligibilityCriteria
+    userAddress: string,
+    criterion: EligibilityCriteria,
   ): Promise<{ passed: boolean; value?: any; details?: string }> {
-    
     const now = new Date();
-    
+
     try {
       // Check valid_from and valid_until dates
       let withinTimeframe = true;
@@ -514,14 +603,14 @@ export class EligibilityService {
       return {
         passed: withinTimeframe,
         value: now.toISOString(),
-        details
+        details,
       };
-
     } catch (error) {
       console.error('Time-based evaluation failed:', error);
       return {
         passed: false,
-        error: error instanceof Error ? error.message : 'Time-based check failed'
+        error:
+          error instanceof Error ? error.message : 'Time-based check failed',
       };
     }
   }
@@ -530,16 +619,15 @@ export class EligibilityService {
    * Evaluate reputation score requirements
    */
   private static async evaluateReputationScore(
-    userAddress: string, 
-    criterion: EligibilityCriteria
+    userAddress: string,
+    criterion: EligibilityCriteria,
   ): Promise<{ passed: boolean; value?: any; details?: string }> {
-    
     // Placeholder for reputation system integration
     // This would integrate with your reputation scoring system
-    
+
     return {
       passed: false,
-      details: 'Reputation scoring system not yet implemented'
+      details: 'Reputation scoring system not yet implemented',
     };
   }
 
@@ -547,16 +635,15 @@ export class EligibilityService {
    * Evaluate staking requirements
    */
   private static async evaluateStaking(
-    userAddress: string, 
-    criterion: EligibilityCriteria
+    userAddress: string,
+    criterion: EligibilityCriteria,
   ): Promise<{ passed: boolean; value?: any; details?: string }> {
-    
     // Placeholder for staking system integration
     // This would check staking pools and locked amounts
-    
+
     return {
       passed: false,
-      details: 'Staking verification system not yet implemented'
+      details: 'Staking verification system not yet implemented',
     };
   }
 
@@ -564,19 +651,21 @@ export class EligibilityService {
    * Evaluate credential ownership requirements using ScalableTokenService
    */
   private static async evaluateCredentialOwnership(
-    userAddress: string, 
-    criterion: EligibilityCriteria
+    userAddress: string,
+    criterion: EligibilityCriteria,
   ): Promise<{ passed: boolean; value?: any; details?: string }> {
-    
-    console.log('🎫 ScalableTokenService: Evaluating credential ownership for:', {
-      user: userAddress,
-      criterion: {
-        name: criterion.name,
-        token_name: criterion.token_name,
-        contract_address: criterion.contract_address,
-        type: criterion.type
-      }
-    });
+    console.log(
+      '🎫 ScalableTokenService: Evaluating credential ownership for:',
+      {
+        user: userAddress,
+        criterion: {
+          name: criterion.name,
+          token_name: criterion.token_name,
+          contract_address: criterion.contract_address,
+          type: criterion.type,
+        },
+      },
+    );
 
     try {
       // Create a public client compatible object
@@ -584,42 +673,48 @@ export class EligibilityService {
       // we'll need to pass the client from the calling component
       const { createPublicClient, http } = await import('viem');
       const { base } = await import('viem/chains');
-      
+
       const publicClient = createPublicClient({
         chain: base,
-        transport: http()
+        transport: http(),
       });
 
       // Method 1: If we have token_name from enhanced query, use it to find the token
       if (criterion.token_name) {
         console.log(`🎯 Using database token name: ${criterion.token_name}`);
-        
-        const tokenInfo = await ScalableTokenService.getToken(criterion.token_name);
+
+        const tokenInfo = await ScalableTokenService.getToken(
+          criterion.token_name,
+        );
         if (tokenInfo) {
           console.log(`✅ Found token in database:`, tokenInfo);
-          
+
           const balance = await ScalableTokenService.checkTokenBalance(
             userAddress,
             tokenInfo,
-            publicClient
+            publicClient,
           );
-          
+
           return {
             passed: balance.hasToken,
             value: balance.balance.toString(),
-            details: balance.hasToken 
+            details: balance.hasToken
               ? `${tokenInfo.name} ownership verified (balance: ${balance.balance})`
-              : `${tokenInfo.name} not found in wallet${balance.error ? ` (${balance.error})` : ''}`
+              : `${tokenInfo.name} not found in wallet${balance.error ? ` (${balance.error})` : ''}`,
           };
         } else {
-          console.warn(`⚠️ Token not found in database: ${criterion.token_name}`);
+          console.warn(
+            `⚠️ Token not found in database: ${criterion.token_name}`,
+          );
         }
       }
 
       // Method 2: If we have contract_address, look up by contract address
       if (criterion.contract_address) {
-        console.log(`🔍 Looking up token by contract address: ${criterion.contract_address}`);
-        
+        console.log(
+          `🔍 Looking up token by contract address: ${criterion.contract_address}`,
+        );
+
         const { data: tokenData, error } = await supabase
           .from('tokens')
           .select('*')
@@ -629,47 +724,57 @@ export class EligibilityService {
 
         if (tokenData && !error) {
           console.log(`✅ Found token by contract address:`, tokenData);
-          
+
           const balance = await ScalableTokenService.checkTokenBalance(
             userAddress,
             tokenData,
-            publicClient
+            publicClient,
           );
-          
+
           return {
             passed: balance.hasToken,
             value: balance.balance.toString(),
-            details: balance.hasToken 
+            details: balance.hasToken
               ? `${tokenData.name} ownership verified (balance: ${balance.balance})`
-              : `${tokenData.name} not found in wallet${balance.error ? ` (${balance.error})` : ''}`
+              : `${tokenData.name} not found in wallet${balance.error ? ` (${balance.error})` : ''}`,
           };
         } else {
-          console.log(`⚠️ No token found for contract address: ${criterion.contract_address}`);
+          console.log(
+            `⚠️ No token found for contract address: ${criterion.contract_address}`,
+          );
         }
       }
 
       // Method 3: Fallback - search by criterion name
-      if (criterion.name && criterion.name !== 'credential ownership requirement') {
+      if (
+        criterion.name &&
+        criterion.name !== 'credential ownership requirement'
+      ) {
         console.log(`🔍 Searching tokens by name pattern: ${criterion.name}`);
-        
-        const searchResults = await ScalableTokenService.searchTokens(criterion.name, 5);
+
+        const searchResults = await ScalableTokenService.searchTokens(
+          criterion.name,
+          5,
+        );
         if (searchResults.length > 0) {
-          console.log(`🎯 Found ${searchResults.length} tokens matching name pattern`);
-          
+          console.log(
+            `🎯 Found ${searchResults.length} tokens matching name pattern`,
+          );
+
           // Check the first matching token
           const tokenInfo = searchResults[0];
           const balance = await ScalableTokenService.checkTokenBalance(
             userAddress,
             tokenInfo,
-            publicClient
+            publicClient,
           );
-          
+
           return {
             passed: balance.hasToken,
             value: balance.balance.toString(),
-            details: balance.hasToken 
+            details: balance.hasToken
               ? `${tokenInfo.name} ownership verified (balance: ${balance.balance})`
-              : `${tokenInfo.name} not found in wallet${balance.error ? ` (${balance.error})` : ''}`
+              : `${tokenInfo.name} not found in wallet${balance.error ? ` (${balance.error})` : ''}`,
           };
         }
       }
@@ -677,29 +782,36 @@ export class EligibilityService {
       // Method 4: Fallback to legacy fetchTokenBalances for known patterns
       console.log('🔄 Falling back to legacy token checking...');
       const balances = await fetchTokenBalances(userAddress);
-      
+
       const credentialName = criterion.name?.toLowerCase() || '';
       const tokenName = criterion.token_name?.toLowerCase() || '';
-      
+
       // Check for known credential patterns
-      if (credentialName.includes('advocate') || tokenName.includes('advocate')) {
+      if (
+        credentialName.includes('advocate') ||
+        tokenName.includes('advocate')
+      ) {
         return {
           passed: balances.hasExecutivePod,
           value: balances.hasExecutivePod ? '1' : '0',
-          details: balances.hasExecutivePod 
-            ? 'Advocate credential verified (Executive Pod)' 
-            : 'Advocate credential not found in wallet'
+          details: balances.hasExecutivePod
+            ? 'Advocate credential verified (Executive Pod)'
+            : 'Advocate credential not found in wallet',
         };
       }
-      
-      if (credentialName.includes('proof') || credentialName.includes('curiosity') || 
-          tokenName.includes('proof') || tokenName.includes('curiosity')) {
+
+      if (
+        credentialName.includes('proof') ||
+        credentialName.includes('curiosity') ||
+        tokenName.includes('proof') ||
+        tokenName.includes('curiosity')
+      ) {
         return {
           passed: balances.hasProofOfCuriosity,
-          value: balances.hasProofOfCuriosity ? '1' : '0', 
+          value: balances.hasProofOfCuriosity ? '1' : '0',
           details: balances.hasProofOfCuriosity
             ? 'Proof of Curiosity verified'
-            : 'Proof of Curiosity not found in wallet'
+            : 'Proof of Curiosity not found in wallet',
         };
       }
 
@@ -707,15 +819,17 @@ export class EligibilityService {
       console.warn('❌ Credential could not be verified:', criterion);
       return {
         passed: false,
-        details: `Credential "${criterion.name || criterion.token_name || 'Unknown'}" could not be verified. Please ensure token is registered in database.`
+        details: `Credential "${criterion.name || criterion.token_name || 'Unknown'}" could not be verified. Please ensure token is registered in database.`,
       };
-
     } catch (error) {
       console.error('❌ Credential ownership evaluation failed:', error);
       return {
         passed: false,
-        error: error instanceof Error ? error.message : 'Credential ownership check failed',
-        details: 'Error checking credential ownership'
+        error:
+          error instanceof Error
+            ? error.message
+            : 'Credential ownership check failed',
+        details: 'Error checking credential ownership',
       };
     }
   }
@@ -730,7 +844,7 @@ export class EligibilityService {
    */
   static async checkAllCriteriaForUser(
     userAddress: string,
-    criteria: EligibilityCriteria[]
+    criteria: EligibilityCriteria[],
   ): Promise<{
     eligible: boolean;
     criteriaStatus: Array<{
@@ -746,7 +860,7 @@ export class EligibilityService {
     if (criteria.length === 0) {
       return {
         eligible: true,
-        criteriaStatus: []
+        criteriaStatus: [],
       };
     }
 
@@ -760,35 +874,44 @@ export class EligibilityService {
     // Check each criterion
     for (const criterion of criteria) {
       try {
-        const result = await this.evaluateSingleCriterion(userAddress, criterion);
+        const result = await this.evaluateSingleCriterion(
+          userAddress,
+          criterion,
+        );
 
         criteriaStatus.push({
           type: criterion.type,
           met: result.passed,
           details: result.details || (result.passed ? 'Met' : 'Not met'),
-          criterion
+          criterion,
         });
 
-        console.log(`${result.passed ? '✅' : '❌'} ${criterion.type}: ${result.details || (result.passed ? 'Met' : 'Not met')}`);
+        console.log(
+          `${result.passed ? '✅' : '❌'} ${criterion.type}: ${result.details || (result.passed ? 'Met' : 'Not met')}`,
+        );
       } catch (error) {
         console.error(`❌ Error checking ${criterion.type}:`, error);
         criteriaStatus.push({
           type: criterion.type,
           met: false,
           details: error instanceof Error ? error.message : 'Check failed',
-          criterion
+          criterion,
         });
       }
     }
 
-    const allMet = criteriaStatus.every(c => c.met);
+    const allMet = criteriaStatus.every((c) => c.met);
 
-    console.log(`${allMet ? '✅' : '❌'} Overall eligibility: ${allMet ? 'ELIGIBLE' : 'NOT ELIGIBLE'}`);
-    console.log(`📊 ${criteriaStatus.filter(c => c.met).length}/${criteriaStatus.length} criteria met`);
+    console.log(
+      `${allMet ? '✅' : '❌'} Overall eligibility: ${allMet ? 'ELIGIBLE' : 'NOT ELIGIBLE'}`,
+    );
+    console.log(
+      `📊 ${criteriaStatus.filter((c) => c.met).length}/${criteriaStatus.length} criteria met`,
+    );
 
     return {
       eligible: allMet,
-      criteriaStatus
+      criteriaStatus,
     };
   }
 
@@ -801,16 +924,18 @@ export class EligibilityService {
    */
   static async getEligibilityCriteria(
     podId: string,
-    roleType: 'leader' | 'member'
+    roleType: 'leader' | 'member',
   ): Promise<{
     criteria: EligibilityCriteria[];
     hatId: string | null;
     eligibilityModule: string | null;
     roleId: string | null;
   } | null> {
-
     try {
-      console.log(`🔍 Fetching ${roleType} eligibility criteria for pod:`, podId);
+      console.log(
+        `🔍 Fetching ${roleType} eligibility criteria for pod:`,
+        podId,
+      );
 
       // Map role type to role name
       const roleName = roleType === 'leader' ? 'leader' : 'member';
@@ -839,17 +964,21 @@ export class EligibilityService {
         ? role.eligibility_criteria
         : [];
 
-      console.log(`✅ Found ${criteria.length} ${roleType} criteria for pod ${podId}`);
+      console.log(
+        `✅ Found ${criteria.length} ${roleType} criteria for pod ${podId}`,
+      );
 
       return {
         criteria,
         hatId: role.token_address || null,
         eligibilityModule: null, // TODO: Add eligibility module address if needed
-        roleId: role.id
+        roleId: role.id,
       };
-
     } catch (error) {
-      console.error(`❌ Failed to fetch ${roleType} eligibility criteria:`, error);
+      console.error(
+        `❌ Failed to fetch ${roleType} eligibility criteria:`,
+        error,
+      );
       return null;
     }
   }
@@ -860,9 +989,8 @@ export class EligibilityService {
   static async checkUserEligibility(
     userAddress: string,
     podId: string,
-    roleId?: string
+    roleId?: string,
   ): Promise<EligibilityEvaluation> {
-
     try {
       // Get eligibility criteria for the role or all pod roles
       let criteria: EligibilityCriteria[] = [];
@@ -879,7 +1007,9 @@ export class EligibilityService {
           throw new Error('Role not found');
         }
 
-        criteria = Array.isArray(role.eligibility_criteria) ? role.eligibility_criteria : [];
+        criteria = Array.isArray(role.eligibility_criteria)
+          ? role.eligibility_criteria
+          : [];
       } else {
         // Check all roles in the pod
         const { data: roles, error } = await supabase
@@ -893,8 +1023,10 @@ export class EligibilityService {
         }
 
         // Combine all criteria from all roles
-        criteria = roles.flatMap(role =>
-          Array.isArray(role.eligibility_criteria) ? role.eligibility_criteria : []
+        criteria = roles.flatMap((role) =>
+          Array.isArray(role.eligibility_criteria)
+            ? role.eligibility_criteria
+            : [],
         );
       }
 
@@ -906,11 +1038,11 @@ export class EligibilityService {
           overallResult: {
             passed: 0,
             total: 0,
-            message: 'No eligibility criteria defined - access granted'
+            message: 'No eligibility criteria defined - access granted',
           },
           evaluatedAt: new Date().toISOString(),
           userAddress,
-          roleId: roleId || ''
+          roleId: roleId || '',
         };
       }
 
@@ -919,9 +1051,8 @@ export class EligibilityService {
         userAddress,
         podId,
         roleId,
-        criteria
+        criteria,
       });
-
     } catch (error) {
       console.error('User eligibility check failed:', error);
       throw error;
@@ -931,15 +1062,17 @@ export class EligibilityService {
   /**
    * Get default eligibility templates
    */
-  static getDefaultEligibilityTemplates(): { [roleName: string]: EligibilityCriteria[] } {
+  static getDefaultEligibilityTemplates(): {
+    [roleName: string]: EligibilityCriteria[];
+  } {
     return {
-      'pod_leader': [
+      pod_leader: [
         {
           type: 'agreement_signed',
           name: 'Leadership Agreement',
           description: 'Must sign pod leadership accountability agreement',
           agreement_hash: 'pod_leadership_agreement',
-          required: true
+          required: true,
         },
         {
           type: 'token_balance',
@@ -948,10 +1081,10 @@ export class EligibilityService {
           contract_address: process.env.NEXT_PUBLIC_EXECUTIVE_POD_LEADER,
           minimum_amount: '1',
           token_type: 'ERC20',
-          required: true
-        }
+          required: true,
+        },
       ],
-      'pod_member': [
+      pod_member: [
         {
           type: 'token_balance',
           name: 'Member Token Requirement',
@@ -959,9 +1092,9 @@ export class EligibilityService {
           contract_address: process.env.NEXT_PUBLIC_EXECUTIVE_POD_MEMBER,
           minimum_amount: '1',
           token_type: 'ERC20',
-          required: true
-        }
-      ]
+          required: true,
+        },
+      ],
     };
   }
 
@@ -978,7 +1111,7 @@ export class EligibilityService {
    */
   static async buildSyncCallsForRole(
     roleId: string,
-    clearExisting = true
+    clearExisting = true,
   ): Promise<{
     success: boolean;
     calls: any[];
@@ -992,7 +1125,9 @@ export class EligibilityService {
 
     try {
       // Import the eligibility module service
-      const { EligibilityModuleService } = await import('@/services/eligibilityModuleService');
+      const { EligibilityModuleService } = await import(
+        '@/services/eligibilityModuleService'
+      );
 
       // Step 1: Get role data from database
       const { data: role, error: roleError } = await supabase
@@ -1014,7 +1149,7 @@ export class EligibilityService {
           errors: ['Role does not have an associated HAT ID'],
           roleId,
           hatId: undefined,
-          podId: undefined
+          podId: undefined,
         };
       }
 
@@ -1032,7 +1167,7 @@ export class EligibilityService {
           errors: [],
           roleId,
           hatId: role.token_address,
-          podId: undefined
+          podId: undefined,
         };
       }
 
@@ -1045,34 +1180,43 @@ export class EligibilityService {
       try {
         // Get proxy address using the eligibility module service helper
         const managementHatId = BigInt(role.token_address);
-        const proxyData = await EligibilityModuleService.getProxyAddressForHat(managementHatId);
+        const proxyData =
+          await EligibilityModuleService.getProxyAddressForHat(managementHatId);
 
         if (!proxyData.proxyAddress) {
-          console.warn('⚠️ Could not verify Phase 7 status - proxy address not available', {
-            error: proxyData.error,
-            hatId: managementHatId.toString()
-          });
+          console.warn(
+            '⚠️ Could not verify Phase 7 status - proxy address not available',
+            {
+              error: proxyData.error,
+              hatId: managementHatId.toString(),
+            },
+          );
         } else {
           console.log('🔍 Phase 7 check parameters:', {
             podId: proxyData.podId,
             proxyAddress: proxyData.proxyAddress,
-            managementHatId: managementHatId.toString()
+            managementHatId: managementHatId.toString(),
           });
 
           // Check if proxy is already set as admin
           const adminCheck = await EligibilityModuleService.checkIfProxyIsAdmin(
             managementHatId,
-            proxyData.proxyAddress
+            proxyData.proxyAddress,
           );
 
           if (!adminCheck.isAdmin) {
-            console.log('⚠️ Phase 7 was never executed - adding setHatAdmin call');
-            console.log('📋 Current admin:', adminCheck.currentAdmin || 'none (0x0)');
+            console.log(
+              '⚠️ Phase 7 was never executed - adding setHatAdmin call',
+            );
+            console.log(
+              '📋 Current admin:',
+              adminCheck.currentAdmin || 'none (0x0)',
+            );
 
             // Build Phase 7 call and prepend to transaction
             phase7Call = EligibilityModuleService.buildPhase7SetAdminCall(
               managementHatId,
-              proxyData.proxyAddress
+              proxyData.proxyAddress,
             );
 
             console.log('✅ Phase 7 call built and will be executed first');
@@ -1082,23 +1226,29 @@ export class EligibilityService {
         }
       } catch (phase7Error) {
         console.error('❌ Error checking Phase 7 status:', phase7Error);
-        console.log('⚠️ Continuing without Phase 7 check - may fail if admin not set');
+        console.log(
+          '⚠️ Continuing without Phase 7 check - may fail if admin not set',
+        );
       }
 
       // Step 5: Build transaction calls for criteria sync
-      console.log(`🔨 Building sync calls for ${criteria.length} criteria on HAT ${role.token_address}...`);
+      console.log(
+        `🔨 Building sync calls for ${criteria.length} criteria on HAT ${role.token_address}...`,
+      );
 
       const result = await EligibilityModuleService.buildSyncCriteriaCalls(
         role.token_address,
         criteria,
-        clearExisting
+        clearExisting,
       );
 
       // Step 6: Prepend Phase 7 call if needed
       if (phase7Call) {
         console.log('🔧 Prepending Phase 7 setHatAdmin call to transaction');
         result.calls.unshift(phase7Call);
-        console.log(`📋 Total calls: ${result.calls.length} (1 Phase 7 + ${result.calls.length - 1} criteria)`);
+        console.log(
+          `📋 Total calls: ${result.calls.length} (1 Phase 7 + ${result.calls.length - 1} criteria)`,
+        );
       }
 
       console.log('🔍 TRACE: buildSyncCallsForRole received result:', {
@@ -1106,7 +1256,7 @@ export class EligibilityService {
         podId: result.podId,
         callsLength: result.calls.length,
         criteriaCount: result.criteriaCount,
-        errorsLength: result.errors.length
+        errorsLength: result.errors.length,
       });
 
       if (result.calls.length > 0) {
@@ -1114,33 +1264,34 @@ export class EligibilityService {
           address: result.calls[0].address,
           functionName: result.calls[0].functionName,
           args: result.calls[0].args,
-          arg0_podId: result.calls[0].args?.[0]
+          arg0_podId: result.calls[0].args?.[0],
         });
       }
 
       // Step 7: 🚀 V3 FIX: Inject user's wallet address from wagmi/OnchainKit
       // This will be passed from the Transaction component which has access to `address`
       // For now, mark calls as needing address injection
-      console.log('⚠️ Calls prepared with __USER_ADDRESS__ placeholder - will be replaced by Transaction component');
+      console.log(
+        '⚠️ Calls prepared with __USER_ADDRESS__ placeholder - will be replaced by Transaction component',
+      );
 
       console.log('✅ Sync calls built:', {
         roleId,
         hatId: role.token_address,
         totalCalls: result.calls.length,
         criteriaCount: result.criteriaCount,
-        errors: result.errors.length
+        errors: result.errors.length,
       });
 
       return {
         success: result.success,
-        calls: result.calls,  // Contains __USER_ADDRESS__ placeholder
+        calls: result.calls, // Contains __USER_ADDRESS__ placeholder
         criteriaCount: result.criteriaCount,
         errors: result.errors,
         roleId,
         hatId: role.token_address,
-        podId: result.podId
+        podId: result.podId,
       };
-
     } catch (error) {
       console.error('❌ Failed to build sync calls:', error);
       return {
@@ -1150,7 +1301,7 @@ export class EligibilityService {
         errors: [error instanceof Error ? error.message : 'Unknown error'],
         roleId,
         hatId: undefined,
-        podId: undefined
+        podId: undefined,
       };
     }
   }
@@ -1161,7 +1312,7 @@ export class EligibilityService {
    */
   static async updateSyncStatus(
     roleId: string,
-    status: 'synced' | 'partial' | 'failed'
+    status: 'synced' | 'partial' | 'failed',
   ): Promise<void> {
     try {
       await supabase
@@ -1169,7 +1320,7 @@ export class EligibilityService {
         .update({
           last_synced_at: new Date().toISOString(),
           sync_status: status,
-          updated_at: new Date().toISOString()
+          updated_at: new Date().toISOString(),
         })
         .eq('id', roleId);
 
@@ -1195,19 +1346,23 @@ export class EligibilityService {
   static async syncWithHatsModules(
     roleId: string,
     walletClient: any,
-    clearExisting = true
+    clearExisting = true,
   ): Promise<{
     success: boolean;
     syncedCount: number;
     errors: string[];
     txHashes: string[];
   }> {
-    console.log('⚠️ WARNING: Using deprecated syncWithHatsModules - may fail with Smart Wallets');
+    console.log(
+      '⚠️ WARNING: Using deprecated syncWithHatsModules - may fail with Smart Wallets',
+    );
     console.log('🎩 Starting HATS module sync for role:', roleId);
 
     try {
       // Import the eligibility module service
-      const { EligibilityModuleService } = await import('@/services/eligibilityModuleService');
+      const { EligibilityModuleService } = await import(
+        '@/services/eligibilityModuleService'
+      );
 
       // Step 1: Get role data from database
       const { data: role, error: roleError } = await supabase
@@ -1226,7 +1381,7 @@ export class EligibilityService {
           success: false,
           syncedCount: 0,
           errors: ['Role does not have an associated HAT ID'],
-          txHashes: []
+          txHashes: [],
         };
       }
 
@@ -1241,18 +1396,20 @@ export class EligibilityService {
           success: true,
           syncedCount: 0,
           errors: [],
-          txHashes: []
+          txHashes: [],
         };
       }
 
       // Step 4: Sync to on-chain module
-      console.log(`🔄 Syncing ${criteria.length} criteria to HAT ${role.token_address}...`);
+      console.log(
+        `🔄 Syncing ${criteria.length} criteria to HAT ${role.token_address}...`,
+      );
 
       const result = await EligibilityModuleService.syncAllCriteriaToModule(
         role.token_address,
         criteria,
         walletClient,
-        clearExisting
+        clearExisting,
       );
 
       // Step 5: Update database with sync status
@@ -1262,7 +1419,7 @@ export class EligibilityService {
           .update({
             last_synced_at: new Date().toISOString(),
             sync_status: result.errors.length === 0 ? 'synced' : 'partial',
-            updated_at: new Date().toISOString()
+            updated_at: new Date().toISOString(),
           })
           .eq('id', roleId);
       }
@@ -1271,18 +1428,17 @@ export class EligibilityService {
         roleId,
         hatId: role.token_address,
         syncedCount: result.syncedCount,
-        errors: result.errors.length
+        errors: result.errors.length,
       });
 
       return result;
-
     } catch (error) {
       console.error('❌ HATs module sync failed:', error);
       return {
         success: false,
         syncedCount: 0,
         errors: [error instanceof Error ? error.message : 'Unknown error'],
-        txHashes: []
+        txHashes: [],
       };
     }
   }
@@ -1295,7 +1451,7 @@ export class EligibilityService {
     userAddress: string,
     podId: string,
     roleId: string,
-    mode: 'database' | 'onchain' | 'both' = 'both'
+    mode: 'database' | 'onchain' | 'both' = 'both',
   ): Promise<{
     eligible: boolean;
     source: 'database' | 'onchain' | 'hybrid';
@@ -1303,18 +1459,27 @@ export class EligibilityService {
     onchainResult?: { eligible: boolean; standing: boolean };
     recommendation: string;
   }> {
-    console.log('🔍 Hybrid eligibility check:', { userAddress, podId, roleId, mode });
+    console.log('🔍 Hybrid eligibility check:', {
+      userAddress,
+      podId,
+      roleId,
+      mode,
+    });
 
     const result: any = {
       eligible: false,
       source: mode,
-      recommendation: ''
+      recommendation: '',
     };
 
     try {
       // Database check (always fast and free)
       if (mode === 'database' || mode === 'both') {
-        const dbEval = await this.checkUserEligibility(userAddress, podId, roleId);
+        const dbEval = await this.checkUserEligibility(
+          userAddress,
+          podId,
+          roleId,
+        );
         result.databaseResult = dbEval;
 
         if (mode === 'database') {
@@ -1326,7 +1491,9 @@ export class EligibilityService {
 
       // On-chain check (secure but costs gas to write, free to read)
       if (mode === 'onchain' || mode === 'both') {
-        const { EligibilityModuleService } = await import('@/services/eligibilityModuleService');
+        const { EligibilityModuleService } = await import(
+          '@/services/eligibilityModuleService'
+        );
 
         // Get HAT ID for the role
         const { data: role } = await supabase
@@ -1336,20 +1503,22 @@ export class EligibilityService {
           .single();
 
         if (role?.token_address) {
-          const hatIdBigInt = typeof role.token_address === 'string'
-            ? BigInt(role.token_address)
-            : BigInt(role.token_address);
+          const hatIdBigInt =
+            typeof role.token_address === 'string'
+              ? BigInt(role.token_address)
+              : BigInt(role.token_address);
 
           const onchainEval = await EligibilityModuleService.checkEligibility(
             userAddress as `0x${string}`,
-            hatIdBigInt
+            hatIdBigInt,
           );
 
           result.onchainResult = onchainEval;
 
           if (mode === 'onchain') {
             result.eligible = onchainEval.eligible;
-            result.recommendation = 'On-chain check - cryptographically verified';
+            result.recommendation =
+              'On-chain check - cryptographically verified';
             return result;
           }
         } else {
@@ -1369,7 +1538,8 @@ export class EligibilityService {
         if (dbEligible === chainEligible) {
           result.eligible = dbEligible;
           result.source = 'hybrid';
-          result.recommendation = 'Database and on-chain agree - fully verified';
+          result.recommendation =
+            'Database and on-chain agree - fully verified';
         } else {
           // Discrepancy - trust on-chain as source of truth
           result.eligible = chainEligible;
@@ -1383,20 +1553,20 @@ export class EligibilityService {
             roleId,
             database: dbEligible,
             onchain: chainEligible,
-            usingOnchain: true
+            usingOnchain: true,
           });
         }
       }
 
       return result;
-
     } catch (error) {
       console.error('❌ Hybrid eligibility check failed:', error);
       // Fallback to database-only on error
       if (result.databaseResult) {
         result.eligible = result.databaseResult.eligible;
         result.source = 'database';
-        result.recommendation = 'On-chain check failed - using database fallback';
+        result.recommendation =
+          'On-chain check failed - using database fallback';
       }
       return result;
     }
@@ -1409,26 +1579,33 @@ export class EligibilityService {
     userAddress: string,
     podId: string,
     roleId: string,
-    operation: 'treasury' | 'voting' | 'bounty_approval' | 'role_assignment'
+    operation: 'treasury' | 'voting' | 'bounty_approval' | 'role_assignment',
   ): Promise<boolean> {
-    console.log(`🔒 Critical operation check: ${operation}`, { userAddress, roleId });
+    console.log(`🔒 Critical operation check: ${operation}`, {
+      userAddress,
+      roleId,
+    });
 
     try {
       const result = await this.checkEligibilityHybrid(
         userAddress,
         podId,
         roleId,
-        'onchain' // Always use on-chain for critical ops
+        'onchain', // Always use on-chain for critical ops
       );
 
       if (!result.eligible) {
-        console.warn(`❌ User ${userAddress} denied ${operation} - not eligible on-chain`);
+        console.warn(
+          `❌ User ${userAddress} denied ${operation} - not eligible on-chain`,
+        );
       }
 
       return result.eligible;
-
     } catch (error) {
-      console.error(`❌ Critical operation check failed for ${operation}:`, error);
+      console.error(
+        `❌ Critical operation check failed for ${operation}:`,
+        error,
+      );
       // Fail closed - deny access if check fails
       return false;
     }

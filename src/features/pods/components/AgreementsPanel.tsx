@@ -14,10 +14,9 @@ import { ProfileModal } from '@/features/identity';
 import dynamic from 'next/dynamic';
 
 // Lazy load the agreement signing modal
-const AgreementSigningModal = dynamic(
-  () => import('./AgreementSigningModal'),
-  { ssr: false }
-);
+const AgreementSigningModal = dynamic(() => import('./AgreementSigningModal'), {
+  ssr: false,
+});
 
 interface EligibilityCriterion {
   type: string;
@@ -47,19 +46,32 @@ interface AgreementsPanelProps {
   canManageMembers: boolean;
 }
 
-export function AgreementsPanel({ podId, canManageMembers }: AgreementsPanelProps) {
+export function AgreementsPanel({
+  podId,
+  canManageMembers,
+}: AgreementsPanelProps) {
   const { address } = useAccount();
   const { toast } = useToast();
 
-  const [agreementCriteria, setAgreementCriteria] = useState<Array<EligibilityCriterion & { roleId: string }>>([]);
+  const [agreementCriteria, setAgreementCriteria] = useState<
+    Array<EligibilityCriterion & { roleId: string }>
+  >([]);
   const [signatures, setSignatures] = useState<AgreementSignature[]>([]);
   const [loading, setLoading] = useState(true);
-  const [signingAgreement, setSigningAgreement] = useState<(EligibilityCriterion & { roleId: string }) | null>(null);
+  const [signingAgreement, setSigningAgreement] = useState<
+    (EligibilityCriterion & { roleId: string }) | null
+  >(null);
 
   // Profile management for signature display
-  const allSignerAddresses = signatures.map(sig => sig.signer_address);
+  const allSignerAddresses = signatures.map((sig) => sig.signer_address);
   const { getProfile } = useProfiles(allSignerAddresses);
-  const { selectedUser, users, isOpen: isProfileModalOpen, openProfileModal, closeProfileModal } = useProfileModal();
+  const {
+    selectedUser,
+    users,
+    isOpen: isProfileModalOpen,
+    openProfileModal,
+    closeProfileModal,
+  } = useProfileModal();
 
   useEffect(() => {
     loadAgreements();
@@ -86,14 +98,17 @@ export function AgreementsPanel({ podId, canManageMembers }: AgreementsPanelProp
       const criteria: Array<EligibilityCriterion & { roleId: string }> = [];
 
       if (roles) {
-        roles.forEach(role => {
-          if (role.eligibility_criteria && Array.isArray(role.eligibility_criteria)) {
+        roles.forEach((role) => {
+          if (
+            role.eligibility_criteria &&
+            Array.isArray(role.eligibility_criteria)
+          ) {
             role.eligibility_criteria.forEach((criterion: any) => {
               if (criterion.type === 'agreement_signed') {
                 criteria.push({
                   ...criterion,
                   required_for_role: role.role_name,
-                  roleId: role.id
+                  roleId: role.id,
                 });
               }
             });
@@ -117,13 +132,12 @@ export function AgreementsPanel({ podId, canManageMembers }: AgreementsPanelProp
         console.log('✅ Loaded', sigs?.length || 0, 'signatures');
         setSignatures(sigs || []);
       }
-
     } catch (error) {
       console.error('❌ Error loading agreements:', error);
       toast({
         title: 'Error Loading Agreements',
         description: 'Could not load agreement information',
-        variant: 'destructive'
+        variant: 'destructive',
       });
     } finally {
       setLoading(false);
@@ -133,15 +147,16 @@ export function AgreementsPanel({ podId, canManageMembers }: AgreementsPanelProp
   function hasUserSigned(agreementName: string): boolean {
     if (!address) return false;
 
-    return signatures.some(sig =>
-      sig.signer_address.toLowerCase() === address.toLowerCase() &&
-      sig.accountability_statement.includes(agreementName)
+    return signatures.some(
+      (sig) =>
+        sig.signer_address.toLowerCase() === address.toLowerCase() &&
+        sig.accountability_statement.includes(agreementName),
     );
   }
 
   function getSignersForAgreement(agreementName: string): AgreementSignature[] {
-    return signatures.filter(sig =>
-      sig.accountability_statement.includes(agreementName)
+    return signatures.filter((sig) =>
+      sig.accountability_statement.includes(agreementName),
     );
   }
 
@@ -183,13 +198,16 @@ export function AgreementsPanel({ podId, canManageMembers }: AgreementsPanelProp
         <Card>
           <CardContent className="p-8 text-center">
             <FileText className="h-12 w-12 mx-auto mb-4 text-gray-400" />
-            <h3 className="text-lg font-medium mb-2">No Agreement Requirements</h3>
+            <h3 className="text-lg font-medium mb-2">
+              No Agreement Requirements
+            </h3>
             <p className="text-sm text-gray-600">
               This pod does not have any agreement requirements configured.
             </p>
             {canManageMembers && (
               <p className="text-sm text-gray-500 mt-4">
-                You can add agreement requirements when configuring pod roles and eligibility criteria.
+                You can add agreement requirements when configuring pod roles
+                and eligibility criteria.
               </p>
             )}
           </CardContent>
@@ -219,30 +237,48 @@ export function AgreementsPanel({ podId, canManageMembers }: AgreementsPanelProp
               <CardHeader>
                 <div className="flex items-start justify-between">
                   <div className="flex items-start gap-3 flex-1">
-                    <FileText className="h-5 w-5 mt-0.5" style={{ color: '#2F5D50' }} />
+                    <FileText
+                      className="h-5 w-5 mt-0.5"
+                      style={{ color: '#2F5D50' }}
+                    />
                     <div className="flex-1">
-                      <CardTitle className="text-lg">{criterion.name}</CardTitle>
+                      <CardTitle className="text-lg">
+                        {criterion.name}
+                      </CardTitle>
                       {criterion.description && (
                         <p className="text-sm text-gray-600 mt-1">
                           {criterion.description}
                         </p>
                       )}
-                        <div className="flex flex-wrap items-center gap-2 mt-2">
-                          <Badge variant="outline" className="text-xs whitespace-nowrap">
-                            Required for: {criterion.required_for_role}
+                      <div className="flex flex-wrap items-center gap-2 mt-2">
+                        <Badge
+                          variant="outline"
+                          className="text-xs whitespace-nowrap"
+                        >
+                          Required for: {criterion.required_for_role}
+                        </Badge>
+                        {userHasSigned ? (
+                          <Badge
+                            variant="default"
+                            className="text-xs whitespace-nowrap"
+                            style={{
+                              backgroundColor: '#3F7A5A',
+                              color: '#FFFFFF',
+                            }}
+                          >
+                            <CheckCircle2 className="h-3 w-3 mr-1" />
+                            You signed
                           </Badge>
-                          {userHasSigned ? (
-                            <Badge variant="default" className="text-xs whitespace-nowrap" style={{ backgroundColor: '#3F7A5A', color: '#FFFFFF' }}>
-                              <CheckCircle2 className="h-3 w-3 mr-1" />
-                              You signed
-                            </Badge>
-                          ) : (
-                            <Badge variant="destructive" className="text-xs whitespace-nowrap">
-                              <AlertCircle className="h-3 w-3 mr-1" />
-                              Not signed
-                            </Badge>
-                          )}
-                        </div>
+                        ) : (
+                          <Badge
+                            variant="destructive"
+                            className="text-xs whitespace-nowrap"
+                          >
+                            <AlertCircle className="h-3 w-3 mr-1" />
+                            Not signed
+                          </Badge>
+                        )}
+                      </div>
                     </div>
                   </div>
 
@@ -268,9 +304,11 @@ export function AgreementsPanel({ podId, canManageMembers }: AgreementsPanelProp
                       </span>
                     </div>
                     <div className="space-y-2">
-                      {signers.map(sig => {
+                      {signers.map((sig) => {
                         const profile = getProfile(sig.signer_address);
-                        const displayName = getUserDisplayName(sig.signer_address);
+                        const displayName = getUserDisplayName(
+                          sig.signer_address,
+                        );
 
                         return (
                           <div
@@ -279,7 +317,10 @@ export function AgreementsPanel({ podId, canManageMembers }: AgreementsPanelProp
                             onClick={() => openProfileModal(sig.signer_address)}
                           >
                             <div className="flex items-center gap-3">
-                              <CheckCircle2 className="h-4 w-4 flex-shrink-0" style={{ color: '#3F7A5A' }} />
+                              <CheckCircle2
+                                className="h-4 w-4 flex-shrink-0"
+                                style={{ color: '#3F7A5A' }}
+                              />
                               {profile?.profile_picture ? (
                                 <img
                                   src={profile.profile_picture}
@@ -287,16 +328,24 @@ export function AgreementsPanel({ podId, canManageMembers }: AgreementsPanelProp
                                   className="w-10 h-10 rounded-full object-cover"
                                 />
                               ) : (
-                                <div className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0" style={{ backgroundColor: '#2F5D50' }}>
+                                <div
+                                  className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0"
+                                  style={{ backgroundColor: '#2F5D50' }}
+                                >
                                   <span className="text-white font-medium text-sm">
-                                    {profile?.first_name?.charAt(0)?.toUpperCase() || displayName.charAt(0)}
+                                    {profile?.first_name
+                                      ?.charAt(0)
+                                      ?.toUpperCase() || displayName.charAt(0)}
                                   </span>
                                 </div>
                               )}
                               <div>
-                                <p className="font-medium text-gray-900">{displayName}</p>
+                                <p className="font-medium text-gray-900">
+                                  {displayName}
+                                </p>
                                 <p className="text-xs text-gray-500">
-                                  Signed {new Date(sig.signed_at).toLocaleDateString()}
+                                  Signed{' '}
+                                  {new Date(sig.signed_at).toLocaleDateString()}
                                 </p>
                               </div>
                             </div>

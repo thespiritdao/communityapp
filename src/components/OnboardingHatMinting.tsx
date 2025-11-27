@@ -16,7 +16,10 @@ import {
   TransactionStatusLabel,
 } from '@coinbase/onchainkit/transaction';
 import { useAccount } from 'wagmi';
-import { createMintBetaTesterHatCall, createMintExecutiveLeaderHatCall } from '@/services/executiveHatService';
+import {
+  createMintBetaTesterHatCall,
+  createMintExecutiveLeaderHatCall,
+} from '@/services/executiveHatService';
 
 interface OnboardingHatMintingProps {
   walletAddress: `0x${string}`;
@@ -59,7 +62,10 @@ export function OnboardingHatMinting({
 
   const handleSuccess = (response: any) => {
     console.log('✅ Hat minted successfully:', response);
-    const txHash = response?.transactionReceipts?.[0]?.transactionHash || response?.hash || '';
+    const txHash =
+      response?.transactionReceipts?.[0]?.transactionHash ||
+      response?.hash ||
+      '';
     onSuccess(txHash);
   };
 
@@ -95,7 +101,9 @@ export function OnboardingHatMinting({
             }}
           >
             <TransactionStatus>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <div
+                style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}
+              >
                 <TransactionStatusLabel />
                 <TransactionStatusAction />
               </div>
@@ -141,10 +149,13 @@ export function OnboardingHatMinting({
               color: '#8FAAA1',
             }}
           >
-            <p style={{ marginBottom: '4px' }}>⛓️ Base Mainnet · Gas fees sponsored</p>
+            <p style={{ marginBottom: '4px' }}>
+              ⛓️ Base Mainnet · Gas fees sponsored
+            </p>
             {!isFirstUser && (
               <p style={{ fontStyle: 'italic' }}>
-                This role grants you pod creation and management abilities for 30 days
+                This role grants you pod creation and management abilities for
+                30 days
               </p>
             )}
           </div>

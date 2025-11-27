@@ -1,5 +1,5 @@
 // src/features/shopping-cart/components/OrderManagementBar/OrderManagementBar.tsx
-"use client";
+'use client';
 
 import type React from 'react';
 import { useState, useEffect } from 'react';
@@ -24,7 +24,7 @@ const Container = styled.div`
 `;
 
 const Button = styled.button<{ variant?: 'primary' | 'secondary' }>`
-  background: ${props => props.variant === 'primary' ? '#2F5D50' : '#8FAAA1'};
+  background: ${(props) => (props.variant === 'primary' ? '#2F5D50' : '#8FAAA1')};
   color: #FFFFFF;
   border: none;
   padding: 10px 16px;
@@ -38,7 +38,7 @@ const Button = styled.button<{ variant?: 'primary' | 'secondary' }>`
   gap: 6px;
 
   &:hover {
-    background: ${props => props.variant === 'primary' ? '#1F453A' : '#6F8F86'};
+    background: ${(props) => (props.variant === 'primary' ? '#1F453A' : '#6F8F86')};
     transform: translateY(-1px);
   }
 
@@ -63,7 +63,9 @@ interface OrderManagementBarProps {
   address: string;
 }
 
-export const OrderManagementBar: React.FC<OrderManagementBarProps> = ({ address }) => {
+export const OrderManagementBar: React.FC<OrderManagementBarProps> = ({
+  address,
+}) => {
   const router = useRouter();
   const [canManageOrders, setCanManageOrders] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -82,18 +84,18 @@ export const OrderManagementBar: React.FC<OrderManagementBarProps> = ({ address 
     try {
       setIsLoading(true);
       const tokenBalances = await fetchTokenBalances(address);
-      
+
       // User can manage orders if they have Executive Pod OR Market Management tokens
-      const hasPermissions = tokenBalances.hasExecutivePod || tokenBalances.hasMarketManagement;
+      const hasPermissions =
+        tokenBalances.hasExecutivePod || tokenBalances.hasMarketManagement;
       setCanManageOrders(hasPermissions);
-      
+
       console.log('Order management permissions:', {
         address,
         hasExecutivePod: tokenBalances.hasExecutivePod,
         hasMarketManagement: tokenBalances.hasMarketManagement,
-        canManageOrders: hasPermissions
+        canManageOrders: hasPermissions,
       });
-      
     } catch (error) {
       console.error('Error checking order management permissions:', error);
       setCanManageOrders(false);

@@ -16,21 +16,22 @@ export function useGovernanceParticipation() {
       return;
     }
     setLoading(true);
-    
+
     try {
       // Fetch proposal states from API instead of direct onchain calls
       const res = await fetch(`/api/proposalStates?user=${address}`);
       if (!res.ok) throw new Error('Failed to fetch proposal states');
       const proposalStates = await res.json();
-      
+
       // Filter for active proposals that user hasn't voted on
       const activeUnvotedProposals = proposals.filter((proposal: any) => {
-        const proposalKey = proposal.onchain_proposal_id?.toString() || proposal.id?.toString();
+        const proposalKey =
+          proposal.onchain_proposal_id?.toString() || proposal.id?.toString();
         const state = proposalStates[proposalKey]?.state;
         const hasVoted = proposalStates[proposalKey]?.hasVoted;
         return state === 1 && !hasVoted; // Active and not voted
       });
-      
+
       setHasUnvotedProposals(activeUnvotedProposals.length > 0);
       setLoading(false);
     } catch (error) {
@@ -47,20 +48,25 @@ export function useGovernanceParticipation() {
   // Add a periodic refresh every 30 seconds
   useEffect(() => {
     const interval = setInterval(() => {
-      setRefreshTrigger(prev => prev + 1);
+      setRefreshTrigger((prev) => prev + 1);
     }, 30000);
-    
+
     return () => clearInterval(interval);
   }, []);
 
   const refreshParticipation = useCallback(() => {
-    setRefreshTrigger(prev => prev + 1);
+    setRefreshTrigger((prev) => prev + 1);
   }, []);
 
   // Force immediate refresh (for use after voting)
   const forceRefreshParticipation = useCallback(() => {
-    setRefreshTrigger(prev => prev + 1);
+    setRefreshTrigger((prev) => prev + 1);
   }, []);
 
-  return { hasUnvotedProposals, loading, refreshParticipation, forceRefreshParticipation };
-} 
+  return {
+    hasUnvotedProposals,
+    loading,
+    refreshParticipation,
+    forceRefreshParticipation,
+  };
+}

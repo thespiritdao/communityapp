@@ -36,21 +36,21 @@ interface RoleCreationModalProps {
   onTransactionError?: (error: any) => void;
 }
 
-export function RoleCreationModal({ 
-  isOpen, 
-  onClose, 
-  onSubmit, 
-  transactionCalls, 
+export function RoleCreationModal({
+  isOpen,
+  onClose,
+  onSubmit,
+  transactionCalls,
   isTransactionReady,
   roleData,
   onTransactionSuccess,
-  onTransactionError 
+  onTransactionError,
 }: RoleCreationModalProps) {
   const [roleName, setRoleName] = useState('');
   const [roleDescription, setRoleDescription] = useState('');
   const [maxSupply, setMaxSupply] = useState('5');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  
+
   // Reset form when modal closes
   React.useEffect(() => {
     if (!isOpen) {
@@ -63,17 +63,17 @@ export function RoleCreationModal({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!roleName.trim()) return;
-    
+
     setIsSubmitting(true);
     try {
       await onSubmit({
         name: roleName,
         description: roleDescription,
-        maxSupply: Number.parseInt(maxSupply, 10) || 1
+        maxSupply: Number.parseInt(maxSupply, 10) || 1,
       });
-      
+
       // Don't close modal - let parent handle state
       // Modal will transition to transaction view
     } catch (error) {
@@ -91,12 +91,12 @@ export function RoleCreationModal({
             {isTransactionReady ? 'Complete Role Creation' : 'Create New Role'}
           </DialogTitle>
           <DialogDescription>
-            {isTransactionReady 
-              ? 'Your transaction is ready. Click the button below to create the role on-chain.' 
+            {isTransactionReady
+              ? 'Your transaction is ready. Click the button below to create the role on-chain.'
               : 'Create a new role for your pod. Roles help organize permissions and responsibilities.'}
           </DialogDescription>
         </DialogHeader>
-        
+
         <form onSubmit={handleSubmit}>
           <div className="space-y-4 py-4 pb-6">
             <div className="space-y-2">
@@ -109,7 +109,7 @@ export function RoleCreationModal({
                 required={true}
               />
             </div>
-            
+
             <div className="space-y-2">
               <Label htmlFor="role-description">Description</Label>
               <Textarea
@@ -120,7 +120,7 @@ export function RoleCreationModal({
                 rows={3}
               />
             </div>
-            
+
             <div className="space-y-2">
               <Label htmlFor="max-supply">Maximum Members</Label>
               <Input
@@ -137,29 +137,42 @@ export function RoleCreationModal({
               </p>
             </div>
           </div>
-          
+
           {isTransactionReady ? (
             <div className="pt-4 pb-8">
               {roleData && (
                 <div className="mb-6 p-4 bg-gray-50 rounded-lg">
                   <h4 className="font-semibold mb-2">Role to be created:</h4>
                   <div className="text-sm space-y-1">
-                    <p><strong>Name:</strong> {roleData.name}</p>
-                    <p><strong>Description:</strong> {roleData.description}</p>
-                    <p><strong>Max Members:</strong> {roleData.maxSupply}</p>
+                    <p>
+                      <strong>Name:</strong> {roleData.name}
+                    </p>
+                    <p>
+                      <strong>Description:</strong> {roleData.description}
+                    </p>
+                    <p>
+                      <strong>Max Members:</strong> {roleData.maxSupply}
+                    </p>
                   </div>
                 </div>
               )}
               <p className="text-sm text-gray-600 mb-6">
-                Transaction prepared! Click the button below to create the role on-chain.
+                Transaction prepared! Click the button below to create the role
+                on-chain.
               </p>
               {transactionCalls && (
                 <div className="mb-8">
-                  <div className="mb-4 p-3 rounded-lg text-sm" style={{ backgroundColor: '#E8F1EE' }}>
+                  <div
+                    className="mb-4 p-3 rounded-lg text-sm"
+                    style={{ backgroundColor: '#E8F1EE' }}
+                  >
                     <strong>Debug Info:</strong>
                     <div>• Calls to process: {transactionCalls.length}</div>
                     <div>• Target contract: {transactionCalls[0]?.to}</div>
-                    <div>• Data length: {transactionCalls[0]?.data?.length || 0} bytes</div>
+                    <div>
+                      • Data length: {transactionCalls[0]?.data?.length || 0}{' '}
+                      bytes
+                    </div>
                     <div>• Chain ID: {base.id}</div>
                     <div>• Sponsored: Yes</div>
                   </div>
@@ -168,30 +181,42 @@ export function RoleCreationModal({
                     calls={transactionCalls}
                     isSponsored={true}
                     onSuccess={(response) => {
-                      console.log('🎉 TRANSACTION SUCCESS - OnchainKit Response:', response);
-                      console.log('📋 Response keys:', Object.keys(response || {}));
-                      
+                      console.log(
+                        '🎉 TRANSACTION SUCCESS - OnchainKit Response:',
+                        response,
+                      );
+                      console.log(
+                        '📋 Response keys:',
+                        Object.keys(response || {}),
+                      );
+
                       if (response?.transactionReceipts) {
-                        console.log('📄 Receipt count:', response.transactionReceipts.length);
+                        console.log(
+                          '📄 Receipt count:',
+                          response.transactionReceipts.length,
+                        );
                         response.transactionReceipts.forEach((receipt, i) => {
                           console.log(`📄 Receipt ${i}:`, {
                             hash: receipt.transactionHash,
                             status: receipt.status,
                             logCount: receipt.logs?.length || 0,
-                            gasUsed: receipt.gasUsed?.toString()
+                            gasUsed: receipt.gasUsed?.toString(),
                           });
                         });
                       }
-                      
+
                       onTransactionSuccess?.(response);
                     }}
                     onError={(error) => {
-                      console.error('❌ TRANSACTION ERROR - OnchainKit Error:', error);
+                      console.error(
+                        '❌ TRANSACTION ERROR - OnchainKit Error:',
+                        error,
+                      );
                       console.log('🚨 Error details:', {
                         name: error?.name,
                         message: error?.message,
                         cause: error?.cause,
-                        code: error?.code
+                        code: error?.code,
                       });
                       onTransactionError?.(error);
                     }}
@@ -216,10 +241,7 @@ export function RoleCreationModal({
               >
                 Cancel
               </Button>
-              <Button
-                type="submit"
-                disabled={isSubmitting || !roleName.trim()}
-              >
+              <Button type="submit" disabled={isSubmitting || !roleName.trim()}>
                 {isSubmitting ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />

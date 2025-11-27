@@ -1,9 +1,9 @@
 // src/hooks/useUserAuthorizedTokens.ts
-"use client";
+'use client';
 
-import { useState, useEffect } from "react";
-import { useAccount, usePublicClient } from "wagmi";
-import { fetchUserAuthorizedTokensForGating } from "@/utils/marketplaceAccessService";
+import { useState, useEffect } from 'react';
+import { useAccount, usePublicClient } from 'wagmi';
+import { fetchUserAuthorizedTokensForGating } from '@/utils/marketplaceAccessService';
 
 export interface AuthorizedToken {
   id: string;
@@ -40,14 +40,18 @@ export const useUserAuthorizedTokens = () => {
         console.log(`🎫 Fetching authorized tokens for user: ${address}`);
         const authorizedTokens = await fetchUserAuthorizedTokensForGating(
           address,
-          publicClient
+          publicClient,
         );
-        
+
         console.log(`🎫 User can gate with ${authorizedTokens.length} tokens`);
         setTokens(authorizedTokens);
       } catch (err) {
         console.error('Error loading authorized tokens:', err);
-        setError(err instanceof Error ? err.message : 'Failed to load authorized tokens');
+        setError(
+          err instanceof Error
+            ? err.message
+            : 'Failed to load authorized tokens',
+        );
         setTokens([]);
       } finally {
         setIsLoading(false);
@@ -68,15 +72,17 @@ export const useUserAuthorizedTokens = () => {
         try {
           const authorizedTokens = await fetchUserAuthorizedTokensForGating(
             address,
-            publicClient
+            publicClient,
           );
           setTokens(authorizedTokens);
         } catch (err) {
-          setError(err instanceof Error ? err.message : 'Failed to refresh tokens');
+          setError(
+            err instanceof Error ? err.message : 'Failed to refresh tokens',
+          );
         } finally {
           setIsLoading(false);
         }
       }
-    }
+    },
   };
 };

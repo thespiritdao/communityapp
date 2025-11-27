@@ -10,13 +10,14 @@ import { useUnifiedForumAccess } from './useUnifiedForumAccess';
  * - If no podId: checks across all pods (global)
  */
 export function useModerationPermissions(podId?: string) {
-  const { permissions, isLoading, error, canModerateInPod, podRoles } = useUnifiedForumAccess();
+  const { permissions, isLoading, error, canModerateInPod, podRoles } =
+    useUnifiedForumAccess();
 
   // Pod-specific moderation check (NEW)
   if (podId) {
     const canModerate = canModerateInPod(podId);
-    const moderatorRoles = podRoles.filter(role =>
-      role.podId === podId && role.permissions.forumModeration
+    const moderatorRoles = podRoles.filter(
+      (role) => role.podId === podId && role.permissions.forumModeration,
     );
 
     return {
@@ -28,7 +29,7 @@ export function useModerationPermissions(podId?: string) {
       canReviewReports: canModerate,
       isLoading,
       error,
-      moderatorRoles
+      moderatorRoles,
     };
   }
 
@@ -42,6 +43,9 @@ export function useModerationPermissions(podId?: string) {
     canReviewReports: permissions?.canReviewReports || false,
     isLoading,
     error,
-    moderatorRoles: permissions?.podRoles.filter(role => role.permissions.forumModeration) || []
+    moderatorRoles:
+      permissions?.podRoles.filter(
+        (role) => role.permissions.forumModeration,
+      ) || [],
   };
 }

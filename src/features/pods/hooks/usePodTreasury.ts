@@ -2,44 +2,48 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useAccount } from 'wagmi';
-import { PodTreasuryService, type TokenBalance, type TreasuryTransaction } from '../services/PodTreasuryService';
+import {
+  PodTreasuryService,
+  type TokenBalance,
+  type TreasuryTransaction,
+} from '../services/PodTreasuryService';
 
 interface UsePodTreasuryResult {
   // Data state
   balances: TokenBalance[];
   transactions: TreasuryTransaction[];
   treasuryInfo: { address: string; supportedTokens: string[] } | null;
-  
+
   // Loading states
   isLoading: boolean;
   isLoadingBalances: boolean;
   isLoadingTransactions: boolean;
-  
+
   // Permission states
   canManageTreasury: boolean;
   isLoadingPermissions: boolean;
-  
+
   // Error states
   error: string | null;
-  
+
   // Actions
   loadTreasuryData: () => Promise<void>;
   refreshBalances: () => Promise<void>;
   refreshTransactions: () => Promise<void>;
   checkPermissions: () => Promise<void>;
-  
+
   // Transaction preparation helpers
   prepareDistribution: (
     tokenAddress: string,
     recipients: string[],
     amounts: string[],
-    reason: string
+    reason: string,
   ) => any;
   prepareEqualDistribution: (
     tokenAddress: string,
     recipients: string[],
     totalAmount: string,
-    reason: string
+    reason: string,
   ) => any;
   prepareAddToken: (tokenAddress: string) => any;
   prepareSetAuthorizedProxy: (proxyAddress: string) => any;
@@ -51,7 +55,7 @@ interface UsePodTreasuryResult {
     tokenAddress: string,
     recipients: string[],
     amounts: string[],
-    reason: string
+    reason: string,
   ) => any;
   prepareProxyEqualDistribution: (
     proxyAddress: string,
@@ -59,20 +63,20 @@ interface UsePodTreasuryResult {
     tokenAddress: string,
     recipients: string[],
     totalAmount: string,
-    reason: string
+    reason: string,
   ) => any;
   prepareProxyEmergencyWithdraw: (
     proxyAddress: string,
     podId: string,
     tokenAddress: string,
     recipient: string,
-    amount: string
+    amount: string,
   ) => any;
 }
 
 /**
  * Comprehensive Treasury Management Hook
- * 
+ *
  * Provides complete treasury functionality including:
  * - Real-time balance queries
  * - Transaction history from event logs
@@ -80,23 +84,29 @@ interface UsePodTreasuryResult {
  * - Transaction preparation for OnChainKit
  * - Automatic data refresh and error handling
  */
-export function usePodTreasury(treasuryAddress: string | undefined, podId?: string): UsePodTreasuryResult {
+export function usePodTreasury(
+  treasuryAddress: string | undefined,
+  podId?: string,
+): UsePodTreasuryResult {
   const { address } = useAccount();
-  
+
   // Data state
   const [balances, setBalances] = useState<TokenBalance[]>([]);
   const [transactions, setTransactions] = useState<TreasuryTransaction[]>([]);
-  const [treasuryInfo, setTreasuryInfo] = useState<{ address: string; supportedTokens: string[] } | null>(null);
-  
+  const [treasuryInfo, setTreasuryInfo] = useState<{
+    address: string;
+    supportedTokens: string[];
+  } | null>(null);
+
   // Loading states
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingBalances, setIsLoadingBalances] = useState(false);
   const [isLoadingTransactions, setIsLoadingTransactions] = useState(false);
   const [isLoadingPermissions, setIsLoadingPermissions] = useState(false);
-  
+
   // Permission state
   const [canManageTreasury, setCanManageTreasury] = useState(false);
-  
+
   // Error state
   const [error, setError] = useState<string | null>(null);
 
@@ -108,13 +118,14 @@ export function usePodTreasury(treasuryAddress: string | undefined, podId?: stri
       console.log('🏦 Treasury address is pending, skipping balance load');
       return;
     }
-    
+
     setIsLoadingBalances(true);
     setError(null);
-    
+
     try {
       console.log('🏦 Loading balances for treasury:', treasuryAddress);
-      const newBalances = await PodTreasuryService.getTokenBalances(treasuryAddress);
+      const newBalances =
+        await PodTreasuryService.getTokenBalances(treasuryAddress);
       setBalances(newBalances);
       console.log('🏦 Balances loaded:', newBalances.length, 'tokens');
     } catch (err) {
@@ -133,23 +144,36 @@ export function usePodTreasury(treasuryAddress: string | undefined, podId?: stri
       console.log('🏦 Treasury address is pending, skipping transaction load');
       return;
     }
-    
+
     setIsLoadingTransactions(true);
     setError(null);
-    
+
     try {
       if (podId) {
         console.log('🏦 Loading transaction history for pod:', podId);
         // Use Supabase for richer transaction history instead of blockchain parsing
-        const newTransactions = await PodTreasuryService.getTransactionHistoryFromSupabase(podId);
+        const newTransactions =
+          await PodTreasuryService.getTransactionHistoryFromSupabase(podId);
         setTransactions(newTransactions);
-        console.log('🏦 Transaction history loaded:', newTransactions.length, 'transactions');
+        console.log(
+          '🏦 Transaction history loaded:',
+          newTransactions.length,
+          'transactions',
+        );
       } else {
-        console.log('🏦 Loading transaction history for treasury (fallback to blockchain):', treasuryAddress);
+        console.log(
+          '🏦 Loading transaction history for treasury (fallback to blockchain):',
+          treasuryAddress,
+        );
         // Fallback to blockchain parsing when podId not available
-        const newTransactions = await PodTreasuryService.getTransactionHistory(treasuryAddress);
+        const newTransactions =
+          await PodTreasuryService.getTransactionHistory(treasuryAddress);
         setTransactions(newTransactions);
-        console.log('🏦 Transaction history loaded:', newTransactions.length, 'transactions');
+        console.log(
+          '🏦 Transaction history loaded:',
+          newTransactions.length,
+          'transactions',
+        );
       }
     } catch (err) {
       console.error('🏦 Failed to load transaction history:', err);
@@ -168,12 +192,15 @@ export function usePodTreasury(treasuryAddress: string | undefined, podId?: stri
       setCanManageTreasury(false);
       return;
     }
-    
+
     setIsLoadingPermissions(true);
-    
+
     try {
       console.log('🏦 Checking permissions for:', { treasuryAddress, address });
-      const hasPermission = await PodTreasuryService.checkTreasuryPermissions(treasuryAddress, address);
+      const hasPermission = await PodTreasuryService.checkTreasuryPermissions(
+        treasuryAddress,
+        address,
+      );
       setCanManageTreasury(hasPermission);
       console.log('🏦 Permission check result:', hasPermission);
     } catch (err) {
@@ -191,27 +218,29 @@ export function usePodTreasury(treasuryAddress: string | undefined, podId?: stri
   const loadTreasuryData = useCallback(async () => {
     if (!treasuryAddress || treasuryAddress === 'pending') {
       console.log('🏦 Treasury address is pending, skipping full data load');
-      setError('Treasury deployment is pending. Please deploy the treasury first.');
+      setError(
+        'Treasury deployment is pending. Please deploy the treasury first.',
+      );
       return;
     }
-    
+
     setIsLoading(true);
     setError(null);
-    
+
     try {
       console.log('🏦 Loading complete treasury data for:', treasuryAddress);
-      
+
       // Load treasury info
       const info = await PodTreasuryService.getTreasuryInfo(treasuryAddress);
       setTreasuryInfo(info);
-      
+
       // Load all data in parallel
       await Promise.all([
         refreshBalances(),
         refreshTransactions(),
-        checkPermissions()
+        checkPermissions(),
       ]);
-      
+
       console.log('🏦 Treasury data loading complete');
     } catch (err) {
       console.error('🏦 Failed to load treasury data:', err);
@@ -224,154 +253,196 @@ export function usePodTreasury(treasuryAddress: string | undefined, podId?: stri
   /**
    * Transaction preparation helpers
    */
-  const prepareDistribution = useCallback((
-    tokenAddress: string,
-    recipients: string[],
-    amounts: string[],
-    reason: string
-  ) => {
-    if (!treasuryAddress) throw new Error('Treasury address not available');
-    
-    // Find token to get decimals
-    const token = balances.find(b => b.address.toLowerCase() === tokenAddress.toLowerCase());
-    if (!token) throw new Error('Token not found in balances');
-    
-    return PodTreasuryService.prepareDistributionTransaction(
-      treasuryAddress,
-      tokenAddress,
-      recipients,
-      amounts,
-      token.decimals,
-      reason
-    );
-  }, [treasuryAddress, balances]);
+  const prepareDistribution = useCallback(
+    (
+      tokenAddress: string,
+      recipients: string[],
+      amounts: string[],
+      reason: string,
+    ) => {
+      if (!treasuryAddress) throw new Error('Treasury address not available');
 
-  const prepareEqualDistribution = useCallback((
-    tokenAddress: string,
-    recipients: string[],
-    totalAmount: string,
-    reason: string
-  ) => {
-    if (!treasuryAddress) throw new Error('Treasury address not available');
-    
-    // Find token to get decimals
-    const token = balances.find(b => b.address.toLowerCase() === tokenAddress.toLowerCase());
-    if (!token) throw new Error('Token not found in balances');
-    
-    return PodTreasuryService.prepareEqualDistributionTransaction(
-      treasuryAddress,
-      tokenAddress,
-      recipients,
-      totalAmount,
-      token.decimals,
-      reason
-    );
-  }, [treasuryAddress, balances]);
+      // Find token to get decimals
+      const token = balances.find(
+        (b) => b.address.toLowerCase() === tokenAddress.toLowerCase(),
+      );
+      if (!token) throw new Error('Token not found in balances');
 
-  const prepareAddToken = useCallback((tokenAddress: string) => {
-    if (!treasuryAddress) throw new Error('Treasury address not available');
-    
-    return PodTreasuryService.prepareAddTokenTransaction(treasuryAddress, tokenAddress);
-  }, [treasuryAddress]);
+      return PodTreasuryService.prepareDistributionTransaction(
+        treasuryAddress,
+        tokenAddress,
+        recipients,
+        amounts,
+        token.decimals,
+        reason,
+      );
+    },
+    [treasuryAddress, balances],
+  );
 
-  const prepareSetAuthorizedProxy = useCallback((proxyAddress: string) => {
-    if (!treasuryAddress) throw new Error('Treasury address not available');
-    
-    return PodTreasuryService.prepareSetAuthorizedProxyTransaction(treasuryAddress, proxyAddress);
-  }, [treasuryAddress]);
+  const prepareEqualDistribution = useCallback(
+    (
+      tokenAddress: string,
+      recipients: string[],
+      totalAmount: string,
+      reason: string,
+    ) => {
+      if (!treasuryAddress) throw new Error('Treasury address not available');
+
+      // Find token to get decimals
+      const token = balances.find(
+        (b) => b.address.toLowerCase() === tokenAddress.toLowerCase(),
+      );
+      if (!token) throw new Error('Token not found in balances');
+
+      return PodTreasuryService.prepareEqualDistributionTransaction(
+        treasuryAddress,
+        tokenAddress,
+        recipients,
+        totalAmount,
+        token.decimals,
+        reason,
+      );
+    },
+    [treasuryAddress, balances],
+  );
+
+  const prepareAddToken = useCallback(
+    (tokenAddress: string) => {
+      if (!treasuryAddress) throw new Error('Treasury address not available');
+
+      return PodTreasuryService.prepareAddTokenTransaction(
+        treasuryAddress,
+        tokenAddress,
+      );
+    },
+    [treasuryAddress],
+  );
+
+  const prepareSetAuthorizedProxy = useCallback(
+    (proxyAddress: string) => {
+      if (!treasuryAddress) throw new Error('Treasury address not available');
+
+      return PodTreasuryService.prepareSetAuthorizedProxyTransaction(
+        treasuryAddress,
+        proxyAddress,
+      );
+    },
+    [treasuryAddress],
+  );
 
   /**
    * PROXY TRANSACTION HELPERS - Use these for sponsored transactions
    */
-  const prepareProxyDistribution = useCallback((
-    proxyAddress: string,
-    podId: string,
-    tokenAddress: string,
-    recipients: string[],
-    amounts: string[],
-    reason: string
-  ) => {
-    // Find token to get decimals
-    const token = balances.find(b => b.address.toLowerCase() === tokenAddress.toLowerCase());
-    if (!token) throw new Error('Token not found in balances');
-    
-    return PodTreasuryService.prepareProxyDistributionTransaction(
-      proxyAddress,
-      podId,
-      tokenAddress,
-      recipients,
-      amounts,
-      token.decimals,
-      reason
-    );
-  }, [balances]);
+  const prepareProxyDistribution = useCallback(
+    (
+      proxyAddress: string,
+      podId: string,
+      tokenAddress: string,
+      recipients: string[],
+      amounts: string[],
+      reason: string,
+    ) => {
+      // Find token to get decimals
+      const token = balances.find(
+        (b) => b.address.toLowerCase() === tokenAddress.toLowerCase(),
+      );
+      if (!token) throw new Error('Token not found in balances');
 
-  const prepareProxyEqualDistribution = useCallback((
-    proxyAddress: string,
-    podId: string,
-    tokenAddress: string,
-    recipients: string[],
-    totalAmount: string,
-    reason: string
-  ) => {
-    // Find token to get decimals
-    const token = balances.find(b => b.address.toLowerCase() === tokenAddress.toLowerCase());
-    if (!token) throw new Error('Token not found in balances');
-    
-    return PodTreasuryService.prepareProxyEqualDistributionTransaction(
-      proxyAddress,
-      podId,
-      tokenAddress,
-      recipients,
-      totalAmount,
-      token.decimals,
-      reason
-    );
-  }, [balances]);
+      return PodTreasuryService.prepareProxyDistributionTransaction(
+        proxyAddress,
+        podId,
+        tokenAddress,
+        recipients,
+        amounts,
+        token.decimals,
+        reason,
+      );
+    },
+    [balances],
+  );
 
-  const prepareProxyDistributeSingle = useCallback((
-    proxyAddress: string,
-    podId: string,
-    tokenAddress: string,
-    recipient: string,
-    amount: string,
-    reason: string
-  ) => {
-    // Find token to get decimals
-    const token = balances.find(b => b.address.toLowerCase() === tokenAddress.toLowerCase());
-    if (!token) throw new Error('Token not found in balances');
-    
-    return PodTreasuryService.prepareProxyDistributeSingleTransaction(
-      proxyAddress,
-      podId,
-      tokenAddress,
-      recipient,
-      amount,
-      token.decimals,
-      reason
-    );
-  }, [balances]);
+  const prepareProxyEqualDistribution = useCallback(
+    (
+      proxyAddress: string,
+      podId: string,
+      tokenAddress: string,
+      recipients: string[],
+      totalAmount: string,
+      reason: string,
+    ) => {
+      // Find token to get decimals
+      const token = balances.find(
+        (b) => b.address.toLowerCase() === tokenAddress.toLowerCase(),
+      );
+      if (!token) throw new Error('Token not found in balances');
 
-  const prepareProxyEmergencyWithdraw = useCallback((
-    proxyAddress: string,
-    podId: string,
-    tokenAddress: string,
-    recipient: string,
-    amount: string
-  ) => {
-    // Find token to get decimals
-    const token = balances.find(b => b.address.toLowerCase() === tokenAddress.toLowerCase());
-    if (!token) throw new Error('Token not found in balances');
-    
-    return PodTreasuryService.prepareProxyEmergencyWithdraw(
-      proxyAddress,
-      podId,
-      tokenAddress,
-      recipient,
-      amount,
-      token.decimals
-    );
-  }, [balances]);
+      return PodTreasuryService.prepareProxyEqualDistributionTransaction(
+        proxyAddress,
+        podId,
+        tokenAddress,
+        recipients,
+        totalAmount,
+        token.decimals,
+        reason,
+      );
+    },
+    [balances],
+  );
+
+  const prepareProxyDistributeSingle = useCallback(
+    (
+      proxyAddress: string,
+      podId: string,
+      tokenAddress: string,
+      recipient: string,
+      amount: string,
+      reason: string,
+    ) => {
+      // Find token to get decimals
+      const token = balances.find(
+        (b) => b.address.toLowerCase() === tokenAddress.toLowerCase(),
+      );
+      if (!token) throw new Error('Token not found in balances');
+
+      return PodTreasuryService.prepareProxyDistributeSingleTransaction(
+        proxyAddress,
+        podId,
+        tokenAddress,
+        recipient,
+        amount,
+        token.decimals,
+        reason,
+      );
+    },
+    [balances],
+  );
+
+  const prepareProxyEmergencyWithdraw = useCallback(
+    (
+      proxyAddress: string,
+      podId: string,
+      tokenAddress: string,
+      recipient: string,
+      amount: string,
+    ) => {
+      // Find token to get decimals
+      const token = balances.find(
+        (b) => b.address.toLowerCase() === tokenAddress.toLowerCase(),
+      );
+      if (!token) throw new Error('Token not found in balances');
+
+      return PodTreasuryService.prepareProxyEmergencyWithdraw(
+        proxyAddress,
+        podId,
+        tokenAddress,
+        recipient,
+        amount,
+        token.decimals,
+      );
+    },
+    [balances],
+  );
 
   // Load initial data when treasury address changes
   useEffect(() => {
@@ -397,25 +468,25 @@ export function usePodTreasury(treasuryAddress: string | undefined, podId?: stri
     balances,
     transactions,
     treasuryInfo,
-    
+
     // Loading states
     isLoading,
     isLoadingBalances,
     isLoadingTransactions,
-    
+
     // Permissions
     canManageTreasury,
     isLoadingPermissions,
-    
+
     // Error state
     error,
-    
+
     // Actions
     loadTreasuryData,
     refreshBalances,
     refreshTransactions,
     checkPermissions,
-    
+
     // Transaction helpers
     prepareDistribution,
     prepareEqualDistribution,
@@ -426,6 +497,6 @@ export function usePodTreasury(treasuryAddress: string | undefined, podId?: stri
     prepareProxyDistribution,
     prepareProxyDistributeSingle,
     prepareProxyEqualDistribution,
-    prepareProxyEmergencyWithdraw
+    prepareProxyEmergencyWithdraw,
   };
 }

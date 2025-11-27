@@ -29,13 +29,16 @@ interface PodManageLoaderProps {
  * Client component will handle data loading with proper authentication
  */
 export default function PodManageLoader({ podId }: PodManageLoaderProps) {
-  console.log('🔍 PodManageLoader: Delegating to client component for pod ID:', podId);
-  
+  console.log(
+    '🔍 PodManageLoader: Delegating to client component for pod ID:',
+    podId,
+  );
+
   // Let the client component handle all data loading since it has access to authentication
   return (
     <PodManageErrorBoundary>
       <Suspense fallback={<PodManageLoading />}>
-        <PodManageClient 
+        <PodManageClient
           initialPod={null}
           initialLeaderProfiles={{}}
           podId={podId}

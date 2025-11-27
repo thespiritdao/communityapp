@@ -2,11 +2,14 @@ import { getContract } from 'viem';
 import { publicClient } from '@/config/wagmi.client';
 
 // Known HAT IDs
-const EXECUTIVE_POD_HAT = '0x0000008800010000000000000000000000000000000000000000000000000000';
+const EXECUTIVE_POD_HAT =
+  '0x0000008800010000000000000000000000000000000000000000000000000000';
 
 // Contract addresses
-const HATS_CONTRACT = '0x3bc1a0ad72417f2d411118085256fc53cbddd137' as `0x${string}`;
-const TREASURY_FACTORY = process.env.NEXT_PUBLIC_POD_TREASURY_FACTORY as `0x${string}`;
+const HATS_CONTRACT =
+  '0x3bc1a0ad72417f2d411118085256fc53cbddd137' as `0x${string}`;
+const TREASURY_FACTORY = process.env
+  .NEXT_PUBLIC_POD_TREASURY_FACTORY as `0x${string}`;
 
 // ABIs
 const HATS_ABI = [
@@ -15,11 +18,11 @@ const HATS_ABI = [
     type: 'function',
     inputs: [
       { name: 'account', type: 'address' },
-      { name: 'id', type: 'uint256' }
+      { name: 'id', type: 'uint256' },
     ],
     outputs: [{ name: '', type: 'uint256' }],
-    stateMutability: 'view'
-  }
+    stateMutability: 'view',
+  },
 ] as const;
 
 const FACTORY_ABI = [
@@ -28,8 +31,8 @@ const FACTORY_ABI = [
     type: 'function',
     inputs: [{ name: 'podId', type: 'string' }],
     outputs: [{ name: '', type: 'address' }],
-    stateMutability: 'view'
-  }
+    stateMutability: 'view',
+  },
 ] as const;
 
 const TREASURY_ABI = [
@@ -38,15 +41,15 @@ const TREASURY_ABI = [
     type: 'function',
     inputs: [],
     outputs: [{ name: '', type: 'uint256' }],
-    stateMutability: 'view'
+    stateMutability: 'view',
   },
   {
     name: 'hatsContract',
     type: 'function',
     inputs: [],
     outputs: [{ name: '', type: 'address' }],
-    stateMutability: 'view'
-  }
+    stateMutability: 'view',
+  },
 ] as const;
 
 /**
@@ -55,7 +58,7 @@ const TREASURY_ABI = [
  */
 export async function debugTreasuryHatMismatch(
   userAddress: string,
-  podId = 'e35c9e25-d29f-4988-b1e8-2902e960b94c'
+  podId = 'e35c9e25-d29f-4988-b1e8-2902e960b94c',
 ) {
   console.log('🔍 DEBUGGING TREASURY HAT MISMATCH');
   console.log('='.repeat(60));
@@ -72,7 +75,9 @@ export async function debugTreasuryHatMismatch(
       client: publicClient,
     });
 
-    const treasuryAddress = await factoryContract.read.getTreasuryForPod([podId]);
+    const treasuryAddress = await factoryContract.read.getTreasuryForPod([
+      podId,
+    ]);
     console.log('📍 Treasury Address:', treasuryAddress);
 
     if (treasuryAddress === '0x0000000000000000000000000000000000000000') {
@@ -86,11 +91,15 @@ export async function debugTreasuryHatMismatch(
       client: publicClient,
     });
 
-    const treasuryManagementHatId = await treasuryContract.read.managementHatId();
+    const treasuryManagementHatId =
+      await treasuryContract.read.managementHatId();
     const treasuryHatsContract = await treasuryContract.read.hatsContract();
 
     console.log('🏦 Treasury Contract Says:');
-    console.log('- Management HAT ID:', `0x${treasuryManagementHatId.toString(16).padStart(64, '0')}`);
+    console.log(
+      '- Management HAT ID:',
+      `0x${treasuryManagementHatId.toString(16).padStart(64, '0')}`,
+    );
     console.log('- HATs Contract:', treasuryHatsContract);
     console.log();
 
@@ -103,23 +112,27 @@ export async function debugTreasuryHatMismatch(
 
     const executiveHatBalance = await hatsContract.read.balanceOf([
       userAddress as `0x${string}`,
-      BigInt(EXECUTIVE_POD_HAT)
+      BigInt(EXECUTIVE_POD_HAT),
     ]);
 
     const treasuryRequiredHatBalance = await hatsContract.read.balanceOf([
       userAddress as `0x${string}`,
-      treasuryManagementHatId
+      treasuryManagementHatId,
     ]);
 
     console.log('🎩 HAT Balance Check:');
     console.log('- Executive Pod HAT Balance:', executiveHatBalance.toString());
-    console.log('- Treasury Required HAT Balance:', treasuryRequiredHatBalance.toString());
+    console.log(
+      '- Treasury Required HAT Balance:',
+      treasuryRequiredHatBalance.toString(),
+    );
     console.log();
 
     // Step 4: Comparison and diagnosis
     const executiveHatHex = EXECUTIVE_POD_HAT;
     const treasuryHatHex = `0x${treasuryManagementHatId.toString(16).padStart(64, '0')}`;
-    const hatsMatch = executiveHatHex.toLowerCase() === treasuryHatHex.toLowerCase();
+    const hatsMatch =
+      executiveHatHex.toLowerCase() === treasuryHatHex.toLowerCase();
 
     console.log('🎯 DIAGNOSIS:');
     console.log('- Executive HAT:', executiveHatHex);
@@ -131,21 +144,27 @@ export async function debugTreasuryHatMismatch(
 
     if (!hatsMatch) {
       console.log('❌ PROBLEM: HAT ID MISMATCH');
-      console.log('The treasury contract expects a different HAT than your Executive Pod HAT!');
+      console.log(
+        'The treasury contract expects a different HAT than your Executive Pod HAT!',
+      );
       console.log();
       console.log('💡 SOLUTIONS:');
       console.log('1. Update treasury contract to use Executive Pod HAT ID');
-      console.log('2. Mint the treasury\'s expected HAT to your address');
+      console.log("2. Mint the treasury's expected HAT to your address");
       console.log('3. Check if treasury was deployed with wrong HAT ID');
     } else if (treasuryRequiredHatBalance === 0n) {
       console.log('❌ PROBLEM: HAT NOT MINTED');
       console.log('HAT IDs match, but the HAT is not minted to your address!');
       console.log();
       console.log('💡 SOLUTION:');
-      console.log('Mint the management HAT to your address using the pod creation contract');
+      console.log(
+        'Mint the management HAT to your address using the pod creation contract',
+      );
     } else {
       console.log('✅ ALL GOOD');
-      console.log('HAT IDs match and you have the required HAT. The issue might be elsewhere.');
+      console.log(
+        'HAT IDs match and you have the required HAT. The issue might be elsewhere.',
+      );
     }
 
     return {
@@ -156,9 +175,8 @@ export async function debugTreasuryHatMismatch(
       userHasExecutiveHat: executiveHatBalance > 0n,
       userHasTreasuryHat: treasuryRequiredHatBalance > 0n,
       executiveHatBalance: executiveHatBalance.toString(),
-      treasuryHatBalance: treasuryRequiredHatBalance.toString()
+      treasuryHatBalance: treasuryRequiredHatBalance.toString(),
     };
-
   } catch (error) {
     console.error('❌ Debug failed:', error);
     throw error;

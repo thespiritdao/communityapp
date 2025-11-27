@@ -4,7 +4,12 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/utils/supabaseClient';
-import { isImageFile, formatFileSize, getFileIcon, type MediaAttachment } from '../services/MediaUploadService';
+import {
+  isImageFile,
+  formatFileSize,
+  getFileIcon,
+  type MediaAttachment,
+} from '../services/MediaUploadService';
 import styles from '../styles/AttachmentDisplay.module.css';
 
 interface AttachmentDisplayProps {
@@ -13,8 +18,14 @@ interface AttachmentDisplayProps {
   attachments?: MediaAttachment[]; // Can pass attachments directly
 }
 
-export function AttachmentDisplay({ threadId, postId, attachments: providedAttachments }: AttachmentDisplayProps) {
-  const [attachments, setAttachments] = useState<MediaAttachment[]>(providedAttachments || []);
+export function AttachmentDisplay({
+  threadId,
+  postId,
+  attachments: providedAttachments,
+}: AttachmentDisplayProps) {
+  const [attachments, setAttachments] = useState<MediaAttachment[]>(
+    providedAttachments || [],
+  );
   const [loading, setLoading] = useState(!providedAttachments);
   const [error, setError] = useState<string | null>(null);
 
@@ -41,18 +52,29 @@ export function AttachmentDisplay({ threadId, postId, attachments: providedAttac
           if (postId === threadId) {
             // Original post: show attachments uploaded to thread with null post_id
             query = query.eq('thread_id', threadId).is('post_id', null);
-            console.log('[AttachmentDisplay] Querying for original post, threadId:', threadId, 'with null post_id');
+            console.log(
+              '[AttachmentDisplay] Querying for original post, threadId:',
+              threadId,
+              'with null post_id',
+            );
           } else {
             // Reply post: only show attachments explicitly linked to this post
             query = query.eq('post_id', postId);
-            console.log('[AttachmentDisplay] Querying for reply post, postId:', postId);
+            console.log(
+              '[AttachmentDisplay] Querying for reply post, postId:',
+              postId,
+            );
           }
         } else if (postId) {
           query = query.eq('post_id', postId);
           console.log('[AttachmentDisplay] Querying for postId:', postId);
         } else if (threadId) {
           query = query.eq('thread_id', threadId).is('post_id', null);
-          console.log('[AttachmentDisplay] Querying for threadId:', threadId, 'with null post_id');
+          console.log(
+            '[AttachmentDisplay] Querying for threadId:',
+            threadId,
+            'with null post_id',
+          );
         } else {
           // No thread or post ID, can't fetch
           setLoading(false);
@@ -81,7 +103,9 @@ export function AttachmentDisplay({ threadId, postId, attachments: providedAttac
   }
 
   if (error) {
-    return <div className={styles.error}>Error loading attachments: {error}</div>;
+    return (
+      <div className={styles.error}>Error loading attachments: {error}</div>
+    );
   }
 
   if (attachments.length === 0) {
@@ -121,8 +145,12 @@ export function AttachmentDisplay({ threadId, postId, attachments: providedAttac
                 >
                   <div className={styles.fileIcon}>{icon}</div>
                   <div className={styles.fileInfo}>
-                    <div className={styles.fileName}>{attachment.file_name}</div>
-                    <div className={styles.fileSize}>{formatFileSize(attachment.file_size_bytes)}</div>
+                    <div className={styles.fileName}>
+                      {attachment.file_name}
+                    </div>
+                    <div className={styles.fileSize}>
+                      {formatFileSize(attachment.file_size_bytes)}
+                    </div>
                   </div>
                 </a>
               )}

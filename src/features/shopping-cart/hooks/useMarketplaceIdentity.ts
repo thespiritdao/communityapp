@@ -32,8 +32,9 @@ interface CachedIdentity {
  */
 export function useMarketplaceIdentity(): MarketplaceIdentity {
   const { address } = useAccount();
-  const { balances: tokenBalances, isLoading: tokenLoading } = useTokenBalances();
-  
+  const { balances: tokenBalances, isLoading: tokenLoading } =
+    useTokenBalances();
+
   const [identity, setIdentity] = useState<UserIdentity | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
@@ -41,27 +42,30 @@ export function useMarketplaceIdentity(): MarketplaceIdentity {
   // Check for cached identity on mount
   const getCachedIdentity = useCallback((): UserIdentity | null => {
     if (!address) return null;
-    
+
     try {
       const cached = sessionStorage.getItem(IDENTITY_CACHE_KEY);
       if (!cached) return null;
-      
+
       const parsed: CachedIdentity = JSON.parse(cached);
-      
+
       // Validate cache
       if (parsed.address !== address) {
         sessionStorage.removeItem(IDENTITY_CACHE_KEY);
         return null;
       }
-      
+
       // Check if cache is still fresh
       if (Date.now() - parsed.timestamp > CACHE_DURATION) {
         sessionStorage.removeItem(IDENTITY_CACHE_KEY);
         return null;
       }
-      
-      console.log('🎯 Using cached marketplace identity (age:', 
-        Math.round((Date.now() - parsed.timestamp) / 1000), 'seconds)');
+
+      console.log(
+        '🎯 Using cached marketplace identity (age:',
+        Math.round((Date.now() - parsed.timestamp) / 1000),
+        'seconds)',
+      );
       return parsed.identity;
     } catch (err) {
       console.error('Error reading identity cache:', err);
@@ -70,64 +74,76 @@ export function useMarketplaceIdentity(): MarketplaceIdentity {
   }, [address]);
 
   // Cache the identity
-  const setCachedIdentity = useCallback((identity: UserIdentity) => {
-    if (!address) return;
-    
-    try {
-      const cacheData: CachedIdentity = {
-        identity,
-        timestamp: Date.now(),
-        address
-      };
-      sessionStorage.setItem(IDENTITY_CACHE_KEY, JSON.stringify(cacheData));
-      console.log('💾 Cached marketplace identity for', address);
-    } catch (err) {
-      console.error('Error caching identity:', err);
-    }
-  }, [address]);
+  const setCachedIdentity = useCallback(
+    (identity: UserIdentity) => {
+      if (!address) return;
+
+      try {
+        const cacheData: CachedIdentity = {
+          identity,
+          timestamp: Date.now(),
+          address,
+        };
+        sessionStorage.setItem(IDENTITY_CACHE_KEY, JSON.stringify(cacheData));
+        console.log('💾 Cached marketplace identity for', address);
+      } catch (err) {
+        console.error('Error caching identity:', err);
+      }
+    },
+    [address],
+  );
 
   // Load user identity
-  const loadIdentity = useCallback(async (forceRefresh = false) => {
-    if (!address || !tokenBalances || tokenLoading) {
-      setIdentity(null);
-      setIsLoading(false);
-      return;
-    }
-
-    // Check cache first unless forcing refresh
-    if (!forceRefresh) {
-      const cached = getCachedIdentity();
-      if (cached) {
-        setIdentity(cached);
+  const loadIdentity = useCallback(
+    async (forceRefresh = false) => {
+      if (!address || !tokenBalances || tokenLoading) {
+        setIdentity(null);
         setIsLoading(false);
         return;
       }
-    }
 
-    setIsLoading(true);
-    setError(null);
+      // Check cache first unless forcing refresh
+      if (!forceRefresh) {
+        const cached = getCachedIdentity();
+        if (cached) {
+          setIdentity(cached);
+          setIsLoading(false);
+          return;
+        }
+      }
 
-    try {
-      console.log('🔍 Loading fresh marketplace identity for', address);
-      const userIdentity = await getUserIdentity(address, tokenBalances);
-      
-      setIdentity(userIdentity);
-      setCachedIdentity(userIdentity);
-      
-      console.log('✅ Marketplace identity loaded:', {
-        address,
-        tokenCount: userIdentity.userTokens.length,
-        hatCount: userIdentity.userHats.length,
-        cached: !forceRefresh
-      });
-    } catch (err) {
-      console.error('❌ Error loading marketplace identity:', err);
-      setError(err as Error);
-      setIdentity(null);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [address, tokenBalances, tokenLoading, getCachedIdentity, setCachedIdentity]);
+      setIsLoading(true);
+      setError(null);
+
+      try {
+        console.log('🔍 Loading fresh marketplace identity for', address);
+        const userIdentity = await getUserIdentity(address, tokenBalances);
+
+        setIdentity(userIdentity);
+        setCachedIdentity(userIdentity);
+
+        console.log('✅ Marketplace identity loaded:', {
+          address,
+          tokenCount: userIdentity.userTokens.length,
+          hatCount: userIdentity.userHats.length,
+          cached: !forceRefresh,
+        });
+      } catch (err) {
+        console.error('❌ Error loading marketplace identity:', err);
+        setError(err as Error);
+        setIdentity(null);
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [
+      address,
+      tokenBalances,
+      tokenLoading,
+      getCachedIdentity,
+      setCachedIdentity,
+    ],
+  );
 
   // Initial load and updates
   useEffect(() => {
@@ -135,32 +151,40 @@ export function useMarketplaceIdentity(): MarketplaceIdentity {
   }, [address, tokenBalances, tokenLoading]);
 
   // Memoized access check functions
-  const canAccessProduct = useCallback(async (product: IProduct): Promise<boolean> => {
-    if (!identity) return false;
-    
-    try {
-      return await canUserAccessProductAsync(product, identity);
-    } catch (err) {
-      console.error('Error checking product access:', err);
-      return false;
-    }
-  }, [identity]);
+  const canAccessProduct = useCallback(
+    async (product: IProduct): Promise<boolean> => {
+      if (!identity) return false;
 
-  const canAccessProductSync = useCallback((product: IProduct): boolean => {
-    if (!identity) return false;
-    
-    // For sync checks, we can't resolve pod roles
-    // This is a limitation that should be documented
-    const requiredToken = product.required_token || product.requiredToken;
-    if (requiredToken?.startsWith('pod_')) {
-      console.warn('Sync access check cannot resolve pod roles, use async version');
-      return false;
-    }
-    
-    // Use the sync version from accessControl service
-    const { canUserAccessProduct } = require('../services/accessControl');
-    return canUserAccessProduct(product, identity);
-  }, [identity]);
+      try {
+        return await canUserAccessProductAsync(product, identity);
+      } catch (err) {
+        console.error('Error checking product access:', err);
+        return false;
+      }
+    },
+    [identity],
+  );
+
+  const canAccessProductSync = useCallback(
+    (product: IProduct): boolean => {
+      if (!identity) return false;
+
+      // For sync checks, we can't resolve pod roles
+      // This is a limitation that should be documented
+      const requiredToken = product.required_token || product.requiredToken;
+      if (requiredToken?.startsWith('pod_')) {
+        console.warn(
+          'Sync access check cannot resolve pod roles, use async version',
+        );
+        return false;
+      }
+
+      // Use the sync version from accessControl service
+      const { canUserAccessProduct } = require('../services/accessControl');
+      return canUserAccessProduct(product, identity);
+    },
+    [identity],
+  );
 
   // Refresh function for manual updates
   const refreshIdentity = useCallback(async () => {
@@ -183,7 +207,7 @@ export function useMarketplaceIdentity(): MarketplaceIdentity {
     error,
     canAccessProduct,
     canAccessProductSync,
-    refreshIdentity
+    refreshIdentity,
   };
 }
 
@@ -195,20 +219,23 @@ export function useMarketplaceManager(): {
   isLoading: boolean;
 } {
   const { identity, isLoading } = useMarketplaceIdentity();
-  
+
   const canManageProducts = useMemo(() => {
     if (!identity) return false;
-    
+
     // Check for Executive Pod membership
     const execHat = process.env.NEXT_PUBLIC_EXECUTIVE_POD_LEADER?.toLowerCase();
-    const execMemberHat = process.env.NEXT_PUBLIC_EXECUTIVE_POD_MEMBER?.toLowerCase();
-    
-    return identity.userHats.includes(execHat || '') || 
-           identity.userHats.includes(execMemberHat || '');
+    const execMemberHat =
+      process.env.NEXT_PUBLIC_EXECUTIVE_POD_MEMBER?.toLowerCase();
+
+    return (
+      identity.userHats.includes(execHat || '') ||
+      identity.userHats.includes(execMemberHat || '')
+    );
   }, [identity]);
-  
+
   return {
     canManageProducts,
-    isLoading
+    isLoading,
   };
 }

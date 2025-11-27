@@ -61,7 +61,7 @@ export class HatChildIndexService {
         try {
           const childIndex = this.extractChildIndex(
             pod.management_hat_id,
-            parentHatId
+            parentHatId,
           );
 
           if (childIndex > 0) {
@@ -69,7 +69,10 @@ export class HatChildIndexService {
             console.log(`  Found existing child: index ${childIndex}`);
           }
         } catch (e) {
-          console.warn('⚠️ Failed to extract child index from:', pod.management_hat_id);
+          console.warn(
+            '⚠️ Failed to extract child index from:',
+            pod.management_hat_id,
+          );
         }
       }
 
@@ -85,7 +88,10 @@ export class HatChildIndexService {
 
       console.log('✅ Child index calculation:');
       console.log('  Existing children:', childIndices.length);
-      console.log('  Existing indices:', childIndices.sort((a, b) => a - b).join(', '));
+      console.log(
+        '  Existing indices:',
+        childIndices.sort((a, b) => a - b).join(', '),
+      );
       console.log('  Maximum index:', maxIndex);
       console.log('  Next child index:', nextIndex);
 
@@ -118,7 +124,7 @@ export class HatChildIndexService {
    */
   private static extractChildIndex(
     managementHatId: string,
-    parentHatId: string
+    parentHatId: string,
   ): number {
     const managementHatBigInt = BigInt(managementHatId);
     const parentHatBigInt = BigInt(parentHatId);
@@ -126,7 +132,8 @@ export class HatChildIndexService {
     // Find parent HAT depth (number of non-zero levels)
     let parentDepth = 0;
     for (let i = 0; i < 16; i++) {
-      const levelValue = (parentHatBigInt >> BigInt(16 * (15 - i))) & BigInt(0xFFFF);
+      const levelValue =
+        (parentHatBigInt >> BigInt(16 * (15 - i))) & BigInt(0xffff);
       if (levelValue > 0n) {
         parentDepth = i;
       }
@@ -134,7 +141,8 @@ export class HatChildIndexService {
 
     // Child index is at (parentDepth + 1) level
     const childLevel = parentDepth + 1;
-    const childIndexBigInt = (managementHatBigInt >> BigInt(16 * (15 - childLevel))) & BigInt(0xFFFF);
+    const childIndexBigInt =
+      (managementHatBigInt >> BigInt(16 * (15 - childLevel))) & BigInt(0xffff);
 
     return Number(childIndexBigInt);
   }
@@ -153,7 +161,8 @@ export class HatChildIndexService {
     // Find parent depth
     let parentDepth = 0;
     for (let i = 0; i < 16; i++) {
-      const levelValue = (parentHatBigInt >> BigInt(16 * (15 - i))) & BigInt(0xFFFF);
+      const levelValue =
+        (parentHatBigInt >> BigInt(16 * (15 - i))) & BigInt(0xffff);
       if (levelValue > 0n) {
         parentDepth = i;
       }
@@ -161,8 +170,10 @@ export class HatChildIndexService {
 
     // Verify all parent levels match
     for (let i = 0; i <= parentDepth; i++) {
-      const parentLevel = (parentHatBigInt >> BigInt(16 * (15 - i))) & BigInt(0xFFFF);
-      const childLevel = (managementHatBigInt >> BigInt(16 * (15 - i))) & BigInt(0xFFFF);
+      const parentLevel =
+        (parentHatBigInt >> BigInt(16 * (15 - i))) & BigInt(0xffff);
+      const childLevel =
+        (managementHatBigInt >> BigInt(16 * (15 - i))) & BigInt(0xffff);
 
       if (parentLevel !== childLevel) {
         return false;
@@ -171,7 +182,8 @@ export class HatChildIndexService {
 
     // Verify child has one more level than parent
     const childLevel = parentDepth + 1;
-    const childIndex = (managementHatBigInt >> BigInt(16 * (15 - childLevel))) & BigInt(0xFFFF);
+    const childIndex =
+      (managementHatBigInt >> BigInt(16 * (15 - childLevel))) & BigInt(0xffff);
 
     return childIndex > 0n;
   }
@@ -184,7 +196,8 @@ export class HatChildIndexService {
     const levels: string[] = [];
 
     for (let i = 0; i < 16; i++) {
-      const levelValue = (hatIdBigInt >> BigInt(16 * (15 - i))) & BigInt(0xFFFF);
+      const levelValue =
+        (hatIdBigInt >> BigInt(16 * (15 - i))) & BigInt(0xffff);
       if (levelValue > 0n) {
         levels.push(`L${i}:${levelValue.toString()}`);
       }

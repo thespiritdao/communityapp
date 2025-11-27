@@ -1,11 +1,11 @@
 // src/features/marketplace/components/AddProductButton/AddProductButton.tsx
-"use client";
+'use client';
 
-import { useState } from "react";
-import { useMarketplaceManagementAccess } from "@/features/marketplace/hooks/useMarketplaceManagementAccess";
-import AddProductModal from "../AddProductModal/AddProductModal";
-import { Plus } from "lucide-react";
-import * as S from "./AddProductButton.style";
+import { useState } from 'react';
+import { useMarketplaceManagementAccess } from '@/features/marketplace/hooks/useMarketplaceManagementAccess';
+import AddProductModal from '../AddProductModal/AddProductModal';
+import { Plus } from 'lucide-react';
+import * as S from './AddProductButton.style';
 
 const AddProductButton = () => {
   const { managedPods, isLoading } = useMarketplaceManagementAccess();
@@ -30,11 +30,8 @@ const AddProductButton = () => {
         <Plus aria-hidden="true" />
         <S.ButtonText>Add Product</S.ButtonText>
       </S.AddProductButton>
-      
-      <AddProductModal 
-        isOpen={isModalOpen} 
-        onClose={handleCloseModal}
-      />
+
+      <AddProductModal isOpen={isModalOpen} onClose={handleCloseModal} />
     </>
   );
 };

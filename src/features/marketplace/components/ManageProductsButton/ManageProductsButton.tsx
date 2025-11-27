@@ -1,12 +1,12 @@
 // src/features/marketplace/components/ManageProductsButton/ManageProductsButton.tsx
-"use client";
+'use client';
 
-import { useState } from "react";
-import { useAccount } from "wagmi";
-import { useMarketplaceManagementAccess } from "@/features/marketplace/hooks/useMarketplaceManagementAccess";
-import { ProductManagement } from "../ProductManagement/ProductManagement";
-import { Settings } from "lucide-react";
-import * as S from "./ManageProductsButton.style";
+import { useState } from 'react';
+import { useAccount } from 'wagmi';
+import { useMarketplaceManagementAccess } from '@/features/marketplace/hooks/useMarketplaceManagementAccess';
+import { ProductManagement } from '../ProductManagement/ProductManagement';
+import { Settings } from 'lucide-react';
+import * as S from './ManageProductsButton.style';
 
 const ManageProductsButton = () => {
   const { address } = useAccount();
@@ -32,12 +32,8 @@ const ManageProductsButton = () => {
         <Settings aria-hidden="true" />
         <S.ButtonText>Manage</S.ButtonText>
       </S.ManageProductsButton>
-      
-      {isModalOpen && (
-        <ProductManagement 
-          onClose={handleCloseModal}
-        />
-      )}
+
+      {isModalOpen && <ProductManagement onClose={handleCloseModal} />}
     </>
   );
 };

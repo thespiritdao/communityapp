@@ -23,11 +23,11 @@ export interface FulfillmentManager {
  * to actual pod IDs in the database.
  */
 const POD_ID_MAP: Record<string, string> = {
-  'exec': 'exec',
-  'dev': 'dev',
-  'bounty': 'bounty',
-  'curiosity': 'curiosity',
-  'market_admin': 'marketplace'
+  exec: 'exec',
+  dev: 'dev',
+  bounty: 'bounty',
+  curiosity: 'curiosity',
+  market_admin: 'marketplace',
 };
 
 /**
@@ -57,9 +57,14 @@ const POD_ID_MAP: Record<string, string> = {
  * // Returns users who have market management hat only
  * ```
  */
-export async function getFulfillmentManagers(requiredToken: string | null): Promise<FulfillmentManager[]> {
+export async function getFulfillmentManagers(
+  requiredToken: string | null,
+): Promise<FulfillmentManager[]> {
   try {
-    console.log('🛒 Finding fulfillment managers for required token:', requiredToken);
+    console.log(
+      '🛒 Finding fulfillment managers for required token:',
+      requiredToken,
+    );
 
     // Step 1: Get users with market management hat
     const marketManagers = await getMarketManagers();
@@ -67,14 +72,18 @@ export async function getFulfillmentManagers(requiredToken: string | null): Prom
 
     // Step 2: If no pod-specific requirement, return market managers
     if (!requiredToken || requiredToken === 'market_admin') {
-      console.log('✅ No pod-specific requirement, returning all market managers');
+      console.log(
+        '✅ No pod-specific requirement, returning all market managers',
+      );
       return marketManagers;
     }
 
     // Step 3: Get pod-specific members
     const podId = POD_ID_MAP[requiredToken];
     if (!podId) {
-      console.warn(`⚠️ Unknown required token: ${requiredToken}, defaulting to market managers only`);
+      console.warn(
+        `⚠️ Unknown required token: ${requiredToken}, defaulting to market managers only`,
+      );
       return marketManagers;
     }
 
@@ -82,15 +91,18 @@ export async function getFulfillmentManagers(requiredToken: string | null): Prom
     console.log(`📊 Found ${podMembers.length} members in ${podId} pod`);
 
     // Step 4: Find intersection (users with BOTH hats)
-    const qualifiedManagers = marketManagers.filter(manager =>
-      podMembers.some(member =>
-        member.wallet_address.toLowerCase() === manager.wallet_address.toLowerCase()
-      )
+    const qualifiedManagers = marketManagers.filter((manager) =>
+      podMembers.some(
+        (member) =>
+          member.wallet_address.toLowerCase() ===
+          manager.wallet_address.toLowerCase(),
+      ),
     );
 
-    console.log(`✅ Found ${qualifiedManagers.length} qualified fulfillment managers with both hats`);
+    console.log(
+      `✅ Found ${qualifiedManagers.length} qualified fulfillment managers with both hats`,
+    );
     return deduplicateManagers(qualifiedManagers);
-
   } catch (error) {
     console.error('❌ Error getting fulfillment managers:', error);
     return [];
@@ -113,8 +125,10 @@ async function getMarketManagers(): Promise<FulfillmentManager[]> {
         .in('membership_type', ['leader', 'admin']);
 
       if (!error && data && data.length > 0) {
-        console.log(`✅ Found ${data.length} market managers from active_pod_members`);
-        return data.map(member => ({ wallet_address: member.wallet }));
+        console.log(
+          `✅ Found ${data.length} market managers from active_pod_members`,
+        );
+        return data.map((member) => ({ wallet_address: member.wallet }));
       }
 
       // If error is not "table doesn't exist", throw it
@@ -122,7 +136,9 @@ async function getMarketManagers(): Promise<FulfillmentManager[]> {
         throw error;
       }
 
-      console.log('⚠️ active_pod_members table not found or empty, falling back to pods table');
+      console.log(
+        '⚠️ active_pod_members table not found or empty, falling back to pods table',
+      );
     } catch (indexedError) {
       console.log('⚠️ Indexed lookup failed, falling back to pods table');
     }
@@ -148,9 +164,10 @@ async function getMarketManagers(): Promise<FulfillmentManager[]> {
       return [];
     }
 
-    console.log(`✅ Found ${podData.pod_leads.length} market managers from pods.pod_leads`);
-    return podData.pod_leads.map(wallet => ({ wallet_address: wallet }));
-
+    console.log(
+      `✅ Found ${podData.pod_leads.length} market managers from pods.pod_leads`,
+    );
+    return podData.pod_leads.map((wallet) => ({ wallet_address: wallet }));
   } catch (error) {
     console.error('❌ Error getting market managers:', error);
     return [];
@@ -173,17 +190,23 @@ async function getPodMembers(podId: string): Promise<FulfillmentManager[]> {
         .eq('pod_id', podId);
 
       if (!error && data && data.length > 0) {
-        console.log(`✅ Found ${data.length} members in ${podId} pod from active_pod_members`);
-        return data.map(member => ({ wallet_address: member.wallet }));
+        console.log(
+          `✅ Found ${data.length} members in ${podId} pod from active_pod_members`,
+        );
+        return data.map((member) => ({ wallet_address: member.wallet }));
       }
 
       if (error && error.code !== '42P01') {
         throw error;
       }
 
-      console.log(`⚠️ active_pod_members lookup failed for ${podId}, falling back to pods table`);
+      console.log(
+        `⚠️ active_pod_members lookup failed for ${podId}, falling back to pods table`,
+      );
     } catch (indexedError) {
-      console.log(`⚠️ Indexed lookup failed for ${podId}, falling back to pods table`);
+      console.log(
+        `⚠️ Indexed lookup failed for ${podId}, falling back to pods table`,
+      );
     }
 
     // Strategy 2: Fallback to pods table
@@ -206,9 +229,10 @@ async function getPodMembers(podId: string): Promise<FulfillmentManager[]> {
       return [];
     }
 
-    console.log(`✅ Found ${podData.pod_leads.length} members in ${podId} pod from pods.pod_leads`);
-    return podData.pod_leads.map(wallet => ({ wallet_address: wallet }));
-
+    console.log(
+      `✅ Found ${podData.pod_leads.length} members in ${podId} pod from pods.pod_leads`,
+    );
+    return podData.pod_leads.map((wallet) => ({ wallet_address: wallet }));
   } catch (error) {
     console.error(`❌ Error getting ${podId} pod members:`, error);
     return [];
@@ -221,7 +245,9 @@ async function getPodMembers(podId: string): Promise<FulfillmentManager[]> {
  * @param managers - Array of managers that may contain duplicates
  * @returns Deduplicated array
  */
-function deduplicateManagers(managers: FulfillmentManager[]): FulfillmentManager[] {
+function deduplicateManagers(
+  managers: FulfillmentManager[],
+): FulfillmentManager[] {
   const seen = new Set<string>();
   const unique: FulfillmentManager[] = [];
 
@@ -234,7 +260,9 @@ function deduplicateManagers(managers: FulfillmentManager[]): FulfillmentManager
   }
 
   if (managers.length !== unique.length) {
-    console.log(`🔄 Deduplicated ${managers.length - unique.length} duplicate managers`);
+    console.log(
+      `🔄 Deduplicated ${managers.length - unique.length} duplicate managers`,
+    );
   }
 
   return unique;
@@ -280,10 +308,11 @@ export async function getUserProfile(address: string): Promise<{
  */
 export function formatUserDisplayName(
   address: string,
-  profile?: { first_name: string | null; last_name: string | null } | null
+  profile?: { first_name: string | null; last_name: string | null } | null,
 ): string {
   if (profile?.first_name || profile?.last_name) {
-    const name = `${profile.first_name || ''} ${profile.last_name || ''}`.trim();
+    const name =
+      `${profile.first_name || ''} ${profile.last_name || ''}`.trim();
     if (name) return name;
   }
 

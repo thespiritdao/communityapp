@@ -44,7 +44,6 @@ export function Address({
       setCopyText('Copied');
       setTimeout(() => setCopyText('Copy'), 2000);
     } catch (err) {
-      
       setCopyText('Failed to copy');
       setTimeout(() => setCopyText('Copy'), 2000);
     }

@@ -100,5 +100,10 @@ export function useUserProfile(walletAddress: string | undefined) {
     }
   }, [fetchProfile, authLoading]);
 
-  return { profile, loading: loading || authLoading, error, refetch: fetchProfile };
+  return {
+    profile,
+    loading: loading || authLoading,
+    error,
+    refetch: fetchProfile,
+  };
 }

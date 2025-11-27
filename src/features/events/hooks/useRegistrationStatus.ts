@@ -5,7 +5,9 @@ import { supabase } from '@/lib/supabase';
 export function useRegistrationStatus(eventId: string | null) {
   const { address } = useAccount();
   const [isRegistered, setIsRegistered] = useState(false);
-  const [registrationStatus, setRegistrationStatus] = useState<string | null>(null);
+  const [registrationStatus, setRegistrationStatus] = useState<string | null>(
+    null,
+  );
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -41,7 +43,11 @@ export function useRegistrationStatus(eventId: string | null) {
       }
     } catch (err) {
       console.error('Error checking registration status:', err);
-      setError(err instanceof Error ? err.message : 'Failed to check registration status');
+      setError(
+        err instanceof Error
+          ? err.message
+          : 'Failed to check registration status',
+      );
       setIsRegistered(false);
       setRegistrationStatus(null);
     } finally {
@@ -58,6 +64,6 @@ export function useRegistrationStatus(eventId: string | null) {
     registrationStatus,
     loading,
     error,
-    refetch: checkRegistrationStatus
+    refetch: checkRegistrationStatus,
   };
 }

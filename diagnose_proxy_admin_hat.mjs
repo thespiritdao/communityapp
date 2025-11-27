@@ -26,8 +26,8 @@ const MINIMAL_PROXY_ABI = [
     type: 'function',
     inputs: [],
     outputs: [{ name: '', type: 'address' }],
-    stateMutability: 'view'
-  }
+    stateMutability: 'view',
+  },
 ];
 
 const PROXY_ABI = [
@@ -36,36 +36,36 @@ const PROXY_ABI = [
     type: 'function',
     inputs: [{ name: '_hatId', type: 'uint256' }],
     outputs: [{ name: '', type: 'bool' }],
-    stateMutability: 'view'
+    stateMutability: 'view',
   },
   {
     name: 'proxyAdminHatId',
     type: 'function',
     inputs: [],
     outputs: [{ name: '', type: 'uint256' }],
-    stateMutability: 'view'
+    stateMutability: 'view',
   },
   {
     name: 'isActive',
     type: 'function',
     inputs: [],
     outputs: [{ name: '', type: 'bool' }],
-    stateMutability: 'view'
+    stateMutability: 'view',
   },
   {
     name: 'factory',
     type: 'function',
     inputs: [],
     outputs: [{ name: '', type: 'address' }],
-    stateMutability: 'view'
+    stateMutability: 'view',
   },
   {
     name: 'podId',
     type: 'function',
     inputs: [],
     outputs: [{ name: '', type: 'string' }],
-    stateMutability: 'view'
-  }
+    stateMutability: 'view',
+  },
 ];
 
 const FACTORY_ABI = [
@@ -74,8 +74,8 @@ const FACTORY_ABI = [
     type: 'function',
     inputs: [],
     outputs: [{ name: '', type: 'address' }],
-    stateMutability: 'view'
-  }
+    stateMutability: 'view',
+  },
 ];
 
 const HATS_ABI = [
@@ -84,47 +84,49 @@ const HATS_ABI = [
     type: 'function',
     inputs: [
       { name: '_user', type: 'address' },
-      { name: '_hatId', type: 'uint256' }
+      { name: '_hatId', type: 'uint256' },
     ],
     outputs: [{ name: '', type: 'bool' }],
-    stateMutability: 'view'
+    stateMutability: 'view',
   },
   {
     name: 'balanceOf',
     type: 'function',
     inputs: [
       { name: 'wearer', type: 'address' },
-      { name: 'hatId', type: 'uint256' }
+      { name: 'hatId', type: 'uint256' },
     ],
     outputs: [{ name: '', type: 'uint256' }],
-    stateMutability: 'view'
+    stateMutability: 'view',
   },
   {
     name: 'viewHat',
     type: 'function',
     inputs: [{ name: '_hatId', type: 'uint256' }],
-    outputs: [{
-      name: '',
-      type: 'tuple',
-      components: [
-        { name: 'details', type: 'string' },
-        { name: 'maxSupply', type: 'uint32' },
-        { name: 'supply', type: 'uint32' },
-        { name: 'eligibility', type: 'address' },
-        { name: 'toggle', type: 'address' },
-        { name: 'imageURI', type: 'string' },
-        { name: 'numChildren', type: 'uint16' },
-        { name: 'mutable', type: 'bool' },
-        { name: 'active', type: 'bool' }
-      ]
-    }],
-    stateMutability: 'view'
-  }
+    outputs: [
+      {
+        name: '',
+        type: 'tuple',
+        components: [
+          { name: 'details', type: 'string' },
+          { name: 'maxSupply', type: 'uint32' },
+          { name: 'supply', type: 'uint32' },
+          { name: 'eligibility', type: 'address' },
+          { name: 'toggle', type: 'address' },
+          { name: 'imageURI', type: 'string' },
+          { name: 'numChildren', type: 'uint16' },
+          { name: 'mutable', type: 'bool' },
+          { name: 'active', type: 'bool' },
+        ],
+      },
+    ],
+    stateMutability: 'view',
+  },
 ];
 
 const client = createPublicClient({
   chain: base,
-  transport: http(process.env.NEXT_PUBLIC_RPC_URL)
+  transport: http(process.env.NEXT_PUBLIC_RPC_URL),
 });
 
 async function diagnoseProxyAdminHat(proxyAddress) {
@@ -146,16 +148,16 @@ async function diagnoseProxyAdminHat(proxyAddress) {
     const podId = await client.readContract({
       address: proxyAddress,
       abi: PROXY_ABI,
-      functionName: 'podId'
+      functionName: 'podId',
     });
     console.log('  ✅ Pod ID:', podId);
 
     const proxyFactory = await client.readContract({
       address: proxyAddress,
       abi: PROXY_ABI,
-      functionName: 'factory'
+      functionName: 'factory',
     });
-    console.log('  ✅ Proxy\'s factory:', proxyFactory);
+    console.log("  ✅ Proxy's factory:", proxyFactory);
 
     if (proxyFactory.toLowerCase() !== FACTORY_ADDRESS.toLowerCase()) {
       console.log('  ⚠️  WARNING: Proxy was created by different factory!');
@@ -166,14 +168,14 @@ async function diagnoseProxyAdminHat(proxyAddress) {
     const isActive = await client.readContract({
       address: proxyAddress,
       abi: PROXY_ABI,
-      functionName: 'isActive'
+      functionName: 'isActive',
     });
     console.log('  ✅ Is Active:', isActive);
 
     const adminHatId = await client.readContract({
       address: proxyAddress,
       abi: PROXY_ABI,
-      functionName: 'proxyAdminHatId'
+      functionName: 'proxyAdminHatId',
     });
     console.log('  ✅ Admin HAT ID:', adminHatId.toString());
 
@@ -189,15 +191,23 @@ async function diagnoseProxyAdminHat(proxyAddress) {
     const factoryTemplate = await client.readContract({
       address: FACTORY_ADDRESS,
       abi: FACTORY_ABI,
-      functionName: 'podAuthTemplate'
+      functionName: 'podAuthTemplate',
     });
-    console.log('  Factory\'s template:', factoryTemplate);
+    console.log("  Factory's template:", factoryTemplate);
     console.log('  .env template:', TEMPLATE_ADDRESS);
 
     if (factoryTemplate.toLowerCase() !== TEMPLATE_ADDRESS.toLowerCase()) {
-      console.log('  ❌ MISMATCH! Factory is NOT using the template from .env!');
-      console.log('      This means the factory wasn\'t updated after template deployment.');
-      console.log('      You need to call: factory.updatePodAuthTemplate(' + TEMPLATE_ADDRESS + ')');
+      console.log(
+        '  ❌ MISMATCH! Factory is NOT using the template from .env!',
+      );
+      console.log(
+        "      This means the factory wasn't updated after template deployment.",
+      );
+      console.log(
+        '      You need to call: factory.updatePodAuthTemplate(' +
+          TEMPLATE_ADDRESS +
+          ')',
+      );
       return false;
     } else {
       console.log('  ✅ Factory template matches .env');
@@ -207,11 +217,19 @@ async function diagnoseProxyAdminHat(proxyAddress) {
     console.log('\n3️⃣  CHECKING TEMPLATE FOR getHatStatus() FUNCTION');
     console.log('-'.repeat(80));
 
-    const templateCode = await client.getBytecode({ address: TEMPLATE_ADDRESS });
-    console.log('  Template bytecode length:', templateCode?.length || 0, 'characters');
+    const templateCode = await client.getBytecode({
+      address: TEMPLATE_ADDRESS,
+    });
+    console.log(
+      '  Template bytecode length:',
+      templateCode?.length || 0,
+      'characters',
+    );
 
     if (!templateCode || templateCode.length < 100) {
-      console.log('  ❌ CRITICAL: Template has no bytecode! Not deployed correctly!');
+      console.log(
+        '  ❌ CRITICAL: Template has no bytecode! Not deployed correctly!',
+      );
       return false;
     }
 
@@ -223,18 +241,26 @@ async function diagnoseProxyAdminHat(proxyAddress) {
         address: TEMPLATE_ADDRESS,
         abi: PROXY_ABI,
         functionName: 'getHatStatus',
-        args: [testHatId]
+        args: [testHatId],
       });
-      console.log('  ✅ Template has getHatStatus() function! (returned:', templateStatus, ')');
+      console.log(
+        '  ✅ Template has getHatStatus() function! (returned:',
+        templateStatus,
+        ')',
+      );
     } catch (error) {
-      console.log('  ❌ CRITICAL: Template does NOT have getHatStatus() function!');
+      console.log(
+        '  ❌ CRITICAL: Template does NOT have getHatStatus() function!',
+      );
       console.log('      Error:', error.message);
-      console.log('      You deployed the OLD template without the IHatsToggle fix!');
+      console.log(
+        '      You deployed the OLD template without the IHatsToggle fix!',
+      );
       return false;
     }
 
     // Step 4: Check if proxy (via delegatecall) has getHatStatus
-    console.log('\n4️⃣  CHECKING PROXY\'S getHatStatus() FUNCTION');
+    console.log("\n4️⃣  CHECKING PROXY'S getHatStatus() FUNCTION");
     console.log('-'.repeat(80));
 
     try {
@@ -242,17 +268,23 @@ async function diagnoseProxyAdminHat(proxyAddress) {
         address: proxyAddress,
         abi: PROXY_ABI,
         functionName: 'getHatStatus',
-        args: [adminHatId]
+        args: [adminHatId],
       });
       console.log('  ✅ Proxy has getHatStatus() function!');
       console.log('  ✅ getHatStatus(adminHatId) returned:', proxyHatStatus);
 
       if (!proxyHatStatus && isActive) {
-        console.log('  ⚠️  WARNING: getHatStatus returned false but pod is active!');
-        console.log('      This is unexpected - check the implementation logic.');
+        console.log(
+          '  ⚠️  WARNING: getHatStatus returned false but pod is active!',
+        );
+        console.log(
+          '      This is unexpected - check the implementation logic.',
+        );
       }
     } catch (error) {
-      console.log('  ❌ CRITICAL: Proxy does NOT have getHatStatus() function!');
+      console.log(
+        '  ❌ CRITICAL: Proxy does NOT have getHatStatus() function!',
+      );
       console.log('      Error:', error.message);
       console.log('      This proxy was created with the OLD template!');
       return false;
@@ -267,11 +299,16 @@ async function diagnoseProxyAdminHat(proxyAddress) {
         address: HATS_PROTOCOL,
         abi: HATS_ABI,
         functionName: 'viewHat',
-        args: [adminHatId]
+        args: [adminHatId],
       });
 
       console.log('  HAT Details:');
-      console.log('    - Supply:', hatDetails.supply.toString(), '/', hatDetails.maxSupply.toString());
+      console.log(
+        '    - Supply:',
+        hatDetails.supply.toString(),
+        '/',
+        hatDetails.maxSupply.toString(),
+      );
       console.log('    - Eligibility:', hatDetails.eligibility);
       console.log('    - Toggle:', hatDetails.toggle);
       console.log('    - Active:', hatDetails.active);
@@ -286,7 +323,9 @@ async function diagnoseProxyAdminHat(proxyAddress) {
       }
 
       if (!hatDetails.active) {
-        console.log('  ⚠️  WARNING: HAT is marked as inactive by Hats Protocol!');
+        console.log(
+          '  ⚠️  WARNING: HAT is marked as inactive by Hats Protocol!',
+        );
       }
 
       if (hatDetails.supply === 0) {
@@ -307,12 +346,14 @@ async function diagnoseProxyAdminHat(proxyAddress) {
         address: HATS_PROTOCOL,
         abi: HATS_ABI,
         functionName: 'balanceOf',
-        args: [proxyAddress, adminHatId]
+        args: [proxyAddress, adminHatId],
       });
-      console.log('  Proxy\'s HAT balance:', balance.toString());
+      console.log("  Proxy's HAT balance:", balance.toString());
 
       if (balance === 0n) {
-        console.log('  ❌ CRITICAL: Proxy balance is 0! HAT was not minted to proxy!');
+        console.log(
+          '  ❌ CRITICAL: Proxy balance is 0! HAT was not minted to proxy!',
+        );
         console.log('      Phase 5 of pod creation FAILED!');
         return false;
       } else {
@@ -331,22 +372,28 @@ async function diagnoseProxyAdminHat(proxyAddress) {
         address: HATS_PROTOCOL,
         abi: HATS_ABI,
         functionName: 'isWearerOfHat',
-        args: [proxyAddress, adminHatId]
+        args: [proxyAddress, adminHatId],
       });
 
       console.log('  isWearerOfHat(proxy, adminHatId):', isWearer);
 
       if (!isWearer) {
-        console.log('  ❌ CRITICAL: Hats Protocol says proxy does NOT wear admin HAT!');
-        console.log('      This is the exact error you\'re seeing.');
+        console.log(
+          '  ❌ CRITICAL: Hats Protocol says proxy does NOT wear admin HAT!',
+        );
+        console.log("      This is the exact error you're seeing.");
         console.log('\n  Possible causes:');
-        console.log('      1. HAT toggle (proxy) returned false from getHatStatus()');
+        console.log(
+          '      1. HAT toggle (proxy) returned false from getHatStatus()',
+        );
         console.log('      2. HAT was not minted to proxy');
         console.log('      3. HAT was minted but then revoked/burned');
         console.log('      4. Toggle is not set correctly');
         return false;
       } else {
-        console.log('  ✅ SUCCESS! Hats Protocol recognizes proxy as admin HAT wearer!');
+        console.log(
+          '  ✅ SUCCESS! Hats Protocol recognizes proxy as admin HAT wearer!',
+        );
       }
     } catch (error) {
       console.log('  ❌ Error checking isWearerOfHat:', error.message);
@@ -358,7 +405,6 @@ async function diagnoseProxyAdminHat(proxyAddress) {
     console.log('='.repeat(80) + '\n');
 
     return true;
-
   } catch (error) {
     console.error('\n❌ DIAGNOSTIC ERROR:', error.message);
     console.error(error);
@@ -367,7 +413,8 @@ async function diagnoseProxyAdminHat(proxyAddress) {
 }
 
 // Get proxy address from command line
-const proxyAddress = process.argv[2] || '0x15ac11b2d8c2f238663ec9ddb1c8b43e537c6890'; // From error log
+const proxyAddress =
+  process.argv[2] || '0x15ac11b2d8c2f238663ec9ddb1c8b43e537c6890'; // From error log
 
 if (!proxyAddress) {
   console.error('\n❌ Usage: node diagnose_proxy_admin_hat.js <PROXY_ADDRESS>');
@@ -376,10 +423,10 @@ if (!proxyAddress) {
 }
 
 diagnoseProxyAdminHat(proxyAddress)
-  .then(success => {
+  .then((success) => {
     process.exit(success ? 0 : 1);
   })
-  .catch(error => {
+  .catch((error) => {
     console.error('Fatal error:', error);
     process.exit(1);
   });

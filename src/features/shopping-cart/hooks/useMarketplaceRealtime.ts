@@ -9,7 +9,7 @@ export enum MarketplaceEventType {
   ORDER_UPDATED = 'order_updated',
   INVENTORY_UPDATED = 'inventory_updated',
   PRICE_UPDATED = 'price_updated',
-  USER_ACTIVITY = 'user_activity'
+  USER_ACTIVITY = 'user_activity',
 }
 
 interface MarketplaceEvent {
@@ -40,7 +40,9 @@ interface RealtimeState {
  * Hook for real-time marketplace updates using Server-Sent Events (SSE)
  * Falls back to polling if SSE is not supported
  */
-export function useMarketplaceRealtime(options: UseMarketplaceRealtimeOptions = {}) {
+export function useMarketplaceRealtime(
+  options: UseMarketplaceRealtimeOptions = {},
+) {
   const { address } = useAccount();
   const {
     channels = ['general'],
@@ -48,7 +50,7 @@ export function useMarketplaceRealtime(options: UseMarketplaceRealtimeOptions = 
     reconnectInterval = 5000,
     onConnect,
     onDisconnect,
-    onError
+    onError,
   } = options;
 
   const [state, setState] = useState<RealtimeState>({
@@ -56,19 +58,21 @@ export function useMarketplaceRealtime(options: UseMarketplaceRealtimeOptions = 
     connectionState: 'disconnected',
     lastEvent: null,
     eventHistory: [],
-    error: null
+    error: null,
   });
 
   const eventSourceRef = useRef<EventSource | null>(null);
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const eventHandlersRef = useRef<Map<MarketplaceEventType, ((data: any) => void)[]>>(new Map());
+  const eventHandlersRef = useRef<
+    Map<MarketplaceEventType, ((data: any) => void)[]>
+  >(new Map());
 
   // Build SSE URL
   const buildSSEUrl = useCallback(() => {
     const params = new URLSearchParams();
     if (address) params.set('address', address);
     params.set('channels', channels.join(','));
-    
+
     return `/api/marketplace/websocket/sse?${params.toString()}`;
   }, [address, channels]);
 
@@ -78,7 +82,11 @@ export function useMarketplaceRealtime(options: UseMarketplaceRealtimeOptions = 
       eventSourceRef.current.close();
     }
 
-    setState(prev => ({ ...prev, connectionState: 'connecting', error: null }));
+    setState((prev) => ({
+      ...prev,
+      connectionState: 'connecting',
+      error: null,
+    }));
 
     try {
       const eventSource = new EventSource(buildSSEUrl());
@@ -86,11 +94,11 @@ export function useMarketplaceRealtime(options: UseMarketplaceRealtimeOptions = 
 
       eventSource.onopen = () => {
         console.log('🔄 Connected to marketplace real-time updates');
-        setState(prev => ({
+        setState((prev) => ({
           ...prev,
           isConnected: true,
           connectionState: 'connected',
-          error: null
+          error: null,
         }));
         onConnect?.();
       };
@@ -98,31 +106,31 @@ export function useMarketplaceRealtime(options: UseMarketplaceRealtimeOptions = 
       eventSource.onmessage = (event) => {
         try {
           const data = JSON.parse(event.data);
-          
+
           // Skip heartbeat messages
           if (data.type === 'heartbeat') return;
-          
+
           // Skip initial connection message
           if (data.type === 'connection') return;
 
           const marketplaceEvent: MarketplaceEvent = data;
-          
-          setState(prev => ({
+
+          setState((prev) => ({
             ...prev,
             lastEvent: marketplaceEvent,
-            eventHistory: [...prev.eventHistory.slice(-99), marketplaceEvent] // Keep last 100 events
+            eventHistory: [...prev.eventHistory.slice(-99), marketplaceEvent], // Keep last 100 events
           }));
 
           // Trigger specific event handlers
-          const handlers = eventHandlersRef.current.get(marketplaceEvent.type) || [];
-          handlers.forEach(handler => {
+          const handlers =
+            eventHandlersRef.current.get(marketplaceEvent.type) || [];
+          handlers.forEach((handler) => {
             try {
               handler(marketplaceEvent.data);
             } catch (error) {
               console.error('Error in event handler:', error);
             }
           });
-
         } catch (error) {
           console.error('Error parsing SSE message:', error);
         }
@@ -130,12 +138,12 @@ export function useMarketplaceRealtime(options: UseMarketplaceRealtimeOptions = 
 
       eventSource.onerror = (error) => {
         console.error('SSE connection error:', error);
-        
-        setState(prev => ({
+
+        setState((prev) => ({
           ...prev,
           isConnected: false,
           connectionState: 'error',
-          error: new Error('Connection failed')
+          error: new Error('Connection failed'),
         }));
 
         eventSource.close();
@@ -149,13 +157,12 @@ export function useMarketplaceRealtime(options: UseMarketplaceRealtimeOptions = 
           }, reconnectInterval);
         }
       };
-
     } catch (error) {
       console.error('Failed to create SSE connection:', error);
-      setState(prev => ({
+      setState((prev) => ({
         ...prev,
         connectionState: 'error',
-        error: error as Error
+        error: error as Error,
       }));
       onError?.(error as Error);
     }
@@ -173,37 +180,37 @@ export function useMarketplaceRealtime(options: UseMarketplaceRealtimeOptions = 
       reconnectTimeoutRef.current = null;
     }
 
-    setState(prev => ({
+    setState((prev) => ({
       ...prev,
       isConnected: false,
       connectionState: 'disconnected',
-      error: null
+      error: null,
     }));
 
     onDisconnect?.();
   }, [onDisconnect]);
 
   // Subscribe to specific event types
-  const subscribe = useCallback((
-    eventType: MarketplaceEventType,
-    handler: (data: any) => void
-  ) => {
-    const handlers = eventHandlersRef.current.get(eventType) || [];
-    handlers.push(handler);
-    eventHandlersRef.current.set(eventType, handlers);
+  const subscribe = useCallback(
+    (eventType: MarketplaceEventType, handler: (data: any) => void) => {
+      const handlers = eventHandlersRef.current.get(eventType) || [];
+      handlers.push(handler);
+      eventHandlersRef.current.set(eventType, handlers);
 
-    // Return unsubscribe function
-    return () => {
-      const currentHandlers = eventHandlersRef.current.get(eventType) || [];
-      const filteredHandlers = currentHandlers.filter(h => h !== handler);
-      
-      if (filteredHandlers.length === 0) {
-        eventHandlersRef.current.delete(eventType);
-      } else {
-        eventHandlersRef.current.set(eventType, filteredHandlers);
-      }
-    };
-  }, []);
+      // Return unsubscribe function
+      return () => {
+        const currentHandlers = eventHandlersRef.current.get(eventType) || [];
+        const filteredHandlers = currentHandlers.filter((h) => h !== handler);
+
+        if (filteredHandlers.length === 0) {
+          eventHandlersRef.current.delete(eventType);
+        } else {
+          eventHandlersRef.current.set(eventType, filteredHandlers);
+        }
+      };
+    },
+    [],
+  );
 
   // Connect on mount, disconnect on unmount
   useEffect(() => {
@@ -225,16 +232,27 @@ export function useMarketplaceRealtime(options: UseMarketplaceRealtimeOptions = 
     disconnect,
     subscribe,
     // Convenience methods for common events
-    onProductCreated: (handler: (product: any) => void) => 
+    onProductCreated: (handler: (product: any) => void) =>
       subscribe(MarketplaceEventType.PRODUCT_CREATED, handler),
-    onProductUpdated: (handler: (data: { productId: string; changes: any }) => void) => 
-      subscribe(MarketplaceEventType.PRODUCT_UPDATED, handler),
-    onInventoryUpdated: (handler: (data: { productId: string; oldQuantity: number; newQuantity: number }) => void) => 
-      subscribe(MarketplaceEventType.INVENTORY_UPDATED, handler),
-    onOrderCreated: (handler: (order: any) => void) => 
+    onProductUpdated: (
+      handler: (data: { productId: string; changes: any }) => void,
+    ) => subscribe(MarketplaceEventType.PRODUCT_UPDATED, handler),
+    onInventoryUpdated: (
+      handler: (data: {
+        productId: string;
+        oldQuantity: number;
+        newQuantity: number;
+      }) => void,
+    ) => subscribe(MarketplaceEventType.INVENTORY_UPDATED, handler),
+    onOrderCreated: (handler: (order: any) => void) =>
       subscribe(MarketplaceEventType.ORDER_CREATED, handler),
-    onPriceUpdated: (handler: (data: { productId: string; oldPrices: any; newPrices: any }) => void) => 
-      subscribe(MarketplaceEventType.PRICE_UPDATED, handler)
+    onPriceUpdated: (
+      handler: (data: {
+        productId: string;
+        oldPrices: any;
+        newPrices: any;
+      }) => void,
+    ) => subscribe(MarketplaceEventType.PRICE_UPDATED, handler),
   };
 }
 
@@ -243,7 +261,7 @@ export function useMarketplaceRealtime(options: UseMarketplaceRealtimeOptions = 
  */
 export function useProductRealtime(productId: string) {
   const realtime = useMarketplaceRealtime({
-    channels: ['general', 'products', `product_${productId}`]
+    channels: ['general', 'products', `product_${productId}`],
   });
 
   const [productUpdates, setProductUpdates] = useState<{
@@ -255,44 +273,44 @@ export function useProductRealtime(productId: string) {
     lastUpdate: null,
     priceChanged: false,
     inventoryChanged: false,
-    generalUpdate: false
+    generalUpdate: false,
   });
 
   useEffect(() => {
     const unsubscribers = [
       realtime.onProductUpdated((data) => {
         if (data.productId === productId) {
-          setProductUpdates(prev => ({
+          setProductUpdates((prev) => ({
             ...prev,
             lastUpdate: new Date(),
-            generalUpdate: true
+            generalUpdate: true,
           }));
         }
       }),
 
       realtime.onPriceUpdated((data) => {
         if (data.productId === productId) {
-          setProductUpdates(prev => ({
+          setProductUpdates((prev) => ({
             ...prev,
             lastUpdate: new Date(),
-            priceChanged: true
+            priceChanged: true,
           }));
         }
       }),
 
       realtime.onInventoryUpdated((data) => {
         if (data.productId === productId) {
-          setProductUpdates(prev => ({
+          setProductUpdates((prev) => ({
             ...prev,
             lastUpdate: new Date(),
-            inventoryChanged: true
+            inventoryChanged: true,
           }));
         }
-      })
+      }),
     ];
 
     return () => {
-      unsubscribers.forEach(unsub => unsub());
+      unsubscribers.forEach((unsub) => unsub());
     };
   }, [productId, realtime]);
 
@@ -300,11 +318,11 @@ export function useProductRealtime(productId: string) {
   useEffect(() => {
     if (productUpdates.lastUpdate) {
       const timeout = setTimeout(() => {
-        setProductUpdates(prev => ({
+        setProductUpdates((prev) => ({
           ...prev,
           priceChanged: false,
           inventoryChanged: false,
-          generalUpdate: false
+          generalUpdate: false,
         }));
       }, 5000); // Clear flags after 5 seconds
 
@@ -314,7 +332,7 @@ export function useProductRealtime(productId: string) {
 
   return {
     ...realtime,
-    productUpdates
+    productUpdates,
   };
 }
 
@@ -334,7 +352,7 @@ export function useOrderRealtime(userAddress?: string) {
   useEffect(() => {
     const unsubscribe = realtime.onOrderCreated((order) => {
       if (!userAddress || order.buyerAddress === userAddress) {
-        setOrderNotifications(prev => [...prev.slice(-9), order]); // Keep last 10 notifications
+        setOrderNotifications((prev) => [...prev.slice(-9), order]); // Keep last 10 notifications
       }
     });
 
@@ -344,6 +362,6 @@ export function useOrderRealtime(userAddress?: string) {
   return {
     ...realtime,
     orderNotifications,
-    clearNotifications: () => setOrderNotifications([])
+    clearNotifications: () => setOrderNotifications([]),
   };
 }

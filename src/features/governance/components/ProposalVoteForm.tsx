@@ -5,12 +5,25 @@
 import type React from 'react';
 import { useState, useEffect } from 'react';
 import { useAccount, useContractRead } from 'wagmi';
-import { Transaction, TransactionButton, TransactionSponsor, TransactionStatus, TransactionStatusLabel, TransactionStatusAction } from '@coinbase/onchainkit/transaction';
+import {
+  Transaction,
+  TransactionButton,
+  TransactionSponsor,
+  TransactionStatus,
+  TransactionStatusLabel,
+  TransactionStatusAction,
+} from '@coinbase/onchainkit/transaction';
 import AdvocateMembershipABI from '@/abis/AdvocateMembershipABI.json';
 import DAOGovernorABI from '@/abis/DAO_GovernorABI.json';
 // import MembershipNFTABI from '../../../abis/MembershipNFTABI.json';
 import { useToast } from '@/components/ui/use-toast';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
 import VotingCountdown from './VotingCountdown';
 import { useUnifiedNotifications } from '@/context/UnifiedNotificationContext';
 
@@ -31,10 +44,16 @@ const ADVOCATE_ADDRESS = process.env.NEXT_PUBLIC_ADVOCATE as `0x${string}`;
 const VoteType = {
   Against: 0,
   For: 1,
-  Abstain: 2
+  Abstain: 2,
 };
 
-export const ProposalVoteForm: React.FC<ProposalVoteFormProps> = ({ proposalId, proposalTitle, proposalState: propProposalState, hasVoted: hasVotedProp, onSuccess }) => {
+export const ProposalVoteForm: React.FC<ProposalVoteFormProps> = ({
+  proposalId,
+  proposalTitle,
+  proposalState: propProposalState,
+  hasVoted: hasVotedProp,
+  onSuccess,
+}) => {
   const { address } = useAccount();
   const { toast } = useToast();
   const { refreshNotifications } = useUnifiedNotifications();
@@ -63,7 +82,8 @@ export const ProposalVoteForm: React.FC<ProposalVoteFormProps> = ({ proposalId, 
     args: [proposalId],
     enabled: !!proposalId && propProposalState === undefined,
   });
-  const proposalState = propProposalState !== undefined ? propProposalState : proposalStateRaw;
+  const proposalState =
+    propProposalState !== undefined ? propProposalState : proposalStateRaw;
 
   // Get proposal metadata if available (move this up before any use)
   const { data: metadata } = useContractRead({
@@ -75,12 +95,20 @@ export const ProposalVoteForm: React.FC<ProposalVoteFormProps> = ({ proposalId, 
   });
 
   // Determine required token for voting from proposal metadata (onchain or Supabase)
-  const [votingTokenAddress, setVotingTokenAddress] = useState<string | undefined>(ADVOCATE_ADDRESS);
-  const [votingTokenABI, setVotingTokenABI] = useState<any>(AdvocateMembershipABI);
+  const [votingTokenAddress, setVotingTokenAddress] = useState<
+    string | undefined
+  >(ADVOCATE_ADDRESS);
+  const [votingTokenABI, setVotingTokenABI] = useState<any>(
+    AdvocateMembershipABI,
+  );
 
   useEffect(() => {
     // If metadata specifies a token, use it
-    if (metadata && (metadata as any).token_id && (metadata as any).contract_address) {
+    if (
+      metadata &&
+      (metadata as any).token_id &&
+      (metadata as any).contract_address
+    ) {
       setVotingTokenAddress((metadata as any).contract_address);
       // TODO: Dynamically select ABI based on token type if needed
       setVotingTokenABI(AdvocateMembershipABI); // Default to AdvocateMembershipABI for now
@@ -100,7 +128,8 @@ export const ProposalVoteForm: React.FC<ProposalVoteFormProps> = ({ proposalId, 
   });
 
   // Define canVote: proposal must be active, user must have voting power, and not have already voted
-  const canVote = proposalState === 1 && votingPower && Number(votingPower) > 0 && !hasVoted;
+  const canVote =
+    proposalState === 1 && votingPower && Number(votingPower) > 0 && !hasVoted;
 
   // Only use OnChainKit's <Transaction> for voting
   const voteCall = [
@@ -113,7 +142,11 @@ export const ProposalVoteForm: React.FC<ProposalVoteFormProps> = ({ proposalId, 
   ];
 
   if (!address) {
-    return <div className="vote-form p-4">Please connect your wallet to vote on proposals.</div>;
+    return (
+      <div className="vote-form p-4">
+        Please connect your wallet to vote on proposals.
+      </div>
+    );
   }
 
   const getProposalStateText = (state: number | undefined) => {
@@ -128,7 +161,7 @@ export const ProposalVoteForm: React.FC<ProposalVoteFormProps> = ({ proposalId, 
       'Succeeded',
       'Queued',
       'Expired',
-      'Executed'
+      'Executed',
     ];
     return states[state] || 'Unknown';
   };
@@ -141,15 +174,24 @@ export const ProposalVoteForm: React.FC<ProposalVoteFormProps> = ({ proposalId, 
     }
 
     switch (state) {
-      case 1: return { backgroundColor: '#E8F1EE', color: '#1F453A' }; // Active
-      case 4: return { backgroundColor: '#D1E6DC', color: '#1F453A' }; // Passed
-      case 3: return { backgroundColor: '#F5E6E6', color: '#5C1F1F' }; // Failed
-      case 7: return { backgroundColor: '#EDEAF0', color: '#574C66' }; // Executed
-      case 2: return { backgroundColor: '#f3f4f6', color: '#1f2937' }; // Canceled
-      case 6: return { backgroundColor: '#FAF4EC', color: '#8F6B2F' }; // Expired
-      case 5: return { backgroundColor: '#FAF4EC', color: '#A67E35' }; // Queued
-      case 0: return { backgroundColor: '#f3f4f6', color: '#1f2937' }; // Pending
-      default: return { backgroundColor: '#f3f4f6', color: '#1f2937' };
+      case 1:
+        return { backgroundColor: '#E8F1EE', color: '#1F453A' }; // Active
+      case 4:
+        return { backgroundColor: '#D1E6DC', color: '#1F453A' }; // Passed
+      case 3:
+        return { backgroundColor: '#F5E6E6', color: '#5C1F1F' }; // Failed
+      case 7:
+        return { backgroundColor: '#EDEAF0', color: '#574C66' }; // Executed
+      case 2:
+        return { backgroundColor: '#f3f4f6', color: '#1f2937' }; // Canceled
+      case 6:
+        return { backgroundColor: '#FAF4EC', color: '#8F6B2F' }; // Expired
+      case 5:
+        return { backgroundColor: '#FAF4EC', color: '#A67E35' }; // Queued
+      case 0:
+        return { backgroundColor: '#f3f4f6', color: '#1f2937' }; // Pending
+      default:
+        return { backgroundColor: '#f3f4f6', color: '#1f2937' };
     }
   };
 
@@ -158,7 +200,10 @@ export const ProposalVoteForm: React.FC<ProposalVoteFormProps> = ({ proposalId, 
       <CardHeader>
         <CardTitle className="flex justify-between items-center">
           <span>Cast Your Vote</span>
-          <span className="ml-2 px-2 py-1 text-xs font-medium rounded-full" style={getStatusBadgeStyle(Number(proposalState))}>
+          <span
+            className="ml-2 px-2 py-1 text-xs font-medium rounded-full"
+            style={getStatusBadgeStyle(Number(proposalState))}
+          >
             {getProposalStateText(Number(proposalState))}
           </span>
         </CardTitle>
@@ -176,22 +221,33 @@ export const ProposalVoteForm: React.FC<ProposalVoteFormProps> = ({ proposalId, 
             >
               ✓ Voted
             </button>
-            <p className="text-sm text-gray-500 mt-2">Thank you for participating in governance</p>
+            <p className="text-sm text-gray-500 mt-2">
+              Thank you for participating in governance
+            </p>
           </div>
         ) : (
           <>
             {proposalState === -1 ? (
               <div className="p-4 bg-red-50 border border-red-200 rounded-md">
                 <div className="flex items-start gap-2">
-                  <svg className="w-5 h-5 text-red-600 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                  <svg
+                    className="w-5 h-5 text-red-600 mt-0.5 flex-shrink-0"
+                    fill="currentColor"
+                    viewBox="0 0 20 20"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                      clipRule="evenodd"
+                    />
                   </svg>
                   <div className="flex-1">
                     <p className="text-sm font-medium text-red-800">
                       Unable to determine proposal state
                     </p>
                     <p className="text-xs text-red-700 mt-1">
-                      Cannot verify if this proposal is open for voting. Please try refreshing the page or check back later.
+                      Cannot verify if this proposal is open for voting. Please
+                      try refreshing the page or check back later.
                     </p>
                   </div>
                 </div>
@@ -203,7 +259,12 @@ export const ProposalVoteForm: React.FC<ProposalVoteFormProps> = ({ proposalId, 
             ) : (
               <>
                 <div className="voting-power mb-4">
-                  <p>Your voting power: <strong>{votingPower ? votingPower.toString() : '0'}</strong></p>
+                  <p>
+                    Your voting power:{' '}
+                    <strong>
+                      {votingPower ? votingPower.toString() : '0'}
+                    </strong>
+                  </p>
                 </div>
                 {metadata?.voting_end && (
                   <VotingCountdown votingEnd={metadata.voting_end} />
@@ -245,10 +306,16 @@ export const ProposalVoteForm: React.FC<ProposalVoteFormProps> = ({ proposalId, 
                     setHasVoted(true);
                     if (address && proposalId) {
                       try {
-                        await governanceNotificationService.markAllNotificationsForProposalAsReadForUser(proposalId, address);
+                        await governanceNotificationService.markAllNotificationsForProposalAsReadForUser(
+                          proposalId,
+                          address,
+                        );
                         await refreshNotifications();
                       } catch (error) {
-                        console.error('Error marking notifications as read:', error);
+                        console.error(
+                          'Error marking notifications as read:',
+                          error,
+                        );
                       }
                     }
                     // Add a small delay to ensure API has time to update
@@ -260,7 +327,9 @@ export const ProposalVoteForm: React.FC<ProposalVoteFormProps> = ({ proposalId, 
                   onError={(error) => {
                     toast({
                       title: 'Voting failed',
-                      description: error.message || 'There was an error casting your vote.',
+                      description:
+                        error.message ||
+                        'There was an error casting your vote.',
                       variant: 'destructive',
                     });
                   }}
@@ -276,11 +345,13 @@ export const ProposalVoteForm: React.FC<ProposalVoteFormProps> = ({ proposalId, 
                     <TransactionStatusAction />
                   </TransactionStatus>
                 </Transaction>
-                {!canVote && votingPower && BigInt(votingPower.toString()) === 0n && (
-                  <p className="text-amber-600 text-sm mt-2">
-                    You need to own at least one membership NFT to vote.
-                  </p>
-                )}
+                {!canVote &&
+                  votingPower &&
+                  BigInt(votingPower.toString()) === 0n && (
+                    <p className="text-amber-600 text-sm mt-2">
+                      You need to own at least one membership NFT to vote.
+                    </p>
+                  )}
               </>
             )}
           </>

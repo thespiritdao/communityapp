@@ -19,13 +19,13 @@ const FACTORY_ABI = [
     name: 'getPodProxy',
     outputs: [{ name: '', type: 'address' }],
     stateMutability: 'view',
-    type: 'function'
-  }
+    type: 'function',
+  },
 ];
 
 const client = createPublicClient({
   chain: base,
-  transport: http()
+  transport: http(),
 });
 
 async function verifyFactoryHasPod() {
@@ -40,7 +40,7 @@ async function verifyFactoryHasPod() {
       address: FACTORY_ADDRESS,
       abi: FACTORY_ABI,
       functionName: 'getPodProxy',
-      args: [POD_ID]
+      args: [POD_ID],
     });
 
     console.log('✅ Factory Query Result:', proxyAddress);
@@ -57,7 +57,9 @@ async function verifyFactoryHasPod() {
     if (proxyAddress.toLowerCase() === EXPECTED_PROXY.toLowerCase()) {
       console.log('\n✅ SUCCESS: Factory has correct proxy registered!');
       console.log('   This confirms the pod exists in factory storage.');
-      console.log('   If transaction fails, the issue is pod_id being passed incorrectly.\n');
+      console.log(
+        '   If transaction fails, the issue is pod_id being passed incorrectly.\n',
+      );
       return true;
     } else {
       console.warn('\n⚠️ WARNING: Proxy address mismatch!');
@@ -65,7 +67,6 @@ async function verifyFactoryHasPod() {
       console.warn(`   Expected:    ${EXPECTED_PROXY}\n`);
       return false;
     }
-
   } catch (error) {
     console.error('❌ Error querying factory:', error.message);
     return false;
@@ -73,10 +74,10 @@ async function verifyFactoryHasPod() {
 }
 
 verifyFactoryHasPod()
-  .then(success => {
+  .then((success) => {
     process.exit(success ? 0 : 1);
   })
-  .catch(error => {
+  .catch((error) => {
     console.error('Fatal error:', error);
     process.exit(1);
   });

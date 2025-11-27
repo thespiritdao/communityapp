@@ -21,16 +21,15 @@ export const useProfileModal = (): UseProfileModalReturn => {
   const openProfileModal = useCallback(async (walletAddress: string) => {
     try {
       console.log('🔍 Opening profile modal for:', walletAddress);
-      
+
       // Fetch user profile by wallet address
       const profile = await EventService.getUserProfileByWallet(walletAddress);
-      
+
       if (profile) {
         setSelectedUser(profile);
         setUsers([profile]); // ProfileModal expects users array
         setIsOpen(true);
       } else {
-        
         // Create a minimal profile for unknown users
         const fallbackProfile: UserProfile = {
           wallet_address: walletAddress,
@@ -51,15 +50,13 @@ export const useProfileModal = (): UseProfileModalReturn => {
           twitch: null,
           interests: null,
           seeking: null,
-          open_to_connect: null
+          open_to_connect: null,
         };
         setSelectedUser(fallbackProfile);
         setUsers([fallbackProfile]);
         setIsOpen(true);
       }
-    } catch (error) {
-      
-    }
+    } catch (error) {}
   }, []);
 
   const closeProfileModal = useCallback(() => {
@@ -73,7 +70,7 @@ export const useProfileModal = (): UseProfileModalReturn => {
     users,
     isOpen,
     openProfileModal,
-    closeProfileModal
+    closeProfileModal,
   };
 };
 

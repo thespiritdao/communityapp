@@ -8,7 +8,7 @@ import {
   getPollResults,
   votePoll,
   changeVote,
-  type PollResults
+  type PollResults,
 } from '../services/PollService';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -78,10 +78,10 @@ export function PollDisplay({ pollId, onVoteComplete }: PollDisplayProps) {
 
     if (results?.poll.allow_multiple) {
       // Multiple choice
-      setSelectedOptions(prev =>
+      setSelectedOptions((prev) =>
         prev.includes(optionId)
-          ? prev.filter(id => id !== optionId)
-          : [...prev, optionId]
+          ? prev.filter((id) => id !== optionId)
+          : [...prev, optionId],
       );
     } else {
       // Single choice
@@ -103,7 +103,9 @@ export function PollDisplay({ pollId, onVoteComplete }: PollDisplayProps) {
     return (
       <Card>
         <CardContent className="pt-6">
-          <p className="text-center" style={{ color: '#8B3A3A' }}>{error || 'Poll not found'}</p>
+          <p className="text-center" style={{ color: '#8B3A3A' }}>
+            {error || 'Poll not found'}
+          </p>
         </CardContent>
       </Card>
     );
@@ -122,9 +124,7 @@ export function PollDisplay({ pollId, onVoteComplete }: PollDisplayProps) {
             {results.poll.allow_multiple && (
               <Badge variant="outline">Multiple Choice</Badge>
             )}
-            {results.hasExpired && (
-              <Badge variant="destructive">Expired</Badge>
-            )}
+            {results.hasExpired && <Badge variant="destructive">Expired</Badge>}
             {results.poll.expires_at && !results.hasExpired && (
               <Badge variant="outline">
                 Expires {new Date(results.poll.expires_at).toLocaleDateString()}
@@ -149,7 +149,11 @@ export function PollDisplay({ pollId, onVoteComplete }: PollDisplayProps) {
                     : 'border-gray-300 hover:border-gray-400'
                   : 'border-gray-200'
               }`}
-              style={canVote && !showResults && isSelected ? { borderColor: '#2F5D50', backgroundColor: '#E8F1EE' } : undefined}
+              style={
+                canVote && !showResults && isSelected
+                  ? { borderColor: '#2F5D50', backgroundColor: '#E8F1EE' }
+                  : undefined
+              }
               onClick={() => !showResults && toggleOption(option.id)}
             >
               <div className="flex items-center justify-between mb-2">
@@ -181,7 +185,10 @@ export function PollDisplay({ pollId, onVoteComplete }: PollDisplayProps) {
                 <div className="w-full bg-gray-200 rounded-full h-2">
                   <div
                     className="h-2 rounded-full transition-all"
-                    style={{ width: `${option.percentage}%`, backgroundColor: '#2F5D50' }}
+                    style={{
+                      width: `${option.percentage}%`,
+                      backgroundColor: '#2F5D50',
+                    }}
                   />
                 </div>
               )}
@@ -214,7 +221,9 @@ export function PollDisplay({ pollId, onVoteComplete }: PollDisplayProps) {
 
         {/* Error message */}
         {error && (
-          <p className="text-sm text-center" style={{ color: '#8B3A3A' }}>{error}</p>
+          <p className="text-sm text-center" style={{ color: '#8B3A3A' }}>
+            {error}
+          </p>
         )}
 
         {/* Total votes */}

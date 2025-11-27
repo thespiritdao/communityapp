@@ -6,18 +6,22 @@ import { useAccount, usePublicClient, useWalletClient } from 'wagmi';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { 
-  Shield, 
-  Power, 
-  PowerOff, 
-  UserX, 
-  AlertTriangle, 
+import {
+  Shield,
+  Power,
+  PowerOff,
+  UserX,
+  AlertTriangle,
   RefreshCw,
   Users,
-  Crown
+  Crown,
 } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
-import { HatDeactivationService, type HatStatus, type HatWearer } from '../services/hatDeactivationService';
+import {
+  HatDeactivationService,
+  type HatStatus,
+  type HatWearer,
+} from '../services/hatDeactivationService';
 
 interface HatDeactivationControlsProps {
   hatId: string;
@@ -26,12 +30,9 @@ interface HatDeactivationControlsProps {
   onHatStatusChanged?: () => void;
 }
 
-export const HatDeactivationControls: React.FC<HatDeactivationControlsProps> = ({
-  hatId,
-  hatType,
-  podName,
-  onHatStatusChanged
-}) => {
+export const HatDeactivationControls: React.FC<
+  HatDeactivationControlsProps
+> = ({ hatId, hatType, podName, onHatStatusChanged }) => {
   const { address } = useAccount();
   const publicClient = usePublicClient();
   const { data: walletClient } = useWalletClient();
@@ -42,7 +43,9 @@ export const HatDeactivationControls: React.FC<HatDeactivationControlsProps> = (
   const [hasAdminPermission, setHasAdminPermission] = useState(false);
   const [loading, setLoading] = useState(false);
   const [loadingWearers, setLoadingWearers] = useState(false);
-  const [operationInProgress, setOperationInProgress] = useState<string | null>(null);
+  const [operationInProgress, setOperationInProgress] = useState<string | null>(
+    null,
+  );
 
   // Load HAT status and permissions on mount
   useEffect(() => {
@@ -60,18 +63,21 @@ export const HatDeactivationControls: React.FC<HatDeactivationControlsProps> = (
       // Load HAT status and admin permissions in parallel
       const [status, adminPermission] = await Promise.all([
         HatDeactivationService.getHatStatus(publicClient, hatId),
-        HatDeactivationService.checkAdminPermissions(publicClient, address, hatId)
+        HatDeactivationService.checkAdminPermissions(
+          publicClient,
+          address,
+          hatId,
+        ),
       ]);
 
       setHatStatus(status);
       setHasAdminPermission(adminPermission);
-
     } catch (error) {
       console.error('Failed to load HAT data:', error);
       toast({
-        title: "Loading Error",
-        description: "Failed to load HAT status information",
-        variant: "destructive"
+        title: 'Loading Error',
+        description: 'Failed to load HAT status information',
+        variant: 'destructive',
       });
     } finally {
       setLoading(false);
@@ -87,24 +93,23 @@ export const HatDeactivationControls: React.FC<HatDeactivationControlsProps> = (
       // In a real implementation, you'd want to query all HAT holders
       // For now, we'll check some known addresses (pod leads, creator, current user)
       const knownAddresses = [
-        ...(address ? [address] : [])
+        ...(address ? [address] : []),
         // Add more addresses from pod data if available
       ];
 
       const wearers = await HatDeactivationService.getHatWearers(
-        publicClient, 
-        hatId, 
-        knownAddresses
+        publicClient,
+        hatId,
+        knownAddresses,
       );
 
       setHatWearers(wearers);
-
     } catch (error) {
       console.error('Failed to load HAT wearers:', error);
       toast({
-        title: "Loading Error",
-        description: "Failed to load HAT wearers",
-        variant: "destructive"
+        title: 'Loading Error',
+        description: 'Failed to load HAT wearers',
+        variant: 'destructive',
       });
     } finally {
       setLoadingWearers(false);
@@ -121,12 +126,12 @@ export const HatDeactivationControls: React.FC<HatDeactivationControlsProps> = (
         publicClient,
         walletClient,
         address,
-        hatId
+        hatId,
       );
 
       if (result.success) {
         toast({
-          title: "HAT Deactivated",
+          title: 'HAT Deactivated',
           description: `Successfully deactivated ${hatType} HAT for ${podName}`,
         });
 
@@ -135,18 +140,18 @@ export const HatDeactivationControls: React.FC<HatDeactivationControlsProps> = (
         onHatStatusChanged?.();
       } else {
         toast({
-          title: "Deactivation Failed",
-          description: result.error || "Failed to deactivate HAT",
-          variant: "destructive"
+          title: 'Deactivation Failed',
+          description: result.error || 'Failed to deactivate HAT',
+          variant: 'destructive',
         });
       }
-
     } catch (error) {
       console.error('HAT deactivation error:', error);
       toast({
-        title: "Deactivation Error",
-        description: error instanceof Error ? error.message : "Unexpected error occurred",
-        variant: "destructive"
+        title: 'Deactivation Error',
+        description:
+          error instanceof Error ? error.message : 'Unexpected error occurred',
+        variant: 'destructive',
       });
     } finally {
       setOperationInProgress(null);
@@ -163,12 +168,12 @@ export const HatDeactivationControls: React.FC<HatDeactivationControlsProps> = (
         publicClient,
         walletClient,
         address,
-        hatId
+        hatId,
       );
 
       if (result.success) {
         toast({
-          title: "HAT Reactivated",
+          title: 'HAT Reactivated',
           description: `Successfully reactivated ${hatType} HAT for ${podName}`,
         });
 
@@ -177,18 +182,18 @@ export const HatDeactivationControls: React.FC<HatDeactivationControlsProps> = (
         onHatStatusChanged?.();
       } else {
         toast({
-          title: "Reactivation Failed",
-          description: result.error || "Failed to reactivate HAT",
-          variant: "destructive"
+          title: 'Reactivation Failed',
+          description: result.error || 'Failed to reactivate HAT',
+          variant: 'destructive',
         });
       }
-
     } catch (error) {
       console.error('HAT reactivation error:', error);
       toast({
-        title: "Reactivation Error",
-        description: error instanceof Error ? error.message : "Unexpected error occurred",
-        variant: "destructive"
+        title: 'Reactivation Error',
+        description:
+          error instanceof Error ? error.message : 'Unexpected error occurred',
+        variant: 'destructive',
       });
     } finally {
       setOperationInProgress(null);
@@ -206,12 +211,12 @@ export const HatDeactivationControls: React.FC<HatDeactivationControlsProps> = (
         walletClient,
         address,
         hatId,
-        wearerAddress
+        wearerAddress,
       );
 
       if (result.success) {
         toast({
-          title: "HAT Removed",
+          title: 'HAT Removed',
           description: `Successfully removed HAT from ${wearerAddress.slice(0, 6)}...${wearerAddress.slice(-4)}`,
         });
 
@@ -220,18 +225,18 @@ export const HatDeactivationControls: React.FC<HatDeactivationControlsProps> = (
         onHatStatusChanged?.();
       } else {
         toast({
-          title: "Removal Failed",
-          description: result.error || "Failed to remove HAT from wearer",
-          variant: "destructive"
+          title: 'Removal Failed',
+          description: result.error || 'Failed to remove HAT from wearer',
+          variant: 'destructive',
         });
       }
-
     } catch (error) {
       console.error('HAT removal error:', error);
       toast({
-        title: "Removal Error",
-        description: error instanceof Error ? error.message : "Unexpected error occurred",
-        variant: "destructive"
+        title: 'Removal Error',
+        description:
+          error instanceof Error ? error.message : 'Unexpected error occurred',
+        variant: 'destructive',
       });
     } finally {
       setOperationInProgress(null);
@@ -244,11 +249,14 @@ export const HatDeactivationControls: React.FC<HatDeactivationControlsProps> = (
     try {
       setOperationInProgress('renouncing');
 
-      const result = await HatDeactivationService.renounceHat(walletClient, hatId);
+      const result = await HatDeactivationService.renounceHat(
+        walletClient,
+        hatId,
+      );
 
       if (result.success) {
         toast({
-          title: "HAT Renounced",
+          title: 'HAT Renounced',
           description: `Successfully renounced your ${hatType} HAT for ${podName}`,
         });
 
@@ -258,18 +266,18 @@ export const HatDeactivationControls: React.FC<HatDeactivationControlsProps> = (
         onHatStatusChanged?.();
       } else {
         toast({
-          title: "Renounce Failed",
-          description: result.error || "Failed to renounce HAT",
-          variant: "destructive"
+          title: 'Renounce Failed',
+          description: result.error || 'Failed to renounce HAT',
+          variant: 'destructive',
         });
       }
-
     } catch (error) {
       console.error('HAT renounce error:', error);
       toast({
-        title: "Renounce Error",
-        description: error instanceof Error ? error.message : "Unexpected error occurred",
-        variant: "destructive"
+        title: 'Renounce Error',
+        description:
+          error instanceof Error ? error.message : 'Unexpected error occurred',
+        variant: 'destructive',
       });
     } finally {
       setOperationInProgress(null);
@@ -309,8 +317,8 @@ export const HatDeactivationControls: React.FC<HatDeactivationControlsProps> = (
     );
   };
 
-  const canSelfRenounce = hatWearers.some(wearer => 
-    wearer.address.toLowerCase() === address?.toLowerCase()
+  const canSelfRenounce = hatWearers.some(
+    (wearer) => wearer.address.toLowerCase() === address?.toLowerCase(),
   );
 
   return (
@@ -320,7 +328,8 @@ export const HatDeactivationControls: React.FC<HatDeactivationControlsProps> = (
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             {getHatTypeIcon()}
-            {hatType === 'management' ? 'Management' : 'Membership'} HAT Controls
+            {hatType === 'management' ? 'Management' : 'Membership'} HAT
+            Controls
           </CardTitle>
           <p className="text-sm text-gray-600">
             Manage the {hatType} HAT activation status and wearer permissions
@@ -330,7 +339,12 @@ export const HatDeactivationControls: React.FC<HatDeactivationControlsProps> = (
           {/* Current Status */}
           <div className="flex items-center justify-between p-4 border rounded-lg">
             <div className="flex items-center gap-3">
-              <div className="w-3 h-3 rounded-full" style={{ backgroundColor: hatStatus.isActive ? '#3F7A5A' : '#8B3A3A' }}></div>
+              <div
+                className="w-3 h-3 rounded-full"
+                style={{
+                  backgroundColor: hatStatus.isActive ? '#3F7A5A' : '#8B3A3A',
+                }}
+              ></div>
               <div>
                 <p className="font-medium">Current Status</p>
                 <Badge variant={hatStatus.isActive ? 'default' : 'secondary'}>
@@ -341,7 +355,8 @@ export const HatDeactivationControls: React.FC<HatDeactivationControlsProps> = (
             <div className="text-right">
               <p className="text-sm text-gray-500">Supply</p>
               <p className="font-medium">
-                {hatStatus.supply}/{hatStatus.maxSupply === 0 ? '∞' : hatStatus.maxSupply}
+                {hatStatus.supply}/
+                {hatStatus.maxSupply === 0 ? '∞' : hatStatus.maxSupply}
               </p>
             </div>
           </div>
@@ -353,7 +368,7 @@ export const HatDeactivationControls: React.FC<HatDeactivationControlsProps> = (
                 <Shield className="h-4 w-4" />
                 Admin Controls
               </h4>
-              
+
               <div className="flex gap-2">
                 {hatStatus.isActive ? (
                   <Button
@@ -370,7 +385,9 @@ export const HatDeactivationControls: React.FC<HatDeactivationControlsProps> = (
                     }}
                   >
                     <PowerOff className="h-4 w-4 mr-2" />
-                    {operationInProgress === 'deactivating' ? 'Deactivating...' : 'Deactivate HAT'}
+                    {operationInProgress === 'deactivating'
+                      ? 'Deactivating...'
+                      : 'Deactivate HAT'}
                   </Button>
                 ) : (
                   <Button
@@ -387,17 +404,21 @@ export const HatDeactivationControls: React.FC<HatDeactivationControlsProps> = (
                     }}
                   >
                     <Power className="h-4 w-4 mr-2" />
-                    {operationInProgress === 'reactivating' ? 'Reactivating...' : 'Reactivate HAT'}
+                    {operationInProgress === 'reactivating'
+                      ? 'Reactivating...'
+                      : 'Reactivate HAT'}
                   </Button>
                 )}
-                
+
                 <Button
                   variant="outline"
                   onClick={loadHatWearers}
                   disabled={loadingWearers}
                   size="sm"
                 >
-                  <RefreshCw className={`h-4 w-4 ${loadingWearers ? 'animate-spin' : ''}`} />
+                  <RefreshCw
+                    className={`h-4 w-4 ${loadingWearers ? 'animate-spin' : ''}`}
+                  />
                 </Button>
               </div>
 
@@ -405,10 +426,13 @@ export const HatDeactivationControls: React.FC<HatDeactivationControlsProps> = (
                 <div className="flex items-start gap-2">
                   <AlertTriangle className="h-4 w-4 text-amber-600 mt-0.5" />
                   <div className="text-sm">
-                    <p className="font-medium text-amber-800">Deactivation Impact</p>
+                    <p className="font-medium text-amber-800">
+                      Deactivation Impact
+                    </p>
                     <p className="text-amber-700 mt-1">
-                      Deactivating this HAT will prevent it from being worn by anyone, 
-                      effectively disabling all associated permissions and access rights.
+                      Deactivating this HAT will prevent it from being worn by
+                      anyone, effectively disabling all associated permissions
+                      and access rights.
                     </p>
                   </div>
                 </div>
@@ -423,7 +447,7 @@ export const HatDeactivationControls: React.FC<HatDeactivationControlsProps> = (
                 <UserX className="h-4 w-4" />
                 Personal Actions
               </h4>
-              
+
               <Button
                 variant="outline"
                 onClick={handleRenounceHat}
@@ -437,9 +461,11 @@ export const HatDeactivationControls: React.FC<HatDeactivationControlsProps> = (
                 }}
               >
                 <UserX className="h-4 w-4 mr-2" />
-                {operationInProgress === 'renouncing' ? 'Renouncing...' : 'Renounce My HAT'}
+                {operationInProgress === 'renouncing'
+                  ? 'Renouncing...'
+                  : 'Renounce My HAT'}
               </Button>
-              
+
               <p className="text-xs text-gray-500">
                 You can voluntarily give up your HAT at any time
               </p>
@@ -454,7 +480,8 @@ export const HatDeactivationControls: React.FC<HatDeactivationControlsProps> = (
                 <div className="text-sm text-gray-600">
                   <p className="font-medium">Limited Access</p>
                   <p className="mt-1">
-                    You need admin permissions for this HAT to perform management operations.
+                    You need admin permissions for this HAT to perform
+                    management operations.
                   </p>
                 </div>
               </div>
@@ -478,17 +505,29 @@ export const HatDeactivationControls: React.FC<HatDeactivationControlsProps> = (
           <CardContent>
             <div className="space-y-3">
               {hatWearers.map((wearer) => (
-                <div key={wearer.address} className="flex items-center justify-between p-3 border rounded-lg">
+                <div
+                  key={wearer.address}
+                  className="flex items-center justify-between p-3 border rounded-lg"
+                >
                   <div>
                     <p className="font-medium font-mono text-sm">
                       {wearer.address.slice(0, 6)}...{wearer.address.slice(-4)}
                     </p>
-                    <p className="text-xs text-gray-500">Balance: {wearer.balance}</p>
+                    <p className="text-xs text-gray-500">
+                      Balance: {wearer.balance}
+                    </p>
                   </div>
-                  
+
                   <div className="flex gap-2">
                     {wearer.address.toLowerCase() === address?.toLowerCase() ? (
-                      <Badge variant="outline" style={{ backgroundColor: '#E8F1EE', color: '#1F453A', borderColor: '#B8D9CA' }}>
+                      <Badge
+                        variant="outline"
+                        style={{
+                          backgroundColor: '#E8F1EE',
+                          color: '#1F453A',
+                          borderColor: '#B8D9CA',
+                        }}
+                      >
                         You
                       </Badge>
                     ) : (
@@ -496,7 +535,9 @@ export const HatDeactivationControls: React.FC<HatDeactivationControlsProps> = (
                         size="sm"
                         variant="outline"
                         onClick={() => handleRemoveWearer(wearer.address)}
-                        disabled={operationInProgress === `removing-${wearer.address}`}
+                        disabled={
+                          operationInProgress === `removing-${wearer.address}`
+                        }
                         style={{ color: '#8B3A3A', borderColor: '#D9B3B3' }}
                         onMouseEnter={(e) => {
                           e.currentTarget.style.backgroundColor = '#F5E6E6';
@@ -506,7 +547,9 @@ export const HatDeactivationControls: React.FC<HatDeactivationControlsProps> = (
                         }}
                       >
                         <UserX className="h-3 w-3 mr-1" />
-                        {operationInProgress === `removing-${wearer.address}` ? 'Removing...' : 'Remove'}
+                        {operationInProgress === `removing-${wearer.address}`
+                          ? 'Removing...'
+                          : 'Remove'}
                       </Button>
                     )}
                   </div>

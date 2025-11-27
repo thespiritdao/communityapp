@@ -14,7 +14,7 @@ import type { HatPermissions } from '@/services/hatPermissionsService';
  */
 export function usePodPermission(
   podId: string | null | undefined,
-  permissionKey: keyof HatPermissions
+  permissionKey: keyof HatPermissions,
 ): boolean {
   const { userRoles } = useHatPermissions();
 
@@ -24,7 +24,7 @@ export function usePodPermission(
     }
 
     // Check if user has a role in this pod with the required permission
-    const hasAccess = userRoles.some(role => {
+    const hasAccess = userRoles.some((role) => {
       const roleMatches = role.podId === podId;
       const permissionGranted = role.permissions?.[permissionKey] === true;
 
@@ -33,7 +33,7 @@ export function usePodPermission(
           permissionKey,
           roleName: role.roleName,
           roleHasPermission: permissionGranted,
-          allPermissions: role.permissions
+          allPermissions: role.permissions,
         });
       }
 
@@ -60,38 +60,31 @@ export function usePodPermission(
  */
 export function usePodPermissions(
   podId: string | null | undefined,
-  permissionKeys: (keyof HatPermissions)[]
+  permissionKeys: (keyof HatPermissions)[],
 ): Record<string, boolean> {
   const { userRoles } = useHatPermissions();
 
   const permissions = useMemo(() => {
     if (!podId || !userRoles || userRoles.length === 0) {
-      return Object.fromEntries(
-        permissionKeys.map(key => [key, false])
-      );
+      return Object.fromEntries(permissionKeys.map((key) => [key, false]));
     }
 
     // Find the user's role in this pod
-    const podRole = userRoles.find(role => role.podId === podId);
+    const podRole = userRoles.find((role) => role.podId === podId);
 
     if (!podRole) {
-      return Object.fromEntries(
-        permissionKeys.map(key => [key, false])
-      );
+      return Object.fromEntries(permissionKeys.map((key) => [key, false]));
     }
 
     console.log(`🔐 Multi-permission check for ${podId}:`, {
       roleName: podRole.roleName,
       requestedPermissions: permissionKeys,
-      rolePermissions: podRole.permissions
+      rolePermissions: podRole.permissions,
     });
 
     // Return object with requested permission values
     return Object.fromEntries(
-      permissionKeys.map(key => [
-        key,
-        podRole.permissions?.[key] === true
-      ])
+      permissionKeys.map((key) => [key, podRole.permissions?.[key] === true]),
     );
   }, [podId, permissionKeys, userRoles]);
 
@@ -116,7 +109,7 @@ export function usePodRole(podId: string | null | undefined) {
       return null;
     }
 
-    return userRoles.find(role => role.podId === podId) || null;
+    return userRoles.find((role) => role.podId === podId) || null;
   }, [podId, userRoles]);
 
   return role;
@@ -161,7 +154,7 @@ export function useUserPods() {
 
     // Return unique pods (user might have multiple roles in same pod theoretically)
     const podMap = new Map();
-    userRoles.forEach(role => {
+    userRoles.forEach((role) => {
       if (role.podId && !podMap.has(role.podId)) {
         podMap.set(role.podId, role);
       }

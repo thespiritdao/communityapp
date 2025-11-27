@@ -20,7 +20,7 @@ async function fixBidState() {
   // Create public client for on-chain reads
   const publicClient = createPublicClient({
     chain: base,
-    transport: http(process.env.NEXT_PUBLIC_BASE_RPC_URL)
+    transport: http(process.env.NEXT_PUBLIC_BASE_RPC_URL),
   });
 
   try {

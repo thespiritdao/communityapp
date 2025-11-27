@@ -10,18 +10,22 @@ const YOUR_EOA = '0x12a0cf22D632c859B793F852af03b9d515580244'; // This address o
 // YOU NEED TO REPLACE THIS with your smart wallet address!
 const YOUR_SMART_WALLET = '0x...'; // ← CHECK YOUR CONNECTED ADDRESS IN THE UI!
 
-const proxyAbi = [{
-  name: 'addLeader',
-  type: 'function',
-  inputs: [{ name: 'newLeader', type: 'address' }],
-  outputs: [],
-  stateMutability: 'nonpayable'
-}];
+const proxyAbi = [
+  {
+    name: 'addLeader',
+    type: 'function',
+    inputs: [{ name: 'newLeader', type: 'address' }],
+    outputs: [],
+    stateMutability: 'nonpayable',
+  },
+];
 
 async function addSmartWalletAsLeader() {
   if (!YOUR_SMART_WALLET || YOUR_SMART_WALLET === '0x...') {
     console.error('❌ ERROR: You need to set YOUR_SMART_WALLET address first!');
-    console.log('Find it by checking what address is shown when connected to the app.');
+    console.log(
+      'Find it by checking what address is shown when connected to the app.',
+    );
     return;
   }
 
@@ -35,7 +39,7 @@ async function addSmartWalletAsLeader() {
     // Create wallet client
     const walletClient = createWalletClient({
       chain: base,
-      transport: custom(window.ethereum)
+      transport: custom(window.ethereum),
     });
 
     // Call addLeader on proxy
@@ -45,7 +49,7 @@ async function addSmartWalletAsLeader() {
       abi: proxyAbi,
       functionName: 'addLeader',
       args: [YOUR_SMART_WALLET],
-      account: YOUR_EOA
+      account: YOUR_EOA,
     });
 
     console.log('✅ Transaction sent!');
@@ -64,7 +68,6 @@ async function addSmartWalletAsLeader() {
     } else {
       console.log('❌ Transaction reverted');
     }
-
   } catch (error) {
     console.error('❌ Error:', error.message);
   }
@@ -76,6 +79,8 @@ async function addSmartWalletAsLeader() {
 // 3. Run: node fix_add_smart_wallet_leader.js
 
 console.log('⚠️  SETUP REQUIRED:');
-console.log('   1. Check what address shows in the UI when you connect your wallet');
+console.log(
+  '   1. Check what address shows in the UI when you connect your wallet',
+);
 console.log('   2. Edit this file and set YOUR_SMART_WALLET = that address');
 console.log('   3. Then run this script');

@@ -6,7 +6,7 @@ import { HatsCoreService } from '../../../services/hatsCoreService';
 
 /**
  * Member Indexing Service - Populates pod_members table
- * 
+ *
  * This service scans HAT contracts to discover pod members and maintains
  * an authoritative cache in the pod_members table, eliminating the need
  * for runtime blockchain queries.
@@ -31,9 +31,9 @@ interface IndexingStats {
 export class MemberIndexingService {
   private static publicClient = createPublicClient({
     chain: base,
-    transport: http()
+    transport: http(),
   });
-  
+
   private static hatsService = new HatsCoreService(this.publicClient);
 
   /**
@@ -46,7 +46,7 @@ export class MemberIndexingService {
       members_added: 0,
       members_removed: 0,
       members_updated: 0,
-      errors: []
+      errors: [],
     };
 
     try {
@@ -69,7 +69,9 @@ export class MemberIndexingService {
       return stats;
     } catch (error) {
       console.error('❌ Indexing failed:', error);
-      stats.errors.push(`Global indexing error: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      stats.errors.push(
+        `Global indexing error: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      );
       return stats;
     }
   }
@@ -79,7 +81,7 @@ export class MemberIndexingService {
    */
   static async indexPodMembership(
     pod: { id: string; management_hat_id?: string; membership_hat_id?: string },
-    stats: IndexingStats
+    stats: IndexingStats,
   ): Promise<void> {
     console.log(`🔍 Indexing pod ${pod.id}`);
 
@@ -95,14 +97,19 @@ export class MemberIndexingService {
             wallet: leader.toLowerCase(),
             hat_id: pod.management_hat_id,
             membership_type: 'leader',
-            is_active: true
+            is_active: true,
           });
           currentMembers.add(leader.toLowerCase());
           stats.members_added++;
         }
-        console.log(`  📋 Found ${leaders.length} leaders for management HAT ${pod.management_hat_id}`);
+        console.log(
+          `  📋 Found ${leaders.length} leaders for management HAT ${pod.management_hat_id}`,
+        );
       } catch (error) {
-        console.error(`  ⚠️ Failed to index management HAT ${pod.management_hat_id}:`, error);
+        console.error(
+          `  ⚠️ Failed to index management HAT ${pod.management_hat_id}:`,
+          error,
+        );
       }
     }
 
@@ -118,20 +125,29 @@ export class MemberIndexingService {
               wallet: member.toLowerCase(),
               hat_id: pod.membership_hat_id,
               membership_type: 'member',
-              is_active: true
+              is_active: true,
             });
             currentMembers.add(member.toLowerCase());
             stats.members_added++;
           }
         }
-        console.log(`  👥 Found ${members.length} members for membership HAT ${pod.membership_hat_id}`);
+        console.log(
+          `  👥 Found ${members.length} members for membership HAT ${pod.membership_hat_id}`,
+        );
       } catch (error) {
-        console.error(`  ⚠️ Failed to index membership HAT ${pod.membership_hat_id}:`, error);
+        console.error(
+          `  ⚠️ Failed to index membership HAT ${pod.membership_hat_id}:`,
+          error,
+        );
       }
     }
 
     // Mark members who no longer hold HATs as inactive
-    await this.deactivateStaleMembers(pod.id, Array.from(currentMembers), stats);
+    await this.deactivateStaleMembers(
+      pod.id,
+      Array.from(currentMembers),
+      stats,
+    );
   }
 
   /**
@@ -140,50 +156,62 @@ export class MemberIndexingService {
    */
   private static async getHatHolders(hatId: string): Promise<string[]> {
     console.log(`🎩 Querying HAT holders for ${hatId}`);
-    
+
     try {
       // Queue the blockchain query with low priority (background indexing)
       return await globalRpcQueue.enqueueLowPriority(async () => {
         // Initialize HATS service if not already done
         await this.hatsService.initialize();
-        
+
         // Get all wearers of this HAT using the HATS Core SDK
         const wearers = await this.hatsService.getHatWearers(hatId);
-        
+
         console.log(`  📊 Found ${wearers.length} wearers for HAT ${hatId}`);
-        
+
         // Extract addresses from wearer objects and filter out null/undefined
         const addresses = wearers
-          .map(wearer => wearer.id || wearer.address)
-          .filter(address => address && address !== '0x0000000000000000000000000000000000000000')
-          .map(address => address.toLowerCase());
-          
+          .map((wearer) => wearer.id || wearer.address)
+          .filter(
+            (address) =>
+              address &&
+              address !== '0x0000000000000000000000000000000000000000',
+          )
+          .map((address) => address.toLowerCase());
+
         return addresses;
       });
     } catch (error) {
       console.error(`Failed to get HAT holders for ${hatId}:`, error);
-      
+
       // If HATS SDK fails, fallback to direct contract call
       try {
-        console.log(`  🔄 Falling back to direct contract query for HAT ${hatId}`);
+        console.log(
+          `  🔄 Falling back to direct contract query for HAT ${hatId}`,
+        );
         return await this.getHatHoldersDirect(hatId);
       } catch (fallbackError) {
-        console.error(`Direct contract query also failed for HAT ${hatId}:`, fallbackError);
-        throw new Error(`HAT query failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        console.error(
+          `Direct contract query also failed for HAT ${hatId}:`,
+          fallbackError,
+        );
+        throw new Error(
+          `HAT query failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        );
       }
     }
   }
-  
+
   /**
    * Fallback method: Query HAT holders directly from contract
    */
   private static async getHatHoldersDirect(hatId: string): Promise<string[]> {
-    const HATS_CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_HATS_CONTRACT as `0x${string}`;
-    
+    const HATS_CONTRACT_ADDRESS = process.env
+      .NEXT_PUBLIC_HATS_CONTRACT as `0x${string}`;
+
     if (!HATS_CONTRACT_ADDRESS) {
       throw new Error('HATS_CONTRACT_ADDRESS not configured');
     }
-    
+
     // Minimal HATS ABI for getting wearers
     const HATS_ABI = [
       {
@@ -191,59 +219,64 @@ export class MemberIndexingService {
         type: 'function',
         inputs: [
           { name: 'account', type: 'address' },
-          { name: 'hatId', type: 'uint256' }
+          { name: 'hatId', type: 'uint256' },
         ],
         outputs: [{ name: '', type: 'uint256' }],
-        stateMutability: 'view'
+        stateMutability: 'view',
       },
       {
         name: 'isWearerOfHat',
         type: 'function',
         inputs: [
           { name: 'user', type: 'address' },
-          { name: 'hatId', type: 'uint256' }
+          { name: 'hatId', type: 'uint256' },
         ],
         outputs: [{ name: 'isWearer', type: 'bool' }],
-        stateMutability: 'view'
-      }
+        stateMutability: 'view',
+      },
     ] as const;
-    
+
     return await globalRpcQueue.enqueueLowPriority(async () => {
       const hatContract = getContract({
         address: HATS_CONTRACT_ADDRESS,
         abi: HATS_ABI,
-        publicClient: this.publicClient
+        publicClient: this.publicClient,
       });
-      
+
       // Since we can't enumerate all holders directly, we'll need to check
       // against known addresses from our pod_members table
-      console.log(`  ⚠️ Direct contract query limited - checking known addresses for HAT ${hatId}`);
-      
+      console.log(
+        `  ⚠️ Direct contract query limited - checking known addresses for HAT ${hatId}`,
+      );
+
       // Get existing member addresses from database to check
       const { data: existingMembers } = await supabase
         .from('pod_members')
         .select('wallet')
         .eq('hat_id', hatId);
-        
-      const knownAddresses = existingMembers?.map(m => m.wallet) || [];
+
+      const knownAddresses = existingMembers?.map((m) => m.wallet) || [];
       const currentHolders: string[] = [];
-      
+
       // Check each known address to see if they still hold the HAT
       for (const address of knownAddresses) {
         try {
           const isHolder = await hatContract.read.isWearerOfHat([
             address as `0x${string}`,
-            BigInt(hatId)
+            BigInt(hatId),
           ]);
-          
+
           if (isHolder) {
             currentHolders.push(address.toLowerCase());
           }
         } catch (error) {
-          console.error(`Failed to check HAT ${hatId} for address ${address}:`, error);
+          console.error(
+            `Failed to check HAT ${hatId} for address ${address}:`,
+            error,
+          );
         }
       }
-      
+
       return currentHolders;
     });
   }
@@ -251,11 +284,13 @@ export class MemberIndexingService {
   /**
    * Get pods that need indexing
    */
-  private static async getPodsForIndexing(): Promise<Array<{
-    id: string;
-    management_hat_id?: string;
-    membership_hat_id?: string;
-  }>> {
+  private static async getPodsForIndexing(): Promise<
+    Array<{
+      id: string;
+      management_hat_id?: string;
+      membership_hat_id?: string;
+    }>
+  > {
     try {
       const { data, error } = await supabase
         .from('pods')
@@ -281,9 +316,8 @@ export class MemberIndexingService {
    */
   private static async upsertMember(member: MembershipRecord): Promise<void> {
     try {
-      const { error } = await supabase
-        .from('pod_members')
-        .upsert({
+      const { error } = await supabase.from('pod_members').upsert(
+        {
           pod_id: member.pod_id,
           wallet: member.wallet,
           hat_id: member.hat_id,
@@ -292,11 +326,13 @@ export class MemberIndexingService {
           source: 'indexer',
           indexed_at: new Date().toISOString(),
           // Only set joined_at for new records
-          joined_at: member.is_active ? new Date().toISOString() : undefined
-        }, {
+          joined_at: member.is_active ? new Date().toISOString() : undefined,
+        },
+        {
           onConflict: 'pod_id,wallet',
-          ignoreDuplicates: false
-        });
+          ignoreDuplicates: false,
+        },
+      );
 
       if (error) {
         console.error('Failed to upsert member:', member, error);
@@ -312,9 +348,9 @@ export class MemberIndexingService {
    * Mark members as inactive who no longer hold HATs
    */
   private static async deactivateStaleMembers(
-    podId: string, 
-    currentMembers: string[], 
-    stats: IndexingStats
+    podId: string,
+    currentMembers: string[],
+    stats: IndexingStats,
   ): Promise<void> {
     try {
       // Get existing active members from database
@@ -332,18 +368,20 @@ export class MemberIndexingService {
 
       // Find members who are in DB but not in current HAT holders
       const staleMemberWallets = (existingMembers || [])
-        .map(m => m.wallet)
-        .filter(wallet => !currentMembers.includes(wallet));
+        .map((m) => m.wallet)
+        .filter((wallet) => !currentMembers.includes(wallet));
 
       if (staleMemberWallets.length > 0) {
-        console.log(`  🚫 Deactivating ${staleMemberWallets.length} stale members`);
-        
+        console.log(
+          `  🚫 Deactivating ${staleMemberWallets.length} stale members`,
+        );
+
         const { error: updateError } = await supabase
           .from('pod_members')
           .update({
             is_active: false,
             left_at: new Date().toISOString(),
-            indexed_at: new Date().toISOString()
+            indexed_at: new Date().toISOString(),
           })
           .eq('pod_id', podId)
           .in('wallet', staleMemberWallets)
@@ -364,30 +402,33 @@ export class MemberIndexingService {
    * Manual member management (for testing or admin actions)
    */
   static async addMemberManually(
-    podId: string, 
-    walletAddress: string, 
-    membershipType: 'leader' | 'member' | 'admin' = 'member'
+    podId: string,
+    walletAddress: string,
+    membershipType: 'leader' | 'member' | 'admin' = 'member',
   ): Promise<void> {
     await this.upsertMember({
       pod_id: podId,
       wallet: walletAddress.toLowerCase(),
       hat_id: '', // No HAT ID for manual additions
       membership_type: membershipType,
-      is_active: true
+      is_active: true,
     });
   }
 
   /**
    * Remove member manually
    */
-  static async removeMemberManually(podId: string, walletAddress: string): Promise<void> {
+  static async removeMemberManually(
+    podId: string,
+    walletAddress: string,
+  ): Promise<void> {
     try {
       const { error } = await supabase
         .from('pod_members')
         .update({
           is_active: false,
           left_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
+          updated_at: new Date().toISOString(),
         })
         .eq('pod_id', podId)
         .eq('wallet', walletAddress.toLowerCase());
@@ -426,7 +467,7 @@ export class MemberIndexingService {
         last_indexed_at: data?.last_indexed_at || null,
         member_count: data?.total_members || 0,
         indexed_member_count: data?.indexed_members || 0,
-        manual_member_count: data?.manual_members || 0
+        manual_member_count: data?.manual_members || 0,
       };
     } catch (error) {
       console.error('Error getting pod indexing status:', error);
@@ -434,7 +475,7 @@ export class MemberIndexingService {
         last_indexed_at: null,
         member_count: 0,
         indexed_member_count: 0,
-        manual_member_count: 0
+        manual_member_count: 0,
       };
     }
   }

@@ -5,11 +5,11 @@ import { useState, useEffect } from 'react';
 import { useAccount } from 'wagmi';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { 
-  Lock, 
-  Shield, 
-  CheckCircle, 
-  XCircle, 
+import {
+  Lock,
+  Shield,
+  CheckCircle,
+  XCircle,
   RefreshCw,
   AlertTriangle,
 } from 'lucide-react';
@@ -28,7 +28,9 @@ interface EligibilityGatedContentProps {
   onEligibilityChange?: (eligible: boolean) => void;
 }
 
-export const EligibilityGatedContent: React.FC<EligibilityGatedContentProps> = ({
+export const EligibilityGatedContent: React.FC<
+  EligibilityGatedContentProps
+> = ({
   children,
   eligibilityCriteria,
   podId,
@@ -36,19 +38,15 @@ export const EligibilityGatedContent: React.FC<EligibilityGatedContentProps> = (
   fallbackComponent,
   showCriteriaDetails = true,
   contentType = 'content',
-  onEligibilityChange
+  onEligibilityChange,
 }) => {
   const { address } = useAccount();
   const [eligibilityResult, setEligibilityResult] = useState<any>(null);
   const [hasAccess, setHasAccess] = useState(false);
   const [isChecking, setIsChecking] = useState(false);
 
-  const {
-    evaluateCriteria,
-    checkUserEligibility,
-    loading,
-    error
-  } = useEligibility();
+  const { evaluateCriteria, checkUserEligibility, loading, error } =
+    useEligibility();
 
   const checkEligibility = async () => {
     if (!address || eligibilityCriteria.length === 0) {
@@ -59,7 +57,7 @@ export const EligibilityGatedContent: React.FC<EligibilityGatedContentProps> = (
     setIsChecking(true);
     try {
       let result;
-      
+
       if (roleId && podId) {
         // Use role-based eligibility check
         result = await checkUserEligibility(podId, roleId);
@@ -71,9 +69,8 @@ export const EligibilityGatedContent: React.FC<EligibilityGatedContentProps> = (
       setEligibilityResult(result);
       const eligible = result?.eligible || false;
       setHasAccess(eligible);
-      
-      onEligibilityChange?.(eligible);
 
+      onEligibilityChange?.(eligible);
     } catch (err) {
       console.error('Eligibility check failed:', err);
       setHasAccess(false);
@@ -95,10 +92,18 @@ export const EligibilityGatedContent: React.FC<EligibilityGatedContentProps> = (
   // Loading state
   if (loading || isChecking) {
     return (
-      <Card className="border-2 border-dashed" style={{ borderColor: '#8FAAA1' }}>
+      <Card
+        className="border-2 border-dashed"
+        style={{ borderColor: '#8FAAA1' }}
+      >
         <CardContent className="py-8 text-center">
-          <div className="animate-spin h-6 w-6 border-2 border-t-transparent rounded-full mx-auto mb-3" style={{ borderColor: '#2F5D50', borderTopColor: 'transparent' }}></div>
-          <p className="text-sm text-gray-600">Checking access requirements...</p>
+          <div
+            className="animate-spin h-6 w-6 border-2 border-t-transparent rounded-full mx-auto mb-3"
+            style={{ borderColor: '#2F5D50', borderTopColor: 'transparent' }}
+          ></div>
+          <p className="text-sm text-gray-600">
+            Checking access requirements...
+          </p>
         </CardContent>
       </Card>
     );
@@ -109,7 +114,10 @@ export const EligibilityGatedContent: React.FC<EligibilityGatedContentProps> = (
     return (
       <div className="relative">
         {/* Success indicator */}
-        <div className="mb-4 p-3 border rounded-lg" style={{ backgroundColor: '#D1E6DC', borderColor: '#B8D9CA' }}>
+        <div
+          className="mb-4 p-3 border rounded-lg"
+          style={{ backgroundColor: '#D1E6DC', borderColor: '#B8D9CA' }}
+        >
           <div className="flex items-center gap-2">
             <CheckCircle className="h-4 w-4" style={{ color: '#3F7A5A' }} />
             <span className="text-sm font-medium" style={{ color: '#1F453A' }}>
@@ -122,11 +130,13 @@ export const EligibilityGatedContent: React.FC<EligibilityGatedContentProps> = (
               disabled={isChecking}
               className="ml-auto"
             >
-              <RefreshCw className={`h-3 w-3 ${isChecking ? 'animate-spin' : ''}`} />
+              <RefreshCw
+                className={`h-3 w-3 ${isChecking ? 'animate-spin' : ''}`}
+              />
             </Button>
           </div>
         </div>
-        
+
         {/* Render protected content */}
         {children}
       </div>
@@ -140,17 +150,27 @@ export const EligibilityGatedContent: React.FC<EligibilityGatedContentProps> = (
 
   const getContentTypeLabel = () => {
     switch (contentType) {
-      case 'chat': return 'Chat';
-      case 'forum': return 'Forum';
-      case 'feature': return 'Feature';
-      default: return 'Content';
+      case 'chat':
+        return 'Chat';
+      case 'forum':
+        return 'Forum';
+      case 'feature':
+        return 'Feature';
+      default:
+        return 'Content';
     }
   };
 
   return (
-    <Card className="border-2" style={{ borderColor: '#D9B3B3', backgroundColor: '#F5E6E6' }}>
+    <Card
+      className="border-2"
+      style={{ borderColor: '#D9B3B3', backgroundColor: '#F5E6E6' }}
+    >
       <CardHeader>
-        <CardTitle className="flex items-center gap-2" style={{ color: '#5C1F1F' }}>
+        <CardTitle
+          className="flex items-center gap-2"
+          style={{ color: '#5C1F1F' }}
+        >
           <Lock className="h-5 w-5" />
           {getContentTypeLabel()} Access Restricted
         </CardTitle>
@@ -160,15 +180,21 @@ export const EligibilityGatedContent: React.FC<EligibilityGatedContentProps> = (
         <div className="flex items-center gap-2" style={{ color: '#8B3A3A' }}>
           <XCircle className="h-4 w-4" />
           <span className="text-sm">
-            You don't meet the requirements to access this {contentType.toLowerCase()}
+            You don't meet the requirements to access this{' '}
+            {contentType.toLowerCase()}
           </span>
         </div>
 
         {/* Show eligibility results if available */}
         {eligibilityResult && (
-          <div className="bg-white border rounded-lg p-4" style={{ borderColor: '#D9B3B3' }}>
+          <div
+            className="bg-white border rounded-lg p-4"
+            style={{ borderColor: '#D9B3B3' }}
+          >
             <div className="flex items-center justify-between mb-3">
-              <h4 className="font-medium" style={{ color: '#5C1F1F' }}>Requirements Status</h4>
+              <h4 className="font-medium" style={{ color: '#5C1F1F' }}>
+                Requirements Status
+              </h4>
               <Button
                 size="sm"
                 variant="outline"
@@ -186,7 +212,9 @@ export const EligibilityGatedContent: React.FC<EligibilityGatedContentProps> = (
                   }
                 }}
               >
-                <RefreshCw className={`h-3 w-3 mr-1 ${isChecking ? 'animate-spin' : ''}`} />
+                <RefreshCw
+                  className={`h-3 w-3 mr-1 ${isChecking ? 'animate-spin' : ''}`}
+                />
                 Recheck
               </Button>
             </div>
@@ -196,7 +224,10 @@ export const EligibilityGatedContent: React.FC<EligibilityGatedContentProps> = (
                 <div className="flex justify-between items-center">
                   <span className="text-gray-600">Progress:</span>
                   <div className="flex items-center gap-2">
-                    <div className="px-2 py-1 rounded font-medium" style={{ backgroundColor: '#F5E6E6', color: '#5C1F1F' }}>
+                    <div
+                      className="px-2 py-1 rounded font-medium"
+                      style={{ backgroundColor: '#F5E6E6', color: '#5C1F1F' }}
+                    >
                       {eligibilityResult.evaluation.overallResult.passed}/
                       {eligibilityResult.evaluation.overallResult.total} passed
                     </div>
@@ -226,25 +257,46 @@ export const EligibilityGatedContent: React.FC<EligibilityGatedContentProps> = (
 
         {/* Error display */}
         {error && (
-          <div className="border p-3 rounded-lg" style={{ backgroundColor: '#FAF4EC', borderColor: '#E8D7B8' }}>
-            <div className="flex items-center gap-2" style={{ color: '#8F6B2F' }}>
+          <div
+            className="border p-3 rounded-lg"
+            style={{ backgroundColor: '#FAF4EC', borderColor: '#E8D7B8' }}
+          >
+            <div
+              className="flex items-center gap-2"
+              style={{ color: '#8F6B2F' }}
+            >
               <AlertTriangle className="h-4 w-4" />
-              <span className="text-sm font-medium">Error checking requirements:</span>
+              <span className="text-sm font-medium">
+                Error checking requirements:
+              </span>
             </div>
-            <p className="text-sm mt-1" style={{ color: '#A67E35' }}>{error}</p>
+            <p className="text-sm mt-1" style={{ color: '#A67E35' }}>
+              {error}
+            </p>
           </div>
         )}
 
         {/* Help text */}
-        <div className="border p-3 rounded-lg" style={{ backgroundColor: '#E8F1EE', borderColor: '#B8D9CA' }}>
-          <div className="flex items-center gap-2 mb-2" style={{ color: '#1F453A' }}>
+        <div
+          className="border p-3 rounded-lg"
+          style={{ backgroundColor: '#E8F1EE', borderColor: '#B8D9CA' }}
+        >
+          <div
+            className="flex items-center gap-2 mb-2"
+            style={{ color: '#1F453A' }}
+          >
             <Shield className="h-4 w-4" />
             <span className="text-sm font-medium">How to get access:</span>
           </div>
           <ul className="text-sm space-y-1" style={{ color: '#2F5D50' }}>
             <li>• Meet the eligibility requirements shown above</li>
-            <li>• Requirements are checked automatically when you connect your wallet</li>
-            <li>• Contact pod administrators if you believe you should have access</li>
+            <li>
+              • Requirements are checked automatically when you connect your
+              wallet
+            </li>
+            <li>
+              • Contact pod administrators if you believe you should have access
+            </li>
             {roleId && (
               <li>• You may need to request assignment to the required role</li>
             )}
@@ -266,7 +318,7 @@ export function withEligibilityGating<T extends {}>(
     roleId?: string;
     contentType?: 'chat' | 'forum' | 'feature' | 'content';
     showCriteriaDetails?: boolean;
-  }
+  },
 ) {
   return function EligibilityGatedComponent(props: T) {
     return (

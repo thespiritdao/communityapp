@@ -4,7 +4,7 @@ import { EligibilityService } from '@/features/pods/services/EligibilityService'
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: { id: string } },
 ) {
   try {
     const { searchParams } = new URL(request.url);
@@ -14,38 +14,40 @@ export async function GET(
     if (!params.id) {
       return NextResponse.json(
         { error: 'Pod ID is required' },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
     if (!userAddress) {
       return NextResponse.json(
         { error: 'User address is required' },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
     // If roleId is specified, check eligibility for that specific role
     if (roleId) {
-      const eligibilityCheck = await PodRolePermissionsService.checkUserEligibility(
-        userAddress,
-        roleId
-      );
+      const eligibilityCheck =
+        await PodRolePermissionsService.checkUserEligibility(
+          userAddress,
+          roleId,
+        );
 
       return NextResponse.json({
         podId: params.id,
         userAddress,
         roleId,
         eligible: eligibilityCheck.eligible,
-        evaluation: eligibilityCheck.evaluation
+        evaluation: eligibilityCheck.evaluation,
       });
     }
 
     // Otherwise, get all eligible roles for the user in this pod
-    const eligibleRoles = await PodRolePermissionsService.getEligibleRolesForUser(
-      userAddress,
-      params.id
-    );
+    const eligibleRoles =
+      await PodRolePermissionsService.getEligibleRolesForUser(
+        userAddress,
+        params.id,
+      );
 
     return NextResponse.json({
       podId: params.id,
@@ -55,22 +57,26 @@ export async function GET(
         roleName: role.role_name,
         hatId: role.hat_id,
         eligible,
-        evaluation
-      }))
+        evaluation,
+      })),
     });
-
   } catch (error) {
     console.error('Failed to check eligibility:', error);
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Failed to check eligibility' },
-      { status: 500 }
+      {
+        error:
+          error instanceof Error
+            ? error.message
+            : 'Failed to check eligibility',
+      },
+      { status: 500 },
     );
   }
 }
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: { id: string } },
 ) {
   try {
     const body = await request.json();
@@ -79,7 +85,7 @@ export async function POST(
     if (!params.id || !userAddress || !criteria) {
       return NextResponse.json(
         { error: 'Pod ID, user address, and criteria are required' },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -87,21 +93,25 @@ export async function POST(
       userAddress,
       podId: params.id,
       roleId,
-      criteria
+      criteria,
     });
 
     return NextResponse.json({
       podId: params.id,
       userAddress,
       roleId,
-      evaluation
+      evaluation,
     });
-
   } catch (error) {
     console.error('Failed to evaluate eligibility criteria:', error);
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Failed to evaluate criteria' },
-      { status: 500 }
+      {
+        error:
+          error instanceof Error
+            ? error.message
+            : 'Failed to evaluate criteria',
+      },
+      { status: 500 },
     );
   }
 }

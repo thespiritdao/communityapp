@@ -8,7 +8,7 @@ const mockHandleOnChange = jest.fn();
 describe('[commons] - Checkbox', () => {
   const setup = () => {
     return render(
-      <Checkbox label={mockLabel} handleOnChange={mockHandleOnChange} />
+      <Checkbox label={mockLabel} handleOnChange={mockHandleOnChange} />,
     );
   };
 

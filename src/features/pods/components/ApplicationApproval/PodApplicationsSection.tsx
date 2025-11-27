@@ -7,7 +7,14 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/utils/supabaseClient';
 import { ApplicationApprovalCard } from './ApplicationApprovalCard';
-import { ClipboardList, UserPlus, Clock, CheckCircle, Users, Crown } from 'lucide-react';
+import {
+  ClipboardList,
+  UserPlus,
+  Clock,
+  CheckCircle,
+  Users,
+  Crown,
+} from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 interface Application {
@@ -41,15 +48,19 @@ export const PodApplicationsSection: React.FC<PodApplicationsSectionProps> = ({
   podId,
   podName,
   isLeader,
-  onApplicationSubmit
+  onApplicationSubmit,
 }) => {
   const { address } = useAccount();
   const router = useRouter();
   const [applications, setApplications] = useState<Application[]>([]);
-  const [userApplication, setUserApplication] = useState<Application | null>(null);
+  const [userApplication, setUserApplication] = useState<Application | null>(
+    null,
+  );
   const [loading, setLoading] = useState(true);
   const [isMember, setIsMember] = useState(false);
-  const [selectedRole, setSelectedRole] = useState<'member' | 'leader'>('member');
+  const [selectedRole, setSelectedRole] = useState<'member' | 'leader'>(
+    'member',
+  );
   const [showApplyForm, setShowApplyForm] = useState(false);
 
   useEffect(() => {
@@ -64,11 +75,11 @@ export const PodApplicationsSection: React.FC<PodApplicationsSectionProps> = ({
           event: '*',
           schema: 'public',
           table: 'pod_membership_applications',
-          filter: `pod_id=eq.${podId}`
+          filter: `pod_id=eq.${podId}`,
         },
         () => {
           loadData();
-        }
+        },
       )
       .subscribe();
 
@@ -131,8 +142,8 @@ export const PodApplicationsSection: React.FC<PodApplicationsSectionProps> = ({
     setShowApplyForm(true);
   };
 
-  const pendingApps = applications.filter(app => app.status === 'pending');
-  const approvedApps = applications.filter(app => app.status === 'approved');
+  const pendingApps = applications.filter((app) => app.status === 'pending');
+  const approvedApps = applications.filter((app) => app.status === 'approved');
 
   // If user is already a member, don't show anything
   if (isMember && !isLeader) {
@@ -165,10 +176,24 @@ export const PodApplicationsSection: React.FC<PodApplicationsSectionProps> = ({
             Membership Applications
           </h3>
           <div className="flex gap-2">
-            <Badge variant="outline" style={{ backgroundColor: '#FAF4EC', color: '#A67E35', borderColor: '#E8D7B8' }}>
+            <Badge
+              variant="outline"
+              style={{
+                backgroundColor: '#FAF4EC',
+                color: '#A67E35',
+                borderColor: '#E8D7B8',
+              }}
+            >
               {pendingApps.length} Pending
             </Badge>
-            <Badge variant="outline" style={{ backgroundColor: '#D1E6DC', color: '#2F5D50', borderColor: '#B8D9CA' }}>
+            <Badge
+              variant="outline"
+              style={{
+                backgroundColor: '#D1E6DC',
+                color: '#2F5D50',
+                borderColor: '#B8D9CA',
+              }}
+            >
               {approvedApps.length} Approved
             </Badge>
           </div>
@@ -179,7 +204,9 @@ export const PodApplicationsSection: React.FC<PodApplicationsSectionProps> = ({
             <CardContent className="p-8 text-center text-gray-500">
               <ClipboardList className="w-12 h-12 text-gray-400 mx-auto mb-4" />
               <p className="font-medium">No pending applications</p>
-              <p className="text-sm mt-1">Applications will appear here when users apply to join</p>
+              <p className="text-sm mt-1">
+                Applications will appear here when users apply to join
+              </p>
             </CardContent>
           </Card>
         ) : (
@@ -204,8 +231,10 @@ export const PodApplicationsSection: React.FC<PodApplicationsSectionProps> = ({
   // User has pending application - show status
   if (userApplication?.status === 'pending') {
     const roleIcon = userApplication.intended_role === 'leader' ? Crown : Users;
-    const roleColor = userApplication.intended_role === 'leader' ? '#6A5F7A' : '#2F5D50';
-    const roleBgColor = userApplication.intended_role === 'leader' ? '#EDEAF0' : '#E8F1EE';
+    const roleColor =
+      userApplication.intended_role === 'leader' ? '#6A5F7A' : '#2F5D50';
+    const roleBgColor =
+      userApplication.intended_role === 'leader' ? '#EDEAF0' : '#E8F1EE';
     const RoleIcon = roleIcon;
 
     return (
@@ -216,27 +245,46 @@ export const PodApplicationsSection: React.FC<PodApplicationsSectionProps> = ({
               <Clock className="h-5 w-5" style={{ color: '#C6933F' }} />
               Your Application Status
             </CardTitle>
-            <div className="flex items-center gap-2 px-3 py-1 rounded-full" style={{ backgroundColor: roleBgColor }}>
+            <div
+              className="flex items-center gap-2 px-3 py-1 rounded-full"
+              style={{ backgroundColor: roleBgColor }}
+            >
               <RoleIcon className="w-4 h-4" style={{ color: roleColor }} />
-              <span className="text-sm font-medium" style={{ color: roleColor }}>
-                {userApplication.intended_role === 'leader' ? 'Leader' : 'Member'}
+              <span
+                className="text-sm font-medium"
+                style={{ color: roleColor }}
+              >
+                {userApplication.intended_role === 'leader'
+                  ? 'Leader'
+                  : 'Member'}
               </span>
             </div>
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="border-l-4 pl-4 py-2" style={{ borderColor: '#C6933F' }}>
-            <p className="text-sm font-medium text-gray-900 mb-1">Accountability Statement</p>
-            <p className="text-sm text-gray-700">{userApplication.accountability_statement}</p>
+          <div
+            className="border-l-4 pl-4 py-2"
+            style={{ borderColor: '#C6933F' }}
+          >
+            <p className="text-sm font-medium text-gray-900 mb-1">
+              Accountability Statement
+            </p>
+            <p className="text-sm text-gray-700">
+              {userApplication.accountability_statement}
+            </p>
           </div>
 
-          <div className="flex items-center justify-between p-4 rounded-lg border" style={{ backgroundColor: '#FAF4EC', borderColor: '#E8D7B8' }}>
+          <div
+            className="flex items-center justify-between p-4 rounded-lg border"
+            style={{ backgroundColor: '#FAF4EC', borderColor: '#E8D7B8' }}
+          >
             <div className="flex items-center gap-3">
               <Clock className="h-6 w-6" style={{ color: '#C6933F' }} />
               <div>
                 <p className="font-medium text-gray-900">Pending Approval</p>
                 <p className="text-sm text-gray-600">
-                  {userApplication.current_votes} / {userApplication.required_votes} leader votes received
+                  {userApplication.current_votes} /{' '}
+                  {userApplication.required_votes} leader votes received
                 </p>
               </div>
             </div>
@@ -246,7 +294,7 @@ export const PodApplicationsSection: React.FC<PodApplicationsSectionProps> = ({
                   className="h-2 rounded-full transition-all"
                   style={{
                     width: `${(userApplication.current_votes / userApplication.required_votes) * 100}%`,
-                    backgroundColor: '#C6933F'
+                    backgroundColor: '#C6933F',
                   }}
                 />
               </div>
@@ -254,7 +302,8 @@ export const PodApplicationsSection: React.FC<PodApplicationsSectionProps> = ({
           </div>
 
           <p className="text-xs text-gray-500 text-center">
-            Submitted {new Date(userApplication.submitted_at).toLocaleDateString()}
+            Submitted{' '}
+            {new Date(userApplication.submitted_at).toLocaleDateString()}
           </p>
         </CardContent>
       </Card>
@@ -266,12 +315,16 @@ export const PodApplicationsSection: React.FC<PodApplicationsSectionProps> = ({
     return (
       <Card>
         <CardContent className="p-8 text-center">
-          <CheckCircle className="w-16 h-16 mx-auto mb-4" style={{ color: '#3F7A5A' }} />
+          <CheckCircle
+            className="w-16 h-16 mx-auto mb-4"
+            style={{ color: '#3F7A5A' }}
+          />
           <h3 className="text-xl font-semibold text-gray-900 mb-2">
             Welcome to {podName}!
           </h3>
           <p className="text-gray-600">
-            Your application was approved and your {userApplication.intended_role} HAT has been minted.
+            Your application was approved and your{' '}
+            {userApplication.intended_role} HAT has been minted.
           </p>
         </CardContent>
       </Card>
@@ -307,8 +360,8 @@ export const PodApplicationsSection: React.FC<PodApplicationsSectionProps> = ({
       <CardContent className="space-y-4">
         <div>
           <p className="text-sm text-gray-600 mb-4">
-            Choose the role you're applying for and submit your application.
-            Pod leaders will review and vote on your request.
+            Choose the role you're applying for and submit your application. Pod
+            leaders will review and vote on your request.
           </p>
 
           {/* Role Selection */}
@@ -320,9 +373,10 @@ export const PodApplicationsSection: React.FC<PodApplicationsSectionProps> = ({
               <button
                 onClick={() => setSelectedRole('member')}
                 className="p-4 rounded-lg border-2 transition-all"
-                style={selectedRole === 'member'
-                  ? { borderColor: '#2F5D50', backgroundColor: '#E8F1EE' }
-                  : { borderColor: '#e5e7eb' }
+                style={
+                  selectedRole === 'member'
+                    ? { borderColor: '#2F5D50', backgroundColor: '#E8F1EE' }
+                    : { borderColor: '#e5e7eb' }
                 }
                 onMouseEnter={(e) => {
                   if (selectedRole !== 'member') {
@@ -335,9 +389,19 @@ export const PodApplicationsSection: React.FC<PodApplicationsSectionProps> = ({
                   }
                 }}
               >
-                <Users className="w-6 h-6 mx-auto mb-2" style={{ color: selectedRole === 'member' ? '#2F5D50' : '#9ca3af' }} />
+                <Users
+                  className="w-6 h-6 mx-auto mb-2"
+                  style={{
+                    color: selectedRole === 'member' ? '#2F5D50' : '#9ca3af',
+                  }}
+                />
                 <div className="text-center">
-                  <div className="font-medium" style={{ color: selectedRole === 'member' ? '#1F453A' : '#374151' }}>
+                  <div
+                    className="font-medium"
+                    style={{
+                      color: selectedRole === 'member' ? '#1F453A' : '#374151',
+                    }}
+                  >
                     Member
                   </div>
                   <div className="text-xs text-gray-500 mt-1">
@@ -349,9 +413,10 @@ export const PodApplicationsSection: React.FC<PodApplicationsSectionProps> = ({
               <button
                 onClick={() => setSelectedRole('leader')}
                 className="p-4 rounded-lg border-2 transition-all"
-                style={selectedRole === 'leader'
-                  ? { borderColor: '#6A5F7A', backgroundColor: '#EDEAF0' }
-                  : { borderColor: '#e5e7eb' }
+                style={
+                  selectedRole === 'leader'
+                    ? { borderColor: '#6A5F7A', backgroundColor: '#EDEAF0' }
+                    : { borderColor: '#e5e7eb' }
                 }
                 onMouseEnter={(e) => {
                   if (selectedRole !== 'leader') {
@@ -364,9 +429,19 @@ export const PodApplicationsSection: React.FC<PodApplicationsSectionProps> = ({
                   }
                 }}
               >
-                <Crown className="w-6 h-6 mx-auto mb-2" style={{ color: selectedRole === 'leader' ? '#6A5F7A' : '#9ca3af' }} />
+                <Crown
+                  className="w-6 h-6 mx-auto mb-2"
+                  style={{
+                    color: selectedRole === 'leader' ? '#6A5F7A' : '#9ca3af',
+                  }}
+                />
                 <div className="text-center">
-                  <div className="font-medium" style={{ color: selectedRole === 'leader' ? '#4A3F5A' : '#374151' }}>
+                  <div
+                    className="font-medium"
+                    style={{
+                      color: selectedRole === 'leader' ? '#4A3F5A' : '#374151',
+                    }}
+                  >
                     Leader
                   </div>
                   <div className="text-xs text-gray-500 mt-1">
@@ -378,16 +453,13 @@ export const PodApplicationsSection: React.FC<PodApplicationsSectionProps> = ({
           </div>
 
           {/* Apply Button */}
-          <Button
-            onClick={handleApplyClick}
-            className="w-full"
-            size="lg"
-          >
+          <Button onClick={handleApplyClick} className="w-full" size="lg">
             Continue to Application
           </Button>
 
           <p className="text-xs text-gray-500 text-center mt-4">
-            You'll need to sign the pod agreement and write an accountability statement
+            You'll need to sign the pod agreement and write an accountability
+            statement
           </p>
         </div>
       </CardContent>

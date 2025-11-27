@@ -28,13 +28,18 @@ import {
   TransactionSponsor,
   TransactionStatus,
   TransactionStatusLabel,
-  TransactionStatusAction
-} from "@coinbase/onchainkit/transaction";
+  TransactionStatusAction,
+} from '@coinbase/onchainkit/transaction';
 
 // Contract addresses from environment
-const POD_TREASURY_FACTORY_ADDRESS = (process.env.NEXT_PUBLIC_POD_TREASURY_FACTORY || '0x0000000000000000000000000000000000000000') as `0x${string}`;
-const POD_AUTH_FACTORY_ADDRESS = (process.env.NEXT_PUBLIC_POD_AUTH_FACTORY || '0xeCdDB060cD38439E0aC8874f159E961eB856407D') as `0x${string}`;
-const POD_BOUNTY_SERVICE_ADDRESS = (process.env.NEXT_PUBLIC_POD_BOUNTY_SERVICE || '0xeCdDB060cD38439E0aC8874f159E961eB856407D') as `0x${string}`;
+const POD_TREASURY_FACTORY_ADDRESS = (process.env
+  .NEXT_PUBLIC_POD_TREASURY_FACTORY ||
+  '0x0000000000000000000000000000000000000000') as `0x${string}`;
+const POD_AUTH_FACTORY_ADDRESS = (process.env.NEXT_PUBLIC_POD_AUTH_FACTORY ||
+  '0xeCdDB060cD38439E0aC8874f159E961eB856407D') as `0x${string}`;
+const POD_BOUNTY_SERVICE_ADDRESS = (process.env
+  .NEXT_PUBLIC_POD_BOUNTY_SERVICE ||
+  '0xeCdDB060cD38439E0aC8874f159E961eB856407D') as `0x${string}`;
 const PODS_TESTING_MODE = process.env.NEXT_PUBLIC_PODS_TESTING === 'true';
 
 // Default supported tokens (Your community currencies)
@@ -56,80 +61,80 @@ interface Pod {
 // ABIs
 const TREASURY_FACTORY_ABI = [
   {
-    name: "deployTreasury",
-    type: "function",
+    name: 'deployTreasury',
+    type: 'function',
     inputs: [
-      { name: "podId", type: "string" },
-      { name: "managementHatId", type: "uint256" },
-      { name: "supportedTokens", type: "address[]" },
-      { name: "testingMode", type: "bool" }
+      { name: 'podId', type: 'string' },
+      { name: 'managementHatId', type: 'uint256' },
+      { name: 'supportedTokens', type: 'address[]' },
+      { name: 'testingMode', type: 'bool' },
     ],
-    outputs: [{ name: "", type: "address" }],
-    stateMutability: "nonpayable"
+    outputs: [{ name: '', type: 'address' }],
+    stateMutability: 'nonpayable',
   },
   {
-    name: "getTreasuryForPod",
-    type: "function",
-    inputs: [{ name: "podId", type: "string" }],
-    outputs: [{ name: "", type: "address" }],
-    stateMutability: "view"
-  }
+    name: 'getTreasuryForPod',
+    type: 'function',
+    inputs: [{ name: 'podId', type: 'string' }],
+    outputs: [{ name: '', type: 'address' }],
+    stateMutability: 'view',
+  },
 ] as const;
 
 const POD_AUTH_FACTORY_ABI = [
   {
-    name: "updatePodProxy",
-    type: "function",
+    name: 'updatePodProxy',
+    type: 'function',
     inputs: [
-      { name: "podId", type: "string" },
-      { name: "newLeaders", type: "address[]" },
-      { name: "newTreasuryAddress", type: "address" },
-      { name: "isActive", type: "bool" }
+      { name: 'podId', type: 'string' },
+      { name: 'newLeaders', type: 'address[]' },
+      { name: 'newTreasuryAddress', type: 'address' },
+      { name: 'isActive', type: 'bool' },
     ],
     outputs: [],
-    stateMutability: "nonpayable"
+    stateMutability: 'nonpayable',
   },
   {
-    name: "getPodProxy",
-    type: "function",
-    inputs: [{ name: "podId", type: "string" }],
-    outputs: [{ name: "", type: "address" }],
-    stateMutability: "view"
-  }
+    name: 'getPodProxy',
+    type: 'function',
+    inputs: [{ name: 'podId', type: 'string' }],
+    outputs: [{ name: '', type: 'address' }],
+    stateMutability: 'view',
+  },
 ] as const;
 
 const POD_BOUNTY_SERVICE_ABI = [
   {
-    name: "registerPod",
-    type: "function",
+    name: 'registerPod',
+    type: 'function',
     inputs: [
-      { name: "podId", type: "string" },
-      { name: "creator", type: "address" },
-      { name: "leaders", type: "address[]" },
-      { name: "treasuryAddress", type: "address" }
+      { name: 'podId', type: 'string' },
+      { name: 'creator', type: 'address' },
+      { name: 'leaders', type: 'address[]' },
+      { name: 'treasuryAddress', type: 'address' },
     ],
     outputs: [],
-    stateMutability: "nonpayable"
+    stateMutability: 'nonpayable',
   },
   {
-    name: "updatePod",
-    type: "function",
+    name: 'updatePod',
+    type: 'function',
     inputs: [
-      { name: "podId", type: "string" },
-      { name: "newLeaders", type: "address[]" },
-      { name: "newTreasuryAddress", type: "address" },
-      { name: "isActive", type: "bool" }
+      { name: 'podId', type: 'string' },
+      { name: 'newLeaders', type: 'address[]' },
+      { name: 'newTreasuryAddress', type: 'address' },
+      { name: 'isActive', type: 'bool' },
     ],
     outputs: [],
-    stateMutability: "nonpayable"
+    stateMutability: 'nonpayable',
   },
   {
-    name: "isValidPod",
-    type: "function",
-    inputs: [{ name: "podId", type: "string" }],
-    outputs: [{ name: "", type: "bool" }],
-    stateMutability: "view"
-  }
+    name: 'isValidPod',
+    type: 'function',
+    inputs: [{ name: 'podId', type: 'string' }],
+    outputs: [{ name: '', type: 'bool' }],
+    stateMutability: 'view',
+  },
 ] as const;
 
 export default function ConsolidatedTreasuryDeployerV2() {
@@ -139,9 +144,13 @@ export default function ConsolidatedTreasuryDeployerV2() {
   const [pods, setPods] = useState<Pod[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedPod, setSelectedPod] = useState<Pod | null>(null);
-  const [deploymentMode, setDeploymentMode] = useState<'new' | 'existing' | null>(null);
+  const [deploymentMode, setDeploymentMode] = useState<
+    'new' | 'existing' | null
+  >(null);
   const [existingTreasuryAddress, setExistingTreasuryAddress] = useState('');
-  const [deployedTreasuryAddress, setDeployedTreasuryAddress] = useState<string | null>(null);
+  const [deployedTreasuryAddress, setDeployedTreasuryAddress] = useState<
+    string | null
+  >(null);
   const [showSyncStep, setShowSyncStep] = useState(false);
 
   // Load pods from database
@@ -153,18 +162,21 @@ export default function ConsolidatedTreasuryDeployerV2() {
 
       const responseData = await response.json();
       const podsData = responseData.pods || [];
-      const activePods = podsData.filter((pod: Pod) =>
-        pod.management_hat_id && !pod.treasury_contract_address
+      const activePods = podsData.filter(
+        (pod: Pod) => pod.management_hat_id && !pod.treasury_contract_address,
       );
 
       setPods(activePods);
-      console.log('🏦 Loaded pods ready for treasury deployment:', activePods.length);
+      console.log(
+        '🏦 Loaded pods ready for treasury deployment:',
+        activePods.length,
+      );
     } catch (error) {
       console.error('🏦 Error loading pods:', error);
       toast({
-        title: "Error Loading Pods",
-        description: "Failed to load pods from database",
-        variant: "destructive"
+        title: 'Error Loading Pods',
+        description: 'Failed to load pods from database',
+        variant: 'destructive',
       });
     } finally {
       setLoading(false);
@@ -214,8 +226,8 @@ export default function ConsolidatedTreasuryDeployerV2() {
         pod.id,
         getManagementHatIdBigInt(pod.management_hat_id),
         DEFAULT_SUPPORTED_TOKENS,
-        PODS_TESTING_MODE
-      ]
+        PODS_TESTING_MODE,
+      ],
     };
   };
 
@@ -227,7 +239,7 @@ export default function ConsolidatedTreasuryDeployerV2() {
     console.log('🔄 Preparing sync transactions for:', {
       podId: pod.id,
       treasuryAddress,
-      leaders: leaders.length
+      leaders: leaders.length,
     });
 
     // Transaction 1: Update PodAuthorizationFactory proxy
@@ -239,8 +251,8 @@ export default function ConsolidatedTreasuryDeployerV2() {
         pod.id,
         leaders,
         treasuryAddress as `0x${string}`,
-        true // isActive
-      ]
+        true, // isActive
+      ],
     });
 
     // Transaction 2: Register/Update in PodBountyService (legacy support)
@@ -253,21 +265,24 @@ export default function ConsolidatedTreasuryDeployerV2() {
         pod.id,
         pod.created_by_address as `0x${string}`,
         leaders,
-        treasuryAddress as `0x${string}`
-      ]
+        treasuryAddress as `0x${string}`,
+      ],
     });
 
     return transactions;
   };
 
   // Handle treasury deployment success
-  const handleTreasuryDeploymentSuccess = async (pod: Pod, treasuryAddress: string) => {
+  const handleTreasuryDeploymentSuccess = async (
+    pod: Pod,
+    treasuryAddress: string,
+  ) => {
     console.log('✅ Treasury deployed successfully:', treasuryAddress);
     setDeployedTreasuryAddress(treasuryAddress);
     setShowSyncStep(true);
 
     toast({
-      title: "Treasury Deployed!",
+      title: 'Treasury Deployed!',
       description: `Treasury deployed at ${treasuryAddress.substring(0, 10)}... Now syncing to authorization contracts...`,
     });
   };
@@ -284,12 +299,12 @@ export default function ConsolidatedTreasuryDeployerV2() {
         body: JSON.stringify({
           podId: pod.id,
           treasuryAddress,
-          isActive: true
-        })
+          isActive: true,
+        }),
       });
 
       toast({
-        title: "Complete!",
+        title: 'Complete!',
         description: `Treasury deployed and synced for ${pod.name}. Pod can now create treasury-funded bounties!`,
       });
 
@@ -300,13 +315,13 @@ export default function ConsolidatedTreasuryDeployerV2() {
       setDeployedTreasuryAddress(null);
       setShowSyncStep(false);
       await loadPods();
-
     } catch (error) {
       console.error('❌ Database update failed:', error);
       toast({
-        title: "Sync Succeeded, Database Update Failed",
-        description: "Contracts are synced but database couldn't be updated. Please update manually.",
-        variant: "destructive"
+        title: 'Sync Succeeded, Database Update Failed',
+        description:
+          "Contracts are synced but database couldn't be updated. Please update manually.",
+        variant: 'destructive',
       });
     }
   };
@@ -335,7 +350,8 @@ export default function ConsolidatedTreasuryDeployerV2() {
         </CardHeader>
         <CardContent>
           <p className="text-gray-600">
-            All active pods either already have treasuries or are not ready for deployment.
+            All active pods either already have treasuries or are not ready for
+            deployment.
           </p>
           <Button onClick={loadPods} className="mt-4">
             Refresh
@@ -351,12 +367,14 @@ export default function ConsolidatedTreasuryDeployerV2() {
       <Alert>
         <AlertTitle>🚀 Enhanced Treasury Deployment (Phase 2)</AlertTitle>
         <AlertDescription>
-          This new version automatically syncs treasury addresses to all authorization contracts,
-          preventing the "Treasury not found" error. The deployment happens in two steps:
-          <br/>
+          This new version automatically syncs treasury addresses to all
+          authorization contracts, preventing the "Treasury not found" error.
+          The deployment happens in two steps:
+          <br />
           <strong>Step 1:</strong> Deploy treasury contract
-          <br/>
-          <strong>Step 2:</strong> Sync address to PodAuthorizationFactory and PodBountyService
+          <br />
+          <strong>Step 2:</strong> Sync address to PodAuthorizationFactory and
+          PodBountyService
         </AlertDescription>
       </Alert>
 
@@ -371,12 +389,16 @@ export default function ConsolidatedTreasuryDeployerV2() {
               <div
                 key={pod.id}
                 className="p-4 border rounded-lg cursor-pointer transition-colors"
-                style={selectedPod?.id === pod.id ? {
-                  borderColor: '#2F5D50',
-                  backgroundColor: '#E8F1EE'
-                } : {
-                  borderColor: '#e5e7eb'
-                }}
+                style={
+                  selectedPod?.id === pod.id
+                    ? {
+                        borderColor: '#2F5D50',
+                        backgroundColor: '#E8F1EE',
+                      }
+                    : {
+                        borderColor: '#e5e7eb',
+                      }
+                }
                 onMouseEnter={(e) => {
                   if (selectedPod?.id !== pod.id) {
                     e.currentTarget.style.borderColor = '#d1d5db';
@@ -390,7 +412,9 @@ export default function ConsolidatedTreasuryDeployerV2() {
                 onClick={() => setSelectedPod(pod)}
               >
                 <h3 className="font-semibold">{pod.name}</h3>
-                <p className="text-sm text-gray-600">ID: {pod.id.substring(0, 13)}...</p>
+                <p className="text-sm text-gray-600">
+                  ID: {pod.id.substring(0, 13)}...
+                </p>
                 <Badge variant="outline" className="mt-2">
                   Ready for Treasury
                 </Badge>
@@ -404,7 +428,9 @@ export default function ConsolidatedTreasuryDeployerV2() {
       {selectedPod && deploymentMode === 'new' && !showSyncStep && (
         <Card>
           <CardHeader>
-            <CardTitle>Step 1: Deploy Treasury for {selectedPod.name}</CardTitle>
+            <CardTitle>
+              Step 1: Deploy Treasury for {selectedPod.name}
+            </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div>
@@ -412,7 +438,9 @@ export default function ConsolidatedTreasuryDeployerV2() {
               <div className="flex flex-wrap gap-2 mt-2">
                 {DEFAULT_SUPPORTED_TOKENS.map((token, index) => (
                   <Badge key={index} variant="secondary">
-                    {token === '0x1317Ae277266D38C4E492558f8693F14143a6A65' ? '$SPIRIT' : '$SELF'}
+                    {token === '0x1317Ae277266D38C4E492558f8693F14143a6A65'
+                      ? '$SPIRIT'
+                      : '$SELF'}
                   </Badge>
                 ))}
               </div>
@@ -424,16 +452,20 @@ export default function ConsolidatedTreasuryDeployerV2() {
               calls={[prepareDeployTreasuryTransaction(selectedPod)]}
               isSponsored={true}
               onSuccess={(response) => {
-                console.log('🏦 Treasury deployment transaction successful:', response);
+                console.log(
+                  '🏦 Treasury deployment transaction successful:',
+                  response,
+                );
                 const txReceipt = response?.transactionReceipts?.[0];
 
                 // Extract treasury address from logs
-                const TREASURY_DEPLOYED_EVENT = '0x494cf03e4055d4033e848ad013abd5a12efdf3143ccf97cd8514778840b10d36';
+                const TREASURY_DEPLOYED_EVENT =
+                  '0x494cf03e4055d4033e848ad013abd5a12efdf3143ccf97cd8514778840b10d36';
                 let treasuryAddress = '';
 
                 if (txReceipt?.logs) {
-                  const deploymentLog = txReceipt.logs.find((log: any) =>
-                    log.topics?.[0] === TREASURY_DEPLOYED_EVENT
+                  const deploymentLog = txReceipt.logs.find(
+                    (log: any) => log.topics?.[0] === TREASURY_DEPLOYED_EVENT,
                   );
 
                   if (deploymentLog?.topics?.[2]) {
@@ -451,9 +483,9 @@ export default function ConsolidatedTreasuryDeployerV2() {
               onError={(error) => {
                 console.error('❌ Treasury deployment failed:', error);
                 toast({
-                  title: "Deployment Failed",
-                  description: error.message || "Unknown error occurred",
-                  variant: "destructive"
+                  title: 'Deployment Failed',
+                  description: error.message || 'Unknown error occurred',
+                  variant: 'destructive',
                 });
               }}
             >
@@ -489,13 +521,20 @@ export default function ConsolidatedTreasuryDeployerV2() {
               <AlertTitle>✅ Treasury Deployed Successfully!</AlertTitle>
               <AlertDescription>
                 <strong>Treasury Address:</strong> {deployedTreasuryAddress}
-                <br/><br/>
-                Now syncing this address to authorization contracts so the pod can create treasury-funded bounties.
+                <br />
+                <br />
+                Now syncing this address to authorization contracts so the pod
+                can create treasury-funded bounties.
               </AlertDescription>
             </Alert>
 
-            <div className="p-4 rounded-lg text-sm space-y-2" style={{ backgroundColor: '#E8F1EE' }}>
-              <p><strong>This transaction will:</strong></p>
+            <div
+              className="p-4 rounded-lg text-sm space-y-2"
+              style={{ backgroundColor: '#E8F1EE' }}
+            >
+              <p>
+                <strong>This transaction will:</strong>
+              </p>
               <ul className="list-disc list-inside space-y-1 ml-2">
                 <li>Update PodAuthorizationFactory with treasury address</li>
                 <li>Register pod in PodBountyService with treasury address</li>
@@ -506,7 +545,10 @@ export default function ConsolidatedTreasuryDeployerV2() {
             <Transaction
               account={address?.toLowerCase() as `0x${string}`}
               chainId={8453}
-              calls={prepareSyncTransactions(selectedPod, deployedTreasuryAddress)}
+              calls={prepareSyncTransactions(
+                selectedPod,
+                deployedTreasuryAddress,
+              )}
               isSponsored={true}
               onSuccess={() => {
                 console.log('✅ Sync transactions successful');
@@ -515,9 +557,10 @@ export default function ConsolidatedTreasuryDeployerV2() {
               onError={(error) => {
                 console.error('❌ Sync failed:', error);
                 toast({
-                  title: "Sync Failed",
-                  description: "Treasury deployed but sync failed. You may need to sync manually.",
-                  variant: "destructive"
+                  title: 'Sync Failed',
+                  description:
+                    'Treasury deployed but sync failed. You may need to sync manually.',
+                  variant: 'destructive',
                 });
               }}
             >
@@ -548,7 +591,9 @@ export default function ConsolidatedTreasuryDeployerV2() {
       {selectedPod && !deploymentMode && (
         <Card>
           <CardHeader>
-            <CardTitle>Choose Deployment Method for {selectedPod.name}</CardTitle>
+            <CardTitle>
+              Choose Deployment Method for {selectedPod.name}
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <Button
@@ -558,7 +603,8 @@ export default function ConsolidatedTreasuryDeployerV2() {
             >
               <h3 className="font-semibold mb-2">Deploy New Treasury</h3>
               <p className="text-sm text-gray-600 text-left">
-                Deploy a fresh treasury contract with automatic sync to all authorization contracts.
+                Deploy a fresh treasury contract with automatic sync to all
+                authorization contracts.
               </p>
             </Button>
           </CardContent>

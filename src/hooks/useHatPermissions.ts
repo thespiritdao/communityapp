@@ -7,7 +7,7 @@ import {
   type HatPermissions,
   type HatRole,
   getHatPermissionsService,
-  HAT_ROLES
+  HAT_ROLES,
 } from '../services/hatPermissionsService';
 import { supabase } from '../utils/supabaseClient';
 
@@ -37,7 +37,10 @@ interface UseHatPermissionsReturn {
 
   // Pod-specific permission checks (NEW)
   getPermissionsForPod: (podId: string) => HatPermissions | null;
-  hasPermissionInPod: (podId: string, permission: keyof HatPermissions) => boolean;
+  hasPermissionInPod: (
+    podId: string,
+    permission: keyof HatPermissions,
+  ) => boolean;
 }
 
 /**
@@ -47,7 +50,11 @@ interface UseHatPermissionsReturn {
 export const useHatPermissions = (): UseHatPermissionsReturn => {
   const { address } = useAccount();
   const publicClient = usePublicClient();
-  const { balances, isLoading: tokenLoading, error: tokenError } = useTokenBalances();
+  const {
+    balances,
+    isLoading: tokenLoading,
+    error: tokenError,
+  } = useTokenBalances();
 
   const [permissions, setPermissions] = useState<HatPermissions | null>(null);
   const [userRoles, setUserRoles] = useState<HatRole[]>([]);
@@ -82,19 +89,27 @@ export const useHatPermissions = (): UseHatPermissionsReturn => {
       const hats: string[] = [];
 
       // ONLY DYNAMIC POD ROLES - Load ALL pods the user is a member/leader of
-      console.log('🔍 useHatPermissions: Loading dynamic pod roles for', address);
+      console.log(
+        '🔍 useHatPermissions: Loading dynamic pod roles for',
+        address,
+      );
 
       try {
-        const { data: userPodMemberships, error: membershipError } = await supabase
-          .from('active_pod_members')
-          .select('*')
-          .eq('wallet', address.toLowerCase())
-          .eq('is_active', true);
+        const { data: userPodMemberships, error: membershipError } =
+          await supabase
+            .from('active_pod_members')
+            .select('*')
+            .eq('wallet', address.toLowerCase())
+            .eq('is_active', true);
 
         if (membershipError) {
           console.error('❌ Error loading pod memberships:', membershipError);
         } else if (userPodMemberships && userPodMemberships.length > 0) {
-          console.log('🎯 useHatPermissions: Found', userPodMemberships.length, 'pod memberships');
+          console.log(
+            '🎯 useHatPermissions: Found',
+            userPodMemberships.length,
+            'pod memberships',
+          );
 
           // Load role details for each pod
           for (const membership of userPodMemberships) {
@@ -117,7 +132,11 @@ export const useHatPermissions = (): UseHatPermissionsReturn => {
               .single();
 
             if (roleError || !roleData) {
-              console.warn('⚠️ No role permissions found for', podName, '- using defaults');
+              console.warn(
+                '⚠️ No role permissions found for',
+                podName,
+                '- using defaults',
+              );
 
               // Add role with default permissions
               const dynamicRole: HatRole = {
@@ -141,7 +160,7 @@ export const useHatPermissions = (): UseHatPermissionsReturn => {
                   bountyManagement: isLeader,
                   marketplaceAccess: true,
                   marketplaceManage: isLeader,
-                }
+                },
               };
 
               roles.push(dynamicRole);
@@ -150,17 +169,19 @@ export const useHatPermissions = (): UseHatPermissionsReturn => {
               // Use actual role permissions from database
               const dynamicRole: HatRole = {
                 hatId: hatId,
-                roleName: roleData.role_name || `${podName} ${isLeader ? 'Leader' : 'Member'}`,
+                roleName:
+                  roleData.role_name ||
+                  `${podName} ${isLeader ? 'Leader' : 'Member'}`,
                 description: `${isLeader ? 'Leader' : 'Member'} of ${podName}`,
                 podId: podId,
                 isLeaderRole: isLeader,
-                permissions: roleData.permissions || {}
+                permissions: roleData.permissions || {},
               };
 
               console.log('✅ Loaded role for', podName, ':', {
                 roleName: dynamicRole.roleName,
                 hatId: hatId.slice(0, 10) + '...',
-                permissions: Object.keys(dynamicRole.permissions)
+                permissions: Object.keys(dynamicRole.permissions),
               });
 
               roles.push(dynamicRole);
@@ -177,20 +198,24 @@ export const useHatPermissions = (): UseHatPermissionsReturn => {
 
       // Calculate consolidated permissions from ALL roles
       const consolidatedPermissions: HatPermissions = {
-        chatAccess: roles.some(r => r.permissions?.chatAccess),
-        chatModeration: roles.some(r => r.permissions?.chatModeration),
-        forumAccess: roles.some(r => r.permissions?.forumAccess),
-        governanceParticipation: roles.some(r => r.permissions?.governanceParticipation),
-        eventCreation: roles.some(r => r.permissions?.eventCreation),
-        treasuryViewing: roles.some(r => r.permissions?.treasuryViewing),
-        treasuryManagement: roles.some(r => r.permissions?.treasuryManagement),
-        memberManagement: roles.some(r => r.permissions?.memberManagement),
-        subPodCreation: roles.some(r => r.permissions?.subPodCreation),
-        roleAssignment: roles.some(r => r.permissions?.roleAssignment),
-        forumModeration: roles.some(r => r.permissions?.forumModeration),
-        bountyManagement: roles.some(r => r.permissions?.bountyManagement),
-        marketplaceAccess: roles.some(r => r.permissions?.marketplaceAccess),
-        marketplaceManage: roles.some(r => r.permissions?.marketplaceManage),
+        chatAccess: roles.some((r) => r.permissions?.chatAccess),
+        chatModeration: roles.some((r) => r.permissions?.chatModeration),
+        forumAccess: roles.some((r) => r.permissions?.forumAccess),
+        governanceParticipation: roles.some(
+          (r) => r.permissions?.governanceParticipation,
+        ),
+        eventCreation: roles.some((r) => r.permissions?.eventCreation),
+        treasuryViewing: roles.some((r) => r.permissions?.treasuryViewing),
+        treasuryManagement: roles.some(
+          (r) => r.permissions?.treasuryManagement,
+        ),
+        memberManagement: roles.some((r) => r.permissions?.memberManagement),
+        subPodCreation: roles.some((r) => r.permissions?.subPodCreation),
+        roleAssignment: roles.some((r) => r.permissions?.roleAssignment),
+        forumModeration: roles.some((r) => r.permissions?.forumModeration),
+        bountyManagement: roles.some((r) => r.permissions?.bountyManagement),
+        marketplaceAccess: roles.some((r) => r.permissions?.marketplaceAccess),
+        marketplaceManage: roles.some((r) => r.permissions?.marketplaceManage),
       };
 
       setUserRoles(roles);
@@ -200,14 +225,15 @@ export const useHatPermissions = (): UseHatPermissionsReturn => {
       console.log('✅ useHatPermissions: Final result:', {
         totalRoles: roles.length,
         totalHats: hats.length,
-        roleNames: roles.map(r => r.roleName),
-        hatIds: hats.map(h => h.slice(0, 10) + '...'),
-        permissions: consolidatedPermissions
+        roleNames: roles.map((r) => r.roleName),
+        hatIds: hats.map((h) => h.slice(0, 10) + '...'),
+        permissions: consolidatedPermissions,
       });
-
     } catch (err) {
       console.error('❌ Failed to process HAT permissions:', err);
-      setError(err instanceof Error ? err.message : 'Failed to process permissions');
+      setError(
+        err instanceof Error ? err.message : 'Failed to process permissions',
+      );
     } finally {
       setIsLoading(false);
     }
@@ -222,7 +248,9 @@ export const useHatPermissions = (): UseHatPermissionsReturn => {
   useEffect(() => {
     if (!address) return;
 
-    console.log('🔄 Setting up realtime subscription for permission changes...');
+    console.log(
+      '🔄 Setting up realtime subscription for permission changes...',
+    );
 
     // Subscribe to pod_role_permissions changes
     const subscription = supabase
@@ -232,13 +260,13 @@ export const useHatPermissions = (): UseHatPermissionsReturn => {
         {
           event: '*', // Listen to all events (INSERT, UPDATE, DELETE)
           schema: 'public',
-          table: 'pod_role_permissions'
+          table: 'pod_role_permissions',
         },
         (payload) => {
           console.log('🔔 Permission change detected:', payload);
           console.log('🔄 Refreshing permissions...');
           loadUserData(); // Refresh permissions when database changes
-        }
+        },
       )
       .subscribe();
 
@@ -260,14 +288,14 @@ export const useHatPermissions = (): UseHatPermissionsReturn => {
         canViewTreasury: false,
         canManageMembers: false,
         canCreateSubPods: false,
-        managedPods: [] as string[]
+        managedPods: [] as string[],
       };
     }
 
-    const isPodLeader = userRoles.some(role => role.isLeaderRole);
+    const isPodLeader = userRoles.some((role) => role.isLeaderRole);
     const managedPods = userRoles
-      .filter(role => role.isLeaderRole && role.podId)
-      .map(role => role.podId!)
+      .filter((role) => role.isLeaderRole && role.podId)
+      .map((role) => role.podId!)
       .filter((podId, index, arr) => arr.indexOf(podId) === index); // Remove duplicates
 
     return {
@@ -279,7 +307,7 @@ export const useHatPermissions = (): UseHatPermissionsReturn => {
       canManageTreasury: permissions.treasuryManagement,
       canManageMembers: permissions.memberManagement,
       canCreateSubPods: permissions.subPodCreation,
-      managedPods
+      managedPods,
     };
   }, [permissions, userRoles]);
 
@@ -307,7 +335,7 @@ export const useHatPermissions = (): UseHatPermissionsReturn => {
     if (!podId) return null;
 
     // Filter roles to only include those for the specified pod
-    const podRoles = userRoles.filter(role => role.podId === podId);
+    const podRoles = userRoles.filter((role) => role.podId === podId);
 
     if (podRoles.length === 0) {
       console.log(`⚠️ No roles found for pod ${podId}`);
@@ -316,36 +344,43 @@ export const useHatPermissions = (): UseHatPermissionsReturn => {
 
     console.log(`🎯 Getting permissions for pod ${podId}:`, {
       rolesCount: podRoles.length,
-      roleNames: podRoles.map(r => r.roleName)
+      roleNames: podRoles.map((r) => r.roleName),
     });
 
     // Calculate consolidated permissions for THIS POD ONLY
     const podPermissions: HatPermissions = {
-      chatAccess: podRoles.some(r => r.permissions?.chatAccess),
-      chatModeration: podRoles.some(r => r.permissions?.chatModeration),
-      forumAccess: podRoles.some(r => r.permissions?.forumAccess),
-      governanceParticipation: podRoles.some(r => r.permissions?.governanceParticipation),
-      eventCreation: podRoles.some(r => r.permissions?.eventCreation),
-      treasuryViewing: podRoles.some(r => r.permissions?.treasuryViewing),
-      treasuryManagement: podRoles.some(r => r.permissions?.treasuryManagement),
-      memberManagement: podRoles.some(r => r.permissions?.memberManagement),
-      subPodCreation: podRoles.some(r => r.permissions?.subPodCreation),
-      roleAssignment: podRoles.some(r => r.permissions?.roleAssignment),
-      forumModeration: podRoles.some(r => r.permissions?.forumModeration),
-      bountyManagement: podRoles.some(r => r.permissions?.bountyManagement),
-      marketplaceAccess: podRoles.some(r => r.permissions?.marketplaceAccess),
-      marketplaceManage: podRoles.some(r => r.permissions?.marketplaceManage),
+      chatAccess: podRoles.some((r) => r.permissions?.chatAccess),
+      chatModeration: podRoles.some((r) => r.permissions?.chatModeration),
+      forumAccess: podRoles.some((r) => r.permissions?.forumAccess),
+      governanceParticipation: podRoles.some(
+        (r) => r.permissions?.governanceParticipation,
+      ),
+      eventCreation: podRoles.some((r) => r.permissions?.eventCreation),
+      treasuryViewing: podRoles.some((r) => r.permissions?.treasuryViewing),
+      treasuryManagement: podRoles.some(
+        (r) => r.permissions?.treasuryManagement,
+      ),
+      memberManagement: podRoles.some((r) => r.permissions?.memberManagement),
+      subPodCreation: podRoles.some((r) => r.permissions?.subPodCreation),
+      roleAssignment: podRoles.some((r) => r.permissions?.roleAssignment),
+      forumModeration: podRoles.some((r) => r.permissions?.forumModeration),
+      bountyManagement: podRoles.some((r) => r.permissions?.bountyManagement),
+      marketplaceAccess: podRoles.some((r) => r.permissions?.marketplaceAccess),
+      marketplaceManage: podRoles.some((r) => r.permissions?.marketplaceManage),
     };
 
     console.log(`✅ Pod ${podId} permissions:`, {
       chatModeration: podPermissions.chatModeration,
-      forumModeration: podPermissions.forumModeration
+      forumModeration: podPermissions.forumModeration,
     });
 
     return podPermissions;
   };
 
-  const hasPermissionInPod = (podId: string, permission: keyof HatPermissions): boolean => {
+  const hasPermissionInPod = (
+    podId: string,
+    permission: keyof HatPermissions,
+  ): boolean => {
     const podPermissions = getPermissionsForPod(podId);
     return podPermissions?.[permission] ?? false;
   };

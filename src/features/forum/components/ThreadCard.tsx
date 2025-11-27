@@ -1,6 +1,5 @@
 // src/app/features/forum/components/ThreadCard.tsx
 
-
 import type React from 'react';
 import Link from 'next/link';
 import { formatDistanceToNow } from 'date-fns';
@@ -14,7 +13,7 @@ try {
   styles = {
     threadCard: 'thread-card-fallback',
     threadMeta: 'thread-meta-fallback',
-    postCountBadge: 'post-count-badge-fallback'
+    postCountBadge: 'post-count-badge-fallback',
   };
 }
 
@@ -33,7 +32,7 @@ interface ThreadCardProps {
 }
 
 const ThreadCard: React.FC<ThreadCardProps> = ({ thread }) => {
-  console.debug("ThreadCard received thread data:", thread);
+  console.debug('ThreadCard received thread data:', thread);
   const formatDate = (dateString: string) => {
     try {
       return formatDistanceToNow(new Date(dateString), { addSuffix: true });
@@ -51,7 +50,9 @@ const ThreadCard: React.FC<ThreadCardProps> = ({ thread }) => {
     } else if (author_last_name) {
       return author_last_name;
     } else {
-      return author_wallet ? author_wallet.slice(0, 6) + '...' + author_wallet.slice(-4) : 'Anon.';
+      return author_wallet
+        ? author_wallet.slice(0, 6) + '...' + author_wallet.slice(-4)
+        : 'Anon.';
     }
   };
 
@@ -59,20 +60,19 @@ const ThreadCard: React.FC<ThreadCardProps> = ({ thread }) => {
     <Link href={`/forum/thread/${thread.id}`} className={styles.threadCard}>
       <div className={styles.threadCardContent}>
         <h3 className={styles.threadTitle}>{thread.title}</h3>
-        
+
         <div className={styles.threadMeta}>
           <div className={styles.authorInfo}>
-            <span className={styles.authorName}>
-              {getAuthorDisplayName()}
-            </span>
+            <span className={styles.authorName}>{getAuthorDisplayName()}</span>
             <span className={styles.threadDate}>
               {formatDate(thread.created_at)}
             </span>
           </div>
-          
+
           {thread.post_count !== undefined && (
             <div className={styles.postCountBadge}>
-              {thread.post_count} {thread.post_count === 1 ? 'reply' : 'replies'}
+              {thread.post_count}{' '}
+              {thread.post_count === 1 ? 'reply' : 'replies'}
             </div>
           )}
         </div>

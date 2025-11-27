@@ -22,7 +22,7 @@ export async function POST(req: NextRequest) {
       console.warn('API Route: No address provided in the request.');
       return NextResponse.json(
         { error: 'No address provided' },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -38,7 +38,8 @@ export async function POST(req: NextRequest) {
       .eq('wallet_address', normalizedAddress)
       .single();
 
-    if (error && error.code !== 'PGRST116') { // PGRST116: No rows found
+    if (error && error.code !== 'PGRST116') {
+      // PGRST116: No rows found
       console.error('API Route: Error fetching user profile:', error);
       throw error;
     }
@@ -52,41 +53,56 @@ export async function POST(req: NextRequest) {
 
       // 3) Verify if user exists in auth.users
       console.log('API Route: Verifying if user exists in auth.users...');
-      const { data: authUser, error: authUserError } = await supabaseAdmin
-        .auth.admin.getUserById(userId);
+      const { data: authUser, error: authUserError } =
+        await supabaseAdmin.auth.admin.getUserById(userId);
 
       if (authUserError) {
-        console.error('API Route: Error verifying user in auth.users:', authUserError);
+        console.error(
+          'API Route: Error verifying user in auth.users:',
+          authUserError,
+        );
         throw authUserError;
       }
 
       if (!authUser || !authUser.user) {
-        console.log(`API Route: No user found in auth.users with id: ${userId}. Creating new user...`);
+        console.log(
+          `API Route: No user found in auth.users with id: ${userId}. Creating new user...`,
+        );
         // Create auth user with existing user_id
-        const { data: newUser, error: createUserError } = await supabaseAdmin.auth.admin.createUser({
-          id: userId,
-          email: dummyEmail,
-          email_confirm: true,
-          user_metadata: { wallet_address: normalizedAddress }
-        });
+        const { data: newUser, error: createUserError } =
+          await supabaseAdmin.auth.admin.createUser({
+            id: userId,
+            email: dummyEmail,
+            email_confirm: true,
+            user_metadata: { wallet_address: normalizedAddress },
+          });
 
         if (createUserError) {
-          console.error('API Route: Error creating new user in auth.users:', createUserError);
+          console.error(
+            'API Route: Error creating new user in auth.users:',
+            createUserError,
+          );
           throw createUserError;
         }
 
         userId = newUser.user.id;
-        console.log(`API Route: New user created in auth.users with id: ${userId}`);
+        console.log(
+          `API Route: New user created in auth.users with id: ${userId}`,
+        );
       }
     } else {
       // New user flow
-      console.log('API Route: No existing user found. Checking for existing auth user...');
+      console.log(
+        'API Route: No existing user found. Checking for existing auth user...',
+      );
 
       // First check if a user with this email already exists
-      const { data: existingUser, error: existingUserError } = await supabaseAdmin
-        .auth.admin.listUsers();
+      const { data: existingUser, error: existingUserError } =
+        await supabaseAdmin.auth.admin.listUsers();
 
-      const existingAuthUser = existingUser?.users?.find(user => user.email === dummyEmail);
+      const existingAuthUser = existingUser?.users?.find(
+        (user) => user.email === dummyEmail,
+      );
 
       if (existingAuthUser) {
         userId = existingAuthUser.id;
@@ -95,27 +111,39 @@ export async function POST(req: NextRequest) {
         // Create user_profiles entry if it doesn't exist
         const { error: insertProfileError } = await supabaseAdmin
           .from('user_profiles')
-          .upsert([{ 
-            user_id: userId, 
-            wallet_address: normalizedAddress 
-          }], {
-            onConflict: 'user_id'
-          });
+          .upsert(
+            [
+              {
+                user_id: userId,
+                wallet_address: normalizedAddress,
+              },
+            ],
+            {
+              onConflict: 'user_id',
+            },
+          );
 
         if (insertProfileError) {
-          console.error('API Route: Error upserting user_profiles:', insertProfileError);
+          console.error(
+            'API Route: Error upserting user_profiles:',
+            insertProfileError,
+          );
           throw insertProfileError;
         }
       } else {
         // Create new auth user
-        const { data: newUser, error: createUserError } = await supabaseAdmin.auth.admin.createUser({
-          email: dummyEmail,
-          email_confirm: true,
-          user_metadata: { wallet_address: normalizedAddress }
-        });
+        const { data: newUser, error: createUserError } =
+          await supabaseAdmin.auth.admin.createUser({
+            email: dummyEmail,
+            email_confirm: true,
+            user_metadata: { wallet_address: normalizedAddress },
+          });
 
         if (createUserError) {
-          console.error('API Route: Error creating new user in auth.users:', createUserError);
+          console.error(
+            'API Route: Error creating new user in auth.users:',
+            createUserError,
+          );
           throw createUserError;
         }
 
@@ -129,13 +157,18 @@ export async function POST(req: NextRequest) {
         // Create user_profiles entry
         const { error: insertProfileError } = await supabaseAdmin
           .from('user_profiles')
-          .insert([{ 
-            user_id: userId, 
-            wallet_address: normalizedAddress 
-          }]);
+          .insert([
+            {
+              user_id: userId,
+              wallet_address: normalizedAddress,
+            },
+          ]);
 
         if (insertProfileError) {
-          console.error('API Route: Error inserting into user_profiles:', insertProfileError);
+          console.error(
+            'API Route: Error inserting into user_profiles:',
+            insertProfileError,
+          );
           throw insertProfileError;
         }
       }
@@ -149,33 +182,31 @@ export async function POST(req: NextRequest) {
     // Generate JWT tokens
     const JWT_SECRET = process.env.SUPABASE_JWT_SECRET;
     if (!JWT_SECRET) {
-      console.error('API Route: Missing SUPABASE_JWT_SECRET in environment variables.');
+      console.error(
+        'API Route: Missing SUPABASE_JWT_SECRET in environment variables.',
+      );
       return NextResponse.json(
         { error: 'Missing SUPABASE_JWT_SECRET' },
-        { status: 500 }
+        { status: 500 },
       );
     }
 
     const userClaims = {
       aud: 'authenticated',
       role: 'authenticated',
-      wallet_address: normalizedAddress  // ✅ Add wallet_address to JWT
+      wallet_address: normalizedAddress, // ✅ Add wallet_address to JWT
     };
 
     const jwtPayload = { sub: userId, ...userClaims };
     console.log('API Route: JWT Payload:', jwtPayload);
 
-    const supabaseToken = jwt.sign(
-      jwtPayload,
-      JWT_SECRET,
-      { expiresIn: '30m' }
-    );
+    const supabaseToken = jwt.sign(jwtPayload, JWT_SECRET, {
+      expiresIn: '30m',
+    });
 
-    const supabaseRefreshToken = jwt.sign(
-      jwtPayload,
-      JWT_SECRET,
-      { expiresIn: '7d' }
-    );
+    const supabaseRefreshToken = jwt.sign(jwtPayload, JWT_SECRET, {
+      expiresIn: '7d',
+    });
 
     console.log('API Route: Generated tokens successfully.');
 

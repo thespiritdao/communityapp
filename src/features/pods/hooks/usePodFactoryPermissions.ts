@@ -14,13 +14,15 @@ interface PodFactoryPermissions {
   error: string | null;
 }
 
-export function usePodFactoryPermissions(podId: string | null): PodFactoryPermissions {
+export function usePodFactoryPermissions(
+  podId: string | null,
+): PodFactoryPermissions {
   const { address } = useAccount();
   const [permissions, setPermissions] = useState<PodFactoryPermissions>({
     canManageBounties: false,
     canUseTreasury: false,
     isLoading: false,
-    error: null
+    error: null,
   });
 
   useEffect(() => {
@@ -30,32 +32,34 @@ export function usePodFactoryPermissions(podId: string | null): PodFactoryPermis
           canManageBounties: false,
           canUseTreasury: false,
           isLoading: false,
-          error: null
+          error: null,
         });
         return;
       }
 
       try {
-        setPermissions(prev => ({ ...prev, isLoading: true, error: null }));
-        
-        console.log(`🔍 Checking factory permissions for user ${address} on pod ${podId}`);
-        
+        setPermissions((prev) => ({ ...prev, isLoading: true, error: null }));
+
+        console.log(
+          `🔍 Checking factory permissions for user ${address} on pod ${podId}`,
+        );
+
         // Check permissions via factory contract
         const [canManageBounties, canUseTreasury] = await Promise.all([
           PodFactorySyncService.canManageBounties(address, podId),
-          PodFactorySyncService.canUsePodTreasury(address, podId)
+          PodFactorySyncService.canUsePodTreasury(address, podId),
         ]);
 
         console.log(`✅ Factory permissions for ${podId}:`, {
           canManageBounties,
-          canUseTreasury
+          canUseTreasury,
         });
 
         setPermissions({
           canManageBounties,
           canUseTreasury,
           isLoading: false,
-          error: null
+          error: null,
         });
       } catch (error) {
         console.error('Error checking factory permissions:', error);
@@ -63,7 +67,7 @@ export function usePodFactoryPermissions(podId: string | null): PodFactoryPermis
           canManageBounties: false,
           canUseTreasury: false,
           isLoading: false,
-          error: error instanceof Error ? error.message : 'Unknown error'
+          error: error instanceof Error ? error.message : 'Unknown error',
         });
       }
     }
@@ -77,11 +81,11 @@ export function usePodFactoryPermissions(podId: string | null): PodFactoryPermis
 // Convenience hook that matches the old interface for easy migration
 export function usePodPermissions(podId: string) {
   const permissions = usePodFactoryPermissions(podId);
-  
+
   return {
     canManageBounties: permissions.canManageBounties,
     canUseTreasury: permissions.canUseTreasury,
     isLoading: permissions.isLoading,
-    error: permissions.error
+    error: permissions.error,
   };
 }

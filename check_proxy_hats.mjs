@@ -10,7 +10,7 @@ console.log('\n---\n');
 
 const publicClient = createPublicClient({
   chain: base,
-  transport: http()
+  transport: http(),
 });
 
 // Check if the proxy is wearing specific HATs by checking balanceOf
@@ -18,7 +18,9 @@ const publicClient = createPublicClient({
 
 const potentialHatIds = [
   136n, // Common top hat ID from exec pod
-  BigInt('3666553570037155989126156067147814773746773803532600618919785347940352'), // The one in database
+  BigInt(
+    '3666553570037155989126156067147814773746773803532600618919785347940352',
+  ), // The one in database
 ];
 
 console.log('Checking if proxy wears any HATs...\n');
@@ -27,18 +29,20 @@ for (const hatId of potentialHatIds) {
   try {
     const balance = await publicClient.readContract({
       address: HATS_PROTOCOL_ADDRESS,
-      abi: [{
-        name: 'balanceOf',
-        type: 'function',
-        inputs: [
-          { name: 'wearer', type: 'address' },
-          { name: 'hatId', type: 'uint256' }
-        ],
-        outputs: [{ type: 'uint256' }],
-        stateMutability: 'view'
-      }],
+      abi: [
+        {
+          name: 'balanceOf',
+          type: 'function',
+          inputs: [
+            { name: 'wearer', type: 'address' },
+            { name: 'hatId', type: 'uint256' },
+          ],
+          outputs: [{ type: 'uint256' }],
+          stateMutability: 'view',
+        },
+      ],
       functionName: 'balanceOf',
-      args: [PROXY_ADDRESS, hatId]
+      args: [PROXY_ADDRESS, hatId],
     });
 
     const hatIdHex = '0x' + hatId.toString(16).padStart(64, '0');
@@ -63,6 +67,6 @@ console.log('(This would help us find the actual HAT IDs it controls)\n');
 console.log('💡 To find all HATs owned by this proxy, you would need to:');
 console.log('1. Query HatMinted events from the Hats Protocol contract');
 console.log('2. Filter for events where the recipient is:', PROXY_ADDRESS);
-console.log('3. Or check Basescan for this address\'s HAT token holdings');
+console.log("3. Or check Basescan for this address's HAT token holdings");
 
 process.exit(0);

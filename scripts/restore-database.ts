@@ -40,7 +40,9 @@ interface RestoreResult {
 /**
  * Restore database from backup
  */
-async function restoreDatabase(options: RestoreOptions): Promise<RestoreResult> {
+async function restoreDatabase(
+  options: RestoreOptions,
+): Promise<RestoreResult> {
   const { backupDir, staging = false, force = false } = options;
 
   // Validate backup directory
@@ -48,7 +50,7 @@ async function restoreDatabase(options: RestoreOptions): Promise<RestoreResult> 
     return {
       success: false,
       backupDir,
-      error: `Backup directory not found: ${backupDir}`
+      error: `Backup directory not found: ${backupDir}`,
     };
   }
 
@@ -58,7 +60,7 @@ async function restoreDatabase(options: RestoreOptions): Promise<RestoreResult> 
     return {
       success: false,
       backupDir,
-      error: 'Backup metadata not found. Invalid backup directory.'
+      error: 'Backup metadata not found. Invalid backup directory.',
     };
   }
 
@@ -66,14 +68,16 @@ async function restoreDatabase(options: RestoreOptions): Promise<RestoreResult> 
 
   // Validate backup files
   const requiredFiles = ['roles.sql', 'schema.sql', 'data.sql'];
-  const missingFiles = requiredFiles.filter(f => !fs.existsSync(path.join(backupDir, f)));
+  const missingFiles = requiredFiles.filter(
+    (f) => !fs.existsSync(path.join(backupDir, f)),
+  );
 
   if (missingFiles.length > 0) {
     return {
       success: false,
       backupDir,
       metadata,
-      error: `Missing backup files: ${missingFiles.join(', ')}`
+      error: `Missing backup files: ${missingFiles.join(', ')}`,
     };
   }
 
@@ -89,7 +93,7 @@ async function restoreDatabase(options: RestoreOptions): Promise<RestoreResult> 
       metadata,
       error: staging
         ? 'SUPABASE_STAGING_DB_URL environment variable not set'
-        : 'SUPABASE_DB_URL environment variable not set'
+        : 'SUPABASE_DB_URL environment variable not set',
     };
   }
 
@@ -121,7 +125,7 @@ async function restoreDatabase(options: RestoreOptions): Promise<RestoreResult> 
         success: false,
         backupDir,
         metadata,
-        error: 'Restore cancelled by user'
+        error: 'Restore cancelled by user',
       };
     }
   }
@@ -168,9 +172,12 @@ COMMIT;
 
     // Execute restore
     console.log('Executing restore...');
-    const { stdout, stderr } = await execAsync(`psql "${dbUrl}" -f "${scriptFile}"`, {
-      maxBuffer: 1024 * 1024 * 100 // 100MB buffer for large databases
-    });
+    const { stdout, stderr } = await execAsync(
+      `psql "${dbUrl}" -f "${scriptFile}"`,
+      {
+        maxBuffer: 1024 * 1024 * 100, // 100MB buffer for large databases
+      },
+    );
 
     if (stdout) console.log(stdout);
     if (stderr) console.error(stderr);
@@ -192,22 +199,23 @@ COMMIT;
     return {
       success: true,
       backupDir,
-      metadata
+      metadata,
     };
-
   } catch (error) {
     console.error('');
     console.error('❌ Restore failed:', error);
     console.error('');
     console.error('The database may be in an inconsistent state.');
-    console.error('You should restore from a known good backup or rebuild from migrations.');
+    console.error(
+      'You should restore from a known good backup or rebuild from migrations.',
+    );
     console.error('');
 
     return {
       success: false,
       backupDir,
       metadata,
-      error: error instanceof Error ? error.message : 'Unknown error'
+      error: error instanceof Error ? error.message : 'Unknown error',
     };
   }
 }
@@ -218,11 +226,11 @@ COMMIT;
 function confirmRestore(): Promise<boolean> {
   const rl = readline.createInterface({
     input: process.stdin,
-    output: process.stdout
+    output: process.stdout,
   });
 
-  return new Promise(resolve => {
-    rl.question('Type "CONFIRM" to proceed with restore: ', answer => {
+  return new Promise((resolve) => {
+    rl.question('Type "CONFIRM" to proceed with restore: ', (answer) => {
       rl.close();
       resolve(answer.trim().toUpperCase() === 'CONFIRM');
     });
@@ -232,24 +240,27 @@ function confirmRestore(): Promise<boolean> {
 /**
  * List available backups
  */
-function listBackups(backupsDir: string = path.join(__dirname, '..', 'backups')): void {
+function listBackups(
+  backupsDir: string = path.join(__dirname, '..', 'backups'),
+): void {
   if (!fs.existsSync(backupsDir)) {
     console.log('No backups directory found');
     return;
   }
 
-  const backups = fs.readdirSync(backupsDir)
-    .filter(dir => {
+  const backups = fs
+    .readdirSync(backupsDir)
+    .filter((dir) => {
       const metadataFile = path.join(backupsDir, dir, 'metadata.json');
       return fs.existsSync(metadataFile);
     })
-    .map(dir => {
+    .map((dir) => {
       const metadataFile = path.join(backupsDir, dir, 'metadata.json');
       const metadata = JSON.parse(fs.readFileSync(metadataFile, 'utf-8'));
       return {
         dir,
         path: path.join(backupsDir, dir),
-        ...metadata
+        ...metadata,
       };
     })
     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
@@ -281,7 +292,7 @@ function formatBytes(bytes: number): string {
   const k = 1024;
   const sizes = ['Bytes', 'KB', 'MB', 'GB'];
   const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+  return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + ' ' + sizes[i];
 }
 
 // Run restore if executed directly
@@ -290,7 +301,8 @@ if (require.main === module) {
 
   // List backups if requested
   if (args.includes('--list')) {
-    const backupsDir = args.find((arg, i) => args[i - 1] === '--backups-dir') || undefined;
+    const backupsDir =
+      args.find((arg, i) => args[i - 1] === '--backups-dir') || undefined;
     listBackups(backupsDir);
     process.exit(0);
   }
@@ -301,8 +313,12 @@ if (require.main === module) {
     console.error('Error: --backup [DIRECTORY] required');
     console.error('');
     console.error('Usage:');
-    console.error('  npm run restore:database -- --backup ./backups/2025-11-25_14-30-00');
-    console.error('  npm run restore:database -- --backup ./backups/2025-11-25_14-30-00 --staging');
+    console.error(
+      '  npm run restore:database -- --backup ./backups/2025-11-25_14-30-00',
+    );
+    console.error(
+      '  npm run restore:database -- --backup ./backups/2025-11-25_14-30-00 --staging',
+    );
     console.error('  npm run restore:database -- --list');
     console.error('');
     process.exit(1);
@@ -311,14 +327,14 @@ if (require.main === module) {
   const options: RestoreOptions = {
     backupDir: args[backupDirIndex + 1],
     staging: args.includes('--staging'),
-    force: args.includes('--force')
+    force: args.includes('--force'),
   };
 
   restoreDatabase(options)
-    .then(result => {
+    .then((result) => {
       process.exit(result.success ? 0 : 1);
     })
-    .catch(error => {
+    .catch((error) => {
       console.error('Fatal error:', error);
       process.exit(1);
     });

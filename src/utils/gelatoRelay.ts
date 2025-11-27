@@ -17,33 +17,33 @@ export class GelatoRelayManager {
   }
 
   private setupWebSocket() {
-    const ws = new WebSocket("wss://api.gelato.digital/tasks/ws/status");
+    const ws = new WebSocket('wss://api.gelato.digital/tasks/ws/status');
 
     ws.onopen = () => {
-      console.log("🔹 Gelato WebSocket connected");
+      console.log('🔹 Gelato WebSocket connected');
     };
 
     ws.onerror = (error) => {
-      console.error("❌ Gelato WebSocket error:", error);
+      console.error('❌ Gelato WebSocket error:', error);
     };
   }
 
   async sponsoredCall(
     contractAddress: string,
     data: string,
-    onStatusUpdate?: (status: TaskState) => void
+    onStatusUpdate?: (status: TaskState) => void,
   ) {
     try {
       const request = {
         chainId: 8453, // Base
         target: contractAddress,
         data: data,
-        user: process.env.NEXT_PUBLIC_SAFE_WALLET!
+        user: process.env.NEXT_PUBLIC_SAFE_WALLET!,
       };
 
       const response = await this.relay.sponsoredCall(
         request,
-        process.env.GELATO_API_KEY!
+        process.env.GELATO_API_KEY!,
       );
 
       if (onStatusUpdate) {
@@ -52,13 +52,16 @@ export class GelatoRelayManager {
 
       return response;
     } catch (error) {
-      console.error("❌ Gelato sponsored call failed:", error);
+      console.error('❌ Gelato sponsored call failed:', error);
       throw error;
     }
   }
 
-  private subscribeToTaskStatus(taskId: string, onStatusUpdate: (status: TaskState) => void) {
-    const ws = new WebSocket("wss://api.gelato.digital/tasks/ws/status");
+  private subscribeToTaskStatus(
+    taskId: string,
+    onStatusUpdate: (status: TaskState) => void,
+  ) {
+    const ws = new WebSocket('wss://api.gelato.digital/tasks/ws/status');
 
     ws.onopen = () => {
       ws.send(JSON.stringify({ taskId }));
@@ -70,7 +73,7 @@ export class GelatoRelayManager {
     };
 
     ws.onerror = (error) => {
-      console.error("❌ Task status WebSocket error:", error);
+      console.error('❌ Task status WebSocket error:', error);
     };
   }
 

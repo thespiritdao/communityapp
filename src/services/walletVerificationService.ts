@@ -32,7 +32,7 @@ class WalletVerificationService {
    */
   async verifyWallet(
     address: string,
-    connector: Connector | undefined
+    connector: Connector | undefined,
   ): Promise<WalletVerificationResult> {
     // Check cache first
     const cached = this.getCachedVerification(address);
@@ -43,21 +43,27 @@ class WalletVerificationService {
 
     // Check if verification is already in progress (deduplication)
     if (this.pendingVerifications[address]) {
-      console.log('⏳ Waiting for existing verification to complete for:', address);
+      console.log(
+        '⏳ Waiting for existing verification to complete for:',
+        address,
+      );
       return this.pendingVerifications[address];
     }
 
     // Start new verification with deduplication
     console.log('🔍 Starting new wallet verification for:', address);
-    this.pendingVerifications[address] = this.performVerificationWithRetry(address, connector);
+    this.pendingVerifications[address] = this.performVerificationWithRetry(
+      address,
+      connector,
+    );
 
     try {
       const result = await this.pendingVerifications[address];
-      
+
       // Cache the result
       this.cache[address] = {
         result,
-        expiresAt: Date.now() + this.CACHE_DURATION
+        expiresAt: Date.now() + this.CACHE_DURATION,
       };
 
       return result;
@@ -73,19 +79,26 @@ class WalletVerificationService {
   private async performVerificationWithRetry(
     address: string,
     connector: Connector | undefined,
-    retryCount = 0
+    retryCount = 0,
   ): Promise<WalletVerificationResult> {
     try {
       return await this.performVerification(address, connector);
     } catch (error) {
-      console.error(`❌ Wallet verification attempt ${retryCount + 1} failed:`, error);
+      console.error(
+        `❌ Wallet verification attempt ${retryCount + 1} failed:`,
+        error,
+      );
 
       if (retryCount < this.RETRY_DELAYS.length) {
         const delay = this.RETRY_DELAYS[retryCount];
         console.log(`🔄 Retrying wallet verification in ${delay}ms...`);
-        
-        await new Promise(resolve => setTimeout(resolve, delay));
-        return this.performVerificationWithRetry(address, connector, retryCount + 1);
+
+        await new Promise((resolve) => setTimeout(resolve, delay));
+        return this.performVerificationWithRetry(
+          address,
+          connector,
+          retryCount + 1,
+        );
       }
 
       // Max retries reached, return default result
@@ -94,7 +107,7 @@ class WalletVerificationService {
         isSmartWallet: false,
         detectedMethod: 'Verification failed after retries',
         timestamp: Date.now(),
-        address
+        address,
       };
     }
   }
@@ -104,14 +117,14 @@ class WalletVerificationService {
    */
   private async performVerification(
     address: string,
-    connector: Connector | undefined
+    connector: Connector | undefined,
   ): Promise<WalletVerificationResult> {
     if (!address || !connector) {
       return {
         isSmartWallet: false,
         detectedMethod: 'No address or connector',
         timestamp: Date.now(),
-        address
+        address,
       };
     }
 
@@ -128,7 +141,7 @@ class WalletVerificationService {
         isSmartWallet: false,
         detectedMethod: 'Not a Coinbase connector',
         timestamp: Date.now(),
-        address
+        address,
       };
     }
 
@@ -146,8 +159,8 @@ class WalletVerificationService {
         const providerIndicates = this.checkProviderProperties(provider);
         if (providerIndicates !== null) {
           detected = providerIndicates;
-          detectedMethod = providerIndicates 
-            ? 'Provider indicates Smart Wallet' 
+          detectedMethod = providerIndicates
+            ? 'Provider indicates Smart Wallet'
             : 'Provider indicates NOT Smart Wallet';
         }
       }
@@ -168,7 +181,7 @@ class WalletVerificationService {
       isSmartWallet: detected,
       detectedMethod: detectedMethod || 'No detection method matched',
       timestamp: Date.now(),
-      address
+      address,
     };
   }
 
@@ -177,7 +190,7 @@ class WalletVerificationService {
    */
   private async getProviderWithDedup(
     connector: Connector,
-    address: string
+    address: string,
   ): Promise<any> {
     const dedupeKey = `provider_${address}`;
 
@@ -212,7 +225,10 @@ class WalletVerificationService {
   /**
    * Check if address has contract code (Smart Wallet indicator)
    */
-  private async checkContractCode(provider: any, address: string): Promise<boolean> {
+  private async checkContractCode(
+    provider: any,
+    address: string,
+  ): Promise<boolean> {
     const dedupeKey = `code_${address}`;
 
     // Check if request is already in progress
@@ -225,7 +241,7 @@ class WalletVerificationService {
       try {
         const code = await provider.request({
           method: 'eth_getCode',
-          params: [address, 'latest']
+          params: [address, 'latest'],
         });
         const hasCode = code && code !== '0x' && code !== '0x0';
         console.log('Contract code check:', { address, hasCode });
@@ -255,10 +271,13 @@ class WalletVerificationService {
 
     console.log('Checking provider properties:', {
       isSmartWallet: provider.isSmartWallet,
-      selectedProvider: provider.selectedProvider
+      selectedProvider: provider.selectedProvider,
     });
 
-    if (provider.isSmartWallet === true || provider.selectedProvider === 'smartWallet') {
+    if (
+      provider.isSmartWallet === true ||
+      provider.selectedProvider === 'smartWallet'
+    ) {
       return true;
     }
 
@@ -277,9 +296,11 @@ class WalletVerificationService {
   /**
    * Get cached verification result if valid
    */
-  private getCachedVerification(address: string): WalletVerificationResult | null {
+  private getCachedVerification(
+    address: string,
+  ): WalletVerificationResult | null {
     const cached = this.cache[address];
-    
+
     if (cached && cached.expiresAt > Date.now()) {
       return cached.result;
     }
@@ -312,7 +333,7 @@ class WalletVerificationService {
     const addresses = Object.keys(this.cache);
     return {
       size: addresses.length,
-      addresses
+      addresses,
     };
   }
 }

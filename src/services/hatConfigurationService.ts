@@ -6,7 +6,7 @@ import type { PublicClient, WalletClient } from 'viem';
 export class HatConfigurationService {
   constructor(
     private publicClient: PublicClient,
-    private walletClient: WalletClient
+    private walletClient: WalletClient,
   ) {}
 
   /**
@@ -19,11 +19,13 @@ export class HatConfigurationService {
   }> {
     try {
       console.log('🔧 === FIXING EXECUTIVE POD MEMBER HAT CONFIGURATION ===');
-      
-      const HATS_CONTRACT = process.env.NEXT_PUBLIC_HATS_CONTRACT as `0x${string}`;
+
+      const HATS_CONTRACT = process.env
+        .NEXT_PUBLIC_HATS_CONTRACT as `0x${string}`;
       const EXECUTIVE_POD_MEMBER = process.env.NEXT_PUBLIC_EXECUTIVE_POD_MEMBER;
-      const TOGGLE_MODULE = process.env.NEXT_PUBLIC_EXECUTIVE_POD_MEMBER_TOGGLE_MODULE as `0x${string}`;
-      
+      const TOGGLE_MODULE = process.env
+        .NEXT_PUBLIC_EXECUTIVE_POD_MEMBER_TOGGLE_MODULE as `0x${string}`;
+
       console.log('📋 Configuration:');
       console.log('- Hats Contract:', HATS_CONTRACT);
       console.log('- Executive Pod Member HAT:', EXECUTIVE_POD_MEMBER);
@@ -48,12 +50,12 @@ export class HatConfigurationService {
               { name: 'imageURI', type: 'string' },
               { name: 'lastHatId', type: 'uint32' },
               { name: 'mutable', type: 'bool' },
-              { name: 'active', type: 'bool' }
-            ]
-          }
+              { name: 'active', type: 'bool' },
+            ],
+          },
         ],
         functionName: 'viewHat',
-        args: [BigInt(EXECUTIVE_POD_MEMBER!)]
+        args: [BigInt(EXECUTIVE_POD_MEMBER!)],
       });
 
       console.log('Current HAT state:');
@@ -67,7 +69,7 @@ export class HatConfigurationService {
         console.log('✅ Toggle module already correctly configured!');
         return {
           success: true,
-          error: 'Toggle module already correctly configured'
+          error: 'Toggle module already correctly configured',
         };
       }
 
@@ -76,7 +78,7 @@ export class HatConfigurationService {
         console.log('❌ HAT is not mutable - cannot change toggle module');
         return {
           success: false,
-          error: 'HAT is not mutable - cannot change configuration'
+          error: 'HAT is not mutable - cannot change configuration',
         };
       }
 
@@ -98,26 +100,28 @@ export class HatConfigurationService {
             stateMutability: 'nonpayable',
             inputs: [
               { name: '_hatId', type: 'uint256' },
-              { name: '_newToggle', type: 'address' }
+              { name: '_newToggle', type: 'address' },
             ],
-            outputs: [{ name: 'success', type: 'bool' }]
-          }
+            outputs: [{ name: 'success', type: 'bool' }],
+          },
         ],
         functionName: 'changeHatToggle',
         args: [BigInt(EXECUTIVE_POD_MEMBER!), TOGGLE_MODULE],
         account,
-        chain: this.walletClient.chain
+        chain: this.walletClient.chain,
       });
 
       console.log('✅ changeHatToggle transaction submitted:', hash);
-      
+
       // Wait for transaction confirmation
       console.log('⏳ Waiting for transaction confirmation...');
-      const receipt = await this.publicClient.waitForTransactionReceipt({ hash });
-      
+      const receipt = await this.publicClient.waitForTransactionReceipt({
+        hash,
+      });
+
       if (receipt.status === 'success') {
         console.log('✅ Transaction confirmed successfully!');
-        
+
         // Verify the change
         console.log('\n🔍 Step 3: Verifying configuration update...');
         const updatedHatData = await this.publicClient.readContract({
@@ -137,57 +141,61 @@ export class HatConfigurationService {
                 { name: 'imageURI', type: 'string' },
                 { name: 'lastHatId', type: 'uint32' },
                 { name: 'mutable', type: 'bool' },
-                { name: 'active', type: 'bool' }
-              ]
-            }
+                { name: 'active', type: 'bool' },
+              ],
+            },
           ],
           functionName: 'viewHat',
-          args: [BigInt(EXECUTIVE_POD_MEMBER!)]
+          args: [BigInt(EXECUTIVE_POD_MEMBER!)],
         });
 
         console.log('Updated HAT state:');
         console.log('- Toggle address:', updatedHatData[4]);
         console.log('- Expected:', TOGGLE_MODULE);
-        
+
         if (updatedHatData[4].toLowerCase() === TOGGLE_MODULE.toLowerCase()) {
           console.log('🎉 SUCCESS! HAT toggle module successfully configured');
           return {
             success: true,
-            transactionHash: hash
+            transactionHash: hash,
           };
         } else {
-          console.log('❌ Configuration update failed - toggle address mismatch');
+          console.log(
+            '❌ Configuration update failed - toggle address mismatch',
+          );
           return {
             success: false,
-            error: 'Configuration update failed - toggle address not updated'
+            error: 'Configuration update failed - toggle address not updated',
           };
         }
-        
       } else {
         console.log('❌ Transaction failed');
         return {
           success: false,
-          error: 'Transaction failed'
+          error: 'Transaction failed',
         };
       }
-
     } catch (error) {
       console.error('❌ HAT configuration fix failed:', error);
-      
+
       let errorMessage = 'Failed to configure HAT toggle module';
       if (error instanceof Error) {
-        if (error.message.includes('User rejected') || error.message.includes('user rejected')) {
+        if (
+          error.message.includes('User rejected') ||
+          error.message.includes('user rejected')
+        ) {
           errorMessage = 'Transaction cancelled by user';
         } else if (error.message.includes('admin')) {
-          errorMessage = 'Permission denied: You need admin permissions for this HAT';
+          errorMessage =
+            'Permission denied: You need admin permissions for this HAT';
         } else {
           errorMessage = error.message;
         }
       }
-      
+
       return {
         success: false,
-        error: errorMessage
+        error: errorMessage,
       };
     }
   }
@@ -202,9 +210,10 @@ export class HatConfigurationService {
     error?: string;
   }> {
     try {
-      const HATS_CONTRACT = process.env.NEXT_PUBLIC_HATS_CONTRACT as `0x${string}`;
+      const HATS_CONTRACT = process.env
+        .NEXT_PUBLIC_HATS_CONTRACT as `0x${string}`;
       const [userAddress] = await this.walletClient.getAddresses();
-      
+
       console.log('🔍 Checking admin permissions for HAT:', hatId);
       console.log('👤 User address:', userAddress);
 
@@ -224,7 +233,7 @@ export class HatConfigurationService {
       const userHats = [];
       const hatsToCheck = [
         process.env.NEXT_PUBLIC_EXECUTIVE_POD_LEADER,
-        adminHat
+        adminHat,
       ].filter(Boolean);
 
       for (const hat of hatsToCheck) {
@@ -238,13 +247,13 @@ export class HatConfigurationService {
                 stateMutability: 'view',
                 inputs: [
                   { name: 'wearer', type: 'address' },
-                  { name: 'id', type: 'uint256' }
+                  { name: 'id', type: 'uint256' },
                 ],
-                outputs: [{ name: '', type: 'uint256' }]
-              }
+                outputs: [{ name: '', type: 'uint256' }],
+              },
             ],
             functionName: 'balanceOf',
-            args: [userAddress as `0x${string}`, BigInt(hat!)]
+            args: [userAddress as `0x${string}`, BigInt(hat!)],
           });
 
           if (balance > 0n) {
@@ -262,15 +271,15 @@ export class HatConfigurationService {
       return {
         hasPermission,
         adminHat: adminHat || undefined,
-        userHats
+        userHats,
       };
-
     } catch (error) {
       console.error('❌ Admin permission check failed:', error);
       return {
         hasPermission: false,
         userHats: [],
-        error: error instanceof Error ? error.message : 'Permission check failed'
+        error:
+          error instanceof Error ? error.message : 'Permission check failed',
       };
     }
   }

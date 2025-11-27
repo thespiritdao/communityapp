@@ -49,28 +49,34 @@ Examples:
 - "Where is the marketplace?" → spiritdao
 - "Explain causality in naturalism" → temporal-naturalism
 - "How do I mint an Advocate NFT?" → spiritdao
-- "What does theology say about creation?" → temporal-naturalism`
+- "What does theology say about creation?" → temporal-naturalism`,
         },
         {
           role: 'user',
-          content: userMessage
-        }
+          content: userMessage,
+        },
       ],
       temperature: 0.1,
-      max_tokens: 10
+      max_tokens: 10,
     });
 
-    const classification = completion.choices[0]?.message?.content?.trim().toLowerCase();
+    const classification = completion.choices[0]?.message?.content
+      ?.trim()
+      .toLowerCase();
 
-    if (classification === 'spiritdao' || classification === 'temporal-naturalism') {
-      console.log(`[Routing] Classified "${userMessage.substring(0, 50)}..." as: ${classification}`);
+    if (
+      classification === 'spiritdao' ||
+      classification === 'temporal-naturalism'
+    ) {
+      console.log(
+        `[Routing] Classified "${userMessage.substring(0, 50)}..." as: ${classification}`,
+      );
       return classification as QueryType;
     }
 
     // Default to spiritdao if unclear (most users will ask about DAO)
     console.log(`[Routing] Unclear classification, defaulting to: spiritdao`);
     return 'spiritdao';
-
   } catch (error) {
     console.error('[Routing] Classification error:', error);
     // Default to spiritdao on error

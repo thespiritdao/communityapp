@@ -9,7 +9,6 @@ import { supabase } from '@/utils/supabaseClient';
  * This service provides high-level methods for common operations
  */
 export class HatsEligibilityIntegrationService {
-  
   /**
    * Initialize eligibility modules for a newly created pod
    */
@@ -20,7 +19,7 @@ export class HatsEligibilityIntegrationService {
     memberHatId: string,
     leaderCriteria: EligibilityCriteria[] = [],
     memberCriteria: EligibilityCriteria[] = [],
-    deployer: string
+    deployer: string,
   ): Promise<{
     leaderModule?: string;
     memberModule?: string;
@@ -29,7 +28,7 @@ export class HatsEligibilityIntegrationService {
     const results = {
       leaderModule: undefined as string | undefined,
       memberModule: undefined as string | undefined,
-      errors: [] as string[]
+      errors: [] as string[],
     };
 
     console.log('🚀 Initializing HATS eligibility modules for pod:', podName);
@@ -38,15 +37,19 @@ export class HatsEligibilityIntegrationService {
       // Deploy leader module if criteria exist
       if (leaderCriteria.length > 0) {
         try {
-          const leaderDeployment = await HatsModuleDeploymentService.deployEligibilityModule({
-            hatId: leaderHatId,
-            podId,
-            criteria: leaderCriteria,
-            requireAllCriteria: true,
-            deployer
-          });
+          const leaderDeployment =
+            await HatsModuleDeploymentService.deployEligibilityModule({
+              hatId: leaderHatId,
+              podId,
+              criteria: leaderCriteria,
+              requireAllCriteria: true,
+              deployer,
+            });
           results.leaderModule = leaderDeployment.module_address;
-          console.log('✅ Leader module deployed:', leaderDeployment.module_address);
+          console.log(
+            '✅ Leader module deployed:',
+            leaderDeployment.module_address,
+          );
         } catch (error) {
           results.errors.push(`Leader module deployment failed: ${error}`);
           console.error('❌ Leader module deployment failed:', error);
@@ -56,15 +59,19 @@ export class HatsEligibilityIntegrationService {
       // Deploy member module if criteria exist
       if (memberCriteria.length > 0) {
         try {
-          const memberDeployment = await HatsModuleDeploymentService.deployEligibilityModule({
-            hatId: memberHatId,
-            podId,
-            criteria: memberCriteria,
-            requireAllCriteria: true,
-            deployer
-          });
+          const memberDeployment =
+            await HatsModuleDeploymentService.deployEligibilityModule({
+              hatId: memberHatId,
+              podId,
+              criteria: memberCriteria,
+              requireAllCriteria: true,
+              deployer,
+            });
           results.memberModule = memberDeployment.module_address;
-          console.log('✅ Member module deployed:', memberDeployment.module_address);
+          console.log(
+            '✅ Member module deployed:',
+            memberDeployment.module_address,
+          );
         } catch (error) {
           results.errors.push(`Member module deployment failed: ${error}`);
           console.error('❌ Member module deployment failed:', error);
@@ -72,7 +79,6 @@ export class HatsEligibilityIntegrationService {
       }
 
       return results;
-
     } catch (error) {
       console.error('❌ Pod eligibility initialization failed:', error);
       results.errors.push(`General initialization error: ${error}`);
@@ -87,7 +93,7 @@ export class HatsEligibilityIntegrationService {
     roleId: string,
     newCriteria: EligibilityCriteria[],
     updatedBy: string,
-    autoDeployModule = false
+    autoDeployModule = false,
   ): Promise<{
     success: boolean;
     moduleAddress?: string;
@@ -98,17 +104,19 @@ export class HatsEligibilityIntegrationService {
       console.log('🔄 Updating role eligibility and syncing to modules...');
 
       // Update database criteria
-      const updatedRole = await PodRolePermissionsService.updateEligibilityCriteria(
-        roleId,
-        newCriteria,
-        updatedBy
-      );
+      const updatedRole =
+        await PodRolePermissionsService.updateEligibilityCriteria(
+          roleId,
+          newCriteria,
+          updatedBy,
+        );
 
       // Check if module exists
-      const existingDeployment = await HatsModuleDeploymentService.getDeploymentByHat(
-        updatedRole.pod_id,
-        updatedRole.token_address
-      );
+      const existingDeployment =
+        await HatsModuleDeploymentService.getDeploymentByHat(
+          updatedRole.pod_id,
+          updatedRole.token_address,
+        );
 
       let moduleAddress: string | undefined;
       let syncResult: any;
@@ -117,33 +125,32 @@ export class HatsEligibilityIntegrationService {
         // Module exists, sync changes
         syncResult = await HatsModuleSyncService.syncRoleToModule(updatedRole, {
           forceUpdate: true,
-          validateOnchain: true
+          validateOnchain: true,
         });
         moduleAddress = existingDeployment.module_address;
-        
       } else if (autoDeployModule && newCriteria.length > 0) {
         // No module but criteria exist, deploy new one
-        const deployment = await HatsModuleDeploymentService.deployEligibilityModule({
-          hatId: updatedRole.token_address,
-          podId: updatedRole.pod_id,
-          criteria: newCriteria,
-          requireAllCriteria: true,
-          deployer: updatedBy
-        });
+        const deployment =
+          await HatsModuleDeploymentService.deployEligibilityModule({
+            hatId: updatedRole.token_address,
+            podId: updatedRole.pod_id,
+            criteria: newCriteria,
+            requireAllCriteria: true,
+            deployer: updatedBy,
+          });
         moduleAddress = deployment.module_address;
       }
 
       return {
         success: true,
         moduleAddress,
-        syncResult
+        syncResult,
       };
-
     } catch (error) {
       console.error('❌ Failed to update role eligibility:', error);
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error'
+        error: error instanceof Error ? error.message : 'Unknown error',
       };
     }
   }
@@ -154,7 +161,7 @@ export class HatsEligibilityIntegrationService {
   static async checkUserEligibilityComprehensive(
     userAddress: string,
     podId: string,
-    roleId?: string
+    roleId?: string,
   ): Promise<{
     databaseEligible: boolean;
     onchainEligible?: boolean;
@@ -168,12 +175,15 @@ export class HatsEligibilityIntegrationService {
         onchainEligible: undefined as boolean | undefined,
         moduleAddress: undefined as string | undefined,
         evaluation: undefined as any,
-        discrepancies: [] as string[]
+        discrepancies: [] as string[],
       };
 
       // Database eligibility check
       if (roleId) {
-        const dbCheck = await PodRolePermissionsService.checkUserEligibility(userAddress, roleId);
+        const dbCheck = await PodRolePermissionsService.checkUserEligibility(
+          userAddress,
+          roleId,
+        );
         results.databaseEligible = dbCheck.eligible;
         results.evaluation = dbCheck.evaluation;
 
@@ -185,35 +195,43 @@ export class HatsEligibilityIntegrationService {
           .single();
 
         if (role.data?.token_address) {
-          const deployment = await HatsModuleDeploymentService.getDeploymentByHat(podId, role.data.token_address);
+          const deployment =
+            await HatsModuleDeploymentService.getDeploymentByHat(
+              podId,
+              role.data.token_address,
+            );
 
           if (deployment && deployment.module_address) {
             results.moduleAddress = deployment.module_address;
 
             // Onchain eligibility check
-            const onchainResult = await HatsModuleDeploymentService.checkOnchainEligibility(
-              deployment.module_address,
-              role.data.token_address,
-              userAddress
-            );
+            const onchainResult =
+              await HatsModuleDeploymentService.checkOnchainEligibility(
+                deployment.module_address,
+                role.data.token_address,
+                userAddress,
+              );
             results.onchainEligible = onchainResult.eligible;
 
             // Check for discrepancies
             if (results.databaseEligible !== results.onchainEligible) {
               results.discrepancies.push(
-                `Database shows ${results.databaseEligible ? 'eligible' : 'not eligible'} but onchain shows ${results.onchainEligible ? 'eligible' : 'not eligible'}`
+                `Database shows ${results.databaseEligible ? 'eligible' : 'not eligible'} but onchain shows ${results.onchainEligible ? 'eligible' : 'not eligible'}`,
               );
             }
           }
         }
       } else {
         // Check all roles in pod
-        const eligibleRoles = await PodRolePermissionsService.getEligibleRolesForUser(userAddress, podId);
-        results.databaseEligible = eligibleRoles.some(r => r.eligible);
+        const eligibleRoles =
+          await PodRolePermissionsService.getEligibleRolesForUser(
+            userAddress,
+            podId,
+          );
+        results.databaseEligible = eligibleRoles.some((r) => r.eligible);
       }
 
       return results;
-
     } catch (error) {
       console.error('❌ Comprehensive eligibility check failed:', error);
       throw error;
@@ -236,34 +254,50 @@ export class HatsEligibilityIntegrationService {
       const [roles, syncHealth, deployments] = await Promise.all([
         PodRolePermissionsService.getPodRolePermissions(podId),
         HatsModuleSyncService.getPodSyncHealth(podId),
-        HatsModuleDeploymentService.getPodDeployments(podId)
+        HatsModuleDeploymentService.getPodDeployments(podId),
       ]);
 
-      const rolesWithCriteria = roles.filter(role => 
-        Array.isArray(role.eligibility_criteria) && role.eligibility_criteria.length > 0
+      const rolesWithCriteria = roles.filter(
+        (role) =>
+          Array.isArray(role.eligibility_criteria) &&
+          role.eligibility_criteria.length > 0,
       ).length;
 
-      const deployedModules = deployments.filter(d => d.is_active).length;
-      const syncedModules = deployments.filter(d => d.sync_status === 'synced').length;
+      const deployedModules = deployments.filter((d) => d.is_active).length;
+      const syncedModules = deployments.filter(
+        (d) => d.sync_status === 'synced',
+      ).length;
 
       const issues: string[] = [];
       const recommendations: string[] = [];
 
       // Identify issues
       if (rolesWithCriteria > deployedModules) {
-        issues.push(`${rolesWithCriteria - deployedModules} roles have criteria but no deployed modules`);
-        recommendations.push('Deploy HATS modules for roles with eligibility criteria');
+        issues.push(
+          `${rolesWithCriteria - deployedModules} roles have criteria but no deployed modules`,
+        );
+        recommendations.push(
+          'Deploy HATS modules for roles with eligibility criteria',
+        );
       }
 
       if (deployedModules > syncedModules) {
-        issues.push(`${deployedModules - syncedModules} modules are out of sync`);
-        recommendations.push('Run sync operation to update modules with latest criteria');
+        issues.push(
+          `${deployedModules - syncedModules} modules are out of sync`,
+        );
+        recommendations.push(
+          'Run sync operation to update modules with latest criteria',
+        );
       }
 
-      const erroredDeployments = deployments.filter(d => d.sync_status === 'error').length;
+      const erroredDeployments = deployments.filter(
+        (d) => d.sync_status === 'error',
+      ).length;
       if (erroredDeployments > 0) {
         issues.push(`${erroredDeployments} modules have sync errors`);
-        recommendations.push('Check module sync errors and redeploy if necessary');
+        recommendations.push(
+          'Check module sync errors and redeploy if necessary',
+        );
       }
 
       // Calculate health score
@@ -280,9 +314,8 @@ export class HatsEligibilityIntegrationService {
         syncedModules,
         healthScore,
         issues,
-        recommendations
+        recommendations,
       };
-
     } catch (error) {
       console.error('❌ Failed to get pod eligibility health:', error);
       throw error;
@@ -299,7 +332,7 @@ export class HatsEligibilityIntegrationService {
       deployMissingModules?: boolean;
       syncOutdatedModules?: boolean;
       fixErroredModules?: boolean;
-    } = {}
+    } = {},
   ): Promise<{
     applied: string[];
     failed: string[];
@@ -308,7 +341,7 @@ export class HatsEligibilityIntegrationService {
     const {
       deployMissingModules = true,
       syncOutdatedModules = true,
-      fixErroredModules = true
+      fixErroredModules = true,
     } = options;
 
     const applied: string[] = [];
@@ -320,16 +353,26 @@ export class HatsEligibilityIntegrationService {
       const health = await this.getPodEligibilityHealth(podId);
 
       // Deploy missing modules
-      if (deployMissingModules && health.rolesWithCriteria > health.deployedModules) {
+      if (
+        deployMissingModules &&
+        health.rolesWithCriteria > health.deployedModules
+      ) {
         try {
-          const syncResult = await HatsModuleSyncService.syncPodToModules(podId, {
-            deployIfNotExists: true,
-            forceUpdate: false
-          });
-          applied.push(`Deployed ${syncResult.summary.success} missing modules`);
-          
+          const syncResult = await HatsModuleSyncService.syncPodToModules(
+            podId,
+            {
+              deployIfNotExists: true,
+              forceUpdate: false,
+            },
+          );
+          applied.push(
+            `Deployed ${syncResult.summary.success} missing modules`,
+          );
+
           if (syncResult.summary.failed > 0) {
-            failed.push(`Failed to deploy ${syncResult.summary.failed} modules`);
+            failed.push(
+              `Failed to deploy ${syncResult.summary.failed} modules`,
+            );
           }
         } catch (error) {
           failed.push(`Module deployment failed: ${error}`);
@@ -339,10 +382,13 @@ export class HatsEligibilityIntegrationService {
       // Sync outdated modules
       if (syncOutdatedModules) {
         try {
-          const syncResult = await HatsModuleSyncService.syncPodToModules(podId, {
-            forceUpdate: true,
-            validateOnchain: true
-          });
+          const syncResult = await HatsModuleSyncService.syncPodToModules(
+            podId,
+            {
+              forceUpdate: true,
+              validateOnchain: true,
+            },
+          );
           applied.push(`Synced ${syncResult.summary.success} modules`);
         } catch (error) {
           failed.push(`Module sync failed: ${error}`);
@@ -360,10 +406,9 @@ export class HatsEligibilityIntegrationService {
       }
 
       const summary = `Applied ${applied.length} fixes, ${failed.length} failed`;
-      
+
       console.log('✅ Automated fix completed:', summary);
       return { applied, failed, summary };
-
     } catch (error) {
       console.error('❌ Automated fix failed:', error);
       failed.push(`General error: ${error}`);
@@ -387,7 +432,7 @@ export class HatsEligibilityIntegrationService {
         supabase.from('pods').select('*').eq('id', podId).single(),
         PodRolePermissionsService.getPodRolePermissions(podId),
         HatsModuleDeploymentService.getPodDeployments(podId),
-        this.getPodEligibilityHealth(podId)
+        this.getPodEligibilityHealth(podId),
       ]);
 
       const recommendations: string[] = [];
@@ -395,49 +440,64 @@ export class HatsEligibilityIntegrationService {
 
       // Generate recommendations based on current state
       if (health.rolesWithCriteria === 0) {
-        recommendations.push('Consider adding eligibility criteria to roles for better access control');
-        nextActions.push('Configure eligibility requirements in the pod management panel');
+        recommendations.push(
+          'Consider adding eligibility criteria to roles for better access control',
+        );
+        nextActions.push(
+          'Configure eligibility requirements in the pod management panel',
+        );
       }
 
       if (health.deployedModules < health.rolesWithCriteria) {
-        recommendations.push('Deploy HATS modules for onchain eligibility verification');
+        recommendations.push(
+          'Deploy HATS modules for onchain eligibility verification',
+        );
         nextActions.push('Use the HATS Modules tab to deploy missing modules');
       }
 
       if (health.healthScore < 80) {
-        recommendations.push('Sync modules to ensure consistency between database and onchain state');
+        recommendations.push(
+          'Sync modules to ensure consistency between database and onchain state',
+        );
         nextActions.push('Run a sync operation to update all modules');
       }
 
       if (health.issues.length > 0) {
-        recommendations.push('Address identified issues to improve system reliability');
-        nextActions.push('Review and fix issues shown in the module health dashboard');
+        recommendations.push(
+          'Address identified issues to improve system reliability',
+        );
+        nextActions.push(
+          'Review and fix issues shown in the module health dashboard',
+        );
       }
 
       return {
         podInfo: podInfo.data,
-        roles: roles.map(role => ({
+        roles: roles.map((role) => ({
           id: role.id,
           name: role.role_name,
           hatId: role.token_address,
-          hasCriteria: Array.isArray(role.eligibility_criteria) && role.eligibility_criteria.length > 0,
-          criteriaCount: Array.isArray(role.eligibility_criteria) ? role.eligibility_criteria.length : 0,
+          hasCriteria:
+            Array.isArray(role.eligibility_criteria) &&
+            role.eligibility_criteria.length > 0,
+          criteriaCount: Array.isArray(role.eligibility_criteria)
+            ? role.eligibility_criteria.length
+            : 0,
           syncStatus: role.sync_status,
-          lastSynced: role.last_synced_at
+          lastSynced: role.last_synced_at,
         })),
-        modules: deployments.map(deployment => ({
+        modules: deployments.map((deployment) => ({
           id: deployment.id,
           hatId: deployment.hat_id,
           moduleAddress: deployment.module_address,
           syncStatus: deployment.sync_status,
           lastSynced: deployment.last_synced_at,
-          error: deployment.sync_error
+          error: deployment.sync_error,
         })),
         health,
         recommendations,
-        nextActions
+        nextActions,
       };
-
     } catch (error) {
       console.error('❌ Failed to generate integration report:', error);
       throw error;

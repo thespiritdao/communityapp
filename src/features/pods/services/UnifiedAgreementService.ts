@@ -1,11 +1,13 @@
-
 import { AccountabilitySignatureService } from './AccountabilitySignatureService';
 import type { EligibilityCriteria } from './EligibilityService';
 
 export interface PodAgreement {
   id: string;
   pod_id: string;
-  agreement_type: 'leadership_accountability' | 'membership_requirement' | 'role_specific';
+  agreement_type:
+    | 'leadership_accountability'
+    | 'membership_requirement'
+    | 'role_specific';
   role_name?: string;
   title: string;
   content: string;
@@ -21,7 +23,6 @@ export interface PodAgreement {
  * Provides unified interface until full migration is complete
  */
 export class UnifiedAgreementService {
-  
   /**
    * Get existing accountability agreement for a pod
    * This looks at existing signed agreements to extract the agreement text
@@ -33,49 +34,58 @@ export class UnifiedAgreementService {
     signatureCount?: number;
   }> {
     try {
-      console.log('🔍 Looking for existing accountability agreement for pod:', podId);
-      
+      console.log(
+        '🔍 Looking for existing accountability agreement for pod:',
+        podId,
+      );
+
       // Get existing signatures to see what agreement text was used
-      const result = await AccountabilitySignatureService.getPodSignatures(podId);
-      
+      const result =
+        await AccountabilitySignatureService.getPodSignatures(podId);
+
       if (!result.success || !result.signatures?.length) {
         console.log('📭 No existing accountability signatures found');
         return { exists: false };
       }
-      
+
       // Look for the most common accountability statement pattern
-      const statements = result.signatures.map(sig => sig.accountability_statement).filter(Boolean);
-      
+      const statements = result.signatures
+        .map((sig) => sig.accountability_statement)
+        .filter(Boolean);
+
       if (statements.length === 0) {
         return { exists: false };
       }
-      
+
       // Find the longest/most detailed statement (likely the real agreement)
-      const detailedStatement = statements.reduce((longest, current) => 
-        current.length > longest.length ? current : longest, ''
+      const detailedStatement = statements.reduce(
+        (longest, current) =>
+          current.length > longest.length ? current : longest,
+        '',
       );
-      
+
       // If it's just the default text, create a proper agreement
-      const isDefaultText = detailedStatement === 'I acknowledge and agree to the SpiritDAO Accountability Agreement.';
-      
-      const agreementContent = isDefaultText 
+      const isDefaultText =
+        detailedStatement ===
+        'I acknowledge and agree to the SpiritDAO Accountability Agreement.';
+
+      const agreementContent = isDefaultText
         ? this.getDefaultAccountabilityAgreement(podId)
         : detailedStatement;
-      
+
       console.log('✅ Found existing accountability agreement');
       return {
         exists: true,
         title: 'Pod Leadership Accountability Agreement',
         content: agreementContent,
-        signatureCount: result.signatures.length
+        signatureCount: result.signatures.length,
       };
-      
     } catch (error) {
       console.error('❌ Error getting pod accountability agreement:', error);
       return { exists: false };
     }
   }
-  
+
   /**
    * Create default accountability agreement for pods
    */
@@ -102,14 +112,14 @@ By signing this agreement, I acknowledge that as a leader of this pod:
 
 By signing this agreement, I formally accept the responsibilities of pod leadership and commit to upholding these principles throughout my tenure.`;
   }
-  
+
   /**
    * Get agreement text for eligibility criteria
    * This bridges the gap between accountability agreements and eligibility system
    */
   static async getAgreementTextForCriteria(
-    podId: string, 
-    criteriaType: 'leadership' | 'membership' | 'role_specific' = 'membership'
+    podId: string,
+    criteriaType: 'leadership' | 'membership' | 'role_specific' = 'membership',
   ): Promise<string> {
     try {
       // For leadership criteria, use accountability agreement
@@ -120,16 +130,15 @@ By signing this agreement, I formally accept the responsibilities of pod leaders
         }
         return this.getDefaultAccountabilityAgreement(podId);
       }
-      
+
       // For membership criteria, use membership agreement
       return this.getDefaultMembershipAgreement();
-      
     } catch (error) {
       console.error('❌ Error getting agreement text for criteria:', error);
       return this.getDefaultMembershipAgreement();
     }
   }
-  
+
   /**
    * Default membership agreement
    */
@@ -152,51 +161,58 @@ By signing this agreement, I acknowledge that:
 
 By signing this agreement, I formally request membership in this pod and agree to abide by these terms.`;
   }
-  
+
   /**
    * Check if user has signed the accountability agreement
    * Bridges to existing signature checking
    */
   static async hasUserSignedAccountabilityAgreement(
-    podId: string, 
-    userAddress: string
+    podId: string,
+    userAddress: string,
   ): Promise<boolean> {
     try {
-      const result = await AccountabilitySignatureService.hasUserSigned(podId, userAddress);
+      const result = await AccountabilitySignatureService.hasUserSigned(
+        podId,
+        userAddress,
+      );
       return result.success && result.hasSigned === true;
     } catch (error) {
       console.error('❌ Error checking accountability signature:', error);
       return false;
     }
   }
-  
+
   /**
    * Auto-populate eligibility criteria with existing pod agreement
    */
   static async populateEligibilityCriteriaWithExistingAgreement(
     podId: string,
-    criteriaType: 'leadership' | 'membership' = 'membership'
+    criteriaType: 'leadership' | 'membership' = 'membership',
   ): Promise<Partial<EligibilityCriteria>> {
     try {
-      const agreementText = await this.getAgreementTextForCriteria(podId, criteriaType);
-      
+      const agreementText = await this.getAgreementTextForCriteria(
+        podId,
+        criteriaType,
+      );
+
       return {
         type: 'agreement_signed',
-        name: criteriaType === 'leadership' 
-          ? 'Leadership Accountability Agreement' 
-          : 'Pod Membership Agreement',
+        name:
+          criteriaType === 'leadership'
+            ? 'Leadership Accountability Agreement'
+            : 'Pod Membership Agreement',
         description: `Required agreement for ${criteriaType} in this pod`,
         agreement_text: agreementText,
         agreement_hash: `${podId}_${criteriaType}_agreement`,
         signature_required: true,
-        required: true
+        required: true,
       };
     } catch (error) {
       console.error('❌ Error populating eligibility criteria:', error);
       return {
         type: 'agreement_signed',
         name: 'Agreement Required',
-        agreement_text: this.getDefaultMembershipAgreement()
+        agreement_text: this.getDefaultMembershipAgreement(),
       };
     }
   }

@@ -44,9 +44,7 @@ export type NFTContextType = {
 } & NFTData;
 
 export type NFTProviderReact = {
-  children:
-    | ReactNode
-    | ((ctx: NFTContextType) => ReactNode);
+  children: ReactNode | ((ctx: NFTContextType) => ReactNode);
   contractAddress: `0x${string}`;
   tokenId?: string;
   isSponsored?: boolean;
@@ -144,9 +142,7 @@ export type NFTCardDefaultReact = Omit<NFTCardReact, 'children'>;
  * NFTMint must be used if the NFTMintButton is included
  */
 export type NFTMintCardReact = {
-  children:
-    | ReactNode
-    | ((ctx: NFTContextType) => ReactNode);
+  children: ReactNode | ((ctx: NFTContextType) => ReactNode);
   className?: string;
   contractAddress: Hex;
   tokenId?: string;

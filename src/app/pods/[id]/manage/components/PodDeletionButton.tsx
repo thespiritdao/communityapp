@@ -10,13 +10,13 @@ import { Label } from '@/components/ui/label';
 import { useToast } from '@/components/ui/use-toast';
 import { Trash2, AlertTriangle, Loader2 } from 'lucide-react';
 import { PodDeletionService } from '@/features/pods/services/PodDeletionService';
-import { 
-  Transaction, 
-  TransactionButton, 
-  TransactionSponsor, 
-  TransactionStatus, 
-  TransactionStatusLabel, 
-  TransactionStatusAction 
+import {
+  Transaction,
+  TransactionButton,
+  TransactionSponsor,
+  TransactionStatus,
+  TransactionStatusLabel,
+  TransactionStatusAction,
 } from '@coinbase/onchainkit/transaction';
 import { base } from 'viem/chains';
 
@@ -40,7 +40,11 @@ interface PodDeletionButtonProps {
   onDeleteProposal?: () => void;
 }
 
-export const PodDeletionButton: React.FC<PodDeletionButtonProps> = ({ pod, canManage, onDeleteProposal }) => {
+export const PodDeletionButton: React.FC<PodDeletionButtonProps> = ({
+  pod,
+  canManage,
+  onDeleteProposal,
+}) => {
   const router = useRouter();
   const { address } = useAccount();
   const { data: walletClient } = useWalletClient();
@@ -50,7 +54,10 @@ export const PodDeletionButton: React.FC<PodDeletionButtonProps> = ({ pod, canMa
   const [deleting, setDeleting] = useState(false);
   const [canDelete, setCanDelete] = useState(false);
   const [deleteCheckMessage, setDeleteCheckMessage] = useState<string>('');
-  const [leaderInfo, setLeaderInfo] = useState<{ current: number; required: number }>({ current: 0, required: 3 });
+  const [leaderInfo, setLeaderInfo] = useState<{
+    current: number;
+    required: number;
+  }>({ current: 0, required: 3 });
   const [processingHats, setProcessingHats] = useState(false);
   const [hatTransactionConfig, setHatTransactionConfig] = useState<any>(null);
   const publicClient = usePublicClient();
@@ -59,13 +66,13 @@ export const PodDeletionButton: React.FC<PodDeletionButtonProps> = ({ pod, canMa
   useEffect(() => {
     const checkDeletionEligibility = async () => {
       if (!address || !pod?.id) return;
-      
+
       const result = await PodDeletionService.canDeletePod(pod.id, address);
       setCanDelete(result.canDelete);
       setDeleteCheckMessage(result.reason || '');
       setLeaderInfo({
         current: result.leaderCount || 0,
-        required: result.requiredLeaders || 3
+        required: result.requiredLeaders || 3,
       });
     };
 
@@ -79,70 +86,81 @@ export const PodDeletionButton: React.FC<PodDeletionButtonProps> = ({ pod, canMa
       setDeleting(true);
 
       // Check if pod has hats that need deactivation
-      const hasHats = (pod.management_hat_id && pod.management_hat_id !== 'placeholder') || 
-                      (pod.membership_hat_id && pod.membership_hat_id !== 'placeholder');
+      const hasHats =
+        (pod.management_hat_id && pod.management_hat_id !== 'placeholder') ||
+        (pod.membership_hat_id && pod.membership_hat_id !== 'placeholder');
 
       if (hasHats && publicClient) {
         setProcessingHats(true);
-        
+
         console.log('🎩 Preparing Hat deactivation transactions...', {
           pod_name: pod.name,
           management_hat_id: pod.management_hat_id,
           membership_hat_id: pod.membership_hat_id,
           user_address: address,
-          hats_contract: process.env.NEXT_PUBLIC_HATS_CONTRACT
+          hats_contract: process.env.NEXT_PUBLIC_HATS_CONTRACT,
         });
-        
+
         // Prepare hat deactivation transactions using OnchainKit
-        const transactionConfig = await PodDeletionService.prepareHatDeactivationTransactions(
-          pod,
-          address,
-          publicClient
-        );
-        
+        const transactionConfig =
+          await PodDeletionService.prepareHatDeactivationTransactions(
+            pod,
+            address,
+            publicClient,
+          );
+
         console.log('📦 Transaction config prepared:', {
           hasConfig: !!transactionConfig,
           callsLength: transactionConfig?.calls?.length || 0,
           calls: transactionConfig?.calls || [],
-          sponsored: true
+          sponsored: true,
         });
-        
+
         if (transactionConfig && transactionConfig.calls.length > 0) {
-          console.log('✅ Setting transaction config for OnchainKit:', transactionConfig);
+          console.log(
+            '✅ Setting transaction config for OnchainKit:',
+            transactionConfig,
+          );
           setHatTransactionConfig(transactionConfig);
           toast({
-            title: "Hat Deactivation Required",
-            description: "Please approve the transaction to deactivate Hat tokens",
+            title: 'Hat Deactivation Required',
+            description:
+              'Please approve the transaction to deactivate Hat tokens',
           });
           setShowDeleteConfirm(false); // Close the delete modal to show transaction UI
           return; // Exit here, transaction will complete the deletion
         } else {
-          console.warn('⚠️ No transaction config generated - proceeding with database deletion only');
+          console.warn(
+            '⚠️ No transaction config generated - proceeding with database deletion only',
+          );
           setProcessingHats(false);
         }
       }
 
       // If no hats to deactivate, proceed with database deletion
-      const result = await PodDeletionService.deletePodDatabase(pod.id, address);
+      const result = await PodDeletionService.deletePodDatabase(
+        pod.id,
+        address,
+      );
 
       if (!result.success) {
         throw new Error(result.error || 'Failed to delete pod');
       }
 
       toast({
-        title: "Pod Deleted",
+        title: 'Pod Deleted',
         description: `${pod.name} has been permanently deleted.`,
       });
 
       // Redirect to pods list
       router.push('/pods');
-
     } catch (error) {
       console.error('Failed to delete pod:', error);
       toast({
-        title: "Deletion Failed",
-        description: error instanceof Error ? error.message : "Failed to delete pod",
-        variant: "destructive"
+        title: 'Deletion Failed',
+        description:
+          error instanceof Error ? error.message : 'Failed to delete pod',
+        variant: 'destructive',
       });
       setDeleting(false);
       setProcessingHats(false);
@@ -152,11 +170,14 @@ export const PodDeletionButton: React.FC<PodDeletionButtonProps> = ({ pod, canMa
   const handleHatTransactionSuccess = async () => {
     try {
       // After successful hat deactivation, complete the database deletion
-      const result = await PodDeletionService.deletePodDatabase(pod.id, address);
-      
+      const result = await PodDeletionService.deletePodDatabase(
+        pod.id,
+        address,
+      );
+
       if (result.success) {
         toast({
-          title: "Pod Deleted Successfully",
+          title: 'Pod Deleted Successfully',
           description: `${pod.name} and its Hat tokens have been permanently deleted.`,
         });
         router.push('/pods');
@@ -166,9 +187,10 @@ export const PodDeletionButton: React.FC<PodDeletionButtonProps> = ({ pod, canMa
     } catch (error) {
       console.error('Failed to complete pod deletion:', error);
       toast({
-        title: "Database Deletion Failed",
-        description: "Hat tokens were deactivated but pod data could not be removed",
-        variant: "destructive"
+        title: 'Database Deletion Failed',
+        description:
+          'Hat tokens were deactivated but pod data could not be removed',
+        variant: 'destructive',
       });
     } finally {
       setDeleting(false);
@@ -185,8 +207,8 @@ export const PodDeletionButton: React.FC<PodDeletionButtonProps> = ({ pod, canMa
 
   return (
     <>
-      <Button 
-        variant="outline" 
+      <Button
+        variant="outline"
         size="sm"
         className="border-red-300 text-red-600 hover:bg-red-100"
         onClick={() => {
@@ -202,72 +224,82 @@ export const PodDeletionButton: React.FC<PodDeletionButtonProps> = ({ pod, canMa
       </Button>
 
       {/* OnchainKit Transaction Component for Hat Deactivation - Render OUTSIDE modal */}
-      {hatTransactionConfig && hatTransactionConfig.calls && hatTransactionConfig.calls.length > 0 && (
-        <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-[60] p-4">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full">
-            <h3 className="text-lg font-semibold mb-4">Deactivate Pod Hats</h3>
-            <p className="text-sm text-gray-600 mb-4">
-              This will deactivate {hatTransactionConfig.calls.length} Hat token(s) on the blockchain before deleting the pod.
-            </p>
-            
-            <Transaction
-              account={address?.toLowerCase() as `0x${string}`}
-              chainId={base.id}
-              calls={hatTransactionConfig.calls}
-              isSponsored={true}
-              onSuccess={async (response) => {
-                console.log('✅ Hat deactivation successful:', response);
-                await handleHatTransactionSuccess();
-              }}
-              onError={(error) => {
-                console.error('❌ Hat deactivation failed:', error);
-                toast({
-                  title: "Hat Deactivation Failed",
-                  description: error instanceof Error ? error.message : 'Transaction failed',
-                  variant: "destructive"
-                });
-                // Reset all state properly on error
-                setProcessingHats(false);
-                setDeleting(false);
-                setHatTransactionConfig(null);
-                setDeleteConfirmText('');
-                // Don't re-open delete modal automatically
-              }}
-            >
-              <TransactionButton
-                text="Confirm Hat Deactivation"
-                className="w-full bg-red-600 text-white hover:bg-red-700 py-2 rounded"
-              />
-              <TransactionSponsor />
-              <TransactionStatus>
-                <TransactionStatusLabel />
-                <TransactionStatusAction />
-              </TransactionStatus>
-            </Transaction>
-            
-            <button
-              onClick={() => {
-                // Reset all state properly when canceling hat transaction
-                setHatTransactionConfig(null);
-                setProcessingHats(false);
-                setDeleting(false);
-                setDeleteConfirmText('');
-                // Don't re-open delete modal, just cancel everything
-              }}
-              className="text-gray-500 hover:text-gray-700 text-sm mt-3 w-full"
-            >
-              Cancel
-            </button>
+      {hatTransactionConfig &&
+        hatTransactionConfig.calls &&
+        hatTransactionConfig.calls.length > 0 && (
+          <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-[60] p-4">
+            <div className="bg-white rounded-lg p-6 max-w-md w-full">
+              <h3 className="text-lg font-semibold mb-4">
+                Deactivate Pod Hats
+              </h3>
+              <p className="text-sm text-gray-600 mb-4">
+                This will deactivate {hatTransactionConfig.calls.length} Hat
+                token(s) on the blockchain before deleting the pod.
+              </p>
+
+              <Transaction
+                account={address?.toLowerCase() as `0x${string}`}
+                chainId={base.id}
+                calls={hatTransactionConfig.calls}
+                isSponsored={true}
+                onSuccess={async (response) => {
+                  console.log('✅ Hat deactivation successful:', response);
+                  await handleHatTransactionSuccess();
+                }}
+                onError={(error) => {
+                  console.error('❌ Hat deactivation failed:', error);
+                  toast({
+                    title: 'Hat Deactivation Failed',
+                    description:
+                      error instanceof Error
+                        ? error.message
+                        : 'Transaction failed',
+                    variant: 'destructive',
+                  });
+                  // Reset all state properly on error
+                  setProcessingHats(false);
+                  setDeleting(false);
+                  setHatTransactionConfig(null);
+                  setDeleteConfirmText('');
+                  // Don't re-open delete modal automatically
+                }}
+              >
+                <TransactionButton
+                  text="Confirm Hat Deactivation"
+                  className="w-full bg-red-600 text-white hover:bg-red-700 py-2 rounded"
+                />
+                <TransactionSponsor />
+                <TransactionStatus>
+                  <TransactionStatusLabel />
+                  <TransactionStatusAction />
+                </TransactionStatus>
+              </Transaction>
+
+              <button
+                onClick={() => {
+                  // Reset all state properly when canceling hat transaction
+                  setHatTransactionConfig(null);
+                  setProcessingHats(false);
+                  setDeleting(false);
+                  setDeleteConfirmText('');
+                  // Don't re-open delete modal, just cancel everything
+                }}
+                className="text-gray-500 hover:text-gray-700 text-sm mt-3 w-full"
+              >
+                Cancel
+              </button>
+            </div>
           </div>
-        </div>
-      )}
+        )}
 
       {/* Deletion Confirmation Modal */}
       {showDeleteConfirm && !hatTransactionConfig && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 overflow-y-auto">
           <div className="bg-white rounded-lg p-4 sm:p-6 w-full max-w-md mx-auto my-auto">
-            <h3 className="text-lg font-semibold text-red-800 mb-4">Delete Pod</h3>
-            
+            <h3 className="text-lg font-semibold text-red-800 mb-4">
+              Delete Pod
+            </h3>
+
             <div className="space-y-4">
               {/* Show leader requirement warning if not met */}
               {!canDelete && deleteCheckMessage && (
@@ -275,11 +307,16 @@ export const PodDeletionButton: React.FC<PodDeletionButtonProps> = ({ pod, canMa
                   <div className="flex items-start gap-2">
                     <AlertTriangle className="h-5 w-5 text-yellow-600 mt-0.5" />
                     <div>
-                      <p className="text-sm font-medium text-yellow-800">Cannot Delete Pod</p>
-                      <p className="text-sm text-yellow-700 mt-1">{deleteCheckMessage}</p>
+                      <p className="text-sm font-medium text-yellow-800">
+                        Cannot Delete Pod
+                      </p>
+                      <p className="text-sm text-yellow-700 mt-1">
+                        {deleteCheckMessage}
+                      </p>
                       {leaderInfo.current < leaderInfo.required && (
                         <p className="text-xs text-yellow-600 mt-2">
-                          Current leaders: {leaderInfo.current} / Required: {leaderInfo.required}
+                          Current leaders: {leaderInfo.current} / Required:{' '}
+                          {leaderInfo.required}
                         </p>
                       )}
                     </div>
@@ -288,15 +325,21 @@ export const PodDeletionButton: React.FC<PodDeletionButtonProps> = ({ pod, canMa
               )}
 
               <p className="text-sm text-gray-700">
-                This action will permanently delete the <strong>{pod.name}</strong> pod and cannot be undone.
+                This action will permanently delete the{' '}
+                <strong>{pod.name}</strong> pod and cannot be undone.
               </p>
-              
+
               <div className="bg-red-50 p-3 rounded-lg">
                 <p className="text-sm text-red-700">
                   <strong>Warning:</strong> This will:
                 </p>
                 <ul className="text-sm text-red-600 mt-2 list-disc list-inside">
-                  <li>Deactivate all Hats Protocol tokens on-chain {walletClient ? '(requires transaction approval)' : '(manual deactivation required - wallet not connected)'}</li>
+                  <li>
+                    Deactivate all Hats Protocol tokens on-chain{' '}
+                    {walletClient
+                      ? '(requires transaction approval)'
+                      : '(manual deactivation required - wallet not connected)'}
+                  </li>
                   <li>Remove all pod data from the database</li>
                   <li>Revoke access for all pod members</li>
                   <li>Clean up treasury contracts</li>
@@ -312,16 +355,28 @@ export const PodDeletionButton: React.FC<PodDeletionButtonProps> = ({ pod, canMa
                     <strong>Hat Deactivation:</strong>
                   </p>
                   <ul className="text-sm text-[#3A3A3A] mt-2 list-disc list-inside">
-                    {pod.management_hat_id && pod.management_hat_id !== 'placeholder' && (
-                      <li className="break-all">Management Hat ID: <span className="font-mono text-xs">{pod.management_hat_id}</span></li>
-                    )}
-                    {pod.membership_hat_id && pod.membership_hat_id !== 'placeholder' && (
-                      <li className="break-all">Membership Hat ID: <span className="font-mono text-xs">{pod.membership_hat_id}</span></li>
-                    )}
+                    {pod.management_hat_id &&
+                      pod.management_hat_id !== 'placeholder' && (
+                        <li className="break-all">
+                          Management Hat ID:{' '}
+                          <span className="font-mono text-xs">
+                            {pod.management_hat_id}
+                          </span>
+                        </li>
+                      )}
+                    {pod.membership_hat_id &&
+                      pod.membership_hat_id !== 'placeholder' && (
+                        <li className="break-all">
+                          Membership Hat ID:{' '}
+                          <span className="font-mono text-xs">
+                            {pod.membership_hat_id}
+                          </span>
+                        </li>
+                      )}
                   </ul>
                   <p className="text-xs text-[#3A3A3A] mt-2">
-                    {walletClient 
-                      ? '✅ Wallet connected - Hats will be deactivated on-chain' 
+                    {walletClient
+                      ? '✅ Wallet connected - Hats will be deactivated on-chain'
                       : '⚠️ Connect wallet to enable automatic hat deactivation'}
                   </p>
                 </div>
@@ -331,15 +386,23 @@ export const PodDeletionButton: React.FC<PodDeletionButtonProps> = ({ pod, canMa
               {canDelete && (
                 <div className="bg-[#D4E5DF] p-3 rounded-lg">
                   <p className="text-sm text-[#2F5D50]">
-                    <strong>Deletion Authorized:</strong> This pod has {leaderInfo.current} leaders 
-                    (minimum {leaderInfo.required} required)
+                    <strong>Deletion Authorized:</strong> This pod has{' '}
+                    {leaderInfo.current} leaders (minimum {leaderInfo.required}{' '}
+                    required)
                   </p>
                 </div>
               )}
 
               <div className="space-y-2">
-                <Label htmlFor="delete-confirm-input" className="text-sm font-medium text-gray-700">
-                  Type <span className="font-mono bg-gray-100 px-1 rounded">{pod.name}</span> to confirm deletion:
+                <Label
+                  htmlFor="delete-confirm-input"
+                  className="text-sm font-medium text-gray-700"
+                >
+                  Type{' '}
+                  <span className="font-mono bg-gray-100 px-1 rounded">
+                    {pod.name}
+                  </span>{' '}
+                  to confirm deletion:
                 </Label>
                 <Input
                   id="delete-confirm-input"
@@ -348,7 +411,9 @@ export const PodDeletionButton: React.FC<PodDeletionButtonProps> = ({ pod, canMa
                   onChange={(e) => {
                     const value = e.target.value;
                     setDeleteConfirmText(value);
-                    console.log(`Delete confirmation text: "${value}" vs expected: "${pod.name}" (match: ${value === pod.name})`);
+                    console.log(
+                      `Delete confirmation text: "${value}" vs expected: "${pod.name}" (match: ${value === pod.name})`,
+                    );
                   }}
                   onPaste={(e) => {
                     // Allow paste for convenience
@@ -356,7 +421,11 @@ export const PodDeletionButton: React.FC<PodDeletionButtonProps> = ({ pod, canMa
                   }}
                   onKeyDown={(e) => {
                     // Allow Enter to submit if text matches
-                    if (e.key === 'Enter' && deleteConfirmText === pod.name && canDelete) {
+                    if (
+                      e.key === 'Enter' &&
+                      deleteConfirmText === pod.name &&
+                      canDelete
+                    ) {
                       handlePodDeletion();
                     }
                   }}
@@ -370,8 +439,8 @@ export const PodDeletionButton: React.FC<PodDeletionButtonProps> = ({ pod, canMa
             </div>
 
             <div className="flex gap-3 mt-6">
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 onClick={() => {
                   setShowDeleteConfirm(false);
                   setDeleteConfirmText('');
@@ -381,7 +450,7 @@ export const PodDeletionButton: React.FC<PodDeletionButtonProps> = ({ pod, canMa
               >
                 Cancel
               </Button>
-              <Button 
+              <Button
                 variant="destructive"
                 onClick={() => {
                   console.log('Delete button clicked:', {
@@ -389,16 +458,25 @@ export const PodDeletionButton: React.FC<PodDeletionButtonProps> = ({ pod, canMa
                     deleteConfirmText,
                     podName: pod.name,
                     matches: deleteConfirmText === pod.name,
-                    deleting
+                    deleting,
                   });
                   handlePodDeletion();
                 }}
-                disabled={!canDelete || deleteConfirmText !== pod.name || deleting || hatTransactionConfig !== null}
+                disabled={
+                  !canDelete ||
+                  deleteConfirmText !== pod.name ||
+                  deleting ||
+                  hatTransactionConfig !== null
+                }
                 className="flex-1"
                 title={
-                  canDelete ? 
-                  deleteConfirmText !== pod.name ? 'Type the pod name exactly as shown' :
-                  deleting ? 'Deletion in progress' : 'Click to delete pod' : 'Cannot delete - requirements not met'
+                  canDelete
+                    ? deleteConfirmText !== pod.name
+                      ? 'Type the pod name exactly as shown'
+                      : deleting
+                        ? 'Deletion in progress'
+                        : 'Click to delete pod'
+                    : 'Cannot delete - requirements not met'
                 }
               >
                 {processingHats ? (

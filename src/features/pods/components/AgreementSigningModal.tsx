@@ -1,7 +1,13 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Loader2 } from 'lucide-react';
 import { useAccount, useSignMessage } from 'wagmi';
@@ -25,7 +31,7 @@ export default function AgreementSigningModal({
   agreementText,
   podId,
   roleId,
-  onSigningComplete
+  onSigningComplete,
 }: AgreementSigningModalProps) {
   const { address } = useAccount();
   const { signMessageAsync } = useSignMessage();
@@ -37,7 +43,7 @@ export default function AgreementSigningModal({
       toast({
         title: 'Wallet Not Connected',
         description: 'Please connect your wallet to sign the agreement',
-        variant: 'destructive'
+        variant: 'destructive',
       });
       return;
     }
@@ -59,7 +65,7 @@ export default function AgreementSigningModal({
           signature_data: signature,
           accountability_statement: agreementText,
           signed_at: new Date().toISOString(),
-          is_valid: true
+          is_valid: true,
         });
 
       if (signatureError) {
@@ -69,29 +75,35 @@ export default function AgreementSigningModal({
       // Also store in user_eligibility_status table
       const { error: eligibilityError } = await supabase
         .from('user_eligibility_status')
-        .upsert({
-          user_wallet: address.toLowerCase(),
-          pod_id: podId,
-          role_id: roleId,
-          criteria_type: 'agreement',
-          criteria_id: agreementId,
-          status: 'met',
-          proof: signature,
-          verified_at: new Date().toISOString(),
-          last_checked: new Date().toISOString()
-        }, {
-          onConflict: 'user_wallet,pod_id,role_id,criteria_type,criteria_id'
-        });
+        .upsert(
+          {
+            user_wallet: address.toLowerCase(),
+            pod_id: podId,
+            role_id: roleId,
+            criteria_type: 'agreement',
+            criteria_id: agreementId,
+            status: 'met',
+            proof: signature,
+            verified_at: new Date().toISOString(),
+            last_checked: new Date().toISOString(),
+          },
+          {
+            onConflict: 'user_wallet,pod_id,role_id,criteria_type,criteria_id',
+          },
+        );
 
       if (eligibilityError) {
-        console.warn('Warning: Failed to update eligibility status:', eligibilityError);
+        console.warn(
+          'Warning: Failed to update eligibility status:',
+          eligibilityError,
+        );
         // Don't throw - signature was stored successfully
       }
 
       toast({
         title: 'Agreement Signed!',
         description: 'Your signature has been recorded on-chain',
-        variant: 'default'
+        variant: 'default',
       });
 
       // Call completion callback
@@ -105,8 +117,9 @@ export default function AgreementSigningModal({
       console.error('Error signing agreement:', error);
       toast({
         title: 'Signing Failed',
-        description: error instanceof Error ? error.message : 'Failed to sign agreement',
-        variant: 'destructive'
+        description:
+          error instanceof Error ? error.message : 'Failed to sign agreement',
+        variant: 'destructive',
       });
     } finally {
       setIsSigning(false);
@@ -132,29 +145,29 @@ export default function AgreementSigningModal({
           </div>
 
           {/* Signature Info */}
-          <div className="text-sm text-gray-600 p-4 rounded-lg" style={{ backgroundColor: '#E8F1EE', border: '1px solid #B8D9CA' }}>
-            <p className="font-medium mb-2" style={{ color: '#1F453A' }}>What happens when you sign:</p>
+          <div
+            className="text-sm text-gray-600 p-4 rounded-lg"
+            style={{ backgroundColor: '#E8F1EE', border: '1px solid #B8D9CA' }}
+          >
+            <p className="font-medium mb-2" style={{ color: '#1F453A' }}>
+              What happens when you sign:
+            </p>
             <ul className="list-disc list-inside space-y-1">
               <li>You'll be prompted to sign with your wallet</li>
               <li>Your signature will be cryptographically verified</li>
               <li>The signature will be stored securely in the database</li>
-              <li>You'll gain access to the pod once all requirements are met</li>
+              <li>
+                You'll gain access to the pod once all requirements are met
+              </li>
             </ul>
           </div>
 
           {/* Action Buttons */}
           <div className="flex gap-3 justify-end pt-4 border-t">
-            <Button
-              variant="outline"
-              onClick={onClose}
-              disabled={isSigning}
-            >
+            <Button variant="outline" onClick={onClose} disabled={isSigning}>
               Cancel
             </Button>
-            <Button
-              onClick={handleSign}
-              disabled={isSigning}
-            >
+            <Button onClick={handleSign} disabled={isSigning}>
               {isSigning ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />

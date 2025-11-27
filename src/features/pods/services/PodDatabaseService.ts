@@ -1,6 +1,9 @@
 import { supabase } from '@/utils/supabaseClient';
-import type { Pod, } from '../types';
-import type { PodCreationData, AccountabilitySignature } from './PodCoreService';
+import type { Pod } from '../types';
+import type {
+  PodCreationData,
+  AccountabilitySignature,
+} from './PodCoreService';
 
 export interface DatabaseQueryConfig {
   orderBy?: string;
@@ -18,12 +21,11 @@ export interface DatabaseResult<T> {
 
 /**
  * PodDatabaseService - Centralized database operations for pods
- * 
+ *
  * Handles all Supabase interactions with optimized queries, proper error handling,
  * and authentication checks. Provides a clean abstraction layer over raw database operations.
  */
 export class PodDatabaseService {
-
   // ==========================================
   // AUTHENTICATION & SESSION MANAGEMENT
   // ==========================================
@@ -32,7 +34,10 @@ export class PodDatabaseService {
    * Ensure user is authenticated for protected operations
    */
   private static async ensureAuthenticated(): Promise<string> {
-    const { data: { session }, error } = await supabase.auth.getSession();
+    const {
+      data: { session },
+      error,
+    } = await supabase.auth.getSession();
     if (error || !session?.user?.id) {
       throw new Error('Authentication required');
     }
@@ -49,10 +54,10 @@ export class PodDatabaseService {
   static async getPodById(podId: string): Promise<DatabaseResult<Pod>> {
     try {
       console.log('📊 PodDatabaseService: Getting pod by ID:', podId);
-      
+
       // Check authentication for RLS
       await this.ensureAuthenticated();
-      
+
       const { data, error } = await supabase
         .from('pods')
         .select(`
@@ -77,9 +82,9 @@ export class PodDatabaseService {
 
       console.log('✅ Pod retrieved from database:', data.name);
       return { data, error: null };
-      
     } catch (err) {
-      const error = err instanceof Error ? err.message : 'Database operation failed';
+      const error =
+        err instanceof Error ? err.message : 'Database operation failed';
       console.error('PodDatabaseService.getPodById error:', error);
       return { data: null, error };
     }
@@ -88,16 +93,17 @@ export class PodDatabaseService {
   /**
    * Get multiple pods with filtering and pagination
    */
-  static async getPods(config: DatabaseQueryConfig = {}): Promise<DatabaseResult<Pod[]>> {
+  static async getPods(
+    config: DatabaseQueryConfig = {},
+  ): Promise<DatabaseResult<Pod[]>> {
     try {
       console.log('📊 PodDatabaseService: Getting pods with config:', config);
-      
+
       // Check authentication
       await this.ensureAuthenticated();
-      
-      let query = supabase
-        .from('pods')
-        .select(`
+
+      let query = supabase.from('pods').select(
+        `
           *,
           management_hat_id,
           membership_hat_id,
@@ -105,7 +111,9 @@ export class PodDatabaseService {
           pod_image_url,
           created_at,
           updated_at
-        `, { count: 'exact' });
+        `,
+        { count: 'exact' },
+      );
 
       // Apply filters
       if (!config.includeInactive) {
@@ -114,8 +122,8 @@ export class PodDatabaseService {
 
       // Apply ordering
       if (config.orderBy) {
-        query = query.order(config.orderBy, { 
-          ascending: config.ascending ?? false 
+        query = query.order(config.orderBy, {
+          ascending: config.ascending ?? false,
         });
       } else {
         query = query.order('created_at', { ascending: false });
@@ -126,7 +134,10 @@ export class PodDatabaseService {
         query = query.limit(config.limit);
       }
       if (config.offset) {
-        query = query.range(config.offset, config.offset + (config.limit || 50) - 1);
+        query = query.range(
+          config.offset,
+          config.offset + (config.limit || 50) - 1,
+        );
       }
 
       const { data, error, count } = await query;
@@ -138,9 +149,9 @@ export class PodDatabaseService {
 
       console.log(`✅ Retrieved ${data?.length || 0} pods from database`);
       return { data: data || [], error: null, count: count || 0 };
-      
     } catch (err) {
-      const error = err instanceof Error ? err.message : 'Database operation failed';
+      const error =
+        err instanceof Error ? err.message : 'Database operation failed';
       console.error('PodDatabaseService.getPods error:', error);
       return { data: null, error, count: 0 };
     }
@@ -149,10 +160,12 @@ export class PodDatabaseService {
   /**
    * Get pods where user has leadership access
    */
-  static async getUserLeadershipPods(userAddress: string): Promise<DatabaseResult<Pod[]>> {
+  static async getUserLeadershipPods(
+    userAddress: string,
+  ): Promise<DatabaseResult<Pod[]>> {
     try {
       console.log('📊 Getting leadership pods for:', userAddress);
-      
+
       if (!userAddress) {
         return { data: [], error: null };
       }
@@ -168,7 +181,9 @@ export class PodDatabaseService {
           treasury_contract_address,
           pod_image_url
         `)
-        .or(`pod_leads.cs.{${userAddress.toLowerCase()}},created_by_address.eq.${userAddress.toLowerCase()}`)
+        .or(
+          `pod_leads.cs.{${userAddress.toLowerCase()}},created_by_address.eq.${userAddress.toLowerCase()}`,
+        )
         .order('created_at', { ascending: false });
 
       if (error) {
@@ -177,9 +192,9 @@ export class PodDatabaseService {
 
       console.log(`✅ Retrieved ${data?.length || 0} leadership pods`);
       return { data: data || [], error: null };
-      
     } catch (err) {
-      const error = err instanceof Error ? err.message : 'Database operation failed';
+      const error =
+        err instanceof Error ? err.message : 'Database operation failed';
       console.error('PodDatabaseService.getUserLeadershipPods error:', error);
       return { data: null, error };
     }
@@ -188,7 +203,9 @@ export class PodDatabaseService {
   /**
    * Create a new pod
    */
-  static async createPod(podData: PodCreationData): Promise<DatabaseResult<Pod>> {
+  static async createPod(
+    podData: PodCreationData,
+  ): Promise<DatabaseResult<Pod>> {
     try {
       console.log('📊 Creating pod in database:', podData.name);
 
@@ -205,16 +222,19 @@ export class PodDatabaseService {
         'placeholder',
         'null',
         'undefined',
-        'none'
+        'none',
       ];
 
       if (podData.management_hat_id) {
         const hatIdLower = podData.management_hat_id.toLowerCase();
         if (placeholderValues.includes(hatIdLower)) {
-          console.error('❌ TIER 1 FIX: Rejecting placeholder management_hat_id:', podData.management_hat_id);
+          console.error(
+            '❌ TIER 1 FIX: Rejecting placeholder management_hat_id:',
+            podData.management_hat_id,
+          );
           return {
             data: null,
-            error: `Invalid management HAT ID: "${podData.management_hat_id}" is a placeholder value. HAT must be verified onchain before pod creation.`
+            error: `Invalid management HAT ID: "${podData.management_hat_id}" is a placeholder value. HAT must be verified onchain before pod creation.`,
           };
         }
       }
@@ -222,7 +242,10 @@ export class PodDatabaseService {
       if (podData.membership_hat_id) {
         const hatIdLower = podData.membership_hat_id.toLowerCase();
         if (placeholderValues.includes(hatIdLower)) {
-          console.warn('⚠️ TIER 1 FIX: Rejecting placeholder membership_hat_id:', podData.membership_hat_id);
+          console.warn(
+            '⚠️ TIER 1 FIX: Rejecting placeholder membership_hat_id:',
+            podData.membership_hat_id,
+          );
           // Set to null instead of rejecting - membership HAT is optional
           podData.membership_hat_id = undefined;
         }
@@ -230,10 +253,13 @@ export class PodDatabaseService {
 
       // Require valid management_hat_id for active pods
       if (podData.status === 'active' && !podData.management_hat_id) {
-        console.error('❌ TIER 1 FIX: Cannot create active pod without management HAT ID');
+        console.error(
+          '❌ TIER 1 FIX: Cannot create active pod without management HAT ID',
+        );
         return {
           data: null,
-          error: 'Cannot create active pod without a valid management HAT ID. HAT must exist onchain.'
+          error:
+            'Cannot create active pod without a valid management HAT ID. HAT must exist onchain.',
         };
       }
 
@@ -253,7 +279,7 @@ export class PodDatabaseService {
         membership_hat_id: podData.membership_hat_id,
         treasury_contract_address: podData.treasury_contract_address,
         created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
+        updated_at: new Date().toISOString(),
       };
 
       const { data, error } = await supabase
@@ -269,9 +295,9 @@ export class PodDatabaseService {
 
       console.log('✅ Pod created in database:', data.id);
       return { data, error: null };
-      
     } catch (err) {
-      const error = err instanceof Error ? err.message : 'Database operation failed';
+      const error =
+        err instanceof Error ? err.message : 'Database operation failed';
       console.error('PodDatabaseService.createPod error:', error);
       return { data: null, error };
     }
@@ -282,7 +308,7 @@ export class PodDatabaseService {
    */
   static async updatePod(
     podId: string,
-    updates: Partial<Pod>
+    updates: Partial<Pod>,
   ): Promise<DatabaseResult<Pod>> {
     try {
       console.log('📊 Updating pod in database:', podId);
@@ -299,16 +325,19 @@ export class PodDatabaseService {
         'placeholder',
         'null',
         'undefined',
-        'none'
+        'none',
       ];
 
       if (updates.management_hat_id) {
         const hatIdLower = updates.management_hat_id.toLowerCase();
         if (placeholderValues.includes(hatIdLower)) {
-          console.error('❌ TIER 1 FIX: Rejecting placeholder management_hat_id in update:', updates.management_hat_id);
+          console.error(
+            '❌ TIER 1 FIX: Rejecting placeholder management_hat_id in update:',
+            updates.management_hat_id,
+          );
           return {
             data: null,
-            error: `Invalid management HAT ID: "${updates.management_hat_id}" is a placeholder value. HAT must be verified onchain before updating.`
+            error: `Invalid management HAT ID: "${updates.management_hat_id}" is a placeholder value. HAT must be verified onchain before updating.`,
           };
         }
       }
@@ -316,14 +345,17 @@ export class PodDatabaseService {
       if (updates.membership_hat_id) {
         const hatIdLower = updates.membership_hat_id.toLowerCase();
         if (placeholderValues.includes(hatIdLower)) {
-          console.warn('⚠️ TIER 1 FIX: Removing placeholder membership_hat_id from update:', updates.membership_hat_id);
+          console.warn(
+            '⚠️ TIER 1 FIX: Removing placeholder membership_hat_id from update:',
+            updates.membership_hat_id,
+          );
           updates.membership_hat_id = undefined; // Remove from update
         }
       }
 
       const updateData = {
         ...updates,
-        updated_at: new Date().toISOString()
+        updated_at: new Date().toISOString(),
       };
 
       const { data, error } = await supabase
@@ -340,9 +372,9 @@ export class PodDatabaseService {
 
       console.log('✅ Pod updated in database:', podId);
       return { data, error: null };
-      
     } catch (err) {
-      const error = err instanceof Error ? err.message : 'Database operation failed';
+      const error =
+        err instanceof Error ? err.message : 'Database operation failed';
       console.error('PodDatabaseService.updatePod error:', error);
       return { data: null, error };
     }
@@ -351,10 +383,12 @@ export class PodDatabaseService {
   /**
    * Create accountability signatures
    */
-  static async createAccountabilitySignatures(signatures: any[]): Promise<DatabaseResult<any[]>> {
+  static async createAccountabilitySignatures(
+    signatures: any[],
+  ): Promise<DatabaseResult<any[]>> {
     try {
       console.log('📊 Creating accountability signatures:', signatures.length);
-      
+
       await this.ensureAuthenticated();
 
       const { data, error } = await supabase
@@ -363,16 +397,22 @@ export class PodDatabaseService {
         .select();
 
       if (error) {
-        console.error('Database error creating accountability signatures:', error);
+        console.error(
+          'Database error creating accountability signatures:',
+          error,
+        );
         return { data: null, error: error.message };
       }
 
       console.log('✅ Accountability signatures created:', data?.length || 0);
       return { data: data || [], error: null };
-      
     } catch (err) {
-      const error = err instanceof Error ? err.message : 'Database operation failed';
-      console.error('PodDatabaseService.createAccountabilitySignatures error:', error);
+      const error =
+        err instanceof Error ? err.message : 'Database operation failed';
+      console.error(
+        'PodDatabaseService.createAccountabilitySignatures error:',
+        error,
+      );
       return { data: null, error };
     }
   }
@@ -380,10 +420,12 @@ export class PodDatabaseService {
   /**
    * Get accountability signatures for a pod
    */
-  static async getAccountabilitySignatures(podId: string): Promise<DatabaseResult<any[]>> {
+  static async getAccountabilitySignatures(
+    podId: string,
+  ): Promise<DatabaseResult<any[]>> {
     try {
       console.log('📊 Getting accountability signatures for pod:', podId);
-      
+
       await this.ensureAuthenticated();
 
       const { data, error } = await supabase
@@ -393,23 +435,32 @@ export class PodDatabaseService {
         .order('signed_at', { ascending: true });
 
       if (error) {
-        console.error('Database error getting accountability signatures:', error);
+        console.error(
+          'Database error getting accountability signatures:',
+          error,
+        );
         return { data: null, error: error.message };
       }
 
       console.log('✅ Retrieved accountability signatures:', data?.length || 0);
-      console.log('🔍 Raw signature data:', data?.map(sig => ({
-        id: sig.id,
-        signer_address: sig.signer_address,
-        signature_data: sig.signature_data ? 'present' : 'missing',
-        signed_at: sig.signed_at,
-        is_valid: sig.is_valid
-      })));
+      console.log(
+        '🔍 Raw signature data:',
+        data?.map((sig) => ({
+          id: sig.id,
+          signer_address: sig.signer_address,
+          signature_data: sig.signature_data ? 'present' : 'missing',
+          signed_at: sig.signed_at,
+          is_valid: sig.is_valid,
+        })),
+      );
       return { data: data || [], error: null };
-      
     } catch (err) {
-      const error = err instanceof Error ? err.message : 'Database operation failed';
-      console.error('PodDatabaseService.getAccountabilitySignatures error:', error);
+      const error =
+        err instanceof Error ? err.message : 'Database operation failed';
+      console.error(
+        'PodDatabaseService.getAccountabilitySignatures error:',
+        error,
+      );
       return { data: null, error };
     }
   }
@@ -417,10 +468,13 @@ export class PodDatabaseService {
   /**
    * Add single accountability signature
    */
-  static async addAccountabilitySignature(podId: string, signature: any): Promise<DatabaseResult<any>> {
+  static async addAccountabilitySignature(
+    podId: string,
+    signature: any,
+  ): Promise<DatabaseResult<any>> {
     try {
       console.log('📊 Adding accountability signature for pod:', podId);
-      
+
       await this.ensureAuthenticated();
 
       const { data, error } = await supabase
@@ -443,10 +497,13 @@ export class PodDatabaseService {
 
       console.log('✅ Accountability signature added');
       return { data, error: null };
-      
     } catch (err) {
-      const error = err instanceof Error ? err.message : 'Database operation failed';
-      console.error('PodDatabaseService.addAccountabilitySignature error:', error);
+      const error =
+        err instanceof Error ? err.message : 'Database operation failed';
+      console.error(
+        'PodDatabaseService.addAccountabilitySignature error:',
+        error,
+      );
       return { data: null, error };
     }
   }
@@ -457,15 +514,15 @@ export class PodDatabaseService {
   static async deletePod(podId: string): Promise<DatabaseResult<boolean>> {
     try {
       console.log('📊 Soft deleting pod:', podId);
-      
+
       await this.ensureAuthenticated();
 
       const { error } = await supabase
         .from('pods')
-        .update({ 
-          status: 'inactive', 
+        .update({
+          status: 'inactive',
           is_active: false,
-          updated_at: new Date().toISOString()
+          updated_at: new Date().toISOString(),
         })
         .eq('id', podId);
 
@@ -476,9 +533,9 @@ export class PodDatabaseService {
 
       console.log('✅ Pod soft deleted:', podId);
       return { data: true, error: null };
-      
     } catch (err) {
-      const error = err instanceof Error ? err.message : 'Database operation failed';
+      const error =
+        err instanceof Error ? err.message : 'Database operation failed';
       console.error('PodDatabaseService.deletePod error:', error);
       return { data: null, error };
     }
@@ -493,11 +550,11 @@ export class PodDatabaseService {
    */
   static async createAccountabilitySignature(
     podId: string,
-    signature: AccountabilitySignature
+    signature: AccountabilitySignature,
   ): Promise<DatabaseResult<boolean>> {
     try {
       console.log('📊 Creating accountability signature for pod:', podId);
-      
+
       await this.ensureAuthenticated();
 
       const { error } = await supabase
@@ -509,7 +566,7 @@ export class PodDatabaseService {
           signed_at: signature.timestamp,
           accountability_statement: signature.statement,
           is_valid: signature.isValid,
-          created_at: new Date().toISOString()
+          created_at: new Date().toISOString(),
         });
 
       if (error) {
@@ -519,10 +576,13 @@ export class PodDatabaseService {
 
       console.log('✅ Accountability signature created');
       return { data: true, error: null };
-      
     } catch (err) {
-      const error = err instanceof Error ? err.message : 'Database operation failed';
-      console.error('PodDatabaseService.createAccountabilitySignature error:', error);
+      const error =
+        err instanceof Error ? err.message : 'Database operation failed';
+      console.error(
+        'PodDatabaseService.createAccountabilitySignature error:',
+        error,
+      );
       return { data: null, error };
     }
   }
@@ -530,7 +590,9 @@ export class PodDatabaseService {
   /**
    * Get accountability signatures for a pod
    */
-  static async getAccountabilitySignatures(podId: string): Promise<DatabaseResult<AccountabilitySignature[]>> {
+  static async getAccountabilitySignatures(
+    podId: string,
+  ): Promise<DatabaseResult<AccountabilitySignature[]>> {
     try {
       const { data, error } = await supabase
         .from('pod_accountability_signatures')
@@ -542,7 +604,7 @@ export class PodDatabaseService {
         return { data: null, error: error.message };
       }
 
-      const signatures = (data || []).map(sig => ({
+      const signatures = (data || []).map((sig) => ({
         address: sig.signer_address,
         signature: sig.signature_data,
         timestamp: sig.signed_at,
@@ -551,9 +613,9 @@ export class PodDatabaseService {
       }));
 
       return { data: signatures, error: null };
-      
     } catch (err) {
-      const error = err instanceof Error ? err.message : 'Database operation failed';
+      const error =
+        err instanceof Error ? err.message : 'Database operation failed';
       return { data: null, error };
     }
   }
@@ -566,14 +628,16 @@ export class PodDatabaseService {
    * Get pod membership for a user
    */
   static async checkPodMembership(
-    podId: string, 
-    walletAddress: string
-  ): Promise<DatabaseResult<{
-    is_member: boolean;
-    membership_type?: 'leader' | 'member' | 'admin';
-    joined_at?: string;
-    hat_id?: string;
-  }>> {
+    podId: string,
+    walletAddress: string,
+  ): Promise<
+    DatabaseResult<{
+      is_member: boolean;
+      membership_type?: 'leader' | 'member' | 'admin';
+      joined_at?: string;
+      hat_id?: string;
+    }>
+  > {
     try {
       const { data, error } = await supabase
         .from('active_pod_members')
@@ -593,19 +657,19 @@ export class PodDatabaseService {
             is_member: true,
             membership_type: data.membership_type,
             joined_at: data.joined_at,
-            hat_id: data.hat_id
+            hat_id: data.hat_id,
           },
-          error: null
+          error: null,
         };
       }
 
       return {
         data: { is_member: false },
-        error: null
+        error: null,
       };
-      
     } catch (err) {
-      const error = err instanceof Error ? err.message : 'Database operation failed';
+      const error =
+        err instanceof Error ? err.message : 'Database operation failed';
       return { data: null, error };
     }
   }
@@ -617,20 +681,20 @@ export class PodDatabaseService {
   /**
    * Get database statistics
    */
-  static async getStats(): Promise<DatabaseResult<{
-    totalPods: number;
-    activePods: number;
-    draftPods: number;
-    totalSignatures: number;
-  }>> {
+  static async getStats(): Promise<
+    DatabaseResult<{
+      totalPods: number;
+      activePods: number;
+      draftPods: number;
+      totalSignatures: number;
+    }>
+  > {
     try {
       const [podsResult, signaturesResult] = await Promise.all([
-        supabase
-          .from('pods')
-          .select('status', { count: 'exact' }),
+        supabase.from('pods').select('status', { count: 'exact' }),
         supabase
           .from('pod_accountability_signatures')
-          .select('*', { count: 'exact' })
+          .select('*', { count: 'exact' }),
       ]);
 
       if (podsResult.error) {
@@ -640,15 +704,15 @@ export class PodDatabaseService {
       const pods = podsResult.data || [];
       const stats = {
         totalPods: pods.length,
-        activePods: pods.filter(p => p.status === 'active').length,
-        draftPods: pods.filter(p => p.status === 'draft').length,
-        totalSignatures: signaturesResult.count || 0
+        activePods: pods.filter((p) => p.status === 'active').length,
+        draftPods: pods.filter((p) => p.status === 'draft').length,
+        totalSignatures: signaturesResult.count || 0,
       };
 
       return { data: stats, error: null };
-      
     } catch (err) {
-      const error = err instanceof Error ? err.message : 'Database operation failed';
+      const error =
+        err instanceof Error ? err.message : 'Database operation failed';
       return { data: null, error };
     }
   }
@@ -657,21 +721,21 @@ export class PodDatabaseService {
    * Execute raw query with proper error handling
    */
   static async executeQuery<T>(
-    queryFn: () => Promise<any>
+    queryFn: () => Promise<any>,
   ): Promise<DatabaseResult<T>> {
     try {
       await this.ensureAuthenticated();
-      
+
       const result = await queryFn();
-      
+
       if (result.error) {
         return { data: null, error: result.error.message };
       }
-      
+
       return { data: result.data, error: null };
-      
     } catch (err) {
-      const error = err instanceof Error ? err.message : 'Database operation failed';
+      const error =
+        err instanceof Error ? err.message : 'Database operation failed';
       return { data: null, error };
     }
   }

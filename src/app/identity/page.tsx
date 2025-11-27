@@ -12,7 +12,10 @@ import 'src/features/identity/styles/ProfileModal.css';
 
 // Lazy load heavy components with loading skeletons
 const BalancesSection = dynamic(
-  () => import('@/features/identity/components/BalancesSection').then(mod => ({ default: mod.BalancesSection })),
+  () =>
+    import('@/features/identity/components/BalancesSection').then((mod) => ({
+      default: mod.BalancesSection,
+    })),
   {
     loading: () => (
       <div className="flex justify-center items-center min-h-[100px]">
@@ -31,12 +34,15 @@ const BalancesSection = dynamic(
         </div>
       </div>
     ),
-    ssr: false
-  }
+    ssr: false,
+  },
 );
 
 const ProfileSection = dynamic(
-  () => import('@/features/identity/components/ProfileSection').then(mod => ({ default: mod.ProfileSection })),
+  () =>
+    import('@/features/identity/components/ProfileSection').then((mod) => ({
+      default: mod.ProfileSection,
+    })),
   {
     loading: () => (
       <div className="flex justify-center items-center min-h-[200px]">
@@ -55,8 +61,8 @@ const ProfileSection = dynamic(
         </div>
       </div>
     ),
-    ssr: false
-  }
+    ssr: false,
+  },
 );
 
 export default function IdentityPage() {
@@ -66,7 +72,7 @@ export default function IdentityPage() {
 function IdentityPageContent() {
   const [isClient, setIsClient] = useState(false);
   const { address } = useAccount();
-  
+
   const {
     isEditing,
     profile,
@@ -132,43 +138,57 @@ function IdentityPageContent() {
 
       {/* Memberships Section - Using Updated TokenGallery */}
       <div className="profile-section token-gallery-section">
-        <h3><strong>Memberships</strong></h3>
+        <h3>
+          <strong>Memberships</strong>
+        </h3>
         <TokenGallery walletAddress={address} category="membership" />
       </div>
 
       {/* Credentials Section - Using Updated TokenGallery */}
-      <div className="profile-section token-gallery-section" style={{ marginTop: "20px" }}>
-        <h3><strong>Credentials</strong></h3>
+      <div
+        className="profile-section token-gallery-section"
+        style={{ marginTop: '20px' }}
+      >
+        <h3>
+          <strong>Credentials</strong>
+        </h3>
         <TokenGallery walletAddress={address} category="credential" />
       </div>
 
       {/* Invite Code Display - Only visible to account owner */}
       <InviteCodeDisplay walletAddress={address} />
 
-      <div className="form-buttons" style={{ display: 'flex', justifyContent: 'center', marginTop: '20px' }}>
+      <div
+        className="form-buttons"
+        style={{ display: 'flex', justifyContent: 'center', marginTop: '20px' }}
+      >
         <button type="button" className="btn" onClick={handleLogout}>
           Logout
         </button>
       </div>
 
       {/* Privacy and Terms Links */}
-      <div style={{
-        display: 'flex',
-        justifyContent: 'center',
-        gap: '20px',
-        marginTop: '30px',
-        marginBottom: '30px',
-        fontSize: '14px'
-      }}>
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'center',
+          gap: '20px',
+          marginTop: '30px',
+          marginBottom: '30px',
+          fontSize: '14px',
+        }}
+      >
         <Link
           href="/privacy"
           style={{
             color: '#2F5D50',
             textDecoration: 'none',
-            fontWeight: '500'
+            fontWeight: '500',
           }}
-          onMouseEnter={(e) => e.currentTarget.style.textDecoration = 'underline'}
-          onMouseLeave={(e) => e.currentTarget.style.textDecoration = 'none'}
+          onMouseEnter={(e) =>
+            (e.currentTarget.style.textDecoration = 'underline')
+          }
+          onMouseLeave={(e) => (e.currentTarget.style.textDecoration = 'none')}
         >
           Privacy Policy
         </Link>
@@ -178,10 +198,12 @@ function IdentityPageContent() {
           style={{
             color: '#2F5D50',
             textDecoration: 'none',
-            fontWeight: '500'
+            fontWeight: '500',
           }}
-          onMouseEnter={(e) => e.currentTarget.style.textDecoration = 'underline'}
-          onMouseLeave={(e) => e.currentTarget.style.textDecoration = 'none'}
+          onMouseEnter={(e) =>
+            (e.currentTarget.style.textDecoration = 'underline')
+          }
+          onMouseLeave={(e) => (e.currentTarget.style.textDecoration = 'none')}
         >
           Terms of Service
         </Link>

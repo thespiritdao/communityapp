@@ -32,12 +32,12 @@ export const ProductPrice = styled.p`
 `;
 
 export const AddButton = styled.button`
-  background-color: ${({ disabled }) => (disabled ? "#D8D2C8" : "#2F5D50")};
-  color: ${({ disabled }) => (disabled ? "#8F8A84" : "#FFFFFF")};
+  background-color: ${({ disabled }) => (disabled ? '#D8D2C8' : '#2F5D50')};
+  color: ${({ disabled }) => (disabled ? '#8F8A84' : '#FFFFFF')};
   padding: 0.5rem 1rem;
   border: none;
   border-radius: 4px;
-  cursor: ${({ disabled }) => (disabled ? "not-allowed" : "pointer")};
+  cursor: ${({ disabled }) => (disabled ? 'not-allowed' : 'pointer')};
   font-size: 0.9rem;
   opacity: ${({ disabled }) => (disabled ? 0.6 : 1)};
 `;

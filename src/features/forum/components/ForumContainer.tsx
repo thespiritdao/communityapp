@@ -6,11 +6,7 @@ interface ForumContainerProps {
 }
 
 const ForumContainer: React.FC<ForumContainerProps> = ({ children }) => {
-  return (
-    <div className="max-w-6xl mx-auto px-4 py-8 mb-16">
-      {children}
-    </div>
-  );
+  return <div className="max-w-6xl mx-auto px-4 py-8 mb-16">{children}</div>;
 };
 
 export default ForumContainer;

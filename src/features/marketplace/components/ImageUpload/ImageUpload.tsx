@@ -1,10 +1,13 @@
 // src/features/marketplace/components/ImageUpload/ImageUpload.tsx
-"use client";
+'use client';
 
-import type React from "react";
-import { useState, useRef } from "react";
-import { uploadProductImage, validateImageFile } from "../../services/imageUploadService";
-import * as S from "./ImageUpload.style";
+import type React from 'react';
+import { useState, useRef } from 'react';
+import {
+  uploadProductImage,
+  validateImageFile,
+} from '../../services/imageUploadService';
+import * as S from './ImageUpload.style';
 
 interface ImageUploadProps {
   onUploadComplete: (imageUrl: string) => void;
@@ -19,11 +22,11 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
   onUploadError,
   productTitle,
   currentImageUrl,
-  disabled = false
+  disabled = false,
 }) => {
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
-  const [previewUrl, setPreviewUrl] = useState<string>(currentImageUrl || "");
+  const [previewUrl, setPreviewUrl] = useState<string>(currentImageUrl || '');
   const [dragActive, setDragActive] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -33,10 +36,10 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
     // Validate file
     const validation = await validateImageFile(file);
     if (!validation.isValid) {
-      onUploadError(validation.error || "Invalid file");
+      onUploadError(validation.error || 'Invalid file');
       return;
     }
-    
+
     // Show warning if present
     if (validation.warning) {
       console.warn('Image validation warning:', validation.warning);
@@ -55,7 +58,7 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
     try {
       // Simulate progress updates (Supabase doesn't provide real progress)
       const progressInterval = setInterval(() => {
-        setUploadProgress(prev => {
+        setUploadProgress((prev) => {
           if (prev >= 90) {
             clearInterval(progressInterval);
             return 90;
@@ -73,19 +76,21 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
         onUploadComplete(result.url);
         setPreviewUrl(result.url);
       } else {
-        onUploadError(result.error || "Upload failed");
-        setPreviewUrl(currentImageUrl || "");
+        onUploadError(result.error || 'Upload failed');
+        setPreviewUrl(currentImageUrl || '');
       }
     } catch (error) {
-      onUploadError(error instanceof Error ? error.message : "Upload failed");
-      setPreviewUrl(currentImageUrl || "");
+      onUploadError(error instanceof Error ? error.message : 'Upload failed');
+      setPreviewUrl(currentImageUrl || '');
     } finally {
       setIsUploading(false);
       setUploadProgress(0);
     }
   };
 
-  const handleFileInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileInputChange = (
+    event: React.ChangeEvent<HTMLInputElement>,
+  ) => {
     const file = event.target.files?.[0];
     if (file) {
       handleFileSelect(file);
@@ -107,7 +112,7 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
   const handleDrop = (event: React.DragEvent) => {
     event.preventDefault();
     setDragActive(false);
-    
+
     if (disabled) return;
 
     const files = Array.from(event.dataTransfer.files);
@@ -124,10 +129,10 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
 
   const handleRemoveImage = () => {
     if (!disabled) {
-      setPreviewUrl("");
-      onUploadComplete("");
+      setPreviewUrl('');
+      onUploadComplete('');
       if (fileInputRef.current) {
-        fileInputRef.current.value = "";
+        fileInputRef.current.value = '';
       }
     }
   };
@@ -135,7 +140,7 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
   return (
     <S.Container>
       <S.Label>Product Image</S.Label>
-      
+
       <S.UploadArea
         onClick={handleUploadClick}
         onDragOver={handleDragOver}
@@ -175,11 +180,11 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
           <S.UploadContent>
             <S.UploadIcon>📷</S.UploadIcon>
             <S.UploadText>
-              {dragActive ? "Drop image here" : "Click to upload or drag & drop"}
+              {dragActive
+                ? 'Drop image here'
+                : 'Click to upload or drag & drop'}
             </S.UploadText>
-            <S.UploadSubtext>
-              JPG, JPEG, PNG (max 5MB)
-            </S.UploadSubtext>
+            <S.UploadSubtext>JPG, JPEG, PNG (max 5MB)</S.UploadSubtext>
           </S.UploadContent>
         )}
 
@@ -194,7 +199,8 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
       </S.UploadArea>
 
       <S.HelpText>
-        Requirements: Minimum 400x400px, JPG/PNG only, max 5MB. Images will be automatically resized to 600x600px square format for uniform display.
+        Requirements: Minimum 400x400px, JPG/PNG only, max 5MB. Images will be
+        automatically resized to 600x600px square format for uniform display.
       </S.HelpText>
     </S.Container>
   );

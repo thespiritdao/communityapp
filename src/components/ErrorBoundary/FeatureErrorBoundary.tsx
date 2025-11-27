@@ -30,7 +30,11 @@ interface FeatureErrorBoundaryState {
 interface FeatureErrorBoundaryProps {
   children: React.ReactNode;
   featureName: string;
-  fallback?: React.ComponentType<{ error: Error; retry: () => void; featureName: string }>;
+  fallback?: React.ComponentType<{
+    error: Error;
+    retry: () => void;
+    featureName: string;
+  }>;
   onError?: (error: Error, errorInfo: React.ErrorInfo) => void;
   showHomeLink?: boolean;
 }
@@ -44,34 +48,50 @@ const DefaultErrorFallback = React.memo<{
   featureName: string;
   showHomeLink?: boolean;
 }>(({ error, retry, featureName, showHomeLink = true }) => {
-  const isNetworkError = error.message.toLowerCase().includes('network') ||
-                        error.message.toLowerCase().includes('fetch') ||
-                        error.message.toLowerCase().includes('connection');
+  const isNetworkError =
+    error.message.toLowerCase().includes('network') ||
+    error.message.toLowerCase().includes('fetch') ||
+    error.message.toLowerCase().includes('connection');
 
-  const isRpcError = error.message.toLowerCase().includes('rpc') ||
-                    error.message.toLowerCase().includes('rate limit') ||
-                    error.message.toLowerCase().includes('blockchain');
+  const isRpcError =
+    error.message.toLowerCase().includes('rpc') ||
+    error.message.toLowerCase().includes('rate limit') ||
+    error.message.toLowerCase().includes('blockchain');
 
-  const isContractError = error.message.toLowerCase().includes('contract') ||
-                          error.message.toLowerCase().includes('revert') ||
-                          error.message.toLowerCase().includes('execution reverted');
+  const isContractError =
+    error.message.toLowerCase().includes('contract') ||
+    error.message.toLowerCase().includes('revert') ||
+    error.message.toLowerCase().includes('execution reverted');
 
-  const isWalletError = error.message.toLowerCase().includes('wallet') ||
-                        error.message.toLowerCase().includes('user rejected') ||
-                        error.message.toLowerCase().includes('denied');
+  const isWalletError =
+    error.message.toLowerCase().includes('wallet') ||
+    error.message.toLowerCase().includes('user rejected') ||
+    error.message.toLowerCase().includes('denied');
 
   // Use Sacred Minimalism color system
   const getErrorStyle = () => {
     if (isNetworkError || isRpcError) {
       // Info/warning style (blue-green)
-      return { backgroundColor: '#E8F1EE', borderColor: '#B8D9CA', color: '#1F453A' };
+      return {
+        backgroundColor: '#E8F1EE',
+        borderColor: '#B8D9CA',
+        color: '#1F453A',
+      };
     }
     if (isWalletError) {
       // Warning style (yellow)
-      return { backgroundColor: '#FFF8E1', borderColor: '#FFD54F', color: '#5D4E00' };
+      return {
+        backgroundColor: '#FFF8E1',
+        borderColor: '#FFD54F',
+        color: '#5D4E00',
+      };
     }
     // Error style (red-brown)
-    return { backgroundColor: '#F5E6E6', borderColor: '#D9B3B3', color: '#5C1F1F' };
+    return {
+      backgroundColor: '#F5E6E6',
+      borderColor: '#D9B3B3',
+      color: '#5C1F1F',
+    };
   };
 
   const getErrorTitle = () => {
@@ -101,7 +121,10 @@ const DefaultErrorFallback = React.memo<{
   return (
     <Card className="w-full max-w-4xl mx-auto my-8">
       <CardHeader>
-        <CardTitle className="flex items-center space-x-2" style={{ color: '#8B3A3A' }}>
+        <CardTitle
+          className="flex items-center space-x-2"
+          style={{ color: '#8B3A3A' }}
+        >
           <AlertCircle className="h-5 w-5" />
           <span>{getErrorTitle()}</span>
         </CardTitle>
@@ -130,11 +153,7 @@ const DefaultErrorFallback = React.memo<{
 
             {showHomeLink && (
               <Link href="/">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="px-4 py-2"
-                >
+                <Button variant="outline" size="sm" className="px-4 py-2">
                   <Home className="h-4 w-4 mr-2" />
                   Return Home
                 </Button>
@@ -175,8 +194,9 @@ const DefaultErrorFallback = React.memo<{
 
           <div className="mt-4 text-xs text-gray-600">
             <p>
-              <strong>Tip:</strong> This error is isolated to the {featureName} feature.
-              Other parts of the application should continue to work normally.
+              <strong>Tip:</strong> This error is isolated to the {featureName}{' '}
+              feature. Other parts of the application should continue to work
+              normally.
             </p>
           </div>
         </div>
@@ -203,7 +223,9 @@ export class FeatureErrorBoundary extends React.Component<
     };
   }
 
-  static getDerivedStateFromError(error: Error): Partial<FeatureErrorBoundaryState> {
+  static getDerivedStateFromError(
+    error: Error,
+  ): Partial<FeatureErrorBoundaryState> {
     return {
       hasError: true,
       error,
@@ -266,10 +288,14 @@ export function withFeatureErrorBoundary<P extends object>(
   Component: React.ComponentType<P>,
   featureName: string,
   options?: {
-    fallback?: React.ComponentType<{ error: Error; retry: () => void; featureName: string }>;
+    fallback?: React.ComponentType<{
+      error: Error;
+      retry: () => void;
+      featureName: string;
+    }>;
     showHomeLink?: boolean;
     onError?: (error: Error, errorInfo: React.ErrorInfo) => void;
-  }
+  },
 ) {
   const WrappedComponent = (props: P) => (
     <FeatureErrorBoundary

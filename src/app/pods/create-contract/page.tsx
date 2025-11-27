@@ -21,10 +21,19 @@ export default function CreatePodContractPage() {
       <div className="mt-8 p-4 bg-yellow-50 rounded-lg">
         <h3 className="font-semibold text-yellow-800">⚠️ Important Notes:</h3>
         <ul className="text-yellow-700 text-sm mt-2 space-y-1">
-          <li>• Pods must be created in the contract before treasury deployment</li>
-          <li>• The process is: Create Proposal → Activate Pod → Treasury Deployed</li>
-          <li>• You may need to adjust the Parent Hat ID based on your Hats setup</li>
-          <li>• After activation, the pod will have both management and membership hats</li>
+          <li>
+            • Pods must be created in the contract before treasury deployment
+          </li>
+          <li>
+            • The process is: Create Proposal → Activate Pod → Treasury Deployed
+          </li>
+          <li>
+            • You may need to adjust the Parent Hat ID based on your Hats setup
+          </li>
+          <li>
+            • After activation, the pod will have both management and membership
+            hats
+          </li>
         </ul>
       </div>
     </PodPageLayout>

@@ -7,7 +7,10 @@
 
   try {
     // Get the current session
-    const { data: { session }, error } = await supabase.auth.getSession();
+    const {
+      data: { session },
+      error,
+    } = await supabase.auth.getSession();
 
     if (error) {
       console.error('❌ Error getting session:', error);
@@ -55,10 +58,9 @@
     }
 
     console.log('\n📊 JWT Fields Present:');
-    Object.keys(payload).forEach(key => {
+    Object.keys(payload).forEach((key) => {
       console.log(`  - ${key}: ${payload[key]}`);
     });
-
   } catch (err) {
     console.error('❌ Error:', err);
   }

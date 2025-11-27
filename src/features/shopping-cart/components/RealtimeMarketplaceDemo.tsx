@@ -2,7 +2,10 @@
 
 import { useState, useEffect } from 'react';
 import { useAccount } from 'wagmi';
-import { useMarketplaceRealtime, useProductRealtime, } from '../hooks/useMarketplaceRealtime';
+import {
+  useMarketplaceRealtime,
+  useProductRealtime,
+} from '../hooks/useMarketplaceRealtime';
 
 interface RealtimeMarketplaceDemoProps {
   productId?: string;
@@ -13,14 +16,14 @@ interface RealtimeMarketplaceDemoProps {
  * Demo component showcasing real-time marketplace functionality
  * This can be used for testing and demonstration purposes
  */
-export function RealtimeMarketplaceDemo({ 
+export function RealtimeMarketplaceDemo({
   productId,
-  className = ''
+  className = '',
 }: RealtimeMarketplaceDemoProps) {
   const { address } = useAccount();
   const [events, setEvents] = useState<any[]>([]);
   const [connectionLogs, setConnectionLogs] = useState<string[]>([]);
-  
+
   // General marketplace real-time connection
   const marketplace = useMarketplaceRealtime({
     channels: ['general', 'products', 'orders'],
@@ -32,21 +35,24 @@ export function RealtimeMarketplaceDemo({
     },
     onError: (error) => {
       addLog(`⚠️ Connection error: ${error.message}`);
-    }
+    },
   });
-  
+
   // Product-specific real-time connection (if productId provided)
   const productRealtime = useProductRealtime(productId || '1');
-  
+
   const addLog = (message: string) => {
     const timestamp = new Date().toLocaleTimeString();
-    setConnectionLogs(prev => [`[${timestamp}] ${message}`, ...prev.slice(0, 9)]);
+    setConnectionLogs((prev) => [
+      `[${timestamp}] ${message}`,
+      ...prev.slice(0, 9),
+    ]);
   };
-  
+
   const addEvent = (event: any) => {
-    setEvents(prev => [event, ...prev.slice(0, 19)]);
+    setEvents((prev) => [event, ...prev.slice(0, 19)]);
   };
-  
+
   // Subscribe to various marketplace events
   useEffect(() => {
     const unsubscribers = [
@@ -54,27 +60,27 @@ export function RealtimeMarketplaceDemo({
         addEvent({
           type: 'Product Created',
           data: `New product: ${product.name}`,
-          timestamp: new Date().toISOString()
+          timestamp: new Date().toISOString(),
         });
         addLog(`🆕 New product created: ${product.name}`);
       }),
-      
+
       marketplace.onProductUpdated((data) => {
         addEvent({
           type: 'Product Updated',
           data: `Product ${data.productId} updated`,
-          timestamp: new Date().toISOString()
+          timestamp: new Date().toISOString(),
         });
         addLog(`📝 Product ${data.productId} updated`);
       }),
-      
+
       marketplace.onInventoryUpdated((data) => {
         addEvent({
           type: 'Inventory Updated',
           data: `Product ${data.productId}: ${data.oldQuantity} → ${data.newQuantity}`,
-          timestamp: new Date().toISOString()
+          timestamp: new Date().toISOString(),
         });
-        
+
         if (data.isOutOfStock) {
           addLog(`📦 Product ${data.productId} is now out of stock`);
         } else if (data.isBackInStock) {
@@ -83,82 +89,86 @@ export function RealtimeMarketplaceDemo({
           addLog(`📊 Inventory updated for product ${data.productId}`);
         }
       }),
-      
+
       marketplace.onOrderCreated((order) => {
         addEvent({
           type: 'Order Created',
           data: `Order for product ${order.productId} by ${order.buyerAddress?.slice(0, 8)}...`,
-          timestamp: new Date().toISOString()
+          timestamp: new Date().toISOString(),
         });
         addLog(`🛒 New order created for product ${order.productId}`);
       }),
-      
+
       marketplace.onPriceUpdated((data) => {
         addEvent({
           type: 'Price Updated',
           data: `Product ${data.productId} price changed`,
-          timestamp: new Date().toISOString()
+          timestamp: new Date().toISOString(),
         });
         addLog(`💰 Price updated for product ${data.productId}`);
-      })
+      }),
     ];
-    
+
     return () => {
-      unsubscribers.forEach(unsub => unsub());
+      unsubscribers.forEach((unsub) => unsub());
     };
   }, [marketplace]);
-  
+
   // Simulate marketplace events for testing
   const simulateEvent = (eventType: string) => {
     const mockEvents = {
-      'product_created': {
+      product_created: {
         type: 'Simulated Product Created',
         data: 'Mock product: Test Item',
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       },
-      'inventory_updated': {
+      inventory_updated: {
         type: 'Simulated Inventory Update',
         data: 'Product inventory changed: 10 → 5',
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       },
-      'order_created': {
+      order_created: {
         type: 'Simulated Order',
         data: 'New order from test user',
-        timestamp: new Date().toISOString()
-      }
+        timestamp: new Date().toISOString(),
+      },
     };
-    
+
     const event = mockEvents[eventType as keyof typeof mockEvents];
     if (event) {
       addEvent(event);
       addLog(`🎭 Simulated event: ${event.type}`);
     }
   };
-  
+
   return (
     <div className={`p-6 bg-white rounded-lg shadow-sm border ${className}`}>
       <div className="mb-6">
-        <h2 className="text-xl font-semibold mb-2">Real-time Marketplace Demo</h2>
+        <h2 className="text-xl font-semibold mb-2">
+          Real-time Marketplace Demo
+        </h2>
         <div className="flex items-center gap-4 text-sm">
-          <div className={`flex items-center gap-2 ${
-            marketplace.isConnected ? 'text-green-600' : 'text-red-600'
-          }`}>
-            <div className={`w-2 h-2 rounded-full ${
-              marketplace.isConnected ? 'bg-green-500' : 'bg-red-500'
-            }`} />
+          <div
+            className={`flex items-center gap-2 ${
+              marketplace.isConnected ? 'text-green-600' : 'text-red-600'
+            }`}
+          >
+            <div
+              className={`w-2 h-2 rounded-full ${
+                marketplace.isConnected ? 'bg-green-500' : 'bg-red-500'
+              }`}
+            />
             {marketplace.connectionState}
           </div>
           <span className="text-gray-500">
             User: {address ? `${address.slice(0, 8)}...` : 'Not connected'}
           </span>
           {productId && (
-            <span className="text-gray-500">
-              Watching Product: {productId}
-            </span>
+            <span className="text-gray-500">Watching Product: {productId}</span>
           )}
         </div>
       </div>
-      
+
       {/* Product-specific updates */}
       {productId && productRealtime.productUpdates.lastUpdate && (
         <div className="mb-4 p-3 bg-blue-50 rounded-lg">
@@ -174,12 +184,13 @@ export function RealtimeMarketplaceDemo({
               <div>📝 General update</div>
             )}
             <div className="text-xs text-blue-600 mt-1">
-              Last update: {productRealtime.productUpdates.lastUpdate.toLocaleTimeString()}
+              Last update:{' '}
+              {productRealtime.productUpdates.lastUpdate.toLocaleTimeString()}
             </div>
           </div>
         </div>
       )}
-      
+
       {/* Event simulation controls */}
       <div className="mb-4">
         <h3 className="font-medium mb-2">Test Events</h3>
@@ -213,7 +224,7 @@ export function RealtimeMarketplaceDemo({
           </button>
         </div>
       </div>
-      
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* Connection logs */}
         <div>
@@ -223,14 +234,17 @@ export function RealtimeMarketplaceDemo({
               <p className="text-gray-500 text-sm">No connection logs yet...</p>
             ) : (
               connectionLogs.map((log, index) => (
-                <div key={index} className="text-xs text-gray-700 mb-1 font-mono">
+                <div
+                  key={index}
+                  className="text-xs text-gray-700 mb-1 font-mono"
+                >
                   {log}
                 </div>
               ))
             )}
           </div>
         </div>
-        
+
         {/* Event history */}
         <div>
           <h3 className="font-medium mb-2">Event History ({events.length})</h3>
@@ -251,19 +265,19 @@ export function RealtimeMarketplaceDemo({
           </div>
         </div>
       </div>
-      
+
       {/* Debug information */}
       <div className="mt-4 p-3 bg-gray-50 rounded text-xs">
         <details>
-          <summary className="cursor-pointer font-medium">Debug Information</summary>
+          <summary className="cursor-pointer font-medium">
+            Debug Information
+          </summary>
           <div className="mt-2 space-y-1">
             <div>Connection State: {marketplace.connectionState}</div>
             <div>Last Event: {marketplace.lastEvent?.type || 'None'}</div>
             <div>Error: {marketplace.error?.message || 'None'}</div>
             <div>Event History Count: {marketplace.eventHistory.length}</div>
-            {productId && (
-              <div>Product Watching: {productId}</div>
-            )}
+            {productId && <div>Product Watching: {productId}</div>}
           </div>
         </details>
       </div>

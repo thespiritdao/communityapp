@@ -27,7 +27,9 @@ export function InviteCodeDisplay({ walletAddress }: InviteCodeDisplayProps) {
       }
 
       try {
-        const response = await fetch(`/api/invite/validate?wallet=${walletAddress}`);
+        const response = await fetch(
+          `/api/invite/validate?wallet=${walletAddress}`,
+        );
 
         if (!response.ok) {
           console.error('Failed to fetch invite code');
@@ -68,15 +70,18 @@ export function InviteCodeDisplay({ walletAddress }: InviteCodeDisplayProps) {
 
   if (loading) {
     return (
-      <div className="invite-code-container" style={{
-        background: 'rgba(255, 255, 255, 0.95)',
-        border: '1px solid #D8D2C8',
-        borderRadius: '16px',
-        padding: '20px',
-        marginTop: '30px',
-        marginBottom: '20px',
-        textAlign: 'center',
-      }}>
+      <div
+        className="invite-code-container"
+        style={{
+          background: 'rgba(255, 255, 255, 0.95)',
+          border: '1px solid #D8D2C8',
+          borderRadius: '16px',
+          padding: '20px',
+          marginTop: '30px',
+          marginBottom: '20px',
+          textAlign: 'center',
+        }}
+      >
         <div
           style={{
             background: '#C6933F',
@@ -100,22 +105,27 @@ export function InviteCodeDisplay({ walletAddress }: InviteCodeDisplayProps) {
   }
 
   return (
-    <div className="invite-code-container" style={{
-      background: 'rgba(255, 255, 255, 0.95)',
-      border: '1px solid #D8D2C8',
-      borderRadius: '16px',
-      padding: '24px',
-      marginTop: '30px',
-      marginBottom: '20px',
-      boxShadow: '0 4px 12px rgba(47, 93, 80, 0.08)',
-    }}>
+    <div
+      className="invite-code-container"
+      style={{
+        background: 'rgba(255, 255, 255, 0.95)',
+        border: '1px solid #D8D2C8',
+        borderRadius: '16px',
+        padding: '24px',
+        marginTop: '30px',
+        marginBottom: '20px',
+        boxShadow: '0 4px 12px rgba(47, 93, 80, 0.08)',
+      }}
+    >
       {/* Header with Image */}
-      <div style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: '16px',
-        marginBottom: '16px',
-      }}>
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '16px',
+          marginBottom: '16px',
+        }}
+      >
         {/* Image on left */}
         <img
           src="/images/sensemakeraikey.png"
@@ -129,46 +139,56 @@ export function InviteCodeDisplay({ walletAddress }: InviteCodeDisplayProps) {
         />
 
         {/* Text on right */}
-        <div style={{
-          flex: 1,
-          textAlign: 'left',
-        }}>
-          <h3 style={{
-            color: '#3A3A3A',
-            fontSize: '18px',
-            fontWeight: '600',
-            margin: '0 0 8px 0',
-            letterSpacing: '0.02em',
-          }}>
+        <div
+          style={{
+            flex: 1,
+            textAlign: 'left',
+          }}
+        >
+          <h3
+            style={{
+              color: '#3A3A3A',
+              fontSize: '18px',
+              fontWeight: '600',
+              margin: '0 0 8px 0',
+              letterSpacing: '0.02em',
+            }}
+          >
             Invitation Key
           </h3>
-          <p style={{
-            color: '#5F5A54',
-            fontSize: '13px',
-            margin: 0,
-            lineHeight: '1.5',
-          }}>
+          <p
+            style={{
+              color: '#5F5A54',
+              fontSize: '13px',
+              margin: 0,
+              lineHeight: '1.5',
+            }}
+          >
             Share this key to invite others to join
           </p>
         </div>
       </div>
 
       {/* Invite Code Display */}
-      <div style={{
-        background: '#F0ECE6',
-        borderRadius: '12px',
-        padding: '16px',
-        marginBottom: '12px',
-        border: '1px solid #D8D2C8',
-      }}>
-        <div style={{
-          fontSize: '32px',
-          fontWeight: '700',
-          letterSpacing: '8px',
-          color: '#3A3A3A',
-          textAlign: 'center',
-          fontFamily: 'monospace',
-        }}>
+      <div
+        style={{
+          background: '#F0ECE6',
+          borderRadius: '12px',
+          padding: '16px',
+          marginBottom: '12px',
+          border: '1px solid #D8D2C8',
+        }}
+      >
+        <div
+          style={{
+            fontSize: '32px',
+            fontWeight: '700',
+            letterSpacing: '8px',
+            color: '#3A3A3A',
+            textAlign: 'center',
+            fontFamily: 'monospace',
+          }}
+        >
           {inviteCode}
         </div>
       </div>

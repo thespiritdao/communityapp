@@ -33,7 +33,7 @@ export async function saveDraft(
   categoryId?: string,
   threadId?: string,
   title?: string,
-  metadata?: Record<string, any>
+  metadata?: Record<string, any>,
 ): Promise<{ success: boolean; draftId?: string; error?: string }> {
   try {
     // Check if draft already exists
@@ -66,7 +66,7 @@ export async function saveDraft(
         .update({
           content: content,
           title: title,
-          updated_at: new Date().toISOString()
+          updated_at: new Date().toISOString(),
         })
         .eq('id', existing.id)
         .select()
@@ -85,7 +85,7 @@ export async function saveDraft(
           parent_thread_id: threadId,
           title: title,
           content: content,
-          draft_type: threadId ? 'post' : 'thread'
+          draft_type: threadId ? 'post' : 'thread',
         })
         .select()
         .single();
@@ -106,7 +106,7 @@ export async function saveDraft(
 export async function getDraft(
   userAddress: string,
   categoryId?: string,
-  threadId?: string
+  threadId?: string,
 ): Promise<{ success: boolean; draft?: Draft; error?: string }> {
   try {
     const query = supabase
@@ -141,7 +141,7 @@ export async function getDraft(
  * Get all drafts for a user
  */
 export async function getAllDrafts(
-  userAddress: string
+  userAddress: string,
 ): Promise<{ success: boolean; drafts?: Draft[]; error?: string }> {
   try {
     const { data, error } = await supabase
@@ -164,7 +164,7 @@ export async function getAllDrafts(
  */
 export async function deleteDraft(
   draftId: string,
-  userAddress: string
+  userAddress: string,
 ): Promise<{ success: boolean; error?: string }> {
   try {
     const { error } = await supabase
@@ -188,7 +188,7 @@ export async function deleteDraft(
 export async function deleteDraftByContext(
   userAddress: string,
   categoryId?: string,
-  threadId?: string
+  threadId?: string,
 ): Promise<{ success: boolean; error?: string }> {
   try {
     const query = supabase
@@ -228,7 +228,7 @@ export async function deleteDraftByContext(
  */
 export function debounce<T extends (...args: any[]) => any>(
   func: T,
-  wait: number
+  wait: number,
 ): (...args: Parameters<T>) => void {
   let timeout: NodeJS.Timeout | null = null;
 
@@ -256,7 +256,7 @@ export class AutoSaveManager {
   constructor(
     saveCallback: () => Promise<void>,
     debounceMs = 2000,
-    intervalMs = 30000 // Auto-save every 30 seconds
+    intervalMs = 30000, // Auto-save every 30 seconds
   ) {
     this.saveCallback = saveCallback;
     this.debouncedSave = debounce(saveCallback, debounceMs);

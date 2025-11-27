@@ -35,7 +35,10 @@ type ProfileData = {
   reputation?: number | null;
 };
 
-export async function updateProfile(wallet_address: string, updates: ProfileData) {
+export async function updateProfile(
+  wallet_address: string,
+  updates: ProfileData,
+) {
   // Normalize the wallet address to ensure consistency.
   const normalizedWallet = wallet_address.toLowerCase();
 
@@ -52,19 +55,18 @@ export async function updateProfile(wallet_address: string, updates: ProfileData
   }
 
   let payload;
-	if (existingProfile) {
-	  // Remove wallet_address from the incoming updates to ignore any changes,
-	  // but include the existing wallet_address from the profile.
-	  const { wallet_address: _ignore, ...restUpdates } = updates;
-	  payload = { 
-		user_id: existingProfile.user_id, 
-		wallet_address: existingProfile.wallet_address, 
-		...restUpdates 
-	  };
-	} else {
-	  payload = { wallet_address: normalizedWallet, ...updates };
-	}
-
+  if (existingProfile) {
+    // Remove wallet_address from the incoming updates to ignore any changes,
+    // but include the existing wallet_address from the profile.
+    const { wallet_address: _ignore, ...restUpdates } = updates;
+    payload = {
+      user_id: existingProfile.user_id,
+      wallet_address: existingProfile.wallet_address,
+      ...restUpdates,
+    };
+  } else {
+    payload = { wallet_address: normalizedWallet, ...updates };
+  }
 
   // Set the conflict target. Use the primary key (user_id) if profile exists; otherwise, use wallet_address.
   const conflictTarget = existingProfile ? ['user_id'] : ['wallet_address'];
@@ -76,7 +78,6 @@ export async function updateProfile(wallet_address: string, updates: ProfileData
     .single();
 
   if (error) {
-    
     throw error;
   }
 

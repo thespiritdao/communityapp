@@ -1,4 +1,4 @@
-"use client"
+'use client';
 
 import type React from 'react';
 import { useState, useEffect } from 'react';
@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { BountyCompletion } from './BountyCompletion';
-import { bidApi, convertBidFromDb, } from '../lib/supabase';
+import { bidApi, convertBidFromDb } from '../lib/supabase';
 import { supabase } from '@/utils/supabaseClient';
 import { format } from 'date-fns';
 
@@ -40,8 +40,8 @@ interface BountyDetails {
     token: 'SYSTEM' | 'SELF';
   };
   status: 'open' | 'in-progress' | 'completed';
-  onchain_id?: number;  // On-chain bounty ID for payment transactions
-  creator_address?: string;  // Bounty creator for notifications
+  onchain_id?: number; // On-chain bounty ID for payment transactions
+  creator_address?: string; // Bounty creator for notifications
 }
 
 interface BidViewerProps {
@@ -51,7 +51,9 @@ interface BidViewerProps {
 
 // Helper to merge user names into bids (copied from useBountySupabase)
 async function mergeUserNamesIntoBids(bids: any[]) {
-  const uniqueAddresses = Array.from(new Set(bids.map(b => b.bidder_address)));
+  const uniqueAddresses = Array.from(
+    new Set(bids.map((b) => b.bidder_address)),
+  );
   if (uniqueAddresses.length === 0) return bids;
   const { data: profiles, error } = await supabase
     .from('user_profiles')
@@ -62,9 +64,12 @@ async function mergeUserNamesIntoBids(bids: any[]) {
     return bids;
   }
   const profileMap = Object.fromEntries(
-    (profiles || []).map(p => [p.wallet_address, { first_name: p.first_name, last_name: p.last_name }])
+    (profiles || []).map((p) => [
+      p.wallet_address,
+      { first_name: p.first_name, last_name: p.last_name },
+    ]),
   );
-  return bids.map(bid => ({
+  return bids.map((bid) => ({
     ...bid,
     first_name: profileMap[bid.bidder_address]?.first_name || '',
     last_name: profileMap[bid.bidder_address]?.last_name || '',
@@ -73,12 +78,13 @@ async function mergeUserNamesIntoBids(bids: any[]) {
 
 export const BidViewer: React.FC<BidViewerProps> = ({
   bounty,
-  onBountyCompleted
+  onBountyCompleted,
 }) => {
   const [bids, setBids] = useState<FrontendBid[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCompletion, setShowCompletion] = useState(false);
-  const [selectedBidForCompletion, setSelectedBidForCompletion] = useState<FrontendBid | null>(null);
+  const [selectedBidForCompletion, setSelectedBidForCompletion] =
+    useState<FrontendBid | null>(null);
 
   useEffect(() => {
     loadBids();
@@ -110,12 +116,15 @@ export const BidViewer: React.FC<BidViewerProps> = ({
   };
 
   // Find the approved bid (there should only be one for in-progress bounties)
-  const approvedBid = bids.find(bid => bid.status === 'approved');
+  const approvedBid = bids.find((bid) => bid.status === 'approved');
 
   if (loading) {
     return (
       <div className="flex justify-center items-center py-8">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2" style={{ borderColor: '#2F5D50' }}></div>
+        <div
+          className="animate-spin rounded-full h-8 w-8 border-b-2"
+          style={{ borderColor: '#2F5D50' }}
+        ></div>
       </div>
     );
   }
@@ -138,7 +147,9 @@ export const BidViewer: React.FC<BidViewerProps> = ({
           <CardTitle className="text-lg">{bounty.title}</CardTitle>
           <div className="flex gap-2">
             <Badge variant="outline">{bounty.status}</Badge>
-            <Badge variant="secondary">{bounty.value.amount} {bounty.value.token}</Badge>
+            <Badge variant="secondary">
+              {bounty.value.amount} {bounty.value.token}
+            </Badge>
           </div>
         </CardHeader>
       </Card>
@@ -151,9 +162,12 @@ export const BidViewer: React.FC<BidViewerProps> = ({
             <CardContent className="p-6">
               <div className="flex justify-between items-start mb-4">
                 <div>
-                  <h4 className="font-semibold">Bidder: {bid.first_name || bid.last_name
-                    ? `${bid.first_name || ''} ${bid.last_name || ''}`.trim()
-                    : bid.bidderAddress}</h4>
+                  <h4 className="font-semibold">
+                    Bidder:{' '}
+                    {bid.first_name || bid.last_name
+                      ? `${bid.first_name || ''} ${bid.last_name || ''}`.trim()
+                      : bid.bidderAddress}
+                  </h4>
                   <p className="text-sm text-gray-600">
                     Submitted: {bid.submittedAt.toLocaleDateString()}
                   </p>
@@ -179,14 +193,18 @@ export const BidViewer: React.FC<BidViewerProps> = ({
                 <TabsContent value="experience" className="mt-4">
                   <div className="bg-gray-50 p-4 rounded-lg">
                     <h5 className="font-medium mb-2">Relevant Experience</h5>
-                    <p className="text-gray-700 whitespace-pre-wrap">{bid.experience}</p>
+                    <p className="text-gray-700 whitespace-pre-wrap">
+                      {bid.experience}
+                    </p>
                   </div>
                 </TabsContent>
 
                 <TabsContent value="plan" className="mt-4">
                   <div className="bg-gray-50 p-4 rounded-lg">
                     <h5 className="font-medium mb-2">Plan of Action</h5>
-                    <p className="text-gray-700 whitespace-pre-wrap">{bid.planOfAction}</p>
+                    <p className="text-gray-700 whitespace-pre-wrap">
+                      {bid.planOfAction}
+                    </p>
                   </div>
                 </TabsContent>
 
@@ -194,20 +212,36 @@ export const BidViewer: React.FC<BidViewerProps> = ({
                   <div className="bg-gray-50 p-4 rounded-lg">
                     <h5 className="font-medium mb-2">Deliverables</h5>
                     <div className="space-y-2">
-                      {Array.isArray(bid.deliverables) ? bid.deliverables.map((deliverable, index) => {
-                        const dateObj = new Date(deliverable.due_date);
-                        const isValidDate = !isNaN(dateObj.getTime());
-                        return (
-                          <div key={index} className="border-b border-gray-200 pb-2 last:border-0">
-                            <p className="text-gray-700">{deliverable.description}</p>
-                            <div className="text-sm text-gray-600 mt-1">
-                              <span className="mr-4">Due: {isValidDate ? format(dateObj, 'MMM dd, yyyy') : 'N/A'}</span>
-                              <span>Amount: {deliverable.payment_amount}</span>
+                      {Array.isArray(bid.deliverables) ? (
+                        bid.deliverables.map((deliverable, index) => {
+                          const dateObj = new Date(deliverable.due_date);
+                          const isValidDate = !isNaN(dateObj.getTime());
+                          return (
+                            <div
+                              key={index}
+                              className="border-b border-gray-200 pb-2 last:border-0"
+                            >
+                              <p className="text-gray-700">
+                                {deliverable.description}
+                              </p>
+                              <div className="text-sm text-gray-600 mt-1">
+                                <span className="mr-4">
+                                  Due:{' '}
+                                  {isValidDate
+                                    ? format(dateObj, 'MMM dd, yyyy')
+                                    : 'N/A'}
+                                </span>
+                                <span>
+                                  Amount: {deliverable.payment_amount}
+                                </span>
+                              </div>
                             </div>
-                          </div>
-                        );
-                      }) : (
-                        <p className="text-gray-700">No deliverables specified</p>
+                          );
+                        })
+                      ) : (
+                        <p className="text-gray-700">
+                          No deliverables specified
+                        </p>
                       )}
                     </div>
                   </div>
@@ -216,7 +250,9 @@ export const BidViewer: React.FC<BidViewerProps> = ({
                 <TabsContent value="timeline" className="mt-4">
                   <div className="bg-gray-50 p-4 rounded-lg">
                     <h5 className="font-medium mb-2">Timeline</h5>
-                    <p className="text-gray-700 whitespace-pre-wrap">{bid.timeline}</p>
+                    <p className="text-gray-700 whitespace-pre-wrap">
+                      {bid.timeline}
+                    </p>
                   </div>
                 </TabsContent>
               </Tabs>
@@ -228,7 +264,9 @@ export const BidViewer: React.FC<BidViewerProps> = ({
                   <div className="space-y-2">
                     {Object.entries(bid.answers).map(([question, answer]) => (
                       <div key={question} className="bg-gray-50 p-3 rounded">
-                        <p className="text-sm font-medium text-gray-600">{question}</p>
+                        <p className="text-sm font-medium text-gray-600">
+                          {question}
+                        </p>
                         <p className="text-gray-700 mt-1">{answer}</p>
                       </div>
                     ))}
@@ -248,14 +286,15 @@ export const BidViewer: React.FC<BidViewerProps> = ({
 
               {/* Action Buttons */}
               <div className="flex gap-2 mt-6">
-                {bounty.status === 'in-progress' && bid.status === 'approved' && (
-                  <Button
-                    onClick={() => handleShowCompletion(bid)}
-                    className="flex-1"
-                  >
-                    Complete Bounty
-                  </Button>
-                )}
+                {bounty.status === 'in-progress' &&
+                  bid.status === 'approved' && (
+                    <Button
+                      onClick={() => handleShowCompletion(bid)}
+                      className="flex-1"
+                    >
+                      Complete Bounty
+                    </Button>
+                  )}
               </div>
             </CardContent>
           </Card>
@@ -269,10 +308,16 @@ export const BidViewer: React.FC<BidViewerProps> = ({
             {/* Validation: Check for required data */}
             {!bounty.onchain_id ? (
               <div className="space-y-4">
-                <h3 className="text-lg font-semibold" style={{ color: '#8B3A3A' }}>Missing On-Chain Data</h3>
+                <h3
+                  className="text-lg font-semibold"
+                  style={{ color: '#8B3A3A' }}
+                >
+                  Missing On-Chain Data
+                </h3>
                 <p className="text-sm text-gray-700">
-                  This bounty is missing the on-chain bounty ID required to process payment.
-                  Please ensure the bounty was properly created on-chain.
+                  This bounty is missing the on-chain bounty ID required to
+                  process payment. Please ensure the bounty was properly created
+                  on-chain.
                 </p>
                 <Button
                   variant="outline"
@@ -284,10 +329,15 @@ export const BidViewer: React.FC<BidViewerProps> = ({
               </div>
             ) : !bounty.creator_address ? (
               <div className="space-y-4">
-                <h3 className="text-lg font-semibold" style={{ color: '#8B3A3A' }}>Missing Creator Data</h3>
+                <h3
+                  className="text-lg font-semibold"
+                  style={{ color: '#8B3A3A' }}
+                >
+                  Missing Creator Data
+                </h3>
                 <p className="text-sm text-gray-700">
-                  This bounty is missing the creator address required to send notifications.
-                  Please contact support.
+                  This bounty is missing the creator address required to send
+                  notifications. Please contact support.
                 </p>
                 <Button
                   variant="outline"
@@ -327,4 +377,4 @@ export const BidViewer: React.FC<BidViewerProps> = ({
       )}
     </div>
   );
-}; 
+};

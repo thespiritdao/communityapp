@@ -117,7 +117,6 @@ describe('SwapSettingsSlippageInput', () => {
   it('applies correct styles in Auto mode', () => {
     render(<SwapSettingsSlippageInput />);
     expect(screen.getByRole('button', { name: 'Auto' })).toHaveClass(
-
       'cursor-pointer ock-bg-default active:bg-[var(--ock-bg-default-active)] hover:bg-[var(--ock-bg-default-hover)] ock-text-foreground ock-font-family font-semibold text-sm ock-border-radius-inner flex-1 px-3 py-1 transition-colors ock-bg-inverse ock-text-primary ock-shadow-default',
     );
     expect(screen.getByRole('button', { name: 'Custom' })).toHaveClass(
@@ -127,7 +126,6 @@ describe('SwapSettingsSlippageInput', () => {
     );
     expect(screen.getByRole('button', { name: 'Custom' })).toHaveClass(
       'cursor-pointer ock-bg-default active:bg-[var(--ock-bg-default-active)] hover:bg-[var(--ock-bg-default-hover)] ock-text-foreground ock-font-family font-semibold text-sm leading-5 ock-border-radius-inner flex-1 px-3 py-1 transition-colors ock-text-foreground-muted',
-
     );
     expect(screen.getByRole('textbox').parentElement).toHaveClass('opacity-50');
   });
@@ -136,7 +134,6 @@ describe('SwapSettingsSlippageInput', () => {
     render(<SwapSettingsSlippageInput />);
     fireEvent.click(screen.getByRole('button', { name: 'Custom' }));
     expect(screen.getByRole('button', { name: 'Auto' })).toHaveClass(
-
       'cursor-pointer ock-bg-default active:bg-[var(--ock-bg-default-active)] hover:bg-[var(--ock-bg-default-hover)] ock-text-foreground ock-font-family font-semibold text-sm ock-border-radius-inner flex-1 px-3 py-1 transition-colors ock-text-foreground-muted',
     );
     expect(screen.getByRole('button', { name: 'Custom' })).toHaveClass(
@@ -146,7 +143,6 @@ describe('SwapSettingsSlippageInput', () => {
     );
     expect(screen.getByRole('button', { name: 'Custom' })).toHaveClass(
       'cursor-pointer ock-bg-default active:bg-[var(--ock-bg-default-active)] hover:bg-[var(--ock-bg-default-hover)] ock-text-foreground ock-font-family font-semibold text-sm leading-5 ock-border-radius-inner flex-1 px-3 py-1 transition-colors ock-bg-inverse ock-text-primary ock-shadow-default',
-
     );
     expect(screen.getByRole('textbox').parentElement).not.toHaveClass(
       'opacity-50',

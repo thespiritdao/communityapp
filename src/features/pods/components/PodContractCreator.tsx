@@ -2,7 +2,14 @@
 
 import { useState } from 'react';
 import { useAccount } from 'wagmi';
-import { Transaction, TransactionButton, TransactionSponsor, TransactionStatus, TransactionStatusLabel, TransactionStatusAction } from '@coinbase/onchainkit/transaction';
+import {
+  Transaction,
+  TransactionButton,
+  TransactionSponsor,
+  TransactionStatus,
+  TransactionStatusLabel,
+  TransactionStatusAction,
+} from '@coinbase/onchainkit/transaction';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -21,21 +28,22 @@ const POD_CREATION_MANAGER_ABI = [
       { name: 'description', type: 'string' },
       { name: 'imageURI', type: 'string' },
       { name: 'podLeads', type: 'address[]' },
-      { name: 'parentHatId', type: 'uint256' }
+      { name: 'parentHatId', type: 'uint256' },
     ],
     outputs: [],
-    stateMutability: 'nonpayable'
+    stateMutability: 'nonpayable',
   },
   {
     name: 'activatePod',
     type: 'function',
     inputs: [{ name: 'podId', type: 'string' }],
     outputs: [],
-    stateMutability: 'nonpayable'
-  }
+    stateMutability: 'nonpayable',
+  },
 ] as const;
 
-const POD_CREATION_MANAGER_ADDRESS = '0x43C124Df0dFb324CCC742808D9FdF62C764f2644';
+const POD_CREATION_MANAGER_ADDRESS =
+  '0x43C124Df0dFb324CCC742808D9FdF62C764f2644';
 
 interface PodContractCreatorProps {
   onPodCreated?: (podId: string) => void;
@@ -47,42 +55,46 @@ export function PodContractCreator({ onPodCreated }: PodContractCreatorProps) {
   const [formData, setFormData] = useState({
     podId: 'executive-pod',
     name: 'Executive Pod',
-    description: 'Main executive leadership pod for DAO governance and operations',
+    description:
+      'Main executive leadership pod for DAO governance and operations',
     imageURI: 'https://example.com/executive-pod.png',
     podLeads: '', // comma-separated addresses
-    parentHatId: '3666552746732487012074714051834669771614651641465517857430090993893376' // Executive Hat ID in decimal (0x0000008800000000...)
+    parentHatId:
+      '3666552746732487012074714051834669771614651641465517857430090993893376', // Executive Hat ID in decimal (0x0000008800000000...)
   });
   const [createdPodId, setCreatedPodId] = useState<string>('');
 
   const handleInputChange = (field: string, value: string) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+    setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
   // Prepare createPodProposal transaction
   const prepareCreatePodTransaction = () => {
     const podLeadsArray = formData.podLeads
       .split(',')
-      .map(addr => addr.trim())
-      .filter(addr => addr.length > 0)
-      .filter(addr => /^0x[a-fA-F0-9]{40}$/.test(addr));
+      .map((addr) => addr.trim())
+      .filter((addr) => addr.length > 0)
+      .filter((addr) => /^0x[a-fA-F0-9]{40}$/.test(addr));
 
     if (podLeadsArray.length === 0) {
       podLeadsArray.push(address!); // Add current user as default pod lead
     }
 
-    const calls = [{
-      address: POD_CREATION_MANAGER_ADDRESS as `0x${string}`,
-      abi: POD_CREATION_MANAGER_ABI,
-      functionName: 'createPodProposal',
-      args: [
-        formData.podId,
-        formData.name,
-        formData.description,
-        formData.imageURI,
-        podLeadsArray as `0x${string}`[],
-        BigInt(formData.parentHatId)
-      ]
-    }];
+    const calls = [
+      {
+        address: POD_CREATION_MANAGER_ADDRESS as `0x${string}`,
+        abi: POD_CREATION_MANAGER_ABI,
+        functionName: 'createPodProposal',
+        args: [
+          formData.podId,
+          formData.name,
+          formData.description,
+          formData.imageURI,
+          podLeadsArray as `0x${string}`[],
+          BigInt(formData.parentHatId),
+        ],
+      },
+    ];
 
     console.log('🏗️ Creating pod proposal transaction...');
     debugTransactionCalls(calls, 'CreatePodProposal');
@@ -93,13 +105,15 @@ export function PodContractCreator({ onPodCreated }: PodContractCreatorProps) {
   // Prepare activatePod transaction
   const prepareActivatePodTransaction = () => {
     const targetPodId = createdPodId || formData.podId;
-    
-    const calls = [{
-      address: POD_CREATION_MANAGER_ADDRESS as `0x${string}`,
-      abi: POD_CREATION_MANAGER_ABI,
-      functionName: 'activatePod',
-      args: [targetPodId]
-    }];
+
+    const calls = [
+      {
+        address: POD_CREATION_MANAGER_ADDRESS as `0x${string}`,
+        abi: POD_CREATION_MANAGER_ABI,
+        functionName: 'activatePod',
+        args: [targetPodId],
+      },
+    ];
 
     console.log('🏗️ Creating pod activation transaction...');
     debugTransactionCalls(calls, 'ActivatePod');
@@ -123,7 +137,9 @@ export function PodContractCreator({ onPodCreated }: PodContractCreatorProps) {
     return (
       <Card>
         <CardContent className="p-6">
-          <p className="text-center text-muted-foreground">Please connect your wallet to create pods in the contract.</p>
+          <p className="text-center text-muted-foreground">
+            Please connect your wallet to create pods in the contract.
+          </p>
         </CardContent>
       </Card>
     );
@@ -135,7 +151,8 @@ export function PodContractCreator({ onPodCreated }: PodContractCreatorProps) {
         <CardHeader>
           <CardTitle>Create Pod in Smart Contract</CardTitle>
           <p className="text-sm text-muted-foreground">
-            Your pods exist in the database but need to be created in the smart contract first.
+            Your pods exist in the database but need to be created in the smart
+            contract first.
           </p>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -167,7 +184,9 @@ export function PodContractCreator({ onPodCreated }: PodContractCreatorProps) {
                 <Textarea
                   id="description"
                   value={formData.description}
-                  onChange={(e) => handleInputChange('description', e.target.value)}
+                  onChange={(e) =>
+                    handleInputChange('description', e.target.value)
+                  }
                   placeholder="Pod description..."
                 />
               </div>
@@ -178,7 +197,9 @@ export function PodContractCreator({ onPodCreated }: PodContractCreatorProps) {
                   <Input
                     id="imageURI"
                     value={formData.imageURI}
-                    onChange={(e) => handleInputChange('imageURI', e.target.value)}
+                    onChange={(e) =>
+                      handleInputChange('imageURI', e.target.value)
+                    }
                     placeholder="https://..."
                   />
                 </div>
@@ -187,7 +208,9 @@ export function PodContractCreator({ onPodCreated }: PodContractCreatorProps) {
                   <Input
                     id="parentHatId"
                     value={formData.parentHatId}
-                    onChange={(e) => handleInputChange('parentHatId', e.target.value)}
+                    onChange={(e) =>
+                      handleInputChange('parentHatId', e.target.value)
+                    }
                     placeholder="1"
                     type="number"
                   />
@@ -195,11 +218,15 @@ export function PodContractCreator({ onPodCreated }: PodContractCreatorProps) {
               </div>
 
               <div>
-                <Label htmlFor="podLeads">Pod Leads (comma-separated addresses)</Label>
+                <Label htmlFor="podLeads">
+                  Pod Leads (comma-separated addresses)
+                </Label>
                 <Input
                   id="podLeads"
                   value={formData.podLeads}
-                  onChange={(e) => handleInputChange('podLeads', e.target.value)}
+                  onChange={(e) =>
+                    handleInputChange('podLeads', e.target.value)
+                  }
                   placeholder="0x..., 0x..."
                 />
                 <p className="text-xs text-muted-foreground mt-1">
@@ -212,7 +239,10 @@ export function PodContractCreator({ onPodCreated }: PodContractCreatorProps) {
                   calls={prepareCreatePodTransaction()}
                   onSuccess={handleProposeSuccess}
                 >
-                  <TransactionButton className="w-full" text="Create Pod Proposal" />
+                  <TransactionButton
+                    className="w-full"
+                    text="Create Pod Proposal"
+                  />
                   <TransactionSponsor />
                   <TransactionStatus>
                     <TransactionStatusLabel />
@@ -225,16 +255,31 @@ export function PodContractCreator({ onPodCreated }: PodContractCreatorProps) {
 
           {step === 'activate' && (
             <div className="space-y-4">
-              <div className="p-4 rounded-lg" style={{ backgroundColor: '#D1E6DC' }}>
-                <p className="font-medium" style={{ color: '#1F453A' }}>✅ Pod Proposal Created!</p>
-                <p className="text-sm" style={{ color: '#2F5D50' }}>Pod ID: {createdPodId}</p>
-                <p className="text-sm" style={{ color: '#2F5D50' }}>Status: Proposed</p>
+              <div
+                className="p-4 rounded-lg"
+                style={{ backgroundColor: '#D1E6DC' }}
+              >
+                <p className="font-medium" style={{ color: '#1F453A' }}>
+                  ✅ Pod Proposal Created!
+                </p>
+                <p className="text-sm" style={{ color: '#2F5D50' }}>
+                  Pod ID: {createdPodId}
+                </p>
+                <p className="text-sm" style={{ color: '#2F5D50' }}>
+                  Status: Proposed
+                </p>
               </div>
 
-              <div className="p-4 rounded-lg" style={{ backgroundColor: '#E8F1EE' }}>
-                <p className="font-medium" style={{ color: '#1F453A' }}>Next Step: Activate Pod</p>
+              <div
+                className="p-4 rounded-lg"
+                style={{ backgroundColor: '#E8F1EE' }}
+              >
+                <p className="font-medium" style={{ color: '#1F453A' }}>
+                  Next Step: Activate Pod
+                </p>
                 <p className="text-sm" style={{ color: '#2F5D50' }}>
-                  This will create the membership hat and deploy the treasury contract.
+                  This will create the membership hat and deploy the treasury
+                  contract.
                 </p>
               </div>
 
@@ -242,7 +287,10 @@ export function PodContractCreator({ onPodCreated }: PodContractCreatorProps) {
                 calls={prepareActivatePodTransaction()}
                 onSuccess={handleActivateSuccess}
               >
-                <TransactionButton className="w-full" text="Activate Pod & Deploy Treasury" />
+                <TransactionButton
+                  className="w-full"
+                  text="Activate Pod & Deploy Treasury"
+                />
                 <TransactionSponsor />
                 <TransactionStatus>
                   <TransactionStatusLabel />
@@ -250,9 +298,9 @@ export function PodContractCreator({ onPodCreated }: PodContractCreatorProps) {
                 </TransactionStatus>
               </Transaction>
 
-              <Button 
-                variant="outline" 
-                className="w-full" 
+              <Button
+                variant="outline"
+                className="w-full"
                 onClick={() => setStep('propose')}
               >
                 Back to Create Another Pod
@@ -269,10 +317,18 @@ export function PodContractCreator({ onPodCreated }: PodContractCreatorProps) {
         </CardHeader>
         <CardContent>
           <div className="text-xs font-mono space-y-1">
-            <p><strong>Contract:</strong> {POD_CREATION_MANAGER_ADDRESS}</p>
-            <p><strong>Current Step:</strong> {step}</p>
-            <p><strong>User:</strong> {address}</p>
-            <p><strong>Pod ID:</strong> {formData.podId}</p>
+            <p>
+              <strong>Contract:</strong> {POD_CREATION_MANAGER_ADDRESS}
+            </p>
+            <p>
+              <strong>Current Step:</strong> {step}
+            </p>
+            <p>
+              <strong>User:</strong> {address}
+            </p>
+            <p>
+              <strong>Pod ID:</strong> {formData.podId}
+            </p>
           </div>
         </CardContent>
       </Card>

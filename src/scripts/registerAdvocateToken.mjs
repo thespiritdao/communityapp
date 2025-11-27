@@ -5,7 +5,8 @@ dotenv.config({ path: '.env.local' });
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  process.env.SUPABASE_SERVICE_ROLE_KEY ||
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
 );
 
 async function registerAdvocateToken() {
@@ -18,7 +19,7 @@ async function registerAdvocateToken() {
     contract_address: '0x592E560171D2a882474cdfc3BbeeDb21cEB4015d',
     token_type: 'erc721',
     is_active: true,
-    description: 'Advocate credential for community members'
+    description: 'Advocate credential for community members',
   };
 
   try {
@@ -31,15 +32,15 @@ async function registerAdvocateToken() {
 
     if (existing) {
       console.log('✅ Advocate token already registered:', existing);
-      
+
       // Update if needed
       if (existing.name !== 'Advocate') {
         const { data: updated, error: updateError } = await supabase
           .from('tokens')
-          .update({ 
+          .update({
             name: 'Advocate',
             symbol: 'ADV',
-            is_active: true 
+            is_active: true,
           })
           .eq('id', existing.id)
           .select()
@@ -67,8 +68,10 @@ async function registerAdvocateToken() {
     }
 
     // Now check if eligibility criteria need updating
-    console.log('\n🔍 Checking eligibility criteria that reference this contract...');
-    
+    console.log(
+      '\n🔍 Checking eligibility criteria that reference this contract...',
+    );
+
     const { data: roles, error: rolesError } = await supabase
       .from('pod_role_permissions')
       .select('id, role_name, eligibility_criteria')
@@ -76,16 +79,24 @@ async function registerAdvocateToken() {
 
     if (roles && !rolesError) {
       for (const role of roles) {
-        if (role.eligibility_criteria && Array.isArray(role.eligibility_criteria)) {
+        if (
+          role.eligibility_criteria &&
+          Array.isArray(role.eligibility_criteria)
+        ) {
           let needsUpdate = false;
-          const updatedCriteria = role.eligibility_criteria.map(criterion => {
-            if (criterion.contract_address === advocateToken.contract_address && !criterion.token_name) {
-              console.log(`📝 Updating criterion for role ${role.role_name} to include token_name`);
+          const updatedCriteria = role.eligibility_criteria.map((criterion) => {
+            if (
+              criterion.contract_address === advocateToken.contract_address &&
+              !criterion.token_name
+            ) {
+              console.log(
+                `📝 Updating criterion for role ${role.role_name} to include token_name`,
+              );
               needsUpdate = true;
               return {
                 ...criterion,
                 token_name: 'Advocate',
-                token_id: 'advocate'
+                token_id: 'advocate',
               };
             }
             return criterion;
@@ -98,7 +109,10 @@ async function registerAdvocateToken() {
               .eq('id', role.id);
 
             if (updateError) {
-              console.error(`❌ Error updating role ${role.role_name}:`, updateError);
+              console.error(
+                `❌ Error updating role ${role.role_name}:`,
+                updateError,
+              );
             } else {
               console.log(`✅ Updated role ${role.role_name} with token_name`);
             }
@@ -108,7 +122,6 @@ async function registerAdvocateToken() {
     }
 
     console.log('\n✅ Advocate token registration complete!');
-    
   } catch (error) {
     console.error('❌ Error in registerAdvocateToken:', error);
   }

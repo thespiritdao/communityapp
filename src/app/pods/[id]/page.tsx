@@ -5,7 +5,16 @@ import { useParams, useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Check, FileText, XCircle, Users, CheckCircle2, AlertCircle, UserPlus, Search } from 'lucide-react';
+import {
+  Check,
+  FileText,
+  XCircle,
+  Users,
+  CheckCircle2,
+  AlertCircle,
+  UserPlus,
+  Search,
+} from 'lucide-react';
 import FundingModal from '@/components/FundingModal';
 import FundButton from '@/components/FundButton';
 import { useFundingModal } from '@/hooks/useFundingModal';
@@ -15,7 +24,10 @@ import { useToast } from '@/components/ui/use-toast';
 import { useProfiles } from '@/features/identity/hooks/useProfiles';
 import { useProfileModal } from '@/features/identity/hooks/useProfileModal';
 import { ProfileModal } from '@/features/identity';
-import { getTreasuryAddress, getTreasuryAddressSync } from '@/features/pods/utils/treasuryAddressUtils';
+import {
+  getTreasuryAddress,
+  getTreasuryAddressSync,
+} from '@/features/pods/utils/treasuryAddressUtils';
 import { supabase } from '@/utils/supabaseClient';
 import dynamic from 'next/dynamic';
 import '../../../features/home/styles/HomePage.css';
@@ -23,7 +35,7 @@ import '../../../features/home/styles/HomePage.css';
 // Lazy load the agreement signing modal (fixes SSR issues)
 const AgreementSigningModal = dynamic(
   () => import('@/features/pods/components/AgreementSigningModal'),
-  { ssr: false }
+  { ssr: false },
 );
 
 interface EligibilityCriterion {
@@ -54,9 +66,13 @@ export default function PodDetailPage() {
   const [loading, setLoading] = useState(true);
 
   // Agreement state
-  const [agreementCriteria, setAgreementCriteria] = useState<Array<EligibilityCriterion & { roleId: string }>>([]);
+  const [agreementCriteria, setAgreementCriteria] = useState<
+    Array<EligibilityCriterion & { roleId: string }>
+  >([]);
   const [signatures, setSignatures] = useState<AgreementSignature[]>([]);
-  const [signingAgreement, setSigningAgreement] = useState<(EligibilityCriterion & { roleId: string }) | null>(null);
+  const [signingAgreement, setSigningAgreement] = useState<
+    (EligibilityCriterion & { roleId: string }) | null
+  >(null);
 
   // Member state
   const [allMembers, setAllMembers] = useState<string[]>([]);
@@ -71,14 +87,20 @@ export default function PodDetailPage() {
   const { modalProps, openPodFunding } = useFundingModal();
 
   // Profile modal state
-  const { selectedUser, users, isOpen: isProfileModalOpen, openProfileModal, closeProfileModal } = useProfileModal();
+  const {
+    selectedUser,
+    users,
+    isOpen: isProfileModalOpen,
+    openProfileModal,
+    closeProfileModal,
+  } = useProfileModal();
 
   // Get all unique member addresses (leaders + members)
   const allMemberAddresses = allMembers;
   const { getProfile } = useProfiles(allMemberAddresses);
 
   // Get signer addresses for profiles
-  const allSignerAddresses = signatures.map(sig => sig.signer_address);
+  const allSignerAddresses = signatures.map((sig) => sig.signer_address);
   const { getProfile: getSignerProfile } = useProfiles(allSignerAddresses);
 
   useEffect(() => {
@@ -86,7 +108,8 @@ export default function PodDetailPage() {
       if (!id) return;
 
       // Validate that ID looks like a UUID before making database calls
-      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+      const uuidRegex =
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
       const idString = String(id);
 
       if (!uuidRegex.test(idString)) {
@@ -107,14 +130,19 @@ export default function PodDetailPage() {
           try {
             const factoryTreasuryAddress = await getTreasuryAddress(
               podData.id,
-              podData.treasury_contract_address
+              podData.treasury_contract_address,
             );
             setTreasuryAddress(factoryTreasuryAddress);
-            console.log('✅ Treasury address resolved:', factoryTreasuryAddress);
+            console.log(
+              '✅ Treasury address resolved:',
+              factoryTreasuryAddress,
+            );
           } catch (error) {
             console.error('❌ Treasury address lookup failed:', error);
             // Fallback to sync method with database value
-            const syncTreasuryAddress = getTreasuryAddressSync(podData.treasury_contract_address);
+            const syncTreasuryAddress = getTreasuryAddressSync(
+              podData.treasury_contract_address,
+            );
             setTreasuryAddress(syncTreasuryAddress);
           } finally {
             setTreasuryLoading(false);
@@ -156,14 +184,17 @@ export default function PodDetailPage() {
       const criteria: Array<EligibilityCriterion & { roleId: string }> = [];
 
       if (roles) {
-        roles.forEach(role => {
-          if (role.eligibility_criteria && Array.isArray(role.eligibility_criteria)) {
+        roles.forEach((role) => {
+          if (
+            role.eligibility_criteria &&
+            Array.isArray(role.eligibility_criteria)
+          ) {
             role.eligibility_criteria.forEach((criterion: any) => {
               if (criterion.type === 'agreement_signed') {
                 criteria.push({
                   ...criterion,
                   required_for_role: role.role_name,
-                  roleId: role.id
+                  roleId: role.id,
                 });
               }
             });
@@ -187,7 +218,6 @@ export default function PodDetailPage() {
         console.log('✅ Loaded', sigs?.length || 0, 'signatures');
         setSignatures(sigs || []);
       }
-
     } catch (error) {
       console.error('❌ Error loading agreements:', error);
     }
@@ -201,7 +231,10 @@ export default function PodDetailPage() {
       const leaders = podData?.pod_leads || [];
 
       // Check if current user is a leader
-      if (address && leaders.some((l: string) => l.toLowerCase() === address.toLowerCase())) {
+      if (
+        address &&
+        leaders.some((l: string) => l.toLowerCase() === address.toLowerCase())
+      ) {
         setIsLeader(true);
       } else {
         setIsLeader(false);
@@ -218,13 +251,16 @@ export default function PodDetailPage() {
         console.error('❌ Error loading members:', membersError);
       }
 
-      const members = memberRecords?.map(m => m.wallet) || [];
+      const members = memberRecords?.map((m) => m.wallet) || [];
 
       // Combine and deduplicate
       const allUnique = Array.from(new Set([...leaders, ...members]));
-      console.log('✅ Loaded members:', { leaders: leaders.length, members: members.length, total: allUnique.length });
+      console.log('✅ Loaded members:', {
+        leaders: leaders.length,
+        members: members.length,
+        total: allUnique.length,
+      });
       setAllMembers(allUnique);
-
     } catch (error) {
       console.error('❌ Error loading members:', error);
     } finally {
@@ -235,9 +271,10 @@ export default function PodDetailPage() {
   function hasUserSigned(agreementName: string): boolean {
     if (!address) return false;
 
-    return signatures.some(sig =>
-      sig.signer_address.toLowerCase() === address.toLowerCase() &&
-      sig.accountability_statement.includes(agreementName)
+    return signatures.some(
+      (sig) =>
+        sig.signer_address.toLowerCase() === address.toLowerCase() &&
+        sig.accountability_statement.includes(agreementName),
     );
   }
 
@@ -254,8 +291,8 @@ export default function PodDetailPage() {
   }
 
   function hasMemberSignedAnyAgreement(memberAddress: string): boolean {
-    return signatures.some(sig =>
-      sig.signer_address.toLowerCase() === memberAddress.toLowerCase()
+    return signatures.some(
+      (sig) => sig.signer_address.toLowerCase() === memberAddress.toLowerCase(),
     );
   }
 
@@ -269,7 +306,7 @@ export default function PodDetailPage() {
     toast({
       title: 'Agreement Signed',
       description: 'Your signature has been recorded.',
-      variant: 'default'
+      variant: 'default',
     });
   }
 
@@ -290,14 +327,22 @@ export default function PodDetailPage() {
           <div className="flex justify-center mb-4">
             <Search className="text-gray-400 w-24 h-24" />
           </div>
-          <h2 className="text-2xl font-semibold text-gray-800 mb-2">Pod Not Found</h2>
-          <p className="text-gray-600 mb-6">The pod you're looking for doesn't exist or has been removed.</p>
+          <h2 className="text-2xl font-semibold text-gray-800 mb-2">
+            Pod Not Found
+          </h2>
+          <p className="text-gray-600 mb-6">
+            The pod you're looking for doesn't exist or has been removed.
+          </p>
           <a
             href="/pods"
             className="inline-flex items-center px-4 py-2 rounded-lg transition-colors"
             style={{ backgroundColor: '#8FAAA1', color: '#1F2D2A' }}
-            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#6F8F86'}
-            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#8FAAA1'}
+            onMouseEnter={(e) =>
+              (e.currentTarget.style.backgroundColor = '#6F8F86')
+            }
+            onMouseLeave={(e) =>
+              (e.currentTarget.style.backgroundColor = '#8FAAA1')
+            }
           >
             ← Back to Pods
           </a>
@@ -316,10 +361,13 @@ export default function PodDetailPage() {
               <Badge
                 variant="outline"
                 className={`ml-2 mr-4 ${
-                  pod.status === 'active' ? 'bg-green-100 text-green-800 border-green-300' :
-                  pod.status === 'draft' ? 'bg-yellow-100 text-yellow-800 border-yellow-300' :
-                  pod.status === 'pending' ? 'bg-blue-100 text-blue-800 border-blue-300' :
-                  'bg-gray-100 text-gray-800 border-gray-300'
+                  pod.status === 'active'
+                    ? 'bg-green-100 text-green-800 border-green-300'
+                    : pod.status === 'draft'
+                      ? 'bg-yellow-100 text-yellow-800 border-yellow-300'
+                      : pod.status === 'pending'
+                        ? 'bg-blue-100 text-blue-800 border-blue-300'
+                        : 'bg-gray-100 text-gray-800 border-gray-300'
                 }`}
               >
                 {pod.status}
@@ -332,13 +380,17 @@ export default function PodDetailPage() {
               <FundButton
                 recipientType="pod"
                 variant="default"
-                onClick={() => openPodFunding({
-                  address: treasuryAddress || "0x85e4e4C68C72Cb7ae3203C72E6bbb14C55866a11",
-                  name: pod.name,
-                  description: `Support ${pod.name} with funding to help achieve their mission`,
-                  isTreasury: !!treasuryAddress,
-                  podId: pod.id
-                })}
+                onClick={() =>
+                  openPodFunding({
+                    address:
+                      treasuryAddress ||
+                      '0x85e4e4C68C72Cb7ae3203C72E6bbb14C55866a11',
+                    name: pod.name,
+                    description: `Support ${pod.name} with funding to help achieve their mission`,
+                    isTreasury: !!treasuryAddress,
+                    podId: pod.id,
+                  })
+                }
                 disabled={!address || treasuryLoading}
               />
               {treasuryLoading && (
@@ -385,29 +437,39 @@ export default function PodDetailPage() {
                     <CardHeader>
                       <div className="flex items-start justify-between gap-4">
                         <div className="flex-1">
-                          <CardTitle className="text-lg">{criterion.name}</CardTitle>
+                          <CardTitle className="text-lg">
+                            {criterion.name}
+                          </CardTitle>
                           {criterion.description && (
                             <p className="text-sm text-gray-600 mt-1">
                               {criterion.description}
                             </p>
                           )}
                           <div className="flex flex-wrap items-center gap-2 mt-2">
-                            <Badge variant="outline" className="text-xs whitespace-nowrap">
+                            <Badge
+                              variant="outline"
+                              className="text-xs whitespace-nowrap"
+                            >
                               Required for: {criterion.required_for_role}
                             </Badge>
-                            {address && (
-                              userHasSigned ? (
-                                <Badge variant="default" className="text-xs bg-green-600 whitespace-nowrap">
+                            {address &&
+                              (userHasSigned ? (
+                                <Badge
+                                  variant="default"
+                                  className="text-xs bg-green-600 whitespace-nowrap"
+                                >
                                   <CheckCircle2 className="h-3 w-3 mr-1" />
                                   You signed
                                 </Badge>
                               ) : (
-                                <Badge variant="destructive" className="text-xs whitespace-nowrap">
+                                <Badge
+                                  variant="destructive"
+                                  className="text-xs whitespace-nowrap"
+                                >
                                   <AlertCircle className="h-3 w-3 mr-1" />
                                   Not signed
                                 </Badge>
-                              )
-                            )}
+                              ))}
                           </div>
                         </div>
 
@@ -452,7 +514,8 @@ export default function PodDetailPage() {
                     {allMembers.map((memberAddress, index) => {
                       const profile = getProfile(memberAddress);
                       const displayName = getUserDisplayName(memberAddress);
-                      const hasSigned = hasMemberSignedAnyAgreement(memberAddress);
+                      const hasSigned =
+                        hasMemberSignedAnyAgreement(memberAddress);
 
                       return (
                         <div
@@ -474,23 +537,31 @@ export default function PodDetailPage() {
                             ) : (
                               <div className="w-10 h-10 rounded-full bg-blue-500 flex items-center justify-center">
                                 <span className="text-white font-medium text-sm">
-                                  {profile?.first_name?.charAt(0)?.toUpperCase() || displayName.charAt(0)}
+                                  {profile?.first_name
+                                    ?.charAt(0)
+                                    ?.toUpperCase() || displayName.charAt(0)}
                                 </span>
                               </div>
                             )}
 
                             {/* Name and Agreement Status */}
                             <div className="flex-1">
-                              <p className="font-medium text-gray-900">{displayName}</p>
+                              <p className="font-medium text-gray-900">
+                                {displayName}
+                              </p>
                               {hasSigned ? (
                                 <div className="flex items-center gap-1 text-green-600 mt-0.5">
                                   <Check className="h-3.5 w-3.5" />
-                                  <span className="text-xs font-medium">Signed</span>
+                                  <span className="text-xs font-medium">
+                                    Signed
+                                  </span>
                                 </div>
                               ) : (
                                 <div className="flex items-center gap-1 text-gray-400 mt-0.5">
                                   <XCircle className="h-3.5 w-3.5" />
-                                  <span className="text-xs font-medium">Not Signed</span>
+                                  <span className="text-xs font-medium">
+                                    Not Signed
+                                  </span>
                                 </div>
                               )}
                             </div>

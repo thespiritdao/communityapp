@@ -10,7 +10,10 @@ export async function GET(request: NextRequest) {
     const bountyId = searchParams.get('id');
 
     if (!bountyId) {
-      return NextResponse.json({ error: 'Bounty ID is required' }, { status: 400 });
+      return NextResponse.json(
+        { error: 'Bounty ID is required' },
+        { status: 400 },
+      );
     }
 
     const supabase = createClient(supabaseUrl, supabaseAnonKey);
@@ -23,7 +26,10 @@ export async function GET(request: NextRequest) {
 
     if (error) {
       console.error('Error fetching bounty:', error);
-      return NextResponse.json({ error: 'Failed to fetch bounty' }, { status: 500 });
+      return NextResponse.json(
+        { error: 'Failed to fetch bounty' },
+        { status: 500 },
+      );
     }
 
     if (!bounty) {
@@ -40,14 +46,21 @@ export async function GET(request: NextRequest) {
       podId: bounty.pod_id || '',
       category: bounty.category || '',
       ipfsHash: bounty.ipfs_hash || 'temp',
-      createdAt: bounty.created_at ? Math.floor(new Date(bounty.created_at).getTime() / 1000) : Math.floor(Date.now() / 1000),
-      deadline: bounty.deadline ? Math.floor(new Date(bounty.deadline).getTime() / 1000) : Math.floor(Date.now() / 1000) + 604800,
-      fundingSource: bounty.funding_source || 'pod_treasury'
+      createdAt: bounty.created_at
+        ? Math.floor(new Date(bounty.created_at).getTime() / 1000)
+        : Math.floor(Date.now() / 1000),
+      deadline: bounty.deadline
+        ? Math.floor(new Date(bounty.deadline).getTime() / 1000)
+        : Math.floor(Date.now() / 1000) + 604800,
+      fundingSource: bounty.funding_source || 'pod_treasury',
     };
 
     return NextResponse.json(bountyV2);
   } catch (error) {
     console.error('Error in bounty get API:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 },
+    );
   }
 }

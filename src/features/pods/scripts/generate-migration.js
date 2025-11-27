@@ -9,7 +9,9 @@ const fs = require('fs');
 const path = require('path');
 
 // Read environment variables from .env.local or process.env
-require('dotenv').config({ path: path.join(__dirname, '../../../..', '.env.local') });
+require('dotenv').config({
+  path: path.join(__dirname, '../../../..', '.env.local'),
+});
 
 const HAT_IDS = {
   EXECUTIVE_POD_LEADER: process.env.NEXT_PUBLIC_EXECUTIVE_POD_LEADER,
@@ -34,7 +36,7 @@ const PERMISSION_TEMPLATES = {
     roleAssignment: true,
     forumModeration: true,
     bountyManagement: true,
-    marketplaceAccess: true
+    marketplaceAccess: true,
   },
   EXECUTIVE_MEMBER: {
     chatAccess: true,
@@ -46,7 +48,7 @@ const PERMISSION_TEMPLATES = {
     roleAssignment: false,
     forumModeration: false,
     bountyManagement: false,
-    marketplaceAccess: true
+    marketplaceAccess: true,
   },
   DEV_LEADER: {
     chatAccess: true,
@@ -58,7 +60,7 @@ const PERMISSION_TEMPLATES = {
     roleAssignment: true,
     forumModeration: false,
     bountyManagement: true,
-    marketplaceAccess: true
+    marketplaceAccess: true,
   },
   DEV_MEMBER: {
     chatAccess: true,
@@ -70,7 +72,7 @@ const PERMISSION_TEMPLATES = {
     roleAssignment: false,
     forumModeration: false,
     bountyManagement: false,
-    marketplaceAccess: true
+    marketplaceAccess: true,
   },
   LEGACY_MANAGER: {
     chatAccess: true,
@@ -82,11 +84,17 @@ const PERMISSION_TEMPLATES = {
     roleAssignment: false,
     forumModeration: false,
     bountyManagement: false,
-    marketplaceAccess: true
-  }
+    marketplaceAccess: true,
+  },
 };
 
-function generateInsertStatement(podId, hatId, roleName, permissions, maxHolders = 50) {
+function generateInsertStatement(
+  podId,
+  hatId,
+  roleName,
+  permissions,
+  maxHolders = 50,
+) {
   return `INSERT INTO pod_role_permissions (
     pod_id, hat_id, role_name, permissions, eligibility_criteria, 
     max_holders, current_holders, is_active, created_by, updated_by
@@ -123,44 +131,48 @@ SELECT id, name, management_hat_id, membership_hat_id, pod_leads FROM pods ORDER
   if (HAT_IDS.EXECUTIVE_POD_LEADER && HAT_IDS.EXECUTIVE_POD_MEMBER) {
     sql += `-- Executive Pod Roles\n`;
     sql += `-- TODO: Replace 'EXECUTIVE_POD_UUID_HERE' with actual pod UUID\n\n`;
-    
-    sql += generateInsertStatement(
-      'EXECUTIVE_POD_UUID_HERE',
-      HAT_IDS.EXECUTIVE_POD_LEADER,
-      'Executive Pod Leader',
-      PERMISSION_TEMPLATES.EXECUTIVE_LEADER,
-      5
-    ) + '\n\n';
-    
-    sql += generateInsertStatement(
-      'EXECUTIVE_POD_UUID_HERE', 
-      HAT_IDS.EXECUTIVE_POD_MEMBER,
-      'Executive Pod Member',
-      PERMISSION_TEMPLATES.EXECUTIVE_MEMBER,
-      100
-    ) + '\n\n';
+
+    sql +=
+      generateInsertStatement(
+        'EXECUTIVE_POD_UUID_HERE',
+        HAT_IDS.EXECUTIVE_POD_LEADER,
+        'Executive Pod Leader',
+        PERMISSION_TEMPLATES.EXECUTIVE_LEADER,
+        5,
+      ) + '\n\n';
+
+    sql +=
+      generateInsertStatement(
+        'EXECUTIVE_POD_UUID_HERE',
+        HAT_IDS.EXECUTIVE_POD_MEMBER,
+        'Executive Pod Member',
+        PERMISSION_TEMPLATES.EXECUTIVE_MEMBER,
+        100,
+      ) + '\n\n';
   }
 
-  // Dev Pod roles  
+  // Dev Pod roles
   if (HAT_IDS.DEV_POD_LEADER && HAT_IDS.DEV_POD_MEMBER) {
     sql += `-- Development Pod Roles\n`;
     sql += `-- TODO: Replace 'DEV_POD_UUID_HERE' with actual pod UUID\n\n`;
-    
-    sql += generateInsertStatement(
-      'DEV_POD_UUID_HERE',
-      HAT_IDS.DEV_POD_LEADER,
-      'Development Pod Leader', 
-      PERMISSION_TEMPLATES.DEV_LEADER,
-      3
-    ) + '\n\n';
-    
-    sql += generateInsertStatement(
-      'DEV_POD_UUID_HERE',
-      HAT_IDS.DEV_POD_MEMBER,
-      'Development Pod Member',
-      PERMISSION_TEMPLATES.DEV_MEMBER,
-      50
-    ) + '\n\n';
+
+    sql +=
+      generateInsertStatement(
+        'DEV_POD_UUID_HERE',
+        HAT_IDS.DEV_POD_LEADER,
+        'Development Pod Leader',
+        PERMISSION_TEMPLATES.DEV_LEADER,
+        3,
+      ) + '\n\n';
+
+    sql +=
+      generateInsertStatement(
+        'DEV_POD_UUID_HERE',
+        HAT_IDS.DEV_POD_MEMBER,
+        'Development Pod Member',
+        PERMISSION_TEMPLATES.DEV_MEMBER,
+        50,
+      ) + '\n\n';
   }
 
   // Legacy management roles
@@ -169,28 +181,29 @@ SELECT id, name, management_hat_id, membership_hat_id, pod_leads FROM pods ORDER
     { env: 'BOUNTY_MANAGEMENT', name: 'Bounty Manager' },
     { env: 'FORUM_MANAGEMENT', name: 'Forum Manager' },
     { env: 'CHAT_MANAGEMENT', name: 'Chat Manager' },
-    { env: 'EVENT_MANAGEMENT', name: 'Event Manager' }
+    { env: 'EVENT_MANAGEMENT', name: 'Event Manager' },
   ];
 
-  legacyRoles.forEach(role => {
+  legacyRoles.forEach((role) => {
     if (HAT_IDS[role.env]) {
       sql += `-- Legacy ${role.name} Role\n`;
       sql += `-- TODO: Replace 'LEGACY_POD_UUID_HERE' with actual pod UUID\n\n`;
-      
+
       const permissions = { ...PERMISSION_TEMPLATES.LEGACY_MANAGER };
-      
+
       // Customize permissions based on role type
       if (role.env === 'BOUNTY_MANAGEMENT') permissions.bountyManagement = true;
       if (role.env === 'FORUM_MANAGEMENT') permissions.forumModeration = true;
       if (role.env === 'EVENT_MANAGEMENT') permissions.eventCreation = true;
-      
-      sql += generateInsertStatement(
-        'LEGACY_POD_UUID_HERE',
-        HAT_IDS[role.env],
-        role.name,
-        permissions,
-        10
-      ) + '\n\n';
+
+      sql +=
+        generateInsertStatement(
+          'LEGACY_POD_UUID_HERE',
+          HAT_IDS[role.env],
+          role.name,
+          permissions,
+          10,
+        ) + '\n\n';
     }
   });
 
@@ -217,7 +230,12 @@ FROM pod_role_permissions;`;
 
 // Generate the migration
 console.log('🔧 Generating Pod Role Permissions Migration...');
-console.log('📋 Found HAT IDs:', Object.entries(HAT_IDS).filter(([k,v]) => v).map(([k,v]) => `${k}: ${v}`));
+console.log(
+  '📋 Found HAT IDs:',
+  Object.entries(HAT_IDS)
+    .filter(([k, v]) => v)
+    .map(([k, v]) => `${k}: ${v}`),
+);
 
 const migrationSQL = generateMigrationSQL();
 const outputPath = path.join(__dirname, '..', 'sql', 'generated-migration.sql');
@@ -225,7 +243,7 @@ const outputPath = path.join(__dirname, '..', 'sql', 'generated-migration.sql');
 fs.writeFileSync(outputPath, migrationSQL);
 console.log(`✅ Migration generated: ${outputPath}`);
 console.log('\n📝 Next steps:');
-console.log('1. Review the generated SQL file');  
+console.log('1. Review the generated SQL file');
 console.log('2. Replace UUID placeholders with actual pod IDs');
 console.log('3. Run the migration in your Supabase SQL editor');
 console.log('4. Test with PodManagerControlPanel');

@@ -1,10 +1,9 @@
-
 import { cn } from '@/styles/theme';
-import type { UserProfile } from '@/features/identity/types'; 
+import type { UserProfile } from '@/features/identity/types';
 // ^ Adjust import path/types as needed
 
 interface SocialsProps {
-  user: UserProfile;             // The user object with social fields
+  user: UserProfile; // The user object with social fields
   className?: string;
 }
 
@@ -31,9 +30,9 @@ export function Socials({ user, className }: SocialsProps) {
     <div className={cn('mt-2 w-full pl-1', className)}>
       <div className="flex space-x-2">
         {SOCIAL_PLATFORMS.map((platform) => {
-          const value = (user as any)[platform]; 
+          const value = (user as any)[platform];
           // Or define user type more precisely if needed
-          
+
           // If there's no value for that platform, skip it
           if (!value) return null;
 

@@ -34,10 +34,9 @@ interface ApplicationApprovalCardProps {
   onApproved?: () => void;
 }
 
-export const ApplicationApprovalCard: React.FC<ApplicationApprovalCardProps> = ({
-  applicationId,
-  onApproved
-}) => {
+export const ApplicationApprovalCard: React.FC<
+  ApplicationApprovalCardProps
+> = ({ applicationId, onApproved }) => {
   const { address } = useAccount();
   const [application, setApplication] = useState<Application | null>(null);
   const [pod, setPod] = useState<Pod | null>(null);
@@ -45,8 +44,12 @@ export const ApplicationApprovalCard: React.FC<ApplicationApprovalCardProps> = (
   const [hasVoted, setHasVoted] = useState(false);
 
   // Get applicant profile
-  const { getProfile } = useProfiles(application ? [application.applicant_address] : []);
-  const applicantProfile = application ? getProfile(application.applicant_address) : null;
+  const { getProfile } = useProfiles(
+    application ? [application.applicant_address] : [],
+  );
+  const applicantProfile = application
+    ? getProfile(application.applicant_address)
+    : null;
 
   useEffect(() => {
     loadApplication();
@@ -69,7 +72,8 @@ export const ApplicationApprovalCard: React.FC<ApplicationApprovalCardProps> = (
 
       // Check if current user has voted
       if (address) {
-        const voted = app.voting_leaders?.includes(address.toLowerCase()) || false;
+        const voted =
+          app.voting_leaders?.includes(address.toLowerCase()) || false;
         setHasVoted(voted);
       }
 
@@ -110,15 +114,15 @@ export const ApplicationApprovalCard: React.FC<ApplicationApprovalCardProps> = (
   }
 
   const intendedRole = application.intended_role || 'member';
-  const hatToMint = intendedRole === 'leader'
-    ? pod.management_hat_id
-    : pod.membership_hat_id;
+  const hatToMint =
+    intendedRole === 'leader' ? pod.management_hat_id : pod.membership_hat_id;
   const roleLabel = intendedRole === 'leader' ? 'Leader' : 'Member';
   const RoleIcon = intendedRole === 'leader' ? Crown : Users;
   const roleColor = intendedRole === 'leader' ? '#6A5F7A' : '#2F5D50';
   const roleBgColor = intendedRole === 'leader' ? '#EDEAF0' : '#E8F1EE';
 
-  const isReadyToApprove = application.current_votes >= application.required_votes - 1;
+  const isReadyToApprove =
+    application.current_votes >= application.required_votes - 1;
 
   return (
     <Card className="p-6">
@@ -128,35 +132,44 @@ export const ApplicationApprovalCard: React.FC<ApplicationApprovalCardProps> = (
           <div>
             <h3 className="text-lg font-semibold">{pod.name}</h3>
             <p className="text-sm text-gray-600">
-              Application from {applicantProfile?.first_name || applicantProfile?.last_name
+              Application from{' '}
+              {applicantProfile?.first_name || applicantProfile?.last_name
                 ? `${applicantProfile.first_name || ''} ${applicantProfile.last_name || ''}`.trim()
-                : `${application.applicant_address.slice(0, 8)}...${application.applicant_address.slice(-6)}`
-              }
+                : `${application.applicant_address.slice(0, 8)}...${application.applicant_address.slice(-6)}`}
             </p>
           </div>
-          <div className="flex items-center gap-2 px-3 py-1 rounded-full" style={{ backgroundColor: roleBgColor }}>
+          <div
+            className="flex items-center gap-2 px-3 py-1 rounded-full"
+            style={{ backgroundColor: roleBgColor }}
+          >
             <RoleIcon className="w-4 h-4" style={{ color: roleColor }} />
-            <span className="text-sm font-medium" style={{ color: roleColor }}>{roleLabel}</span>
+            <span className="text-sm font-medium" style={{ color: roleColor }}>
+              {roleLabel}
+            </span>
           </div>
         </div>
 
         {/* Accountability Statement */}
         <div className="border-l-4 border-gray-200 pl-4">
-          <p className="text-sm text-gray-700">{application.accountability_statement}</p>
+          <p className="text-sm text-gray-700">
+            {application.accountability_statement}
+          </p>
         </div>
 
         {/* Voting Progress */}
         <div className="flex items-center gap-4 text-sm">
           <div>
             <span className="font-medium">Votes:</span>
-            <span className="ml-2">{application.current_votes} / {application.required_votes}</span>
+            <span className="ml-2">
+              {application.current_votes} / {application.required_votes}
+            </span>
           </div>
           <div className="flex-1 bg-gray-200 rounded-full h-2">
             <div
               className="h-2 rounded-full transition-all"
               style={{
                 width: `${(application.current_votes / application.required_votes) * 100}%`,
-                backgroundColor: '#3F7A5A'
+                backgroundColor: '#3F7A5A',
               }}
             />
           </div>
@@ -180,7 +193,10 @@ export const ApplicationApprovalCard: React.FC<ApplicationApprovalCardProps> = (
           <div className="pt-4 border-t">
             {isReadyToApprove ? (
               <div className="space-y-2">
-                <div className="text-sm font-medium" style={{ color: '#3F7A5A' }}>
+                <div
+                  className="text-sm font-medium"
+                  style={{ color: '#3F7A5A' }}
+                >
                   🎉 Final approval! This will mint the {roleLabel} role
                 </div>
                 <ApproveApplicationButton

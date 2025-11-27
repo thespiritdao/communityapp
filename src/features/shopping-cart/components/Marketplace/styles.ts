@@ -1,6 +1,4 @@
-import styled from "styled-components";
-
-
+import styled from 'styled-components';
 
 export const Container = styled.div`
   display: flex;
@@ -23,7 +21,6 @@ export const Side = styled.div`
 export const Main = styled.div`
   width: 75%;
 `;
-
 
 export const ErrorMessage = styled.p`
   color: red;

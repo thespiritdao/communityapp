@@ -8,7 +8,7 @@ import { useModerationPermissions } from '../hooks/useModerationPermissions';
 import {
   getModeratorActions,
   getModerationStats,
-  type ModerationAction
+  type ModerationAction,
 } from '../services/ModerationService';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -21,7 +21,7 @@ export function ModerationLog() {
     totalActions: 0,
     pendingReports: 0,
     activeMutes: 0,
-    actionsToday: 0
+    actionsToday: 0,
   });
   const [isLoading, setIsLoading] = useState(true);
 
@@ -64,15 +64,24 @@ export function ModerationLog() {
 
   const getActionIcon = (actionType: string) => {
     switch (actionType) {
-      case 'pin': return '📌';
-      case 'unpin': return '📍';
-      case 'lock': return '🔒';
-      case 'unlock': return '🔓';
-      case 'delete': return '🗑️';
-      case 'mute': return '🔇';
-      case 'ban': return '🚫';
-      case 'feature': return '⭐';
-      default: return '•';
+      case 'pin':
+        return '📌';
+      case 'unpin':
+        return '📍';
+      case 'lock':
+        return '🔒';
+      case 'unlock':
+        return '🔓';
+      case 'delete':
+        return '🗑️';
+      case 'mute':
+        return '🔇';
+      case 'ban':
+        return '🚫';
+      case 'feature':
+        return '⭐';
+      default:
+        return '•';
     }
   };
 
@@ -116,7 +125,7 @@ export function ModerationLog() {
             <p className="text-gray-500">No moderation actions yet</p>
           ) : (
             <div className="space-y-2">
-              {actions.map(action => (
+              {actions.map((action) => (
                 <div
                   key={action.id}
                   className="border-l-4 border-gray-300 pl-3 py-2 text-sm"

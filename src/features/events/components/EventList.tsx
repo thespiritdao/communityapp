@@ -2,7 +2,7 @@
 
 import type React from 'react';
 import { useState, useEffect, useMemo } from 'react';
-import { Card, CardContent, CardHeader, } from '@/components/ui/card';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Search, Calendar, X } from 'lucide-react';
 import { EventCard } from './EventCard';
@@ -34,30 +34,45 @@ export const EventList: React.FC<EventListProps> = ({
   organizingPodId,
   title = 'Events',
   emptyMessage,
-  limit
+  limit,
 }) => {
   const { address } = useAccount();
   const [showPastToggle, setShowPastToggle] = useState(showPastEvents);
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedEvent, setSelectedEvent] = useState<EventWithStats | null>(null);
+  const [selectedEvent, setSelectedEvent] = useState<EventWithStats | null>(
+    null,
+  );
   const [showRegistrationModal, setShowRegistrationModal] = useState(false);
-  const [userRegistrations, setUserRegistrations] = useState<Record<string, EventRegistration>>({});
+  const [userRegistrations, setUserRegistrations] = useState<
+    Record<string, EventRegistration>
+  >({});
   const [refreshKey, setRefreshKey] = useState(0);
 
   // Get events based on different modes
-  const { visibleEvents, registrableEvents, registeredEvents, loading: tokenGatingLoading } = useTokenGatedEvents();
-  
+  const {
+    visibleEvents,
+    registrableEvents,
+    registeredEvents,
+    loading: tokenGatingLoading,
+  } = useTokenGatedEvents();
+
   // Get all events - include completed events for past events toggle
   const eventStatus = showPastToggle ? undefined : 'published'; // Don't filter by status for past events
   const { events: allEvents, loading: eventsLoading } = useEvents({
     status: eventStatus,
     organizing_pod_id: organizingPodId,
-    upcoming_only: showAllEvents ? false : !showPastToggle // Show all events regardless of date when showAllEvents is true
+    upcoming_only: showAllEvents ? false : !showPastToggle, // Show all events regardless of date when showAllEvents is true
   });
-  
+
   // Get batch registration status for all events (memoized to prevent re-renders)
-  const eventIds = useMemo(() => allEvents.map(event => event.id), [allEvents]);
-  const { getRegistrationStatus } = useBatchEventRegistrationStatus(eventIds, refreshKey);
+  const eventIds = useMemo(
+    () => allEvents.map((event) => event.id),
+    [allEvents],
+  );
+  const { getRegistrationStatus } = useBatchEventRegistrationStatus(
+    eventIds,
+    refreshKey,
+  );
 
   // Determine which events to show and loading state (memoized to prevent flickering)
   const { events, loading } = useMemo(() => {
@@ -77,43 +92,55 @@ export const EventList: React.FC<EventListProps> = ({
       // Default fallback
       return { events: allEvents || [], loading: eventsLoading };
     }
-  }, [showOnlyUserEvents, showAllEvents, showTokenGating, registeredEvents, registrableEvents, allEvents, visibleEvents, tokenGatingLoading, eventsLoading]);
+  }, [
+    showOnlyUserEvents,
+    showAllEvents,
+    showTokenGating,
+    registeredEvents,
+    registrableEvents,
+    allEvents,
+    visibleEvents,
+    tokenGatingLoading,
+    eventsLoading,
+  ]);
 
   // Filter and sort events based on search and show past events setting
   const filteredEvents = useMemo(() => {
     return events
-      .filter(event => {
+      .filter((event) => {
         // Handle search filtering first
         if (searchTerm && searchTerm.trim()) {
           const searchLower = searchTerm.toLowerCase().trim();
-          const matchesSearch = (
+          const matchesSearch =
             event.title.toLowerCase().includes(searchLower) ||
             event.description.toLowerCase().includes(searchLower) ||
-            (event.location && event.location.toLowerCase().includes(searchLower)) ||
-            (event.organizing_pod_id && event.organizing_pod_id.toLowerCase().includes(searchLower))
-          );
+            (event.location &&
+              event.location.toLowerCase().includes(searchLower)) ||
+            (event.organizing_pod_id &&
+              event.organizing_pod_id.toLowerCase().includes(searchLower));
           if (!matchesSearch) return false;
         }
 
         // Handle past/future filtering based on showPastToggle
         const now = new Date();
         const eventStartDate = new Date(event.event_date);
-        
+
         // For events without end dates, add default duration to avoid immediate expiration
-        const eventEndDate = event.event_end_date 
-          ? new Date(event.event_end_date) 
+        const eventEndDate = event.event_end_date
+          ? new Date(event.event_end_date)
           : new Date(eventStartDate.getTime() + 8 * 60 * 60 * 1000); // +8 hours if no end date
-        
+
         // Determine event timing status
         const hasStarted = eventStartDate <= now;
         const hasEnded = eventEndDate < now;
-        const isManuallyCompleted = event.status === 'cancelled' || event.status === 'completed';
-        
+        const isManuallyCompleted =
+          event.status === 'cancelled' || event.status === 'completed';
+
         // Event states: upcoming -> ongoing -> past
         const isUpcomingEvent = !hasStarted && !isManuallyCompleted;
         const isOngoingEvent = hasStarted && !hasEnded && !isManuallyCompleted;
         const isPastEvent = hasEnded || isManuallyCompleted;
-        
+
         // Enhanced debug logging for ALL events to identify the classification issue
         if (event.title.toLowerCase().includes('test')) {
           console.log('🔍 Event Classification Debug:', {
@@ -125,16 +152,25 @@ export const EventList: React.FC<EventListProps> = ({
             hasStarted,
             hasEnded,
             isManuallyCompleted,
-            eventState: isUpcomingEvent ? 'UPCOMING' : isOngoingEvent ? 'ONGOING' : 'PAST',
-            timeDiffMinutes: Math.round((eventEndDate.getTime() - now.getTime()) / 60000),
+            eventState: isUpcomingEvent
+              ? 'UPCOMING'
+              : isOngoingEvent
+                ? 'ONGOING'
+                : 'PAST',
+            timeDiffMinutes: Math.round(
+              (eventEndDate.getTime() - now.getTime()) / 60000,
+            ),
             status: event.status,
             finalIsPastEvent: isPastEvent,
-            rawEventEndDate: event.event_end_date
+            rawEventEndDate: event.event_end_date,
           });
         }
-        
+
         // Debug logging to understand timing issues
-        if (event.title.toLowerCase().includes('test') || event.id.includes('1754963457566')) {
+        if (
+          event.title.toLowerCase().includes('test') ||
+          event.id.includes('1754963457566')
+        ) {
           console.log('🕐 Event timing debug:', {
             title: event.title,
             eventStartDate: eventStartDate.toISOString(),
@@ -147,10 +183,12 @@ export const EventList: React.FC<EventListProps> = ({
             currentTime: now.getTime(),
             startTime: eventStartDate.getTime(),
             endTime: eventEndDate.getTime(),
-            minutesUntilEnd: Math.round((eventEndDate.getTime() - now.getTime()) / 60000)
+            minutesUntilEnd: Math.round(
+              (eventEndDate.getTime() - now.getTime()) / 60000,
+            ),
           });
         }
-        
+
         // Debug logging for completed events
         if (event.status === 'completed') {
           console.log('🔍 Found completed event:', {
@@ -160,10 +198,10 @@ export const EventList: React.FC<EventListProps> = ({
             now: now.toISOString(),
             isPastEvent,
             showPastToggle,
-            willShow: showPastToggle ? isPastEvent : !isPastEvent
+            willShow: showPastToggle ? isPastEvent : !isPastEvent,
           });
         }
-        
+
         if (showPastToggle) {
           // When showing past events, only show past events
           return isPastEvent;
@@ -175,7 +213,7 @@ export const EventList: React.FC<EventListProps> = ({
       .sort((a, b) => {
         const dateA = new Date(a.event_date);
         const dateB = new Date(b.event_date);
-        
+
         if (showPastToggle) {
           // For past events: most recent first (descending order)
           return dateB.getTime() - dateA.getTime();
@@ -194,49 +232,59 @@ export const EventList: React.FC<EventListProps> = ({
       // When showing past events page, all filteredEvents are past events
       return {
         upcomingEvents: [],
-        pastEvents: filteredEvents
+        pastEvents: filteredEvents,
       };
     } else if (showOnlyUserEvents) {
       // For "My Events", only show UPCOMING registered events (no past events)
       const now = new Date();
       const upcoming: EventWithStats[] = [];
-      
+
       // Use registeredEvents but only include upcoming ones
-      (registeredEvents || []).forEach(event => {
+      (registeredEvents || []).forEach((event) => {
         // Apply search filter if present
         if (searchTerm && searchTerm.trim()) {
           const searchLower = searchTerm.toLowerCase().trim();
-          const matchesSearch = (
+          const matchesSearch =
             event.title.toLowerCase().includes(searchLower) ||
             event.description.toLowerCase().includes(searchLower) ||
-            (event.location && event.location.toLowerCase().includes(searchLower)) ||
-            (event.organizing_pod_id && event.organizing_pod_id.toLowerCase().includes(searchLower))
-          );
+            (event.location &&
+              event.location.toLowerCase().includes(searchLower)) ||
+            (event.organizing_pod_id &&
+              event.organizing_pod_id.toLowerCase().includes(searchLower));
           if (!matchesSearch) return;
         }
-        
+
         const eventStartDate = new Date(event.event_date);
-        const eventEndDate = event.event_end_date 
-          ? new Date(event.event_end_date) 
+        const eventEndDate = event.event_end_date
+          ? new Date(event.event_end_date)
           : new Date(eventStartDate.getTime() + 8 * 60 * 60 * 1000);
-        
-        const isPastEvent = eventEndDate < now || event.status === 'cancelled' || event.status === 'completed';
-        
+
+        const isPastEvent =
+          eventEndDate < now ||
+          event.status === 'cancelled' ||
+          event.status === 'completed';
+
         // Only include upcoming events in "My Events"
         if (!isPastEvent) {
           upcoming.push(event);
         }
       });
-      
+
       return { upcomingEvents: upcoming, pastEvents: [] };
     } else {
       // When not showing past events, all filteredEvents are upcoming
       return {
         upcomingEvents: filteredEvents,
-        pastEvents: []
+        pastEvents: [],
       };
     }
-  }, [filteredEvents, showPastToggle, showOnlyUserEvents, registeredEvents, searchTerm]);
+  }, [
+    filteredEvents,
+    showPastToggle,
+    showOnlyUserEvents,
+    registeredEvents,
+    searchTerm,
+  ]);
 
   // Get user registrations for visible events
   useEffect(() => {
@@ -245,10 +293,10 @@ export const EventList: React.FC<EventListProps> = ({
     const fetchUserRegistrations = async () => {
       // This is a simplified version - in production you'd want to batch this
       const registrations: Record<string, EventRegistration> = {};
-      
+
       // For now, we'll handle this in individual EventCard components
       // In a production app, you'd want to optimize this with a batch query
-      
+
       setUserRegistrations(registrations);
     };
 
@@ -260,7 +308,7 @@ export const EventList: React.FC<EventListProps> = ({
       id: event.id,
       title: event.title,
       blockchain_event_id: event.blockchain_event_id,
-      hasBlockchainId: !!event.blockchain_event_id
+      hasBlockchainId: !!event.blockchain_event_id,
     });
     setSelectedEvent(event);
     setShowRegistrationModal(true);
@@ -270,7 +318,7 @@ export const EventList: React.FC<EventListProps> = ({
     setShowRegistrationModal(false);
     setSelectedEvent(null);
     // Force refresh of registration status data
-    setRefreshKey(prev => prev + 1);
+    setRefreshKey((prev) => prev + 1);
   };
 
   if (loading && events.length === 0) {
@@ -297,7 +345,8 @@ export const EventList: React.FC<EventListProps> = ({
     );
   }
 
-  const hasEvents = upcomingEvents.length > 0 || (showPastToggle && pastEvents.length > 0);
+  const hasEvents =
+    upcomingEvents.length > 0 || (showPastToggle && pastEvents.length > 0);
 
   return (
     <div className="space-y-6">
@@ -306,7 +355,6 @@ export const EventList: React.FC<EventListProps> = ({
         <div>
           <h1 className="text-3xl font-bold">{title}</h1>
         </div>
-        
       </div>
 
       {/* Filters and Search */}
@@ -337,7 +385,9 @@ export const EventList: React.FC<EventListProps> = ({
             <p>No events found matching "{searchTerm}"</p>
           ) : (
             <p>
-              {filteredEvents.length} event{filteredEvents.length !== 1 ? 's' : ''} found matching "{searchTerm}"
+              {filteredEvents.length} event
+              {filteredEvents.length !== 1 ? 's' : ''} found matching "
+              {searchTerm}"
             </p>
           )}
         </div>
@@ -358,7 +408,9 @@ export const EventList: React.FC<EventListProps> = ({
                   <EventCard
                     key={`upcoming-${event.id}`}
                     event={event}
-                    userRegistration={getRegistrationStatus(event.id).registration}
+                    userRegistration={
+                      getRegistrationStatus(event.id).registration
+                    }
                     registrationStatus={getRegistrationStatus(event.id)}
                     forceShowAll={showAllEvents}
                     onRegister={() => handleRegisterClick(event)}
@@ -380,7 +432,9 @@ export const EventList: React.FC<EventListProps> = ({
                   <EventCard
                     key={`past-${event.id}`}
                     event={event}
-                    userRegistration={getRegistrationStatus(event.id).registration}
+                    userRegistration={
+                      getRegistrationStatus(event.id).registration
+                    }
                     registrationStatus={getRegistrationStatus(event.id)}
                     forceShowAll={showAllEvents}
                     showRegistrationButton={false}
@@ -398,9 +452,9 @@ export const EventList: React.FC<EventListProps> = ({
               {emptyMessage || 'No events found'}
             </h3>
             <p className="text-gray-600 mb-6">
-              {searchTerm 
+              {searchTerm
                 ? 'Try adjusting your search terms or filters.'
-                : showTokenGating 
+                : showTokenGating
                   ? 'You may need specific tokens to view available events.'
                   : 'Check back later for new events.'}
             </p>

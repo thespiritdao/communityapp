@@ -19,7 +19,7 @@ interface ExtendedTokenGateResult {
 
 export function useExtendedTokenGate(
   erc1155Address?: `0x${string}`,
-  tokenId?: number
+  tokenId?: number,
 ): ExtendedTokenGateResult {
   const { address, isConnected } = useAccount();
   const [hasAccess, setHasAccess] = useState<boolean>(false);
@@ -46,16 +46,24 @@ export function useExtendedTokenGate(
 
     try {
       // Use extended token balances function
-      const balances = await fetchExtendedTokenBalances(address, erc1155Address, tokenId);
+      const balances = await fetchExtendedTokenBalances(
+        address,
+        erc1155Address,
+        tokenId,
+      );
       setTokenBalances(balances);
-      
+
       // Access is granted if user has either Proof of Curiosity token or the specified ERC-1155 token
       const access = balances.hasProofOfCuriosity || balances.hasERC1155Token;
       setHasAccess(access);
       setIsLoading(false);
       return access;
     } catch (err) {
-      setError(err instanceof Error ? err : new Error('Unknown error checking token access'));
+      setError(
+        err instanceof Error
+          ? err
+          : new Error('Unknown error checking token access'),
+      );
       setIsLoading(false);
       return false;
     }
@@ -77,6 +85,6 @@ export function useExtendedTokenGate(
     isLoading,
     error,
     checkAccess,
-    tokenBalances
+    tokenBalances,
   };
 }

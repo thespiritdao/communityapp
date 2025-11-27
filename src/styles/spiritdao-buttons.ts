@@ -89,8 +89,15 @@ export const BUTTON_TYPOGRAPHY = {
  * @returns React CSSProperties object
  */
 export function getSpiritDAOButtonStyle(
-  intent: 'primary' | 'secondary' | 'tertiary' | 'success' | 'warning' | 'destructive' | 'neutral',
-  disabled: boolean = false
+  intent:
+    | 'primary'
+    | 'secondary'
+    | 'tertiary'
+    | 'success'
+    | 'warning'
+    | 'destructive'
+    | 'neutral',
+  disabled: boolean = false,
 ): React.CSSProperties {
   const colors = SPIRITDAO_COLORS[intent];
 
@@ -113,7 +120,14 @@ export function getSpiritDAOButtonStyle(
  * Hover style generator
  */
 export function getSpiritDAOButtonHoverStyle(
-  intent: 'primary' | 'secondary' | 'tertiary' | 'success' | 'warning' | 'destructive' | 'neutral'
+  intent:
+    | 'primary'
+    | 'secondary'
+    | 'tertiary'
+    | 'success'
+    | 'warning'
+    | 'destructive'
+    | 'neutral',
 ): React.CSSProperties {
   const colors = SPIRITDAO_COLORS[intent];
 
@@ -132,8 +146,14 @@ export function getSpiritDAOButtonHoverStyle(
  */
 export function detectButtonIntent(
   text: string,
-  actionType?: 'submit' | 'cancel' | 'delete' | 'edit' | 'view'
-): 'primary' | 'secondary' | 'tertiary' | 'success' | 'warning' | 'destructive' {
+  actionType?: 'submit' | 'cancel' | 'delete' | 'edit' | 'view',
+):
+  | 'primary'
+  | 'secondary'
+  | 'tertiary'
+  | 'success'
+  | 'warning'
+  | 'destructive' {
   const lowerText = text.toLowerCase();
 
   // Destructive actions (highest priority)
@@ -175,10 +195,7 @@ export function detectButtonIntent(
   }
 
   // Warning actions
-  if (
-    lowerText.includes('warning') ||
-    lowerText.includes('caution')
-  ) {
+  if (lowerText.includes('warning') || lowerText.includes('caution')) {
     return 'warning';
   }
 
@@ -217,14 +234,24 @@ export function detectButtonIntent(
  * Use this for components that prefer className over inline styles
  */
 export function getSpiritDAOButtonClasses(
-  intent: 'primary' | 'secondary' | 'tertiary' | 'success' | 'warning' | 'destructive' | 'neutral'
+  intent:
+    | 'primary'
+    | 'secondary'
+    | 'tertiary'
+    | 'success'
+    | 'warning'
+    | 'destructive'
+    | 'neutral',
 ): string {
-  const baseClasses = 'font-medium tracking-wide rounded-xl px-4 py-2.5 transition-all duration-200';
+  const baseClasses =
+    'font-medium tracking-wide rounded-xl px-4 py-2.5 transition-all duration-200';
 
   const intentClasses = {
     primary: 'bg-[#2F5D50] hover:bg-[#254A40] text-white',
-    secondary: 'bg-[#8FAAA1] hover:bg-[#6F8F86] text-[#1F2D2A] border border-[#6F8F86]',
-    tertiary: 'bg-transparent hover:bg-[#F0ECE6] text-[#5F5A54] border border-[#D8D2C8]',
+    secondary:
+      'bg-[#8FAAA1] hover:bg-[#6F8F86] text-[#1F2D2A] border border-[#6F8F86]',
+    tertiary:
+      'bg-transparent hover:bg-[#F0ECE6] text-[#5F5A54] border border-[#D8D2C8]',
     success: 'bg-[#3F7A5A] hover:bg-[#2F5A44] text-white',
     warning: 'bg-[#C6933F] hover:bg-[#A67A2F] text-white',
     destructive: 'bg-[#8B3A3A] hover:bg-[#6F2C2C] text-white',
@@ -247,20 +274,25 @@ export function meetsWCAGAA(foreground: string, background: string): boolean {
 /**
  * Migration helper - maps old button styles to new system
  */
-export const LEGACY_COLOR_MAPPING: Record<string, keyof typeof SPIRITDAO_COLORS> = {
-  '#e8fcff': 'primary',      // Old Coinbase blue → Primary
-  '#0052FF': 'primary',      // Old blue → Primary
-  '#10b981': 'success',      // Old green → Success
-  '#ef4444': 'destructive',  // Old red → Destructive
-  '#f59e0b': 'warning',      // Old orange → Warning
-  '#6b7280': 'secondary',    // Old gray → Secondary
-  'transparent': 'tertiary', // Transparent → Tertiary
+export const LEGACY_COLOR_MAPPING: Record<
+  string,
+  keyof typeof SPIRITDAO_COLORS
+> = {
+  '#e8fcff': 'primary', // Old Coinbase blue → Primary
+  '#0052FF': 'primary', // Old blue → Primary
+  '#10b981': 'success', // Old green → Success
+  '#ef4444': 'destructive', // Old red → Destructive
+  '#f59e0b': 'warning', // Old orange → Warning
+  '#6b7280': 'secondary', // Old gray → Secondary
+  transparent: 'tertiary', // Transparent → Tertiary
 };
 
 /**
  * Convert legacy color to SpiritDAO intent
  */
-export function mapLegacyColorToIntent(color: string): keyof typeof SPIRITDAO_COLORS {
+export function mapLegacyColorToIntent(
+  color: string,
+): keyof typeof SPIRITDAO_COLORS {
   const normalized = color.toLowerCase().trim();
   return LEGACY_COLOR_MAPPING[normalized] || 'secondary';
 }

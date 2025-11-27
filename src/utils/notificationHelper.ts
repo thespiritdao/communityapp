@@ -1,6 +1,6 @@
 /**
  * Utility functions for managing notification badges in the bottom nav
- * 
+ *
  * Usage anywhere in your app:
  * import { updateNotificationCount } from '@/utils/notificationHelper';
  * updateNotificationCount(5); // Shows badge with count 5
@@ -10,7 +10,7 @@
 export function updateNotificationCount(count: number): void {
   if (typeof window !== 'undefined') {
     window.dispatchEvent(
-      new CustomEvent("notifications:count", { detail: count })
+      new CustomEvent('notifications:count', { detail: count }),
     );
   }
 }

@@ -27,7 +27,10 @@ export async function middleware(request: NextRequest) {
   if (!walletAddress) {
     // Redirect to login if wallet address is not found
     return NextResponse.redirect(
-      new URL('/login?redirect=' + encodeURIComponent(request.nextUrl.pathname), request.url)
+      new URL(
+        '/login?redirect=' + encodeURIComponent(request.nextUrl.pathname),
+        request.url,
+      ),
     );
   }
 
@@ -37,7 +40,7 @@ export async function middleware(request: NextRequest) {
     const { hasERC1155Token } = await fetchExtendedTokenBalances(
       walletAddress,
       process.env.NEXT_PUBLIC_HATS_CONTRACT as `0x${string}`,
-      Number.parseInt(process.env.NEXT_PUBLIC_MARKET_MANAGEMENT || '0', 16)
+      Number.parseInt(process.env.NEXT_PUBLIC_MARKET_MANAGEMENT || '0', 16),
     );
 
     if (!hasERC1155Token) {
@@ -54,5 +57,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/forum/admin/:path*']
+  matcher: ['/forum/admin/:path*'],
 };

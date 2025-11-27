@@ -15,10 +15,10 @@ export type CreateThreadParams = {
 async function ensureUserProfile(walletAddress: string) {
   const { data, error } = await supabase
     .from('user_profiles')
-    .upsert({ wallet_address: walletAddress })  // Upsert creates or updates the record
+    .upsert({ wallet_address: walletAddress }) // Upsert creates or updates the record
     .select('*')
     .single();
-  
+
   if (error) {
     throw new Error(`Failed to upsert user profile: ${error.message}`);
   }
@@ -35,26 +35,27 @@ export const createThread = async ({
 }: CreateThreadParams) => {
   try {
     // Check token (only require proof-of-curiosity for this forum)
-    const { hasProofOfCuriosity } = await fetchUnifiedTokenBalances(authorWallet);
+    const { hasProofOfCuriosity } =
+      await fetchUnifiedTokenBalances(authorWallet);
     if (!hasProofOfCuriosity) {
       throw new Error('Access denied: Missing Proof of Curiosity token.');
     }
-    
+
     if (!title.trim()) {
       throw new Error('Thread title cannot be empty');
     }
     if (!categoryId) {
       throw new Error('Category ID is required');
     }
-    
+
     // Ensure the user profile exists before inserting the thread
     await ensureUserProfile(authorWallet);
-    
+
     // Now insert the thread into the forum_threads table
     const { data, error } = await supabase
       .from('forum_threads')
       .insert({
-        categoryId:category_id,
+        categoryId: category_id,
         title: title.trim(),
         content: content.trim(),
         author_wallet: authorWallet,
@@ -73,7 +74,8 @@ export const createThread = async ({
   } catch (error) {
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'An unknown error occurred'
+      error:
+        error instanceof Error ? error.message : 'An unknown error occurred',
     };
   }
 };

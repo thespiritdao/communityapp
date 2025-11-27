@@ -33,10 +33,13 @@ export const BountyService: BountyService = {
     }
 
     console.log('💰 [Bounties] Loaded pods from database:', data?.length || 0);
-    console.log('💰 [Bounties] Pod names:', data?.map(p => `${p.name} (${p.id})`).join(', '));
+    console.log(
+      '💰 [Bounties] Pod names:',
+      data?.map((p) => `${p.name} (${p.id})`).join(', '),
+    );
 
     return data || [];
-  }
+  },
 };
 
 export interface UseBountyManagementAccessReturn {
@@ -66,7 +69,11 @@ export function useBountyManagementAccess(): UseBountyManagementAccessReturn {
   // Create stable string representation of bounty modules to prevent infinite loops
   const bountiesModulesKey = useMemo(() => {
     const podIds = Object.keys(modules).sort();
-    return podIds.map(podId => `${podId}:${modules[podId]?.bounties_enabled ? '1' : '0'}`).join(',');
+    return podIds
+      .map(
+        (podId) => `${podId}:${modules[podId]?.bounties_enabled ? '1' : '0'}`,
+      )
+      .join(',');
   }, [modules]);
 
   const checkManagementAccess = useCallback(async () => {
@@ -83,24 +90,31 @@ export function useBountyManagementAccess(): UseBountyManagementAccessReturn {
       console.log('💰 [Bounties] Modules data:', {
         modulesCount: Object.keys(modules).length,
         modulesPodIds: Object.keys(modules),
-        modulesData: modules
+        modulesData: modules,
       });
 
       // Fetch all active pods
       const allPods = await BountyService.getPods();
-      console.log(`💰 [Bounties] Checking ${allPods.length} pods for bounty access...`);
+      console.log(
+        `💰 [Bounties] Checking ${allPods.length} pods for bounty access...`,
+      );
 
       // Filter pods where user has both module enabled AND bounty management permission
-      const podsWithPermission = allPods.filter(pod => {
+      const podsWithPermission = allPods.filter((pod) => {
         // Filter out Top Hat and system pods
-        if (pod.name === 'Top Hat' || pod.name?.toLowerCase().includes('top hat')) {
+        if (
+          pod.name === 'Top Hat' ||
+          pod.name?.toLowerCase().includes('top hat')
+        ) {
           console.log(`💰 [Bounties] Filtered out ${pod.name}: Top Hat`);
           return false;
         }
 
         // Filter out pods with hat IDs ending in all zeros (root/system hats)
         if (pod.hat_id?.endsWith('000000000000000000000000')) {
-          console.log(`💰 [Bounties] Filtered out ${pod.name}: System pod (hat ends in zeros)`);
+          console.log(
+            `💰 [Bounties] Filtered out ${pod.name}: System pod (hat ends in zeros)`,
+          );
           return false;
         }
 
@@ -109,16 +123,21 @@ export function useBountyManagementAccess(): UseBountyManagementAccessReturn {
         const hasBountiesModule = moduleData?.bounties_enabled ?? false;
 
         // Check 2: User has bountyManagement permission (role-specific)
-        const podRoles = userRoles.filter(role => role.podId === pod.id);
-        const hasPermission = podRoles.some(role => role.permissions?.bountyManagement);
+        const podRoles = userRoles.filter((role) => role.podId === pod.id);
+        const hasPermission = podRoles.some(
+          (role) => role.permissions?.bountyManagement,
+        );
 
-        console.log(`💰 [Bounties] Pod "${pod.name}" (${pod.id.substring(0, 8)}...):`, {
-          module: hasBountiesModule,
-          permission: hasPermission,
-          moduleDataExists: !!moduleData,
-          moduleData: moduleData,
-          podIdInModules: pod.id in modules
-        });
+        console.log(
+          `💰 [Bounties] Pod "${pod.name}" (${pod.id.substring(0, 8)}...):`,
+          {
+            module: hasBountiesModule,
+            permission: hasPermission,
+            moduleDataExists: !!moduleData,
+            moduleData: moduleData,
+            podIdInModules: pod.id in modules,
+          },
+        );
 
         // Must satisfy BOTH conditions
         return hasBountiesModule && hasPermission;
@@ -127,10 +146,14 @@ export function useBountyManagementAccess(): UseBountyManagementAccessReturn {
       setManagedPods(podsWithPermission);
 
       if (podsWithPermission.length === 0) {
-        console.log('💰 [Bounties] No pods with bounty management access found');
+        console.log(
+          '💰 [Bounties] No pods with bounty management access found',
+        );
       } else {
-        console.log(`💰 [Bounties] Found ${podsWithPermission.length} manageable pods:`,
-          podsWithPermission.map(p => p.name).join(', '));
+        console.log(
+          `💰 [Bounties] Found ${podsWithPermission.length} manageable pods:`,
+          podsWithPermission.map((p) => p.name).join(', '),
+        );
       }
     } catch (error) {
       console.error('💰 [Bounties] Error checking management access:', error);
@@ -138,7 +161,13 @@ export function useBountyManagementAccess(): UseBountyManagementAccessReturn {
     } finally {
       setIsLoading(false);
     }
-  }, [address, userRoles, hatPermissionsLoading, modulesLoading, bountiesModulesKey]);
+  }, [
+    address,
+    userRoles,
+    hatPermissionsLoading,
+    modulesLoading,
+    bountiesModulesKey,
+  ]);
 
   // Check access when dependencies change
   useEffect(() => {
@@ -146,14 +175,17 @@ export function useBountyManagementAccess(): UseBountyManagementAccessReturn {
   }, [checkManagementAccess]);
 
   // Helper function to check if user has access to a specific pod
-  const hasAccessToPod = useCallback((podId: string): boolean => {
-    return managedPods.some(pod => pod.id === podId);
-  }, [managedPods]);
+  const hasAccessToPod = useCallback(
+    (podId: string): boolean => {
+      return managedPods.some((pod) => pod.id === podId);
+    },
+    [managedPods],
+  );
 
   return {
     managedPods,
     isLoading,
     refreshAccess: checkManagementAccess,
-    hasAccessToPod
+    hasAccessToPod,
   };
 }

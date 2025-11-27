@@ -1,5 +1,5 @@
 // src/app/marketplace/orders/page.tsx
-"use client";
+'use client';
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
@@ -10,8 +10,23 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Package, Clock, Truck, CheckCircle, XCircle, ArrowLeft, Search, Filter as FilterIcon } from 'lucide-react';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
+  Package,
+  Clock,
+  Truck,
+  CheckCircle,
+  XCircle,
+  ArrowLeft,
+  Search,
+  Filter as FilterIcon,
+} from 'lucide-react';
 import { UserProfileDisplay } from '@/components/UserProfileDisplay';
 
 interface Order {
@@ -53,7 +68,7 @@ export default function OrderManagementPage() {
     preparing: 0,
     shipped: 0,
     delivered: 0,
-    cancelled: 0
+    cancelled: 0,
   });
 
   useEffect(() => {
@@ -78,7 +93,9 @@ export default function OrderManagementPage() {
       const hasMarketManagement = tokenBalances.hasMarketManagement;
 
       if (!hasExecutivePod && !hasMarketManagement) {
-        setError('You do not have permission to manage orders. You need Executive Pod membership or Market Management tokens.');
+        setError(
+          'You do not have permission to manage orders. You need Executive Pod membership or Market Management tokens.',
+        );
         setCanManageOrders(false);
         return;
       }
@@ -99,7 +116,6 @@ export default function OrderManagementPage() {
 
       setOrders(ordersData || []);
       calculateStats(ordersData || []);
-
     } catch (error) {
       console.error('Error loading orders:', error);
       setError('Failed to load order management data');
@@ -111,11 +127,11 @@ export default function OrderManagementPage() {
   const calculateStats = (orderData: Order[]) => {
     const stats = {
       total: orderData.length,
-      processing: orderData.filter(o => o.status === 'processing').length,
-      preparing: orderData.filter(o => o.status === 'preparing').length,
-      shipped: orderData.filter(o => o.status === 'shipped').length,
-      delivered: orderData.filter(o => o.status === 'delivered').length,
-      cancelled: orderData.filter(o => o.status === 'cancelled').length
+      processing: orderData.filter((o) => o.status === 'processing').length,
+      preparing: orderData.filter((o) => o.status === 'preparing').length,
+      shipped: orderData.filter((o) => o.status === 'shipped').length,
+      delivered: orderData.filter((o) => o.status === 'delivered').length,
+      cancelled: orderData.filter((o) => o.status === 'cancelled').length,
     };
     setStats(stats);
   };
@@ -124,28 +140,36 @@ export default function OrderManagementPage() {
     let filtered = [...orders];
 
     if (statusFilter && statusFilter !== 'all') {
-      filtered = filtered.filter(order => order.status === statusFilter);
+      filtered = filtered.filter((order) => order.status === statusFilter);
     }
 
     if (searchFilter) {
-      filtered = filtered.filter(order => 
-        order.product_name.toLowerCase().includes(searchFilter.toLowerCase()) ||
-        order.buyer_address.toLowerCase().includes(searchFilter.toLowerCase()) ||
-        order.id.toLowerCase().includes(searchFilter.toLowerCase())
+      filtered = filtered.filter(
+        (order) =>
+          order.product_name
+            .toLowerCase()
+            .includes(searchFilter.toLowerCase()) ||
+          order.buyer_address
+            .toLowerCase()
+            .includes(searchFilter.toLowerCase()) ||
+          order.id.toLowerCase().includes(searchFilter.toLowerCase()),
       );
     }
 
     setFilteredOrders(filtered);
   };
 
-  const handleQuickStatusUpdate = async (orderId: string, newStatus: string) => {
+  const handleQuickStatusUpdate = async (
+    orderId: string,
+    newStatus: string,
+  ) => {
     try {
       const { error } = await supabase
         .from('marketplace_orders')
-        .update({ 
-          status: newStatus, 
+        .update({
+          status: newStatus,
           updated_at: new Date().toISOString(),
-          fulfillment_manager_address: address
+          fulfillment_manager_address: address,
         })
         .eq('id', orderId);
 
@@ -155,19 +179,16 @@ export default function OrderManagementPage() {
       }
 
       // Add to status history
-      await supabase
-        .from('order_status_history')
-        .insert({
-          order_id: orderId,
-          old_status: orders.find(o => o.id === orderId)?.status,
-          new_status: newStatus,
-          changed_by_address: address,
-          notes: `Quick update from order management dashboard`
-        });
+      await supabase.from('order_status_history').insert({
+        order_id: orderId,
+        old_status: orders.find((o) => o.id === orderId)?.status,
+        new_status: newStatus,
+        changed_by_address: address,
+        notes: `Quick update from order management dashboard`,
+      });
 
       // Refresh orders
       await checkPermissionsAndLoadOrders();
-
     } catch (error) {
       console.error('Error updating order:', error);
     }
@@ -175,23 +196,35 @@ export default function OrderManagementPage() {
 
   const getStatusIcon = (status: string) => {
     switch (status) {
-      case 'processing': return <Clock className="w-4 h-4" />;
-      case 'preparing': return <Package className="w-4 h-4" />;
-      case 'shipped': return <Truck className="w-4 h-4" />;
-      case 'delivered': return <CheckCircle className="w-4 h-4" />;
-      case 'cancelled': return <XCircle className="w-4 h-4" />;
-      default: return <Package className="w-4 h-4" />;
+      case 'processing':
+        return <Clock className="w-4 h-4" />;
+      case 'preparing':
+        return <Package className="w-4 h-4" />;
+      case 'shipped':
+        return <Truck className="w-4 h-4" />;
+      case 'delivered':
+        return <CheckCircle className="w-4 h-4" />;
+      case 'cancelled':
+        return <XCircle className="w-4 h-4" />;
+      default:
+        return <Package className="w-4 h-4" />;
     }
   };
 
   const getStatusVariant = (status: string) => {
     switch (status) {
-      case 'processing': return 'secondary';
-      case 'preparing': return 'outline';
-      case 'shipped': return 'default';
-      case 'delivered': return 'default';
-      case 'cancelled': return 'destructive';
-      default: return 'secondary';
+      case 'processing':
+        return 'secondary';
+      case 'preparing':
+        return 'outline';
+      case 'shipped':
+        return 'default';
+      case 'delivered':
+        return 'default';
+      case 'cancelled':
+        return 'destructive';
+      default:
+        return 'secondary';
     }
   };
 
@@ -204,7 +237,7 @@ export default function OrderManagementPage() {
       month: 'short',
       day: 'numeric',
       hour: '2-digit',
-      minute: '2-digit'
+      minute: '2-digit',
     });
   };
 
@@ -220,8 +253,12 @@ export default function OrderManagementPage() {
       <div className="min-h-screen bg-gray-50 p-4 bottom-nav-spacing">
         <div className="max-w-7xl mx-auto">
           <div className="text-center py-12">
-            <h1 className="text-2xl font-bold text-gray-900 mb-4">Order Management</h1>
-            <p className="text-gray-600">Please connect your wallet to access order management.</p>
+            <h1 className="text-2xl font-bold text-gray-900 mb-4">
+              Order Management
+            </h1>
+            <p className="text-gray-600">
+              Please connect your wallet to access order management.
+            </p>
           </div>
         </div>
       </div>
@@ -248,16 +285,24 @@ export default function OrderManagementPage() {
       <div className="min-h-screen bg-gray-50 p-4 bottom-nav-spacing">
         <div className="max-w-7xl mx-auto">
           <div className="mb-6">
-            <Button variant="ghost" onClick={() => router.push('/market')} className="mb-4">
+            <Button
+              variant="ghost"
+              onClick={() => router.push('/market')}
+              className="mb-4"
+            >
               <ArrowLeft className="w-4 h-4 mr-2" />
               Back to Market
             </Button>
-            <h1 className="text-4xl font-bold text-gray-900 mb-4">Order Management</h1>
+            <h1 className="text-4xl font-bold text-gray-900 mb-4">
+              Order Management
+            </h1>
           </div>
           <Card className="max-w-2xl mx-auto">
             <CardContent className="p-6 text-center">
               <XCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">Access Denied</h3>
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                Access Denied
+              </h3>
               <p className="text-gray-600">{error}</p>
             </CardContent>
           </Card>
@@ -271,17 +316,22 @@ export default function OrderManagementPage() {
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-8">
-          <Button variant="ghost" onClick={() => router.push('/market')} className="mb-4">
+          <Button
+            variant="ghost"
+            onClick={() => router.push('/market')}
+            className="mb-4"
+          >
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back to Market
           </Button>
-          
+
           <div className="text-center mb-8">
             <h1 className="text-4xl font-bold text-gray-900 mb-4">
               Order Management
             </h1>
             <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              Manage and fulfill customer orders. Track order status, update shipping information, and communicate with buyers.
+              Manage and fulfill customer orders. Track order status, update
+              shipping information, and communicate with buyers.
             </p>
           </div>
 
@@ -292,42 +342,52 @@ export default function OrderManagementPage() {
               <Card className="shadow-sm">
                 <CardContent className="p-3 sm:p-4 text-center">
                   <Package className="w-4 h-4 sm:w-5 sm:h-5 mx-auto text-blue-500 mb-1" />
-                  <p className="text-lg sm:text-xl font-bold text-gray-900">{stats.total}</p>
+                  <p className="text-lg sm:text-xl font-bold text-gray-900">
+                    {stats.total}
+                  </p>
                   <p className="text-xs text-gray-600">Total</p>
                 </CardContent>
               </Card>
-              
+
               <Card className="shadow-sm">
                 <CardContent className="p-3 sm:p-4 text-center">
                   <Clock className="w-4 h-4 sm:w-5 sm:h-5 mx-auto text-yellow-500 mb-1" />
-                  <p className="text-lg sm:text-xl font-bold text-gray-900">{stats.processing}</p>
+                  <p className="text-lg sm:text-xl font-bold text-gray-900">
+                    {stats.processing}
+                  </p>
                   <p className="text-xs text-gray-600">Processing</p>
                 </CardContent>
               </Card>
-              
+
               <Card className="shadow-sm">
                 <CardContent className="p-3 sm:p-4 text-center">
                   <Package className="w-4 h-4 sm:w-5 sm:h-5 mx-auto text-orange-500 mb-1" />
-                  <p className="text-lg sm:text-xl font-bold text-gray-900">{stats.preparing}</p>
+                  <p className="text-lg sm:text-xl font-bold text-gray-900">
+                    {stats.preparing}
+                  </p>
                   <p className="text-xs text-gray-600">Preparing</p>
                 </CardContent>
               </Card>
             </div>
-            
+
             {/* Second Row: Shipped, Delivered */}
             <div className="grid grid-cols-2 gap-2 sm:gap-3 max-w-md mx-auto">
               <Card className="shadow-sm">
                 <CardContent className="p-3 sm:p-4 text-center">
                   <Truck className="w-4 h-4 sm:w-5 sm:h-5 mx-auto text-blue-600 mb-1" />
-                  <p className="text-lg sm:text-xl font-bold text-gray-900">{stats.shipped}</p>
+                  <p className="text-lg sm:text-xl font-bold text-gray-900">
+                    {stats.shipped}
+                  </p>
                   <p className="text-xs text-gray-600">Shipped</p>
                 </CardContent>
               </Card>
-              
+
               <Card className="shadow-sm">
                 <CardContent className="p-3 sm:p-4 text-center">
                   <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5 mx-auto text-green-500 mb-1" />
-                  <p className="text-lg sm:text-xl font-bold text-gray-900">{stats.delivered}</p>
+                  <p className="text-lg sm:text-xl font-bold text-gray-900">
+                    {stats.delivered}
+                  </p>
                   <p className="text-xs text-gray-600">Delivered</p>
                 </CardContent>
               </Card>
@@ -345,7 +405,7 @@ export default function OrderManagementPage() {
                 className="w-64"
               />
             </div>
-            
+
             <Select value={statusFilter} onValueChange={setStatusFilter}>
               <SelectTrigger className="w-40">
                 <FilterIcon className="w-4 h-4 mr-2" />
@@ -360,12 +420,15 @@ export default function OrderManagementPage() {
                 <SelectItem value="cancelled">Cancelled</SelectItem>
               </SelectContent>
             </Select>
-            
+
             {(statusFilter || searchFilter) && (
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 size="sm"
-                onClick={() => { setStatusFilter(''); setSearchFilter(''); }}
+                onClick={() => {
+                  setStatusFilter('');
+                  setSearchFilter('');
+                }}
               >
                 Clear Filters
               </Button>
@@ -380,13 +443,14 @@ export default function OrderManagementPage() {
               <CardContent className="p-12 text-center">
                 <Package className="w-16 h-16 text-gray-300 mx-auto mb-4" />
                 <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                  {orders.length === 0 ? 'No Orders Yet' : 'No Orders Match Filters'}
+                  {orders.length === 0
+                    ? 'No Orders Yet'
+                    : 'No Orders Match Filters'}
                 </h3>
                 <p className="text-gray-600 mb-4">
-                  {orders.length === 0 
+                  {orders.length === 0
                     ? 'Orders will appear here when customers make purchases.'
-                    : 'Try adjusting your search or filter criteria.'
-                  }
+                    : 'Try adjusting your search or filter criteria.'}
                 </p>
                 {orders.length === 0 && (
                   <Button onClick={() => router.push('/market')}>
@@ -397,25 +461,36 @@ export default function OrderManagementPage() {
             </Card>
           ) : (
             filteredOrders.map((order) => (
-              <Card key={order.id} className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => router.push(`/marketplace/orders/${order.id}`)}>
+              <Card
+                key={order.id}
+                className="hover:shadow-md transition-shadow cursor-pointer"
+                onClick={() => router.push(`/marketplace/orders/${order.id}`)}
+              >
                 <CardContent className="p-6">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between space-y-4 sm:space-y-0">
                     <div className="flex-1">
                       <div className="flex items-start justify-between mb-2">
-                        <h3 className="font-semibold text-gray-900 text-lg">{order.product_name}</h3>
-                        <Badge variant={getStatusVariant(order.status)} className="ml-2">
+                        <h3 className="font-semibold text-gray-900 text-lg">
+                          {order.product_name}
+                        </h3>
+                        <Badge
+                          variant={getStatusVariant(order.status)}
+                          className="ml-2"
+                        >
                           {getStatusIcon(order.status)}
-                          <span className="ml-1 capitalize">{order.status}</span>
+                          <span className="ml-1 capitalize">
+                            {order.status}
+                          </span>
                         </Badge>
                       </div>
-                      
+
                       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm text-gray-600">
                         <div>
                           <span className="font-medium">Buyer:</span>
                           <br />
-                          <UserProfileDisplay 
-                            walletAddress={order.buyer_address} 
-                            size="sm" 
+                          <UserProfileDisplay
+                            walletAddress={order.buyer_address}
+                            size="sm"
                             className="mt-1"
                           />
                         </div>
@@ -427,7 +502,10 @@ export default function OrderManagementPage() {
                         <div>
                           <span className="font-medium">Total:</span>
                           <br />
-                          {formatPrice(order.price_paid_self, order.price_paid_system)}
+                          {formatPrice(
+                            order.price_paid_self,
+                            order.price_paid_system,
+                          )}
                         </div>
                         <div>
                           <span className="font-medium">Date:</span>
@@ -435,43 +513,57 @@ export default function OrderManagementPage() {
                           {formatDate(order.created_at)}
                         </div>
                       </div>
-                      
+
                       {order.tracking_number && (
                         <div className="mt-3 p-2 bg-blue-50 rounded text-sm">
-                          <span className="font-medium text-blue-900">Tracking:</span> {order.tracking_number}
+                          <span className="font-medium text-blue-900">
+                            Tracking:
+                          </span>{' '}
+                          {order.tracking_number}
                         </div>
                       )}
                     </div>
-                    
-                    <div className="flex space-x-2" onClick={(e) => e.stopPropagation()}>
+
+                    <div
+                      className="flex space-x-2"
+                      onClick={(e) => e.stopPropagation()}
+                    >
                       {order.status === 'processing' && (
-                        <Button 
+                        <Button
                           size="sm"
-                          onClick={() => handleQuickStatusUpdate(order.id, 'preparing')}
+                          onClick={() =>
+                            handleQuickStatusUpdate(order.id, 'preparing')
+                          }
                         >
                           Start Prep
                         </Button>
                       )}
                       {order.status === 'preparing' && (
-                        <Button 
+                        <Button
                           size="sm"
-                          onClick={() => handleQuickStatusUpdate(order.id, 'shipped')}
+                          onClick={() =>
+                            handleQuickStatusUpdate(order.id, 'shipped')
+                          }
                         >
                           Mark Shipped
                         </Button>
                       )}
                       {order.status === 'shipped' && (
-                        <Button 
+                        <Button
                           size="sm"
-                          onClick={() => handleQuickStatusUpdate(order.id, 'delivered')}
+                          onClick={() =>
+                            handleQuickStatusUpdate(order.id, 'delivered')
+                          }
                         >
                           Mark Delivered
                         </Button>
                       )}
-                      <Button 
-                        variant="outline" 
+                      <Button
+                        variant="outline"
                         size="sm"
-                        onClick={() => router.push(`/marketplace/orders/${order.id}`)}
+                        onClick={() =>
+                          router.push(`/marketplace/orders/${order.id}`)
+                        }
                       >
                         Details
                       </Button>

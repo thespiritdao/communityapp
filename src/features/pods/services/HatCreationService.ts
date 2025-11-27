@@ -1,13 +1,16 @@
 /**
  * Hat Creation Service
- * 
+ *
  * Handles proper creation and management of Hats Protocol hats for pods.
  * Fixes the invalid hat ID generation issue.
  */
 
 import { createPublicClient, http, encodeFunctionData } from 'viem';
 import { base } from 'viem/chains';
-import { validateAndConvertHatId, getFixedExecutivePodHatId } from '../utils/hatIdValidator';
+import {
+  validateAndConvertHatId,
+  getFixedExecutivePodHatId,
+} from '../utils/hatIdValidator';
 
 export interface HatCreationParams {
   adminHatId: string;
@@ -28,19 +31,22 @@ export interface HatCreationResult {
 }
 
 export class HatCreationService {
-  private static readonly HATS_PROTOCOL_ADDRESS = 
-    process.env.NEXT_PUBLIC_HATS_PROTOCOL_ADDRESS || '0x3bc1A0Ad72417f2d411118085256fC53CBdDd137';
+  private static readonly HATS_PROTOCOL_ADDRESS =
+    process.env.NEXT_PUBLIC_HATS_PROTOCOL_ADDRESS ||
+    '0x3bc1A0Ad72417f2d411118085256fC53CBdDd137';
 
   /**
    * Creates a new hat using the Hats Protocol
    */
-  static async createHat(params: HatCreationParams): Promise<HatCreationResult> {
+  static async createHat(
+    params: HatCreationParams,
+  ): Promise<HatCreationResult> {
     try {
       console.log('🎩 Creating new hat with params:', {
         adminHatId: params.adminHatId,
         details: params.details.substring(0, 100) + '...',
         maxSupply: params.maxSupply,
-        mutable: params.mutable
+        mutable: params.mutable,
       });
 
       // Validate admin hat ID
@@ -48,93 +54,107 @@ export class HatCreationService {
       if (!adminValidation.isValid || !adminValidation.hatIdBigInt) {
         return {
           success: false,
-          error: `Invalid admin hat ID: ${adminValidation.error}`
+          error: `Invalid admin hat ID: ${adminValidation.error}`,
         };
       }
 
       const publicClient = createPublicClient({
         chain: base,
-        transport: http()
+        transport: http(),
       });
 
       // Check if admin hat exists and is active
       const adminHatDetails = await publicClient.readContract({
         address: this.HATS_PROTOCOL_ADDRESS,
-        abi: [{
-          name: 'viewHat',
-          type: 'function',
-          inputs: [{ name: '_hatId', type: 'uint256' }],
-          outputs: [{
-            type: 'tuple',
-            components: [
-              { name: 'details', type: 'string' },
-              { name: 'maxSupply', type: 'uint32' },
-              { name: 'supply', type: 'uint32' },
-              { name: 'eligibility', type: 'address' },
-              { name: 'toggle', type: 'address' },
-              { name: 'imageURI', type: 'string' },
-              { name: 'lastHatId', type: 'uint16' },
-              { name: 'mutable', type: 'bool' },
-              { name: 'active', type: 'bool' }
-            ]
-          }],
-          stateMutability: 'view'
-        }],
+        abi: [
+          {
+            name: 'viewHat',
+            type: 'function',
+            inputs: [{ name: '_hatId', type: 'uint256' }],
+            outputs: [
+              {
+                type: 'tuple',
+                components: [
+                  { name: 'details', type: 'string' },
+                  { name: 'maxSupply', type: 'uint32' },
+                  { name: 'supply', type: 'uint32' },
+                  { name: 'eligibility', type: 'address' },
+                  { name: 'toggle', type: 'address' },
+                  { name: 'imageURI', type: 'string' },
+                  { name: 'lastHatId', type: 'uint16' },
+                  { name: 'mutable', type: 'bool' },
+                  { name: 'active', type: 'bool' },
+                ],
+              },
+            ],
+            stateMutability: 'view',
+          },
+        ],
         functionName: 'viewHat',
-        args: [adminValidation.hatIdBigInt]
+        args: [adminValidation.hatIdBigInt],
       });
 
-      if (!adminHatDetails[8]) { // active field
+      if (!adminHatDetails[8]) {
+        // active field
         return {
           success: false,
-          error: 'Admin hat is not active'
+          error: 'Admin hat is not active',
         };
       }
 
       // Create the hat using createHat function
       // CRITICAL FIX: Use creator address as toggle module
       // The toggle module must be an ADDRESS (20 bytes), not a hat ID (32 bytes)
-      const account = await this.walletClient.getAddresses().then(addrs => addrs[0]);
+      const account = await this.walletClient
+        .getAddresses()
+        .then((addrs) => addrs[0]);
       const toggleModule = params.toggleModule || account;
-      
+
       console.log('🎯 Hat creation parameters:', {
         admin: params.adminHatId,
-        eligibility: params.eligibilityModule || '0x0000000000000000000000000000000000000000',
+        eligibility:
+          params.eligibilityModule ||
+          '0x0000000000000000000000000000000000000000',
         toggle: toggleModule,
         mutable: params.mutable,
-        maxSupply: params.maxSupply
+        maxSupply: params.maxSupply,
       });
-      
+
       if (toggleModule === account) {
-        console.log('✅ Using creator address as toggle module (enables permission management)');
+        console.log(
+          '✅ Using creator address as toggle module (enables permission management)',
+        );
       }
-      
+
       const createHatData = encodeFunctionData({
-        abi: [{
-          name: 'createHat',
-          type: 'function',
-          inputs: [
-            { name: '_admin', type: 'uint256' },
-            { name: '_details', type: 'string' },
-            { name: '_maxSupply', type: 'uint32' },
-            { name: '_eligibility', type: 'address' },
-            { name: '_toggle', type: 'address' },
-            { name: '_mutable', type: 'bool' },
-            { name: '_imageURI', type: 'string' }
-          ],
-          outputs: [{ name: 'newHatId', type: 'uint256' }],
-          stateMutability: 'nonpayable'
-        }],
+        abi: [
+          {
+            name: 'createHat',
+            type: 'function',
+            inputs: [
+              { name: '_admin', type: 'uint256' },
+              { name: '_details', type: 'string' },
+              { name: '_maxSupply', type: 'uint32' },
+              { name: '_eligibility', type: 'address' },
+              { name: '_toggle', type: 'address' },
+              { name: '_mutable', type: 'bool' },
+              { name: '_imageURI', type: 'string' },
+            ],
+            outputs: [{ name: 'newHatId', type: 'uint256' }],
+            stateMutability: 'nonpayable',
+          },
+        ],
         functionName: 'createHat',
         args: [
           adminValidation.hatIdBigInt,
           params.details,
           params.maxSupply,
-          params.eligibilityModule || '0x0000000000000000000000000000000000000000',
+          params.eligibilityModule ||
+            '0x0000000000000000000000000000000000000000',
           toggleModule as `0x${string}`,
           params.mutable,
-          params.imageURI
-        ]
+          params.imageURI,
+        ],
       });
 
       // Execute the transaction
@@ -142,14 +162,16 @@ export class HatCreationService {
         to: this.HATS_PROTOCOL_ADDRESS,
         data: createHatData,
         value: 0n,
-        account: params.walletClient.account
+        account: params.walletClient.account,
       });
 
       console.log('✅ Hat creation transaction sent:', txHash);
 
       // Wait for transaction confirmation and get the new hat ID
-      const receipt = await publicClient.waitForTransactionReceipt({ hash: txHash });
-      
+      const receipt = await publicClient.waitForTransactionReceipt({
+        hash: txHash,
+      });
+
       // Parse logs to get the new hat ID
       // In a production implementation, you'd parse the HatCreated event
       // For now, we'll return a placeholder
@@ -158,14 +180,13 @@ export class HatCreationService {
       return {
         success: true,
         hatId: newHatId,
-        transactionHash: txHash
+        transactionHash: txHash,
       };
-
     } catch (error: any) {
       console.error('❌ Failed to create hat:', error);
       return {
         success: false,
-        error: error?.message || error?.toString() || 'Failed to create hat'
+        error: error?.message || error?.toString() || 'Failed to create hat',
       };
     }
   }
@@ -214,23 +235,32 @@ export class HatCreationService {
     description: string,
     walletClient: any,
     imageURI?: string,
-    adminHatId?: string
-  ): Promise<HatCreationResult & { needsAdminTransfer?: boolean; newHatId?: string }> {
+    adminHatId?: string,
+  ): Promise<
+    HatCreationResult & { needsAdminTransfer?: boolean; newHatId?: string }
+  > {
     // Use provided admin HAT or default to Executive Pod
     const hatAdmin = adminHatId || getFixedExecutivePodHatId();
 
     // Determine if this is using the proxy admin pattern
-    const isProxyAdminPattern = adminHatId !== undefined && adminHatId !== getFixedExecutivePodHatId();
+    const isProxyAdminPattern =
+      adminHatId !== undefined && adminHatId !== getFixedExecutivePodHatId();
 
     console.log('🎯 Creating pod management HAT:', {
       podName,
       adminHatId: hatAdmin,
-      adminType: isProxyAdminPattern ? 'Proxy Admin HAT (v2)' : 'Parent Pod HAT (legacy)',
-      architecture: isProxyAdminPattern ? 'Proxy Admin Pattern' : 'Traditional Hierarchy'
+      adminType: isProxyAdminPattern
+        ? 'Proxy Admin HAT (v2)'
+        : 'Parent Pod HAT (legacy)',
+      architecture: isProxyAdminPattern
+        ? 'Proxy Admin Pattern'
+        : 'Traditional Hierarchy',
     });
 
     // Get account for toggle module
-    const account = await walletClient.getAddresses().then((addrs: string[]) => addrs[0]);
+    const account = await walletClient
+      .getAddresses()
+      .then((addrs: string[]) => addrs[0]);
 
     // Create HAT with specified admin (proxy admin HAT or parent pod HAT)
     const creationResult = await this.createHat({
@@ -241,32 +271,38 @@ export class HatCreationService {
         description: isProxyAdminPattern
           ? `Management HAT for ${podName} pod. Pod leaders can autonomously manage HAT details via authorization proxy. ${description}`
           : `Management HAT for ${podName} pod. ${description}`,
-        architecture: isProxyAdminPattern ? 'proxy-admin-pattern-v2' : 'traditional-hierarchy',
+        architecture: isProxyAdminPattern
+          ? 'proxy-admin-pattern-v2'
+          : 'traditional-hierarchy',
         version: isProxyAdminPattern ? '2.0' : '1.0',
         responsibilities: [
           'Manage pod members',
           'Set access requirements',
           'Coordinate pod activities',
-          'Modify pod HAT metadata'
+          'Modify pod HAT metadata',
         ],
         authorities: [
           'Add/remove pod members',
           'Update pod settings',
           'Manage pod treasury',
-          isProxyAdminPattern ? 'Change HAT details (via proxy)' : 'Request HAT changes from admin'
+          isProxyAdminPattern
+            ? 'Change HAT details (via proxy)'
+            : 'Request HAT changes from admin',
         ],
         governance: {
           adminType: isProxyAdminPattern ? 'Proxy Admin HAT' : 'Parent Pod HAT',
           adminHatId: hatAdmin,
           toggleControl: 'Pod Creator',
-          autonomy: isProxyAdminPattern ? 'full (via proxy)' : 'limited (requires parent admin)'
-        }
+          autonomy: isProxyAdminPattern
+            ? 'full (via proxy)'
+            : 'limited (requires parent admin)',
+        },
       }),
       imageURI: imageURI || '',
       maxSupply: 10,
       toggleModule: account, // Toggle control (for deactivation)
       mutable: true,
-      walletClient
+      walletClient,
     });
 
     if (!creationResult.success || !creationResult.hatId) {
@@ -274,10 +310,16 @@ export class HatCreationService {
     }
 
     if (isProxyAdminPattern) {
-      console.log('✅ Pod Management HAT created with Proxy Admin HAT as admin:', creationResult.hatId);
+      console.log(
+        '✅ Pod Management HAT created with Proxy Admin HAT as admin:',
+        creationResult.hatId,
+      );
       console.log('🎉 Pod leaders can now autonomously manage HAT via proxy!');
     } else {
-      console.log('✅ Pod Management HAT created with parent as admin (legacy):', creationResult.hatId);
+      console.log(
+        '✅ Pod Management HAT created with parent as admin (legacy):',
+        creationResult.hatId,
+      );
       console.log('⚠️ Pod leaders must request changes from parent pod admin');
     }
 
@@ -307,7 +349,7 @@ export class HatCreationService {
   static async transferAdminToSelf(
     hatId: string,
     currentAdminHatId: string,
-    walletClient: any
+    walletClient: any,
   ): Promise<{ success: boolean; transactionHash?: string; error?: string }> {
     try {
       console.log('🔄 Transferring admin to make HAT self-admin:', {
@@ -335,11 +377,14 @@ export class HatCreationService {
       console.warn('⚠️ Admin transfer to self must be done via:');
       console.warn('   1. Hats Protocol UI (if supported)');
       console.warn('   2. Direct contract call to transferHat or equivalent');
-      console.warn('   3. OR: Accept that parent remains admin (current behavior)');
+      console.warn(
+        '   3. OR: Accept that parent remains admin (current behavior)',
+      );
 
       return {
         success: false,
-        error: 'Admin transfer to self not yet implemented - requires Hats Protocol specific method',
+        error:
+          'Admin transfer to self not yet implemented - requires Hats Protocol specific method',
       };
     } catch (error: any) {
       console.error('❌ Failed to transfer admin:', error);
@@ -357,13 +402,16 @@ export class HatCreationService {
     podName: string,
     description: string,
     managementHatId: string,
-    walletClient: any
+    walletClient: any,
   ): Promise<HatCreationResult> {
-    console.log('🎯 Creating pod membership hat with proper toggle configuration:', {
-      podName,
-      adminHat: managementHatId,
-      toggleWillBe: managementHatId // Pod management hat will control membership hats
-    });
+    console.log(
+      '🎯 Creating pod membership hat with proper toggle configuration:',
+      {
+        podName,
+        adminHat: managementHatId,
+        toggleWillBe: managementHatId, // Pod management hat will control membership hats
+      },
+    );
 
     return this.createHat({
       adminHatId: managementHatId,
@@ -373,19 +421,19 @@ export class HatCreationService {
         responsibilities: [
           'Participate in pod activities',
           'Follow pod guidelines',
-          'Contribute to pod goals'
+          'Contribute to pod goals',
         ],
         authorities: [
           'Access pod resources',
           'Participate in discussions',
-          'Vote on pod proposals'
-        ]
+          'Vote on pod proposals',
+        ],
       }),
       imageURI: '', // Should be provided by the pod creation form
       maxSupply: 1000, // Higher default for members
       toggleModule: managementHatId, // Pod management hat controls membership
       mutable: true,
-      walletClient
+      walletClient,
     });
   }
 
@@ -404,13 +452,13 @@ export class HatCreationService {
     podId: string,
     podName: string,
     managementHatId: string,
-    walletClient: any
+    walletClient: any,
   ): Promise<HatCreationResult & { needsDbUpdate?: boolean }> {
     try {
       console.log('🎩 Auto-creating membership HAT on-demand:', {
         podId,
         podName,
-        managementHatId
+        managementHatId,
       });
 
       // Validate management HAT exists
@@ -418,7 +466,7 @@ export class HatCreationService {
       if (!managementValidation.isValid || !managementValidation.hatIdBigInt) {
         return {
           success: false,
-          error: `Invalid management HAT ID: ${managementValidation.error}`
+          error: `Invalid management HAT ID: ${managementValidation.error}`,
         };
       }
 
@@ -429,14 +477,15 @@ export class HatCreationService {
         // HAT ID is structurally invalid (doesn't exist on-chain)
         return {
           success: false,
-          error: 'The management role ID for this pod appears to be invalid or was not properly created on-chain. Please contact an administrator to recreate the pod with valid role IDs.'
+          error:
+            'The management role ID for this pod appears to be invalid or was not properly created on-chain. Please contact an administrator to recreate the pod with valid role IDs.',
         };
       }
 
       if (!isActive) {
         return {
           success: false,
-          error: 'Management role is not active or does not exist on-chain'
+          error: 'Management role is not active or does not exist on-chain',
         };
       }
 
@@ -445,29 +494,34 @@ export class HatCreationService {
         podName,
         'General membership role',
         managementHatId,
-        walletClient
+        walletClient,
       );
 
       if (!creationResult.success || !creationResult.hatId) {
         return {
           ...creationResult,
-          needsDbUpdate: false
+          needsDbUpdate: false,
         };
       }
 
-      console.log('✅ Membership HAT created successfully:', creationResult.hatId);
+      console.log(
+        '✅ Membership HAT created successfully:',
+        creationResult.hatId,
+      );
       console.log('📝 Database needs to be updated with new membership_hat_id');
 
       return {
         ...creationResult,
-        needsDbUpdate: true // Signal that database update is needed
+        needsDbUpdate: true, // Signal that database update is needed
       };
-
     } catch (error: any) {
       console.error('❌ Failed to create membership HAT on-demand:', error);
       return {
         success: false,
-        error: error?.message || error?.toString() || 'Failed to create membership HAT'
+        error:
+          error?.message ||
+          error?.toString() ||
+          'Failed to create membership HAT',
       };
     }
   }
@@ -483,33 +537,37 @@ export class HatCreationService {
 
       const publicClient = createPublicClient({
         chain: base,
-        transport: http()
+        transport: http(),
       });
 
       const hatDetails = await publicClient.readContract({
         address: this.HATS_PROTOCOL_ADDRESS,
-        abi: [{
-          name: 'viewHat',
-          type: 'function',
-          inputs: [{ name: '_hatId', type: 'uint256' }],
-          outputs: [{
-            type: 'tuple',
-            components: [
-              { name: 'details', type: 'string' },
-              { name: 'maxSupply', type: 'uint32' },
-              { name: 'supply', type: 'uint32' },
-              { name: 'eligibility', type: 'address' },
-              { name: 'toggle', type: 'address' },
-              { name: 'imageURI', type: 'string' },
-              { name: 'lastHatId', type: 'uint16' },
-              { name: 'mutable', type: 'bool' },
-              { name: 'active', type: 'bool' }
-            ]
-          }],
-          stateMutability: 'view'
-        }],
+        abi: [
+          {
+            name: 'viewHat',
+            type: 'function',
+            inputs: [{ name: '_hatId', type: 'uint256' }],
+            outputs: [
+              {
+                type: 'tuple',
+                components: [
+                  { name: 'details', type: 'string' },
+                  { name: 'maxSupply', type: 'uint32' },
+                  { name: 'supply', type: 'uint32' },
+                  { name: 'eligibility', type: 'address' },
+                  { name: 'toggle', type: 'address' },
+                  { name: 'imageURI', type: 'string' },
+                  { name: 'lastHatId', type: 'uint16' },
+                  { name: 'mutable', type: 'bool' },
+                  { name: 'active', type: 'bool' },
+                ],
+              },
+            ],
+            stateMutability: 'view',
+          },
+        ],
         functionName: 'viewHat',
-        args: [validation.hatIdBigInt!]
+        args: [validation.hatIdBigInt!],
       });
 
       return hatDetails[8]; // active field
@@ -520,12 +578,18 @@ export class HatCreationService {
       const causeMessage = error?.cause?.message || '';
       const fullErrorText = errorMessage + ' ' + causeMessage;
 
-      if (fullErrorText.includes('Position') && fullErrorText.includes('out of bounds')) {
-        console.warn('⚠️ HAT ID appears to be structurally invalid (not on-chain):', {
-          hatId,
-          error: errorMessage,
-          cause: causeMessage
-        });
+      if (
+        fullErrorText.includes('Position') &&
+        fullErrorText.includes('out of bounds')
+      ) {
+        console.warn(
+          '⚠️ HAT ID appears to be structurally invalid (not on-chain):',
+          {
+            hatId,
+            error: errorMessage,
+            cause: causeMessage,
+          },
+        );
         // Return null to indicate invalid structure (different from inactive)
         return null;
       }
@@ -545,33 +609,37 @@ export class HatCreationService {
 
       const publicClient = createPublicClient({
         chain: base,
-        transport: http()
+        transport: http(),
       });
 
       const hatDetails = await publicClient.readContract({
         address: this.HATS_PROTOCOL_ADDRESS,
-        abi: [{
-          name: 'viewHat',
-          type: 'function',
-          inputs: [{ name: '_hatId', type: 'uint256' }],
-          outputs: [{
-            type: 'tuple',
-            components: [
-              { name: 'details', type: 'string' },
-              { name: 'maxSupply', type: 'uint32' },
-              { name: 'supply', type: 'uint32' },
-              { name: 'eligibility', type: 'address' },
-              { name: 'toggle', type: 'address' },
-              { name: 'imageURI', type: 'string' },
-              { name: 'lastHatId', type: 'uint16' },
-              { name: 'mutable', type: 'bool' },
-              { name: 'active', type: 'bool' }
-            ]
-          }],
-          stateMutability: 'view'
-        }],
+        abi: [
+          {
+            name: 'viewHat',
+            type: 'function',
+            inputs: [{ name: '_hatId', type: 'uint256' }],
+            outputs: [
+              {
+                type: 'tuple',
+                components: [
+                  { name: 'details', type: 'string' },
+                  { name: 'maxSupply', type: 'uint32' },
+                  { name: 'supply', type: 'uint32' },
+                  { name: 'eligibility', type: 'address' },
+                  { name: 'toggle', type: 'address' },
+                  { name: 'imageURI', type: 'string' },
+                  { name: 'lastHatId', type: 'uint16' },
+                  { name: 'mutable', type: 'bool' },
+                  { name: 'active', type: 'bool' },
+                ],
+              },
+            ],
+            stateMutability: 'view',
+          },
+        ],
         functionName: 'viewHat',
-        args: [validation.hatIdBigInt!]
+        args: [validation.hatIdBigInt!],
       });
 
       return Number(hatDetails[2]); // supply field

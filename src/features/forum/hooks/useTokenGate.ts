@@ -41,12 +41,12 @@ export function useTokenGate(options: TokenGateOptions = {}): TokenGateResult {
 
   // Eligibility checking hook
   const eligibilityHook = useEligibility();
-  
+
   const {
     eligibilityCriteria,
     podId,
     roleId,
-    fallbackToTokenCheck = true
+    fallbackToTokenCheck = true,
   } = options;
 
   const checkAccess = async (): Promise<boolean> => {
@@ -67,18 +67,18 @@ export function useTokenGate(options: TokenGateOptions = {}): TokenGateResult {
         const eligibilityCheck = await eligibilityHook.evaluateCriteria(
           eligibilityCriteria,
           podId,
-          roleId
+          roleId,
         );
-        
+
         setEligibilityResult(eligibilityCheck);
-        
+
         if (eligibilityCheck?.eligible) {
           setHasAccess(true);
           setIsLoading(false);
           console.log('✅ Forum access granted via eligibility criteria');
           return true;
         }
-        
+
         // If eligibility check failed and no fallback allowed
         if (!fallbackToTokenCheck) {
           setHasAccess(false);
@@ -87,13 +87,14 @@ export function useTokenGate(options: TokenGateOptions = {}): TokenGateResult {
           return false;
         }
       }
-      
+
       // Priority 2: Role-based check if roleId provided
       if (roleId && podId) {
         try {
-          const roleEligibilityCheck = await eligibilityHook.checkUserEligibility(podId, roleId);
+          const roleEligibilityCheck =
+            await eligibilityHook.checkUserEligibility(podId, roleId);
           setEligibilityResult(roleEligibilityCheck);
-          
+
           if (roleEligibilityCheck?.eligible) {
             setHasAccess(true);
             setIsLoading(false);
@@ -101,30 +102,40 @@ export function useTokenGate(options: TokenGateOptions = {}): TokenGateResult {
             return true;
           }
         } catch (roleError) {
-          console.warn('Role eligibility check failed, falling back to token check:', roleError);
+          console.warn(
+            'Role eligibility check failed, falling back to token check:',
+            roleError,
+          );
         }
       }
-      
+
       // Fallback: Traditional token balance check
       if (fallbackToTokenCheck) {
         const balances = await fetchTokenBalances(address);
         setTokenBalances(balances);
-        
+
         // Access is granted if user has Proof of Curiosity token
         const access = balances.hasProofOfCuriosity;
         setHasAccess(access);
         setIsLoading(false);
-        console.log(access ? '✅ Forum access granted via token balance' : '❌ Forum access denied - no required tokens');
+        console.log(
+          access
+            ? '✅ Forum access granted via token balance'
+            : '❌ Forum access denied - no required tokens',
+        );
         return access;
       }
-      
+
       // No valid access method found
       setHasAccess(false);
       setIsLoading(false);
       return false;
-      
     } catch (err) {
-      setError(err instanceof Error ? err : new Error('Unknown error checking forum access'));
+      setError(
+        err instanceof Error
+          ? err
+          : new Error('Unknown error checking forum access'),
+      );
       setIsLoading(false);
       return false;
     }
@@ -140,7 +151,14 @@ export function useTokenGate(options: TokenGateOptions = {}): TokenGateResult {
       setEligibilityResult(null);
       setIsLoading(false);
     }
-  }, [isConnected, address, eligibilityCriteria, podId, roleId, fallbackToTokenCheck]);
+  }, [
+    isConnected,
+    address,
+    eligibilityCriteria,
+    podId,
+    roleId,
+    fallbackToTokenCheck,
+  ]);
 
   return {
     hasAccess,
@@ -148,6 +166,6 @@ export function useTokenGate(options: TokenGateOptions = {}): TokenGateResult {
     error,
     checkAccess,
     tokenBalances,
-    eligibilityResult
+    eligibilityResult,
   };
 }

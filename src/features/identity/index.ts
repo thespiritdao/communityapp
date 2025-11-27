@@ -43,7 +43,11 @@ export { getName } from './utils/getName';
 export { isBasename } from './utils/isBasename';
 export { updateProfile } from './utils/updateProfile';
 export { displayName } from './utils/displayName';
-export { getCurrentSession, isAuthenticated, getCurrentUserId } from './utils/serverAuth';
+export {
+  getCurrentSession,
+  isAuthenticated,
+  getCurrentUserId,
+} from './utils/serverAuth';
 
 // Types
 export type {

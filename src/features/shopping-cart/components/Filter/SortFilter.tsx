@@ -1,7 +1,7 @@
-"use client";
+'use client';
 
-import { memo, useCallback } from "react";
-import styled from "styled-components";
+import { memo, useCallback } from 'react';
+import styled from 'styled-components';
 
 const SortSelect = styled.select`
   width: 100%;
@@ -26,7 +26,7 @@ const sortOptions = [
   { value: 'name_asc', label: 'Name: A to Z' },
   { value: 'name_desc', label: 'Name: Z to A' },
   { value: 'newest', label: 'Newest First' },
-  { value: 'oldest', label: 'Oldest First' }
+  { value: 'oldest', label: 'Oldest First' },
 ];
 
 interface SortFilterProps {
@@ -41,13 +41,16 @@ interface SortFilterProps {
  * - Memoized for performance
  */
 const SortFilter = memo(({ selectedSort, onSortChange }: SortFilterProps) => {
-  const handleSortChange = useCallback((event: React.ChangeEvent<HTMLSelectElement>) => {
-    onSortChange(event.target.value);
-  }, [onSortChange]);
+  const handleSortChange = useCallback(
+    (event: React.ChangeEvent<HTMLSelectElement>) => {
+      onSortChange(event.target.value);
+    },
+    [onSortChange],
+  );
 
   return (
     <SortSelect value={selectedSort} onChange={handleSortChange}>
-      {sortOptions.map(option => (
+      {sortOptions.map((option) => (
         <option key={option.value} value={option.value}>
           {option.label}
         </option>

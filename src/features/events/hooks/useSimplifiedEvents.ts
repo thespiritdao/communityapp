@@ -9,7 +9,7 @@ const EVENT_MANAGER_ADDRESS = CONTRACT_ADDRESSES.EVENT_MANAGER;
 export interface SimplifiedEvent {
   eventId: string;
   title: string;
-  description?: string;  // From database
+  description?: string; // From database
   eventDate: bigint;
   organizer: string;
   fundRecipient: string;
@@ -48,7 +48,7 @@ export function useSimplifiedEvents() {
   useEffect(() => {
     async function fetchEventsWithDetails() {
       if (!eventIds || idsLoading) return;
-      
+
       try {
         setLoading(true);
         const eventsWithDetails: EventWithDetails[] = [];
@@ -56,11 +56,13 @@ export function useSimplifiedEvents() {
         for (const eventId of eventIds as string[]) {
           // Get event data from contract
           const eventData = await fetchEventFromContract(eventId);
-          
+
           // Get additional details from database
           const { data: dbEvent } = await supabase
             .from('events')
-            .select('description, location, image_url, registration_open, registration_close')
+            .select(
+              'description, location, image_url, registration_open, registration_close',
+            )
             .eq('blockchain_event_id', eventId)
             .single();
 
@@ -71,7 +73,9 @@ export function useSimplifiedEvents() {
               location: dbEvent?.location || '',
               image_url: dbEvent?.image_url || '',
               registration_open: dbEvent?.registration_open || true,
-              registration_close: dbEvent?.registration_close ? new Date(dbEvent.registration_close) : new Date(Number(eventData.eventDate) * 1000)
+              registration_close: dbEvent?.registration_close
+                ? new Date(dbEvent.registration_close)
+                : new Date(Number(eventData.eventDate) * 1000),
             });
           }
         }
@@ -95,7 +99,7 @@ export function useSimplifiedEvents() {
 export function useUserEvents(userAddress?: string) {
   const { address } = useAccount();
   const targetAddress = userAddress || address;
-  
+
   const { data: userEventIds, isLoading } = useReadContract({
     address: EVENT_MANAGER_ADDRESS,
     abi: EventManagerABI,
@@ -109,17 +113,19 @@ export function useUserEvents(userAddress?: string) {
   useEffect(() => {
     async function fetchUserEvents() {
       if (!userEventIds || isLoading) return;
-      
+
       try {
         setLoading(true);
         const events: EventWithDetails[] = [];
 
         for (const eventId of userEventIds as string[]) {
           const eventData = await fetchEventFromContract(eventId);
-          
+
           const { data: dbEvent } = await supabase
             .from('events')
-            .select('description, location, image_url, registration_open, registration_close')
+            .select(
+              'description, location, image_url, registration_open, registration_close',
+            )
             .eq('blockchain_event_id', eventId)
             .single();
 
@@ -130,7 +136,9 @@ export function useUserEvents(userAddress?: string) {
               location: dbEvent?.location || '',
               image_url: dbEvent?.image_url || '',
               registration_open: dbEvent?.registration_open || true,
-              registration_close: dbEvent?.registration_close ? new Date(dbEvent.registration_close) : new Date(Number(eventData.eventDate) * 1000)
+              registration_close: dbEvent?.registration_close
+                ? new Date(dbEvent.registration_close)
+                : new Date(Number(eventData.eventDate) * 1000),
             });
           }
         }
@@ -164,12 +172,14 @@ export function useEventRegistration(eventId: string, userAddress?: string) {
 }
 
 // Helper function to fetch event data from contract
-async function fetchEventFromContract(eventId: string): Promise<SimplifiedEvent | null> {
+async function fetchEventFromContract(
+  eventId: string,
+): Promise<SimplifiedEvent | null> {
   try {
     // This would typically use a contract read call
     // For now, we'll use a mock implementation
     // In a real implementation, you'd call the contract's getEvent function
-    
+
     return null; // Placeholder - implement actual contract read
   } catch (error) {
     console.error('Error fetching event from contract:', error);
@@ -195,12 +205,14 @@ export function useEventDetails(eventId: string) {
       try {
         const { data: dbEvent } = await supabase
           .from('events')
-          .select('description, location, image_url, registration_open, registration_close')
+          .select(
+            'description, location, image_url, registration_open, registration_close',
+          )
           .eq('blockchain_event_id', eventId)
           .single();
 
         const eventData = contractEvent as any;
-        
+
         setEvent({
           eventId: eventData.eventId,
           title: eventData.title,
@@ -218,7 +230,9 @@ export function useEventDetails(eventId: string) {
           location: dbEvent?.location || '',
           image_url: dbEvent?.image_url || '',
           registration_open: dbEvent?.registration_open || true,
-          registration_close: dbEvent?.registration_close ? new Date(dbEvent.registration_close) : new Date(Number(eventData.eventDate) * 1000)
+          registration_close: dbEvent?.registration_close
+            ? new Date(dbEvent.registration_close)
+            : new Date(Number(eventData.eventDate) * 1000),
         });
       } catch (error) {
         console.error('Error fetching event details:', error);

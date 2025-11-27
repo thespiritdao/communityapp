@@ -14,7 +14,13 @@ export interface BatchOperation {
   targetAddresses?: string[];
   hatId?: string;
   metadata?: any;
-  status: 'pending' | 'approved' | 'executing' | 'completed' | 'failed' | 'rejected';
+  status:
+    | 'pending'
+    | 'approved'
+    | 'executing'
+    | 'completed'
+    | 'failed'
+    | 'rejected';
   createdAt: string;
   executedAt?: string;
   createdBy: string;
@@ -55,7 +61,9 @@ class HatBatchService {
   /**
    * Add single operation (real-time mode for testing)
    */
-  async executeImmediateOperation(operation: Omit<BatchOperation, 'id' | 'status' | 'createdAt'>): Promise<{
+  async executeImmediateOperation(
+    operation: Omit<BatchOperation, 'id' | 'status' | 'createdAt'>,
+  ): Promise<{
     success: boolean;
     operationId: string;
     transactionHash?: string;
@@ -66,13 +74,13 @@ class HatBatchService {
       ...operation,
       id: operationId,
       status: 'executing',
-      createdAt: new Date().toISOString()
+      createdAt: new Date().toISOString(),
     };
 
     console.log(`🚀 Executing immediate HAT operation:`, {
       type: operation.type,
       podId: operation.podId,
-      operationId
+      operationId,
     });
 
     const startTime = Date.now();
@@ -94,22 +102,21 @@ class HatBatchService {
           operationId,
           podId: operation.podId,
           immediate: true,
-          ...operation.metadata
-        }
+          ...operation.metadata,
+        },
       });
 
       return {
         success: true,
         operationId,
-        transactionHash: result.transactionHash
+        transactionHash: result.transactionHash,
       };
-
     } catch (error) {
       const duration = Date.now() - startTime;
       const parsedError = logHatError(error, {
         userAddress: operation.createdBy,
         hatId: operation.hatId,
-        action: operation.type
+        action: operation.type,
       });
 
       logHatTransaction({
@@ -123,14 +130,14 @@ class HatBatchService {
           operationId,
           podId: operation.podId,
           immediate: true,
-          error: parsedError.message
-        }
+          error: parsedError.message,
+        },
       });
 
       return {
         success: false,
         operationId,
-        error: parsedError.message
+        error: parsedError.message,
       };
     }
   }
@@ -138,37 +145,43 @@ class HatBatchService {
   /**
    * Create batch for governance approval workflow
    */
-  async createGovernanceBatch(operations: Omit<BatchOperation, 'id' | 'status' | 'createdAt'>[]): Promise<GovernanceApprovalRequest> {
+  async createGovernanceBatch(
+    operations: Omit<BatchOperation, 'id' | 'status' | 'createdAt'>[],
+  ): Promise<GovernanceApprovalRequest> {
     const batchId = `batch-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-    
+
     const batchOperations: BatchOperation[] = operations.map((op, index) => ({
       ...op,
       id: `${batchId}-op-${index}`,
       status: 'pending',
-      createdAt: new Date().toISOString()
+      createdAt: new Date().toISOString(),
     }));
 
     this.pendingBatches.set(batchId, batchOperations);
 
     // Create governance proposal description
     const operationSummary = this.summarizeOperations(batchOperations);
-    const executiveReviewRequired = this.requiresExecutiveReview(batchOperations);
+    const executiveReviewRequired =
+      this.requiresExecutiveReview(batchOperations);
 
     const approvalRequest: GovernanceApprovalRequest = {
       batchId,
       title: `HAT Operations Batch - ${operationSummary.title}`,
-      description: this.generateBatchDescription(batchOperations, operationSummary),
+      description: this.generateBatchDescription(
+        batchOperations,
+        operationSummary,
+      ),
       operations: batchOperations,
       requestedBy: operations[0]?.createdBy || 'unknown',
       executiveReviewRequired,
-      estimatedGasCost: this.estimateGasCost(batchOperations)
+      estimatedGasCost: this.estimateGasCost(batchOperations),
     };
 
     console.log(`📋 Created governance batch:`, {
       batchId,
       operationsCount: batchOperations.length,
       executiveReviewRequired,
-      summary: operationSummary
+      summary: operationSummary,
     });
 
     return approvalRequest;
@@ -184,7 +197,7 @@ class HatBatchService {
     }
 
     // Update operation statuses
-    operations.forEach(op => {
+    operations.forEach((op) => {
       op.status = 'approved';
       op.approvedBy = approvedBy;
     });
@@ -192,7 +205,9 @@ class HatBatchService {
     // Add to execution queue
     this.executionQueue.push(...operations);
 
-    console.log(`✅ Batch ${batchId} approved by ${approvedBy}, added to execution queue`);
+    console.log(
+      `✅ Batch ${batchId} approved by ${approvedBy}, added to execution queue`,
+    );
 
     // Start processing if not already running
     if (!this.isProcessing) {
@@ -203,13 +218,17 @@ class HatBatchService {
   /**
    * Reject batch (called by governance)
    */
-  async rejectBatch(batchId: string, rejectedBy: string, reason: string): Promise<void> {
+  async rejectBatch(
+    batchId: string,
+    rejectedBy: string,
+    reason: string,
+  ): Promise<void> {
     const operations = this.pendingBatches.get(batchId);
     if (!operations) {
       throw new Error(`Batch ${batchId} not found`);
     }
 
-    operations.forEach(op => {
+    operations.forEach((op) => {
       op.status = 'rejected';
       op.error = `Rejected by ${rejectedBy}: ${reason}`;
     });
@@ -226,27 +245,29 @@ class HatBatchService {
     }
 
     this.isProcessing = true;
-    console.log(`⚡ Processing ${this.executionQueue.length} queued operations...`);
+    console.log(
+      `⚡ Processing ${this.executionQueue.length} queued operations...`,
+    );
 
     while (this.executionQueue.length > 0) {
       const operation = this.executionQueue.shift()!;
-      
+
       try {
         operation.status = 'executing';
         const result = await this.executeSingleOperation(operation);
-        
+
         operation.status = 'completed';
         operation.executedAt = new Date().toISOString();
         operation.transactionHash = result.transactionHash;
-
       } catch (error) {
         operation.status = 'failed';
-        operation.error = error instanceof Error ? error.message : 'Unknown error';
-        
+        operation.error =
+          error instanceof Error ? error.message : 'Unknown error';
+
         logHatError(error, {
           userAddress: operation.createdBy,
           hatId: operation.hatId,
-          action: operation.type
+          action: operation.type,
         });
       }
     }
@@ -258,32 +279,44 @@ class HatBatchService {
   /**
    * Execute single operation (implementation placeholder)
    */
-  private async executeSingleOperation(operation: BatchOperation): Promise<{ transactionHash: string }> {
+  private async executeSingleOperation(
+    operation: BatchOperation,
+  ): Promise<{ transactionHash: string }> {
     // This is where actual HAT protocol calls would be made
     // For now, we'll simulate the operations
-    
+
     console.log(`🎩 Executing ${operation.type} for pod ${operation.podId}...`);
-    
+
     // Simulate transaction execution time
-    await new Promise(resolve => setTimeout(resolve, 1000 + Math.random() * 2000));
-    
+    await new Promise((resolve) =>
+      setTimeout(resolve, 1000 + Math.random() * 2000),
+    );
+
     switch (operation.type) {
       case 'create_hat':
         // Would call Hats.createHat()
-        return { transactionHash: `0x${Math.random().toString(16).substr(2, 64)}` };
-        
+        return {
+          transactionHash: `0x${Math.random().toString(16).substr(2, 64)}`,
+        };
+
       case 'mint_management':
         // Would call Hats.mintHat() for management hat
-        return { transactionHash: `0x${Math.random().toString(16).substr(2, 64)}` };
-        
+        return {
+          transactionHash: `0x${Math.random().toString(16).substr(2, 64)}`,
+        };
+
       case 'mint_membership':
         // Would call Hats.mintHat() or Hats.batchMintHats() for membership
-        return { transactionHash: `0x${Math.random().toString(16).substr(2, 64)}` };
-        
+        return {
+          transactionHash: `0x${Math.random().toString(16).substr(2, 64)}`,
+        };
+
       case 'deactivate_hat':
         // Would call hat toggle/deactivation
-        return { transactionHash: `0x${Math.random().toString(16).substr(2, 64)}` };
-        
+        return {
+          transactionHash: `0x${Math.random().toString(16).substr(2, 64)}`,
+        };
+
       default:
         throw new Error(`Unknown operation type: ${operation.type}`);
     }
@@ -292,27 +325,37 @@ class HatBatchService {
   /**
    * Helper methods
    */
-  private mapOperationToLogType(operationType: BatchOperation['type']): 'creation' | 'mint' | 'state_change' {
+  private mapOperationToLogType(
+    operationType: BatchOperation['type'],
+  ): 'creation' | 'mint' | 'state_change' {
     switch (operationType) {
-      case 'create_hat': return 'creation';
+      case 'create_hat':
+        return 'creation';
       case 'mint_management':
-      case 'mint_membership': return 'mint';
-      case 'deactivate_hat': return 'state_change';
-      default: return 'state_change';
+      case 'mint_membership':
+        return 'mint';
+      case 'deactivate_hat':
+        return 'state_change';
+      default:
+        return 'state_change';
     }
   }
 
-  private summarizeOperations(operations: BatchOperation[]): { title: string; counts: Record<string, number> } {
+  private summarizeOperations(operations: BatchOperation[]): {
+    title: string;
+    counts: Record<string, number>;
+  } {
     const counts: Record<string, number> = {};
-    operations.forEach(op => {
+    operations.forEach((op) => {
       counts[op.type] = (counts[op.type] || 0) + 1;
     });
 
     const totalOps = operations.length;
     const types = Object.keys(counts);
-    const title = totalOps === 1 
-      ? `Single ${operations[0].type.replace('_', ' ')}`
-      : `${totalOps} operations (${types.join(', ')})`;
+    const title =
+      totalOps === 1
+        ? `Single ${operations[0].type.replace('_', ' ')}`
+        : `${totalOps} operations (${types.join(', ')})`;
 
     return { title, counts };
   }
@@ -322,25 +365,30 @@ class HatBatchService {
     // - More than 5 operations
     // - Any hat creation operations
     // - Operations affecting more than 10 users
-    return operations.length > 5 ||
-           operations.some(op => op.type === 'create_hat') ||
-           operations.some(op => (op.targetAddresses?.length || 0) > 10);
+    return (
+      operations.length > 5 ||
+      operations.some((op) => op.type === 'create_hat') ||
+      operations.some((op) => (op.targetAddresses?.length || 0) > 10)
+    );
   }
 
-  private generateBatchDescription(operations: BatchOperation[], summary: any): string {
-    const podIds = [...new Set(operations.map(op => op.podId))];
+  private generateBatchDescription(
+    operations: BatchOperation[],
+    summary: any,
+  ): string {
+    const podIds = [...new Set(operations.map((op) => op.podId))];
     const podCount = podIds.length;
-    
+
     let description = `This batch contains ${operations.length} HAT operations across ${podCount} pod(s).\n\n`;
     description += `**Operations Summary:**\n`;
-    
+
     Object.entries(summary.counts).forEach(([type, count]) => {
       description += `- ${count} ${type.replace('_', ' ')} operation(s)\n`;
     });
-    
+
     description += `\n**Affected Pods:**\n`;
-    podIds.forEach(podId => {
-      const podOps = operations.filter(op => op.podId === podId);
+    podIds.forEach((podId) => {
+      const podOps = operations.filter((op) => op.podId === podId);
       description += `- ${podId}: ${podOps.length} operations\n`;
     });
 
@@ -353,7 +401,7 @@ class HatBatchService {
       create_hat: 150000,
       mint_management: 80000,
       mint_membership: 80000,
-      deactivate_hat: 50000
+      deactivate_hat: 50000,
     };
 
     const totalGas = operations.reduce((sum, op) => {
@@ -369,31 +417,43 @@ class HatBatchService {
    * Get pending batches for governance review
    */
   getPendingBatches(): GovernanceApprovalRequest[] {
-    return Array.from(this.pendingBatches.entries()).map(([batchId, operations]) => ({
-      batchId,
-      title: `HAT Operations Batch - ${this.summarizeOperations(operations).title}`,
-      description: this.generateBatchDescription(operations, this.summarizeOperations(operations)),
-      operations,
-      requestedBy: operations[0]?.createdBy || 'unknown',
-      executiveReviewRequired: this.requiresExecutiveReview(operations),
-      estimatedGasCost: this.estimateGasCost(operations)
-    }));
+    return Array.from(this.pendingBatches.entries()).map(
+      ([batchId, operations]) => ({
+        batchId,
+        title: `HAT Operations Batch - ${this.summarizeOperations(operations).title}`,
+        description: this.generateBatchDescription(
+          operations,
+          this.summarizeOperations(operations),
+        ),
+        operations,
+        requestedBy: operations[0]?.createdBy || 'unknown',
+        executiveReviewRequired: this.requiresExecutiveReview(operations),
+        estimatedGasCost: this.estimateGasCost(operations),
+      }),
+    );
   }
 
   /**
    * Get batch status
    */
-  getBatchStatus(batchId: string): { operations: BatchOperation[]; status: string } | null {
+  getBatchStatus(
+    batchId: string,
+  ): { operations: BatchOperation[]; status: string } | null {
     const operations = this.pendingBatches.get(batchId);
     if (!operations) return null;
 
-    const statuses = operations.map(op => op.status);
-    const overallStatus = statuses.every(s => s === 'completed') ? 'completed' :
-                         statuses.some(s => s === 'failed') ? 'failed' :
-                         statuses.some(s => s === 'executing') ? 'executing' :
-                         statuses.every(s => s === 'approved') ? 'approved' :
-                         statuses.every(s => s === 'rejected') ? 'rejected' :
-                         'pending';
+    const statuses = operations.map((op) => op.status);
+    const overallStatus = statuses.every((s) => s === 'completed')
+      ? 'completed'
+      : statuses.some((s) => s === 'failed')
+        ? 'failed'
+        : statuses.some((s) => s === 'executing')
+          ? 'executing'
+          : statuses.every((s) => s === 'approved')
+            ? 'approved'
+            : statuses.every((s) => s === 'rejected')
+              ? 'rejected'
+              : 'pending';
 
     return { operations, status: overallStatus };
   }
@@ -403,14 +463,19 @@ class HatBatchService {
 export const hatBatchService = new HatBatchService();
 
 // Convenience functions for your approval workflow
-export const createHatBatch = (operations: Omit<BatchOperation, 'id' | 'status' | 'createdAt'>[]) =>
-  hatBatchService.createGovernanceBatch(operations);
+export const createHatBatch = (
+  operations: Omit<BatchOperation, 'id' | 'status' | 'createdAt'>[],
+) => hatBatchService.createGovernanceBatch(operations);
 
-export const executeHatOperation = (operation: Omit<BatchOperation, 'id' | 'status' | 'createdAt'>) =>
-  hatBatchService.executeImmediateOperation(operation);
+export const executeHatOperation = (
+  operation: Omit<BatchOperation, 'id' | 'status' | 'createdAt'>,
+) => hatBatchService.executeImmediateOperation(operation);
 
 export const approveHatBatch = (batchId: string, approvedBy: string) =>
   hatBatchService.approveBatch(batchId, approvedBy);
 
-export const rejectHatBatch = (batchId: string, rejectedBy: string, reason: string) =>
-  hatBatchService.rejectBatch(batchId, rejectedBy, reason);
+export const rejectHatBatch = (
+  batchId: string,
+  rejectedBy: string,
+  reason: string,
+) => hatBatchService.rejectBatch(batchId, rejectedBy, reason);

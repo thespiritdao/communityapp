@@ -4,7 +4,7 @@ import { unifiedNotificationService } from '@/services/unifiedNotificationServic
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
+  process.env.SUPABASE_SERVICE_ROLE_KEY!,
 );
 
 export async function POST(request: NextRequest) {
@@ -15,27 +15,33 @@ export async function POST(request: NextRequest) {
       submissionId,
       reviewerAddress,
       status, // 'approved' | 'rejected' | 'revision_requested'
-      reviewComments
+      reviewComments,
     } = body;
 
     console.log('🔍 Work review request:', {
       submissionId,
       reviewerAddress,
-      status
+      status,
     });
 
     // Validation
     if (!submissionId || !reviewerAddress || !status) {
       return NextResponse.json(
-        { error: 'Missing required fields: submissionId, reviewerAddress, status' },
-        { status: 400 }
+        {
+          error:
+            'Missing required fields: submissionId, reviewerAddress, status',
+        },
+        { status: 400 },
       );
     }
 
     if (!['approved', 'rejected', 'revision_requested'].includes(status)) {
       return NextResponse.json(
-        { error: 'Invalid status. Must be: approved, rejected, or revision_requested' },
-        { status: 400 }
+        {
+          error:
+            'Invalid status. Must be: approved, rejected, or revision_requested',
+        },
+        { status: 400 },
       );
     }
 
@@ -54,13 +60,14 @@ export async function POST(request: NextRequest) {
       console.error('❌ Submission not found:', submissionError);
       return NextResponse.json(
         { error: 'Work submission not found' },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
     // Verify reviewer is authorized (bounty creator or pod leader)
     const bounty = submission.bounties;
-    let isAuthorized = bounty.creator_address?.toLowerCase() === reviewerAddress.toLowerCase();
+    let isAuthorized =
+      bounty.creator_address?.toLowerCase() === reviewerAddress.toLowerCase();
 
     if (!isAuthorized && bounty.pod_id) {
       // Check if reviewer is a pod leader
@@ -72,7 +79,8 @@ export async function POST(request: NextRequest) {
 
       if (pod && pod.pod_leads) {
         isAuthorized = pod.pod_leads.some(
-          (lead: string) => lead.toLowerCase() === reviewerAddress.toLowerCase()
+          (lead: string) =>
+            lead.toLowerCase() === reviewerAddress.toLowerCase(),
         );
       }
     }
@@ -80,8 +88,11 @@ export async function POST(request: NextRequest) {
     if (!isAuthorized) {
       console.error('❌ Reviewer not authorized');
       return NextResponse.json(
-        { error: 'Only the bounty creator or pod leaders can review work submissions' },
-        { status: 403 }
+        {
+          error:
+            'Only the bounty creator or pod leaders can review work submissions',
+        },
+        { status: 403 },
       );
     }
 
@@ -93,7 +104,7 @@ export async function POST(request: NextRequest) {
         reviewer_address: reviewerAddress.toLowerCase(),
         review_comments: reviewComments,
         reviewed_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
+        updated_at: new Date().toISOString(),
       })
       .eq('id', submissionId)
       .select()
@@ -103,14 +114,14 @@ export async function POST(request: NextRequest) {
       console.error('❌ Error updating submission:', updateError);
       return NextResponse.json(
         { error: 'Failed to update submission', details: updateError.message },
-        { status: 500 }
+        { status: 500 },
       );
     }
 
     console.log('✅ Work submission reviewed:', {
       submissionId,
       status,
-      reviewer: reviewerAddress
+      reviewer: reviewerAddress,
     });
 
     // Handle status-specific actions
@@ -124,11 +135,13 @@ export async function POST(request: NextRequest) {
         .from('bids')
         .update({
           status: 'work_approved', // New status: work approved, awaiting payment
-          updated_at: new Date().toISOString()
+          updated_at: new Date().toISOString(),
         })
         .eq('id', submission.bid_id);
 
-      console.log('✅ Work approved - bounty remains "assigned" until payment released');
+      console.log(
+        '✅ Work approved - bounty remains "assigned" until payment released',
+      );
 
       // Send notification to bidder
       const bid = submission.bids;
@@ -141,7 +154,7 @@ export async function POST(request: NextRequest) {
         context_type: 'bounty',
         context_id: submission.bounty_id,
         context_url: `/bounty/${submission.bounty_id}`,
-        priority: 'high'
+        priority: 'high',
       });
 
       console.log('✅ Approval notification sent to bidder');
@@ -157,7 +170,7 @@ export async function POST(request: NextRequest) {
         context_type: 'bounty',
         context_id: submission.bounty_id,
         context_url: `/bounty/${submission.bounty_id}`,
-        priority: 'high'
+        priority: 'high',
       });
 
       console.log('✅ Rejection notification sent to bidder');
@@ -173,7 +186,7 @@ export async function POST(request: NextRequest) {
         context_type: 'bounty',
         context_id: submission.bounty_id,
         context_url: `/bounty/${submission.bounty_id}/submissions`,
-        priority: 'high'
+        priority: 'high',
       });
 
       console.log('✅ Revision request notification sent to bidder');
@@ -181,14 +194,16 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      submission: updatedSubmission
+      submission: updatedSubmission,
     });
-
   } catch (error) {
     console.error('❌ Error in work review API:', error);
     return NextResponse.json(
-      { error: 'Internal server error', details: error instanceof Error ? error.message : 'Unknown error' },
-      { status: 500 }
+      {
+        error: 'Internal server error',
+        details: error instanceof Error ? error.message : 'Unknown error',
+      },
+      { status: 500 },
     );
   }
 }

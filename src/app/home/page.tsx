@@ -4,11 +4,9 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useAccount } from 'wagmi';
 import { useUserProfile } from '@/features/identity/hooks/useUserProfile';
-import '../../features/home/styles/HomePage.css'; 
-
+import '../../features/home/styles/HomePage.css';
 
 export default function HomePage() {
-
   const { address } = useAccount();
   const { profile, loading } = useUserProfile(address);
 
@@ -32,7 +30,6 @@ export default function HomePage() {
     );
   }
 
-
   return (
     <div className="home-container">
       {/* HEADER */}
@@ -49,7 +46,7 @@ export default function HomePage() {
 
         {/* Welcome text with user's first name */}
         <h1 className="home-title">
-          Welcome, {profile?.first_name || "Guest"}.
+          Welcome, {profile?.first_name || 'Guest'}.
         </h1>
       </div>
 
@@ -80,7 +77,11 @@ export default function HomePage() {
             <div className="home-module-title">Artifacts</div>
           </Link>
 
-		    <Link href="/sensemaker-ai" className="home-module-card" prefetch={true}>
+          <Link
+            href="/sensemaker-ai"
+            className="home-module-card"
+            prefetch={true}
+          >
             <Image
               src="/images/sensemakeraikey.png"
               alt="SensemakerAI"
@@ -171,10 +172,6 @@ export default function HomePage() {
           </Link>
         </div>
       </section>
-	  
-
-
-
 
       {/* FOOTER */}
       <div className="home-footer">

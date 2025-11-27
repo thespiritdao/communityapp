@@ -32,11 +32,11 @@ export function usePods(config: UsePodsConfig = {}): UsePodsReturn {
   const [pods, setPods] = useState<Pod[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  
+
   // Migration state
   const [isMigrating, setIsMigrating] = useState(false);
   const [migrationMessage, setMigrationMessage] = useState<string | null>(null);
-  
+
   // Pod operations state
   const [processingPods, setProcessingPods] = useState<Set<string>>(new Set());
 
@@ -47,11 +47,11 @@ export function usePods(config: UsePodsConfig = {}): UsePodsReturn {
     try {
       setLoading(true);
       setError(null);
-      
+
       console.log('🔄 Loading pods with config:', config);
-      
+
       let allPods: Pod[] = [];
-      
+
       if (config.userLeadershipOnly && address) {
         // Get pods where user has leadership access
         allPods = await PodCoreService.getUserLeadershipPods(address);
@@ -59,11 +59,12 @@ export function usePods(config: UsePodsConfig = {}): UsePodsReturn {
         // Get all pods with filtering
         const serviceConfig = {
           status: config.filter === 'all' ? undefined : config.filter,
-          includeInactive: config.includeInactive || config.filter === 'inactive'
+          includeInactive:
+            config.includeInactive || config.filter === 'inactive',
         };
         allPods = await PodCoreService.getAllPods(serviceConfig);
       }
-      
+
       console.log('📋 Loaded pods:', allPods.length);
       setPods(allPods);
     } catch (err) {
@@ -72,7 +73,12 @@ export function usePods(config: UsePodsConfig = {}): UsePodsReturn {
     } finally {
       setLoading(false);
     }
-  }, [config.filter, config.includeInactive, config.userLeadershipOnly, address]);
+  }, [
+    config.filter,
+    config.includeInactive,
+    config.userLeadershipOnly,
+    address,
+  ]);
 
   /**
    * Handle HAT migration (import orphaned HATs)
@@ -85,17 +91,19 @@ export function usePods(config: UsePodsConfig = {}): UsePodsReturn {
 
     setIsMigrating(true);
     setMigrationMessage(null);
-    
+
     try {
       console.log('🔄 Starting orphaned HAT import...');
       await HatsMigrationService.importOrphanedHats(address);
       setMigrationMessage('✅ Orphaned HAT import completed successfully!');
-      
+
       // Reload pods after migration
       await loadPods();
     } catch (error) {
       console.error('❌ Migration failed:', error);
-      setMigrationMessage(error instanceof Error ? error.message : 'Migration failed');
+      setMigrationMessage(
+        error instanceof Error ? error.message : 'Migration failed',
+      );
     } finally {
       setIsMigrating(false);
     }
@@ -104,38 +112,48 @@ export function usePods(config: UsePodsConfig = {}): UsePodsReturn {
   /**
    * Handle pod activation/deactivation toggle
    */
-  const handlePodToggle = useCallback(async (podId: string, currentStatus: string) => {
-    if (!address) return;
+  const handlePodToggle = useCallback(
+    async (podId: string, currentStatus: string) => {
+      if (!address) return;
 
-    setProcessingPods(prev => new Set(prev).add(podId));
-    
-    try {
-      if (currentStatus === 'active') {
-        await PodCoreService.deactivatePod(podId, address);
-      } else {
-        await PodCoreService.reactivatePod(podId, address);
+      setProcessingPods((prev) => new Set(prev).add(podId));
+
+      try {
+        if (currentStatus === 'active') {
+          await PodCoreService.deactivatePod(podId, address);
+        } else {
+          await PodCoreService.reactivatePod(podId, address);
+        }
+
+        // Reload pods to reflect status change
+        await loadPods();
+      } catch (error) {
+        console.error('❌ Failed to toggle pod status:', error);
+        setError(
+          error instanceof Error
+            ? error.message
+            : 'Failed to toggle pod status',
+        );
+      } finally {
+        setProcessingPods((prev) => {
+          const next = new Set(prev);
+          next.delete(podId);
+          return next;
+        });
       }
-      
-      // Reload pods to reflect status change
-      await loadPods();
-    } catch (error) {
-      console.error('❌ Failed to toggle pod status:', error);
-      setError(error instanceof Error ? error.message : 'Failed to toggle pod status');
-    } finally {
-      setProcessingPods(prev => {
-        const next = new Set(prev);
-        next.delete(podId);
-        return next;
-      });
-    }
-  }, [address, loadPods]);
+    },
+    [address, loadPods],
+  );
 
   /**
    * Check if user can manage specific pod
    */
-  const canUserManagePod = useCallback((pod: Pod) => {
-    return address ? PodCoreService.canUserManagePod(pod, address) : false;
-  }, [address]);
+  const canUserManagePod = useCallback(
+    (pod: Pod) => {
+      return address ? PodCoreService.canUserManagePod(pod, address) : false;
+    },
+    [address],
+  );
 
   /**
    * Manual refetch function

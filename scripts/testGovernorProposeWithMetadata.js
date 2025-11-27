@@ -3,8 +3,13 @@ const fs = require('fs');
 require('dotenv').config();
 
 // --- CONFIG ---
-const GOVERNOR_ADDRESS = process.env.NEXT_PUBLIC_DAO_GOVERNOR || '0x831cC408B5F5C7cD6EF877e3e6f48c04e53FD7de';
-const RPC_URL = process.env.NEXT_PUBLIC_RPC_URL || process.env.RPC_URL || 'https://mainnet.base.org'; // Change to your network if needed
+const GOVERNOR_ADDRESS =
+  process.env.NEXT_PUBLIC_DAO_GOVERNOR ||
+  '0x831cC408B5F5C7cD6EF877e3e6f48c04e53FD7de';
+const RPC_URL =
+  process.env.NEXT_PUBLIC_RPC_URL ||
+  process.env.RPC_URL ||
+  'https://mainnet.base.org'; // Change to your network if needed
 const PRIVATE_KEY = process.env.TEST_PRIVATE_KEY; // Use a test wallet with no funds
 const ABI_PATH = 'src/abis/DAO_GovernorABI.json'; // Path to ABI JSON
 
@@ -17,12 +22,14 @@ try {
   process.exit(1);
 }
 
-console.log(abi.find(f => f.name === 'proposeWithMetadata'));
+console.log(abi.find((f) => f.name === 'proposeWithMetadata'));
 
 // --- MAIN ---
 async function main() {
   if (!PRIVATE_KEY) {
-    console.error('Set TEST_PRIVATE_KEY in your .env file (use a test wallet!)');
+    console.error(
+      'Set TEST_PRIVATE_KEY in your .env file (use a test wallet!)',
+    );
     process.exit(1);
   }
 
@@ -47,9 +54,12 @@ async function main() {
       calldatas,
       description,
       title,
-      forumThreadId
+      forumThreadId,
     );
-    console.log('Simulation succeeded! ProposalId would be:', proposalId.toString());
+    console.log(
+      'Simulation succeeded! ProposalId would be:',
+      proposalId.toString(),
+    );
   } catch (err) {
     console.error('Simulation failed!');
     if (err.error && err.error.data && err.error.data.message) {
@@ -62,4 +72,4 @@ async function main() {
   }
 }
 
-main(); 
+main();

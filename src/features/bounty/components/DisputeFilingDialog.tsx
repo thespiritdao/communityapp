@@ -2,11 +2,23 @@
 
 import React, { useState } from 'react';
 import { useAccount } from 'wagmi';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AlertTriangle, Scale } from 'lucide-react';
 import type { FrontendBounty, FrontendBid } from '../types/bounty';
@@ -24,30 +36,62 @@ export const DisputeFilingDialog: React.FC<DisputeFilingDialogProps> = ({
   bid,
   open,
   onOpenChange,
-  onSuccess
+  onSuccess,
 }) => {
   const { address } = useAccount();
   const [disputeType, setDisputeType] = useState<string>('');
   const [disputeTitle, setDisputeTitle] = useState('');
   const [disputeDescription, setDisputeDescription] = useState('');
   const [desiredResolution, setDesiredResolution] = useState('');
-  const [priority, setPriority] = useState<'low' | 'medium' | 'high' | 'urgent'>('medium');
+  const [priority, setPriority] = useState<
+    'low' | 'medium' | 'high' | 'urgent'
+  >('medium');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string>('');
 
   // Determine if user is creator or bidder
-  const isCreator = address && bounty.creator_address?.toLowerCase() === address.toLowerCase();
-  const isBidder = address && bid && bid.bidderAddress.toLowerCase() === address.toLowerCase();
+  const isCreator =
+    address && bounty.creator_address?.toLowerCase() === address.toLowerCase();
+  const isBidder =
+    address && bid && bid.bidderAddress.toLowerCase() === address.toLowerCase();
 
   const disputeTypes = [
-    { value: 'work_quality', label: 'Work Quality Issues', description: 'Work does not meet requirements' },
-    { value: 'work_incomplete', label: 'Incomplete Work', description: 'Work is not fully completed' },
-    { value: 'payment_not_released', label: 'Payment Not Released', description: 'Payment promised but not released' },
-    { value: 'scope_changed', label: 'Scope Changed', description: 'Requirements changed during work' },
-    { value: 'deadline_missed', label: 'Deadline Missed', description: 'Agreed deadline was not met' },
-    { value: 'communication_failed', label: 'Communication Issues', description: 'Other party not responding' },
-    { value: 'terms_violated', label: 'Terms Violated', description: 'Contract terms were violated' },
-    { value: 'other', label: 'Other', description: 'Other dispute reason' }
+    {
+      value: 'work_quality',
+      label: 'Work Quality Issues',
+      description: 'Work does not meet requirements',
+    },
+    {
+      value: 'work_incomplete',
+      label: 'Incomplete Work',
+      description: 'Work is not fully completed',
+    },
+    {
+      value: 'payment_not_released',
+      label: 'Payment Not Released',
+      description: 'Payment promised but not released',
+    },
+    {
+      value: 'scope_changed',
+      label: 'Scope Changed',
+      description: 'Requirements changed during work',
+    },
+    {
+      value: 'deadline_missed',
+      label: 'Deadline Missed',
+      description: 'Agreed deadline was not met',
+    },
+    {
+      value: 'communication_failed',
+      label: 'Communication Issues',
+      description: 'Other party not responding',
+    },
+    {
+      value: 'terms_violated',
+      label: 'Terms Violated',
+      description: 'Contract terms were violated',
+    },
+    { value: 'other', label: 'Other', description: 'Other dispute reason' },
   ];
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -58,7 +102,12 @@ export const DisputeFilingDialog: React.FC<DisputeFilingDialogProps> = ({
       return;
     }
 
-    if (!disputeType || !disputeTitle.trim() || !disputeDescription.trim() || !desiredResolution.trim()) {
+    if (
+      !disputeType ||
+      !disputeTitle.trim() ||
+      !disputeDescription.trim() ||
+      !desiredResolution.trim()
+    ) {
       setError('Please fill in all required fields');
       return;
     }
@@ -85,8 +134,8 @@ export const DisputeFilingDialog: React.FC<DisputeFilingDialogProps> = ({
           desiredResolution: desiredResolution.trim(),
           disputedAmount: bounty.value.amount,
           disputedToken: bounty.value.token,
-          priority
-        })
+          priority,
+        }),
       });
 
       const data = await response.json();
@@ -107,10 +156,13 @@ export const DisputeFilingDialog: React.FC<DisputeFilingDialogProps> = ({
       setDisputeDescription('');
       setDesiredResolution('');
       setPriority('medium');
-
     } catch (err) {
       console.error('❌ Error filing dispute:', err);
-      setError(err instanceof Error ? err.message : 'Failed to file dispute. Please try again.');
+      setError(
+        err instanceof Error
+          ? err.message
+          : 'Failed to file dispute. Please try again.',
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -120,32 +172,43 @@ export const DisputeFilingDialog: React.FC<DisputeFilingDialogProps> = ({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="fixed z-50 left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-white rounded-lg shadow-lg focus:outline-none max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2" style={{ color: '#C6933F' }}>
+          <DialogTitle
+            className="flex items-center gap-2"
+            style={{ color: '#C6933F' }}
+          >
             <Scale className="w-5 h-5" />
             File a Dispute
           </DialogTitle>
-          <DialogDescription>
-            {bounty.title}
-          </DialogDescription>
+          <DialogDescription>{bounty.title}</DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4 p-4">
           {/* Warning Alert */}
-          <Alert style={{ backgroundColor: '#FAF4EC', borderWidth: '1px', borderStyle: 'solid', borderColor: '#E8D7B8' }}>
+          <Alert
+            style={{
+              backgroundColor: '#FAF4EC',
+              borderWidth: '1px',
+              borderStyle: 'solid',
+              borderColor: '#E8D7B8',
+            }}
+          >
             <AlertTriangle className="w-4 h-4" style={{ color: '#C6933F' }} />
             <AlertDescription className="ml-2" style={{ color: '#8F6B2F' }}>
-              <strong>Important:</strong> Filing a dispute will pause payment releases and notify all parties.
-              Please ensure you have attempted to resolve the issue directly before filing.
+              <strong>Important:</strong> Filing a dispute will pause payment
+              releases and notify all parties. Please ensure you have attempted
+              to resolve the issue directly before filing.
             </AlertDescription>
           </Alert>
 
           {/* Role Information */}
           <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
             <p className="text-sm text-gray-700">
-              <strong>Your Role:</strong> {isCreator ? 'Bounty Creator' : isBidder ? 'Bidder' : 'Unknown'}
+              <strong>Your Role:</strong>{' '}
+              {isCreator ? 'Bounty Creator' : isBidder ? 'Bidder' : 'Unknown'}
             </p>
             <p className="text-sm text-gray-700 mt-1">
-              <strong>Bounty Value:</strong> {bounty.value.amount} {bounty.value.token}
+              <strong>Bounty Value:</strong> {bounty.value.amount}{' '}
+              {bounty.value.token}
             </p>
           </div>
 
@@ -163,7 +226,9 @@ export const DisputeFilingDialog: React.FC<DisputeFilingDialogProps> = ({
                   <SelectItem key={type.value} value={type.value}>
                     <div>
                       <div className="font-medium">{type.label}</div>
-                      <div className="text-xs text-gray-500">{type.description}</div>
+                      <div className="text-xs text-gray-500">
+                        {type.description}
+                      </div>
                     </div>
                   </SelectItem>
                 ))}
@@ -185,7 +250,9 @@ export const DisputeFilingDialog: React.FC<DisputeFilingDialogProps> = ({
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               maxLength={200}
             />
-            <p className="text-xs text-gray-500">{disputeTitle.length}/200 characters</p>
+            <p className="text-xs text-gray-500">
+              {disputeTitle.length}/200 characters
+            </p>
           </div>
 
           {/* Dispute Description */}
@@ -202,7 +269,8 @@ export const DisputeFilingDialog: React.FC<DisputeFilingDialogProps> = ({
               className="resize-none"
             />
             <p className="text-xs text-gray-500">
-              Be specific and include all relevant details. This will be visible to all parties and mediators.
+              Be specific and include all relevant details. This will be visible
+              to all parties and mediators.
             </p>
           </div>
 
@@ -224,34 +292,63 @@ export const DisputeFilingDialog: React.FC<DisputeFilingDialogProps> = ({
           {/* Priority */}
           <div className="space-y-2">
             <Label htmlFor="priority">Priority Level</Label>
-            <Select value={priority} onValueChange={(value: any) => setPriority(value)}>
+            <Select
+              value={priority}
+              onValueChange={(value: any) => setPriority(value)}
+            >
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="low">Low - Can wait for resolution</SelectItem>
-                <SelectItem value="medium">Medium - Normal priority (default)</SelectItem>
-                <SelectItem value="high">High - Needs attention soon</SelectItem>
+                <SelectItem value="low">
+                  Low - Can wait for resolution
+                </SelectItem>
+                <SelectItem value="medium">
+                  Medium - Normal priority (default)
+                </SelectItem>
+                <SelectItem value="high">
+                  High - Needs attention soon
+                </SelectItem>
                 <SelectItem value="urgent">Urgent - Critical issue</SelectItem>
               </SelectContent>
             </Select>
           </div>
 
           {/* What Happens Next */}
-          <div className="rounded-lg p-4" style={{ backgroundColor: '#E8F1EE', borderWidth: '1px', borderStyle: 'solid', borderColor: '#B8D9CA' }}>
-            <h4 className="font-semibold text-sm mb-2" style={{ color: '#1F453A' }}>What happens next:</h4>
-            <ul className="list-disc list-inside space-y-1 text-sm" style={{ color: '#2F5D50' }}>
+          <div
+            className="rounded-lg p-4"
+            style={{
+              backgroundColor: '#E8F1EE',
+              borderWidth: '1px',
+              borderStyle: 'solid',
+              borderColor: '#B8D9CA',
+            }}
+          >
+            <h4
+              className="font-semibold text-sm mb-2"
+              style={{ color: '#1F453A' }}
+            >
+              What happens next:
+            </h4>
+            <ul
+              className="list-disc list-inside space-y-1 text-sm"
+              style={{ color: '#2F5D50' }}
+            >
               <li>Both parties and pod leaders will be notified</li>
               <li>Payment releases will be paused pending resolution</li>
               <li>All parties can submit evidence and comments</li>
-              <li>Pod leaders or mediators will review and propose resolutions</li>
+              <li>
+                Pod leaders or mediators will review and propose resolutions
+              </li>
               <li>Resolution will be executed once approved</li>
             </ul>
           </div>
 
           {error && (
             <Alert className="bg-red-50 border-red-200">
-              <AlertDescription className="text-red-800">{error}</AlertDescription>
+              <AlertDescription className="text-red-800">
+                {error}
+              </AlertDescription>
             </Alert>
           )}
 

@@ -1,4 +1,3 @@
-
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { TimeBoundMembershipStatus } from '../components/TimeBoundMembershipStatus';
@@ -11,7 +10,7 @@ const mockUseTimeBoundMembership = useTimeBoundMembership as any;
 // Mock Wagmi hooks
 vi.mock('wagmi', () => ({
   useAccount: () => ({ address: '0x1234567890123456789012345678901234567890' }),
-  useWalletClient: () => ({ data: null })
+  useWalletClient: () => ({ data: null }),
 }));
 
 describe('TimeBoundMembership Integration', () => {
@@ -28,7 +27,7 @@ describe('TimeBoundMembership Integration', () => {
       validUntil: new Date('2024-12-31'),
       timeRemaining: 7 * 24 * 60 * 60 * 1000, // 7 days
       status: 'active' as const,
-      reason: undefined
+      reason: undefined,
     };
 
     mockUseTimeBoundMembership.mockReturnValue({
@@ -41,15 +40,15 @@ describe('TimeBoundMembership Integration', () => {
       isExpiringSoon: false,
       formattedTimeRemaining: '7 days, 0 hours',
       statusInfo: { color: 'green', message: 'Membership active' },
-      checkMembershipStatus: vi.fn()
+      checkMembershipStatus: vi.fn(),
     });
 
     render(
-      <TimeBoundMembershipStatus 
-        hatId={BigInt(123)} 
-        roleType="member" 
+      <TimeBoundMembershipStatus
+        hatId={BigInt(123)}
+        roleType="member"
         showActions={true}
-      />
+      />,
     );
 
     expect(screen.getByText('Time-Bound Membership')).toBeInTheDocument();
@@ -67,7 +66,7 @@ describe('TimeBoundMembership Integration', () => {
       validUntil: new Date('2024-12-31'),
       timeRemaining: 2 * 60 * 60 * 1000, // 2 hours
       status: 'active' as const,
-      reason: undefined
+      reason: undefined,
     };
 
     mockUseTimeBoundMembership.mockReturnValue({
@@ -80,18 +79,17 @@ describe('TimeBoundMembership Integration', () => {
       isExpiringSoon: true,
       formattedTimeRemaining: '2 hours, 0 minutes',
       statusInfo: { color: 'yellow', message: 'Membership expiring soon' },
-      checkMembershipStatus: vi.fn()
+      checkMembershipStatus: vi.fn(),
     });
 
-    render(
-      <TimeBoundMembershipStatus 
-        hatId={BigInt(123)} 
-        roleType="member"
-      />
-    );
+    render(<TimeBoundMembershipStatus hatId={BigInt(123)} roleType="member" />);
 
-    expect(screen.getByText('Your member membership expires in 2 hours, 0 minutes!')).toBeInTheDocument();
-    expect(screen.getByText(/Contact pod administrators to extend/)).toBeInTheDocument();
+    expect(
+      screen.getByText('Your member membership expires in 2 hours, 0 minutes!'),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/Contact pod administrators to extend/),
+    ).toBeInTheDocument();
   });
 
   it('should show expired status', async () => {
@@ -103,7 +101,7 @@ describe('TimeBoundMembership Integration', () => {
       validUntil: new Date('2024-01-31'),
       timeRemaining: 0,
       status: 'expired' as const,
-      reason: 'Time period has ended'
+      reason: 'Time period has ended',
     };
 
     mockUseTimeBoundMembership.mockReturnValue({
@@ -116,24 +114,23 @@ describe('TimeBoundMembership Integration', () => {
       isExpiringSoon: false,
       formattedTimeRemaining: null,
       statusInfo: { color: 'red', message: 'Membership expired' },
-      checkMembershipStatus: vi.fn()
+      checkMembershipStatus: vi.fn(),
     });
 
-    render(
-      <TimeBoundMembershipStatus 
-        hatId={BigInt(123)} 
-        roleType="leader"
-      />
-    );
+    render(<TimeBoundMembershipStatus hatId={BigInt(123)} roleType="leader" />);
 
     expect(screen.getByText('expired')).toBeInTheDocument();
-    expect(screen.getByText('Your leader membership has expired')).toBeInTheDocument();
-    expect(screen.getByText(/You no longer have access to leader privileges/)).toBeInTheDocument();
+    expect(
+      screen.getByText('Your leader membership has expired'),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/You no longer have access to leader privileges/),
+    ).toBeInTheDocument();
   });
 
   it('should handle refresh action', async () => {
     const mockRefresh = vi.fn();
-    
+
     mockUseTimeBoundMembership.mockReturnValue({
       membership: null,
       loading: false,
@@ -144,15 +141,10 @@ describe('TimeBoundMembership Integration', () => {
       isExpiringSoon: false,
       formattedTimeRemaining: null,
       statusInfo: { color: 'gray', message: 'No membership data' },
-      checkMembershipStatus: vi.fn()
+      checkMembershipStatus: vi.fn(),
     });
 
-    render(
-      <TimeBoundMembershipStatus 
-        hatId={BigInt(123)} 
-        roleType="member"
-      />
-    );
+    render(<TimeBoundMembershipStatus hatId={BigInt(123)} roleType="member" />);
 
     const refreshButton = screen.getByText('Refresh');
     fireEvent.click(refreshButton);
@@ -171,17 +163,14 @@ describe('TimeBoundMembership Integration', () => {
       isExpiringSoon: false,
       formattedTimeRemaining: null,
       statusInfo: { color: 'gray', message: 'No membership data' },
-      checkMembershipStatus: vi.fn()
+      checkMembershipStatus: vi.fn(),
     });
 
-    render(
-      <TimeBoundMembershipStatus 
-        hatId={BigInt(123)} 
-        roleType="member"
-      />
-    );
+    render(<TimeBoundMembershipStatus hatId={BigInt(123)} roleType="member" />);
 
-    expect(screen.getByText('Checking membership status...')).toBeInTheDocument();
+    expect(
+      screen.getByText('Checking membership status...'),
+    ).toBeInTheDocument();
   });
 
   it('should handle error state', async () => {
@@ -195,17 +184,14 @@ describe('TimeBoundMembership Integration', () => {
       isExpiringSoon: false,
       formattedTimeRemaining: null,
       statusInfo: { color: 'gray', message: 'No membership data' },
-      checkMembershipStatus: vi.fn()
+      checkMembershipStatus: vi.fn(),
     });
 
-    render(
-      <TimeBoundMembershipStatus 
-        hatId={BigInt(123)} 
-        roleType="member"
-      />
-    );
+    render(<TimeBoundMembershipStatus hatId={BigInt(123)} roleType="member" />);
 
-    expect(screen.getByText('Error checking membership: Network connection failed')).toBeInTheDocument();
+    expect(
+      screen.getByText('Error checking membership: Network connection failed'),
+    ).toBeInTheDocument();
     expect(screen.getByText('Retry')).toBeInTheDocument();
   });
 });

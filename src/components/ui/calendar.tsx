@@ -1,9 +1,9 @@
-import type * as React from "react";
-import { DayPicker } from "react-day-picker";
-import "react-day-picker/dist/style.css";
+import type * as React from 'react';
+import { DayPicker } from 'react-day-picker';
+import 'react-day-picker/dist/style.css';
 
 export interface CalendarProps {
-  mode?: "single";
+  mode?: 'single';
   selected?: Date | undefined;
   onSelect?: (date: Date | undefined) => void;
   initialFocus?: boolean;
@@ -11,11 +11,11 @@ export interface CalendarProps {
 }
 
 export const Calendar: React.FC<CalendarProps> = ({
-  mode = "single",
+  mode = 'single',
   selected,
   onSelect,
   initialFocus,
-  className = "",
+  className = '',
 }) => {
   // Only support single mode as per usage
   return (
@@ -27,4 +27,4 @@ export const Calendar: React.FC<CalendarProps> = ({
       initialFocus={initialFocus}
     />
   );
-}; 
+};

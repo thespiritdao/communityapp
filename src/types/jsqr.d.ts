@@ -16,14 +16,18 @@ declare module 'jsqr' {
   }
 
   interface Options {
-    inversionAttempts?: "dontInvert" | "onlyInvert" | "attemptBoth" | "invertFirst";
+    inversionAttempts?:
+      | 'dontInvert'
+      | 'onlyInvert'
+      | 'attemptBoth'
+      | 'invertFirst';
   }
 
   function jsQR(
     data: Uint8ClampedArray,
     width: number,
     height: number,
-    options?: Options
+    options?: Options,
   ): QRCode | null;
 
   export = jsQR;

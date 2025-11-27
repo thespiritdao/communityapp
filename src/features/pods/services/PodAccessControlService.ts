@@ -10,7 +10,7 @@ import HatsProtocolABI from '@/abis/HatsProtocol.json';
 
 /**
  * PodAccessControlService - Real-time access control using role permissions
- * 
+ *
  * Integrates with existing pod management infrastructure to provide
  * HAT-based permission checking for all pod operations.
  */
@@ -22,12 +22,20 @@ export class PodAccessControlService {
    * 🆕 PURE ENFORCEMENT: Everyone (including creators) must meet eligibility criteria
    * No special bypasses - criteria are enforced at HAT mint time via pre-mint check
    */
-  static async canManagePod(userWallet: string, podId: string): Promise<boolean> {
+  static async canManagePod(
+    userWallet: string,
+    podId: string,
+  ): Promise<boolean> {
     try {
-      console.log(`🔐 Checking management access for ${userWallet} in pod ${podId}`);
+      console.log(
+        `🔐 Checking management access for ${userWallet} in pod ${podId}`,
+      );
 
       // Step 1: Get user's pod membership
-      const userMembership = await PodService.checkPodMembership(podId, userWallet);
+      const userMembership = await PodService.checkPodMembership(
+        podId,
+        userWallet,
+      );
 
       if (!userMembership.is_member) {
         console.log('❌ User is not a pod member');
@@ -55,18 +63,27 @@ export class PodAccessControlService {
       }
 
       // Step 4: ⚠️ CRITICAL - Check eligibility criteria (agreements, token requirements, etc.)
-      if (userRole.eligibility_criteria && userRole.eligibility_criteria.length > 0) {
-        console.log(`🔍 Checking eligibility criteria for role ${userRole.role_name}`);
-
-        const eligibilityCheck = await EligibilityService.checkEligibilityHybrid(
-          userWallet,
-          podId,
-          userRole.id,
-          'database' // Use database check for speed (can upgrade to 'both' for onchain verification)
+      if (
+        userRole.eligibility_criteria &&
+        userRole.eligibility_criteria.length > 0
+      ) {
+        console.log(
+          `🔍 Checking eligibility criteria for role ${userRole.role_name}`,
         );
 
+        const eligibilityCheck =
+          await EligibilityService.checkEligibilityHybrid(
+            userWallet,
+            podId,
+            userRole.id,
+            'database', // Use database check for speed (can upgrade to 'both' for onchain verification)
+          );
+
         if (!eligibilityCheck.eligible) {
-          console.log('❌ User does not meet eligibility criteria:', eligibilityCheck);
+          console.log(
+            '❌ User does not meet eligibility criteria:',
+            eligibilityCheck,
+          );
           return false;
         }
 
@@ -80,33 +97,40 @@ export class PodAccessControlService {
       try {
         const publicClient = createPublicClient({
           chain: base,
-          transport: http()
+          transport: http(),
         });
 
         const hatBalance = await publicClient.readContract({
           address: HATS_PROTOCOL_ADDRESS,
           abi: HatsProtocolABI,
           functionName: 'balanceOf',
-          args: [userWallet as `0x${string}`, BigInt(userMembership.hat_id)]
+          args: [userWallet as `0x${string}`, BigInt(userMembership.hat_id)],
         });
 
         if (hatBalance === 0n) {
-          console.log('❌ User no longer holds HAT token on-chain (database stale)');
+          console.log(
+            '❌ User no longer holds HAT token on-chain (database stale)',
+          );
           return false;
         }
 
         console.log('✅ User holds HAT token on-chain - verified');
       } catch (onchainError) {
-        console.error('❌ Failed to verify HAT ownership on-chain:', onchainError);
+        console.error(
+          '❌ Failed to verify HAT ownership on-chain:',
+          onchainError,
+        );
         // Fail closed: deny access if we cannot verify on-chain ownership
         return false;
       }
 
       console.log('✅ User has management access (all checks passed)');
       return true;
-
     } catch (error) {
-      console.error(`Failed to check pod management access for ${userWallet}:`, error);
+      console.error(
+        `Failed to check pod management access for ${userWallet}:`,
+        error,
+      );
       return false;
     }
   }
@@ -118,11 +142,14 @@ export class PodAccessControlService {
   private static async checkPermissionWithEligibility(
     userWallet: string,
     podId: string,
-    permissionKey: keyof HatPermissions
+    permissionKey: keyof HatPermissions,
   ): Promise<boolean> {
     try {
       // Step 1: Get user's pod membership
-      const userMembership = await PodService.checkPodMembership(podId, userWallet);
+      const userMembership = await PodService.checkPodMembership(
+        podId,
+        userWallet,
+      );
 
       if (!userMembership.is_member) {
         return false;
@@ -142,13 +169,17 @@ export class PodAccessControlService {
       }
 
       // Step 3: Check eligibility criteria if they exist
-      if (userRole.eligibility_criteria && userRole.eligibility_criteria.length > 0) {
-        const eligibilityCheck = await EligibilityService.checkEligibilityHybrid(
-          userWallet,
-          podId,
-          userRole.id,
-          'database'
-        );
+      if (
+        userRole.eligibility_criteria &&
+        userRole.eligibility_criteria.length > 0
+      ) {
+        const eligibilityCheck =
+          await EligibilityService.checkEligibilityHybrid(
+            userWallet,
+            podId,
+            userRole.id,
+            'database',
+          );
 
         return eligibilityCheck.eligible;
       }
@@ -163,68 +194,116 @@ export class PodAccessControlService {
   /**
    * Check if user can access pod chat
    */
-  static async canAccessPodChat(userWallet: string, podId: string): Promise<boolean> {
+  static async canAccessPodChat(
+    userWallet: string,
+    podId: string,
+  ): Promise<boolean> {
     return this.checkPermissionWithEligibility(userWallet, podId, 'chatAccess');
   }
 
   /**
    * Check if user can create events for a pod
    */
-  static async canCreateEvents(userWallet: string, podId: string): Promise<boolean> {
-    return this.checkPermissionWithEligibility(userWallet, podId, 'eventCreation');
+  static async canCreateEvents(
+    userWallet: string,
+    podId: string,
+  ): Promise<boolean> {
+    return this.checkPermissionWithEligibility(
+      userWallet,
+      podId,
+      'eventCreation',
+    );
   }
 
   /**
    * Check if user can view pod treasury
    */
-  static async canViewTreasury(userWallet: string, podId: string): Promise<boolean> {
-    return this.checkPermissionWithEligibility(userWallet, podId, 'treasuryViewing');
+  static async canViewTreasury(
+    userWallet: string,
+    podId: string,
+  ): Promise<boolean> {
+    return this.checkPermissionWithEligibility(
+      userWallet,
+      podId,
+      'treasuryViewing',
+    );
   }
 
   /**
    * Check if user can participate in governance for a pod
    */
-  static async canParticipateInGovernance(userWallet: string, podId: string): Promise<boolean> {
-    return this.checkPermissionWithEligibility(userWallet, podId, 'governanceParticipation');
+  static async canParticipateInGovernance(
+    userWallet: string,
+    podId: string,
+  ): Promise<boolean> {
+    return this.checkPermissionWithEligibility(
+      userWallet,
+      podId,
+      'governanceParticipation',
+    );
   }
 
   /**
    * Check if user can create sub-pods
    */
-  static async canCreateSubPods(userWallet: string, podId: string): Promise<boolean> {
-    return this.checkPermissionWithEligibility(userWallet, podId, 'subPodCreation');
+  static async canCreateSubPods(
+    userWallet: string,
+    podId: string,
+  ): Promise<boolean> {
+    return this.checkPermissionWithEligibility(
+      userWallet,
+      podId,
+      'subPodCreation',
+    );
   }
 
   /**
    * Check if user can assign roles to other members
    */
-  static async canAssignRoles(userWallet: string, podId: string): Promise<boolean> {
-    return this.checkPermissionWithEligibility(userWallet, podId, 'roleAssignment');
+  static async canAssignRoles(
+    userWallet: string,
+    podId: string,
+  ): Promise<boolean> {
+    return this.checkPermissionWithEligibility(
+      userWallet,
+      podId,
+      'roleAssignment',
+    );
   }
 
   /**
    * Get all permissions for a user in a pod
    */
-  static async getUserPodPermissions(userWallet: string, podId: string): Promise<HatPermissions | null> {
+  static async getUserPodPermissions(
+    userWallet: string,
+    podId: string,
+  ): Promise<HatPermissions | null> {
     try {
       // Get all role permissions for this pod that the user has
-      const rolePermissions = await PodRolePermissionsService.getPodRolePermissions(podId);
-      
+      const rolePermissions =
+        await PodRolePermissionsService.getPodRolePermissions(podId);
+
       // Check which roles the user has via pod membership
-      const userMembership = await PodService.checkPodMembership(podId, userWallet);
-      
+      const userMembership = await PodService.checkPodMembership(
+        podId,
+        userWallet,
+      );
+
       if (!userMembership.is_member) {
         return null;
       }
 
       // Find the user's role permissions
-      const userRolePermissions = rolePermissions.find(role =>
-        role.token_address === userMembership.hat_id
+      const userRolePermissions = rolePermissions.find(
+        (role) => role.token_address === userMembership.hat_id,
       );
 
       return userRolePermissions?.permissions || null;
     } catch (error) {
-      console.error(`Failed to get user pod permissions for ${userWallet}:`, error);
+      console.error(
+        `Failed to get user pod permissions for ${userWallet}:`,
+        error,
+      );
       return null;
     }
   }
@@ -232,7 +311,10 @@ export class PodAccessControlService {
   /**
    * Comprehensive access check for pod management UI
    */
-  static async getPodAccessSummary(userWallet: string, podId: string): Promise<{
+  static async getPodAccessSummary(
+    userWallet: string,
+    podId: string,
+  ): Promise<{
     canManage: boolean;
     canAccessChat: boolean;
     canCreateEvents: boolean;
@@ -244,7 +326,9 @@ export class PodAccessControlService {
     membershipType?: string;
   }> {
     try {
-      console.log(`🔍 Checking comprehensive pod access for ${userWallet} in pod ${podId}`);
+      console.log(
+        `🔍 Checking comprehensive pod access for ${userWallet} in pod ${podId}`,
+      );
 
       // Run all permission checks in parallel for efficiency
       const [
@@ -256,7 +340,7 @@ export class PodAccessControlService {
         canCreateSubPods,
         canAssignRoles,
         permissions,
-        membership
+        membership,
       ] = await Promise.all([
         this.canManagePod(userWallet, podId),
         this.canAccessPodChat(userWallet, podId),
@@ -266,7 +350,7 @@ export class PodAccessControlService {
         this.canCreateSubPods(userWallet, podId),
         this.canAssignRoles(userWallet, podId),
         this.getUserPodPermissions(userWallet, podId),
-        PodService.checkPodMembership(podId, userWallet)
+        PodService.checkPodMembership(podId, userWallet),
       ]);
 
       const accessSummary = {
@@ -278,19 +362,22 @@ export class PodAccessControlService {
         canCreateSubPods,
         canAssignRoles,
         permissions,
-        membershipType: membership.membership_type
+        membershipType: membership.membership_type,
       };
 
       console.log(`✅ Pod access summary for ${userWallet}:`, {
         podId,
         canManage,
         membershipType: membership.membership_type,
-        hasPermissions: !!permissions
+        hasPermissions: !!permissions,
       });
 
       return accessSummary;
     } catch (error) {
-      console.error(`Failed to get pod access summary for ${userWallet}:`, error);
+      console.error(
+        `Failed to get pod access summary for ${userWallet}:`,
+        error,
+      );
       return {
         canManage: false,
         canAccessChat: false,
@@ -299,7 +386,7 @@ export class PodAccessControlService {
         canParticipateInGovernance: false,
         canCreateSubPods: false,
         canAssignRoles: false,
-        permissions: null
+        permissions: null,
       };
     }
   }
@@ -310,7 +397,7 @@ export class PodAccessControlService {
   static async requirePodPermission(
     userWallet: string,
     podId: string,
-    requiredPermission: keyof HatPermissions
+    requiredPermission: keyof HatPermissions,
   ): Promise<{ allowed: boolean; error?: string }> {
     try {
       if (!userWallet) {
@@ -320,22 +407,22 @@ export class PodAccessControlService {
       const hasPermission = await PodRolePermissionsService.checkUserPermission(
         userWallet,
         podId,
-        requiredPermission
+        requiredPermission,
       );
 
       if (!hasPermission) {
-        return { 
-          allowed: false, 
-          error: `Missing required permission: ${requiredPermission}` 
+        return {
+          allowed: false,
+          error: `Missing required permission: ${requiredPermission}`,
         };
       }
 
       return { allowed: true };
     } catch (error) {
       console.error('Permission check failed:', error);
-      return { 
-        allowed: false, 
-        error: 'Permission check failed' 
+      return {
+        allowed: false,
+        error: 'Permission check failed',
       };
     }
   }
@@ -343,19 +430,22 @@ export class PodAccessControlService {
   /**
    * Helper to validate pod management access for UI components
    */
-  static async validatePodManagementAccess(userWallet: string, podId: string): Promise<{
+  static async validatePodManagementAccess(
+    userWallet: string,
+    podId: string,
+  ): Promise<{
     hasAccess: boolean;
     accessLevel: 'none' | 'member' | 'leader' | 'admin';
     permissions: HatPermissions | null;
   }> {
     try {
       const membership = await PodService.checkPodMembership(podId, userWallet);
-      
+
       if (!membership.is_member) {
         return {
           hasAccess: false,
           accessLevel: 'none',
-          permissions: null
+          permissions: null,
         };
       }
 
@@ -363,8 +453,11 @@ export class PodAccessControlService {
       const canManage = await this.canManagePod(userWallet, podId);
 
       let accessLevel: 'none' | 'member' | 'leader' | 'admin' = 'member';
-      
-      if (membership.membership_type === 'admin' || (permissions?.roleAssignment && canManage)) {
+
+      if (
+        membership.membership_type === 'admin' ||
+        (permissions?.roleAssignment && canManage)
+      ) {
         accessLevel = 'admin';
       } else if (membership.membership_type === 'leader' || canManage) {
         accessLevel = 'leader';
@@ -373,14 +466,14 @@ export class PodAccessControlService {
       return {
         hasAccess: true,
         accessLevel,
-        permissions
+        permissions,
       };
     } catch (error) {
       console.error('Failed to validate pod management access:', error);
       return {
         hasAccess: false,
         accessLevel: 'none',
-        permissions: null
+        permissions: null,
       };
     }
   }

@@ -6,39 +6,39 @@ export interface Event {
   event_end_date?: string;
   location?: string;
   max_attendees?: number;
-  
+
   // Blockchain integration
   blockchain_event_id?: string; // Unique ID used on smart contract
-  
+
   // Pricing and token info
   price_amount: string;
   price_self_amount?: string;
   price_token: 'free' | 'SELF' | 'SYSTEM' | 'dual';
-  
+
   // Token gating
   required_tokens: string[];
-  
+
   // Pod association
   organizing_pod_id?: string;
   fund_recipient_pod_id?: string;
   fund_recipient_type: 'pod' | 'dao';
-  
+
   // Event creator and management
   creator_address: string;
   manager_address?: string;
-  
+
   // Event tokens/NFTs
   registration_contract_address?: string;
   completion_contract_address?: string;
-  
+
   // Status and metadata
   status: 'draft' | 'published' | 'cancelled' | 'completed';
   qr_code_data?: string;
-  
+
   // Image and metadata
   event_image_url?: string;
   event_metadata?: Record<string, any>;
-  
+
   created_at: string;
   updated_at: string;
 }
@@ -47,20 +47,20 @@ export interface EventRegistration {
   id: string;
   event_id: string;
   user_address: string;
-  
+
   // Registration details
   registration_status: 'registered' | 'cancelled' | 'checked_in' | 'completed';
-  
+
   // Token tracking
   registration_token_id?: string;
   completion_token_id?: string;
-  
+
   // Payment tracking
   payment_amount: string;
   payment_token: string;
   payment_tx_hash?: string;
   payment_status: 'pending' | 'completed' | 'refunded';
-  
+
   // Timestamps
   registered_at: string;
   checked_in_at?: string;
@@ -86,28 +86,28 @@ export interface EventNotification {
   recipient_address: string;
   event_id?: string;
   registration_id?: string;
-  
-  notification_type: 
-    | 'event_created' 
-    | 'event_updated' 
+
+  notification_type:
+    | 'event_created'
+    | 'event_updated'
     | 'event_cancelled'
-    | 'registration_confirmed' 
+    | 'registration_confirmed'
     | 'registration_cancelled'
-    | 'event_one_week_reminder' 
+    | 'event_one_week_reminder'
     | 'event_day_reminder'
-    | 'event_starting_soon' 
+    | 'event_starting_soon'
     | 'event_completed'
-    | 'check_in_required' 
+    | 'check_in_required'
     | 'completion_nft_ready';
-  
+
   title: string;
   message: string;
   context_url?: string;
-  
+
   // Notification scheduling
   scheduled_for?: string;
   sent_at?: string;
-  
+
   is_read: boolean;
   created_at: string;
 }
@@ -118,13 +118,13 @@ export interface EventToken {
   token_type: 'registration' | 'completion';
   contract_address: string;
   token_id: string;
-  
+
   // Token metadata
   token_name?: string;
   token_description?: string;
   token_image_url?: string;
   token_metadata?: Record<string, any>;
-  
+
   // Owner tracking
   owner_address: string;
   minted_at: string;
@@ -133,20 +133,20 @@ export interface EventToken {
 export interface EventEscrow {
   id: string;
   event_id: string;
-  
+
   // Escrow account details
   escrow_account_id: string;
   escrow_account_address?: string;
-  
+
   // Token amounts
   total_self_amount: string;
   total_system_amount: string;
-  
+
   // Distribution tracking
   distributed: boolean;
   distributed_at?: string;
   distribution_tx_hash?: string;
-  
+
   created_at: string;
 }
 

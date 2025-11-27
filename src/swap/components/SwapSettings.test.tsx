@@ -176,14 +176,12 @@ describe('SwapSettings', () => {
     const { unmount } = renderComponent();
     unmount();
     expect(removeEventListenerSpy).toHaveBeenCalledWith(
-
       'click',
       expect.any(Function),
       { capture: true },
 
       'mousedown',
       expect.any(Function),
-
     );
     removeEventListenerSpy.mockRestore();
   });

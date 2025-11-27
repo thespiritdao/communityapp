@@ -27,7 +27,7 @@ export function DirectMessageModal({
   recipientAddress,
   recipientName,
   recipientImage,
-  onClose
+  onClose,
 }: DirectMessageModalProps) {
   const { address } = useAccount();
   const [messages, setMessages] = useState<DirectMessage[]>([]);
@@ -72,7 +72,7 @@ export function DirectMessageModal({
           event: '*',
           schema: 'public',
           table: 'chat_messages',
-          filter: `is_direct_message=eq.true`
+          filter: `is_direct_message=eq.true`,
         },
         (payload) => {
           if (payload.eventType === 'INSERT') {
@@ -83,15 +83,19 @@ export function DirectMessageModal({
 
             // Only add if it's part of this conversation
             if (
-              (msgSender === normalizedAddress && msgReceiver === normalizedRecipient) ||
-              (msgSender === normalizedRecipient && msgReceiver === normalizedAddress)
+              (msgSender === normalizedAddress &&
+                msgReceiver === normalizedRecipient) ||
+              (msgSender === normalizedRecipient &&
+                msgReceiver === normalizedAddress)
             ) {
-              setMessages(prev => [...prev, newMsg]);
+              setMessages((prev) => [...prev, newMsg]);
             }
           } else if (payload.eventType === 'DELETE') {
-            setMessages(prev => prev.filter(msg => msg.id !== payload.old.id));
+            setMessages((prev) =>
+              prev.filter((msg) => msg.id !== payload.old.id),
+            );
           }
-        }
+        },
       )
       .subscribe();
 
@@ -104,7 +108,8 @@ export function DirectMessageModal({
   useEffect(() => {
     if (messagesContainerRef.current) {
       // Scroll the messages container to bottom, not the page
-      messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
+      messagesContainerRef.current.scrollTop =
+        messagesContainerRef.current.scrollHeight;
     }
   }, [messages]);
 
@@ -123,7 +128,9 @@ export function DirectMessageModal({
         .from('chat_messages')
         .select('*')
         .eq('is_direct_message', true)
-        .or(`and(sender_wallet_id.eq.${normalizedAddress},receiver_wallet_id.eq.${normalizedRecipient}),and(sender_wallet_id.eq.${normalizedRecipient},receiver_wallet_id.eq.${normalizedAddress})`)
+        .or(
+          `and(sender_wallet_id.eq.${normalizedAddress},receiver_wallet_id.eq.${normalizedRecipient}),and(sender_wallet_id.eq.${normalizedRecipient},receiver_wallet_id.eq.${normalizedAddress})`,
+        )
         .order('created_at', { ascending: true });
 
       if (error) throw error;
@@ -168,15 +175,13 @@ export function DirectMessageModal({
       const normalizedAddress = address.toLowerCase();
       const normalizedRecipient = recipientAddress.toLowerCase();
 
-      const { error } = await supabase
-        .from('chat_messages')
-        .insert({
-          sender_wallet_id: normalizedAddress,
-          receiver_wallet_id: normalizedRecipient,
-          content: newMessage.trim(),
-          is_direct_message: true,
-          created_at: new Date().toISOString()
-        });
+      const { error } = await supabase.from('chat_messages').insert({
+        sender_wallet_id: normalizedAddress,
+        receiver_wallet_id: normalizedRecipient,
+        content: newMessage.trim(),
+        is_direct_message: true,
+        created_at: new Date().toISOString(),
+      });
 
       if (error) throw error;
 
@@ -191,10 +196,13 @@ export function DirectMessageModal({
           context_type: 'chat',
           context_id: normalizedAddress,
           context_url: `/chat/dm/${normalizedAddress}`,
-          priority: 'high'
+          priority: 'high',
         });
       } catch (notificationError) {
-        console.error('[DirectMessage] Failed to send notification:', notificationError);
+        console.error(
+          '[DirectMessage] Failed to send notification:',
+          notificationError,
+        );
         // Non-fatal - message was sent successfully
       }
 
@@ -229,20 +237,23 @@ export function DirectMessageModal({
   const handleBlockUser = async () => {
     if (!address) return;
 
-    if (!confirm(`Block ${recipientName}? They will no longer be able to send you messages.`)) return;
+    if (
+      !confirm(
+        `Block ${recipientName}? They will no longer be able to send you messages.`,
+      )
+    )
+      return;
 
     try {
       // Normalize addresses to lowercase for storage
       const normalizedAddress = address.toLowerCase();
       const normalizedRecipient = recipientAddress.toLowerCase();
 
-      const { error } = await supabase
-        .from('dm_blocks')
-        .insert({
-          blocker_id: normalizedAddress,
-          blocked_id: normalizedRecipient,
-          created_at: new Date().toISOString()
-        });
+      const { error } = await supabase.from('dm_blocks').insert({
+        blocker_id: normalizedAddress,
+        blocked_id: normalizedRecipient,
+        created_at: new Date().toISOString(),
+      });
 
       if (error) throw error;
 
@@ -262,7 +273,11 @@ export function DirectMessageModal({
         {/* Header */}
         <div className="dm-header">
           <div className="dm-header-info">
-            <img src={recipientImage} alt={recipientName} className="dm-avatar" />
+            <img
+              src={recipientImage}
+              alt={recipientName}
+              className="dm-avatar"
+            />
             <div>
               <h3>{recipientName}</h3>
             </div>
@@ -321,7 +336,9 @@ export function DirectMessageModal({
                 type="text"
                 value={newMessage}
                 onChange={(e) => setNewMessage(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handleSendMessage()}
+                onKeyDown={(e) =>
+                  e.key === 'Enter' && !e.shiftKey && handleSendMessage()
+                }
                 placeholder="Type a message..."
                 className="dm-input"
                 disabled={isSending}
@@ -338,7 +355,7 @@ export function DirectMessageModal({
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  color: '#555'
+                  color: '#555',
                 }}
               >
                 <Send size={18} />

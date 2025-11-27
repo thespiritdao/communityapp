@@ -11,7 +11,12 @@ export interface EventNotification {
   recipient_address: string;
   event_id: string;
   registration_id?: string;
-  notification_type: 'registration_confirmed' | 'event_reminder' | 'event_update' | 'event_cancelled' | 'completion_nft_ready';
+  notification_type:
+    | 'registration_confirmed'
+    | 'event_reminder'
+    | 'event_update'
+    | 'event_cancelled'
+    | 'completion_nft_ready';
   title: string;
   message: string;
   context_url?: string;
@@ -29,7 +34,7 @@ class EventNotificationService {
     eventId: string,
     eventTitle: string,
     eventDate: string,
-    transactionHash?: string
+    transactionHash?: string,
   ): Promise<void> {
     try {
       const notification: Partial<EventNotification> = {
@@ -39,7 +44,7 @@ class EventNotificationService {
         title: 'Event Registration Confirmed',
         message: `You have successfully registered for "${eventTitle}" scheduled for ${new Date(eventDate).toLocaleDateString()}. See you there!`,
         context_url: `/events/${eventId}`,
-        is_read: false
+        is_read: false,
       };
 
       const { error } = await supabase
@@ -47,17 +52,25 @@ class EventNotificationService {
         .insert(notification);
 
       if (error) {
-        console.error('Error creating registration confirmation notification:', error);
+        console.error(
+          'Error creating registration confirmation notification:',
+          error,
+        );
         return;
       }
 
       console.log('📧 Registration confirmation sent:', {
         attendee: attendeeAddress,
-        event: eventTitle
+        event: eventTitle,
       });
 
       // Schedule check-in prompt notifications
-      await this.scheduleCheckInPrompts(attendeeAddress, eventId, eventTitle, eventDate);
+      await this.scheduleCheckInPrompts(
+        attendeeAddress,
+        eventId,
+        eventTitle,
+        eventDate,
+      );
     } catch (error) {
       console.error('Error sending registration confirmation:', error);
     }
@@ -70,14 +83,16 @@ class EventNotificationService {
     attendeeAddress: string,
     eventId: string,
     eventTitle: string,
-    eventDate: string
+    eventDate: string,
   ): Promise<void> {
     try {
       const eventDateTime = new Date(eventDate);
       const now = new Date();
 
       // Schedule 7-day check-in prompt
-      const sevenDaysBefore = new Date(eventDateTime.getTime() - (7 * 24 * 60 * 60 * 1000));
+      const sevenDaysBefore = new Date(
+        eventDateTime.getTime() - 7 * 24 * 60 * 60 * 1000,
+      );
       if (sevenDaysBefore > now) {
         const notification7d: Partial<EventNotification> = {
           user_id: attendeeAddress.toLowerCase(),
@@ -90,16 +105,18 @@ class EventNotificationService {
           status: 'pending',
           metadata: {
             reminder_type: 'checkin_7d',
-            event_date: eventDate
-          }
+            event_date: eventDate,
+          },
         };
 
         await supabase.from('event_notifications').insert(notification7d);
-        console.log(`📅 7-day check-in prompt scheduled for ${attendeeAddress}`);
+        console.log(
+          `📅 7-day check-in prompt scheduled for ${attendeeAddress}`,
+        );
       }
 
       // Schedule day-of check-in prompt (1 hour before event)
-      const dayOf = new Date(eventDateTime.getTime() - (1 * 60 * 60 * 1000));
+      const dayOf = new Date(eventDateTime.getTime() - 1 * 60 * 60 * 1000);
       if (dayOf > now) {
         const notificationDayOf: Partial<EventNotification> = {
           user_id: attendeeAddress.toLowerCase(),
@@ -112,12 +129,14 @@ class EventNotificationService {
           status: 'pending',
           metadata: {
             reminder_type: 'checkin_day_of',
-            event_date: eventDate
-          }
+            event_date: eventDate,
+          },
         };
 
         await supabase.from('event_notifications').insert(notificationDayOf);
-        console.log(`📅 Day-of check-in prompt scheduled for ${attendeeAddress}`);
+        console.log(
+          `📅 Day-of check-in prompt scheduled for ${attendeeAddress}`,
+        );
       }
     } catch (error) {
       console.error('Error scheduling check-in prompts:', error);
@@ -131,7 +150,7 @@ class EventNotificationService {
     organizerAddress: string,
     eventId: string,
     eventTitle: string,
-    attendeeAddress: string
+    attendeeAddress: string,
   ): Promise<void> {
     try {
       const notification: Partial<EventNotification> = {
@@ -145,8 +164,8 @@ class EventNotificationService {
         status: 'pending',
         metadata: {
           attendee_address: attendeeAddress,
-          action: 'new_registration'
-        }
+          action: 'new_registration',
+        },
       };
 
       const { error } = await supabase
@@ -161,7 +180,7 @@ class EventNotificationService {
       console.log('📧 Organizer notification sent:', {
         organizer: organizerAddress,
         event: eventTitle,
-        newAttendee: attendeeAddress
+        newAttendee: attendeeAddress,
       });
     } catch (error) {
       console.error('Error notifying organizer:', error);
@@ -174,11 +193,11 @@ class EventNotificationService {
   async scheduleEventReminders(
     eventId: string,
     eventTitle: string,
-    eventDate: string
+    eventDate: string,
   ): Promise<void> {
     try {
       const eventDateTime = new Date(eventDate);
-      
+
       // Get all registered attendees
       const { data: registrations, error } = await supabase
         .from('event_registrations')
@@ -193,14 +212,16 @@ class EventNotificationService {
 
       // Schedule reminders for 7 days and 1 hour before event (day-of)
       const reminderTimes = [
-        { hours: 168, label: '7 days', type: 'event_reminder_7d' },      // 7 days before
-        { hours: 1, label: '1 hour', type: 'event_reminder_day_of' }    // Day of event
+        { hours: 168, label: '7 days', type: 'event_reminder_7d' }, // 7 days before
+        { hours: 1, label: '1 hour', type: 'event_reminder_day_of' }, // Day of event
       ];
 
       for (const registration of registrations) {
         for (const reminder of reminderTimes) {
-          const reminderTime = new Date(eventDateTime.getTime() - (reminder.hours * 60 * 60 * 1000));
-          
+          const reminderTime = new Date(
+            eventDateTime.getTime() - reminder.hours * 60 * 60 * 1000,
+          );
+
           // Only schedule if reminder time is in the future
           if (reminderTime > new Date()) {
             const notification: Partial<EventNotification> = {
@@ -214,18 +235,18 @@ class EventNotificationService {
               status: 'pending',
               metadata: {
                 reminder_type: reminder.type,
-                event_date: eventDate
-              }
+                event_date: eventDate,
+              },
             };
 
-            await supabase
-              .from('event_notifications')
-              .insert(notification);
+            await supabase.from('event_notifications').insert(notification);
           }
         }
       }
 
-      console.log(`📅 Scheduled reminders for ${registrations.length} attendees`);
+      console.log(
+        `📅 Scheduled reminders for ${registrations.length} attendees`,
+      );
     } catch (error) {
       console.error('Error scheduling event reminders:', error);
     }
@@ -238,7 +259,7 @@ class EventNotificationService {
     eventId: string,
     eventTitle: string,
     updateMessage: string,
-    organizerAddress: string
+    organizerAddress: string,
   ): Promise<void> {
     try {
       // Get all registered attendees
@@ -253,7 +274,7 @@ class EventNotificationService {
         return;
       }
 
-      const notifications = registrations.map(registration => ({
+      const notifications = registrations.map((registration) => ({
         user_id: registration.user_address.toLowerCase(),
         event_id: eventId,
         notification_type: 'event_update' as const,
@@ -264,8 +285,8 @@ class EventNotificationService {
         status: 'pending' as const,
         metadata: {
           organizer: organizerAddress,
-          update_type: 'manual'
-        }
+          update_type: 'manual',
+        },
       }));
 
       const { error: insertError } = await supabase
@@ -273,7 +294,10 @@ class EventNotificationService {
         .insert(notifications);
 
       if (insertError) {
-        console.error('Error creating event update notifications:', insertError);
+        console.error(
+          'Error creating event update notifications:',
+          insertError,
+        );
         return;
       }
 
@@ -290,7 +314,7 @@ class EventNotificationService {
     eventId: string,
     eventTitle: string,
     cancellationReason: string,
-    organizerAddress: string
+    organizerAddress: string,
   ): Promise<void> {
     try {
       // Get all registered attendees
@@ -305,7 +329,7 @@ class EventNotificationService {
         return;
       }
 
-      const notifications = registrations.map(registration => ({
+      const notifications = registrations.map((registration) => ({
         user_id: registration.user_address.toLowerCase(),
         event_id: eventId,
         notification_type: 'event_cancellation' as const,
@@ -316,8 +340,8 @@ class EventNotificationService {
         status: 'pending' as const,
         metadata: {
           organizer: organizerAddress,
-          reason: cancellationReason
-        }
+          reason: cancellationReason,
+        },
       }));
 
       const { error: insertError } = await supabase
@@ -325,11 +349,16 @@ class EventNotificationService {
         .insert(notifications);
 
       if (insertError) {
-        console.error('Error creating cancellation notifications:', insertError);
+        console.error(
+          'Error creating cancellation notifications:',
+          insertError,
+        );
         return;
       }
 
-      console.log(`📢 Cancellation notice sent to ${registrations.length} attendees`);
+      console.log(
+        `📢 Cancellation notice sent to ${registrations.length} attendees`,
+      );
     } catch (error) {
       console.error('Error sending cancellation notifications:', error);
     }
@@ -342,10 +371,10 @@ class EventNotificationService {
     eventId: string,
     eventTitle: string,
     recipientAddresses: string[],
-    organizerAddress: string
+    organizerAddress: string,
   ): Promise<void> {
     try {
-      const notifications = recipientAddresses.map(address => ({
+      const notifications = recipientAddresses.map((address) => ({
         user_id: address.toLowerCase(),
         event_id: eventId,
         notification_type: 'completion_certificate' as const,
@@ -356,8 +385,8 @@ class EventNotificationService {
         status: 'pending' as const,
         metadata: {
           organizer: organizerAddress,
-          certificate_type: 'completion'
-        }
+          certificate_type: 'completion',
+        },
       }));
 
       const { error } = await supabase
@@ -369,7 +398,9 @@ class EventNotificationService {
         return;
       }
 
-      console.log(`🏆 Certificate notifications sent to ${recipientAddresses.length} attendees`);
+      console.log(
+        `🏆 Certificate notifications sent to ${recipientAddresses.length} attendees`,
+      );
     } catch (error) {
       console.error('Error sending certificate notifications:', error);
     }
@@ -381,7 +412,7 @@ class EventNotificationService {
   async getUserNotifications(
     userAddress: string,
     limit = 20,
-    offset = 0
+    offset = 0,
   ): Promise<EventNotification[]> {
     try {
       const { data, error } = await supabase
@@ -410,9 +441,9 @@ class EventNotificationService {
     try {
       const { error } = await supabase
         .from('event_notifications')
-        .update({ 
+        .update({
           status: 'sent',
-          sent_at: new Date().toISOString()
+          sent_at: new Date().toISOString(),
         })
         .eq('id', notificationId);
 
@@ -468,7 +499,9 @@ class EventNotificationService {
         return;
       }
 
-      console.log(`Processing ${pendingNotifications?.length || 0} pending notifications`);
+      console.log(
+        `Processing ${pendingNotifications?.length || 0} pending notifications`,
+      );
 
       for (const notification of pendingNotifications || []) {
         // For in-app notifications, just mark as sent
@@ -477,7 +510,7 @@ class EventNotificationService {
           .from('event_notifications')
           .update({
             status: 'sent',
-            sent_at: new Date().toISOString()
+            sent_at: new Date().toISOString(),
           })
           .eq('id', notification.id);
       }

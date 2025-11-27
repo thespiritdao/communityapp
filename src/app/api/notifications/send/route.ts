@@ -25,34 +25,43 @@ export async function POST(request: NextRequest) {
       proposal_id,
       transaction_hash,
       priority = 'medium',
-      category
+      category,
     } = data;
 
     // Validate required fields
-    if (!recipient_address || !sender_address || !notification_type || !title || !message) {
+    if (
+      !recipient_address ||
+      !sender_address ||
+      !notification_type ||
+      !title ||
+      !message
+    ) {
       return NextResponse.json(
         { error: 'Missing required fields' },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
     // Determine category if not provided
-    const notificationCategory = category || determineCategory(notification_type);
+    const notificationCategory =
+      category || determineCategory(notification_type);
 
     // Check user preferences (using admin client)
     const shouldSend = await checkUserPreferences(
       recipient_address,
       notification_type,
       notificationCategory,
-      priority
+      priority,
     );
 
     if (!shouldSend) {
-      console.log(`[API] Notification skipped (user preferences): ${notification_type} for ${recipient_address}`);
+      console.log(
+        `[API] Notification skipped (user preferences): ${notification_type} for ${recipient_address}`,
+      );
       return NextResponse.json({
         success: true,
         skipped: true,
-        reason: 'User preferences'
+        reason: 'User preferences',
       });
     }
 
@@ -61,18 +70,20 @@ export async function POST(request: NextRequest) {
     if (notificationCategory === 'governance') {
       const { data: govNotification, error } = await supabaseAdmin
         .from('governance_notifications')
-        .insert([{
-          recipient_address: recipient_address.toLowerCase(),
-          sender_address: sender_address.toLowerCase(),
-          notification_type,
-          title,
-          message,
-          context_url,
-          context_type,
-          context_id,
-          proposal_id,
-          transaction_hash,
-        }])
+        .insert([
+          {
+            recipient_address: recipient_address.toLowerCase(),
+            sender_address: sender_address.toLowerCase(),
+            notification_type,
+            title,
+            message,
+            context_url,
+            context_type,
+            context_id,
+            proposal_id,
+            transaction_hash,
+          },
+        ])
         .select()
         .single();
 
@@ -81,16 +92,18 @@ export async function POST(request: NextRequest) {
     } else {
       const { data: generalNotification, error } = await supabaseAdmin
         .from('general_notifications')
-        .insert([{
-          recipient_address: recipient_address.toLowerCase(),
-          sender_address: sender_address.toLowerCase(),
-          notification_type,
-          title,
-          message,
-          context_url,
-          context_type,
-          context_id,
-        }])
+        .insert([
+          {
+            recipient_address: recipient_address.toLowerCase(),
+            sender_address: sender_address.toLowerCase(),
+            notification_type,
+            title,
+            message,
+            context_url,
+            context_type,
+            context_id,
+          },
+        ])
         .select()
         .single();
 
@@ -101,14 +114,13 @@ export async function POST(request: NextRequest) {
     console.log(`[API] Notification sent successfully to ${recipient_address}`);
     return NextResponse.json({
       success: true,
-      notification
+      notification,
     });
-
   } catch (error: any) {
     console.error('[API] Failed to send notification:', error);
     return NextResponse.json(
       { error: error.message || 'Failed to send notification' },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -118,7 +130,11 @@ export async function POST(request: NextRequest) {
  */
 function determineCategory(notificationType: string): string {
   if (notificationType.startsWith('pod_')) return 'pod';
-  if (notificationType.startsWith('governance_') || notificationType === 'proposal_created') return 'governance';
+  if (
+    notificationType.startsWith('governance_') ||
+    notificationType === 'proposal_created'
+  )
+    return 'governance';
   if (notificationType.startsWith('bounty_')) return 'bounty';
   if (notificationType.startsWith('chat_')) return 'chat';
   if (notificationType.startsWith('forum_')) return 'forum';
@@ -134,7 +150,7 @@ async function checkUserPreferences(
   userAddress: string,
   notificationType: string,
   category: string,
-  priority: string
+  priority: string,
 ): Promise<boolean> {
   try {
     // Get user preferences
@@ -169,7 +185,9 @@ async function checkUserPreferences(
     // Check specific notification type preference
     const typeKey = notificationType as keyof typeof preferences;
     if (typeKey in preferences && preferences[typeKey] === false) {
-      console.log(`[API] Notification type ${notificationType} disabled for ${userAddress}`);
+      console.log(
+        `[API] Notification type ${notificationType} disabled for ${userAddress}`,
+      );
       return false;
     }
 
@@ -183,7 +201,9 @@ async function checkUserPreferences(
       if (isInQuietHours(currentTime, start, end)) {
         // Only block low/medium priority during quiet hours
         if (priority === 'low' || priority === 'medium') {
-          console.log(`[API] Quiet hours active for ${userAddress}, blocking ${priority} priority`);
+          console.log(
+            `[API] Quiet hours active for ${userAddress}, blocking ${priority} priority`,
+          );
           return false;
         }
       }
@@ -191,7 +211,10 @@ async function checkUserPreferences(
 
     return true;
   } catch (error) {
-    console.error('[API] Error checking preferences, allowing notification:', error);
+    console.error(
+      '[API] Error checking preferences, allowing notification:',
+      error,
+    );
     return true; // Fail open - allow notification if preference check fails
   }
 }

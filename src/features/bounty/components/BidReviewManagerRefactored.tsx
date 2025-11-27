@@ -17,7 +17,7 @@
  * @module BidReviewManagerRefactored
  */
 
-"use client"
+'use client';
 
 import type React from 'react';
 import { useState, useEffect } from 'react';
@@ -29,7 +29,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogDescription
+  DialogDescription,
 } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
@@ -77,16 +77,25 @@ const getPaymentOptionLabel = (option: string): string => {
 
 export const BidReviewManager: React.FC<BidReviewManagerProps> = ({
   onBidStatusChange,
-  onNotificationSent
+  onNotificationSent,
 }) => {
   const { address } = useAccount();
-  const [activeTab, setActiveTab] = useState<'pending' | 'approved' | 'rejected'>('pending');
+  const [activeTab, setActiveTab] = useState<
+    'pending' | 'approved' | 'rejected'
+  >('pending');
   const [approvalFlowOpen, setApprovalFlowOpen] = useState(false);
   const [rejectionDialogOpen, setRejectionDialogOpen] = useState(false);
   const [rejectionReason, setRejectionReason] = useState('');
   const [selectedBid, setSelectedBid] = useState<FrontendBid | null>(null);
 
-  const { bids, bounties, loadAllBids, loadBounties, updateBidStatus, createBidReview } = useBountySupabase();
+  const {
+    bids,
+    bounties,
+    loadAllBids,
+    loadBounties,
+    updateBidStatus,
+    createBidReview,
+  } = useBountySupabase();
   const { validateMultiplePods } = usePodValidation();
 
   // ============================================================================
@@ -101,7 +110,7 @@ export const BidReviewManager: React.FC<BidReviewManagerProps> = ({
   // Validate pod IDs for pending bounties
   useEffect(() => {
     if (activeTab === 'pending' && bounties.length > 0) {
-      const podIds = bounties.map(bounty => bounty.podId).filter(Boolean);
+      const podIds = bounties.map((bounty) => bounty.podId).filter(Boolean);
       if (podIds.length > 0) {
         console.log('🔄 Pre-validating pod IDs for pending bounties:', podIds);
         validateMultiplePods(podIds);
@@ -114,16 +123,16 @@ export const BidReviewManager: React.FC<BidReviewManagerProps> = ({
   // ============================================================================
 
   const getBountyTitle = (bountyId: string): string => {
-    const bounty = bounties.find(b => b.id === bountyId);
+    const bounty = bounties.find((b) => b.id === bountyId);
     return bounty?.title || bountyId;
   };
 
   const getBountyData = (bountyId: string) => {
-    return bounties.find(b => b.id === bountyId);
+    return bounties.find((b) => b.id === bountyId);
   };
 
   const getTokenSymbolForBid = (bidBountyId: string): string => {
-    const bounty = bounties.find(b => b.id === bidBountyId);
+    const bounty = bounties.find((b) => b.id === bidBountyId);
     return bounty ? getTokenSymbol(bounty.value.token) : 'tokens';
   };
 
@@ -156,7 +165,9 @@ export const BidReviewManager: React.FC<BidReviewManagerProps> = ({
 
     try {
       console.log('🔍 Starting bid rejection for bid ID:', selectedBid.id);
-      console.log('ℹ️ Note: No funds are in escrow yet - escrow only happens when a bid is APPROVED');
+      console.log(
+        'ℹ️ Note: No funds are in escrow yet - escrow only happens when a bid is APPROVED',
+      );
 
       // Update bid status
       await updateBidStatus(selectedBid.id, 'rejected');
@@ -170,7 +181,7 @@ export const BidReviewManager: React.FC<BidReviewManagerProps> = ({
         reviewerAddress: address,
         reviewType: 'final',
         status: 'rejected',
-        comments: rejectionReason
+        comments: rejectionReason,
       });
       console.log('✅ Bid review created successfully');
 
@@ -184,14 +195,16 @@ export const BidReviewManager: React.FC<BidReviewManagerProps> = ({
         context_type: 'bounty',
         context_id: selectedBid.bountyId,
         context_url: `/bounty/${selectedBid.bountyId}`,
-        priority: 'medium'
+        priority: 'medium',
       });
 
       console.log('✅ Bid rejection complete - bidder has been notified');
 
-      alert(`✅ Bid rejected successfully!\n\n` +
-            `The bidder has been notified with your reason.\n\n` +
-            `Note: No funds were in escrow yet - funds only go into escrow when a bid is approved.`);
+      alert(
+        `✅ Bid rejected successfully!\n\n` +
+          `The bidder has been notified with your reason.\n\n` +
+          `Note: No funds were in escrow yet - funds only go into escrow when a bid is approved.`,
+      );
 
       setRejectionDialogOpen(false);
       setSelectedBid(null);
@@ -199,7 +212,9 @@ export const BidReviewManager: React.FC<BidReviewManagerProps> = ({
       await loadAllBids();
     } catch (error) {
       console.error('❌ Error rejecting bid:', error);
-      alert(`Failed to reject bid: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      alert(
+        `Failed to reject bid: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      );
     }
   };
 
@@ -225,7 +240,7 @@ export const BidReviewManager: React.FC<BidReviewManagerProps> = ({
   // RENDER
   // ============================================================================
 
-  const filteredBids = bids.filter(bid => bid.status === activeTab);
+  const filteredBids = bids.filter((bid) => bid.status === activeTab);
 
   return (
     <div className="space-y-6">
@@ -280,7 +295,9 @@ export const BidReviewManager: React.FC<BidReviewManagerProps> = ({
               <div className="space-y-4">
                 <div>
                   <p className="text-sm font-medium text-gray-500">Amount</p>
-                  <p>{bid.proposedAmount} {getTokenSymbolForBid(bid.bountyId)}</p>
+                  <p>
+                    {bid.proposedAmount} {getTokenSymbolForBid(bid.bountyId)}
+                  </p>
                 </div>
                 <div>
                   <p className="text-sm font-medium text-gray-500">Payment</p>
@@ -296,7 +313,9 @@ export const BidReviewManager: React.FC<BidReviewManagerProps> = ({
                     className="flex-1"
                     style={{ backgroundColor: '#2F5D50', color: '#FFFFFF' }}
                   >
-                    {bid.status === 'pending' ? 'Review & Approve' : 'View Details'}
+                    {bid.status === 'pending'
+                      ? 'Review & Approve'
+                      : 'View Details'}
                   </Button>
                   {bid.status === 'pending' && (
                     <Button
@@ -318,42 +337,44 @@ export const BidReviewManager: React.FC<BidReviewManagerProps> = ({
       </div>
 
       {/* Approval Flow */}
-      {selectedBid && approvalFlowOpen && (() => {
-        const bounty = getBountyData(selectedBid.bountyId);
-        if (!bounty) {
-          return (
-            <Dialog open={true} onOpenChange={handleCloseApprovalFlow}>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Error</DialogTitle>
-                  <DialogDescription>
-                    Unable to load bounty information
-                  </DialogDescription>
-                </DialogHeader>
-                <p>Bounty not found. Please refresh and try again.</p>
-              </DialogContent>
-            </Dialog>
-          );
-        }
+      {selectedBid &&
+        approvalFlowOpen &&
+        (() => {
+          const bounty = getBountyData(selectedBid.bountyId);
+          if (!bounty) {
+            return (
+              <Dialog open={true} onOpenChange={handleCloseApprovalFlow}>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Error</DialogTitle>
+                    <DialogDescription>
+                      Unable to load bounty information
+                    </DialogDescription>
+                  </DialogHeader>
+                  <p>Bounty not found. Please refresh and try again.</p>
+                </DialogContent>
+              </Dialog>
+            );
+          }
 
-        return (
-          <BidApprovalFlow
-            bid={selectedBid}
-            bounty={{
-              id: bounty.id,
-              title: bounty.title,
-              podId: bounty.podId,
-              onchain_id: bounty.onchain_id, // Pass existing on-chain ID if it exists
-              value: bounty.value
-            }}
-            tokenSymbol={getTokenSymbol(bounty.value.token)}
-            open={approvalFlowOpen}
-            onClose={handleCloseApprovalFlow}
-            onApprovalComplete={handleApprovalComplete}
-            onApprovalError={handleApprovalError}
-          />
-        );
-      })()}
+          return (
+            <BidApprovalFlow
+              bid={selectedBid}
+              bounty={{
+                id: bounty.id,
+                title: bounty.title,
+                podId: bounty.podId,
+                onchain_id: bounty.onchain_id, // Pass existing on-chain ID if it exists
+                value: bounty.value,
+              }}
+              tokenSymbol={getTokenSymbol(bounty.value.token)}
+              open={approvalFlowOpen}
+              onClose={handleCloseApprovalFlow}
+              onApprovalComplete={handleApprovalComplete}
+              onApprovalError={handleApprovalError}
+            />
+          );
+        })()}
 
       {/* Rejection Dialog */}
       <Dialog open={rejectionDialogOpen} onOpenChange={setRejectionDialogOpen}>
@@ -374,12 +395,14 @@ export const BidReviewManager: React.FC<BidReviewManagerProps> = ({
                 </h3>
                 <div className="grid grid-cols-2 gap-4 text-sm text-gray-600">
                   <p>
-                    Bidder: {selectedBid.first_name || selectedBid.last_name
+                    Bidder:{' '}
+                    {selectedBid.first_name || selectedBid.last_name
                       ? `${selectedBid.first_name || ''} ${selectedBid.last_name || ''}`.trim()
                       : selectedBid.bidderAddress}
                   </p>
                   <p>
-                    Amount: {selectedBid.proposedAmount} {getTokenSymbolForBid(selectedBid.bountyId)}
+                    Amount: {selectedBid.proposedAmount}{' '}
+                    {getTokenSymbolForBid(selectedBid.bountyId)}
                   </p>
                 </div>
               </div>

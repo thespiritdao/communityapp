@@ -1,5 +1,5 @@
 // src/features/shopping-cart/components/Cart/style.ts
-import styled from "styled-components";
+import styled from 'styled-components';
 
 // If you still need a container for a cart toggle button, keep this:
 export const Container = styled.div`
@@ -163,4 +163,3 @@ export const TokenRadioLabel = styled.label`
     border: none;
   }
 `;
-

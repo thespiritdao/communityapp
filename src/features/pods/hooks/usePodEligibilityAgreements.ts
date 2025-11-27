@@ -1,6 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useAccount, usePublicClient } from 'wagmi';
-import { EligibilityService, type EligibilityCriteria } from '../services/EligibilityService';
+import {
+  EligibilityService,
+  type EligibilityCriteria,
+} from '../services/EligibilityService';
 import { AccountabilitySignatureService } from '../services/AccountabilitySignatureService';
 import { supabase } from '@/utils/supabaseClient';
 
@@ -16,7 +19,11 @@ interface UsePodEligibilityAgreementsResult {
   loading: boolean;
   error: string | null;
   hasUnsignedAgreements: boolean;
-  checkSignatureStatus: (agreementCid: string, hatId: bigint, eligibilityModuleAddress: `0x${string}`) => Promise<boolean>;
+  checkSignatureStatus: (
+    agreementCid: string,
+    hatId: bigint,
+    eligibilityModuleAddress: `0x${string}`,
+  ) => Promise<boolean>;
 }
 
 /**
@@ -25,7 +32,9 @@ interface UsePodEligibilityAgreementsResult {
  * Checks both leader and member roles for agreement requirements
  * Returns unsigned agreements that need user signature
  */
-export function usePodEligibilityAgreements(podId: string): UsePodEligibilityAgreementsResult {
+export function usePodEligibilityAgreements(
+  podId: string,
+): UsePodEligibilityAgreementsResult {
   const [agreements, setAgreements] = useState<AgreementRequirement[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -41,10 +50,10 @@ export function usePodEligibilityAgreements(podId: string): UsePodEligibilityAgr
       stateMutability: 'view',
       inputs: [
         { name: 'user', type: 'address' },
-        { name: 'hatId', type: 'uint256' }
+        { name: 'hatId', type: 'uint256' },
       ],
-      outputs: [{ name: '', type: 'bool' }]
-    }
+      outputs: [{ name: '', type: 'bool' }],
+    },
   ] as const;
 
   useEffect(() => {
@@ -61,12 +70,22 @@ export function usePodEligibilityAgreements(podId: string): UsePodEligibilityAgr
         console.log('🔍 Fetching eligibility criteria for pod:', podId);
 
         // Fetch both leader and member eligibility criteria
-        const leaderCriteria = await EligibilityService.getEligibilityCriteria(podId, 'leader');
-        const memberCriteria = await EligibilityService.getEligibilityCriteria(podId, 'member');
+        const leaderCriteria = await EligibilityService.getEligibilityCriteria(
+          podId,
+          'leader',
+        );
+        const memberCriteria = await EligibilityService.getEligibilityCriteria(
+          podId,
+          'member',
+        );
 
         console.log('📋 Criteria fetch results:', {
-          leaderCriteria: leaderCriteria ? `${leaderCriteria.criteria.length} criteria` : 'null',
-          memberCriteria: memberCriteria ? `${memberCriteria.criteria.length} criteria` : 'null'
+          leaderCriteria: leaderCriteria
+            ? `${leaderCriteria.criteria.length} criteria`
+            : 'null',
+          memberCriteria: memberCriteria
+            ? `${memberCriteria.criteria.length} criteria`
+            : 'null',
         });
 
         const allAgreements: AgreementRequirement[] = [];
@@ -74,29 +93,36 @@ export function usePodEligibilityAgreements(podId: string): UsePodEligibilityAgr
         // Check leader criteria for agreements
         if (leaderCriteria) {
           const leaderAgreements = leaderCriteria.criteria.filter(
-            (c: EligibilityCriteria) => c.type === 'agreement_signed'
+            (c: EligibilityCriteria) => c.type === 'agreement_signed',
           );
 
           console.log(`🔍 Leader agreements found: ${leaderAgreements.length}`);
-          console.log(`🔍 Leader agreement details:`, leaderAgreements.map(a => ({
-            name: a.name,
-            has_cid: !!a.agreement_cid,
-            has_hash: !!a.agreement_hash
-          })));
+          console.log(
+            `🔍 Leader agreement details:`,
+            leaderAgreements.map((a) => ({
+              name: a.name,
+              has_cid: !!a.agreement_cid,
+              has_hash: !!a.agreement_hash,
+            })),
+          );
 
           for (const agreement of leaderAgreements) {
             // ✅ FIX: Accept EITHER agreement_cid (IPFS-based) OR agreement_hash (database-based)
-            const agreementId = agreement.agreement_cid || agreement.agreement_hash;
+            const agreementId =
+              agreement.agreement_cid || agreement.agreement_hash;
 
             if (agreementId && leaderCriteria.hatId) {
               allAgreements.push({
                 agreementCid: agreementId, // Can be CID or hash - both work
                 hatId: BigInt(leaderCriteria.hatId),
-                eligibilityModuleAddress: leaderCriteria.eligibilityModule as `0x${string}`,
-                roleType: 'leader'
+                eligibilityModuleAddress:
+                  leaderCriteria.eligibilityModule as `0x${string}`,
+                roleType: 'leader',
               });
 
-              console.log(`✅ Added leader agreement: ${agreement.name} (id: ${agreementId})`);
+              console.log(
+                `✅ Added leader agreement: ${agreement.name} (id: ${agreementId})`,
+              );
             } else {
               console.warn(`⚠️ Leader agreement missing ID:`, agreement);
             }
@@ -106,43 +132,55 @@ export function usePodEligibilityAgreements(podId: string): UsePodEligibilityAgr
         // Check member criteria for agreements
         if (memberCriteria) {
           const memberAgreements = memberCriteria.criteria.filter(
-            (c: EligibilityCriteria) => c.type === 'agreement_signed'
+            (c: EligibilityCriteria) => c.type === 'agreement_signed',
           );
 
           console.log(`🔍 Member agreements found: ${memberAgreements.length}`);
-          console.log(`🔍 Member agreement details:`, memberAgreements.map(a => ({
-            name: a.name,
-            has_cid: !!a.agreement_cid,
-            has_hash: !!a.agreement_hash
-          })));
+          console.log(
+            `🔍 Member agreement details:`,
+            memberAgreements.map((a) => ({
+              name: a.name,
+              has_cid: !!a.agreement_cid,
+              has_hash: !!a.agreement_hash,
+            })),
+          );
 
           for (const agreement of memberAgreements) {
             // ✅ FIX: Accept EITHER agreement_cid (IPFS-based) OR agreement_hash (database-based)
-            const agreementId = agreement.agreement_cid || agreement.agreement_hash;
+            const agreementId =
+              agreement.agreement_cid || agreement.agreement_hash;
 
             if (agreementId && memberCriteria.hatId) {
               allAgreements.push({
                 agreementCid: agreementId, // Can be CID or hash - both work
                 hatId: BigInt(memberCriteria.hatId),
-                eligibilityModuleAddress: memberCriteria.eligibilityModule as `0x${string}`,
-                roleType: 'member'
+                eligibilityModuleAddress:
+                  memberCriteria.eligibilityModule as `0x${string}`,
+                roleType: 'member',
               });
 
-              console.log(`✅ Added member agreement: ${agreement.name} (id: ${agreementId})`);
+              console.log(
+                `✅ Added member agreement: ${agreement.name} (id: ${agreementId})`,
+              );
             } else {
               console.warn(`⚠️ Member agreement missing ID:`, agreement);
             }
           }
         }
 
-        console.log('✅ Total eligibility agreements found:', allAgreements.length);
+        console.log(
+          '✅ Total eligibility agreements found:',
+          allAgreements.length,
+        );
 
         setAgreements(allAgreements);
 
         // ✅ FIX: Check signature status in BOTH on-chain AND database
         if (allAgreements.length === 0) {
           // No agreement criteria = no unsigned agreements
-          console.log('ℹ️ No agreement criteria defined - no signatures required');
+          console.log(
+            'ℹ️ No agreement criteria defined - no signatures required',
+          );
           setHasUnsignedAgreements(false);
         } else if (address && allAgreements.length > 0) {
           // First check database for accountability signatures
@@ -160,12 +198,14 @@ export function usePodEligibilityAgreements(podId: string): UsePodEligibilityAgr
             userAddress: address,
             agreementsRequiringSignature: allAgreements.length,
             hasDBSignature,
-            dbSignatureCount: dbSignatures?.length || 0
+            dbSignatureCount: dbSignatures?.length || 0,
           });
 
           // If user has database signature (accountability agreement), they're signed ✅
           if (hasDBSignature) {
-            console.log('✅ User has valid accountability signature in database - access granted');
+            console.log(
+              '✅ User has valid accountability signature in database - access granted',
+            );
             setHasUnsignedAgreements(false);
           }
           // Otherwise check on-chain eligibility module signatures
@@ -177,37 +217,43 @@ export function usePodEligibilityAgreements(podId: string): UsePodEligibilityAgr
                     address: agreement.eligibilityModuleAddress,
                     abi: ELIGIBILITY_MODULE_ABI,
                     functionName: 'hasSignedAgreement',
-                    args: [address, agreement.hatId]
+                    args: [address, agreement.hatId],
                   });
                   return hasSigned as boolean;
                 } catch (error) {
-                  console.warn('⚠️ Error checking on-chain signature status:', error);
+                  console.warn(
+                    '⚠️ Error checking on-chain signature status:',
+                    error,
+                  );
                   return false;
                 }
-              })
+              }),
             );
 
             // If any agreement is unsigned, set flag
-            const hasUnsigned = signatureChecks.some(signed => !signed);
+            const hasUnsigned = signatureChecks.some((signed) => !signed);
             setHasUnsignedAgreements(hasUnsigned);
 
             console.log('📝 On-chain signature status:', {
               total: allAgreements.length,
-              signed: signatureChecks.filter(s => s).length,
-              unsigned: signatureChecks.filter(s => !s).length,
-              hasUnsignedAgreements: hasUnsigned
+              signed: signatureChecks.filter((s) => s).length,
+              unsigned: signatureChecks.filter((s) => !s).length,
+              hasUnsignedAgreements: hasUnsigned,
             });
           } else {
             // No database signature and can't check on-chain - DENY ACCESS
-            console.warn('⚠️ Cannot verify signatures (no publicClient) - denying access');
+            console.warn(
+              '⚠️ Cannot verify signatures (no publicClient) - denying access',
+            );
             setHasUnsignedAgreements(true);
           }
         } else if (!address && allAgreements.length > 0) {
           // No wallet connected but agreements exist - DENY ACCESS
-          console.warn('⚠️ Wallet not connected but agreements required - denying access');
+          console.warn(
+            '⚠️ Wallet not connected but agreements required - denying access',
+          );
           setHasUnsignedAgreements(true);
         }
-
       } catch (error: any) {
         console.error('❌ Failed to fetch eligibility agreements:', error);
         setError(error.message || 'Failed to fetch agreements');
@@ -222,7 +268,7 @@ export function usePodEligibilityAgreements(podId: string): UsePodEligibilityAgr
   const checkSignatureStatus = async (
     agreementCid: string,
     hatId: bigint,
-    eligibilityModuleAddress: `0x${string}`
+    eligibilityModuleAddress: `0x${string}`,
   ): Promise<boolean> => {
     if (!address) return false;
 
@@ -247,7 +293,7 @@ export function usePodEligibilityAgreements(podId: string): UsePodEligibilityAgr
         address: eligibilityModuleAddress,
         abi: ELIGIBILITY_MODULE_ABI,
         functionName: 'hasSignedAgreement',
-        args: [address, hatId]
+        args: [address, hatId],
       });
       return hasSigned as boolean;
     } catch (error) {
@@ -261,6 +307,6 @@ export function usePodEligibilityAgreements(podId: string): UsePodEligibilityAgr
     loading,
     error,
     hasUnsignedAgreements,
-    checkSignatureStatus
+    checkSignatureStatus,
   };
 }

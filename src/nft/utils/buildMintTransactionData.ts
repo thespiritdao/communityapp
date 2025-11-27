@@ -5,7 +5,8 @@ import type { Call } from '../../../transaction/types';
 import type { BuildMintTransactionParams } from '../../../api/types';
 import { buildMintTransaction as genericBuild } from '../../../api/buildMintTransaction';
 
-const ADVOCATE_ADDRESS = '0xd05b10248f1F72e8B9fEbd9E9c87887Ab0a1aAB0'.toLowerCase();
+const ADVOCATE_ADDRESS =
+  '0xd05b10248f1F72e8B9fEbd9E9c87887Ab0a1aAB0'.toLowerCase();
 
 /**
  * A single builder that:
@@ -21,7 +22,7 @@ export async function buildMintTransactionData({
 }: { contractAddress: Address } & BuildMintTransactionParams): Promise<Call[]> {
   if (contractAddress.toLowerCase() === ADVOCATE_ADDRESS) {
     throw new Error(
-      'AdvocateMintCard overrides buildMintTransaction directly. Do not call generic builder for Advocate.'
+      'AdvocateMintCard overrides buildMintTransaction directly. Do not call generic builder for Advocate.',
     );
   }
 
@@ -40,8 +41,8 @@ export async function buildMintTransactionData({
 
   return [
     {
-      to:    result.call_data.to,
-      data:  result.call_data.data,
+      to: result.call_data.to,
+      data: result.call_data.data,
       value: BigInt(result.call_data.value),
     },
   ];

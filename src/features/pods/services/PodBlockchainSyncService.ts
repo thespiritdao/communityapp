@@ -10,12 +10,14 @@ import { base } from 'viem/chains';
 import PodAuthorizationFactoryABI from '@/abis/PodAuthorizationFactory.json';
 
 // Use PodAuthorizationFactory instead of PodBountyService
-const POD_AUTHORIZATION_FACTORY_ADDRESS = process.env.NEXT_PUBLIC_POD_AUTH_FACTORY as `0x${string}` || '0xeCdDB060cD38439E0aC8874f159E961eB856407D' as `0x${string}`;
+const POD_AUTHORIZATION_FACTORY_ADDRESS =
+  (process.env.NEXT_PUBLIC_POD_AUTH_FACTORY as `0x${string}`) ||
+  ('0xeCdDB060cD38439E0aC8874f159E961eB856407D' as `0x${string}`);
 
 export class PodBlockchainSyncService {
   private static publicClient = createPublicClient({
     chain: base,
-    transport: http()
+    transport: http(),
   });
 
   /**
@@ -28,7 +30,7 @@ export class PodBlockchainSyncService {
         address: POD_AUTHORIZATION_FACTORY_ADDRESS,
         abi: PodAuthorizationFactoryABI,
         functionName: 'isValidPod',
-        args: [podId]
+        args: [podId],
       });
       return result as boolean;
     } catch (error) {
@@ -46,7 +48,7 @@ export class PodBlockchainSyncService {
       const result = await this.publicClient.readContract({
         address: POD_AUTHORIZATION_FACTORY_ADDRESS,
         abi: PodAuthorizationFactoryABI,
-        functionName: 'getAllPods'
+        functionName: 'getAllPods',
       });
       return result as string[];
     } catch (error) {
@@ -80,15 +82,19 @@ export class PodBlockchainSyncService {
     }
 
     // Use treasury address or zero address as fallback
-    const treasuryAddress = pod.treasury_contract_address || '0x0000000000000000000000000000000000000000';
+    const treasuryAddress =
+      pod.treasury_contract_address ||
+      '0x0000000000000000000000000000000000000000';
 
     // Convert predicted admin hat ID to BigInt (required for v2 contracts)
-    const predictedAdminHatIdBigInt = predictedAdminHatId ? BigInt(predictedAdminHatId) : BigInt(0);
+    const predictedAdminHatIdBigInt = predictedAdminHatId
+      ? BigInt(predictedAdminHatId)
+      : BigInt(0);
 
     console.log('🔮 Predicted admin HAT ID for proxy initialization:', {
       raw: predictedAdminHatId,
       bigInt: predictedAdminHatIdBigInt.toString(),
-      hex: '0x' + predictedAdminHatIdBigInt.toString(16).padStart(64, '0')
+      hex: '0x' + predictedAdminHatIdBigInt.toString(16).padStart(64, '0'),
     });
 
     return {
@@ -100,8 +106,8 @@ export class PodBlockchainSyncService {
         pod.created_by_address as `0x${string}`, // creator
         leaders, // leaders array
         treasuryAddress as `0x${string}`, // treasuryAddress
-        predictedAdminHatIdBigInt // predictedProxyAdminHatId (NEW in v2)
-      ]
+        predictedAdminHatIdBigInt, // predictedProxyAdminHatId (NEW in v2)
+      ],
     };
   }
 
@@ -130,7 +136,9 @@ export class PodBlockchainSyncService {
     }
 
     // Use treasury address or zero address as fallback
-    const treasuryAddress = pod.treasury_contract_address || '0x0000000000000000000000000000000000000000';
+    const treasuryAddress =
+      pod.treasury_contract_address ||
+      '0x0000000000000000000000000000000000000000';
     const isActive = pod.status === 'active';
 
     return {
@@ -141,31 +149,36 @@ export class PodBlockchainSyncService {
         pod.id, // podId
         leaders, // newLeaders
         treasuryAddress as `0x${string}`, // newTreasuryAddress
-        isActive // isActive
-      ]
+        isActive, // isActive
+      ],
     };
   }
 
   /**
    * Get pods that need to be synced to blockchain
    */
-  static async getPodsNeedingSync(): Promise<{ toRegister: any[], toUpdate: any[] }> {
+  static async getPodsNeedingSync(): Promise<{
+    toRegister: any[];
+    toUpdate: any[];
+  }> {
     try {
       console.log('🔄 Checking which pods need blockchain sync...');
-      
+
       // Get all active pods from database
       const pods = await PodCoreService.getAllPods({ filter: 'active' });
       const registeredPodIds = await this.getRegisteredPods();
-      
+
       console.log(`📊 Found ${pods.length} active pods in database`);
-      console.log(`📊 Found ${registeredPodIds.length} registered pods on blockchain`);
-      
+      console.log(
+        `📊 Found ${registeredPodIds.length} registered pods on blockchain`,
+      );
+
       const toRegister: any[] = [];
       const toUpdate: any[] = [];
-      
+
       for (const pod of pods) {
         const isRegistered = registeredPodIds.includes(pod.id);
-        
+
         if (!isRegistered) {
           toRegister.push(pod);
           console.log(`📝 Pod "${pod.name}" needs to be registered`);
@@ -174,7 +187,7 @@ export class PodBlockchainSyncService {
           console.log(`🔄 Pod "${pod.name}" needs to be updated`);
         }
       }
-      
+
       return { toRegister, toUpdate };
     } catch (error) {
       console.error('Error checking pods needing sync:', error);
@@ -186,13 +199,16 @@ export class PodBlockchainSyncService {
    * Check if user can manage bounties for a pod via factory
    * UPDATED: Now uses PodAuthorizationFactory.canManageBounties()
    */
-  static async canManageBounties(userAddress: string, podId: string): Promise<boolean> {
+  static async canManageBounties(
+    userAddress: string,
+    podId: string,
+  ): Promise<boolean> {
     try {
       const result = await this.publicClient.readContract({
         address: POD_AUTHORIZATION_FACTORY_ADDRESS,
         abi: PodAuthorizationFactoryABI,
         functionName: 'canManageBounties',
-        args: [userAddress as `0x${string}`, podId]
+        args: [userAddress as `0x${string}`, podId],
       });
       return result as boolean;
     } catch (error) {
@@ -205,13 +221,16 @@ export class PodBlockchainSyncService {
    * Check if user can use pod treasury via factory
    * UPDATED: Now uses PodAuthorizationFactory.canUsePodTreasury()
    */
-  static async canUsePodTreasury(userAddress: string, podId: string): Promise<boolean> {
+  static async canUsePodTreasury(
+    userAddress: string,
+    podId: string,
+  ): Promise<boolean> {
     try {
       const result = await this.publicClient.readContract({
         address: POD_AUTHORIZATION_FACTORY_ADDRESS,
         abi: PodAuthorizationFactoryABI,
         functionName: 'canUsePodTreasury',
-        args: [userAddress as `0x${string}`, podId]
+        args: [userAddress as `0x${string}`, podId],
       });
       return result as boolean;
     } catch (error) {
@@ -229,7 +248,7 @@ export class PodBlockchainSyncService {
         address: POD_AUTHORIZATION_FACTORY_ADDRESS,
         abi: PodAuthorizationFactoryABI,
         functionName: 'getPodProxy',
-        args: [podId]
+        args: [podId],
       });
       return result as string;
     } catch (error) {

@@ -21,7 +21,6 @@ export interface ApplicationResult {
  * Service for handling pod membership applications that require approval
  */
 export class PodMembershipApplicationService {
-  
   /**
    * Get the required vote threshold based on pod's leader count
    * ✅ ISSUE #6 FIX: Calculate dynamic threshold instead of hardcoded 3
@@ -44,14 +43,19 @@ export class PodMembershipApplicationService {
         .single();
 
       if (error || !pod) {
-        console.warn('⚠️ Failed to fetch pod for vote threshold, defaulting to 2');
+        console.warn(
+          '⚠️ Failed to fetch pod for vote threshold, defaulting to 2',
+        );
         return 2; // Safe default
       }
 
       const leaderCount = (pod.pod_leads as string[])?.length || 0;
 
       // If pod has a custom approval_threshold, use it
-      if (pod.approval_threshold && typeof pod.approval_threshold === 'number') {
+      if (
+        pod.approval_threshold &&
+        typeof pod.approval_threshold === 'number'
+      ) {
         return Math.max(2, Math.min(pod.approval_threshold, leaderCount));
       }
 
@@ -82,11 +86,10 @@ export class PodMembershipApplicationService {
       console.log(`📊 Vote threshold calculated for pod ${podId}:`, {
         leaderCount,
         requiredVotes: majorityVotes,
-        percentage: `${Math.round((majorityVotes / leaderCount) * 100)}%`
+        percentage: `${Math.round((majorityVotes / leaderCount) * 100)}%`,
       });
 
       return majorityVotes;
-
     } catch (error) {
       console.error('❌ Error calculating vote threshold:', error);
       return 2; // Safe fallback
@@ -97,23 +100,28 @@ export class PodMembershipApplicationService {
    * Submit a membership application (doesn't mint hat immediately)
    */
   static async submitApplication(
-    applicationData: MembershipApplicationData
+    applicationData: MembershipApplicationData,
   ): Promise<ApplicationResult> {
     try {
-      console.log('📝 Submitting membership application for approval:', applicationData);
-      
+      console.log(
+        '📝 Submitting membership application for approval:',
+        applicationData,
+      );
+
       // Debug auth session for RLS policies
       try {
-        const { data: { session } } = await supabase.auth.getSession();
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
         console.log('🔐 Current Supabase session:', {
           hasSession: !!session,
           userId: session?.user?.id,
-          userRole: session?.user?.role
+          userRole: session?.user?.role,
         });
       } catch (authError) {
         console.warn('⚠️ Auth session check failed:', authError);
       }
-      
+
       // 1. Get pod details
       const { data: pod, error: podError } = await supabase
         .from('pods')
@@ -122,7 +130,9 @@ export class PodMembershipApplicationService {
         .single();
 
       if (podError || !pod) {
-        throw new Error(`Pod not found: ${podError?.message || 'Unknown error'}`);
+        throw new Error(
+          `Pod not found: ${podError?.message || 'Unknown error'}`,
+        );
       }
 
       // 2. Store the application in database
@@ -130,10 +140,11 @@ export class PodMembershipApplicationService {
         podId: applicationData.podId,
         applicantAddress: applicationData.applicantAddress,
         agreementSignatureLength: applicationData.agreementSignature?.length,
-        agreementSignaturePreview: applicationData.agreementSignature?.substring(0, 20) + '...',
-        accountabilityStatement: applicationData.accountabilityStatement
+        agreementSignaturePreview:
+          applicationData.agreementSignature?.substring(0, 20) + '...',
+        accountabilityStatement: applicationData.accountabilityStatement,
       });
-      
+
       // ✅ ISSUE #6 FIX: Calculate dynamic threshold based on leader count
       const requiredVotes = await this.getRequiredVotes(applicationData.podId);
 
@@ -149,25 +160,32 @@ export class PodMembershipApplicationService {
           required_votes: requiredVotes,
           current_votes: 0,
           voting_leaders: [],
-          submitted_at: new Date().toISOString()
+          submitted_at: new Date().toISOString(),
         })
         .select()
         .single();
 
       if (appError) {
         console.error('Failed to store membership application:', appError);
-        
+
         // Handle various database issues with fallback
         if (appError.code === '42P01') {
-          console.log('📋 Membership applications table not found, using direct approval fallback');
+          console.log(
+            '📋 Membership applications table not found, using direct approval fallback',
+          );
         } else if (appError.code === '42501') {
           console.log('🔒 RLS policy blocking, using direct approval fallback');
         } else {
-          console.warn('📋 Database error, using direct approval fallback:', appError.message);
+          console.warn(
+            '📋 Database error, using direct approval fallback:',
+            appError.message,
+          );
         }
-        
+
         // For now, continue with just notifications until database is set up
-        console.log('📧 Database not ready - will send notifications to leaders for manual approval...');
+        console.log(
+          '📧 Database not ready - will send notifications to leaders for manual approval...',
+        );
       }
 
       const applicationId = application?.id || `temp-${Date.now()}`;
@@ -175,7 +193,7 @@ export class PodMembershipApplicationService {
       // 3. Notify all pod leaders about the new application
       const leaders = pod.pod_leads || [];
       const notifications = await Promise.all(
-        leaders.map(leaderAddress => 
+        leaders.map((leaderAddress) =>
           unifiedNotificationService.createNotification({
             recipient_address: leaderAddress,
             sender_address: applicationData.applicantAddress,
@@ -191,24 +209,23 @@ export class PodMembershipApplicationService {
               application_id: applicationId,
               applicant_address: applicationData.applicantAddress,
               pod_name: pod.name,
-              required_votes: this.getRequiredVotes()
-            }
-          })
-        )
+              required_votes: this.getRequiredVotes(),
+            },
+          }),
+        ),
       );
 
       return {
         success: true,
         message: `Application submitted! Requires ${this.getRequiredVotes()} leader approval(s).`,
-        applicationId
+        applicationId,
       };
-
     } catch (error) {
       console.error('❌ Failed to submit membership application:', error);
       return {
         success: false,
         message: 'Failed to submit membership application',
-        error: error instanceof Error ? error.message : 'Unknown error'
+        error: error instanceof Error ? error.message : 'Unknown error',
       };
     }
   }

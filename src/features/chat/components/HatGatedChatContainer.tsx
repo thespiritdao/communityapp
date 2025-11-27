@@ -1,18 +1,18 @@
-"use client";
+'use client';
 
 import { useAuthContext } from '@/features/identity';
-import type React from "react";
-import { useEffect, useState } from "react";
+import type React from 'react';
+import { useEffect, useState } from 'react';
 import '@/features/chat/styles/Chat.css';
-import { useAccount } from "wagmi";
-import { supabase } from "@/utils/supabaseClient";
-import { useHatPermissions } from "@/hooks/useHatPermissions";
-import type { Message, UserProfile, ChatGroup } from "../types";
-import ChatInput from "./ChatInput";
-import MessageList from "./MessageList";
+import { useAccount } from 'wagmi';
+import { supabase } from '@/utils/supabaseClient';
+import { useHatPermissions } from '@/hooks/useHatPermissions';
+import type { Message, UserProfile, ChatGroup } from '../types';
+import ChatInput from './ChatInput';
+import MessageList from './MessageList';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Shield, Users, Lock, Crown } from "lucide-react";
+import { Shield, Users, Lock, Crown } from 'lucide-react';
 import { extractMentionedWalletsEnhanced } from '@/utils/mentions';
 import { useUnifiedNotifications } from '@/context/UnifiedNotificationContext';
 import { useEligibility } from '../../pods/hooks/useEligibility';
@@ -28,12 +28,12 @@ export const HatGatedChatContainer: React.FC<HatGatedChatContainerProps> = ({
   chatGroupId,
   requiredHat,
   podId,
-  eligibilityRoleId
+  eligibilityRoleId,
 }) => {
   const { address } = useAccount();
   const { session, isAuthenticated, signIn } = useAuthContext();
   const { createNotification } = useUnifiedNotifications();
-  
+
   // HAT-based permissions
   const {
     canAccessChat,
@@ -42,28 +42,33 @@ export const HatGatedChatContainer: React.FC<HatGatedChatContainerProps> = ({
     isPodLeader,
     isLoading: permissionsLoading,
     error: permissionsError,
-    hasHat
+    hasHat,
   } = useHatPermissions();
 
   // Eligibility-based permissions
   const {
     checkUserEligibility,
     loading: eligibilityLoading,
-    error: eligibilityError
+    error: eligibilityError,
   } = useEligibility();
 
   // State
   const [chatGroups, setChatGroups] = useState<ChatGroup[]>([]);
-  const [selectedChatGroup, setSelectedChatGroup] = useState<ChatGroup | null>(null);
+  const [selectedChatGroup, setSelectedChatGroup] = useState<ChatGroup | null>(
+    null,
+  );
   const [messages, setMessages] = useState<Message[]>([]);
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [accessDenied, setAccessDenied] = useState(false);
-  const [eligibilityCheckResult, setEligibilityCheckResult] = useState<any>(null);
+  const [eligibilityCheckResult, setEligibilityCheckResult] =
+    useState<any>(null);
 
   // --- NEW: Pod metadata (id -> { name, image_url }) ---
-  const [podsMeta, setPodsMeta] = useState<Record<string, { name: string; image_url: string | null }>>({});
+  const [podsMeta, setPodsMeta] = useState<
+    Record<string, { name: string; image_url: string | null }>
+  >({});
 
   const fetchPodsMeta = async (ids: string[]) => {
     if (!ids.length) return;
@@ -75,14 +80,15 @@ export const HatGatedChatContainer: React.FC<HatGatedChatContainerProps> = ({
 
       if (error) throw error;
 
-      const map: Record<string, { name: string; image_url: string | null }> = {};
+      const map: Record<string, { name: string; image_url: string | null }> =
+        {};
       (data || []).forEach((p: any) => {
         map[p.id] = {
           name: p?.name ?? p?.id,
           image_url: p?.image_url ?? p?.image ?? null,
         };
       });
-      setPodsMeta(prev => ({ ...prev, ...map }));
+      setPodsMeta((prev) => ({ ...prev, ...map }));
     } catch (e) {
       console.error('fetchPodsMeta error:', e);
     }
@@ -106,14 +112,22 @@ export const HatGatedChatContainer: React.FC<HatGatedChatContainerProps> = ({
     // Role-based eligibility check
     if (eligibilityRoleId && address) {
       try {
-        const eligibilityResult = await checkUserEligibility(podId || '', eligibilityRoleId);
+        const eligibilityResult = await checkUserEligibility(
+          podId || '',
+          eligibilityRoleId,
+        );
         setEligibilityCheckResult(eligibilityResult);
-        
+
         if (!eligibilityResult?.eligible) {
-          console.log('❌ Chat access denied: Failed eligibility requirements for role:', eligibilityRoleId);
+          console.log(
+            '❌ Chat access denied: Failed eligibility requirements for role:',
+            eligibilityRoleId,
+          );
           return false;
         }
-        console.log('✅ Chat access granted: User meets eligibility requirements');
+        console.log(
+          '✅ Chat access granted: User meets eligibility requirements',
+        );
       } catch (error) {
         console.error('Error checking eligibility:', error);
         return false;
@@ -122,7 +136,7 @@ export const HatGatedChatContainer: React.FC<HatGatedChatContainerProps> = ({
 
     // Pod-specific access (user must be member of the pod)
     if (podId) {
-      const podRole = userRoles.find(role => role.podId === podId);
+      const podRole = userRoles.find((role) => role.podId === podId);
       if (!podRole) {
         console.log('❌ Chat access denied: Not a member of pod:', podId);
         return false;
@@ -138,25 +152,26 @@ export const HatGatedChatContainer: React.FC<HatGatedChatContainerProps> = ({
       if (!address) return;
 
       try {
-        const { data: sessionData, error: sessionError } = await getCurrentSession();
+        const { data: sessionData, error: sessionError } =
+          await getCurrentSession();
         if (sessionError || !sessionData.session) {
-          throw new Error("No authenticated user found");
+          throw new Error('No authenticated user found');
         }
 
         const userId = sessionData.session.user.id;
         const { data: userProfile, error: userProfileError } = await supabase
-          .from("user_profiles")
-          .select("*")
-          .eq("user_id", userId)
+          .from('user_profiles')
+          .select('*')
+          .eq('user_id', userId)
           .single();
 
         if (userProfileError || !userProfile) {
-          throw new Error("User profile not found");
+          throw new Error('User profile not found');
         }
 
         setCurrentUser(userProfile);
       } catch (error) {
-        console.error("Error fetching user data:", error);
+        console.error('Error fetching user data:', error);
       }
     };
 
@@ -169,7 +184,7 @@ export const HatGatedChatContainer: React.FC<HatGatedChatContainerProps> = ({
       if (!permissionsLoading && !permissionsError && !eligibilityLoading) {
         const hasAccess = await checkAccess();
         setAccessDenied(!hasAccess);
-        
+
         if (!hasAccess) {
           console.log('❌ Chat access denied. User permissions:', {
             canAccessChat,
@@ -178,14 +193,24 @@ export const HatGatedChatContainer: React.FC<HatGatedChatContainerProps> = ({
             requiredHat,
             podId,
             eligibilityRoleId,
-            eligibilityResult: eligibilityCheckResult
+            eligibilityResult: eligibilityCheckResult,
           });
         }
       }
     };
-    
+
     performAccessCheck();
-  }, [canAccessChat, userRoles, userHats, requiredHat, podId, eligibilityRoleId, permissionsLoading, permissionsError, eligibilityLoading]);
+  }, [
+    canAccessChat,
+    userRoles,
+    userHats,
+    requiredHat,
+    podId,
+    eligibilityRoleId,
+    permissionsLoading,
+    permissionsError,
+    eligibilityLoading,
+  ]);
 
   // Fetch chat groups based on HAT permissions
   useEffect(() => {
@@ -206,7 +231,7 @@ export const HatGatedChatContainer: React.FC<HatGatedChatContainerProps> = ({
               required_token: null,
               is_active: true,
               created_at: new Date().toISOString(),
-              updated_at: new Date().toISOString()
+              updated_at: new Date().toISOString(),
             });
           }
 
@@ -220,7 +245,7 @@ export const HatGatedChatContainer: React.FC<HatGatedChatContainerProps> = ({
                 required_token: role.hatId,
                 is_active: true,
                 created_at: new Date().toISOString(),
-                updated_at: new Date().toISOString()
+                updated_at: new Date().toISOString(),
               });
             }
           }
@@ -234,42 +259,49 @@ export const HatGatedChatContainer: React.FC<HatGatedChatContainerProps> = ({
               required_token: 'leadership',
               is_active: true,
               created_at: new Date().toISOString(),
-              updated_at: new Date().toISOString()
+              updated_at: new Date().toISOString(),
             });
           }
 
           setChatGroups(availableGroups);
 
           // --- NEW: fetch pod metadata for any pod groups we just built ---
-          const podIds = Array.from(new Set(
-            availableGroups
-              .filter(g => g.id.startsWith('pod-'))
-              .map(g => g.id.slice(4))
-          ));
+          const podIds = Array.from(
+            new Set(
+              availableGroups
+                .filter((g) => g.id.startsWith('pod-'))
+                .map((g) => g.id.slice(4)),
+            ),
+          );
           await fetchPodsMeta(podIds);
           // --- /NEW ---
 
           // Auto-select based on context
           if (chatGroupId) {
-            const targetGroup = availableGroups.find(g => g.id === chatGroupId);
+            const targetGroup = availableGroups.find(
+              (g) => g.id === chatGroupId,
+            );
             if (targetGroup) {
               setSelectedChatGroup(targetGroup);
             }
           } else if (podId) {
-            const podGroup = availableGroups.find(g => g.id === `pod-${podId}`);
+            const podGroup = availableGroups.find(
+              (g) => g.id === `pod-${podId}`,
+            );
             if (podGroup) {
               setSelectedChatGroup(podGroup);
             }
           } else {
             // Default to general chat
-            const generalGroup = availableGroups.find(g => g.id === 'general');
+            const generalGroup = availableGroups.find(
+              (g) => g.id === 'general',
+            );
             if (generalGroup) {
               setSelectedChatGroup(generalGroup);
             }
           }
-
         } catch (error) {
-          console.error("Error fetching HAT-gated chat groups:", error);
+          console.error('Error fetching HAT-gated chat groups:', error);
         } finally {
           setLoading(false);
         }
@@ -277,7 +309,16 @@ export const HatGatedChatContainer: React.FC<HatGatedChatContainerProps> = ({
 
       fetchHatGatedChatGroups();
     }
-  }, [selectedChatGroup, accessDenied, currentUser, canAccessChat, userRoles, isPodLeader, chatGroupId, podId]);
+  }, [
+    selectedChatGroup,
+    accessDenied,
+    currentUser,
+    canAccessChat,
+    userRoles,
+    isPodLeader,
+    chatGroupId,
+    podId,
+  ]);
 
   // Fetch messages for selected chat group
   useEffect(() => {
@@ -286,30 +327,31 @@ export const HatGatedChatContainer: React.FC<HatGatedChatContainerProps> = ({
         setLoading(true);
         try {
           const { data: messagesData, error } = await supabase
-            .from("messages")
-            .select("*")
-            .eq("chat_group_id", selectedChatGroup.id)
-            .order("created_at", { ascending: true });
+            .from('messages')
+            .select('*')
+            .eq('chat_group_id', selectedChatGroup.id)
+            .order('created_at', { ascending: true });
 
           if (error) throw error;
 
           setMessages(messagesData || []);
 
           // Get unique user IDs from messages
-          const userIds = [...new Set(messagesData?.map(m => m.user_id) || [])];
-          
+          const userIds = [
+            ...new Set(messagesData?.map((m) => m.user_id) || []),
+          ];
+
           if (userIds.length > 0) {
             const { data: usersData, error: usersError } = await supabase
-              .from("user_profiles")
-              .select("*")
-              .in("user_id", userIds);
+              .from('user_profiles')
+              .select('*')
+              .in('user_id', userIds);
 
             if (usersError) throw usersError;
             setUsers(usersData || []);
           }
-
         } catch (error) {
-          console.error("Error fetching messages:", error);
+          console.error('Error fetching messages:', error);
         } finally {
           setLoading(false);
         }
@@ -322,13 +364,20 @@ export const HatGatedChatContainer: React.FC<HatGatedChatContainerProps> = ({
         .channel(`chat-${selectedChatGroup.id}`)
         .on(
           'postgres_changes',
-          { event: 'INSERT', schema: 'public', table: 'messages', filter: `chat_group_id=eq.${selectedChatGroup.id}` },
+          {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'messages',
+            filter: `chat_group_id=eq.${selectedChatGroup.id}`,
+          },
           async (payload) => {
             const newMessage = payload.new as Message;
-            setMessages(prev => [...prev, newMessage]);
+            setMessages((prev) => [...prev, newMessage]);
 
             // Handle mentions
-            const mentionedWallets = extractMentionedWalletsEnhanced(newMessage.content);
+            const mentionedWallets = extractMentionedWalletsEnhanced(
+              newMessage.content,
+            );
             if (mentionedWallets.length > 0 && currentUser) {
               for (const wallet of mentionedWallets) {
                 await createNotification({
@@ -337,28 +386,30 @@ export const HatGatedChatContainer: React.FC<HatGatedChatContainerProps> = ({
                   notification_type: 'user_mentioned',
                   category: 'general',
                   title: 'You were mentioned in a chat',
-                  message: `${currentUser.first_name || ''} ${currentUser.last_name || ''}`.trim() + ' mentioned you in a HAT-gated chat',
+                  message:
+                    `${currentUser.first_name || ''} ${currentUser.last_name || ''}`.trim() +
+                    ' mentioned you in a HAT-gated chat',
                   context_type: 'chat',
                   context_id: selectedChatGroup.id,
                   context_url: `/chat/${selectedChatGroup.id}`,
-                  priority: 'medium'
+                  priority: 'medium',
                 });
               }
             }
 
             // Add sender to users if not already present
-            if (!users.find(u => u.user_id === newMessage.user_id)) {
+            if (!users.find((u) => u.user_id === newMessage.user_id)) {
               const { data: userData } = await supabase
-                .from("user_profiles")
-                .select("*")
-                .eq("user_id", newMessage.user_id)
+                .from('user_profiles')
+                .select('*')
+                .eq('user_id', newMessage.user_id)
                 .single();
-              
+
               if (userData) {
-                setUsers(prev => [...prev, userData]);
+                setUsers((prev) => [...prev, userData]);
               }
             }
-          }
+          },
         )
         .subscribe();
 
@@ -373,18 +424,16 @@ export const HatGatedChatContainer: React.FC<HatGatedChatContainerProps> = ({
     if (!currentUser || !selectedChatGroup || accessDenied) return;
 
     try {
-      const { error } = await supabase
-        .from("messages")
-        .insert({
-          content,
-          user_id: currentUser.user_id,
-          chat_group_id: selectedChatGroup.id,
-          wallet_address: currentUser.wallet_address
-        });
+      const { error } = await supabase.from('messages').insert({
+        content,
+        user_id: currentUser.user_id,
+        chat_group_id: selectedChatGroup.id,
+        wallet_address: currentUser.wallet_address,
+      });
 
       if (error) throw error;
     } catch (error) {
-      console.error("Error sending message:", error);
+      console.error('Error sending message:', error);
     }
   };
 
@@ -396,7 +445,9 @@ export const HatGatedChatContainer: React.FC<HatGatedChatContainerProps> = ({
           <div className="animate-spin h-8 w-8 border-4 border-blue-500 border-t-transparent rounded-full mx-auto mb-4"></div>
           <p>Loading chat permissions...</p>
           {eligibilityLoading && (
-            <p className="text-sm text-gray-500 mt-2">Checking eligibility requirements...</p>
+            <p className="text-sm text-gray-500 mt-2">
+              Checking eligibility requirements...
+            </p>
           )}
         </CardContent>
       </Card>
@@ -418,9 +469,11 @@ export const HatGatedChatContainer: React.FC<HatGatedChatContainerProps> = ({
             <p className="text-gray-600">
               You don't have the required permissions to access this chat.
             </p>
-            
+
             <div className="bg-yellow-50 border border-yellow-200 p-4 rounded-lg">
-              <h4 className="font-medium text-yellow-800 mb-2">Required Access:</h4>
+              <h4 className="font-medium text-yellow-800 mb-2">
+                Required Access:
+              </h4>
               <ul className="text-sm text-yellow-700 space-y-1">
                 <li>• Valid HAT token for chat access</li>
                 {requiredHat && <li>• Specific HAT: {requiredHat}</li>}
@@ -434,11 +487,19 @@ export const HatGatedChatContainer: React.FC<HatGatedChatContainerProps> = ({
             {/* Show eligibility check results if available */}
             {eligibilityCheckResult && !eligibilityCheckResult.eligible && (
               <div className="bg-red-50 border border-red-200 p-4 rounded-lg">
-                <h4 className="font-medium text-red-800 mb-2">Eligibility Requirements Not Met:</h4>
+                <h4 className="font-medium text-red-800 mb-2">
+                  Eligibility Requirements Not Met:
+                </h4>
                 <div className="text-sm text-red-700">
-                  <p className="mb-2">{eligibilityCheckResult.evaluation?.overallResult?.message}</p>
+                  <p className="mb-2">
+                    {eligibilityCheckResult.evaluation?.overallResult?.message}
+                  </p>
                   {eligibilityCheckResult.evaluation?.overallResult && (
-                    <p>Requirements passed: {eligibilityCheckResult.evaluation.overallResult.passed}/{eligibilityCheckResult.evaluation.overallResult.total}</p>
+                    <p>
+                      Requirements passed:{' '}
+                      {eligibilityCheckResult.evaluation.overallResult.passed}/
+                      {eligibilityCheckResult.evaluation.overallResult.total}
+                    </p>
                   )}
                 </div>
               </div>
@@ -449,7 +510,11 @@ export const HatGatedChatContainer: React.FC<HatGatedChatContainerProps> = ({
                 <h4 className="font-medium mb-2">Your Current HATs:</h4>
                 <div className="flex flex-wrap gap-2">
                   {userRoles.map((role, index) => (
-                    <Badge key={index} variant="outline" className="flex items-center gap-1">
+                    <Badge
+                      key={index}
+                      variant="outline"
+                      className="flex items-center gap-1"
+                    >
                       {role.isLeaderRole ? (
                         <Crown className="h-3 w-3" />
                       ) : (
@@ -467,7 +532,7 @@ export const HatGatedChatContainer: React.FC<HatGatedChatContainerProps> = ({
                 Error: {permissionsError}
               </div>
             )}
-            
+
             {eligibilityError && (
               <div className="bg-gray-50 border p-3 rounded text-sm text-gray-600">
                 Eligibility Error: {eligibilityError}
@@ -480,8 +545,9 @@ export const HatGatedChatContainer: React.FC<HatGatedChatContainerProps> = ({
   }
 
   // --- NEW: derive selected pod meta for header ---
-  const selectedPodId =
-    selectedChatGroup?.id?.startsWith('pod-') ? selectedChatGroup.id.slice(4) : null;
+  const selectedPodId = selectedChatGroup?.id?.startsWith('pod-')
+    ? selectedChatGroup.id.slice(4)
+    : null;
   const selectedPodMeta = selectedPodId ? podsMeta[selectedPodId] : null;
   // --- /NEW ---
 
@@ -500,7 +566,7 @@ export const HatGatedChatContainer: React.FC<HatGatedChatContainerProps> = ({
             <Shield className="h-5 w-5" style={{ color: '#3F7A5A' }} />
           )}
           <span>
-            {selectedPodMeta?.name ?? selectedChatGroup?.name ?? "Chat"}
+            {selectedPodMeta?.name ?? selectedChatGroup?.name ?? 'Chat'}
           </span>
           {selectedChatGroup?.required_token && (
             <Badge variant="outline" className="ml-2">
@@ -517,14 +583,16 @@ export const HatGatedChatContainer: React.FC<HatGatedChatContainerProps> = ({
                 onClick={() => setSelectedChatGroup(group)}
                 className={`group-pill ${selectedChatGroup?.id === group.id ? 'group-pill--active' : ''}`}
               >
-                {group.id.startsWith('pod-') && podsMeta[group.id.slice(4)]?.image_url ? (
+                {group.id.startsWith('pod-') &&
+                podsMeta[group.id.slice(4)]?.image_url ? (
                   <img
                     src={podsMeta[group.id.slice(4)]!.image_url!}
                     alt=""
                     className="pod-avatar pod-avatar--sm"
                   />
                 ) : null}
-                {group.id.startsWith('pod-') && podsMeta[group.id.slice(4)]?.name
+                {group.id.startsWith('pod-') &&
+                podsMeta[group.id.slice(4)]?.name
                   ? podsMeta[group.id.slice(4)]!.name
                   : group.name}
               </button>
@@ -535,15 +603,15 @@ export const HatGatedChatContainer: React.FC<HatGatedChatContainerProps> = ({
 
       <CardContent className="flex-1 flex flex-col p-0">
         <div className="flex-1 overflow-hidden">
-          <MessageList 
-            messages={messages} 
-            users={users} 
-            currentUser={currentUser} 
+          <MessageList
+            messages={messages}
+            users={users}
+            currentUser={currentUser}
           />
         </div>
-        
+
         <div className="border-t p-4">
-          <ChatInput 
+          <ChatInput
             onSendMessage={handleSendMessage}
             disabled={!selectedChatGroup || accessDenied}
           />

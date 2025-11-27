@@ -5,8 +5,11 @@ import BountyManagerABI from '@/abis/BountyManagerV2.json';
 import PodAuthorizationFactoryABI from '@/abis/PodAuthorizationFactory.json';
 
 // Get contract addresses from environment
-const BOUNTY_MANAGER_ADDRESS = process.env.NEXT_PUBLIC_BOUNTY_MANAGER_ADDRESS as `0x${string}`;
-const POD_AUTHORIZATION_FACTORY_ADDRESS = process.env.NEXT_PUBLIC_POD_AUTH_FACTORY as `0x${string}` || '0xeCdDB060cD38439E0aC8874f159E961eB856407D' as `0x${string}`;
+const BOUNTY_MANAGER_ADDRESS = process.env
+  .NEXT_PUBLIC_BOUNTY_MANAGER_ADDRESS as `0x${string}`;
+const POD_AUTHORIZATION_FACTORY_ADDRESS =
+  (process.env.NEXT_PUBLIC_POD_AUTH_FACTORY as `0x${string}`) ||
+  ('0xeCdDB060cD38439E0aC8874f159E961eB856407D' as `0x${string}`);
 
 // Create a config for contract reads
 const config = createConfig({
@@ -31,7 +34,6 @@ let lastCallTime = 0;
 const MIN_CALL_INTERVAL = 100; // 100ms minimum between calls
 
 export class PodValidationService {
-
   /**
    * Delay between contract calls to avoid rate limiting
    */
@@ -39,7 +41,9 @@ export class PodValidationService {
     const now = Date.now();
     const timeSinceLastCall = now - lastCallTime;
     if (timeSinceLastCall < MIN_CALL_INTERVAL) {
-      await new Promise(resolve => setTimeout(resolve, MIN_CALL_INTERVAL - timeSinceLastCall));
+      await new Promise((resolve) =>
+        setTimeout(resolve, MIN_CALL_INTERVAL - timeSinceLastCall),
+      );
     }
     lastCallTime = Date.now();
   }
@@ -50,11 +54,11 @@ export class PodValidationService {
   static async getPodServiceContract(): Promise<`0x${string}` | null> {
     try {
       await this.rateLimit();
-      const podServiceAddress = await readContract(config, {
+      const podServiceAddress = (await readContract(config, {
         address: BOUNTY_MANAGER_ADDRESS,
         abi: BountyManagerABI,
         functionName: 'podServiceContract',
-      }) as `0x${string}`;
+      })) as `0x${string}`;
 
       console.log('🏢 Pod service contract address:', podServiceAddress);
       return podServiceAddress;
@@ -90,23 +94,25 @@ export class PodValidationService {
 
       // Check if pod exists in PodAuthorizationFactory
       // BountyManagerV2 is configured to point to this contract
-      const exists = await readContract(config, {
+      const exists = (await readContract(config, {
         address: POD_AUTHORIZATION_FACTORY_ADDRESS,
         abi: PodAuthorizationFactoryABI,
         functionName: 'isValidPod',
-        args: [podId]
-      }) as boolean;
+        args: [podId],
+      })) as boolean;
 
       console.log('🔍 Pod validation result (PodAuthorizationFactory):', {
         podId,
         exists,
-        note: 'BountyManagerV2.podServiceContract points to PodAuthorizationFactory'
+        note: 'BountyManagerV2.podServiceContract points to PodAuthorizationFactory',
       });
 
       const result = {
         isValid: exists,
         contractPodId: podId,
-        error: exists ? undefined : 'Pod not registered in PodAuthorizationFactory contract',
+        error: exists
+          ? undefined
+          : 'Pod not registered in PodAuthorizationFactory contract',
       };
 
       // Cache the result
@@ -132,7 +138,9 @@ export class PodValidationService {
    * We use the database UUID directly as the pod ID since that's how pods are registered
    * in the PodBountyService contract via PodBlockchainSyncService.
    */
-  static async convertDatabasePodToContractId(databasePodId: string): Promise<string> {
+  static async convertDatabasePodToContractId(
+    databasePodId: string,
+  ): Promise<string> {
     try {
       // Check conversion cache first
       if (conversionCache.has(databasePodId)) {
@@ -143,7 +151,9 @@ export class PodValidationService {
       // If empty or null, return the database ID directly
       // The contract will validate it via isValidPod()
       if (!databasePodId || databasePodId.trim() === '') {
-        console.warn('⚠️ No pod ID provided - bounty creation will likely fail without a valid pod');
+        console.warn(
+          '⚠️ No pod ID provided - bounty creation will likely fail without a valid pod',
+        );
         const result = databasePodId || '';
         conversionCache.set(databasePodId, result);
         return result;
@@ -151,12 +161,14 @@ export class PodValidationService {
 
       // Return the database UUID directly - it should be registered in PodBountyService
       // Pods are registered via PodBlockchainSyncService.generateRegisterPodCall()
-      console.log('✅ Using database pod ID directly for contract:', databasePodId);
+      console.log(
+        '✅ Using database pod ID directly for contract:',
+        databasePodId,
+      );
 
       const result = databasePodId;
       conversionCache.set(databasePodId, result);
       return result;
-
     } catch (error) {
       console.error('❌ Pod ID conversion failed:', error);
       // Return the original ID as fallback
@@ -172,23 +184,25 @@ export class PodValidationService {
    */
   static async findValidPublicBountyId(): Promise<string> {
     const publicBountyTestValues = [
-      'public',      // Common value for public items
-      'general',     // General purpose
-      'open',        // Open to all
-      'none',        // No pod restriction
-      'global',      // Global access
-      '0',           // Zero ID
-      'default',     // Default pod
-      '',            // Empty string
+      'public', // Common value for public items
+      'general', // General purpose
+      'open', // Open to all
+      'none', // No pod restriction
+      'global', // Global access
+      '0', // Zero ID
+      'default', // Default pod
+      '', // Empty string
     ];
 
     console.log('🔍 Testing public bounty pod ID values...');
-    
+
     for (const testValue of publicBountyTestValues) {
       try {
         const validation = await this.validatePodId(testValue);
-        console.log(`  📝 Testing "${testValue}": ${validation.isValid ? '✅ Valid' : '❌ Invalid'}`);
-        
+        console.log(
+          `  📝 Testing "${testValue}": ${validation.isValid ? '✅ Valid' : '❌ Invalid'}`,
+        );
+
         if (validation.isValid) {
           console.log(`✅ Found valid public bounty pod ID: "${testValue}"`);
           return testValue;
@@ -211,7 +225,9 @@ export class PodValidationService {
     try {
       // This would require a function in the contract to list all pods
       // For now, we'll return an empty array and log that this needs implementation
-      console.log('🔧 getValidPodIds: Function not yet implemented in contract');
+      console.log(
+        '🔧 getValidPodIds: Function not yet implemented in contract',
+      );
       return [];
     } catch (error) {
       console.error('❌ Failed to get valid pod IDs:', error);
@@ -222,9 +238,11 @@ export class PodValidationService {
   /**
    * Test the pod validation system with debugging
    */
-  static async testPodValidation(testPodIds: string[] = ['', 'test-pod', 'invalid-pod']): Promise<void> {
+  static async testPodValidation(
+    testPodIds: string[] = ['', 'test-pod', 'invalid-pod'],
+  ): Promise<void> {
     console.log('🧪 Testing pod validation system...');
-    
+
     for (const podId of testPodIds) {
       const result = await this.validatePodId(podId);
       console.log(`Pod "${podId}":`, result);

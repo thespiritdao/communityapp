@@ -4,15 +4,31 @@ import { useAccount } from 'wagmi';
 import type { UserProfile } from '@/features/identity/types';
 import { TokenGallery } from '@/features/identity/components/TokenGallery';
 import { mapStoredValuesToLabels } from '@/features/identity/utils/formatProfileValues';
-import { interestsOptions, seekingOptions } from '@/features/identity/constants/profileOptions';
+import {
+  interestsOptions,
+  seekingOptions,
+} from '@/features/identity/constants/profileOptions';
 import FundButton from '@/components/FundButton';
 import FundingModal from '@/components/FundingModal';
 import { useFundingModal } from '@/hooks/useFundingModal';
-import { Lightbulb, Search, ChevronsRightLeft, Twitter, Instagram, Facebook,
-         Youtube, Github, Linkedin, Mail, MessageCircle, Video, Gift } from 'lucide-react';
+import {
+  Lightbulb,
+  Search,
+  ChevronsRightLeft,
+  Twitter,
+  Instagram,
+  Facebook,
+  Youtube,
+  Github,
+  Linkedin,
+  Mail,
+  MessageCircle,
+  Video,
+  Gift,
+} from 'lucide-react';
 import { DirectMessageModal } from '@/features/chat/components/DirectMessageModal';
 import { GiftModal } from '@/features/identity/components/GiftModal';
-import "../styles/ProfileModal.css";
+import '../styles/ProfileModal.css';
 
 interface ProfileModalProps {
   user: UserProfile;
@@ -43,7 +59,7 @@ const SOCIAL_PLATFORMS = [
   { key: 'twitch', label: 'Twitch', Icon: Video },
   { key: 'github', label: 'GitHub', Icon: Github },
   { key: 'linkedin', label: 'LinkedIn', Icon: Linkedin },
-  { key: 'email', label: 'Email', Icon: Mail }
+  { key: 'email', label: 'Email', Icon: Mail },
 ];
 
 // Format social link to show readable username/handle
@@ -66,7 +82,11 @@ const formatSocialLink = (url: string) => {
   return formatted;
 };
 
-export const ProfileModal: React.FC<ProfileModalProps> = ({ user, users, onClose }) => {
+export const ProfileModal: React.FC<ProfileModalProps> = ({
+  user,
+  users,
+  onClose,
+}) => {
   const { address } = useAccount();
   const { modalProps, openMemberFunding } = useFundingModal();
   const profilePictureUrl = getProfilePictureUrl(user.wallet_address, users);
@@ -78,16 +98,16 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ user, users, onClose
       address: user.wallet_address,
       name: `${user.first_name} ${user.last_name}`,
       image: profilePictureUrl,
-      description: `Send funding directly to ${user.first_name}`
+      description: `Send funding directly to ${user.first_name}`,
     });
   };
 
-  const canFundUser = address &&
-    address.toLowerCase() !== user.wallet_address.toLowerCase();
+  const canFundUser =
+    address && address.toLowerCase() !== user.wallet_address.toLowerCase();
 
   // Only allow message/gift for OTHER users' profiles (not your own)
-  const canInteractWithUser = address &&
-    address.toLowerCase() !== user.wallet_address.toLowerCase();
+  const canInteractWithUser =
+    address && address.toLowerCase() !== user.wallet_address.toLowerCase();
 
   const handleOpenMessage = () => {
     setShowDMModal(true);
@@ -99,7 +119,9 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ user, users, onClose
 
   return (
     <div className="profile-modal">
-      <button className="close-button" onClick={onClose}>✖</button>
+      <button className="close-button" onClick={onClose}>
+        ✖
+      </button>
 
       {/* Profile Image */}
       <div className="profile-image-container">
@@ -125,11 +147,17 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ user, users, onClose
             {/* Action Buttons: Message & Gift */}
             {canInteractWithUser && (
               <div className="profile-action-buttons">
-                <button className="action-btn message-btn" onClick={handleOpenMessage}>
+                <button
+                  className="action-btn message-btn"
+                  onClick={handleOpenMessage}
+                >
                   <MessageCircle size={16} />
                   <span>Message</span>
                 </button>
-                <button className="action-btn gift-btn" onClick={handleOpenGift}>
+                <button
+                  className="action-btn gift-btn"
+                  onClick={handleOpenGift}
+                >
                   <Gift size={16} />
                   <span>Gift</span>
                 </button>
@@ -138,7 +166,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ user, users, onClose
 
             {user.bio && <p className="user-bio">{user.bio}</p>}
           </div>
-          
+
           {/* Fund User Button */}
           {canFundUser && (
             <div className="profile-actions">
@@ -156,73 +184,90 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ user, users, onClose
       <hr />
 
       {/* Section: Interests */}
-		<div className="profile-section interests-section">
-		  <div className="interests-subsection">
-			<h3 className="interests-heading">
-			  <span className="interests-icon">
-				<Lightbulb size={18} strokeWidth={2} />
-			  </span>
-			  Interests
-			</h3>
-			{mapStoredValuesToLabels(user.interests, interestsOptions).length > 0 ? (
-			  <div className="interests-tags">
-				{mapStoredValuesToLabels(user.interests, interestsOptions).map((label, i) => (
-				  <span key={i} className="interest-tag">{label}</span>
-				))}
-			  </div>
-			) : (
-			  <p className="interests-empty">No interests specified</p>
-			)}
-		  </div>
+      <div className="profile-section interests-section">
+        <div className="interests-subsection">
+          <h3 className="interests-heading">
+            <span className="interests-icon">
+              <Lightbulb size={18} strokeWidth={2} />
+            </span>
+            Interests
+          </h3>
+          {mapStoredValuesToLabels(user.interests, interestsOptions).length >
+          0 ? (
+            <div className="interests-tags">
+              {mapStoredValuesToLabels(user.interests, interestsOptions).map(
+                (label, i) => (
+                  <span key={i} className="interest-tag">
+                    {label}
+                  </span>
+                ),
+              )}
+            </div>
+          ) : (
+            <p className="interests-empty">No interests specified</p>
+          )}
+        </div>
 
-		  <div className="interests-subsection">
-			<h3 className="interests-heading">
-			  <span className="interests-icon">
-				<Search size={18} strokeWidth={2} />
-			  </span>
-			  Seeking
-			</h3>
-			{mapStoredValuesToLabels(user.seeking, seekingOptions).length > 0 ? (
-			  <div className="interests-tags">
-				{mapStoredValuesToLabels(user.seeking, seekingOptions).map((label, i) => (
-				  <span key={i} className="interest-tag seeking-tag">{label}</span>
-				))}
-			  </div>
-			) : (
-			  <p className="interests-empty">Not seeking anything at the moment</p>
-			)}
-		  </div>
+        <div className="interests-subsection">
+          <h3 className="interests-heading">
+            <span className="interests-icon">
+              <Search size={18} strokeWidth={2} />
+            </span>
+            Seeking
+          </h3>
+          {mapStoredValuesToLabels(user.seeking, seekingOptions).length > 0 ? (
+            <div className="interests-tags">
+              {mapStoredValuesToLabels(user.seeking, seekingOptions).map(
+                (label, i) => (
+                  <span key={i} className="interest-tag seeking-tag">
+                    {label}
+                  </span>
+                ),
+              )}
+            </div>
+          ) : (
+            <p className="interests-empty">
+              Not seeking anything at the moment
+            </p>
+          )}
+        </div>
 
-		  <div className="interests-subsection">
-			<h3 className="interests-heading">
-			  <span className="interests-icon">
-				<ChevronsRightLeft size={18} strokeWidth={2} />
-			  </span>
-			  Open to Connect
-			</h3>
-			<div className="connect-status">
-			  <span className={`connect-badge ${user.open_to_connect || 'not-specified'}`}>
-				{
-				  {
-					low_limited: "Low / Limited",
-					open_available: "Open / Available",
-					actively_collaborate: "Actively looking to collaborate",
-				  }[user.open_to_connect || ''] || "Not specified"
-				}
-			  </span>
-			</div>
-		  </div>
-		</div>
+        <div className="interests-subsection">
+          <h3 className="interests-heading">
+            <span className="interests-icon">
+              <ChevronsRightLeft size={18} strokeWidth={2} />
+            </span>
+            Open to Connect
+          </h3>
+          <div className="connect-status">
+            <span
+              className={`connect-badge ${user.open_to_connect || 'not-specified'}`}
+            >
+              {{
+                low_limited: 'Low / Limited',
+                open_available: 'Open / Available',
+                actively_collaborate: 'Actively looking to collaborate',
+              }[user.open_to_connect || ''] || 'Not specified'}
+            </span>
+          </div>
+        </div>
+      </div>
 
       <hr />
 
       {/* Section: Tokens */}
       <div className="profile-section token-gallery-modal">
         <h3>Memberships</h3>
-        <TokenGallery walletAddress={user.wallet_address} category="membership" />
+        <TokenGallery
+          walletAddress={user.wallet_address}
+          category="membership"
+        />
 
-        <h3 style={{ marginTop: "20px" }}>Credentials</h3>
-        <TokenGallery walletAddress={user.wallet_address} category="credential" />
+        <h3 style={{ marginTop: '20px' }}>Credentials</h3>
+        <TokenGallery
+          walletAddress={user.wallet_address}
+          category="credential"
+        />
       </div>
 
       <hr />
@@ -231,39 +276,35 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ user, users, onClose
       <div className="profile-section">
         <h3>Connect</h3>
         <div className="social-links">
-          {SOCIAL_PLATFORMS
-            .filter(({ key }) => user[key as keyof UserProfile])
-            .map(({ key, label, Icon }) => {
-              const url = user[key as keyof UserProfile] as string;
-              return (
-                <div key={key} className="social-link-item">
-                  <Icon size={16} className="social-link-icon" />
-                  <span className="social-link-label">{label}:</span>
-                  <a
-                    href={url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="social-link-url"
-                  >
-                    {formatSocialLink(url)}
-                  </a>
-                </div>
-              );
-            })}
-          {SOCIAL_PLATFORMS.filter(({ key }) => user[key as keyof UserProfile]).length === 0 && (
+          {SOCIAL_PLATFORMS.filter(
+            ({ key }) => user[key as keyof UserProfile],
+          ).map(({ key, label, Icon }) => {
+            const url = user[key as keyof UserProfile] as string;
+            return (
+              <div key={key} className="social-link-item">
+                <Icon size={16} className="social-link-icon" />
+                <span className="social-link-label">{label}:</span>
+                <a
+                  href={url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="social-link-url"
+                >
+                  {formatSocialLink(url)}
+                </a>
+              </div>
+            );
+          })}
+          {SOCIAL_PLATFORMS.filter(({ key }) => user[key as keyof UserProfile])
+            .length === 0 && (
             <p className="interests-empty">No social links added</p>
           )}
         </div>
       </div>
-      
+
       {/* Funding Modal */}
       {modalProps.recipient && (
-        <FundingModal
-          {...modalProps}
-          onSuccess={(amount, token) => {
-
-          }}
-        />
+        <FundingModal {...modalProps} onSuccess={(amount, token) => {}} />
       )}
 
       {/* Direct Message Modal */}
@@ -288,4 +329,3 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ user, users, onClose
     </div>
   );
 };
-

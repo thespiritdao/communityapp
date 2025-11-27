@@ -23,18 +23,19 @@ export interface UsePodMembersResult {
  */
 export function usePodMembers(
   podId: string,
-  options: UsePodMembersOptions = {}
+  options: UsePodMembersOptions = {},
 ): UsePodMembersResult {
   const {
     membershipType,
     enabled = true,
     staleTime = 2 * 60 * 1000, // 2 minutes
-    currentUserAddress
+    currentUserAddress,
   } = options;
 
   const query = useQuery({
     queryKey: ['pod-members', podId, membershipType, currentUserAddress],
-    queryFn: () => PodService.listPodMembers(podId, membershipType, currentUserAddress),
+    queryFn: () =>
+      PodService.listPodMembers(podId, membershipType, currentUserAddress),
     enabled: enabled && !!podId,
     staleTime,
     gcTime: 10 * 60 * 1000, // 10 minutes cache
@@ -43,7 +44,7 @@ export function usePodMembers(
   });
 
   const memberRefs = query.data || [];
-  const members = memberRefs.map(ref => ref.wallet);
+  const members = memberRefs.map((ref) => ref.wallet);
 
   return {
     members,
@@ -72,7 +73,11 @@ export function usePodMemberStats(podId: string, enabled = true) {
 /**
  * Hook to check if current user is a member of a pod
  */
-export function usePodMembership(podId: string, walletAddress: string, enabled = true) {
+export function usePodMembership(
+  podId: string,
+  walletAddress: string,
+  enabled = true,
+) {
   return useQuery({
     queryKey: ['pod-membership', podId, walletAddress],
     queryFn: () => PodService.checkPodMembership(podId, walletAddress),

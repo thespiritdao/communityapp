@@ -17,12 +17,12 @@ export function PodPageLayout({
   children,
   maxWidth = 'default',
   showBackButton = false,
-  actions
+  actions,
 }: PodPageLayoutProps) {
   const containerClasses = {
     default: 'container mx-auto py-8 px-4',
     wide: 'max-w-6xl mx-auto py-8 px-4',
-    full: 'w-full py-8 px-4'
+    full: 'w-full py-8 px-4',
   };
 
   const handleBack = () => {
@@ -45,23 +45,13 @@ export function PodPageLayout({
               </button>
             )}
             <h1 className="text-3xl font-bold mb-2">{title}</h1>
-            {description && (
-              <p className="text-gray-600">
-                {description}
-              </p>
-            )}
+            {description && <p className="text-gray-600">{description}</p>}
           </div>
-          {actions && (
-            <div className="ml-4">
-              {actions}
-            </div>
-          )}
+          {actions && <div className="ml-4">{actions}</div>}
         </div>
       </div>
-      
-      <div className="pb-20">
-        {children}
-      </div>
+
+      <div className="pb-20">{children}</div>
     </div>
   );
 }

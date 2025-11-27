@@ -9,7 +9,8 @@ import { convertIpfsToHttps } from '../../../nft/utils/ipfs';
 import { useMintDetails } from '../../../nft/hooks/useMintDetails';
 import AdvocateMembershipABI from '../../../abis/AdvocateMembershipABI.json';
 
-const ADVOCATE_ADDRESS = '0xd05b10248f1F72e8B9fEbd9E9c87887Ab0a1aAB0'.toLowerCase();
+const ADVOCATE_ADDRESS =
+  '0xd05b10248f1F72e8B9fEbd9E9c87887Ab0a1aAB0'.toLowerCase();
 
 /**
  * A single hook that:
@@ -60,7 +61,7 @@ export function useMintData(
       // fill in whatever metadata you like
       name: 'Advocate Membership',
       description: 'Mint to join the Advocate DAO and unlock on-chain voting.',
-      imageUrl: '',           // optional: your default image
+      imageUrl: '', // optional: your default image
       animationUrl: undefined,
       mimeType: undefined,
       contractType: 'ERC721',
@@ -97,18 +98,21 @@ export function useMintData(
   if (error) return error;
 
   return {
-    name:                 mintData?.name,
-    description:          mintData?.description,
-    imageUrl:             convertIpfsToHttps(mintData?.imageUrl),
-    animationUrl:         convertIpfsToHttps(mintData?.animationUrl),
-    mimeType:             mintData?.mimeType,
-    contractType:         mintData?.contractType,
-    maxMintsPerWallet:    mintData?.maxMintsPerWallet === 0 ? undefined : mintData?.maxMintsPerWallet,
-    price:                mintData?.price,
-    mintFee:              mintData?.mintFee,
-    isEligibleToMint:     mintData?.isEligibleToMint,
-    creatorAddress:       mintData?.creatorAddress,
-    totalOwners:          mintData?.totalOwners,
-    network:              mintData?.network,
+    name: mintData?.name,
+    description: mintData?.description,
+    imageUrl: convertIpfsToHttps(mintData?.imageUrl),
+    animationUrl: convertIpfsToHttps(mintData?.animationUrl),
+    mimeType: mintData?.mimeType,
+    contractType: mintData?.contractType,
+    maxMintsPerWallet:
+      mintData?.maxMintsPerWallet === 0
+        ? undefined
+        : mintData?.maxMintsPerWallet,
+    price: mintData?.price,
+    mintFee: mintData?.mintFee,
+    isEligibleToMint: mintData?.isEligibleToMint,
+    creatorAddress: mintData?.creatorAddress,
+    totalOwners: mintData?.totalOwners,
+    network: mintData?.network,
   };
 }

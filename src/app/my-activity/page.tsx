@@ -1,5 +1,5 @@
 // src/app/my-activity/page.tsx
-"use client";
+'use client';
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
@@ -80,8 +80,8 @@ const Tab = styled.button<{ active: boolean }>`
   padding: 15px 25px;
   cursor: pointer;
   font-weight: 500;
-  color: ${props => props.active ? '#007bff' : '#666'};
-  border-bottom: 2px solid ${props => props.active ? '#007bff' : 'transparent'};
+  color: ${(props) => (props.active ? '#007bff' : '#666')};
+  border-bottom: 2px solid ${(props) => (props.active ? '#007bff' : 'transparent')};
   white-space: nowrap;
   transition: all 0.2s ease;
   
@@ -98,14 +98,20 @@ const ActivityList = styled.div`
 const ActivityCard = styled.div<{ type: string }>`
   background: white;
   border: 1px solid #e0e0e0;
-  border-left: 4px solid ${props => {
+  border-left: 4px solid ${(props) => {
     switch (props.type) {
-      case 'purchase': return '#28a745';
-      case 'vote': return '#007bff';
-      case 'proposal': return '#6f42c1';
-      case 'event': return '#fd7e14';
-      case 'forum': return '#20c997';
-      default: return '#6c757d';
+      case 'purchase':
+        return '#28a745';
+      case 'vote':
+        return '#007bff';
+      case 'proposal':
+        return '#6f42c1';
+      case 'event':
+        return '#fd7e14';
+      case 'forum':
+        return '#20c997';
+      default:
+        return '#6c757d';
     }
   }};
   border-radius: 8px;
@@ -152,24 +158,36 @@ const TypeBadge = styled.span<{ type: string }>`
   font-size: 12px;
   font-weight: 500;
   text-transform: uppercase;
-  background: ${props => {
+  background: ${(props) => {
     switch (props.type) {
-      case 'purchase': return '#d4edda';
-      case 'vote': return '#d1ecf1';
-      case 'proposal': return '#e2d9f3';
-      case 'event': return '#ffeaa7';
-      case 'forum': return '#d1f2eb';
-      default: return '#e9ecef';
+      case 'purchase':
+        return '#d4edda';
+      case 'vote':
+        return '#d1ecf1';
+      case 'proposal':
+        return '#e2d9f3';
+      case 'event':
+        return '#ffeaa7';
+      case 'forum':
+        return '#d1f2eb';
+      default:
+        return '#e9ecef';
     }
   }};
-  color: ${props => {
+  color: ${(props) => {
     switch (props.type) {
-      case 'purchase': return '#155724';
-      case 'vote': return '#0c5460';
-      case 'proposal': return '#4a148c';
-      case 'event': return '#8b4513';
-      case 'forum': return '#00695c';
-      default: return '#495057';
+      case 'purchase':
+        return '#155724';
+      case 'vote':
+        return '#0c5460';
+      case 'proposal':
+        return '#4a148c';
+      case 'event':
+        return '#8b4513';
+      case 'forum':
+        return '#00695c';
+      default:
+        return '#495057';
     }
   }};
 `;
@@ -179,28 +197,36 @@ const StatusBadge = styled.span<{ status: string }>`
   border-radius: 12px;
   font-size: 12px;
   font-weight: 500;
-  background: ${props => {
+  background: ${(props) => {
     switch (props.status.toLowerCase()) {
       case 'completed':
       case 'delivered':
-      case 'approved': return '#d4edda';
+      case 'approved':
+        return '#d4edda';
       case 'pending':
-      case 'processing': return '#fff3cd';
+      case 'processing':
+        return '#fff3cd';
       case 'cancelled':
-      case 'rejected': return '#f8d7da';
-      default: return '#e9ecef';
+      case 'rejected':
+        return '#f8d7da';
+      default:
+        return '#e9ecef';
     }
   }};
-  color: ${props => {
+  color: ${(props) => {
     switch (props.status.toLowerCase()) {
       case 'completed':
       case 'delivered':
-      case 'approved': return '#155724';
+      case 'approved':
+        return '#155724';
       case 'pending':
-      case 'processing': return '#856404';
+      case 'processing':
+        return '#856404';
       case 'cancelled':
-      case 'rejected': return '#721c24';
-      default: return '#495057';
+      case 'rejected':
+        return '#721c24';
+      default:
+        return '#495057';
     }
   }};
 `;
@@ -230,8 +256,10 @@ const LoadingMessage = styled.div`
 export default function MyActivityPage() {
   const router = useRouter();
   const { address } = useAccount();
-  
-  const [activeTab, setActiveTab] = useState<'all' | 'purchases' | 'governance' | 'events' | 'forum'>('all');
+
+  const [activeTab, setActiveTab] = useState<
+    'all' | 'purchases' | 'governance' | 'events' | 'forum'
+  >('all');
   const [activities, setActivities] = useState<ActivityItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -263,7 +291,10 @@ export default function MyActivityPage() {
           status: order.status,
           date: order.created_at,
           url: `/marketplace/orders/${order.id}`,
-          metadata: { orderId: order.id, transactionHash: order.transaction_hash }
+          metadata: {
+            orderId: order.id,
+            transactionHash: order.transaction_hash,
+          },
         }));
         allActivities.push(...purchaseActivities);
       }
@@ -275,8 +306,10 @@ export default function MyActivityPage() {
       // - Forum posts/replies
 
       // Sort all activities by date (most recent first)
-      allActivities.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-      
+      allActivities.sort(
+        (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
+      );
+
       setActivities(allActivities);
     } catch (error) {
       console.error('Error loading activities:', error);
@@ -285,10 +318,11 @@ export default function MyActivityPage() {
     }
   };
 
-  const filteredActivities = activities.filter(activity => {
+  const filteredActivities = activities.filter((activity) => {
     if (activeTab === 'all') return true;
     if (activeTab === 'purchases') return activity.type === 'purchase';
-    if (activeTab === 'governance') return ['vote', 'proposal'].includes(activity.type);
+    if (activeTab === 'governance')
+      return ['vote', 'proposal'].includes(activity.type);
     if (activeTab === 'events') return activity.type === 'event';
     if (activeTab === 'forum') return activity.type === 'forum';
     return true;
@@ -300,7 +334,7 @@ export default function MyActivityPage() {
       month: 'short',
       day: 'numeric',
       hour: '2-digit',
-      minute: '2-digit'
+      minute: '2-digit',
     });
   };
 
@@ -316,7 +350,9 @@ export default function MyActivityPage() {
         <Header>
           <Title>My Activity</Title>
         </Header>
-        <EmptyState>Please connect your wallet to view your activity history.</EmptyState>
+        <EmptyState>
+          Please connect your wallet to view your activity history.
+        </EmptyState>
       </Container>
     );
   }
@@ -340,17 +376,34 @@ export default function MyActivityPage() {
         <Tab active={activeTab === 'all'} onClick={() => setActiveTab('all')}>
           All Activity ({activities.length})
         </Tab>
-        <Tab active={activeTab === 'purchases'} onClick={() => setActiveTab('purchases')}>
-          Purchases ({activities.filter(a => a.type === 'purchase').length})
+        <Tab
+          active={activeTab === 'purchases'}
+          onClick={() => setActiveTab('purchases')}
+        >
+          Purchases ({activities.filter((a) => a.type === 'purchase').length})
         </Tab>
-        <Tab active={activeTab === 'governance'} onClick={() => setActiveTab('governance')}>
-          Governance ({activities.filter(a => ['vote', 'proposal'].includes(a.type)).length})
+        <Tab
+          active={activeTab === 'governance'}
+          onClick={() => setActiveTab('governance')}
+        >
+          Governance (
+          {
+            activities.filter((a) => ['vote', 'proposal'].includes(a.type))
+              .length
+          }
+          )
         </Tab>
-        <Tab active={activeTab === 'events'} onClick={() => setActiveTab('events')}>
-          Events ({activities.filter(a => a.type === 'event').length})
+        <Tab
+          active={activeTab === 'events'}
+          onClick={() => setActiveTab('events')}
+        >
+          Events ({activities.filter((a) => a.type === 'event').length})
         </Tab>
-        <Tab active={activeTab === 'forum'} onClick={() => setActiveTab('forum')}>
-          Forum ({activities.filter(a => a.type === 'forum').length})
+        <Tab
+          active={activeTab === 'forum'}
+          onClick={() => setActiveTab('forum')}
+        >
+          Forum ({activities.filter((a) => a.type === 'forum').length})
         </Tab>
       </TabsContainer>
 
@@ -358,20 +411,25 @@ export default function MyActivityPage() {
         {filteredActivities.length === 0 ? (
           <EmptyState>
             <div style={{ fontSize: '48px', marginBottom: '20px' }}>🎯</div>
-            <div style={{ fontSize: '18px', fontWeight: '600', marginBottom: '10px' }}>
+            <div
+              style={{
+                fontSize: '18px',
+                fontWeight: '600',
+                marginBottom: '10px',
+              }}
+            >
               No Activity Found
             </div>
             <div>
-              {activeTab === 'all' 
+              {activeTab === 'all'
                 ? "You haven't participated in any activities yet. Start by exploring the marketplace, governance, or events!"
-                : `No ${activeTab} activity found. Try a different tab or start participating!`
-              }
+                : `No ${activeTab} activity found. Try a different tab or start participating!`}
             </div>
           </EmptyState>
         ) : (
           filteredActivities.map((activity) => (
-            <ActivityCard 
-              key={activity.id} 
+            <ActivityCard
+              key={activity.id}
               type={activity.type}
               onClick={() => handleActivityClick(activity)}
             >
@@ -379,7 +437,9 @@ export default function MyActivityPage() {
                 <ActivityTitle>{activity.title}</ActivityTitle>
                 <ActivityMeta>
                   <TypeBadge type={activity.type}>{activity.type}</TypeBadge>
-                  <StatusBadge status={activity.status}>{activity.status}</StatusBadge>
+                  <StatusBadge status={activity.status}>
+                    {activity.status}
+                  </StatusBadge>
                   <span>{formatDate(activity.date)}</span>
                 </ActivityMeta>
               </ActivityHeader>

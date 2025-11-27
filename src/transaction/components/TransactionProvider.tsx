@@ -124,20 +124,24 @@ export function TransactionProvider({
     return statusSendCall;
   }, [statusSendCall, statusSendCalls, walletCapabilities]);
 
-  function isHexAddress(address: string | undefined | null): address is `0x${string}` {
+  function isHexAddress(
+    address: string | undefined | null,
+  ): address is `0x${string}` {
     return typeof address === 'string' && /^0x[a-fA-F0-9]{40}$/.test(address);
   }
 
   const capabilities = useMemo(() => {
     if (isSponsored && paymaster) {
       return {
-        paymasterService: { 
+        paymasterService: {
           url: paymaster,
           // Add paymaster configuration
           paymasterAndData: {
             type: 'paymaster',
-            ...(isHexAddress(account.address) ? { paymaster: account.address } : {}),
-          }
+            ...(isHexAddress(account.address)
+              ? { paymaster: account.address }
+              : {}),
+          },
         },
         // this needs to be below so devs can override default paymaster
         // with their personal paymaster in production playgroundd

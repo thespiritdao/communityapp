@@ -1,6 +1,6 @@
 /**
  * Pod Management State - Optimized state management with memoization
- * 
+ *
  * Centralizes pod management state with proper memoization to prevent
  * unnecessary re-renders and improve performance.
  */
@@ -51,7 +51,7 @@ interface PodManagementState {
  */
 export function usePodManagementState({
   podId,
-  userAddress
+  userAddress,
 }: UsePodManagementStateProps): PodManagementState {
   const [selectedTab, setSelectedTab] = useState('members');
 
@@ -63,7 +63,7 @@ export function usePodManagementState({
     data: pod,
     isLoading: isLoadingPod,
     error: podError,
-    refetch: refetchPod
+    refetch: refetchPod,
   } = useQuery({
     queryKey: ['pod', podId],
     queryFn: () => PodService.getPodById(podId),
@@ -85,12 +85,12 @@ export function usePodManagementState({
     memberRefs, // ✅ ISSUE #7: Get full member data for removal flow
     isLoading: isLoadingMembers,
     error: membersError,
-    refetch: refetchMembers
+    refetch: refetchMembers,
   } = usePodMembers(podId, {
     membershipType: 'member',
     enabled: !!podId,
     staleTime: 2 * 60 * 1000, // 2 minutes for member data
-    currentUserAddress: userAddress
+    currentUserAddress: userAddress,
   });
 
   // 🔐 HYBRID PERMISSION CHECKS - On-chain HAT verification + Database permissions
@@ -100,13 +100,13 @@ export function usePodManagementState({
   const {
     hasPermission: canManageMembers,
     isLoading: manageMembersLoading,
-    error: manageMembersError
+    error: manageMembersError,
   } = useHybridPodPermission(podId, 'memberManagement');
 
   const {
     hasPermission: canManageTreasuryPermission,
     isLoading: manageTreasuryLoading,
-    error: manageTreasuryError
+    error: manageTreasuryError,
   } = useHybridPodPermission(podId, 'treasuryManagement');
 
   // Treasury access requires BOTH permission AND deployed treasury contract
@@ -118,7 +118,7 @@ export function usePodManagementState({
       canManageTreasuryPermission,
       hasTreasuryContract,
       treasury_contract_address: pod?.treasury_contract_address,
-      finalDecision: canManage
+      finalDecision: canManage,
     });
 
     return canManage;
@@ -132,7 +132,7 @@ export function usePodManagementState({
     canManageMembers,
     canManageTreasury,
     canEditPod,
-    isLoading: manageMembersLoading || manageTreasuryLoading
+    isLoading: manageMembersLoading || manageTreasuryLoading,
   });
 
   // Memoized tab setter to prevent unnecessary re-renders
@@ -184,6 +184,6 @@ export function usePodManagementState({
       memoizedSetSelectedTab,
       refetchPod,
       refetchMembers,
-    ]
+    ],
   );
 }

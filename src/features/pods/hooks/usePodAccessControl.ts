@@ -26,28 +26,36 @@ interface AccessControlOptions {
   allowPublic?: boolean; // Allow public access
 }
 
-export function usePodAccessControl(options: AccessControlOptions = {}): AccessControlResult {
+export function usePodAccessControl(
+  options: AccessControlOptions = {},
+): AccessControlResult {
   const { address } = useAccount();
   const router = useRouter();
-  
+
   const [accessState, setAccessState] = useState<AccessControlResult>({
     hasAccess: false,
     isLoading: true,
     isExecutiveMember: false,
     isPodLeader: false,
-    isPodMember: false
+    isPodMember: false,
   });
 
   useEffect(() => {
     const checkAccess = async () => {
       // If public access is allowed and no specific requirements, grant access
-      if (options.allowPublic && !options.requireExecutive && !options.requirePodLeader && !options.requirePodMember && !options.requireHat) {
+      if (
+        options.allowPublic &&
+        !options.requireExecutive &&
+        !options.requirePodLeader &&
+        !options.requirePodMember &&
+        !options.requireHat
+      ) {
         setAccessState({
           hasAccess: true,
           isLoading: false,
           isExecutiveMember: false,
           isPodLeader: false,
-          isPodMember: false
+          isPodMember: false,
         });
         return;
       }
@@ -60,9 +68,9 @@ export function usePodAccessControl(options: AccessControlOptions = {}): AccessC
           isExecutiveMember: false,
           isPodLeader: false,
           isPodMember: false,
-          errorMessage: 'Please connect your wallet to access this page'
+          errorMessage: 'Please connect your wallet to access this page',
         });
-        
+
         if (!options.allowPublic && options.redirectTo) {
           router.push(options.redirectTo);
         }
@@ -86,9 +94,10 @@ export function usePodAccessControl(options: AccessControlOptions = {}): AccessC
 
           if (executivePod) {
             // Check if user is a pod lead
-            isExecutiveMember = executivePod.pod_leads?.some(
-              (lead: string) => lead.toLowerCase() === address.toLowerCase()
-            ) || false;
+            isExecutiveMember =
+              executivePod.pod_leads?.some(
+                (lead: string) => lead.toLowerCase() === address.toLowerCase(),
+              ) || false;
 
             // If not a lead, check Hat ownership
             if (!isExecutiveMember && executivePod.membership_hat_id) {
@@ -96,7 +105,7 @@ export function usePodAccessControl(options: AccessControlOptions = {}): AccessC
                 const hatBalance = await HatCreationService.checkHatOwnership(
                   publicClient,
                   executivePod.membership_hat_id,
-                  address
+                  address,
                 );
                 isExecutiveMember = hatBalance;
               } catch (error) {
@@ -124,9 +133,10 @@ export function usePodAccessControl(options: AccessControlOptions = {}): AccessC
 
           if (pod) {
             // Check if user is in pod_leads array
-            isPodLeader = pod.pod_leads?.some(
-              (lead: string) => lead.toLowerCase() === address.toLowerCase()
-            ) || false;
+            isPodLeader =
+              pod.pod_leads?.some(
+                (lead: string) => lead.toLowerCase() === address.toLowerCase(),
+              ) || false;
 
             // If not in leads array, check management Hat
             if (!isPodLeader && pod.management_hat_id) {
@@ -134,7 +144,7 @@ export function usePodAccessControl(options: AccessControlOptions = {}): AccessC
                 const hatBalance = await HatCreationService.checkHatOwnership(
                   publicClient,
                   pod.management_hat_id,
-                  address
+                  address,
                 );
                 isPodLeader = hatBalance;
               } catch (error) {
@@ -177,7 +187,7 @@ export function usePodAccessControl(options: AccessControlOptions = {}): AccessC
                 const hatBalance = await HatCreationService.checkHatOwnership(
                   publicClient,
                   pod.membership_hat_id,
-                  address
+                  address,
                 );
                 isPodMember = hatBalance;
               } catch (error) {
@@ -198,9 +208,9 @@ export function usePodAccessControl(options: AccessControlOptions = {}): AccessC
             const hasHat = await HatCreationService.checkHatOwnership(
               publicClient,
               options.requireHat,
-              address
+              address,
             );
-            
+
             if (!hasHat) {
               hasRequiredAccess = false;
               errorMessage = 'Required Hat not owned';
@@ -218,7 +228,7 @@ export function usePodAccessControl(options: AccessControlOptions = {}): AccessC
           isExecutiveMember,
           isPodLeader,
           isPodMember,
-          errorMessage
+          errorMessage,
         });
 
         // Redirect if access denied
@@ -233,9 +243,9 @@ export function usePodAccessControl(options: AccessControlOptions = {}): AccessC
           isExecutiveMember: false,
           isPodLeader: false,
           isPodMember: false,
-          errorMessage: 'Failed to verify access permissions'
+          errorMessage: 'Failed to verify access permissions',
         });
-        
+
         if (options.redirectTo) {
           router.push(options.redirectTo);
         }
@@ -243,7 +253,13 @@ export function usePodAccessControl(options: AccessControlOptions = {}): AccessC
     };
 
     checkAccess();
-  }, [address, options.requireExecutive, options.requirePodLeader, options.requirePodMember, options.requireHat]);
+  }, [
+    address,
+    options.requireExecutive,
+    options.requirePodLeader,
+    options.requirePodMember,
+    options.requireHat,
+  ]);
 
   return accessState;
 }
@@ -252,7 +268,7 @@ export function usePodAccessControl(options: AccessControlOptions = {}): AccessC
 export function useExecutivePodAccess(redirectTo = '/pods') {
   return usePodAccessControl({
     requireExecutive: true,
-    redirectTo
+    redirectTo,
   });
 }
 
@@ -260,7 +276,7 @@ export function useExecutivePodAccess(redirectTo = '/pods') {
 export function usePodLeaderAccess(podId: string, redirectTo = '/pods') {
   return usePodAccessControl({
     requirePodLeader: podId,
-    redirectTo
+    redirectTo,
   });
 }
 
@@ -268,6 +284,6 @@ export function usePodLeaderAccess(podId: string, redirectTo = '/pods') {
 export function usePodMemberAccess(podId: string, redirectTo = '/pods') {
   return usePodAccessControl({
     requirePodMember: podId,
-    redirectTo
+    redirectTo,
   });
 }

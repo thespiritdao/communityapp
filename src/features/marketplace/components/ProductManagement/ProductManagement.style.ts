@@ -76,7 +76,6 @@ export const ProductsList = styled.div`
   max-height: calc(90vh - 100px);
 `;
 
-
 export const SectionTitle = styled.h3`
   margin: 0 0 16px 0;
   color: #333;
@@ -96,10 +95,10 @@ export const ProductItem = styled.div<{ $isSelected?: boolean }>`
   display: flex;
   align-items: center;
   padding: 12px;
-  border: 1px solid ${props => props.$isSelected ? '#007bff' : '#e0e0e0'};
+  border: 1px solid ${(props) => (props.$isSelected ? '#007bff' : '#e0e0e0')};
   border-radius: 8px;
   margin-bottom: 12px;
-  background: ${props => props.$isSelected ? '#f8f9ff' : 'white'};
+  background: ${(props) => (props.$isSelected ? '#f8f9ff' : 'white')};
   cursor: pointer;
   transition: all 0.2s ease;
   

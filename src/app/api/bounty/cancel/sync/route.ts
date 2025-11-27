@@ -4,7 +4,7 @@ import { unifiedNotificationService } from '@/services/unifiedNotificationServic
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
+  process.env.SUPABASE_SERVICE_ROLE_KEY!,
 );
 
 /**
@@ -30,21 +30,24 @@ export async function POST(request: NextRequest) {
       onchainId,
       cancelerAddress,
       cancellationReason,
-      transactionHash
+      transactionHash,
     } = body;
 
     console.log('🔄 Syncing bounty cancellation to database:', {
       bountyId,
       onchainId,
       cancelerAddress,
-      transactionHash
+      transactionHash,
     });
 
     // Validation
     if (!bountyId || !cancelerAddress || !transactionHash) {
       return NextResponse.json(
-        { error: 'Missing required fields: bountyId, cancelerAddress, transactionHash' },
-        { status: 400 }
+        {
+          error:
+            'Missing required fields: bountyId, cancelerAddress, transactionHash',
+        },
+        { status: 400 },
       );
     }
 
@@ -57,10 +60,7 @@ export async function POST(request: NextRequest) {
 
     if (bountyError || !bounty) {
       console.error('❌ Bounty not found:', bountyError);
-      return NextResponse.json(
-        { error: 'Bounty not found' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: 'Bounty not found' }, { status: 404 });
     }
 
     // Check if already cancelled (idempotent operation)
@@ -70,12 +70,13 @@ export async function POST(request: NextRequest) {
         success: true,
         alreadyCancelled: true,
         bounty,
-        message: 'Bounty was already cancelled in database'
+        message: 'Bounty was already cancelled in database',
       });
     }
 
     // Verify canceler is authorized (bounty creator or pod leader)
-    let isAuthorized = bounty.creator_address?.toLowerCase() === cancelerAddress.toLowerCase();
+    let isAuthorized =
+      bounty.creator_address?.toLowerCase() === cancelerAddress.toLowerCase();
 
     if (!isAuthorized && bounty.pod_id) {
       // Check if canceler is a pod leader
@@ -87,7 +88,8 @@ export async function POST(request: NextRequest) {
 
       if (pod && pod.pod_leads) {
         isAuthorized = pod.pod_leads.some(
-          (lead: string) => lead.toLowerCase() === cancelerAddress.toLowerCase()
+          (lead: string) =>
+            lead.toLowerCase() === cancelerAddress.toLowerCase(),
         );
       }
     }
@@ -95,8 +97,11 @@ export async function POST(request: NextRequest) {
     if (!isAuthorized) {
       console.error('❌ Canceler not authorized');
       return NextResponse.json(
-        { error: 'Only the bounty creator or pod leaders can cancel this bounty' },
-        { status: 403 }
+        {
+          error:
+            'Only the bounty creator or pod leaders can cancel this bounty',
+        },
+        { status: 403 },
       );
     }
 
@@ -109,7 +114,7 @@ export async function POST(request: NextRequest) {
         cancellation_tx_hash: transactionHash,
         cancelled_at: new Date().toISOString(),
         cancelled_by: cancelerAddress.toLowerCase(),
-        updated_at: new Date().toISOString()
+        updated_at: new Date().toISOString(),
       })
       .eq('id', bountyId)
       .select()
@@ -118,8 +123,11 @@ export async function POST(request: NextRequest) {
     if (updateError) {
       console.error('❌ Error updating bounty status:', updateError);
       return NextResponse.json(
-        { error: 'Failed to update bounty status', details: updateError.message },
-        { status: 500 }
+        {
+          error: 'Failed to update bounty status',
+          details: updateError.message,
+        },
+        { status: 500 },
       );
     }
 
@@ -130,7 +138,7 @@ export async function POST(request: NextRequest) {
       .from('bids')
       .update({
         status: 'archived',
-        updated_at: new Date().toISOString()
+        updated_at: new Date().toISOString(),
       })
       .eq('bounty_id', bountyId)
       .in('status', ['pending', 'legacy_pending'])
@@ -151,7 +159,7 @@ export async function POST(request: NextRequest) {
 
     // Send notifications to all bidders
     if (allBids && allBids.length > 0) {
-      const notificationPromises = allBids.map(bid =>
+      const notificationPromises = allBids.map((bid) =>
         unifiedNotificationService.createNotification({
           recipient_address: bid.bidder_address.toLowerCase(),
           sender_address: cancelerAddress.toLowerCase(),
@@ -161,13 +169,15 @@ export async function POST(request: NextRequest) {
           context_type: 'bounty',
           context_id: bountyId,
           context_url: `/bounty/${bountyId}`,
-          priority: 'high'
-        })
+          priority: 'high',
+        }),
       );
 
       try {
         await Promise.all(notificationPromises);
-        console.log(`✅ Cancellation notifications sent to ${allBids.length} bidders`);
+        console.log(
+          `✅ Cancellation notifications sent to ${allBids.length} bidders`,
+        );
       } catch (notifError) {
         console.error('⚠️ Error sending notifications:', notifError);
         // Non-fatal error, continue
@@ -179,14 +189,16 @@ export async function POST(request: NextRequest) {
       bounty: updatedBounty,
       transactionHash,
       archivedBidsCount: archivedBids?.length || 0,
-      notificationsSent: allBids?.length || 0
+      notificationsSent: allBids?.length || 0,
     });
-
   } catch (error) {
     console.error('❌ Error in bounty cancellation sync:', error);
     return NextResponse.json(
-      { error: 'Internal server error', details: error instanceof Error ? error.message : 'Unknown error' },
-      { status: 500 }
+      {
+        error: 'Internal server error',
+        details: error instanceof Error ? error.message : 'Unknown error',
+      },
+      { status: 500 },
     );
   }
 }

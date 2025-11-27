@@ -13,7 +13,9 @@ export class HatsModuleRegistry {
 
   private static publicClient = createPublicClient({
     chain: base,
-    transport: http(process.env.NEXT_PUBLIC_RPC_URL || 'https://mainnet.base.org')
+    transport: http(
+      process.env.NEXT_PUBLIC_RPC_URL || 'https://mainnet.base.org',
+    ),
   });
 
   // Registry ABI (minimal interface)
@@ -26,29 +28,29 @@ export class HatsModuleRegistry {
         { name: 'implementation', type: 'address' },
         { name: 'factory', type: 'address' },
         { name: 'name', type: 'string' },
-        { name: 'description', type: 'string' }
+        { name: 'description', type: 'string' },
       ],
-      stateMutability: 'view'
+      stateMutability: 'view',
     },
     {
       name: 'getAllModules',
       type: 'function',
       inputs: [],
       outputs: [
-        { 
-          name: '', 
+        {
+          name: '',
           type: 'tuple[]',
           components: [
             { name: 'id', type: 'bytes32' },
             { name: 'implementation', type: 'address' },
             { name: 'factory', type: 'address' },
             { name: 'name', type: 'string' },
-            { name: 'description', type: 'string' }
-          ]
-        }
+            { name: 'description', type: 'string' },
+          ],
+        },
       ],
-      stateMutability: 'view'
-    }
+      stateMutability: 'view',
+    },
   ] as const;
 
   /**
@@ -56,22 +58,28 @@ export class HatsModuleRegistry {
    */
   static readonly KNOWN_MODULE_IDS = {
     // Multi Claims Hatter - Core module for pod management
-    MULTI_CLAIMS_HATTER: '0x0000000000000000000000000000000000000000000000000000000000000001',
-    
+    MULTI_CLAIMS_HATTER:
+      '0x0000000000000000000000000000000000000000000000000000000000000001',
+
     // Agreement Eligibility - For accountability signatures
-    AGREEMENT_ELIGIBILITY: '0x0000000000000000000000000000000000000000000000000000000000000002',
-    
+    AGREEMENT_ELIGIBILITY:
+      '0x0000000000000000000000000000000000000000000000000000000000000002',
+
     // Allowlist Eligibility - For membership control
-    ALLOWLIST_ELIGIBILITY: '0x0000000000000000000000000000000000000000000000000000000000000003',
-    
+    ALLOWLIST_ELIGIBILITY:
+      '0x0000000000000000000000000000000000000000000000000000000000000003',
+
     // ERC20 Eligibility - Token-gated membership
-    ERC20_ELIGIBILITY: '0x0000000000000000000000000000000000000000000000000000000000000004',
-    
+    ERC20_ELIGIBILITY:
+      '0x0000000000000000000000000000000000000000000000000000000000000004',
+
     // Seasonal Toggle - Time-based hat activation
-    SEASONAL_TOGGLE: '0x0000000000000000000000000000000000000000000000000000000000000005',
-    
+    SEASONAL_TOGGLE:
+      '0x0000000000000000000000000000000000000000000000000000000000000005',
+
     // HATS Signer Gate - Multi-sig treasury management
-    HATS_SIGNER_GATE: '0x0000000000000000000000000000000000000000000000000000000000000006',
+    HATS_SIGNER_GATE:
+      '0x0000000000000000000000000000000000000000000000000000000000000006',
   } as const;
 
   /**
@@ -80,30 +88,34 @@ export class HatsModuleRegistry {
   static async fetchAllModules(): Promise<any[]> {
     // Registry address temporarily disabled due to checksum validation errors
     if (!this.REGISTRY_ADDRESS) {
-      console.info('🎩 Hats Module Registry temporarily disabled, using fallback module IDs');
+      console.info(
+        '🎩 Hats Module Registry temporarily disabled, using fallback module IDs',
+      );
       return this.getFallbackModules();
     }
 
     try {
       console.log('📋 Fetching modules from HATS registry on Base...');
-      
+
       const modules = await this.publicClient.readContract({
         address: this.REGISTRY_ADDRESS as `0x${string}`,
         abi: this.REGISTRY_ABI,
-        functionName: 'getAllModules'
+        functionName: 'getAllModules',
       });
 
       console.log(`✅ Found ${modules.length} modules in registry`);
-      return modules.map(module => ({
+      return modules.map((module) => ({
         id: module.id,
         name: module.name,
         description: module.description,
         implementation: module.implementation,
-        factory: module.factory
+        factory: module.factory,
       }));
-
     } catch (error) {
-      console.warn('⚠️ Failed to fetch from registry, using known module IDs:', error);
+      console.warn(
+        '⚠️ Failed to fetch from registry, using known module IDs:',
+        error,
+      );
       return this.getKnownModules();
     }
   }
@@ -117,7 +129,7 @@ export class HatsModuleRegistry {
         address: this.REGISTRY_ADDRESS as `0x${string}`,
         abi: this.REGISTRY_ABI,
         functionName: 'getModuleById',
-        args: [moduleId as `0x${string}`]
+        args: [moduleId as `0x${string}`],
       });
 
       return {
@@ -125,9 +137,8 @@ export class HatsModuleRegistry {
         name: module[2],
         description: module[3],
         implementation: module[0],
-        factory: module[1]
+        factory: module[1],
       };
-
     } catch (error) {
       console.warn(`⚠️ Failed to fetch module ${moduleId}:`, error);
       return null;
@@ -151,43 +162,43 @@ export class HatsModuleRegistry {
         name: 'Multi Claims Hatter',
         description: 'Allows multiple claims for hat eligibility',
         implementation: '0x0000000000000000000000000000000000000000', // Will be populated from registry
-        factory: this.FACTORY_ADDRESS
+        factory: this.FACTORY_ADDRESS,
       },
       {
         id: this.KNOWN_MODULE_IDS.AGREEMENT_ELIGIBILITY,
         name: 'Agreement Eligibility',
         description: 'Requires agreement signing for hat eligibility',
         implementation: '0x0000000000000000000000000000000000000000',
-        factory: this.FACTORY_ADDRESS
+        factory: this.FACTORY_ADDRESS,
       },
       {
         id: this.KNOWN_MODULE_IDS.ALLOWLIST_ELIGIBILITY,
         name: 'Allowlist Eligibility',
         description: 'Controls hat eligibility via allowlist',
         implementation: '0x0000000000000000000000000000000000000000',
-        factory: this.FACTORY_ADDRESS
+        factory: this.FACTORY_ADDRESS,
       },
       {
         id: this.KNOWN_MODULE_IDS.ERC20_ELIGIBILITY,
         name: 'ERC20 Eligibility',
         description: 'Token-gated hat eligibility',
         implementation: '0x0000000000000000000000000000000000000000',
-        factory: this.FACTORY_ADDRESS
+        factory: this.FACTORY_ADDRESS,
       },
       {
         id: this.KNOWN_MODULE_IDS.SEASONAL_TOGGLE,
         name: 'Seasonal Toggle',
         description: 'Time-based hat activation and deactivation',
         implementation: '0x0000000000000000000000000000000000000000',
-        factory: this.FACTORY_ADDRESS
+        factory: this.FACTORY_ADDRESS,
       },
       {
         id: this.KNOWN_MODULE_IDS.HATS_SIGNER_GATE,
         name: 'HATS Signer Gate',
         description: 'Multi-signature gate controlled by hat wearers',
         implementation: '0x0000000000000000000000000000000000000000',
-        factory: this.FACTORY_ADDRESS
-      }
+        factory: this.FACTORY_ADDRESS,
+      },
     ];
   }
 
@@ -232,7 +243,6 @@ export class HatsModuleRegistry {
       }
 
       return updatedIds;
-
     } catch (error) {
       console.warn('⚠️ Using known module IDs as fallback:', error);
       return this.KNOWN_MODULE_IDS;
@@ -245,7 +255,10 @@ export class HatsModuleRegistry {
   static async validateModule(moduleId: string): Promise<boolean> {
     try {
       const module = await this.getModuleById(moduleId);
-      return module !== null && module.implementation !== '0x0000000000000000000000000000000000000000';
+      return (
+        module !== null &&
+        module.implementation !== '0x0000000000000000000000000000000000000000'
+      );
     } catch {
       return false;
     }

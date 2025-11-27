@@ -1,4 +1,3 @@
-
 // src/app/features/forum/components/ThreadList.tsx
 import type React from 'react';
 import Link from 'next/link';
@@ -12,7 +11,7 @@ try {
   styles = {
     threadList: 'thread-list-fallback',
     threadItem: 'thread-item-fallback',
-    loading: 'loading-fallback'
+    loading: 'loading-fallback',
   };
 }
 
@@ -42,12 +41,12 @@ interface Thread {
 }
 
 interface ThreadListProps {
-  threads: Thread[];        // threads are already fetched and filtered
-  categoryName?: string;    // optional category name
+  threads: Thread[]; // threads are already fetched and filtered
+  categoryName?: string; // optional category name
 }
 
 const ThreadList: React.FC<ThreadListProps> = ({ threads, categoryName }) => {
-  console.debug("Displaying threads:", threads);  // ✅ Debug log
+  console.debug('Displaying threads:', threads); // ✅ Debug log
 
   return (
     <div className={styles.threadListContainer}>
@@ -59,14 +58,13 @@ const ThreadList: React.FC<ThreadListProps> = ({ threads, categoryName }) => {
           </Link>
         </div>
       )}
-      
+
       <div className={styles.threadListHeader}>
         <h3 className={styles.sectionTitle}>
           {categoryName ? `Threads in ${categoryName}` : 'Recent Threads'}
         </h3>
-
       </div>
-      
+
       {threads.length === 0 ? (
         <div className={styles.emptyState}>
           <p>No threads found in this category.</p>
@@ -84,6 +82,5 @@ const ThreadList: React.FC<ThreadListProps> = ({ threads, categoryName }) => {
     </div>
   );
 };
-
 
 export default ThreadList;

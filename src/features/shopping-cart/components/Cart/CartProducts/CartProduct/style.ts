@@ -21,7 +21,6 @@ export const Container = styled.div`
   }
 `;
 
-
 /* ✅ NEW: Price Container for $SYSTEM & $SELF */
 export const PriceContainer = styled.div`
   width: 30%;
@@ -110,7 +109,6 @@ export const ProductContainer = styled.div`
   margin-bottom: 1rem;
 `;
 
-
 export const ProductName = styled.h3`
   font-size: 1.1rem;  /* Slightly larger than default */
   font-weight: bold;
@@ -123,7 +121,6 @@ export const ProductDescription = styled.div`
   color: #333;
   margin-right: 1rem;
 `;
-
 
 export const ProductControls = styled.div`
   display: flex;
@@ -167,7 +164,6 @@ export const RemoveButton = styled.button`
     background-color: #f79e7f;
   }
 `;
-
 
 export const ProductImage = styled.img`
   width: 75px;

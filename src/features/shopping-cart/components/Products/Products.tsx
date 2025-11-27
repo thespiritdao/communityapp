@@ -1,13 +1,13 @@
 // src/features/shopping-cart/components/Products/Products.tsx
-"use client";
+'use client';
 
-import type { IProduct } from "../../models";
-import Product from "./Product/Product"; // Ensure this file exports a default component.
-import { useEffect, useState } from "react";
-import { useAccount } from "wagmi";
-import { useTokenBalances } from "@/context/TokenBalancesContext";
-import { getUserIdentity, type UserIdentity } from "@/utils/accessControlUtils";
-import * as S from "./style";
+import type { IProduct } from '../../models';
+import Product from './Product/Product'; // Ensure this file exports a default component.
+import { useEffect, useState } from 'react';
+import { useAccount } from 'wagmi';
+import { useTokenBalances } from '@/context/TokenBalancesContext';
+import { getUserIdentity, type UserIdentity } from '@/utils/accessControlUtils';
+import * as S from './style';
 
 interface IProps {
   products: IProduct[];
@@ -15,7 +15,8 @@ interface IProps {
 
 const Products = ({ products }: IProps) => {
   const { address } = useAccount();
-  const { balances: tokenBalances, isLoading: tokenLoading } = useTokenBalances();
+  const { balances: tokenBalances, isLoading: tokenLoading } =
+    useTokenBalances();
   const [userIdentity, setUserIdentity] = useState<UserIdentity | null>(null);
   const [isLoadingIdentity, setIsLoadingIdentity] = useState(true);
 
@@ -31,9 +32,9 @@ const Products = ({ products }: IProps) => {
       try {
         const identity = await getUserIdentity(address, tokenBalances);
         setUserIdentity(identity);
-        console.log("🛒 Products loaded user identity:", identity);
+        console.log('🛒 Products loaded user identity:', identity);
       } catch (error) {
-        console.error("🛒 Error loading user identity in Products:", error);
+        console.error('🛒 Error loading user identity in Products:', error);
         setUserIdentity(null);
       } finally {
         setIsLoadingIdentity(false);
@@ -57,18 +58,18 @@ const Products = ({ products }: IProps) => {
   // Products are already filtered by useProducts hook using async access control
   // No need to filter again here as it would use sync version and incorrectly filter pod_ tokens
   const accessibleProducts = products || [];
-  
-  console.log(`🛒 Rendering ${accessibleProducts.length} accessible products out of ${products?.length || 0} total`);
+
+  console.log(
+    `🛒 Rendering ${accessibleProducts.length} accessible products out of ${products?.length || 0} total`,
+  );
 
   return (
     <S.Container>
       {accessibleProducts.length === 0 ? (
         <div style={{ padding: '2rem', textAlign: 'center', color: '#666' }}>
-          {userIdentity ? (
-            "🛒 No products available with your current permissions"
-          ) : (
-            "🔐 Connect your wallet to see available products"
-          )}
+          {userIdentity
+            ? '🛒 No products available with your current permissions'
+            : '🔐 Connect your wallet to see available products'}
         </div>
       ) : (
         accessibleProducts.map((p, index) => (

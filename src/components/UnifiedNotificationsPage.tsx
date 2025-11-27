@@ -9,33 +9,46 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent } from '@/components/ui/card';
-import { Bell, Vote, Calendar, Clock, ExternalLink, CheckCircle, MessageCircle, ShoppingCart, Settings } from 'lucide-react';
+import {
+  Bell,
+  Vote,
+  Calendar,
+  Clock,
+  ExternalLink,
+  CheckCircle,
+  MessageCircle,
+  ShoppingCart,
+  Settings,
+} from 'lucide-react';
 import { supabase } from '@/utils/supabaseClient';
 import Link from 'next/link';
-import type { UnifiedNotification, NotificationCategory } from '@/services/unifiedNotificationService';
+import type {
+  UnifiedNotification,
+  NotificationCategory,
+} from '@/services/unifiedNotificationService';
 
 // Date formatting function
 function formatDistanceToNow(date: Date): string {
   const now = new Date();
   const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
-  
+
   if (diffInSeconds < 60) return 'just now';
-  
+
   const diffInMinutes = Math.floor(diffInSeconds / 60);
   if (diffInMinutes < 60) return `${diffInMinutes}m ago`;
-  
+
   const diffInHours = Math.floor(diffInMinutes / 60);
   if (diffInHours < 24) return `${diffInHours}h ago`;
-  
+
   const diffInDays = Math.floor(diffInHours / 24);
   if (diffInDays < 7) return `${diffInDays}d ago`;
-  
+
   const diffInWeeks = Math.floor(diffInDays / 7);
   if (diffInWeeks < 4) return `${diffInWeeks}w ago`;
-  
+
   const diffInMonths = Math.floor(diffInDays / 30);
   if (diffInMonths < 12) return `${diffInMonths}mo ago`;
-  
+
   const diffInYears = Math.floor(diffInDays / 365);
   return `${diffInYears}y ago`;
 }
@@ -45,19 +58,29 @@ interface NotificationCardProps {
   onMarkAsRead: () => void;
 }
 
-function NotificationCard({ notification, onMarkAsRead }: NotificationCardProps) {
-  const [senderProfilePicture, setSenderProfilePicture] = useState<string | null>(null);
+function NotificationCard({
+  notification,
+  onMarkAsRead,
+}: NotificationCardProps) {
+  const [senderProfilePicture, setSenderProfilePicture] = useState<
+    string | null
+  >(null);
 
   useEffect(() => {
     async function fetchSenderProfilePicture() {
-      if (notification.sender_address && notification.sender_address !== 'system') {
+      if (
+        notification.sender_address &&
+        notification.sender_address !== 'system'
+      ) {
         const { data } = await supabase
           .from('user_profiles')
           .select('profile_picture')
           .eq('wallet_address', notification.sender_address)
           .single();
-        
-        setSenderProfilePicture(data?.profile_picture || '/observableinfinities.png');
+
+        setSenderProfilePicture(
+          data?.profile_picture || '/observableinfinities.png',
+        );
       }
     }
     fetchSenderProfilePicture();
@@ -66,13 +89,16 @@ function NotificationCard({ notification, onMarkAsRead }: NotificationCardProps)
   const getNotificationIcon = () => {
     switch (notification.notification_type) {
       case 'user_mentioned':
-        return notification.sender_address === 'system' ? '👤' : (
+        return notification.sender_address === 'system' ? (
+          '👤'
+        ) : (
           <img
             src={senderProfilePicture || '/observableinfinities.png'}
             alt="Profile"
             className="w-8 h-8 rounded-full object-cover border border-gray-200"
             onError={(e) => {
-              (e.currentTarget as HTMLImageElement).src = '/observableinfinities.png';
+              (e.currentTarget as HTMLImageElement).src =
+                '/observableinfinities.png';
             }}
           />
         );
@@ -116,35 +142,47 @@ function NotificationCard({ notification, onMarkAsRead }: NotificationCardProps)
     if (notification.context_url) {
       return notification.context_url;
     }
-    
+
     switch (notification.context_type) {
       case 'forum':
-        return notification.context_id ? `/forum/thread/${notification.context_id}` : '/forum';
+        return notification.context_id
+          ? `/forum/thread/${notification.context_id}`
+          : '/forum';
       case 'chat':
-        return notification.context_id ? `/chat/${notification.context_id}` : '/chat';
+        return notification.context_id
+          ? `/chat/${notification.context_id}`
+          : '/chat';
       case 'bounty':
-        return notification.context_id ? `/bounty/${notification.context_id}` : '/bounty';
+        return notification.context_id
+          ? `/bounty/${notification.context_id}`
+          : '/bounty';
       case 'governance':
-        return notification.context_id ? `/governance/${notification.context_id}` : '/governance';
+        return notification.context_id
+          ? `/governance/${notification.context_id}`
+          : '/governance';
       case 'marketplace':
-        return notification.context_id ? `/market/orders/${notification.context_id}` : '/market';
+        return notification.context_id
+          ? `/market/orders/${notification.context_id}`
+          : '/market';
       case 'events':
-        return notification.context_id ? `/events/${notification.context_id}` : '/events';
+        return notification.context_id
+          ? `/events/${notification.context_id}`
+          : '/events';
       default:
         return '#';
     }
   };
 
   return (
-    <Card className={`transition-all duration-200 hover:shadow-md ${
-      notification.is_read ? 'border-l-gray-300 bg-white' : getPriorityColor()
-    } border-l-4`}>
+    <Card
+      className={`transition-all duration-200 hover:shadow-md ${
+        notification.is_read ? 'border-l-gray-300 bg-white' : getPriorityColor()
+      } border-l-4`}
+    >
       <CardContent className="p-4">
         <div className="flex items-start justify-between gap-3">
           <div className="flex items-start space-x-3 flex-1 min-w-0">
-            <div className="flex-shrink-0 mt-1">
-              {getNotificationIcon()}
-            </div>
+            <div className="flex-shrink-0 mt-1">{getNotificationIcon()}</div>
             <div className="flex-1 min-w-0 overflow-hidden">
               {/* Title row with priority indicators */}
               <div className="flex items-start justify-between gap-2 mb-1">
@@ -158,26 +196,36 @@ function NotificationCard({ notification, onMarkAsRead }: NotificationCardProps)
                     </div>
                   )}
                 </div>
-                {notification.priority && notification.priority !== 'medium' && (
-                  <Badge 
-                    variant={notification.priority === 'urgent' ? 'destructive' : 'secondary'}
-                    className="text-xs flex-shrink-0"
-                  >
-                    {notification.priority}
-                  </Badge>
-                )}
+                {notification.priority &&
+                  notification.priority !== 'medium' && (
+                    <Badge
+                      variant={
+                        notification.priority === 'urgent'
+                          ? 'destructive'
+                          : 'secondary'
+                      }
+                      className="text-xs flex-shrink-0"
+                    >
+                      {notification.priority}
+                    </Badge>
+                  )}
               </div>
-              
+
               {/* Message with line clamping */}
               <p className="text-gray-600 text-sm mb-3 text-truncate-2">
                 {notification.message}
               </p>
-              
+
               {/* Bottom row with metadata and action */}
               <div className="flex items-center justify-between gap-2">
                 <div className="flex items-center space-x-2 text-xs text-gray-500 min-w-0 flex-1">
-                  <span className="truncate">{formatDistanceToNow(new Date(notification.created_at))}</span>
-                  <Badge variant="outline" className="text-xs flex-shrink-0 px-1">
+                  <span className="truncate">
+                    {formatDistanceToNow(new Date(notification.created_at))}
+                  </span>
+                  <Badge
+                    variant="outline"
+                    className="text-xs flex-shrink-0 px-1"
+                  >
                     {notification.category}
                   </Badge>
                 </div>
@@ -193,7 +241,7 @@ function NotificationCard({ notification, onMarkAsRead }: NotificationCardProps)
               </div>
             </div>
           </div>
-          
+
           {/* Mark as read button */}
           {!notification.is_read && (
             <div className="flex-shrink-0">
@@ -225,17 +273,19 @@ export default function UnifiedNotificationsPage() {
     setSelectedCategory,
     markAsRead,
     markAllAsRead,
-    refreshNotifications
+    refreshNotifications,
   } = useUnifiedNotifications();
 
   // No need to force refresh - context handles it
-  
+
   if (!address) {
     return (
       <div className="min-h-screen bg-gray-50 p-4">
         <div className="max-w-4xl mx-auto">
           <h1 className="text-2xl font-bold mb-4">Notifications</h1>
-          <p className="text-gray-600">Please connect your wallet to view notifications.</p>
+          <p className="text-gray-600">
+            Please connect your wallet to view notifications.
+          </p>
         </div>
       </div>
     );
@@ -265,7 +315,11 @@ export default function UnifiedNotificationsPage() {
           <h1 className="text-2xl font-bold mb-4">Notifications</h1>
           <div className="bg-red-50 border border-red-200 rounded-lg p-4">
             <p className="text-red-600">Error loading notifications: {error}</p>
-            <Button onClick={refreshNotifications} variant="outline" className="mt-2">
+            <Button
+              onClick={refreshNotifications}
+              variant="outline"
+              className="mt-2"
+            >
               Retry
             </Button>
           </div>
@@ -275,7 +329,7 @@ export default function UnifiedNotificationsPage() {
   }
 
   // Client-side filtering based on category only (all notifications shown are unread)
-  const filteredNotifications = notifications.filter(n => {
+  const filteredNotifications = notifications.filter((n) => {
     // Filter by category
     if (selectedCategory !== 'all' && n.category !== selectedCategory) {
       return false;
@@ -290,8 +344,7 @@ export default function UnifiedNotificationsPage() {
         <div className="flex justify-between items-center mb-6">
           <div className="flex items-center space-x-4">
             <h1 className="text-2xl font-bold">Notifications</h1>
-            <div className="flex items-center space-x-2">
-            </div>
+            <div className="flex items-center space-x-2"></div>
           </div>
           <div className="flex items-center space-x-2">
             <Link href="/notifications/preferences">
@@ -314,7 +367,11 @@ export default function UnifiedNotificationsPage() {
             </Button>
             {unreadCounts.total > 0 && (
               <Button
-                onClick={() => markAllAsRead(selectedCategory === 'all' ? undefined : selectedCategory)}
+                onClick={() =>
+                  markAllAsRead(
+                    selectedCategory === 'all' ? undefined : selectedCategory,
+                  )
+                }
                 size="sm"
               >
                 Clear
@@ -324,27 +381,48 @@ export default function UnifiedNotificationsPage() {
         </div>
 
         {/* Category Tabs */}
-        <Tabs value={selectedCategory} onValueChange={(value) => setSelectedCategory(value as NotificationCategory | 'all')}>
+        <Tabs
+          value={selectedCategory}
+          onValueChange={(value) =>
+            setSelectedCategory(value as NotificationCategory | 'all')
+          }
+        >
           <TabsList className="grid w-full grid-cols-5 mb-6">
             <TabsTrigger value="all" className="flex items-center space-x-1">
               <Bell className="w-4 h-4" />
               <span className="text-xs">All ({unreadCounts.total})</span>
             </TabsTrigger>
-            <TabsTrigger value="general" className="flex items-center space-x-1" title="Mentions">
+            <TabsTrigger
+              value="general"
+              className="flex items-center space-x-1"
+              title="Mentions"
+            >
               <MessageCircle className="w-4 h-4" />
               <span className="text-xs">({unreadCounts.general})</span>
             </TabsTrigger>
-            <TabsTrigger value="governance" className="flex items-center space-x-1" title="Governance">
-                <Vote className="w-4 h-4" />
-                <span className="text-xs">({unreadCounts.governance})</span>
+            <TabsTrigger
+              value="governance"
+              className="flex items-center space-x-1"
+              title="Governance"
+            >
+              <Vote className="w-4 h-4" />
+              <span className="text-xs">({unreadCounts.governance})</span>
             </TabsTrigger>
-            <TabsTrigger value="marketplace" className="flex items-center space-x-1" title="Marketplace">
-                <ShoppingCart className="w-4 h-4" />
-                <span className="text-xs">({unreadCounts.marketplace || 0})</span>
+            <TabsTrigger
+              value="marketplace"
+              className="flex items-center space-x-1"
+              title="Marketplace"
+            >
+              <ShoppingCart className="w-4 h-4" />
+              <span className="text-xs">({unreadCounts.marketplace || 0})</span>
             </TabsTrigger>
-            <TabsTrigger value="events" className="flex items-center space-x-1" title="Events">
-                <Calendar className="w-4 h-4" />
-                <span className="text-xs">({unreadCounts.events})</span>
+            <TabsTrigger
+              value="events"
+              className="flex items-center space-x-1"
+              title="Events"
+            >
+              <Calendar className="w-4 h-4" />
+              <span className="text-xs">({unreadCounts.events})</span>
             </TabsTrigger>
           </TabsList>
 
@@ -352,15 +430,21 @@ export default function UnifiedNotificationsPage() {
             {filteredNotifications.length === 0 ? (
               <div className="text-center py-12">
                 <div className="text-gray-400 text-6xl mb-4">
-                  {selectedCategory === 'governance' ? '🗳️' : 
-                   selectedCategory === 'events' ? '📅' : 
-                   selectedCategory === 'marketplace' ? '🛒' : '🔔'}
+                  {selectedCategory === 'governance'
+                    ? '🗳️'
+                    : selectedCategory === 'events'
+                      ? '📅'
+                      : selectedCategory === 'marketplace'
+                        ? '🛒'
+                        : '🔔'}
                 </div>
                 <h2 className="text-xl font-semibold text-gray-600 mb-2">
                   No notifications yet
                 </h2>
                 <p className="text-gray-500">
-                  You'll see {selectedCategory === 'all' ? '' : selectedCategory + ' '}notifications here when there's activity.
+                  You'll see{' '}
+                  {selectedCategory === 'all' ? '' : selectedCategory + ' '}
+                  notifications here when there's activity.
                 </p>
               </div>
             ) : (
@@ -369,7 +453,9 @@ export default function UnifiedNotificationsPage() {
                   <NotificationCard
                     key={notification.id}
                     notification={notification}
-                    onMarkAsRead={() => markAsRead(notification.id, notification.category)}
+                    onMarkAsRead={() =>
+                      markAsRead(notification.id, notification.category)
+                    }
                   />
                 ))}
               </div>

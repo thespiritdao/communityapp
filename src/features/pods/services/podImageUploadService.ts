@@ -16,14 +16,14 @@ const ALLOWED_TYPES = ['image/jpeg', 'image/jpg', 'image/png'];
  */
 export const uploadPodImage = async (
   file: File,
-  podId: string
+  podId: string,
 ): Promise<PodImageUploadResult> => {
   try {
     // Validate file type
     if (!ALLOWED_TYPES.includes(file.type)) {
       return {
         success: false,
-        error: 'Invalid file type. Only JPG, JPEG, and PNG files are allowed.'
+        error: 'Invalid file type. Only JPG, JPEG, and PNG files are allowed.',
       };
     }
 
@@ -31,7 +31,7 @@ export const uploadPodImage = async (
     if (file.size > MAX_FILE_SIZE) {
       return {
         success: false,
-        error: 'File size too large. Maximum size is 2MB.'
+        error: 'File size too large. Maximum size is 2MB.',
       };
     }
 
@@ -41,7 +41,11 @@ export const uploadPodImage = async (
     const fileName = `${podId}_${timestamp}.${extension}`;
     const filePath = `${fileName}`;
 
-    console.log('📸 Uploading pod image:', { fileName, size: file.size, type: file.type });
+    console.log('📸 Uploading pod image:', {
+      fileName,
+      size: file.size,
+      type: file.type,
+    });
 
     // Upload to Supabase Storage
     const { data, error } = await supabase.storage
@@ -49,14 +53,14 @@ export const uploadPodImage = async (
       .upload(filePath, file, {
         cacheControl: '3600',
         upsert: false,
-        duplex: 'half'
+        duplex: 'half',
       });
 
     if (error) {
       console.error('❌ Pod image upload error:', error);
       return {
         success: false,
-        error: error.message || 'Failed to upload image'
+        error: error.message || 'Failed to upload image',
       };
     }
 
@@ -68,7 +72,7 @@ export const uploadPodImage = async (
     if (!publicUrlData?.publicUrl) {
       return {
         success: false,
-        error: 'Failed to get public URL for uploaded image'
+        error: 'Failed to get public URL for uploaded image',
       };
     }
 
@@ -76,14 +80,14 @@ export const uploadPodImage = async (
 
     return {
       success: true,
-      url: publicUrlData.publicUrl
+      url: publicUrlData.publicUrl,
     };
-
   } catch (error) {
     console.error('❌ Unexpected pod image upload error:', error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Unexpected error occurred'
+      error:
+        error instanceof Error ? error.message : 'Unexpected error occurred',
     };
   }
 };
@@ -96,7 +100,7 @@ export const deletePodImage = async (imageUrl: string): Promise<boolean> => {
     // Extract file path from URL
     const url = new URL(imageUrl);
     const pathParts = url.pathname.split('/');
-    const bucketIndex = pathParts.findIndex(part => part === BUCKET_NAME);
+    const bucketIndex = pathParts.findIndex((part) => part === BUCKET_NAME);
 
     if (bucketIndex === -1 || bucketIndex >= pathParts.length - 1) {
       console.error('Invalid pod image URL format');
@@ -116,7 +120,6 @@ export const deletePodImage = async (imageUrl: string): Promise<boolean> => {
 
     console.log('Pod image deleted successfully:', filePath);
     return true;
-
   } catch (error) {
     console.error('Unexpected delete error:', error);
     return false;

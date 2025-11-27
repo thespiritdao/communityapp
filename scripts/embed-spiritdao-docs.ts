@@ -27,15 +27,21 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const pinecone = new Pinecone({
-  apiKey: process.env.PINECONE_API_KEY!
+  apiKey: process.env.PINECONE_API_KEY!,
 });
 
 const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY!
+  apiKey: process.env.OPENAI_API_KEY!,
 });
 
 const GUIDES_DIR = path.join(__dirname, '..', 'src', 'guides', 'user');
-const QUICK_REF = path.join(__dirname, '..', 'src', 'guides', 'QUICK_REFERENCE.md');
+const QUICK_REF = path.join(
+  __dirname,
+  '..',
+  'src',
+  'guides',
+  'QUICK_REFERENCE.md',
+);
 
 interface DocumentChunk {
   id: string;
@@ -52,7 +58,11 @@ interface DocumentChunk {
  * Split document into chunks by sections
  * Tries to keep sections together when possible
  */
-function chunkDocument(content: string, filename: string, maxChars: number = 4000): DocumentChunk[] {
+function chunkDocument(
+  content: string,
+  filename: string,
+  maxChars: number = 4000,
+): DocumentChunk[] {
   const chunks: DocumentChunk[] = [];
 
   // Split by major headings (# or ##)
@@ -61,7 +71,8 @@ function chunkDocument(content: string, filename: string, maxChars: number = 400
   sections.forEach((section, sectionIdx) => {
     // Extract section title (first line)
     const lines = section.split('\n');
-    const sectionTitle = lines[0]?.replace(/^#{1,3}\s+/, '').trim() || 'Untitled';
+    const sectionTitle =
+      lines[0]?.replace(/^#{1,3}\s+/, '').trim() || 'Untitled';
 
     // If section is small enough, keep it as one chunk
     if (section.length <= maxChars) {
@@ -72,8 +83,8 @@ function chunkDocument(content: string, filename: string, maxChars: number = 400
           filename,
           section: sectionTitle,
           chunkIndex: 0,
-          totalChunks: 1
-        }
+          totalChunks: 1,
+        },
       });
     } else {
       // Split large sections into smaller chunks by paragraphs
@@ -82,7 +93,10 @@ function chunkDocument(content: string, filename: string, maxChars: number = 400
       const paragraphs = section.split(/\n\n+/);
 
       for (const para of paragraphs) {
-        if ((currentChunk + para).length > maxChars && currentChunk.length > 0) {
+        if (
+          (currentChunk + para).length > maxChars &&
+          currentChunk.length > 0
+        ) {
           // Save current chunk
           chunks.push({
             id: `${filename}-section-${sectionIdx}-chunk-${chunkIndex}`,
@@ -90,8 +104,8 @@ function chunkDocument(content: string, filename: string, maxChars: number = 400
             metadata: {
               filename,
               section: sectionTitle,
-              chunkIndex
-            }
+              chunkIndex,
+            },
           });
           currentChunk = para + '\n\n';
           chunkIndex++;
@@ -108,8 +122,8 @@ function chunkDocument(content: string, filename: string, maxChars: number = 400
           metadata: {
             filename,
             section: sectionTitle,
-            chunkIndex
-          }
+            chunkIndex,
+          },
         });
       }
     }
@@ -126,10 +140,10 @@ async function getEmbeddings(texts: string[]): Promise<number[][]> {
     const response = await openai.embeddings.create({
       model: 'text-embedding-3-small',
       input: texts,
-      dimensions: 1536
+      dimensions: 1536,
     });
 
-    return response.data.map(d => d.embedding);
+    return response.data.map((d) => d.embedding);
   } catch (error) {
     console.error('Error getting embeddings:', error);
     throw error;
@@ -158,9 +172,11 @@ async function embedDocuments() {
 
   // Read all guide files
   console.log('📖 Reading guide files...');
-  const guideFiles = fs.readdirSync(GUIDES_DIR).filter(f => f.endsWith('.md'));
+  const guideFiles = fs
+    .readdirSync(GUIDES_DIR)
+    .filter((f) => f.endsWith('.md'));
   console.log(`   Found ${guideFiles.length} guide files:\n`);
-  guideFiles.forEach(f => console.log(`   - ${f}`));
+  guideFiles.forEach((f) => console.log(`   - ${f}`));
 
   const allChunks: DocumentChunk[] = [];
 
@@ -211,11 +227,13 @@ async function embedDocuments() {
     const batch = allChunks.slice(i, i + batchSize);
     const batchNum = Math.floor(i / batchSize) + 1;
 
-    console.log(`📦 Batch ${batchNum}/${totalBatches} (${batch.length} chunks)`);
+    console.log(
+      `📦 Batch ${batchNum}/${totalBatches} (${batch.length} chunks)`,
+    );
 
     // Get embeddings for this batch
     console.log('   🧠 Generating embeddings...');
-    const texts = batch.map(c => c.text);
+    const texts = batch.map((c) => c.text);
     const embeddings = await getEmbeddings(texts);
 
     // Prepare vectors for Pinecone
@@ -226,8 +244,8 @@ async function embedDocuments() {
         text: chunk.text,
         filename: chunk.metadata.filename,
         section: chunk.metadata.section || '',
-        chunkIndex: chunk.metadata.chunkIndex
-      }
+        chunkIndex: chunk.metadata.chunkIndex,
+      },
     }));
 
     // Upsert to Pinecone
@@ -237,7 +255,7 @@ async function embedDocuments() {
 
     // Small delay to avoid rate limits
     if (i + batchSize < allChunks.length) {
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await new Promise((resolve) => setTimeout(resolve, 1000));
     }
   }
 
@@ -249,7 +267,9 @@ async function embedDocuments() {
   console.log('\n╔═══════════════════════════════════════════════╗');
   console.log('║              EMBEDDING COMPLETE               ║');
   console.log('╚═══════════════════════════════════════════════╝');
-  console.log(`\n📊 Vectors in spiritdao namespace: ${spiritdaoStats?.recordCount || 0}`);
+  console.log(
+    `\n📊 Vectors in spiritdao namespace: ${spiritdaoStats?.recordCount || 0}`,
+  );
   console.log(`📏 Vector dimensionality: ${stats.dimension}`);
   console.log(`✅ Successfully embedded ${allChunks.length} chunks\n`);
 
@@ -257,7 +277,7 @@ async function embedDocuments() {
 }
 
 // Run the script
-embedDocuments().catch(error => {
+embedDocuments().catch((error) => {
   console.error('\n❌ ERROR:', error.message);
   console.error(error.stack);
   process.exit(1);

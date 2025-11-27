@@ -12,33 +12,37 @@ interface ProfileSectionProps {
   onCancel: () => void;
 }
 
-export const ProfileSection: React.FC<ProfileSectionProps> = React.memo(({
-  profile,
-  address,
-  isEditing,
-  authSession,
-  onEditClick,
-  onSave,
-  onCancel
-}) => (
-  <div className="profile-section-container">
-    <h2><strong>Profile</strong></h2>
-    {isEditing ? (
-      <ProfileEditForm
-        initialData={profile || {}}
-        authSession={authSession}
-        walletAddress={address}
-        onSave={onSave}
-        onCancel={onCancel}
-      />
-    ) : (
-      <ProfileDisplay
-        profile={profile}
-        address={address}
-        onEditClick={onEditClick}
-      />
-    )}
-  </div>
-));
+export const ProfileSection: React.FC<ProfileSectionProps> = React.memo(
+  ({
+    profile,
+    address,
+    isEditing,
+    authSession,
+    onEditClick,
+    onSave,
+    onCancel,
+  }) => (
+    <div className="profile-section-container">
+      <h2>
+        <strong>Profile</strong>
+      </h2>
+      {isEditing ? (
+        <ProfileEditForm
+          initialData={profile || {}}
+          authSession={authSession}
+          walletAddress={address}
+          onSave={onSave}
+          onCancel={onCancel}
+        />
+      ) : (
+        <ProfileDisplay
+          profile={profile}
+          address={address}
+          onEditClick={onEditClick}
+        />
+      )}
+    </div>
+  ),
+);
 
 ProfileSection.displayName = 'ProfileSection';

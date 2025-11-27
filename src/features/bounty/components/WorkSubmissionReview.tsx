@@ -8,7 +8,13 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from '@/components/ui/dialog';
 import { ExternalLink, CheckCircle, XCircle, Edit } from 'lucide-react';
 import { format } from 'date-fns';
 import type { FrontendWorkSubmission, FrontendBounty } from '../types/bounty';
@@ -21,16 +27,19 @@ interface WorkSubmissionReviewProps {
 
 export const WorkSubmissionReview: React.FC<WorkSubmissionReviewProps> = ({
   podId,
-  onReviewComplete
+  onReviewComplete,
 }) => {
   const { address } = useAccount();
   const [submissions, setSubmissions] = useState<FrontendWorkSubmission[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>('');
-  const [selectedSubmission, setSelectedSubmission] = useState<FrontendWorkSubmission | null>(null);
+  const [selectedSubmission, setSelectedSubmission] =
+    useState<FrontendWorkSubmission | null>(null);
   const [reviewDialogOpen, setReviewDialogOpen] = useState(false);
   const [reviewComments, setReviewComments] = useState('');
-  const [reviewAction, setReviewAction] = useState<'approved' | 'rejected' | 'revision_requested'>('approved');
+  const [reviewAction, setReviewAction] = useState<
+    'approved' | 'rejected' | 'revision_requested'
+  >('approved');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
@@ -70,19 +79,24 @@ export const WorkSubmissionReview: React.FC<WorkSubmissionReviewProps> = ({
         revisionNumber: sub.revision_number,
         previousSubmissionId: sub.previous_submission_id,
         createdAt: new Date(sub.created_at),
-        updatedAt: new Date(sub.updated_at)
+        updatedAt: new Date(sub.updated_at),
       }));
 
       setSubmissions(transformedSubmissions);
     } catch (err) {
       console.error('❌ Error loading submissions:', err);
-      setError(err instanceof Error ? err.message : 'Failed to load submissions');
+      setError(
+        err instanceof Error ? err.message : 'Failed to load submissions',
+      );
     } finally {
       setLoading(false);
     }
   };
 
-  const handleReviewClick = (submission: FrontendWorkSubmission, action: 'approved' | 'rejected' | 'revision_requested') => {
+  const handleReviewClick = (
+    submission: FrontendWorkSubmission,
+    action: 'approved' | 'rejected' | 'revision_requested',
+  ) => {
     setSelectedSubmission(submission);
     setReviewAction(action);
     setReviewComments('');
@@ -103,8 +117,8 @@ export const WorkSubmissionReview: React.FC<WorkSubmissionReviewProps> = ({
           submissionId: selectedSubmission.id,
           reviewerAddress: address,
           status: reviewAction,
-          reviewComments
-        })
+          reviewComments,
+        }),
       });
 
       const data = await response.json();
@@ -131,11 +145,19 @@ export const WorkSubmissionReview: React.FC<WorkSubmissionReviewProps> = ({
       case 'pending':
         return <Badge variant="secondary">Pending Review</Badge>;
       case 'approved':
-        return <Badge style={{ backgroundColor: '#D1E6DC', color: '#1F453A' }}>Approved</Badge>;
+        return (
+          <Badge style={{ backgroundColor: '#D1E6DC', color: '#1F453A' }}>
+            Approved
+          </Badge>
+        );
       case 'rejected':
         return <Badge variant="destructive">Rejected</Badge>;
       case 'revision_requested':
-        return <Badge style={{ backgroundColor: '#FAF4EC', color: '#8F6B2F' }}>Revision Requested</Badge>;
+        return (
+          <Badge style={{ backgroundColor: '#FAF4EC', color: '#8F6B2F' }}>
+            Revision Requested
+          </Badge>
+        );
       default:
         return <Badge variant="outline">{status}</Badge>;
     }
@@ -146,7 +168,14 @@ export const WorkSubmissionReview: React.FC<WorkSubmissionReviewProps> = ({
       <Card>
         <CardContent className="p-6">
           <div className="flex items-center justify-center">
-            <div className="animate-spin rounded-full h-8 w-8" style={{ borderBottomWidth: '2px', borderBottomStyle: 'solid', borderBottomColor: '#2F5D50' }}></div>
+            <div
+              className="animate-spin rounded-full h-8 w-8"
+              style={{
+                borderBottomWidth: '2px',
+                borderBottomStyle: 'solid',
+                borderBottomColor: '#2F5D50',
+              }}
+            ></div>
             <span className="ml-2">Loading submissions...</span>
           </div>
         </CardContent>
@@ -169,8 +198,17 @@ export const WorkSubmissionReview: React.FC<WorkSubmissionReviewProps> = ({
       <h2 className="text-2xl font-bold">Work Submissions</h2>
 
       {error && (
-        <Alert style={{ backgroundColor: '#F5E6E6', borderWidth: '1px', borderStyle: 'solid', borderColor: '#D9B3B3' }}>
-          <AlertDescription style={{ color: '#5C1F1F' }}>{error}</AlertDescription>
+        <Alert
+          style={{
+            backgroundColor: '#F5E6E6',
+            borderWidth: '1px',
+            borderStyle: 'solid',
+            borderColor: '#D9B3B3',
+          }}
+        >
+          <AlertDescription style={{ color: '#5C1F1F' }}>
+            {error}
+          </AlertDescription>
         </Alert>
       )}
 
@@ -179,7 +217,9 @@ export const WorkSubmissionReview: React.FC<WorkSubmissionReviewProps> = ({
           <CardHeader>
             <div className="flex justify-between items-start">
               <div className="flex-1">
-                <CardTitle className="text-lg">{submission.submissionTitle}</CardTitle>
+                <CardTitle className="text-lg">
+                  {submission.submissionTitle}
+                </CardTitle>
                 <div className="text-sm text-gray-600 mt-1 flex items-center gap-2">
                   <span>Submitted by:</span>
                   <UserProfileDisplay
@@ -189,7 +229,8 @@ export const WorkSubmissionReview: React.FC<WorkSubmissionReviewProps> = ({
                   />
                 </div>
                 <p className="text-sm text-gray-500">
-                  {format(submission.createdAt, 'MMM dd, yyyy HH:mm')} • Revision #{submission.revisionNumber}
+                  {format(submission.createdAt, 'MMM dd, yyyy HH:mm')} •
+                  Revision #{submission.revisionNumber}
                 </p>
               </div>
               {getStatusBadge(submission.status)}
@@ -199,7 +240,9 @@ export const WorkSubmissionReview: React.FC<WorkSubmissionReviewProps> = ({
             {/* Description */}
             <div>
               <h4 className="font-medium text-sm mb-2">Description</h4>
-              <p className="text-sm text-gray-700 whitespace-pre-wrap">{submission.submissionDescription}</p>
+              <p className="text-sm text-gray-700 whitespace-pre-wrap">
+                {submission.submissionDescription}
+              </p>
             </div>
 
             {/* Deliverable URLs */}
@@ -208,7 +251,10 @@ export const WorkSubmissionReview: React.FC<WorkSubmissionReviewProps> = ({
                 <h4 className="font-medium text-sm mb-2">Deliverables</h4>
                 <div className="space-y-2">
                   {submission.deliverableUrls.map((deliverable, index) => (
-                    <div key={index} className="flex items-center gap-2 text-sm">
+                    <div
+                      key={index}
+                      className="flex items-center gap-2 text-sm"
+                    >
                       <strong>{deliverable.label}:</strong>
                       <a
                         href={deliverable.url}
@@ -216,8 +262,12 @@ export const WorkSubmissionReview: React.FC<WorkSubmissionReviewProps> = ({
                         rel="noopener noreferrer"
                         className="flex items-center gap-1"
                         style={{ color: '#2F5D50' }}
-                        onMouseEnter={(e) => { e.currentTarget.style.textDecoration = 'underline'; }}
-                        onMouseLeave={(e) => { e.currentTarget.style.textDecoration = 'none'; }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.textDecoration = 'underline';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.textDecoration = 'none';
+                        }}
                       >
                         {deliverable.url}
                         <ExternalLink className="w-3 h-3" />
@@ -231,7 +281,9 @@ export const WorkSubmissionReview: React.FC<WorkSubmissionReviewProps> = ({
             {/* Attachment URLs */}
             {submission.attachmentUrls.length > 0 && (
               <div>
-                <h4 className="font-medium text-sm mb-2">Additional Attachments</h4>
+                <h4 className="font-medium text-sm mb-2">
+                  Additional Attachments
+                </h4>
                 <div className="space-y-1">
                   {submission.attachmentUrls.map((url, index) => (
                     <a
@@ -241,8 +293,12 @@ export const WorkSubmissionReview: React.FC<WorkSubmissionReviewProps> = ({
                       rel="noopener noreferrer"
                       className="text-sm flex items-center gap-1"
                       style={{ color: '#2F5D50' }}
-                      onMouseEnter={(e) => { e.currentTarget.style.textDecoration = 'underline'; }}
-                      onMouseLeave={(e) => { e.currentTarget.style.textDecoration = 'none'; }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.textDecoration = 'underline';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.textDecoration = 'none';
+                      }}
                     >
                       {url}
                       <ExternalLink className="w-3 h-3" />
@@ -256,10 +312,13 @@ export const WorkSubmissionReview: React.FC<WorkSubmissionReviewProps> = ({
             {submission.reviewComments && (
               <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
                 <h4 className="font-medium text-sm mb-2">Review Feedback</h4>
-                <p className="text-sm text-gray-700 whitespace-pre-wrap">{submission.reviewComments}</p>
+                <p className="text-sm text-gray-700 whitespace-pre-wrap">
+                  {submission.reviewComments}
+                </p>
                 {submission.reviewedAt && (
                   <p className="text-xs text-gray-500 mt-2">
-                    Reviewed on {format(submission.reviewedAt, 'MMM dd, yyyy HH:mm')}
+                    Reviewed on{' '}
+                    {format(submission.reviewedAt, 'MMM dd, yyyy HH:mm')}
                   </p>
                 )}
               </div>
@@ -270,7 +329,9 @@ export const WorkSubmissionReview: React.FC<WorkSubmissionReviewProps> = ({
               <div className="space-y-2 pt-4">
                 {/* Request Revision - Full Width */}
                 <Button
-                  onClick={() => handleReviewClick(submission, 'revision_requested')}
+                  onClick={() =>
+                    handleReviewClick(submission, 'revision_requested')
+                  }
                   variant="outline"
                   className="w-full"
                 >
@@ -284,8 +345,12 @@ export const WorkSubmissionReview: React.FC<WorkSubmissionReviewProps> = ({
                     onClick={() => handleReviewClick(submission, 'approved')}
                     className="flex-1"
                     style={{ backgroundColor: '#3F7A5A', color: '#FFFFFF' }}
-                    onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#2F5D50'; }}
-                    onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = '#3F7A5A'; }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor = '#2F5D50';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = '#3F7A5A';
+                    }}
                   >
                     <CheckCircle className="w-4 h-4 mr-2" />
                     Approve
@@ -315,14 +380,17 @@ export const WorkSubmissionReview: React.FC<WorkSubmissionReviewProps> = ({
               {reviewAction === 'revision_requested' && 'Request Revision'}
             </DialogTitle>
             <DialogDescription>
-              {selectedSubmission && `Review submission: "${selectedSubmission.submissionTitle}"`}
+              {selectedSubmission &&
+                `Review submission: "${selectedSubmission.submissionTitle}"`}
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4 p-4">
             <div>
               <Label htmlFor="reviewComments">
-                {reviewAction === 'approved' ? 'Approval Comments (Optional)' : 'Comments *'}
+                {reviewAction === 'approved'
+                  ? 'Approval Comments (Optional)'
+                  : 'Comments *'}
               </Label>
               <Textarea
                 id="reviewComments"
@@ -332,8 +400,8 @@ export const WorkSubmissionReview: React.FC<WorkSubmissionReviewProps> = ({
                   reviewAction === 'approved'
                     ? 'Leave positive feedback for the contributor...'
                     : reviewAction === 'rejected'
-                    ? 'Explain why this submission is being rejected...'
-                    : 'Describe what needs to be revised...'
+                      ? 'Explain why this submission is being rejected...'
+                      : 'Describe what needs to be revised...'
                 }
                 rows={4}
                 required={reviewAction !== 'approved'}
@@ -350,16 +418,19 @@ export const WorkSubmissionReview: React.FC<WorkSubmissionReviewProps> = ({
               </Button>
               <Button
                 onClick={handleSubmitReview}
-                disabled={isSubmitting || (reviewAction !== 'approved' && !reviewComments.trim())}
+                disabled={
+                  isSubmitting ||
+                  (reviewAction !== 'approved' && !reviewComments.trim())
+                }
                 className="flex-1"
                 style={{
                   backgroundColor:
                     reviewAction === 'approved'
                       ? '#D1E6DC'
                       : reviewAction === 'rejected'
-                      ? '#F5E6E6'
-                      : '#FAF4EC',
-                  color: '#000'
+                        ? '#F5E6E6'
+                        : '#FAF4EC',
+                  color: '#000',
                 }}
               >
                 {isSubmitting ? 'Submitting...' : 'Confirm'}

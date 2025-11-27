@@ -1,7 +1,7 @@
 // src/features/identity/utils/formatProfileValues.ts
 export const mapStoredValuesToLabels = (
   csvString: string | null,
-  options: { label: string; value: string }[]
+  options: { label: string; value: string }[],
 ): string[] => {
   if (!csvString) return [];
   const values = csvString.split(',').map((v) => v.trim());

@@ -24,26 +24,30 @@ export interface PaymasterSetup {
 export function validatePaymasterSetup(): PaymasterSetup {
   const purchaseRouterAddress = process.env.NEXT_PUBLIC_PURCHASE_ROUTER;
   const purchaseBurnAddress = process.env.NEXT_PUBLIC_PURCHASE_BURN;
-  const decentralizedRouterAddress = process.env.NEXT_PUBLIC_PURCHASE_ROUTER_DECENTRALIZED;
-  const useDecentralized = process.env.NEXT_PUBLIC_USE_DECENTRALIZED_ROUTER === 'true';
-  
+  const decentralizedRouterAddress =
+    process.env.NEXT_PUBLIC_PURCHASE_ROUTER_DECENTRALIZED;
+  const useDecentralized =
+    process.env.NEXT_PUBLIC_USE_DECENTRALIZED_ROUTER === 'true';
+
   if (useDecentralized) {
     return {
       isValid: Boolean(decentralizedRouterAddress),
       contractAddress: decentralizedRouterAddress || '',
       useRouter: true,
-      isDecentralized: true
+      isDecentralized: true,
     };
   }
-  
+
   const useRouter = Boolean(purchaseRouterAddress);
-  const contractAddress = useRouter ? purchaseRouterAddress : purchaseBurnAddress;
-  
+  const contractAddress = useRouter
+    ? purchaseRouterAddress
+    : purchaseBurnAddress;
+
   return {
     isValid: Boolean(contractAddress),
     contractAddress: contractAddress || '',
     useRouter,
-    isDecentralized: false
+    isDecentralized: false,
   };
 }
 
@@ -56,35 +60,40 @@ export interface FundRoutingInfo {
 export function determineFundRouting(
   products: ICartProduct[],
   userAddress: string,
-  useFallbackRouting: boolean
+  useFallbackRouting: boolean,
 ): FundRoutingInfo {
   const typeMap = {
-    'burn': 0,
-    'wallet': 1,
-    'pod_treasury': 2
+    burn: 0,
+    wallet: 1,
+    pod_treasury: 2,
   };
-  
+
   let fundDestinationType = 0;
-  let destinationAddress = "0x0000000000000000000000000000000000000000";
-  let podId = "";
-  
+  let destinationAddress = '0x0000000000000000000000000000000000000000';
+  let podId = '';
+
   if (products && products.length > 0) {
     const firstProduct = products[0];
-    
-    if (useFallbackRouting && firstProduct.fund_destination_type === 'pod_treasury') {
+
+    if (
+      useFallbackRouting &&
+      firstProduct.fund_destination_type === 'pod_treasury'
+    ) {
       console.warn('🔄 Using fallback routing to creator wallet');
       fundDestinationType = 1;
       destinationAddress = firstProduct.creator_wallet || userAddress;
-      podId = "";
+      podId = '';
     } else {
       fundDestinationType = typeMap[firstProduct.fund_destination_type] ?? 0;
-      
+
       if (firstProduct.fund_destination_type === 'pod_treasury') {
         if (!firstProduct.destination_address || !firstProduct.pod_id) {
-          console.error('⚠️ Pod treasury routing missing data, using wallet fallback');
+          console.error(
+            '⚠️ Pod treasury routing missing data, using wallet fallback',
+          );
           fundDestinationType = 1;
           destinationAddress = firstProduct.creator_wallet || userAddress;
-          podId = "";
+          podId = '';
         } else {
           // For pod treasury, ONLY use the destination_address (treasury address)
           destinationAddress = firstProduct.destination_address;
@@ -93,113 +102,135 @@ export function determineFundRouting(
       } else if (firstProduct.fund_destination_type === 'wallet') {
         // For wallet routing, use creator_wallet
         destinationAddress = firstProduct.creator_wallet || userAddress;
-        podId = "";
+        podId = '';
       } else {
         // For burn or unknown, use burn address
-        destinationAddress = "0x0000000000000000000000000000000000000000";
-        podId = "";
+        destinationAddress = '0x0000000000000000000000000000000000000000';
+        podId = '';
       }
     }
   }
-  
+
   return { fundDestinationType, destinationAddress, podId };
 }
 
 export function buildPurchaseCall(config: PurchaseConfig) {
   const paymasterConfig = validatePaymasterSetup();
-  
+
   if (!paymasterConfig.isValid) {
     throw new Error('Invalid paymaster configuration');
   }
-  
+
   if (!config.productId) {
     throw new Error('Invalid product ID');
   }
-  
+
   const formattedAddress = config.address?.toLowerCase() as `0x${string}`;
-  if (!formattedAddress || !formattedAddress.startsWith('0x') || formattedAddress.length !== 42) {
+  if (
+    !formattedAddress ||
+    !formattedAddress.startsWith('0x') ||
+    formattedAddress.length !== 42
+  ) {
     throw new Error('Invalid user address');
   }
-  
+
   const { contractAddress, useRouter, isDecentralized } = paymasterConfig;
-  const selectedABI = isDecentralized 
-    ? purchaseRouterDecentralizedABI 
-    : (useRouter ? purchaseRouterABI : purchaseBurnABI);
-  
+  const selectedABI = isDecentralized
+    ? purchaseRouterDecentralizedABI
+    : useRouter
+      ? purchaseRouterABI
+      : purchaseBurnABI;
+
   if (isDecentralized) {
-    const routing = determineFundRouting(config.products, config.address, config.useFallbackRouting || false);
-    
+    const routing = determineFundRouting(
+      config.products,
+      config.address,
+      config.useFallbackRouting || false,
+    );
+
     // CONTRACT FIXED: Now we can use purchaseWithExplicitDestination properly
     // This ensures destinations are set correctly even if not pre-configured in contract
-    console.log('✅ Using purchaseWithExplicitDestination (contract fixed - no buyer permission check)');
+    console.log(
+      '✅ Using purchaseWithExplicitDestination (contract fixed - no buyer permission check)',
+    );
     console.log('📋 Routing details:', {
       fundDestinationType: routing.fundDestinationType,
       destinationAddress: routing.destinationAddress,
       podId: routing.podId,
-      originalProductType: config.products[0]?.fund_destination_type
+      originalProductType: config.products[0]?.fund_destination_type,
     });
-    
-    return [{
-      address: contractAddress as `0x${string}`,
-      abi: selectedABI,
-      functionName: "purchaseWithExplicitDestination",
-      args: [
-        config.systemAmount.toString(),
-        config.selfAmount.toString(),
-        config.productId,
-        routing.fundDestinationType,
-        routing.destinationAddress,
-        routing.podId
-      ]
-    }];
+
+    return [
+      {
+        address: contractAddress as `0x${string}`,
+        abi: selectedABI,
+        functionName: 'purchaseWithExplicitDestination',
+        args: [
+          config.systemAmount.toString(),
+          config.selfAmount.toString(),
+          config.productId,
+          routing.fundDestinationType,
+          routing.destinationAddress,
+          routing.podId,
+        ],
+      },
+    ];
   } else if (useRouter) {
-    return [{
-      address: contractAddress as `0x${string}`,
-      abi: selectedABI,
-      functionName: "purchaseArtifactRouter",
-      args: [
-        config.systemAmount.toString(),
-        config.selfAmount.toString(),
-        config.productId,
-        formattedAddress
-      ]
-    }];
+    return [
+      {
+        address: contractAddress as `0x${string}`,
+        abi: selectedABI,
+        functionName: 'purchaseArtifactRouter',
+        args: [
+          config.systemAmount.toString(),
+          config.selfAmount.toString(),
+          config.productId,
+          formattedAddress,
+        ],
+      },
+    ];
   } else {
-    return [{
-      address: contractAddress as `0x${string}`,
-      abi: selectedABI,
-      functionName: "purchaseArtifact",
-      args: [
-        config.systemAmount.toString(),
-        config.selfAmount.toString(),
-        config.productId
-      ]
-    }];
+    return [
+      {
+        address: contractAddress as `0x${string}`,
+        abi: selectedABI,
+        functionName: 'purchaseArtifact',
+        args: [
+          config.systemAmount.toString(),
+          config.selfAmount.toString(),
+          config.productId,
+        ],
+      },
+    ];
   }
 }
 
 export async function verifyContractEvents(
   receipt: any,
-  contractAddress: string
+  contractAddress: string,
 ): Promise<boolean> {
   try {
     console.group('📋 Contract Event Verification');
     console.log('Receipt:', receipt);
-    
-    const contractLogs = receipt.logs?.filter((log: any) => 
-      log.contractAddress?.toLowerCase() === contractAddress.toLowerCase()
-    ) || [];
-    
-    console.log(`📍 Found ${contractLogs.length} logs from contract ${contractAddress}`);
-    
+
+    const contractLogs =
+      receipt.logs?.filter(
+        (log: any) =>
+          log.contractAddress?.toLowerCase() === contractAddress.toLowerCase(),
+      ) || [];
+
+    console.log(
+      `📍 Found ${contractLogs.length} logs from contract ${contractAddress}`,
+    );
+
     if (contractLogs.length > 0) {
       const purchaseEvents = contractLogs.filter((log: any) => {
         try {
           const purchaseEventSignatures = [
             '0x52b28c2c6db0ef7d180f694a2c0d7e4e9ce0b0e3c9c6a8e5ae452d4d1a6b8af7',
-            '0xfd14e2e3596a20450defb59a35bf6c7db343dc86ba781cd612c173e92b45f8ee'
+            '0xfd14e2e3596a20450defb59a35bf6c7db343dc86ba781cd612c173e92b45f8ee',
           ];
-          
+
           if (log.topics && log.topics.length > 0) {
             const eventTopic = log.topics[0];
             return purchaseEventSignatures.includes(eventTopic);
@@ -209,16 +240,18 @@ export async function verifyContractEvents(
           return true;
         }
       });
-      
-      const eventName = contractAddress.includes('Router') ? 'PurchaseCompleted' : 'PurchaseArtifact';
+
+      const eventName = contractAddress.includes('Router')
+        ? 'PurchaseCompleted'
+        : 'PurchaseArtifact';
       console.log(`📋 ${eventName} Events:`, purchaseEvents.length);
-      
+
       if (purchaseEvents.length > 0) {
         console.log(`✅ ${eventName} event found!`);
         console.log('📋 Event Details:', purchaseEvents[0]);
       }
     }
-    
+
     console.groupEnd();
     return contractLogs.length > 0;
   } catch (error) {

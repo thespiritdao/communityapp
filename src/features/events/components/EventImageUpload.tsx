@@ -15,7 +15,7 @@ interface EventImageUploadProps {
 export const EventImageUpload: React.FC<EventImageUploadProps> = ({
   currentImageUrl,
   onImageUpload,
-  eventId
+  eventId,
 }) => {
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -66,7 +66,7 @@ export const EventImageUpload: React.FC<EventImageUploadProps> = ({
         .from('event-images')
         .upload(filePath, file, {
           cacheControl: '3600',
-          upsert: false
+          upsert: false,
         });
 
       if (uploadError) {
@@ -83,7 +83,9 @@ export const EventImageUpload: React.FC<EventImageUploadProps> = ({
       }
     } catch (error) {
       console.error('Error uploading image:', error);
-      setError(error instanceof Error ? error.message : 'Failed to upload image');
+      setError(
+        error instanceof Error ? error.message : 'Failed to upload image',
+      );
     } finally {
       setUploading(false);
     }
@@ -118,7 +120,7 @@ export const EventImageUpload: React.FC<EventImageUploadProps> = ({
             <Camera className="w-8 h-8 text-gray-400" />
           )}
         </div>
-        
+
         <div className="flex-1">
           <div className="flex items-center space-x-2">
             <Button
@@ -128,9 +130,13 @@ export const EventImageUpload: React.FC<EventImageUploadProps> = ({
               disabled={uploading}
             >
               <Upload className="w-4 h-4 mr-2" />
-              {uploading ? 'Uploading...' : currentImageUrl ? 'Change Image' : 'Upload Image'}
+              {uploading
+                ? 'Uploading...'
+                : currentImageUrl
+                  ? 'Change Image'
+                  : 'Upload Image'}
             </Button>
-            
+
             {currentImageUrl && (
               <Button
                 type="button"
@@ -142,10 +148,8 @@ export const EventImageUpload: React.FC<EventImageUploadProps> = ({
               </Button>
             )}
           </div>
-          
-          <p className="text-sm text-gray-500 mt-1">
-            JPG or PNG, max 5MB.
-          </p>
+
+          <p className="text-sm text-gray-500 mt-1">JPG or PNG, max 5MB.</p>
         </div>
       </div>
 
@@ -160,9 +164,13 @@ export const EventImageUpload: React.FC<EventImageUploadProps> = ({
 
       {/* Error Display */}
       {error && (
-        <Card style={{ border: '1px solid #E8CBCB', backgroundColor: '#F5E6E6' }}>
+        <Card
+          style={{ border: '1px solid #E8CBCB', backgroundColor: '#F5E6E6' }}
+        >
           <CardContent className="p-3">
-            <p className="text-sm" style={{ color: '#8B3A3A' }}>{error}</p>
+            <p className="text-sm" style={{ color: '#8B3A3A' }}>
+              {error}
+            </p>
           </CardContent>
         </Card>
       )}

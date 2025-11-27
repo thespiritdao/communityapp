@@ -19,48 +19,49 @@ const publicClient = createPublicClient({
   transport: http(),
 });
 
-const HATS_PROTOCOL_ADDRESS = '0x3bc1A0Ad72417f2d411118085256fC53CBdDd137' as const;
+const HATS_PROTOCOL_ADDRESS =
+  '0x3bc1A0Ad72417f2d411118085256fC53CBdDd137' as const;
 
 const HATS_ABI = [
   {
     inputs: [
       { name: 'wearer', type: 'address' },
-      { name: 'hatId', type: 'uint256' }
+      { name: 'hatId', type: 'uint256' },
     ],
     name: 'isWearerOfHat',
     outputs: [{ name: '', type: 'bool' }],
     stateMutability: 'view',
-    type: 'function'
+    type: 'function',
   },
   {
     inputs: [
       { name: 'wearer', type: 'address' },
-      { name: 'hatId', type: 'uint256' }
+      { name: 'hatId', type: 'uint256' },
     ],
     name: 'isEligible',
     outputs: [{ name: '', type: 'bool' }],
     stateMutability: 'view',
-    type: 'function'
+    type: 'function',
   },
   {
     inputs: [
       { name: 'wearer', type: 'address' },
-      { name: 'hatId', type: 'uint256' }
+      { name: 'hatId', type: 'uint256' },
     ],
     name: 'isInGoodStanding',
     outputs: [{ name: '', type: 'bool' }],
     stateMutability: 'view',
-    type: 'function'
+    type: 'function',
   },
   {
     inputs: [
       { name: 'wearer', type: 'address' },
-      { name: 'hatId', type: 'uint256' }
+      { name: 'hatId', type: 'uint256' },
     ],
     name: 'balanceOf',
     outputs: [{ name: '', type: 'uint256' }],
     stateMutability: 'view',
-    type: 'function'
+    type: 'function',
   },
 ] as const;
 
@@ -70,7 +71,7 @@ const HATS_ABI = [
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: { id: string } },
 ) {
   try {
     const { id } = params;
@@ -86,10 +87,7 @@ export async function GET(
       .single();
 
     if (podError || !pod) {
-      return NextResponse.json(
-        { error: 'Pod not found' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: 'Pod not found' }, { status: 404 });
     }
 
     // Get cached members
@@ -108,7 +106,7 @@ export async function GET(
     if (membersError) {
       return NextResponse.json(
         { error: 'Failed to fetch members', details: membersError.message },
-        { status: 500 }
+        { status: 500 },
       );
     }
 
@@ -147,7 +145,11 @@ export async function GET(
               hasAccess: (isWearer && isEligible && inGoodStanding) as boolean,
             };
           } catch (err) {
-            console.warn('Failed to verify member on-chain:', member.wallet_address, err);
+            console.warn(
+              'Failed to verify member on-chain:',
+              member.wallet_address,
+              err,
+            );
           }
         }
 
@@ -164,7 +166,7 @@ export async function GET(
           },
           onChain: onChainStatus,
         };
-      })
+      }),
     );
 
     return NextResponse.json({
@@ -177,12 +179,14 @@ export async function GET(
       members: membersWithStatus,
       total: membersWithStatus.length,
     });
-
   } catch (error) {
     console.error('GET /api/pods2/[id]/members error:', error);
     return NextResponse.json(
-      { error: 'Internal server error', details: error instanceof Error ? error.message : 'Unknown error' },
-      { status: 500 }
+      {
+        error: 'Internal server error',
+        details: error instanceof Error ? error.message : 'Unknown error',
+      },
+      { status: 500 },
     );
   }
 }
@@ -194,7 +198,7 @@ export async function GET(
  */
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: { id: string } },
 ) {
   try {
     const { id } = params;
@@ -203,8 +207,11 @@ export async function POST(
 
     if (!transactionHash || !memberAddress || !role) {
       return NextResponse.json(
-        { error: 'Missing required fields: transactionHash, memberAddress, role' },
-        { status: 400 }
+        {
+          error:
+            'Missing required fields: transactionHash, memberAddress, role',
+        },
+        { status: 400 },
       );
     }
 
@@ -216,10 +223,7 @@ export async function POST(
       .single();
 
     if (podError || !pod) {
-      return NextResponse.json(
-        { error: 'Pod not found' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: 'Pod not found' }, { status: 404 });
     }
 
     // Wait for transaction
@@ -231,7 +235,7 @@ export async function POST(
     if (receipt.status !== 'success') {
       return NextResponse.json(
         { error: 'Transaction failed' },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -249,7 +253,7 @@ export async function POST(
     if (!isWearer) {
       return NextResponse.json(
         { error: 'Member does not wear the hat on-chain' },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -286,7 +290,7 @@ export async function POST(
         },
         {
           onConflict: 'pod_id,wallet_address,hat_id',
-        }
+        },
       )
       .select()
       .single();
@@ -294,7 +298,7 @@ export async function POST(
     if (upsertError) {
       return NextResponse.json(
         { error: 'Failed to save member', details: upsertError.message },
-        { status: 500 }
+        { status: 500 },
       );
     }
 
@@ -319,12 +323,14 @@ export async function POST(
         transactionHash,
       },
     });
-
   } catch (error) {
     console.error('POST /api/pods2/[id]/members error:', error);
     return NextResponse.json(
-      { error: 'Internal server error', details: error instanceof Error ? error.message : 'Unknown error' },
-      { status: 500 }
+      {
+        error: 'Internal server error',
+        details: error instanceof Error ? error.message : 'Unknown error',
+      },
+      { status: 500 },
     );
   }
 }
@@ -335,7 +341,7 @@ export async function POST(
  */
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: { id: string } },
 ) {
   try {
     const { id } = params;
@@ -345,7 +351,7 @@ export async function DELETE(
     if (!memberAddress) {
       return NextResponse.json(
         { error: 'Missing memberAddress' },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -357,10 +363,7 @@ export async function DELETE(
       .single();
 
     if (podError || !pod) {
-      return NextResponse.json(
-        { error: 'Pod not found' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: 'Pod not found' }, { status: 404 });
     }
 
     // If verification requested, check blockchain
@@ -384,7 +387,7 @@ export async function DELETE(
       if (isAdminWearer || isMemberWearer) {
         return NextResponse.json(
           { error: 'Member still wears a hat on-chain' },
-          { status: 400 }
+          { status: 400 },
         );
       }
     }
@@ -402,7 +405,7 @@ export async function DELETE(
     if (updateError) {
       return NextResponse.json(
         { error: 'Failed to update member', details: updateError.message },
-        { status: 500 }
+        { status: 500 },
       );
     }
 
@@ -411,12 +414,14 @@ export async function DELETE(
       message: 'Member marked as inactive',
       address: memberAddress,
     });
-
   } catch (error) {
     console.error('DELETE /api/pods2/[id]/members error:', error);
     return NextResponse.json(
-      { error: 'Internal server error', details: error instanceof Error ? error.message : 'Unknown error' },
-      { status: 500 }
+      {
+        error: 'Internal server error',
+        details: error instanceof Error ? error.message : 'Unknown error',
+      },
+      { status: 500 },
     );
   }
 }

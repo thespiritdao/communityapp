@@ -29,7 +29,7 @@ export function TransactionDefault({
       onError={onError}
       onStatus={onStatus}
       onSuccess={onSuccess}
-      isSponsored={isSponsored} 
+      isSponsored={isSponsored}
     >
       <TransactionButton disabled={disabled} />
       <TransactionToast>

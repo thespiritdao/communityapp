@@ -3,69 +3,82 @@ const { base } = require('viem/chains');
 
 // TEST POD V2-52 DETAILS (From errors.txt)
 const POD_ID = 'pod-1762310879258-3naytgade';
-const MANAGEMENT_HAT_ID = '3666553570037151583201476077717346993499070746393697715044809070084096';
+const MANAGEMENT_HAT_ID =
+  '3666553570037151583201476077717346993499070746393697715044809070084096';
 const YOUR_WALLET = '0x12a0cf22D632c859B793F852af03b9d515580244';
 const HATS_CONTRACT = '0x3bc1a0ad72417f2d411118085256fc53cbddd137';
 const FACTORY_ADDRESS = '0x3d453f1a4E200F446637DD9f4863DdcA9975eDCF';
 
 const client = createPublicClient({
   chain: base,
-  transport: http('https://base-mainnet.infura.io/v3/f1103e203835402d94489e605683ff50')
+  transport: http(
+    'https://base-mainnet.infura.io/v3/f1103e203835402d94489e605683ff50',
+  ),
 });
 
-const factoryAbi = [{
-  name: 'getPodProxy',
-  type: 'function',
-  inputs: [{ name: 'podId', type: 'string' }],
-  outputs: [{ name: '', type: 'address' }],
-  stateMutability: 'view'
-}, {
-  name: 'canManageBounties',
-  type: 'function',
-  inputs: [
-    { name: 'user', type: 'address' },
-    { name: 'podId', type: 'string' }
-  ],
-  outputs: [{ name: '', type: 'bool' }],
-  stateMutability: 'view'
-}];
+const factoryAbi = [
+  {
+    name: 'getPodProxy',
+    type: 'function',
+    inputs: [{ name: 'podId', type: 'string' }],
+    outputs: [{ name: '', type: 'address' }],
+    stateMutability: 'view',
+  },
+  {
+    name: 'canManageBounties',
+    type: 'function',
+    inputs: [
+      { name: 'user', type: 'address' },
+      { name: 'podId', type: 'string' },
+    ],
+    outputs: [{ name: '', type: 'bool' }],
+    stateMutability: 'view',
+  },
+];
 
-const proxyAbi = [{
-  name: 'canManage',
-  type: 'function',
-  inputs: [{ name: 'user', type: 'address' }],
-  outputs: [{ name: '', type: 'bool' }],
-  stateMutability: 'view'
-}, {
-  name: 'managementHatId',
-  type: 'function',
-  inputs: [],
-  outputs: [{ name: '', type: 'uint256' }],
-  stateMutability: 'view'
-}, {
-  name: 'membershipHatId',
-  type: 'function',
-  inputs: [],
-  outputs: [{ name: '', type: 'uint256' }],
-  stateMutability: 'view'
-}, {
-  name: 'isActive',
-  type: 'function',
-  inputs: [],
-  outputs: [{ name: '', type: 'bool' }],
-  stateMutability: 'view'
-}];
+const proxyAbi = [
+  {
+    name: 'canManage',
+    type: 'function',
+    inputs: [{ name: 'user', type: 'address' }],
+    outputs: [{ name: '', type: 'bool' }],
+    stateMutability: 'view',
+  },
+  {
+    name: 'managementHatId',
+    type: 'function',
+    inputs: [],
+    outputs: [{ name: '', type: 'uint256' }],
+    stateMutability: 'view',
+  },
+  {
+    name: 'membershipHatId',
+    type: 'function',
+    inputs: [],
+    outputs: [{ name: '', type: 'uint256' }],
+    stateMutability: 'view',
+  },
+  {
+    name: 'isActive',
+    type: 'function',
+    inputs: [],
+    outputs: [{ name: '', type: 'bool' }],
+    stateMutability: 'view',
+  },
+];
 
-const hatsAbi = [{
-  name: 'isWearerOfHat',
-  type: 'function',
-  inputs: [
-    { name: '_user', type: 'address' },
-    { name: '_hatId', type: 'uint256' }
-  ],
-  outputs: [{ name: '', type: 'bool' }],
-  stateMutability: 'view'
-}];
+const hatsAbi = [
+  {
+    name: 'isWearerOfHat',
+    type: 'function',
+    inputs: [
+      { name: '_user', type: 'address' },
+      { name: '_hatId', type: 'uint256' },
+    ],
+    outputs: [{ name: '', type: 'bool' }],
+    stateMutability: 'view',
+  },
+];
 
 async function verifyPod() {
   console.log('🔍 === VERIFYING TEST POD V2-52 ===\n');
@@ -81,7 +94,7 @@ async function verifyPod() {
       address: FACTORY_ADDRESS,
       abi: factoryAbi,
       functionName: 'getPodProxy',
-      args: [POD_ID]
+      args: [POD_ID],
     });
 
     console.log('  Proxy Address:', proxyAddress);
@@ -95,27 +108,24 @@ async function verifyPod() {
 
     // Step 2: Check proxy state
     console.log('📋 Step 2: Checking proxy on-chain state...');
-    const [
-      proxyIsActive,
-      proxyManagementHatId,
-      proxyMembershipHatId
-    ] = await Promise.all([
-      client.readContract({
-        address: proxyAddress,
-        abi: proxyAbi,
-        functionName: 'isActive'
-      }),
-      client.readContract({
-        address: proxyAddress,
-        abi: proxyAbi,
-        functionName: 'managementHatId'
-      }),
-      client.readContract({
-        address: proxyAddress,
-        abi: proxyAbi,
-        functionName: 'membershipHatId'
-      })
-    ]);
+    const [proxyIsActive, proxyManagementHatId, proxyMembershipHatId] =
+      await Promise.all([
+        client.readContract({
+          address: proxyAddress,
+          abi: proxyAbi,
+          functionName: 'isActive',
+        }),
+        client.readContract({
+          address: proxyAddress,
+          abi: proxyAbi,
+          functionName: 'managementHatId',
+        }),
+        client.readContract({
+          address: proxyAddress,
+          abi: proxyAbi,
+          functionName: 'membershipHatId',
+        }),
+      ]);
 
     console.log('  isActive:', proxyIsActive ? '✅ true' : '❌ false');
     console.log('  managementHatId:', proxyManagementHatId.toString());
@@ -154,10 +164,13 @@ async function verifyPod() {
       address: HATS_CONTRACT,
       abi: hatsAbi,
       functionName: 'isWearerOfHat',
-      args: [YOUR_WALLET, BigInt(MANAGEMENT_HAT_ID)]
+      args: [YOUR_WALLET, BigInt(MANAGEMENT_HAT_ID)],
     });
 
-    console.log('  You wear Management HAT:', wearsHat ? '✅ true' : '❌ false');
+    console.log(
+      '  You wear Management HAT:',
+      wearsHat ? '✅ true' : '❌ false',
+    );
     console.log();
 
     if (!wearsHat) {
@@ -176,10 +189,13 @@ async function verifyPod() {
       address: proxyAddress,
       abi: proxyAbi,
       functionName: 'canManage',
-      args: [YOUR_WALLET]
+      args: [YOUR_WALLET],
     });
 
-    console.log('  proxy.canManage(YOUR_WALLET):', canManageResult ? '✅ true' : '❌ false');
+    console.log(
+      '  proxy.canManage(YOUR_WALLET):',
+      canManageResult ? '✅ true' : '❌ false',
+    );
     console.log();
 
     if (!canManageResult) {
@@ -187,7 +203,10 @@ async function verifyPod() {
       console.log();
       console.log('🔍 Debugging proxy.canManage() logic:');
       console.log('   1. isActive:', proxyIsActive ? 'true ✅' : 'false ❌');
-      console.log('   2. managementHatId != 0:', proxyManagementHatId.toString() !== '0' ? 'true ✅' : 'false ❌');
+      console.log(
+        '   2. managementHatId != 0:',
+        proxyManagementHatId.toString() !== '0' ? 'true ✅' : 'false ❌',
+      );
       console.log('   3. You wear HAT:', wearsHat ? 'true ✅' : 'false ❌');
       console.log();
       console.log('   If all three are true, canManage should return true.');
@@ -202,30 +221,45 @@ async function verifyPod() {
       address: FACTORY_ADDRESS,
       abi: factoryAbi,
       functionName: 'canManageBounties',
-      args: [YOUR_WALLET, POD_ID]
+      args: [YOUR_WALLET, POD_ID],
     });
 
-    console.log('  factory.canManageBounties(YOUR_WALLET, POD_ID):', factoryCanManage ? '✅ true' : '❌ false');
+    console.log(
+      '  factory.canManageBounties(YOUR_WALLET, POD_ID):',
+      factoryCanManage ? '✅ true' : '❌ false',
+    );
     console.log();
 
     if (!factoryCanManage) {
       console.log('❌ FACTORY AUTHORIZATION FAILS!');
       console.log();
-      console.log('🔍 This is the error you\'re seeing!');
-      console.log('   The factory cannot authorize you to manage eligibility criteria.');
+      console.log("🔍 This is the error you're seeing!");
+      console.log(
+        '   The factory cannot authorize you to manage eligibility criteria.',
+      );
       console.log();
     }
 
     // FINAL SUMMARY
     console.log('\n📊 FINAL SUMMARY');
     console.log('================\n');
-    console.log(proxyManagementHatId.toString() === MANAGEMENT_HAT_ID ? '✅' : '❌', 'Management HAT ID set correctly');
+    console.log(
+      proxyManagementHatId.toString() === MANAGEMENT_HAT_ID ? '✅' : '❌',
+      'Management HAT ID set correctly',
+    );
     console.log(wearsHat ? '✅' : '❌', 'You wear the Management HAT');
     console.log(canManageResult ? '✅' : '❌', 'proxy.canManage returns true');
-    console.log(factoryCanManage ? '✅' : '❌', 'factory.canManageBounties returns true');
+    console.log(
+      factoryCanManage ? '✅' : '❌',
+      'factory.canManageBounties returns true',
+    );
     console.log();
 
-    if (proxyManagementHatId.toString() === MANAGEMENT_HAT_ID && canManageResult && factoryCanManage) {
+    if (
+      proxyManagementHatId.toString() === MANAGEMENT_HAT_ID &&
+      canManageResult &&
+      factoryCanManage
+    ) {
       console.log('🎉 ALL CHECKS PASSED!');
       console.log('===================\n');
       console.log('Eligibility criteria sync should work now.');
@@ -236,7 +270,6 @@ async function verifyPod() {
       console.log('Authorization is failing on-chain.');
       console.log('See details above for what needs to be fixed.');
     }
-
   } catch (error) {
     console.error('❌ Error during verification:', error.message);
     console.log();

@@ -14,7 +14,11 @@ export const UnlockMembership: React.FC<UnlockMembershipProps> = ({
   contractAddress,
 }) => {
   // Use wagmi to call the 'balanceOf' function using your Unlock Public Lock ABI
-  const { data: balance, isLoading, isError } = useContractRead({
+  const {
+    data: balance,
+    isLoading,
+    isError,
+  } = useContractRead({
     address: contractAddress as `0x${string}`,
     abi: UNLOCK_PUBLIC_LOCK_ABI,
     functionName: 'balanceOf',

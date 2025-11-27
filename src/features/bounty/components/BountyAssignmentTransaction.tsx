@@ -17,7 +17,7 @@
  * @module BountyAssignmentTransaction
  */
 
-"use client"
+'use client';
 
 import React, { useState, useEffect } from 'react';
 import { useAccount, usePublicClient } from 'wagmi';
@@ -27,7 +27,7 @@ import {
   TransactionSponsor,
   TransactionStatus,
   TransactionStatusLabel,
-  TransactionStatusAction
+  TransactionStatusAction,
 } from '@coinbase/onchainkit/transaction';
 import type { TransactionReceipt } from 'viem';
 import BountyManagerABI from '@/abis/BountyManagerV2.json';
@@ -40,16 +40,16 @@ import {
   pollForTransactionReceipt,
   createTransactionStatusHandler,
   type TransactionCallData,
-  BASE_CHAIN_ID
+  BASE_CHAIN_ID,
 } from '../utils/transactionUtils';
 import {
   syncBidApprovalState,
-  type BidApprovalStateUpdate
+  type BidApprovalStateUpdate,
 } from '../utils/stateSync';
 import {
   validateBidForApproval,
   logValidationResult,
-  formatValidationError
+  formatValidationError,
 } from '../utils/bidIndexValidator';
 
 // ============================================================================
@@ -92,7 +92,9 @@ export interface BountyAssignmentTransactionProps {
 // COMPONENT
 // ============================================================================
 
-export const BountyAssignmentTransaction: React.FC<BountyAssignmentTransactionProps> = ({
+export const BountyAssignmentTransaction: React.FC<
+  BountyAssignmentTransactionProps
+> = ({
   onchainBountyId,
   onchainBidIndex,
   reviewer,
@@ -102,7 +104,7 @@ export const BountyAssignmentTransaction: React.FC<BountyAssignmentTransactionPr
   bidderAddress,
   onSuccess,
   onError,
-  onComplete
+  onComplete,
 }) => {
   const { address } = useAccount();
   const publicClient = usePublicClient();
@@ -128,7 +130,7 @@ export const BountyAssignmentTransaction: React.FC<BountyAssignmentTransactionPr
         bidId,
         onchainBountyId,
         onchainBidIndex,
-        bidderAddress
+        bidderAddress,
       });
 
       try {
@@ -138,9 +140,9 @@ export const BountyAssignmentTransaction: React.FC<BountyAssignmentTransactionPr
             bidId,
             bidderAddress,
             onchainBountyId,
-            onchainBidIndex
+            onchainBidIndex,
           },
-          publicClient
+          publicClient,
         );
 
         logValidationResult(validation);
@@ -148,7 +150,9 @@ export const BountyAssignmentTransaction: React.FC<BountyAssignmentTransactionPr
         if (!validation.isValid) {
           const errorMessage = formatValidationError(validation);
           setValidationError(errorMessage);
-          console.error('❌ Bid validation failed - cannot proceed with assignment');
+          console.error(
+            '❌ Bid validation failed - cannot proceed with assignment',
+          );
         } else {
           console.log('✅ Bid validation passed - ready for assignment');
         }
@@ -181,7 +185,10 @@ export const BountyAssignmentTransaction: React.FC<BountyAssignmentTransactionPr
   // ============================================================================
 
   const handleSuccess = async (receipt: TransactionReceipt) => {
-    console.log('✅ Assignment transaction successful:', receipt.transactionHash);
+    console.log(
+      '✅ Assignment transaction successful:',
+      receipt.transactionHash,
+    );
     setIsProcessing(true);
 
     try {
@@ -195,7 +202,7 @@ export const BountyAssignmentTransaction: React.FC<BountyAssignmentTransactionPr
         status: 'approved',
         reviewer,
         approver,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       };
 
       console.log('🔄 Syncing bid approval state to database...');
@@ -224,7 +231,7 @@ export const BountyAssignmentTransaction: React.FC<BountyAssignmentTransactionPr
           context_type: 'bounty',
           context_id: bountyId,
           context_url: `/bounty/${bountyId}`,
-          priority: 'high'
+          priority: 'high',
         }),
 
         // Notify technical reviewer
@@ -237,7 +244,7 @@ export const BountyAssignmentTransaction: React.FC<BountyAssignmentTransactionPr
           context_type: 'bounty',
           context_id: bountyId,
           context_url: `/bounty/${bountyId}`,
-          priority: 'high'
+          priority: 'high',
         }),
 
         // Notify final approver
@@ -250,8 +257,8 @@ export const BountyAssignmentTransaction: React.FC<BountyAssignmentTransactionPr
           context_type: 'bounty',
           context_id: bountyId,
           context_url: `/bounty/${bountyId}`,
-          priority: 'high'
-        })
+          priority: 'high',
+        }),
       ]);
 
       console.log('✅ All notifications sent successfully');
@@ -265,7 +272,7 @@ export const BountyAssignmentTransaction: React.FC<BountyAssignmentTransactionPr
         bidId,
         bidder: bidderAddress,
         reviewer,
-        approver
+        approver,
       });
     } catch (error) {
       console.error('❌ Error in post-assignment processing:', error);
@@ -287,17 +294,20 @@ export const BountyAssignmentTransaction: React.FC<BountyAssignmentTransactionPr
       }
 
       // Prepare transaction calls for error handler
-      const calls: TransactionCallData[] = [{
-        address: process.env.NEXT_PUBLIC_BOUNTY_MANAGER_ADDRESS as `0x${string}`,
-        abi: BountyManagerABI,
-        functionName: 'assignBounty',
-        args: [
-          BigInt(onchainBountyId),
-          BigInt(onchainBidIndex),
-          reviewer,
-          approver
-        ]
-      }];
+      const calls: TransactionCallData[] = [
+        {
+          address: process.env
+            .NEXT_PUBLIC_BOUNTY_MANAGER_ADDRESS as `0x${string}`,
+          abi: BountyManagerABI,
+          functionName: 'assignBounty',
+          args: [
+            BigInt(onchainBountyId),
+            BigInt(onchainBidIndex),
+            reviewer,
+            approver,
+          ],
+        },
+      ];
 
       // Handle error with comprehensive logging
       await handleTransactionError(
@@ -305,7 +315,7 @@ export const BountyAssignmentTransaction: React.FC<BountyAssignmentTransactionPr
         'Bounty Assignment',
         calls,
         address,
-        publicClient
+        publicClient,
       );
 
       onError(error);
@@ -322,9 +332,9 @@ export const BountyAssignmentTransaction: React.FC<BountyAssignmentTransactionPr
   const transactionStatusHandler = createTransactionStatusHandler(
     {
       onSuccess: handleSuccess,
-      onError: handleError
+      onError: handleError,
     },
-    'Bounty Assignment'
+    'Bounty Assignment',
   );
 
   const onStatusWithPolling = async (status: any) => {
@@ -333,22 +343,29 @@ export const BountyAssignmentTransaction: React.FC<BountyAssignmentTransactionPr
 
     // Start polling as fallback when transaction becomes pending
     if (status.statusName === 'transactionPending' && publicClient) {
-      const txHash = status.transactionHash || status.statusData?.transactionHash;
+      const txHash =
+        status.transactionHash || status.statusData?.transactionHash;
 
       if (txHash) {
-        console.log('⏱️ Starting fallback polling for assignment transaction:', txHash);
+        console.log(
+          '⏱️ Starting fallback polling for assignment transaction:',
+          txHash,
+        );
 
         const cleanup = await pollForTransactionReceipt(
           txHash,
           publicClient,
           (receipt) => {
-            console.log('✅ Receipt found via polling:', receipt.transactionHash);
+            console.log(
+              '✅ Receipt found via polling:',
+              receipt.transactionHash,
+            );
             handleSuccess(receipt);
           },
           () => {
             console.log('⏱️ Polling timed out for assignment transaction');
             // Don't call onError - transaction might still succeed
-          }
+          },
         );
 
         setPollCleanup(() => cleanup);
@@ -380,15 +397,31 @@ export const BountyAssignmentTransaction: React.FC<BountyAssignmentTransactionPr
   // Show validation error
   if (validationError) {
     return (
-      <div className="rounded-lg p-4" style={{ backgroundColor: '#F5E6E6', borderWidth: '1px', borderStyle: 'solid', borderColor: '#D9B3B3' }}>
-        <h4 className="font-semibold mb-2" style={{ color: '#5C1F1F' }}>Cannot Assign Bounty</h4>
-        <p className="text-sm whitespace-pre-wrap" style={{ color: '#8B3A3A' }}>{validationError}</p>
+      <div
+        className="rounded-lg p-4"
+        style={{
+          backgroundColor: '#F5E6E6',
+          borderWidth: '1px',
+          borderStyle: 'solid',
+          borderColor: '#D9B3B3',
+        }}
+      >
+        <h4 className="font-semibold mb-2" style={{ color: '#5C1F1F' }}>
+          Cannot Assign Bounty
+        </h4>
+        <p className="text-sm whitespace-pre-wrap" style={{ color: '#8B3A3A' }}>
+          {validationError}
+        </p>
         <button
           onClick={() => onError(new Error(validationError))}
           className="mt-4 px-4 py-2 rounded"
           style={{ backgroundColor: '#F5E6E6', color: '#5C1F1F' }}
-          onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#D9B3B3'; }}
-          onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = '#F5E6E6'; }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.backgroundColor = '#D9B3B3';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.backgroundColor = '#F5E6E6';
+          }}
         >
           Cancel
         </button>
@@ -397,12 +430,16 @@ export const BountyAssignmentTransaction: React.FC<BountyAssignmentTransactionPr
   }
 
   // Render transaction component
-  const contractAddress = process.env.NEXT_PUBLIC_BOUNTY_MANAGER_ADDRESS as `0x${string}`;
+  const contractAddress = process.env
+    .NEXT_PUBLIC_BOUNTY_MANAGER_ADDRESS as `0x${string}`;
 
   return (
     <div className="space-y-4">
       {/* Assignment Details */}
-      <div className="p-4 rounded-lg space-y-3 text-sm" style={{ backgroundColor: '#E8F1EE' }}>
+      <div
+        className="p-4 rounded-lg space-y-3 text-sm"
+        style={{ backgroundColor: '#E8F1EE' }}
+      >
         <div>
           <p className="font-semibold text-gray-700 mb-1">Bounty ID:</p>
           <p className="text-gray-900">{onchainBountyId}</p>
@@ -415,17 +452,29 @@ export const BountyAssignmentTransaction: React.FC<BountyAssignmentTransactionPr
 
         <div>
           <p className="font-semibold text-gray-700 mb-2">Bidder:</p>
-          <UserProfileDisplay walletAddress={bidderAddress} size="md" showModal={true} />
+          <UserProfileDisplay
+            walletAddress={bidderAddress}
+            size="md"
+            showModal={true}
+          />
         </div>
 
         <div>
           <p className="font-semibold text-gray-700 mb-2">Reviewer:</p>
-          <UserProfileDisplay walletAddress={reviewer} size="md" showModal={true} />
+          <UserProfileDisplay
+            walletAddress={reviewer}
+            size="md"
+            showModal={true}
+          />
         </div>
 
         <div>
           <p className="font-semibold text-gray-700 mb-2">Approver:</p>
-          <UserProfileDisplay walletAddress={approver} size="md" showModal={true} />
+          <UserProfileDisplay
+            walletAddress={approver}
+            size="md"
+            showModal={true}
+          />
         </div>
       </div>
 
@@ -442,9 +491,9 @@ export const BountyAssignmentTransaction: React.FC<BountyAssignmentTransactionPr
               BigInt(onchainBountyId),
               BigInt(onchainBidIndex),
               reviewer,
-              approver
-            ]
-          }
+              approver,
+            ],
+          },
         ]}
         isSponsored={true}
         onStatus={onStatusWithPolling}

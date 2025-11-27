@@ -15,9 +15,10 @@ export const SmartWalletHelper: React.FC = () => {
       if (!address || !connector) return;
 
       // Check if using Coinbase Smart Wallet
-      const isCSW = connector.name === 'Coinbase Wallet' || 
-                    connector.id === 'coinbaseWalletSDK' ||
-                    connector.name.includes('Smart Wallet');
+      const isCSW =
+        connector.name === 'Coinbase Wallet' ||
+        connector.id === 'coinbaseWalletSDK' ||
+        connector.name.includes('Smart Wallet');
 
       setIsSmartWallet(isCSW);
 
@@ -25,13 +26,14 @@ export const SmartWalletHelper: React.FC = () => {
         console.log('=== Smart Wallet Detected ===');
         console.log('Connector:', connector.name);
         console.log('Address:', address);
-        
+
         // Show helpful info for first-time users
         const hasShownTip = localStorage.getItem('smart-wallet-tip-shown');
         if (!hasShownTip) {
           toast({
             title: 'Smart Wallet Detected',
-            description: 'Remember to delegate your voting power to participate in governance!',
+            description:
+              'Remember to delegate your voting power to participate in governance!',
             duration: 10000,
           });
           localStorage.setItem('smart-wallet-tip-shown', 'true');

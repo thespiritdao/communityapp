@@ -13,7 +13,7 @@
  * @module BountyCompletion
  */
 
-"use client"
+'use client';
 
 import type React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -72,7 +72,7 @@ export const BountyCompletion: React.FC<BountyCompletionProps> = ({
   creatorAddress,
   onComplete,
   onError,
-  onRefreshData
+  onRefreshData,
 }) => {
   const handleSuccess = (receipt: any) => {
     console.log('✅ Bounty completed successfully:', receipt.transactionHash);
@@ -103,4 +103,4 @@ export const BountyCompletion: React.FC<BountyCompletionProps> = ({
       </CardContent>
     </Card>
   );
-}; 
+};

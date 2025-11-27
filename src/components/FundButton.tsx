@@ -2,7 +2,7 @@
 
 import type React from 'react';
 import { Button } from '@/components/ui/button';
-import { DollarSign, Send, } from 'lucide-react';
+import { DollarSign, Send } from 'lucide-react';
 
 interface FundButtonProps {
   variant?: 'default' | 'outline' | 'ghost';
@@ -25,7 +25,7 @@ export default function FundButton({
   className,
   onClick,
   disabled = false,
-  children
+  children,
 }: FundButtonProps) {
   const getIcon = () => {
     switch (recipientType) {

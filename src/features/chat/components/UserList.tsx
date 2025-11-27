@@ -16,13 +16,19 @@ const getProfilePictureUrl = (profilePicturePath: string) => {
     : '/images/symbolobinfin.png';
 };
 
-export default function UserList({ users, currentUser, onUserSelect }: UserListProps) {
+export default function UserList({
+  users,
+  currentUser,
+  onUserSelect,
+}: UserListProps) {
   const [searchQuery, setSearchQuery] = useState('');
 
   const filteredUsers = users.filter(
     (user) =>
-      `${user.first_name} ${user.last_name}`.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      user.wallet_address.toLowerCase().includes(searchQuery.toLowerCase())
+      `${user.first_name} ${user.last_name}`
+        .toLowerCase()
+        .includes(searchQuery.toLowerCase()) ||
+      user.wallet_address.toLowerCase().includes(searchQuery.toLowerCase()),
   );
 
   return (
@@ -42,7 +48,9 @@ export default function UserList({ users, currentUser, onUserSelect }: UserListP
           <div
             key={user.wallet_address}
             className={`user-list-item ${
-              user.wallet_address === currentUser.wallet_address ? 'current-user' : ''
+              user.wallet_address === currentUser.wallet_address
+                ? 'current-user'
+                : ''
             }`}
             onClick={() => onUserSelect && onUserSelect(user)}
           >

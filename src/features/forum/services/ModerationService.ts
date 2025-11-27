@@ -13,7 +13,16 @@ export interface ModerationAction {
   id: string;
   moderator_address: string;
   moderator_hat_id: string | null;
-  action_type: 'pin' | 'unpin' | 'lock' | 'unlock' | 'delete' | 'ban' | 'mute' | 'feature' | 'unfeature';
+  action_type:
+    | 'pin'
+    | 'unpin'
+    | 'lock'
+    | 'unlock'
+    | 'delete'
+    | 'ban'
+    | 'mute'
+    | 'feature'
+    | 'unfeature';
   target_type: 'thread' | 'post' | 'user';
   target_id: string;
   reason?: string;
@@ -56,7 +65,7 @@ export async function pinThread(
   threadId: string,
   moderatorAddress: string,
   moderatorHatId: string | null,
-  reason?: string
+  reason?: string,
 ): Promise<{ success: boolean; error?: string }> {
   try {
     // Update thread
@@ -65,7 +74,7 @@ export async function pinThread(
       .update({
         is_pinned: true,
         pinned_at: new Date().toISOString(),
-        pinned_by: moderatorAddress
+        pinned_by: moderatorAddress,
       })
       .eq('id', threadId);
 
@@ -78,7 +87,7 @@ export async function pinThread(
       action_type: 'pin',
       target_type: 'thread',
       target_id: threadId,
-      reason
+      reason,
     });
 
     return { success: true };
@@ -95,7 +104,7 @@ export async function unpinThread(
   threadId: string,
   moderatorAddress: string,
   moderatorHatId: string | null,
-  reason?: string
+  reason?: string,
 ): Promise<{ success: boolean; error?: string }> {
   try {
     const { error: updateError } = await supabase
@@ -103,7 +112,7 @@ export async function unpinThread(
       .update({
         is_pinned: false,
         pinned_at: null,
-        pinned_by: null
+        pinned_by: null,
       })
       .eq('id', threadId);
 
@@ -115,7 +124,7 @@ export async function unpinThread(
       action_type: 'unpin',
       target_type: 'thread',
       target_id: threadId,
-      reason
+      reason,
     });
 
     return { success: true };
@@ -132,13 +141,13 @@ export async function lockThread(
   threadId: string,
   moderatorAddress: string,
   moderatorHatId: string | null,
-  reason?: string
+  reason?: string,
 ): Promise<{ success: boolean; error?: string }> {
   try {
     const { error: updateError } = await supabase
       .from('forum_threads')
       .update({
-        is_locked: true
+        is_locked: true,
       })
       .eq('id', threadId);
 
@@ -150,7 +159,7 @@ export async function lockThread(
       action_type: 'lock',
       target_type: 'thread',
       target_id: threadId,
-      reason
+      reason,
     });
 
     return { success: true };
@@ -167,13 +176,13 @@ export async function unlockThread(
   threadId: string,
   moderatorAddress: string,
   moderatorHatId: string | null,
-  reason?: string
+  reason?: string,
 ): Promise<{ success: boolean; error?: string }> {
   try {
     const { error: updateError } = await supabase
       .from('forum_threads')
       .update({
-        is_locked: false
+        is_locked: false,
       })
       .eq('id', threadId);
 
@@ -185,7 +194,7 @@ export async function unlockThread(
       action_type: 'unlock',
       target_type: 'thread',
       target_id: threadId,
-      reason
+      reason,
     });
 
     return { success: true };
@@ -202,7 +211,7 @@ export async function deleteThread(
   threadId: string,
   moderatorAddress: string,
   moderatorHatId: string | null,
-  reason?: string
+  reason?: string,
 ): Promise<{ success: boolean; error?: string }> {
   try {
     // Log action before deleting
@@ -212,7 +221,7 @@ export async function deleteThread(
       action_type: 'delete',
       target_type: 'thread',
       target_id: threadId,
-      reason
+      reason,
     });
 
     // Delete thread (cascades to posts due to foreign key)
@@ -241,7 +250,7 @@ export async function deletePost(
   postId: string,
   moderatorAddress: string,
   moderatorHatId: string | null,
-  reason?: string
+  reason?: string,
 ): Promise<{ success: boolean; error?: string }> {
   try {
     const { error: updateError } = await supabase
@@ -249,7 +258,7 @@ export async function deletePost(
       .update({
         is_deleted: true,
         deleted_at: new Date().toISOString(),
-        deleted_by: moderatorAddress
+        deleted_by: moderatorAddress,
       })
       .eq('id', postId);
 
@@ -261,7 +270,7 @@ export async function deletePost(
       action_type: 'delete',
       target_type: 'post',
       target_id: postId,
-      reason
+      reason,
     });
 
     return { success: true };
@@ -277,7 +286,7 @@ export async function deletePost(
 export async function restorePost(
   postId: string,
   moderatorAddress: string,
-  moderatorHatId: string | null
+  moderatorHatId: string | null,
 ): Promise<{ success: boolean; error?: string }> {
   try {
     const { error: updateError } = await supabase
@@ -285,7 +294,7 @@ export async function restorePost(
       .update({
         is_deleted: false,
         deleted_at: null,
-        deleted_by: null
+        deleted_by: null,
       })
       .eq('id', postId);
 
@@ -310,7 +319,7 @@ export async function muteUser(
   moderatorAddress: string,
   muteType: 'temporary' | 'permanent' | 'shadow',
   reason?: string,
-  expiresAt?: Date
+  expiresAt?: Date,
 ): Promise<{ success: boolean; error?: string }> {
   try {
     const { error: insertError } = await supabase
@@ -321,7 +330,7 @@ export async function muteUser(
         reason,
         mute_type: muteType,
         expires_at: expiresAt?.toISOString(),
-        is_active: true
+        is_active: true,
       });
 
     if (insertError) throw insertError;
@@ -333,7 +342,7 @@ export async function muteUser(
       target_type: 'user',
       target_id: userAddress,
       reason,
-      metadata: { mute_type: muteType, expires_at: expiresAt?.toISOString() }
+      metadata: { mute_type: muteType, expires_at: expiresAt?.toISOString() },
     });
 
     return { success: true };
@@ -348,7 +357,7 @@ export async function muteUser(
  */
 export async function unmuteUser(
   userAddress: string,
-  moderatorAddress: string
+  moderatorAddress: string,
 ): Promise<{ success: boolean; error?: string }> {
   try {
     const { error: updateError } = await supabase
@@ -370,7 +379,7 @@ export async function unmuteUser(
  * Check if a user is currently muted
  */
 export async function isUserMuted(
-  userAddress: string
+  userAddress: string,
 ): Promise<{ muted: boolean; muteInfo?: UserMute }> {
   try {
     const { data, error } = await supabase
@@ -421,7 +430,7 @@ export async function submitReport(
   reportType: 'spam' | 'abuse' | 'off-topic' | 'harassment' | 'other',
   description: string,
   postId?: string,
-  threadId?: string
+  threadId?: string,
 ): Promise<{ success: boolean; error?: string }> {
   try {
     const { error: insertError } = await supabase
@@ -432,7 +441,7 @@ export async function submitReport(
         reporter_address: reporterAddress.toLowerCase(),
         report_type: reportType,
         description,
-        status: 'pending'
+        status: 'pending',
       });
 
     if (insertError) throw insertError;
@@ -474,7 +483,7 @@ export async function getPendingReports(): Promise<{
 export async function reviewReport(
   reportId: string,
   moderatorAddress: string,
-  status: 'reviewed' | 'dismissed' | 'actioned'
+  status: 'reviewed' | 'dismissed' | 'actioned',
 ): Promise<{ success: boolean; error?: string }> {
   try {
     const { error: updateError } = await supabase
@@ -482,7 +491,7 @@ export async function reviewReport(
       .update({
         status,
         reviewed_by: moderatorAddress.toLowerCase(),
-        reviewed_at: new Date().toISOString()
+        reviewed_at: new Date().toISOString(),
       })
       .eq('id', reportId);
 
@@ -519,7 +528,7 @@ async function logModerationAction(action: {
       target_type: action.target_type,
       target_id: action.target_id,
       reason: action.reason,
-      metadata: action.metadata || {}
+      metadata: action.metadata || {},
     });
   } catch (error) {
     console.error('Error logging moderation action:', error);
@@ -532,7 +541,7 @@ async function logModerationAction(action: {
  */
 export async function getModerationHistory(
   targetType: 'thread' | 'post' | 'user',
-  targetId: string
+  targetId: string,
 ): Promise<{ success: boolean; actions?: ModerationAction[]; error?: string }> {
   try {
     const { data, error } = await supabase
@@ -556,7 +565,7 @@ export async function getModerationHistory(
  */
 export async function getModeratorActions(
   moderatorAddress: string,
-  limit = 50
+  limit = 50,
 ): Promise<{ success: boolean; actions?: ModerationAction[]; error?: string }> {
   try {
     const { data, error } = await supabase
@@ -620,8 +629,8 @@ export async function getModerationStats(): Promise<{
         totalActions: totalActions || 0,
         pendingReports: pendingReports || 0,
         activeMutes: activeMutes || 0,
-        actionsToday: actionsToday || 0
-      }
+        actionsToday: actionsToday || 0,
+      },
     };
   } catch (error: any) {
     console.error('Error fetching moderation stats:', error);

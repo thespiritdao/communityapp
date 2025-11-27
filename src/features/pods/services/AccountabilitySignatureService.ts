@@ -21,7 +21,6 @@ export interface CreateSignatureData {
  * Service for managing Pod Accountability Agreement signatures
  */
 export class AccountabilitySignatureService {
-  
   /**
    * Create a new accountability signature record
    */
@@ -35,7 +34,7 @@ export class AccountabilitySignatureService {
         pod_id: data.pod_id,
         signer_address: data.signer_address,
         signature_length: data.signature_data?.length || 0,
-        statement_length: data.accountability_statement?.length || 0
+        statement_length: data.accountability_statement?.length || 0,
       });
 
       const { data: signature, error } = await supabase
@@ -46,7 +45,7 @@ export class AccountabilitySignatureService {
           signature_data: data.signature_data,
           accountability_statement: data.accountability_statement,
           is_valid: true,
-          signed_at: new Date().toISOString()
+          signed_at: new Date().toISOString(),
         })
         .select()
         .single();
@@ -58,12 +57,12 @@ export class AccountabilitySignatureService {
 
       console.log('✅ Signature created successfully:', signature.id);
       return { success: true, signature };
-
     } catch (error) {
       console.error('❌ Error creating signature:', error);
-      return { 
-        success: false, 
-        error: error instanceof Error ? error.message : 'Failed to create signature' 
+      return {
+        success: false,
+        error:
+          error instanceof Error ? error.message : 'Failed to create signature',
       };
     }
   }
@@ -93,12 +92,12 @@ export class AccountabilitySignatureService {
 
       console.log('✅ Retrieved', signatures?.length || 0, 'signatures');
       return { success: true, signatures: signatures || [] };
-
     } catch (error) {
       console.error('❌ Error getting signatures:', error);
-      return { 
-        success: false, 
-        error: error instanceof Error ? error.message : 'Failed to get signatures' 
+      return {
+        success: false,
+        error:
+          error instanceof Error ? error.message : 'Failed to get signatures',
       };
     }
   }
@@ -106,7 +105,10 @@ export class AccountabilitySignatureService {
   /**
    * Check if a user has signed the accountability agreement for a pod
    */
-  static async hasUserSigned(podId: string, userAddress: string): Promise<{
+  static async hasUserSigned(
+    podId: string,
+    userAddress: string,
+  ): Promise<{
     success: boolean;
     hasSigned?: boolean;
     signature?: AccountabilitySignature;
@@ -115,7 +117,7 @@ export class AccountabilitySignatureService {
     try {
       console.log('🔍 Checking if user has signed:', {
         pod_id: podId,
-        user_address: userAddress
+        user_address: userAddress,
       });
 
       const { data: signature, error } = await supabase
@@ -135,18 +137,18 @@ export class AccountabilitySignatureService {
 
       const hasSigned = !!signature;
       console.log('✅ Signature check result:', hasSigned);
-      
-      return { 
-        success: true, 
-        hasSigned,
-        signature: signature || undefined
-      };
 
+      return {
+        success: true,
+        hasSigned,
+        signature: signature || undefined,
+      };
     } catch (error) {
       console.error('❌ Error checking signature:', error);
-      return { 
-        success: false, 
-        error: error instanceof Error ? error.message : 'Failed to check signature' 
+      return {
+        success: false,
+        error:
+          error instanceof Error ? error.message : 'Failed to check signature',
       };
     }
   }
@@ -173,12 +175,14 @@ export class AccountabilitySignatureService {
 
       console.log('✅ Signature invalidated successfully');
       return { success: true };
-
     } catch (error) {
       console.error('❌ Error invalidating signature:', error);
-      return { 
-        success: false, 
-        error: error instanceof Error ? error.message : 'Failed to invalidate signature' 
+      return {
+        success: false,
+        error:
+          error instanceof Error
+            ? error.message
+            : 'Failed to invalidate signature',
       };
     }
   }
@@ -209,25 +213,33 @@ export class AccountabilitySignatureService {
       }
 
       const total_signatures = signatures?.length || 0;
-      const valid_signatures = signatures?.filter(s => s.is_valid).length || 0;
-      const latest_signature = signatures?.length > 0 
-        ? signatures.sort((a, b) => new Date(b.signed_at).getTime() - new Date(a.signed_at).getTime())[0].signed_at
-        : null;
+      const valid_signatures =
+        signatures?.filter((s) => s.is_valid).length || 0;
+      const latest_signature =
+        signatures?.length > 0
+          ? signatures.sort(
+              (a, b) =>
+                new Date(b.signed_at).getTime() -
+                new Date(a.signed_at).getTime(),
+            )[0].signed_at
+          : null;
 
       const stats = {
         total_signatures,
         valid_signatures,
-        latest_signature
+        latest_signature,
       };
 
       console.log('✅ Signature stats:', stats);
       return { success: true, stats };
-
     } catch (error) {
       console.error('❌ Error getting signature stats:', error);
-      return { 
-        success: false, 
-        error: error instanceof Error ? error.message : 'Failed to get signature stats' 
+      return {
+        success: false,
+        error:
+          error instanceof Error
+            ? error.message
+            : 'Failed to get signature stats',
       };
     }
   }

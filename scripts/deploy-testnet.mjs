@@ -9,7 +9,13 @@
  * Usage: npm run deploy:testnet
  */
 
-import { createWalletClient, createPublicClient, http, parseEther, formatEther } from 'viem';
+import {
+  createWalletClient,
+  createPublicClient,
+  http,
+  parseEther,
+  formatEther,
+} from 'viem';
 import { baseSepolia } from 'viem/chains';
 import { privateKeyToAccount } from 'viem/accounts';
 import fs from 'fs';
@@ -30,7 +36,9 @@ if (!fs.existsSync(envPath)) {
   console.error('');
   console.error('Please create .env.testnet file:');
   console.error('  1. Copy .env.testnet.example to .env.testnet');
-  console.error('  2. Fill in your values (private key, database credentials, etc.)');
+  console.error(
+    '  2. Fill in your values (private key, database credentials, etc.)',
+  );
   console.error('');
   console.error('Example:');
   console.error('  cp .env.testnet.example .env.testnet');
@@ -50,10 +58,13 @@ const CHAIN = baseSepolia;
 const RPC_URL = process.env.TESTNET_RPC_URL || 'https://sepolia.base.org';
 
 // Get private key and add 0x prefix if missing
-let DEPLOYER_PRIVATE_KEY = process.env.TESTNET_DEPLOYER_PRIVATE_KEY || process.env.PRIVATE_KEY;
+let DEPLOYER_PRIVATE_KEY =
+  process.env.TESTNET_DEPLOYER_PRIVATE_KEY || process.env.PRIVATE_KEY;
 
 if (!DEPLOYER_PRIVATE_KEY) {
-  console.error('❌ Error: TESTNET_DEPLOYER_PRIVATE_KEY or PRIVATE_KEY not found in .env.testnet');
+  console.error(
+    '❌ Error: TESTNET_DEPLOYER_PRIVATE_KEY or PRIVATE_KEY not found in .env.testnet',
+  );
   console.error('');
   console.error('Add this to your .env.testnet file:');
   console.error('TESTNET_DEPLOYER_PRIVATE_KEY=0xyour_private_key_here');
@@ -88,20 +99,32 @@ const walletClient = createWalletClient({
 function loadContract(contractName) {
   try {
     // Try hardhat artifacts first
-    const artifactPath = path.join(__dirname, '../artifacts/contracts', `${contractName}.sol`, `${contractName}.json`);
+    const artifactPath = path.join(
+      __dirname,
+      '../artifacts/contracts',
+      `${contractName}.sol`,
+      `${contractName}.json`,
+    );
     if (fs.existsSync(artifactPath)) {
       const artifact = JSON.parse(fs.readFileSync(artifactPath, 'utf8'));
       return { abi: artifact.abi, bytecode: artifact.bytecode };
     }
 
     // Try foundry out directory
-    const foundryPath = path.join(__dirname, '../out', `${contractName}.sol`, `${contractName}.json`);
+    const foundryPath = path.join(
+      __dirname,
+      '../out',
+      `${contractName}.sol`,
+      `${contractName}.json`,
+    );
     if (fs.existsSync(foundryPath)) {
       const artifact = JSON.parse(fs.readFileSync(foundryPath, 'utf8'));
       return { abi: artifact.abi, bytecode: artifact.bytecode.object };
     }
 
-    throw new Error(`Contract ${contractName} not found. Please compile contracts first.`);
+    throw new Error(
+      `Contract ${contractName} not found. Please compile contracts first.`,
+    );
   } catch (error) {
     console.error(`❌ Error loading contract ${contractName}:`, error.message);
     throw error;
@@ -145,8 +168,12 @@ async function checkBalance() {
   console.log(`💰 Deployer balance: ${formatEther(balance)} ETH`);
 
   if (balance < parseEther('0.01')) {
-    console.warn('⚠️  Warning: Low balance! Get testnet ETH from Base Sepolia faucet');
-    console.warn('   Faucet: https://www.coinbase.com/faucets/base-ethereum-goerli-faucet');
+    console.warn(
+      '⚠️  Warning: Low balance! Get testnet ETH from Base Sepolia faucet',
+    );
+    console.warn(
+      '   Faucet: https://www.coinbase.com/faucets/base-ethereum-goerli-faucet',
+    );
   }
 
   return balance;
@@ -222,9 +249,9 @@ Timestamp: ${new Date().toISOString()}
 Deployed Contracts:
 ═══════════════════════════════════════════════════════════════
 
-${Object.entries(deployedContracts).map(([name, address]) =>
-  `  ${name.padEnd(40)} ${address}`
-).join('\n')}
+${Object.entries(deployedContracts)
+  .map(([name, address]) => `  ${name.padEnd(40)} ${address}`)
+  .join('\n')}
 
 ═══════════════════════════════════════════════════════════════
 
@@ -255,10 +282,18 @@ https://sepolia.basescan.org/address/${deployedContracts.SYSTEM_TOKEN}
 
 async function main() {
   console.log('\n');
-  console.log('╔═══════════════════════════════════════════════════════════════╗');
-  console.log('║         SpiritDAO Testnet Deployment Script                   ║');
-  console.log('║         Deploying to Base Sepolia                             ║');
-  console.log('╚═══════════════════════════════════════════════════════════════╝\n');
+  console.log(
+    '╔═══════════════════════════════════════════════════════════════╗',
+  );
+  console.log(
+    '║         SpiritDAO Testnet Deployment Script                   ║',
+  );
+  console.log(
+    '║         Deploying to Base Sepolia                             ║',
+  );
+  console.log(
+    '╚═══════════════════════════════════════════════════════════════╝\n',
+  );
 
   const startTime = Date.now();
   const deployedContracts = {};
@@ -272,9 +307,13 @@ async function main() {
     // ============================================================
     // PHASE 1: Token Contracts
     // ============================================================
-    console.log('═══════════════════════════════════════════════════════════════');
+    console.log(
+      '═══════════════════════════════════════════════════════════════',
+    );
     console.log('PHASE 1: Token Contracts');
-    console.log('═══════════════════════════════════════════════════════════════');
+    console.log(
+      '═══════════════════════════════════════════════════════════════',
+    );
 
     const systemToken = await deployContract('SystemToken', [
       'Spirit System Token',
@@ -294,9 +333,13 @@ async function main() {
     // ============================================================
     // PHASE 2: Governance Contracts
     // ============================================================
-    console.log('\n═══════════════════════════════════════════════════════════════');
+    console.log(
+      '\n═══════════════════════════════════════════════════════════════',
+    );
     console.log('PHASE 2: Governance Contracts');
-    console.log('═══════════════════════════════════════════════════════════════');
+    console.log(
+      '═══════════════════════════════════════════════════════════════',
+    );
 
     const timelock = await deployContract('DAOTimelock', [
       300, // 5 min delay (testnet)
@@ -319,9 +362,13 @@ async function main() {
     // ============================================================
     // PHASE 3: Purchase & Marketplace Contracts
     // ============================================================
-    console.log('\n═══════════════════════════════════════════════════════════════');
+    console.log(
+      '\n═══════════════════════════════════════════════════════════════',
+    );
     console.log('PHASE 3: Purchase & Marketplace Contracts');
-    console.log('═══════════════════════════════════════════════════════════════');
+    console.log(
+      '═══════════════════════════════════════════════════════════════',
+    );
 
     const purchaseBurn = await deployContract('PurchaseBurn', [
       systemToken.address,
@@ -335,25 +382,36 @@ async function main() {
     ]);
     deployedContracts.PURCHASE_ROUTER = purchaseRouter.address;
 
-    const purchaseRouterDecentralized = await deployContract('PurchaseRouterDecentralized', [
-      systemToken.address,
-    ]);
-    deployedContracts.PURCHASE_ROUTER_DECENTRALIZED = purchaseRouterDecentralized.address;
+    const purchaseRouterDecentralized = await deployContract(
+      'PurchaseRouterDecentralized',
+      [systemToken.address],
+    );
+    deployedContracts.PURCHASE_ROUTER_DECENTRALIZED =
+      purchaseRouterDecentralized.address;
 
     // ============================================================
     // PHASE 4: Event Contracts
     // ============================================================
-    console.log('\n═══════════════════════════════════════════════════════════════');
+    console.log(
+      '\n═══════════════════════════════════════════════════════════════',
+    );
     console.log('PHASE 4: Event Contracts');
-    console.log('═══════════════════════════════════════════════════════════════');
+    console.log(
+      '═══════════════════════════════════════════════════════════════',
+    );
 
     const eventManager = await deployContract('EventManager');
     deployedContracts.EVENT_MANAGER = eventManager.address;
 
-    const eventRegistrationFactory = await deployContract('EventRegistrationNFTFactory');
-    deployedContracts.EVENT_REGISTRATION_FACTORY = eventRegistrationFactory.address;
+    const eventRegistrationFactory = await deployContract(
+      'EventRegistrationNFTFactory',
+    );
+    deployedContracts.EVENT_REGISTRATION_FACTORY =
+      eventRegistrationFactory.address;
 
-    const eventCompletionFactory = await deployContract('EventCompletionNFTFactory');
+    const eventCompletionFactory = await deployContract(
+      'EventCompletionNFTFactory',
+    );
     deployedContracts.EVENT_COMPLETION_FACTORY = eventCompletionFactory.address;
 
     const eventEscrow = await deployContract('EventEscrow', [
@@ -364,9 +422,13 @@ async function main() {
     // ============================================================
     // PHASE 5: Pod Management Contracts
     // ============================================================
-    console.log('\n═══════════════════════════════════════════════════════════════');
+    console.log(
+      '\n═══════════════════════════════════════════════════════════════',
+    );
     console.log('PHASE 5: Pod Management Contracts');
-    console.log('═══════════════════════════════════════════════════════════════');
+    console.log(
+      '═══════════════════════════════════════════════════════════════',
+    );
 
     const podAuthFactory = await deployContract('PodAuthorizationFactory');
     deployedContracts.POD_AUTH_FACTORY = podAuthFactory.address;
@@ -389,9 +451,13 @@ async function main() {
     // ============================================================
     // PHASE 6: Bounty Contracts
     // ============================================================
-    console.log('\n═══════════════════════════════════════════════════════════════');
+    console.log(
+      '\n═══════════════════════════════════════════════════════════════',
+    );
     console.log('PHASE 6: Bounty Contracts');
-    console.log('═══════════════════════════════════════════════════════════════');
+    console.log(
+      '═══════════════════════════════════════════════════════════════',
+    );
 
     const bountyManager = await deployContract('BountyManagerV2', [
       systemToken.address,
@@ -408,11 +474,17 @@ async function main() {
     // ============================================================
     // PHASE 7: Hats Protocol Modules
     // ============================================================
-    console.log('\n═══════════════════════════════════════════════════════════════');
+    console.log(
+      '\n═══════════════════════════════════════════════════════════════',
+    );
     console.log('PHASE 7: Hats Protocol Modules');
-    console.log('═══════════════════════════════════════════════════════════════');
+    console.log(
+      '═══════════════════════════════════════════════════════════════',
+    );
 
-    const eligibilityModule = await deployContract('MultiCriteriaEligibilityModule');
+    const eligibilityModule = await deployContract(
+      'MultiCriteriaEligibilityModule',
+    );
     deployedContracts.ELIGIBILITY_MODULE_ADDRESS = eligibilityModule.address;
 
     const timeBasedToggle = await deployContract('TimeBasedToggleModule');
@@ -424,9 +496,13 @@ async function main() {
     // ============================================================
     // Deployment Complete
     // ============================================================
-    console.log('\n═══════════════════════════════════════════════════════════════');
+    console.log(
+      '\n═══════════════════════════════════════════════════════════════',
+    );
     console.log('All contracts deployed successfully!');
-    console.log('═══════════════════════════════════════════════════════════════\n');
+    console.log(
+      '═══════════════════════════════════════════════════════════════\n',
+    );
 
     // Save addresses to .env.testnet
     saveToEnvFile(deployedContracts);
@@ -439,7 +515,6 @@ async function main() {
     console.log('   2. Run: npm run setup:testnet (to configure permissions)');
     console.log('   3. Run: npm run dev:testnet (to test locally)');
     console.log('   4. Deploy to Vercel with .env.testnet variables\n');
-
   } catch (error) {
     console.error('\n❌ Deployment failed:', error.message);
     console.error('\nPartially deployed contracts:');

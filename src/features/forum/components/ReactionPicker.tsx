@@ -8,7 +8,7 @@ import {
   getReactionSummary,
   toggleReaction,
   AVAILABLE_REACTIONS,
-  type ReactionSummary
+  type ReactionSummary,
 } from '../services/ReactionService';
 import { Button } from '@/components/ui/button';
 
@@ -21,7 +21,7 @@ interface ReactionPickerProps {
 export function ReactionPicker({
   postId,
   threadId,
-  onReactionChange
+  onReactionChange,
 }: ReactionPickerProps) {
   const { address } = useAccount();
   const [reactions, setReactions] = useState<ReactionSummary[]>([]);
@@ -75,12 +75,17 @@ export function ReactionPicker({
           onClick={() => handleReaction(reaction.reaction_type)}
           className={`
             px-2 py-1 rounded-full text-sm border transition-all
-            ${reaction.userReacted
-              ? ''
-              : 'bg-gray-100 border-gray-300 hover:bg-gray-200'
+            ${
+              reaction.userReacted
+                ? ''
+                : 'bg-gray-100 border-gray-300 hover:bg-gray-200'
             }
           `}
-          style={reaction.userReacted ? { backgroundColor: '#E8F1EE', borderColor: '#2F5D50' } : undefined}
+          style={
+            reaction.userReacted
+              ? { backgroundColor: '#E8F1EE', borderColor: '#2F5D50' }
+              : undefined
+          }
         >
           <span>{reaction.reaction_type}</span>
           <span className="ml-1 text-xs font-medium">{reaction.count}</span>

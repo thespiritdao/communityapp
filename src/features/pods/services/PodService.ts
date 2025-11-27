@@ -15,7 +15,9 @@ export class PodService {
   // Public client for on-chain HAT verification
   private static publicClient = createPublicClient({
     chain: base,
-    transport: http(process.env.NEXT_PUBLIC_RPC_URL || 'https://mainnet.base.org')
+    transport: http(
+      process.env.NEXT_PUBLIC_RPC_URL || 'https://mainnet.base.org',
+    ),
   });
 
   /**
@@ -24,11 +26,11 @@ export class PodService {
   static async getPodById(id: string): Promise<Pod | null> {
     try {
       console.log('🔍 PodService.getPodById: Searching for pod ID:', id);
-      
+
       // Check if user is authenticated for RLS policies
       const session = await getCurrentSession();
       console.log('🔐 PodService authentication status:', !!session?.user?.id);
-      
+
       const { data, error } = await supabase
         .from('pods')
         .select(`
@@ -54,7 +56,10 @@ export class PodService {
       }
 
       console.log('🏦 PodService.getPodById result for', id, ':', data);
-      console.log('🏦 Treasury contract address from DB:', data?.treasury_contract_address);
+      console.log(
+        '🏦 Treasury contract address from DB:',
+        data?.treasury_contract_address,
+      );
 
       return data;
     } catch (error) {
@@ -108,13 +113,13 @@ export class PodService {
   static async listPodLeaders(podId: string): Promise<MemberRef[]> {
     try {
       const pod = await this.getPodById(podId);
-      
+
       if (!pod?.pod_leads) {
         return [];
       }
 
       // Convert string array to MemberRef array
-      return pod.pod_leads.map(wallet => ({ wallet }));
+      return pod.pod_leads.map((wallet) => ({ wallet }));
     } catch (error) {
       console.error(`Failed to fetch pod leaders for ${podId}:`, error);
       throw error;
@@ -125,7 +130,11 @@ export class PodService {
    * Get active members for a pod
    * Falls back to pods table if pod_members table doesn't exist yet
    */
-  static async listPodMembers(podId: string, membershipType?: 'leader' | 'member' | 'admin', currentUserAddress?: string): Promise<MemberRef[]> {
+  static async listPodMembers(
+    podId: string,
+    membershipType?: 'leader' | 'member' | 'admin',
+    currentUserAddress?: string,
+  ): Promise<MemberRef[]> {
     try {
       // First try the new pod_members table structure
       try {
@@ -151,16 +160,18 @@ export class PodService {
         }
 
         // ✅ ISSUE #7 FIX: Return full member data for removal flow
-        return (data || []).map(member => ({
+        return (data || []).map((member) => ({
           wallet: member.wallet,
           id: member.id,
           hat_id: member.hat_id,
           membership_type: member.membership_type,
-          joined_at: member.joined_at
+          joined_at: member.joined_at,
         }));
       } catch (fallbackError) {
-        console.log('🔄 Database empty, falling back to pod leaders from pods table');
-        
+        console.log(
+          '🔄 Database empty, falling back to pod leaders from pods table',
+        );
+
         // Fallback: Get pod leaders from the pods table
         const pod = await this.getPodById(podId);
         if (!pod) {
@@ -169,7 +180,7 @@ export class PodService {
 
         // If requesting leaders specifically or no filter, return pod leaders
         if (!membershipType || membershipType === 'leader') {
-          const leaders = (pod.pod_leads || []).map(wallet => ({ wallet }));
+          const leaders = (pod.pod_leads || []).map((wallet) => ({ wallet }));
           console.log(`📋 Found ${leaders.length} pod leaders as fallback`);
           return leaders;
         }
@@ -177,11 +188,15 @@ export class PodService {
         // For member types, return empty array for now
         // TODO: Implement proper member detection when database is set up
         if (membershipType === 'member') {
-          console.log('⚠️ Pod members table not available. Returning empty members list.');
+          console.log(
+            '⚠️ Pod members table not available. Returning empty members list.',
+          );
           return [];
         }
-        
-        console.log('⚠️ Pod members table exists but is empty. Consider running indexer to populate member data.');
+
+        console.log(
+          '⚠️ Pod members table exists but is empty. Consider running indexer to populate member data.',
+        );
         return [];
       }
     } catch (error) {
@@ -206,13 +221,13 @@ export class PodService {
   static async getUserManagedPods(userAddress: string): Promise<Pod[]> {
     try {
       const allPods = await this.getAllPods();
-      
+
       // Filter pods where user is a leader
       // TODO: In Phase 4, also check HAT ownership for management access
-      const managedPods = allPods.filter(pod => {
+      const managedPods = allPods.filter((pod) => {
         if (!pod.pod_leads) return false;
-        return pod.pod_leads.some(leader => 
-          leader.toLowerCase() === userAddress.toLowerCase()
+        return pod.pod_leads.some(
+          (leader) => leader.toLowerCase() === userAddress.toLowerCase(),
         );
       });
 
@@ -239,7 +254,7 @@ export class PodService {
   }): Promise<{ podId: string; proposalId?: string }> {
     try {
       console.log(`🏗️ Creating new pod: ${podData.name}`);
-      
+
       const { data, error } = await supabase
         .from('pods')
         .insert({
@@ -253,7 +268,7 @@ export class PodService {
           token_type: 'HATS',
           is_active: false,
           management_hat_id: podData.managementHatId || null,
-          membership_hat_id: podData.membershipHatId || null
+          membership_hat_id: podData.membershipHatId || null,
         })
         .select()
         .single();
@@ -269,27 +284,32 @@ export class PodService {
       if (podData.managementHatId && podData.membershipHatId) {
         try {
           console.log(`🎩 Creating role permissions for draft pod: ${data.id}`);
-          
+
           await PodRolePermissionsService.initializeDefaultRoles(
             data.id,
             podData.managementHatId,
             podData.membershipHatId,
-            podData.createdByAddress
+            podData.createdByAddress,
           );
 
           console.log(`✅ Role permissions created for draft pod: ${data.id}`);
         } catch (roleError) {
-          console.error(`⚠️ Failed to create role permissions for draft pod ${data.id}:`, roleError);
+          console.error(
+            `⚠️ Failed to create role permissions for draft pod ${data.id}:`,
+            roleError,
+          );
           // Don't fail pod creation if role permissions fail
           // They can be created later during activation
         }
       } else {
-        console.log(`ℹ️ HAT IDs not provided, role permissions will be created during activation`);
+        console.log(
+          `ℹ️ HAT IDs not provided, role permissions will be created during activation`,
+        );
       }
 
       return {
         podId: data.id,
-        proposalId: undefined // Will be set when governance integration is added
+        proposalId: undefined, // Will be set when governance integration is added
       };
     } catch (error) {
       console.error('Failed to create pod:', podData, error);
@@ -306,7 +326,7 @@ export class PodService {
         .from('pods')
         .update({
           ...updates,
-          updated_at: new Date().toISOString()
+          updated_at: new Date().toISOString(),
         })
         .eq('id', podId)
         .select()
@@ -347,15 +367,17 @@ export class PodService {
         throw error;
       }
 
-      return data || {
-        total_members: 0,
-        leaders_count: 0,
-        members_count: 0,
-        admins_count: 0,
-        last_indexed_at: null,
-        indexed_members: 0,
-        manual_members: 0
-      };
+      return (
+        data || {
+          total_members: 0,
+          leaders_count: 0,
+          members_count: 0,
+          admins_count: 0,
+          last_indexed_at: null,
+          indexed_members: 0,
+          manual_members: 0,
+        }
+      );
     } catch (error) {
       console.error(`Failed to get pod member stats for ${podId}:`, error);
       throw error;
@@ -365,7 +387,10 @@ export class PodService {
   /**
    * Check if a user is a member of a pod
    */
-  static async checkPodMembership(podId: string, walletAddress: string): Promise<{
+  static async checkPodMembership(
+    podId: string,
+    walletAddress: string,
+  ): Promise<{
     is_member: boolean;
     membership_type?: 'leader' | 'member' | 'admin';
     joined_at?: string;
@@ -388,37 +413,50 @@ export class PodService {
         // ⚠️ CRITICAL: Verify on-chain HAT status before granting access
         // Database may be outdated if eligibility criteria changed
         if (data.hat_id) {
-          console.log(`🔍 Verifying on-chain HAT status for ${walletAddress} (HAT: ${data.hat_id})`);
+          console.log(
+            `🔍 Verifying on-chain HAT status for ${walletAddress} (HAT: ${data.hat_id})`,
+          );
 
           try {
             // Use the static public client for on-chain verification
             const balance = await PodService.publicClient.readContract({
               address: '0x3bc1A0Ad72417f2d411118085256fC53CBdDd137', // Hats Protocol address
-              abi: [{
-                name: 'balanceOf',
-                type: 'function',
-                inputs: [
-                  { name: 'wearer', type: 'address' },
-                  { name: 'hatId', type: 'uint256' }
-                ],
-                outputs: [{ name: 'balance', type: 'uint256' }],
-                stateMutability: 'view'
-              }],
+              abi: [
+                {
+                  name: 'balanceOf',
+                  type: 'function',
+                  inputs: [
+                    { name: 'wearer', type: 'address' },
+                    { name: 'hatId', type: 'uint256' },
+                  ],
+                  outputs: [{ name: 'balance', type: 'uint256' }],
+                  stateMutability: 'view',
+                },
+              ],
               functionName: 'balanceOf',
-              args: [walletAddress as `0x${string}`, BigInt(data.hat_id)]
+              args: [walletAddress as `0x${string}`, BigInt(data.hat_id)],
             });
 
-            console.log(`📊 On-chain HAT balance for ${walletAddress}:`, balance);
+            console.log(
+              `📊 On-chain HAT balance for ${walletAddress}:`,
+              balance,
+            );
 
             if (balance === 0n) {
-              console.warn(`⚠️ User ${walletAddress} is in database but does NOT wear HAT ${data.hat_id} on-chain (ineligible)`);
+              console.warn(
+                `⚠️ User ${walletAddress} is in database but does NOT wear HAT ${data.hat_id} on-chain (ineligible)`,
+              );
               return { is_member: false };
             }
 
-            console.log(`✅ On-chain HAT verification passed for ${walletAddress}`);
-
+            console.log(
+              `✅ On-chain HAT verification passed for ${walletAddress}`,
+            );
           } catch (verifyError) {
-            console.error('❌ Failed to verify on-chain HAT status:', verifyError);
+            console.error(
+              '❌ Failed to verify on-chain HAT status:',
+              verifyError,
+            );
             // Continue with database result if verification fails (to avoid breaking existing functionality)
           }
         }
@@ -427,54 +465,74 @@ export class PodService {
           is_member: true,
           membership_type: data.membership_type,
           joined_at: data.joined_at,
-          hat_id: data.hat_id
+          hat_id: data.hat_id,
         };
       }
 
       // Fallback: Check pod leadership directly from pods table
-      console.log(`🔍 Checking pod leadership fallback for ${walletAddress} in pod ${podId}`);
+      console.log(
+        `🔍 Checking pod leadership fallback for ${walletAddress} in pod ${podId}`,
+      );
       const pod = await this.getPodById(podId);
-      
+
       if (pod?.pod_leads) {
-        const isLeader = pod.pod_leads.some(leader => 
-          leader.toLowerCase() === walletAddress.toLowerCase()
+        const isLeader = pod.pod_leads.some(
+          (leader) => leader.toLowerCase() === walletAddress.toLowerCase(),
         );
-        
+
         if (isLeader && pod.management_hat_id) {
-          console.log(`✅ Found leadership access for ${walletAddress} in pod ${podId}`);
+          console.log(
+            `✅ Found leadership access for ${walletAddress} in pod ${podId}`,
+          );
 
           // ⚠️ CRITICAL: Verify on-chain HAT status before granting access
-          console.log(`🔍 Verifying on-chain HAT status for leader (HAT: ${pod.management_hat_id})`);
+          console.log(
+            `🔍 Verifying on-chain HAT status for leader (HAT: ${pod.management_hat_id})`,
+          );
 
           try {
             // Use the static public client for on-chain verification
             const balance = await PodService.publicClient.readContract({
               address: '0x3bc1A0Ad72417f2d411118085256fC53CBdDd137',
-              abi: [{
-                name: 'balanceOf',
-                type: 'function',
-                inputs: [
-                  { name: 'wearer', type: 'address' },
-                  { name: 'hatId', type: 'uint256' }
-                ],
-                outputs: [{ name: 'balance', type: 'uint256' }],
-                stateMutability: 'view'
-              }],
+              abi: [
+                {
+                  name: 'balanceOf',
+                  type: 'function',
+                  inputs: [
+                    { name: 'wearer', type: 'address' },
+                    { name: 'hatId', type: 'uint256' },
+                  ],
+                  outputs: [{ name: 'balance', type: 'uint256' }],
+                  stateMutability: 'view',
+                },
+              ],
               functionName: 'balanceOf',
-              args: [walletAddress as `0x${string}`, BigInt(pod.management_hat_id)]
+              args: [
+                walletAddress as `0x${string}`,
+                BigInt(pod.management_hat_id),
+              ],
             });
 
-            console.log(`📊 On-chain HAT balance for leader ${walletAddress}:`, balance);
+            console.log(
+              `📊 On-chain HAT balance for leader ${walletAddress}:`,
+              balance,
+            );
 
             if (balance === 0n) {
-              console.warn(`⚠️ Leader ${walletAddress} does NOT wear management HAT ${pod.management_hat_id} on-chain (ineligible)`);
+              console.warn(
+                `⚠️ Leader ${walletAddress} does NOT wear management HAT ${pod.management_hat_id} on-chain (ineligible)`,
+              );
               return { is_member: false };
             }
 
-            console.log(`✅ On-chain HAT verification passed for leader ${walletAddress}`);
-
+            console.log(
+              `✅ On-chain HAT verification passed for leader ${walletAddress}`,
+            );
           } catch (verifyError) {
-            console.error('❌ Failed to verify on-chain HAT status for leader:', verifyError);
+            console.error(
+              '❌ Failed to verify on-chain HAT status for leader:',
+              verifyError,
+            );
             // Continue with database result if verification fails
           }
 
@@ -482,16 +540,21 @@ export class PodService {
             is_member: true,
             membership_type: 'leader',
             joined_at: pod.created_at || new Date().toISOString(),
-            hat_id: pod.management_hat_id
+            hat_id: pod.management_hat_id,
           };
         }
       }
 
       // No membership found after all checks
-      console.log(`❌ No membership found for ${walletAddress} in pod ${podId}`);
+      console.log(
+        `❌ No membership found for ${walletAddress} in pod ${podId}`,
+      );
       return { is_member: false };
     } catch (error) {
-      console.error(`Failed to check pod membership for ${walletAddress} in ${podId}:`, error);
+      console.error(
+        `Failed to check pod membership for ${walletAddress} in ${podId}:`,
+        error,
+      );
       throw error;
     }
   }
@@ -499,12 +562,14 @@ export class PodService {
   /**
    * Get all pods a user is a member of
    */
-  static async getUserPodMemberships(walletAddress: string): Promise<Array<{
-    pod_id: string;
-    membership_type: 'leader' | 'member' | 'admin';
-    joined_at: string;
-    hat_id?: string;
-  }>> {
+  static async getUserPodMemberships(walletAddress: string): Promise<
+    Array<{
+      pod_id: string;
+      membership_type: 'leader' | 'member' | 'admin';
+      joined_at: string;
+      hat_id?: string;
+    }>
+  > {
     try {
       const { data, error } = await supabase
         .from('active_pod_members')
@@ -518,7 +583,10 @@ export class PodService {
 
       return data || [];
     } catch (error) {
-      console.error(`Failed to get pod memberships for ${walletAddress}:`, error);
+      console.error(
+        `Failed to get pod memberships for ${walletAddress}:`,
+        error,
+      );
       throw error;
     }
   }

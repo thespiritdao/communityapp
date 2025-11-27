@@ -39,7 +39,9 @@ export default function UserTagging({
 }: UserTaggingProps) {
   const [users, setUsers] = useState<Array<any>>([]);
   const [loading, setLoading] = useState(true);
-  const [previousMentions, setPreviousMentions] = useState<Array<{ id: string; display: string }>>([]);
+  const [previousMentions, setPreviousMentions] = useState<
+    Array<{ id: string; display: string }>
+  >([]);
   const { address } = useAccount();
 
   useEffect(() => {
@@ -49,7 +51,7 @@ export default function UserTagging({
         const { data, error } = await supabase
           .from('user_profiles')
           .select('wallet_address, first_name, last_name, profile_picture');
-        
+
         if (error) {
           console.error('Error fetching users:', error);
         } else {
@@ -68,11 +70,16 @@ export default function UserTagging({
         setLoading(false);
       }
     }
-    
+
     fetchUsers();
   }, []);
 
-  const handleMentionsChange = (event, newValue, newPlainTextValue, mentions) => {
+  const handleMentionsChange = (
+    event,
+    newValue,
+    newPlainTextValue,
+    mentions,
+  ) => {
     onChange?.(newValue);
     onMentionsChange?.(mentions);
     setPreviousMentions(mentions);
@@ -94,7 +101,7 @@ export default function UserTagging({
       contextType,
       contextId,
       proposalId,
-      mentions: currentMentions.map(m => ({ id: m.id, display: m.display }))
+      mentions: currentMentions.map((m) => ({ id: m.id, display: m.display })),
     });
 
     try {
@@ -109,9 +116,11 @@ export default function UserTagging({
               'governance',
               contextId,
               contextUrl,
-              proposalId
+              proposalId,
             );
-            console.log(`✅ Sent governance mention notification to ${mention.display}`);
+            console.log(
+              `✅ Sent governance mention notification to ${mention.display}`,
+            );
           } else {
             // Use unified service for other mentions
             await unifiedNotificationService.createUserMentionNotification(
@@ -119,12 +128,17 @@ export default function UserTagging({
               address,
               contextType,
               contextId,
-              contextUrl
+              contextUrl,
             );
-            console.log(`✅ Sent ${contextType} mention notification to ${mention.display}`);
+            console.log(
+              `✅ Sent ${contextType} mention notification to ${mention.display}`,
+            );
           }
         } catch (error) {
-          console.error(`❌ Failed to send mention notification to ${mention.display}:`, error);
+          console.error(
+            `❌ Failed to send mention notification to ${mention.display}:`,
+            error,
+          );
         }
       }
     } catch (error) {
@@ -141,23 +155,23 @@ export default function UserTagging({
 
   const fetchMentionSuggestions = (query, callback) => {
     console.log('Searching for:', query);
-    
+
     if (loading) {
       console.log('Still loading users...');
       callback([]);
       return;
     }
-    
+
     if (query === '') {
       console.log('Empty query, returning all users');
       callback(users);
       return;
     }
-    
-    const matchingUsers = users.filter(user => 
-      user.display.toLowerCase().includes(query.toLowerCase())
+
+    const matchingUsers = users.filter((user) =>
+      user.display.toLowerCase().includes(query.toLowerCase()),
     );
-    
+
     console.log(`Found ${matchingUsers.length} matches for "${query}"`);
     callback(matchingUsers);
   };
@@ -200,7 +214,9 @@ export default function UserTagging({
         value={value}
         onChange={handleMentionsChange}
         onKeyDown={onKeyDown}
-        placeholder={placeholder || 'Share your message... Use @ to mention someone'}
+        placeholder={
+          placeholder || 'Share your message... Use @ to mention someone'
+        }
         className={className || ''}
         style={mentionsInputStyle}
         allowSuggestionsAboveCursor={true}
@@ -213,11 +229,23 @@ export default function UserTagging({
           appendSpaceOnAdd={true}
           markup="@[__display__](__id__)"
           displayTransform={(id, display) => `@${display}`}
-          renderSuggestion={(suggestion, search, highlightedDisplay, index, focused) => {
+          renderSuggestion={(
+            suggestion,
+            search,
+            highlightedDisplay,
+            index,
+            focused,
+          ) => {
             return (
-              <div className={focused ? styles.focusedSuggestion : styles.suggestion}>
+              <div
+                className={
+                  focused ? styles.focusedSuggestion : styles.suggestion
+                }
+              >
                 <img
-                  src={suggestion.profile_picture || '/observableinfinities.png'}
+                  src={
+                    suggestion.profile_picture || '/observableinfinities.png'
+                  }
                   alt=""
                   className={styles.profilePicture}
                   width={24}
@@ -232,7 +260,9 @@ export default function UserTagging({
           }}
         />
       </MentionsInput>
-      {loading && <div className={styles.loadingIndicator}>Loading users...</div>}
+      {loading && (
+        <div className={styles.loadingIndicator}>Loading users...</div>
+      )}
     </div>
   );
 }

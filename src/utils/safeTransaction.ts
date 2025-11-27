@@ -14,7 +14,10 @@ export async function sendSafeTransaction(to: string, amount: string) {
   try {
     console.log(`🔹 Creating Safe transaction to ${to} for ${amount} wei`);
 
-    const safeService = new SafeApiKit({ txServiceUrl: SAFE_API_URL, ethAdapter: provider });
+    const safeService = new SafeApiKit({
+      txServiceUrl: SAFE_API_URL,
+      ethAdapter: provider,
+    });
 
     const safeTransactionData = {
       to,
@@ -23,11 +26,14 @@ export async function sendSafeTransaction(to: string, amount: string) {
     };
 
     // Submit transaction
-    const response = await axios.post(`${SAFE_API_URL}/api/v1/safes/${SAFE_ADDRESS}/multisig-transactions/`, {
-      ...safeTransactionData,
-      safe: SAFE_ADDRESS,
-      operation: 0, // CALL operation
-    });
+    const response = await axios.post(
+      `${SAFE_API_URL}/api/v1/safes/${SAFE_ADDRESS}/multisig-transactions/`,
+      {
+        ...safeTransactionData,
+        safe: SAFE_ADDRESS,
+        operation: 0, // CALL operation
+      },
+    );
 
     console.log('✅ Safe transaction created:', response.data);
     return response.data;

@@ -26,7 +26,9 @@ export function formatTokenAmount(amount: number): bigint {
 export async function checkETHBalance(address: string): Promise<boolean> {
   try {
     const publicClient = await getPublicClient();
-    const balance = await publicClient.getBalance({ address: address as `0x${string}` });
+    const balance = await publicClient.getBalance({
+      address: address as `0x${string}`,
+    });
     const minRequired = 1000000000000000n; // 0.001 ETH in wei
     return balance >= minRequired;
   } catch (error) {
@@ -41,7 +43,7 @@ export function validatePaymasterConfig(): boolean {
     console.error('Paymaster endpoint not configured');
     return false;
   }
-  
+
   try {
     new URL(paymasterEndpoint);
     return true;
@@ -57,7 +59,7 @@ export async function logWalletState(userAddress: string): Promise<void> {
     const [balance, network, blockNumber] = await Promise.all([
       publicClient.getBalance({ address: userAddress as `0x${string}` }),
       publicClient.getNetwork(),
-      publicClient.getBlockNumber()
+      publicClient.getBlockNumber(),
     ]);
 
     console.log('Wallet State:', {
@@ -66,10 +68,10 @@ export async function logWalletState(userAddress: string): Promise<void> {
       balanceInEth: Number(balance) / 1e18,
       network: {
         chainId: network.chainId,
-        name: network.name
+        name: network.name,
       },
       blockNumber: blockNumber.toString(),
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     });
   } catch (error) {
     console.error('Error logging wallet state:', error);
@@ -81,7 +83,7 @@ export async function logNetworkConditions(): Promise<void> {
     const publicClient = await getPublicClient();
     const [gasPrice, block] = await Promise.all([
       publicClient.getGasPrice(),
-      publicClient.getBlock()
+      publicClient.getBlock(),
     ]);
 
     console.log('Network Conditions:', {
@@ -90,7 +92,7 @@ export async function logNetworkConditions(): Promise<void> {
       blockNumber: block.number.toString(),
       blockTimestamp: new Date(Number(block.timestamp) * 1000).toISOString(),
       baseFeePerGas: block.baseFeePerGas?.toString(),
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     });
   } catch (error) {
     console.error('Error logging network conditions:', error);
@@ -101,14 +103,17 @@ export function logTransactionError(error: unknown): void {
   const timestamp = new Date().toISOString();
   const errorData = {
     timestamp,
-    error: error instanceof Error ? {
-      message: error.message,
-      stack: error.stack,
-      name: error.name
-    } : String(error),
-    type: error instanceof BaseError ? 'BaseError' : 'Unknown'
+    error:
+      error instanceof Error
+        ? {
+            message: error.message,
+            stack: error.stack,
+            name: error.name,
+          }
+        : String(error),
+    type: error instanceof BaseError ? 'BaseError' : 'Unknown',
   };
-  
+
   try {
     const existingLogs = localStorage.getItem(ERROR_LOG_KEY);
     const logs = existingLogs ? JSON.parse(existingLogs) : [];
@@ -118,7 +123,7 @@ export function logTransactionError(error: unknown): void {
   } catch (e) {
     console.error('Failed to store error log:', e);
   }
-  
+
   console.error(`[${timestamp}] Transaction Error:`, errorData);
 }
 
@@ -145,23 +150,26 @@ export function validateTransactionData(data: any): TransactionValidation {
   const validation: TransactionValidation = {
     isValid: false,
     issues: [],
-    data: null
+    data: null,
   };
 
   try {
     const serialized = JSON.stringify(data);
     validation.data = JSON.parse(serialized);
-    
+
     if (!validation.data.address) validation.issues.push('Missing address');
     if (!validation.data.chainId) validation.issues.push('Missing chainId');
     if (!validation.data.calls) validation.issues.push('Missing calls');
-    
+
     if (Array.isArray(validation.data.calls)) {
       validation.data.calls.forEach((call: any, index: number) => {
-        if (!call.address) validation.issues.push(`Call ${index}: Missing address`);
+        if (!call.address)
+          validation.issues.push(`Call ${index}: Missing address`);
         if (!call.abi) validation.issues.push(`Call ${index}: Missing ABI`);
-        if (!call.functionName) validation.issues.push(`Call ${index}: Missing functionName`);
-        if (!Array.isArray(call.args)) validation.issues.push(`Call ${index}: Missing args array`);
+        if (!call.functionName)
+          validation.issues.push(`Call ${index}: Missing functionName`);
+        if (!Array.isArray(call.args))
+          validation.issues.push(`Call ${index}: Missing args array`);
       });
     } else {
       validation.issues.push('Calls is not an array');
@@ -170,7 +178,9 @@ export function validateTransactionData(data: any): TransactionValidation {
     validation.isValid = validation.issues.length === 0;
   } catch (e) {
     validation.isValid = false;
-    validation.issues.push(`Serialization error: ${e instanceof Error ? e.message : String(e)}`);
+    validation.issues.push(
+      `Serialization error: ${e instanceof Error ? e.message : String(e)}`,
+    );
   }
 
   return validation;
@@ -186,29 +196,39 @@ export async function getTransactionConfig(userAddress: string): Promise<{
 
   const hasETH = await checkETHBalance(userAddress);
   const paymasterStatus = validatePaymasterConfig();
-  
+
   console.log('Transaction Configuration Decision:', {
     hasETH,
     paymasterStatus,
     address: userAddress,
     timestamp: new Date().toISOString(),
-    decision: hasETH && !paymasterStatus ? 'non-sponsored' :
-              hasETH && paymasterStatus ? 'sponsored-with-fallback' :
-              !hasETH && paymasterStatus ? 'sponsored-only' :
-              'cannot-proceed'
+    decision:
+      hasETH && !paymasterStatus
+        ? 'non-sponsored'
+        : hasETH && paymasterStatus
+          ? 'sponsored-with-fallback'
+          : !hasETH && paymasterStatus
+            ? 'sponsored-only'
+            : 'cannot-proceed',
   });
 
   return {
     hasETH,
     paymasterStatus,
-    decision: hasETH && !paymasterStatus ? 'non-sponsored' :
-              hasETH && paymasterStatus ? 'sponsored-with-fallback' :
-              !hasETH && paymasterStatus ? 'sponsored-only' :
-              'cannot-proceed'
+    decision:
+      hasETH && !paymasterStatus
+        ? 'non-sponsored'
+        : hasETH && paymasterStatus
+          ? 'sponsored-with-fallback'
+          : !hasETH && paymasterStatus
+            ? 'sponsored-only'
+            : 'cannot-proceed',
   };
 }
 
 export function isCoinbaseWalletError(error: any): boolean {
-  return error?.message?.includes('scanTxTimeout') || 
-         error?.message?.includes('api.wallet.coinbase.com');
+  return (
+    error?.message?.includes('scanTxTimeout') ||
+    error?.message?.includes('api.wallet.coinbase.com')
+  );
 }

@@ -6,14 +6,20 @@ import { getCurrentSession } from '@/features/identity/utils/serverAuth';
 // Your existing HATS configuration
 export const EXISTING_HATS = {
   HATS_CONTRACT: '0x3bc1a0ad72417f2d411118085256fc53cbddd137',
-  EXECUTIVE_POD: '0x0000008800010000000000000000000000000000000000000000000000000000',
+  EXECUTIVE_POD:
+    '0x0000008800010000000000000000000000000000000000000000000000000000',
   DEV_POD: '0x0000008800020000000000000000000000000000000000000000000000000000',
   // Manager roles (permissions, not pods)
-  MARKET_MANAGEMENT: '0x0000008800010000000000000000000000000000000000000000000000000000',
-  BOUNTY_MANAGEMENT: '0x0000008800010001000100000000000000000000000000000000000000000000',
-  FORUM_MANAGEMENT: '0x0000008800010001000400000000000000000000000000000000000000000000',
-  CHAT_MANAGEMENT: '0x0000008800010001000300000000000000000000000000000000000000000000',
-  EVENT_MANAGEMENT: '0x0000008800010001000500000000000000000000000000000000000000000000',
+  MARKET_MANAGEMENT:
+    '0x0000008800010000000000000000000000000000000000000000000000000000',
+  BOUNTY_MANAGEMENT:
+    '0x0000008800010001000100000000000000000000000000000000000000000000',
+  FORUM_MANAGEMENT:
+    '0x0000008800010001000400000000000000000000000000000000000000000000',
+  CHAT_MANAGEMENT:
+    '0x0000008800010001000300000000000000000000000000000000000000000000',
+  EVENT_MANAGEMENT:
+    '0x0000008800010001000500000000000000000000000000000000000000000000',
 };
 
 export interface ExistingPodData {
@@ -35,7 +41,7 @@ export const EXISTING_PODS: ExistingPodData[] = [
     hat_id: EXISTING_HATS.EXECUTIVE_POD,
     parent_hat_id: null, // Root pod
     is_pod: true,
-    treasury_needed: true
+    treasury_needed: true,
   },
   {
     id: 'dev-pod',
@@ -44,49 +50,49 @@ export const EXISTING_PODS: ExistingPodData[] = [
     hat_id: EXISTING_HATS.DEV_POD,
     parent_hat_id: null, // Root pod (sibling to Executive)
     is_pod: true,
-    treasury_needed: true
-  }
+    treasury_needed: true,
+  },
 ];
 
 // HATs Protocol ABI (minimal for what we need)
 const HATS_ABI = [
   {
-    "inputs": [{"internalType": "uint256", "name": "hatId", "type": "uint256"}],
-    "name": "getHatLevel",
-    "outputs": [{"internalType": "uint32", "name": "", "type": "uint32"}],
-    "stateMutability": "view",
-    "type": "function"
+    inputs: [{ internalType: 'uint256', name: 'hatId', type: 'uint256' }],
+    name: 'getHatLevel',
+    outputs: [{ internalType: 'uint32', name: '', type: 'uint32' }],
+    stateMutability: 'view',
+    type: 'function',
   },
   {
-    "inputs": [{"internalType": "uint256", "name": "hatId", "type": "uint256"}],
-    "name": "isActive",
-    "outputs": [{"internalType": "bool", "name": "", "type": "bool"}],
-    "stateMutability": "view",
-    "type": "function"
+    inputs: [{ internalType: 'uint256', name: 'hatId', type: 'uint256' }],
+    name: 'isActive',
+    outputs: [{ internalType: 'bool', name: '', type: 'bool' }],
+    stateMutability: 'view',
+    type: 'function',
   },
   {
-    "inputs": [{"internalType": "uint256", "name": "hatId", "type": "uint256"}],
-    "name": "viewHat",
-    "outputs": [
-      {"internalType": "string", "name": "details", "type": "string"},
-      {"internalType": "uint32", "name": "maxSupply", "type": "uint32"},
-      {"internalType": "uint32", "name": "supply", "type": "uint32"},
-      {"internalType": "address", "name": "eligibility", "type": "address"},
-      {"internalType": "address", "name": "toggle", "type": "address"},
-      {"internalType": "string", "name": "imageURI", "type": "string"},
-      {"internalType": "uint16", "name": "lastHatId", "type": "uint16"},
-      {"internalType": "bool", "name": "mutable", "type": "bool"},
-      {"internalType": "bool", "name": "active", "type": "bool"}
+    inputs: [{ internalType: 'uint256', name: 'hatId', type: 'uint256' }],
+    name: 'viewHat',
+    outputs: [
+      { internalType: 'string', name: 'details', type: 'string' },
+      { internalType: 'uint32', name: 'maxSupply', type: 'uint32' },
+      { internalType: 'uint32', name: 'supply', type: 'uint32' },
+      { internalType: 'address', name: 'eligibility', type: 'address' },
+      { internalType: 'address', name: 'toggle', type: 'address' },
+      { internalType: 'string', name: 'imageURI', type: 'string' },
+      { internalType: 'uint16', name: 'lastHatId', type: 'uint16' },
+      { internalType: 'bool', name: 'mutable', type: 'bool' },
+      { internalType: 'bool', name: 'active', type: 'bool' },
     ],
-    "stateMutability": "view",
-    "type": "function"
-  }
+    stateMutability: 'view',
+    type: 'function',
+  },
 ] as const;
 
 export class HatsMigrationService {
   private static publicClient = createPublicClient({
     chain: base,
-    transport: http()
+    transport: http(),
   });
 
   /**
@@ -126,10 +132,14 @@ export class HatsMigrationService {
   static async importOrphanedHats(creatorAddress: string): Promise<void> {
     try {
       console.log('🔍 Scanning for orphaned HATs...');
-      
+
       // TEMPORARY DISABLE: This is causing app-wide rate limiting
-      console.log('⚠️ HAT scanning temporarily disabled to prevent rate limiting');
-      throw new Error('HAT scanning temporarily disabled to prevent app-wide rate limiting. Please contact support to re-enable with proper RPC limits.');
+      console.log(
+        '⚠️ HAT scanning temporarily disabled to prevent rate limiting',
+      );
+      throw new Error(
+        'HAT scanning temporarily disabled to prevent app-wide rate limiting. Please contact support to re-enable with proper RPC limits.',
+      );
 
       // Get all existing pods from database
       const { data: existingPods } = await supabase
@@ -139,21 +149,23 @@ export class HatsMigrationService {
       console.log('📋 Raw existing pods data:', existingPods);
 
       const existingHatIds = new Set([
-        ...existingPods?.map(p => p.management_hat_id).filter(Boolean) || [],
-        ...existingPods?.map(p => p.token_address).filter(Boolean) || []
+        ...(existingPods?.map((p) => p.management_hat_id).filter(Boolean) ||
+          []),
+        ...(existingPods?.map((p) => p.token_address).filter(Boolean) || []),
       ]);
 
       console.log('📋 Existing HAT IDs in database:', existingHatIds.size);
       console.log('📋 Existing HAT IDs list:', Array.from(existingHatIds));
 
       // Define HAT ID ranges to scan (based on your HAT tree structure)
-      const baseHatId = '0x0000008800000000000000000000000000000000000000000000000000000000';
+      const baseHatId =
+        '0x0000008800000000000000000000000000000000000000000000000000000000';
       const orphanedHats = [];
 
       // Known HATs to check specifically (the ones we found)
       const knownHatsToCheck = [
         '0x0000008800010000000000000000000000000000000000000000000000000000', // Executive Pod
-        '0x0000008800020000000000000000000000000000000000000000000000000000', // Community Pod  
+        '0x0000008800020000000000000000000000000000000000000000000000000000', // Community Pod
         '0x0000008800000000000000000000000000000000000000000000000000000000', // Top HAT
       ];
 
@@ -169,7 +181,7 @@ export class HatsMigrationService {
             address: EXISTING_HATS.HATS_CONTRACT as `0x${string}`,
             abi: HATS_ABI,
             functionName: 'viewHat',
-            args: [BigInt(hatId)]
+            args: [BigInt(hatId)],
           });
 
           if (hatData && hatData[0]) {
@@ -180,28 +192,38 @@ export class HatsMigrationService {
               maxSupply: hatData[1],
               supply: hatData[2],
               active: hatData[8],
-              imageURI: hatData[5]
+              imageURI: hatData[5],
             });
           }
         } catch (error) {
           console.log('❌ Error checking known HAT:', hatId, error);
         }
-        
-        await new Promise(resolve => setTimeout(resolve, 500)); // Wait between requests
+
+        await new Promise((resolve) => setTimeout(resolve, 500)); // Wait between requests
       }
 
       // Then scan for potential child HATs (more limited scan)
       const hatRangesToScan = [
-        { start: '0x000000880001000', prefix: 'Executive Pod children', count: 10 },
-        { start: '0x000000880002000', prefix: 'Community Pod children', count: 10 },
+        {
+          start: '0x000000880001000',
+          prefix: 'Executive Pod children',
+          count: 10,
+        },
+        {
+          start: '0x000000880002000',
+          prefix: 'Community Pod children',
+          count: 10,
+        },
       ];
 
       for (const range of hatRangesToScan) {
         console.log(`🔍 Scanning range: ${range.prefix}...`);
-        
-        for (let i = 1; i <= range.count; i++) { // Limited scan
-          const hatId = `${range.start}${i.toString(16).padStart(48, '0')}` as `0x${string}`;
-          
+
+        for (let i = 1; i <= range.count; i++) {
+          // Limited scan
+          const hatId =
+            `${range.start}${i.toString(16).padStart(48, '0')}` as `0x${string}`;
+
           if (existingHatIds.has(hatId)) {
             console.log('⏭️ HAT already in database:', hatId);
             continue;
@@ -213,36 +235,37 @@ export class HatsMigrationService {
               address: EXISTING_HATS.HATS_CONTRACT as `0x${string}`,
               abi: HATS_ABI,
               functionName: 'viewHat',
-              args: [BigInt(hatId)]
+              args: [BigInt(hatId)],
             });
 
             // If HAT exists and has details, it's an orphaned HAT
-            if (hatData && hatData[0]) { // details field exists
+            if (hatData && hatData[0]) {
+              // details field exists
               console.log('🔍 Found orphaned HAT:', hatId, hatData[0]);
-              
+
               orphanedHats.push({
                 hat_id: hatId,
                 details: hatData[0],
                 maxSupply: hatData[1],
                 supply: hatData[2],
                 active: hatData[8],
-                imageURI: hatData[5]
+                imageURI: hatData[5],
               });
             }
           } catch (error) {
             // If we get rate limited, wait a bit
             if (error instanceof Error && error.message.includes('429')) {
               console.log('⏳ Rate limited, waiting 2 seconds...');
-              await new Promise(resolve => setTimeout(resolve, 2000));
+              await new Promise((resolve) => setTimeout(resolve, 2000));
               i--; // Retry this iteration
               continue;
             }
             // HAT doesn't exist or other error, skip silently
             continue;
           }
-          
+
           // Add small delay between requests to avoid rate limiting
-          await new Promise(resolve => setTimeout(resolve, 100));
+          await new Promise((resolve) => setTimeout(resolve, 100));
         }
       }
 
@@ -268,15 +291,22 @@ export class HatsMigrationService {
   /**
    * Insert orphaned HAT as a pod record
    */
-  private static async insertOrphanedHat(hatData: any, creatorAddress: string): Promise<void> {
+  private static async insertOrphanedHat(
+    hatData: any,
+    creatorAddress: string,
+  ): Promise<void> {
     // Parse HAT details if it's JSON, otherwise use as name
     let name = 'Orphaned HAT';
     let description = 'Discovered orphaned HAT from blockchain scan';
-    
+
     try {
       const details = JSON.parse(hatData.details);
-      name = details.name || details.data?.name || `Orphaned HAT ${hatData.hat_id.slice(-8)}`;
-      description = details.description || details.data?.description || description;
+      name =
+        details.name ||
+        details.data?.name ||
+        `Orphaned HAT ${hatData.hat_id.slice(-8)}`;
+      description =
+        details.description || details.data?.description || description;
     } catch {
       // Details is not JSON, use as name if reasonable length
       if (hatData.details && hatData.details.length < 100) {
@@ -298,7 +328,9 @@ export class HatsMigrationService {
       pod_leads: [creatorAddress],
       accountability_signatures: '{}',
       governance_proposal_id: null,
-      pod_image_url: hatData.imageURI || `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&size=400&background=ff6b6b&color=fff&bold=true`,
+      pod_image_url:
+        hatData.imageURI ||
+        `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&size=400&background=ff6b6b&color=fff&bold=true`,
       pod_metadata: JSON.stringify({
         migrated_from_hats: true,
         migration_date: new Date().toISOString(),
@@ -308,13 +340,11 @@ export class HatsMigrationService {
         original_details: hatData.details,
         max_supply: hatData.maxSupply,
         current_supply: hatData.supply,
-        blockchain_active: hatData.active
-      })
+        blockchain_active: hatData.active,
+      }),
     };
 
-    const { error } = await supabase
-      .from('pods')
-      .insert(podRecord);
+    const { error } = await supabase.from('pods').insert(podRecord);
 
     if (error) {
       throw error;
@@ -343,14 +373,14 @@ export class HatsMigrationService {
       const currentMetadata = currentPod?.pod_metadata || {};
       const updatedMetadata = {
         ...currentMetadata,
-        deactivated_at: new Date().toISOString()
+        deactivated_at: new Date().toISOString(),
       };
 
       const { error } = await supabase
         .from('pods')
-        .update({ 
+        .update({
           status: 'inactive',
-          pod_metadata: updatedMetadata
+          pod_metadata: updatedMetadata,
         })
         .eq('id', podId);
 
@@ -387,14 +417,14 @@ export class HatsMigrationService {
       const currentMetadata = currentPod?.pod_metadata || {};
       const updatedMetadata = {
         ...currentMetadata,
-        reactivated_at: new Date().toISOString()
+        reactivated_at: new Date().toISOString(),
       };
 
       const { error } = await supabase
         .from('pods')
-        .update({ 
+        .update({
           status: 'active',
-          pod_metadata: updatedMetadata
+          pod_metadata: updatedMetadata,
         })
         .eq('id', podId);
 
@@ -439,7 +469,10 @@ export class HatsMigrationService {
       .select('*')
       .limit(1);
 
-    console.log('📋 Available pods table columns:', Object.keys(tableInfo?.[0] || {}));
+    console.log(
+      '📋 Available pods table columns:',
+      Object.keys(tableInfo?.[0] || {}),
+    );
 
     // Insert new pod record with only the columns that exist
     const podRecord: any = {
@@ -463,8 +496,8 @@ export class HatsMigrationService {
         migration_date: new Date().toISOString(),
         hat_id: podData.hat_id,
         is_existing_hat: true,
-        pod_type: podData.id === 'executive-pod' ? 'executive' : 'development'
-      })
+        pod_type: podData.id === 'executive-pod' ? 'executive' : 'development',
+      }),
     };
 
     // Only add created_at if it doesn't exist as a default
@@ -472,9 +505,7 @@ export class HatsMigrationService {
       podRecord.created_at = new Date().toISOString();
     }
 
-    const { error } = await supabase
-      .from('pods')
-      .insert(podRecord);
+    const { error } = await supabase.from('pods').insert(podRecord);
 
     if (error) {
       console.error(`Failed to insert ${podData.name}:`, error);
@@ -485,7 +516,9 @@ export class HatsMigrationService {
   /**
    * Deploy treasury contracts for existing pods
    */
-  static async deployTreasuriesForExistingPods(): Promise<{ [podId: string]: string }> {
+  static async deployTreasuriesForExistingPods(): Promise<{
+    [podId: string]: string;
+  }> {
     const treasuryAddresses: { [podId: string]: string } = {};
 
     console.log('🏦 Starting treasury deployment for existing pods...');
@@ -495,8 +528,10 @@ export class HatsMigrationService {
         console.log(`📝 Ready to deploy treasury for ${podData.name}`);
         console.log(`   - Pod ID: ${podData.id}`);
         console.log(`   - HAT ID: ${podData.hat_id}`);
-        console.log(`   - You'll need to call PodCreationManager.activatePod("${podData.id}") to deploy treasury`);
-        
+        console.log(
+          `   - You'll need to call PodCreationManager.activatePod("${podData.id}") to deploy treasury`,
+        );
+
         // For now, just log what needs to be done
         // In a real deployment, you'd call your PodCreationManager contract here
         treasuryAddresses[podData.id] = 'PENDING_DEPLOYMENT';
@@ -509,11 +544,15 @@ export class HatsMigrationService {
   /**
    * Update pod creation form to use proper HAT IDs
    */
-  static getParentHatOptions(): Array<{ id: string; name: string; hat_id: string }> {
-    return EXISTING_PODS.map(pod => ({
+  static getParentHatOptions(): Array<{
+    id: string;
+    name: string;
+    hat_id: string;
+  }> {
+    return EXISTING_PODS.map((pod) => ({
       id: pod.id,
       name: pod.name,
-      hat_id: pod.hat_id
+      hat_id: pod.hat_id,
     }));
   }
 
@@ -521,25 +560,30 @@ export class HatsMigrationService {
    * Validate if a HAT ID corresponds to an actual pod (vs manager role)
    */
   static isPodHat(hatId: string): boolean {
-    return EXISTING_PODS.some(pod => pod.hat_id === hatId && pod.is_pod);
+    return EXISTING_PODS.some((pod) => pod.hat_id === hatId && pod.is_pod);
   }
 
   /**
    * Get pod information by HAT ID
    */
   static getPodByHatId(hatId: string): ExistingPodData | undefined {
-    return EXISTING_PODS.find(pod => pod.hat_id === hatId);
+    return EXISTING_PODS.find((pod) => pod.hat_id === hatId);
   }
 
   /**
    * Check if user has permission to create sub-pods under a parent
    */
-  static async canCreateSubPod(userAddress: string, parentHatId: string): Promise<boolean> {
+  static async canCreateSubPod(
+    userAddress: string,
+    parentHatId: string,
+  ): Promise<boolean> {
     try {
       // For now, check if user has the parent pod's HAT
       // In production, you'd query the HATS contract
-      console.log(`🔍 Checking if ${userAddress} can create sub-pod under ${parentHatId}`);
-      
+      console.log(
+        `🔍 Checking if ${userAddress} can create sub-pod under ${parentHatId}`,
+      );
+
       // TODO: Query HATS contract to check if user wears the parent HAT
       // const hasHat = await this.publicClient.readContract({
       //   address: EXISTING_HATS.HATS_CONTRACT as `0x${string}`,
@@ -547,7 +591,7 @@ export class HatsMigrationService {
       //   functionName: 'balanceOf',
       //   args: [userAddress, parentHatId]
       // });
-      
+
       // For now, return true for testing
       return true;
     } catch (error) {

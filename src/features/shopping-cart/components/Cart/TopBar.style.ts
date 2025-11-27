@@ -1,5 +1,5 @@
 // src/components/TopBar.style.ts
-import styled from "styled-components";
+import styled from 'styled-components';
 
 export const TopBarContainer = styled.div`
   display: flex;
@@ -55,10 +55,6 @@ export const SelfBalances = styled.div`
     flex: 0 0 auto;
   }
 `;
-
-
-
-
 
 export const CartToggleButton = styled.button`
   background: none;

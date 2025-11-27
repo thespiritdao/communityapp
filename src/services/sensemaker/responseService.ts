@@ -5,11 +5,11 @@ import Anthropic from '@anthropic-ai/sdk';
 import { RelevantContext } from './pineconeService';
 
 const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY!
+  apiKey: process.env.OPENAI_API_KEY!,
 });
 
 const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY!
+  apiKey: process.env.ANTHROPIC_API_KEY!,
 });
 
 /**
@@ -90,22 +90,35 @@ export async function generateResponse(
   userMessage: string,
   contexts: RelevantContext[],
   queryType: 'spiritdao' | 'temporal-naturalism',
-  conversationHistory: Array<{ role: 'user' | 'assistant'; content: string }> = []
+  conversationHistory: Array<{
+    role: 'user' | 'assistant';
+    content: string;
+  }> = [],
 ): Promise<string> {
   // Build context string from Pinecone results
-  const contextString = contexts.length > 0
-    ? contexts
-        .map((ctx, idx) => `[Context ${idx + 1}] (Relevance: ${(ctx.score * 100).toFixed(1)}%)\n${ctx.content}`)
-        .join('\n\n---\n\n')
-    : 'No specific context available from knowledge base.';
+  const contextString =
+    contexts.length > 0
+      ? contexts
+          .map(
+            (ctx, idx) =>
+              `[Context ${idx + 1}] (Relevance: ${(ctx.score * 100).toFixed(1)}%)\n${ctx.content}`,
+          )
+          .join('\n\n---\n\n')
+      : 'No specific context available from knowledge base.';
 
-  console.log(`[Response] Generating ${queryType} response with ${contexts.length} context chunks`);
+  console.log(
+    `[Response] Generating ${queryType} response with ${contexts.length} context chunks`,
+  );
 
   // Route to appropriate model
   if (queryType === 'spiritdao') {
     return generateDAOResponse(userMessage, contextString, conversationHistory);
   } else {
-    return generatePhilosophyResponse(userMessage, contextString, conversationHistory);
+    return generatePhilosophyResponse(
+      userMessage,
+      contextString,
+      conversationHistory,
+    );
   }
 }
 
@@ -116,18 +129,21 @@ export async function generateResponse(
 async function generateDAOResponse(
   userMessage: string,
   contextString: string,
-  conversationHistory: Array<{ role: 'user' | 'assistant'; content: string }>
+  conversationHistory: Array<{ role: 'user' | 'assistant'; content: string }>,
 ): Promise<string> {
   try {
-    const messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }> = [
+    const messages: Array<{
+      role: 'system' | 'user' | 'assistant';
+      content: string;
+    }> = [
       {
         role: 'system',
-        content: SPIRITDAO_SYSTEM_PROMPT
+        content: SPIRITDAO_SYSTEM_PROMPT,
       },
       {
         role: 'system',
-        content: `Here is relevant context from our documentation:\n\n${contextString}`
-      }
+        content: `Here is relevant context from our documentation:\n\n${contextString}`,
+      },
     ];
 
     // Add conversation history (last 6 messages = 3 exchanges)
@@ -138,7 +154,7 @@ async function generateDAOResponse(
     // Add current user message
     messages.push({
       role: 'user',
-      content: userMessage
+      content: userMessage,
     });
 
     console.log('[Response] Calling GPT-4o-mini for DAO support');
@@ -147,7 +163,7 @@ async function generateDAOResponse(
       model: 'gpt-4o-mini',
       messages,
       temperature: 0.7,
-      max_tokens: 800
+      max_tokens: 800,
     });
 
     const response = completion.choices[0]?.message?.content;
@@ -159,17 +175,16 @@ async function generateDAOResponse(
 
     console.log('[Response] GPT-4o-mini response generated successfully');
     return response;
-
   } catch (error: any) {
     console.error('[Response] Error generating DAO response:', error);
 
     // Provide more helpful error messages
     if (error.message?.includes('429')) {
-      return 'I apologize, but I\'m currently experiencing high demand. Please wait a moment and try again.';
+      return "I apologize, but I'm currently experiencing high demand. Please wait a moment and try again.";
     }
 
     if (error.message?.includes('API key')) {
-      return 'I apologize, but there\'s a configuration issue. Please contact support.';
+      return "I apologize, but there's a configuration issue. Please contact support.";
     }
 
     return 'I apologize, but I encountered an error processing your SpiritDAO question. Please try rephrasing, or contact support if this issue persists.';
@@ -183,7 +198,7 @@ async function generateDAOResponse(
 async function generatePhilosophyResponse(
   userMessage: string,
   contextString: string,
-  conversationHistory: Array<{ role: 'user' | 'assistant'; content: string }>
+  conversationHistory: Array<{ role: 'user' | 'assistant'; content: string }>,
 ): Promise<string> {
   try {
     // Build system prompt with context
@@ -196,7 +211,10 @@ ${contextString}
 Use this context to inform your responses. Cite specific sources when referencing ideas from the knowledge base.`;
 
     // Convert conversation history to Claude format
-    const claudeMessages: Array<{ role: 'user' | 'assistant'; content: string }> = [];
+    const claudeMessages: Array<{
+      role: 'user' | 'assistant';
+      content: string;
+    }> = [];
 
     // Add conversation history
     if (conversationHistory.length > 0) {
@@ -206,7 +224,7 @@ Use this context to inform your responses. Cite specific sources when referencin
     // Add current message
     claudeMessages.push({
       role: 'user',
-      content: userMessage
+      content: userMessage,
     });
 
     console.log('[Response] Calling Claude Sonnet 4.5 for Temporal Naturalism');
@@ -216,11 +234,11 @@ Use this context to inform your responses. Cite specific sources when referencin
       max_tokens: 2000,
       temperature: 0.7,
       system: systemPrompt,
-      messages: claudeMessages
+      messages: claudeMessages,
     });
 
     // Extract text from response
-    const textContent = message.content.find(block => block.type === 'text');
+    const textContent = message.content.find((block) => block.type === 'text');
 
     if (!textContent || !('text' in textContent)) {
       console.error('[Response] No text content in Claude response');
@@ -229,24 +247,26 @@ Use this context to inform your responses. Cite specific sources when referencin
 
     console.log('[Response] Claude 3.5 Sonnet response generated successfully');
     return textContent.text;
-
   } catch (error: any) {
     console.error('[Response] Error generating philosophy response:', error);
     console.error('[Response] Error details:', {
       message: error.message,
       type: error.type,
       status: error.status,
-      code: error.code
+      code: error.code,
     });
 
     // Provide more helpful error messages
     if (error.message?.includes('429')) {
-      return 'I apologize, but I\'m currently experiencing high demand. Please wait a moment and try again.';
+      return "I apologize, but I'm currently experiencing high demand. Please wait a moment and try again.";
     }
 
-    if (error.message?.includes('API key') || error.message?.includes('authentication')) {
+    if (
+      error.message?.includes('API key') ||
+      error.message?.includes('authentication')
+    ) {
       console.error('[Response] API key issue detected');
-      return 'I apologize, but there\'s an authentication issue. Please contact support.';
+      return "I apologize, but there's an authentication issue. Please contact support.";
     }
 
     // In development, show actual error

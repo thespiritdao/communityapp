@@ -30,7 +30,7 @@ import { useHatPermissions } from './useHatPermissions';
  */
 export function useGovernancePermission(
   podId?: string | null,
-  context?: string
+  context?: string,
 ) {
   const { userRoles, isLoading } = useHatPermissions();
 
@@ -40,7 +40,9 @@ export function useGovernancePermission(
 
   const result = useMemo(() => {
     if (!targetPodId) {
-      console.warn('⚠️ No pod ID provided and NEXT_PUBLIC_GOVERNANCE_POD_ID not configured');
+      console.warn(
+        '⚠️ No pod ID provided and NEXT_PUBLIC_GOVERNANCE_POD_ID not configured',
+      );
       return {
         canParticipate: false,
         canCreateProposal: false,
@@ -48,7 +50,7 @@ export function useGovernancePermission(
         governancePodId: null,
         governanceRole: null,
         isLoading: false,
-        error: 'No governance pod specified'
+        error: 'No governance pod specified',
       };
     }
 
@@ -60,15 +62,17 @@ export function useGovernancePermission(
         governancePodId: targetPodId,
         governanceRole: null,
         isLoading: true,
-        error: null
+        error: null,
       };
     }
 
     // Find user's role in the target pod
-    const governanceRole = userRoles.find(role => role.podId === targetPodId);
+    const governanceRole = userRoles.find((role) => role.podId === targetPodId);
 
     if (!governanceRole) {
-      console.log(`ℹ️ User is not a member of pod ${targetPodId}${context ? ` (${context})` : ''}`);
+      console.log(
+        `ℹ️ User is not a member of pod ${targetPodId}${context ? ` (${context})` : ''}`,
+      );
       return {
         canParticipate: false,
         canCreateProposal: false,
@@ -76,19 +80,20 @@ export function useGovernancePermission(
         governancePodId: targetPodId,
         governanceRole: null,
         isLoading: false,
-        error: null
+        error: null,
       };
     }
 
     // Check governanceParticipation permission
-    const hasPermission = governanceRole.permissions?.governanceParticipation === true;
+    const hasPermission =
+      governanceRole.permissions?.governanceParticipation === true;
 
     console.log('🏛️ Governance Permission Check:', {
       context: context || 'default',
       governancePodId: targetPodId,
       roleName: governanceRole.roleName,
       hasPermission,
-      allPermissions: Object.keys(governanceRole.permissions || {})
+      allPermissions: Object.keys(governanceRole.permissions || {}),
     });
 
     return {
@@ -98,7 +103,7 @@ export function useGovernancePermission(
       governancePodId: targetPodId,
       governanceRole,
       isLoading: false,
-      error: null
+      error: null,
     };
   }, [userRoles, isLoading, targetPodId, context]);
 
@@ -121,7 +126,7 @@ export function useIsGovernanceMember(): boolean {
       return false;
     }
 
-    return userRoles.some(role => role.podId === governancePodId);
+    return userRoles.some((role) => role.podId === governancePodId);
   }, [userRoles, governancePodId]);
 }
 
@@ -140,7 +145,9 @@ export function useIsGovernanceLeader(): boolean {
       return false;
     }
 
-    const governanceRole = userRoles.find(role => role.podId === governancePodId);
+    const governanceRole = userRoles.find(
+      (role) => role.podId === governancePodId,
+    );
     return governanceRole?.isLeaderRole === true;
   }, [userRoles, governancePodId]);
 }

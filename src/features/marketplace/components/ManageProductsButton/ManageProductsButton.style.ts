@@ -1,5 +1,5 @@
 // src/features/marketplace/components/ManageProductsButton/ManageProductsButton.style.ts
-import styled from "styled-components";
+import styled from 'styled-components';
 
 export const ManageProductsButton = styled.button`
   display: inline-flex;

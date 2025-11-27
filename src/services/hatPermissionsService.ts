@@ -9,56 +9,52 @@ const HATS_ABI = [
     type: 'function',
     inputs: [
       { name: 'account', type: 'address' },
-      { name: 'hatId', type: 'uint256' }
+      { name: 'hatId', type: 'uint256' },
     ],
     outputs: [{ name: '', type: 'uint256' }],
-    stateMutability: 'view'
+    stateMutability: 'view',
   },
   {
     name: 'isWearerOfHat',
     type: 'function',
     inputs: [
       { name: 'user', type: 'address' },
-      { name: 'hatId', type: 'uint256' }
+      { name: 'hatId', type: 'uint256' },
     ],
     outputs: [{ name: 'isWearer', type: 'bool' }],
-    stateMutability: 'view'
+    stateMutability: 'view',
   },
   {
     name: 'getHatLevel',
     type: 'function',
-    inputs: [
-      { name: 'hatId', type: 'uint256' }
-    ],
+    inputs: [{ name: 'hatId', type: 'uint256' }],
     outputs: [{ name: 'level', type: 'uint32' }],
-    stateMutability: 'view'
+    stateMutability: 'view',
   },
   {
     name: 'changeHatDetails',
     type: 'function',
     inputs: [
       { name: '_hatId', type: 'uint256' },
-      { name: '_newDetails', type: 'string' }
+      { name: '_newDetails', type: 'string' },
     ],
     outputs: [],
-    stateMutability: 'nonpayable'
+    stateMutability: 'nonpayable',
   },
   {
     name: 'changeHatImageURI',
-    type: 'function', 
+    type: 'function',
     inputs: [
       { name: '_hatId', type: 'uint256' },
-      { name: '_newImageURI', type: 'string' }
+      { name: '_newImageURI', type: 'string' },
     ],
     outputs: [],
-    stateMutability: 'nonpayable'
+    stateMutability: 'nonpayable',
   },
   {
     name: 'viewHat',
     type: 'function',
-    inputs: [
-      { name: '_hatId', type: 'uint256' }
-    ],
+    inputs: [{ name: '_hatId', type: 'uint256' }],
     outputs: [
       { name: 'details', type: 'string' },
       { name: 'maxSupply', type: 'uint32' },
@@ -68,26 +64,24 @@ const HATS_ABI = [
       { name: 'imageURI', type: 'string' },
       { name: 'lastHatId', type: 'uint16' },
       { name: 'mutable', type: 'bool' },
-      { name: 'active', type: 'bool' }
+      { name: 'active', type: 'bool' },
     ],
-    stateMutability: 'view'
+    stateMutability: 'view',
   },
   {
     name: 'isActive',
     type: 'function',
-    inputs: [
-      { name: 'hatId', type: 'uint256' }
-    ],
+    inputs: [{ name: 'hatId', type: 'uint256' }],
     outputs: [{ name: 'active', type: 'bool' }],
-    stateMutability: 'view'
-  }
+    stateMutability: 'view',
+  },
 ] as const;
 
 // Permission types
 export interface HatPermissions {
   chatAccess: boolean;
-  chatModeration: boolean;       // 🆕 Chat moderation (delete, mute, pin)
-  forumAccess: boolean;           // 🆕 Forum viewing/posting access
+  chatModeration: boolean; // 🆕 Chat moderation (delete, mute, pin)
+  forumAccess: boolean; // 🆕 Forum viewing/posting access
   forumModeration: boolean;
   governanceParticipation: boolean;
   eventCreation: boolean;
@@ -128,7 +122,7 @@ export const HAT_ROLES: Record<string, HatRole> = {
       forumModeration: true,
       bountyManagement: true,
       marketplaceAccess: true,
-    }
+    },
   },
   EXECUTIVE_MEMBER: {
     hatId: process.env.NEXT_PUBLIC_EXECUTIVE_POD_MEMBER || '',
@@ -147,7 +141,7 @@ export const HAT_ROLES: Record<string, HatRole> = {
       forumModeration: false,
       bountyManagement: false,
       marketplaceAccess: true,
-    }
+    },
   },
   DEV_LEADER: {
     hatId: process.env.NEXT_PUBLIC_DEV_POD_LEADER || '',
@@ -166,7 +160,7 @@ export const HAT_ROLES: Record<string, HatRole> = {
       forumModeration: false,
       bountyManagement: true,
       marketplaceAccess: true,
-    }
+    },
   },
   DEV_MEMBER: {
     hatId: process.env.NEXT_PUBLIC_DEV_POD_MEMBER || '',
@@ -185,7 +179,7 @@ export const HAT_ROLES: Record<string, HatRole> = {
       forumModeration: false,
       bountyManagement: false,
       marketplaceAccess: true,
-    }
+    },
   },
   // Legacy management roles (maintained for compatibility)
   MARKET_MANAGER: {
@@ -204,7 +198,7 @@ export const HAT_ROLES: Record<string, HatRole> = {
       forumModeration: false,
       bountyManagement: false,
       marketplaceAccess: true,
-    }
+    },
   },
   BOUNTY_MANAGER: {
     hatId: process.env.NEXT_PUBLIC_BOUNTY_MANAGEMENT || '',
@@ -222,7 +216,7 @@ export const HAT_ROLES: Record<string, HatRole> = {
       forumModeration: false,
       bountyManagement: true,
       marketplaceAccess: false,
-    }
+    },
   },
   FORUM_MANAGER: {
     hatId: process.env.NEXT_PUBLIC_FORUM_MANAGEMENT || '',
@@ -240,7 +234,7 @@ export const HAT_ROLES: Record<string, HatRole> = {
       forumModeration: true,
       bountyManagement: false,
       marketplaceAccess: false,
-    }
+    },
   },
   CHAT_MANAGER: {
     hatId: process.env.NEXT_PUBLIC_CHAT_MANAGEMENT || '',
@@ -258,7 +252,7 @@ export const HAT_ROLES: Record<string, HatRole> = {
       forumModeration: false,
       bountyManagement: false,
       marketplaceAccess: false,
-    }
+    },
   },
   EVENT_MANAGER: {
     hatId: process.env.NEXT_PUBLIC_EVENT_MANAGEMENT || '',
@@ -276,8 +270,8 @@ export const HAT_ROLES: Record<string, HatRole> = {
       forumModeration: false,
       bountyManagement: false,
       marketplaceAccess: false,
-    }
-  }
+    },
+  },
 };
 
 /**
@@ -287,17 +281,24 @@ export const HAT_ROLES: Record<string, HatRole> = {
 export class HatPermissionsService {
   private publicClient: PublicClient;
   private hatsContractAddress: `0x${string}`;
-  
+
   // Aggressive caching to prevent rate limiting
-  private hatBalanceCache = new Map<string, { balance: boolean; timestamp: number }>();
-  private hatStatusCache = new Map<string, { active: boolean; timestamp: number }>();
+  private hatBalanceCache = new Map<
+    string,
+    { balance: boolean; timestamp: number }
+  >();
+  private hatStatusCache = new Map<
+    string,
+    { active: boolean; timestamp: number }
+  >();
   private readonly CACHE_DURATION = 5 * 60 * 1000; // 5 minutes cache
   private readonly MAX_CACHE_SIZE = 1000; // Prevent memory leaks
 
   constructor(publicClient: PublicClient) {
     this.publicClient = publicClient;
-    this.hatsContractAddress = (process.env.NEXT_PUBLIC_HATS_CONTRACT || '') as `0x${string}`;
-    
+    this.hatsContractAddress = (process.env.NEXT_PUBLIC_HATS_CONTRACT ||
+      '') as `0x${string}`;
+
     if (!this.hatsContractAddress) {
       throw new Error('HATS contract address not configured');
     }
@@ -309,9 +310,9 @@ export class HatPermissionsService {
   async hasHat(userAddress: string, hatId: string): Promise<boolean> {
     const cacheKey = `${userAddress}-${hatId}`;
     const cached = this.hatBalanceCache.get(cacheKey);
-    
+
     // Return cached result if still valid
-    if (cached && (Date.now() - cached.timestamp) < this.CACHE_DURATION) {
+    if (cached && Date.now() - cached.timestamp < this.CACHE_DURATION) {
       return cached.balance;
     }
 
@@ -320,17 +321,17 @@ export class HatPermissionsService {
         address: this.hatsContractAddress,
         abi: HATS_ABI,
         functionName: 'balanceOf',
-        args: [userAddress as `0x${string}`, BigInt(hatId)]
+        args: [userAddress as `0x${string}`, BigInt(hatId)],
       });
 
       const hasBalance = Number(balance) > 0;
-      
+
       // Cache the result
       this.hatBalanceCache.set(cacheKey, {
         balance: hasBalance,
-        timestamp: Date.now()
+        timestamp: Date.now(),
       });
-      
+
       // Cleanup cache periodically (every 100 calls)
       if (this.hatBalanceCache.size % 100 === 0) {
         this.cleanupCache();
@@ -342,7 +343,7 @@ export class HatPermissionsService {
       // Cache negative result for shorter time to allow retry
       this.hatBalanceCache.set(cacheKey, {
         balance: false,
-        timestamp: Date.now() - this.CACHE_DURATION + 30000 // 30 second retry
+        timestamp: Date.now() - this.CACHE_DURATION + 30000, // 30 second retry
       });
       return false;
     }
@@ -353,14 +354,14 @@ export class HatPermissionsService {
    */
   async getUserHats(userAddress: string): Promise<string[]> {
     const userHats: string[] = [];
-    
+
     // Check all configured HAT roles
     for (const role of Object.values(HAT_ROLES)) {
-      if (role.hatId && await this.hasHat(userAddress, role.hatId)) {
+      if (role.hatId && (await this.hasHat(userAddress, role.hatId))) {
         userHats.push(role.hatId);
       }
     }
-    
+
     return userHats;
   }
 
@@ -369,13 +370,13 @@ export class HatPermissionsService {
    */
   async getUserRoles(userAddress: string): Promise<HatRole[]> {
     const userRoles: HatRole[] = [];
-    
+
     for (const role of Object.values(HAT_ROLES)) {
-      if (role.hatId && await this.hasHat(userAddress, role.hatId)) {
+      if (role.hatId && (await this.hasHat(userAddress, role.hatId))) {
         userRoles.push(role);
       }
     }
-    
+
     return userRoles;
   }
 
@@ -384,7 +385,7 @@ export class HatPermissionsService {
    */
   async getUserPermissions(userAddress: string): Promise<HatPermissions> {
     const userRoles = await this.getUserRoles(userAddress);
-    
+
     // Start with no permissions
     const permissions: HatPermissions = {
       chatAccess: false,
@@ -404,7 +405,8 @@ export class HatPermissionsService {
     for (const role of userRoles) {
       Object.keys(permissions).forEach((key) => {
         const permKey = key as keyof HatPermissions;
-        permissions[permKey] = permissions[permKey] || role.permissions[permKey];
+        permissions[permKey] =
+          permissions[permKey] || role.permissions[permKey];
       });
     }
 
@@ -414,7 +416,10 @@ export class HatPermissionsService {
   /**
    * Check if user has a specific permission
    */
-  async hasPermission(userAddress: string, permission: keyof HatPermissions): Promise<boolean> {
+  async hasPermission(
+    userAddress: string,
+    permission: keyof HatPermissions,
+  ): Promise<boolean> {
     const permissions = await this.getUserPermissions(userAddress);
     return permissions[permission];
   }
@@ -422,7 +427,10 @@ export class HatPermissionsService {
   /**
    * Check if user can access chat
    */
-  async canAccessChat(userAddress: string, chatGroupId?: string): Promise<boolean> {
+  async canAccessChat(
+    userAddress: string,
+    chatGroupId?: string,
+  ): Promise<boolean> {
     return await this.hasPermission(userAddress, 'chatAccess');
   }
 
@@ -450,14 +458,20 @@ export class HatPermissionsService {
   /**
    * Check if user can manage pod members
    */
-  async canManageMembers(userAddress: string, podId?: string): Promise<boolean> {
+  async canManageMembers(
+    userAddress: string,
+    podId?: string,
+  ): Promise<boolean> {
     return await this.hasPermission(userAddress, 'memberManagement');
   }
 
   /**
    * Check if user can create sub-pods
    */
-  async canCreateSubPods(userAddress: string, parentPodId?: string): Promise<boolean> {
+  async canCreateSubPods(
+    userAddress: string,
+    parentPodId?: string,
+  ): Promise<boolean> {
     return await this.hasPermission(userAddress, 'subPodCreation');
   }
 
@@ -466,7 +480,7 @@ export class HatPermissionsService {
    */
   async isPodLeader(userAddress: string): Promise<boolean> {
     const roles = await this.getUserRoles(userAddress);
-    return roles.some(role => role.isLeaderRole);
+    return roles.some((role) => role.isLeaderRole);
   }
 
   /**
@@ -475,13 +489,17 @@ export class HatPermissionsService {
   async getManagedPods(userAddress: string): Promise<string[]> {
     const roles = await this.getUserRoles(userAddress);
     const managedPods: string[] = [];
-    
+
     for (const role of roles) {
-      if (role.isLeaderRole && role.podId && !managedPods.includes(role.podId)) {
+      if (
+        role.isLeaderRole &&
+        role.podId &&
+        !managedPods.includes(role.podId)
+      ) {
         managedPods.push(role.podId);
       }
     }
-    
+
     return managedPods;
   }
 
@@ -490,9 +508,9 @@ export class HatPermissionsService {
    */
   async isHatActive(hatId: string): Promise<boolean> {
     const cached = this.hatStatusCache.get(hatId);
-    
+
     // Return cached result if still valid
-    if (cached && (Date.now() - cached.timestamp) < this.CACHE_DURATION) {
+    if (cached && Date.now() - cached.timestamp < this.CACHE_DURATION) {
       return cached.active;
     }
 
@@ -501,13 +519,13 @@ export class HatPermissionsService {
         address: this.hatsContractAddress,
         abi: HATS_ABI,
         functionName: 'isActive',
-        args: [BigInt(hatId)]
+        args: [BigInt(hatId)],
       });
 
       // Cache the result
       this.hatStatusCache.set(hatId, {
         active: isActive,
-        timestamp: Date.now()
+        timestamp: Date.now(),
       });
 
       return isActive;
@@ -516,7 +534,7 @@ export class HatPermissionsService {
       // Cache negative result for shorter time
       this.hatStatusCache.set(hatId, {
         active: false,
-        timestamp: Date.now() - this.CACHE_DURATION + 30000
+        timestamp: Date.now() - this.CACHE_DURATION + 30000,
       });
       return false;
     }
@@ -531,7 +549,7 @@ export class HatPermissionsService {
         address: this.hatsContractAddress,
         abi: HATS_ABI,
         functionName: 'getHatLevel',
-        args: [BigInt(hatId)]
+        args: [BigInt(hatId)],
       });
 
       return Number(level);
@@ -544,17 +562,20 @@ export class HatPermissionsService {
   /**
    * Batch check multiple HATs for a user
    */
-  async batchCheckHats(userAddress: string, hatIds: string[]): Promise<Record<string, boolean>> {
+  async batchCheckHats(
+    userAddress: string,
+    hatIds: string[],
+  ): Promise<Record<string, boolean>> {
     const results: Record<string, boolean> = {};
-    
+
     // Execute all checks in parallel for efficiency
     const checks = hatIds.map(async (hatId) => {
       const hasHat = await this.hasHat(userAddress, hatId);
       results[hatId] = hasHat;
     });
-    
+
     await Promise.all(checks);
-    
+
     return results;
   }
 
@@ -563,26 +584,27 @@ export class HatPermissionsService {
    */
   private cleanupCache(): void {
     const now = Date.now();
-    
+
     // Clean balance cache
     for (const [key, value] of this.hatBalanceCache.entries()) {
       if (now - value.timestamp > this.CACHE_DURATION) {
         this.hatBalanceCache.delete(key);
       }
     }
-    
+
     // Clean status cache
     for (const [key, value] of this.hatStatusCache.entries()) {
       if (now - value.timestamp > this.CACHE_DURATION) {
         this.hatStatusCache.delete(key);
       }
     }
-    
+
     // Limit cache size (remove oldest entries if too large)
     if (this.hatBalanceCache.size > this.MAX_CACHE_SIZE) {
-      const entries = Array.from(this.hatBalanceCache.entries())
-        .sort((a, b) => a[1].timestamp - b[1].timestamp);
-      
+      const entries = Array.from(this.hatBalanceCache.entries()).sort(
+        (a, b) => a[1].timestamp - b[1].timestamp,
+      );
+
       const toRemove = entries.slice(0, entries.length - this.MAX_CACHE_SIZE);
       toRemove.forEach(([key]) => this.hatBalanceCache.delete(key));
     }
@@ -600,7 +622,7 @@ export class HatPermissionsService {
 // Utility function to get user permissions (used in components)
 export const getUserPermissions = async (
   publicClient: PublicClient,
-  userAddress: string
+  userAddress: string,
 ): Promise<HatPermissions> => {
   const service = new HatPermissionsService(publicClient);
   return await service.getUserPermissions(userAddress);
@@ -610,7 +632,7 @@ export const getUserPermissions = async (
 export const checkPermission = async (
   publicClient: PublicClient,
   userAddress: string,
-  permission: keyof HatPermissions
+  permission: keyof HatPermissions,
 ): Promise<boolean> => {
   const service = new HatPermissionsService(publicClient);
   return await service.hasPermission(userAddress, permission);
@@ -619,7 +641,9 @@ export const checkPermission = async (
 // Export singleton service for use in hooks
 let hatPermissionsService: HatPermissionsService | null = null;
 
-export const getHatPermissionsService = (publicClient: PublicClient): HatPermissionsService => {
+export const getHatPermissionsService = (
+  publicClient: PublicClient,
+): HatPermissionsService => {
   if (!hatPermissionsService) {
     hatPermissionsService = new HatPermissionsService(publicClient);
   }

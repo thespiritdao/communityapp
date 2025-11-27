@@ -52,20 +52,23 @@ const PostList: React.FC<PostListProps> = ({ threadId }) => {
   const [replyAttachments, setReplyAttachments] = useState<any[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
-  const [threadAttachments, setThreadAttachments] = useState<Record<string, MediaAttachment[]>>({});
+  const [threadAttachments, setThreadAttachments] = useState<
+    Record<string, MediaAttachment[]>
+  >({});
   const router = useRouter();
   const { submitPost, isLoading: forumLoading, address } = useForum();
 
   // Batch fetch user profiles for all post authors (prevents N+1 queries)
   const uniqueAuthors = useMemo(() => {
-    const authors = posts.map(p => p.author_address);
+    const authors = posts.map((p) => p.author_address);
     if (threadInfo?.author_address) {
       authors.push(threadInfo.author_address);
     }
     return [...new Set(authors)];
   }, [posts, threadInfo]);
 
-  const { data: profileMap, isLoading: profilesLoading } = useForumUserProfiles(uniqueAuthors);
+  const { data: profileMap, isLoading: profilesLoading } =
+    useForumUserProfiles(uniqueAuthors);
 
   useEffect(() => {
     const fetchThreadAndPosts = async () => {
@@ -73,11 +76,12 @@ const PostList: React.FC<PostListProps> = ({ threadId }) => {
         setIsLoading(true);
 
         // Fetch thread, posts, and poll in parallel for better performance
-        const [threadResult, pollResult, attachmentsResult] = await Promise.all([
-          // 1) Fetch thread metadata + posts in single query
-          supabase
-            .from('forum_threads')
-            .select(`
+        const [threadResult, pollResult, attachmentsResult] = await Promise.all(
+          [
+            // 1) Fetch thread metadata + posts in single query
+            supabase
+              .from('forum_threads')
+              .select(`
               id,
               title,
               content,
@@ -92,19 +96,20 @@ const PostList: React.FC<PostListProps> = ({ threadId }) => {
                 pod_id
               )
             `)
-            .eq('id', threadId)
-            .single(),
+              .eq('id', threadId)
+              .single(),
 
-          // 2) Fetch poll (if exists)
-          getPollByThreadId(threadId),
+            // 2) Fetch poll (if exists)
+            getPollByThreadId(threadId),
 
-          // 3) Fetch all attachments for thread in single query
-          supabase
-            .from('forum_media_attachments')
-            .select('*')
-            .eq('thread_id', threadId)
-            .order('created_at', { ascending: true })
-        ]);
+            // 3) Fetch all attachments for thread in single query
+            supabase
+              .from('forum_media_attachments')
+              .select('*')
+              .eq('thread_id', threadId)
+              .order('created_at', { ascending: true }),
+          ],
+        );
 
         // Handle thread data
         if (threadResult.error) throw threadResult.error;
@@ -179,7 +184,10 @@ const PostList: React.FC<PostListProps> = ({ threadId }) => {
       setSubmitError(null);
 
       // Use submitPost from useForum to handle reply, tagging, and notifications
-      console.log('[PostList] Submitting post with replyAttachments:', replyAttachments);
+      console.log(
+        '[PostList] Submitting post with replyAttachments:',
+        replyAttachments,
+      );
       const result = await submitPost(threadId, replyContent);
       console.log('[PostList] submitPost result:', result);
 
@@ -192,8 +200,13 @@ const PostList: React.FC<PostListProps> = ({ threadId }) => {
       if (result.post && replyAttachments.length > 0) {
         const postId = result.post.id;
         try {
-          const attachmentIds = replyAttachments.map(att => att.id);
-          console.log('[PostList] Linking attachments:', attachmentIds, 'to post:', postId);
+          const attachmentIds = replyAttachments.map((att) => att.id);
+          console.log(
+            '[PostList] Linking attachments:',
+            attachmentIds,
+            'to post:',
+            postId,
+          );
 
           const { data: updateResult, error: attachmentError } = await supabase
             .from('forum_media_attachments')
@@ -202,9 +215,15 @@ const PostList: React.FC<PostListProps> = ({ threadId }) => {
             .select();
 
           if (attachmentError) {
-            console.error('Error linking attachments to post:', attachmentError);
+            console.error(
+              'Error linking attachments to post:',
+              attachmentError,
+            );
           } else {
-            console.log(`Successfully linked ${updateResult?.length || 0} attachments to post ${postId}`, updateResult);
+            console.log(
+              `Successfully linked ${updateResult?.length || 0} attachments to post ${postId}`,
+              updateResult,
+            );
           }
         } catch (err) {
           console.error('Error updating attachments:', err);
@@ -250,13 +269,15 @@ const PostList: React.FC<PostListProps> = ({ threadId }) => {
   }
 
   // Create original post from thread data
-  const originalPost: Post | null = threadInfo ? {
-    id: threadInfo.id,
-    thread_id: threadInfo.id,
-    content: threadInfo.content || '',
-    author_address: threadInfo.author_address,
-    created_at: threadInfo.created_at
-  } : null;
+  const originalPost: Post | null = threadInfo
+    ? {
+        id: threadInfo.id,
+        thread_id: threadInfo.id,
+        content: threadInfo.content || '',
+        author_address: threadInfo.author_address,
+        created_at: threadInfo.created_at,
+      }
+    : null;
 
   return (
     <div className={styles.threadContainer}>

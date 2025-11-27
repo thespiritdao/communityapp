@@ -18,8 +18,8 @@
  * }
  */
 
-import { Ratelimit } from "@upstash/ratelimit";
-import { Redis } from "@upstash/redis";
+import { Ratelimit } from '@upstash/ratelimit';
+import { Redis } from '@upstash/redis';
 
 /**
  * Initialize Redis client
@@ -30,7 +30,9 @@ function createRedisClient() {
   const token = process.env.UPSTASH_REDIS_REST_TOKEN;
 
   if (!url || !token) {
-    console.warn('⚠️ UPSTASH_REDIS env vars not configured. Rate limiting disabled.');
+    console.warn(
+      '⚠️ UPSTASH_REDIS env vars not configured. Rate limiting disabled.',
+    );
     return null;
   }
 
@@ -74,9 +76,9 @@ export const rateLimiters = {
   sensemaker: redis
     ? new Ratelimit({
         redis,
-        limiter: Ratelimit.slidingWindow(10, "1 m"), // 10 requests per minute
+        limiter: Ratelimit.slidingWindow(10, '1 m'), // 10 requests per minute
         analytics: true,
-        prefix: "ratelimit:sensemaker",
+        prefix: 'ratelimit:sensemaker',
       })
     : noOpLimiter,
 
@@ -92,9 +94,9 @@ export const rateLimiters = {
   airdrop: redis
     ? new Ratelimit({
         redis,
-        limiter: Ratelimit.slidingWindow(3, "1 h"), // 3 requests per hour
+        limiter: Ratelimit.slidingWindow(3, '1 h'), // 3 requests per hour
         analytics: true,
-        prefix: "ratelimit:airdrop",
+        prefix: 'ratelimit:airdrop',
       })
     : noOpLimiter,
 
@@ -110,9 +112,9 @@ export const rateLimiters = {
   notifications: redis
     ? new Ratelimit({
         redis,
-        limiter: Ratelimit.slidingWindow(100, "1 h"), // 100 requests per hour
+        limiter: Ratelimit.slidingWindow(100, '1 h'), // 100 requests per hour
         analytics: true,
-        prefix: "ratelimit:notifications",
+        prefix: 'ratelimit:notifications',
       })
     : noOpLimiter,
 
@@ -128,9 +130,9 @@ export const rateLimiters = {
   bountyCreate: redis
     ? new Ratelimit({
         redis,
-        limiter: Ratelimit.slidingWindow(10, "1 h"), // 10 requests per hour
+        limiter: Ratelimit.slidingWindow(10, '1 h'), // 10 requests per hour
         analytics: true,
-        prefix: "ratelimit:bounty:create",
+        prefix: 'ratelimit:bounty:create',
       })
     : noOpLimiter,
 };
@@ -140,19 +142,19 @@ export const rateLimiters = {
  */
 export function getClientIp(req: Request): string {
   // Try x-forwarded-for (Vercel, proxies)
-  const forwarded = req.headers.get("x-forwarded-for");
+  const forwarded = req.headers.get('x-forwarded-for');
   if (forwarded) {
-    return forwarded.split(",")[0].trim();
+    return forwarded.split(',')[0].trim();
   }
 
   // Try x-real-ip (nginx, other proxies)
-  const realIp = req.headers.get("x-real-ip");
+  const realIp = req.headers.get('x-real-ip');
   if (realIp) {
     return realIp;
   }
 
   // Fallback to localhost (development)
-  return "127.0.0.1";
+  return '127.0.0.1';
 }
 
 /**
@@ -163,8 +165,8 @@ export function rateLimitErrorResponse(reset: number) {
   const retryAfter = Math.ceil((reset - Date.now()) / 1000);
 
   return {
-    error: "Rate limit exceeded",
-    message: "Too many requests. Please try again later.",
+    error: 'Rate limit exceeded',
+    message: 'Too many requests. Please try again later.',
     retryAfter, // seconds until reset
     resetAt: resetDate.toISOString(),
   };

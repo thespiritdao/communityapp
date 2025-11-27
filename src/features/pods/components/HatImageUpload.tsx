@@ -23,7 +23,7 @@ export const HatImageUpload: React.FC<HatImageUploadProps> = ({
   uploadingImage,
   setUploadingImage,
   disabled = false,
-  hatId
+  hatId,
 }) => {
   const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -58,7 +58,7 @@ export const HatImageUpload: React.FC<HatImageUploadProps> = ({
       // Create file path with hatId if available
       const timestamp = Date.now();
       const fileExt = file.name.split('.').pop();
-      const fileName = hatId 
+      const fileName = hatId
         ? `hat-${hatId}-${timestamp}.${fileExt}`
         : `hat-image-${timestamp}.${fileExt}`;
 
@@ -72,16 +72,17 @@ export const HatImageUpload: React.FC<HatImageUploadProps> = ({
       }
 
       // Get public URL
-      const { data: { publicUrl } } = supabase.storage
-        .from('hat-images')
-        .getPublicUrl(data.path);
+      const {
+        data: { publicUrl },
+      } = supabase.storage.from('hat-images').getPublicUrl(data.path);
 
       console.log('🎩 HAT image uploaded successfully:', publicUrl);
       onImageUpload(publicUrl);
-
     } catch (error) {
       console.error('Failed to upload HAT image:', error);
-      setError(error instanceof Error ? error.message : 'Failed to upload image');
+      setError(
+        error instanceof Error ? error.message : 'Failed to upload image',
+      );
     } finally {
       setUploadingImage(false);
     }
@@ -117,8 +118,12 @@ export const HatImageUpload: React.FC<HatImageUploadProps> = ({
         <div className="space-y-2">
           <Label className="text-sm text-gray-600">Current Image:</Label>
           <div className="flex items-center space-x-3 p-3 border rounded-lg bg-gray-50">
-            <img 
-              src={isIPFSUrl(currentImageUrl) ? convertIPFStoHTTPS(currentImageUrl) : currentImageUrl}
+            <img
+              src={
+                isIPFSUrl(currentImageUrl)
+                  ? convertIPFStoHTTPS(currentImageUrl)
+                  : currentImageUrl
+              }
               alt="Current HAT"
               className="w-12 h-12 rounded object-cover"
               onError={(e) => {
@@ -129,7 +134,9 @@ export const HatImageUpload: React.FC<HatImageUploadProps> = ({
             <div className="flex-1 min-w-0">
               <p className="text-xs text-gray-500 truncate">
                 {isIPFSUrl(currentImageUrl) ? (
-                  <span style={{ color: '#3F7A5A' }}>IPFS: {currentImageUrl.slice(0, 40)}...</span>
+                  <span style={{ color: '#3F7A5A' }}>
+                    IPFS: {currentImageUrl.slice(0, 40)}...
+                  </span>
                 ) : (
                   currentImageUrl.slice(0, 40) + '...'
                 )}
@@ -143,13 +150,17 @@ export const HatImageUpload: React.FC<HatImageUploadProps> = ({
         <CardContent className="p-4">
           <div
             className="border-2 border-dashed rounded-lg p-6 text-center transition-colors"
-            style={disabled ? {
-              borderColor: '#e5e7eb',
-              backgroundColor: '#f9fafb'
-            } : {
-              borderColor: '#d1d5db',
-              cursor: 'pointer'
-            }}
+            style={
+              disabled
+                ? {
+                    borderColor: '#e5e7eb',
+                    backgroundColor: '#f9fafb',
+                  }
+                : {
+                    borderColor: '#d1d5db',
+                    cursor: 'pointer',
+                  }
+            }
             onMouseEnter={(e) => {
               if (!disabled) {
                 e.currentTarget.style.borderColor = '#2F5D50';
@@ -172,17 +183,25 @@ export const HatImageUpload: React.FC<HatImageUploadProps> = ({
               className="hidden"
               disabled={disabled}
             />
-            
+
             {uploadingImage ? (
               <div className="space-y-2">
-                <div className="animate-spin w-6 h-6 border-2 border-t-transparent rounded-full mx-auto" style={{ borderColor: '#2F5D50', borderTopColor: 'transparent' }}></div>
+                <div
+                  className="animate-spin w-6 h-6 border-2 border-t-transparent rounded-full mx-auto"
+                  style={{
+                    borderColor: '#2F5D50',
+                    borderTopColor: 'transparent',
+                  }}
+                ></div>
                 <p className="text-sm text-gray-600">Uploading image...</p>
               </div>
             ) : (
               <div className="space-y-2">
                 <Camera className="w-8 h-8 text-gray-400 mx-auto" />
                 <p className="text-sm text-gray-600">
-                  {disabled ? 'Image upload disabled' : 'Click to upload or drag & drop'}
+                  {disabled
+                    ? 'Image upload disabled'
+                    : 'Click to upload or drag & drop'}
                 </p>
                 <p className="text-xs text-gray-500">JPG, PNG, GIF up to 5MB</p>
               </div>
@@ -192,8 +211,13 @@ export const HatImageUpload: React.FC<HatImageUploadProps> = ({
       </Card>
 
       {error && (
-        <div className="p-3 border rounded-lg" style={{ backgroundColor: '#F5E6E6', borderColor: '#D9B3B3' }}>
-          <p className="text-sm" style={{ color: '#8B3A3A' }}>{error}</p>
+        <div
+          className="p-3 border rounded-lg"
+          style={{ backgroundColor: '#F5E6E6', borderColor: '#D9B3B3' }}
+        >
+          <p className="text-sm" style={{ color: '#8B3A3A' }}>
+            {error}
+          </p>
         </div>
       )}
     </div>

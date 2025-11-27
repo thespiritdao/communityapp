@@ -16,10 +16,13 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  const userId = request.cookies.get('userId')?.value; 
+  const userId = request.cookies.get('userId')?.value;
   if (!userId) {
     return NextResponse.redirect(
-      new URL('/login?redirect=' + encodeURIComponent(request.nextUrl.pathname), request.url)
+      new URL(
+        '/login?redirect=' + encodeURIComponent(request.nextUrl.pathname),
+        request.url,
+      ),
     );
   }
 
@@ -31,9 +34,16 @@ export async function middleware(request: NextRequest) {
       .single();
 
     // Enforce valid on-chain wallet address
-    if (profileError || !profile?.wallet_address || !profile.wallet_address.startsWith('0x')) {
+    if (
+      profileError ||
+      !profile?.wallet_address ||
+      !profile.wallet_address.startsWith('0x')
+    ) {
       return NextResponse.redirect(
-        new URL('/error?msg=' + encodeURIComponent('No valid wallet address found'), request.url)
+        new URL(
+          '/error?msg=' + encodeURIComponent('No valid wallet address found'),
+          request.url,
+        ),
       );
     }
 

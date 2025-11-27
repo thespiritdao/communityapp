@@ -13,47 +13,56 @@ export function extractMentionedWallets(message: string): string[] {
 }
 
 // Enhanced function that extracts both formatted mentions and attempts to resolve plain text mentions
-export async function extractMentionedWalletsEnhanced(message: string): Promise<string[]> {
+export async function extractMentionedWalletsEnhanced(
+  message: string,
+): Promise<string[]> {
   console.log('Enhanced mention extraction for message:', message);
-  
+
   // First, extract properly formatted mentions
   const formattedWallets = extractMentionedWallets(message);
   console.log('Formatted mentions found:', formattedWallets);
-  
+
   // If we found formatted mentions, return them
   if (formattedWallets.length > 0) {
     return formattedWallets;
   }
-  
+
   // Fallback: extract plain text mentions and try to resolve them
   const plainMentionRegex = /@(\w+)/g;
   const plainMentions = [];
   let match;
-  
+
   while ((match = plainMentionRegex.exec(message)) !== null) {
     plainMentions.push(match[1].toLowerCase());
   }
   console.log('Plain text mentions found:', plainMentions);
-  
+
   if (plainMentions.length === 0) {
     return [];
   }
-  
+
   // Try to resolve plain mentions to wallet addresses
   try {
     const { data: users, error } = await supabase
       .from('user_profiles')
       .select('wallet_address, first_name, last_name')
-      .or(plainMentions.map(mention => `first_name.ilike.%${mention}%,last_name.ilike.%${mention}%`).join(','));
-      
+      .or(
+        plainMentions
+          .map(
+            (mention) =>
+              `first_name.ilike.%${mention}%,last_name.ilike.%${mention}%`,
+          )
+          .join(','),
+      );
+
     if (error) {
       console.error('Error resolving plain mentions:', error);
       return [];
     }
-    
-    const resolvedWallets = users?.map(user => user.wallet_address) || [];
+
+    const resolvedWallets = users?.map((user) => user.wallet_address) || [];
     console.log('Resolved wallet addresses:', resolvedWallets);
-    
+
     return Array.from(new Set(resolvedWallets));
   } catch (error) {
     console.error('Error in enhanced mention extraction:', error);
@@ -70,4 +79,4 @@ export function extractMentionedDisplayNames(message: string): string[] {
     names.push(match[1]);
   }
   return Array.from(new Set(names));
-} 
+}

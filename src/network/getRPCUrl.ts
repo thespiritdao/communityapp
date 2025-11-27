@@ -1,6 +1,5 @@
 //src/network/getRPCUrl.ts
 
-
 import { ONCHAIN_KIT_CONFIG } from '../OnchainKitConfig';
 
 /**

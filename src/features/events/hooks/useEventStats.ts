@@ -15,13 +15,13 @@ export function useEventStats(): EventStats {
     totalParticipants: 0,
     completedEvents: 0,
     loading: true,
-    error: null
+    error: null,
   });
 
   useEffect(() => {
     const fetchEventStats = async () => {
       try {
-        setStats(prev => ({ ...prev, loading: true, error: null }));
+        setStats((prev) => ({ ...prev, loading: true, error: null }));
 
         const now = new Date().toISOString();
 
@@ -43,11 +43,16 @@ export function useEventStats(): EventStats {
         if (completedError) throw completedError;
 
         // Get total participants (all valid registrations across all events)
-        const { count: participantsCount, error: participantsError } = await supabase
-          .from('event_registrations')
-          .select('*', { count: 'exact', head: true })
-          .in('registration_status', ['registered', 'checked_in', 'completed'])
-          .neq('registration_status', 'cancelled');
+        const { count: participantsCount, error: participantsError } =
+          await supabase
+            .from('event_registrations')
+            .select('*', { count: 'exact', head: true })
+            .in('registration_status', [
+              'registered',
+              'checked_in',
+              'completed',
+            ])
+            .neq('registration_status', 'cancelled');
 
         if (participantsError) throw participantsError;
 
@@ -56,15 +61,17 @@ export function useEventStats(): EventStats {
           totalParticipants: participantsCount || 0,
           completedEvents: completedCount || 0,
           loading: false,
-          error: null
+          error: null,
         });
-
       } catch (error) {
         console.error('Error fetching event stats:', error);
-        setStats(prev => ({
+        setStats((prev) => ({
           ...prev,
           loading: false,
-          error: error instanceof Error ? error.message : 'Failed to load event statistics'
+          error:
+            error instanceof Error
+              ? error.message
+              : 'Failed to load event statistics',
         }));
       }
     };
@@ -74,13 +81,15 @@ export function useEventStats(): EventStats {
     // Set up real-time subscription for updates
     const eventsSubscription = supabase
       .channel('events-stats')
-      .on('postgres_changes', 
-        { event: '*', schema: 'public', table: 'events' }, 
-        () => fetchEventStats()
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'events' },
+        () => fetchEventStats(),
       )
-      .on('postgres_changes', 
-        { event: '*', schema: 'public', table: 'event_registrations' }, 
-        () => fetchEventStats()
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'event_registrations' },
+        () => fetchEventStats(),
       )
       .subscribe();
 

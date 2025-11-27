@@ -16,15 +16,23 @@
 import { useState, useEffect } from 'react';
 import { useHatPermissions } from '@/hooks/useHatPermissions';
 import { supabase } from '@/utils/supabaseClient';
-import type { PodCredential, UsePodCredentialsReturn } from './usePodCredentials.types';
+import type {
+  PodCredential,
+  UsePodCredentialsReturn,
+} from './usePodCredentials.types';
 
 // Re-export types for backward compatibility
-export type { PodCredential, UsePodCredentialsReturn } from './usePodCredentials.types';
+export type {
+  PodCredential,
+  UsePodCredentialsReturn,
+} from './usePodCredentials.types';
 
 /**
  * Hook to fetch dynamic pod credentials based on user's actual hat holdings
  */
-export function usePodCredentials(walletAddress: string | undefined): UsePodCredentialsReturn {
+export function usePodCredentials(
+  walletAddress: string | undefined,
+): UsePodCredentialsReturn {
   const [credentials, setCredentials] = useState<PodCredential[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -47,8 +55,11 @@ export function usePodCredentials(walletAddress: string | undefined): UsePodCred
       console.log('[usePodCredentials] User roles:', userRoles.length);
 
       // Filter for leader roles only
-      const leaderRoles = userRoles.filter(role => role.isLeaderRole);
-      console.log('[usePodCredentials] Leader roles found:', leaderRoles.length);
+      const leaderRoles = userRoles.filter((role) => role.isLeaderRole);
+      console.log(
+        '[usePodCredentials] Leader roles found:',
+        leaderRoles.length,
+      );
 
       if (leaderRoles.length === 0) {
         console.log('[usePodCredentials] No leader roles found');
@@ -59,7 +70,7 @@ export function usePodCredentials(walletAddress: string | undefined): UsePodCred
 
       // Get pod IDs for leader roles
       const podIds = leaderRoles
-        .map(role => role.podId)
+        .map((role) => role.podId)
         .filter((id): id is string => !!id);
 
       console.log('[usePodCredentials] Pod IDs:', podIds);
@@ -86,24 +97,32 @@ export function usePodCredentials(walletAddress: string | undefined): UsePodCred
 
       // Map pods to credential format
       const podCredentials: PodCredential[] = (pods || [])
-        .filter(pod => pod.management_hat_id) // Only include pods with hat IDs
-        .map(pod => ({
+        .filter((pod) => pod.management_hat_id) // Only include pods with hat IDs
+        .map((pod) => ({
           address: pod.management_hat_id!,
           type: 'hat' as const,
           label: `${pod.name} Leader`,
           category: 'credential' as const,
           image: pod.pod_image_url || '/images/symbolobinfin.png',
           podId: pod.id,
-          isLeader: true
+          isLeader: true,
         }));
 
-      console.log('[usePodCredentials] Generated credentials:', podCredentials.length);
-      console.log('[usePodCredentials] Credentials:', podCredentials.map(c => c.label));
+      console.log(
+        '[usePodCredentials] Generated credentials:',
+        podCredentials.length,
+      );
+      console.log(
+        '[usePodCredentials] Credentials:',
+        podCredentials.map((c) => c.label),
+      );
 
       setCredentials(podCredentials);
     } catch (err) {
       console.error('[usePodCredentials] Error loading pod credentials:', err);
-      setError(err instanceof Error ? err.message : 'Failed to load pod credentials');
+      setError(
+        err instanceof Error ? err.message : 'Failed to load pod credentials',
+      );
       setCredentials([]);
     } finally {
       setIsLoading(false);
@@ -121,6 +140,6 @@ export function usePodCredentials(walletAddress: string | undefined): UsePodCred
     credentials,
     isLoading: isLoading || rolesLoading,
     error,
-    refresh: loadPodCredentials
+    refresh: loadPodCredentials,
   };
 }

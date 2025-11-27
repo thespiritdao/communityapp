@@ -1,5 +1,5 @@
 // src/features/shopping-cart/components/cart/cartproducts/CartProduct/style.ts
-import styled from "styled-components";
+import styled from 'styled-components';
 
 export const Container = styled.div`
   display: flex;
@@ -8,7 +8,6 @@ export const Container = styled.div`
   overflow-y: auto;
   padding: 10px;
 `;
-
 
 export const ProductContainer = styled.div`
   display: flex;

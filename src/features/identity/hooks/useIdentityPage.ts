@@ -16,13 +16,16 @@ export function useIdentityPage(address: string | undefined) {
     setIsEditing(false);
   }, []);
 
-  const handleSave = useCallback(async (data: any) => {
-    if (!address) return;
-    
-    await updateProfile(address, data);
-    setIsEditing(false);
-    await refetch();
-  }, [address, refetch]);
+  const handleSave = useCallback(
+    async (data: any) => {
+      if (!address) return;
+
+      await updateProfile(address, data);
+      setIsEditing(false);
+      await refetch();
+    },
+    [address, refetch],
+  );
 
   const handleLogout = useCallback(async () => {
     await signOut();
@@ -34,7 +37,7 @@ export function useIdentityPage(address: string | undefined) {
     profile,
     loading,
     session,
-    
+
     // Actions
     handleEditClick,
     handleCancel,

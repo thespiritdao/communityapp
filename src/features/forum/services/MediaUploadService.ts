@@ -24,12 +24,17 @@ export interface MediaAttachment {
 }
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
-const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+const ALLOWED_IMAGE_TYPES = [
+  'image/jpeg',
+  'image/png',
+  'image/gif',
+  'image/webp',
+];
 const ALLOWED_FILE_TYPES = [
   ...ALLOWED_IMAGE_TYPES,
   'application/pdf',
   'text/plain',
-  'application/json'
+  'application/json',
 ];
 
 // ============================================================================
@@ -44,7 +49,7 @@ function validateFile(file: File): { valid: boolean; error?: string } {
   if (file.size > MAX_FILE_SIZE) {
     return {
       valid: false,
-      error: `File size exceeds 5MB limit (${(file.size / 1024 / 1024).toFixed(2)}MB)`
+      error: `File size exceeds 5MB limit (${(file.size / 1024 / 1024).toFixed(2)}MB)`,
     };
   }
 
@@ -52,7 +57,7 @@ function validateFile(file: File): { valid: boolean; error?: string } {
   if (!ALLOWED_FILE_TYPES.includes(file.type)) {
     return {
       valid: false,
-      error: `File type not allowed: ${file.type}`
+      error: `File type not allowed: ${file.type}`,
     };
   }
 
@@ -77,7 +82,7 @@ export async function uploadFile(
   file: File,
   uploaderAddress: string,
   threadId?: string,
-  postId?: string
+  postId?: string,
 ): Promise<{
   success: boolean;
   attachment?: MediaAttachment;
@@ -123,14 +128,14 @@ export async function uploadFile(
       fileName: file.name,
       fileSize: file.size,
       fileType: file.type,
-      uploaderAddress: uploaderAddress.toLowerCase()
+      uploaderAddress: uploaderAddress.toLowerCase(),
     });
 
     const { data: uploadData, error: uploadError } = await supabase.storage
       .from('forum-media')
       .upload(filePath, file, {
         cacheControl: '3600',
-        upsert: false
+        upsert: false,
       });
 
     if (uploadError) {
@@ -138,7 +143,7 @@ export async function uploadFile(
         error: uploadError,
         message: uploadError.message,
         statusCode: uploadError.statusCode,
-        name: uploadError.name
+        name: uploadError.name,
       });
       throw uploadError;
     }
@@ -160,7 +165,7 @@ export async function uploadFile(
       file_type: file.type,
       file_size_bytes: file.size,
       uploader_address: uploaderAddress.toLowerCase(),
-      is_embedded: false
+      is_embedded: false,
     };
 
     console.log('Saving attachment record to database:', attachmentRecord);
@@ -180,7 +185,7 @@ export async function uploadFile(
 
     return {
       success: true,
-      attachment: attachmentData as MediaAttachment
+      attachment: attachmentData as MediaAttachment,
     };
   } catch (error: any) {
     console.error('Error uploading file:', error);
@@ -195,23 +200,23 @@ export async function uploadMultipleFiles(
   files: File[],
   uploaderAddress: string,
   threadId?: string,
-  postId?: string
+  postId?: string,
 ): Promise<{
   success: boolean;
   attachments?: MediaAttachment[];
   errors?: string[];
 }> {
   const results = await Promise.all(
-    files.map(file => uploadFile(file, uploaderAddress, threadId, postId))
+    files.map((file) => uploadFile(file, uploaderAddress, threadId, postId)),
   );
 
-  const successful = results.filter(r => r.success);
-  const failed = results.filter(r => !r.success);
+  const successful = results.filter((r) => r.success);
+  const failed = results.filter((r) => !r.success);
 
   return {
     success: successful.length > 0,
-    attachments: successful.map(r => r.attachment!),
-    errors: failed.map(r => r.error!)
+    attachments: successful.map((r) => r.attachment!),
+    errors: failed.map((r) => r.error!),
   };
 }
 
@@ -222,9 +227,7 @@ export async function uploadMultipleFiles(
 /**
  * Get attachments for a post
  */
-export async function getPostAttachments(
-  postId: string
-): Promise<{
+export async function getPostAttachments(postId: string): Promise<{
   success: boolean;
   attachments?: MediaAttachment[];
   error?: string;
@@ -240,7 +243,7 @@ export async function getPostAttachments(
 
     return {
       success: true,
-      attachments: (data || []) as MediaAttachment[]
+      attachments: (data || []) as MediaAttachment[],
     };
   } catch (error: any) {
     console.error('Error fetching attachments:', error);
@@ -251,9 +254,7 @@ export async function getPostAttachments(
 /**
  * Get attachments for a thread
  */
-export async function getThreadAttachments(
-  threadId: string
-): Promise<{
+export async function getThreadAttachments(threadId: string): Promise<{
   success: boolean;
   attachments?: MediaAttachment[];
   error?: string;
@@ -269,7 +270,7 @@ export async function getThreadAttachments(
 
     return {
       success: true,
-      attachments: (data || []) as MediaAttachment[]
+      attachments: (data || []) as MediaAttachment[],
     };
   } catch (error: any) {
     console.error('Error fetching attachments:', error);
@@ -286,7 +287,7 @@ export async function getThreadAttachments(
  */
 export async function deleteAttachment(
   attachmentId: string,
-  userAddress: string
+  userAddress: string,
 ): Promise<{ success: boolean; error?: string }> {
   try {
     // Get attachment info
@@ -300,7 +301,10 @@ export async function deleteAttachment(
 
     // Check if user owns the attachment
     if (attachment.uploaded_by !== userAddress.toLowerCase()) {
-      return { success: false, error: 'You can only delete your own attachments' };
+      return {
+        success: false,
+        error: 'You can only delete your own attachments',
+      };
     }
 
     // Extract file path from URL
@@ -340,7 +344,7 @@ export async function deleteAttachment(
 export function getThumbnailUrl(
   imageUrl: string,
   width = 200,
-  height = 200
+  height = 200,
 ): string {
   // If using Supabase image transformations (Pro plan)
   // return `${imageUrl}?width=${width}&height=${height}&resize=contain`;
@@ -357,7 +361,7 @@ export function formatFileSize(bytes: number): string {
   const k = 1024;
   const sizes = ['Bytes', 'KB', 'MB', 'GB'];
   const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+  return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + ' ' + sizes[i];
 }
 
 /**

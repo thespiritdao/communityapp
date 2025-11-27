@@ -1,6 +1,6 @@
-import * as S from "./style";
+import * as S from './style';
 
-const Loader = ({ message = "Loading..." }) => (
+const Loader = ({ message = 'Loading...' }) => (
   <S.Container>
     <div />
     <div />

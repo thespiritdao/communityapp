@@ -11,7 +11,7 @@ import {
   lockThread,
   unlockThread,
   deleteThread,
-  deletePost
+  deletePost,
 } from '../services/ModerationService';
 import { Button } from '@/components/ui/button';
 import {
@@ -36,24 +36,30 @@ export function ModerationToolbar({
   isPinned = false,
   isLocked = false,
   onActionComplete,
-  podId
+  podId,
 }: ModerationToolbarProps) {
   const { address } = useAccount();
-  const { canModerate, moderatorRoles } = useModerationPermissions(podId || undefined);
+  const { canModerate, moderatorRoles } = useModerationPermissions(
+    podId || undefined,
+  );
   const [isProcessing, setIsProcessing] = useState(false);
 
   if (!canModerate || !address) {
-    console.log(`🎯 [ModerationToolbar] Pod ${podId}: canModerate=${canModerate}, hiding toolbar`);
+    console.log(
+      `🎯 [ModerationToolbar] Pod ${podId}: canModerate=${canModerate}, hiding toolbar`,
+    );
     return null;
   }
 
-  console.log(`✅ [ModerationToolbar] Pod ${podId}: canModerate=${canModerate}, showing toolbar`);
+  console.log(
+    `✅ [ModerationToolbar] Pod ${podId}: canModerate=${canModerate}, showing toolbar`,
+  );
 
   const moderatorHatId = moderatorRoles[0]?.hatId || null;
 
   const handleAction = async (
     action: () => Promise<{ success: boolean; error?: string }>,
-    actionName: string
+    actionName: string,
   ) => {
     setIsProcessing(true);
     try {
@@ -112,11 +118,7 @@ export function ModerationToolbar({
 
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={isProcessing}
-          >
+          <Button variant="outline" size="sm" disabled={isProcessing}>
             {isProcessing ? 'Processing...' : 'Moderate'}
           </Button>
         </DropdownMenuTrigger>

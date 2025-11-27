@@ -9,7 +9,8 @@ import { createPublicClient, http } from 'viem';
 import { base } from 'viem/chains';
 
 const HATS_PROTOCOL_ADDRESS = '0x3bc1A0Ad72417f2d411118085256fC53CBdDd137';
-const MANAGEMENT_HAT_ID = '3666553570037153403039930855960366294036165487385853262297516663111680';
+const MANAGEMENT_HAT_ID =
+  '3666553570037153403039930855960366294036165487385853262297516663111680';
 const USER_ADDRESS = '0x12a0cf22D632c859B793F852af03b9d515580244';
 
 const HATS_ABI = [
@@ -19,35 +20,37 @@ const HATS_ABI = [
     stateMutability: 'view',
     inputs: [
       { name: 'wearer', type: 'address' },
-      { name: 'hatId', type: 'uint256' }
+      { name: 'hatId', type: 'uint256' },
     ],
-    outputs: [{ name: '', type: 'bool' }]
+    outputs: [{ name: '', type: 'bool' }],
   },
   {
     name: 'isActive',
     type: 'function',
     stateMutability: 'view',
     inputs: [{ name: 'hatId', type: 'uint256' }],
-    outputs: [{ name: '', type: 'bool' }]
+    outputs: [{ name: '', type: 'bool' }],
   },
   {
     name: 'viewHat',
     type: 'function',
     stateMutability: 'view',
     inputs: [{ name: 'hatId', type: 'uint256' }],
-    outputs: [{
-      type: 'tuple',
-      components: [
-        { name: 'eligibility', type: 'address' },
-        { name: 'toggle', type: 'address' },
-        { name: 'details', type: 'string' },
-        { name: 'maxSupply', type: 'uint32' },
-        { name: 'supply', type: 'uint32' },
-        { name: 'mutable', type: 'bool' },
-        { name: 'active', type: 'bool' }
-      ]
-    }]
-  }
+    outputs: [
+      {
+        type: 'tuple',
+        components: [
+          { name: 'eligibility', type: 'address' },
+          { name: 'toggle', type: 'address' },
+          { name: 'details', type: 'string' },
+          { name: 'maxSupply', type: 'uint32' },
+          { name: 'supply', type: 'uint32' },
+          { name: 'mutable', type: 'bool' },
+          { name: 'active', type: 'bool' },
+        ],
+      },
+    ],
+  },
 ];
 
 const ELIGIBILITY_MODULE_ABI = [
@@ -57,12 +60,12 @@ const ELIGIBILITY_MODULE_ABI = [
     stateMutability: 'view',
     inputs: [
       { name: 'wearer', type: 'address' },
-      { name: 'hatId', type: 'uint256' }
+      { name: 'hatId', type: 'uint256' },
     ],
     outputs: [
       { name: 'eligible', type: 'bool' },
-      { name: 'standing', type: 'bool' }
-    ]
+      { name: 'standing', type: 'bool' },
+    ],
   },
   {
     name: 'signatures',
@@ -70,22 +73,22 @@ const ELIGIBILITY_MODULE_ABI = [
     stateMutability: 'view',
     inputs: [
       { name: 'signer', type: 'address' },
-      { name: 'agreementHash', type: 'bytes32' }
+      { name: 'agreementHash', type: 'bytes32' },
     ],
-    outputs: [{ name: 'timestamp', type: 'uint256' }]
+    outputs: [{ name: 'timestamp', type: 'uint256' }],
   },
   {
     name: 'agreementHashes',
     type: 'function',
     stateMutability: 'view',
     inputs: [{ name: 'hatId', type: 'uint256' }],
-    outputs: [{ name: 'hash', type: 'bytes32' }]
-  }
+    outputs: [{ name: 'hash', type: 'bytes32' }],
+  },
 ];
 
 const publicClient = createPublicClient({
   chain: base,
-  transport: http()
+  transport: http(),
 });
 
 console.log('🔍 Eligibility Module Diagnostics');
@@ -99,7 +102,7 @@ async function diagnoseEligibilityModule() {
       address: HATS_PROTOCOL_ADDRESS,
       abi: HATS_ABI,
       functionName: 'isActive',
-      args: [BigInt(MANAGEMENT_HAT_ID)]
+      args: [BigInt(MANAGEMENT_HAT_ID)],
     });
     console.log(`   ✅ HAT Active: ${isActive}\n`);
 
@@ -109,9 +112,11 @@ async function diagnoseEligibilityModule() {
       address: HATS_PROTOCOL_ADDRESS,
       abi: HATS_ABI,
       functionName: 'isEligible',
-      args: [USER_ADDRESS, BigInt(MANAGEMENT_HAT_ID)]
+      args: [USER_ADDRESS, BigInt(MANAGEMENT_HAT_ID)],
     });
-    console.log(`   ${isEligible ? '✅' : '❌'} User Eligible: ${isEligible}\n`);
+    console.log(
+      `   ${isEligible ? '✅' : '❌'} User Eligible: ${isEligible}\n`,
+    );
 
     // 3. Get HAT details to find eligibility module address
     console.log('3️⃣ Getting HAT details...');
@@ -119,7 +124,7 @@ async function diagnoseEligibilityModule() {
       address: HATS_PROTOCOL_ADDRESS,
       abi: HATS_ABI,
       functionName: 'viewHat',
-      args: [BigInt(MANAGEMENT_HAT_ID)]
+      args: [BigInt(MANAGEMENT_HAT_ID)],
     });
 
     console.log('   HAT Details:');
@@ -133,14 +138,22 @@ async function diagnoseEligibilityModule() {
     const eligibilityModuleAddress = hatDetails.eligibility;
 
     // 4. Check if eligibility module is set
-    if (eligibilityModuleAddress === '0x0000000000000000000000000000000000000000') {
+    if (
+      eligibilityModuleAddress === '0x0000000000000000000000000000000000000000'
+    ) {
       console.log('   ❌ NO ELIGIBILITY MODULE SET ON HAT');
-      console.log('   This is the problem! The HAT has no eligibility module configured.\n');
-      console.log('   Solution: You need to sync the eligibility module to the blockchain.');
+      console.log(
+        '   This is the problem! The HAT has no eligibility module configured.\n',
+      );
+      console.log(
+        '   Solution: You need to sync the eligibility module to the blockchain.',
+      );
       return;
     }
 
-    console.log(`   ✅ Eligibility module is set: ${eligibilityModuleAddress}\n`);
+    console.log(
+      `   ✅ Eligibility module is set: ${eligibilityModuleAddress}\n`,
+    );
 
     // 5. Check eligibility module's view of user status
     console.log('4️⃣ Checking eligibility module status...');
@@ -149,7 +162,7 @@ async function diagnoseEligibilityModule() {
         address: eligibilityModuleAddress,
         abi: ELIGIBILITY_MODULE_ABI,
         functionName: 'getWearerStatus',
-        args: [USER_ADDRESS, BigInt(MANAGEMENT_HAT_ID)]
+        args: [USER_ADDRESS, BigInt(MANAGEMENT_HAT_ID)],
       });
 
       console.log(`   - Eligible (from module): ${wearerStatus[0]}`);
@@ -174,7 +187,7 @@ async function diagnoseEligibilityModule() {
         address: eligibilityModuleAddress,
         abi: ELIGIBILITY_MODULE_ABI,
         functionName: 'agreementHashes',
-        args: [BigInt(MANAGEMENT_HAT_ID)]
+        args: [BigInt(MANAGEMENT_HAT_ID)],
       });
 
       console.log(`   Agreement Hash: ${agreementHash}\n`);
@@ -185,27 +198,34 @@ async function diagnoseEligibilityModule() {
         address: eligibilityModuleAddress,
         abi: ELIGIBILITY_MODULE_ABI,
         functionName: 'signatures',
-        args: [USER_ADDRESS, agreementHash]
+        args: [USER_ADDRESS, agreementHash],
       });
 
       if (signatureTimestamp > 0n) {
         const date = new Date(Number(signatureTimestamp) * 1000);
         console.log(`   ✅ User HAS signed the agreement!`);
         console.log(`   Signed at: ${date.toISOString()}\n`);
-        console.log('   🤔 User has signed but still not eligible. This suggests:');
+        console.log(
+          '   🤔 User has signed but still not eligible. This suggests:',
+        );
         console.log('   - The eligibility module might have additional checks');
         console.log('   - There might be a delay in module updating');
         console.log('   - The module might be checking additional criteria\n');
       } else {
-        console.log(`   ❌ User has NOT signed the agreement in the eligibility module`);
+        console.log(
+          `   ❌ User has NOT signed the agreement in the eligibility module`,
+        );
         console.log(`   Signature timestamp: ${signatureTimestamp}\n`);
-        console.log('   This is the problem! The signature is not recorded on-chain.');
-        console.log('   You need to sign the agreement using the eligibility module contract.\n');
+        console.log(
+          '   This is the problem! The signature is not recorded on-chain.',
+        );
+        console.log(
+          '   You need to sign the agreement using the eligibility module contract.\n',
+        );
       }
     } catch (error) {
       console.log(`   ⚠️ Could not check agreement: ${error.message}\n`);
     }
-
   } catch (error) {
     console.error('❌ Error during diagnosis:', error);
   }

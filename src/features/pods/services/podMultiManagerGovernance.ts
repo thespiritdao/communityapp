@@ -9,7 +9,12 @@ import { supabase } from '../../../utils/supabaseClient';
 export interface GovernanceProposal {
   id: string;
   pod_id: string;
-  proposal_type: 'status_change' | 'delete_pod' | 'archive_pod' | 'edit_description' | 'update_image';
+  proposal_type:
+    | 'status_change'
+    | 'delete_pod'
+    | 'archive_pod'
+    | 'edit_description'
+    | 'update_image';
   proposal_data: any;
   proposed_by: string;
   required_approvals: number;
@@ -30,7 +35,7 @@ export interface ProposalVote {
 export class PodMultiManagerGovernance {
   private static readonly MINIMUM_MANAGERS_REQUIRED = 3;
   private static readonly PROPOSAL_DURATION_HOURS = 72; // 3 days
-  
+
   /**
    * Get all active managers for a pod
    */
@@ -44,7 +49,7 @@ export class PodMultiManagerGovernance {
         .eq('status', 'active');
 
       if (error) throw error;
-      return data?.map(member => member.wallet_address) || [];
+      return data?.map((member) => member.wallet_address) || [];
     } catch (error) {
       console.error('Error fetching pod managers:', error);
       return [];
@@ -54,7 +59,10 @@ export class PodMultiManagerGovernance {
   /**
    * Check if user can manage pod (is a manager)
    */
-  static async canManagePod(podId: string, userAddress: string): Promise<boolean> {
+  static async canManagePod(
+    podId: string,
+    userAddress: string,
+  ): Promise<boolean> {
     const managers = await this.getPodManagers(podId);
     return managers.includes(userAddress.toLowerCase());
   }
@@ -74,19 +82,25 @@ export class PodMultiManagerGovernance {
     podId: string,
     proposalType: GovernanceProposal['proposal_type'],
     proposalData: any,
-    proposedBy: string
+    proposedBy: string,
   ): Promise<{ success: boolean; proposalId?: string; error?: string }> {
     try {
       // Check if user can propose
       const canManage = await this.canManagePod(podId, proposedBy);
       if (!canManage) {
-        return { success: false, error: 'Only pod managers can create proposals' };
+        return {
+          success: false,
+          error: 'Only pod managers can create proposals',
+        };
       }
 
       // Check if pod has enough managers
       const hasEnoughManagers = await this.hasEnoughManagers(podId);
       if (!hasEnoughManagers) {
-        return { success: false, error: `Minimum ${this.MINIMUM_MANAGERS_REQUIRED} managers required for governance` };
+        return {
+          success: false,
+          error: `Minimum ${this.MINIMUM_MANAGERS_REQUIRED} managers required for governance`,
+        };
       }
 
       const managers = await this.getPodManagers(podId);
@@ -105,7 +119,7 @@ export class PodMultiManagerGovernance {
           required_approvals: requiredApprovals,
           current_approvals: [proposedBy], // Proposer automatically approves
           status: 'pending',
-          expires_at: expiresAt.toISOString()
+          expires_at: expiresAt.toISOString(),
         })
         .select()
         .single();
@@ -126,7 +140,7 @@ export class PodMultiManagerGovernance {
     proposalId: string,
     voterAddress: string,
     vote: 'approve' | 'reject',
-    reason?: string
+    reason?: string,
   ): Promise<{ success: boolean; error?: string }> {
     try {
       // Get proposal details
@@ -147,7 +161,10 @@ export class PodMultiManagerGovernance {
       }
 
       // Check if proposal is still active
-      if (proposal.status !== 'pending' || new Date() > new Date(proposal.expires_at)) {
+      if (
+        proposal.status !== 'pending' ||
+        new Date() > new Date(proposal.expires_at)
+      ) {
         return { success: false, error: 'Proposal is no longer active' };
       }
 
@@ -159,20 +176,25 @@ export class PodMultiManagerGovernance {
           voter_address: voterAddress,
           vote: vote,
           vote_reason: reason,
-          voted_at: new Date().toISOString()
+          voted_at: new Date().toISOString(),
         });
 
       if (voteError) throw voteError;
 
       // Update proposal approvals
       if (vote === 'approve') {
-        const updatedApprovals = [...new Set([...proposal.current_approvals, voterAddress])];
-        
+        const updatedApprovals = [
+          ...new Set([...proposal.current_approvals, voterAddress]),
+        ];
+
         const { error: updateError } = await supabase
           .from('pod_governance_proposals')
           .update({
             current_approvals: updatedApprovals,
-            status: updatedApprovals.length >= proposal.required_approvals ? 'approved' : 'pending'
+            status:
+              updatedApprovals.length >= proposal.required_approvals
+                ? 'approved'
+                : 'pending',
           })
           .eq('id', proposalId);
 
@@ -189,7 +211,9 @@ export class PodMultiManagerGovernance {
   /**
    * Execute an approved proposal
    */
-  static async executeProposal(proposalId: string): Promise<{ success: boolean; error?: string }> {
+  static async executeProposal(
+    proposalId: string,
+  ): Promise<{ success: boolean; error?: string }> {
     try {
       const { data: proposal, error } = await supabase
         .from('pod_governance_proposals')
@@ -241,7 +265,9 @@ export class PodMultiManagerGovernance {
   /**
    * Get active proposals for a pod
    */
-  static async getActiveProposals(podId: string): Promise<GovernanceProposal[]> {
+  static async getActiveProposals(
+    podId: string,
+  ): Promise<GovernanceProposal[]> {
     try {
       const { data, error } = await supabase
         .from('pod_governance_proposals')
@@ -260,10 +286,12 @@ export class PodMultiManagerGovernance {
   }
 
   // Private execution methods
-  private static async executeStatusChange(proposal: GovernanceProposal): Promise<{ success: boolean; error?: string }> {
+  private static async executeStatusChange(
+    proposal: GovernanceProposal,
+  ): Promise<{ success: boolean; error?: string }> {
     try {
       const { newStatus } = proposal.proposal_data;
-      
+
       const { error } = await supabase
         .from('pods')
         .update({ status: newStatus })
@@ -276,10 +304,12 @@ export class PodMultiManagerGovernance {
     }
   }
 
-  private static async executeDescriptionEdit(proposal: GovernanceProposal): Promise<{ success: boolean; error?: string }> {
+  private static async executeDescriptionEdit(
+    proposal: GovernanceProposal,
+  ): Promise<{ success: boolean; error?: string }> {
     try {
       const { newDescription } = proposal.proposal_data;
-      
+
       const { error } = await supabase
         .from('pods')
         .update({ description: newDescription })
@@ -292,10 +322,12 @@ export class PodMultiManagerGovernance {
     }
   }
 
-  private static async executeImageUpdate(proposal: GovernanceProposal): Promise<{ success: boolean; error?: string }> {
+  private static async executeImageUpdate(
+    proposal: GovernanceProposal,
+  ): Promise<{ success: boolean; error?: string }> {
     try {
       const { newImageUrl } = proposal.proposal_data;
-      
+
       const { error } = await supabase
         .from('pods')
         .update({ image_url: newImageUrl })
@@ -308,13 +340,15 @@ export class PodMultiManagerGovernance {
     }
   }
 
-  private static async executeArchivePod(proposal: GovernanceProposal): Promise<{ success: boolean; error?: string }> {
+  private static async executeArchivePod(
+    proposal: GovernanceProposal,
+  ): Promise<{ success: boolean; error?: string }> {
     try {
       const { error } = await supabase
         .from('pods')
-        .update({ 
+        .update({
           status: 'archived',
-          archived_at: new Date().toISOString()
+          archived_at: new Date().toISOString(),
         })
         .eq('id', proposal.pod_id);
 
@@ -325,15 +359,17 @@ export class PodMultiManagerGovernance {
     }
   }
 
-  private static async executeDeletePod(proposal: GovernanceProposal): Promise<{ success: boolean; error?: string }> {
+  private static async executeDeletePod(
+    proposal: GovernanceProposal,
+  ): Promise<{ success: boolean; error?: string }> {
     try {
       // Note: In production, you might want to soft delete or transfer ownership
       // rather than hard delete, depending on your business requirements
       const { error } = await supabase
         .from('pods')
-        .update({ 
+        .update({
           status: 'deleted',
-          deleted_at: new Date().toISOString()
+          deleted_at: new Date().toISOString(),
         })
         .eq('id', proposal.pod_id);
 

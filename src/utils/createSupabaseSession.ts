@@ -4,12 +4,12 @@ import { supabase } from './supabaseClient';
 
 export async function createSupabaseSession(
   supabaseToken: string,
-  supabaseRefreshToken: string
+  supabaseRefreshToken: string,
 ) {
   try {
     console.log('Client: Starting Supabase session creation...', {
       hasToken: !!supabaseToken,
-      hasRefreshToken: !!supabaseRefreshToken
+      hasRefreshToken: !!supabaseRefreshToken,
     });
 
     // Check if a session already exists
@@ -21,15 +21,22 @@ export async function createSupabaseSession(
     }
 
     // If session exists but JWT is expired, refresh it
-    if (session?.session?.expires_at && session.session.expires_at < Date.now() / 1000) {
+    if (
+      session?.session?.expires_at &&
+      session.session.expires_at < Date.now() / 1000
+    ) {
       console.warn('Client: Supabase session expired. Refreshing...', {
         expiresAt: new Date(session.session.expires_at * 1000).toISOString(),
-        currentTime: new Date().toISOString()
+        currentTime: new Date().toISOString(),
       });
-      
-      const { data: refreshedSession, error: refreshError } = await supabase.auth.refreshSession();
+
+      const { data: refreshedSession, error: refreshError } =
+        await supabase.auth.refreshSession();
       if (refreshError) {
-        console.error('Client: Error refreshing session:', refreshError.message);
+        console.error(
+          'Client: Error refreshing session:',
+          refreshError.message,
+        );
         throw refreshError;
       }
       session = refreshedSession;
@@ -37,12 +44,14 @@ export async function createSupabaseSession(
     }
 
     if (!session?.session) {
-      console.warn('Client: No active Supabase session found. Setting a new one...');
-      
+      console.warn(
+        'Client: No active Supabase session found. Setting a new one...',
+      );
+
       if (!supabaseToken || !supabaseRefreshToken) {
         console.error('Client: Missing tokens for session creation', {
           hasToken: !!supabaseToken,
-          hasRefreshToken: !!supabaseRefreshToken
+          hasRefreshToken: !!supabaseRefreshToken,
         });
         throw new Error('Missing tokens for session creation');
       }
@@ -68,7 +77,9 @@ export async function createSupabaseSession(
 
     console.log('Client: Supabase session is active:', {
       userId: session.session?.user?.id,
-      expiresAt: session.session?.expires_at ? new Date(session.session.expires_at * 1000).toISOString() : 'N/A'
+      expiresAt: session.session?.expires_at
+        ? new Date(session.session.expires_at * 1000).toISOString()
+        : 'N/A',
     });
 
     return session;

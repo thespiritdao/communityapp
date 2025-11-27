@@ -57,7 +57,7 @@ export async function createPoll(
   options: string[],
   creatorAddress: string,
   allowMultiple = false,
-  expiresInDays?: number
+  expiresInDays?: number,
 ): Promise<{ success: boolean; pollId?: string; error?: string }> {
   try {
     if (options.length < 2) {
@@ -81,7 +81,7 @@ export async function createPoll(
         question,
         allow_multiple: allowMultiple,
         expires_at: expiresAt,
-        created_by: creatorAddress.toLowerCase()
+        created_by: creatorAddress.toLowerCase(),
       })
       .select()
       .single();
@@ -92,7 +92,7 @@ export async function createPoll(
     const pollOptions = options.map((optionText, index) => ({
       poll_id: pollData.id,
       option_text: optionText,
-      option_order: index
+      option_order: index,
     }));
 
     const { error: optionsError } = await supabase
@@ -118,7 +118,7 @@ export async function createPoll(
 export async function votePoll(
   pollId: string,
   optionIds: string[], // Array to support multiple choice
-  voterAddress: string
+  voterAddress: string,
 ): Promise<{ success: boolean; error?: string }> {
   try {
     // Check if poll exists and is not expired
@@ -147,7 +147,9 @@ export async function votePoll(
 
     // Validate option IDs
     const validOptionIds = poll.forum_poll_options.map((opt: any) => opt.id);
-    const invalidOptions = optionIds.filter(id => !validOptionIds.includes(id));
+    const invalidOptions = optionIds.filter(
+      (id) => !validOptionIds.includes(id),
+    );
     if (invalidOptions.length > 0) {
       return { success: false, error: 'Invalid poll option' };
     }
@@ -158,10 +160,10 @@ export async function votePoll(
     }
 
     // Insert votes
-    const votes = optionIds.map(optionId => ({
+    const votes = optionIds.map((optionId) => ({
       poll_id: pollId,
       option_id: optionId,
-      voter_address: voterAddress.toLowerCase()
+      voter_address: voterAddress.toLowerCase(),
     }));
 
     const { error: voteError } = await supabase
@@ -183,7 +185,7 @@ export async function votePoll(
 export async function changeVote(
   pollId: string,
   newOptionIds: string[],
-  voterAddress: string
+  voterAddress: string,
 ): Promise<{ success: boolean; error?: string }> {
   try {
     // Remove existing votes
@@ -212,7 +214,7 @@ export async function changeVote(
  */
 export async function getPollResults(
   pollId: string,
-  userAddress?: string
+  userAddress?: string,
 ): Promise<{ success: boolean; results?: PollResults; error?: string }> {
   try {
     // Get poll with options
@@ -237,7 +239,7 @@ export async function getPollResults(
 
     // Calculate vote counts
     const voteCounts: Record<string, number> = {};
-    votes?.forEach(vote => {
+    votes?.forEach((vote) => {
       voteCounts[vote.option_id] = (voteCounts[vote.option_id] || 0) + 1;
     });
 
@@ -248,7 +250,10 @@ export async function getPollResults(
       .map((option: any) => ({
         ...option,
         vote_count: voteCounts[option.id] || 0,
-        percentage: totalVotes > 0 ? ((voteCounts[option.id] || 0) / totalVotes) * 100 : 0
+        percentage:
+          totalVotes > 0
+            ? ((voteCounts[option.id] || 0) / totalVotes) * 100
+            : 0,
       }))
       .sort((a: any, b: any) => a.option_order - b.option_order);
 
@@ -261,11 +266,13 @@ export async function getPollResults(
         .eq('poll_id', pollId)
         .eq('voter_address', userAddress.toLowerCase());
 
-      userVotes = userVoteData?.map(v => v.option_id) || [];
+      userVotes = userVoteData?.map((v) => v.option_id) || [];
     }
 
     // Check if expired
-    const hasExpired = poll.expires_at ? new Date(poll.expires_at) < new Date() : false;
+    const hasExpired = poll.expires_at
+      ? new Date(poll.expires_at) < new Date()
+      : false;
 
     return {
       success: true,
@@ -274,8 +281,8 @@ export async function getPollResults(
         options,
         totalVotes,
         userVotes,
-        hasExpired
-      }
+        hasExpired,
+      },
     };
   } catch (error: any) {
     console.error('Error getting poll results:', error);
@@ -287,7 +294,7 @@ export async function getPollResults(
  * Get poll by thread ID
  */
 export async function getPollByThreadId(
-  threadId: string
+  threadId: string,
 ): Promise<{ success: boolean; poll?: Poll; error?: string }> {
   try {
     const { data, error } = await supabase
@@ -319,7 +326,7 @@ export async function getPollByThreadId(
  * Delete a poll (moderator only)
  */
 export async function deletePoll(
-  pollId: string
+  pollId: string,
 ): Promise<{ success: boolean; error?: string }> {
   try {
     // Delete votes first (cascade should handle this, but being explicit)
@@ -329,7 +336,10 @@ export async function deletePoll(
     await supabase.from('forum_poll_options').delete().eq('poll_id', pollId);
 
     // Delete poll
-    const { error } = await supabase.from('forum_polls').delete().eq('id', pollId);
+    const { error } = await supabase
+      .from('forum_polls')
+      .delete()
+      .eq('id', pollId);
 
     if (error) throw error;
 
@@ -345,7 +355,7 @@ export async function deletePoll(
  */
 export async function hasUserVoted(
   pollId: string,
-  userAddress: string
+  userAddress: string,
 ): Promise<{ hasVoted: boolean; votes?: string[] }> {
   try {
     const { data, error } = await supabase
@@ -358,7 +368,7 @@ export async function hasUserVoted(
 
     return {
       hasVoted: (data?.length || 0) > 0,
-      votes: data?.map(v => v.option_id) || []
+      votes: data?.map((v) => v.option_id) || [],
     };
   } catch (error) {
     console.error('Error checking vote status:', error);

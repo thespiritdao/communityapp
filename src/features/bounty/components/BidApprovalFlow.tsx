@@ -31,7 +31,7 @@
  * @module BidApprovalFlow
  */
 
-"use client"
+'use client';
 
 import React, { useState } from 'react';
 import { useAccount, usePublicClient } from 'wagmi';
@@ -41,7 +41,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogDescription
+  DialogDescription,
 } from '@/components/ui/dialog';
 import {
   Transaction,
@@ -49,7 +49,7 @@ import {
   TransactionSponsor,
   TransactionStatus,
   TransactionStatusLabel,
-  TransactionStatusAction
+  TransactionStatusAction,
 } from '@coinbase/onchainkit/transaction';
 import type { TransactionReceipt } from 'viem';
 import BountyManagerABI from '@/abis/BountyManagerV2.json';
@@ -62,7 +62,7 @@ import {
   validateTransactionData,
   createTransactionStatusHandler,
   BASE_CHAIN_ID,
-  type TransactionCallData
+  type TransactionCallData,
 } from '../utils/transactionUtils';
 import { supabase } from '@/lib/supabase';
 
@@ -119,14 +119,15 @@ interface PendingAssignment {
  */
 const extractBountyIdFromLogs = (
   logs: any[],
-  bountyManagerAddress: string
+  bountyManagerAddress: string,
 ): string | null => {
   try {
     // Look for BountyCreated event from BountyManager contract
-    const bountyCreatedLog = logs?.find(log =>
-      log.topics &&
-      log.topics.length >= 2 &&
-      log.address?.toLowerCase() === bountyManagerAddress.toLowerCase()
+    const bountyCreatedLog = logs?.find(
+      (log) =>
+        log.topics &&
+        log.topics.length >= 2 &&
+        log.address?.toLowerCase() === bountyManagerAddress.toLowerCase(),
     );
 
     if (bountyCreatedLog && bountyCreatedLog.topics?.[1]) {
@@ -161,14 +162,18 @@ const getPaymentType = (paymentOption: string): number => {
 /**
  * Checks if bounty can accept more bids based on bid limit configuration
  */
-const canAcceptMoreBids = async (bountyId: string): Promise<{ canAccept: boolean; reason?: string }> => {
+const canAcceptMoreBids = async (
+  bountyId: string,
+): Promise<{ canAccept: boolean; reason?: string }> => {
   try {
     console.log('🔍 Checking if bounty can accept more bids:', bountyId);
 
     // Fetch bounty configuration
     const { data: bounty, error } = await supabase
       .from('bounties')
-      .select('bid_acceptance_mode, max_bids_accepted, bids_accepted_count, deadline')
+      .select(
+        'bid_acceptance_mode, max_bids_accepted, bids_accepted_count, deadline',
+      )
       .eq('id', bountyId)
       .single();
 
@@ -180,7 +185,7 @@ const canAcceptMoreBids = async (bountyId: string): Promise<{ canAccept: boolean
     console.log('📋 Bounty bid limit config:', {
       mode: bounty.bid_acceptance_mode,
       maxBids: bounty.max_bids_accepted,
-      acceptedCount: bounty.bids_accepted_count
+      acceptedCount: bounty.bids_accepted_count,
     });
 
     // Check by mode
@@ -189,7 +194,7 @@ const canAcceptMoreBids = async (bountyId: string): Promise<{ canAccept: boolean
         if ((bounty.bids_accepted_count || 0) >= 1) {
           return {
             canAccept: false,
-            reason: 'This bounty only accepts 1 bid (already accepted)'
+            reason: 'This bounty only accepts 1 bid (already accepted)',
           };
         }
         break;
@@ -200,7 +205,7 @@ const canAcceptMoreBids = async (bountyId: string): Promise<{ canAccept: boolean
         if (acceptedCount >= maxBids) {
           return {
             canAccept: false,
-            reason: `Maximum of ${maxBids} bid${maxBids > 1 ? 's' : ''} already accepted`
+            reason: `Maximum of ${maxBids} bid${maxBids > 1 ? 's' : ''} already accepted`,
           };
         }
         break;
@@ -208,14 +213,15 @@ const canAcceptMoreBids = async (bountyId: string): Promise<{ canAccept: boolean
       case 'date_limited':
         if (bounty.deadline) {
           const now = Math.floor(Date.now() / 1000);
-          const deadline = typeof bounty.deadline === 'string'
-            ? Math.floor(new Date(bounty.deadline).getTime() / 1000)
-            : bounty.deadline;
+          const deadline =
+            typeof bounty.deadline === 'string'
+              ? Math.floor(new Date(bounty.deadline).getTime() / 1000)
+              : bounty.deadline;
 
           if (now > deadline) {
             return {
               canAccept: false,
-              reason: 'Deadline has passed - no more bids can be accepted'
+              reason: 'Deadline has passed - no more bids can be accepted',
             };
           }
         }
@@ -230,7 +236,7 @@ const canAcceptMoreBids = async (bountyId: string): Promise<{ canAccept: boolean
         if ((bounty.bids_accepted_count || 0) >= 1) {
           return {
             canAccept: false,
-            reason: 'This bounty only accepts 1 bid (already accepted)'
+            reason: 'This bounty only accepts 1 bid (already accepted)',
           };
         }
     }
@@ -241,7 +247,7 @@ const canAcceptMoreBids = async (bountyId: string): Promise<{ canAccept: boolean
     console.error('❌ Error checking bid limits:', error);
     return {
       canAccept: false,
-      reason: 'Failed to check bid limits'
+      reason: 'Failed to check bid limits',
     };
   }
 };
@@ -257,7 +263,7 @@ export const BidApprovalFlow: React.FC<BidApprovalFlowProps> = ({
   open,
   onClose,
   onApprovalComplete,
-  onApprovalError
+  onApprovalError,
 }) => {
   const { address } = useAccount();
   const publicClient = usePublicClient();
@@ -266,8 +272,11 @@ export const BidApprovalFlow: React.FC<BidApprovalFlowProps> = ({
   // STATE
   // ============================================================================
 
-  const [stage, setStage] = useState<'review' | 'creating' | 'assigning' | 'complete'>('review');
-  const [pendingAssignment, setPendingAssignment] = useState<PendingAssignment | null>(null);
+  const [stage, setStage] = useState<
+    'review' | 'creating' | 'assigning' | 'complete'
+  >('review');
+  const [pendingAssignment, setPendingAssignment] =
+    useState<PendingAssignment | null>(null);
   const [selectedReviewers, setSelectedReviewers] = useState<{
     technical: `0x${string}` | null;
     final: `0x${string}` | null;
@@ -278,10 +287,12 @@ export const BidApprovalFlow: React.FC<BidApprovalFlowProps> = ({
   // ============================================================================
 
   const buildBountyCreationCalls = (): TransactionCallData[] => {
-    const contractAddress = process.env.NEXT_PUBLIC_BOUNTY_MANAGER_ADDRESS as `0x${string}`;
-    const tokenAddress = bounty.value.token === 'SYSTEM'
-      ? process.env.NEXT_PUBLIC_SYSTEM_TOKEN as `0x${string}`
-      : process.env.NEXT_PUBLIC_SELF_TOKEN as `0x${string}`;
+    const contractAddress = process.env
+      .NEXT_PUBLIC_BOUNTY_MANAGER_ADDRESS as `0x${string}`;
+    const tokenAddress =
+      bounty.value.token === 'SYSTEM'
+        ? (process.env.NEXT_PUBLIC_SYSTEM_TOKEN as `0x${string}`)
+        : (process.env.NEXT_PUBLIC_SELF_TOKEN as `0x${string}`);
 
     const decimals = 18; // ERC20 standard
     const amountWei = parseUnits(String(bid.proposedAmount), decimals);
@@ -300,13 +311,13 @@ export const BidApprovalFlow: React.FC<BidApprovalFlowProps> = ({
           type: 'function',
           inputs: [
             { name: 'spender', type: 'address' },
-            { name: 'amount', type: 'uint256' }
+            { name: 'amount', type: 'uint256' },
           ],
-          outputs: [{ name: '', type: 'bool' }]
-        }
+          outputs: [{ name: '', type: 'bool' }],
+        },
       ],
       functionName: 'approve',
-      args: [contractAddress, amountWei]
+      args: [contractAddress, amountWei],
     });
 
     // Call 2: Create bounty
@@ -316,12 +327,12 @@ export const BidApprovalFlow: React.FC<BidApprovalFlowProps> = ({
       abi: BountyManagerABI,
       functionName: 'createBounty',
       args: [
-        amountWei,        // uint128 value
-        tokenAddress,     // address token
-        paymentType,      // uint8 paymentType
-        bounty.podId,     // string podId
-        ipfsHash         // string ipfsHash
-      ]
+        amountWei, // uint128 value
+        tokenAddress, // address token
+        paymentType, // uint8 paymentType
+        bounty.podId, // string podId
+        ipfsHash, // string ipfsHash
+      ],
     });
 
     console.log('🔧 Transaction calls prepared:', {
@@ -334,7 +345,7 @@ export const BidApprovalFlow: React.FC<BidApprovalFlowProps> = ({
       paymentType,
       podId: bounty.podId,
       ipfsHash,
-      contractAddress
+      contractAddress,
     });
 
     return calls;
@@ -344,13 +355,16 @@ export const BidApprovalFlow: React.FC<BidApprovalFlowProps> = ({
   // HANDLERS
   // ============================================================================
 
-  const handleApprove = async (techReviewer: `0x${string}`, finalApprover: `0x${string}`) => {
+  const handleApprove = async (
+    techReviewer: `0x${string}`,
+    finalApprover: `0x${string}`,
+  ) => {
     console.log('🎯 Starting approval flow:', {
       bidId: bid.id,
       bountyId: bounty.id,
       existingOnchainId: bounty.onchain_id,
       techReviewer,
-      finalApprover
+      finalApprover,
     });
 
     // Check bid acceptance limits
@@ -358,24 +372,31 @@ export const BidApprovalFlow: React.FC<BidApprovalFlowProps> = ({
 
     if (!canAccept) {
       console.error('❌ Bid limit reached:', reason);
-      alert(`Cannot approve bid:\n\n${reason}\n\nPlease adjust the bounty settings or wait for the deadline to pass.`);
+      alert(
+        `Cannot approve bid:\n\n${reason}\n\nPlease adjust the bounty settings or wait for the deadline to pass.`,
+      );
       onApprovalError(new Error(reason || 'Bid limit reached'));
       return;
     }
 
     setSelectedReviewers({
       technical: techReviewer,
-      final: finalApprover
+      final: finalApprover,
     });
 
     // Check if bounty already exists on-chain
     if (bounty.onchain_id) {
-      console.log('✅ Bounty already exists on-chain with ID:', bounty.onchain_id);
+      console.log(
+        '✅ Bounty already exists on-chain with ID:',
+        bounty.onchain_id,
+      );
       console.log('⏭️ Skipping bounty creation, going directly to assignment');
 
       // Validate bid index exists
       if (bid.onchainBidIndex === undefined || bid.onchainBidIndex === null) {
-        const error = new Error('Bid is missing onchainBidIndex - cannot approve. Bid must be placed on-chain first.');
+        const error = new Error(
+          'Bid is missing onchainBidIndex - cannot approve. Bid must be placed on-chain first.',
+        );
         console.error('❌', error.message);
         onApprovalError(error);
         return;
@@ -386,15 +407,20 @@ export const BidApprovalFlow: React.FC<BidApprovalFlowProps> = ({
         onchainBountyId: String(bounty.onchain_id),
         onchainBidIndex: bid.onchainBidIndex, // ✅ Use correct field name
         reviewer: techReviewer,
-        approver: finalApprover
+        approver: finalApprover,
       };
 
-      console.log('📋 Assignment details prepared (using existing bounty):', assignmentData);
+      console.log(
+        '📋 Assignment details prepared (using existing bounty):',
+        assignmentData,
+      );
 
       setPendingAssignment(assignmentData);
       setStage('assigning');
     } else {
-      console.log('🏗️ Bounty not yet created on-chain, will create during approval');
+      console.log(
+        '🏗️ Bounty not yet created on-chain, will create during approval',
+      );
       setStage('creating');
     }
   };
@@ -402,14 +428,17 @@ export const BidApprovalFlow: React.FC<BidApprovalFlowProps> = ({
   const handleBountyCreationSuccess = (receipts: any[]) => {
     console.log('✅ Bounty creation succeeded, extracting bounty ID...');
 
-    const contractAddress = process.env.NEXT_PUBLIC_BOUNTY_MANAGER_ADDRESS as `0x${string}`;
+    const contractAddress = process.env
+      .NEXT_PUBLIC_BOUNTY_MANAGER_ADDRESS as `0x${string}`;
     const createBountyReceipt = receipts[receipts.length - 1];
     const logs = createBountyReceipt?.logs;
 
     const onchainBountyId = extractBountyIdFromLogs(logs, contractAddress);
 
     if (!onchainBountyId) {
-      const error = new Error('Failed to extract bounty ID from transaction logs');
+      const error = new Error(
+        'Failed to extract bounty ID from transaction logs',
+      );
       console.error('❌', error.message);
       onApprovalError(error);
       setStage('review');
@@ -421,7 +450,9 @@ export const BidApprovalFlow: React.FC<BidApprovalFlowProps> = ({
 
     // Validate bid index exists
     if (bid.onchainBidIndex === undefined || bid.onchainBidIndex === null) {
-      const error = new Error('Bid is missing onchainBidIndex - cannot approve. Bid must be placed on-chain first.');
+      const error = new Error(
+        'Bid is missing onchainBidIndex - cannot approve. Bid must be placed on-chain first.',
+      );
       console.error('❌', error.message);
       onApprovalError(error);
       setStage('review');
@@ -433,7 +464,7 @@ export const BidApprovalFlow: React.FC<BidApprovalFlowProps> = ({
       onchainBountyId,
       onchainBidIndex: bid.onchainBidIndex, // ✅ Use correct field name, no fallback
       reviewer: selectedReviewers.technical!,
-      approver: selectedReviewers.final!
+      approver: selectedReviewers.final!,
     };
 
     console.log('📋 Assignment details prepared:', assignmentData);
@@ -458,7 +489,7 @@ export const BidApprovalFlow: React.FC<BidApprovalFlowProps> = ({
       'Bounty Creation',
       calls,
       address,
-      publicClient
+      publicClient,
     );
 
     onApprovalError(error);
@@ -483,9 +514,9 @@ export const BidApprovalFlow: React.FC<BidApprovalFlowProps> = ({
 
     alert(
       `Bounty was created but assignment failed.\n\n` +
-      `Error: ${error.message}\n\n` +
-      `The bounty exists on-chain but is not assigned to the bidder. ` +
-      `Please contact support to complete the assignment manually.`
+        `Error: ${error.message}\n\n` +
+        `The bounty exists on-chain but is not assigned to the bidder. ` +
+        `Please contact support to complete the assignment manually.`,
     );
 
     setPendingAssignment(null);
@@ -515,24 +546,27 @@ export const BidApprovalFlow: React.FC<BidApprovalFlowProps> = ({
         const receipts = [receipt]; // Wrap in array for consistency
         handleBountyCreationSuccess(receipts);
       },
-      onError: handleBountyCreationError
+      onError: handleBountyCreationError,
     },
-    'Bounty Creation'
+    'Bounty Creation',
   );
 
   const onBountyCreationStatus = (status: any) => {
     console.log('🔔 Bounty creation status:', {
       statusName: status.statusName,
-      hasReceipts: !!status.transactionReceipts
+      hasReceipts: !!status.transactionReceipts,
     });
 
     // Extract receipts from different possible locations
-    const receipts = status.transactionReceipts || status.statusData?.transactionReceipts;
+    const receipts =
+      status.transactionReceipts || status.statusData?.transactionReceipts;
 
     if (status.statusName === 'success' && receipts && receipts.length > 0) {
       handleBountyCreationSuccess(receipts);
     } else if (status.statusName === 'error') {
-      handleBountyCreationError(status.error || new Error('Transaction failed'));
+      handleBountyCreationError(
+        status.error || new Error('Transaction failed'),
+      );
     } else {
       // For other statuses, use the standard handler
       bountyCreationStatusHandler(status);
@@ -568,13 +602,18 @@ export const BidApprovalFlow: React.FC<BidApprovalFlowProps> = ({
       address: address?.toLowerCase() as `0x${string}`,
       chainId: BASE_CHAIN_ID,
       calls,
-      isSponsored: true
+      isSponsored: true,
     };
 
     const validation = validateTransactionData(transactionData);
 
     return (
-      <Dialog open={true} onOpenChange={() => {/* Don't allow closing */}}>
+      <Dialog
+        open={true}
+        onOpenChange={() => {
+          /* Don't allow closing */
+        }}
+      >
         <DialogContent className="fixed z-50 left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-white rounded-lg shadow-lg focus:outline-none max-w-md">
           <DialogHeader>
             <DialogTitle>Creating Bounty</DialogTitle>
@@ -585,14 +624,27 @@ export const BidApprovalFlow: React.FC<BidApprovalFlowProps> = ({
 
           <div className="space-y-4 p-4">
             <p className="text-sm text-gray-600">
-              This will create the bounty on-chain with escrow. After this succeeds,
-              the bounty will be assigned to the winning bidder.
+              This will create the bounty on-chain with escrow. After this
+              succeeds, the bounty will be assigned to the winning bidder.
             </p>
 
             {!validation.isValid ? (
-              <div className="rounded-lg p-4" style={{ backgroundColor: '#F5E6E6', borderWidth: '1px', borderStyle: 'solid', borderColor: '#D9B3B3' }}>
-                <h4 className="font-semibold mb-2" style={{ color: '#5C1F1F' }}>Invalid Transaction Data</h4>
-                <ul className="text-sm list-disc list-inside" style={{ color: '#8B3A3A' }}>
+              <div
+                className="rounded-lg p-4"
+                style={{
+                  backgroundColor: '#F5E6E6',
+                  borderWidth: '1px',
+                  borderStyle: 'solid',
+                  borderColor: '#D9B3B3',
+                }}
+              >
+                <h4 className="font-semibold mb-2" style={{ color: '#5C1F1F' }}>
+                  Invalid Transaction Data
+                </h4>
+                <ul
+                  className="text-sm list-disc list-inside"
+                  style={{ color: '#8B3A3A' }}
+                >
                   {validation.issues.map((issue, i) => (
                     <li key={i}>{issue}</li>
                   ))}
@@ -627,7 +679,12 @@ export const BidApprovalFlow: React.FC<BidApprovalFlowProps> = ({
   // Stage 3: Assigning Bounty
   if (stage === 'assigning' && pendingAssignment) {
     return (
-      <Dialog open={true} onOpenChange={() => {/* Don't allow closing */}}>
+      <Dialog
+        open={true}
+        onOpenChange={() => {
+          /* Don't allow closing */
+        }}
+      >
         <DialogContent className="fixed z-50 left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-white rounded-lg shadow-lg focus:outline-none max-w-md">
           <DialogHeader>
             <DialogTitle>Assigning Bounty</DialogTitle>
@@ -638,7 +695,8 @@ export const BidApprovalFlow: React.FC<BidApprovalFlowProps> = ({
 
           <div className="space-y-4 p-4">
             <p className="text-sm text-gray-600">
-              Bounty created successfully! Now assigning it to the bidder and setting up escrow.
+              Bounty created successfully! Now assigning it to the bidder and
+              setting up escrow.
             </p>
 
             <BountyAssignmentTransaction
@@ -662,7 +720,12 @@ export const BidApprovalFlow: React.FC<BidApprovalFlowProps> = ({
   // Stage 4: Complete
   if (stage === 'complete') {
     return (
-      <Dialog open={true} onOpenChange={() => {/* Don't allow closing */}}>
+      <Dialog
+        open={true}
+        onOpenChange={() => {
+          /* Don't allow closing */
+        }}
+      >
         <DialogContent className="fixed z-50 left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-white rounded-lg shadow-lg focus:outline-none max-w-md">
           <DialogHeader>
             <DialogTitle>Approval Complete!</DialogTitle>
@@ -672,11 +735,22 @@ export const BidApprovalFlow: React.FC<BidApprovalFlowProps> = ({
           </DialogHeader>
 
           <div className="space-y-4 p-4">
-            <div className="rounded-lg p-4" style={{ backgroundColor: '#D1E6DC', borderWidth: '1px', borderStyle: 'solid', borderColor: '#B8D9CA' }}>
-              <p className="font-semibold" style={{ color: '#1F453A' }}>✅ Success!</p>
+            <div
+              className="rounded-lg p-4"
+              style={{
+                backgroundColor: '#D1E6DC',
+                borderWidth: '1px',
+                borderStyle: 'solid',
+                borderColor: '#B8D9CA',
+              }}
+            >
+              <p className="font-semibold" style={{ color: '#1F453A' }}>
+                ✅ Success!
+              </p>
               <p className="text-sm mt-2" style={{ color: '#2F5D50' }}>
                 The bid has been approved, the bounty has been created on-chain,
-                and it has been assigned to the winning bidder. Funds are now in escrow.
+                and it has been assigned to the winning bidder. Funds are now in
+                escrow.
               </p>
             </div>
           </div>

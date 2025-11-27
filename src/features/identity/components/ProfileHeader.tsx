@@ -1,5 +1,3 @@
-
-
 type ProfileHeaderProps = {
   // The user's data, including the profile_picture URL
   profile?: {
@@ -13,7 +11,12 @@ type ProfileHeaderProps = {
   className?: string;
 };
 
-export function ProfileHeader({ profile, address, showCopy, className }: ProfileHeaderProps) {
+export function ProfileHeader({
+  profile,
+  address,
+  showCopy,
+  className,
+}: ProfileHeaderProps) {
   if (!profile) {
     return null; // or some fallback
   }
@@ -39,14 +42,14 @@ export function ProfileHeader({ profile, address, showCopy, className }: Profile
       {/* Basic Name / Address Info */}
       <div style={{ marginTop: '10px' }}>
         <h3>
-          <strong>{profile.first_name}</strong> <strong>{profile.last_name}</strong>
+          <strong>{profile.first_name}</strong>{' '}
+          <strong>{profile.last_name}</strong>
         </h3>
-        
+
         {/* Formatted wallet address with ellipsis */}
         <p className="wallet-address">
-          {walletAddress && (
-            `${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}`
-          )}
+          {walletAddress &&
+            `${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}`}
         </p>
       </div>
     </div>

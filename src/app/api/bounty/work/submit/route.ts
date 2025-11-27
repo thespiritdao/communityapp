@@ -4,7 +4,7 @@ import { unifiedNotificationService } from '@/services/unifiedNotificationServic
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
+  process.env.SUPABASE_SERVICE_ROLE_KEY!,
 );
 
 export async function POST(request: NextRequest) {
@@ -19,28 +19,28 @@ export async function POST(request: NextRequest) {
       submissionDescription,
       deliverableUrls,
       attachmentUrls,
-      completedDeliverables
+      completedDeliverables,
     } = body;
 
     console.log('📝 Work submission request:', {
       bountyId,
       bidId,
       submitterAddress,
-      submissionTitle
+      submissionTitle,
     });
 
     // Validation
     if (!bountyId || !bidId || !submitterAddress) {
       return NextResponse.json(
         { error: 'Missing required fields: bountyId, bidId, submitterAddress' },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
     if (!submissionTitle?.trim() || !submissionDescription?.trim()) {
       return NextResponse.json(
         { error: 'Submission title and description are required' },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -54,17 +54,14 @@ export async function POST(request: NextRequest) {
 
     if (bidError || !bid) {
       console.error('❌ Bid not found:', bidError);
-      return NextResponse.json(
-        { error: 'Bid not found' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: 'Bid not found' }, { status: 404 });
     }
 
     if (bid.status !== 'approved') {
       console.error('❌ Bid not approved:', bid.status);
       return NextResponse.json(
         { error: 'Only approved bids can submit work' },
-        { status: 403 }
+        { status: 403 },
       );
     }
 
@@ -72,7 +69,7 @@ export async function POST(request: NextRequest) {
       console.error('❌ Submitter is not the bidder');
       return NextResponse.json(
         { error: 'Only the bidder can submit work for this bid' },
-        { status: 403 }
+        { status: 403 },
       );
     }
 
@@ -90,8 +87,11 @@ export async function POST(request: NextRequest) {
 
     if (existingSubmission) {
       return NextResponse.json(
-        { error: 'You already have a pending work submission. Please wait for review or edit the existing submission.' },
-        { status: 409 }
+        {
+          error:
+            'You already have a pending work submission. Please wait for review or edit the existing submission.',
+        },
+        { status: 409 },
       );
     }
 
@@ -104,7 +104,9 @@ export async function POST(request: NextRequest) {
       .limit(1)
       .maybeSingle();
 
-    const revisionNumber = latestSubmission ? latestSubmission.revision_number + 1 : 1;
+    const revisionNumber = latestSubmission
+      ? latestSubmission.revision_number + 1
+      : 1;
 
     // Insert work submission
     const { data: submission, error: submitError } = await supabase
@@ -121,7 +123,7 @@ export async function POST(request: NextRequest) {
         status: 'pending',
         revision_number: revisionNumber,
         created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
+        updated_at: new Date().toISOString(),
       })
       .select()
       .single();
@@ -129,8 +131,11 @@ export async function POST(request: NextRequest) {
     if (submitError) {
       console.error('❌ Error creating work submission:', submitError);
       return NextResponse.json(
-        { error: 'Failed to create work submission', details: submitError.message },
-        { status: 500 }
+        {
+          error: 'Failed to create work submission',
+          details: submitError.message,
+        },
+        { status: 500 },
       );
     }
 
@@ -157,7 +162,7 @@ export async function POST(request: NextRequest) {
         context_type: 'bounty',
         context_id: bountyId,
         context_url: `/bounty/${bountyId}/submissions`,
-        priority: 'high'
+        priority: 'high',
       });
 
       console.log('✅ Notification sent to bounty creator');
@@ -165,14 +170,16 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      submission
+      submission,
     });
-
   } catch (error) {
     console.error('❌ Error in work submission API:', error);
     return NextResponse.json(
-      { error: 'Internal server error', details: error instanceof Error ? error.message : 'Unknown error' },
-      { status: 500 }
+      {
+        error: 'Internal server error',
+        details: error instanceof Error ? error.message : 'Unknown error',
+      },
+      { status: 500 },
     );
   }
 }
@@ -188,8 +195,11 @@ export async function GET(request: NextRequest) {
 
     if (!bountyId && !podId && !bidId && !submitterAddress) {
       return NextResponse.json(
-        { error: 'At least one filter parameter required: bountyId, podId, bidId, or submitterAddress' },
-        { status: 400 }
+        {
+          error:
+            'At least one filter parameter required: bountyId, podId, bidId, or submitterAddress',
+        },
+        { status: 400 },
       );
     }
 
@@ -203,16 +213,19 @@ export async function GET(request: NextRequest) {
       if (bountyError) {
         console.error('❌ Error fetching bounties for pod:', bountyError);
         return NextResponse.json(
-          { error: 'Failed to fetch bounties for pod', details: bountyError.message },
-          { status: 500 }
+          {
+            error: 'Failed to fetch bounties for pod',
+            details: bountyError.message,
+          },
+          { status: 500 },
         );
       }
 
-      const bountyIds = bounties.map(b => b.id);
+      const bountyIds = bounties.map((b) => b.id);
 
       console.log(`🔍 Fetching work submissions for pod ${podId}:`, {
         bountyCount: bounties.length,
-        bountyIds
+        bountyIds,
       });
 
       const { data, error } = await supabase
@@ -225,7 +238,7 @@ export async function GET(request: NextRequest) {
         console.error('❌ Error fetching work submissions:', error);
         return NextResponse.json(
           { error: 'Failed to fetch work submissions', details: error.message },
-          { status: 500 }
+          { status: 500 },
         );
       }
 
@@ -233,7 +246,7 @@ export async function GET(request: NextRequest) {
 
       return NextResponse.json({
         success: true,
-        submissions: data
+        submissions: data,
       });
     }
 
@@ -261,20 +274,22 @@ export async function GET(request: NextRequest) {
       console.error('❌ Error fetching work submissions:', error);
       return NextResponse.json(
         { error: 'Failed to fetch work submissions', details: error.message },
-        { status: 500 }
+        { status: 500 },
       );
     }
 
     return NextResponse.json({
       success: true,
-      submissions: data
+      submissions: data,
     });
-
   } catch (error) {
     console.error('❌ Error in work submission GET:', error);
     return NextResponse.json(
-      { error: 'Internal server error', details: error instanceof Error ? error.message : 'Unknown error' },
-      { status: 500 }
+      {
+        error: 'Internal server error',
+        details: error instanceof Error ? error.message : 'Unknown error',
+      },
+      { status: 500 },
     );
   }
 }

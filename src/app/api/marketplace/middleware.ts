@@ -7,7 +7,7 @@ const RATE_LIMITS = {
   '/api/marketplace/products/search': 50, // 50 searches per minute
   '/api/marketplace/products/accessible': 80, // 80 requests per minute
   '/api/marketplace/orders': 30, // 30 order operations per minute
-  default: 60 // Default rate limit
+  default: 60, // Default rate limit
 };
 
 // In-memory rate limiting store (in production, use Redis)
@@ -24,30 +24,30 @@ export function rateLimitMiddleware(request: NextRequest, endpoint: string) {
   const clientIP = getClientIP(request);
   const userAgent = request.headers.get('user-agent') || 'unknown';
   const rateLimitKey = `${clientIP}:${endpoint}`;
-  
+
   const limit = RATE_LIMITS[endpoint] || RATE_LIMITS.default;
   const now = Date.now();
-  
+
   // Clean up expired entries
   cleanupExpiredEntries();
-  
+
   const current = rateLimitStore.get(rateLimitKey);
-  
+
   if (!current || now > current.resetTime) {
     // New window or expired
     rateLimitStore.set(rateLimitKey, {
       count: 1,
-      resetTime: now + RATE_LIMIT_WINDOW
+      resetTime: now + RATE_LIMIT_WINDOW,
     });
-    
+
     return {
       allowed: true,
       remaining: limit - 1,
       resetTime: now + RATE_LIMIT_WINDOW,
-      limit
+      limit,
     };
   }
-  
+
   if (current.count >= limit) {
     // Rate limit exceeded
     return {
@@ -55,19 +55,19 @@ export function rateLimitMiddleware(request: NextRequest, endpoint: string) {
       remaining: 0,
       resetTime: current.resetTime,
       limit,
-      retryAfter: Math.ceil((current.resetTime - now) / 1000)
+      retryAfter: Math.ceil((current.resetTime - now) / 1000),
     };
   }
-  
+
   // Increment counter
   current.count++;
   rateLimitStore.set(rateLimitKey, current);
-  
+
   return {
     allowed: true,
     remaining: limit - current.count,
     resetTime: current.resetTime,
-    limit
+    limit,
   };
 }
 
@@ -77,19 +77,19 @@ export function rateLimitMiddleware(request: NextRequest, endpoint: string) {
 export function compressionMiddleware(request: NextRequest, response: any) {
   const acceptEncoding = request.headers.get('accept-encoding') || '';
   const contentLength = JSON.stringify(response).length;
-  
+
   // Skip compression for small responses
   if (contentLength < COMPRESSION_THRESHOLD) {
     return {
       shouldCompress: false,
       encoding: null,
-      headers: {}
+      headers: {},
     };
   }
-  
+
   // Determine best encoding
   let selectedEncoding = null;
-  
+
   if (acceptEncoding.includes('br')) {
     selectedEncoding = 'br';
   } else if (acceptEncoding.includes('gzip')) {
@@ -97,22 +97,22 @@ export function compressionMiddleware(request: NextRequest, response: any) {
   } else if (acceptEncoding.includes('deflate')) {
     selectedEncoding = 'deflate';
   }
-  
+
   if (!selectedEncoding) {
     return {
       shouldCompress: false,
       encoding: null,
-      headers: {}
+      headers: {},
     };
   }
-  
+
   return {
     shouldCompress: true,
     encoding: selectedEncoding,
     headers: {
       'Content-Encoding': selectedEncoding,
-      'Vary': 'Accept-Encoding'
-    }
+      Vary: 'Accept-Encoding',
+    },
   };
 }
 
@@ -126,7 +126,7 @@ export function securityHeadersMiddleware() {
     'X-XSS-Protection': '1; mode=block',
     'Referrer-Policy': 'strict-origin-when-cross-origin',
     'Permissions-Policy': 'camera=(), microphone=(), geolocation=()',
-    'Strict-Transport-Security': 'max-age=31536000; includeSubDomains'
+    'Strict-Transport-Security': 'max-age=31536000; includeSubDomains',
   };
 }
 
@@ -136,15 +136,15 @@ export function securityHeadersMiddleware() {
 export function performanceMiddleware(startTime: number) {
   const endTime = Date.now();
   const duration = endTime - startTime;
-  
+
   // Log slow requests
   if (duration > 1000) {
     console.warn(`Slow API request: ${duration}ms`);
   }
-  
+
   return {
     'X-Response-Time': `${duration}ms`,
-    'X-Timestamp': new Date().toISOString()
+    'X-Timestamp': new Date().toISOString(),
   };
 }
 
@@ -157,17 +157,19 @@ export function corsMiddleware(request: NextRequest) {
     'http://localhost:3000',
     'http://localhost:3001',
     process.env.NEXT_PUBLIC_APP_URL,
-    process.env.NEXT_PUBLIC_PRODUCTION_URL
+    process.env.NEXT_PUBLIC_PRODUCTION_URL,
   ].filter(Boolean);
-  
+
   const isAllowedOrigin = !origin || allowedOrigins.includes(origin);
-  
+
   return {
-    'Access-Control-Allow-Origin': isAllowedOrigin ? (origin || '*') : 'null',
+    'Access-Control-Allow-Origin': isAllowedOrigin ? origin || '*' : 'null',
     'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Requested-With, If-None-Match, If-Modified-Since',
-    'Access-Control-Expose-Headers': 'X-Total-Count, X-Response-Time, X-Rate-Limit-Remaining, ETag',
-    'Access-Control-Max-Age': '86400'
+    'Access-Control-Allow-Headers':
+      'Content-Type, Authorization, X-Requested-With, If-None-Match, If-Modified-Since',
+    'Access-Control-Expose-Headers':
+      'X-Total-Count, X-Response-Time, X-Rate-Limit-Remaining, ETag',
+    'Access-Control-Max-Age': '86400',
   };
 }
 
@@ -177,17 +179,17 @@ export function corsMiddleware(request: NextRequest) {
 export function marketplaceMiddleware(
   request: NextRequest,
   endpoint: string,
-  startTime: number = Date.now()
+  startTime: number = Date.now(),
 ) {
   // Rate limiting
   const rateLimit = rateLimitMiddleware(request, endpoint);
-  
+
   if (!rateLimit.allowed) {
     return NextResponse.json(
       {
         error: 'Rate limit exceeded',
         message: `Too many requests. Limit: ${rateLimit.limit} per minute.`,
-        retryAfter: rateLimit.retryAfter
+        retryAfter: rateLimit.retryAfter,
       },
       {
         status: 429,
@@ -197,22 +199,22 @@ export function marketplaceMiddleware(
           'X-Rate-Limit-Reset': String(rateLimit.resetTime),
           'Retry-After': String(rateLimit.retryAfter),
           ...corsMiddleware(request),
-          ...securityHeadersMiddleware()
-        }
-      }
+          ...securityHeadersMiddleware(),
+        },
+      },
     );
   }
-  
+
   // Return middleware headers for successful requests
   return {
     rateLimitHeaders: {
       'X-Rate-Limit-Limit': String(rateLimit.limit),
       'X-Rate-Limit-Remaining': String(rateLimit.remaining),
-      'X-Rate-Limit-Reset': String(rateLimit.resetTime)
+      'X-Rate-Limit-Reset': String(rateLimit.resetTime),
     },
     corsHeaders: corsMiddleware(request),
     securityHeaders: securityHeadersMiddleware(),
-    performanceHeaders: performanceMiddleware(startTime)
+    performanceHeaders: performanceMiddleware(startTime),
   };
 }
 
@@ -223,8 +225,10 @@ export function requestLogger(request: NextRequest, endpoint: string) {
   const clientIP = getClientIP(request);
   const userAgent = request.headers.get('user-agent') || 'unknown';
   const timestamp = new Date().toISOString();
-  
-  console.log(`[${timestamp}] ${request.method} ${endpoint} - IP: ${clientIP} - UA: ${userAgent.substring(0, 100)}`);
+
+  console.log(
+    `[${timestamp}] ${request.method} ${endpoint} - IP: ${clientIP} - UA: ${userAgent.substring(0, 100)}`,
+  );
 }
 
 /**
@@ -235,17 +239,17 @@ function getClientIP(request: NextRequest): string {
   const forwarded = request.headers.get('x-forwarded-for');
   const realIP = request.headers.get('x-real-ip');
   const remoteAddr = request.headers.get('remote-addr');
-  
+
   if (forwarded) {
     return forwarded.split(',')[0].trim();
   }
-  
+
   return realIP || remoteAddr || 'unknown';
 }
 
 function cleanupExpiredEntries() {
   const now = Date.now();
-  
+
   for (const [key, value] of rateLimitStore.entries()) {
     if (now > value.resetTime) {
       rateLimitStore.delete(key);
@@ -260,18 +264,18 @@ export function createOptimizedResponse(
   data: any,
   request: NextRequest,
   endpoint: string,
-  startTime: number = Date.now()
+  startTime: number = Date.now(),
 ) {
   const middleware = marketplaceMiddleware(request, endpoint, startTime);
-  
+
   // Check if it's a rate limit response
   if (middleware instanceof NextResponse) {
     return middleware;
   }
-  
+
   // Apply compression if beneficial
   const compression = compressionMiddleware(request, data);
-  
+
   // Combine all headers
   const headers = {
     ...middleware.rateLimitHeaders,
@@ -279,9 +283,9 @@ export function createOptimizedResponse(
     ...middleware.securityHeaders,
     ...middleware.performanceHeaders,
     ...compression.headers,
-    'Content-Type': 'application/json'
+    'Content-Type': 'application/json',
   };
-  
+
   return NextResponse.json(data, { headers });
 }
 
@@ -293,21 +297,21 @@ export function createErrorResponse(
   status: number,
   request: NextRequest,
   endpoint: string,
-  details?: any
+  details?: any,
 ) {
   const errorResponse = {
     error,
     status,
     timestamp: new Date().toISOString(),
     endpoint,
-    ...(details && { details })
+    ...(details && { details }),
   };
-  
+
   const headers = {
     ...corsMiddleware(request),
     ...securityHeadersMiddleware(),
-    'Content-Type': 'application/json'
+    'Content-Type': 'application/json',
   };
-  
+
   return NextResponse.json(errorResponse, { status, headers });
 }

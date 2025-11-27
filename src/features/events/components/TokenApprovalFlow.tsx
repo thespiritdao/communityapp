@@ -11,52 +11,58 @@ import { Badge } from '@/components/ui/badge';
 import { CheckCircle, Clock, AlertCircle, Coins } from 'lucide-react';
 
 // Transaction components for sponsored transactions
-import { 
-  Transaction, 
-  TransactionButton, 
-  TransactionSponsor, 
-  TransactionStatus, 
-  TransactionStatusLabel, 
-  TransactionStatusAction 
-} from "@coinbase/onchainkit/transaction";
+import {
+  Transaction,
+  TransactionButton,
+  TransactionSponsor,
+  TransactionStatus,
+  TransactionStatusLabel,
+  TransactionStatusAction,
+} from '@coinbase/onchainkit/transaction';
 
 // Import ABIs
 const ERC20_ABI = [
   {
-    "constant": true,
-    "inputs": [{"name": "_owner", "type": "address"}, {"name": "_spender", "type": "address"}],
-    "name": "allowance",
-    "outputs": [{"name": "", "type": "uint256"}],
-    "type": "function"
+    constant: true,
+    inputs: [
+      { name: '_owner', type: 'address' },
+      { name: '_spender', type: 'address' },
+    ],
+    name: 'allowance',
+    outputs: [{ name: '', type: 'uint256' }],
+    type: 'function',
   },
   {
-    "constant": true,
-    "inputs": [{"name": "_owner", "type": "address"}],
-    "name": "balanceOf",
-    "outputs": [{"name": "", "type": "uint256"}],
-    "type": "function"
+    constant: true,
+    inputs: [{ name: '_owner', type: 'address' }],
+    name: 'balanceOf',
+    outputs: [{ name: '', type: 'uint256' }],
+    type: 'function',
   },
   {
-    "constant": false,
-    "inputs": [{"name": "_spender", "type": "address"}, {"name": "_value", "type": "uint256"}],
-    "name": "approve",
-    "outputs": [{"name": "", "type": "bool"}],
-    "type": "function"
+    constant: false,
+    inputs: [
+      { name: '_spender', type: 'address' },
+      { name: '_value', type: 'uint256' },
+    ],
+    name: 'approve',
+    outputs: [{ name: '', type: 'bool' }],
+    type: 'function',
   },
   {
-    "constant": true,
-    "inputs": [],
-    "name": "symbol",
-    "outputs": [{"name": "", "type": "string"}],
-    "type": "function"
+    constant: true,
+    inputs: [],
+    name: 'symbol',
+    outputs: [{ name: '', type: 'string' }],
+    type: 'function',
   },
   {
-    "constant": true,
-    "inputs": [],
-    "name": "decimals",
-    "outputs": [{"name": "", "type": "uint8"}],
-    "type": "function"
-  }
+    constant: true,
+    inputs: [],
+    name: 'decimals',
+    outputs: [{ name: '', type: 'uint8' }],
+    type: 'function',
+  },
 ];
 
 // Environment variables
@@ -67,7 +73,7 @@ const BASE_CHAIN_ID = 8453;
 
 interface TokenApprovalFlowProps {
   systemTokenAmount: string; // Amount in token units (e.g., "10")
-  selfTokenAmount: string;   // Amount in token units (e.g., "5")
+  selfTokenAmount: string; // Amount in token units (e.g., "5")
   onApprovalComplete: () => void;
   onCancel: () => void;
 }
@@ -85,10 +91,12 @@ export const TokenApprovalFlow: React.FC<TokenApprovalFlowProps> = ({
   systemTokenAmount,
   selfTokenAmount,
   onApprovalComplete,
-  onCancel
+  onCancel,
 }) => {
   const { address } = useAccount();
-  const [approvalStep, setApprovalStep] = useState<'checking' | 'system' | 'self' | 'complete'>('checking');
+  const [approvalStep, setApprovalStep] = useState<
+    'checking' | 'system' | 'self' | 'complete'
+  >('checking');
   const [systemApproved, setSystemApproved] = useState(false);
   const [selfApproved, setSelfApproved] = useState(false);
 
@@ -127,10 +135,14 @@ export const TokenApprovalFlow: React.FC<TokenApprovalFlowProps> = ({
   });
 
   // Determine what approvals are needed
-  const needsSystemApproval = systemAmountWei > 0n && (systemAllowance || 0n) < systemAmountWei;
-  const needsSelfApproval = selfAmountWei > 0n && (selfAllowance || 0n) < selfAmountWei;
-  const hasInsufficientSystemBalance = systemAmountWei > 0n && (systemBalance || 0n) < systemAmountWei;
-  const hasInsufficientSelfBalance = selfAmountWei > 0n && (selfBalance || 0n) < selfAmountWei;
+  const needsSystemApproval =
+    systemAmountWei > 0n && (systemAllowance || 0n) < systemAmountWei;
+  const needsSelfApproval =
+    selfAmountWei > 0n && (selfAllowance || 0n) < selfAmountWei;
+  const hasInsufficientSystemBalance =
+    systemAmountWei > 0n && (systemBalance || 0n) < systemAmountWei;
+  const hasInsufficientSelfBalance =
+    selfAmountWei > 0n && (selfBalance || 0n) < selfAmountWei;
 
   // Set initial step based on what's needed
   useEffect(() => {
@@ -145,19 +157,23 @@ export const TokenApprovalFlow: React.FC<TokenApprovalFlowProps> = ({
   }, [needsSystemApproval, needsSelfApproval, onApprovalComplete]);
 
   // Create approval transaction calls
-  const getSystemApprovalCall = () => [{
-    address: SYSTEM_TOKEN,
-    abi: ERC20_ABI,
-    functionName: 'approve',
-    args: [EVENT_MANAGER, systemAmountWei]
-  }];
+  const getSystemApprovalCall = () => [
+    {
+      address: SYSTEM_TOKEN,
+      abi: ERC20_ABI,
+      functionName: 'approve',
+      args: [EVENT_MANAGER, systemAmountWei],
+    },
+  ];
 
-  const getSelfApprovalCall = () => [{
-    address: SELF_TOKEN,
-    abi: ERC20_ABI,
-    functionName: 'approve',
-    args: [EVENT_MANAGER, selfAmountWei]
-  }];
+  const getSelfApprovalCall = () => [
+    {
+      address: SELF_TOKEN,
+      abi: ERC20_ABI,
+      functionName: 'approve',
+      args: [EVENT_MANAGER, selfAmountWei],
+    },
+  ];
 
   const formatTokenAmount = (amount: bigint) => {
     return Number.parseFloat(formatUnits(amount, 18)).toFixed(2);
@@ -176,14 +192,16 @@ export const TokenApprovalFlow: React.FC<TokenApprovalFlowProps> = ({
           {hasInsufficientSystemBalance && (
             <Alert variant="destructive">
               <AlertDescription>
-                You need {formatTokenAmount(systemAmountWei)} SYSTEM tokens but only have {formatTokenAmount(systemBalance || 0n)}.
+                You need {formatTokenAmount(systemAmountWei)} SYSTEM tokens but
+                only have {formatTokenAmount(systemBalance || 0n)}.
               </AlertDescription>
             </Alert>
           )}
           {hasInsufficientSelfBalance && (
             <Alert variant="destructive">
               <AlertDescription>
-                You need {formatTokenAmount(selfAmountWei)} SELF tokens but only have {formatTokenAmount(selfBalance || 0n)}.
+                You need {formatTokenAmount(selfAmountWei)} SELF tokens but only
+                have {formatTokenAmount(selfBalance || 0n)}.
               </AlertDescription>
             </Alert>
           )}
@@ -204,7 +222,6 @@ export const TokenApprovalFlow: React.FC<TokenApprovalFlowProps> = ({
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">
-        
         {/* Progress indicators */}
         <div className="space-y-3">
           {systemAmountWei > 0n && (
@@ -213,7 +230,11 @@ export const TokenApprovalFlow: React.FC<TokenApprovalFlowProps> = ({
                 <div
                   className="w-6 h-6 rounded-full flex items-center justify-center"
                   style={{
-                    backgroundColor: systemApproved ? '#3F7A5A' : approvalStep === 'system' ? '#2F5D50' : '#d1d5db'
+                    backgroundColor: systemApproved
+                      ? '#3F7A5A'
+                      : approvalStep === 'system'
+                        ? '#2F5D50'
+                        : '#d1d5db',
                   }}
                 >
                   {systemApproved ? (
@@ -226,11 +247,13 @@ export const TokenApprovalFlow: React.FC<TokenApprovalFlowProps> = ({
                 </div>
                 <div>
                   <p className="font-medium">SYSTEM Token</p>
-                  <p className="text-sm text-gray-600">{formatTokenAmount(systemAmountWei)} tokens</p>
+                  <p className="text-sm text-gray-600">
+                    {formatTokenAmount(systemAmountWei)} tokens
+                  </p>
                 </div>
               </div>
-              <Badge variant={systemApproved ? "default" : "secondary"}>
-                {systemApproved ? "Approved" : "Pending"}
+              <Badge variant={systemApproved ? 'default' : 'secondary'}>
+                {systemApproved ? 'Approved' : 'Pending'}
               </Badge>
             </div>
           )}
@@ -241,7 +264,11 @@ export const TokenApprovalFlow: React.FC<TokenApprovalFlowProps> = ({
                 <div
                   className="w-6 h-6 rounded-full flex items-center justify-center"
                   style={{
-                    backgroundColor: selfApproved ? '#3F7A5A' : approvalStep === 'self' ? '#2F5D50' : '#d1d5db'
+                    backgroundColor: selfApproved
+                      ? '#3F7A5A'
+                      : approvalStep === 'self'
+                        ? '#2F5D50'
+                        : '#d1d5db',
                   }}
                 >
                   {selfApproved ? (
@@ -254,11 +281,13 @@ export const TokenApprovalFlow: React.FC<TokenApprovalFlowProps> = ({
                 </div>
                 <div>
                   <p className="font-medium">SELF Token</p>
-                  <p className="text-sm text-gray-600">{formatTokenAmount(selfAmountWei)} tokens</p>
+                  <p className="text-sm text-gray-600">
+                    {formatTokenAmount(selfAmountWei)} tokens
+                  </p>
                 </div>
               </div>
-              <Badge variant={selfApproved ? "default" : "secondary"}>
-                {selfApproved ? "Approved" : "Pending"}
+              <Badge variant={selfApproved ? 'default' : 'secondary'}>
+                {selfApproved ? 'Approved' : 'Pending'}
               </Badge>
             </div>
           )}
@@ -269,10 +298,11 @@ export const TokenApprovalFlow: React.FC<TokenApprovalFlowProps> = ({
           <div className="space-y-4">
             <Alert>
               <AlertDescription>
-                Approve SYSTEM tokens to allow the event contract to collect payment when you register.
+                Approve SYSTEM tokens to allow the event contract to collect
+                payment when you register.
               </AlertDescription>
             </Alert>
-            
+
             <Transaction
               account={address?.toLowerCase() as `0x${string}`}
               chainId={BASE_CHAIN_ID}
@@ -309,10 +339,11 @@ export const TokenApprovalFlow: React.FC<TokenApprovalFlowProps> = ({
           <div className="space-y-4">
             <Alert>
               <AlertDescription>
-                Approve SELF tokens to allow the event contract to collect payment when you register.
+                Approve SELF tokens to allow the event contract to collect
+                payment when you register.
               </AlertDescription>
             </Alert>
-            
+
             <Transaction
               account={address?.toLowerCase() as `0x${string}`}
               chainId={BASE_CHAIN_ID}
@@ -343,15 +374,22 @@ export const TokenApprovalFlow: React.FC<TokenApprovalFlowProps> = ({
 
         {approvalStep === 'complete' && (
           <div className="text-center space-y-4">
-            <CheckCircle className="w-12 h-12 mx-auto" style={{ color: '#3F7A5A' }} />
-            <p className="text-lg font-medium" style={{ color: '#3F7A5A' }}>Approvals Complete!</p>
-            <p className="text-gray-600">You can now proceed with event registration.</p>
+            <CheckCircle
+              className="w-12 h-12 mx-auto"
+              style={{ color: '#3F7A5A' }}
+            />
+            <p className="text-lg font-medium" style={{ color: '#3F7A5A' }}>
+              Approvals Complete!
+            </p>
+            <p className="text-gray-600">
+              You can now proceed with event registration.
+            </p>
           </div>
         )}
 
         {/* Cancel button */}
-        <Button 
-          variant="outline" 
+        <Button
+          variant="outline"
           onClick={onCancel}
           className="w-full"
           disabled={approvalStep === 'checking'}

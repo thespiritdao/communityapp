@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { EnhancedToggle } from '@/components/ui/enhanced-toggle';
-import { MessageCircle, Plus, Settings, Trash2, } from 'lucide-react';
+import { MessageCircle, Plus, Settings, Trash2 } from 'lucide-react';
 
 interface PodChatManagerProps {
   podId: string;
@@ -34,14 +34,16 @@ export default function PodChatManager({
   podName,
   managementHatId,
   membershipHatId,
-  isManager
+  isManager,
 }: PodChatManagerProps) {
   const { session } = useAuthContext();
   const [chatGroups, setChatGroups] = useState<ChatGroup[]>([]);
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
   const [newChatName, setNewChatName] = useState('');
-  const [accessLevel, setAccessLevel] = useState<'managers' | 'members' | 'both'>('both');
+  const [accessLevel, setAccessLevel] = useState<
+    'managers' | 'members' | 'both'
+  >('both');
 
   // Load existing chat groups for this pod
   useEffect(() => {
@@ -87,7 +89,7 @@ export default function PodChatManager({
           pod_id: podId,
           required_token: requiredToken,
           access_level: accessLevel,
-          is_active: true
+          is_active: true,
         })
         .select()
         .single();
@@ -96,7 +98,7 @@ export default function PodChatManager({
 
       setChatGroups([data, ...chatGroups]);
       setNewChatName('');
-      
+
       // If access level is 'both', create a second chat group for members
       if (accessLevel === 'both' && membershipHatId) {
         const { data: memberChat } = await supabase
@@ -106,13 +108,13 @@ export default function PodChatManager({
             pod_id: podId,
             required_token: membershipHatId,
             access_level: 'members',
-            is_active: true
+            is_active: true,
           })
           .select()
           .single();
-          
+
         if (memberChat) {
-          setChatGroups(prev => [memberChat, ...prev]);
+          setChatGroups((prev) => [memberChat, ...prev]);
         }
       }
     } catch (error) {
@@ -133,16 +135,23 @@ export default function PodChatManager({
 
       if (error) throw error;
 
-      setChatGroups(chatGroups.map(chat => 
-        chat.id === chatId ? { ...chat, is_active: !currentStatus } : chat
-      ));
+      setChatGroups(
+        chatGroups.map((chat) =>
+          chat.id === chatId ? { ...chat, is_active: !currentStatus } : chat,
+        ),
+      );
     } catch (error) {
       console.error('Error toggling chat status:', error);
     }
   };
 
   const deleteChatGroup = async (chatId: string) => {
-    if (!isManager || !confirm('Are you sure you want to delete this chat? This action cannot be undone.')) {
+    if (
+      !isManager ||
+      !confirm(
+        'Are you sure you want to delete this chat? This action cannot be undone.',
+      )
+    ) {
       return;
     }
 
@@ -154,18 +163,22 @@ export default function PodChatManager({
 
       if (error) throw error;
 
-      setChatGroups(chatGroups.filter(chat => chat.id !== chatId));
+      setChatGroups(chatGroups.filter((chat) => chat.id !== chatId));
     } catch (error) {
       console.error('Error deleting chat group:', error);
     }
   };
 
   const getAccessLevelLabel = (level: string) => {
-    switch(level) {
-      case 'managers': return 'Leaders';
-      case 'members': return 'Members';
-      case 'both': return 'All';
-      default: return level;
+    switch (level) {
+      case 'managers':
+        return 'Leaders';
+      case 'members':
+        return 'Members';
+      case 'both':
+        return 'All';
+      default:
+        return level;
     }
   };
 
@@ -201,10 +214,15 @@ export default function PodChatManager({
 
       {/* Create New Chat Form */}
       {creating && isManager && (
-        <Card className="p-4" style={{ backgroundColor: '#E8F1EE', borderColor: '#B8D9CA' }}>
+        <Card
+          className="p-4"
+          style={{ backgroundColor: '#E8F1EE', borderColor: '#B8D9CA' }}
+        >
           <div className="space-y-3">
             <div>
-              <Label htmlFor="chatName" className="text-sm font-medium">Channel Name</Label>
+              <Label htmlFor="chatName" className="text-sm font-medium">
+                Channel Name
+              </Label>
               <Input
                 id="chatName"
                 placeholder={`${podName} Discussion`}
@@ -213,9 +231,11 @@ export default function PodChatManager({
                 className="mt-1"
               />
             </div>
-            
+
             <div>
-              <Label htmlFor="accessLevel" className="text-sm font-medium">Access Level</Label>
+              <Label htmlFor="accessLevel" className="text-sm font-medium">
+                Access Level
+              </Label>
               <select
                 id="accessLevel"
                 className="w-full px-3 py-2 border border-gray-300 rounded-md mt-1 text-sm"
@@ -224,9 +244,7 @@ export default function PodChatManager({
               >
                 <option value="both">All</option>
                 <option value="managers">Leaders</option>
-                {membershipHatId && (
-                  <option value="members">Members</option>
-                )}
+                {membershipHatId && <option value="members">Members</option>}
               </select>
             </div>
 
@@ -273,23 +291,27 @@ export default function PodChatManager({
                 <div className="space-y-2">
                   {/* First row: Title and Access Level */}
                   <div className="flex items-center gap-2">
-                    <h5 className="font-medium text-sm truncate">{chat.title}</h5>
+                    <h5 className="font-medium text-sm truncate">
+                      {chat.title}
+                    </h5>
                     <span className="text-xs px-2 py-0.5 bg-gray-100 rounded-full text-gray-600 whitespace-nowrap">
                       {getAccessLevelLabel(chat.access_level)}
                     </span>
                   </div>
-                  
+
                   {/* Second row: Status, Toggle, and Delete */}
                   <div className="flex items-center justify-between">
                     <p className="text-xs text-gray-500">
                       {chat.is_active ? 'Active' : 'Inactive'}
                     </p>
-                    
+
                     {isManager && (
                       <div className="flex items-center gap-2">
                         <EnhancedToggle
                           checked={chat.is_active}
-                          onCheckedChange={() => toggleChatStatus(chat.id, chat.is_active)}
+                          onCheckedChange={() =>
+                            toggleChatStatus(chat.id, chat.is_active)
+                          }
                           size="sm"
                           variant="button"
                         />
@@ -305,7 +327,8 @@ export default function PodChatManager({
                           }}
                           onMouseLeave={(e) => {
                             e.currentTarget.style.color = '#8B3A3A';
-                            e.currentTarget.style.backgroundColor = 'transparent';
+                            e.currentTarget.style.backgroundColor =
+                              'transparent';
                           }}
                         >
                           <Trash2 className="h-3 w-3" />
@@ -322,9 +345,15 @@ export default function PodChatManager({
 
       {/* Info Box */}
       {isManager && chatGroups.length > 0 && (
-        <div className="p-3 border rounded-md" style={{ backgroundColor: '#E8F1EE', borderColor: '#B8D9CA' }}>
+        <div
+          className="p-3 border rounded-md"
+          style={{ backgroundColor: '#E8F1EE', borderColor: '#B8D9CA' }}
+        >
           <div className="flex gap-2">
-            <Settings className="h-4 w-4 mt-0.5 flex-shrink-0" style={{ color: '#2F5D50' }} />
+            <Settings
+              className="h-4 w-4 mt-0.5 flex-shrink-0"
+              style={{ color: '#2F5D50' }}
+            />
             <div className="text-xs" style={{ color: '#1F453A' }}>
               <p className="font-medium">Tips:</p>
               <p>• Toggle channels on/off instead of deleting them</p>

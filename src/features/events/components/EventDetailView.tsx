@@ -6,23 +6,27 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { 
-  Calendar, 
-  MapPin, 
-  Users, 
-  DollarSign, 
-  Clock, 
-  User, 
+import {
+  Calendar,
+  MapPin,
+  Users,
+  DollarSign,
+  Clock,
+  User,
   Edit,
   Share2,
   Download,
   QrCode,
   ArrowLeft,
-  CheckCircle
+  CheckCircle,
 } from 'lucide-react';
 import { EventRegistrationModal } from './EventRegistrationModal';
 import { EventTokenDisplay } from './EventTokenDisplay';
-import { useEvent, useEventRegistration, useEventRegistrations } from '../hooks/useEvents';
+import {
+  useEvent,
+  useEventRegistration,
+  useEventRegistrations,
+} from '../hooks/useEvents';
 import { useEventAgendas } from '../hooks/useEvents';
 import { useEventAccess } from '../hooks/useEventTokenGating';
 import { useEventRegistrationStatus } from '../hooks/useEventRegistrationStatus';
@@ -37,25 +41,45 @@ interface EventDetailViewProps {
   eventId: string;
 }
 
-export const EventDetailView: React.FC<EventDetailViewProps> = ({ eventId }) => {
+export const EventDetailView: React.FC<EventDetailViewProps> = ({
+  eventId,
+}) => {
   const { address } = useAccount();
-  const { event, loading: eventLoading, error: eventError, refetch: refetchEvent } = useEvent(eventId);
-  const { registration, registerForEvent, loading: registrationLoading, refetch: refetchRegistration } = useEventRegistration(eventId);
-  const { registrations, loading: registrationsLoading, refetch: refetchRegistrations } = useEventRegistrations(eventId);
+  const {
+    event,
+    loading: eventLoading,
+    error: eventError,
+    refetch: refetchEvent,
+  } = useEvent(eventId);
+  const {
+    registration,
+    registerForEvent,
+    loading: registrationLoading,
+    refetch: refetchRegistration,
+  } = useEventRegistration(eventId);
+  const {
+    registrations,
+    loading: registrationsLoading,
+    refetch: refetchRegistrations,
+  } = useEventRegistrations(eventId);
   const { agendas, loading: agendasLoading } = useEventAgendas(eventId);
   const { canView, canRegister, canManage } = useEventAccess(event);
-  const { registration: hookRegistration, isRegistered: hookIsRegistered, refetch: refetchRegistrationStatus } = useEventRegistrationStatus(event?.id || null);
+  const {
+    registration: hookRegistration,
+    isRegistered: hookIsRegistered,
+    refetch: refetchRegistrationStatus,
+  } = useEventRegistrationStatus(event?.id || null);
 
   const [showRegistrationModal, setShowRegistrationModal] = useState(false);
   const [activeTab, setActiveTab] = useState('overview');
   const [cancellingRegistration, setCancellingRegistration] = useState(false);
   const [qrCodeData, setQrCodeData] = useState<string>('');
   const [qrCodeLoading, setQrCodeLoading] = useState(false);
-  
+
   // Use hook data if available, fallback to original registration data
   const effectiveRegistration = hookRegistration || registration;
-  const effectiveIsRegistered = hookIsRegistered || (registration !== null);
-  
+  const effectiveIsRegistered = hookIsRegistered || registration !== null;
+
   // Organizer profile state
   const [organizerProfile, setOrganizerProfile] = useStateForProfile<{
     first_name?: string;
@@ -69,10 +93,12 @@ export const EventDetailView: React.FC<EventDetailViewProps> = ({ eventId }) => 
   useEffect(() => {
     const fetchOrganizerProfile = async () => {
       if (!event?.creator_address) return;
-      
+
       try {
         setLoadingProfile(true);
-        const profile = await EventService.getUserProfileByWallet(event.creator_address);
+        const profile = await EventService.getUserProfileByWallet(
+          event.creator_address,
+        );
         setOrganizerProfile(profile);
       } catch (error) {
         console.error('Failed to fetch organizer profile:', error);
@@ -87,27 +113,40 @@ export const EventDetailView: React.FC<EventDetailViewProps> = ({ eventId }) => 
   // Generate QR code when user is registered
   useEffect(() => {
     const generateQRCode = async () => {
-      if (!effectiveRegistration || !event || effectiveRegistration.registration_status !== 'registered') {
+      if (
+        !effectiveRegistration ||
+        !event ||
+        effectiveRegistration.registration_status !== 'registered'
+      ) {
         setQrCodeData('');
         return;
       }
 
       try {
         setQrCodeLoading(true);
-        console.log('🎫 Regenerating QR code with fixed structure for registration:', effectiveRegistration.id);
+        console.log(
+          '🎫 Regenerating QR code with fixed structure for registration:',
+          effectiveRegistration.id,
+        );
         console.log('🎫 QR Generation Debug:', {
           currentEventId: event.id,
           currentEventTitle: event.title,
           registrationEventId: effectiveRegistration.event_id,
           registrationId: effectiveRegistration.id,
-          matches: event.id === effectiveRegistration.event_id
+          matches: event.id === effectiveRegistration.event_id,
         });
-        
+
         // Fetch user profile for proper userId
-        const userProfile = await EventService.getUserProfileByWallet(effectiveRegistration.user_address);
+        const userProfile = await EventService.getUserProfileByWallet(
+          effectiveRegistration.user_address,
+        );
         console.log('👤 User profile for QR:', userProfile);
-        
-        const qrCodeURL = await QRCodeService.generateUserQRCode(event.id, effectiveRegistration, userProfile);
+
+        const qrCodeURL = await QRCodeService.generateUserQRCode(
+          event.id,
+          effectiveRegistration,
+          userProfile,
+        );
         setQrCodeData(qrCodeURL);
       } catch (error) {
         console.error('Error generating QR code:', error);
@@ -125,29 +164,31 @@ export const EventDetailView: React.FC<EventDetailViewProps> = ({ eventId }) => 
       weekday: 'long',
       year: 'numeric',
       month: 'long',
-      day: 'numeric'
+      day: 'numeric',
     });
   };
 
   const formatTime = (dateString: string) => {
     return new Date(dateString).toLocaleTimeString('en-US', {
       hour: '2-digit',
-      minute: '2-digit'
+      minute: '2-digit',
     });
   };
 
   const addToCalendar = () => {
     if (!event) return;
-    
+
     const startDate = new Date(event.event_date);
-    const endDate = event.event_end_date ? new Date(event.event_end_date) : new Date(startDate.getTime() + 2 * 60 * 60 * 1000);
-    
+    const endDate = event.event_end_date
+      ? new Date(event.event_end_date)
+      : new Date(startDate.getTime() + 2 * 60 * 60 * 1000);
+
     const formatDate = (date: Date) => {
       return date.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
     };
-    
+
     const calendarUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(event.title)}&dates=${formatDate(startDate)}/${formatDate(endDate)}&details=${encodeURIComponent(event.description)}&location=${encodeURIComponent(event.location || '')}`;
-    
+
     window.open(calendarUrl, '_blank');
   };
 
@@ -155,11 +196,11 @@ export const EventDetailView: React.FC<EventDetailViewProps> = ({ eventId }) => 
     if (loadingProfile) {
       return 'Loading organizer...';
     }
-    
+
     if (organizerProfile?.first_name || organizerProfile?.last_name) {
       return `${organizerProfile.first_name || ''} ${organizerProfile.last_name || ''}`.trim();
     }
-    
+
     // Fallback to wallet address
     return `${event?.creator_address.substring(0, 6)}...${event?.creator_address.substring(38)}`;
   };
@@ -171,7 +212,7 @@ export const EventDetailView: React.FC<EventDetailViewProps> = ({ eventId }) => 
       month: 'long',
       day: 'numeric',
       hour: '2-digit',
-      minute: '2-digit'
+      minute: '2-digit',
     });
   };
 
@@ -189,16 +230,18 @@ export const EventDetailView: React.FC<EventDetailViewProps> = ({ eventId }) => 
         return 'bg-gradient-to-r from-gray-200 to-gray-300 text-black';
     }
   };
-  
 
   // Event is live/upcoming if it hasn't ended yet (use end date, not start date)
-  const isUpcoming = event ? (
-    event.event_end_date 
+  const isUpcoming = event
+    ? event.event_end_date
       ? new Date(event.event_end_date) > new Date()
-      : new Date(event.event_date).getTime() + (8 * 60 * 60 * 1000) > new Date().getTime() // +8 hours if no end date
-  ) : false;
+      : new Date(event.event_date).getTime() + 8 * 60 * 60 * 1000 >
+        new Date().getTime() // +8 hours if no end date
+    : false;
   const isPastEvent = event ? new Date(event.event_date) < new Date() : false;
-  const isEventFull = event?.max_attendees ? event.registration_count >= event.max_attendees : false;
+  const isEventFull = event?.max_attendees
+    ? event.registration_count >= event.max_attendees
+    : false;
 
   if (eventLoading) {
     return (
@@ -224,7 +267,8 @@ export const EventDetailView: React.FC<EventDetailViewProps> = ({ eventId }) => 
         <CardContent className="p-8 text-center">
           <h2 className="text-xl font-semibold mb-4">Event Not Found</h2>
           <p className="text-gray-600 mb-4">
-            The event you're looking for doesn't exist or you don't have permission to view it.
+            The event you're looking for doesn't exist or you don't have
+            permission to view it.
           </p>
           <Button asChild={true}>
             <Link href="/events">View All Events</Link>
@@ -261,7 +305,14 @@ export const EventDetailView: React.FC<EventDetailViewProps> = ({ eventId }) => 
               {event.status}
             </Badge>
             {effectiveIsRegistered && (
-              <Badge variant="outline" style={{ backgroundColor: '#E8F1EE', color: '#3F7A5A', borderColor: '#B8D9CA' }}>
+              <Badge
+                variant="outline"
+                style={{
+                  backgroundColor: '#E8F1EE',
+                  color: '#3F7A5A',
+                  borderColor: '#B8D9CA',
+                }}
+              >
                 <CheckCircle className="w-3 h-3 mr-1" />
                 Registered
               </Badge>
@@ -279,12 +330,12 @@ export const EventDetailView: React.FC<EventDetailViewProps> = ({ eventId }) => 
               Back
             </Link>
           </Button>
-          
+
           <Button variant="outline" size="sm">
             <Share2 className="w-4 h-4 mr-2" />
             Share
           </Button>
-          
+
           {canManage && (
             <Button variant="outline" size="sm" asChild={true}>
               <Link href={`/events/manage/${event.id}`}>
@@ -310,7 +361,7 @@ export const EventDetailView: React.FC<EventDetailViewProps> = ({ eventId }) => 
             <TabsContent value="overview" className="space-y-6">
               <Card>
                 <CardContent>
-                {event.event_image_url && (
+                  {event.event_image_url && (
                     <div className="mt-6">
                       <img
                         src={event.event_image_url}
@@ -324,8 +375,6 @@ export const EventDetailView: React.FC<EventDetailViewProps> = ({ eventId }) => 
                       {event.description}
                     </p>
                   </div>
-                  
-
                 </CardContent>
               </Card>
 
@@ -340,8 +389,8 @@ export const EventDetailView: React.FC<EventDetailViewProps> = ({ eventId }) => 
                       <p className="text-sm text-gray-600 mb-3">
                         This event requires the following tokens:
                       </p>
-                      <EventTokenDisplay 
-                        tokenIds={event.required_tokens} 
+                      <EventTokenDisplay
+                        tokenIds={event.required_tokens}
                         showImages={true}
                         compact={false}
                       />
@@ -370,7 +419,11 @@ export const EventDetailView: React.FC<EventDetailViewProps> = ({ eventId }) => 
                   ) : (
                     <div className="space-y-4">
                       {agendas.map((agenda) => (
-                        <div key={agenda.id} className="border-l-4 pl-4 py-2" style={{ borderLeftColor: '#2F5D50' }}>
+                        <div
+                          key={agenda.id}
+                          className="border-l-4 pl-4 py-2"
+                          style={{ borderLeftColor: '#2F5D50' }}
+                        >
                           <div className="flex items-center justify-between">
                             <h4 className="font-semibold">{agenda.title}</h4>
                             <div className="flex items-center text-sm text-gray-600">
@@ -380,7 +433,9 @@ export const EventDetailView: React.FC<EventDetailViewProps> = ({ eventId }) => 
                             </div>
                           </div>
                           {agenda.description && (
-                            <p className="text-gray-600 mt-1">{agenda.description}</p>
+                            <p className="text-gray-600 mt-1">
+                              {agenda.description}
+                            </p>
                           )}
                           <p className="text-sm text-gray-500 mt-1">
                             {formatDate(agenda.agenda_date)}
@@ -396,7 +451,17 @@ export const EventDetailView: React.FC<EventDetailViewProps> = ({ eventId }) => 
             <TabsContent value="attendees" className="space-y-6">
               <Card>
                 <CardHeader>
-                  <CardTitle>Registered Attendees ({registrations.filter(r => ['registered', 'checked_in', 'completed'].includes(r.registration_status)).length})</CardTitle>
+                  <CardTitle>
+                    Registered Attendees (
+                    {
+                      registrations.filter((r) =>
+                        ['registered', 'checked_in', 'completed'].includes(
+                          r.registration_status,
+                        ),
+                      ).length
+                    }
+                    )
+                  </CardTitle>
                 </CardHeader>
                 <CardContent>
                   {registrationsLoading ? (
@@ -411,7 +476,11 @@ export const EventDetailView: React.FC<EventDetailViewProps> = ({ eventId }) => 
                         </div>
                       ))}
                     </div>
-                  ) : registrations.filter(r => ['registered', 'checked_in', 'completed'].includes(r.registration_status)).length === 0 ? (
+                  ) : registrations.filter((r) =>
+                      ['registered', 'checked_in', 'completed'].includes(
+                        r.registration_status,
+                      ),
+                    ).length === 0 ? (
                     <div className="text-center py-8">
                       <Users className="w-12 h-12 mx-auto text-gray-400 mb-4" />
                       <p className="text-gray-500">
@@ -419,7 +488,13 @@ export const EventDetailView: React.FC<EventDetailViewProps> = ({ eventId }) => 
                       </p>
                     </div>
                   ) : (
-                    <AttendeeList registrations={registrations.filter(r => ['registered', 'checked_in', 'completed'].includes(r.registration_status))} />
+                    <AttendeeList
+                      registrations={registrations.filter((r) =>
+                        ['registered', 'checked_in', 'completed'].includes(
+                          r.registration_status,
+                        ),
+                      )}
+                    />
                   )}
                 </CardContent>
               </Card>
@@ -436,26 +511,39 @@ export const EventDetailView: React.FC<EventDetailViewProps> = ({ eventId }) => 
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex items-center">
-                <Calendar className="w-5 h-5 mr-3" style={{ color: '#2F5D50' }} />
+                <Calendar
+                  className="w-5 h-5 mr-3"
+                  style={{ color: '#2F5D50' }}
+                />
                 <div>
                   <p className="font-medium">{formatDate(event.event_date)}</p>
-                  <p className="text-sm text-gray-600">{formatTime(event.event_date)}</p>
+                  <p className="text-sm text-gray-600">
+                    {formatTime(event.event_date)}
+                  </p>
                 </div>
               </div>
 
               {event.event_end_date && (
                 <div className="flex items-center">
-                  <Clock className="w-5 h-5 mr-3" style={{ color: '#C6933F' }} />
+                  <Clock
+                    className="w-5 h-5 mr-3"
+                    style={{ color: '#C6933F' }}
+                  />
                   <div>
                     <p className="font-medium">Ends</p>
-                    <p className="text-sm text-gray-600">{formatDateTime(event.event_end_date)}</p>
+                    <p className="text-sm text-gray-600">
+                      {formatDateTime(event.event_end_date)}
+                    </p>
                   </div>
                 </div>
               )}
 
               {event.location && (
                 <div className="flex items-center">
-                  <MapPin className="w-5 h-5 mr-3" style={{ color: '#3F7A5A' }} />
+                  <MapPin
+                    className="w-5 h-5 mr-3"
+                    style={{ color: '#3F7A5A' }}
+                  />
                   <div>
                     <p className="font-medium">Location</p>
                     <p className="text-sm text-gray-600">{event.location}</p>
@@ -468,7 +556,14 @@ export const EventDetailView: React.FC<EventDetailViewProps> = ({ eventId }) => 
                 <div>
                   <p className="font-medium">Attendees</p>
                   <p className="text-sm text-gray-600">
-                    {registrations.filter(r => ['registered', 'checked_in', 'completed'].includes(r.registration_status)).length} registered
+                    {
+                      registrations.filter((r) =>
+                        ['registered', 'checked_in', 'completed'].includes(
+                          r.registration_status,
+                        ),
+                      ).length
+                    }{' '}
+                    registered
                     {event.max_attendees && ` of ${event.max_attendees} max`}
                   </p>
                 </div>
@@ -476,7 +571,10 @@ export const EventDetailView: React.FC<EventDetailViewProps> = ({ eventId }) => 
 
               {event.price_token !== 'free' && (
                 <div className="flex items-center">
-                  <DollarSign className="w-5 h-5 mr-3" style={{ color: '#C6933F' }} />
+                  <DollarSign
+                    className="w-5 h-5 mr-3"
+                    style={{ color: '#C6933F' }}
+                  />
                   <div>
                     <p className="font-medium">Price</p>
                     <p className="text-sm text-gray-600">
@@ -503,91 +601,149 @@ export const EventDetailView: React.FC<EventDetailViewProps> = ({ eventId }) => 
             <CardContent className="p-6">
               {effectiveIsRegistered ? (
                 <div className="text-center space-y-4">
-                  <div className="p-4 rounded-lg" style={{ backgroundColor: '#E8F1EE', border: '1px solid #B8D9CA' }}>
+                  <div
+                    className="p-4 rounded-lg"
+                    style={{
+                      backgroundColor: '#E8F1EE',
+                      border: '1px solid #B8D9CA',
+                    }}
+                  >
                     <div className="flex items-center justify-center space-x-2">
-                      <CheckCircle className="w-5 h-5" style={{ color: '#3F7A5A' }} />
-                      <p className="font-medium" style={{ color: '#1F453A' }}>You're Registered!</p>
+                      <CheckCircle
+                        className="w-5 h-5"
+                        style={{ color: '#3F7A5A' }}
+                      />
+                      <p className="font-medium" style={{ color: '#1F453A' }}>
+                        You're Registered!
+                      </p>
                     </div>
                     <p className="text-sm" style={{ color: '#3F7A5A' }}>
-                      Status: {effectiveRegistration?.registration_status || 'registered'}
+                      Status:{' '}
+                      {effectiveRegistration?.registration_status ||
+                        'registered'}
                     </p>
                   </div>
-                  
-                  {effectiveRegistration?.registration_status === 'registered' && isUpcoming && (
-                    <Button 
-                      variant="destructive" 
-                      className="w-full"
-                      disabled={cancellingRegistration}
-                      onClick={async () => {
-                        if (!address || !event) return;
-                        
-                        setCancellingRegistration(true);
-                        try {
-                          const success = await EventService.cancelEventRegistration(event.id, address);
-                          if (success) {
-                            alert('Registration cancelled successfully');
-                            // Refresh the data without reloading the page
-                            await Promise.all([
-                              refetchEvent(),
-                              refetchRegistration(),
-                              refetchRegistrations(),
-                              refetchRegistrationStatus && refetchRegistrationStatus()
-                            ]);
-                          } else {
-                            alert('Failed to cancel registration. Please try again.');
+
+                  {effectiveRegistration?.registration_status ===
+                    'registered' &&
+                    isUpcoming && (
+                      <Button
+                        variant="destructive"
+                        className="w-full"
+                        disabled={cancellingRegistration}
+                        onClick={async () => {
+                          if (!address || !event) return;
+
+                          setCancellingRegistration(true);
+                          try {
+                            const success =
+                              await EventService.cancelEventRegistration(
+                                event.id,
+                                address,
+                              );
+                            if (success) {
+                              alert('Registration cancelled successfully');
+                              // Refresh the data without reloading the page
+                              await Promise.all([
+                                refetchEvent(),
+                                refetchRegistration(),
+                                refetchRegistrations(),
+                                refetchRegistrationStatus &&
+                                  refetchRegistrationStatus(),
+                              ]);
+                            } else {
+                              alert(
+                                'Failed to cancel registration. Please try again.',
+                              );
+                            }
+                          } catch (error) {
+                            console.error(
+                              'Error cancelling registration:',
+                              error,
+                            );
+                            alert(
+                              'An error occurred while cancelling registration.',
+                            );
+                          } finally {
+                            setCancellingRegistration(false);
                           }
-                        } catch (error) {
-                          console.error('Error cancelling registration:', error);
-                          alert('An error occurred while cancelling registration.');
-                        } finally {
-                          setCancellingRegistration(false);
-                        }
-                      }}
-                    >
-                      {cancellingRegistration ? 'Cancelling...' : 'Cancel Registration'}
-                    </Button>
-                  )}
-                  
-                  <Button variant="outline" className="w-full" onClick={addToCalendar}>
+                        }}
+                      >
+                        {cancellingRegistration
+                          ? 'Cancelling...'
+                          : 'Cancel Registration'}
+                      </Button>
+                    )}
+
+                  <Button
+                    variant="outline"
+                    className="w-full"
+                    onClick={addToCalendar}
+                  >
                     <Download className="w-4 h-4 mr-2" />
                     Add to Calendar
                   </Button>
                 </div>
               ) : (
                 <div className="text-center space-y-4">
-                  {isUpcoming ? isEventFull ? (
-                    <div className="p-4 rounded-lg" style={{ backgroundColor: '#FAF4EC', border: '1px solid #F5EDD7' }}>
-                      <p className="font-medium" style={{ color: '#9C7137' }}>Event is Full</p>
-                      <p className="text-sm" style={{ color: '#C6933F' }}>
-                        This event has reached maximum capacity
-                      </p>
-                    </div>
-                  ) : canRegister ? (
-                    <>
-                      <Button
-                        className="w-full hover:opacity-90"
-                        onClick={() => setShowRegistrationModal(true)}
-                        disabled={registrationLoading}
-                        style={{ backgroundColor: '#2F5D50', color: '#FFFFFF' }}
+                  {isUpcoming ? (
+                    isEventFull ? (
+                      <div
+                        className="p-4 rounded-lg"
+                        style={{
+                          backgroundColor: '#FAF4EC',
+                          border: '1px solid #F5EDD7',
+                        }}
                       >
-                        {registrationLoading ? 'Processing...' : 'Register Now'}
-                      </Button>
-                      <p className="text-xs text-gray-500">
-                        {event.price_token === 'free'
-                          ? 'Free registration'
-                          : `${event.price_amount} ${event.price_token}`}
-                      </p>
-                    </>
-                  ) : (
-                    <div className="p-4 rounded-lg" style={{ backgroundColor: '#F5E6E6', border: '1px solid #E8CBCB' }}>
-                      <p className="font-medium" style={{ color: '#8B3A3A' }}>Cannot Register</p>
-                      <p className="text-sm" style={{ color: '#8B3A3A' }}>
-                        You don't meet the requirements for this event
-                      </p>
-                    </div>
+                        <p className="font-medium" style={{ color: '#9C7137' }}>
+                          Event is Full
+                        </p>
+                        <p className="text-sm" style={{ color: '#C6933F' }}>
+                          This event has reached maximum capacity
+                        </p>
+                      </div>
+                    ) : canRegister ? (
+                      <>
+                        <Button
+                          className="w-full hover:opacity-90"
+                          onClick={() => setShowRegistrationModal(true)}
+                          disabled={registrationLoading}
+                          style={{
+                            backgroundColor: '#2F5D50',
+                            color: '#FFFFFF',
+                          }}
+                        >
+                          {registrationLoading
+                            ? 'Processing...'
+                            : 'Register Now'}
+                        </Button>
+                        <p className="text-xs text-gray-500">
+                          {event.price_token === 'free'
+                            ? 'Free registration'
+                            : `${event.price_amount} ${event.price_token}`}
+                        </p>
+                      </>
+                    ) : (
+                      <div
+                        className="p-4 rounded-lg"
+                        style={{
+                          backgroundColor: '#F5E6E6',
+                          border: '1px solid #E8CBCB',
+                        }}
+                      >
+                        <p className="font-medium" style={{ color: '#8B3A3A' }}>
+                          Cannot Register
+                        </p>
+                        <p className="text-sm" style={{ color: '#8B3A3A' }}>
+                          You don't meet the requirements for this event
+                        </p>
+                      </div>
+                    )
                   ) : (
                     <div className="p-4 bg-gray-50 border border-gray-200 rounded-lg">
-                      <p className="font-medium text-gray-800">Event has ended</p>
+                      <p className="font-medium text-gray-800">
+                        Event has ended
+                      </p>
                       <p className="text-sm text-gray-600">
                         This event took place on {formatDate(event.event_date)}
                       </p>
@@ -598,53 +754,57 @@ export const EventDetailView: React.FC<EventDetailViewProps> = ({ eventId }) => 
             </CardContent>
           </Card>
 
-
           {/* QR Code for Check-in (if registered) */}
-          {effectiveRegistration && effectiveRegistration.registration_status === 'registered' && isUpcoming && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <QrCode className="w-5 h-5 mr-2" />
-                  Check-in QR Code
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="text-center">
-                {qrCodeLoading ? (
-                  <div className="w-32 h-32 bg-gray-200 rounded-lg mx-auto mb-4 flex items-center justify-center">
-                    <div className="animate-spin rounded-full h-8 w-8" style={{ borderBottom: '2px solid #2F5D50' }}></div>
-                  </div>
-                ) : qrCodeData ? (
-                  <div className="space-y-4">
-                    <img
-                      src={qrCodeData}
-                      alt="Check-in QR Code"
-                      className="w-32 h-32 mx-auto border rounded-lg"
-                    />
-                    <p className="text-sm text-gray-600">
-                      Show this QR code at the event for check-in
-                    </p>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        const link = document.createElement('a');
-                        link.download = `${event.title}-checkin-qr.png`;
-                        link.href = qrCodeData;
-                        link.click();
-                      }}
-                    >
-                      <Download className="w-4 h-4 mr-2" />
-                      Download QR Code
-                    </Button>
-                  </div>
-                ) : (
-                  <div className="w-32 h-32 bg-gray-200 rounded-lg mx-auto mb-4 flex items-center justify-center">
-                    <QrCode className="w-16 h-16 text-gray-400" />
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          )}
+          {effectiveRegistration &&
+            effectiveRegistration.registration_status === 'registered' &&
+            isUpcoming && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center">
+                    <QrCode className="w-5 h-5 mr-2" />
+                    Check-in QR Code
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="text-center">
+                  {qrCodeLoading ? (
+                    <div className="w-32 h-32 bg-gray-200 rounded-lg mx-auto mb-4 flex items-center justify-center">
+                      <div
+                        className="animate-spin rounded-full h-8 w-8"
+                        style={{ borderBottom: '2px solid #2F5D50' }}
+                      ></div>
+                    </div>
+                  ) : qrCodeData ? (
+                    <div className="space-y-4">
+                      <img
+                        src={qrCodeData}
+                        alt="Check-in QR Code"
+                        className="w-32 h-32 mx-auto border rounded-lg"
+                      />
+                      <p className="text-sm text-gray-600">
+                        Show this QR code at the event for check-in
+                      </p>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          const link = document.createElement('a');
+                          link.download = `${event.title}-checkin-qr.png`;
+                          link.href = qrCodeData;
+                          link.click();
+                        }}
+                      >
+                        <Download className="w-4 h-4 mr-2" />
+                        Download QR Code
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="w-32 h-32 bg-gray-200 rounded-lg mx-auto mb-4 flex items-center justify-center">
+                      <QrCode className="w-16 h-16 text-gray-400" />
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
         </div>
       </div>
 
@@ -657,7 +817,13 @@ export const EventDetailView: React.FC<EventDetailViewProps> = ({ eventId }) => 
           setShowRegistrationModal(false);
           // Refetch event data
         }}
-        currentRegistrationCount={registrations.filter(r => ['registered', 'checked_in', 'completed'].includes(r.registration_status)).length}
+        currentRegistrationCount={
+          registrations.filter((r) =>
+            ['registered', 'checked_in', 'completed'].includes(
+              r.registration_status,
+            ),
+          ).length
+        }
       />
     </div>
   );
@@ -676,26 +842,31 @@ const AttendeeList: React.FC<AttendeeListProps> = ({ registrations }) => {
     const fetchProfiles = async () => {
       setLoading(true);
       const profileMap = new Map();
-      
+
       try {
         await Promise.all(
           registrations.map(async (registration) => {
             try {
-              const profile = await EventService.getUserProfileByWallet(registration.user_address);
+              const profile = await EventService.getUserProfileByWallet(
+                registration.user_address,
+              );
               if (profile) {
                 profileMap.set(registration.user_address, profile);
               }
             } catch (error) {
-              console.warn(`Failed to fetch profile for ${registration.user_address}:`, error);
+              console.warn(
+                `Failed to fetch profile for ${registration.user_address}:`,
+                error,
+              );
               // Set a default profile with wallet address
               profileMap.set(registration.user_address, {
                 wallet_address: registration.user_address,
                 first_name: registration.user_address.slice(0, 6) + '...',
                 last_name: '',
-                profile_picture: null
+                profile_picture: null,
               });
             }
-          })
+          }),
         );
         setProfiles(profileMap);
       } catch (error) {
@@ -733,11 +904,14 @@ const AttendeeList: React.FC<AttendeeListProps> = ({ registrations }) => {
       {registrations.map((registration) => {
         const profile = profiles.get(registration.user_address);
         return (
-          <div key={registration.id} className="flex items-center space-x-3 p-3 border rounded-lg hover:bg-gray-50">
+          <div
+            key={registration.id}
+            className="flex items-center space-x-3 p-3 border rounded-lg hover:bg-gray-50"
+          >
             <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center overflow-hidden">
               {profile?.profile_picture ? (
-                <img 
-                  src={profile.profile_picture} 
+                <img
+                  src={profile.profile_picture}
                   alt={`${profile.first_name} ${profile.last_name}`}
                   className="w-full h-full object-cover"
                 />
@@ -750,7 +924,8 @@ const AttendeeList: React.FC<AttendeeListProps> = ({ registrations }) => {
                 {profile?.first_name || 'Anonymous'} {profile?.last_name || ''}
               </p>
               <p className="text-xs text-gray-500">
-                {registration.user_address.slice(0, 6)}...{registration.user_address.slice(-4)}
+                {registration.user_address.slice(0, 6)}...
+                {registration.user_address.slice(-4)}
               </p>
             </div>
             <div className="text-right">
@@ -761,15 +936,21 @@ const AttendeeList: React.FC<AttendeeListProps> = ({ registrations }) => {
                 className="inline-block px-2 py-1 rounded-full text-xs"
                 style={{
                   backgroundColor:
-                    registration.registration_status === 'registered' ? '#E8F1EE' :
-                    registration.registration_status === 'checked_in' ? '#D1E6DC' :
-                    registration.registration_status === 'completed' ? '#E8E4DC' :
-                    '#f3f4f6',
+                    registration.registration_status === 'registered'
+                      ? '#E8F1EE'
+                      : registration.registration_status === 'checked_in'
+                        ? '#D1E6DC'
+                        : registration.registration_status === 'completed'
+                          ? '#E8E4DC'
+                          : '#f3f4f6',
                   color:
-                    registration.registration_status === 'registered' ? '#3F7A5A' :
-                    registration.registration_status === 'checked_in' ? '#2F5D50' :
-                    registration.registration_status === 'completed' ? '#6A5F7A' :
-                    '#6b7280'
+                    registration.registration_status === 'registered'
+                      ? '#3F7A5A'
+                      : registration.registration_status === 'checked_in'
+                        ? '#2F5D50'
+                        : registration.registration_status === 'completed'
+                          ? '#6A5F7A'
+                          : '#6b7280',
                 }}
               >
                 {registration.registration_status}

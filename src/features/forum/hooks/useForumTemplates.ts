@@ -45,7 +45,7 @@ export function useForumTemplates() {
         .single();
 
       if (error) throw error;
-      setTemplates(prev => [...prev, data]);
+      setTemplates((prev) => [...prev, data]);
       return data;
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unknown error');
@@ -53,7 +53,10 @@ export function useForumTemplates() {
     }
   };
 
-  const updateTemplate = async (id: string, updates: Partial<ThreadTemplate>) => {
+  const updateTemplate = async (
+    id: string,
+    updates: Partial<ThreadTemplate>,
+  ) => {
     try {
       const { data, error } = await supabase
         .from('forum_templates')
@@ -63,7 +66,7 @@ export function useForumTemplates() {
         .single();
 
       if (error) throw error;
-      setTemplates(prev => prev.map(t => t.id === id ? data : t));
+      setTemplates((prev) => prev.map((t) => (t.id === id ? data : t)));
       return data;
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unknown error');
@@ -79,7 +82,7 @@ export function useForumTemplates() {
         .eq('id', id);
 
       if (error) throw error;
-      setTemplates(prev => prev.filter(t => t.id !== id));
+      setTemplates((prev) => prev.filter((t) => t.id !== id));
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unknown error');
       throw err;

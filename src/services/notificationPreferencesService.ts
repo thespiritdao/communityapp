@@ -102,7 +102,9 @@ export const notificationPreferencesService = {
       if (error) {
         if (error.code === 'PGRST116') {
           // No preferences found, create defaults
-          console.log(`[NotificationPreferences] Creating default preferences for ${userAddress}`);
+          console.log(
+            `[NotificationPreferences] Creating default preferences for ${userAddress}`,
+          );
           return await this.createDefaultPreferences(userAddress);
         }
         throw error;
@@ -110,7 +112,10 @@ export const notificationPreferencesService = {
 
       return data;
     } catch (error) {
-      console.error('[NotificationPreferences] Error getting preferences:', error);
+      console.error(
+        '[NotificationPreferences] Error getting preferences:',
+        error,
+      );
       throw error;
     }
   },
@@ -121,7 +126,9 @@ export const notificationPreferencesService = {
    * Note: This is only called for the current user (creating their own preferences).
    * For system-initiated preference creation, the API route handles it with admin client.
    */
-  async createDefaultPreferences(userAddress: string): Promise<NotificationPreferences> {
+  async createDefaultPreferences(
+    userAddress: string,
+  ): Promise<NotificationPreferences> {
     const defaults: Partial<NotificationPreferences> = {
       enabled: true,
       desktop_enabled: true,
@@ -195,10 +202,15 @@ export const notificationPreferencesService = {
 
       if (error) throw error;
 
-      console.log(`[NotificationPreferences] Created default preferences for ${userAddress}`);
+      console.log(
+        `[NotificationPreferences] Created default preferences for ${userAddress}`,
+      );
       return data;
     } catch (error) {
-      console.error('[NotificationPreferences] Error creating default preferences:', error);
+      console.error(
+        '[NotificationPreferences] Error creating default preferences:',
+        error,
+      );
       throw error;
     }
   },
@@ -208,7 +220,7 @@ export const notificationPreferencesService = {
    */
   async updatePreferences(
     userAddress: string,
-    updates: Partial<NotificationPreferences>
+    updates: Partial<NotificationPreferences>,
   ): Promise<NotificationPreferences> {
     try {
       const { data, error } = await supabase
@@ -220,10 +232,15 @@ export const notificationPreferencesService = {
 
       if (error) throw error;
 
-      console.log(`[NotificationPreferences] Updated preferences for ${userAddress}`);
+      console.log(
+        `[NotificationPreferences] Updated preferences for ${userAddress}`,
+      );
       return data;
     } catch (error) {
-      console.error('[NotificationPreferences] Error updating preferences:', error);
+      console.error(
+        '[NotificationPreferences] Error updating preferences:',
+        error,
+      );
       throw error;
     }
   },
@@ -239,44 +256,56 @@ export const notificationPreferencesService = {
   async shouldNotify(
     userAddress: string,
     notificationType: string,
-    priority: 'low' | 'medium' | 'high' | 'urgent'
+    priority: 'low' | 'medium' | 'high' | 'urgent',
   ): Promise<boolean> {
     try {
       const prefs = await this.getPreferences(userAddress);
 
       // 1. Check global enabled
       if (!prefs.enabled) {
-        console.log(`[NotificationPreferences] Notifications disabled for ${userAddress}`);
+        console.log(
+          `[NotificationPreferences] Notifications disabled for ${userAddress}`,
+        );
         return false;
       }
 
       // 2. Check quiet hours (allow urgent notifications)
       if (prefs.quiet_hours_enabled && priority !== 'urgent') {
         if (this.isQuietHours(prefs.quiet_hours_start, prefs.quiet_hours_end)) {
-          console.log(`[NotificationPreferences] Quiet hours active for ${userAddress}, skipping ${priority} notification`);
+          console.log(
+            `[NotificationPreferences] Quiet hours active for ${userAddress}, skipping ${priority} notification`,
+          );
           return false;
         }
       }
 
       // 3. Check category-level toggle
       const category = this.getCategoryForType(notificationType);
-      const categoryKey = `category_${category}` as keyof NotificationPreferences;
+      const categoryKey =
+        `category_${category}` as keyof NotificationPreferences;
       if (prefs[categoryKey] === false) {
-        console.log(`[NotificationPreferences] Category ${category} disabled for ${userAddress}`);
+        console.log(
+          `[NotificationPreferences] Category ${category} disabled for ${userAddress}`,
+        );
         return false;
       }
 
       // 4. Check individual type preference
       const typeKey = notificationType as keyof NotificationPreferences;
       if (prefs[typeKey] === false) {
-        console.log(`[NotificationPreferences] Type ${notificationType} disabled for ${userAddress}`);
+        console.log(
+          `[NotificationPreferences] Type ${notificationType} disabled for ${userAddress}`,
+        );
         return false;
       }
 
       return true;
     } catch (error) {
       // If we can't get preferences, allow notification (fail open)
-      console.error('[NotificationPreferences] Error checking preferences, allowing notification:', error);
+      console.error(
+        '[NotificationPreferences] Error checking preferences, allowing notification:',
+        error,
+      );
       return true;
     }
   },
@@ -329,12 +358,17 @@ export const notificationPreferencesService = {
 
       if (deleteError) throw deleteError;
 
-      console.log(`[NotificationPreferences] Reset preferences for ${userAddress}`);
+      console.log(
+        `[NotificationPreferences] Reset preferences for ${userAddress}`,
+      );
 
       // Create new defaults
       return await this.createDefaultPreferences(userAddress);
     } catch (error) {
-      console.error('[NotificationPreferences] Error resetting preferences:', error);
+      console.error(
+        '[NotificationPreferences] Error resetting preferences:',
+        error,
+      );
       throw error;
     }
   },
@@ -345,37 +379,44 @@ export const notificationPreferencesService = {
    */
   getPreferenceKeyFromNotification(
     notificationType: string,
-    category: string
+    category: string,
   ): string {
     // Direct mappings
     const directMappings: Record<string, string> = {
       // Chat
-      'chat_message': 'chat_direct_message',
+      chat_message: 'chat_direct_message',
 
       // Forum
-      'user_mentioned': category === 'general' ? 'forum_user_mentioned' : 'governance_proposal_mentioned',
-      'forum_reply': 'forum_thread_reply',
+      user_mentioned:
+        category === 'general'
+          ? 'forum_user_mentioned'
+          : 'governance_proposal_mentioned',
+      forum_reply: 'forum_thread_reply',
 
       // Marketplace
-      'purchase_completed': 'marketplace_purchase_fulfillment',
-      'order_status_updated': 'marketplace_order_status',
+      purchase_completed: 'marketplace_purchase_fulfillment',
+      order_status_updated: 'marketplace_order_status',
 
       // Events
-      'event_registration': 'event_registration_confirmation',
-      'event_reminder': 'event_reminder_day_of', // Default to day-of
-      'event_checkin': 'event_checkin_prompt',
+      event_registration: 'event_registration_confirmation',
+      event_reminder: 'event_reminder_day_of', // Default to day-of
+      event_checkin: 'event_checkin_prompt',
 
       // Governance
-      'proposal_created': 'governance_proposal_created',
-      'proposal_mentioned': 'governance_proposal_mentioned',
-      'voting_reminder': 'governance_voting_reminder_24h', // Default to 24h
-      'proposal_executed': 'governance_proposal_executed',
+      proposal_created: 'governance_proposal_created',
+      proposal_mentioned: 'governance_proposal_mentioned',
+      voting_reminder: 'governance_voting_reminder_24h', // Default to 24h
+      proposal_executed: 'governance_proposal_executed',
 
       // Bounties
-      'bounty_update': 'bounty_work_submitted', // Generic bounty update
+      bounty_update: 'bounty_work_submitted', // Generic bounty update
     };
 
     const key = `${notificationType}_${category}`;
-    return directMappings[notificationType] || directMappings[key] || notificationType;
-  }
+    return (
+      directMappings[notificationType] ||
+      directMappings[key] ||
+      notificationType
+    );
+  },
 };

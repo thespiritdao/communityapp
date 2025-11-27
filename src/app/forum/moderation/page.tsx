@@ -28,7 +28,7 @@ function ModerationDashboardContent() {
         </p>
         {moderatorRoles.length > 0 && (
           <p className="text-sm text-gray-500 mt-2">
-            Moderating as: {moderatorRoles.map(r => r.roleName).join(', ')}
+            Moderating as: {moderatorRoles.map((r) => r.roleName).join(', ')}
           </p>
         )}
       </div>

@@ -8,19 +8,21 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/components/ui/use-toast';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { 
-  Transaction, 
-  TransactionButton, 
-  TransactionSponsor, 
-  TransactionStatus, 
-  TransactionStatusLabel, 
-  TransactionStatusAction 
-} from "@coinbase/onchainkit/transaction";
+import {
+  Transaction,
+  TransactionButton,
+  TransactionSponsor,
+  TransactionStatus,
+  TransactionStatusLabel,
+  TransactionStatusAction,
+} from '@coinbase/onchainkit/transaction';
 import { TreasuryManagement } from './TreasuryManagement';
 import { Wallet, Plus, AlertTriangle, CheckCircle } from 'lucide-react';
 
 // Contract addresses from environment
-const POD_TREASURY_FACTORY_ADDRESS = (process.env.NEXT_PUBLIC_POD_TREASURY_FACTORY || '0x0000000000000000000000000000000000000000') as `0x${string}`;
+const POD_TREASURY_FACTORY_ADDRESS = (process.env
+  .NEXT_PUBLIC_POD_TREASURY_FACTORY ||
+  '0x0000000000000000000000000000000000000000') as `0x${string}`;
 const PODS_TESTING_MODE = process.env.NEXT_PUBLIC_PODS_TESTING === 'true';
 
 // Default supported tokens (Your community currencies)
@@ -32,16 +34,16 @@ const DEFAULT_SUPPORTED_TOKENS = [
 // Factory ABI for treasury deployment
 const TREASURY_FACTORY_ABI = [
   {
-    name: "deployTreasury",
-    type: "function",
+    name: 'deployTreasury',
+    type: 'function',
     inputs: [
-      { name: "podId", type: "string" },
-      { name: "managementHatId", type: "uint256" },
-      { name: "supportedTokens", type: "address[]" },
-      { name: "testingMode", type: "bool" }
+      { name: 'podId', type: 'string' },
+      { name: 'managementHatId', type: 'uint256' },
+      { name: 'supportedTokens', type: 'address[]' },
+      { name: 'testingMode', type: 'bool' },
     ],
-    outputs: [{ name: "", type: "address" }],
-    stateMutability: "nonpayable"
+    outputs: [{ name: '', type: 'address' }],
+    stateMutability: 'nonpayable',
   },
 ] as const;
 
@@ -62,16 +64,19 @@ interface PodSpecificTreasuryManagerProps {
  * Pod-specific treasury manager that shows deployment interface when no treasury exists
  * and regular treasury management when treasury is active
  */
-export function PodSpecificTreasuryManager({ pod, canManageTreasury }: PodSpecificTreasuryManagerProps) {
+export function PodSpecificTreasuryManager({
+  pod,
+  canManageTreasury,
+}: PodSpecificTreasuryManagerProps) {
   const { address } = useAccount();
   const { toast } = useToast();
   const [localPod, setLocalPod] = useState(pod);
-  
+
   // Update local pod when prop changes
   useEffect(() => {
     setLocalPod(pod);
   }, [pod]);
-  
+
   // Check if pod has an active treasury
   const hasTreasury = !!localPod.treasury_contract_address;
 
@@ -95,8 +100,8 @@ export function PodSpecificTreasuryManager({ pod, canManageTreasury }: PodSpecif
         localPod.id,
         getManagementHatIdBigInt(localPod.management_hat_id),
         DEFAULT_SUPPORTED_TOKENS,
-        PODS_TESTING_MODE
-      ]
+        PODS_TESTING_MODE,
+      ],
     };
   };
 
@@ -106,22 +111,23 @@ export function PodSpecificTreasuryManager({ pod, canManageTreasury }: PodSpecif
   // Handle successful deployment
   const handleSuccess = async (response: any) => {
     console.log('🏦 Treasury deployment response:', response);
-    
+
     try {
       // Extract treasury address from transaction logs
       const txReceipt = response?.transactionReceipts?.[0];
-      
+
       // TreasuryDeployed event signature: keccak256("TreasuryDeployed(string,address,uint256,address[],address)")
-      const TREASURY_DEPLOYED_EVENT = '0x494cf03e4055d4033e848ad013abd5a12efdf3143ccf97cd8514778840b10d36';
-      
+      const TREASURY_DEPLOYED_EVENT =
+        '0x494cf03e4055d4033e848ad013abd5a12efdf3143ccf97cd8514778840b10d36';
+
       let treasuryAddress = '';
-      
+
       if (txReceipt?.logs) {
         // Find TreasuryDeployed event log
-        const deploymentLog = txReceipt.logs.find((log: any) => 
-          log.topics?.[0] === TREASURY_DEPLOYED_EVENT
+        const deploymentLog = txReceipt.logs.find(
+          (log: any) => log.topics?.[0] === TREASURY_DEPLOYED_EVENT,
         );
-        
+
         if (deploymentLog) {
           // Treasury address is the second indexed parameter (topics[2])
           // Remove '0x' and pad to get proper address format
@@ -130,25 +136,25 @@ export function PodSpecificTreasuryManager({ pod, canManageTreasury }: PodSpecif
             treasuryAddress = '0x' + addressFromTopic.slice(-40);
           }
         }
-        
+
         // If topic parsing fails, try getting from receipt contractAddress
         if (!treasuryAddress && txReceipt.contractAddress) {
           treasuryAddress = txReceipt.contractAddress;
         }
       }
-      
+
       console.log('🏦 Extracted treasury address:', treasuryAddress);
-      
+
       // If we couldn't extract the address, show a message with the tx hash
       if (!treasuryAddress) {
         console.error('Could not extract treasury address from logs');
         toast({
-          title: "Treasury Deployed!",
+          title: 'Treasury Deployed!',
           description: `Treasury deployed but address extraction failed. Check tx: ${txReceipt?.transactionHash}`,
         });
         return;
       }
-      
+
       // Update database with treasury address
       console.log('📝 Updating pod with treasury address:', treasuryAddress);
       const updateResponse = await fetch('/api/pods/activate', {
@@ -157,40 +163,42 @@ export function PodSpecificTreasuryManager({ pod, canManageTreasury }: PodSpecif
         body: JSON.stringify({
           podId: localPod.id,
           treasuryAddress: treasuryAddress,
-          isActive: true
-        })
+          isActive: true,
+        }),
       });
-      
+
       if (!updateResponse.ok) {
         throw new Error('Failed to update pod with treasury address');
       }
-      
+
       toast({
-        title: "Treasury Deployed Successfully!",
+        title: 'Treasury Deployed Successfully!',
         description: `Treasury deployed at ${treasuryAddress.slice(0, 6)}...${treasuryAddress.slice(-4)}`,
       });
-      
+
       // Update the local pod object to show the treasury
       // This will trigger a re-render showing the treasury management UI
       setLocalPod({
         ...localPod,
-        treasury_contract_address: treasuryAddress
+        treasury_contract_address: treasuryAddress,
       });
-      
+
       // Force a small delay then trigger parent component refresh
       setTimeout(() => {
         // Trigger parent component refresh if needed
-        window.dispatchEvent(new CustomEvent('treasury-deployed', { 
-          detail: { podId: localPod.id, treasuryAddress } 
-        }));
+        window.dispatchEvent(
+          new CustomEvent('treasury-deployed', {
+            detail: { podId: localPod.id, treasuryAddress },
+          }),
+        );
       }, 1000);
-      
     } catch (error) {
       console.error('Failed to process treasury deployment:', error);
       toast({
-        title: "Post-Deployment Error",
-        description: "Treasury deployed but failed to update database. Please refresh the page.",
-        variant: "destructive"
+        title: 'Post-Deployment Error',
+        description:
+          'Treasury deployed but failed to update database. Please refresh the page.',
+        variant: 'destructive',
       });
     }
   };
@@ -199,9 +207,9 @@ export function PodSpecificTreasuryManager({ pod, canManageTreasury }: PodSpecif
   const handleError = (error: Error) => {
     console.error('Treasury deployment failed:', error);
     toast({
-      title: "Deployment Failed",
-      description: error.message || "Treasury deployment encountered an error",
-      variant: "destructive"
+      title: 'Deployment Failed',
+      description: error.message || 'Treasury deployment encountered an error',
+      variant: 'destructive',
     });
   };
 
@@ -211,12 +219,15 @@ export function PodSpecificTreasuryManager({ pod, canManageTreasury }: PodSpecif
       <div className="space-y-4">
         <div className="flex items-center gap-2 mb-4">
           <CheckCircle className="h-5 w-5" style={{ color: '#3F7A5A' }} />
-          <span className="font-medium" style={{ color: '#1F453A' }}>Treasury Active</span>
+          <span className="font-medium" style={{ color: '#1F453A' }}>
+            Treasury Active
+          </span>
           <Badge variant="secondary" className="ml-2">
-            {localPod.treasury_contract_address?.slice(0, 6)}...{localPod.treasury_contract_address?.slice(-4)}
+            {localPod.treasury_contract_address?.slice(0, 6)}...
+            {localPod.treasury_contract_address?.slice(-4)}
           </Badge>
         </div>
-        
+
         <TreasuryManagement
           podId={localPod.id}
           treasuryAddress={localPod.treasury_contract_address}
@@ -238,8 +249,9 @@ export function PodSpecificTreasuryManager({ pod, canManageTreasury }: PodSpecif
       <Alert>
         <AlertTriangle className="h-4 w-4" />
         <AlertDescription>
-          This pod doesn't have a treasury yet. Deploy a treasury contract to enable fund management, 
-          token distribution, and financial operations for <strong>{localPod.name}</strong>.
+          This pod doesn't have a treasury yet. Deploy a treasury contract to
+          enable fund management, token distribution, and financial operations
+          for <strong>{localPod.name}</strong>.
         </AlertDescription>
       </Alert>
 
@@ -255,17 +267,27 @@ export function PodSpecificTreasuryManager({ pod, canManageTreasury }: PodSpecif
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <Label>Pod ID</Label>
-              <Input value={localPod.id} readOnly={true} className="bg-gray-50" />
+              <Input
+                value={localPod.id}
+                readOnly={true}
+                className="bg-gray-50"
+              />
             </div>
             <div>
               <Label>Management Hat ID</Label>
-              <Input value={localPod.management_hat_id || 'Not set'} readOnly={true} className="bg-gray-50" />
+              <Input
+                value={localPod.management_hat_id || 'Not set'}
+                readOnly={true}
+                className="bg-gray-50"
+              />
             </div>
           </div>
 
           {/* Default Supported Tokens */}
           <div>
-            <Label className="text-sm font-medium">Default Supported Tokens</Label>
+            <Label className="text-sm font-medium">
+              Default Supported Tokens
+            </Label>
             <div className="mt-2 space-y-2">
               <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                 <div className="flex items-center space-x-3">
@@ -292,7 +314,6 @@ export function PodSpecificTreasuryManager({ pod, canManageTreasury }: PodSpecif
             </div>
           </div>
 
-
           {/* Deployment Transaction */}
           {address && (
             <div className="pt-4 border-t">
@@ -304,7 +325,7 @@ export function PodSpecificTreasuryManager({ pod, canManageTreasury }: PodSpecif
                 onSuccess={handleSuccess}
                 onError={handleError}
               >
-                <TransactionButton 
+                <TransactionButton
                   text={`Deploy Treasury for ${localPod.name}`}
                   className="w-full"
                 />
@@ -330,7 +351,8 @@ export function PodSpecificTreasuryManager({ pod, canManageTreasury }: PodSpecif
             <Alert>
               <AlertTriangle className="h-4 w-4" />
               <AlertDescription>
-                You need treasury management permissions to deploy the treasury for this pod.
+                You need treasury management permissions to deploy the treasury
+                for this pod.
               </AlertDescription>
             </Alert>
           )}

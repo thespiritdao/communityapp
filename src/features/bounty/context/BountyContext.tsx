@@ -1,5 +1,5 @@
 import type React from 'react';
-import { createContext, useContext, useReducer, } from 'react';
+import { createContext, useContext, useReducer } from 'react';
 import { useBountyContract } from '../hooks/useBountyContract';
 import { useBounty } from '../hooks/useBounty';
 import type { Bounty, BountyNotification } from '../components/BountyList';
@@ -29,7 +29,10 @@ const initialState: BountyState = {
   error: null,
 };
 
-const bountyReducer = (state: BountyState, action: BountyAction): BountyState => {
+const bountyReducer = (
+  state: BountyState,
+  action: BountyAction,
+): BountyState => {
   switch (action.type) {
     case 'SET_BOUNTIES':
       return { ...state, bounties: action.payload };
@@ -39,7 +42,7 @@ const bountyReducer = (state: BountyState, action: BountyAction): BountyState =>
       return {
         ...state,
         bounties: state.bounties.map((b) =>
-          b.id === action.payload.id ? action.payload : b
+          b.id === action.payload.id ? action.payload : b,
         ),
       };
     case 'ADD_NOTIFICATION':
@@ -75,7 +78,7 @@ export const BountyProvider: React.FC<{ children: React.ReactNode }> = ({
   const { createBounty, placeBid, completeBounty } = useBounty();
 
   const handleCreateBounty = async (
-    bountyData: Omit<Bounty, 'id' | 'createdAt'>
+    bountyData: Omit<Bounty, 'id' | 'createdAt'>,
   ) => {
     try {
       dispatch({ type: 'SET_LOADING', payload: true });
@@ -85,14 +88,15 @@ export const BountyProvider: React.FC<{ children: React.ReactNode }> = ({
         bountyData.category,
         bountyData.value.amount,
         bountyData.value.token,
-        [] // TODO: Add reviewers
+        [], // TODO: Add reviewers
       );
       await createBounty(bountyData);
       dispatch({ type: 'SET_ERROR', payload: null });
     } catch (error) {
       dispatch({
         type: 'SET_ERROR',
-        payload: error instanceof Error ? error.message : 'Failed to create bounty',
+        payload:
+          error instanceof Error ? error.message : 'Failed to create bounty',
       });
     } finally {
       dispatch({ type: 'SET_LOADING', payload: false });
@@ -124,7 +128,8 @@ export const BountyProvider: React.FC<{ children: React.ReactNode }> = ({
     } catch (error) {
       dispatch({
         type: 'SET_ERROR',
-        payload: error instanceof Error ? error.message : 'Failed to complete bounty',
+        payload:
+          error instanceof Error ? error.message : 'Failed to complete bounty',
       });
     } finally {
       dispatch({ type: 'SET_LOADING', payload: false });
@@ -151,4 +156,4 @@ export const useBountyContext = () => {
     throw new Error('useBountyContext must be used within a BountyProvider');
   }
   return context;
-}; 
+};

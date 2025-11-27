@@ -9,23 +9,30 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Calendar } from '@/components/ui/calendar';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger } from '@/components/ui/dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogTrigger,
+} from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { 
-  Plus, 
-  Trash2, 
-  Calendar as CalendarIcon, 
-  Clock, 
+import {
+  Plus,
+  Trash2,
+  Calendar as CalendarIcon,
+  Clock,
   Save,
   ArrowLeft,
-  AlertTriangle
+  AlertTriangle,
 } from 'lucide-react';
 
 import { useEvent, useEventAgendas } from '../hooks/useEvents';
 import { usePods, useEventAccess } from '../hooks/useEventTokenGating';
 import { EventService } from '../lib/supabase';
-import type { Event, CreateAgendaForm, } from '../types/event';
+import type { Event, CreateAgendaForm } from '../types/event';
 import { EventImageUpload } from './EventImageUpload';
 import { EventManagerAssignment } from './EventManagerAssignment';
 
@@ -36,7 +43,13 @@ interface EventEditFormProps {
 export const EventEditForm: React.FC<EventEditFormProps> = ({ eventId }) => {
   const router = useRouter();
   const { event, loading: eventLoading, error: eventError } = useEvent(eventId);
-  const { agendas, createAgenda, updateAgenda, deleteAgenda, error: agendaError } = useEventAgendas(eventId);
+  const {
+    agendas,
+    createAgenda,
+    updateAgenda,
+    deleteAgenda,
+    error: agendaError,
+  } = useEventAgendas(eventId);
   const { pods } = usePods();
   const { canManage } = useEventAccess(event);
 
@@ -50,7 +63,7 @@ export const EventEditForm: React.FC<EventEditFormProps> = ({ eventId }) => {
     agenda_date: new Date(),
     start_time: '09:00',
     end_time: '10:00',
-    sort_order: 0
+    sort_order: 0,
   });
   const [activeTab, setActiveTab] = useState('details');
   const [saving, setSaving] = useState(false);
@@ -72,7 +85,7 @@ export const EventEditForm: React.FC<EventEditFormProps> = ({ eventId }) => {
         organizing_pod_id: event.organizing_pod_id,
         fund_recipient_pod_id: event.fund_recipient_pod_id,
         fund_recipient_type: event.fund_recipient_type,
-        event_image_url: event.event_image_url
+        event_image_url: event.event_image_url,
       });
     }
   }, [event]);
@@ -102,11 +115,10 @@ export const EventEditForm: React.FC<EventEditFormProps> = ({ eventId }) => {
         <CardContent className="p-8 text-center">
           <h2 className="text-xl font-semibold mb-4">Event Not Found</h2>
           <p className="text-gray-600 mb-4">
-            The event you're trying to edit doesn't exist or you don't have permission to edit it.
+            The event you're trying to edit doesn't exist or you don't have
+            permission to edit it.
           </p>
-          <Button onClick={() => router.back()}>
-            Go Back
-          </Button>
+          <Button onClick={() => router.back()}>Go Back</Button>
         </CardContent>
       </Card>
     );
@@ -116,35 +128,36 @@ export const EventEditForm: React.FC<EventEditFormProps> = ({ eventId }) => {
     return (
       <Card className="max-w-2xl mx-auto">
         <CardContent className="p-8 text-center">
-          <AlertTriangle className="w-12 h-12 mx-auto mb-4" style={{ color: '#8B3A3A' }} />
+          <AlertTriangle
+            className="w-12 h-12 mx-auto mb-4"
+            style={{ color: '#8B3A3A' }}
+          />
           <h2 className="text-xl font-semibold mb-4">Access Denied</h2>
           <p className="text-gray-600 mb-4">
             You don't have permission to edit this event.
           </p>
-          <Button onClick={() => router.back()}>
-            Go Back
-          </Button>
+          <Button onClick={() => router.back()}>Go Back</Button>
         </CardContent>
       </Card>
     );
   }
 
   const handleInputChange = (field: keyof Event, value: any) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      [field]: value
+      [field]: value,
     }));
   };
 
   const handleTokenToggle = (podId: string) => {
-    const pod = pods.find(p => p.id === podId);
+    const pod = pods.find((p) => p.id === podId);
     if (!pod?.contract_address) return;
-    
-    setFormData(prev => ({
+
+    setFormData((prev) => ({
       ...prev,
       required_tokens: prev.required_tokens?.includes(pod.contract_address)
-        ? prev.required_tokens.filter(addr => addr !== pod.contract_address)
-        : [...(prev.required_tokens || []), pod.contract_address]
+        ? prev.required_tokens.filter((addr) => addr !== pod.contract_address)
+        : [...(prev.required_tokens || []), pod.contract_address],
     }));
   };
 
@@ -152,9 +165,9 @@ export const EventEditForm: React.FC<EventEditFormProps> = ({ eventId }) => {
     try {
       setSaving(true);
       setError(null);
-      
+
       await EventService.updateEvent(eventId, formData);
-      
+
       // Show success message and redirect
       router.push(`/events/manage`);
     } catch (err) {
@@ -169,7 +182,7 @@ export const EventEditForm: React.FC<EventEditFormProps> = ({ eventId }) => {
       console.log('Adding agenda item:', currentAgenda);
       const success = await createAgenda(currentAgenda);
       console.log('Agenda creation result:', success);
-      
+
       if (success) {
         setCurrentAgenda({
           title: '',
@@ -177,7 +190,7 @@ export const EventEditForm: React.FC<EventEditFormProps> = ({ eventId }) => {
           agenda_date: new Date(),
           start_time: '09:00',
           end_time: '10:00',
-          sort_order: agendas.length
+          sort_order: agendas.length,
         });
         setShowAgendaForm(false);
       } else {
@@ -186,7 +199,9 @@ export const EventEditForm: React.FC<EventEditFormProps> = ({ eventId }) => {
       }
     } catch (err) {
       console.error('Error in addAgenda:', err);
-      setError(err instanceof Error ? err.message : 'Failed to add agenda item');
+      setError(
+        err instanceof Error ? err.message : 'Failed to add agenda item',
+      );
     }
   };
 
@@ -196,7 +211,7 @@ export const EventEditForm: React.FC<EventEditFormProps> = ({ eventId }) => {
       <div className="space-y-4">
         {/* Title Row */}
         <h1 className="text-3xl font-bold">Edit Event</h1>
-        
+
         {/* Buttons Row */}
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-4">
@@ -204,7 +219,10 @@ export const EventEditForm: React.FC<EventEditFormProps> = ({ eventId }) => {
               <ArrowLeft className="w-4 h-4 mr-2" />
               Back
             </Button>
-            <Button variant="outline" onClick={() => router.push(`/events/${eventId}`)}>
+            <Button
+              variant="outline"
+              onClick={() => router.push(`/events/${eventId}`)}
+            >
               View Event
             </Button>
           </div>
@@ -214,7 +232,7 @@ export const EventEditForm: React.FC<EventEditFormProps> = ({ eventId }) => {
             {saving ? 'Saving...' : 'Save Changes'}
           </Button>
         </div>
-        
+
         {/* Event Name Row */}
         <div className="border-b pb-4">
           <h2 className="text-xl font-semibold text-gray-800">{event.title}</h2>
@@ -245,13 +263,15 @@ export const EventEditForm: React.FC<EventEditFormProps> = ({ eventId }) => {
                     placeholder="Enter event title"
                   />
                 </div>
-                
+
                 <div>
                   <Label htmlFor="location">Location</Label>
                   <Input
                     id="location"
                     value={formData.location || ''}
-                    onChange={(e) => handleInputChange('location', e.target.value)}
+                    onChange={(e) =>
+                      handleInputChange('location', e.target.value)
+                    }
                     placeholder="Enter event location"
                   />
                 </div>
@@ -262,7 +282,9 @@ export const EventEditForm: React.FC<EventEditFormProps> = ({ eventId }) => {
                 <Textarea
                   id="description"
                   value={formData.description || ''}
-                  onChange={(e) => handleInputChange('description', e.target.value)}
+                  onChange={(e) =>
+                    handleInputChange('description', e.target.value)
+                  }
                   placeholder="Describe your event"
                   rows={4}
                 />
@@ -271,11 +293,19 @@ export const EventEditForm: React.FC<EventEditFormProps> = ({ eventId }) => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <Label>Event Date</Label>
-                  <Dialog open={showDatePicker} onOpenChange={setShowDatePicker}>
+                  <Dialog
+                    open={showDatePicker}
+                    onOpenChange={setShowDatePicker}
+                  >
                     <DialogTrigger asChild={true}>
-                      <Button variant="outline" className="w-full justify-start">
+                      <Button
+                        variant="outline"
+                        className="w-full justify-start"
+                      >
                         <CalendarIcon className="mr-2 h-4 w-4" />
-                        {formData.event_date ? new Date(formData.event_date).toLocaleDateString() : 'Select date'}
+                        {formData.event_date
+                          ? new Date(formData.event_date).toLocaleDateString()
+                          : 'Select date'}
                       </Button>
                     </DialogTrigger>
                     <DialogContent>
@@ -284,7 +314,11 @@ export const EventEditForm: React.FC<EventEditFormProps> = ({ eventId }) => {
                       </DialogHeader>
                       <Calendar
                         mode="single"
-                        selected={formData.event_date ? new Date(formData.event_date) : undefined}
+                        selected={
+                          formData.event_date
+                            ? new Date(formData.event_date)
+                            : undefined
+                        }
                         onSelect={(date) => {
                           if (date) {
                             handleInputChange('event_date', date.toISOString());
@@ -299,11 +333,21 @@ export const EventEditForm: React.FC<EventEditFormProps> = ({ eventId }) => {
 
                 <div>
                   <Label>End Date (Optional)</Label>
-                  <Dialog open={showEndDatePicker} onOpenChange={setShowEndDatePicker}>
+                  <Dialog
+                    open={showEndDatePicker}
+                    onOpenChange={setShowEndDatePicker}
+                  >
                     <DialogTrigger asChild={true}>
-                      <Button variant="outline" className="w-full justify-start">
+                      <Button
+                        variant="outline"
+                        className="w-full justify-start"
+                      >
                         <CalendarIcon className="mr-2 h-4 w-4" />
-                        {formData.event_end_date ? new Date(formData.event_end_date).toLocaleDateString() : 'Select end date'}
+                        {formData.event_end_date
+                          ? new Date(
+                              formData.event_end_date,
+                            ).toLocaleDateString()
+                          : 'Select end date'}
                       </Button>
                     </DialogTrigger>
                     <DialogContent>
@@ -312,9 +356,16 @@ export const EventEditForm: React.FC<EventEditFormProps> = ({ eventId }) => {
                       </DialogHeader>
                       <Calendar
                         mode="single"
-                        selected={formData.event_end_date ? new Date(formData.event_end_date) : undefined}
+                        selected={
+                          formData.event_end_date
+                            ? new Date(formData.event_end_date)
+                            : undefined
+                        }
                         onSelect={(date) => {
-                          handleInputChange('event_end_date', date?.toISOString());
+                          handleInputChange(
+                            'event_end_date',
+                            date?.toISOString(),
+                          );
                           setShowEndDatePicker(false);
                         }}
                         initialFocus={true}
@@ -328,7 +379,9 @@ export const EventEditForm: React.FC<EventEditFormProps> = ({ eventId }) => {
                 <Label htmlFor="event_image">Event Image</Label>
                 <EventImageUpload
                   currentImageUrl={formData.event_image_url}
-                  onImageUpload={(url) => handleInputChange('event_image_url', url)}
+                  onImageUpload={(url) =>
+                    handleInputChange('event_image_url', url)
+                  }
                   eventId={eventId}
                 />
               </div>
@@ -347,7 +400,14 @@ export const EventEditForm: React.FC<EventEditFormProps> = ({ eventId }) => {
                     id="max_attendees"
                     type="number"
                     value={formData.max_attendees || ''}
-                    onChange={(e) => handleInputChange('max_attendees', e.target.value ? Number.parseInt(e.target.value) : undefined)}
+                    onChange={(e) =>
+                      handleInputChange(
+                        'max_attendees',
+                        e.target.value
+                          ? Number.parseInt(e.target.value)
+                          : undefined,
+                      )
+                    }
                     placeholder="Unlimited"
                   />
                 </div>
@@ -357,9 +417,13 @@ export const EventEditForm: React.FC<EventEditFormProps> = ({ eventId }) => {
                   <select
                     id="price_token"
                     value={formData.price_token || 'free'}
-                    onChange={(e) => handleInputChange('price_token', e.target.value)}
+                    onChange={(e) =>
+                      handleInputChange('price_token', e.target.value)
+                    }
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2"
-                    style={{ '--tw-ring-color': '#2F5D50' } as React.CSSProperties}
+                    style={
+                      { '--tw-ring-color': '#2F5D50' } as React.CSSProperties
+                    }
                   >
                     <option value="free">Free</option>
                     <option value="SELF">$SELF</option>
@@ -374,7 +438,9 @@ export const EventEditForm: React.FC<EventEditFormProps> = ({ eventId }) => {
                     type="number"
                     step="0.01"
                     value={formData.price_amount || '0'}
-                    onChange={(e) => handleInputChange('price_amount', e.target.value)}
+                    onChange={(e) =>
+                      handleInputChange('price_amount', e.target.value)
+                    }
                     placeholder="0"
                     disabled={formData.price_token === 'free'}
                   />
@@ -409,22 +475,32 @@ export const EventEditForm: React.FC<EventEditFormProps> = ({ eventId }) => {
                         <Input
                           id="agenda_title"
                           value={currentAgenda.title}
-                          onChange={(e) => setCurrentAgenda(prev => ({ ...prev, title: e.target.value }))}
+                          onChange={(e) =>
+                            setCurrentAgenda((prev) => ({
+                              ...prev,
+                              title: e.target.value,
+                            }))
+                          }
                           placeholder="Agenda item title"
                         />
                       </div>
-                      
+
                       <div>
                         <Label htmlFor="agenda_description">Description</Label>
                         <Textarea
                           id="agenda_description"
                           value={currentAgenda.description}
-                          onChange={(e) => setCurrentAgenda(prev => ({ ...prev, description: e.target.value }))}
+                          onChange={(e) =>
+                            setCurrentAgenda((prev) => ({
+                              ...prev,
+                              description: e.target.value,
+                            }))
+                          }
                           placeholder="Agenda item description"
                           rows={3}
                         />
                       </div>
-                      
+
                       <div className="grid grid-cols-2 gap-4">
                         <div>
                           <Label htmlFor="start_time">Start Time</Label>
@@ -432,21 +508,31 @@ export const EventEditForm: React.FC<EventEditFormProps> = ({ eventId }) => {
                             id="start_time"
                             type="time"
                             value={currentAgenda.start_time}
-                            onChange={(e) => setCurrentAgenda(prev => ({ ...prev, start_time: e.target.value }))}
+                            onChange={(e) =>
+                              setCurrentAgenda((prev) => ({
+                                ...prev,
+                                start_time: e.target.value,
+                              }))
+                            }
                           />
                         </div>
-                        
+
                         <div>
                           <Label htmlFor="end_time">End Time</Label>
                           <Input
                             id="end_time"
                             type="time"
                             value={currentAgenda.end_time}
-                            onChange={(e) => setCurrentAgenda(prev => ({ ...prev, end_time: e.target.value }))}
+                            onChange={(e) =>
+                              setCurrentAgenda((prev) => ({
+                                ...prev,
+                                end_time: e.target.value,
+                              }))
+                            }
                           />
                         </div>
                       </div>
-                      
+
                       <div className="flex justify-end space-x-2">
                         <Button
                           variant="outline"
@@ -478,7 +564,10 @@ export const EventEditForm: React.FC<EventEditFormProps> = ({ eventId }) => {
               ) : (
                 <div className="space-y-3">
                   {agendas.map((agenda) => (
-                    <div key={agenda.id} className="flex items-center justify-between p-3 border rounded-lg">
+                    <div
+                      key={agenda.id}
+                      className="flex items-center justify-between p-3 border rounded-lg"
+                    >
                       <div className="flex-1">
                         <div className="font-medium">{agenda.title}</div>
                         <div className="text-sm text-gray-600">
@@ -486,7 +575,9 @@ export const EventEditForm: React.FC<EventEditFormProps> = ({ eventId }) => {
                           {agenda.start_time} - {agenda.end_time}
                         </div>
                         {agenda.description && (
-                          <div className="text-sm text-gray-500 mt-1">{agenda.description}</div>
+                          <div className="text-sm text-gray-500 mt-1">
+                            {agenda.description}
+                          </div>
                         )}
                       </div>
                       <Button
@@ -505,11 +596,11 @@ export const EventEditForm: React.FC<EventEditFormProps> = ({ eventId }) => {
         </TabsContent>
 
         <TabsContent value="settings" className="space-y-6">
-          <EventManagerAssignment 
-            event={event} 
-            onManagerUpdate={() => window.location.reload()} 
+          <EventManagerAssignment
+            event={event}
+            onManagerUpdate={() => window.location.reload()}
           />
-          
+
           <Card>
             <CardHeader>
               <CardTitle>Pod Management</CardTitle>
@@ -521,9 +612,13 @@ export const EventEditForm: React.FC<EventEditFormProps> = ({ eventId }) => {
                   <select
                     id="organizing_pod"
                     value={formData.organizing_pod_id || ''}
-                    onChange={(e) => handleInputChange('organizing_pod_id', e.target.value)}
+                    onChange={(e) =>
+                      handleInputChange('organizing_pod_id', e.target.value)
+                    }
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2"
-                    style={{ '--tw-ring-color': '#2F5D50' } as React.CSSProperties}
+                    style={
+                      { '--tw-ring-color': '#2F5D50' } as React.CSSProperties
+                    }
                   >
                     <option value="">Select organizing pod</option>
                     {pods.map((pod) => (
@@ -539,9 +634,13 @@ export const EventEditForm: React.FC<EventEditFormProps> = ({ eventId }) => {
                   <select
                     id="fund_recipient"
                     value={formData.fund_recipient_pod_id || ''}
-                    onChange={(e) => handleInputChange('fund_recipient_pod_id', e.target.value)}
+                    onChange={(e) =>
+                      handleInputChange('fund_recipient_pod_id', e.target.value)
+                    }
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2"
-                    style={{ '--tw-ring-color': '#2F5D50' } as React.CSSProperties}
+                    style={
+                      { '--tw-ring-color': '#2F5D50' } as React.CSSProperties
+                    }
                   >
                     <option value="">Select fund recipient</option>
                     {pods.map((pod) => (
@@ -567,25 +666,34 @@ export const EventEditForm: React.FC<EventEditFormProps> = ({ eventId }) => {
                     <input
                       type="checkbox"
                       id={`token-${pod.id}`}
-                      checked={formData.required_tokens?.includes(pod.contract_address || '') || formData.required_tokens?.includes(pod.id) || false}
+                      checked={
+                        formData.required_tokens?.includes(
+                          pod.contract_address || '',
+                        ) ||
+                        formData.required_tokens?.includes(pod.id) ||
+                        false
+                      }
                       onChange={() => handleTokenToggle(pod.id)}
                       className="rounded border-gray-300"
                     />
                     <Label htmlFor={`token-${pod.id}`}>{pod.name}</Label>
                   </div>
                 ))}
-                {formData.required_tokens && formData.required_tokens.length > 0 && (
-                  <div className="mt-2 flex flex-wrap gap-2">
-                    {formData.required_tokens.map((contractAddress) => {
-                      const pod = pods.find(p => p.contract_address === contractAddress);
-                      return pod ? (
-                        <Badge key={contractAddress} variant="secondary">
-                          {pod.name}
-                        </Badge>
-                      ) : null;
-                    })}
-                  </div>
-                )}
+                {formData.required_tokens &&
+                  formData.required_tokens.length > 0 && (
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {formData.required_tokens.map((contractAddress) => {
+                        const pod = pods.find(
+                          (p) => p.contract_address === contractAddress,
+                        );
+                        return pod ? (
+                          <Badge key={contractAddress} variant="secondary">
+                            {pod.name}
+                          </Badge>
+                        ) : null;
+                      })}
+                    </div>
+                  )}
               </div>
             </CardContent>
           </Card>
@@ -594,10 +702,14 @@ export const EventEditForm: React.FC<EventEditFormProps> = ({ eventId }) => {
 
       {/* Error Display */}
       {(error || agendaError) && (
-        <Card style={{ border: '1px solid #E8CBCB', backgroundColor: '#F5E6E6' }}>
+        <Card
+          style={{ border: '1px solid #E8CBCB', backgroundColor: '#F5E6E6' }}
+        >
           <CardContent className="p-4">
             {error && <p style={{ color: '#8B3A3A' }}>{error}</p>}
-            {agendaError && <p style={{ color: '#8B3A3A' }}>Agenda Error: {agendaError}</p>}
+            {agendaError && (
+              <p style={{ color: '#8B3A3A' }}>Agenda Error: {agendaError}</p>
+            )}
           </CardContent>
         </Card>
       )}

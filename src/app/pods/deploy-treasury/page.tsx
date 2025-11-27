@@ -22,12 +22,14 @@ export default function DeployTreasuryPage() {
         <div className="flex items-start gap-3">
           <Wrench className="h-5 w-5 text-[#2F5D50] mt-0.5" />
           <div>
-            <h3 className="font-medium text-[#2F5D50] mb-1">Development Tools Available</h3>
+            <h3 className="font-medium text-[#2F5D50] mb-1">
+              Development Tools Available
+            </h3>
             <p className="text-[#3A3A3A] text-sm mb-3">
-              Treasury deployment is now part of our consolidated development tools suite. 
-              Access all pod development features in one place.
+              Treasury deployment is now part of our consolidated development
+              tools suite. Access all pod development features in one place.
             </p>
-            <Button 
+            <Button
               onClick={redirectToDevTools}
               size="sm"
               className="flex items-center gap-2"
@@ -38,7 +40,7 @@ export default function DeployTreasuryPage() {
           </div>
         </div>
       </div>
-      
+
       <ConsolidatedTreasuryDeployer />
     </PodPageLayout>
   );

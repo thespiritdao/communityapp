@@ -36,7 +36,7 @@ export async function uploadBidToIPFS(bidData: BidMetadata): Promise<string> {
     console.log('📤 Uploading bid metadata to IPFS...', {
       bounty_id: bidData.bounty_id,
       bidder: bidData.bidder_address,
-      timestamp: bidData.timestamp
+      timestamp: bidData.timestamp,
     });
 
     const response = await fetch('/api/bounty/ipfs', {
@@ -44,13 +44,17 @@ export async function uploadBidToIPFS(bidData: BidMetadata): Promise<string> {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         action: 'upload',
-        metadata: bidData
-      })
+        metadata: bidData,
+      }),
     });
 
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
-      throw new Error(`Failed to upload bid to IPFS: ${errorData.error || response.statusText}`);
+      const errorData = await response
+        .json()
+        .catch(() => ({ error: 'Unknown error' }));
+      throw new Error(
+        `Failed to upload bid to IPFS: ${errorData.error || response.statusText}`,
+      );
     }
 
     const { ipfsHash } = await response.json();
@@ -83,13 +87,17 @@ export async function fetchBidFromIPFS(ipfsHash: string): Promise<BidMetadata> {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         action: 'fetch',
-        ipfsHash
-      })
+        ipfsHash,
+      }),
     });
 
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
-      throw new Error(`Failed to fetch bid from IPFS: ${errorData.error || response.statusText}`);
+      const errorData = await response
+        .json()
+        .catch(() => ({ error: 'Unknown error' }));
+      throw new Error(
+        `Failed to fetch bid from IPFS: ${errorData.error || response.statusText}`,
+      );
     }
 
     const { metadata } = await response.json();

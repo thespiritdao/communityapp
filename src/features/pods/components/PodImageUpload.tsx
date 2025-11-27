@@ -18,7 +18,7 @@ const ALLOWED_TYPES = ['image/jpeg', 'image/jpg', 'image/png'];
 export const PodImageUpload: React.FC<PodImageUploadProps> = ({
   onImageSelect,
   onImageUrlChange,
-  disabled = false
+  disabled = false,
 }) => {
   const [previewUrl, setPreviewUrl] = useState<string>('');
   const [error, setError] = useState<string>('');
@@ -30,7 +30,7 @@ export const PodImageUpload: React.FC<PodImageUploadProps> = ({
     if (!ALLOWED_TYPES.includes(file.type)) {
       return {
         isValid: false,
-        error: 'Invalid file type. Only JPG, JPEG, and PNG files are allowed.'
+        error: 'Invalid file type. Only JPG, JPEG, and PNG files are allowed.',
       };
     }
 
@@ -38,7 +38,7 @@ export const PodImageUpload: React.FC<PodImageUploadProps> = ({
     if (file.size > MAX_FILE_SIZE) {
       return {
         isValid: false,
-        error: 'File size too large. Maximum size is 2MB.'
+        error: 'File size too large. Maximum size is 2MB.',
       };
     }
 
@@ -70,7 +70,9 @@ export const PodImageUpload: React.FC<PodImageUploadProps> = ({
     onImageSelect(file);
   };
 
-  const handleFileInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileInputChange = (
+    event: React.ChangeEvent<HTMLInputElement>,
+  ) => {
     const file = event.target.files?.[0];
     if (file) {
       handleFileSelect(file);
@@ -135,7 +137,11 @@ export const PodImageUpload: React.FC<PodImageUploadProps> = ({
           ${disabled ? 'opacity-50 cursor-not-allowed' : ''}
           ${previewUrl ? 'p-0 border-solid' : ''}
         `}
-        style={dragActive ? { borderColor: '#2F5D50', backgroundColor: '#E8F1EE' } : {}}
+        style={
+          dragActive
+            ? { borderColor: '#2F5D50', backgroundColor: '#E8F1EE' }
+            : {}
+        }
       >
         <input
           ref={fileInputRef}
@@ -189,7 +195,9 @@ export const PodImageUpload: React.FC<PodImageUploadProps> = ({
             </div>
             <div>
               <p className="text-sm font-medium text-gray-700">
-                {dragActive ? 'Drop image here' : 'Click to upload or drag & drop'}
+                {dragActive
+                  ? 'Drop image here'
+                  : 'Click to upload or drag & drop'}
               </p>
               <p className="text-xs text-gray-500 mt-1">
                 JPG, JPEG, PNG (max 2MB)
@@ -200,11 +208,14 @@ export const PodImageUpload: React.FC<PodImageUploadProps> = ({
       </div>
 
       {error && (
-        <p className="text-sm" style={{ color: '#8B3A3A' }}>{error}</p>
+        <p className="text-sm" style={{ color: '#8B3A3A' }}>
+          {error}
+        </p>
       )}
 
       <p className="text-xs text-gray-500">
-        This image will represent your pod. Recommended: Square images (400x400px or larger) for best display.
+        This image will represent your pod. Recommended: Square images
+        (400x400px or larger) for best display.
       </p>
     </div>
   );

@@ -51,13 +51,14 @@ export interface OnChainBid {
  * This is the PRIMARY validation to prevent critical bugs
  */
 export const validateBidIndexExists = (
-  bidIndex: number | null | undefined
+  bidIndex: number | null | undefined,
 ): { isValid: boolean; error?: string } => {
   // Check for null/undefined
   if (bidIndex === null || bidIndex === undefined) {
     return {
       isValid: false,
-      error: 'Bid index is missing. This bid may not have been placed on-chain correctly.'
+      error:
+        'Bid index is missing. This bid may not have been placed on-chain correctly.',
     };
   }
 
@@ -65,13 +66,15 @@ export const validateBidIndexExists = (
   if (bidIndex < 0) {
     return {
       isValid: false,
-      error: `Invalid bid index: ${bidIndex}. Index must be non-negative.`
+      error: `Invalid bid index: ${bidIndex}. Index must be non-negative.`,
     };
   }
 
   // Warn about index 0 (might be valid, but requires extra verification)
   if (bidIndex === 0) {
-    console.warn('⚠️ Bid index is 0 - will require on-chain verification to ensure correct bidder');
+    console.warn(
+      '⚠️ Bid index is 0 - will require on-chain verification to ensure correct bidder',
+    );
   }
 
   return { isValid: true };
@@ -83,10 +86,11 @@ export const validateBidIndexExists = (
 export const fetchOnChainBid = async (
   publicClient: PublicClient,
   onchainBountyId: string,
-  bidIndex: number
+  bidIndex: number,
 ): Promise<OnChainBid | null> => {
   try {
-    const contractAddress = process.env.NEXT_PUBLIC_BOUNTY_MANAGER_ADDRESS as `0x${string}`;
+    const contractAddress = process.env
+      .NEXT_PUBLIC_BOUNTY_MANAGER_ADDRESS as `0x${string}`;
 
     if (!contractAddress) {
       console.error('❌ BOUNTY_MANAGER_ADDRESS not configured');
@@ -96,23 +100,23 @@ export const fetchOnChainBid = async (
     console.log('🔍 Fetching on-chain bid:', {
       bountyId: onchainBountyId,
       bidIndex,
-      contractAddress
+      contractAddress,
     });
 
     // Get all bids for this bounty
-    const bids = await publicClient.readContract({
+    const bids = (await publicClient.readContract({
       address: contractAddress,
       abi: BountyManagerABI,
       functionName: 'getBids',
-      args: [BigInt(onchainBountyId)]
-    }) as any[];
+      args: [BigInt(onchainBountyId)],
+    })) as any[];
 
     // Validate index is in range
     if (!bids || bidIndex >= bids.length) {
       console.error('❌ Bid index out of range:', {
         bidIndex,
         totalBids: bids?.length || 0,
-        bountyId: onchainBountyId
+        bountyId: onchainBountyId,
       });
       return null;
     }
@@ -122,7 +126,7 @@ export const fetchOnChainBid = async (
       bidIndex,
       bidder: bid.bidder,
       status: bid.status,
-      submittedAt: bid.submittedAt.toString()
+      submittedAt: bid.submittedAt.toString(),
     });
 
     return bid;
@@ -137,7 +141,7 @@ export const fetchOnChainBid = async (
  */
 export const validateBidderMatch = (
   onChainBidder: string,
-  databaseBidder: string
+  databaseBidder: string,
 ): { isValid: boolean; error?: string } => {
   const normalizedOnChain = onChainBidder.toLowerCase();
   const normalizedDatabase = databaseBidder.toLowerCase();
@@ -145,7 +149,7 @@ export const validateBidderMatch = (
   if (normalizedOnChain !== normalizedDatabase) {
     return {
       isValid: false,
-      error: `Bidder mismatch! On-chain: ${onChainBidder}, Database: ${databaseBidder}. This bid cannot be approved safely.`
+      error: `Bidder mismatch! On-chain: ${onChainBidder}, Database: ${databaseBidder}. This bid cannot be approved safely.`,
     };
   }
 
@@ -156,7 +160,7 @@ export const validateBidderMatch = (
  * Validates that the bid status is valid for approval
  */
 export const validateBidStatus = (
-  status: number
+  status: number,
 ): { isValid: boolean; error?: string } => {
   // Status 0 = Pending (valid for approval)
   // Status 1 = Accepted (already approved)
@@ -165,21 +169,21 @@ export const validateBidStatus = (
   if (status === 1) {
     return {
       isValid: false,
-      error: 'This bid has already been approved on-chain.'
+      error: 'This bid has already been approved on-chain.',
     };
   }
 
   if (status === 2) {
     return {
       isValid: false,
-      error: 'This bid has been rejected on-chain and cannot be approved.'
+      error: 'This bid has been rejected on-chain and cannot be approved.',
     };
   }
 
   if (status !== 0) {
     return {
       isValid: false,
-      error: `Invalid bid status: ${status}. Expected status 0 (Pending).`
+      error: `Invalid bid status: ${status}. Expected status 0 (Pending).`,
     };
   }
 
@@ -205,19 +209,19 @@ export const validateBidStatus = (
  */
 export const validateBidForApproval = async (
   input: BidValidationInput,
-  publicClient: PublicClient
+  publicClient: PublicClient,
 ): Promise<BidIndexValidationResult> => {
   const result: BidIndexValidationResult = {
     isValid: false,
     errors: [],
-    warnings: []
+    warnings: [],
   };
 
   console.log('🔍 Starting comprehensive bid validation:', {
     bidId: input.bidId,
     bidderAddress: input.bidderAddress,
     onchainBountyId: input.onchainBountyId,
-    onchainBidIndex: input.onchainBidIndex
+    onchainBidIndex: input.onchainBidIndex,
   });
 
   // Step 1: Validate bid index exists
@@ -235,11 +239,13 @@ export const validateBidForApproval = async (
   const onChainBid = await fetchOnChainBid(
     publicClient,
     input.onchainBountyId,
-    bidIndex
+    bidIndex,
   );
 
   if (!onChainBid) {
-    result.errors.push('Could not fetch on-chain bid. The contract may be unavailable or the bid index may be invalid.');
+    result.errors.push(
+      'Could not fetch on-chain bid. The contract may be unavailable or the bid index may be invalid.',
+    );
     console.error('❌ Failed to fetch on-chain bid');
     return result;
   }
@@ -248,7 +254,10 @@ export const validateBidForApproval = async (
   result.databaseBidder = input.bidderAddress;
 
   // Step 3: Validate bidder matches
-  const bidderCheck = validateBidderMatch(onChainBid.bidder, input.bidderAddress);
+  const bidderCheck = validateBidderMatch(
+    onChainBid.bidder,
+    input.bidderAddress,
+  );
   if (!bidderCheck.isValid) {
     result.errors.push(bidderCheck.error!);
     console.error('❌ Bidder validation failed:', bidderCheck.error);
@@ -265,7 +274,9 @@ export const validateBidForApproval = async (
 
   // Add warning if index is 0 (first bid)
   if (bidIndex === 0) {
-    result.warnings.push('This is the first bid (index 0). Extra verification performed to ensure correct bidder.');
+    result.warnings.push(
+      'This is the first bid (index 0). Extra verification performed to ensure correct bidder.',
+    );
   }
 
   // All validations passed
@@ -273,7 +284,7 @@ export const validateBidForApproval = async (
   console.log('✅ Bid validation successful:', {
     bidIndex,
     bidder: onChainBid.bidder,
-    status: onChainBid.status
+    status: onChainBid.status,
   });
 
   return result;
@@ -285,18 +296,20 @@ export const validateBidForApproval = async (
  */
 export const validateMultipleBidsForApproval = async (
   inputs: BidValidationInput[],
-  publicClient: PublicClient
+  publicClient: PublicClient,
 ): Promise<BidIndexValidationResult[]> => {
   console.log(`🔍 Validating ${inputs.length} bids for batch approval`);
 
   const results = await Promise.all(
-    inputs.map(input => validateBidForApproval(input, publicClient))
+    inputs.map((input) => validateBidForApproval(input, publicClient)),
   );
 
-  const validCount = results.filter(r => r.isValid).length;
+  const validCount = results.filter((r) => r.isValid).length;
   const invalidCount = results.length - validCount;
 
-  console.log(`✅ Batch validation complete: ${validCount} valid, ${invalidCount} invalid`);
+  console.log(
+    `✅ Batch validation complete: ${validCount} valid, ${invalidCount} invalid`,
+  );
 
   return results;
 };
@@ -309,7 +322,7 @@ export const validateMultipleBidsForApproval = async (
  * Retrieves bid data from database for validation
  */
 export const getBidDataForValidation = async (
-  bidId: string
+  bidId: string,
 ): Promise<BidValidationInput | null> => {
   try {
     const { data: bid, error } = await supabase
@@ -339,7 +352,7 @@ export const getBidDataForValidation = async (
       bidId: bid.id,
       bidderAddress: bid.bidder_address,
       onchainBountyId: onchainBountyId.toString(),
-      onchainBidIndex: bid.onchain_bid_index
+      onchainBidIndex: bid.onchain_bid_index,
     };
   } catch (error) {
     console.error('❌ Error fetching bid data:', error);
@@ -353,7 +366,7 @@ export const getBidDataForValidation = async (
  */
 export const validateBidById = async (
   bidId: string,
-  publicClient: PublicClient
+  publicClient: PublicClient,
 ): Promise<BidIndexValidationResult> => {
   console.log('🔍 Validating bid by ID:', bidId);
 
@@ -363,7 +376,7 @@ export const validateBidById = async (
     return {
       isValid: false,
       errors: ['Could not fetch bid data from database'],
-      warnings: []
+      warnings: [],
     };
   }
 
@@ -377,7 +390,9 @@ export const validateBidById = async (
 /**
  * Formats validation result into user-friendly error message
  */
-export const formatValidationError = (result: BidIndexValidationResult): string => {
+export const formatValidationError = (
+  result: BidIndexValidationResult,
+): string => {
   if (result.isValid) {
     return '';
   }
@@ -412,7 +427,7 @@ export const logValidationResult = (result: BidIndexValidationResult): void => {
     console.log('✅ Bid validation passed', {
       index: result.index,
       bidder: result.onChainBidder,
-      warnings: result.warnings
+      warnings: result.warnings,
     });
   } else {
     console.error('❌ Bid validation failed', {
@@ -420,7 +435,7 @@ export const logValidationResult = (result: BidIndexValidationResult): void => {
       errors: result.errors,
       warnings: result.warnings,
       onChainBidder: result.onChainBidder,
-      databaseBidder: result.databaseBidder
+      databaseBidder: result.databaseBidder,
     });
   }
 };

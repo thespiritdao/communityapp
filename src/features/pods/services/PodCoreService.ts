@@ -46,17 +46,16 @@ export interface GovernanceProposalData {
 
 /**
  * PodCoreService - Unified service for all pod operations
- * 
+ *
  * Consolidates functionality from:
  * - PodService (basic CRUD operations)
  * - PodGovernanceService (governance and approval workflows)
  * - Parts of hatToggleService (pod activation/deactivation)
- * 
+ *
  * Provides clean, efficient API for pod management with proper error handling
  * and authentication checks.
  */
 export class PodCoreService {
-  
   // ==========================================
   // BASIC POD OPERATIONS (from PodService)
   // ==========================================
@@ -67,9 +66,9 @@ export class PodCoreService {
   static async getPodById(id: string): Promise<Pod | null> {
     try {
       console.log('🔍 PodCoreService.getPodById:', id);
-      
+
       const result = await PodDatabaseService.getPodById(id);
-      
+
       if (result.error) {
         if (result.error === 'Pod not found') {
           return null;
@@ -91,15 +90,15 @@ export class PodCoreService {
   static async getAllPods(config: PodServiceConfig = {}): Promise<Pod[]> {
     try {
       console.log('🔄 PodCoreService: Getting all pods...');
-      
+
       const databaseConfig = {
         includeInactive: config.includeInactive,
         orderBy: 'created_at',
-        ascending: false
+        ascending: false,
       };
 
       const result = await PodDatabaseService.getPods(databaseConfig);
-      
+
       if (result.error) {
         throw new Error(result.error);
       }
@@ -108,18 +107,18 @@ export class PodCoreService {
 
       // Apply additional filters
       if (config.status) {
-        pods = pods.filter(pod => pod.status === config.status);
+        pods = pods.filter((pod) => pod.status === config.status);
         console.log('🔍 Filtered by status:', config.status);
       }
 
       if (config.parentPodId) {
-        pods = pods.filter(pod => pod.parent_pod_id === config.parentPodId);
+        pods = pods.filter((pod) => pod.parent_pod_id === config.parentPodId);
         console.log('🔍 Filtered by parent pod ID:', config.parentPodId);
       }
 
-      console.log('📊 Query result:', { 
-        count: pods.length, 
-        totalFromDb: result.count || 0
+      console.log('📊 Query result:', {
+        count: pods.length,
+        totalFromDb: result.count || 0,
       });
 
       return pods;
@@ -135,17 +134,18 @@ export class PodCoreService {
   static async getUserLeadershipPods(userAddress: string): Promise<Pod[]> {
     try {
       console.log('🔄 Getting leadership pods for:', userAddress);
-      
+
       if (!userAddress) {
         return [];
       }
 
-      const result = await PodDatabaseService.getUserLeadershipPods(userAddress);
+      const result =
+        await PodDatabaseService.getUserLeadershipPods(userAddress);
       if (result.error) {
         console.error('Failed to get user leadership pods:', result.error);
         return [];
       }
-      
+
       console.log('📊 Leadership pods:', result.data?.length || 0);
       return result.data || [];
     } catch (error) {
@@ -164,7 +164,7 @@ export class PodCoreService {
   static async createPod(podData: PodCreationData): Promise<string> {
     try {
       console.log(`🏗️ Creating pod: ${podData.name}`);
-      
+
       // Ensure user session is valid
       const session = await getCurrentSession();
       if (!session?.user?.id) {
@@ -183,15 +183,17 @@ export class PodCoreService {
         pod_metadata: podData.pod_metadata,
         management_hat_id: podData.management_hat_id,
         membership_hat_id: podData.membership_hat_id,
-        treasury_contract_address: podData.treasury_contract_address
+        treasury_contract_address: podData.treasury_contract_address,
       } as any);
-      
+
       if (result.error) throw new Error(result.error);
       console.log(`✅ Pod created: ${result.data.id}`);
 
       // Store accountability signatures if provided
       if (Object.keys(podData.accountability_signatures).length > 0) {
-        const signatureInserts = Object.values(podData.accountability_signatures).map(sig => ({
+        const signatureInserts = Object.values(
+          podData.accountability_signatures,
+        ).map((sig) => ({
           pod_id: podData.id,
           signer_address: sig.address,
           signature_data: sig.signature,
@@ -200,7 +202,10 @@ export class PodCoreService {
           is_valid: sig.isValid,
         }));
 
-        const sigResult = await PodDatabaseService.createAccountabilitySignatures(signatureInserts);
+        const sigResult =
+          await PodDatabaseService.createAccountabilitySignatures(
+            signatureInserts,
+          );
         if (sigResult.error) {
           console.warn('Failed to store signatures:', sigResult.error);
           // Don't fail pod creation if signatures fail
@@ -216,7 +221,7 @@ export class PodCoreService {
             podData.membership_hat_id,
             podData.created_by_address,
             podData.leaderEligibilityCriteria,
-            podData.memberEligibilityCriteria
+            podData.memberEligibilityCriteria,
           );
         } catch (roleError) {
           console.warn('Failed to create role permissions:', roleError);
@@ -229,10 +234,13 @@ export class PodCoreService {
         await this.notifyExecutiveForApproval(
           podData.id,
           podData.name,
-          podData.created_by_address
+          podData.created_by_address,
         );
       } catch (notificationError) {
-        console.warn('Failed to send approval notifications:', notificationError);
+        console.warn(
+          'Failed to send approval notifications:',
+          notificationError,
+        );
         // Don't fail pod creation
       }
 
@@ -247,17 +255,17 @@ export class PodCoreService {
    * Update pod status and properties
    */
   static async updatePodStatus(
-    podId: string, 
+    podId: string,
     status: 'draft' | 'proposed' | 'active' | 'inactive',
-    updates?: Partial<Pod>
+    updates?: Partial<Pod>,
   ): Promise<void> {
     try {
       console.log(`🔄 Updating pod ${podId} status to: ${status}`);
-      
+
       const updateData = {
         status,
         ...updates,
-        updated_at: new Date().toISOString()
+        updated_at: new Date().toISOString(),
       };
 
       const result = await PodDatabaseService.updatePod(podId, updateData);
@@ -273,13 +281,13 @@ export class PodCoreService {
    * Activate pod with HAT integration
    */
   static async activatePod(
-    podId: string, 
-    hatIds: { managementHatId: string; membershipHatId: string }, 
-    treasuryAddress: string
+    podId: string,
+    hatIds: { managementHatId: string; membershipHatId: string },
+    treasuryAddress: string,
   ): Promise<void> {
     try {
       console.log(`🚀 Activating pod ${podId} with HAT integration...`);
-      
+
       // Get pod details
       const pod = await this.getPodById(podId);
       if (!pod) {
@@ -291,7 +299,7 @@ export class PodCoreService {
         management_hat_id: hatIds.managementHatId,
         membership_hat_id: hatIds.membershipHatId,
         treasury_contract_address: treasuryAddress,
-        is_active: true
+        is_active: true,
       });
 
       // Initialize role permissions if not already done
@@ -300,11 +308,14 @@ export class PodCoreService {
           podId,
           hatIds.managementHatId,
           hatIds.membershipHatId,
-          pod.created_by_address || 'system'
+          pod.created_by_address || 'system',
         );
         console.log(`✅ Role permissions created for pod ${podId}`);
       } catch (roleError) {
-        console.warn(`Role permission creation failed for pod ${podId}:`, roleError);
+        console.warn(
+          `Role permission creation failed for pod ${podId}:`,
+          roleError,
+        );
         // Don't fail activation
       }
 
@@ -322,10 +333,13 @@ export class PodCoreService {
   /**
    * Deactivate pod (mark as inactive, deactivate HATs)
    */
-  static async deactivatePod(podId: string, userAddress: string): Promise<void> {
+  static async deactivatePod(
+    podId: string,
+    userAddress: string,
+  ): Promise<void> {
     try {
       console.log(`🔴 Deactivating pod ${podId} by user ${userAddress}`);
-      
+
       // Verify user has permission to deactivate
       const pod = await this.getPodById(podId);
       if (!pod) {
@@ -339,7 +353,7 @@ export class PodCoreService {
 
       // Use HATs migration service for proper HAT deactivation
       await HatsMigrationService.deactivatePod(podId);
-      
+
       console.log(`✅ Pod ${podId} deactivated successfully`);
     } catch (error) {
       console.error('Failed to deactivate pod:', error);
@@ -350,10 +364,13 @@ export class PodCoreService {
   /**
    * Reactivate pod
    */
-  static async reactivatePod(podId: string, userAddress: string): Promise<void> {
+  static async reactivatePod(
+    podId: string,
+    userAddress: string,
+  ): Promise<void> {
     try {
       console.log(`🟢 Reactivating pod ${podId} by user ${userAddress}`);
-      
+
       // Verify permissions
       const pod = await this.getPodById(podId);
       if (!pod) {
@@ -367,7 +384,7 @@ export class PodCoreService {
 
       // Use HATs migration service for proper HAT reactivation
       await HatsMigrationService.reactivatePod(podId);
-      
+
       console.log(`✅ Pod ${podId} reactivated successfully`);
     } catch (error) {
       console.error('Failed to reactivate pod:', error);
@@ -388,7 +405,7 @@ export class PodCoreService {
       if (!pod?.pod_leads) {
         return [];
       }
-      return pod.pod_leads.map(wallet => ({ wallet }));
+      return pod.pod_leads.map((wallet) => ({ wallet }));
     } catch (error) {
       console.error(`Failed to get pod leaders for ${podId}:`, error);
       return [];
@@ -399,8 +416,8 @@ export class PodCoreService {
    * Get pod members with role information
    */
   static async getPodMembers(
-    podId: string, 
-    membershipType?: 'leader' | 'member' | 'admin'
+    podId: string,
+    membershipType?: 'leader' | 'member' | 'admin',
   ): Promise<MemberRef[]> {
     try {
       // Try indexed member data first
@@ -424,15 +441,15 @@ export class PodCoreService {
           throw error;
         }
 
-        return (data || []).map(member => ({ wallet: member.wallet }));
+        return (data || []).map((member) => ({ wallet: member.wallet }));
       } catch (fallbackError) {
         console.log('🔄 Falling back to pod leaders from pods table');
-        
+
         // Fallback to pod leaders
         if (!membershipType || membershipType === 'leader') {
           return await this.getPodLeaders(podId);
         }
-        
+
         return [];
       }
     } catch (error) {
@@ -449,30 +466,38 @@ export class PodCoreService {
    * Add accountability signature
    */
   static async addAccountabilitySignature(
-    podId: string, 
-    signature: AccountabilitySignature
+    podId: string,
+    signature: AccountabilitySignature,
   ): Promise<void> {
-    const result = await PodDatabaseService.addAccountabilitySignature(podId, signature);
+    const result = await PodDatabaseService.addAccountabilitySignature(
+      podId,
+      signature,
+    );
     if (result.error) throw new Error(result.error);
   }
 
   /**
    * Get accountability signatures for pod
    */
-  static async getAccountabilitySignatures(podId: string): Promise<AccountabilitySignature[]> {
-    console.log('🔍 PodCoreService.getAccountabilitySignatures called for pod:', podId);
+  static async getAccountabilitySignatures(
+    podId: string,
+  ): Promise<AccountabilitySignature[]> {
+    console.log(
+      '🔍 PodCoreService.getAccountabilitySignatures called for pod:',
+      podId,
+    );
     const result = await PodDatabaseService.getAccountabilitySignatures(podId);
     if (result.error) throw new Error(result.error);
 
     console.log('🔍 Raw database result before mapping:', result.data);
-    const mapped = (result.data || []).map(sig => {
+    const mapped = (result.data || []).map((sig) => {
       console.log('🔍 Mapping signature:', {
         input_address: sig.address,
         input_signature: sig.signature ? 'present' : 'missing',
         input_signer_address: sig.signer_address,
         input_signature_data: sig.signature_data ? 'present' : 'missing',
         output_address: sig.address || sig.signer_address,
-        output_signature: sig.signature || sig.signature_data
+        output_signature: sig.signature || sig.signature_data,
       });
       return {
         address: sig.address || sig.signer_address,
@@ -482,7 +507,7 @@ export class PodCoreService {
         isValid: sig.isValid || sig.is_valid,
       };
     });
-    
+
     console.log('🔍 Final mapped signatures:', mapped);
     return mapped;
   }
@@ -496,19 +521,23 @@ export class PodCoreService {
    */
   static canUserManagePod(pod: Pod, userAddress: string): boolean {
     if (!userAddress) return false;
-    
+
     return (
       pod.created_by_address?.toLowerCase() === userAddress.toLowerCase() ||
-      (pod.pod_leads && pod.pod_leads.some(lead => 
-        lead.toLowerCase() === userAddress.toLowerCase()
-      ))
+      (pod.pod_leads &&
+        pod.pod_leads.some(
+          (lead) => lead.toLowerCase() === userAddress.toLowerCase(),
+        ))
     );
   }
 
   /**
    * Check pod membership for user
    */
-  static async checkPodMembership(podId: string, walletAddress: string): Promise<{
+  static async checkPodMembership(
+    podId: string,
+    walletAddress: string,
+  ): Promise<{
     is_member: boolean;
     membership_type?: 'leader' | 'member' | 'admin';
     joined_at?: string;
@@ -532,23 +561,23 @@ export class PodCoreService {
           is_member: true,
           membership_type: data.membership_type,
           joined_at: data.joined_at,
-          hat_id: data.hat_id
+          hat_id: data.hat_id,
         };
       }
 
       // Fallback: check pod leadership
       const pod = await this.getPodById(podId);
       if (pod?.pod_leads) {
-        const isLeader = pod.pod_leads.some(leader => 
-          leader.toLowerCase() === walletAddress.toLowerCase()
+        const isLeader = pod.pod_leads.some(
+          (leader) => leader.toLowerCase() === walletAddress.toLowerCase(),
         );
-        
+
         if (isLeader) {
           return {
             is_member: true,
             membership_type: 'leader',
             joined_at: pod.created_at || new Date().toISOString(),
-            hat_id: pod.management_hat_id
+            hat_id: pod.management_hat_id,
           };
         }
       }
@@ -573,10 +602,10 @@ export class PodCoreService {
     membershipHatId: string,
     createdBy: string,
     leaderCriteria?: EligibilityCriteria[],
-    memberCriteria?: EligibilityCriteria[]
+    memberCriteria?: EligibilityCriteria[],
   ): Promise<void> {
     console.log(`🔐 Initializing role permissions for pod ${podId}...`);
-    
+
     // Create leader role
     await PodRolePermissionsService.createRolePermission({
       pod_id: podId,
@@ -632,7 +661,7 @@ export class PodCoreService {
   private static async notifyExecutiveForApproval(
     podId: string,
     podName: string,
-    creatorAddress: string
+    creatorAddress: string,
   ): Promise<void> {
     try {
       // Check if notification already sent
@@ -652,30 +681,39 @@ export class PodCoreService {
       // Get executive managers using new helper function
       const managers = await getExecutivePodManagers();
       if (!managers || managers.length === 0) {
-        console.log('⚠️ No Executive Pod managers found for approval notification');
+        console.log(
+          '⚠️ No Executive Pod managers found for approval notification',
+        );
         return;
       }
 
-      console.log(`📨 Sending approval notification for ${podName} to ${managers.length} executives`);
+      console.log(
+        `📨 Sending approval notification for ${podName} to ${managers.length} executives`,
+      );
 
-      await Promise.all(managers.map((manager) =>
-        unifiedNotificationService.createNotification({
-          recipient_address: manager.wallet_address.toLowerCase(),
-          sender_address: creatorAddress.toLowerCase(),
-          notification_type: 'user_mentioned',
-          category: 'general',
-          title: 'Pod Approval Required',
-          message: `New pod "${podName}" is ready for Executive approval.`,
-          context_type: 'governance',
-          context_id: podId,
-          context_url: `/pods/${podId}`,
-          priority: 'high'
-        })
-      ));
+      await Promise.all(
+        managers.map((manager) =>
+          unifiedNotificationService.createNotification({
+            recipient_address: manager.wallet_address.toLowerCase(),
+            sender_address: creatorAddress.toLowerCase(),
+            notification_type: 'user_mentioned',
+            category: 'general',
+            title: 'Pod Approval Required',
+            message: `New pod "${podName}" is ready for Executive approval.`,
+            context_type: 'governance',
+            context_id: podId,
+            context_url: `/pods/${podId}`,
+            priority: 'high',
+          }),
+        ),
+      );
 
       console.log(`✅ Approval notifications sent for ${podName}`);
     } catch (error) {
-      console.error(`Failed to send approval notifications for ${podName}:`, error);
+      console.error(
+        `Failed to send approval notifications for ${podName}:`,
+        error,
+      );
       throw error;
     }
   }

@@ -36,7 +36,7 @@ export const MembersPanel: React.FC<MembersPanelProps> = ({
   podName,
   userAddress,
   onRemoveMember,
-  canManageMembers = false
+  canManageMembers = false,
 }) => {
   const [showAddMemberModal, setShowAddMemberModal] = React.useState(false);
 

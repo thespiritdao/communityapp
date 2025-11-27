@@ -1,13 +1,13 @@
-"use client";
+'use client';
 
-import * as React from "react";
-import { Calendar } from "./calendar";
-import { Popover, PopoverContent, PopoverTrigger } from "./popover";
-import { Button } from "./button";
-import { CalendarIcon } from "lucide-react";
-import { format } from "date-fns";
-import { Input } from "./input";
-import { Label } from "./label";
+import * as React from 'react';
+import { Calendar } from './calendar';
+import { Popover, PopoverContent, PopoverTrigger } from './popover';
+import { Button } from './button';
+import { CalendarIcon } from 'lucide-react';
+import { format } from 'date-fns';
+import { Input } from './input';
+import { Label } from './label';
 
 export interface DateTimePickerProps {
   value?: string; // datetime-local format: YYYY-MM-DDTHH:mm
@@ -25,8 +25,8 @@ export const DateTimePicker: React.FC<DateTimePickerProps> = ({
   onChange,
   disabled = false,
   required = false,
-  placeholder = "Select date and time",
-  className = "",
+  placeholder = 'Select date and time',
+  className = '',
   minDate,
   maxDate,
 }) => {
@@ -44,7 +44,7 @@ export const DateTimePicker: React.FC<DateTimePickerProps> = ({
       const minutes = d.getMinutes().toString().padStart(2, '0');
       return `${hours}:${minutes}`;
     }
-    return "12:00";
+    return '12:00';
   });
 
   const [isOpen, setIsOpen] = React.useState(false);
@@ -80,7 +80,7 @@ export const DateTimePicker: React.FC<DateTimePickerProps> = ({
   const handleDateSelect = (selectedDate: Date | undefined) => {
     setDate(selectedDate);
     if (selectedDate && !time) {
-      setTime("12:00");
+      setTime('12:00');
     }
   };
 
@@ -90,15 +90,13 @@ export const DateTimePicker: React.FC<DateTimePickerProps> = ({
 
   const handleClear = () => {
     setDate(undefined);
-    setTime("12:00");
+    setTime('12:00');
     if (onChangeRef.current) {
-      onChangeRef.current("");
+      onChangeRef.current('');
     }
   };
 
-  const displayText = date
-    ? `${format(date, "PPP")} at ${time}`
-    : placeholder;
+  const displayText = date ? `${format(date, 'PPP')} at ${time}` : placeholder;
 
   return (
     <div className={`flex flex-col gap-2 ${className}`}>
@@ -107,7 +105,7 @@ export const DateTimePicker: React.FC<DateTimePickerProps> = ({
           <Button
             variant="outline"
             className={`w-full justify-start text-left font-normal ${
-              !date && "text-muted-foreground"
+              !date && 'text-muted-foreground'
             }`}
             disabled={disabled}
           >
@@ -131,7 +129,10 @@ export const DateTimePicker: React.FC<DateTimePickerProps> = ({
               />
             </div>
             <div className="border-t border-gray-200 dark:border-gray-700 pt-3">
-              <Label htmlFor="time-input" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+              <Label
+                htmlFor="time-input"
+                className="text-sm font-medium text-gray-700 dark:text-gray-300"
+              >
                 Time
               </Label>
               <Input
@@ -171,7 +172,7 @@ export const DateTimePicker: React.FC<DateTimePickerProps> = ({
       {/* Hidden input for form compatibility */}
       <input
         type="hidden"
-        value={value || ""}
+        value={value || ''}
         required={required}
         disabled={disabled}
       />

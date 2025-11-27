@@ -5,7 +5,13 @@ import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useAccount } from 'wagmi';
-import { Transaction, TransactionButton, TransactionStatus, TransactionStatusLabel, TransactionStatusAction } from '@coinbase/onchainkit/transaction';
+import {
+  Transaction,
+  TransactionButton,
+  TransactionStatus,
+  TransactionStatusLabel,
+  TransactionStatusAction,
+} from '@coinbase/onchainkit/transaction';
 import { PodFactorySyncService } from '../services/PodFactorySyncService';
 
 interface PodFactorySyncProps {
@@ -13,7 +19,7 @@ interface PodFactorySyncProps {
 }
 
 export const PodFactorySync: React.FC<PodFactorySyncProps> = ({
-  onSyncComplete
+  onSyncComplete,
 }) => {
   const { address } = useAccount();
   const [loading, setLoading] = useState(false);
@@ -21,7 +27,9 @@ export const PodFactorySync: React.FC<PodFactorySyncProps> = ({
     toRegister: any[];
     toUpdate: any[];
   }>({ toRegister: [], toUpdate: [] });
-  const [currentTransactionCalls, setCurrentTransactionCalls] = useState<any[]>([]);
+  const [currentTransactionCalls, setCurrentTransactionCalls] = useState<any[]>(
+    [],
+  );
   const [showTransaction, setShowTransaction] = useState(false);
 
   useEffect(() => {
@@ -47,13 +55,13 @@ export const PodFactorySync: React.FC<PodFactorySyncProps> = ({
       const calls: any[] = [];
 
       // Generate creation calls for new pods
-      syncData.toRegister.forEach(pod => {
+      syncData.toRegister.forEach((pod) => {
         const call = PodFactorySyncService.generateCreatePodCall(pod);
         calls.push(call);
       });
 
       // Generate update calls for existing pods
-      syncData.toUpdate.forEach(pod => {
+      syncData.toUpdate.forEach((pod) => {
         const call = PodFactorySyncService.generateUpdatePodCall(pod);
         calls.push(call);
       });
@@ -83,7 +91,9 @@ export const PodFactorySync: React.FC<PodFactorySyncProps> = ({
           <CardTitle>Pod Factory Sync</CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="text-gray-600">Please connect your wallet to sync pod data.</p>
+          <p className="text-gray-600">
+            Please connect your wallet to sync pod data.
+          </p>
         </CardContent>
       </Card>
     );
@@ -100,7 +110,10 @@ export const PodFactorySync: React.FC<PodFactorySyncProps> = ({
       <CardContent className="space-y-4">
         {loading ? (
           <div className="text-center py-4">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 mx-auto mb-2" style={{ borderColor: '#2F5D50' }}></div>
+            <div
+              className="animate-spin rounded-full h-8 w-8 border-b-2 mx-auto mb-2"
+              style={{ borderColor: '#2F5D50' }}
+            ></div>
             <p className="text-gray-600">Checking sync status...</p>
           </div>
         ) : (
@@ -108,7 +121,9 @@ export const PodFactorySync: React.FC<PodFactorySyncProps> = ({
             <div className="space-y-2">
               <div className="flex justify-between">
                 <span>Pods to create:</span>
-                <span className="font-medium">{syncData.toRegister.length}</span>
+                <span className="font-medium">
+                  {syncData.toRegister.length}
+                </span>
               </div>
               <div className="flex justify-between">
                 <span>Pods to update:</span>
@@ -121,18 +136,25 @@ export const PodFactorySync: React.FC<PodFactorySyncProps> = ({
             </div>
 
             {totalPodsToSync > 0 && (
-              <Alert className="border" style={{ backgroundColor: '#D1E6DC', borderColor: '#B8D9CA' }}>
+              <Alert
+                className="border"
+                style={{ backgroundColor: '#D1E6DC', borderColor: '#B8D9CA' }}
+              >
                 <AlertDescription style={{ color: '#1F453A' }}>
-                  <strong>Factory Authorization:</strong> This factory pattern allows any pod leader to sync their pod data without manual whitelist approval. More scalable for community apps!
+                  <strong>Factory Authorization:</strong> This factory pattern
+                  allows any pod leader to sync their pod data without manual
+                  whitelist approval. More scalable for community apps!
                 </AlertDescription>
               </Alert>
             )}
 
             {syncData.toRegister.length > 0 && (
               <div>
-                <h4 className="font-medium mb-2">Pods to Create (Factory Proxies):</h4>
+                <h4 className="font-medium mb-2">
+                  Pods to Create (Factory Proxies):
+                </h4>
                 <ul className="text-sm space-y-1">
-                  {syncData.toRegister.map(pod => (
+                  {syncData.toRegister.map((pod) => (
                     <li key={pod.id} className="flex justify-between">
                       <span>{pod.name}</span>
                       <span style={{ color: '#3F7A5A' }}>New Proxy</span>
@@ -144,9 +166,11 @@ export const PodFactorySync: React.FC<PodFactorySyncProps> = ({
 
             {syncData.toUpdate.length > 0 && (
               <div>
-                <h4 className="font-medium mb-2">Pods to Update (Existing Proxies):</h4>
+                <h4 className="font-medium mb-2">
+                  Pods to Update (Existing Proxies):
+                </h4>
                 <ul className="text-sm space-y-1">
-                  {syncData.toUpdate.map(pod => (
+                  {syncData.toUpdate.map((pod) => (
                     <li key={pod.id} className="flex justify-between">
                       <span>{pod.name}</span>
                       <span style={{ color: '#2F5D50' }}>Update Proxy</span>
@@ -158,15 +182,17 @@ export const PodFactorySync: React.FC<PodFactorySyncProps> = ({
 
             {!showTransaction ? (
               <div className="space-y-2">
-                <Button 
+                <Button
                   onClick={handleSyncPods}
                   disabled={totalPodsToSync === 0}
                   className="w-full"
                 >
-                  {totalPodsToSync === 0 ? 'All Pods Synced' : `Sync ${totalPodsToSync} Pod${totalPodsToSync !== 1 ? 's' : ''} via Factory`}
+                  {totalPodsToSync === 0
+                    ? 'All Pods Synced'
+                    : `Sync ${totalPodsToSync} Pod${totalPodsToSync !== 1 ? 's' : ''} via Factory`}
                 </Button>
-                
-                <Button 
+
+                <Button
                   variant="outline"
                   onClick={checkSyncStatus}
                   className="w-full"
@@ -176,27 +202,35 @@ export const PodFactorySync: React.FC<PodFactorySyncProps> = ({
               </div>
             ) : (
               <div className="space-y-4">
-                <Alert className="border" style={{ backgroundColor: '#E8F1EE', borderColor: '#B8D9CA' }}>
+                <Alert
+                  className="border"
+                  style={{ backgroundColor: '#E8F1EE', borderColor: '#B8D9CA' }}
+                >
                   <AlertDescription style={{ color: '#1F453A' }}>
-                    <strong>Ready to Sync:</strong> This will create/update {totalPodsToSync} pod proxy{totalPodsToSync !== 1 ? 'ies' : 'y'} using the factory pattern. No manual authorization required!
+                    <strong>Ready to Sync:</strong> This will create/update{' '}
+                    {totalPodsToSync} pod proxy
+                    {totalPodsToSync !== 1 ? 'ies' : 'y'} using the factory
+                    pattern. No manual authorization required!
                   </AlertDescription>
                 </Alert>
 
-                <Transaction 
+                <Transaction
                   chainId={8453}
                   calls={currentTransactionCalls}
                   onSuccess={handleTransactionSuccess}
                   isSponsored={true}
                 >
-                  <TransactionButton text={`Sync ${totalPodsToSync} Pod${totalPodsToSync !== 1 ? 's' : ''} via Factory`} />
+                  <TransactionButton
+                    text={`Sync ${totalPodsToSync} Pod${totalPodsToSync !== 1 ? 's' : ''} via Factory`}
+                  />
                   <TransactionStatus>
                     <TransactionStatusLabel />
                     <TransactionStatusAction />
                   </TransactionStatus>
                 </Transaction>
 
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   onClick={() => setShowTransaction(false)}
                   className="w-full"
                 >

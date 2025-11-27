@@ -40,7 +40,9 @@ export async function GET(req: NextRequest) {
   const { data: cached, error: cacheError } = await supabase
     .from('proposal_onchain_status')
     .select('*');
-  const cacheMap = Object.fromEntries((cached || []).map((row: any) => [row.proposal_id, row]));
+  const cacheMap = Object.fromEntries(
+    (cached || []).map((row: any) => [row.proposal_id, row]),
+  );
 
   // 3. For proposals not in cache, older than 15s, or if force=true, fetch from chain
   const now = Date.now();
@@ -66,7 +68,9 @@ export async function GET(req: NextRequest) {
       functionName: 'state',
       args: [BigInt(id)],
     }));
-    const stateResults = await publicClient.multicall({ contracts: stateCalls });
+    const stateResults = await publicClient.multicall({
+      contracts: stateCalls,
+    });
 
     // For each proposal, also fetch user-vote status if ?user= is provided
     let userVotes: Record<string, boolean> = {};
@@ -77,9 +81,11 @@ export async function GET(req: NextRequest) {
         functionName: 'hasVoted',
         args: [BigInt(id), user as `0x${string}`],
       }));
-      const voteResults = await publicClient.multicall({ contracts: voteCalls });
+      const voteResults = await publicClient.multicall({
+        contracts: voteCalls,
+      });
       userVotes = Object.fromEntries(
-        needsUpdate.map((id, i) => [id, Boolean(voteResults[i].result)])
+        needsUpdate.map((id, i) => [id, Boolean(voteResults[i].result)]),
       );
     }
 
@@ -88,14 +94,12 @@ export async function GET(req: NextRequest) {
       const id = needsUpdate[i];
       const state = Number(stateResults[i].result);
       const vote = user ? userVotes[id] : undefined;
-      await supabase
-        .from('proposal_onchain_status')
-        .upsert({
-          proposal_id: id,
-          state,
-          last_checked: new Date().toISOString(),
-          user_votes: user ? { [user]: vote } : undefined,
-        });
+      await supabase.from('proposal_onchain_status').upsert({
+        proposal_id: id,
+        state,
+        last_checked: new Date().toISOString(),
+        user_votes: user ? { [user]: vote } : undefined,
+      });
       updates.push({ id, state, vote });
     }
   }
@@ -107,7 +111,7 @@ export async function GET(req: NextRequest) {
     const update = updates.find((u) => u.id === id);
     result[id] = {
       state: update?.state ?? cache?.state,
-      hasVoted: user ? (update?.vote ?? cache?.user_votes?.[user]) : undefined,
+      hasVoted: user ? update?.vote ?? cache?.user_votes?.[user] : undefined,
     };
   }
 
@@ -126,7 +130,9 @@ export async function GET(req: NextRequest) {
       functionName: 'state',
       args: [BigInt(id)],
     }));
-    const stateResults = await publicClient.multicall({ contracts: stateCalls });
+    const stateResults = await publicClient.multicall({
+      contracts: stateCalls,
+    });
     pendingIds.forEach((id, i) => {
       result[id].state = Number(stateResults[i].result);
     });

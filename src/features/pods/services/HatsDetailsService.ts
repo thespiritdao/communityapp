@@ -3,7 +3,7 @@ import * as z from 'zod';
 
 // Hats Details SDK Schema (matches the official schema)
 const hatsDetailsSchema = z.object({
-  type: z.literal("1.0"),
+  type: z.literal('1.0'),
   data: z.object({
     name: z.string(),
     description: z.string().optional(),
@@ -14,7 +14,7 @@ const hatsDetailsSchema = z.object({
           description: z.string().optional(),
           link: z.string().optional(),
           imageUrl: z.string().optional(),
-        })
+        }),
       )
       .optional(),
     authorities: z
@@ -25,7 +25,7 @@ const hatsDetailsSchema = z.object({
           link: z.string().optional(),
           imageUrl: z.string().optional(),
           gate: z.string().optional(),
-        })
+        }),
       )
       .optional(),
   }),
@@ -38,26 +38,35 @@ export type HatsDetailsMetadata = z.infer<typeof hatsDetailsSchema>;
  * Handles IPFS storage of structured metadata for Hats Protocol
  */
 export class HatsDetailsService {
-  private static client: HatsDetailsClient<typeof hatsDetailsSchema> | null = null;
+  private static client: HatsDetailsClient<typeof hatsDetailsSchema> | null =
+    null;
 
   /**
    * Initialize the Hats Details Client
    */
-  private static initializeClient(): HatsDetailsClient<typeof hatsDetailsSchema> {
+  private static initializeClient(): HatsDetailsClient<
+    typeof hatsDetailsSchema
+  > {
     if (!this.client) {
       const pinataJwt = process.env.NEXT_PUBLIC_PINATA_JWT;
 
       if (!pinataJwt || pinataJwt === 'your_pinata_jwt_token_here') {
-        throw new Error('NEXT_PUBLIC_PINATA_JWT environment variable is required. Get your JWT from https://app.pinata.cloud/keys');
+        throw new Error(
+          'NEXT_PUBLIC_PINATA_JWT environment variable is required. Get your JWT from https://app.pinata.cloud/keys',
+        );
       }
 
       this.client = new HatsDetailsClient({
         schema: hatsDetailsSchema,
-        provider: "pinata",
+        provider: 'pinata',
         pinata: {
           pinningKey: pinataJwt,
-          gateway: process.env.NEXT_PUBLIC_PINATA_GATEWAY || 'https://gateway.pinata.cloud',
-          ...(process.env.NEXT_PUBLIC_PINATA_GATEWAY_KEY && { gatewayKey: process.env.NEXT_PUBLIC_PINATA_GATEWAY_KEY })
+          gateway:
+            process.env.NEXT_PUBLIC_PINATA_GATEWAY ||
+            'https://gateway.pinata.cloud',
+          ...(process.env.NEXT_PUBLIC_PINATA_GATEWAY_KEY && {
+            gatewayKey: process.env.NEXT_PUBLIC_PINATA_GATEWAY_KEY,
+          }),
         },
       });
     }
@@ -83,73 +92,79 @@ export class HatsDetailsService {
     if (config.podType === 'management') {
       responsibilities.push(
         {
-          label: "Pod Leadership",
-          description: "Lead and coordinate pod activities and member engagement"
+          label: 'Pod Leadership',
+          description:
+            'Lead and coordinate pod activities and member engagement',
         },
         {
-          label: "Strategic Planning", 
-          description: "Develop and execute strategic initiatives for the pod"
+          label: 'Strategic Planning',
+          description: 'Develop and execute strategic initiatives for the pod',
         },
         {
-          label: "Member Oversight",
-          description: "Guide and support pod members in their roles and contributions"
-        }
+          label: 'Member Oversight',
+          description:
+            'Guide and support pod members in their roles and contributions',
+        },
       );
 
       authorities.push(
         {
-          label: "Member Management",
-          description: "Authority to add, remove, and manage pod members"
+          label: 'Member Management',
+          description: 'Authority to add, remove, and manage pod members',
         },
         {
-          label: "Role Assignment", 
-          description: "Authority to assign and modify member roles within the pod"
-        }
+          label: 'Role Assignment',
+          description:
+            'Authority to assign and modify member roles within the pod',
+        },
       );
 
       if (config.treasuryEnabled) {
         authorities.push({
-          label: "Treasury Management",
-          description: "Authority to manage pod treasury funds and approve expenditures"
+          label: 'Treasury Management',
+          description:
+            'Authority to manage pod treasury funds and approve expenditures',
         });
       }
     } else {
       // membership hat
       responsibilities.push(
         {
-          label: "Active Participation",
-          description: "Actively participate in pod activities and initiatives"
+          label: 'Active Participation',
+          description: 'Actively participate in pod activities and initiatives',
         },
         {
-          label: "Collaboration",
-          description: "Work constructively with other pod members"
+          label: 'Collaboration',
+          description: 'Work constructively with other pod members',
         },
         {
-          label: "Accountability",
-          description: "Follow pod guidelines and fulfill assigned responsibilities"
-        }
+          label: 'Accountability',
+          description:
+            'Follow pod guidelines and fulfill assigned responsibilities',
+        },
       );
 
       authorities.push(
         {
-          label: "Pod Access",
-          description: "Access to pod resources, channels, and activities"
+          label: 'Pod Access',
+          description: 'Access to pod resources, channels, and activities',
         },
         {
-          label: "Voting Rights",
-          description: "Right to participate in pod governance and decision-making"
-        }
+          label: 'Voting Rights',
+          description:
+            'Right to participate in pod governance and decision-making',
+        },
       );
     }
 
     return {
-      type: "1.0",
+      type: '1.0',
       data: {
         name: config.name,
         description: config.description,
         responsibilities,
-        authorities
-      }
+        authorities,
+      },
     };
   }
 
@@ -162,7 +177,7 @@ export class HatsDetailsService {
         name: metadata.data.name,
         hasDescription: !!metadata.data.description,
         responsibilitiesCount: metadata.data.responsibilities?.length || 0,
-        authoritiesCount: metadata.data.authorities?.length || 0
+        authoritiesCount: metadata.data.authorities?.length || 0,
       });
 
       const client = this.initializeClient();
@@ -170,20 +185,24 @@ export class HatsDetailsService {
 
       console.log('✅ Successfully uploaded metadata to IPFS:', {
         hash: ipfsHash,
-        name: metadata.data.name
+        name: metadata.data.name,
       });
 
       return ipfsHash;
     } catch (error) {
       console.error('❌ Failed to upload metadata to IPFS:', error);
-      throw new Error(`IPFS upload failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new Error(
+        `IPFS upload failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      );
     }
   }
 
   /**
    * Retrieve metadata from IPFS hash
    */
-  static async getMetadata(ipfsHash: string): Promise<HatsDetailsMetadata | null> {
+  static async getMetadata(
+    ipfsHash: string,
+  ): Promise<HatsDetailsMetadata | null> {
     try {
       console.log('🔍 Retrieving HAT metadata from IPFS:', ipfsHash);
 
@@ -191,7 +210,10 @@ export class HatsDetailsService {
       const result = await client.get(ipfsHash);
 
       if (result.error) {
-        console.error('❌ Error retrieving metadata from IPFS:', result.error.message);
+        console.error(
+          '❌ Error retrieving metadata from IPFS:',
+          result.error.message,
+        );
         return null;
       }
 
@@ -199,7 +221,7 @@ export class HatsDetailsService {
 
       console.log('✅ Successfully retrieved metadata from IPFS:', {
         hash: ipfsHash,
-        hasData: !!metadata
+        hasData: !!metadata,
       });
 
       return metadata as HatsDetailsMetadata;
@@ -221,7 +243,7 @@ export class HatsDetailsService {
   }): Promise<string> {
     const metadata = this.createPodMetadata({
       ...config,
-      podType: 'management'
+      podType: 'management',
     });
 
     return await this.uploadMetadata(metadata);
@@ -242,7 +264,7 @@ export class HatsDetailsService {
       name: membershipName,
       description: membershipDescription,
       podType: 'membership',
-      eligibilityRules: config.eligibilityRules
+      eligibilityRules: config.eligibilityRules,
     });
 
     return await this.uploadMetadata(metadata);
@@ -253,7 +275,8 @@ export class HatsDetailsService {
    */
   static isValidIPFSHash(hash: string): boolean {
     // Basic IPFS hash validation (CIDv0 or CIDv1)
-    const ipfsRegex = /^(Qm[1-9A-HJ-NP-Za-km-z]{44}|b[A-Za-z2-7]{58}|[1-9A-HJ-NP-Za-km-z]{46,})$/;
+    const ipfsRegex =
+      /^(Qm[1-9A-HJ-NP-Za-km-z]{44}|b[A-Za-z2-7]{58}|[1-9A-HJ-NP-Za-km-z]{46,})$/;
     return ipfsRegex.test(hash);
   }
 
@@ -263,11 +286,11 @@ export class HatsDetailsService {
   static async testConnection(): Promise<boolean> {
     try {
       const testMetadata: HatsDetailsMetadata = {
-        type: "1.0",
+        type: '1.0',
         data: {
-          name: "Connection Test",
-          description: "Test metadata to verify Pinata connection"
-        }
+          name: 'Connection Test',
+          description: 'Test metadata to verify Pinata connection',
+        },
       };
 
       await this.uploadMetadata(testMetadata);

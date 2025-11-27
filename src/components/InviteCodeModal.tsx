@@ -51,7 +51,10 @@ export function InviteCodeModal({
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     // Auto-uppercase and limit to 6 characters
-    const value = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6);
+    const value = e.target.value
+      .toUpperCase()
+      .replace(/[^A-Z0-9]/g, '')
+      .slice(0, 6);
     setInviteCode(value);
     setError(null); // Clear error on input change
   };
@@ -196,7 +199,9 @@ export function InviteCodeModal({
                       e.target.style.border = '2px solid #2F5D50';
                     }}
                     onBlur={(e) => {
-                      e.target.style.border = error ? '2px solid #8B3A3A' : '2px solid #D8D2C8';
+                      e.target.style.border = error
+                        ? '2px solid #8B3A3A'
+                        : '2px solid #D8D2C8';
                     }}
                   />
                   <p
@@ -239,7 +244,10 @@ export function InviteCodeModal({
                   disabled={inviteCode.length !== 6 || isValidating}
                   style={{
                     width: '100%',
-                    background: inviteCode.length === 6 && !isValidating ? '#2F5D50' : '#8FAAA1',
+                    background:
+                      inviteCode.length === 6 && !isValidating
+                        ? '#2F5D50'
+                        : '#8FAAA1',
                     color: '#FFFFFF',
                     border: 'none',
                     borderRadius: '12px',
@@ -247,7 +255,10 @@ export function InviteCodeModal({
                     fontSize: '16px',
                     fontWeight: '500',
                     letterSpacing: '0.02em',
-                    cursor: inviteCode.length === 6 && !isValidating ? 'pointer' : 'not-allowed',
+                    cursor:
+                      inviteCode.length === 6 && !isValidating
+                        ? 'pointer'
+                        : 'not-allowed',
                     opacity: inviteCode.length === 6 && !isValidating ? 1 : 0.6,
                     transition: 'all 0.2s ease',
                   }}
@@ -263,7 +274,14 @@ export function InviteCodeModal({
                   }}
                 >
                   {isValidating ? (
-                    <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                    <span
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '8px',
+                      }}
+                    >
                       <svg
                         className="animate-spin"
                         width="16"

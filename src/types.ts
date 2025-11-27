@@ -20,7 +20,6 @@ export type AppConfig = {
     termsUrl?: string | null; // URL to the terms of service for the wallet modal
     privacyUrl?: string | null; // URL to the privacy policy for the wallet modal
   };
-
 };
 
 export type CreateWagmiConfigParams = {

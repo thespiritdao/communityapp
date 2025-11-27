@@ -11,10 +11,12 @@
 
 export const CONTRACT_ADDRESSES = {
   // Hats Protocol (Base Mainnet - DO NOT CHANGE)
-  HATS_PROTOCOL: (process.env.NEXT_PUBLIC_HATS_CONTRACT || '0x3bc1a0ad72417f2d411118085256fc53cbddd137') as `0x${string}`,
+  HATS_PROTOCOL: (process.env.NEXT_PUBLIC_HATS_CONTRACT ||
+    '0x3bc1a0ad72417f2d411118085256fc53cbddd137') as `0x${string}`,
 
   // Hats Module Factory
-  HATS_MODULE_FACTORY: (process.env.NEXT_PUBLIC_HATS_MODULE_FACTORY_ADDRESS || '0xfE661c01891172046feE16D3a57c3Cf456729efA') as `0x${string}`,
+  HATS_MODULE_FACTORY: (process.env.NEXT_PUBLIC_HATS_MODULE_FACTORY_ADDRESS ||
+    '0xfE661c01891172046feE16D3a57c3Cf456729efA') as `0x${string}`,
 
   // Tokens
   SYSTEM_TOKEN: process.env.NEXT_PUBLIC_SYSTEM_TOKEN as `0x${string}`,
@@ -22,24 +24,31 @@ export const CONTRACT_ADDRESSES = {
 
   // Membership Tokens
   ADVOCATE_TOKEN: process.env.NEXT_PUBLIC_ADVOCATE as `0x${string}`,
-  PROOF_OF_CURIOSITY: process.env.NEXT_PUBLIC_PROOF_OF_CURIOSITY as `0x${string}`,
+  PROOF_OF_CURIOSITY: process.env
+    .NEXT_PUBLIC_PROOF_OF_CURIOSITY as `0x${string}`,
 
   // Pod Management (V2)
-  POD_FACTORY_V2: process.env.NEXT_PUBLIC_POD_FACTORY_V2_ADDRESS as `0x${string}`,
-  POD_MANAGER_V2: process.env.NEXT_PUBLIC_POD_MANAGER_V2_ADDRESS as `0x${string}`,
-  POD_CREATION_MANAGER: process.env.NEXT_PUBLIC_POD_CREATION_MANAGER as `0x${string}`,
+  POD_FACTORY_V2: process.env
+    .NEXT_PUBLIC_POD_FACTORY_V2_ADDRESS as `0x${string}`,
+  POD_MANAGER_V2: process.env
+    .NEXT_PUBLIC_POD_MANAGER_V2_ADDRESS as `0x${string}`,
+  POD_CREATION_MANAGER: process.env
+    .NEXT_PUBLIC_POD_CREATION_MANAGER as `0x${string}`,
 
   // Treasury
   TREASURY_PROXY: process.env.NEXT_PUBLIC_TREASURY_PROXY as `0x${string}`,
-  TREASURY_FACTORY: process.env.NEXT_PUBLIC_POD_TREASURY_FACTORY as `0x${string}`,
+  TREASURY_FACTORY: process.env
+    .NEXT_PUBLIC_POD_TREASURY_FACTORY as `0x${string}`,
 
   // Events
   EVENT_MANAGER: process.env.NEXT_PUBLIC_EVENT_MANAGER as `0x${string}`,
   EVENT_ESCROW: process.env.NEXT_PUBLIC_EVENT_ESCROW_CONTRACT as `0x${string}`,
 
   // Bounties
-  BOUNTY_MANAGER: process.env.NEXT_PUBLIC_BOUNTY_MANAGER_ADDRESS as `0x${string}`,
-  POD_BOUNTY_SERVICE: process.env.NEXT_PUBLIC_POD_BOUNTY_SERVICE as `0x${string}`,
+  BOUNTY_MANAGER: process.env
+    .NEXT_PUBLIC_BOUNTY_MANAGER_ADDRESS as `0x${string}`,
+  POD_BOUNTY_SERVICE: process.env
+    .NEXT_PUBLIC_POD_BOUNTY_SERVICE as `0x${string}`,
 
   // Governance
   DAO_GOVERNOR: process.env.NEXT_PUBLIC_DAO_GOVERNOR as `0x${string}`,
@@ -47,13 +56,15 @@ export const CONTRACT_ADDRESSES = {
 
   // Marketplace
   PURCHASE_ROUTER: process.env.NEXT_PUBLIC_PURCHASE_ROUTER as `0x${string}`,
-  PURCHASE_ROUTER_DECENTRALIZED: process.env.NEXT_PUBLIC_PURCHASE_ROUTER_DECENTRALIZED as `0x${string}`,
+  PURCHASE_ROUTER_DECENTRALIZED: process.env
+    .NEXT_PUBLIC_PURCHASE_ROUTER_DECENTRALIZED as `0x${string}`,
 
   // Safe Wallet (for multi-sig operations)
   SAFE_WALLET: process.env.NEXT_PUBLIC_SAFE_WALLET as `0x${string}`,
 
   // Utility
-  MULTICALL: (process.env.NEXT_PUBLIC_MULTICALL_ADDRESS || '0xcA11bde05977b3631167028862bE2a173976CA11') as `0x${string}`,
+  MULTICALL: (process.env.NEXT_PUBLIC_MULTICALL_ADDRESS ||
+    '0xcA11bde05977b3631167028862bE2a173976CA11') as `0x${string}`,
 } as const;
 
 // ============================================================================
@@ -61,10 +72,13 @@ export const CONTRACT_ADDRESSES = {
 // ============================================================================
 
 export const HAT_IDS = {
-  EXECUTIVE_POD_LEADER: process.env.NEXT_PUBLIC_EXECUTIVE_POD_LEADER as `0x${string}`,
-  EXECUTIVE_POD_MEMBER: process.env.NEXT_PUBLIC_EXECUTIVE_POD_MEMBER as `0x${string}`,
+  EXECUTIVE_POD_LEADER: process.env
+    .NEXT_PUBLIC_EXECUTIVE_POD_LEADER as `0x${string}`,
+  EXECUTIVE_POD_MEMBER: process.env
+    .NEXT_PUBLIC_EXECUTIVE_POD_MEMBER as `0x${string}`,
   BETA_TESTER_HAT: process.env.NEXT_PUBLIC_BETA_TESTER_HAT as `0x${string}`, // Temporary 30-day testing hat
-  COMMUNITY_PODS_PARENT: process.env.NEXT_PUBLIC_COMMUNITY_PODS_PARENT as `0x${string}`,
+  COMMUNITY_PODS_PARENT: process.env
+    .NEXT_PUBLIC_COMMUNITY_PODS_PARENT as `0x${string}`,
   DEV_POD_LEADER: process.env.NEXT_PUBLIC_DEV_POD_LEADER as `0x${string}`,
   DEV_POD_MEMBER: process.env.NEXT_PUBLIC_DEV_POD_MEMBER as `0x${string}`,
 } as const;
@@ -170,14 +184,14 @@ export function isValidAddress(address: string | undefined): boolean {
  * Throws error if address is invalid
  */
 export function getContractAddress(
-  contractKey: keyof typeof CONTRACT_ADDRESSES
+  contractKey: keyof typeof CONTRACT_ADDRESSES,
 ): `0x${string}` {
   const address = CONTRACT_ADDRESSES[contractKey];
 
   if (!isValidAddress(address)) {
     throw new Error(
       `Invalid or missing contract address for ${contractKey}. ` +
-      `Please check your environment variables.`
+        `Please check your environment variables.`,
     );
   }
 

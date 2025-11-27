@@ -25,7 +25,9 @@ export default async function createPost(req, res) {
 
     if (profileError || !profile?.wallet_address) {
       console.error('❌ User profile error or missing wallet:', profileError);
-      return res.status(400).json({ error: 'User profile not found or missing wallet address' });
+      return res
+        .status(400)
+        .json({ error: 'User profile not found or missing wallet address' });
     }
 
     console.log('✅ User profile retrieved:', profile);
@@ -37,7 +39,9 @@ export default async function createPost(req, res) {
       return res.status(400).json({ error: 'Missing threadId or content' });
     }
 
-    console.log(`📌 Received threadId: ${threadId}, content length: ${content.length}`);
+    console.log(
+      `📌 Received threadId: ${threadId}, content length: ${content.length}`,
+    );
     console.log(`🔍 Received required_token from frontend: ${required_token}`);
 
     // If required_token is missing, fetch it from the thread
@@ -50,8 +54,13 @@ export default async function createPost(req, res) {
         .single();
 
       if (threadError) {
-        console.error('❌ Error fetching required_token from forum_threads:', threadError);
-        return res.status(500).json({ error: 'Failed to retrieve thread token requirement' });
+        console.error(
+          '❌ Error fetching required_token from forum_threads:',
+          threadError,
+        );
+        return res
+          .status(500)
+          .json({ error: 'Failed to retrieve thread token requirement' });
       }
 
       required_token = threadData?.required_token || null;
@@ -60,24 +69,24 @@ export default async function createPost(req, res) {
 
     // Insert post into the database
     console.log('📤 Inserting post into forum_posts...');
-    const { error: insertError } = await supabase
-      .from('forum_posts')
-      .insert({
-        thread_id: threadId,
-        content,
-        author_wallet: profile.wallet_address,
-        required_token: required_token,
-        created_at: new Date().toISOString(),
-      });
+    const { error: insertError } = await supabase.from('forum_posts').insert({
+      thread_id: threadId,
+      content,
+      author_wallet: profile.wallet_address,
+      required_token: required_token,
+      created_at: new Date().toISOString(),
+    });
 
     if (insertError) {
       console.error('❌ Supabase insert error:', insertError);
       return res.status(409).json({ error: insertError.message });
     }
 
-    console.log('✅ Post successfully inserted with required_token:', required_token);
+    console.log(
+      '✅ Post successfully inserted with required_token:',
+      required_token,
+    );
     return res.status(200).json({ success: true });
-
   } catch (err) {
     console.error('❌ createPost error:', err);
     return res.status(500).json({ error: err.message || 'Unknown error' });

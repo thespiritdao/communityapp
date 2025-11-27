@@ -8,16 +8,16 @@ vi.mock('@hatsprotocol/sdk-v1-core', () => ({
   HatsClient: vi.fn().mockImplementation(() => ({
     createHat: vi.fn(),
     isWearerOfHat: vi.fn(),
-    isActive: vi.fn()
-  }))
+    isActive: vi.fn(),
+  })),
 }));
 
 vi.mock('@hatsprotocol/sdk-v1-subgraph', () => ({
   HatsSubgraphClient: vi.fn().mockImplementation(() => ({
     getHat: vi.fn(),
     getWearer: vi.fn(),
-    getTree: vi.fn()
-  }))
+    getTree: vi.fn(),
+  })),
 }));
 
 describe('HatsCoreService', () => {
@@ -27,9 +27,9 @@ describe('HatsCoreService', () => {
   beforeEach(() => {
     publicClient = createPublicClient({
       chain: base,
-      transport: http()
+      transport: http(),
     });
-    
+
     service = getHatsCoreService(publicClient);
   });
 

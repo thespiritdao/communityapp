@@ -22,22 +22,22 @@ const PROXY_ABI = [
     type: 'function',
     inputs: [{ name: '_hatId', type: 'uint256' }],
     outputs: [{ name: '', type: 'bool' }],
-    stateMutability: 'view'
+    stateMutability: 'view',
   },
   {
     name: 'proxyAdminHatId',
     type: 'function',
     inputs: [],
     outputs: [{ name: '', type: 'uint256' }],
-    stateMutability: 'view'
+    stateMutability: 'view',
   },
   {
     name: 'isActive',
     type: 'function',
     inputs: [],
     outputs: [{ name: '', type: 'bool' }],
-    stateMutability: 'view'
-  }
+    stateMutability: 'view',
+  },
 ];
 
 const HATS_ABI = [
@@ -46,16 +46,16 @@ const HATS_ABI = [
     type: 'function',
     inputs: [
       { name: '_user', type: 'address' },
-      { name: '_hatId', type: 'uint256' }
+      { name: '_hatId', type: 'uint256' },
     ],
     outputs: [{ name: '', type: 'bool' }],
-    stateMutability: 'view'
-  }
+    stateMutability: 'view',
+  },
 ];
 
 const client = createPublicClient({
   chain: base,
-  transport: http(process.env.NEXT_PUBLIC_RPC_URL)
+  transport: http(process.env.NEXT_PUBLIC_RPC_URL),
 });
 
 async function verifyToggleImplementation(proxyAddress) {
@@ -70,12 +70,14 @@ async function verifyToggleImplementation(proxyAddress) {
     const adminHatId = await client.readContract({
       address: proxyAddress,
       abi: PROXY_ABI,
-      functionName: 'proxyAdminHatId'
+      functionName: 'proxyAdminHatId',
     });
     console.log('   ✅ Admin HAT ID:', adminHatId.toString());
 
     if (adminHatId === 0n) {
-      console.log('   ❌ Admin HAT ID is 0 - pod needs migration or Phase 5 incomplete');
+      console.log(
+        '   ❌ Admin HAT ID is 0 - pod needs migration or Phase 5 incomplete',
+      );
       return false;
     }
 
@@ -84,7 +86,7 @@ async function verifyToggleImplementation(proxyAddress) {
     const isActive = await client.readContract({
       address: proxyAddress,
       abi: PROXY_ABI,
-      functionName: 'isActive'
+      functionName: 'isActive',
     });
     console.log('   ✅ Pod Active:', isActive);
 
@@ -99,13 +101,18 @@ async function verifyToggleImplementation(proxyAddress) {
         address: proxyAddress,
         abi: PROXY_ABI,
         functionName: 'getHatStatus',
-        args: [adminHatId]
+        args: [adminHatId],
       });
       console.log('   ✅ getHatStatus() returned:', hatStatus);
       console.log('   ✅ Function exists and is callable!');
 
       if (hatStatus !== isActive) {
-        console.log('   ⚠️  WARNING: getHatStatus() returned', hatStatus, 'but pod isActive is', isActive);
+        console.log(
+          '   ⚠️  WARNING: getHatStatus() returned',
+          hatStatus,
+          'but pod isActive is',
+          isActive,
+        );
         console.log('   ⚠️  Expected them to match for admin HAT!');
       }
     } catch (error) {
@@ -115,12 +122,14 @@ async function verifyToggleImplementation(proxyAddress) {
     }
 
     // Step 4: Check if Hats Protocol recognizes proxy as wearer
-    console.log('\n4️⃣  Checking if Hats Protocol recognizes proxy as admin HAT wearer...');
+    console.log(
+      '\n4️⃣  Checking if Hats Protocol recognizes proxy as admin HAT wearer...',
+    );
     const isWearer = await client.readContract({
       address: HATS_PROTOCOL,
       abi: HATS_ABI,
       functionName: 'isWearerOfHat',
-      args: [proxyAddress, adminHatId]
+      args: [proxyAddress, adminHatId],
     });
     console.log('   ✅ isWearerOfHat() returned:', isWearer);
 
@@ -139,7 +148,6 @@ async function verifyToggleImplementation(proxyAddress) {
     console.log('='.repeat(60) + '\n');
 
     return true;
-
   } catch (error) {
     console.error('\n❌ ERROR:', error.message);
     console.error(error);
@@ -151,16 +159,18 @@ async function verifyToggleImplementation(proxyAddress) {
 const proxyAddress = process.argv[2];
 
 if (!proxyAddress) {
-  console.error('\n❌ Usage: node verify_toggle_implementation.js <PROXY_ADDRESS>');
+  console.error(
+    '\n❌ Usage: node verify_toggle_implementation.js <PROXY_ADDRESS>',
+  );
   console.error('Example: node verify_toggle_implementation.js 0x123...\n');
   process.exit(1);
 }
 
 verifyToggleImplementation(proxyAddress)
-  .then(success => {
+  .then((success) => {
     process.exit(success ? 0 : 1);
   })
-  .catch(error => {
+  .catch((error) => {
     console.error('Fatal error:', error);
     process.exit(1);
   });

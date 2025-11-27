@@ -13,20 +13,22 @@ const FACTORY_ABI = [
     type: 'function',
     inputs: [{ name: 'podId', type: 'string' }],
     outputs: [{ name: '', type: 'address' }],
-    stateMutability: 'view'
+    stateMutability: 'view',
   },
   {
     name: 'podProxies',
     type: 'function',
     inputs: [{ name: 'podId', type: 'string' }],
     outputs: [{ name: '', type: 'address' }],
-    stateMutability: 'view'
-  }
+    stateMutability: 'view',
+  },
 ];
 
 const client = createPublicClient({
   chain: base,
-  transport: http(process.env.NEXT_PUBLIC_BASE_RPC_URL || 'https://mainnet.base.org')
+  transport: http(
+    process.env.NEXT_PUBLIC_BASE_RPC_URL || 'https://mainnet.base.org',
+  ),
 });
 
 console.log('🔍 Verifying new PodAuthorizationFactory deployment...\n');
@@ -39,7 +41,7 @@ try {
     address: NEW_FACTORY,
     abi: FACTORY_ABI,
     functionName: 'podProxies',
-    args: [EXEC_POD_ID]
+    args: [EXEC_POD_ID],
   });
 
   console.log(`Proxy address: ${proxyAddress}`);
@@ -55,7 +57,7 @@ try {
       address: NEW_FACTORY,
       abi: FACTORY_ABI,
       functionName: 'getPodTreasuryAddress',
-      args: [EXEC_POD_ID]
+      args: [EXEC_POD_ID],
     });
 
     console.log(`Treasury address: ${treasury}`);
@@ -70,6 +72,8 @@ try {
 } catch (error) {
   console.error('\n❌ Error:', error.message);
   if (error.message.includes('getPodTreasuryAddress')) {
-    console.log('\n⚠️ Function might not exist - did the contract compile correctly?');
+    console.log(
+      '\n⚠️ Function might not exist - did the contract compile correctly?',
+    );
   }
 }

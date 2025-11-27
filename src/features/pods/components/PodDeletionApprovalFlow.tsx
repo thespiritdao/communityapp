@@ -8,24 +8,19 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/components/ui/use-toast';
-import { 
-  AlertTriangle, 
-  CheckCircle, 
-  Clock,
-  Trash2
-} from 'lucide-react';
+import { AlertTriangle, CheckCircle, Clock, Trash2 } from 'lucide-react';
 import { PodDeletionService } from '../services/PodDeletionService';
 import { unifiedNotificationService } from '@/services/unifiedNotificationService';
 import { supabase } from '@/utils/supabaseClient';
 import { PodDeletionDebugger } from './PodDeletionDebugger';
 import { MemberCard } from './MembersPanel/MemberCard';
 import { EventService } from '../../events/lib/supabase';
-import { 
+import {
   Transaction,
   TransactionButton,
   TransactionStatus,
   TransactionStatusAction,
-  TransactionStatusLabel
+  TransactionStatusLabel,
 } from '@coinbase/onchainkit/transaction';
 import { publicClient } from '@/config/wagmi.client';
 import type { Pod } from '../types';
@@ -45,18 +40,21 @@ interface DeletionProposal {
   proposed_by: string;
   required_approvals: number;
   current_approvals: string[];
-  status: 'pending' | 'approved' | 'executed' | 'rejected' | 'expired' | 'failed';
+  status:
+    | 'pending'
+    | 'approved'
+    | 'executed'
+    | 'rejected'
+    | 'expired'
+    | 'failed';
   created_at: string;
   expires_at: string;
   rejection_reason?: string;
 }
 
-export const PodDeletionApprovalFlow: React.FC<PodDeletionApprovalFlowProps> = ({
-  pod,
-  onProposalCreated,
-  onDeletionComplete,
-  className = ''
-}) => {
+export const PodDeletionApprovalFlow: React.FC<
+  PodDeletionApprovalFlowProps
+> = ({ pod, onProposalCreated, onDeletionComplete, className = '' }) => {
   const router = useRouter();
   const { address } = useAccount();
   const { data: walletClient } = useWalletClient();
@@ -64,10 +62,14 @@ export const PodDeletionApprovalFlow: React.FC<PodDeletionApprovalFlowProps> = (
   const { toast } = useToast();
 
   const [isLoading, setIsLoading] = useState(false);
-  const [activeProposal, setActiveProposal] = useState<DeletionProposal | null>(null);
+  const [activeProposal, setActiveProposal] = useState<DeletionProposal | null>(
+    null,
+  );
   const [canPropose, setCanPropose] = useState(false);
   const [hasApproved, setHasApproved] = useState(false);
-  const [userProfiles, setUserProfiles] = useState<Map<string, UserProfile>>(new Map());
+  const [userProfiles, setUserProfiles] = useState<Map<string, UserProfile>>(
+    new Map(),
+  );
   const [showApprovalSignature, setShowApprovalSignature] = useState(false);
   const [transactionCalls, setTransactionCalls] = useState<any[]>([]);
   const [showTransaction, setShowTransaction] = useState(false);
@@ -76,7 +78,7 @@ export const PodDeletionApprovalFlow: React.FC<PodDeletionApprovalFlowProps> = (
   const forceRefresh = async () => {
     console.log('🔄 Force refreshing component...');
     setIsLoading(true);
-    
+
     try {
       const { data, error } = await supabase
         .from('pod_deletion_proposals')
@@ -86,14 +88,16 @@ export const PodDeletionApprovalFlow: React.FC<PodDeletionApprovalFlowProps> = (
         .order('created_at', { ascending: false })
         .limit(1)
         .single();
-      
+
       if (data && !error) {
         console.log('🔄 Refreshed proposal data:', data);
         setActiveProposal(data);
         setHasApproved(
-          address ? data.current_approvals.some((a: string) => 
-            a.toLowerCase() === address.toLowerCase()
-          ) : false
+          address
+            ? data.current_approvals.some(
+                (a: string) => a.toLowerCase() === address.toLowerCase(),
+              )
+            : false,
         );
       } else {
         console.log('🔄 No proposal found during refresh');
@@ -112,25 +116,25 @@ export const PodDeletionApprovalFlow: React.FC<PodDeletionApprovalFlowProps> = (
     console.log('🔍 PodDeletionApprovalFlow: Checking proposal permissions:', {
       address,
       pod_leads: pod.pod_leads,
-      pod_name: pod.name
+      pod_name: pod.name,
     });
-    
+
     if (!address || !pod.pod_leads) {
       console.log('❌ Cannot propose: Missing address or pod_leads');
       setCanPropose(false);
       return;
     }
-    
-    const isLeader = pod.pod_leads.some(lead => 
-      lead.toLowerCase() === address.toLowerCase()
+
+    const isLeader = pod.pod_leads.some(
+      (lead) => lead.toLowerCase() === address.toLowerCase(),
     );
-    
+
     console.log('✅ Proposal permission check result:', {
       isLeader,
       userAddress: address,
-      podLeads: pod.pod_leads
+      podLeads: pod.pod_leads,
     });
-    
+
     setCanPropose(isLeader);
   }, [address, pod.pod_leads]);
 
@@ -138,34 +142,40 @@ export const PodDeletionApprovalFlow: React.FC<PodDeletionApprovalFlowProps> = (
   useEffect(() => {
     const fetchUserProfiles = async () => {
       const addressesToFetch = new Set<string>();
-      
+
       // Add pod leaders
       if (pod.pod_leads) {
-        pod.pod_leads.forEach(lead => addressesToFetch.add(lead.toLowerCase()));
+        pod.pod_leads.forEach((lead) =>
+          addressesToFetch.add(lead.toLowerCase()),
+        );
       }
-      
+
       // Add proposal participants
       if (activeProposal) {
         addressesToFetch.add(activeProposal.proposed_by.toLowerCase());
-        activeProposal.current_approvals.forEach(approver => 
-          addressesToFetch.add(approver.toLowerCase())
+        activeProposal.current_approvals.forEach((approver) =>
+          addressesToFetch.add(approver.toLowerCase()),
         );
       }
-      
+
       const profileMap = new Map<string, UserProfile>();
-      
+
       try {
         await Promise.all(
           Array.from(addressesToFetch).map(async (walletAddress) => {
             try {
-              const profile = await EventService.getUserProfileByWallet(walletAddress);
+              const profile =
+                await EventService.getUserProfileByWallet(walletAddress);
               if (profile) {
                 profileMap.set(walletAddress.toLowerCase(), profile);
               }
             } catch (error) {
-              console.warn(`Failed to fetch profile for ${walletAddress}:`, error);
+              console.warn(
+                `Failed to fetch profile for ${walletAddress}:`,
+                error,
+              );
             }
-          })
+          }),
         );
         setUserProfiles(profileMap);
       } catch (error) {
@@ -180,7 +190,7 @@ export const PodDeletionApprovalFlow: React.FC<PodDeletionApprovalFlowProps> = (
   useEffect(() => {
     const fetchActiveProposal = async () => {
       console.log('🔍 Fetching active deletion proposal for pod:', pod.id);
-      
+
       // FIXED: Check for BOTH pending AND approved proposals
       const { data, error } = await supabase
         .from('pod_deletion_proposals')
@@ -190,7 +200,7 @@ export const PodDeletionApprovalFlow: React.FC<PodDeletionApprovalFlowProps> = (
         .order('created_at', { ascending: false })
         .limit(1)
         .single();
-      
+
       console.log('🔍 Proposal query result:', { data, error });
 
       if (data && !error) {
@@ -198,14 +208,16 @@ export const PodDeletionApprovalFlow: React.FC<PodDeletionApprovalFlowProps> = (
           id: data.id,
           status: data.status,
           approvals: data.current_approvals?.length,
-          required: data.required_approvals
+          required: data.required_approvals,
         });
-        
+
         setActiveProposal(data);
         setHasApproved(
-          address ? data.current_approvals.some((a: string) => 
-            a.toLowerCase() === address.toLowerCase()
-          ) : false
+          address
+            ? data.current_approvals.some(
+                (a: string) => a.toLowerCase() === address.toLowerCase(),
+              )
+            : false,
         );
       } else {
         console.log('🔍 No active proposal found');
@@ -215,18 +227,22 @@ export const PodDeletionApprovalFlow: React.FC<PodDeletionApprovalFlowProps> = (
     };
 
     fetchActiveProposal();
-    
+
     // Set up real-time subscription
     const subscription = supabase
       .channel(`pod-deletion-${pod.id}`)
-      .on('postgres_changes', {
-        event: '*',
-        schema: 'public',
-        table: 'pod_deletion_proposals',
-        filter: `pod_id=eq.${pod.id}`
-      }, () => {
-        fetchActiveProposal();
-      })
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'pod_deletion_proposals',
+          filter: `pod_id=eq.${pod.id}`,
+        },
+        () => {
+          fetchActiveProposal();
+        },
+      )
       .subscribe();
 
     return () => {
@@ -236,15 +252,20 @@ export const PodDeletionApprovalFlow: React.FC<PodDeletionApprovalFlowProps> = (
 
   // Create deletion proposal
   const createDeletionProposal = async () => {
-    console.log('🚀 PodDeletionApprovalFlow: Starting deletion proposal creation:', {
-      address,
-      canPropose,
-      pod_id: pod.id,
-      pod_name: pod.name
-    });
-    
+    console.log(
+      '🚀 PodDeletionApprovalFlow: Starting deletion proposal creation:',
+      {
+        address,
+        canPropose,
+        pod_id: pod.id,
+        pod_name: pod.name,
+      },
+    );
+
     if (!address || !canPropose) {
-      console.log('❌ Cannot create proposal: Missing address or canPropose=false');
+      console.log(
+        '❌ Cannot create proposal: Missing address or canPropose=false',
+      );
       return;
     }
 
@@ -252,10 +273,13 @@ export const PodDeletionApprovalFlow: React.FC<PodDeletionApprovalFlowProps> = (
     try {
       // Calculate required approvals (2/3 majority)
       // FOR TESTING: Allow single approval if MIN_POD_LEADERS=1
-      const minRequired = Number.parseInt(process.env.NEXT_PUBLIC_MIN_POD_LEADERS || '3') === 1 ? 1 : 2;
+      const minRequired =
+        Number.parseInt(process.env.NEXT_PUBLIC_MIN_POD_LEADERS || '3') === 1
+          ? 1
+          : 2;
       const requiredApprovals = Math.max(
         minRequired,
-        Math.ceil((pod.pod_leads?.length || 0) * 0.66)
+        Math.ceil((pod.pod_leads?.length || 0) * 0.66),
       );
 
       // Create proposal via API route (bypasses RLS auth issue)
@@ -267,7 +291,7 @@ export const PodDeletionApprovalFlow: React.FC<PodDeletionApprovalFlowProps> = (
         current_approvals: [address.toLowerCase()],
         status: 'pending',
         management_hat_id: pod.management_hat_id,
-        membership_hat_id: pod.membership_hat_id
+        membership_hat_id: pod.membership_hat_id,
       });
 
       const response = await fetch('/api/pod-deletion/create-proposal', {
@@ -281,8 +305,8 @@ export const PodDeletionApprovalFlow: React.FC<PodDeletionApprovalFlowProps> = (
           current_approvals: [], // NO auto-approval - signature required first
           status: 'pending', // Always starts pending - approval requires signature
           management_hat_id: pod.management_hat_id,
-          membership_hat_id: pod.membership_hat_id
-        })
+          membership_hat_id: pod.membership_hat_id,
+        }),
       });
 
       if (!response.ok) {
@@ -298,9 +322,10 @@ export const PodDeletionApprovalFlow: React.FC<PodDeletionApprovalFlowProps> = (
       // Notifications are helpful but not critical - proposal should succeed even if notifications fail
       try {
         // Send notifications to other pod leaders
-        const otherLeaders = pod.pod_leads?.filter(lead =>
-          lead.toLowerCase() !== address.toLowerCase()
-        ) || [];
+        const otherLeaders =
+          pod.pod_leads?.filter(
+            (lead) => lead.toLowerCase() !== address.toLowerCase(),
+          ) || [];
 
         for (const leader of otherLeaders) {
           await unifiedNotificationService.createNotification({
@@ -313,7 +338,7 @@ export const PodDeletionApprovalFlow: React.FC<PodDeletionApprovalFlowProps> = (
             context_id: proposal.id,
             context_url: `/pods/${pod.id}/manage`,
             proposal_id: proposal.id,
-            priority: 'high'
+            priority: 'high',
           });
         }
 
@@ -336,7 +361,7 @@ export const PodDeletionApprovalFlow: React.FC<PodDeletionApprovalFlowProps> = (
                 context_type: 'governance',
                 context_id: proposal.id,
                 context_url: `/pods/${pod.id}`,
-                priority: 'medium'
+                priority: 'medium',
               });
             }
           }
@@ -345,23 +370,28 @@ export const PodDeletionApprovalFlow: React.FC<PodDeletionApprovalFlowProps> = (
         console.log('✅ Deletion proposal notifications sent successfully');
       } catch (notificationError) {
         // Log but don't fail the proposal creation if notifications fail
-        console.error('⚠️ Failed to send deletion proposal notifications (non-critical):', notificationError);
-        console.log('✅ Proposal created successfully despite notification failure');
+        console.error(
+          '⚠️ Failed to send deletion proposal notifications (non-critical):',
+          notificationError,
+        );
+        console.log(
+          '✅ Proposal created successfully despite notification failure',
+        );
       }
 
       setActiveProposal(proposal);
       onProposalCreated?.(proposal.id);
-      
+
       toast({
-        title: "Deletion Proposal Created",
+        title: 'Deletion Proposal Created',
         description: `Proposal created. Click "Approve Deletion" to sign your approval. ${requiredApprovals} approval(s) needed.`,
       });
     } catch (error) {
       console.error('Failed to create deletion proposal:', error);
       toast({
-        title: "Failed to Create Proposal",
+        title: 'Failed to Create Proposal',
         description: error instanceof Error ? error.message : 'Unknown error',
-        variant: "destructive"
+        variant: 'destructive',
       });
     } finally {
       setIsLoading(false);
@@ -376,24 +406,24 @@ export const PodDeletionApprovalFlow: React.FC<PodDeletionApprovalFlowProps> = (
     try {
       // STEP 1: Request signature for approval
       const message = `Approve deletion of pod: ${pod.name}\nProposal ID: ${activeProposal.id}\nTimestamp: ${new Date().toISOString()}`;
-      
+
       console.log('🔏 Requesting signature for approval:', message);
-      
+
       // Request signature from user's wallet
       const signature = await walletClient.signMessage({
         message,
       });
-      
+
       console.log('✅ Signature obtained:', signature.substring(0, 20) + '...');
-      
+
       // STEP 2: Safely add approval with race condition protection
       console.log('🔄 Adding approval to database with race protection...');
-      
+
       // Use PostgreSQL array functions to safely append without race conditions
       const { data: updatedProposal, error: updateError } = await supabase
         .rpc('add_pod_deletion_approval', {
           proposal_id: activeProposal.id,
-          approver_address: address.toLowerCase()
+          approver_address: address.toLowerCase(),
         })
         .select()
         .single();
@@ -401,11 +431,14 @@ export const PodDeletionApprovalFlow: React.FC<PodDeletionApprovalFlowProps> = (
       // Handle RPC errors
       if (updateError) {
         // Check if error is "already approved" - this is not a real error, just sync the state
-        const isAlreadyApproved = updateError.message?.includes('already approved') ||
-                                  updateError.message?.includes('Address has already approved');
+        const isAlreadyApproved =
+          updateError.message?.includes('already approved') ||
+          updateError.message?.includes('Address has already approved');
 
         if (isAlreadyApproved) {
-          console.log('ℹ️ User has already approved - syncing state with database');
+          console.log(
+            'ℹ️ User has already approved - syncing state with database',
+          );
 
           // Fetch the latest proposal to sync state
           const { data: latestProposal } = await supabase
@@ -424,13 +457,14 @@ export const PodDeletionApprovalFlow: React.FC<PodDeletionApprovalFlowProps> = (
 
             if (isFullyApproved) {
               toast({
-                title: "Already Approved!",
-                description: "You've already approved this deletion. A pod leader must execute deletion from the pod card. Redirecting to pods page...",
+                title: 'Already Approved!',
+                description:
+                  "You've already approved this deletion. A pod leader must execute deletion from the pod card. Redirecting to pods page...",
                 duration: 5000,
               });
             } else {
               toast({
-                title: "Already Approved",
+                title: 'Already Approved',
                 description: `You've already approved this deletion. Waiting for ${latestProposal.required_approvals - latestProposal.current_approvals.length} more approval(s). Redirecting to pods page...`,
                 duration: 5000,
               });
@@ -448,7 +482,9 @@ export const PodDeletionApprovalFlow: React.FC<PodDeletionApprovalFlowProps> = (
 
         // Check if RPC function doesn't exist, use fallback
         if (updateError.message?.includes('function')) {
-          console.log('📋 RPC function not found, using manual update with duplicate check');
+          console.log(
+            '📋 RPC function not found, using manual update with duplicate check',
+          );
 
           // Re-fetch latest data to avoid race conditions
           const { data: latestProposal } = await supabase
@@ -457,9 +493,13 @@ export const PodDeletionApprovalFlow: React.FC<PodDeletionApprovalFlowProps> = (
             .eq('id', activeProposal.id)
             .single();
 
-          if (latestProposal?.current_approvals?.includes(address.toLowerCase())) {
+          if (
+            latestProposal?.current_approvals?.includes(address.toLowerCase())
+          ) {
             // Same as "already approved" case above
-            console.log('ℹ️ User has already approved (detected in fallback) - syncing state');
+            console.log(
+              'ℹ️ User has already approved (detected in fallback) - syncing state',
+            );
 
             const { data: fullProposal } = await supabase
               .from('pod_deletion_proposals')
@@ -474,7 +514,9 @@ export const PodDeletionApprovalFlow: React.FC<PodDeletionApprovalFlowProps> = (
               const isFullyApproved = fullProposal.status === 'approved';
 
               toast({
-                title: isFullyApproved ? "Already Approved!" : "Already Approved",
+                title: isFullyApproved
+                  ? 'Already Approved!'
+                  : 'Already Approved',
                 description: isFullyApproved
                   ? "You've already approved this deletion. A pod leader must execute deletion from the pod card. Redirecting to pods page..."
                   : `You've already approved this deletion. Waiting for ${fullProposal.required_approvals - fullProposal.current_approvals.length} more approval(s). Redirecting to pods page...`,
@@ -490,15 +532,21 @@ export const PodDeletionApprovalFlow: React.FC<PodDeletionApprovalFlowProps> = (
             }
           }
 
-          const updatedApprovals = [...(latestProposal?.current_approvals || []), address.toLowerCase()];
-          const isFullyApproved = updatedApprovals.length >= (latestProposal?.required_approvals || activeProposal.required_approvals);
+          const updatedApprovals = [
+            ...(latestProposal?.current_approvals || []),
+            address.toLowerCase(),
+          ];
+          const isFullyApproved =
+            updatedApprovals.length >=
+            (latestProposal?.required_approvals ||
+              activeProposal.required_approvals);
 
           const { error: manualUpdateError } = await supabase
             .from('pod_deletion_proposals')
             .update({
               current_approvals: updatedApprovals,
               status: isFullyApproved ? 'approved' : 'pending',
-              updated_at: new Date().toISOString()
+              updated_at: new Date().toISOString(),
             })
             .eq('id', activeProposal.id);
 
@@ -521,7 +569,8 @@ export const PodDeletionApprovalFlow: React.FC<PodDeletionApprovalFlowProps> = (
       }
 
       const updatedApprovals = finalProposal.current_approvals || [];
-      const isFullyApproved = updatedApprovals.length >= finalProposal.required_approvals;
+      const isFullyApproved =
+        updatedApprovals.length >= finalProposal.required_approvals;
 
       // Send notification to proposer
       await unifiedNotificationService.createNotification({
@@ -533,7 +582,7 @@ export const PodDeletionApprovalFlow: React.FC<PodDeletionApprovalFlowProps> = (
         context_type: 'governance',
         context_id: activeProposal.id,
         context_url: `/pods/${pod.id}/manage`,
-        priority: isFullyApproved ? 'urgent' : 'high'
+        priority: isFullyApproved ? 'urgent' : 'high',
       });
 
       if (isFullyApproved) {
@@ -552,13 +601,14 @@ export const PodDeletionApprovalFlow: React.FC<PodDeletionApprovalFlowProps> = (
           console.log('✅ Proposal approved and refreshed:', {
             status: updatedProposal.status,
             approvals: updatedProposal.current_approvals.length,
-            required: updatedProposal.required_approvals
+            required: updatedProposal.required_approvals,
           });
         }
 
         toast({
-          title: "Quorum Reached!",
-          description: "When quorum is reached, a pod leader must execute the deletion by clicking the Delete button on the pod card. Redirecting to pods page...",
+          title: 'Quorum Reached!',
+          description:
+            'When quorum is reached, a pod leader must execute the deletion by clicking the Delete button on the pod card. Redirecting to pods page...',
           duration: 5000,
         });
 
@@ -573,7 +623,7 @@ export const PodDeletionApprovalFlow: React.FC<PodDeletionApprovalFlowProps> = (
         console.log('✅ Proposal approved, redirecting to /pods in 5 seconds');
       } else {
         toast({
-          title: "Approval Recorded",
+          title: 'Approval Recorded',
           description: `Your approval has been recorded. ${activeProposal.required_approvals - updatedApprovals.length} more approval(s) needed. Redirecting to pods page...`,
           duration: 5000,
         });
@@ -590,9 +640,9 @@ export const PodDeletionApprovalFlow: React.FC<PodDeletionApprovalFlowProps> = (
     } catch (error) {
       console.error('Failed to approve proposal:', error);
       toast({
-        title: "Approval Failed",
+        title: 'Approval Failed',
         description: error instanceof Error ? error.message : 'Unknown error',
-        variant: "destructive"
+        variant: 'destructive',
       });
     } finally {
       setIsLoading(false);
@@ -611,30 +661,37 @@ export const PodDeletionApprovalFlow: React.FC<PodDeletionApprovalFlowProps> = (
 
     try {
       // Get HAT deactivation transactions from PodDeletionService
-      const txConfig = await PodDeletionService.prepareHatDeactivationTransactions(
-        pod,
-        address,
-        pubClient || publicClient
-      );
+      const txConfig =
+        await PodDeletionService.prepareHatDeactivationTransactions(
+          pod,
+          address,
+          pubClient || publicClient,
+        );
 
       if (txConfig && txConfig.calls && txConfig.calls.length > 0) {
-        console.log(`✅ Prepared ${txConfig.calls.length} transaction calls for OnchainKit:`, {
-          calls: txConfig.calls.map(call => ({
-            contract: call.address,
-            function: call.functionName,
-            args: call.args
-          }))
-        });
+        console.log(
+          `✅ Prepared ${txConfig.calls.length} transaction calls for OnchainKit:`,
+          {
+            calls: txConfig.calls.map((call) => ({
+              contract: call.address,
+              function: call.functionName,
+              args: call.args,
+            })),
+          },
+        );
         setTransactionCalls(txConfig.calls);
         setShowTransaction(true);
       } else {
         // No HAT deactivation needed, proceed directly to database deletion
-        console.log('📋 No HAT deactivation needed (HATs already deactivated or invalid)');
+        console.log(
+          '📋 No HAT deactivation needed (HATs already deactivated or invalid)',
+        );
         console.log('📋 Proceeding directly with database cleanup...');
 
         toast({
-          title: "HATs Already Deactivated",
-          description: "HATs are already deactivated. Proceeding with database cleanup.",
+          title: 'HATs Already Deactivated',
+          description:
+            'HATs are already deactivated. Proceeding with database cleanup.',
         });
 
         await executeDatabaseDeletion();
@@ -643,23 +700,28 @@ export const PodDeletionApprovalFlow: React.FC<PodDeletionApprovalFlowProps> = (
       console.error('❌ Failed to prepare deletion transactions:', error);
 
       // Check if this is a known issue that can be bypassed
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      const canBypass = errorMessage.includes('already deactivated') ||
-                       errorMessage.includes('already inactive') ||
-                       errorMessage.includes('invalid hat');
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error';
+      const canBypass =
+        errorMessage.includes('already deactivated') ||
+        errorMessage.includes('already inactive') ||
+        errorMessage.includes('invalid hat');
 
       if (canBypass) {
-        console.log('⚠️ HAT deactivation failed but can be bypassed - proceeding with database cleanup');
+        console.log(
+          '⚠️ HAT deactivation failed but can be bypassed - proceeding with database cleanup',
+        );
         toast({
-          title: "Bypassing HAT Deactivation",
-          description: "HATs appear to be already deactivated. Proceeding with database cleanup.",
+          title: 'Bypassing HAT Deactivation',
+          description:
+            'HATs appear to be already deactivated. Proceeding with database cleanup.',
         });
         await executeDatabaseDeletion();
       } else {
         toast({
-          title: "Failed to Prepare Deletion",
+          title: 'Failed to Prepare Deletion',
           description: errorMessage,
-          variant: "destructive"
+          variant: 'destructive',
         });
       }
     } finally {
@@ -670,14 +732,14 @@ export const PodDeletionApprovalFlow: React.FC<PodDeletionApprovalFlowProps> = (
   // Execute database deletion after HAT deactivation
   const executeDatabaseDeletion = async () => {
     console.log(`🗑️ Executing database deletion for pod: ${pod.id}`);
-    
+
     if (!activeProposal || !address) return;
 
     try {
       // Only delete from database (HATs already deactivated via OnchainKit)
       const result = await PodDeletionService.deletePodDatabase(
         pod.id,
-        address
+        address,
       );
       console.log(`🚀 Database deletion result:`, result);
 
@@ -689,7 +751,8 @@ export const PodDeletionApprovalFlow: React.FC<PodDeletionApprovalFlowProps> = (
             status: 'executed',
             executed_at: new Date().toISOString(),
             executed_by: address.toLowerCase(),
-            hat_deactivation_tx: result.hatDeactivationResults?.managementHat?.transactionHash
+            hat_deactivation_tx:
+              result.hatDeactivationResults?.managementHat?.transactionHash,
           })
           .eq('id', activeProposal.id);
 
@@ -701,7 +764,9 @@ export const PodDeletionApprovalFlow: React.FC<PodDeletionApprovalFlowProps> = (
             .eq('pod_id', pod.id);
 
           if (!membersError && members && members.length > 0) {
-            console.log(`📧 Notifying ${members.length} pod members about deletion...`);
+            console.log(
+              `📧 Notifying ${members.length} pod members about deletion...`,
+            );
             for (const member of members) {
               await unifiedNotificationService.createNotification({
                 recipient_address: member.wallet_address,
@@ -711,20 +776,25 @@ export const PodDeletionApprovalFlow: React.FC<PodDeletionApprovalFlowProps> = (
                 message: `The pod "${pod.name}" has been permanently deleted following approval from pod leaders.`,
                 context_type: 'governance',
                 context_id: activeProposal.id,
-                priority: 'urgent'
+                priority: 'urgent',
               });
             }
           } else {
-            console.log('📋 No pod members to notify or pod_members table not available');
+            console.log(
+              '📋 No pod members to notify or pod_members table not available',
+            );
           }
         } catch (notificationError) {
           // Non-critical error - pod is already deleted
-          console.log('⚠️ Could not send member notifications (non-critical):', notificationError);
+          console.log(
+            '⚠️ Could not send member notifications (non-critical):',
+            notificationError,
+          );
         }
 
         toast({
-          title: "Pod Deleted",
-          description: "Pod has been successfully deleted.",
+          title: 'Pod Deleted',
+          description: 'Pod has been successfully deleted.',
         });
 
         // Refresh the pods list to remove deleted pod
@@ -739,7 +809,7 @@ export const PodDeletionApprovalFlow: React.FC<PodDeletionApprovalFlowProps> = (
           .from('pod_deletion_proposals')
           .update({
             status: 'failed',
-            execution_error: result.error
+            execution_error: result.error,
           })
           .eq('id', activeProposal.id);
 
@@ -748,9 +818,9 @@ export const PodDeletionApprovalFlow: React.FC<PodDeletionApprovalFlowProps> = (
     } catch (error) {
       console.error('Failed to execute deletion:', error);
       toast({
-        title: "Deletion Failed",
+        title: 'Deletion Failed',
         description: error instanceof Error ? error.message : 'Unknown error',
-        variant: "destructive"
+        variant: 'destructive',
       });
     }
   };
@@ -758,16 +828,16 @@ export const PodDeletionApprovalFlow: React.FC<PodDeletionApprovalFlowProps> = (
   // Calculate time remaining
   const getTimeRemaining = () => {
     if (!activeProposal) return null;
-    
+
     const expires = new Date(activeProposal.expires_at);
     const now = new Date();
     const diff = expires.getTime() - now.getTime();
-    
+
     if (diff <= 0) return 'Expired';
-    
+
     const days = Math.floor(diff / (1000 * 60 * 60 * 24));
     const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-    
+
     if (days > 0) return `${days}d ${hours}h remaining`;
     return `${hours}h remaining`;
   };
@@ -777,7 +847,11 @@ export const PodDeletionApprovalFlow: React.FC<PodDeletionApprovalFlowProps> = (
       <CardHeader>
         <CardTitle className="flex items-center justify-between">
           {activeProposal && (
-            <Badge variant={activeProposal.status === 'pending' ? 'default' : 'secondary'}>
+            <Badge
+              variant={
+                activeProposal.status === 'pending' ? 'default' : 'secondary'
+              }
+            >
               {activeProposal.status}
             </Badge>
           )}
@@ -794,7 +868,11 @@ export const PodDeletionApprovalFlow: React.FC<PodDeletionApprovalFlowProps> = (
                 <div className="flex-shrink-0">
                   <MemberCard
                     address={activeProposal.proposed_by}
-                    profile={userProfiles.get(activeProposal.proposed_by.toLowerCase()) || null}
+                    profile={
+                      userProfiles.get(
+                        activeProposal.proposed_by.toLowerCase(),
+                      ) || null
+                    }
                     onClickName={(addr) => {
                       // Use the same profile modal pattern as rest of app
                       console.log('Opening profile modal for:', addr);
@@ -803,7 +881,7 @@ export const PodDeletionApprovalFlow: React.FC<PodDeletionApprovalFlowProps> = (
                   />
                 </div>
               </div>
-              
+
               <div className="flex items-center justify-between text-sm">
                 <span className="text-muted-foreground">Time remaining:</span>
                 <span className="flex items-center gap-1">
@@ -817,22 +895,27 @@ export const PodDeletionApprovalFlow: React.FC<PodDeletionApprovalFlowProps> = (
             <div className="space-y-2">
               <div className="flex items-center justify-between text-sm">
                 <span className="font-medium">Approvals</span>
-                <span>{activeProposal.current_approvals.length} / {activeProposal.required_approvals}</span>
+                <span>
+                  {activeProposal.current_approvals.length} /{' '}
+                  {activeProposal.required_approvals}
+                </span>
               </div>
-              
+
               <div className="w-full bg-gray-200 rounded-full h-2">
                 <div
                   className="h-2 rounded-full transition-all"
                   style={{
                     width: `${(activeProposal.current_approvals.length / activeProposal.required_approvals) * 100}%`,
-                    backgroundColor: '#3F7A5A'
+                    backgroundColor: '#3F7A5A',
                   }}
                 />
               </div>
 
               {/* Show who approved */}
               <div className="space-y-2">
-                <span className="text-xs text-muted-foreground">Approved by:</span>
+                <span className="text-xs text-muted-foreground">
+                  Approved by:
+                </span>
                 <div className="space-y-1">
                   {activeProposal.current_approvals.map((approver) => (
                     <MemberCard
@@ -843,7 +926,10 @@ export const PodDeletionApprovalFlow: React.FC<PodDeletionApprovalFlowProps> = (
                         console.log('Opening profile modal for:', addr);
                       }}
                       className="flex items-center space-x-2 px-2 py-1 border rounded-lg"
-                      style={{ backgroundColor: '#D1E6DC', borderColor: '#B8D9CA' }}
+                      style={{
+                        backgroundColor: '#D1E6DC',
+                        borderColor: '#B8D9CA',
+                      }}
                     />
                   ))}
                 </div>
@@ -851,40 +937,52 @@ export const PodDeletionApprovalFlow: React.FC<PodDeletionApprovalFlowProps> = (
             </div>
 
             {/* Action Buttons */}
-            {canPropose && !hasApproved && activeProposal.status === 'pending' && (
-              <>
-                <Button
-                  onClick={approveProposal}
-                  disabled={isLoading}
-                  className="w-full"
-                >
-                  <CheckCircle className="h-4 w-4 mr-2" />
-                  {isLoading ? 'Processing...' : 'Approve Deletion'}
-                </Button>
-              </>
-            )}
+            {canPropose &&
+              !hasApproved &&
+              activeProposal.status === 'pending' && (
+                <>
+                  <Button
+                    onClick={approveProposal}
+                    disabled={isLoading}
+                    className="w-full"
+                  >
+                    <CheckCircle className="h-4 w-4 mr-2" />
+                    {isLoading ? 'Processing...' : 'Approve Deletion'}
+                  </Button>
+                </>
+              )}
 
             {hasApproved && (
-              <div className="p-3 border rounded" style={{ backgroundColor: '#D1E6DC', borderColor: '#B8D9CA' }}>
-                <div className="flex items-center gap-2" style={{ color: '#2F5D50' }}>
+              <div
+                className="p-3 border rounded"
+                style={{ backgroundColor: '#D1E6DC', borderColor: '#B8D9CA' }}
+              >
+                <div
+                  className="flex items-center gap-2"
+                  style={{ color: '#2F5D50' }}
+                >
                   <CheckCircle className="h-4 w-4" />
-                  <span className="text-sm">You have approved this deletion</span>
+                  <span className="text-sm">
+                    You have approved this deletion
+                  </span>
                 </div>
               </div>
             )}
 
-            {activeProposal.status === 'approved' && (canPropose || hasApproved) && !showTransaction && (
-              <Button
-                onClick={prepareDeletionTransactions}
-                disabled={isLoading || !walletClient}
-                variant="destructive"
-                className="w-full"
-              >
-                <Trash2 className="h-4 w-4 mr-2" />
-                {isLoading ? 'Preparing...' : 'Execute Deletion'}
-              </Button>
-            )}
-            
+            {activeProposal.status === 'approved' &&
+              (canPropose || hasApproved) &&
+              !showTransaction && (
+                <Button
+                  onClick={prepareDeletionTransactions}
+                  disabled={isLoading || !walletClient}
+                  variant="destructive"
+                  className="w-full"
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  {isLoading ? 'Preparing...' : 'Execute Deletion'}
+                </Button>
+              )}
+
             {/* OnchainKit Transaction for sponsored HAT deactivation */}
             {showTransaction && transactionCalls.length > 0 && (
               <div className="space-y-3">
@@ -892,24 +990,31 @@ export const PodDeletionApprovalFlow: React.FC<PodDeletionApprovalFlowProps> = (
                   calls={transactionCalls}
                   isSponsored={true}
                   onSuccess={async () => {
-                    console.log('✅ HAT deactivation successful, proceeding with database cleanup');
+                    console.log(
+                      '✅ HAT deactivation successful, proceeding with database cleanup',
+                    );
                     setShowTransaction(false);
                     await executeDatabaseDeletion();
                   }}
                   onError={(error) => {
                     console.error('❌ HAT deactivation failed:', error);
                     toast({
-                      title: "HAT Deactivation Failed",
-                      description: "Failed to deactivate HATs. Please contact support.",
-                      variant: "destructive"
+                      title: 'HAT Deactivation Failed',
+                      description:
+                        'Failed to deactivate HATs. Please contact support.',
+                      variant: 'destructive',
                     });
                   }}
                 >
                   <TransactionButton
                     className="w-full"
                     style={{ backgroundColor: '#8B3A3A' }}
-                    onMouseEnter={(e: React.MouseEvent<HTMLButtonElement>) => e.currentTarget.style.backgroundColor = '#5C1F1F'}
-                    onMouseLeave={(e: React.MouseEvent<HTMLButtonElement>) => e.currentTarget.style.backgroundColor = '#8B3A3A'}
+                    onMouseEnter={(e: React.MouseEvent<HTMLButtonElement>) =>
+                      (e.currentTarget.style.backgroundColor = '#5C1F1F')
+                    }
+                    onMouseLeave={(e: React.MouseEvent<HTMLButtonElement>) =>
+                      (e.currentTarget.style.backgroundColor = '#8B3A3A')
+                    }
                   />
                   <TransactionStatus>
                     <TransactionStatusAction />
@@ -923,9 +1028,11 @@ export const PodDeletionApprovalFlow: React.FC<PodDeletionApprovalFlowProps> = (
           // No active proposal
           <div className="space-y-4">
             <div className="text-sm text-muted-foreground">
-              Pod deletion requires approval from {Math.ceil((pod.pod_leads?.length || 0) * 0.66)} of {pod.pod_leads?.length || 0} pod leaders.
+              Pod deletion requires approval from{' '}
+              {Math.ceil((pod.pod_leads?.length || 0) * 0.66)} of{' '}
+              {pod.pod_leads?.length || 0} pod leaders.
             </div>
-            
+
             {canPropose && (
               <Button
                 onClick={createDeletionProposal}
@@ -939,10 +1046,18 @@ export const PodDeletionApprovalFlow: React.FC<PodDeletionApprovalFlowProps> = (
             )}
 
             {!canPropose && address && (
-              <div className="p-3 border rounded" style={{ backgroundColor: '#FAF4EC', borderColor: '#E8D7B8' }}>
-                <div className="flex items-center gap-2" style={{ color: '#A67E35' }}>
+              <div
+                className="p-3 border rounded"
+                style={{ backgroundColor: '#FAF4EC', borderColor: '#E8D7B8' }}
+              >
+                <div
+                  className="flex items-center gap-2"
+                  style={{ color: '#A67E35' }}
+                >
                   <AlertTriangle className="h-4 w-4" />
-                  <span className="text-sm">Only pod leaders can propose deletion</span>
+                  <span className="text-sm">
+                    Only pod leaders can propose deletion
+                  </span>
                 </div>
               </div>
             )}
@@ -950,12 +1065,18 @@ export const PodDeletionApprovalFlow: React.FC<PodDeletionApprovalFlowProps> = (
         )}
 
         {/* Warning Message */}
-        <div className="p-3 border rounded" style={{ backgroundColor: '#F5E6E6', borderColor: '#D9B3B3' }}>
+        <div
+          className="p-3 border rounded"
+          style={{ backgroundColor: '#F5E6E6', borderColor: '#D9B3B3' }}
+        >
           <div className="flex items-start gap-2" style={{ color: '#8B3A3A' }}>
-              <p className="font-medium">Warning: Pod deletion is permanent. All roles will be deactivated and pod data will be removed.</p>
+            <p className="font-medium">
+              Warning: Pod deletion is permanent. All roles will be deactivated
+              and pod data will be removed.
+            </p>
           </div>
         </div>
-        
+
         {/* Debug Component - hidden but available if needed */}
         {process.env.NODE_ENV === 'development' && false && (
           <PodDeletionDebugger pod={pod} />

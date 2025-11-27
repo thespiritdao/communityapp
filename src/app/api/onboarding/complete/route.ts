@@ -44,7 +44,7 @@ export async function POST(request: NextRequest) {
           success: false,
           error: 'Wallet address is required',
         },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -58,7 +58,7 @@ export async function POST(request: NextRequest) {
           success: false,
           error: 'Invalid wallet address format',
         },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -94,7 +94,7 @@ export async function POST(request: NextRequest) {
           success: false,
           error: airdropResult.error || 'Airdrop failed',
         },
-        { status: 500 }
+        { status: 500 },
       );
     }
 
@@ -138,7 +138,7 @@ export async function POST(request: NextRequest) {
         success: false,
         error: 'An error occurred while completing onboarding',
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -158,7 +158,7 @@ export async function GET(request: NextRequest) {
           success: false,
           error: 'Wallet address is required',
         },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -193,7 +193,7 @@ export async function GET(request: NextRequest) {
         success: false,
         error: 'An error occurred while checking onboarding status',
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

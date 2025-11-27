@@ -19,9 +19,10 @@ export default function SensemakerAIPage() {
   const [messages, setMessages] = useState<Message[]>([
     {
       role: 'assistant',
-      content: 'Hello! I can help you with SpiritDAO operations or discuss Temporal Naturalism philosophy. What would you like to know?',
-      timestamp: new Date().toISOString()
-    }
+      content:
+        'Hello! I can help you with SpiritDAO operations or discuss Temporal Naturalism philosophy. What would you like to know?',
+      timestamp: new Date().toISOString(),
+    },
   ]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -61,9 +62,9 @@ export default function SensemakerAIPage() {
     const newUserMessage: Message = {
       role: 'user',
       content: userMessage,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     };
-    setMessages(prev => [...prev, newUserMessage]);
+    setMessages((prev) => [...prev, newUserMessage]);
     setIsLoading(true);
 
     try {
@@ -73,17 +74,19 @@ export default function SensemakerAIPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           message: userMessage,
-          conversationHistory: messages.slice(-6).map(m => ({
+          conversationHistory: messages.slice(-6).map((m) => ({
             role: m.role,
-            content: m.content
+            content: m.content,
           })),
-          sessionId: sessionIdRef.current
-        })
+          sessionId: sessionIdRef.current,
+        }),
       });
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+        throw new Error(
+          errorData.error || `HTTP ${response.status}: ${response.statusText}`,
+        );
       }
 
       const data = await response.json();
@@ -94,10 +97,9 @@ export default function SensemakerAIPage() {
         content: data.response,
         queryType: data.queryType,
         model: data.model,
-        timestamp: data.timestamp
+        timestamp: data.timestamp,
       };
-      setMessages(prev => [...prev, assistantMessage]);
-
+      setMessages((prev) => [...prev, assistantMessage]);
     } catch (error) {
       console.error('Chat error:', error);
 
@@ -105,9 +107,9 @@ export default function SensemakerAIPage() {
       const errorMessage: Message = {
         role: 'assistant',
         content: `Sorry, I encountered an error: ${error instanceof Error ? error.message : 'Unknown error'}. Please try again.`,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       };
-      setMessages(prev => [...prev, errorMessage]);
+      setMessages((prev) => [...prev, errorMessage]);
     } finally {
       setIsLoading(false);
       // Refocus input after sending
@@ -130,19 +132,26 @@ export default function SensemakerAIPage() {
       {
         role: 'assistant',
         content: 'Chat cleared. How can I help you?',
-        timestamp: new Date().toISOString()
-      }
+        timestamp: new Date().toISOString(),
+      },
     ]);
   };
 
   // Voice-to-text functionality
   const startListening = () => {
-    if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
-      alert('Speech recognition is not supported in your browser. Please try Chrome or Edge.');
+    if (
+      !('webkitSpeechRecognition' in window) &&
+      !('SpeechRecognition' in window)
+    ) {
+      alert(
+        'Speech recognition is not supported in your browser. Please try Chrome or Edge.',
+      );
       return;
     }
 
-    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    const SpeechRecognition =
+      (window as any).SpeechRecognition ||
+      (window as any).webkitSpeechRecognition;
     const recognition = new SpeechRecognition();
 
     recognition.continuous = false;
@@ -201,7 +210,9 @@ export default function SensemakerAIPage() {
             <div
               key={idx}
               className={`${styles.message} ${
-                msg.role === 'user' ? styles.userMessage : styles.assistantMessage
+                msg.role === 'user'
+                  ? styles.userMessage
+                  : styles.assistantMessage
               }`}
             >
               <div className={styles.messageHeader}>

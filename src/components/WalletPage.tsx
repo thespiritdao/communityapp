@@ -10,7 +10,7 @@ const WalletPage: React.FC = () => {
   // Join (Create Wallet) button handler
   const handleCreateWallet = () => {
     const coinbaseWalletConnector = connectors.find(
-      (connector) => connector.id === 'coinbaseWalletSDK'
+      (connector) => connector.id === 'coinbaseWalletSDK',
     );
     if (coinbaseWalletConnector) {
       connect({ connector: coinbaseWalletConnector });
@@ -27,16 +27,10 @@ const WalletPage: React.FC = () => {
       <div className="wallet-container">
         <h1 className="wallet-title">SpiritDAO Wallet Access</h1>
         <div className="wallet-buttons">
-          <button
-            className="wallet-button"
-            onClick={handleCreateWallet}
-          >
+          <button className="wallet-button" onClick={handleCreateWallet}>
             Join
           </button>
-          <button
-            className="wallet-button secondary"
-            onClick={handleLogin}
-          >
+          <button className="wallet-button secondary" onClick={handleLogin}>
             Login
           </button>
         </div>

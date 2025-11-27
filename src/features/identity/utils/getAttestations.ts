@@ -13,7 +13,6 @@ export async function getAttestations(
   options?: GetAttestationsOptions,
 ): Promise<Attestation[]> {
   if (!isChainSupported(chain)) {
-    
     return [];
   }
   try {

@@ -4,12 +4,12 @@ import type React from 'react';
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { 
-  Coins, 
-  Image, 
-  FileText, 
-  Clock, 
-  Star, 
+import {
+  Coins,
+  Image,
+  FileText,
+  Clock,
+  Star,
   Lock,
   CheckCircle,
   XCircle,
@@ -17,7 +17,11 @@ import {
 } from 'lucide-react';
 import { useAccount } from 'wagmi';
 import { useToast } from '@/components/ui/use-toast';
-import { EligibilityService, type EligibilityCriteria, type EligibilityEvaluation } from '../services/EligibilityService';
+import {
+  EligibilityService,
+  type EligibilityCriteria,
+  type EligibilityEvaluation,
+} from '../services/EligibilityService';
 
 interface EligibilityCriteriaDisplayProps {
   criteria: EligibilityCriteria[];
@@ -33,20 +37,18 @@ const CRITERION_ICONS = {
   agreement_signed: FileText,
   time_based: Clock,
   reputation_score: Star,
-  staking: Lock
+  staking: Lock,
 };
 
-export const EligibilityCriteriaDisplay: React.FC<EligibilityCriteriaDisplayProps> = ({
-  criteria,
-  podId,
-  roleId,
-  showUserStatus = false,
-  compact = false
-}) => {
+export const EligibilityCriteriaDisplay: React.FC<
+  EligibilityCriteriaDisplayProps
+> = ({ criteria, podId, roleId, showUserStatus = false, compact = false }) => {
   const { address } = useAccount();
   const { toast } = useToast();
-  
-  const [evaluation, setEvaluation] = useState<EligibilityEvaluation | null>(null);
+
+  const [evaluation, setEvaluation] = useState<EligibilityEvaluation | null>(
+    null,
+  );
   const [loading, setLoading] = useState(false);
 
   const checkEligibility = async () => {
@@ -58,19 +60,21 @@ export const EligibilityCriteriaDisplay: React.FC<EligibilityCriteriaDisplayProp
         userAddress: address,
         podId,
         roleId,
-        criteria
+        criteria,
       });
-      
+
       setEvaluation(result);
-      
+
       console.log('✅ Eligibility check completed:', result);
-      
     } catch (error) {
       console.error('❌ Eligibility check failed:', error);
       toast({
-        title: "Eligibility Check Failed",
-        description: error instanceof Error ? error.message : "Failed to check eligibility",
-        variant: "destructive"
+        title: 'Eligibility Check Failed',
+        description:
+          error instanceof Error
+            ? error.message
+            : 'Failed to check eligibility',
+        variant: 'destructive',
       });
     } finally {
       setLoading(false);
@@ -94,82 +98,106 @@ export const EligibilityCriteriaDisplay: React.FC<EligibilityCriteriaDisplayProp
       name: criterion.name,
       token_name: criterion.token_name,
       contract_address: criterion.contract_address,
-      fullCriterion: criterion
+      fullCriterion: criterion,
     });
-    
+
     // For token_balance type, handle $SELF and $SYSTEM specially
     if (criterion.type === 'token_balance') {
       // Check for $SELF or $SYSTEM tokens by contract address
-      const SELF_ADDRESS = process.env.NEXT_PUBLIC_SELF_TOKEN?.toLowerCase() || '0xe9b4ab2eb9397fa41ac3223e96f9d988beff5d21'.toLowerCase();
-      const SYSTEM_ADDRESS = process.env.NEXT_PUBLIC_SYSTEM_TOKEN?.toLowerCase() || '0x1317ae277266d38c4e492558f8693f14143a6a65'.toLowerCase();
-      
+      const SELF_ADDRESS =
+        process.env.NEXT_PUBLIC_SELF_TOKEN?.toLowerCase() ||
+        '0xe9b4ab2eb9397fa41ac3223e96f9d988beff5d21'.toLowerCase();
+      const SYSTEM_ADDRESS =
+        process.env.NEXT_PUBLIC_SYSTEM_TOKEN?.toLowerCase() ||
+        '0x1317ae277266d38c4e492558f8693f14143a6a65'.toLowerCase();
+
       const contractLower = criterion.contract_address?.toLowerCase();
-      
+
       if (contractLower === SELF_ADDRESS) {
         // Check for the correct amount field - could be minimum_amount or self_token_amount
-        const rawAmount = criterion.minimum_amount || criterion.self_token_amount || '1';
+        const rawAmount =
+          criterion.minimum_amount || criterion.self_token_amount || '1';
         const amount = Number.parseFloat(rawAmount).toFixed(3);
-        console.log('💰 SELF amount display:', { rawAmount, amount, criterion });
+        console.log('💰 SELF amount display:', {
+          rawAmount,
+          amount,
+          criterion,
+        });
         return `$SELF (${amount})`;
       }
-      
+
       if (contractLower === SYSTEM_ADDRESS) {
         // Check for the correct amount field - could be minimum_amount or system_token_amount
-        const rawAmount = criterion.minimum_amount || criterion.system_token_amount || '1';
+        const rawAmount =
+          criterion.minimum_amount || criterion.system_token_amount || '1';
         const amount = Number.parseFloat(rawAmount).toFixed(3);
-        console.log('💰 SYSTEM amount display:', { rawAmount, amount, criterion });
+        console.log('💰 SYSTEM amount display:', {
+          rawAmount,
+          amount,
+          criterion,
+        });
         return `$SYSTEM (${amount})`;
       }
-      
+
       // For other token_balance criteria, try to get the name
       if (criterion.token_name) {
-        const amount = criterion.minimum_amount ? Number.parseFloat(criterion.minimum_amount).toFixed(3) : '1.000';
+        const amount = criterion.minimum_amount
+          ? Number.parseFloat(criterion.minimum_amount).toFixed(3)
+          : '1.000';
         return `${criterion.token_name} (${amount})`;
       }
-      
+
       if (criterion.name && criterion.name !== 'token balance requirement') {
-        const amount = criterion.minimum_amount ? Number.parseFloat(criterion.minimum_amount).toFixed(3) : '1.000';
+        const amount = criterion.minimum_amount
+          ? Number.parseFloat(criterion.minimum_amount).toFixed(3)
+          : '1.000';
         return `${criterion.name} (${amount})`;
       }
-      
+
       // Fallback for token_balance
       return 'Token Balance Requirement';
     }
-    
+
     // For credential_ownership and nft_ownership types
     // Priority 1: Check token_name from database join (this should be populated by the query)
     if (criterion.token_name) {
       console.log('✅ Using token_name from database:', criterion.token_name);
       return criterion.token_name;
     }
-    
+
     // Priority 2: Check if name is NOT a generic placeholder
-    const isGenericName = criterion.name === 'credential ownership requirement' || 
-                         criterion.name === 'nft ownership requirement' ||
-                         !criterion.name;
-    
+    const isGenericName =
+      criterion.name === 'credential ownership requirement' ||
+      criterion.name === 'nft ownership requirement' ||
+      !criterion.name;
+
     if (criterion.name && !isGenericName) {
       console.log('✅ Using criterion.name:', criterion.name);
       return criterion.name;
     }
-    
+
     // Priority 3: Try to determine name based on known contract addresses
     if (criterion.contract_address) {
       const contractLower = criterion.contract_address.toLowerCase();
-      
+
       // Known contract addresses mapping
       if (contractLower === '0x592e560171d2a882474cdfc3bbeedb21ceb4015d') {
         console.log('✅ Recognized Advocate contract address');
         return 'Advocate';
       }
-      
+
       // Add more known contracts here as needed
-      console.log('⚠️ Unknown contract address - needs to be added to tokens table:', criterion.contract_address);
+      console.log(
+        '⚠️ Unknown contract address - needs to be added to tokens table:',
+        criterion.contract_address,
+      );
       return 'Token Requirement';
     }
-    
+
     // Final fallback
-    console.log('❌ No token information available - database query may not be joining tokens table');
+    console.log(
+      '❌ No token information available - database query may not be joining tokens table',
+    );
     return 'Token Requirement';
   };
 
@@ -184,7 +212,9 @@ export const EligibilityCriteriaDisplay: React.FC<EligibilityCriteriaDisplayProp
       case 'agreement_signed':
         return 'Signature required';
       case 'time_based':
-        return criterion.valid_until ? `Until ${new Date(criterion.valid_until).toLocaleDateString()}` : 'Time restricted';
+        return criterion.valid_until
+          ? `Until ${new Date(criterion.valid_until).toLocaleDateString()}`
+          : 'Time restricted';
       case 'reputation_score':
         return `Score ≥ ${criterion.minimum_score}`;
       case 'staking':
@@ -202,13 +232,19 @@ export const EligibilityCriteriaDisplay: React.FC<EligibilityCriteriaDisplayProp
 
     if (result.passed) {
       return (
-        <div className="flex items-center justify-center" style={{ color: '#3F7A5A' }}>
+        <div
+          className="flex items-center justify-center"
+          style={{ color: '#3F7A5A' }}
+        >
           <CheckCircle className="h-5 w-5" />
         </div>
       );
     } else {
       return (
-        <div className="flex items-center justify-center" style={{ color: '#8B3A3A' }}>
+        <div
+          className="flex items-center justify-center"
+          style={{ color: '#8B3A3A' }}
+        >
           <XCircle className="h-5 w-5" />
         </div>
       );
@@ -234,12 +270,14 @@ export const EligibilityCriteriaDisplay: React.FC<EligibilityCriteriaDisplayProp
   if (compact) {
     return (
       <div className="space-y-2">
-        
         <div className="space-y-1">
           {criteria.map((criterion, index) => {
             const Icon = getCriterionIcon(criterion.type);
             return (
-              <div key={criterion.id || index} className="flex items-center justify-between text-sm">
+              <div
+                key={criterion.id || index}
+                className="flex items-center justify-between text-sm"
+              >
                 <div className="flex items-center gap-2">
                   <span>{getCredentialDisplayName(criterion)}</span>
                 </div>
@@ -253,7 +291,7 @@ export const EligibilityCriteriaDisplay: React.FC<EligibilityCriteriaDisplayProp
           <div className="pt-2 border-t border-gray-200">
             <div className="flex items-center justify-between text-sm">
               <span className="text-gray-600">Overall Status:</span>
-              <Badge variant={evaluation.eligible ? "default" : "destructive"}>
+              <Badge variant={evaluation.eligible ? 'default' : 'destructive'}>
                 {evaluation.eligible ? 'Eligible' : 'Not Eligible'}
               </Badge>
             </div>
@@ -272,42 +310,57 @@ export const EligibilityCriteriaDisplay: React.FC<EligibilityCriteriaDisplayProp
             Requirements to obtain this role
           </p>
         </div>
-        
       </div>
 
       {/* Overall status card */}
       {evaluation && showUserStatus && (
-        <Card className="border-2" style={{
-          borderColor: evaluation.eligible ? '#B8D9CA' : '#D9B3B3',
-          backgroundColor: evaluation.eligible ? '#D1E6DC' : '#F5E6E6'
-        }}>
+        <Card
+          className="border-2"
+          style={{
+            borderColor: evaluation.eligible ? '#B8D9CA' : '#D9B3B3',
+            backgroundColor: evaluation.eligible ? '#D1E6DC' : '#F5E6E6',
+          }}
+        >
           <CardContent className="py-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 {evaluation.eligible ? (
-                  <CheckCircle className="h-6 w-6" style={{ color: '#3F7A5A' }} />
+                  <CheckCircle
+                    className="h-6 w-6"
+                    style={{ color: '#3F7A5A' }}
+                  />
                 ) : (
                   <XCircle className="h-6 w-6" style={{ color: '#8B3A3A' }} />
                 )}
                 <div>
-                  <h4 className="font-semibold" style={{
-                    color: evaluation.eligible ? '#1F453A' : '#5C1F1F'
-                  }}>
+                  <h4
+                    className="font-semibold"
+                    style={{
+                      color: evaluation.eligible ? '#1F453A' : '#5C1F1F',
+                    }}
+                  >
                     {evaluation.eligible ? 'You are eligible!' : 'Not eligible'}
                   </h4>
-                  <p className="text-sm" style={{
-                    color: evaluation.eligible ? '#2F5D50' : '#8B3A3A'
-                  }}>
+                  <p
+                    className="text-sm"
+                    style={{
+                      color: evaluation.eligible ? '#2F5D50' : '#8B3A3A',
+                    }}
+                  >
                     {evaluation.overallResult.message}
                   </p>
                 </div>
               </div>
 
               <div className="text-right">
-                <div className="text-2xl font-bold" style={{
-                  color: evaluation.eligible ? '#3F7A5A' : '#8B3A3A'
-                }}>
-                  {evaluation.overallResult.passed}/{evaluation.overallResult.total}
+                <div
+                  className="text-2xl font-bold"
+                  style={{
+                    color: evaluation.eligible ? '#3F7A5A' : '#8B3A3A',
+                  }}
+                >
+                  {evaluation.overallResult.passed}/
+                  {evaluation.overallResult.total}
                 </div>
                 <p className="text-xs text-gray-600">criteria met</p>
               </div>
@@ -320,9 +373,13 @@ export const EligibilityCriteriaDisplay: React.FC<EligibilityCriteriaDisplayProp
       <div className="grid gap-4">
         {criteria.map((criterion, index) => {
           const Icon = getCriterionIcon(criterion.type);
-          
+
           return (
-            <Card key={criterion.id || index} className="border-l-4" style={{ borderLeftColor: '#3F7A5A' }}>
+            <Card
+              key={criterion.id || index}
+              className="border-l-4"
+              style={{ borderLeftColor: '#3F7A5A' }}
+            >
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
@@ -343,22 +400,25 @@ export const EligibilityCriteriaDisplay: React.FC<EligibilityCriteriaDisplayProp
                   </div>
                 </div>
               </CardHeader>
-              
+
               <CardContent className="pt-0">
                 <div className="space-y-2">
-                  
                   {criterion.type === 'time_based' && (
                     <div className="space-y-1 text-sm">
                       {criterion.valid_from && (
                         <div className="flex justify-between">
                           <span className="text-gray-600">Valid from:</span>
-                          <span>{new Date(criterion.valid_from).toLocaleString()}</span>
+                          <span>
+                            {new Date(criterion.valid_from).toLocaleString()}
+                          </span>
                         </div>
                       )}
                       {criterion.valid_until && (
                         <div className="flex justify-between">
                           <span className="text-gray-600">Valid until:</span>
-                          <span>{new Date(criterion.valid_until).toLocaleString()}</span>
+                          <span>
+                            {new Date(criterion.valid_until).toLocaleString()}
+                          </span>
                         </div>
                       )}
                     </div>

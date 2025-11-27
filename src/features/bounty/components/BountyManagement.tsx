@@ -7,9 +7,21 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
 import {
   Search,
   Filter,
@@ -23,7 +35,7 @@ import {
   CheckCircle,
   XCircle,
   AlertCircle,
-  Scale
+  Scale,
 } from 'lucide-react';
 
 // Import existing components
@@ -50,34 +62,43 @@ interface BountyManagementProps {
 }
 
 // Utility function to format crypto values
-const formatCryptoValue = (value: string | number, decimals: number = 3): string => {
+const formatCryptoValue = (
+  value: string | number,
+  decimals: number = 3,
+): string => {
   const numValue = typeof value === 'string' ? parseFloat(value) : value;
   if (isNaN(numValue)) return '0.000';
-  
+
   // For very small values, show more decimals
   if (numValue < 0.001 && numValue > 0) {
     return numValue.toFixed(6);
   }
-  
+
   return numValue.toFixed(decimals);
 };
 
 // Helper function to get pod name by ID
 const getPodName = (podId: string, pods: any[]): string => {
   if (!podId) return 'Not specified';
-  const pod = pods.find(p => p.id === podId);
+  const pod = pods.find((p) => p.id === podId);
   return pod?.name || 'Unknown Pod';
 };
 
 // Helper function to check if user can bid on a bounty
-const canUserBid = (bounty: any, userAddress: string | undefined, tokenBalances: any, pods: any[]): boolean => {
+const canUserBid = (
+  bounty: any,
+  userAddress: string | undefined,
+  tokenBalances: any,
+  pods: any[],
+): boolean => {
   if (!userAddress) {
     return false;
   }
 
   // Can't bid on your own bounty (except in dev mode for testing)
-  const isCreator = bounty.creator === userAddress.toLowerCase() ||
-                   bounty.creator_address === userAddress.toLowerCase();
+  const isCreator =
+    bounty.creator === userAddress.toLowerCase() ||
+    bounty.creator_address === userAddress.toLowerCase();
 
   if (isCreator) {
     // Allow creators to bid on their own bounties in development for testing
@@ -88,19 +109,28 @@ const canUserBid = (bounty: any, userAddress: string | undefined, tokenBalances:
   }
 
   // If bounty is not open, can't bid
-  if (bounty.status !== 0 && bounty.status !== 'open' && bounty.status !== 'draft') {
+  if (
+    bounty.status !== 0 &&
+    bounty.status !== 'open' &&
+    bounty.status !== 'draft'
+  ) {
     return false;
   }
 
   // Check if bounty requires pod membership
   if (bounty.podId) {
-    const pod = pods.find(p => p.id === bounty.podId);
+    const pod = pods.find((p) => p.id === bounty.podId);
 
     if (pod) {
       // Check if user is a member or leader of the pod
-      const isMember = pod.pod_members?.some((m: string) => m.toLowerCase() === userAddress.toLowerCase());
-      const isLeader = pod.pod_leads?.some((l: string) => l.toLowerCase() === userAddress.toLowerCase());
-      const isPodCreator = pod.created_by_address?.toLowerCase() === userAddress.toLowerCase();
+      const isMember = pod.pod_members?.some(
+        (m: string) => m.toLowerCase() === userAddress.toLowerCase(),
+      );
+      const isLeader = pod.pod_leads?.some(
+        (l: string) => l.toLowerCase() === userAddress.toLowerCase(),
+      );
+      const isPodCreator =
+        pod.created_by_address?.toLowerCase() === userAddress.toLowerCase();
 
       // If pod-restricted and user is not a member, check for Advocate token
       if (!isMember && !isLeader && !isPodCreator) {
@@ -118,7 +148,7 @@ const canUserBid = (bounty: any, userAddress: string | undefined, tokenBalances:
 
 export const BountyManagement: React.FC<BountyManagementProps> = ({
   podId,
-  canManageBounties
+  canManageBounties,
 }) => {
   const { address } = useAccount() || {}; // Add fallback for undefined during remount
   const [activeTab, setActiveTab] = useState('overview');
@@ -126,28 +156,40 @@ export const BountyManagement: React.FC<BountyManagementProps> = ({
   const [statusFilter, setStatusFilter] = useState<string>('open');
   const [selectedBounty, setSelectedBounty] = useState<BountyV2 | null>(null);
   const [showBidForm, setShowBidForm] = useState(false);
-  const [selectedBountyForBid, setSelectedBountyForBid] = useState<BountyV2 | null>(null);
-  const [openBountyDetailId, setOpenBountyDetailId] = useState<string | null>(null);
+  const [selectedBountyForBid, setSelectedBountyForBid] =
+    useState<BountyV2 | null>(null);
+  const [openBountyDetailId, setOpenBountyDetailId] = useState<string | null>(
+    null,
+  );
   const [editingBid, setEditingBid] = useState<any | null>(null); // Stores the bid being edited
   const [showWorkSubmissionForm, setShowWorkSubmissionForm] = useState(false);
   const [convertedBounties, setConvertedBounties] = useState<any[]>([]); // Store converted Supabase bounties
-  const [selectedBountyForWorkSubmission, setSelectedBountyForWorkSubmission] = useState<any | null>(null);
-  const [selectedBidForWorkSubmission, setSelectedBidForWorkSubmission] = useState<any | null>(null);
+  const [selectedBountyForWorkSubmission, setSelectedBountyForWorkSubmission] =
+    useState<any | null>(null);
+  const [selectedBidForWorkSubmission, setSelectedBidForWorkSubmission] =
+    useState<any | null>(null);
   const [showCancellationDialog, setShowCancellationDialog] = useState(false);
-  const [selectedBountyForCancellation, setSelectedBountyForCancellation] = useState<any | null>(null);
+  const [selectedBountyForCancellation, setSelectedBountyForCancellation] =
+    useState<any | null>(null);
   const [showDisputeFilingDialog, setShowDisputeFilingDialog] = useState(false);
-  const [selectedBountyForDispute, setSelectedBountyForDispute] = useState<any | null>(null);
-  const [selectedBidForDispute, setSelectedBidForDispute] = useState<any | null>(null);
+  const [selectedBountyForDispute, setSelectedBountyForDispute] = useState<
+    any | null
+  >(null);
+  const [selectedBidForDispute, setSelectedBidForDispute] = useState<
+    any | null
+  >(null);
   const [showDisputeDashboard, setShowDisputeDashboard] = useState(false);
-  const [selectedDisputeId, setSelectedDisputeId] = useState<string | null>(null);
+  const [selectedDisputeId, setSelectedDisputeId] = useState<string | null>(
+    null,
+  );
 
   // Use bounty V2 hooks
-  const { 
-    getBounties, 
-    getBountyDetails, 
+  const {
+    getBounties,
+    getBountyDetails,
     getBids,
     assignBountyCall,
-    releasePaymentCall 
+    releasePaymentCall,
   } = useBountyV2();
 
   // Use Supabase hooks for additional data
@@ -158,12 +200,12 @@ export const BountyManagement: React.FC<BountyManagementProps> = ({
     loadBounties: refreshBounties,
     loadAllBids,
     submitBid,
-    updateBid
+    updateBid,
   } = useBountySupabase();
-  
+
   // Get pods data for mapping pod IDs to names
   const { pods } = usePods();
-  
+
   // Get user's token balances to check if they can bid
   const { balances: tokenBalances } = useTokenBalances();
 
@@ -184,9 +226,14 @@ export const BountyManagement: React.FC<BountyManagementProps> = ({
 
   // Log bids count when userBids changes
   useEffect(() => {
-    console.log('✅ BountyManagement: Bids data updated, count:', userBids?.length || 0);
+    console.log(
+      '✅ BountyManagement: Bids data updated, count:',
+      userBids?.length || 0,
+    );
     if (userBids && userBids.length > 0) {
-      console.log('📋 Available bid statuses:', [...new Set(userBids.map(bid => bid.status))]);
+      console.log('📋 Available bid statuses:', [
+        ...new Set(userBids.map((bid) => bid.status)),
+      ]);
     }
   }, [userBids]);
 
@@ -202,8 +249,9 @@ export const BountyManagement: React.FC<BountyManagementProps> = ({
   const getUserBidForBounty = (bountyId: string) => {
     if (!address || !userBids) return null;
     return userBids.find(
-      bid => bid.bountyId === bountyId &&
-             bid.bidderAddress?.toLowerCase() === address.toLowerCase()
+      (bid) =>
+        bid.bountyId === bountyId &&
+        bid.bidderAddress?.toLowerCase() === address.toLowerCase(),
     );
   };
 
@@ -211,42 +259,58 @@ export const BountyManagement: React.FC<BountyManagementProps> = ({
   useEffect(() => {
     console.log('📋 BountyManagement: Processing Supabase bounties:', {
       supabaseBounties: supabaseBounties?.length || 0,
-      loading: supabaseLoading
+      loading: supabaseLoading,
     });
-    
+
     if (supabaseBounties && supabaseBounties.length > 0) {
-      console.log('📋 Converting Supabase bounties to V2 format:', supabaseBounties);
-      
-      const convertedBounties = supabaseBounties.map(supabaseBounty => {
+      console.log(
+        '📋 Converting Supabase bounties to V2 format:',
+        supabaseBounties,
+      );
+
+      const convertedBounties = supabaseBounties.map((supabaseBounty) => {
         // Handle the structure from convertBountyFromDb which returns {value: {amount, token}}
         const rawBounty = supabaseBounty as any; // Type assertion since we know the actual structure
-        
+
         // The value is already an object with amount and token from convertBountyFromDb
-        const rawValueAmount = rawBounty.value?.amount || rawBounty.value_amount;
+        const rawValueAmount =
+          rawBounty.value?.amount || rawBounty.value_amount;
         const rawToken = rawBounty.value?.token || rawBounty.value_token;
         const parsedValue = rawValueAmount ? parseFloat(rawValueAmount) : 0;
-        
+
         // Debug logging for bounty conversion (disabled in production)
-        if (process.env.NODE_ENV === 'development' && process.env.NEXT_PUBLIC_VERBOSE_LOGS === 'true') {
+        if (
+          process.env.NODE_ENV === 'development' &&
+          process.env.NEXT_PUBLIC_VERBOSE_LOGS === 'true'
+        ) {
           console.debug(`🔍 Converting bounty ${rawBounty.id}:`, {
             raw_bounty_value: rawBounty.value,
             raw_value_amount: rawValueAmount,
             raw_token: rawToken,
             parsed_value: parsedValue,
-            status: rawBounty.status
+            status: rawBounty.status,
           });
         }
-        
-        const convertedStatus = rawBounty.status === 'open' ? 0 : 
-                               rawBounty.status === 'assigned' ? 1 : 
-                               rawBounty.status === 'completed' ? 2 : 
-                               rawBounty.status === 'draft' ? 0 : 3; // Treat draft as open for now
 
-        if (process.env.NODE_ENV === 'development' && process.env.NEXT_PUBLIC_VERBOSE_LOGS === 'true') {
+        const convertedStatus =
+          rawBounty.status === 'open'
+            ? 0
+            : rawBounty.status === 'assigned'
+              ? 1
+              : rawBounty.status === 'completed'
+                ? 2
+                : rawBounty.status === 'draft'
+                  ? 0
+                  : 3; // Treat draft as open for now
+
+        if (
+          process.env.NODE_ENV === 'development' &&
+          process.env.NEXT_PUBLIC_VERBOSE_LOGS === 'true'
+        ) {
           console.debug(`🔍 Status conversion for bounty ${rawBounty.id}:`, {
             originalStatus: rawBounty.status,
             convertedStatus,
-            title: rawBounty.title
+            title: rawBounty.title,
           });
         }
 
@@ -260,16 +324,17 @@ export const BountyManagement: React.FC<BountyManagementProps> = ({
           podId: rawBounty.podId || rawBounty.required_pod_id || '',
           category: rawBounty.category || '',
           ipfsHash: rawBounty.ipfs_hash || rawBounty.ipfsHash || 'temp',
-          createdAt: rawBounty.createdAt instanceof Date 
-            ? Math.floor(rawBounty.createdAt.getTime() / 1000) 
-            : rawBounty.created_at 
-              ? Math.floor(new Date(rawBounty.created_at).getTime() / 1000) 
-              : Math.floor(Date.now() / 1000),
+          createdAt:
+            rawBounty.createdAt instanceof Date
+              ? Math.floor(rawBounty.createdAt.getTime() / 1000)
+              : rawBounty.created_at
+                ? Math.floor(new Date(rawBounty.created_at).getTime() / 1000)
+                : Math.floor(Date.now() / 1000),
           deadline: Math.floor(Date.now() / 1000) + 604800, // 7 days from now
-          fundingSource: 'wallet'
+          fundingSource: 'wallet',
         };
       });
-      
+
       console.log('✅ Converted bounties:', convertedBounties);
       setBounties(convertedBounties);
       setConvertedBounties(convertedBounties);
@@ -288,8 +353,9 @@ export const BountyManagement: React.FC<BountyManagementProps> = ({
   // Filter and search bounties
   const filteredBounties = useMemo(() => {
     // For Pay tab, we need to show 'assigned' bounties regardless of the status filter
-    const effectiveStatusFilter = activeTab === 'payments' ? 'assigned' : statusFilter;
-    
+    const effectiveStatusFilter =
+      activeTab === 'payments' ? 'assigned' : statusFilter;
+
     console.log('🔍 FILTERING BOUNTIES:', {
       totalBounties: bounties.length,
       searchTerm,
@@ -297,17 +363,20 @@ export const BountyManagement: React.FC<BountyManagementProps> = ({
       effectiveStatusFilter,
       activeTab,
       podId,
-      targetBountyId: '735611ef-9809-4681-8aaf-db3d22c62ae8'
+      targetBountyId: '735611ef-9809-4681-8aaf-db3d22c62ae8',
     });
 
-    const filtered = bounties.filter(bounty => {
+    const filtered = bounties.filter((bounty) => {
       const searchableText = `${bounty.title || ''} ${bounty.category || ''} ${bounty.id || ''}`;
-      const matchesSearch = !searchTerm || searchableText.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesSearch =
+        !searchTerm ||
+        searchableText.toLowerCase().includes(searchTerm.toLowerCase());
 
-      const matchesStatus = (effectiveStatusFilter === 'open' && bounty.status === 0) ||
-                           (effectiveStatusFilter === 'assigned' && bounty.status === 1) ||
-                           (effectiveStatusFilter === 'completed' && bounty.status === 2) ||
-                           (effectiveStatusFilter === 'cancelled' && bounty.status === 3);
+      const matchesStatus =
+        (effectiveStatusFilter === 'open' && bounty.status === 0) ||
+        (effectiveStatusFilter === 'assigned' && bounty.status === 1) ||
+        (effectiveStatusFilter === 'completed' && bounty.status === 2) ||
+        (effectiveStatusFilter === 'cancelled' && bounty.status === 3);
 
       // Filter by pod if specified (and not 'all')
       const matchesPod = podId === 'all' || !podId || bounty.podId === podId;
@@ -318,14 +387,21 @@ export const BountyManagement: React.FC<BountyManagementProps> = ({
           bountyId: bounty.id,
           title: bounty.title,
           status: bounty.status,
-          statusLabel: bounty.status === 0 ? 'open' : bounty.status === 1 ? 'assigned' : bounty.status === 2 ? 'completed' : 'cancelled',
+          statusLabel:
+            bounty.status === 0
+              ? 'open'
+              : bounty.status === 1
+                ? 'assigned'
+                : bounty.status === 2
+                  ? 'completed'
+                  : 'cancelled',
           podId: bounty.podId,
           searchTerm,
           effectiveStatusFilter,
           matchesSearch,
           matchesStatus,
           matchesPod,
-          willBeIncluded: matchesSearch && matchesStatus && matchesPod
+          willBeIncluded: matchesSearch && matchesStatus && matchesPod,
         });
       }
 
@@ -334,7 +410,7 @@ export const BountyManagement: React.FC<BountyManagementProps> = ({
 
     console.log('🔍 FILTERING RESULT:', {
       filteredCount: filtered.length,
-      filteredTitles: filtered.map(b => b.title)
+      filteredTitles: filtered.map((b) => b.title),
     });
 
     return filtered;
@@ -343,27 +419,32 @@ export const BountyManagement: React.FC<BountyManagementProps> = ({
   // Get status display
   const getStatusDisplay = (status: number) => {
     switch (status) {
-      case 0: return { label: 'Open', color: 'bg-green-100 text-green-800' };
-      case 1: return { label: 'Assigned', color: 'bg-blue-100 text-blue-800' };
-      case 2: return { label: 'Completed', color: 'bg-gray-100 text-gray-800' };
-      case 3: return { label: 'Cancelled', color: 'bg-red-100 text-red-800' };
-      default: return { label: 'Unknown', color: 'bg-gray-100 text-gray-800' };
+      case 0:
+        return { label: 'Open', color: 'bg-green-100 text-green-800' };
+      case 1:
+        return { label: 'Assigned', color: 'bg-blue-100 text-blue-800' };
+      case 2:
+        return { label: 'Completed', color: 'bg-gray-100 text-gray-800' };
+      case 3:
+        return { label: 'Cancelled', color: 'bg-red-100 text-red-800' };
+      default:
+        return { label: 'Unknown', color: 'bg-gray-100 text-gray-800' };
     }
   };
 
   // Get bounty statistics
   const stats = useMemo(() => {
     const total = filteredBounties.length;
-    const open = filteredBounties.filter(b => b.status === 0).length;
-    const assigned = filteredBounties.filter(b => b.status === 1).length;
-    const completed = filteredBounties.filter(b => b.status === 2).length;
+    const open = filteredBounties.filter((b) => b.status === 0).length;
+    const assigned = filteredBounties.filter((b) => b.status === 1).length;
+    const completed = filteredBounties.filter((b) => b.status === 2).length;
 
     // Calculate totals by token type (case-insensitive to handle any data inconsistencies)
-    const systemBounties = filteredBounties.filter(b =>
-      b.token && b.token.toUpperCase() === 'SYSTEM'
+    const systemBounties = filteredBounties.filter(
+      (b) => b.token && b.token.toUpperCase() === 'SYSTEM',
     );
-    const selfBounties = filteredBounties.filter(b =>
-      b.token && b.token.toUpperCase() === 'SELF'
+    const selfBounties = filteredBounties.filter(
+      (b) => b.token && b.token.toUpperCase() === 'SELF',
     );
 
     const systemTotal = systemBounties.reduce((sum, b) => {
@@ -397,9 +478,7 @@ export const BountyManagement: React.FC<BountyManagementProps> = ({
     return (
       <Alert variant="destructive">
         <XCircle className="h-4 w-4" />
-        <AlertDescription>
-          Error loading bounties: {error}
-        </AlertDescription>
+        <AlertDescription>Error loading bounties: {error}</AlertDescription>
       </Alert>
     );
   }
@@ -425,7 +504,7 @@ export const BountyManagement: React.FC<BountyManagementProps> = ({
             </div>
           </CardContent>
         </Card>
-        
+
         {/* Token Values */}
         <Card className="bg-gradient-to-r from-green-500 to-green-600 text-white">
           <CardContent className="pt-6">
@@ -438,11 +517,15 @@ export const BountyManagement: React.FC<BountyManagementProps> = ({
             <div className="space-y-2">
               <div className="flex justify-between items-center">
                 <span className="text-lg font-semibold">$SYSTEM:</span>
-                <span className="text-2xl font-bold">{formatCryptoValue(stats.systemTotal)}</span>
+                <span className="text-2xl font-bold">
+                  {formatCryptoValue(stats.systemTotal)}
+                </span>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-lg font-semibold">$SELF:</span>
-                <span className="text-2xl font-bold">{formatCryptoValue(stats.selfTotal)}</span>
+                <span className="text-2xl font-bold">
+                  {formatCryptoValue(stats.selfTotal)}
+                </span>
               </div>
             </div>
           </CardContent>
@@ -460,7 +543,7 @@ export const BountyManagement: React.FC<BountyManagementProps> = ({
             className="pl-10"
           />
         </div>
-        
+
         <Select value={statusFilter} onValueChange={setStatusFilter}>
           <SelectTrigger className="w-full sm:w-[180px]">
             <Filter className="h-4 w-4 mr-2" />
@@ -497,12 +580,13 @@ export const BountyManagement: React.FC<BountyManagementProps> = ({
               <CardContent className="pt-6">
                 <div className="text-center py-8">
                   <Target className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">No bounties found</h3>
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">
+                    No bounties found
+                  </h3>
                   <p className="text-gray-600">
-                    {searchTerm || statusFilter !== 'open' 
+                    {searchTerm || statusFilter !== 'open'
                       ? 'Try adjusting your search or filter criteria.'
-                      : 'Create your first bounty to get started.'
-                    }
+                      : 'Create your first bounty to get started.'}
                   </p>
                 </div>
               </CardContent>
@@ -512,7 +596,10 @@ export const BountyManagement: React.FC<BountyManagementProps> = ({
               {filteredBounties.map((bounty) => {
                 const status = getStatusDisplay(bounty.status);
                 return (
-                  <Card key={bounty.id} className="cursor-pointer transition-colors hover:bg-gray-50">
+                  <Card
+                    key={bounty.id}
+                    className="cursor-pointer transition-colors hover:bg-gray-50"
+                  >
                     <CardContent className="p-4">
                       <div className="space-y-3">
                         {/* Header with title and badges */}
@@ -521,19 +608,26 @@ export const BountyManagement: React.FC<BountyManagementProps> = ({
                             {bounty.title || `Bounty #${bounty.id}`}
                           </h3>
                           <div className="flex gap-2 flex-wrap">
-                            <Badge className={status.color}>{status.label}</Badge>
-                            {bounty.category && <Badge variant="outline">{bounty.category}</Badge>}
+                            <Badge className={status.color}>
+                              {status.label}
+                            </Badge>
+                            {bounty.category && (
+                              <Badge variant="outline">{bounty.category}</Badge>
+                            )}
                           </div>
                         </div>
-                        
+
                         {/* Details */}
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm text-gray-600">
-                          <p>Value: {formatCryptoValue(bounty.value || '0')} ${bounty.token}</p>
+                          <p>
+                            Value: {formatCryptoValue(bounty.value || '0')} $
+                            {bounty.token}
+                          </p>
                           <div className="flex items-center gap-2">
                             <span>Creator:</span>
                             {bounty.creator ? (
-                              <UserProfileDisplay 
-                                walletAddress={bounty.creator} 
+                              <UserProfileDisplay
+                                walletAddress={bounty.creator}
                                 size="sm"
                                 showModal={true}
                               />
@@ -541,17 +635,27 @@ export const BountyManagement: React.FC<BountyManagementProps> = ({
                               <span>Unknown</span>
                             )}
                           </div>
-                          <p>Created: {bounty.createdAt ? new Date(bounty.createdAt * 1000).toLocaleDateString() : 'Unknown'}</p>
+                          <p>
+                            Created:{' '}
+                            {bounty.createdAt
+                              ? new Date(
+                                  bounty.createdAt * 1000,
+                                ).toLocaleDateString()
+                              : 'Unknown'}
+                          </p>
                         </div>
-                        
+
                         {/* Action button */}
                         <div className="flex justify-end pt-2">
-                          <Dialog open={openBountyDetailId === bounty.id} onOpenChange={(open) => {
-                            if (!open) {
-                              setOpenBountyDetailId(null);
-                              setShowBidForm(false); // Also close bid form if open
-                            }
-                          }}>
+                          <Dialog
+                            open={openBountyDetailId === bounty.id}
+                            onOpenChange={(open) => {
+                              if (!open) {
+                                setOpenBountyDetailId(null);
+                                setShowBidForm(false); // Also close bid form if open
+                              }
+                            }}
+                          >
                             <DialogTrigger asChild>
                               <Button
                                 variant="outline"
@@ -565,28 +669,43 @@ export const BountyManagement: React.FC<BountyManagementProps> = ({
                             </DialogTrigger>
                             <DialogContent className="max-w-2xl">
                               <DialogHeader>
-                                <DialogTitle>{bounty.title || `Bounty #${bounty.id}`}</DialogTitle>
+                                <DialogTitle>
+                                  {bounty.title || `Bounty #${bounty.id}`}
+                                </DialogTitle>
                               </DialogHeader>
                               <div className="space-y-4">
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                   <div className="space-y-2">
                                     <div>
-                                      <span className="font-medium">Status:</span> 
-                                      <Badge className={`ml-2 ${getStatusDisplay(bounty.status).color}`}>
+                                      <span className="font-medium">
+                                        Status:
+                                      </span>
+                                      <Badge
+                                        className={`ml-2 ${getStatusDisplay(bounty.status).color}`}
+                                      >
                                         {getStatusDisplay(bounty.status).label}
                                       </Badge>
                                     </div>
                                     <div>
-                                      <span className="font-medium">Category:</span> {bounty.category || 'Not specified'}
+                                      <span className="font-medium">
+                                        Category:
+                                      </span>{' '}
+                                      {bounty.category || 'Not specified'}
                                     </div>
                                     <div>
-                                      <span className="font-medium">Value:</span> {formatCryptoValue(bounty.value || '0')} ${bounty.token}
+                                      <span className="font-medium">
+                                        Value:
+                                      </span>{' '}
+                                      {formatCryptoValue(bounty.value || '0')} $
+                                      {bounty.token}
                                     </div>
                                     <div className="flex items-center gap-2">
-                                      <span className="font-medium">Creator:</span> 
+                                      <span className="font-medium">
+                                        Creator:
+                                      </span>
                                       {bounty.creator ? (
-                                        <UserProfileDisplay 
-                                          walletAddress={bounty.creator} 
+                                        <UserProfileDisplay
+                                          walletAddress={bounty.creator}
                                           size="sm"
                                           showModal={true}
                                         />
@@ -597,48 +716,102 @@ export const BountyManagement: React.FC<BountyManagementProps> = ({
                                   </div>
                                   <div className="space-y-2">
                                     <div>
-                                      <span className="font-medium">Pod:</span> {getPodName(bounty.podId, pods)}
+                                      <span className="font-medium">Pod:</span>{' '}
+                                      {getPodName(bounty.podId, pods)}
                                     </div>
                                     <div>
-                                      <span className="font-medium">Funding Source:</span> {bounty.fundingSource || 'Wallet'}
+                                      <span className="font-medium">
+                                        Funding Source:
+                                      </span>{' '}
+                                      {bounty.fundingSource || 'Wallet'}
                                     </div>
                                     <div>
-                                      <span className="font-medium">Created:</span> {bounty.createdAt ? new Date(bounty.createdAt * 1000).toLocaleDateString() : 'Unknown'}
+                                      <span className="font-medium">
+                                        Created:
+                                      </span>{' '}
+                                      {bounty.createdAt
+                                        ? new Date(
+                                            bounty.createdAt * 1000,
+                                          ).toLocaleDateString()
+                                        : 'Unknown'}
                                     </div>
                                     <div>
-                                      <span className="font-medium">Deadline:</span> {bounty.deadline ? new Date(bounty.deadline * 1000).toLocaleDateString() : 'Not set'}
+                                      <span className="font-medium">
+                                        Deadline:
+                                      </span>{' '}
+                                      {bounty.deadline
+                                        ? new Date(
+                                            bounty.deadline * 1000,
+                                          ).toLocaleDateString()
+                                        : 'Not set'}
                                     </div>
                                   </div>
                                 </div>
-                                
+
                                 {/* Bid Action for eligible users */}
                                 {(() => {
-                                  const canBid = canUserBid(bounty, address, tokenBalances, pods);
-                                  const existingBid = getUserBidForBounty(bounty.id);
-                                  const showBidButton = !canManageBounties && canBid;
-                                  const isOwnBounty = bounty.creator === address?.toLowerCase() ||
-                                                     bounty.creator_address === address?.toLowerCase();
-                                  const isApprovedBidder = existingBid?.status === 'approved';
-                                  const matchingSupabaseBounty = supabaseBounties.find(b => b.id === bounty.id);
+                                  const canBid = canUserBid(
+                                    bounty,
+                                    address,
+                                    tokenBalances,
+                                    pods,
+                                  );
+                                  const existingBid = getUserBidForBounty(
+                                    bounty.id,
+                                  );
+                                  const showBidButton =
+                                    !canManageBounties && canBid;
+                                  const isOwnBounty =
+                                    bounty.creator === address?.toLowerCase() ||
+                                    bounty.creator_address ===
+                                      address?.toLowerCase();
+                                  const isApprovedBidder =
+                                    existingBid?.status === 'approved';
+                                  const matchingSupabaseBounty =
+                                    supabaseBounties.find(
+                                      (b) => b.id === bounty.id,
+                                    );
 
                                   // Show work submission button for approved bidders
-                                  if (isApprovedBidder && matchingSupabaseBounty) {
+                                  if (
+                                    isApprovedBidder &&
+                                    matchingSupabaseBounty
+                                  ) {
                                     return (
                                       <div className="border-t pt-4 space-y-2">
-                                        <div className="rounded-lg p-3 mb-2" style={{ backgroundColor: '#D1E6DC', border: '1px solid #B8D9CA' }}>
-                                          <p className="text-sm text-center font-medium" style={{ color: '#1F453A' }}>
+                                        <div
+                                          className="rounded-lg p-3 mb-2"
+                                          style={{
+                                            backgroundColor: '#D1E6DC',
+                                            border: '1px solid #B8D9CA',
+                                          }}
+                                        >
+                                          <p
+                                            className="text-sm text-center font-medium"
+                                            style={{ color: '#1F453A' }}
+                                          >
                                             ✅ Your Bid Was Approved!
                                           </p>
-                                          <p className="text-xs text-center mt-1" style={{ color: '#2F5D50' }}>
-                                            You can now submit your completed work
+                                          <p
+                                            className="text-xs text-center mt-1"
+                                            style={{ color: '#2F5D50' }}
+                                          >
+                                            You can now submit your completed
+                                            work
                                           </p>
                                         </div>
                                         <Button
                                           className="w-full text-white hover:bg-[#254A40]"
                                           onClick={() => {
-                                            console.log('📤 Submit Work clicked');
-                                            setSelectedBountyForWorkSubmission(matchingSupabaseBounty);
-                                            setSelectedBidForWorkSubmission(existingBid);
+                                            console.log(
+                                              '📤 Submit Work clicked',
+                                            );
+                                            setSelectedBountyForWorkSubmission(
+                                              matchingSupabaseBounty,
+                                            );
+                                            setSelectedBidForWorkSubmission(
+                                              existingBid,
+                                            );
                                             setShowWorkSubmissionForm(true);
                                             setOpenBountyDetailId(null);
                                           }}
@@ -654,19 +827,35 @@ export const BountyManagement: React.FC<BountyManagementProps> = ({
                                     // User has already submitted a bid
                                     if (existingBid) {
                                       // Only allow editing if bid is still pending
-                                      const canEdit = existingBid.status === 'pending';
+                                      const canEdit =
+                                        existingBid.status === 'pending';
 
                                       return (
                                         <div className="border-t pt-4 space-y-2">
-                                          <div className="rounded-lg p-3" style={{ backgroundColor: '#E8F1EE', border: '1px solid #B8D9CA' }}>
-                                            <p className="text-sm text-center font-medium" style={{ color: '#1F453A' }}>
+                                          <div
+                                            className="rounded-lg p-3"
+                                            style={{
+                                              backgroundColor: '#E8F1EE',
+                                              border: '1px solid #B8D9CA',
+                                            }}
+                                          >
+                                            <p
+                                              className="text-sm text-center font-medium"
+                                              style={{ color: '#1F453A' }}
+                                            >
                                               ✅ Application Submitted
                                             </p>
-                                            <p className="text-xs text-center mt-1" style={{ color: '#2F5D50' }}>
+                                            <p
+                                              className="text-xs text-center mt-1"
+                                              style={{ color: '#2F5D50' }}
+                                            >
                                               Status: {existingBid.status}
                                             </p>
                                             <p className="text-xs text-gray-600 text-center mt-1">
-                                              Submitted: {new Date(existingBid.submittedAt).toLocaleDateString()}
+                                              Submitted:{' '}
+                                              {new Date(
+                                                existingBid.submittedAt,
+                                              ).toLocaleDateString()}
                                             </p>
                                           </div>
                                           {canEdit && (
@@ -674,14 +863,19 @@ export const BountyManagement: React.FC<BountyManagementProps> = ({
                                               variant="outline"
                                               className="w-full text-white hover:bg-[#6F8F86]"
                                               onClick={() => {
-                                                console.log('✏️ Edit Application clicked');
+                                                console.log(
+                                                  '✏️ Edit Application clicked',
+                                                );
                                                 setEditingBid(existingBid);
                                                 setSelectedBountyForBid(bounty);
                                                 setShowBidForm(true);
                                                 // Close the details dialog to avoid nested dialogs
                                                 setOpenBountyDetailId(null);
                                               }}
-                                              style={{ backgroundColor: '#8FAAA1', border: '1px solid #6F8F86' }}
+                                              style={{
+                                                backgroundColor: '#8FAAA1',
+                                                border: '1px solid #6F8F86',
+                                              }}
                                             >
                                               <Edit className="h-4 w-4 mr-1" />
                                               Edit Application
@@ -697,10 +891,13 @@ export const BountyManagement: React.FC<BountyManagementProps> = ({
                                         <Button
                                           className="w-full text-white hover:bg-[#254A40]"
                                           onClick={() => {
-                                            console.log('🎯 Apply for Bounty clicked:', {
-                                              bountyId: bounty.id,
-                                              bountyTitle: bounty.title
-                                            });
+                                            console.log(
+                                              '🎯 Apply for Bounty clicked:',
+                                              {
+                                                bountyId: bounty.id,
+                                                bountyTitle: bounty.title,
+                                              },
+                                            );
                                             setSelectedBountyForBid(bounty);
                                             setShowBidForm(true);
                                             // Close the details dialog to avoid nested dialogs
@@ -711,19 +908,31 @@ export const BountyManagement: React.FC<BountyManagementProps> = ({
                                           🎯 Apply for Bounty
                                         </Button>
                                         <p className="text-xs text-gray-500 text-center">
-                                          {isOwnBounty ?
-                                            "⚠️ Testing mode: Normally you can't apply to your own bounty" :
-                                            "Click to submit your application"
-                                          }
+                                          {isOwnBounty
+                                            ? "⚠️ Testing mode: Normally you can't apply to your own bounty"
+                                            : 'Click to submit your application'}
                                         </p>
                                       </div>
                                     );
-                                  } else if (isOwnBounty && !canManageBounties) {
+                                  } else if (
+                                    isOwnBounty &&
+                                    !canManageBounties
+                                  ) {
                                     return (
                                       <div className="border-t pt-4 space-y-2">
-                                        <div className="rounded-lg p-3" style={{ backgroundColor: '#E8F1EE', border: '1px solid #B8D9CA' }}>
-                                          <p className="text-sm text-center" style={{ color: '#1F453A' }}>
-                                            👤 This is your bounty. Others can apply to work on it.
+                                        <div
+                                          className="rounded-lg p-3"
+                                          style={{
+                                            backgroundColor: '#E8F1EE',
+                                            border: '1px solid #B8D9CA',
+                                          }}
+                                        >
+                                          <p
+                                            className="text-sm text-center"
+                                            style={{ color: '#1F453A' }}
+                                          >
+                                            👤 This is your bounty. Others can
+                                            apply to work on it.
                                           </p>
                                         </div>
                                       </div>
@@ -732,11 +941,13 @@ export const BountyManagement: React.FC<BountyManagementProps> = ({
 
                                   return null;
                                 })()}
-                                
+
                                 {/* Additional actions for managers */}
                                 {canManageBounties && (
                                   <div className="border-t pt-4 space-y-2">
-                                    <h4 className="font-medium">Management Actions</h4>
+                                    <h4 className="font-medium">
+                                      Management Actions
+                                    </h4>
                                     <div className="flex gap-2 flex-wrap">
                                       {bounty.status === 0 && (
                                         <>
@@ -749,10 +960,17 @@ export const BountyManagement: React.FC<BountyManagementProps> = ({
                                             size="sm"
                                             className="border-red-600 text-red-600 hover:bg-red-50"
                                             onClick={() => {
-                                              console.log('🚫 Cancel Bounty clicked');
-                                              const matchingSupabaseBounty = supabaseBounties.find(b => b.id === bounty.id);
+                                              console.log(
+                                                '🚫 Cancel Bounty clicked',
+                                              );
+                                              const matchingSupabaseBounty =
+                                                supabaseBounties.find(
+                                                  (b) => b.id === bounty.id,
+                                                );
                                               if (matchingSupabaseBounty) {
-                                                setSelectedBountyForCancellation(matchingSupabaseBounty);
+                                                setSelectedBountyForCancellation(
+                                                  matchingSupabaseBounty,
+                                                );
                                                 setShowCancellationDialog(true);
                                                 setOpenBountyDetailId(null);
                                               }
@@ -762,14 +980,24 @@ export const BountyManagement: React.FC<BountyManagementProps> = ({
                                             Cancel Bounty
                                           </Button>
                                           {/* Manager can also place a bid */}
-                                          {canUserBid(bounty, address, tokenBalances, pods) && (
+                                          {canUserBid(
+                                            bounty,
+                                            address,
+                                            tokenBalances,
+                                            pods,
+                                          ) && (
                                             <Button
                                               variant="outline"
                                               size="sm"
                                               className="text-white hover:bg-[#6F8F86]"
-                                              style={{ backgroundColor: '#8FAAA1', border: '1px solid #6F8F86' }}
+                                              style={{
+                                                backgroundColor: '#8FAAA1',
+                                                border: '1px solid #6F8F86',
+                                              }}
                                               onClick={() => {
-                                                console.log('🎯 Manager Apply for Bounty clicked');
+                                                console.log(
+                                                  '🎯 Manager Apply for Bounty clicked',
+                                                );
                                                 setSelectedBountyForBid(bounty);
                                                 setShowBidForm(true);
                                                 // Close the details dialog to avoid nested dialogs
@@ -792,15 +1020,30 @@ export const BountyManagement: React.FC<BountyManagementProps> = ({
                                             size="sm"
                                             className="border-orange-600 text-orange-600 hover:bg-orange-50"
                                             onClick={() => {
-                                              console.log('⚖️ File Dispute clicked');
-                                              const matchingSupabaseBounty = supabaseBounties.find(b => b.id === bounty.id);
-                                              const approvedBid = userBids?.find(
-                                                bid => bid.bountyId === bounty.id && bid.status === 'approved'
+                                              console.log(
+                                                '⚖️ File Dispute clicked',
                                               );
+                                              const matchingSupabaseBounty =
+                                                supabaseBounties.find(
+                                                  (b) => b.id === bounty.id,
+                                                );
+                                              const approvedBid =
+                                                userBids?.find(
+                                                  (bid) =>
+                                                    bid.bountyId ===
+                                                      bounty.id &&
+                                                    bid.status === 'approved',
+                                                );
                                               if (matchingSupabaseBounty) {
-                                                setSelectedBountyForDispute(matchingSupabaseBounty);
-                                                setSelectedBidForDispute(approvedBid || null);
-                                                setShowDisputeFilingDialog(true);
+                                                setSelectedBountyForDispute(
+                                                  matchingSupabaseBounty,
+                                                );
+                                                setSelectedBidForDispute(
+                                                  approvedBid || null,
+                                                );
+                                                setShowDisputeFilingDialog(
+                                                  true,
+                                                );
                                                 setOpenBountyDetailId(null);
                                               }
                                             }}
@@ -828,16 +1071,14 @@ export const BountyManagement: React.FC<BountyManagementProps> = ({
 
         {canManageBounties && (
           <>
-            {console.log('🔧 Management tabs rendering:', { 
-              canManageBounties, 
-              activeTab, 
+            {console.log('🔧 Management tabs rendering:', {
+              canManageBounties,
+              activeTab,
               podId,
-              address 
+              address,
             })}
             <TabsContent value="bids">
-              <BidReviewManager
-                onBidStatusChange={refreshBounties}
-              />
+              <BidReviewManager onBidStatusChange={refreshBounties} />
             </TabsContent>
 
             <TabsContent value="work">
@@ -868,52 +1109,70 @@ export const BountyManagement: React.FC<BountyManagementProps> = ({
                     <CardContent className="pt-6">
                       <div className="text-center py-8">
                         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-4"></div>
-                        <p className="text-gray-600">Loading milestone bounties...</p>
+                        <p className="text-gray-600">
+                          Loading milestone bounties...
+                        </p>
                       </div>
                     </CardContent>
                   </Card>
-                ) : (() => {
-                  // Filter for milestone bounties (payment_type = 'milestones')
-                  const milestoneBounties = filteredBounties.filter(bounty => {
-                    const supabaseBounty = convertedBounties.find(sb => sb.id === bounty.id);
-                    return supabaseBounty?.payment_type === 'milestones' && bounty.status === 1; // assigned
-                  });
-
-                  console.log('🎯 MILESTONE BOUNTIES:', {
-                    totalFiltered: filteredBounties.length,
-                    milestoneBounties: milestoneBounties.length,
-                    milestoneBountyIds: milestoneBounties.map(b => b.id)
-                  });
-
-                  if (milestoneBounties.length === 0) {
-                    return (
-                      <Card>
-                        <CardContent className="pt-6">
-                          <div className="text-center py-8">
-                            <p className="text-gray-600">No milestone bounties found.</p>
-                            <p className="text-sm text-gray-500 mt-2">Milestone bounties will appear here when work is approved and ready for payment.</p>
-                          </div>
-                        </CardContent>
-                      </Card>
+                ) : (
+                  (() => {
+                    // Filter for milestone bounties (payment_type = 'milestones')
+                    const milestoneBounties = filteredBounties.filter(
+                      (bounty) => {
+                        const supabaseBounty = convertedBounties.find(
+                          (sb) => sb.id === bounty.id,
+                        );
+                        return (
+                          supabaseBounty?.payment_type === 'milestones' &&
+                          bounty.status === 1
+                        ); // assigned
+                      },
                     );
-                  }
 
-                  return milestoneBounties.map((bounty) => {
-                    const supabaseBounty = convertedBounties.find(sb => sb.id === bounty.id);
-                    
-                    return (
-                      <MilestoneBountyCard
-                        key={bounty.id}
-                        bounty={bounty}
-                        supabaseBounty={supabaseBounty!}
-                        onRefreshData={() => {
-                          refreshBounties();
-                          loadAllBids();
-                        }}
-                      />
-                    );
-                  });
-                })()}
+                    console.log('🎯 MILESTONE BOUNTIES:', {
+                      totalFiltered: filteredBounties.length,
+                      milestoneBounties: milestoneBounties.length,
+                      milestoneBountyIds: milestoneBounties.map((b) => b.id),
+                    });
+
+                    if (milestoneBounties.length === 0) {
+                      return (
+                        <Card>
+                          <CardContent className="pt-6">
+                            <div className="text-center py-8">
+                              <p className="text-gray-600">
+                                No milestone bounties found.
+                              </p>
+                              <p className="text-sm text-gray-500 mt-2">
+                                Milestone bounties will appear here when work is
+                                approved and ready for payment.
+                              </p>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      );
+                    }
+
+                    return milestoneBounties.map((bounty) => {
+                      const supabaseBounty = convertedBounties.find(
+                        (sb) => sb.id === bounty.id,
+                      );
+
+                      return (
+                        <MilestoneBountyCard
+                          key={bounty.id}
+                          bounty={bounty}
+                          supabaseBounty={supabaseBounty!}
+                          onRefreshData={() => {
+                            refreshBounties();
+                            loadAllBids();
+                          }}
+                        />
+                      );
+                    });
+                  })()
+                )}
               </div>
             </TabsContent>
 
@@ -924,7 +1183,7 @@ export const BountyManagement: React.FC<BountyManagementProps> = ({
                   canManageBounties,
                   loading,
                   filteredBountiesCount: filteredBounties.length,
-                  totalBounties: bounties.length
+                  totalBounties: bounties.length,
                 })}
                 {/* Assigned bounties ready for payment (work approved, awaiting payment) */}
                 {loading ? (
@@ -932,69 +1191,103 @@ export const BountyManagement: React.FC<BountyManagementProps> = ({
                     <CardContent className="pt-6">
                       <div className="text-center py-8">
                         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-4"></div>
-                        <p className="text-gray-600">Loading payment-ready bounties...</p>
+                        <p className="text-gray-600">
+                          Loading payment-ready bounties...
+                        </p>
                       </div>
                     </CardContent>
                   </Card>
                 ) : (() => {
-                  // Debug: Check pay tab filtering
-                  const assignedBounties = filteredBounties.filter(bounty => bounty.status === 1);
-                  const bountyDetails = filteredBounties.map(b => ({ 
-                    id: b.id, 
-                    title: b.title, 
-                    status: b.status,
-                    statusLabel: b.status === 0 ? 'open' : b.status === 1 ? 'assigned' : b.status === 2 ? 'completed' : 'cancelled'
-                  }));
-                  
-                  console.log('💰 Pay tab filtering:', {
-                    totalFilteredBounties: filteredBounties.length,
-                    assignedBounties: assignedBounties.length,
-                    assignedBountyIds: assignedBounties.map(b => ({ id: b.id, title: b.title, status: b.status })),
-                    userBidsCount: userBids?.length || 0
-                  });
-                  
-                  console.log('📋 INDIVIDUAL BOUNTY STATUSES:', bountyDetails);
-                  
-                  return assignedBounties.length === 0;
-                })() ? (
+                    // Debug: Check pay tab filtering
+                    const assignedBounties = filteredBounties.filter(
+                      (bounty) => bounty.status === 1,
+                    );
+                    const bountyDetails = filteredBounties.map((b) => ({
+                      id: b.id,
+                      title: b.title,
+                      status: b.status,
+                      statusLabel:
+                        b.status === 0
+                          ? 'open'
+                          : b.status === 1
+                            ? 'assigned'
+                            : b.status === 2
+                              ? 'completed'
+                              : 'cancelled',
+                    }));
+
+                    console.log('💰 Pay tab filtering:', {
+                      totalFilteredBounties: filteredBounties.length,
+                      assignedBounties: assignedBounties.length,
+                      assignedBountyIds: assignedBounties.map((b) => ({
+                        id: b.id,
+                        title: b.title,
+                        status: b.status,
+                      })),
+                      userBidsCount: userBids?.length || 0,
+                    });
+
+                    console.log(
+                      '📋 INDIVIDUAL BOUNTY STATUSES:',
+                      bountyDetails,
+                    );
+
+                    return assignedBounties.length === 0;
+                  })() ? (
                   <Card>
                     <CardContent className="pt-6">
                       <div className="text-center py-8">
                         <DollarSign className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                        <p className="text-gray-600">No bounties ready for payment.</p>
+                        <p className="text-gray-600">
+                          No bounties ready for payment.
+                        </p>
                         <p className="text-sm text-gray-500 mt-2">
-                          Assigned bounties will appear here when work is completed and ready for payment.
+                          Assigned bounties will appear here when work is
+                          completed and ready for payment.
                         </p>
                       </div>
                     </CardContent>
                   </Card>
                 ) : (
                   filteredBounties
-                    .filter(bounty => bounty.status === 1) // Assigned bounties with approved work
-                    .map(bounty => {
+                    .filter((bounty) => bounty.status === 1) // Assigned bounties with approved work
+                    .map((bounty) => {
                       console.log('💰 Processing bounty for payment:', {
                         bountyId: bounty.id,
                         bountyTitle: bounty.title,
-                        bountyStatus: bounty.status
+                        bountyStatus: bounty.status,
                       });
                       // Find the bid with approved work for this bounty
                       // Note: userBids contains ALL bids (not just current user's bids)
                       const approvedBid = userBids?.find(
-                        bid => bid.bountyId === bounty.id && bid.status === 'work_approved'
+                        (bid) =>
+                          bid.bountyId === bounty.id &&
+                          bid.status === 'work_approved',
                       );
 
-                      console.log('💰 Finding approved bid for bounty', bounty.id, {
-                        bountyId: bounty.id,
-                        bountyStatus: bounty.status,
-                        totalBids: userBids?.length || 0,
-                        bidsForThisBounty: userBids?.filter(b => b.bountyId === bounty.id).length || 0,
-                        bidsForThisBountyStatuses: userBids?.filter(b => b.bountyId === bounty.id).map(b => b.status) || [],
-                        foundWorkApprovedBid: !!approvedBid,
-                        workApprovedBidStatus: approvedBid?.status
-                      });
+                      console.log(
+                        '💰 Finding approved bid for bounty',
+                        bounty.id,
+                        {
+                          bountyId: bounty.id,
+                          bountyStatus: bounty.status,
+                          totalBids: userBids?.length || 0,
+                          bidsForThisBounty:
+                            userBids?.filter((b) => b.bountyId === bounty.id)
+                              .length || 0,
+                          bidsForThisBountyStatuses:
+                            userBids
+                              ?.filter((b) => b.bountyId === bounty.id)
+                              .map((b) => b.status) || [],
+                          foundWorkApprovedBid: !!approvedBid,
+                          workApprovedBidStatus: approvedBid?.status,
+                        },
+                      );
 
                       // Find the matching Supabase bounty to get onchain_id and creator_address
-                      const supabaseBounty = supabaseBounties.find(b => b.id === bounty.id);
+                      const supabaseBounty = supabaseBounties.find(
+                        (b) => b.id === bounty.id,
+                      );
 
                       // Validate required data
                       const hasRequiredData = !!(
@@ -1004,18 +1297,25 @@ export const BountyManagement: React.FC<BountyManagementProps> = ({
                         (supabaseBounty?.creator_address || bounty.creator)
                       );
 
-                      console.log('💰 Payment data check for bounty', bounty.id, {
-                        onchain_id: supabaseBounty?.onchain_id,
-                        approvedBid: approvedBid?.id,
-                        bidderAddress: approvedBid?.bidderAddress,
-                        creator_address: supabaseBounty?.creator_address || bounty.creator,
-                        hasRequiredData
-                      });
+                      console.log(
+                        '💰 Payment data check for bounty',
+                        bounty.id,
+                        {
+                          onchain_id: supabaseBounty?.onchain_id,
+                          approvedBid: approvedBid?.id,
+                          bidderAddress: approvedBid?.bidderAddress,
+                          creator_address:
+                            supabaseBounty?.creator_address || bounty.creator,
+                          hasRequiredData,
+                        },
+                      );
 
                       return (
                         <Card key={bounty.id}>
                           <CardHeader>
-                            <CardTitle className="text-lg">{bounty.title || `Bounty #${bounty.id}`}</CardTitle>
+                            <CardTitle className="text-lg">
+                              {bounty.title || `Bounty #${bounty.id}`}
+                            </CardTitle>
                           </CardHeader>
                           <CardContent>
                             {hasRequiredData ? (
@@ -1023,24 +1323,35 @@ export const BountyManagement: React.FC<BountyManagementProps> = ({
                                 onchainBountyId={supabaseBounty!.onchain_id!.toString()}
                                 bountyId={bounty.id}
                                 bidId={approvedBid!.id}
-                                bountyTitle={bounty.title || `Bounty #${bounty.id}`}
+                                bountyTitle={
+                                  bounty.title || `Bounty #${bounty.id}`
+                                }
                                 bountyValue={{
                                   amount: bounty.value || '0',
-                                  token: bounty.token as 'SYSTEM' | 'SELF'
+                                  token: bounty.token as 'SYSTEM' | 'SELF',
                                 }}
                                 bidderAddress={approvedBid!.bidderAddress}
-                                creatorAddress={supabaseBounty!.creator_address || bounty.creator}
+                                creatorAddress={
+                                  supabaseBounty!.creator_address ||
+                                  bounty.creator
+                                }
                                 onComplete={() => {
-                                  console.log('✅ Payment completed, refreshing bounties');
+                                  console.log(
+                                    '✅ Payment completed, refreshing bounties',
+                                  );
                                   refreshBounties();
                                   loadAllBids();
                                 }}
                                 onError={(error) => {
                                   console.error('❌ Payment failed:', error);
-                                  alert(`Failed to release payment: ${error.message}`);
+                                  alert(
+                                    `Failed to release payment: ${error.message}`,
+                                  );
                                 }}
                                 onRefreshData={() => {
-                                  console.log('🔄 Refreshing data after successful payment...');
+                                  console.log(
+                                    '🔄 Refreshing data after successful payment...',
+                                  );
                                   refreshBounties();
                                   loadAllBids();
                                 }}
@@ -1051,16 +1362,24 @@ export const BountyManagement: React.FC<BountyManagementProps> = ({
                                   <strong>⚠️ Incomplete Data</strong>
                                 </p>
                                 <p className="text-xs text-yellow-700 mt-2">
-                                  Missing required information for payment release:
+                                  Missing required information for payment
+                                  release:
                                 </p>
                                 <ul className="text-xs text-yellow-700 mt-1 ml-4 list-disc">
-                                  {!supabaseBounty?.onchain_id && <li>On-chain bounty ID</li>}
+                                  {!supabaseBounty?.onchain_id && (
+                                    <li>On-chain bounty ID</li>
+                                  )}
                                   {!approvedBid && <li>Approved bid record</li>}
-                                  {approvedBid && !approvedBid.bidderAddress && <li>Bidder address</li>}
-                                  {!supabaseBounty?.creator_address && !bounty.creator && <li>Creator address</li>}
+                                  {approvedBid &&
+                                    !approvedBid.bidderAddress && (
+                                      <li>Bidder address</li>
+                                    )}
+                                  {!supabaseBounty?.creator_address &&
+                                    !bounty.creator && <li>Creator address</li>}
                                 </ul>
                                 <p className="text-xs text-yellow-700 mt-2">
-                                  Please ensure the bounty was properly created on-chain and a bid was approved.
+                                  Please ensure the bounty was properly created
+                                  on-chain and a bid was approved.
                                 </p>
                               </div>
                             )}
@@ -1076,32 +1395,39 @@ export const BountyManagement: React.FC<BountyManagementProps> = ({
       </Tabs>
 
       {/* Work Submission Form Dialog */}
-      {showWorkSubmissionForm && selectedBountyForWorkSubmission && selectedBidForWorkSubmission && (
-        <Dialog open={showWorkSubmissionForm} onOpenChange={setShowWorkSubmissionForm}>
-          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>Submit Completed Work: {selectedBountyForWorkSubmission.title}</DialogTitle>
-            </DialogHeader>
-            <WorkSubmissionForm
-              bounty={selectedBountyForWorkSubmission}
-              bid={selectedBidForWorkSubmission}
-              onSuccess={() => {
-                console.log('✅ Work submitted successfully');
-                setShowWorkSubmissionForm(false);
-                setSelectedBountyForWorkSubmission(null);
-                setSelectedBidForWorkSubmission(null);
-                refreshBounties();
-                loadAllBids();
-              }}
-              onCancel={() => {
-                setShowWorkSubmissionForm(false);
-                setSelectedBountyForWorkSubmission(null);
-                setSelectedBidForWorkSubmission(null);
-              }}
-            />
-          </DialogContent>
-        </Dialog>
-      )}
+      {showWorkSubmissionForm &&
+        selectedBountyForWorkSubmission &&
+        selectedBidForWorkSubmission && (
+          <Dialog
+            open={showWorkSubmissionForm}
+            onOpenChange={setShowWorkSubmissionForm}
+          >
+            <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>
+                  Submit Completed Work: {selectedBountyForWorkSubmission.title}
+                </DialogTitle>
+              </DialogHeader>
+              <WorkSubmissionForm
+                bounty={selectedBountyForWorkSubmission}
+                bid={selectedBidForWorkSubmission}
+                onSuccess={() => {
+                  console.log('✅ Work submitted successfully');
+                  setShowWorkSubmissionForm(false);
+                  setSelectedBountyForWorkSubmission(null);
+                  setSelectedBidForWorkSubmission(null);
+                  refreshBounties();
+                  loadAllBids();
+                }}
+                onCancel={() => {
+                  setShowWorkSubmissionForm(false);
+                  setSelectedBountyForWorkSubmission(null);
+                  setSelectedBidForWorkSubmission(null);
+                }}
+              />
+            </DialogContent>
+          </Dialog>
+        )}
 
       {/* Bid Form Dialog */}
       {showBidForm && selectedBountyForBid && (
@@ -1109,12 +1435,16 @@ export const BountyManagement: React.FC<BountyManagementProps> = ({
           <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>
-                {editingBid ? 'Edit Application' : 'Apply for Bounty'}: {selectedBountyForBid.title || `Bounty #${selectedBountyForBid.id}`}
+                {editingBid ? 'Edit Application' : 'Apply for Bounty'}:{' '}
+                {selectedBountyForBid.title ||
+                  `Bounty #${selectedBountyForBid.id}`}
               </DialogTitle>
             </DialogHeader>
             <BidForm
               bounty={(() => {
-                const matchingBounty = supabaseBounties.find(b => b.id === selectedBountyForBid.id);
+                const matchingBounty = supabaseBounties.find(
+                  (b) => b.id === selectedBountyForBid.id,
+                );
                 const onchainId = matchingBounty?.onchain_id;
 
                 console.log('🎯 Preparing BidForm bounty prop:', {
@@ -1122,49 +1452,56 @@ export const BountyManagement: React.FC<BountyManagementProps> = ({
                   matchingBountyFound: !!matchingBounty,
                   onchain_id: onchainId,
                   walletConnected: !!address,
-                  supabaseBountiesCount: supabaseBounties.length
+                  supabaseBountiesCount: supabaseBounties.length,
                 });
 
                 return {
                   id: selectedBountyForBid.id,
                   onchain_id: onchainId,
                   title: selectedBountyForBid.title,
-                  description: '',  // These would need to be fetched from full bounty details
+                  description: '', // These would need to be fetched from full bounty details
                   category: selectedBountyForBid.category,
                   value: {
                     amount: selectedBountyForBid.value,
-                    token: selectedBountyForBid.token as 'SYSTEM' | 'SELF'
+                    token: selectedBountyForBid.token as 'SYSTEM' | 'SELF',
                   },
                   requirements: [],
-                  questions: []
+                  questions: [],
                 };
               })()}
               isEditing={!!editingBid}
-              initialData={editingBid ? {
-                experience: editingBid.experience,
-                planOfAction: editingBid.planOfAction,
-                deliverables: editingBid.deliverables.map((d: any) => ({
-                  id: Math.random().toString(36).substr(2, 9),
-                  description: d.description,
-                  dueDate: new Date(d.due_date || d.dueDate),
-                  paymentAmount: d.payment_amount || d.paymentAmount
-                })),
-                timeline: editingBid.timeline,
-                proposedAmount: editingBid.proposedAmount,
-                paymentOption: editingBid.paymentOption,
-                paymentDetails: editingBid.paymentDetails,
-                additionalNotes: editingBid.additionalNotes,
-                answers: editingBid.answers
-              } : undefined}
+              initialData={
+                editingBid
+                  ? {
+                      experience: editingBid.experience,
+                      planOfAction: editingBid.planOfAction,
+                      deliverables: editingBid.deliverables.map((d: any) => ({
+                        id: Math.random().toString(36).substr(2, 9),
+                        description: d.description,
+                        dueDate: new Date(d.due_date || d.dueDate),
+                        paymentAmount: d.payment_amount || d.paymentAmount,
+                      })),
+                      timeline: editingBid.timeline,
+                      proposedAmount: editingBid.proposedAmount,
+                      paymentOption: editingBid.paymentOption,
+                      paymentDetails: editingBid.paymentDetails,
+                      additionalNotes: editingBid.additionalNotes,
+                      answers: editingBid.answers,
+                    }
+                  : undefined
+              }
               onBidPlaced={async (bidData, ipfsHash, txHash, bidIndex) => {
                 try {
                   const isEditing = !!editingBid;
-                  console.log(isEditing ? '✅ Updating bid:' : '✅ Bid placed on-chain:', {
-                    bidData,
-                    ipfsHash,
-                    txHash,
-                    bidIndex
-                  });
+                  console.log(
+                    isEditing ? '✅ Updating bid:' : '✅ Bid placed on-chain:',
+                    {
+                      bidData,
+                      ipfsHash,
+                      txHash,
+                      bidIndex,
+                    },
+                  );
 
                   if (isEditing) {
                     // Update existing bid
@@ -1178,7 +1515,7 @@ export const BountyManagement: React.FC<BountyManagementProps> = ({
                       paymentOption: bidData.paymentOption,
                       paymentDetails: bidData.paymentDetails,
                       answers: bidData.answers,
-                      additionalNotes: bidData.additionalNotes
+                      additionalNotes: bidData.additionalNotes,
                     });
 
                     console.log('✅ Bid updated successfully');
@@ -1199,11 +1536,13 @@ export const BountyManagement: React.FC<BountyManagementProps> = ({
                       // On-chain tracking fields
                       onchainBidIndex: bidIndex,
                       placementTxHash: txHash,
-                      bidIpfsHash: ipfsHash
+                      bidIpfsHash: ipfsHash,
                     });
 
                     console.log('✅ Bid submitted to Supabase successfully');
-                    alert('✅ Your bid has been submitted successfully! You can view it in the Bid Reviews section.');
+                    alert(
+                      '✅ Your bid has been submitted successfully! You can view it in the Bid Reviews section.',
+                    );
                   }
 
                   // Close both dialogs and reset editing state
@@ -1212,13 +1551,12 @@ export const BountyManagement: React.FC<BountyManagementProps> = ({
                   setEditingBid(null);
 
                   // Reload data
-                  await Promise.all([
-                    refreshBounties(),
-                    loadAllBids()
-                  ]);
+                  await Promise.all([refreshBounties(), loadAllBids()]);
                 } catch (error) {
                   console.error('❌ Error saving bid to database:', error);
-                  alert(`Bid was placed on-chain but failed to save to database: ${error instanceof Error ? error.message : 'Unknown error'}`);
+                  alert(
+                    `Bid was placed on-chain but failed to save to database: ${error instanceof Error ? error.message : 'Unknown error'}`,
+                  );
                 }
               }}
               onCancel={() => {
@@ -1266,7 +1604,10 @@ export const BountyManagement: React.FC<BountyManagementProps> = ({
 
       {/* Dispute Management Dashboard */}
       {showDisputeDashboard && selectedDisputeId && (
-        <Dialog open={showDisputeDashboard} onOpenChange={setShowDisputeDashboard}>
+        <Dialog
+          open={showDisputeDashboard}
+          onOpenChange={setShowDisputeDashboard}
+        >
           <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Dispute Management</DialogTitle>
@@ -1282,7 +1623,6 @@ export const BountyManagement: React.FC<BountyManagementProps> = ({
           </DialogContent>
         </Dialog>
       )}
-
     </div>
   );
 };

@@ -25,11 +25,14 @@ export async function GET(request: NextRequest) {
 
     if (error) {
       console.error('Error fetching bounties:', error);
-      return NextResponse.json({ error: 'Failed to fetch bounties' }, { status: 500 });
+      return NextResponse.json(
+        { error: 'Failed to fetch bounties' },
+        { status: 500 },
+      );
     }
 
     // Transform to V2 format
-    const bountiesV2 = (bounties || []).map(bounty => ({
+    const bountiesV2 = (bounties || []).map((bounty) => ({
       id: bounty.id.toString(),
       creator: bounty.creator || '',
       value: bounty.value?.toString() || '0',
@@ -38,14 +41,21 @@ export async function GET(request: NextRequest) {
       podId: bounty.pod_id || '',
       category: bounty.category || '',
       ipfsHash: bounty.ipfs_hash || 'temp',
-      createdAt: bounty.created_at ? Math.floor(new Date(bounty.created_at).getTime() / 1000) : Math.floor(Date.now() / 1000),
-      deadline: bounty.deadline ? Math.floor(new Date(bounty.deadline).getTime() / 1000) : Math.floor(Date.now() / 1000) + 604800,
-      fundingSource: bounty.funding_source || 'pod_treasury'
+      createdAt: bounty.created_at
+        ? Math.floor(new Date(bounty.created_at).getTime() / 1000)
+        : Math.floor(Date.now() / 1000),
+      deadline: bounty.deadline
+        ? Math.floor(new Date(bounty.deadline).getTime() / 1000)
+        : Math.floor(Date.now() / 1000) + 604800,
+      fundingSource: bounty.funding_source || 'pod_treasury',
     }));
 
     return NextResponse.json(bountiesV2);
   } catch (error) {
     console.error('Error in bounty list API:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 },
+    );
   }
 }

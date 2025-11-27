@@ -1,10 +1,19 @@
 // src/context/TokenBalancesContext.tsx
-// used for token balances throughout app without causing infura errors 
+// used for token balances throughout app without causing infura errors
 
-import type React from "react";
-import { createContext, useState, useEffect, useCallback, useContext } from "react";
-import { fetchTokenBalances, type TokenBalances } from "@/utils/fetchTokenBalances";
-import { useAccount } from "wagmi";
+import type React from 'react';
+import {
+  createContext,
+  useState,
+  useEffect,
+  useCallback,
+  useContext,
+} from 'react';
+import {
+  fetchTokenBalances,
+  type TokenBalances,
+} from '@/utils/fetchTokenBalances';
+import { useAccount } from 'wagmi';
 
 interface TokenBalancesContextValue {
   balances: TokenBalances | null;
@@ -13,9 +22,13 @@ interface TokenBalancesContextValue {
   error: Error | null;
 }
 
-export const TokenBalancesContext = createContext<TokenBalancesContextValue | undefined>(undefined);
+export const TokenBalancesContext = createContext<
+  TokenBalancesContextValue | undefined
+>(undefined);
 
-export const TokenBalancesProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+export const TokenBalancesProvider: React.FC<{ children: React.ReactNode }> = ({
+  children,
+}) => {
   const { address } = useAccount();
   const [balances, setBalances] = useState<TokenBalances | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -23,17 +36,17 @@ export const TokenBalancesProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const refreshBalances = useCallback(async () => {
     if (!address) {
-      console.log("No wallet address available, skipping balance fetch");
+      console.log('No wallet address available, skipping balance fetch');
       return;
     }
 
     setIsLoading(true);
     setError(null);
-    
+
     try {
-      console.log("Fetching token balances for address:", address);
+      console.log('Fetching token balances for address:', address);
       const tokenData = await fetchTokenBalances(address);
-      console.log("Successfully fetched token balances:", {
+      console.log('Successfully fetched token balances:', {
         hasProofOfCuriosity: tokenData.hasProofOfCuriosity,
         hasMarketAdmin: tokenData.hasMarketAdmin,
         hasMarketManagement: tokenData.hasMarketManagement,
@@ -41,11 +54,11 @@ export const TokenBalancesProvider: React.FC<{ children: React.ReactNode }> = ({
         hasDevPod: tokenData.hasDevPod,
         hasBountyHat: tokenData.hasBountyHat,
         systemBalance: tokenData.systemBalance,
-        selfBalance: tokenData.selfBalance
+        selfBalance: tokenData.selfBalance,
       });
       setBalances(tokenData);
     } catch (error) {
-      console.error("Error fetching token balances:", error);
+      console.error('Error fetching token balances:', error);
       setError(error instanceof Error ? error : new Error(String(error)));
     } finally {
       setIsLoading(false);
@@ -55,16 +68,18 @@ export const TokenBalancesProvider: React.FC<{ children: React.ReactNode }> = ({
   // Fetch balances when the address is set (i.e. on load)
   useEffect(() => {
     if (address) {
-      console.log("Address changed, refreshing balances");
+      console.log('Address changed, refreshing balances');
       refreshBalances();
     } else {
-      console.log("No address available, clearing balances");
+      console.log('No address available, clearing balances');
       setBalances(null);
     }
   }, [address, refreshBalances]);
 
   return (
-    <TokenBalancesContext.Provider value={{ balances, refreshBalances, isLoading, error }}>
+    <TokenBalancesContext.Provider
+      value={{ balances, refreshBalances, isLoading, error }}
+    >
       {children}
     </TokenBalancesContext.Provider>
   );
@@ -73,7 +88,9 @@ export const TokenBalancesProvider: React.FC<{ children: React.ReactNode }> = ({
 export const useTokenBalances = () => {
   const context = useContext(TokenBalancesContext);
   if (!context) {
-    throw new Error("useTokenBalances must be used within a TokenBalancesProvider");
+    throw new Error(
+      'useTokenBalances must be used within a TokenBalancesProvider',
+    );
   }
   return context;
 };

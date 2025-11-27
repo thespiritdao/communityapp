@@ -3,14 +3,14 @@
 import {
   GelatoRelay,
   type RelayResponse,
-  type SponsoredCallRequest
+  type SponsoredCallRequest,
 } from '@gelatonetwork/relay-sdk';
-import { Contract, } from 'ethers';
+import { Contract } from 'ethers';
 import { UNLOCK_PUBLIC_LOCK_ABI } from './contractABI';
 
 // Environment variables needed
 const GELATO_API_KEY = process.env.GELATO_API_KEY!;
-const UNLOCK_CONTRACT_ADDRESS = "0x756d2ad6642c2Ed43fd87Af70D83F277Ec0a669f";
+const UNLOCK_CONTRACT_ADDRESS = '0x756d2ad6642c2Ed43fd87Af70D83F277Ec0a669f';
 const SAFE_ADDRESS = process.env.SAFE_ADDRESS!;
 
 export class GelatoRelayManager {
@@ -19,18 +19,18 @@ export class GelatoRelayManager {
 
   constructor() {
     this.relay = new GelatoRelay();
-    
+
     // Initialize contract interface
     this.contract = new Contract(
       UNLOCK_CONTRACT_ADDRESS,
-      UNLOCK_PUBLIC_LOCK_ABI
+      UNLOCK_PUBLIC_LOCK_ABI,
     );
   }
 
   async grantMembership(recipientAddress: string): Promise<RelayResponse> {
     // Encode the contract interaction
-    const data = this.contract.interface.encodeFunctionData("grantKeys", [
-      recipientAddress
+    const data = this.contract.interface.encodeFunctionData('grantKeys', [
+      recipientAddress,
     ]);
 
     // Prepare the sponsored call request
@@ -45,13 +45,13 @@ export class GelatoRelayManager {
       // Submit the relay request
       const relayResponse = await this.relay.sponsoredCall(
         request,
-        GELATO_API_KEY
+        GELATO_API_KEY,
       );
 
-      console.log("Relay Response:", relayResponse);
+      console.log('Relay Response:', relayResponse);
       return relayResponse;
     } catch (error) {
-      console.error("Gelato Relay Error:", error);
+      console.error('Gelato Relay Error:', error);
       throw error;
     }
   }
@@ -61,7 +61,7 @@ export class GelatoRelayManager {
       const status = await this.relay.getTaskStatus(taskId);
       return status;
     } catch (error) {
-      console.error("Error checking relay status:", error);
+      console.error('Error checking relay status:', error);
       throw error;
     }
   }

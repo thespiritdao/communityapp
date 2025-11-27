@@ -42,7 +42,7 @@ export interface MintPoCCall {
  */
 export function createMintPoCCall(
   recipientAddress: `0x${string}`,
-  metadataURI?: string
+  metadataURI?: string,
 ): MintPoCCall {
   const uri = metadataURI || DEFAULT_POC_URI;
 
@@ -66,7 +66,7 @@ export function createMintPoCCall(
  * @returns Transaction call object
  */
 export function createBatchMintPoCCall(
-  recipients: `0x${string}`[]
+  recipients: `0x${string}`[],
 ): MintPoCCall {
   const data = encodeFunctionData({
     abi: ProofOfCuriosityABI,
@@ -95,7 +95,7 @@ export function createBatchMintPoCCall(
  */
 export async function hasProofOfCuriosity(
   address: `0x${string}`,
-  publicClient: any
+  publicClient: any,
 ): Promise<boolean> {
   try {
     const result = await publicClient.readContract({
@@ -121,7 +121,7 @@ export async function hasProofOfCuriosity(
  */
 export async function getPoCBalance(
   address: `0x${string}`,
-  publicClient: any
+  publicClient: any,
 ): Promise<number> {
   try {
     const result = await publicClient.readContract({

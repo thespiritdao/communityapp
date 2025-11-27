@@ -41,7 +41,12 @@ export interface EventNotification {
   id: string;
   user_id: string;
   event_id: string;
-  notification_type: 'registration_confirmation' | 'event_reminder' | 'event_update' | 'event_cancellation' | 'completion_certificate';
+  notification_type:
+    | 'registration_confirmation'
+    | 'event_reminder'
+    | 'event_update'
+    | 'event_cancellation'
+    | 'completion_certificate';
   title: string;
   message: string;
   scheduled_for: string;
@@ -66,7 +71,7 @@ class EventNotificationService {
     eventId: string,
     eventTitle: string,
     eventDate: string,
-    transactionHash?: string
+    transactionHash?: string,
   ): Promise<void> {
     try {
       const notification: Partial<EventNotification> = {
@@ -80,8 +85,8 @@ class EventNotificationService {
         status: 'pending',
         metadata: {
           transaction_hash: transactionHash,
-          event_date: eventDate
-        }
+          event_date: eventDate,
+        },
       };
 
       const { error } = await supabase
@@ -89,13 +94,16 @@ class EventNotificationService {
         .insert(notification);
 
       if (error) {
-        console.error('Error creating registration confirmation notification:', error);
+        console.error(
+          'Error creating registration confirmation notification:',
+          error,
+        );
         return;
       }
 
       console.log('📧 Registration confirmation sent:', {
         attendee: attendeeAddress,
-        event: eventTitle
+        event: eventTitle,
       });
     } catch (error) {
       console.error('Error sending registration confirmation:', error);

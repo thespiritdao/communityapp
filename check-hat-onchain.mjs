@@ -2,12 +2,14 @@ import { createPublicClient, http } from 'viem';
 import { base } from 'viem/chains';
 
 const HATS_CONTRACT = '0x3bc1A0Ad72417f2d411118085256fC53CBdDd137';
-const TEST_HAT_ID_DECIMAL = '3666553570037155989126156067147814773746773803532600618919785347940352';
-const TEST_HAT_ID_HEX = '0x0000008800020058003800000000000000000000000000000000000000000000';
+const TEST_HAT_ID_DECIMAL =
+  '3666553570037155989126156067147814773746773803532600618919785347940352';
+const TEST_HAT_ID_HEX =
+  '0x0000008800020058003800000000000000000000000000000000000000000000';
 
 const publicClient = createPublicClient({
   chain: base,
-  transport: http()
+  transport: http(),
 });
 
 async function checkHatOnchain() {
@@ -19,28 +21,32 @@ async function checkHatOnchain() {
   try {
     const hatDetails = await publicClient.readContract({
       address: HATS_CONTRACT,
-      abi: [{
-        name: 'viewHat',
-        type: 'function',
-        inputs: [{ name: '_hatId', type: 'uint256' }],
-        outputs: [{
-          type: 'tuple',
-          components: [
-            { name: 'details', type: 'string' },
-            { name: 'maxSupply', type: 'uint32' },
-            { name: 'supply', type: 'uint32' },
-            { name: 'eligibility', type: 'address' },
-            { name: 'toggle', type: 'address' },
-            { name: 'imageURI', type: 'string' },
-            { name: 'lastHatId', type: 'uint16' },
-            { name: 'mutable', type: 'bool' },
-            { name: 'active', type: 'bool' }
-          ]
-        }],
-        stateMutability: 'view'
-      }],
+      abi: [
+        {
+          name: 'viewHat',
+          type: 'function',
+          inputs: [{ name: '_hatId', type: 'uint256' }],
+          outputs: [
+            {
+              type: 'tuple',
+              components: [
+                { name: 'details', type: 'string' },
+                { name: 'maxSupply', type: 'uint32' },
+                { name: 'supply', type: 'uint32' },
+                { name: 'eligibility', type: 'address' },
+                { name: 'toggle', type: 'address' },
+                { name: 'imageURI', type: 'string' },
+                { name: 'lastHatId', type: 'uint16' },
+                { name: 'mutable', type: 'bool' },
+                { name: 'active', type: 'bool' },
+              ],
+            },
+          ],
+          stateMutability: 'view',
+        },
+      ],
       functionName: 'viewHat',
-      args: [BigInt(TEST_HAT_ID_DECIMAL)]
+      args: [BigInt(TEST_HAT_ID_DECIMAL)],
     });
 
     console.log('\n✅ HAT EXISTS ONCHAIN!');
@@ -62,14 +68,18 @@ async function checkHatOnchain() {
     } catch (e) {
       console.log('\n📝 Details (not JSON):', hatDetails[0]);
     }
-
   } catch (error) {
     console.error('\n❌ HAT DOES NOT EXIST OR ERROR OCCURRED:');
     console.error('Error message:', error.message);
     console.error('Error cause:', error.cause?.message || 'N/A');
 
-    if (error.message?.includes('Position') || error.cause?.message?.includes('Position')) {
-      console.log('\n⚠️ This indicates the HAT ID structure is invalid or the HAT was never created onchain');
+    if (
+      error.message?.includes('Position') ||
+      error.cause?.message?.includes('Position')
+    ) {
+      console.log(
+        '\n⚠️ This indicates the HAT ID structure is invalid or the HAT was never created onchain',
+      );
     }
   }
 }

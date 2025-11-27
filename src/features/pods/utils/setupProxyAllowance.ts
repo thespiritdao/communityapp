@@ -15,32 +15,32 @@ const TREASURY_PROXY_ADDRESS = process.env.NEXT_PUBLIC_TREASURY_PROXY as string;
  */
 export function prepareSetAuthorizedProxyTransaction(
   treasuryAddress: string,
-  podId?: string
+  podId?: string,
 ) {
   console.log('🔧 Preparing proxy-routed setAuthorizedProxy transaction:', {
     treasury: treasuryAddress,
     proxy: TREASURY_PROXY_ADDRESS,
-    podId
+    podId,
   });
 
   // If we don't have a podId, fall back to direct call (won't be sponsored)
   if (!podId) {
-    console.warn('⚠️ No podId provided - falling back to direct treasury call (unsponsored)');
+    console.warn(
+      '⚠️ No podId provided - falling back to direct treasury call (unsponsored)',
+    );
     return {
       address: treasuryAddress as `0x${string}`,
       abi: [
         {
           name: 'setAuthorizedProxy',
           type: 'function',
-          inputs: [
-            { name: '_proxy', type: 'address' }
-          ],
+          inputs: [{ name: '_proxy', type: 'address' }],
           outputs: [],
-          stateMutability: 'nonpayable'
-        }
+          stateMutability: 'nonpayable',
+        },
       ],
       functionName: 'setAuthorizedProxy',
-      args: [TREASURY_PROXY_ADDRESS as `0x${string}`]
+      args: [TREASURY_PROXY_ADDRESS as `0x${string}`],
     };
   }
 
@@ -54,14 +54,14 @@ export function prepareSetAuthorizedProxyTransaction(
         type: 'function',
         inputs: [
           { name: 'podId', type: 'string' },
-          { name: 'proxyAddress', type: 'address' }
+          { name: 'proxyAddress', type: 'address' },
         ],
         outputs: [],
-        stateMutability: 'nonpayable'
-      }
+        stateMutability: 'nonpayable',
+      },
     ],
     functionName: 'proxySetAuthorizedProxy',
-    args: [podId, TREASURY_PROXY_ADDRESS as `0x${string}`]
+    args: [podId, TREASURY_PROXY_ADDRESS as `0x${string}`],
   };
 }
 
@@ -72,12 +72,12 @@ export function prepareSetAuthorizedProxyTransaction(
  */
 export function prepareEmergencyProxySetup(
   treasuryAddress: string,
-  tokenAddress: string
+  tokenAddress: string,
 ) {
   console.log('🔧 Preparing emergency proxy setup:', {
     treasury: treasuryAddress,
     proxy: TREASURY_PROXY_ADDRESS,
-    token: tokenAddress
+    token: tokenAddress,
   });
 
   // This would need to be called FROM the treasury contract
@@ -91,17 +91,17 @@ export function prepareEmergencyProxySetup(
         inputs: [
           { name: 'token', type: 'address' },
           { name: 'proxy', type: 'address' },
-          { name: 'amount', type: 'uint256' }
+          { name: 'amount', type: 'uint256' },
         ],
         outputs: [],
-        stateMutability: 'nonpayable'
-      }
+        stateMutability: 'nonpayable',
+      },
     ],
     functionName: 'emergencyApproveProxy',
     args: [
       tokenAddress as `0x${string}`,
       TREASURY_PROXY_ADDRESS as `0x${string}`,
-      parseUnits('1000000', 18) // Approve 1M tokens
-    ]
+      parseUnits('1000000', 18), // Approve 1M tokens
+    ],
   };
 }

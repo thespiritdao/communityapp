@@ -31,11 +31,10 @@ export class DatabaseTokenService {
         .eq('is_active', true);
 
       if (error) {
-        
         return [];
       }
 
-      return (data || []).map(token => ({
+      return (data || []).map((token) => ({
         id: token.id,
         name: token.name,
         description: token.description,
@@ -45,10 +44,9 @@ export class DatabaseTokenService {
         category: token.token_type === 'erc20' ? 'credential' : 'membership',
         hat_id: token.token_id, // Use token_id from database as hat_id for contract calls
         is_active: token.is_active,
-        source: 'tokens'
+        source: 'tokens',
       }));
     } catch (error) {
-      
       return [];
     }
   }
@@ -65,14 +63,13 @@ export class DatabaseTokenService {
         .not('management_hat_id', 'is', null);
 
       if (error) {
-        
         return [];
       }
 
-      return (data || []).map(pod => {
+      return (data || []).map((pod) => {
         // Handle pods with IPFS URLs as names
-        const podName = pod.name.startsWith('ipfs://') 
-          ? 'Community Pod' 
+        const podName = pod.name.startsWith('ipfs://')
+          ? 'Community Pod'
           : pod.name;
 
         return {
@@ -85,11 +82,10 @@ export class DatabaseTokenService {
           category: 'credential' as const,
           hat_id: pod.management_hat_id,
           is_active: pod.is_active,
-          source: 'pods'
+          source: 'pods',
         };
       });
     } catch (error) {
-      
       return [];
     }
   }
@@ -107,14 +103,13 @@ export class DatabaseTokenService {
         .neq('membership_hat_id', 'pending_creation');
 
       if (error) {
-        
         return [];
       }
 
-      return (data || []).map(pod => {
+      return (data || []).map((pod) => {
         // Handle pods with IPFS URLs as names
-        const podName = pod.name.startsWith('ipfs://') 
-          ? 'Community Pod' 
+        const podName = pod.name.startsWith('ipfs://')
+          ? 'Community Pod'
           : pod.name;
 
         return {
@@ -127,11 +122,10 @@ export class DatabaseTokenService {
           category: 'credential' as const,
           hat_id: pod.membership_hat_id,
           is_active: pod.is_active,
-          source: 'pods'
+          source: 'pods',
         };
       });
     } catch (error) {
-      
       return [];
     }
   }
@@ -162,13 +156,12 @@ export class DatabaseTokenService {
         .eq('is_active', true);
 
       if (error) {
-        
         return [];
       }
 
-      return (data || []).map(rolePermission => {
+      return (data || []).map((rolePermission) => {
         // Handle pods with IPFS URLs as names
-        const podName = rolePermission.pods.name.startsWith('ipfs://') 
+        const podName = rolePermission.pods.name.startsWith('ipfs://')
           ? 'Community Pod' // Default name for IPFS-named pods
           : rolePermission.pods.name;
 
@@ -178,54 +171,55 @@ export class DatabaseTokenService {
           id: `role_${rolePermission.id}`,
           name: displayName,
           description: `${rolePermission.role_name || 'Member'} role in ${podName}`,
-          contract_address: rolePermission.contract_address || '0x3bc1A0Ad72417f2d411118085256fC53CBdDd137',
+          contract_address:
+            rolePermission.contract_address ||
+            '0x3bc1A0Ad72417f2d411118085256fC53CBdDd137',
           token_type: 'erc1155' as const,
           token_image: rolePermission.pods.pod_image_url,
           category: 'credential' as const,
           token_address: rolePermission.token_address,
           is_active: rolePermission.is_active,
           source: 'pod_roles',
-          role_name: rolePermission.role_name // Add role_name as separate field
+          role_name: rolePermission.role_name, // Add role_name as separate field
         };
       });
     } catch (error) {
-      
       return [];
     }
   }
 
   /**
    * Get all tokens for a user from all sources
-   * Note: For pod role permissions, we get all available roles since 
+   * Note: For pod role permissions, we get all available roles since
    * ownership is determined by on-chain HAT balance checks
    */
   static async getAllTokensForUser(
     userAddress: string,
-    category?: 'membership' | 'credential'
+    category?: 'membership' | 'credential',
   ): Promise<DatabaseToken[]> {
     try {
       const [
         tokensTableData,
         podLeaderTokens,
         podMemberTokens,
-        rolePermissions
+        rolePermissions,
       ] = await Promise.all([
         this.getTokensTableData(),
         this.getPodLeaderTokens(),
         this.getPodMemberTokens(),
-        this.getPodRolePermissions()
+        this.getPodRolePermissions(),
       ]);
 
       const allTokens = [
         ...tokensTableData,
         ...podLeaderTokens,
         ...podMemberTokens,
-        ...rolePermissions
+        ...rolePermissions,
       ];
 
       // Filter by category if specified
-      const filteredTokens = category 
-        ? allTokens.filter(token => token.category === category)
+      const filteredTokens = category
+        ? allTokens.filter((token) => token.category === category)
         : allTokens;
 
       // Remove duplicates based on contract_address + token_address + name combination
@@ -240,7 +234,6 @@ export class DatabaseTokenService {
 
       return Array.from(uniqueTokens.values());
     } catch (error) {
-      
       return [];
     }
   }
@@ -256,7 +249,7 @@ export class DatabaseTokenService {
       label: dbToken.name,
       category: dbToken.category,
       image: dbToken.token_image,
-      source: dbToken.source
+      source: dbToken.source,
     };
   }
 
@@ -273,7 +266,7 @@ export class DatabaseTokenService {
       const [tokens, podLeaders, podMembers] = await Promise.all([
         this.getTokensTableData(),
         this.getPodLeaderTokens(),
-        this.getPodMemberTokens()
+        this.getPodMemberTokens(),
       ]);
 
       const { count: roleCount } = await supabase
@@ -285,10 +278,9 @@ export class DatabaseTokenService {
         tokensTable: tokens.length,
         podLeaders: podLeaders.length,
         podMembers: podMembers.length,
-        activeRoles: roleCount || 0
+        activeRoles: roleCount || 0,
       };
     } catch (error) {
-      
       return { tokensTable: 0, podLeaders: 0, podMembers: 0, activeRoles: 0 };
     }
   }

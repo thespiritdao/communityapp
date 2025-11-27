@@ -1,7 +1,7 @@
 // src/features/shopping-cart/contexts/cart-context/useCart.ts
-import { useCartContext } from "./CartContextProvider";
-import useCartProducts from "./useCartProducts";
-import useCartTotal from "./useCartTotal";
+import { useCartContext } from './CartContextProvider';
+import useCartProducts from './useCartProducts';
+import useCartTotal from './useCartTotal';
 
 const useCart = () => {
   const { isOpen, setIsOpen } = useCartContext();

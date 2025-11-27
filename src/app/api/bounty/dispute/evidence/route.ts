@@ -4,7 +4,7 @@ import { unifiedNotificationService } from '@/services/unifiedNotificationServic
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
+  process.env.SUPABASE_SERVICE_ROLE_KEY!,
 );
 
 /**
@@ -34,23 +34,32 @@ export async function POST(request: NextRequest) {
       evidenceTitle,
       evidenceDescription,
       fileUrls = [],
-      externalLinks = []
+      externalLinks = [],
     } = body;
 
     console.log('📎 Evidence submission request:', {
       disputeId,
       submitterAddress,
-      evidenceType
+      evidenceType,
     });
 
     // =====================================================
     // 1. VALIDATION
     // =====================================================
 
-    if (!disputeId || !submitterAddress || !evidenceType || !evidenceTitle || !evidenceDescription) {
+    if (
+      !disputeId ||
+      !submitterAddress ||
+      !evidenceType ||
+      !evidenceTitle ||
+      !evidenceDescription
+    ) {
       return NextResponse.json(
-        { error: 'Missing required fields: disputeId, submitterAddress, evidenceType, evidenceTitle, evidenceDescription' },
-        { status: 400 }
+        {
+          error:
+            'Missing required fields: disputeId, submitterAddress, evidenceType, evidenceTitle, evidenceDescription',
+        },
+        { status: 400 },
       );
     }
 
@@ -66,20 +75,22 @@ export async function POST(request: NextRequest) {
       'video',
       'document',
       'link',
-      'other'
+      'other',
     ];
 
     if (!validEvidenceTypes.includes(evidenceType)) {
       return NextResponse.json(
-        { error: `Invalid evidence type. Must be one of: ${validEvidenceTypes.join(', ')}` },
-        { status: 400 }
+        {
+          error: `Invalid evidence type. Must be one of: ${validEvidenceTypes.join(', ')}`,
+        },
+        { status: 400 },
       );
     }
 
     if (fileUrls.length === 0 && externalLinks.length === 0) {
       return NextResponse.json(
         { error: 'Must provide at least one file URL or external link' },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -95,18 +106,21 @@ export async function POST(request: NextRequest) {
 
     if (disputeError || !dispute) {
       console.error('❌ Dispute not found:', disputeError);
-      return NextResponse.json(
-        { error: 'Dispute not found' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: 'Dispute not found' }, { status: 404 });
     }
 
     // Check if dispute is still open for evidence
-    const closedStatuses = ['resolved_for_creator', 'resolved_for_bidder', 'resolved_compromise', 'withdrawn', 'closed'];
+    const closedStatuses = [
+      'resolved_for_creator',
+      'resolved_for_bidder',
+      'resolved_compromise',
+      'withdrawn',
+      'closed',
+    ];
     if (closedStatuses.includes(dispute.status)) {
       return NextResponse.json(
         { error: `Cannot submit evidence for ${dispute.status} dispute` },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -148,7 +162,7 @@ export async function POST(request: NextRequest) {
 
         if (pod && pod.pod_leads) {
           isPodLeader = pod.pod_leads.some(
-            (lead: string) => lead.toLowerCase() === submitterLower
+            (lead: string) => lead.toLowerCase() === submitterLower,
           );
         }
       }
@@ -156,8 +170,11 @@ export async function POST(request: NextRequest) {
 
     if (!isParty && !isMediator && !isPodLeader) {
       return NextResponse.json(
-        { error: 'Only parties involved in the dispute, mediators, or pod leaders can submit evidence' },
-        { status: 403 }
+        {
+          error:
+            'Only parties involved in the dispute, mediators, or pod leaders can submit evidence',
+        },
+        { status: 403 },
       );
     }
 
@@ -200,7 +217,7 @@ export async function POST(request: NextRequest) {
         file_urls: fileUrls,
         external_links: externalLinks,
         display_order: displayOrder,
-        created_at: new Date().toISOString()
+        created_at: new Date().toISOString(),
       })
       .select()
       .single();
@@ -209,7 +226,7 @@ export async function POST(request: NextRequest) {
       console.error('❌ Error inserting evidence:', insertError);
       return NextResponse.json(
         { error: 'Failed to submit evidence', details: insertError?.message },
-        { status: 500 }
+        { status: 500 },
       );
     }
 
@@ -228,7 +245,7 @@ export async function POST(request: NextRequest) {
         comment_text: `${submitterRole === 'creator' ? 'Creator' : submitterRole === 'bidder' ? 'Bidder' : submitterRole === 'mediator' ? 'Mediator' : 'Pod leader'} submitted evidence: ${evidenceTitle}`,
         comment_type: 'evidence_submission',
         is_private: false,
-        created_at: new Date().toISOString()
+        created_at: new Date().toISOString(),
       });
 
     if (commentError) {
@@ -258,8 +275,8 @@ export async function POST(request: NextRequest) {
         context_type: 'bounty',
         context_id: disputeId,
         context_url: `/bounty/dispute/${disputeId}`,
-        priority: 'medium'
-      })
+        priority: 'medium',
+      }),
     );
 
     // Notify mediators
@@ -282,8 +299,8 @@ export async function POST(request: NextRequest) {
               context_type: 'bounty',
               context_id: disputeId,
               context_url: `/bounty/dispute/${disputeId}`,
-              priority: 'medium'
-            })
+              priority: 'medium',
+            }),
           );
         }
       });
@@ -307,7 +324,7 @@ export async function POST(request: NextRequest) {
         .from('bounty_disputes')
         .update({
           status: 'under_review',
-          updated_at: new Date().toISOString()
+          updated_at: new Date().toISOString(),
         })
         .eq('id', disputeId);
 
@@ -330,16 +347,18 @@ export async function POST(request: NextRequest) {
         evidenceType: newEvidence.evidence_type,
         evidenceTitle: newEvidence.evidence_title,
         submitterRole: newEvidence.submitter_role,
-        createdAt: newEvidence.created_at
+        createdAt: newEvidence.created_at,
       },
-      message: 'Evidence submitted successfully'
+      message: 'Evidence submitted successfully',
     });
-
   } catch (error) {
     console.error('❌ Error in evidence submission API:', error);
     return NextResponse.json(
-      { error: 'Internal server error', details: error instanceof Error ? error.message : 'Unknown error' },
-      { status: 500 }
+      {
+        error: 'Internal server error',
+        details: error instanceof Error ? error.message : 'Unknown error',
+      },
+      { status: 500 },
     );
   }
 }
@@ -357,7 +376,7 @@ export async function GET(request: NextRequest) {
     if (!disputeId) {
       return NextResponse.json(
         { error: 'Missing disputeId parameter' },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -372,21 +391,23 @@ export async function GET(request: NextRequest) {
       console.error('❌ Error fetching evidence:', error);
       return NextResponse.json(
         { error: 'Failed to fetch evidence', details: error.message },
-        { status: 500 }
+        { status: 500 },
       );
     }
 
     return NextResponse.json({
       success: true,
       evidence: evidence || [],
-      count: evidence?.length || 0
+      count: evidence?.length || 0,
     });
-
   } catch (error) {
     console.error('❌ Error in GET evidence API:', error);
     return NextResponse.json(
-      { error: 'Internal server error', details: error instanceof Error ? error.message : 'Unknown error' },
-      { status: 500 }
+      {
+        error: 'Internal server error',
+        details: error instanceof Error ? error.message : 'Unknown error',
+      },
+      { status: 500 },
     );
   }
 }

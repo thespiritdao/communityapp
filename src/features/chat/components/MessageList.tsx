@@ -1,4 +1,3 @@
-
 import { useRef, useEffect, useState } from 'react';
 import type { Message, UserProfile } from '../types';
 import '../styles/Chat.css';
@@ -13,24 +12,31 @@ interface MessageListProps {
   users: UserProfile[];
   currentUser: UserProfile | null;
   loading: boolean;
-  canModerate?: boolean;  // 🆕 Does user have chatModeration permission?
-  chatGroupId?: string;   // 🆕 For moderation actions
+  canModerate?: boolean; // 🆕 Does user have chatModeration permission?
+  chatGroupId?: string; // 🆕 For moderation actions
 }
 
-const fetchProfilePictureUrl = async (walletAddress: string, users: UserProfile[]) => {
+const fetchProfilePictureUrl = async (
+  walletAddress: string,
+  users: UserProfile[],
+) => {
   const user = users.find((user) => user.wallet_address === walletAddress);
   return user?.profile_picture?.startsWith('http')
     ? user.profile_picture
     : user?.profile_picture
-    ? `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/profile_images/${user.profile_picture}`
-    : '/images/symbolobinfin.png';
+      ? `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/profile_images/${user.profile_picture}`
+      : '/images/symbolobinfin.png';
 };
 
 const markMessagesAsRead = async (receiver_wallet_id: string) => {
-  const { data: session, error: sessionError } = await supabase.auth.getSession();
+  const { data: session, error: sessionError } =
+    await supabase.auth.getSession();
 
   if (sessionError) {
-    console.error('MessageList: Error getting session for mark as read:', sessionError);
+    console.error(
+      'MessageList: Error getting session for mark as read:',
+      sessionError,
+    );
     return;
   }
 
@@ -46,14 +52,20 @@ const markMessagesAsRead = async (receiver_wallet_id: string) => {
     .eq('is_read', false);
 
   if (error) {
-    console.error('MessageList: Error marking messages as read:', error.message);
+    console.error(
+      'MessageList: Error marking messages as read:',
+      error.message,
+    );
   }
 };
 
 // Utility to format message with mentions
 function formatMessageWithMentions(message: string): string {
   // Replace @[Name](wallet) with <span class="mention">@Name</span>
-  return message.replace(/@\[([^\]]+)\]\([^\)]+\)/g, '<span class="mention">@$1</span>');
+  return message.replace(
+    /@\[([^\]]+)\]\([^\)]+\)/g,
+    '<span class="mention">@$1</span>',
+  );
 }
 
 export default function MessageList({
@@ -64,7 +76,9 @@ export default function MessageList({
   chatGroupId,
 }: MessageListProps) {
   const [selectedUser, setSelectedUser] = useState<UserProfile | null>(null);
-  const [profilePictures, setProfilePictures] = useState<Record<string, string>>({});
+  const [profilePictures, setProfilePictures] = useState<
+    Record<string, string>
+  >({});
   const [localMessages, setLocalMessages] = useState<Message[]>(messages);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -86,10 +100,8 @@ export default function MessageList({
       const newProfilePictures: Record<string, string> = {};
       for (const message of messages) {
         if (!profilePictures[message.sender_wallet_id]) {
-          newProfilePictures[message.sender_wallet_id] = await fetchProfilePictureUrl(
-            message.sender_wallet_id,
-            users
-          );
+          newProfilePictures[message.sender_wallet_id] =
+            await fetchProfilePictureUrl(message.sender_wallet_id, users);
         }
       }
       setProfilePictures((prev) => ({ ...prev, ...newProfilePictures }));
@@ -116,19 +128,19 @@ export default function MessageList({
 
   // Handle message deleted
   const handleMessageDeleted = (messageId: string) => {
-    setLocalMessages(prev => prev.filter(m => m.id !== messageId));
+    setLocalMessages((prev) => prev.filter((m) => m.id !== messageId));
   };
 
   // Handle message pinned/unpinned
   const handleMessagePinned = (messageId: string, isPinned: boolean) => {
-    setLocalMessages(prev =>
-      prev.map(m => m.id === messageId ? { ...m, is_pinned: isPinned } : m)
+    setLocalMessages((prev) =>
+      prev.map((m) => (m.id === messageId ? { ...m, is_pinned: isPinned } : m)),
     );
   };
 
   // Separate pinned and regular messages
-  const pinnedMessages = localMessages.filter(m => m.is_pinned);
-  const regularMessages = localMessages.filter(m => !m.is_pinned);
+  const pinnedMessages = localMessages.filter((m) => m.is_pinned);
+  const regularMessages = localMessages.filter((m) => !m.is_pinned);
 
   // Helper function to render a message
   const renderMessage = (message: Message) => {
@@ -136,13 +148,16 @@ export default function MessageList({
       message.sender_profile_picture ||
       profilePictures[message.sender_wallet_id] ||
       '/images/symbolobinfin.png';
-    const adjustedTimestamp = new Date(message.created_at).toLocaleString('default', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
+    const adjustedTimestamp = new Date(message.created_at).toLocaleString(
+      'default',
+      {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+      },
+    );
 
     return (
       <div
@@ -169,7 +184,9 @@ export default function MessageList({
           )}
           <div
             className="message-text"
-            dangerouslySetInnerHTML={{ __html: formatMessageWithMentions(message.content) }}
+            dangerouslySetInnerHTML={{
+              __html: formatMessageWithMentions(message.content),
+            }}
           ></div>
 
           {/* Moderation menu - only show if user has chatModeration permission */}
@@ -202,7 +219,9 @@ export default function MessageList({
           <div className="message-timestamp-container">
             <span className="message-timestamp">{adjustedTimestamp}</span>
             {message.sender_wallet_id === currentUser?.wallet_address && (
-              <span className="read-receipt">{message.is_read ? '✓✓' : '✓'}</span>
+              <span className="read-receipt">
+                {message.is_read ? '✓✓' : '✓'}
+              </span>
             )}
           </div>
         </div>
@@ -215,17 +234,15 @@ export default function MessageList({
       {/* Pinned messages section - always at top */}
       {pinnedMessages.length > 0 && (
         <div className="pinned-messages-section">
-          {pinnedMessages.map(message => renderMessage(message))}
+          {pinnedMessages.map((message) => renderMessage(message))}
           <div className="pinned-separator" />
         </div>
       )}
 
       {/* Regular messages section */}
-      {regularMessages && regularMessages.length > 0 ? (
-        regularMessages.map(message => renderMessage(message))
-      ) : (
-        !pinnedMessages.length && <div>No messages to display.</div>
-      )}
+      {regularMessages && regularMessages.length > 0
+        ? regularMessages.map((message) => renderMessage(message))
+        : !pinnedMessages.length && <div>No messages to display.</div>}
 
       <div ref={messagesEndRef} />
       {selectedUser && (

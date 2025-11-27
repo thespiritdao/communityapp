@@ -33,11 +33,11 @@ interface ProposalSubmissionProps {
   variant?: 'full' | 'compact' | 'minimal';
 }
 
-export const ProposalSubmission: React.FC<ProposalSubmissionProps> = ({ 
+export const ProposalSubmission: React.FC<ProposalSubmissionProps> = ({
   className = '',
   onSuccess,
   onError,
-  variant = 'full'
+  variant = 'full',
 }) => {
   const { address, isConnected } = useAccount();
   const {
@@ -107,11 +107,14 @@ export const ProposalSubmission: React.FC<ProposalSubmissionProps> = ({
     onSuccess?.();
   }, [resetForm, setIsSubmitting, onSuccess]);
 
-  const handleTransactionError = useCallback((error: Error) => {
-    setIsSubmitting(false);
-    console.error('Transaction failed:', error);
-    onError?.(error);
-  }, [setIsSubmitting, onError]);
+  const handleTransactionError = useCallback(
+    (error: Error) => {
+      setIsSubmitting(false);
+      console.error('Transaction failed:', error);
+      onError?.(error);
+    },
+    [setIsSubmitting, onError],
+  );
 
   const transactionData = prepareTransaction();
 
@@ -124,14 +127,14 @@ export const ProposalSubmission: React.FC<ProposalSubmissionProps> = ({
             type="text"
             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             value={formData.title}
-            onChange={e => updateFormField('title', e.target.value)}
+            onChange={(e) => updateFormField('title', e.target.value)}
             placeholder="Proposal title"
             disabled={isSubmitting}
           />
           <textarea
             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             value={formData.body}
-            onChange={e => updateFormField('body', e.target.value)}
+            onChange={(e) => updateFormField('body', e.target.value)}
             placeholder="Proposal description"
             rows={4}
             disabled={isSubmitting}
@@ -148,7 +151,11 @@ export const ProposalSubmission: React.FC<ProposalSubmissionProps> = ({
               <TransactionButton
                 className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold py-4 px-8 rounded-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl"
                 disabled={!isFormValid || isSubmitting}
-                text={isSubmitting ? "Submitting Proposal..." : "Submit Proposal to DAO"}
+                text={
+                  isSubmitting
+                    ? 'Submitting Proposal...'
+                    : 'Submit Proposal to DAO'
+                }
               />
               <TransactionSponsor />
               <div className="mt-4">
@@ -159,7 +166,10 @@ export const ProposalSubmission: React.FC<ProposalSubmissionProps> = ({
               </div>
             </Transaction>
           ) : (
-            <button disabled={true} className="w-full bg-gray-300 text-gray-500 py-2 px-4 rounded-md cursor-not-allowed">
+            <button
+              disabled={true}
+              className="w-full bg-gray-300 text-gray-500 py-2 px-4 rounded-md cursor-not-allowed"
+            >
               {isConnected ? 'Requirements Not Met' : 'Connect Wallet'}
             </button>
           )}
@@ -170,9 +180,11 @@ export const ProposalSubmission: React.FC<ProposalSubmissionProps> = ({
 
   if (variant === 'compact') {
     return (
-      <div className={`w-full max-w-lg mx-auto p-4 bg-white rounded-lg shadow ${className}`}>
+      <div
+        className={`w-full max-w-lg mx-auto p-4 bg-white rounded-lg shadow ${className}`}
+      >
         <h3 className="text-lg font-semibold mb-4">Submit Proposal</h3>
-        
+
         {/* Validation Messages */}
         {!canPropose && (
           <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded text-sm">
@@ -195,7 +207,7 @@ export const ProposalSubmission: React.FC<ProposalSubmissionProps> = ({
             type="text"
             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             value={formData.title}
-            onChange={e => updateFormField('title', e.target.value)}
+            onChange={(e) => updateFormField('title', e.target.value)}
             placeholder="Proposal title"
             disabled={isSubmitting}
             maxLength={200}
@@ -203,7 +215,7 @@ export const ProposalSubmission: React.FC<ProposalSubmissionProps> = ({
           <textarea
             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             value={formData.body}
-            onChange={e => updateFormField('body', e.target.value)}
+            onChange={(e) => updateFormField('body', e.target.value)}
             placeholder="Proposal description"
             rows={6}
             disabled={isSubmitting}
@@ -213,7 +225,7 @@ export const ProposalSubmission: React.FC<ProposalSubmissionProps> = ({
             type="text"
             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             value={formData.forumThreadId}
-            onChange={e => updateFormField('forumThreadId', e.target.value)}
+            onChange={(e) => updateFormField('forumThreadId', e.target.value)}
             placeholder="Forum thread ID (optional)"
             disabled={isSubmitting}
             maxLength={100}
@@ -231,7 +243,7 @@ export const ProposalSubmission: React.FC<ProposalSubmissionProps> = ({
               <TransactionButton
                 className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors disabled:opacity-50"
                 disabled={!isFormValid || isSubmitting}
-                text={isSubmitting ? "Submitting..." : "Submit Proposal"}
+                text={isSubmitting ? 'Submitting...' : 'Submit Proposal'}
               />
               <TransactionSponsor />
               <TransactionStatus>
@@ -241,7 +253,10 @@ export const ProposalSubmission: React.FC<ProposalSubmissionProps> = ({
             </Transaction>
           ) : (
             <ConnectWallet className="w-full">
-              <button className="w-full text-white font-medium py-3 px-6 rounded-lg hover:bg-[#254A40]" style={{ backgroundColor: '#2F5D50' }}>
+              <button
+                className="w-full text-white font-medium py-3 px-6 rounded-lg hover:bg-[#254A40]"
+                style={{ backgroundColor: '#2F5D50' }}
+              >
                 Connect Wallet to Submit
               </button>
             </ConnectWallet>
@@ -253,11 +268,16 @@ export const ProposalSubmission: React.FC<ProposalSubmissionProps> = ({
 
   // Full variant (default)
   return (
-    <div className={`w-full max-w-2xl mx-auto p-6 bg-white rounded-lg shadow-lg ${className}`}>
+    <div
+      className={`w-full max-w-2xl mx-auto p-6 bg-white rounded-lg shadow-lg ${className}`}
+    >
       <div className="mb-6">
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">Submit DAO Proposal</h2>
+        <h2 className="text-2xl font-bold text-gray-900 mb-2">
+          Submit DAO Proposal
+        </h2>
         <p className="text-gray-600">
-          Create a new proposal for the DAO to vote on. All proposals are recorded on-chain.
+          Create a new proposal for the DAO to vote on. All proposals are
+          recorded on-chain.
         </p>
       </div>
 
@@ -266,7 +286,9 @@ export const ProposalSubmission: React.FC<ProposalSubmissionProps> = ({
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-4">
             <div className="flex items-center space-x-2">
-              <div className={`w-3 h-3 rounded-full ${isConnected ? 'bg-green-400' : 'bg-red-400'}`} />
+              <div
+                className={`w-3 h-3 rounded-full ${isConnected ? 'bg-green-400' : 'bg-red-400'}`}
+              />
               <span className="text-sm font-medium">
                 {isConnected ? 'Wallet Connected' : 'Wallet Disconnected'}
               </span>
@@ -274,11 +296,13 @@ export const ProposalSubmission: React.FC<ProposalSubmissionProps> = ({
             {isConnected && (
               <div className="text-sm text-gray-600">
                 <span>Advocate NFTs: </span>
-                <span className="font-semibold">{advocateBalance.toString()}</span>
+                <span className="font-semibold">
+                  {advocateBalance.toString()}
+                </span>
               </div>
             )}
           </div>
-          
+
           <Wallet>
             <ConnectWallet>
               <WalletDropdown>
@@ -316,7 +340,9 @@ export const ProposalSubmission: React.FC<ProposalSubmissionProps> = ({
 
       {formErrors.length > 0 && (
         <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
-          <h4 className="text-red-800 font-medium mb-2">Please fix the following errors:</h4>
+          <h4 className="text-red-800 font-medium mb-2">
+            Please fix the following errors:
+          </h4>
           <ul className="text-red-700 text-sm space-y-1">
             {formErrors.map((error, index) => (
               <li key={index}>• {error}</li>
@@ -329,7 +355,10 @@ export const ProposalSubmission: React.FC<ProposalSubmissionProps> = ({
       <form className="space-y-6">
         {/* Proposal Title */}
         <div>
-          <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-2">
+          <label
+            htmlFor="title"
+            className="block text-sm font-medium text-gray-700 mb-2"
+          >
             Proposal Title *
           </label>
           <input
@@ -337,7 +366,7 @@ export const ProposalSubmission: React.FC<ProposalSubmissionProps> = ({
             type="text"
             className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             value={formData.title}
-            onChange={e => updateFormField('title', e.target.value)}
+            onChange={(e) => updateFormField('title', e.target.value)}
             required={true}
             placeholder="Enter a clear, descriptive title"
             disabled={isSubmitting}
@@ -345,7 +374,8 @@ export const ProposalSubmission: React.FC<ProposalSubmissionProps> = ({
           />
           <div className="flex justify-between mt-1">
             <p className="text-xs text-gray-500">
-              Make it clear and specific - this will be the main identifier for your proposal
+              Make it clear and specific - this will be the main identifier for
+              your proposal
             </p>
             <span className="text-xs text-gray-400">
               {formData.title.length}/200
@@ -355,7 +385,10 @@ export const ProposalSubmission: React.FC<ProposalSubmissionProps> = ({
 
         {/* Proposal Description */}
         <div>
-          <label htmlFor="body" className="block text-sm font-medium text-gray-700 mb-2">
+          <label
+            htmlFor="body"
+            className="block text-sm font-medium text-gray-700 mb-2"
+          >
             Proposal Description *
           </label>
           <UserTagging
@@ -373,7 +406,8 @@ export const ProposalSubmission: React.FC<ProposalSubmissionProps> = ({
           />
           <div className="flex justify-between mt-1">
             <p className="text-xs text-gray-500">
-              Supports Markdown formatting and @mentions. Be thorough - voters need enough detail to make informed decisions.
+              Supports Markdown formatting and @mentions. Be thorough - voters
+              need enough detail to make informed decisions.
             </p>
             <span className="text-xs text-gray-400">
               {formData.body.length}/10,000
@@ -383,7 +417,10 @@ export const ProposalSubmission: React.FC<ProposalSubmissionProps> = ({
 
         {/* Forum Thread ID */}
         <div>
-          <label htmlFor="forumThreadId" className="block text-sm font-medium text-gray-700 mb-2">
+          <label
+            htmlFor="forumThreadId"
+            className="block text-sm font-medium text-gray-700 mb-2"
+          >
             Forum Thread ID (Optional)
           </label>
           <input
@@ -391,13 +428,14 @@ export const ProposalSubmission: React.FC<ProposalSubmissionProps> = ({
             type="text"
             className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             value={formData.forumThreadId}
-            onChange={e => updateFormField('forumThreadId', e.target.value)}
+            onChange={(e) => updateFormField('forumThreadId', e.target.value)}
             placeholder="e.g., forum-thread-123, discussion-456"
             disabled={isSubmitting}
             maxLength={100}
           />
           <p className="text-xs text-gray-500 mt-1">
-            Link to an existing forum discussion for additional context and community feedback
+            Link to an existing forum discussion for additional context and
+            community feedback
           </p>
         </div>
 
@@ -415,7 +453,11 @@ export const ProposalSubmission: React.FC<ProposalSubmissionProps> = ({
               <TransactionButton
                 className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold py-4 px-8 rounded-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl"
                 disabled={!isFormValid || isSubmitting}
-                text={isSubmitting ? "Submitting Proposal..." : "Submit Proposal to DAO"}
+                text={
+                  isSubmitting
+                    ? 'Submitting Proposal...'
+                    : 'Submit Proposal to DAO'
+                }
               />
               <TransactionSponsor />
               <div className="mt-4">
@@ -431,7 +473,9 @@ export const ProposalSubmission: React.FC<ProposalSubmissionProps> = ({
                 disabled={true}
                 className="w-full bg-gray-300 text-gray-500 font-semibold py-4 px-8 rounded-lg cursor-not-allowed"
               >
-                {isConnected ? 'Requirements Not Met' : 'Connect Wallet to Submit'}
+                {isConnected
+                  ? 'Requirements Not Met'
+                  : 'Connect Wallet to Submit'}
               </button>
             </div>
           )}
@@ -439,32 +483,43 @@ export const ProposalSubmission: React.FC<ProposalSubmissionProps> = ({
           {/* Transaction sponsored notice */}
           <div className="mt-4 text-center">
             <p className="text-sm text-gray-500">
-              🎉 Gas fees sponsored by Coinbase • Transaction secured by Base network
+              🎉 Gas fees sponsored by Coinbase • Transaction secured by Base
+              network
             </p>
           </div>
         </div>
 
         {/* Requirements */}
         <div className="mt-8 p-6 bg-blue-50 border border-blue-200 rounded-lg">
-          <h4 className="text-blue-900 font-semibold mb-3">📋 Proposal Requirements</h4>
+          <h4 className="text-blue-900 font-semibold mb-3">
+            📋 Proposal Requirements
+          </h4>
           <div className="grid md:grid-cols-2 gap-4 text-sm text-blue-800">
             <div className="space-y-2">
               <div className="flex items-center">
-                <span className={`w-2 h-2 rounded-full mr-2 ${isConnected ? 'bg-green-500' : 'bg-red-500'}`} />
+                <span
+                  className={`w-2 h-2 rounded-full mr-2 ${isConnected ? 'bg-green-500' : 'bg-red-500'}`}
+                />
                 Wallet connected
               </div>
               <div className="flex items-center">
-                <span className={`w-2 h-2 rounded-full mr-2 ${advocateBalance > 0 ? 'bg-green-500' : 'bg-red-500'}`} />
+                <span
+                  className={`w-2 h-2 rounded-full mr-2 ${advocateBalance > 0 ? 'bg-green-500' : 'bg-red-500'}`}
+                />
                 Hold at least 1 Advocate NFT
               </div>
             </div>
             <div className="space-y-2">
               <div className="flex items-center">
-                <span className={`w-2 h-2 rounded-full mr-2 ${formData.title.length >= 10 ? 'bg-green-500' : 'bg-yellow-500'}`} />
+                <span
+                  className={`w-2 h-2 rounded-full mr-2 ${formData.title.length >= 10 ? 'bg-green-500' : 'bg-yellow-500'}`}
+                />
                 Clear, descriptive title
               </div>
               <div className="flex items-center">
-                <span className={`w-2 h-2 rounded-full mr-2 ${formData.body.length >= 50 ? 'bg-green-500' : 'bg-yellow-500'}`} />
+                <span
+                  className={`w-2 h-2 rounded-full mr-2 ${formData.body.length >= 50 ? 'bg-green-500' : 'bg-yellow-500'}`}
+                />
                 Detailed description (50+ chars)
               </div>
             </div>
@@ -490,7 +545,7 @@ export const ProposalFormInputs: React.FC = () => {
           </ul>
         </div>
       )}
-      
+
       <div>
         <label htmlFor="title" className="block text-sm font-medium mb-1">
           Proposal Title *
@@ -500,7 +555,7 @@ export const ProposalFormInputs: React.FC = () => {
           type="text"
           className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
           value={formData.title}
-          onChange={e => updateFormField('title', e.target.value)}
+          onChange={(e) => updateFormField('title', e.target.value)}
           placeholder="Enter a clear, descriptive title"
           disabled={isSubmitting}
           maxLength={200}
@@ -509,7 +564,7 @@ export const ProposalFormInputs: React.FC = () => {
           {formData.title.length}/200
         </div>
       </div>
-      
+
       <div>
         <label htmlFor="body" className="block text-sm font-medium mb-1">
           Proposal Description *
@@ -531,9 +586,12 @@ export const ProposalFormInputs: React.FC = () => {
           {formData.body.length}/10,000
         </div>
       </div>
-      
+
       <div>
-        <label htmlFor="forumThreadId" className="block text-sm font-medium mb-1">
+        <label
+          htmlFor="forumThreadId"
+          className="block text-sm font-medium mb-1"
+        >
           Forum Thread ID (Optional)
         </label>
         <input
@@ -541,7 +599,7 @@ export const ProposalFormInputs: React.FC = () => {
           type="text"
           className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
           value={formData.forumThreadId}
-          onChange={e => updateFormField('forumThreadId', e.target.value)}
+          onChange={(e) => updateFormField('forumThreadId', e.target.value)}
           placeholder="Enter a forum thread ID"
           disabled={isSubmitting}
           maxLength={100}

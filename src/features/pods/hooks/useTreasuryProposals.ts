@@ -46,80 +46,95 @@ export function useTreasuryProposals() {
    * Create a proposal for token distribution
    * Returns calls array for Transaction component
    */
-  const getCreateProposalCalls = useCallback((params: CreateProposalParams) => {
-    if (!address) {
-      throw new Error('Wallet not connected');
-    }
+  const getCreateProposalCalls = useCallback(
+    (params: CreateProposalParams) => {
+      if (!address) {
+        throw new Error('Wallet not connected');
+      }
 
-    // Validate inputs
-    if (!params.podId || !params.token) {
-      throw new Error('Pod ID and token address required');
-    }
+      // Validate inputs
+      if (!params.podId || !params.token) {
+        throw new Error('Pod ID and token address required');
+      }
 
-    if (params.recipients.length === 0) {
-      throw new Error('At least one recipient required');
-    }
+      if (params.recipients.length === 0) {
+        throw new Error('At least one recipient required');
+      }
 
-    if (params.recipients.length !== params.amounts.length) {
-      throw new Error('Recipients and amounts arrays must match');
-    }
+      if (params.recipients.length !== params.amounts.length) {
+        throw new Error('Recipients and amounts arrays must match');
+      }
 
-    if (!params.reason || params.reason.trim() === '') {
-      throw new Error('Reason is required');
-    }
+      if (!params.reason || params.reason.trim() === '') {
+        throw new Error('Reason is required');
+      }
 
-    // Convert amounts to wei (assuming 18 decimals for now)
-    const amountsInWei = params.amounts.map(amount =>
-      parseUnits(amount, 18)
-    );
+      // Convert amounts to wei (assuming 18 decimals for now)
+      const amountsInWei = params.amounts.map((amount) =>
+        parseUnits(amount, 18),
+      );
 
-    return [{
-      address: CONTRACT_ADDRESSES.TREASURY_PROXY as `0x${string}`,
-      abi: TreasuryProxyABI,
-      functionName: 'proxyProposeDistribution',
-      args: [
-        params.podId,
-        params.token as `0x${string}`,
-        params.recipients as `0x${string}`[],
-        amountsInWei,
-        params.reason
-      ]
-    }];
-  }, [address]);
+      return [
+        {
+          address: CONTRACT_ADDRESSES.TREASURY_PROXY as `0x${string}`,
+          abi: TreasuryProxyABI,
+          functionName: 'proxyProposeDistribution',
+          args: [
+            params.podId,
+            params.token as `0x${string}`,
+            params.recipients as `0x${string}`[],
+            amountsInWei,
+            params.reason,
+          ],
+        },
+      ];
+    },
+    [address],
+  );
 
   /**
    * Approve a proposal
    * Returns calls array for Transaction component
    */
-  const getApproveProposalCalls = useCallback((podId: string, proposalId: number) => {
-    if (!address) {
-      throw new Error('Wallet not connected');
-    }
+  const getApproveProposalCalls = useCallback(
+    (podId: string, proposalId: number) => {
+      if (!address) {
+        throw new Error('Wallet not connected');
+      }
 
-    return [{
-      address: CONTRACT_ADDRESSES.TREASURY_PROXY as `0x${string}`,
-      abi: TreasuryProxyABI,
-      functionName: 'proxyApproveProposal',
-      args: [podId, BigInt(proposalId)]
-    }];
-  }, [address]);
+      return [
+        {
+          address: CONTRACT_ADDRESSES.TREASURY_PROXY as `0x${string}`,
+          abi: TreasuryProxyABI,
+          functionName: 'proxyApproveProposal',
+          args: [podId, BigInt(proposalId)],
+        },
+      ];
+    },
+    [address],
+  );
 
   /**
    * Cancel a proposal (proposer only)
    * Returns calls array for Transaction component
    */
-  const getCancelProposalCalls = useCallback((podId: string, proposalId: number) => {
-    if (!address) {
-      throw new Error('Wallet not connected');
-    }
+  const getCancelProposalCalls = useCallback(
+    (podId: string, proposalId: number) => {
+      if (!address) {
+        throw new Error('Wallet not connected');
+      }
 
-    return [{
-      address: CONTRACT_ADDRESSES.TREASURY_PROXY as `0x${string}`,
-      abi: TreasuryProxyABI,
-      functionName: 'proxyCancelProposal',
-      args: [podId, BigInt(proposalId)]
-    }];
-  }, [address]);
+      return [
+        {
+          address: CONTRACT_ADDRESSES.TREASURY_PROXY as `0x${string}`,
+          abi: TreasuryProxyABI,
+          functionName: 'proxyCancelProposal',
+          args: [podId, BigInt(proposalId)],
+        },
+      ];
+    },
+    [address],
+  );
 
   return {
     loading,
@@ -128,7 +143,7 @@ export function useTreasuryProposals() {
     getApproveProposalCalls,
     getCancelProposalCalls,
     isConnected: !!address,
-    userAddress: address
+    userAddress: address,
   };
 }
 
@@ -145,14 +160,17 @@ export function useTreasuryProposalData(podId: string) {
     return 2; // Placeholder
   }, [podId]);
 
-  const checkIfApproved = useCallback(async (proposalId: number, approver: string) => {
-    // Call contract to check if address has approved
-    return false; // Placeholder
-  }, [podId]);
+  const checkIfApproved = useCallback(
+    async (proposalId: number, approver: string) => {
+      // Call contract to check if address has approved
+      return false; // Placeholder
+    },
+    [podId],
+  );
 
   return {
     getRequiredApprovals,
-    checkIfApproved
+    checkIfApproved,
   };
 }
 
@@ -162,9 +180,15 @@ export function useTreasuryProposalData(podId: string) {
 export function formatProposalForDisplay(proposal: TreasuryProposal) {
   return {
     ...proposal,
-    statusBadge: proposal.status === 'Pending' ? 'warning' :
-                 proposal.status === 'Executed' ? 'success' : 'error',
+    statusBadge:
+      proposal.status === 'Pending'
+        ? 'warning'
+        : proposal.status === 'Executed'
+          ? 'success'
+          : 'error',
     progress: `${proposal.approvalCount}/${proposal.requiredApprovals}`,
-    isExecutable: proposal.approvalCount >= proposal.requiredApprovals && proposal.status === 'Pending'
+    isExecutable:
+      proposal.approvalCount >= proposal.requiredApprovals &&
+      proposal.status === 'Pending',
   };
 }

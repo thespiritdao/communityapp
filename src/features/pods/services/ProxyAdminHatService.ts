@@ -11,16 +11,21 @@
  * - Pod leaders can modify HATs through proxy autonomously
  */
 
-import { createPublicClient, http, encodeFunctionData, type WalletClient } from 'viem';
+import {
+  createPublicClient,
+  http,
+  encodeFunctionData,
+  type WalletClient,
+} from 'viem';
 import { base } from 'viem/chains';
 import { validateAndConvertHatId } from '../utils/hatIdValidator';
 
 export interface ProxyAdminHatParams {
   podId: string;
   podName: string;
-  parentPodHatId: string;  // Parent pod's management HAT ID
-  proxyAddress: string;     // PodAuthProxy address
-  execPodAddress: string;   // Executive pod address for toggle module
+  parentPodHatId: string; // Parent pod's management HAT ID
+  proxyAddress: string; // PodAuthProxy address
+  execPodAddress: string; // Executive pod address for toggle module
   walletClient: WalletClient;
 }
 
@@ -33,7 +38,8 @@ export interface ProxyAdminHatResult {
 
 export class ProxyAdminHatService {
   private static readonly HATS_PROTOCOL_ADDRESS =
-    process.env.NEXT_PUBLIC_HATS_PROTOCOL_ADDRESS || '0x3bc1A0Ad72417f2d411118085256fC53CBdDd137';
+    process.env.NEXT_PUBLIC_HATS_PROTOCOL_ADDRESS ||
+    '0x3bc1A0Ad72417f2d411118085256fC53CBdDd137';
 
   /**
    * Create a Proxy Admin HAT for a pod's authorization proxy
@@ -48,14 +54,14 @@ export class ProxyAdminHatService {
    * @returns Result with new proxy admin HAT ID
    */
   static async createProxyAdminHat(
-    params: ProxyAdminHatParams
+    params: ProxyAdminHatParams,
   ): Promise<ProxyAdminHatResult> {
     try {
       console.log('🎩 Creating Proxy Admin HAT:', {
         podId: params.podId,
         podName: params.podName,
         parentHatId: params.parentPodHatId,
-        proxyAddress: params.proxyAddress
+        proxyAddress: params.proxyAddress,
       });
 
       // Validate parent hat ID
@@ -63,46 +69,51 @@ export class ProxyAdminHatService {
       if (!parentValidation.isValid || !parentValidation.hatIdBigInt) {
         return {
           success: false,
-          error: `Invalid parent hat ID: ${parentValidation.error}`
+          error: `Invalid parent hat ID: ${parentValidation.error}`,
         };
       }
 
       const publicClient = createPublicClient({
         chain: base,
-        transport: http()
+        transport: http(),
       });
 
       // Verify parent HAT exists and is active
       const parentHatDetails = await publicClient.readContract({
         address: this.HATS_PROTOCOL_ADDRESS as `0x${string}`,
-        abi: [{
-          name: 'viewHat',
-          type: 'function',
-          inputs: [{ name: '_hatId', type: 'uint256' }],
-          outputs: [{
-            type: 'tuple',
-            components: [
-              { name: 'details', type: 'string' },
-              { name: 'maxSupply', type: 'uint32' },
-              { name: 'supply', type: 'uint32' },
-              { name: 'eligibility', type: 'address' },
-              { name: 'toggle', type: 'address' },
-              { name: 'imageURI', type: 'string' },
-              { name: 'lastHatId', type: 'uint16' },
-              { name: 'mutable', type: 'bool' },
-              { name: 'active', type: 'bool' }
-            ]
-          }],
-          stateMutability: 'view'
-        }],
+        abi: [
+          {
+            name: 'viewHat',
+            type: 'function',
+            inputs: [{ name: '_hatId', type: 'uint256' }],
+            outputs: [
+              {
+                type: 'tuple',
+                components: [
+                  { name: 'details', type: 'string' },
+                  { name: 'maxSupply', type: 'uint32' },
+                  { name: 'supply', type: 'uint32' },
+                  { name: 'eligibility', type: 'address' },
+                  { name: 'toggle', type: 'address' },
+                  { name: 'imageURI', type: 'string' },
+                  { name: 'lastHatId', type: 'uint16' },
+                  { name: 'mutable', type: 'bool' },
+                  { name: 'active', type: 'bool' },
+                ],
+              },
+            ],
+            stateMutability: 'view',
+          },
+        ],
         functionName: 'viewHat',
-        args: [parentValidation.hatIdBigInt]
+        args: [parentValidation.hatIdBigInt],
       });
 
-      if (!parentHatDetails[8]) { // active field
+      if (!parentHatDetails[8]) {
+        // active field
         return {
           success: false,
-          error: 'Parent HAT is not active'
+          error: 'Parent HAT is not active',
         };
       }
 
@@ -115,35 +126,37 @@ export class ProxyAdminHatService {
         proxyAddress: params.proxyAddress,
         purpose: 'Grant proxy admin rights over pod HATs',
         version: 'v2-proxy-admin-pattern',
-        created: new Date().toISOString()
+        created: new Date().toISOString(),
       });
 
       console.log('🎯 Proxy Admin HAT parameters:', {
         admin: params.parentPodHatId,
         eligibility: params.proxyAddress, // Only proxy can wear this HAT
-        toggle: params.execPodAddress,    // Exec pod can deactivate
-        maxSupply: 1,                     // Only one wearer (the proxy)
-        mutable: false,                   // Immutable for security
-        imageURI: ''                      // No image needed
+        toggle: params.execPodAddress, // Exec pod can deactivate
+        maxSupply: 1, // Only one wearer (the proxy)
+        mutable: false, // Immutable for security
+        imageURI: '', // No image needed
       });
 
       // Create the admin HAT
       const createHatData = encodeFunctionData({
-        abi: [{
-          name: 'createHat',
-          type: 'function',
-          inputs: [
-            { name: '_admin', type: 'uint256' },
-            { name: '_details', type: 'string' },
-            { name: '_maxSupply', type: 'uint32' },
-            { name: '_eligibility', type: 'address' },
-            { name: '_toggle', type: 'address' },
-            { name: '_mutable', type: 'bool' },
-            { name: '_imageURI', type: 'string' }
-          ],
-          outputs: [{ name: 'newHatId', type: 'uint256' }],
-          stateMutability: 'nonpayable'
-        }],
+        abi: [
+          {
+            name: 'createHat',
+            type: 'function',
+            inputs: [
+              { name: '_admin', type: 'uint256' },
+              { name: '_details', type: 'string' },
+              { name: '_maxSupply', type: 'uint32' },
+              { name: '_eligibility', type: 'address' },
+              { name: '_toggle', type: 'address' },
+              { name: '_mutable', type: 'bool' },
+              { name: '_imageURI', type: 'string' },
+            ],
+            outputs: [{ name: 'newHatId', type: 'uint256' }],
+            stateMutability: 'nonpayable',
+          },
+        ],
         functionName: 'createHat',
         args: [
           parentValidation.hatIdBigInt,
@@ -152,8 +165,8 @@ export class ProxyAdminHatService {
           params.proxyAddress as `0x${string}`, // eligibility: only proxy address
           params.execPodAddress as `0x${string}`, // toggle: exec pod (emergency control)
           false, // mutable: immutable for security
-          '' // imageURI: not needed for admin HAT
-        ]
+          '', // imageURI: not needed for admin HAT
+        ],
       });
 
       // Execute transaction
@@ -166,18 +179,20 @@ export class ProxyAdminHatService {
         to: this.HATS_PROTOCOL_ADDRESS as `0x${string}`,
         data: createHatData,
         account,
-        chain: base
+        chain: base,
       });
 
       console.log('✅ Proxy Admin HAT creation transaction sent:', txHash);
 
       // Wait for confirmation
-      const receipt = await publicClient.waitForTransactionReceipt({ hash: txHash });
+      const receipt = await publicClient.waitForTransactionReceipt({
+        hash: txHash,
+      });
 
       if (receipt.status !== 'success') {
         return {
           success: false,
-          error: 'Transaction reverted'
+          error: 'Transaction reverted',
         };
       }
 
@@ -192,20 +207,25 @@ export class ProxyAdminHatService {
           { name: 'eligibility', type: 'address', indexed: false },
           { name: 'toggle', type: 'address', indexed: false },
           { name: 'mutable', type: 'bool', indexed: false },
-          { name: 'imageURI', type: 'string', indexed: false }
-        ]
+          { name: 'imageURI', type: 'string', indexed: false },
+        ],
       };
 
       // Find HatCreated event in logs
-      const hatCreatedLog = receipt.logs.find(log => {
+      const hatCreatedLog = receipt.logs.find((log) => {
         try {
           const topics = log.topics;
           // Check if topic[0] matches HatCreated event signature
-          const eventSignature = '0x' + Buffer.from(
-            'HatCreated(uint256,string,uint32,address,address,bool,string)'
-          ).toString('hex');
+          const eventSignature =
+            '0x' +
+            Buffer.from(
+              'HatCreated(uint256,string,uint32,address,address,bool,string)',
+            ).toString('hex');
           // In practice, use proper event signature hashing
-          return log.address.toLowerCase() === this.HATS_PROTOCOL_ADDRESS.toLowerCase();
+          return (
+            log.address.toLowerCase() ===
+            this.HATS_PROTOCOL_ADDRESS.toLowerCase()
+          );
         } catch {
           return false;
         }
@@ -228,14 +248,16 @@ export class ProxyAdminHatService {
       return {
         success: true,
         proxyAdminHatId: newHatId,
-        transactionHash: txHash
+        transactionHash: txHash,
       };
-
     } catch (error: any) {
       console.error('❌ Failed to create Proxy Admin HAT:', error);
       return {
         success: false,
-        error: error?.message || error?.toString() || 'Failed to create Proxy Admin HAT'
+        error:
+          error?.message ||
+          error?.toString() ||
+          'Failed to create Proxy Admin HAT',
       };
     }
   }
@@ -254,12 +276,12 @@ export class ProxyAdminHatService {
   static async mintProxyAdminHat(
     proxyAdminHatId: string,
     proxyAddress: string,
-    walletClient: WalletClient
+    walletClient: WalletClient,
   ): Promise<ProxyAdminHatResult> {
     try {
       console.log('👑 Minting Proxy Admin HAT to proxy:', {
         hatId: proxyAdminHatId,
-        proxyAddress
+        proxyAddress,
       });
 
       // Validate HAT ID
@@ -267,32 +289,31 @@ export class ProxyAdminHatService {
       if (!hatValidation.isValid || !hatValidation.hatIdBigInt) {
         return {
           success: false,
-          error: `Invalid HAT ID: ${hatValidation.error}`
+          error: `Invalid HAT ID: ${hatValidation.error}`,
         };
       }
 
       const publicClient = createPublicClient({
         chain: base,
-        transport: http()
+        transport: http(),
       });
 
       // Encode mintHat function call
       const mintHatData = encodeFunctionData({
-        abi: [{
-          name: 'mintHat',
-          type: 'function',
-          inputs: [
-            { name: '_hatId', type: 'uint256' },
-            { name: '_wearer', type: 'address' }
-          ],
-          outputs: [{ name: 'success', type: 'bool' }],
-          stateMutability: 'nonpayable'
-        }],
+        abi: [
+          {
+            name: 'mintHat',
+            type: 'function',
+            inputs: [
+              { name: '_hatId', type: 'uint256' },
+              { name: '_wearer', type: 'address' },
+            ],
+            outputs: [{ name: 'success', type: 'bool' }],
+            stateMutability: 'nonpayable',
+          },
+        ],
         functionName: 'mintHat',
-        args: [
-          hatValidation.hatIdBigInt,
-          proxyAddress as `0x${string}`
-        ]
+        args: [hatValidation.hatIdBigInt, proxyAddress as `0x${string}`],
       });
 
       // Execute transaction
@@ -305,18 +326,20 @@ export class ProxyAdminHatService {
         to: this.HATS_PROTOCOL_ADDRESS as `0x${string}`,
         data: mintHatData,
         account,
-        chain: base
+        chain: base,
       });
 
       console.log('✅ Mint Proxy Admin HAT transaction sent:', txHash);
 
       // Wait for confirmation
-      const receipt = await publicClient.waitForTransactionReceipt({ hash: txHash });
+      const receipt = await publicClient.waitForTransactionReceipt({
+        hash: txHash,
+      });
 
       if (receipt.status !== 'success') {
         return {
           success: false,
-          error: 'Mint transaction reverted'
+          error: 'Mint transaction reverted',
         };
       }
 
@@ -325,14 +348,16 @@ export class ProxyAdminHatService {
       return {
         success: true,
         proxyAdminHatId,
-        transactionHash: txHash
+        transactionHash: txHash,
       };
-
     } catch (error: any) {
       console.error('❌ Failed to mint Proxy Admin HAT:', error);
       return {
         success: false,
-        error: error?.message || error?.toString() || 'Failed to mint Proxy Admin HAT'
+        error:
+          error?.message ||
+          error?.toString() ||
+          'Failed to mint Proxy Admin HAT',
       };
     }
   }
@@ -347,7 +372,7 @@ export class ProxyAdminHatService {
    * @returns Result with proxy admin HAT ID
    */
   static async setupProxyAdminHat(
-    params: ProxyAdminHatParams
+    params: ProxyAdminHatParams,
   ): Promise<ProxyAdminHatResult> {
     try {
       console.log('🚀 Setting up Proxy Admin HAT for pod:', params.podId);
@@ -359,20 +384,23 @@ export class ProxyAdminHatService {
         return createResult;
       }
 
-      console.log('✅ Step 1/2: Proxy Admin HAT created:', createResult.proxyAdminHatId);
+      console.log(
+        '✅ Step 1/2: Proxy Admin HAT created:',
+        createResult.proxyAdminHatId,
+      );
 
       // Step 2: Mint the admin HAT to the proxy
       const mintResult = await this.mintProxyAdminHat(
         createResult.proxyAdminHatId,
         params.proxyAddress,
-        params.walletClient
+        params.walletClient,
       );
 
       if (!mintResult.success) {
         return {
           success: false,
           error: `HAT created but minting failed: ${mintResult.error}`,
-          proxyAdminHatId: createResult.proxyAdminHatId
+          proxyAdminHatId: createResult.proxyAdminHatId,
         };
       }
 
@@ -382,14 +410,16 @@ export class ProxyAdminHatService {
       return {
         success: true,
         proxyAdminHatId: createResult.proxyAdminHatId,
-        transactionHash: mintResult.transactionHash
+        transactionHash: mintResult.transactionHash,
       };
-
     } catch (error: any) {
       console.error('❌ Failed to setup Proxy Admin HAT:', error);
       return {
         success: false,
-        error: error?.message || error?.toString() || 'Failed to setup Proxy Admin HAT'
+        error:
+          error?.message ||
+          error?.toString() ||
+          'Failed to setup Proxy Admin HAT',
       };
     }
   }
@@ -407,7 +437,7 @@ export class ProxyAdminHatService {
   static async verifyProxyAdminSetup(
     proxyAddress: string,
     proxyAdminHatId: string,
-    managementHatId: string
+    managementHatId: string,
   ): Promise<{
     isValid: boolean;
     proxyWearsAdminHat: boolean;
@@ -419,7 +449,7 @@ export class ProxyAdminHatService {
     try {
       const publicClient = createPublicClient({
         chain: base,
-        transport: http()
+        transport: http(),
       });
 
       // Validate HAT IDs
@@ -439,43 +469,47 @@ export class ProxyAdminHatService {
           isValid: false,
           proxyWearsAdminHat: false,
           proxyIsAdminOfManagementHat: false,
-          errors
+          errors,
         };
       }
 
       // Check if proxy wears admin HAT
-      const proxyWearsAdminHat = await publicClient.readContract({
+      const proxyWearsAdminHat = (await publicClient.readContract({
         address: this.HATS_PROTOCOL_ADDRESS as `0x${string}`,
-        abi: [{
-          name: 'isWearerOfHat',
-          type: 'function',
-          inputs: [
-            { name: '_user', type: 'address' },
-            { name: '_hatId', type: 'uint256' }
-          ],
-          outputs: [{ name: '', type: 'bool' }],
-          stateMutability: 'view'
-        }],
+        abi: [
+          {
+            name: 'isWearerOfHat',
+            type: 'function',
+            inputs: [
+              { name: '_user', type: 'address' },
+              { name: '_hatId', type: 'uint256' },
+            ],
+            outputs: [{ name: '', type: 'bool' }],
+            stateMutability: 'view',
+          },
+        ],
         functionName: 'isWearerOfHat',
-        args: [proxyAddress as `0x${string}`, adminHatValidation.hatIdBigInt!]
-      }) as boolean;
+        args: [proxyAddress as `0x${string}`, adminHatValidation.hatIdBigInt!],
+      })) as boolean;
 
       // Check if proxy is admin of management HAT
-      const proxyIsAdminOfManagementHat = await publicClient.readContract({
+      const proxyIsAdminOfManagementHat = (await publicClient.readContract({
         address: this.HATS_PROTOCOL_ADDRESS as `0x${string}`,
-        abi: [{
-          name: 'isAdminOfHat',
-          type: 'function',
-          inputs: [
-            { name: '_user', type: 'address' },
-            { name: '_hatId', type: 'uint256' }
-          ],
-          outputs: [{ name: '', type: 'bool' }],
-          stateMutability: 'view'
-        }],
+        abi: [
+          {
+            name: 'isAdminOfHat',
+            type: 'function',
+            inputs: [
+              { name: '_user', type: 'address' },
+              { name: '_hatId', type: 'uint256' },
+            ],
+            outputs: [{ name: '', type: 'bool' }],
+            stateMutability: 'view',
+          },
+        ],
         functionName: 'isAdminOfHat',
-        args: [proxyAddress as `0x${string}`, mgmtHatValidation.hatIdBigInt!]
-      }) as boolean;
+        args: [proxyAddress as `0x${string}`, mgmtHatValidation.hatIdBigInt!],
+      })) as boolean;
 
       // Collect errors
       if (!proxyWearsAdminHat) {
@@ -492,16 +526,15 @@ export class ProxyAdminHatService {
         proxyAddress,
         proxyWearsAdminHat,
         proxyIsAdminOfManagementHat,
-        isValid
+        isValid,
       });
 
       return {
         isValid,
         proxyWearsAdminHat,
         proxyIsAdminOfManagementHat,
-        errors
+        errors,
       };
-
     } catch (error: any) {
       console.error('❌ Failed to verify proxy admin setup:', error);
       errors.push(error?.message || 'Verification failed');
@@ -510,7 +543,7 @@ export class ProxyAdminHatService {
         isValid: false,
         proxyWearsAdminHat: false,
         proxyIsAdminOfManagementHat: false,
-        errors
+        errors,
       };
     }
   }

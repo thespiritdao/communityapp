@@ -2,7 +2,14 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { MoreVertical, Trash2, UserX, UserCheck, Pin, PinOff } from 'lucide-react';
+import {
+  MoreVertical,
+  Trash2,
+  UserX,
+  UserCheck,
+  Pin,
+  PinOff,
+} from 'lucide-react';
 import { supabase } from '@/utils/supabaseClient';
 import { useToast } from '@/components/ui/use-toast';
 import type { Message } from '../types';
@@ -18,7 +25,7 @@ export const ChatModerationMenu: React.FC<ChatModerationMenuProps> = ({
   message,
   onMessageDeleted,
   onMessagePinned,
-  chatGroupId
+  chatGroupId,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -67,7 +74,7 @@ export const ChatModerationMenu: React.FC<ChatModerationMenuProps> = ({
       toast({
         title: 'Error',
         description: 'Failed to delete message. Please try again.',
-        variant: 'destructive'
+        variant: 'destructive',
       });
     } finally {
       setIsLoading(false);
@@ -75,21 +82,23 @@ export const ChatModerationMenu: React.FC<ChatModerationMenuProps> = ({
   };
 
   const handleMute = async () => {
-    if (!confirm('Mute this user? They will be unable to send messages in this chat.')) {
+    if (
+      !confirm(
+        'Mute this user? They will be unable to send messages in this chat.',
+      )
+    ) {
       return;
     }
 
     setIsLoading(true);
     try {
       // Insert into chat_muted_users table
-      const { error } = await supabase
-        .from('chat_muted_users')
-        .insert({
-          chat_group_id: chatGroupId,
-          user_wallet: message.sender_wallet_id.toLowerCase(),
-          muted_by: (await supabase.auth.getUser()).data.user?.id,
-          muted_until: null, // Permanent mute (can add duration later)
-        });
+      const { error } = await supabase.from('chat_muted_users').insert({
+        chat_group_id: chatGroupId,
+        user_wallet: message.sender_wallet_id.toLowerCase(),
+        muted_by: (await supabase.auth.getUser()).data.user?.id,
+        muted_until: null, // Permanent mute (can add duration later)
+      });
 
       if (error) throw error;
 
@@ -115,7 +124,7 @@ export const ChatModerationMenu: React.FC<ChatModerationMenuProps> = ({
         toast({
           title: 'Error',
           description: 'Failed to mute user. Please try again.',
-          variant: 'destructive'
+          variant: 'destructive',
         });
       }
     } finally {
@@ -147,7 +156,7 @@ export const ChatModerationMenu: React.FC<ChatModerationMenuProps> = ({
       toast({
         title: 'Error',
         description: 'Failed to unmute user. Please try again.',
-        variant: 'destructive'
+        variant: 'destructive',
       });
     } finally {
       setIsLoading(false);
@@ -189,7 +198,7 @@ export const ChatModerationMenu: React.FC<ChatModerationMenuProps> = ({
       toast({
         title: 'Error',
         description: 'Failed to update pin status. Please try again.',
-        variant: 'destructive'
+        variant: 'destructive',
       });
     } finally {
       setIsLoading(false);

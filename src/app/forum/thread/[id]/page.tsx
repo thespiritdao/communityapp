@@ -33,7 +33,7 @@ export default function ThreadDetailPage() {
           )
         `)
         .eq('id', id)
-        .single();  // We expect exactly one row
+        .single(); // We expect exactly one row
 
       if (error) {
         setError(error.message);
@@ -78,8 +78,8 @@ export default function ThreadDetailPage() {
       categoryId={categoryId}
       fallbackMessage="You need appropriate permissions to view this thread."
     >
-    <ForumContainer>
-      {/* Example of how you might display metadata if desired:
+      <ForumContainer>
+        {/* Example of how you might display metadata if desired:
           <h1>{thread.title}</h1>
           <p>
             By: {thread.author_first_name 
@@ -90,19 +90,19 @@ export default function ThreadDetailPage() {
           <p>Created: {new Date(thread.created_at).toLocaleString()}</p>
       */}
 
-      {/* PostList fetches and displays all posts for this thread */}
-      <PostList threadId={id} />
+        {/* PostList fetches and displays all posts for this thread */}
+        <PostList threadId={id} />
 
-      <div>
-        <button
-          className={styles.ForumBackButton}
-          onClick={() => router.push('/forum')}
-          style={{ marginTop: '1rem' }}
-        >
-          Back to Forum
-        </button>
-      </div>
-    </ForumContainer>
+        <div>
+          <button
+            className={styles.ForumBackButton}
+            onClick={() => router.push('/forum')}
+            style={{ marginTop: '1rem' }}
+          >
+            Back to Forum
+          </button>
+        </div>
+      </ForumContainer>
     </ForumAccessGate>
   );
 }

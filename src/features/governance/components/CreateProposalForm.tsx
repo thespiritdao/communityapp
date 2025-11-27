@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   useAccount,
   useChainId,
@@ -8,13 +8,13 @@ import {
   useBlockNumber,
   useWaitForTransactionReceipt,
 } from 'wagmi';
-import { 
-  Transaction, 
-  TransactionButton, 
+import {
+  Transaction,
+  TransactionButton,
   TransactionSponsor,
   TransactionStatus,
   TransactionStatusLabel,
-  TransactionStatusAction 
+  TransactionStatusAction,
 } from '@coinbase/onchainkit/transaction';
 import { useQueryClient } from '@tanstack/react-query';
 import { base } from 'viem/chains';
@@ -27,7 +27,11 @@ import { createPublicClient, http } from 'viem';
 import { useForum } from '@/features/forum/hooks/useForum';
 import { supabase } from '@/utils/supabaseClient';
 import { fetchTokenBalances } from '@/utils/fetchTokenBalances';
-import { getUserIdentity, canParticipateInGovernance, logUserIdentity } from '@/utils/accessControlUtils';
+import {
+  getUserIdentity,
+  canParticipateInGovernance,
+  logUserIdentity,
+} from '@/utils/accessControlUtils';
 import { useHatPermissions } from '@/hooks/useHatPermissions';
 import { useGovernancePermission } from '@/hooks/useGovernancePermission';
 import UserTagging from '@/components/UserTagging';
@@ -55,23 +59,21 @@ interface CreateProposalFormProps {
 
 // Helper function to validate BigInt values
 const validateBigIntArray = (values: any[], fieldName: string): bigint[] => {
-  
   if (!Array.isArray(values)) {
     console.error(`❌ ${fieldName} is not an array:`, values);
     throw new Error(`${fieldName} must be an array`);
   }
-  
+
   return values.map((value, index) => {
-    
     if (value === null || value === undefined) {
       console.error(`❌ ${fieldName}[${index}] is null/undefined`);
       throw new Error(`${fieldName}[${index}] cannot be null or undefined`);
     }
-    
+
     if (typeof value === 'bigint') {
       return value;
     }
-    
+
     if (typeof value === 'number') {
       if (isNaN(value) || !isFinite(value)) {
         console.error(`❌ ${fieldName}[${index}] is NaN or infinite:`, value);
@@ -80,75 +82,110 @@ const validateBigIntArray = (values: any[], fieldName: string): bigint[] => {
       const bigIntValue = BigInt(value);
       return bigIntValue;
     }
-    
+
     if (typeof value === 'string') {
       if (value.trim() === '' || value === 'NaN') {
-        console.error(`❌ ${fieldName}[${index}] is empty string or 'NaN':`, value);
+        console.error(
+          `❌ ${fieldName}[${index}] is empty string or 'NaN':`,
+          value,
+        );
         throw new Error(`${fieldName}[${index}] cannot be empty or 'NaN'`);
       }
       try {
         const bigIntValue = BigInt(value);
         return bigIntValue;
       } catch (error) {
-        console.error(`❌ Failed to convert ${fieldName}[${index}] string to BigInt:`, value, error);
-        throw new Error(`${fieldName}[${index}] '${value}' is not a valid integer`);
+        console.error(
+          `❌ Failed to convert ${fieldName}[${index}] string to BigInt:`,
+          value,
+          error,
+        );
+        throw new Error(
+          `${fieldName}[${index}] '${value}' is not a valid integer`,
+        );
       }
     }
-    
-    console.error(`❌ ${fieldName}[${index}] has unsupported type:`, typeof value, value);
-    throw new Error(`${fieldName}[${index}] has unsupported type: ${typeof value}`);
+
+    console.error(
+      `❌ ${fieldName}[${index}] has unsupported type:`,
+      typeof value,
+      value,
+    );
+    throw new Error(
+      `${fieldName}[${index}] has unsupported type: ${typeof value}`,
+    );
   });
 };
 
 // Helper function to validate address arrays
-const validateAddressArray = (addresses: any[], fieldName: string): `0x${string}`[] => {
-  
+const validateAddressArray = (
+  addresses: any[],
+  fieldName: string,
+): `0x${string}`[] => {
   if (!Array.isArray(addresses)) {
     console.error(`❌ ${fieldName} is not an array:`, addresses);
     throw new Error(`${fieldName} must be an array`);
   }
-  
+
   return addresses.map((address, index) => {
-    
     if (typeof address !== 'string') {
-      console.error(`❌ ${fieldName}[${index}] is not a string:`, typeof address, address);
+      console.error(
+        `❌ ${fieldName}[${index}] is not a string:`,
+        typeof address,
+        address,
+      );
       throw new Error(`${fieldName}[${index}] must be a string`);
     }
-    
+
     if (!address.startsWith('0x')) {
-      console.error(`❌ ${fieldName}[${index}] doesn't start with 0x:`, address);
+      console.error(
+        `❌ ${fieldName}[${index}] doesn't start with 0x:`,
+        address,
+      );
       throw new Error(`${fieldName}[${index}] must start with 0x`);
     }
-    
+
     if (address.length !== 42) {
-      console.error(`❌ ${fieldName}[${index}] has wrong length:`, address.length, address);
+      console.error(
+        `❌ ${fieldName}[${index}] has wrong length:`,
+        address.length,
+        address,
+      );
       throw new Error(`${fieldName}[${index}] must be 42 characters long`);
     }
-    
+
     return address as `0x${string}`;
   });
 };
 
 // Helper function to validate calldata arrays
-const validateCalldataArray = (calldatas: any[], fieldName: string): `0x${string}`[] => {
-  
+const validateCalldataArray = (
+  calldatas: any[],
+  fieldName: string,
+): `0x${string}`[] => {
   if (!Array.isArray(calldatas)) {
     console.error(`❌ ${fieldName} is not an array:`, calldatas);
     throw new Error(`${fieldName} must be an array`);
   }
-  
+
   return calldatas.map((calldata, index) => {
-    
     if (typeof calldata !== 'string') {
-      console.error(`❌ ${fieldName}[${index}] is not a string:`, typeof calldata, calldata);
+      console.error(
+        `❌ ${fieldName}[${index}] is not a string:`,
+        typeof calldata,
+        calldata,
+      );
       throw new Error(`${fieldName}[${index}] must be a string`);
     }
-    
+
     if (!calldata.startsWith('0x')) {
-      console.error(`❌ ${fieldName}[${index}] doesn't start with 0x:`, calldata);
+      console.error(
+        `❌ ${fieldName}[${index}] doesn't start with 0x:`,
+        calldata,
+      );
       throw new Error(`${fieldName}[${index}] must start with 0x`);
     }
-    
+
     return calldata as `0x${string}`;
   });
 };
@@ -158,24 +195,29 @@ const validateTransactionData = (data: any) => {
   const validation = {
     isValid: true,
     issues: [] as string[],
-    data: {} as any
+    data: {} as any,
   };
   try {
-    validation.data = JSON.parse(JSON.stringify(data, (key, value) => {
-      if (typeof value === 'bigint') {
-        return value.toString();
-      }
-      return value;
-    }));
+    validation.data = JSON.parse(
+      JSON.stringify(data, (key, value) => {
+        if (typeof value === 'bigint') {
+          return value.toString();
+        }
+        return value;
+      }),
+    );
     if (!validation.data.address) validation.issues.push('Missing address');
     if (!validation.data.chainId) validation.issues.push('Missing chainId');
     if (!validation.data.calls) validation.issues.push('Missing calls');
     if (Array.isArray(validation.data.calls)) {
       validation.data.calls.forEach((call: any, index: number) => {
-        if (!call.address) validation.issues.push(`Call ${index}: Missing address`);
+        if (!call.address)
+          validation.issues.push(`Call ${index}: Missing address`);
         if (!call.abi) validation.issues.push(`Call ${index}: Missing ABI`);
-        if (!call.functionName) validation.issues.push(`Call ${index}: Missing functionName`);
-        if (!Array.isArray(call.args)) validation.issues.push(`Call ${index}: Missing args array`);
+        if (!call.functionName)
+          validation.issues.push(`Call ${index}: Missing functionName`);
+        if (!Array.isArray(call.args))
+          validation.issues.push(`Call ${index}: Missing args array`);
       });
     } else {
       validation.issues.push('Calls is not an array');
@@ -183,12 +225,16 @@ const validateTransactionData = (data: any) => {
     validation.isValid = validation.issues.length === 0;
   } catch (e) {
     validation.isValid = false;
-    validation.issues.push(`Serialization error: ${e instanceof Error ? e.message : String(e)}`);
+    validation.issues.push(
+      `Serialization error: ${e instanceof Error ? e.message : String(e)}`,
+    );
   }
   return validation;
 };
 
-export const CreateProposalForm: React.FC<CreateProposalFormProps> = ({ onSuccess }) => {
+export const CreateProposalForm: React.FC<CreateProposalFormProps> = ({
+  onSuccess,
+}) => {
   const { address, isConnected, connector } = useAccount();
   const chainId = useChainId();
   const { toast } = useToast();
@@ -196,7 +242,8 @@ export const CreateProposalForm: React.FC<CreateProposalFormProps> = ({ onSucces
   const { userHats } = useHatPermissions();
 
   // ✅ NEW: Check governance participation permission
-  const { canParticipate: hasGovernancePermission, governanceRole } = useGovernancePermission();
+  const { canParticipate: hasGovernancePermission, governanceRole } =
+    useGovernancePermission();
 
   const [formData, setFormData] = useState<ProposalFormData>({
     title: '',
@@ -204,17 +251,25 @@ export const CreateProposalForm: React.FC<CreateProposalFormProps> = ({ onSucces
     forumThreadId: '',
     selectedToken: '',
   });
-  const [userTokens, setUserTokens] = useState<{ id: string; label: string }[]>([]);
+  const [userTokens, setUserTokens] = useState<{ id: string; label: string }[]>(
+    [],
+  );
   const { loadPosts } = useForum();
   const { refreshNotifications } = useUnifiedNotifications();
 
   const [debugMode, setDebugMode] = useState(true);
   const [isDelegating, setIsDelegating] = useState(false);
-  const [delegationTxHash, setDelegationTxHash] = useState<`0x${string}` | undefined>();
+  const [delegationTxHash, setDelegationTxHash] = useState<
+    `0x${string}` | undefined
+  >();
   const [validationError, setValidationError] = useState<string | null>(null);
   const [hasInteracted, setHasInteracted] = useState(false);
-  const [governanceAccess, setGovernanceAccess] = useState<boolean | null>(null); // null = loading, boolean = result
-  const [hasProcessedProposal, setHasProcessedProposal] = useState<string | null>(null);
+  const [governanceAccess, setGovernanceAccess] = useState<boolean | null>(
+    null,
+  ); // null = loading, boolean = result
+  const [hasProcessedProposal, setHasProcessedProposal] = useState<
+    string | null
+  >(null);
 
   // Check governance access when wallet connects
   useEffect(() => {
@@ -227,15 +282,19 @@ export const CreateProposalForm: React.FC<CreateProposalFormProps> = ({ onSucces
       try {
         // Fetch token balances
         const tokenBalances = await fetchTokenBalances(address);
-        
+
         // Get user identity
-        const identity = await getUserIdentity(address, tokenBalances, userHats);
+        const identity = await getUserIdentity(
+          address,
+          tokenBalances,
+          userHats,
+        );
         logUserIdentity(identity, 'Governance Access Check');
-        
+
         // Check if user can participate in governance
         const canParticipate = canParticipateInGovernance(identity);
         console.log(`🗳️ User can participate in governance: ${canParticipate}`);
-        
+
         setGovernanceAccess(canParticipate);
       } catch (error) {
         console.error('Error checking governance access:', error);
@@ -250,100 +309,107 @@ export const CreateProposalForm: React.FC<CreateProposalFormProps> = ({ onSucces
   const { data: latestBlock } = useBlockNumber();
 
   // Wait for delegation transaction confirmation
-  const { isLoading: isDelegationPending, isSuccess: isDelegationSuccess } = useWaitForTransactionReceipt({
-    hash: delegationTxHash,
-    confirmations: 2, // Wait for 2 confirmations on Base
-  });
+  const { isLoading: isDelegationPending, isSuccess: isDelegationSuccess } =
+    useWaitForTransactionReceipt({
+      hash: delegationTxHash,
+      confirmations: 2, // Wait for 2 confirmations on Base
+    });
 
   // Read NFT balance with more robust error handling
-	const {
-	  data: nftBalance,
-	  isLoading: isLoadingBalance,
-	  refetch: refetchBalance,
-	  error: balanceError
-	} = useReadContract({
-	  address: ADVOCATE_ADDRESS,
-	  abi: AdvocateMembershipABI,
-	  functionName: 'balanceOf',
-	  args: address ? [address] : undefined,
-	  query: {
-		enabled: !!address && !!ADVOCATE_ADDRESS && isConnected,
-		staleTime: 60000,       // ✅ 1 minute
-		gcTime: 120000,         // ✅ 2 minutes
-		retry: (failureCount, error) => {
-		  if (error?.message?.includes('429') || error?.message?.includes('rate limit')) {
-			return false;
-		  }
-		  return failureCount < 2;
-		},
-		retryDelay: attemptIndex => Math.min(1000 * 2 ** attemptIndex, 10000),
-	  }
-	});
+  const {
+    data: nftBalance,
+    isLoading: isLoadingBalance,
+    refetch: refetchBalance,
+    error: balanceError,
+  } = useReadContract({
+    address: ADVOCATE_ADDRESS,
+    abi: AdvocateMembershipABI,
+    functionName: 'balanceOf',
+    args: address ? [address] : undefined,
+    query: {
+      enabled: !!address && !!ADVOCATE_ADDRESS && isConnected,
+      staleTime: 60000, // ✅ 1 minute
+      gcTime: 120000, // ✅ 2 minutes
+      retry: (failureCount, error) => {
+        if (
+          error?.message?.includes('429') ||
+          error?.message?.includes('rate limit')
+        ) {
+          return false;
+        }
+        return failureCount < 2;
+      },
+      retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 10000),
+    },
+  });
 
   // Robust Voting Power Hooks
-	const {
-	  data: votingPower,
-	  refetch: refetchVotingPower,
-	  isLoading: isLoadingVotingPower,
-	  error: votingPowerError
-	} = useReadContract({
-	  address: ADVOCATE_ADDRESS,
-	  abi: AdvocateMembershipABI,
-	  functionName: 'getVotes',
-	  args: address ? [address] : undefined,
-	  query: {
-		enabled: !!address && !!ADVOCATE_ADDRESS && isConnected,
-		refetchInterval: false, // ✅ Disable automatic refetching to reduce calls
-		staleTime: 60000,       // ✅ 1 minute - data stays fresh longer
-		gcTime: 120000,         // ✅ 2 minutes - keep in cache longer
-		retry: (failureCount, error) => {
-		  // Don't retry on rate limit errors
-		  if (error?.message?.includes('429') || error?.message?.includes('rate limit')) {
-			return false;
-		  }
-		  return failureCount < 2; // Only retry twice for other errors
-		},
-		retryDelay: attemptIndex => Math.min(1000 * 2 ** attemptIndex, 10000), // Exponential backoff
-	  }
-	});
-
+  const {
+    data: votingPower,
+    refetch: refetchVotingPower,
+    isLoading: isLoadingVotingPower,
+    error: votingPowerError,
+  } = useReadContract({
+    address: ADVOCATE_ADDRESS,
+    abi: AdvocateMembershipABI,
+    functionName: 'getVotes',
+    args: address ? [address] : undefined,
+    query: {
+      enabled: !!address && !!ADVOCATE_ADDRESS && isConnected,
+      refetchInterval: false, // ✅ Disable automatic refetching to reduce calls
+      staleTime: 60000, // ✅ 1 minute - data stays fresh longer
+      gcTime: 120000, // ✅ 2 minutes - keep in cache longer
+      retry: (failureCount, error) => {
+        // Don't retry on rate limit errors
+        if (
+          error?.message?.includes('429') ||
+          error?.message?.includes('rate limit')
+        ) {
+          return false;
+        }
+        return failureCount < 2; // Only retry twice for other errors
+      },
+      retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 10000), // Exponential backoff
+    },
+  });
 
   // Check current delegate with better error handling
-	const {
-	  data: currentDelegate,
-	  refetch: refetchDelegate,
-	  error: delegateError
-	} = useReadContract({
-	  address: ADVOCATE_ADDRESS,
-	  abi: AdvocateMembershipABI,
-	  functionName: 'delegates',
-	  args: address ? [address] : undefined,
-	  query: {
-		enabled: !!address && !!ADVOCATE_ADDRESS && isConnected,
-		staleTime: 60000,       // ✅ 1 minute
-		gcTime: 120000,         // ✅ 2 minutes
-		retry: (failureCount, error) => {
-		  if (error?.message?.includes('429') || error?.message?.includes('rate limit')) {
-			return false;
-		  }
-		  return failureCount < 2;
-		},
-		retryDelay: attemptIndex => Math.min(1000 * 2 ** attemptIndex, 10000),
-	  }
-	});
+  const {
+    data: currentDelegate,
+    refetch: refetchDelegate,
+    error: delegateError,
+  } = useReadContract({
+    address: ADVOCATE_ADDRESS,
+    abi: AdvocateMembershipABI,
+    functionName: 'delegates',
+    args: address ? [address] : undefined,
+    query: {
+      enabled: !!address && !!ADVOCATE_ADDRESS && isConnected,
+      staleTime: 60000, // ✅ 1 minute
+      gcTime: 120000, // ✅ 2 minutes
+      retry: (failureCount, error) => {
+        if (
+          error?.message?.includes('429') ||
+          error?.message?.includes('rate limit')
+        ) {
+          return false;
+        }
+        return failureCount < 2;
+      },
+      retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 10000),
+    },
+  });
 
   // Get proposal threshold
-  const {
-    data: proposalThreshold,
-    isLoading: isLoadingThreshold
-  } = useReadContract({
-    address: GOVERNOR_ADDRESS,
-    abi: DAOGovernorABI,
-    functionName: 'proposalThreshold',
-    query: {
-      enabled: !!GOVERNOR_ADDRESS && isConnected,
-    }
-  });
+  const { data: proposalThreshold, isLoading: isLoadingThreshold } =
+    useReadContract({
+      address: GOVERNOR_ADDRESS,
+      abi: DAOGovernorABI,
+      functionName: 'proposalThreshold',
+      query: {
+        enabled: !!GOVERNOR_ADDRESS && isConnected,
+      },
+    });
 
   // Public client for direct RPC test
   const publicClient = createPublicClient({
@@ -351,32 +417,41 @@ export const CreateProposalForm: React.FC<CreateProposalFormProps> = ({ onSucces
     transport: http(process.env.NEXT_PUBLIC_RPC_URL!),
   });
 
-	// Handle delegation transaction completion
-	useEffect(() => {
-	  if (isDelegationSuccess && delegationTxHash) {
-		        // Delegation transaction confirmed
-		
-		// Clear caches and refetch after delegation success
-		setTimeout(async () => {
-		  // Invalidate all queries to force fresh data
-		  queryClient.invalidateQueries();
-		  
-		  await Promise.all([
-			refetchVotingPower(),
-			refetchDelegate(),
-			refetchBalance()
-		  ]);
-		  
-		  setIsDelegating(false);
-		  setDelegationTxHash(undefined);
-		  
-		  toast({
-			title: "Delegation Successful!",
-			description: "Your voting power is now active. You can create proposals.",
-		  });
-		}, 3000);
-	  }
-	}, [isDelegationSuccess, delegationTxHash, queryClient, refetchVotingPower, refetchDelegate, refetchBalance, toast]); // ❌ Removed votingPowerQueryKey from dependencies
+  // Handle delegation transaction completion
+  useEffect(() => {
+    if (isDelegationSuccess && delegationTxHash) {
+      // Delegation transaction confirmed
+
+      // Clear caches and refetch after delegation success
+      setTimeout(async () => {
+        // Invalidate all queries to force fresh data
+        queryClient.invalidateQueries();
+
+        await Promise.all([
+          refetchVotingPower(),
+          refetchDelegate(),
+          refetchBalance(),
+        ]);
+
+        setIsDelegating(false);
+        setDelegationTxHash(undefined);
+
+        toast({
+          title: 'Delegation Successful!',
+          description:
+            'Your voting power is now active. You can create proposals.',
+        });
+      }, 3000);
+    }
+  }, [
+    isDelegationSuccess,
+    delegationTxHash,
+    queryClient,
+    refetchVotingPower,
+    refetchDelegate,
+    refetchBalance,
+    toast,
+  ]); // ❌ Removed votingPowerQueryKey from dependencies
 
   // Fetch user tokens on mount or address change
   useEffect(() => {
@@ -385,11 +460,15 @@ export const CreateProposalForm: React.FC<CreateProposalFormProps> = ({ onSucces
       try {
         const balances = await fetchTokenBalances(address);
         const tokens: { id: string; label: string }[] = [];
-        if (balances.hasProofOfCuriosity) tokens.push({ id: 'poc', label: 'Proof of Curiosity' });
-        if (balances.hasExecutivePod) tokens.push({ id: 'exec', label: 'Executive Pod' });
+        if (balances.hasProofOfCuriosity)
+          tokens.push({ id: 'poc', label: 'Proof of Curiosity' });
+        if (balances.hasExecutivePod)
+          tokens.push({ id: 'exec', label: 'Executive Pod' });
         if (balances.hasDevPod) tokens.push({ id: 'dev', label: 'Dev Pod' });
-        if (balances.hasMarketAdmin) tokens.push({ id: 'market', label: 'Market Admin' });
-        if (balances.hasBountyHat) tokens.push({ id: 'bounty', label: 'Bounty Hat' });
+        if (balances.hasMarketAdmin)
+          tokens.push({ id: 'market', label: 'Market Admin' });
+        if (balances.hasBountyHat)
+          tokens.push({ id: 'bounty', label: 'Bounty Hat' });
         setUserTokens(tokens);
       } catch (error) {
         console.error('Error fetching user tokens:', error);
@@ -419,14 +498,22 @@ export const CreateProposalForm: React.FC<CreateProposalFormProps> = ({ onSucces
     // If we have voting power, check if we're properly delegated
     if (votingPower && BigInt(votingPower.toString()) > 0n) {
       // Check if we're delegated to ourselves
-      const isDelegatedToSelf = currentDelegate && 
+      const isDelegatedToSelf =
+        currentDelegate &&
         currentDelegate.toLowerCase() === address.toLowerCase();
       return !isDelegatedToSelf;
     }
 
     // If we have NFTs but no voting power, we need delegation
     return true;
-  }, [address, nftBalance, votingPower, currentDelegate, isLoadingBalance, isLoadingVotingPower]);
+  }, [
+    address,
+    nftBalance,
+    votingPower,
+    currentDelegate,
+    isLoadingBalance,
+    isLoadingVotingPower,
+  ]);
 
   // Enhanced delegation handlers
   const handleDelegationStart = () => {
@@ -435,7 +522,7 @@ export const CreateProposalForm: React.FC<CreateProposalFormProps> = ({ onSucces
   };
 
   const handleDelegationSuccess = (transactionHash: `0x${string}`) => {
-          // Delegation transaction submitted
+    // Delegation transaction submitted
     setDelegationTxHash(transactionHash);
     // Don't set isDelegating to false here - wait for confirmation
   };
@@ -444,20 +531,21 @@ export const CreateProposalForm: React.FC<CreateProposalFormProps> = ({ onSucces
     console.error('Delegation failed:', error);
     setIsDelegating(false);
     setDelegationTxHash(undefined);
-    
+
     let errorMessage = 'Unknown error occurred';
-    
+
     // Parse common error types
     if (error.message?.includes('NaN')) {
-      errorMessage = 'Invalid address parameter. Please try refreshing the page.';
+      errorMessage =
+        'Invalid address parameter. Please try refreshing the page.';
     } else if (error.shortMessage) {
       errorMessage = error.shortMessage;
     } else if (error.message) {
       errorMessage = error.message;
     }
-    
+
     toast({
-      title: "Delegation Failed",
+      title: 'Delegation Failed',
       description: errorMessage,
       variant: 'destructive',
     });
@@ -465,18 +553,18 @@ export const CreateProposalForm: React.FC<CreateProposalFormProps> = ({ onSucces
 
   // Handler for thread selection
   const handleThreadSelect = async (threadId: string) => {
-    setFormData(prev => ({ ...prev, forumThreadId: threadId }));
+    setFormData((prev) => ({ ...prev, forumThreadId: threadId }));
     if (threadId) {
       const result = await loadPosts(threadId, 0, 1);
       if (result.success && result.posts && result.posts.length > 0) {
-        setFormData(prev => ({ ...prev, body: result.posts[0].content }));
+        setFormData((prev) => ({ ...prev, body: result.posts[0].content }));
       }
     }
   };
 
   // Form handlers
   const handleFormChange = (field: keyof ProposalFormData, value: any) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+    setFormData((prev) => ({ ...prev, [field]: value }));
     setHasInteracted(true);
     // Clear validation error when form changes
     if (validationError) {
@@ -506,7 +594,9 @@ export const CreateProposalForm: React.FC<CreateProposalFormProps> = ({ onSucces
 
     // Check permission first
     if (!hasGovernancePermission) {
-      console.log('❌ Cannot create proposal: No governanceParticipation permission');
+      console.log(
+        '❌ Cannot create proposal: No governanceParticipation permission',
+      );
       return false;
     }
 
@@ -521,65 +611,71 @@ export const CreateProposalForm: React.FC<CreateProposalFormProps> = ({ onSucces
   }, [hasGovernancePermission, hasVotingPower]);
 
   // ENHANCED: Memoized proposal arguments with comprehensive validation and logging
-	const proposalArgs = React.useMemo(() => {
-	  
-	  
-	  const targets = [ADVOCATE_ADDRESS];
-	  const values = [0n];
-	  const calldatas = [encodeFunctionData({
-		abi: AdvocateMembershipABI,
-		functionName: "name",
-		args: [],
-	  })];
-	  
-	  
-	  const description = `# ${formData.title}\n\n${formData.body}${formData.forumThreadId ? `\n\nForum: ${formData.forumThreadId}` : ''}`;
-	  try {
-		setValidationError(null);
+  const proposalArgs = React.useMemo(() => {
+    const targets = [ADVOCATE_ADDRESS];
+    const values = [0n];
+    const calldatas = [
+      encodeFunctionData({
+        abi: AdvocateMembershipABI,
+        functionName: 'name',
+        args: [],
+      }),
+    ];
 
-		// Only validate if user has actually started filling out the form and the form is not empty
-		if (hasInteracted && (formData.title || formData.body)) {
-			if (!formData.title?.trim()) throw new Error('Title is required and cannot be empty');
-			if (!formData.body?.trim()) throw new Error('Body is required and cannot be empty');
-		}
-		if (targets.length !== values.length || targets.length !== calldatas.length) {
-		  throw new Error(`Array length mismatch: targets(${targets.length}), values(${values.length}), calldatas(${calldatas.length})`);
-		}
+    const description = `# ${formData.title}\n\n${formData.body}${formData.forumThreadId ? `\n\nForum: ${formData.forumThreadId}` : ''}`;
+    try {
+      setValidationError(null);
 
-		// Log the constructed values for debug
-		  // Removed console.log statements for cleaner output
+      // Only validate if user has actually started filling out the form and the form is not empty
+      if (hasInteracted && (formData.title || formData.body)) {
+        if (!formData.title?.trim())
+          throw new Error('Title is required and cannot be empty');
+        if (!formData.body?.trim())
+          throw new Error('Body is required and cannot be empty');
+      }
+      if (
+        targets.length !== values.length ||
+        targets.length !== calldatas.length
+      ) {
+        throw new Error(
+          `Array length mismatch: targets(${targets.length}), values(${values.length}), calldatas(${calldatas.length})`,
+        );
+      }
 
-		return [
-		  targets,
-		  values,
-		  calldatas,
-		  description,
-		  formData.title,
-		  formData.forumThreadId || '',
-		] as const;
-	  } catch (error) {
-		// Only log error if user is actively editing and form is not empty
-		if (hasInteracted && (formData.title || formData.body)) {
-			console.error('❌ === PROPOSAL ARGS PREPARATION FAILED ===');
-			console.error('Error:', error);
-			setValidationError(error instanceof Error ? error.message : 'Unknown validation error');
-		}
-		// Return safe defaults so the component doesn't crash (but this proposal will fail to send)
-		return [
-		  targets,
-		  values,
-		  calldatas,
-		  description,
-		  formData.title,
-		  formData.forumThreadId || '',
-		] as const;
-	  }
-	}, [formData, ADVOCATE_ADDRESS, AdvocateMembershipABI, hasInteracted]);
+      // Log the constructed values for debug
+      // Removed console.log statements for cleaner output
 
+      return [
+        targets,
+        values,
+        calldatas,
+        description,
+        formData.title,
+        formData.forumThreadId || '',
+      ] as const;
+    } catch (error) {
+      // Only log error if user is actively editing and form is not empty
+      if (hasInteracted && (formData.title || formData.body)) {
+        console.error('❌ === PROPOSAL ARGS PREPARATION FAILED ===');
+        console.error('Error:', error);
+        setValidationError(
+          error instanceof Error ? error.message : 'Unknown validation error',
+        );
+      }
+      // Return safe defaults so the component doesn't crash (but this proposal will fail to send)
+      return [
+        targets,
+        values,
+        calldatas,
+        description,
+        formData.title,
+        formData.forumThreadId || '',
+      ] as const;
+    }
+  }, [formData, ADVOCATE_ADDRESS, AdvocateMembershipABI, hasInteracted]);
 
   // Enhanced validation for submit button
   const canSubmitProposal = React.useMemo(() => {
-    
     const checks = {
       canCreateProposal,
       needsDelegation: !needsDelegation,
@@ -587,18 +683,24 @@ export const CreateProposalForm: React.FC<CreateProposalFormProps> = ({ onSucces
       hasBody: formData.body.trim().length > 0,
       notDelegating: !isDelegating,
       noValidationError: !validationError,
-      argsValid: proposalArgs && proposalArgs[0].length > 0 && proposalArgs[1].length > 0
+      argsValid:
+        proposalArgs &&
+        proposalArgs[0].length > 0 &&
+        proposalArgs[1].length > 0,
     };
-    
-    
+
     const canSubmit = Object.values(checks).every(Boolean);
-    
-    return (
-      canSubmit &&
-      !!formData.forumThreadId &&
-      !!formData.selectedToken
-    );
-  }, [canCreateProposal, needsDelegation, formData.title, formData.body, isDelegating, validationError, proposalArgs]);
+
+    return canSubmit && !!formData.forumThreadId && !!formData.selectedToken;
+  }, [
+    canCreateProposal,
+    needsDelegation,
+    formData.title,
+    formData.body,
+    isDelegating,
+    validationError,
+    proposalArgs,
+  ]);
 
   // Early return for connection issues
   if (!isConnected || !address) {
@@ -633,7 +735,7 @@ export const CreateProposalForm: React.FC<CreateProposalFormProps> = ({ onSucces
       </div>
     );
   }
-  
+
   const proposeCall = {
     address: GOVERNOR_ADDRESS,
     abi: DAOGovernorABI,
@@ -646,7 +748,7 @@ export const CreateProposalForm: React.FC<CreateProposalFormProps> = ({ onSucces
     address: address?.toLowerCase() as `0x${string}`,
     chainId: base.id, // Use base.id for Base
     calls: [proposeCall],
-    isSponsored: true
+    isSponsored: true,
   };
   const validation = validateTransactionData(transactionData);
   if (validation.isValid) {
@@ -664,25 +766,37 @@ export const CreateProposalForm: React.FC<CreateProposalFormProps> = ({ onSucces
             Submit Proposal
           </h1>
           <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-            Create a new proposal for the SpiritDAO community to vote on. 
+            Create a new proposal for the SpiritDAO community to vote on.
           </p>
         </div>
 
         <div className="bg-white rounded-xl shadow-lg overflow-hidden">
           {/* Status Bar */}
-          <div className="px-6 py-4" style={{ backgroundColor: '#e9f9ec', color: '#000' }}>
-                          <div className="flex items-center justify-between">
+          <div
+            className="px-6 py-4"
+            style={{ backgroundColor: '#e9f9ec', color: '#000' }}
+          >
+            <div className="flex items-center justify-between">
               <div className="flex items-center space-x-4">
                 <div className="flex items-center space-x-2">
-                  <div className="w-3 h-3 rounded-full" style={{ backgroundColor: isConnected ? '#3F7A5A' : '#8B3A3A' }} />
+                  <div
+                    className="w-3 h-3 rounded-full"
+                    style={{
+                      backgroundColor: isConnected ? '#3F7A5A' : '#8B3A3A',
+                    }}
+                  />
                   <span className="text-sm font-medium">
-                    {isConnected ? 'Identity Confirmed' : 'Identity Unconfirmed'}
+                    {isConnected
+                      ? 'Identity Confirmed'
+                      : 'Identity Unconfirmed'}
                   </span>
                 </div>
                 {isConnected && (
                   <div className="text-sm">
                     <span className="opacity-75">Advocate NFTs: </span>
-                    <span className="font-semibold">{nftBalance?.toString() || '0'}</span>
+                    <span className="font-semibold">
+                      {nftBalance?.toString() || '0'}
+                    </span>
                   </div>
                 )}
               </div>
@@ -691,178 +805,291 @@ export const CreateProposalForm: React.FC<CreateProposalFormProps> = ({ onSucces
 
           {/* Form Content */}
           <div className="p-8">
-      
             {/* Validation Error Display */}
             {validationError && (
-              <div className="mb-6 p-4 rounded-lg" style={{ backgroundColor: '#F5E6E6', borderWidth: '1px', borderStyle: 'solid', borderColor: '#D9B3B3' }}>
-                <h4 className="font-medium mb-2" style={{ color: '#5C1F1F' }}>Validation Error</h4>
-                <p className="text-sm" style={{ color: '#8B3A3A' }}>{validationError}</p>
+              <div
+                className="mb-6 p-4 rounded-lg"
+                style={{
+                  backgroundColor: '#F5E6E6',
+                  borderWidth: '1px',
+                  borderStyle: 'solid',
+                  borderColor: '#D9B3B3',
+                }}
+              >
+                <h4 className="font-medium mb-2" style={{ color: '#5C1F1F' }}>
+                  Validation Error
+                </h4>
+                <p className="text-sm" style={{ color: '#8B3A3A' }}>
+                  {validationError}
+                </p>
               </div>
             )}
-      
-
 
             {/* Requirements */}
-            <div className="mb-8 p-6 rounded-lg" style={{ backgroundColor: '#E8F1EE', borderWidth: '1px', borderStyle: 'solid', borderColor: '#B8D9CA' }}>
-              <h4 className="font-semibold mb-3" style={{ color: '#1F453A' }}>📋 Proposal Requirements</h4>
-              <div className="grid md:grid-cols-2 gap-4 text-sm" style={{ color: '#2F5D50' }}>
+            <div
+              className="mb-8 p-6 rounded-lg"
+              style={{
+                backgroundColor: '#E8F1EE',
+                borderWidth: '1px',
+                borderStyle: 'solid',
+                borderColor: '#B8D9CA',
+              }}
+            >
+              <h4 className="font-semibold mb-3" style={{ color: '#1F453A' }}>
+                📋 Proposal Requirements
+              </h4>
+              <div
+                className="grid md:grid-cols-2 gap-4 text-sm"
+                style={{ color: '#2F5D50' }}
+              >
                 <div className="space-y-2">
                   <div className="flex items-center">
-                    <span className="w-2 h-2 rounded-full mr-2" style={{ backgroundColor: isConnected ? '#3F7A5A' : '#8B3A3A' }} />
+                    <span
+                      className="w-2 h-2 rounded-full mr-2"
+                      style={{
+                        backgroundColor: isConnected ? '#3F7A5A' : '#8B3A3A',
+                      }}
+                    />
                     Wallet connected
                   </div>
                   <div className="flex items-center">
-                    <span className="w-2 h-2 rounded-full mr-2" style={{ backgroundColor: nftBalance && BigInt(nftBalance.toString()) > 0n ? '#3F7A5A' : '#8B3A3A' }} />
+                    <span
+                      className="w-2 h-2 rounded-full mr-2"
+                      style={{
+                        backgroundColor:
+                          nftBalance && BigInt(nftBalance.toString()) > 0n
+                            ? '#3F7A5A'
+                            : '#8B3A3A',
+                      }}
+                    />
                     Hold at least 1 Advocate NFT
                   </div>
                 </div>
                 <div className="space-y-2">
                   <div className="flex items-center">
-                    <span className="w-2 h-2 rounded-full mr-2" style={{ backgroundColor: formData.title.length >= 10 ? '#3F7A5A' : '#C6933F' }} />
+                    <span
+                      className="w-2 h-2 rounded-full mr-2"
+                      style={{
+                        backgroundColor:
+                          formData.title.length >= 10 ? '#3F7A5A' : '#C6933F',
+                      }}
+                    />
                     Clear, descriptive title
                   </div>
                   <div className="flex items-center">
-                    <span className="w-2 h-2 rounded-full mr-2" style={{ backgroundColor: formData.body.length >= 50 ? '#3F7A5A' : '#C6933F' }} />
+                    <span
+                      className="w-2 h-2 rounded-full mr-2"
+                      style={{
+                        backgroundColor:
+                          formData.body.length >= 50 ? '#3F7A5A' : '#C6933F',
+                      }}
+                    />
                     Detailed description (50+ chars)
                   </div>
                 </div>
               </div>
             </div>
 
-                        {/* Enhanced Delegation Section */}
+            {/* Enhanced Delegation Section */}
             {needsDelegation && (
-              <div className="mb-6 p-4 rounded-lg" style={{ backgroundColor: '#FAF4EC', borderWidth: '1px', borderStyle: 'solid', borderColor: '#E8D7B8' }}>
+              <div
+                className="mb-6 p-4 rounded-lg"
+                style={{
+                  backgroundColor: '#FAF4EC',
+                  borderWidth: '1px',
+                  borderStyle: 'solid',
+                  borderColor: '#E8D7B8',
+                }}
+              >
                 <div className="flex items-center">
-                  <div className="w-5 h-5 mr-3" style={{ color: '#C6933F' }}>⚠️</div>
-                  <p className="font-medium" style={{ color: '#8F6B2F' }}>Delegation Required</p>
+                  <div className="w-5 h-5 mr-3" style={{ color: '#C6933F' }}>
+                    ⚠️
+                  </div>
+                  <p className="font-medium" style={{ color: '#8F6B2F' }}>
+                    Delegation Required
+                  </p>
                 </div>
                 <p className="text-sm mt-2" style={{ color: '#C6933F' }}>
-                  You own {nftBalance?.toString()} NFT(s) but need to delegate voting power to yourself to create proposals.
+                  You own {nftBalance?.toString()} NFT(s) but need to delegate
+                  voting power to yourself to create proposals.
                 </p>
 
                 {isDelegating && (
-                  <div className="mb-3 p-2 rounded text-sm" style={{ backgroundColor: '#E8F1EE', borderWidth: '1px', borderStyle: 'solid', borderColor: '#B8D9CA', color: '#2F5D50' }}>
-                    {isDelegationPending ? '⏳ Waiting for transaction confirmation...' : '🔄 Delegation in progress...'}
+                  <div
+                    className="mb-3 p-2 rounded text-sm"
+                    style={{
+                      backgroundColor: '#E8F1EE',
+                      borderWidth: '1px',
+                      borderStyle: 'solid',
+                      borderColor: '#B8D9CA',
+                      color: '#2F5D50',
+                    }}
+                  >
+                    {isDelegationPending
+                      ? '⏳ Waiting for transaction confirmation...'
+                      : '🔄 Delegation in progress...'}
                   </div>
                 )}
-          
-          <div className="flex flex-col space-y-2">
-            <Transaction
-              isSponsored={true}
-              chainId={base.id} // Use base.id for Base
-              calls={[{
-                address: ADVOCATE_ADDRESS,
-                abi: AdvocateMembershipABI,
-                functionName: 'delegate',
-                args: [address as `0x${string}`], // Explicit type casting to ensure it's not undefined
-              }]}
-              onStatus={(status) => {
-                if (status.statusName === 'buildingTransaction') {
-                  handleDelegationStart();
-                }
-              }}
-              onSuccess={async (response) => {
-                if (response?.transactionReceipts?.[0]?.transactionHash) {
-                  handleDelegationSuccess(response.transactionReceipts[0].transactionHash as `0x${string}`);
-                }
-              }}
-              onError={(error) => {
-                handleDelegationError(error);
-              }}
-            >
-              <TransactionButton
-                text={isDelegating ? "Delegating..." : "Delegate Voting Power to Myself"}
-                disabled={isDelegating || !address}
-                className="w-full disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-medium py-2 px-4 rounded transition-colors"
-                style={{ backgroundColor: '#C6933F' }}
-                onMouseEnter={(e: React.MouseEvent<HTMLButtonElement>) => {
-                  if (!isDelegating && address) e.currentTarget.style.backgroundColor = '#8F6B2F';
-                }}
-                onMouseLeave={(e: React.MouseEvent<HTMLButtonElement>) => {
-                  if (!isDelegating && address) e.currentTarget.style.backgroundColor = '#C6933F';
-                }}
-              />
-              <TransactionSponsor />
-              <TransactionStatus>
-                <TransactionStatusLabel />
-                <TransactionStatusAction />
-              </TransactionStatus>
-            </Transaction>
-            <div className="text-xs" style={{ color: '#C6933F' }}>
-              This transaction will delegate your NFT voting power to yourself, enabling you to vote and create proposals.
-              {address && <div className="mt-1">Delegating to: {address}</div>}
-            </div>
-          </div>
-        </div>
-      )}
+
+                <div className="flex flex-col space-y-2">
+                  <Transaction
+                    isSponsored={true}
+                    chainId={base.id} // Use base.id for Base
+                    calls={[
+                      {
+                        address: ADVOCATE_ADDRESS,
+                        abi: AdvocateMembershipABI,
+                        functionName: 'delegate',
+                        args: [address as `0x${string}`], // Explicit type casting to ensure it's not undefined
+                      },
+                    ]}
+                    onStatus={(status) => {
+                      if (status.statusName === 'buildingTransaction') {
+                        handleDelegationStart();
+                      }
+                    }}
+                    onSuccess={async (response) => {
+                      if (response?.transactionReceipts?.[0]?.transactionHash) {
+                        handleDelegationSuccess(
+                          response.transactionReceipts[0]
+                            .transactionHash as `0x${string}`,
+                        );
+                      }
+                    }}
+                    onError={(error) => {
+                      handleDelegationError(error);
+                    }}
+                  >
+                    <TransactionButton
+                      text={
+                        isDelegating
+                          ? 'Delegating...'
+                          : 'Delegate Voting Power to Myself'
+                      }
+                      disabled={isDelegating || !address}
+                      className="w-full disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-medium py-2 px-4 rounded transition-colors"
+                      style={{ backgroundColor: '#C6933F' }}
+                      onMouseEnter={(
+                        e: React.MouseEvent<HTMLButtonElement>,
+                      ) => {
+                        if (!isDelegating && address)
+                          e.currentTarget.style.backgroundColor = '#8F6B2F';
+                      }}
+                      onMouseLeave={(
+                        e: React.MouseEvent<HTMLButtonElement>,
+                      ) => {
+                        if (!isDelegating && address)
+                          e.currentTarget.style.backgroundColor = '#C6933F';
+                      }}
+                    />
+                    <TransactionSponsor />
+                    <TransactionStatus>
+                      <TransactionStatusLabel />
+                      <TransactionStatusAction />
+                    </TransactionStatus>
+                  </Transaction>
+                  <div className="text-xs" style={{ color: '#C6933F' }}>
+                    This transaction will delegate your NFT voting power to
+                    yourself, enabling you to vote and create proposals.
+                    {address && (
+                      <div className="mt-1">Delegating to: {address}</div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Force Delegation Section - for when user has NFTs but no voting power */}
-            {!needsDelegation && nftBalance && BigInt(nftBalance.toString()) > 0n &&
-             (!votingPower || BigInt(votingPower.toString()) === 0n) && (
-              <div className="mb-6 p-4 rounded-lg" style={{ backgroundColor: '#F5E6E6', borderWidth: '1px', borderStyle: 'solid', borderColor: '#D9B3B3' }}>
-                <div className="flex items-center">
-                  <div className="w-5 h-5 mr-3" style={{ color: '#8B3A3A' }}>🚨</div>
-                  <p className="font-medium" style={{ color: '#5C1F1F' }}>Voting Power Issue Detected</p>
+            {!needsDelegation &&
+              nftBalance &&
+              BigInt(nftBalance.toString()) > 0n &&
+              (!votingPower || BigInt(votingPower.toString()) === 0n) && (
+                <div
+                  className="mb-6 p-4 rounded-lg"
+                  style={{
+                    backgroundColor: '#F5E6E6',
+                    borderWidth: '1px',
+                    borderStyle: 'solid',
+                    borderColor: '#D9B3B3',
+                  }}
+                >
+                  <div className="flex items-center">
+                    <div className="w-5 h-5 mr-3" style={{ color: '#8B3A3A' }}>
+                      🚨
+                    </div>
+                    <p className="font-medium" style={{ color: '#5C1F1F' }}>
+                      Voting Power Issue Detected
+                    </p>
+                  </div>
+                  <p className="text-sm mt-2" style={{ color: '#8B3A3A' }}>
+                    You own {nftBalance.toString()} NFT(s) but have{' '}
+                    {votingPower?.toString() || '0'} voting power. This may be
+                    due to a contract redeployment. Please delegate your voting
+                    power.
+                  </p>
+
+                  <div className="flex flex-col space-y-2">
+                    <Transaction
+                      isSponsored={true}
+                      chainId={base.id} // Use base.id for Base
+                      calls={[
+                        {
+                          address: ADVOCATE_ADDRESS,
+                          abi: AdvocateMembershipABI,
+                          functionName: 'delegate',
+                          args: [address as `0x${string}`],
+                        },
+                      ]}
+                      onSuccess={async (response) => {
+                        // Force delegation successful
+                        toast({
+                          title: 'Delegation Successful!',
+                          description:
+                            'Your voting power should now be active. Please refresh the page.',
+                        });
+                        // Force refetch after a delay
+                        setTimeout(() => {
+                          refetchVotingPower();
+                          refetchDelegate();
+                          refetchBalance();
+                        }, 3000);
+                      }}
+                      onError={(error) => {
+                        toast({
+                          title: 'Delegation Failed',
+                          description: error.message || 'Unknown error',
+                          variant: 'destructive',
+                        });
+                      }}
+                    >
+                      <TransactionButton
+                        text="Force Delegate Voting Power"
+                        className="w-full text-white font-medium py-2 px-4 rounded transition-colors"
+                        style={{ backgroundColor: '#8B3A3A' }}
+                        onMouseEnter={(
+                          e: React.MouseEvent<HTMLButtonElement>,
+                        ) => {
+                          e.currentTarget.style.backgroundColor = '#5C1F1F';
+                        }}
+                        onMouseLeave={(
+                          e: React.MouseEvent<HTMLButtonElement>,
+                        ) => {
+                          e.currentTarget.style.backgroundColor = '#8B3A3A';
+                        }}
+                      />
+                      <TransactionSponsor />
+                      <TransactionStatus>
+                        <TransactionStatusLabel />
+                        <TransactionStatusAction />
+                      </TransactionStatus>
+                    </Transaction>
+                    <div className="text-xs" style={{ color: '#8B3A3A' }}>
+                      This will delegate your NFT voting power to yourself. This
+                      is needed after contract redeployments.
+                    </div>
+                  </div>
                 </div>
-                <p className="text-sm mt-2" style={{ color: '#8B3A3A' }}>
-                  You own {nftBalance.toString()} NFT(s) but have {votingPower?.toString() || '0'} voting power.
-                  This may be due to a contract redeployment. Please delegate your voting power.
-                </p>
-          
-          <div className="flex flex-col space-y-2">
-            <Transaction
-              isSponsored={true}
-              chainId={base.id} // Use base.id for Base
-              calls={[{
-                address: ADVOCATE_ADDRESS,
-                abi: AdvocateMembershipABI,
-                functionName: 'delegate',
-                args: [address as `0x${string}`],
-              }]}
-              onSuccess={async (response) => {
-                // Force delegation successful
-                toast({
-                  title: "Delegation Successful!",
-                  description: "Your voting power should now be active. Please refresh the page.",
-                });
-                // Force refetch after a delay
-                setTimeout(() => {
-                  refetchVotingPower();
-                  refetchDelegate();
-                  refetchBalance();
-                }, 3000);
-              }}
-              onError={(error) => {
-                toast({
-                  title: "Delegation Failed",
-                  description: error.message || 'Unknown error',
-                  variant: 'destructive',
-                });
-              }}
-            >
-              <TransactionButton
-                text="Force Delegate Voting Power"
-                className="w-full text-white font-medium py-2 px-4 rounded transition-colors"
-                style={{ backgroundColor: '#8B3A3A' }}
-                onMouseEnter={(e: React.MouseEvent<HTMLButtonElement>) => {
-                  e.currentTarget.style.backgroundColor = '#5C1F1F';
-                }}
-                onMouseLeave={(e: React.MouseEvent<HTMLButtonElement>) => {
-                  e.currentTarget.style.backgroundColor = '#8B3A3A';
-                }}
-              />
-              <TransactionSponsor />
-              <TransactionStatus>
-                <TransactionStatusLabel />
-                <TransactionStatusAction />
-              </TransactionStatus>
-            </Transaction>
-            <div className="text-xs" style={{ color: '#8B3A3A' }}>
-              This will delegate your NFT voting power to yourself. This is needed after contract redeployments.
-            </div>
-          </div>
-        </div>
-      )}
+              )}
 
             {/* Enhanced Debug Info */}
             <details className="mb-6">
@@ -876,29 +1103,64 @@ export const CreateProposalForm: React.FC<CreateProposalFormProps> = ({ onSucces
                 Enhanced Debug Information
               </summary>
               <div className="mt-2 p-3 bg-gray-100 rounded text-xs font-mono space-y-1">
-          <div>Address: {address || 'N/A'}</div>
-          <div>Connector: {connector?.name || 'N/A'}</div>
-          <div>NFT Balance: {nftBalance?.toString() || 'N/A'}</div>
-          <div>Voting Power: {votingPower?.toString() || 'N/A'}</div>
-          <div>Proposal Threshold: {proposalThreshold?.toString() || 'N/A'}</div>
-          <div>Current Delegate: {currentDelegate || 'N/A'}</div>
-          <div>Needs Delegation: {needsDelegation ? 'Yes' : 'No'}</div>
-          <div className="font-bold" style={{ color: '#2F5D50' }}>Has Governance Permission: {hasGovernancePermission ? 'Yes ✅' : 'No ❌'}</div>
-          <div className="font-bold" style={{ color: '#2F5D50' }}>Has Voting Power: {hasVotingPower ? 'Yes ✅' : 'No ❌'}</div>
-          <div>Can Create Proposal: {canCreateProposal ? 'Yes' : 'No'}</div>
-          <div>Can Submit Proposal: {canSubmitProposal ? 'Yes' : 'No'}</div>
-          <div>Is Delegating: {isDelegating ? 'Yes' : 'No'}</div>
-          <div>Delegation Tx: {delegationTxHash || 'N/A'}</div>
-          <div>Delegation Pending: {isDelegationPending ? 'Yes' : 'No'}</div>
-          <div>Validation Error: {validationError || 'None'}</div>
-          <div>Proposal Args Length: targets={proposalArgs[0].length}, values={proposalArgs[1].length}, calldatas={proposalArgs[2].length}</div>
-          <div>Proposal Values: [{proposalArgs[1].map(v => v.toString()).join(', ')}]</div>
-          <div>Proposal Value Types: [{proposalArgs[1].map(v => typeof v).join(', ')}]</div>
-          {balanceError && <div style={{ color: '#8B3A3A' }}>Balance Error: {balanceError.message}</div>}
-          {votingPowerError && <div style={{ color: '#8B3A3A' }}>Voting Power Error: {votingPowerError.message}</div>}
-          {delegateError && <div style={{ color: '#8B3A3A' }}>Delegate Error: {delegateError.message}</div>}
-        </div>
-      </details>
+                <div>Address: {address || 'N/A'}</div>
+                <div>Connector: {connector?.name || 'N/A'}</div>
+                <div>NFT Balance: {nftBalance?.toString() || 'N/A'}</div>
+                <div>Voting Power: {votingPower?.toString() || 'N/A'}</div>
+                <div>
+                  Proposal Threshold: {proposalThreshold?.toString() || 'N/A'}
+                </div>
+                <div>Current Delegate: {currentDelegate || 'N/A'}</div>
+                <div>Needs Delegation: {needsDelegation ? 'Yes' : 'No'}</div>
+                <div className="font-bold" style={{ color: '#2F5D50' }}>
+                  Has Governance Permission:{' '}
+                  {hasGovernancePermission ? 'Yes ✅' : 'No ❌'}
+                </div>
+                <div className="font-bold" style={{ color: '#2F5D50' }}>
+                  Has Voting Power: {hasVotingPower ? 'Yes ✅' : 'No ❌'}
+                </div>
+                <div>
+                  Can Create Proposal: {canCreateProposal ? 'Yes' : 'No'}
+                </div>
+                <div>
+                  Can Submit Proposal: {canSubmitProposal ? 'Yes' : 'No'}
+                </div>
+                <div>Is Delegating: {isDelegating ? 'Yes' : 'No'}</div>
+                <div>Delegation Tx: {delegationTxHash || 'N/A'}</div>
+                <div>
+                  Delegation Pending: {isDelegationPending ? 'Yes' : 'No'}
+                </div>
+                <div>Validation Error: {validationError || 'None'}</div>
+                <div>
+                  Proposal Args Length: targets={proposalArgs[0].length},
+                  values={proposalArgs[1].length}, calldatas=
+                  {proposalArgs[2].length}
+                </div>
+                <div>
+                  Proposal Values: [
+                  {proposalArgs[1].map((v) => v.toString()).join(', ')}]
+                </div>
+                <div>
+                  Proposal Value Types: [
+                  {proposalArgs[1].map((v) => typeof v).join(', ')}]
+                </div>
+                {balanceError && (
+                  <div style={{ color: '#8B3A3A' }}>
+                    Balance Error: {balanceError.message}
+                  </div>
+                )}
+                {votingPowerError && (
+                  <div style={{ color: '#8B3A3A' }}>
+                    Voting Power Error: {votingPowerError.message}
+                  </div>
+                )}
+                {delegateError && (
+                  <div style={{ color: '#8B3A3A' }}>
+                    Delegate Error: {delegateError.message}
+                  </div>
+                )}
+              </div>
+            </details>
 
             {/* Proposal Form */}
             <div className="space-y-6">
@@ -907,36 +1169,46 @@ export const CreateProposalForm: React.FC<CreateProposalFormProps> = ({ onSucces
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
                   Link Forum Discussion
                 </label>
-                <ProposalThreadSelector
-                  onThreadSelect={handleThreadSelect}
-                />
+                <ProposalThreadSelector onThreadSelect={handleThreadSelect} />
                 {!formData.forumThreadId && (
-                  <p className="text-xs mt-1" style={{ color: '#8B3A3A' }}>Forum thread is required.</p>
+                  <p className="text-xs mt-1" style={{ color: '#8B3A3A' }}>
+                    Forum thread is required.
+                  </p>
                 )}
               </div>
               {/* Title */}
               <div>
-                <label htmlFor="title" className="block text-sm font-semibold text-gray-700 mb-2">
+                <label
+                  htmlFor="title"
+                  className="block text-sm font-semibold text-gray-700 mb-2"
+                >
                   Proposal Title *
                 </label>
                 <input
                   id="title"
                   type="text"
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:border-transparent transition-colors"
-                  style={{
-                    '--tw-ring-color': '#2F5D50'
-                  } as React.CSSProperties}
-                  onFocus={(e) => { e.currentTarget.style.boxShadow = '0 0 0 2px #2F5D50'; }}
-                  onBlur={(e) => { e.currentTarget.style.boxShadow = ''; }}
+                  style={
+                    {
+                      '--tw-ring-color': '#2F5D50',
+                    } as React.CSSProperties
+                  }
+                  onFocus={(e) => {
+                    e.currentTarget.style.boxShadow = '0 0 0 2px #2F5D50';
+                  }}
+                  onBlur={(e) => {
+                    e.currentTarget.style.boxShadow = '';
+                  }}
                   value={formData.title}
-                  onChange={e => handleFormChange('title', e.target.value)}
+                  onChange={(e) => handleFormChange('title', e.target.value)}
                   placeholder="Enter a clear, descriptive title for your proposal"
                   disabled={isDelegating}
                   maxLength={200}
                 />
                 <div className="flex justify-between mt-1">
                   <p className="text-xs text-gray-500">
-                    Make it clear and specific - this will be the main identifier for your proposal
+                    Make it clear and specific - this will be the main
+                    identifier for your proposal
                   </p>
                   <span className="text-xs text-gray-400">
                     {formData.title.length}/200
@@ -945,7 +1217,10 @@ export const CreateProposalForm: React.FC<CreateProposalFormProps> = ({ onSucces
               </div>
               {/* Description */}
               <div>
-                <label htmlFor="body" className="block text-sm font-semibold text-gray-700 mb-2">
+                <label
+                  htmlFor="body"
+                  className="block text-sm font-semibold text-gray-700 mb-2"
+                >
                   Proposal Description *
                 </label>
                 <UserTagging
@@ -953,9 +1228,11 @@ export const CreateProposalForm: React.FC<CreateProposalFormProps> = ({ onSucces
                   onChange={(value) => handleFormChange('body', value)}
                   placeholder="Provide a detailed description of your proposal... Use @ to mention someone"
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:border-transparent transition-colors resize-none"
-                  style={{
-                    '--tw-ring-color': '#2F5D50'
-                  } as React.CSSProperties}
+                  style={
+                    {
+                      '--tw-ring-color': '#2F5D50',
+                    } as React.CSSProperties
+                  }
                   multiLine={true}
                   contextType="governance"
                   contextId="new-proposal"
@@ -963,7 +1240,8 @@ export const CreateProposalForm: React.FC<CreateProposalFormProps> = ({ onSucces
                 />
                 <div className="flex justify-between mt-1">
                   <p className="text-xs text-gray-500">
-                    Supports Markdown formatting. One paragraph summarizing the proposal purpose and the impact.
+                    Supports Markdown formatting. One paragraph summarizing the
+                    proposal purpose and the impact.
                   </p>
                   <span className="text-xs text-gray-400">
                     {formData.body.length}/10,000
@@ -972,61 +1250,113 @@ export const CreateProposalForm: React.FC<CreateProposalFormProps> = ({ onSucces
               </div>
               {/* Pod/Token Dropdown */}
               <div>
-                <label htmlFor="token" className="block text-sm font-semibold text-gray-700 mb-2">
+                <label
+                  htmlFor="token"
+                  className="block text-sm font-semibold text-gray-700 mb-2"
+                >
                   Accessible To (Pod/Token) *
                 </label>
                 <select
                   id="token"
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:border-transparent transition-colors"
-                  style={{
-                    '--tw-ring-color': '#2F5D50'
-                  } as React.CSSProperties}
-                  onFocus={(e) => { e.currentTarget.style.boxShadow = '0 0 0 2px #2F5D50'; }}
-                  onBlur={(e) => { e.currentTarget.style.boxShadow = ''; }}
+                  style={
+                    {
+                      '--tw-ring-color': '#2F5D50',
+                    } as React.CSSProperties
+                  }
+                  onFocus={(e) => {
+                    e.currentTarget.style.boxShadow = '0 0 0 2px #2F5D50';
+                  }}
+                  onBlur={(e) => {
+                    e.currentTarget.style.boxShadow = '';
+                  }}
                   value={formData.selectedToken}
-                  onChange={e => handleFormChange('selectedToken', e.target.value)}
+                  onChange={(e) =>
+                    handleFormChange('selectedToken', e.target.value)
+                  }
                   required={true}
                 >
                   <option value="">Select a token</option>
-                  {userTokens.map(token => (
-                    <option key={token.id} value={token.id}>{token.label}</option>
+                  {userTokens.map((token) => (
+                    <option key={token.id} value={token.id}>
+                      {token.label}
+                    </option>
                   ))}
                 </select>
                 {!formData.selectedToken && (
-                  <p className="text-xs mt-1" style={{ color: '#8B3A3A' }}>Token selection is required.</p>
+                  <p className="text-xs mt-1" style={{ color: '#8B3A3A' }}>
+                    Token selection is required.
+                  </p>
                 )}
               </div>
             </div>
-        
+
             {/* Submit Section */}
             <div className="mt-8 pt-6 border-t border-gray-200">
               {/* Show specific blocking reasons */}
               {!canSubmitProposal && hasInteracted && (
-                <div className="mb-6 p-4 rounded-lg" style={{ backgroundColor: '#FAF4EC', borderWidth: '1px', borderStyle: 'solid', borderColor: '#E8D7B8' }}>
-                  <h4 className="font-medium mb-2" style={{ color: '#8F6B2F' }}>Cannot Submit Proposal:</h4>
-                  <ul className="text-sm space-y-1" style={{ color: '#C6933F' }}>
+                <div
+                  className="mb-6 p-4 rounded-lg"
+                  style={{
+                    backgroundColor: '#FAF4EC',
+                    borderWidth: '1px',
+                    borderStyle: 'solid',
+                    borderColor: '#E8D7B8',
+                  }}
+                >
+                  <h4 className="font-medium mb-2" style={{ color: '#8F6B2F' }}>
+                    Cannot Submit Proposal:
+                  </h4>
+                  <ul
+                    className="text-sm space-y-1"
+                    style={{ color: '#C6933F' }}
+                  >
                     {!hasGovernancePermission && (
                       <li>
-                        • <span className="font-semibold">No governance participation permission</span>
+                        •{' '}
+                        <span className="font-semibold">
+                          No governance participation permission
+                        </span>
                         <br />
-                        <span className="text-xs ml-4">You need the "governanceParticipation" permission in your pod role to create proposals</span>
+                        <span className="text-xs ml-4">
+                          You need the "governanceParticipation" permission in
+                          your pod role to create proposals
+                        </span>
                       </li>
                     )}
                     {hasGovernancePermission && !hasVotingPower && (
                       <li>
-                        • <span className="font-semibold">Insufficient voting power</span>
+                        •{' '}
+                        <span className="font-semibold">
+                          Insufficient voting power
+                        </span>
                         <br />
-                        <span className="text-xs ml-4">You need more Advocate NFTs or voting tokens to meet the proposal threshold</span>
+                        <span className="text-xs ml-4">
+                          You need more Advocate NFTs or voting tokens to meet
+                          the proposal threshold
+                        </span>
                       </li>
                     )}
-                    {needsDelegation && <li>• Need to delegate voting power first</li>}
+                    {needsDelegation && (
+                      <li>• Need to delegate voting power first</li>
+                    )}
                     {!formData.title.trim() && <li>• Title is required</li>}
-                    {!formData.body.trim() && <li>• Description is required</li>}
-                    {!formData.forumThreadId && <li>• Forum thread is required</li>}
-                    {!formData.selectedToken && <li>• Token selection is required</li>}
+                    {!formData.body.trim() && (
+                      <li>• Description is required</li>
+                    )}
+                    {!formData.forumThreadId && (
+                      <li>• Forum thread is required</li>
+                    )}
+                    {!formData.selectedToken && (
+                      <li>• Token selection is required</li>
+                    )}
                     {isDelegating && <li>• Delegation in progress</li>}
-                    {validationError && <li>• Validation error: {validationError}</li>}
-                    {(!proposalArgs || proposalArgs[0].length === 0) && <li>• Invalid proposal arguments</li>}
+                    {validationError && (
+                      <li>• Validation error: {validationError}</li>
+                    )}
+                    {(!proposalArgs || proposalArgs[0].length === 0) && (
+                      <li>• Invalid proposal arguments</li>
+                    )}
                   </ul>
                 </div>
               )}
@@ -1043,32 +1373,41 @@ export const CreateProposalForm: React.FC<CreateProposalFormProps> = ({ onSucces
                   }}
                   onSuccess={async (txResult) => {
                     setHasInteracted(false);
-                    if (hasProcessedProposal === txResult?.transactionReceipts?.[0]?.transactionHash) {
+                    if (
+                      hasProcessedProposal ===
+                      txResult?.transactionReceipts?.[0]?.transactionHash
+                    ) {
                       return;
                     }
-                    setHasProcessedProposal(txResult?.transactionReceipts?.[0]?.transactionHash || null);
+                    setHasProcessedProposal(
+                      txResult?.transactionReceipts?.[0]?.transactionHash ||
+                        null,
+                    );
                     toast({ title: '✅ Proposal Created!', description: '' });
                     // --- Begin polling for proposal state ---
-                    const transactionHash = txResult?.transactionReceipts?.[0]?.transactionHash;
+                    const transactionHash =
+                      txResult?.transactionReceipts?.[0]?.transactionHash;
                     const logs = txResult?.transactionReceipts?.[0]?.logs || [];
                     let realProposalId: string | null = null;
                     try {
                       const eventAbi = parseAbiItem(
-                        'event ProposalCreatedWithMetadata(uint256 proposalId, address proposer, string title, string forumThreadId, uint256 createdAt)'
+                        'event ProposalCreatedWithMetadata(uint256 proposalId, address proposer, string title, string forumThreadId, uint256 createdAt)',
                       );
                       const parsedLogs = parseEventLogs({
                         abi: [eventAbi],
                         logs: logs,
                       });
                       for (const parsed of parsedLogs) {
-                        if (parsed.eventName === 'ProposalCreatedWithMetadata') {
+                        if (
+                          parsed.eventName === 'ProposalCreatedWithMetadata'
+                        ) {
                           realProposalId = parsed.args.proposalId.toString();
                           break;
                         }
                       }
                       if (!realProposalId) {
                         const fallbackEventAbi = parseAbiItem(
-                          'event ProposalCreated(uint256 proposalId, address proposer, address[] targets, uint256[] values, string[] signatures, bytes[] calldatas, uint256 startBlock, uint256 endBlock, string description)'
+                          'event ProposalCreated(uint256 proposalId, address proposer, address[] targets, uint256[] values, string[] signatures, bytes[] calldatas, uint256 startBlock, uint256 endBlock, string description)',
                         );
                         const fallbackParsedLogs = parseEventLogs({
                           abi: [fallbackEventAbi],
@@ -1082,10 +1421,15 @@ export const CreateProposalForm: React.FC<CreateProposalFormProps> = ({ onSucces
                         }
                       }
                     } catch (e) {
-                      console.error('Error parsing logs for proposal events:', e);
+                      console.error(
+                        'Error parsing logs for proposal events:',
+                        e,
+                      );
                     }
                     if (!realProposalId) {
-                      realProposalId = transactionHash ? `temp_${transactionHash.slice(2, 10)}` : null;
+                      realProposalId = transactionHash
+                        ? `temp_${transactionHash.slice(2, 10)}`
+                        : null;
                     }
                     // --- Insert metadata and notifications immediately ---
                     if (realProposalId) {
@@ -1102,26 +1446,33 @@ export const CreateProposalForm: React.FC<CreateProposalFormProps> = ({ onSucces
                           const mentionRegex = /@\[([^\]]+)\]\(([^)]+)\)/g;
                           const mentions: string[] = [];
                           let match;
-                          while ((match = mentionRegex.exec(formData.body)) !== null) {
+                          while (
+                            (match = mentionRegex.exec(formData.body)) !== null
+                          ) {
                             mentions.push(match[2]); // match[2] is the wallet address
                           }
                           // Insert proposal metadata with status: 'active'
-                          const { error: metadataError } = await supabase.from('proposal_metadata').insert([
-                            {
-                              onchain_proposal_id: realProposalId,
-                              title: formData.title,
-                              description: formData.body,
-                              proposer_address: address,
-                              forum_thread_id: formData.forumThreadId,
-                              token_id: formData.selectedToken,
-                              created_at: new Date().toISOString(),
-                              transaction_hash: transactionHash,
-                              mentions: mentions, // Store the mentions array
-                              status: 'active', // Always set to active for new proposals
-                            }
-                          ]);
+                          const { error: metadataError } = await supabase
+                            .from('proposal_metadata')
+                            .insert([
+                              {
+                                onchain_proposal_id: realProposalId,
+                                title: formData.title,
+                                description: formData.body,
+                                proposer_address: address,
+                                forum_thread_id: formData.forumThreadId,
+                                token_id: formData.selectedToken,
+                                created_at: new Date().toISOString(),
+                                transaction_hash: transactionHash,
+                                mentions: mentions, // Store the mentions array
+                                status: 'active', // Always set to active for new proposals
+                              },
+                            ]);
                           if (metadataError) {
-                            console.error('❌ Error inserting proposal metadata:', metadataError);
+                            console.error(
+                              '❌ Error inserting proposal metadata:',
+                              metadataError,
+                            );
                           }
                         }
                         // Create notifications for token holders using voting reminder service
@@ -1131,27 +1482,39 @@ export const CreateProposalForm: React.FC<CreateProposalFormProps> = ({ onSucces
                               realProposalId,
                               formData.title,
                               address!,
-                              formData.selectedToken
+                              formData.selectedToken,
                             );
-                            console.log('✅ Token holder notifications sent via voting reminder service');
+                            console.log(
+                              '✅ Token holder notifications sent via voting reminder service',
+                            );
                           } catch (tokenNotificationError) {
-                            console.error('❌ Error creating token holder notifications:', tokenNotificationError);
+                            console.error(
+                              '❌ Error creating token holder notifications:',
+                              tokenNotificationError,
+                            );
                           }
                         }
                         // Handle mentions in the proposal description
                         const mentionRegex = /@\[([^\]]+)\]\(([^)]+)\)/g;
                         const mentions: string[] = [];
                         let match;
-                        while ((match = mentionRegex.exec(formData.body)) !== null) {
+                        while (
+                          (match = mentionRegex.exec(formData.body)) !== null
+                        ) {
                           mentions.push(match[2]); // match[2] is the wallet address
                         }
                         // NOTE: Mention notifications are now handled automatically by UserTagging component
                         // when the form is submitted with mentions in the description
-                        
-                        console.log('✅ Proposal creation completed with metadata and notifications');
+
+                        console.log(
+                          '✅ Proposal creation completed with metadata and notifications',
+                        );
                         // --- End notification logic ---
                       } catch (error) {
-                        console.error('❌ Error in post-transaction processing:', error);
+                        console.error(
+                          '❌ Error in post-transaction processing:',
+                          error,
+                        );
                       }
                     }
                     // --- Poll for proposal state ---
@@ -1202,7 +1565,10 @@ export const CreateProposalForm: React.FC<CreateProposalFormProps> = ({ onSucces
                     // --- End polling logic ---
                   }}
                   onError={(error) => {
-                    console.error('❌ Proposal Transaction Error:', error.message);
+                    console.error(
+                      '❌ Proposal Transaction Error:',
+                      error.message,
+                    );
                     toast({
                       title: 'Proposal Failed',
                       description: error.message || 'Unknown error',
@@ -1213,7 +1579,9 @@ export const CreateProposalForm: React.FC<CreateProposalFormProps> = ({ onSucces
                   <TransactionButton
                     className="w-full font-semibold py-4 px-8 rounded-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl !bg-[#d7f8fd] !text-black"
                     disabled={!canSubmitProposal}
-                    text={isDelegating ? "Delegating..." : "Submit Proposal to DAO"}
+                    text={
+                      isDelegating ? 'Delegating...' : 'Submit Proposal to DAO'
+                    }
                   />
                   <TransactionSponsor />
                   <div className="mt-4">
@@ -1229,12 +1597,12 @@ export const CreateProposalForm: React.FC<CreateProposalFormProps> = ({ onSucces
                     disabled={true}
                     className="w-full bg-gray-300 text-gray-500 font-semibold py-4 px-8 rounded-lg cursor-not-allowed"
                   >
-                    {isConnected ? 'Requirements Not Met' : 'Connect Wallet to Submit'}
+                    {isConnected
+                      ? 'Requirements Not Met'
+                      : 'Connect Wallet to Submit'}
                   </button>
                 </div>
               )}
-
-
             </div>
           </div>
         </div>

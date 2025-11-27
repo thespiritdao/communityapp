@@ -1,5 +1,5 @@
 // src/features/marketplace/components/ImageUpload/ImageUpload.style.ts
-import styled from "styled-components";
+import styled from 'styled-components';
 
 export const Container = styled.div`
   display: flex;
@@ -19,30 +19,22 @@ export const UploadArea = styled.div<{
   $hasImage: boolean;
 }>`
   position: relative;
-  border: 2px dashed ${props => 
-    props.$dragActive ? '#3b82f6' : 
-    props.$hasImage ? '#e5e7eb' : '#d1d5db'
-  };
+  border: 2px dashed ${(props) =>
+    props.$dragActive ? '#3b82f6' : props.$hasImage ? '#e5e7eb' : '#d1d5db'};
   border-radius: 0.5rem;
-  padding: ${props => props.$hasImage ? '0' : '2rem'};
+  padding: ${(props) => (props.$hasImage ? '0' : '2rem')};
   text-align: center;
-  cursor: ${props => props.$disabled ? 'not-allowed' : 'pointer'};
+  cursor: ${(props) => (props.$disabled ? 'not-allowed' : 'pointer')};
   transition: all 0.2s ease-in-out;
-  background-color: ${props => 
-    props.$dragActive ? '#eff6ff' : 
-    props.$disabled ? '#f9fafb' : '#ffffff'
-  };
-  min-height: ${props => props.$hasImage ? '200px' : 'auto'};
+  background-color: ${(props) =>
+    props.$dragActive ? '#eff6ff' : props.$disabled ? '#f9fafb' : '#ffffff'};
+  min-height: ${(props) => (props.$hasImage ? '200px' : 'auto')};
   overflow: hidden;
 
   &:hover {
-    border-color: ${props => 
-      props.$disabled ? '#d1d5db' : 
-      props.$hasImage ? '#9ca3af' : '#3b82f6'
-    };
-    background-color: ${props => 
-      props.$disabled ? '#f9fafb' : '#f8fafc'
-    };
+    border-color: ${(props) =>
+      props.$disabled ? '#d1d5db' : props.$hasImage ? '#9ca3af' : '#3b82f6'};
+    background-color: ${(props) => (props.$disabled ? '#f9fafb' : '#f8fafc')};
   }
 `;
 
@@ -157,7 +149,7 @@ export const ProgressBar = styled.div`
 export const ProgressFill = styled.div<{ $progress: number }>`
   height: 100%;
   background-color: #3b82f6;
-  width: ${props => props.$progress}%;
+  width: ${(props) => props.$progress}%;
   transition: width 0.2s ease-in-out;
 `;
 

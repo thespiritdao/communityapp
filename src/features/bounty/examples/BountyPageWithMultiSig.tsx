@@ -1,6 +1,6 @@
 /**
  * Example integration of multi-signature bounty approval system
- * 
+ *
  * This shows how to integrate the new multi-sig functionality into existing bounty pages
  */
 
@@ -21,41 +21,49 @@ export const BountyPageWithMultiSig: React.FC = () => {
     createBountyWithApproval,
     requiresApproval,
     approvalWorkflowId,
-    clearApprovalState
+    clearApprovalState,
   } = useBountyMultiSig();
 
-  const [createdBounty, setCreatedBounty] = useState<FrontendBounty | null>(null);
+  const [createdBounty, setCreatedBounty] = useState<FrontendBounty | null>(
+    null,
+  );
   const [showApprovalFlow, setShowApprovalFlow] = useState(false);
 
   // Handle bounty creation with automatic multi-sig detection
-  const handleBountySubmit = async (bountyData: Omit<FrontendBounty, 'id' | 'createdAt' | 'onchain_id' | 'status'>) => {
+  const handleBountySubmit = async (
+    bountyData: Omit<
+      FrontendBounty,
+      'id' | 'createdAt' | 'onchain_id' | 'status'
+    >,
+  ) => {
     try {
       const result = await createBountyWithApproval(bountyData);
-      
+
       if (result.requiresApproval) {
         // High-value bounty - show approval workflow
         setCreatedBounty(result.bounty!);
         setShowApprovalFlow(true);
-        
+
         toast({
-          title: "Approval Workflow Created",
-          description: "Your high-value bounty requires manager approval. You can track the approval process below.",
+          title: 'Approval Workflow Created',
+          description:
+            'Your high-value bounty requires manager approval. You can track the approval process below.',
         });
       } else {
         // Low-value bounty - created directly
         setCreatedBounty(result.bounty!);
-        
+
         toast({
-          title: "Bounty Created Successfully",
-          description: "Your bounty is now live and accepting bids.",
+          title: 'Bounty Created Successfully',
+          description: 'Your bounty is now live and accepting bids.',
         });
       }
     } catch (error) {
       console.error('Failed to create bounty:', error);
       toast({
-        title: "Creation Failed",
+        title: 'Creation Failed',
         description: error instanceof Error ? error.message : 'Unknown error',
-        variant: "destructive"
+        variant: 'destructive',
       });
     }
   };
@@ -63,10 +71,11 @@ export const BountyPageWithMultiSig: React.FC = () => {
   // Handle approval completion
   const handleApprovalComplete = (workflowId: string) => {
     toast({
-      title: "Bounty Approved!",
-      description: "Your bounty has been approved by the required managers and is now active.",
+      title: 'Bounty Approved!',
+      description:
+        'Your bounty has been approved by the required managers and is now active.',
     });
-    
+
     // Optionally hide approval flow and show success state
     setShowApprovalFlow(false);
   };
@@ -75,7 +84,7 @@ export const BountyPageWithMultiSig: React.FC = () => {
     <div className="container mx-auto p-6 space-y-6">
       <div className="max-w-4xl mx-auto">
         <h1 className="text-3xl font-bold mb-6">Create New Bounty</h1>
-        
+
         {/* Bounty Creation Form */}
         {!createdBounty && (
           <Card>
@@ -95,20 +104,31 @@ export const BountyPageWithMultiSig: React.FC = () => {
 
         {/* Show created bounty info */}
         {createdBounty && (
-          <Card style={{ backgroundColor: '#D1E6DC', border: '1px solid #B8D9CA' }}>
+          <Card
+            style={{ backgroundColor: '#D1E6DC', border: '1px solid #B8D9CA' }}
+          >
             <CardHeader>
               <CardTitle style={{ color: '#1F453A' }}>
-                {requiresApproval ? 'Bounty Created - Awaiting Approval' : 'Bounty Created Successfully'}
+                {requiresApproval
+                  ? 'Bounty Created - Awaiting Approval'
+                  : 'Bounty Created Successfully'}
               </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-2 text-green-700">
-                <div><strong>Title:</strong> {createdBounty.title}</div>
-                <div><strong>Value:</strong> ${createdBounty.value.amount} {createdBounty.value.token}</div>
-                <div><strong>Status:</strong> {createdBounty.status}</div>
+                <div>
+                  <strong>Title:</strong> {createdBounty.title}
+                </div>
+                <div>
+                  <strong>Value:</strong> ${createdBounty.value.amount}{' '}
+                  {createdBounty.value.token}
+                </div>
+                <div>
+                  <strong>Status:</strong> {createdBounty.status}
+                </div>
                 {requiresApproval && (
                   <div className="text-sm text-green-600 mt-2">
-                    This bounty requires manager approval before going live. 
+                    This bounty requires manager approval before going live.
                     Track the approval progress below.
                   </div>
                 )}

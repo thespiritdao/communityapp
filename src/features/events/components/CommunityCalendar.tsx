@@ -2,12 +2,12 @@
 
 import type React from 'react';
 import { useState, useMemo } from 'react';
-import { Card, CardContent, } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { 
-  Calendar as CalendarIcon, 
-  ChevronLeft, 
+import {
+  Calendar as CalendarIcon,
+  ChevronLeft,
   ChevronRight,
   Filter,
   Download,
@@ -15,10 +15,10 @@ import {
   Clock,
   MapPin,
   Users,
-  Lock
+  Lock,
 } from 'lucide-react';
 
-import type { EventWithStats, } from '../types/event';
+import type { EventWithStats } from '../types/event';
 import { EventRegistrationModal } from './EventRegistrationModal';
 import { useTokenGatedEvents } from '../hooks/useEventTokenGating';
 import { usePods } from '../hooks/useEventTokenGating';
@@ -31,20 +31,22 @@ interface CommunityCalendarProps {
 }
 
 export const CommunityCalendar: React.FC<CommunityCalendarProps> = ({
-  showCreateButton = false
+  showCreateButton = false,
 }) => {
   const { visibleEvents, loading } = useTokenGatedEvents();
   const { pods } = usePods();
 
   const [currentDate, setCurrentDate] = useState(new Date());
   const [view, setView] = useState<CalendarView>('month');
-  const [selectedEvent, setSelectedEvent] = useState<EventWithStats | null>(null);
+  const [selectedEvent, setSelectedEvent] = useState<EventWithStats | null>(
+    null,
+  );
   const [showRegistrationModal, setShowRegistrationModal] = useState(false);
   const [filterPod, setFilterPod] = useState<string>('');
 
   // Filter events based on selected pod
   const filteredEvents = useMemo(() => {
-    return visibleEvents.filter(event => {
+    return visibleEvents.filter((event) => {
       if (!filterPod) return true;
       return event.organizing_pod_id === filterPod;
     });
@@ -53,15 +55,15 @@ export const CommunityCalendar: React.FC<CommunityCalendarProps> = ({
   // Group events by date for calendar display
   const eventsByDate = useMemo(() => {
     const grouped: Record<string, EventWithStats[]> = {};
-    
-    filteredEvents.forEach(event => {
+
+    filteredEvents.forEach((event) => {
       const dateKey = new Date(event.event_date).toDateString();
       if (!grouped[dateKey]) {
         grouped[dateKey] = [];
       }
       grouped[dateKey].push(event);
     });
-    
+
     return grouped;
   }, [filteredEvents]);
 
@@ -96,8 +98,10 @@ export const CommunityCalendar: React.FC<CommunityCalendarProps> = ({
 
   const exportToGoogleCalendar = (event: EventWithStats) => {
     const startDate = new Date(event.event_date);
-    const endDate = event.event_end_date ? new Date(event.event_end_date) : new Date(startDate.getTime() + 2 * 60 * 60 * 1000); // Default 2 hours
-    
+    const endDate = event.event_end_date
+      ? new Date(event.event_end_date)
+      : new Date(startDate.getTime() + 2 * 60 * 60 * 1000); // Default 2 hours
+
     const formatDate = (date: Date) => {
       return date.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
     };
@@ -109,10 +113,13 @@ export const CommunityCalendar: React.FC<CommunityCalendarProps> = ({
       details: event.description,
       location: event.location || '',
       sf: 'true',
-      output: 'xml'
+      output: 'xml',
     });
 
-    window.open(`https://calendar.google.com/calendar/render?${params}`, '_blank');
+    window.open(
+      `https://calendar.google.com/calendar/render?${params}`,
+      '_blank',
+    );
   };
 
   if (loading) {
@@ -141,7 +148,7 @@ export const CommunityCalendar: React.FC<CommunityCalendarProps> = ({
             View all community events in calendar format
           </p>
         </div>
-        
+
         <div className="flex items-center space-x-2">
           <Button variant="outline" size="sm">
             <Download className="w-4 h-4 mr-2" />
@@ -190,9 +197,20 @@ export const CommunityCalendar: React.FC<CommunityCalendarProps> = ({
               <ChevronLeft className="w-4 h-4" />
             </Button>
             <h2 className="text-lg font-semibold min-w-[200px] text-center">
-              {view === 'month' && currentDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
-              {view === 'week' && `Week of ${currentDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`}
-              {view === 'day' && currentDate.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
+              {view === 'month' &&
+                currentDate.toLocaleDateString('en-US', {
+                  month: 'long',
+                  year: 'numeric',
+                })}
+              {view === 'week' &&
+                `Week of ${currentDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`}
+              {view === 'day' &&
+                currentDate.toLocaleDateString('en-US', {
+                  weekday: 'long',
+                  month: 'long',
+                  day: 'numeric',
+                  year: 'numeric',
+                })}
             </h2>
             <Button variant="outline" size="sm" onClick={handleNext}>
               <ChevronRight className="w-4 h-4" />
@@ -220,9 +238,27 @@ export const CommunityCalendar: React.FC<CommunityCalendarProps> = ({
       {/* Calendar Display */}
       <Card>
         <CardContent className="p-0">
-          {view === 'month' && <MonthView currentDate={currentDate} eventsByDate={eventsByDate} onEventClick={handleRegisterClick} />}
-          {view === 'week' && <WeekView currentDate={currentDate} eventsByDate={eventsByDate} onEventClick={handleRegisterClick} />}
-          {view === 'day' && <DayView currentDate={currentDate} eventsByDate={eventsByDate} onEventClick={handleRegisterClick} />}
+          {view === 'month' && (
+            <MonthView
+              currentDate={currentDate}
+              eventsByDate={eventsByDate}
+              onEventClick={handleRegisterClick}
+            />
+          )}
+          {view === 'week' && (
+            <WeekView
+              currentDate={currentDate}
+              eventsByDate={eventsByDate}
+              onEventClick={handleRegisterClick}
+            />
+          )}
+          {view === 'day' && (
+            <DayView
+              currentDate={currentDate}
+              eventsByDate={eventsByDate}
+              onEventClick={handleRegisterClick}
+            />
+          )}
         </CardContent>
       </Card>
 
@@ -234,21 +270,28 @@ export const CommunityCalendar: React.FC<CommunityCalendarProps> = ({
               <CalendarIcon className="w-8 h-8" style={{ color: '#3F7A5A' }} />
               <div>
                 <p className="text-2xl font-bold" style={{ color: '#3F7A5A' }}>
-                  {filteredEvents.filter(e => new Date(e.event_date) > new Date()).length}
+                  {
+                    filteredEvents.filter(
+                      (e) => new Date(e.event_date) > new Date(),
+                    ).length
+                  }
                 </p>
                 <p className="text-sm text-gray-600">Upcoming</p>
               </div>
             </div>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center space-x-3">
               <Users className="w-8 h-8" style={{ color: '#C6933F' }} />
               <div>
                 <p className="text-2xl font-bold" style={{ color: '#C6933F' }}>
-                  {filteredEvents.reduce((sum, event) => sum + event.registration_count, 0)}
+                  {filteredEvents.reduce(
+                    (sum, event) => sum + event.registration_count,
+                    0,
+                  )}
                 </p>
                 <p className="text-sm text-gray-600">Attendees</p>
               </div>
@@ -283,7 +326,11 @@ interface MonthViewProps {
   onEventClick: (event: EventWithStats) => void;
 }
 
-const MonthView: React.FC<MonthViewProps> = ({ currentDate, eventsByDate, onEventClick }) => {
+const MonthView: React.FC<MonthViewProps> = ({
+  currentDate,
+  eventsByDate,
+  onEventClick,
+}) => {
   const getDaysInMonth = (date: Date) => {
     const year = date.getFullYear();
     const month = date.getMonth();
@@ -293,17 +340,17 @@ const MonthView: React.FC<MonthViewProps> = ({ currentDate, eventsByDate, onEven
     const startingDayOfWeek = firstDay.getDay();
 
     const days = [];
-    
+
     // Add empty cells for days before the first day of the month
     for (let i = 0; i < startingDayOfWeek; i++) {
       days.push(null);
     }
-    
+
     // Add all days of the month
     for (let day = 1; day <= daysInMonth; day++) {
       days.push(new Date(year, month, day));
     }
-    
+
     return days;
   };
 
@@ -315,12 +362,15 @@ const MonthView: React.FC<MonthViewProps> = ({ currentDate, eventsByDate, onEven
       {/* Weekday headers */}
       <div className="grid grid-cols-7 gap-1 mb-2">
         {weekdays.map((day) => (
-          <div key={day} className="p-2 text-center text-sm font-medium text-gray-600">
+          <div
+            key={day}
+            className="p-2 text-center text-sm font-medium text-gray-600"
+          >
             {day}
           </div>
         ))}
       </div>
-      
+
       {/* Calendar grid */}
       <div className="grid grid-cols-7 gap-1">
         {days.map((day, index) => (
@@ -330,28 +380,34 @@ const MonthView: React.FC<MonthViewProps> = ({ currentDate, eventsByDate, onEven
           >
             {day && (
               <>
-                <div className="text-sm font-medium mb-1">
-                  {day.getDate()}
-                </div>
+                <div className="text-sm font-medium mb-1">{day.getDate()}</div>
                 <div className="space-y-1">
-                  {(eventsByDate[day.toDateString()] || []).slice(0, 3).map((event) => (
-                    <div
-                      key={event.id}
-                      onClick={() => onEventClick(event)}
-                      className="text-xs p-1 rounded cursor-pointer truncate"
-                      style={{ backgroundColor: '#E8F1EE', color: '#2F5D50' }}
-                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#D1E6DC'}
-                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#E8F1EE'}
-                    >
-                      {event.required_tokens && event.required_tokens.length > 0 && (
-                        <Lock className="w-3 h-3 inline mr-1" />
-                      )}
-                      {event.title}
-                    </div>
-                  ))}
+                  {(eventsByDate[day.toDateString()] || [])
+                    .slice(0, 3)
+                    .map((event) => (
+                      <div
+                        key={event.id}
+                        onClick={() => onEventClick(event)}
+                        className="text-xs p-1 rounded cursor-pointer truncate"
+                        style={{ backgroundColor: '#E8F1EE', color: '#2F5D50' }}
+                        onMouseEnter={(e) =>
+                          (e.currentTarget.style.backgroundColor = '#D1E6DC')
+                        }
+                        onMouseLeave={(e) =>
+                          (e.currentTarget.style.backgroundColor = '#E8F1EE')
+                        }
+                      >
+                        {event.required_tokens &&
+                          event.required_tokens.length > 0 && (
+                            <Lock className="w-3 h-3 inline mr-1" />
+                          )}
+                        {event.title}
+                      </div>
+                    ))}
                   {(eventsByDate[day.toDateString()] || []).length > 3 && (
                     <div className="text-xs text-gray-500">
-                      +{(eventsByDate[day.toDateString()] || []).length - 3} more
+                      +{(eventsByDate[day.toDateString()] || []).length - 3}{' '}
+                      more
                     </div>
                   )}
                 </div>
@@ -365,11 +421,15 @@ const MonthView: React.FC<MonthViewProps> = ({ currentDate, eventsByDate, onEven
 };
 
 // Week View Component
-const WeekView: React.FC<MonthViewProps> = ({ currentDate, eventsByDate, onEventClick }) => {
+const WeekView: React.FC<MonthViewProps> = ({
+  currentDate,
+  eventsByDate,
+  onEventClick,
+}) => {
   const getWeekDays = (date: Date) => {
     const startOfWeek = new Date(date);
     startOfWeek.setDate(date.getDate() - date.getDay());
-    
+
     const days = [];
     for (let i = 0; i < 7; i++) {
       const day = new Date(startOfWeek);
@@ -390,9 +450,7 @@ const WeekView: React.FC<MonthViewProps> = ({ currentDate, eventsByDate, onEvent
               <div className="text-sm text-gray-600">
                 {day.toLocaleDateString('en-US', { weekday: 'short' })}
               </div>
-              <div className="text-lg">
-                {day.getDate()}
-              </div>
+              <div className="text-lg">{day.getDate()}</div>
             </div>
             <div className="space-y-2">
               {(eventsByDate[day.toDateString()] || []).map((event) => (
@@ -401,14 +459,18 @@ const WeekView: React.FC<MonthViewProps> = ({ currentDate, eventsByDate, onEvent
                   onClick={() => onEventClick(event)}
                   className="p-2 rounded cursor-pointer text-sm"
                   style={{ backgroundColor: '#E8F1EE', color: '#2F5D50' }}
-                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#D1E6DC'}
-                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#E8F1EE'}
+                  onMouseEnter={(e) =>
+                    (e.currentTarget.style.backgroundColor = '#D1E6DC')
+                  }
+                  onMouseLeave={(e) =>
+                    (e.currentTarget.style.backgroundColor = '#E8F1EE')
+                  }
                 >
                   <div className="font-medium truncate">{event.title}</div>
                   <div className="text-xs">
-                    {new Date(event.event_date).toLocaleTimeString('en-US', { 
-                      hour: '2-digit', 
-                      minute: '2-digit' 
+                    {new Date(event.event_date).toLocaleTimeString('en-US', {
+                      hour: '2-digit',
+                      minute: '2-digit',
                     })}
                   </div>
                 </div>
@@ -422,22 +484,26 @@ const WeekView: React.FC<MonthViewProps> = ({ currentDate, eventsByDate, onEvent
 };
 
 // Day View Component
-const DayView: React.FC<MonthViewProps> = ({ currentDate, eventsByDate, onEventClick }) => {
+const DayView: React.FC<MonthViewProps> = ({
+  currentDate,
+  eventsByDate,
+  onEventClick,
+}) => {
   const dayEvents = eventsByDate[currentDate.toDateString()] || [];
 
   return (
     <div className="p-6">
       <div className="text-center mb-6">
         <h3 className="text-2xl font-bold">
-          {currentDate.toLocaleDateString('en-US', { 
-            weekday: 'long', 
-            month: 'long', 
-            day: 'numeric', 
-            year: 'numeric' 
+          {currentDate.toLocaleDateString('en-US', {
+            weekday: 'long',
+            month: 'long',
+            day: 'numeric',
+            year: 'numeric',
           })}
         </h3>
       </div>
-      
+
       {dayEvents.length === 0 ? (
         <div className="text-center py-12">
           <CalendarIcon className="w-16 h-16 mx-auto text-gray-400 mb-4" />
@@ -446,38 +512,47 @@ const DayView: React.FC<MonthViewProps> = ({ currentDate, eventsByDate, onEventC
       ) : (
         <div className="space-y-4 max-w-2xl mx-auto">
           {dayEvents.map((event) => (
-            <Card key={event.id} className="cursor-pointer hover:shadow-md transition-shadow">
+            <Card
+              key={event.id}
+              className="cursor-pointer hover:shadow-md transition-shadow"
+            >
               <CardContent className="p-6" onClick={() => onEventClick(event)}>
                 <div className="flex justify-between items-start mb-2">
                   <h4 className="text-lg font-semibold">{event.title}</h4>
-                  <Badge variant={event.status === 'published' ? 'default' : 'secondary'}>
+                  <Badge
+                    variant={
+                      event.status === 'published' ? 'default' : 'secondary'
+                    }
+                  >
                     {event.status}
                   </Badge>
                 </div>
-                
+
                 <div className="space-y-2 text-sm text-gray-600">
                   <div className="flex items-center">
                     <Clock className="w-4 h-4 mr-2" />
-                    {new Date(event.event_date).toLocaleTimeString('en-US', { 
-                      hour: '2-digit', 
-                      minute: '2-digit' 
+                    {new Date(event.event_date).toLocaleTimeString('en-US', {
+                      hour: '2-digit',
+                      minute: '2-digit',
                     })}
                   </div>
-                  
+
                   {event.location && (
                     <div className="flex items-center">
                       <MapPin className="w-4 h-4 mr-2" />
                       {event.location}
                     </div>
                   )}
-                  
+
                   <div className="flex items-center">
                     <Users className="w-4 h-4 mr-2" />
                     {event.registration_count} registered
                   </div>
                 </div>
-                
-                <p className="text-gray-700 mt-3 line-clamp-2">{event.description}</p>
+
+                <p className="text-gray-700 mt-3 line-clamp-2">
+                  {event.description}
+                </p>
               </CardContent>
             </Card>
           ))}
@@ -486,4 +561,3 @@ const DayView: React.FC<MonthViewProps> = ({ currentDate, eventsByDate, onEventC
     </div>
   );
 };
-

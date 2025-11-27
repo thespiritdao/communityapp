@@ -15,7 +15,12 @@ export async function middleware(request: NextRequest) {
     : getCookieValue(request.cookies.get('walletAddress')?.value);
 
   if (!walletAddress) {
-    return NextResponse.redirect(new URL(`/login?redirect=${encodeURIComponent(request.nextUrl.pathname)}`, request.url));
+    return NextResponse.redirect(
+      new URL(
+        `/login?redirect=${encodeURIComponent(request.nextUrl.pathname)}`,
+        request.url,
+      ),
+    );
   }
 
   try {

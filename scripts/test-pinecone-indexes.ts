@@ -23,7 +23,7 @@ async function testIndexes() {
   }
 
   const pinecone = new Pinecone({
-    apiKey: process.env.PINECONE_API_KEY!
+    apiKey: process.env.PINECONE_API_KEY!,
   });
 
   console.log('📋 Listing all available indexes...\n');
@@ -43,10 +43,11 @@ async function testIndexes() {
       console.log(`   Host: ${index.host}`);
       console.log(`   Dimension: ${index.dimension}`);
       console.log(`   Metric: ${index.metric}`);
-      console.log(`   Status: ${index.status?.ready ? '✅ Ready' : '⏳ Initializing'}`);
+      console.log(
+        `   Status: ${index.status?.ready ? '✅ Ready' : '⏳ Initializing'}`,
+      );
       console.log('');
     }
-
   } catch (error: any) {
     console.error('❌ ERROR listing indexes:', error.message);
     process.exit(1);
@@ -116,7 +117,7 @@ async function testIndexes() {
 }
 
 // Run the test
-testIndexes().catch(error => {
+testIndexes().catch((error) => {
   console.error('\n❌ FATAL ERROR:', error.message);
   process.exit(1);
 });

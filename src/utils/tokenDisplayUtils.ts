@@ -16,7 +16,9 @@ const tokenDisplayCache = new Map<string, TokenDisplayInfo>();
 /**
  * Resolve a token requirement ID to a human-readable display name
  */
-export const resolveTokenDisplayName = async (tokenId: string): Promise<TokenDisplayInfo> => {
+export const resolveTokenDisplayName = async (
+  tokenId: string,
+): Promise<TokenDisplayInfo> => {
   // Check cache first
   if (tokenDisplayCache.has(tokenId)) {
     return tokenDisplayCache.get(tokenId)!;
@@ -28,7 +30,7 @@ export const resolveTokenDisplayName = async (tokenId: string): Promise<TokenDis
       const displayInfo: TokenDisplayInfo = {
         id: tokenId,
         displayName: tokenId === 'system' ? '$SYSTEM Token' : '$SELF Token',
-        type: 'system'
+        type: 'system',
       };
       tokenDisplayCache.set(tokenId, displayInfo);
       return displayInfo;
@@ -44,8 +46,10 @@ export const resolveTokenDisplayName = async (tokenId: string): Promise<TokenDis
     if (tokenData && !tokenError) {
       const displayInfo: TokenDisplayInfo = {
         id: tokenId,
-        displayName: tokenData.symbol ? `${tokenData.name} (${tokenData.symbol})` : tokenData.name,
-        type: 'token'
+        displayName: tokenData.symbol
+          ? `${tokenData.name} (${tokenData.symbol})`
+          : tokenData.name,
+        type: 'token',
       };
       tokenDisplayCache.set(tokenId, displayInfo);
       return displayInfo;
@@ -56,7 +60,7 @@ export const resolveTokenDisplayName = async (tokenId: string): Promise<TokenDis
     if (podRoleMatch) {
       const [, podId, encodedRoleName] = podRoleMatch;
       const roleName = encodedRoleName.replace(/_/g, ' ');
-      
+
       // Query the pod_role_permissions table for this pod and role
       const { data: podRoleData, error: podRoleError } = await supabase
         .from('pod_role_permissions')
@@ -79,27 +83,32 @@ export const resolveTokenDisplayName = async (tokenId: string): Promise<TokenDis
           displayName: `${podRoleData.role_name} in ${podName}`,
           type: 'pod_role',
           podName: podName,
-          roleName: podRoleData.role_name
+          roleName: podRoleData.role_name,
         };
         tokenDisplayCache.set(tokenId, displayInfo);
         return displayInfo;
       } else {
-        console.warn(`Could not find pod role for ID: ${tokenId}`, { podId, roleName, error: podRoleError });
+        console.warn(`Could not find pod role for ID: ${tokenId}`, {
+          podId,
+          roleName,
+          error: podRoleError,
+        });
       }
     }
 
     // Fallback: Check if it's a simple ID in the pod_permission_lookup table (legacy)
-    const { data: legacyPodRoleData, error: legacyPodRoleError } = await supabase
-      .from('pod_permission_lookup')
-      .select(`
+    const { data: legacyPodRoleData, error: legacyPodRoleError } =
+      await supabase
+        .from('pod_permission_lookup')
+        .select(`
         pod_id,
         role_name,
         permissions,
         pods!inner(name)
       `)
-      .eq('id', tokenId)
-      .eq('is_active', true)
-      .single();
+        .eq('id', tokenId)
+        .eq('is_active', true)
+        .single();
 
     if (legacyPodRoleData && !legacyPodRoleError) {
       const podName = (legacyPodRoleData.pods as any).name;
@@ -108,7 +117,7 @@ export const resolveTokenDisplayName = async (tokenId: string): Promise<TokenDis
         displayName: `${podName} - ${legacyPodRoleData.role_name}`,
         type: 'pod_role',
         podName: podName,
-        roleName: legacyPodRoleData.role_name
+        roleName: legacyPodRoleData.role_name,
       };
       tokenDisplayCache.set(tokenId, displayInfo);
       return displayInfo;
@@ -116,17 +125,17 @@ export const resolveTokenDisplayName = async (tokenId: string): Promise<TokenDis
 
     // Check for legacy simple token names (dev, exec, etc.)
     const legacyTokenNames: Record<string, string> = {
-      'dev': 'Development Pod Access',
-      'exec': 'Executive Pod Access',
-      'marketing': 'Marketing Pod Access',
-      'community': 'Community Pod Access'
+      dev: 'Development Pod Access',
+      exec: 'Executive Pod Access',
+      marketing: 'Marketing Pod Access',
+      community: 'Community Pod Access',
     };
 
     if (legacyTokenNames[tokenId]) {
       const displayInfo: TokenDisplayInfo = {
         id: tokenId,
         displayName: legacyTokenNames[tokenId],
-        type: 'token'
+        type: 'token',
       };
       tokenDisplayCache.set(tokenId, displayInfo);
       return displayInfo;
@@ -137,19 +146,18 @@ export const resolveTokenDisplayName = async (tokenId: string): Promise<TokenDis
     const fallbackInfo: TokenDisplayInfo = {
       id: tokenId,
       displayName: `${tokenId} (Token ID)`,
-      type: 'token'
+      type: 'token',
     };
     tokenDisplayCache.set(tokenId, fallbackInfo);
     return fallbackInfo;
-
   } catch (error) {
     console.error('Error resolving token display name:', error);
-    
+
     // Fallback on error
     const fallbackInfo: TokenDisplayInfo = {
       id: tokenId,
       displayName: `${tokenId} (Unknown)`,
-      type: 'token'
+      type: 'token',
     };
     tokenDisplayCache.set(tokenId, fallbackInfo);
     return fallbackInfo;
@@ -159,9 +167,11 @@ export const resolveTokenDisplayName = async (tokenId: string): Promise<TokenDis
 /**
  * Batch resolve multiple token IDs at once (more efficient)
  */
-export const resolveMultipleTokenDisplayNames = async (tokenIds: string[]): Promise<TokenDisplayInfo[]> => {
+export const resolveMultipleTokenDisplayNames = async (
+  tokenIds: string[],
+): Promise<TokenDisplayInfo[]> => {
   const results = await Promise.all(
-    tokenIds.map(tokenId => resolveTokenDisplayName(tokenId))
+    tokenIds.map((tokenId) => resolveTokenDisplayName(tokenId)),
   );
   return results;
 };
@@ -180,7 +190,7 @@ export const getNoTokenRequiredDisplayInfo = (): TokenDisplayInfo => {
   return {
     id: '',
     displayName: 'Open to Everyone',
-    type: 'system'
+    type: 'system',
   };
 };
 
@@ -192,7 +202,7 @@ export const useTokenDisplayName = async (tokenId?: string) => {
   if (!tokenId || tokenId === '') {
     return {
       loading: false,
-      displayInfo: getNoTokenRequiredDisplayInfo()
+      displayInfo: getNoTokenRequiredDisplayInfo(),
     };
   }
 
@@ -200,7 +210,7 @@ export const useTokenDisplayName = async (tokenId?: string) => {
     const displayInfo = await resolveTokenDisplayName(tokenId);
     return {
       loading: false,
-      displayInfo
+      displayInfo,
     };
   } catch (error) {
     console.error('Error in useTokenDisplayName:', error);
@@ -209,8 +219,8 @@ export const useTokenDisplayName = async (tokenId?: string) => {
       displayInfo: {
         id: tokenId,
         displayName: `${tokenId} (Error)`,
-        type: 'token' as const
-      }
+        type: 'token' as const,
+      },
     };
   }
 };

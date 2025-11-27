@@ -85,12 +85,12 @@ export interface OnChainBountyState {
  */
 export const checkBidApprovalDuplicate = async (
   transactionHash: string,
-  bidId: string
+  bidId: string,
 ): Promise<boolean> => {
   try {
     console.log('🔍 Checking for duplicate bid approval:', {
       transactionHash,
-      bidId
+      bidId,
     });
 
     const { data, error } = await supabase
@@ -109,7 +109,7 @@ export const checkBidApprovalDuplicate = async (
     if (data) {
       console.log('⚠️ Duplicate approval detected:', {
         updateId: data.id,
-        createdAt: data.created_at
+        createdAt: data.created_at,
       });
       return true;
     }
@@ -127,12 +127,12 @@ export const checkBidApprovalDuplicate = async (
  */
 export const checkPaymentDuplicate = async (
   transactionHash: string,
-  bidId: string
+  bidId: string,
 ): Promise<boolean> => {
   try {
     console.log('🔍 Checking for duplicate payment:', {
       transactionHash,
-      bidId
+      bidId,
     });
 
     const { data, error } = await supabase
@@ -151,7 +151,7 @@ export const checkPaymentDuplicate = async (
     if (data) {
       console.log('⚠️ Duplicate payment detected:', {
         updateId: data.id,
-        createdAt: data.created_at
+        createdAt: data.created_at,
       });
       return true;
     }
@@ -174,23 +174,24 @@ export const checkPaymentDuplicate = async (
 export const getOnChainBidState = async (
   publicClient: PublicClient,
   bountyId: string,
-  bidIndex: number
+  bidIndex: number,
 ): Promise<OnChainBidState | null> => {
   try {
-    const contractAddress = process.env.NEXT_PUBLIC_BOUNTY_MANAGER_ADDRESS as `0x${string}`;
+    const contractAddress = process.env
+      .NEXT_PUBLIC_BOUNTY_MANAGER_ADDRESS as `0x${string}`;
 
-    const bids = await publicClient.readContract({
+    const bids = (await publicClient.readContract({
       address: contractAddress,
       abi: BountyManagerABI,
       functionName: 'getBids',
-      args: [BigInt(bountyId)]
-    }) as any[];
+      args: [BigInt(bountyId)],
+    })) as any[];
 
     if (!bids || bidIndex >= bids.length) {
       console.error('❌ Bid index out of range:', {
         bountyId,
         bidIndex,
-        totalBids: bids?.length || 0
+        totalBids: bids?.length || 0,
       });
       return null;
     }
@@ -200,7 +201,7 @@ export const getOnChainBidState = async (
       bountyId,
       bidIndex,
       bidder: bid.bidder,
-      status: bid.status
+      status: bid.status,
     });
 
     return bid;
@@ -215,22 +216,23 @@ export const getOnChainBidState = async (
  */
 export const getOnChainBountyState = async (
   publicClient: PublicClient,
-  bountyId: string
+  bountyId: string,
 ): Promise<OnChainBountyState | null> => {
   try {
-    const contractAddress = process.env.NEXT_PUBLIC_BOUNTY_MANAGER_ADDRESS as `0x${string}`;
+    const contractAddress = process.env
+      .NEXT_PUBLIC_BOUNTY_MANAGER_ADDRESS as `0x${string}`;
 
-    const bounty = await publicClient.readContract({
+    const bounty = (await publicClient.readContract({
       address: contractAddress,
       abi: BountyManagerABI,
       functionName: 'getBounty',
-      args: [BigInt(bountyId)]
-    }) as any;
+      args: [BigInt(bountyId)],
+    })) as any;
 
     console.log('✅ Retrieved on-chain bounty state:', {
       bountyId,
       status: bounty.status,
-      value: bounty.value.toString()
+      value: bounty.value.toString(),
     });
 
     return bounty;
@@ -250,25 +252,25 @@ export const getOnChainBountyState = async (
  */
 export const syncBidApprovalState = async (
   config: BidApprovalStateUpdate,
-  publicClient?: PublicClient
+  publicClient?: PublicClient,
 ): Promise<StateUpdateResult> => {
   try {
     console.log('🔄 Starting bid approval state sync:', {
       bidId: config.bidId,
-      transactionHash: config.transactionHash
+      transactionHash: config.transactionHash,
     });
 
     // Step 1: Check for duplicates
     const isDuplicate = await checkBidApprovalDuplicate(
       config.transactionHash,
-      config.bidId
+      config.bidId,
     );
 
     if (isDuplicate) {
       console.log('⚠️ Approval already processed, skipping update');
       return {
         success: true,
-        isDuplicate: true
+        isDuplicate: true,
       };
     }
 
@@ -277,7 +279,7 @@ export const syncBidApprovalState = async (
       const onChainBid = await getOnChainBidState(
         publicClient,
         config.onchainBountyId,
-        config.onchainBidIndex
+        config.onchainBidIndex,
       );
 
       if (!onChainBid) {
@@ -285,7 +287,7 @@ export const syncBidApprovalState = async (
         return {
           success: false,
           isDuplicate: false,
-          error: 'On-chain verification failed'
+          error: 'On-chain verification failed',
         };
       }
 
@@ -293,12 +295,12 @@ export const syncBidApprovalState = async (
       if (onChainBid.status !== 1) {
         console.error('❌ On-chain bid status mismatch:', {
           expected: 1,
-          actual: onChainBid.status
+          actual: onChainBid.status,
         });
         return {
           success: false,
           isDuplicate: false,
-          error: 'On-chain bid not in Accepted state'
+          error: 'On-chain bid not in Accepted state',
         };
       }
     }
@@ -317,8 +319,8 @@ export const syncBidApprovalState = async (
         metadata: {
           reviewer: config.reviewer,
           approver: config.approver,
-          timestamp: config.timestamp
-        }
+          timestamp: config.timestamp,
+        },
       })
       .select()
       .single();
@@ -336,9 +338,9 @@ export const syncBidApprovalState = async (
       .from('bids')
       .update({
         status: config.status,
-        reviewer_address: config.reviewer,  // Technical reviewer who approves bids
-        final_approver_address: config.approver,  // Final approver for payment release
-        reviewed_at: config.timestamp
+        reviewer_address: config.reviewer, // Technical reviewer who approves bids
+        final_approver_address: config.approver, // Final approver for payment release
+        reviewed_at: config.timestamp,
       })
       .eq('id', config.bidId);
 
@@ -358,19 +360,26 @@ export const syncBidApprovalState = async (
 
     if (!bidFetchError && bidData && bidData.payment_option === 'milestones') {
       console.log('🎯 Creating milestones for milestone-based bid');
-      
+
       try {
         // Parse deliverables and create milestones
-        const deliverables = Array.isArray(bidData.deliverables) ? bidData.deliverables : 
-                            (typeof bidData.deliverables === 'string' ? JSON.parse(bidData.deliverables) : []);
-        
+        const deliverables = Array.isArray(bidData.deliverables)
+          ? bidData.deliverables
+          : typeof bidData.deliverables === 'string'
+            ? JSON.parse(bidData.deliverables)
+            : [];
+
         if (deliverables && deliverables.length > 0) {
           const milestonesData = deliverables.map((deliverable: any) => ({
             bid_id: config.bidId,
-            deliverable_description: deliverable.description || 'Milestone deliverable',
-            due_date: deliverable.due_date || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(), // Default 7 days
-            payment_amount: deliverable.paymentAmount || deliverable.payment_amount || '0',
-            status: 'pending'
+            deliverable_description:
+              deliverable.description || 'Milestone deliverable',
+            due_date:
+              deliverable.due_date ||
+              new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(), // Default 7 days
+            payment_amount:
+              deliverable.paymentAmount || deliverable.payment_amount || '0',
+            status: 'pending',
           }));
 
           const { error: milestonesError } = await supabase
@@ -380,18 +389,28 @@ export const syncBidApprovalState = async (
           if (milestonesError) {
             console.error('❌ Error creating milestones:', milestonesError);
           } else {
-            console.log(`✅ Created ${milestonesData.length} milestones for bid ${config.bidId}`);
+            console.log(
+              `✅ Created ${milestonesData.length} milestones for bid ${config.bidId}`,
+            );
           }
         }
       } catch (milestonesCreateError) {
-        console.error('❌ Error processing milestones creation:', milestonesCreateError);
+        console.error(
+          '❌ Error processing milestones creation:',
+          milestonesCreateError,
+        );
       }
     }
 
     // Step 5: Increment bids_accepted_count
-    console.log('📊 Incrementing bids_accepted_count for bounty:', config.bountyId);
-    const { error: counterError } = await supabase
-      .rpc('increment_bids_accepted', { bounty_id_param: config.bountyId });
+    console.log(
+      '📊 Incrementing bids_accepted_count for bounty:',
+      config.bountyId,
+    );
+    const { error: counterError } = await supabase.rpc(
+      'increment_bids_accepted',
+      { bounty_id_param: config.bountyId },
+    );
 
     if (counterError) {
       console.error('❌ Error incrementing bid counter:', counterError);
@@ -408,7 +427,10 @@ export const syncBidApprovalState = async (
       .single();
 
     if (bountyFetchError) {
-      console.error('❌ Error fetching bounty for status check:', bountyFetchError);
+      console.error(
+        '❌ Error fetching bounty for status check:',
+        bountyFetchError,
+      );
     }
 
     // Determine new bounty status based on bid acceptance mode
@@ -421,7 +443,7 @@ export const syncBidApprovalState = async (
         mode: bounty.bid_acceptance_mode,
         maxBids: bounty.max_bids_accepted,
         acceptedCount: bounty.bids_accepted_count,
-        newStatus: 'assigned'
+        newStatus: 'assigned',
       });
 
       // Note: Bid acceptance mode controls whether MORE bids can be accepted
@@ -432,9 +454,13 @@ export const syncBidApprovalState = async (
         bounty.bid_acceptance_mode === 'multiple' &&
         bounty.bids_accepted_count >= (bounty.max_bids_accepted || 1)
       ) {
-        console.log(`✅ Multiple bid mode limit reached (${bounty.bids_accepted_count}/${bounty.max_bids_accepted}) - all slots filled`);
+        console.log(
+          `✅ Multiple bid mode limit reached (${bounty.bids_accepted_count}/${bounty.max_bids_accepted}) - all slots filled`,
+        );
       } else {
-        console.log('ℹ️ Bounty assigned, can still accept more bids (unlimited or date_limited mode, or slots available)');
+        console.log(
+          'ℹ️ Bounty assigned, can still accept more bids (unlimited or date_limited mode, or slots available)',
+        );
       }
     }
 
@@ -443,7 +469,7 @@ export const syncBidApprovalState = async (
       .from('bounties')
       .update({
         status: newStatus,
-        updated_at: config.timestamp
+        updated_at: config.timestamp,
       })
       .eq('id', config.bountyId);
 
@@ -459,14 +485,14 @@ export const syncBidApprovalState = async (
     return {
       success: true,
       updateId: updateRecord.id,
-      isDuplicate: false
+      isDuplicate: false,
     };
   } catch (error) {
     console.error('❌ Error syncing bid approval state:', error);
     return {
       success: false,
       isDuplicate: false,
-      error: error instanceof Error ? error.message : 'Unknown error'
+      error: error instanceof Error ? error.message : 'Unknown error',
     };
   }
 };
@@ -481,25 +507,25 @@ export const syncBidApprovalState = async (
  */
 export const syncPaymentState = async (
   config: PaymentStateUpdate,
-  publicClient?: PublicClient
+  publicClient?: PublicClient,
 ): Promise<StateUpdateResult> => {
   try {
     console.log('🔄 Starting payment state sync:', {
       bidId: config.bidId,
-      transactionHash: config.transactionHash
+      transactionHash: config.transactionHash,
     });
 
     // Step 1: Check for duplicates
     const isDuplicate = await checkPaymentDuplicate(
       config.transactionHash,
-      config.bidId
+      config.bidId,
     );
 
     if (isDuplicate) {
       console.log('⚠️ Payment already processed, skipping update');
       return {
         success: true,
-        isDuplicate: true
+        isDuplicate: true,
       };
     }
 
@@ -517,7 +543,7 @@ export const syncPaymentState = async (
         return {
           success: false,
           isDuplicate: false,
-          error: 'Bid not found in database'
+          error: 'Bid not found in database',
         };
       }
 
@@ -533,14 +559,14 @@ export const syncPaymentState = async (
         return {
           success: false,
           isDuplicate: false,
-          error: 'Bounty on-chain ID not found'
+          error: 'Bounty on-chain ID not found',
         };
       }
 
       // Verify bounty is completed on-chain
       const onChainBounty = await getOnChainBountyState(
         publicClient,
-        bounty.onchain_id.toString()
+        bounty.onchain_id.toString(),
       );
 
       if (!onChainBounty) {
@@ -548,7 +574,7 @@ export const syncPaymentState = async (
         return {
           success: false,
           isDuplicate: false,
-          error: 'On-chain verification failed'
+          error: 'On-chain verification failed',
         };
       }
 
@@ -556,12 +582,12 @@ export const syncPaymentState = async (
       if (onChainBounty.status !== 2) {
         console.error('❌ On-chain bounty status mismatch:', {
           expected: 2,
-          actual: onChainBounty.status
+          actual: onChainBounty.status,
         });
         return {
           success: false,
           isDuplicate: false,
-          error: 'On-chain bounty not in Completed state'
+          error: 'On-chain bounty not in Completed state',
         };
       }
     }
@@ -578,8 +604,8 @@ export const syncPaymentState = async (
         metadata: {
           paymentAmount: config.paymentAmount,
           paymentToken: config.paymentToken,
-          timestamp: config.timestamp
-        }
+          timestamp: config.timestamp,
+        },
       })
       .select()
       .single();
@@ -595,7 +621,7 @@ export const syncPaymentState = async (
     const { error: bidUpdateError } = await supabase
       .from('bids')
       .update({
-        status: config.status
+        status: config.status,
       })
       .eq('id', config.bidId);
 
@@ -611,7 +637,7 @@ export const syncPaymentState = async (
       .from('bounties')
       .update({
         status: 'completed',
-        updated_at: config.timestamp
+        updated_at: config.timestamp,
       })
       .eq('id', config.bountyId);
 
@@ -625,14 +651,14 @@ export const syncPaymentState = async (
     return {
       success: true,
       updateId: updateRecord.id,
-      isDuplicate: false
+      isDuplicate: false,
     };
   } catch (error) {
     console.error('❌ Error syncing payment state:', error);
     return {
       success: false,
       isDuplicate: false,
-      error: error instanceof Error ? error.message : 'Unknown error'
+      error: error instanceof Error ? error.message : 'Unknown error',
     };
   }
 };
@@ -647,7 +673,7 @@ export const syncPaymentState = async (
  */
 export const resolveStateConflict = async (
   bidId: string,
-  publicClient: PublicClient
+  publicClient: PublicClient,
 ): Promise<boolean> => {
   try {
     console.log('🔧 Resolving state conflict for bid:', bidId);
@@ -674,7 +700,7 @@ export const resolveStateConflict = async (
     const onChainBid = await getOnChainBidState(
       publicClient,
       onchainBountyId.toString(),
-      bid.onchain_bid_index
+      bid.onchain_bid_index,
     );
 
     if (!onChainBid) {
@@ -694,7 +720,7 @@ export const resolveStateConflict = async (
       console.log('🔧 Correcting database state:', {
         bidId,
         currentStatus: bid.status,
-        correctStatus
+        correctStatus,
       });
 
       await supabase
@@ -720,12 +746,12 @@ export const resolveStateConflict = async (
 
 export const syncMilestonePaymentState = async (
   config: MilestonePaymentStateUpdate,
-  publicClient?: PublicClient
+  publicClient?: PublicClient,
 ): Promise<StateUpdateResult> => {
   try {
     console.log('🔄 Starting milestone payment state sync:', {
       milestoneId: config.milestoneId,
-      transactionHash: config.transactionHash
+      transactionHash: config.transactionHash,
     });
 
     // Step 1: Check for duplicates using a simple milestone_id + transaction_hash check
@@ -740,7 +766,7 @@ export const syncMilestonePaymentState = async (
       console.log('⚠️ Milestone payment already processed, skipping update');
       return {
         success: true,
-        isDuplicate: true
+        isDuplicate: true,
       };
     }
 
@@ -750,12 +776,15 @@ export const syncMilestonePaymentState = async (
       .update({
         status: 'completed',
         completed_at: config.timestamp,
-        completed_by: config.transactionHash // Track the transaction hash as completion reference
+        completed_by: config.transactionHash, // Track the transaction hash as completion reference
       })
       .eq('id', config.milestoneId);
 
     if (milestoneUpdateError) {
-      console.error('❌ Error updating milestone status:', milestoneUpdateError);
+      console.error(
+        '❌ Error updating milestone status:',
+        milestoneUpdateError,
+      );
       throw milestoneUpdateError;
     }
 
@@ -780,15 +809,15 @@ export const syncMilestonePaymentState = async (
       .eq('bid_id', milestone.bid_id);
 
     if (!milestonesError && allMilestones) {
-      const allCompleted = allMilestones.every(m => m.status === 'completed');
-      
+      const allCompleted = allMilestones.every((m) => m.status === 'completed');
+
       if (allCompleted) {
         // Update bounty status to completed if all milestones are done
         await supabase
           .from('bounties')
           .update({
             status: 'completed',
-            updated_at: config.timestamp
+            updated_at: config.timestamp,
           })
           .eq('id', config.bountyId);
 
@@ -801,14 +830,14 @@ export const syncMilestonePaymentState = async (
     return {
       success: true,
       updateId: config.milestoneId,
-      isDuplicate: false
+      isDuplicate: false,
     };
   } catch (error) {
     console.error('❌ Error syncing milestone payment state:', error);
     return {
       success: false,
       isDuplicate: false,
-      error: error instanceof Error ? error.message : 'Unknown error'
+      error: error instanceof Error ? error.message : 'Unknown error',
     };
   }
 };

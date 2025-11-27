@@ -12,7 +12,7 @@ import {
   SafeTransactionSponsor as TransactionSponsor,
   SafeTransactionStatus as TransactionStatus,
   SafeTransactionStatusLabel as TransactionStatusLabel,
-  SafeTransactionStatusAction as TransactionStatusAction
+  SafeTransactionStatusAction as TransactionStatusAction,
 } from '@/components/SafeOnchainKit';
 
 interface GiftModalProps {
@@ -34,20 +34,22 @@ const ERC20_ABI = [
     stateMutability: 'nonpayable',
     inputs: [
       { name: 'to', type: 'address' },
-      { name: 'amount', type: 'uint256' }
+      { name: 'amount', type: 'uint256' },
     ],
-    outputs: [{ type: 'bool' }]
-  }
+    outputs: [{ type: 'bool' }],
+  },
 ] as const;
 
 export function GiftModal({
   recipientAddress,
   recipientName,
   recipientImage,
-  onClose
+  onClose,
 }: GiftModalProps) {
   const { address } = useAccount();
-  const [selectedToken, setSelectedToken] = useState<'SYSTEM' | 'SELF'>('SYSTEM');
+  const [selectedToken, setSelectedToken] = useState<'SYSTEM' | 'SELF'>(
+    'SYSTEM',
+  );
   const [amount, setAmount] = useState('');
   const [message, setMessage] = useState('');
 
@@ -98,15 +100,17 @@ export function GiftModal({
       to: recipientAddress,
       token: selectedToken,
       amount,
-      amountWei: amountWei.toString()
+      amountWei: amountWei.toString(),
     });
 
-    return [{
-      address: tokenAddress,
-      abi: ERC20_ABI,
-      functionName: 'transfer',
-      args: [recipientAddress as `0x${string}`, amountWei]
-    }];
+    return [
+      {
+        address: tokenAddress,
+        abi: ERC20_ABI,
+        functionName: 'transfer',
+        args: [recipientAddress as `0x${string}`, amountWei],
+      },
+    ];
   };
 
   const handleSuccess = async (response: any) => {
@@ -114,17 +118,16 @@ export function GiftModal({
 
     // Save gift to database
     try {
-      const { error } = await supabase
-        .from('gifts')
-        .insert({
-          sender_id: address,
-          recipient_id: recipientAddress,
-          token: selectedToken,
-          amount: amount,
-          message: message.trim() || null,
-          transaction_hash: response?.transactionReceipts?.[0]?.transactionHash || null,
-          created_at: new Date().toISOString()
-        });
+      const { error } = await supabase.from('gifts').insert({
+        sender_id: address,
+        recipient_id: recipientAddress,
+        token: selectedToken,
+        amount: amount,
+        message: message.trim() || null,
+        transaction_hash:
+          response?.transactionReceipts?.[0]?.transactionHash || null,
+        created_at: new Date().toISOString(),
+      });
 
       if (error) {
         console.error('[GiftModal] Error saving gift to database:', error);
@@ -162,10 +165,16 @@ export function GiftModal({
 
         {/* Recipient Display */}
         <div className="gift-recipient">
-          <img src={recipientImage} alt={recipientName} className="gift-avatar" />
+          <img
+            src={recipientImage}
+            alt={recipientName}
+            className="gift-avatar"
+          />
           <div>
             <div className="gift-recipient-name">{recipientName}</div>
-            <div className="gift-recipient-address">{recipientAddress.substring(0, 10)}...</div>
+            <div className="gift-recipient-address">
+              {recipientAddress.substring(0, 10)}...
+            </div>
           </div>
         </div>
 
@@ -228,9 +237,7 @@ export function GiftModal({
 
           {/* Insufficient Balance Warning */}
           {amount && !canTransfer() && (
-            <div className="gift-warning">
-              Insufficient balance
-            </div>
+            <div className="gift-warning">Insufficient balance</div>
           )}
         </div>
 
@@ -284,7 +291,11 @@ export function GiftModal({
           <button disabled className="gift-send-btn-disabled">
             <Gift size={18} />
             <span>
-              {!amount ? 'Enter an amount' : !canTransfer() ? 'Insufficient balance' : 'Send Gift'}
+              {!amount
+                ? 'Enter an amount'
+                : !canTransfer()
+                  ? 'Insufficient balance'
+                  : 'Send Gift'}
             </span>
           </button>
         )}

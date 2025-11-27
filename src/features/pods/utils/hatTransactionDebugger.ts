@@ -1,6 +1,6 @@
 /**
  * Transaction Debugger for Hat Operations
- * 
+ *
  * Helps debug the gas estimation failure in changeHatDetails transactions.
  */
 
@@ -26,75 +26,77 @@ export async function debugChangeHatDetailsTransaction(
   hatsProtocolAddress: `0x${string}`,
   hatId: string,
   userAddress: string,
-  ipfsUri: string
+  ipfsUri: string,
 ): Promise<TransactionDebugInfo> {
-  
   console.group('🔍 DEBUGGING CHANGE HAT DETAILS TRANSACTION');
-  
+
   try {
     const hatIdBigInt = convertHatIdForViem(hatId);
-    
+
     // Encode the function data
     const encodedData = encodeFunctionData({
-      abi: [{
-        name: 'changeHatDetails',
-        type: 'function',
-        inputs: [
-          { name: '_hatId', type: 'uint256' },
-          { name: '_newDetails', type: 'string' }
-        ],
-        outputs: [],
-        stateMutability: 'nonpayable'
-      }],
+      abi: [
+        {
+          name: 'changeHatDetails',
+          type: 'function',
+          inputs: [
+            { name: '_hatId', type: 'uint256' },
+            { name: '_newDetails', type: 'string' },
+          ],
+          outputs: [],
+          stateMutability: 'nonpayable',
+        },
+      ],
       functionName: 'changeHatDetails',
-      args: [hatIdBigInt, ipfsUri]
+      args: [hatIdBigInt, ipfsUri],
     });
-    
+
     console.log('📋 Transaction Parameters:', {
       to: hatsProtocolAddress,
       hatId,
       hatIdBigInt: hatIdBigInt.toString(),
       userAddress,
       ipfsUri,
-      encodedDataLength: encodedData.length
+      encodedDataLength: encodedData.length,
     });
-    
+
     const debugInfo: TransactionDebugInfo = {
       hatId,
       hatIdBigInt: hatIdBigInt.toString(),
       userAddress,
       ipfsUri,
-      encodedData
+      encodedData,
     };
-    
+
     // Try to simulate the transaction
     try {
       console.log('🧪 Simulating transaction...');
-      
+
       const simulationResult = await publicClient.simulateContract({
         address: hatsProtocolAddress,
-        abi: [{
-          name: 'changeHatDetails',
-          type: 'function',
-          inputs: [
-            { name: '_hatId', type: 'uint256' },
-            { name: '_newDetails', type: 'string' }
-          ],
-          outputs: [],
-          stateMutability: 'nonpayable'
-        }],
+        abi: [
+          {
+            name: 'changeHatDetails',
+            type: 'function',
+            inputs: [
+              { name: '_hatId', type: 'uint256' },
+              { name: '_newDetails', type: 'string' },
+            ],
+            outputs: [],
+            stateMutability: 'nonpayable',
+          },
+        ],
         functionName: 'changeHatDetails',
         args: [hatIdBigInt, ipfsUri],
-        account: userAddress as `0x${string}`
+        account: userAddress as `0x${string}`,
       });
-      
+
       debugInfo.simulationResult = simulationResult;
       console.log('✅ Simulation successful:', simulationResult);
-      
     } catch (simulationError: any) {
       debugInfo.error = simulationError.message;
       console.error('❌ Simulation failed:', simulationError);
-      
+
       // Analyze the error
       if (simulationError.message?.includes('NotAdmin')) {
         console.log('🚫 Error indicates user is not an admin of this hat');
@@ -104,28 +106,26 @@ export async function debugChangeHatDetailsTransaction(
         console.log('😴 Error indicates hat is inactive');
       }
     }
-    
+
     // Try to estimate gas
     try {
       console.log('⛽ Estimating gas...');
-      
+
       const gasEstimate = await publicClient.estimateGas({
         to: hatsProtocolAddress,
         data: encodedData,
         account: userAddress as `0x${string}`,
-        value: 0n
+        value: 0n,
       });
-      
+
       debugInfo.estimatedGas = gasEstimate;
       console.log('✅ Gas estimation successful:', gasEstimate);
-      
     } catch (gasError: any) {
       console.error('❌ Gas estimation failed:', gasError);
       debugInfo.error = gasError.message;
     }
-    
+
     return debugInfo;
-    
   } catch (error: any) {
     console.error('❌ Debug failed:', error);
     return {
@@ -134,7 +134,7 @@ export async function debugChangeHatDetailsTransaction(
       userAddress,
       ipfsUri,
       encodedData: '0x',
-      error: error.message
+      error: error.message,
     };
   } finally {
     console.groupEnd();
@@ -144,20 +144,26 @@ export async function debugChangeHatDetailsTransaction(
 /**
  * Quick debug function to run from console
  */
-export async function quickDebugExecutiveHat(publicClient: PublicClient, userAddress: string) {
-  const hatsProtocolAddress = '0x3bc1A0Ad72417f2d411118085256fC53CBdDd137' as `0x${string}`;
-  const executiveHatId = '0x0000008800010000000000000000000000000000000000000000000000000000';
-  const testIpfsUri = 'ipfs://bafkreibbuu6dghupp44np23iddoy7grduzmqze26cuhpronr5n5ba5dz2u';
-  
+export async function quickDebugExecutiveHat(
+  publicClient: PublicClient,
+  userAddress: string,
+) {
+  const hatsProtocolAddress =
+    '0x3bc1A0Ad72417f2d411118085256fC53CBdDd137' as `0x${string}`;
+  const executiveHatId =
+    '0x0000008800010000000000000000000000000000000000000000000000000000';
+  const testIpfsUri =
+    'ipfs://bafkreibbuu6dghupp44np23iddoy7grduzmqze26cuhpronr5n5ba5dz2u';
+
   console.log('🚀 Quick Debug - Executive Hat Transaction');
-  
+
   const transactionDebug = await debugChangeHatDetailsTransaction(
     publicClient,
     hatsProtocolAddress,
     executiveHatId,
     userAddress,
-    testIpfsUri
+    testIpfsUri,
   );
-  
+
   return { transactionDebug };
 }

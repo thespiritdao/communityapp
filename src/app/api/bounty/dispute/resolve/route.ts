@@ -4,7 +4,7 @@ import { unifiedNotificationService } from '@/services/unifiedNotificationServic
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
+  process.env.SUPABASE_SERVICE_ROLE_KEY!,
 );
 
 /**
@@ -40,24 +40,32 @@ export async function POST(request: NextRequest) {
       paymentRecipient,
       revisionRequirements,
       revisionDeadline,
-      executeImmediately = false
+      executeImmediately = false,
     } = body;
 
     console.log('⚖️ Resolution request:', {
       disputeId,
       proposerAddress,
       resolutionType,
-      executeImmediately
+      executeImmediately,
     });
 
     // =====================================================
     // 1. VALIDATION
     // =====================================================
 
-    if (!disputeId || !proposerAddress || !resolutionType || !resolutionDescription) {
+    if (
+      !disputeId ||
+      !proposerAddress ||
+      !resolutionType ||
+      !resolutionDescription
+    ) {
       return NextResponse.json(
-        { error: 'Missing required fields: disputeId, proposerAddress, resolutionType, resolutionDescription' },
-        { status: 400 }
+        {
+          error:
+            'Missing required fields: disputeId, proposerAddress, resolutionType, resolutionDescription',
+        },
+        { status: 400 },
       );
     }
 
@@ -71,13 +79,15 @@ export async function POST(request: NextRequest) {
       'extend_deadline',
       'reduce_scope',
       'no_action',
-      'other'
+      'other',
     ];
 
     if (!validResolutionTypes.includes(resolutionType)) {
       return NextResponse.json(
-        { error: `Invalid resolution type. Must be one of: ${validResolutionTypes.join(', ')}` },
-        { status: 400 }
+        {
+          error: `Invalid resolution type. Must be one of: ${validResolutionTypes.join(', ')}`,
+        },
+        { status: 400 },
       );
     }
 
@@ -104,18 +114,21 @@ export async function POST(request: NextRequest) {
 
     if (disputeError || !dispute) {
       console.error('❌ Dispute not found:', disputeError);
-      return NextResponse.json(
-        { error: 'Dispute not found' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: 'Dispute not found' }, { status: 404 });
     }
 
     // Check if dispute is already resolved
-    const resolvedStatuses = ['resolved_for_creator', 'resolved_for_bidder', 'resolved_compromise', 'withdrawn', 'closed'];
+    const resolvedStatuses = [
+      'resolved_for_creator',
+      'resolved_for_bidder',
+      'resolved_compromise',
+      'withdrawn',
+      'closed',
+    ];
     if (resolvedStatuses.includes(dispute.status)) {
       return NextResponse.json(
         { error: `Dispute is already ${dispute.status}` },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -124,7 +137,8 @@ export async function POST(request: NextRequest) {
     // =====================================================
 
     const proposerLower = proposerAddress.toLowerCase();
-    let proposerRole: 'creator' | 'bidder' | 'pod_leader' | 'mediator' | null = null;
+    let proposerRole: 'creator' | 'bidder' | 'pod_leader' | 'mediator' | null =
+      null;
     let canExecuteImmediately = false;
 
     // Check if proposer is a party
@@ -163,7 +177,7 @@ export async function POST(request: NextRequest) {
 
       if (pod && pod.pod_leads) {
         const isPodLeader = pod.pod_leads.some(
-          (lead: string) => lead.toLowerCase() === proposerLower
+          (lead: string) => lead.toLowerCase() === proposerLower,
         );
 
         if (isPodLeader) {
@@ -175,8 +189,11 @@ export async function POST(request: NextRequest) {
 
     if (!proposerRole) {
       return NextResponse.json(
-        { error: 'Only parties involved, mediators, or pod leaders can propose resolutions' },
-        { status: 403 }
+        {
+          error:
+            'Only parties involved, mediators, or pod leaders can propose resolutions',
+        },
+        { status: 403 },
       );
     }
 
@@ -195,9 +212,10 @@ export async function POST(request: NextRequest) {
       payment_recipient: paymentRecipient?.toLowerCase() || null,
       revision_requirements: revisionRequirements || null,
       revision_deadline: revisionDeadline || null,
-      status: (executeImmediately && canExecuteImmediately) ? 'approved' : 'proposed',
+      status:
+        executeImmediately && canExecuteImmediately ? 'approved' : 'proposed',
       created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
+      updated_at: new Date().toISOString(),
     };
 
     // If pod leader is executing immediately, mark all approvals
@@ -216,7 +234,7 @@ export async function POST(request: NextRequest) {
       console.error('❌ Error creating resolution:', insertError);
       return NextResponse.json(
         { error: 'Failed to create resolution', details: insertError?.message },
-        { status: 500 }
+        { status: 500 },
       );
     }
 
@@ -260,7 +278,7 @@ export async function POST(request: NextRequest) {
           resolution_notes: resolutionDescription,
           resolved_by: proposerLower,
           resolved_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
+          updated_at: new Date().toISOString(),
         })
         .eq('id', disputeId);
 
@@ -278,7 +296,7 @@ export async function POST(request: NextRequest) {
           executed_at: new Date().toISOString(),
           executed_by: proposerLower,
           execution_notes: 'Executed by pod leader',
-          updated_at: new Date().toISOString()
+          updated_at: new Date().toISOString(),
         })
         .eq('id', newResolution.id);
 
@@ -290,7 +308,7 @@ export async function POST(request: NextRequest) {
         executed: true,
         newDisputeStatus,
         executedBy: proposerLower,
-        executedAt: new Date().toISOString()
+        executedAt: new Date().toISOString(),
       };
     }
 
@@ -298,9 +316,10 @@ export async function POST(request: NextRequest) {
     // 6. CREATE COMMENT
     // =====================================================
 
-    const commentText = executeImmediately && canExecuteImmediately
-      ? `Pod leader executed resolution: ${resolutionType.replace(/_/g, ' ')}`
-      : `${proposerRole === 'creator' ? 'Creator' : proposerRole === 'bidder' ? 'Bidder' : proposerRole === 'mediator' ? 'Mediator' : 'Pod leader'} proposed resolution: ${resolutionType.replace(/_/g, ' ')}`;
+    const commentText =
+      executeImmediately && canExecuteImmediately
+        ? `Pod leader executed resolution: ${resolutionType.replace(/_/g, ' ')}`
+        : `${proposerRole === 'creator' ? 'Creator' : proposerRole === 'bidder' ? 'Bidder' : proposerRole === 'mediator' ? 'Mediator' : 'Pod leader'} proposed resolution: ${resolutionType.replace(/_/g, ' ')}`;
 
     const { error: commentError } = await supabase
       .from('dispute_comments')
@@ -311,7 +330,7 @@ export async function POST(request: NextRequest) {
         comment_text: commentText,
         comment_type: 'resolution_proposal',
         is_private: false,
-        created_at: new Date().toISOString()
+        created_at: new Date().toISOString(),
       });
 
     if (commentError) {
@@ -330,15 +349,19 @@ export async function POST(request: NextRequest) {
           recipient_address: party.toLowerCase(),
           sender_address: proposerLower,
           notification_type: 'bounty_update',
-          title: executeImmediately && canExecuteImmediately ? 'Dispute Resolved' : 'Resolution Proposed',
-          message: executeImmediately && canExecuteImmediately
-            ? `The dispute has been resolved: ${resolutionType.replace(/_/g, ' ')}`
-            : `A resolution has been proposed for the dispute: ${resolutionType.replace(/_/g, ' ')}`,
+          title:
+            executeImmediately && canExecuteImmediately
+              ? 'Dispute Resolved'
+              : 'Resolution Proposed',
+          message:
+            executeImmediately && canExecuteImmediately
+              ? `The dispute has been resolved: ${resolutionType.replace(/_/g, ' ')}`
+              : `A resolution has been proposed for the dispute: ${resolutionType.replace(/_/g, ' ')}`,
           context_type: 'bounty',
           context_id: disputeId,
           context_url: `/bounty/dispute/${disputeId}`,
-          priority: 'high'
-        })
+          priority: 'high',
+        }),
       );
 
     try {
@@ -360,19 +383,22 @@ export async function POST(request: NextRequest) {
         resolutionType: newResolution.resolution_type,
         status: newResolution.status,
         proposedBy: newResolution.proposed_by,
-        createdAt: newResolution.created_at
+        createdAt: newResolution.created_at,
       },
       execution: executionResult,
-      message: executeImmediately && canExecuteImmediately
-        ? 'Resolution executed successfully'
-        : 'Resolution proposed successfully. Awaiting approval from all parties.'
+      message:
+        executeImmediately && canExecuteImmediately
+          ? 'Resolution executed successfully'
+          : 'Resolution proposed successfully. Awaiting approval from all parties.',
     });
-
   } catch (error) {
     console.error('❌ Error in resolution API:', error);
     return NextResponse.json(
-      { error: 'Internal server error', details: error instanceof Error ? error.message : 'Unknown error' },
-      { status: 500 }
+      {
+        error: 'Internal server error',
+        details: error instanceof Error ? error.message : 'Unknown error',
+      },
+      { status: 500 },
     );
   }
 }
@@ -390,7 +416,7 @@ export async function GET(request: NextRequest) {
     if (!disputeId) {
       return NextResponse.json(
         { error: 'Missing disputeId parameter' },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -405,21 +431,23 @@ export async function GET(request: NextRequest) {
       console.error('❌ Error fetching resolutions:', error);
       return NextResponse.json(
         { error: 'Failed to fetch resolutions', details: error.message },
-        { status: 500 }
+        { status: 500 },
       );
     }
 
     return NextResponse.json({
       success: true,
       resolutions: resolutions || [],
-      count: resolutions?.length || 0
+      count: resolutions?.length || 0,
     });
-
   } catch (error) {
     console.error('❌ Error in GET resolutions API:', error);
     return NextResponse.json(
-      { error: 'Internal server error', details: error instanceof Error ? error.message : 'Unknown error' },
-      { status: 500 }
+      {
+        error: 'Internal server error',
+        details: error instanceof Error ? error.message : 'Unknown error',
+      },
+      { status: 500 },
     );
   }
 }

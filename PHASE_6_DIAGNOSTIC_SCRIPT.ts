@@ -18,14 +18,13 @@ export async function runPhase6Diagnostics(
   factoryAddress: `0x${string}`,
   blockchainPodId: string,
   userAddress: `0x${string}`,
-  adminHatId: bigint
+  adminHatId: bigint,
 ): Promise<{
   success: boolean;
   errors: string[];
   warnings: string[];
   data: Record<string, any>;
 }> {
-
   const errors: string[] = [];
   const warnings: string[] = [];
   const data: Record<string, any> = {};
@@ -45,7 +44,7 @@ export async function runPhase6Diagnostics(
     const factoryOwner = await readContract(config, {
       address: factoryAddress,
       abi: parseAbi(['function owner() view returns (address)']),
-      functionName: 'owner'
+      functionName: 'owner',
     });
     console.log('✅ Factory contract exists. Owner:', factoryOwner);
     data.factoryOwner = factoryOwner;
@@ -66,30 +65,42 @@ export async function runPhase6Diagnostics(
       address: factoryAddress,
       abi: parseAbi(['function getPodProxy(string) view returns (address)']),
       functionName: 'getPodProxy',
-      args: [blockchainPodId]
+      args: [blockchainPodId],
     });
 
     console.log('  Query: getPodProxy("' + blockchainPodId + '")');
     console.log('  Result:', proxyAddress);
 
-    if (!proxyAddress || proxyAddress === '0x0000000000000000000000000000000000000000') {
-      const errorMsg = '❌ CRITICAL: Proxy not registered in factory for this pod ID';
+    if (
+      !proxyAddress ||
+      proxyAddress === '0x0000000000000000000000000000000000000000'
+    ) {
+      const errorMsg =
+        '❌ CRITICAL: Proxy not registered in factory for this pod ID';
       console.error(errorMsg);
-      console.error('  This means Phase 2 (createPodProxy) did not complete successfully');
-      console.error('  Or the blockchain pod ID used in Phase 2 differs from Phase 6');
+      console.error(
+        '  This means Phase 2 (createPodProxy) did not complete successfully',
+      );
+      console.error(
+        '  Or the blockchain pod ID used in Phase 2 differs from Phase 6',
+      );
       errors.push(errorMsg);
-      errors.push('Proxy registration failed - pod creation did not complete correctly');
+      errors.push(
+        'Proxy registration failed - pod creation did not complete correctly',
+      );
       return { success: false, errors, warnings, data };
     }
 
     console.log('✅ Proxy registered:', proxyAddress);
     data.proxyAddress = proxyAddress;
-
   } catch (error) {
-    const errorMsg = '❌ Failed to query getPodProxy - function may not exist on factory';
+    const errorMsg =
+      '❌ Failed to query getPodProxy - function may not exist on factory';
     console.error(errorMsg, error);
     errors.push(errorMsg);
-    errors.push('Factory contract may be outdated - missing getPodProxy function');
+    errors.push(
+      'Factory contract may be outdated - missing getPodProxy function',
+    );
     return { success: false, errors, warnings, data };
   }
 
@@ -97,25 +108,32 @@ export async function runPhase6Diagnostics(
   // TEST 3: Verify factory has setProxyAdminHatViaFactory function
   // ============================================================
   console.log('');
-  console.log('🧪 TEST 3: Verify factory has setProxyAdminHatViaFactory function...');
+  console.log(
+    '🧪 TEST 3: Verify factory has setProxyAdminHatViaFactory function...',
+  );
   try {
     // Try to simulate the call (won't execute, just checks if function exists)
     await readContract(config, {
       address: factoryAddress,
-      abi: parseAbi(['function setProxyAdminHatViaFactory(string, uint256) external']),
+      abi: parseAbi([
+        'function setProxyAdminHatViaFactory(string, uint256) external',
+      ]),
       functionName: 'setProxyAdminHatViaFactory',
-      args: [blockchainPodId, adminHatId]
+      args: [blockchainPodId, adminHatId],
     });
     // If we get here, function exists but execution would fail (expected for write function)
     console.log('✅ Function signature exists on factory');
   } catch (error: any) {
     if (error?.message?.includes('function selector was not recognized')) {
-      const errorMsg = '❌ CRITICAL: setProxyAdminHatViaFactory function NOT FOUND on factory';
+      const errorMsg =
+        '❌ CRITICAL: setProxyAdminHatViaFactory function NOT FOUND on factory';
       console.error(errorMsg);
       console.error('  Factory contract is OUTDATED');
       console.error('  You need to redeploy the factory with the updated code');
       errors.push(errorMsg);
-      errors.push('Factory deployment failed - contract is missing required function');
+      errors.push(
+        'Factory deployment failed - contract is missing required function',
+      );
       return { success: false, errors, warnings, data };
     }
     // Other errors are expected (trying to read a write function)
@@ -131,7 +149,7 @@ export async function runPhase6Diagnostics(
     const proxyPodId = await readContract(config, {
       address: data.proxyAddress,
       abi: parseAbi(['function getPodId() view returns (string)']),
-      functionName: 'getPodId'
+      functionName: 'getPodId',
     });
 
     console.log('  Proxy pod ID:', proxyPodId);
@@ -147,7 +165,6 @@ export async function runPhase6Diagnostics(
     }
 
     data.proxyPodId = proxyPodId;
-
   } catch (error) {
     const errorMsg = '❌ Proxy contract not properly initialized';
     console.error(errorMsg, error);
@@ -165,7 +182,7 @@ export async function runPhase6Diagnostics(
     const currentAdminHatId = await readContract(config, {
       address: data.proxyAddress,
       abi: parseAbi(['function proxyAdminHatId() view returns (uint256)']),
-      functionName: 'proxyAdminHatId'
+      functionName: 'proxyAdminHatId',
     });
 
     console.log('  Current proxy admin HAT ID:', currentAdminHatId.toString());
@@ -175,12 +192,13 @@ export async function runPhase6Diagnostics(
       const warnMsg = '⚠️ WARNING: Proxy admin HAT ID already set';
       console.warn(warnMsg);
       console.warn('  This could mean Phase 6 already completed previously');
-      console.warn('  Or this pod was created before and is being reconfigured');
+      console.warn(
+        '  Or this pod was created before and is being reconfigured',
+      );
       warnings.push(warnMsg);
     } else {
       console.log('✅ Proxy admin HAT ID not set yet (expected for new pod)');
     }
-
   } catch (error) {
     const errorMsg = '❌ Proxy missing proxyAdminHatId state variable';
     console.error(errorMsg, error);
@@ -199,7 +217,7 @@ export async function runPhase6Diagnostics(
       address: data.proxyAddress,
       abi: parseAbi(['function canManage(address) view returns (bool)']),
       functionName: 'canManage',
-      args: [userAddress]
+      args: [userAddress],
     });
 
     console.log('  canManage(' + userAddress + '):', canManage);
@@ -207,7 +225,9 @@ export async function runPhase6Diagnostics(
     if (!canManage) {
       const errorMsg = '❌ CRITICAL: User does not have canManage permission';
       console.error(errorMsg);
-      console.error('  User is not a pod leader or does not wear management HAT');
+      console.error(
+        '  User is not a pod leader or does not wear management HAT',
+      );
       console.error('  Phase 6 will fail authorization check');
       errors.push(errorMsg);
       errors.push('User lacks permission to configure pod');
@@ -216,7 +236,6 @@ export async function runPhase6Diagnostics(
 
     console.log('✅ User has canManage permission');
     data.userCanManage = true;
-
   } catch (error) {
     const errorMsg = '❌ Failed to check canManage permission';
     console.error(errorMsg, error);
@@ -233,7 +252,7 @@ export async function runPhase6Diagnostics(
     const isActive = await readContract(config, {
       address: data.proxyAddress,
       abi: parseAbi(['function isActive() view returns (bool)']),
-      functionName: 'isActive'
+      functionName: 'isActive',
     });
 
     console.log('  isActive:', isActive);
@@ -249,7 +268,6 @@ export async function runPhase6Diagnostics(
 
     console.log('✅ Proxy is active');
     data.proxyIsActive = true;
-
   } catch (error) {
     const warnMsg = '⚠️ Could not verify proxy active status';
     console.warn(warnMsg, error);
@@ -284,7 +302,7 @@ export async function runPhase6Diagnostics(
       address: data.proxyAddress,
       abi: parseAbi(['function canManage(address) view returns (bool)']),
       functionName: 'canManage',
-      args: [factoryAddress]
+      args: [factoryAddress],
     });
 
     if (factoryCanManage) {
@@ -293,11 +311,12 @@ export async function runPhase6Diagnostics(
       console.warn('  This is unusual but not necessarily a problem');
       warnings.push(warnMsg);
     } else {
-      console.log('✅ Factory correctly delegates permission check to msg.sender (user)');
+      console.log(
+        '✅ Factory correctly delegates permission check to msg.sender (user)',
+      );
     }
 
     data.factoryCanManage = factoryCanManage;
-
   } catch (error) {
     const warnMsg = '⚠️ Could not verify factory permission delegation';
     console.warn(warnMsg);
@@ -323,7 +342,9 @@ export async function runPhase6Diagnostics(
     console.log('✅ === ALL DIAGNOSTICS PASSED ===');
     console.log('Phase 6 should work. If it still fails, the issue is likely:');
     console.log('  1. Paymaster not configured (function not whitelisted)');
-    console.log('  2. Gas estimation issue (try disabling sponsorship temporarily)');
+    console.log(
+      '  2. Gas estimation issue (try disabling sponsorship temporarily)',
+    );
     console.log('  3. Network connectivity issue');
     console.log('');
     console.log('Recommendation: Proceed with Phase 6 transaction');
@@ -357,7 +378,7 @@ export async function runPhase6Diagnostics(
     success: errors.length === 0,
     errors,
     warnings,
-    data
+    data,
   };
 }
 

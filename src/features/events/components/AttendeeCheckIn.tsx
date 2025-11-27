@@ -5,18 +5,18 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { 
-  QrCode, 
-  CheckCircle, 
-  Clock, 
+import {
+  QrCode,
+  CheckCircle,
+  Clock,
   Calendar,
   MapPin,
   Award,
   Download,
-  Share2
+  Share2,
 } from 'lucide-react';
 
-import type { EventWithStats, } from '../types/event';
+import type { EventWithStats } from '../types/event';
 import { useEventRegistration } from '../hooks/useEvents';
 import { useAccount } from 'wagmi';
 import QRCode from 'qrcode';
@@ -28,7 +28,7 @@ interface AttendeeCheckInProps {
 export const AttendeeCheckIn: React.FC<AttendeeCheckInProps> = ({ event }) => {
   const { address } = useAccount();
   const { registration, loading } = useEventRegistration(event.id);
-  
+
   const [userQRCode, setUserQRCode] = useState<string>('');
   const [showQRCode, setShowQRCode] = useState(false);
 
@@ -42,18 +42,18 @@ export const AttendeeCheckIn: React.FC<AttendeeCheckInProps> = ({ event }) => {
           eventId: event.id,
           registrationId: registration.id,
           userAddress: registration.user_address,
-          timestamp: Date.now()
+          timestamp: Date.now(),
         });
-        
+
         const qrCodeURL = await QRCode.toDataURL(qrData, {
           width: 256,
           margin: 2,
           color: {
             dark: '#000000',
-            light: '#FFFFFF'
-          }
+            light: '#FFFFFF',
+          },
         });
-        
+
         setUserQRCode(qrCodeURL);
       } catch (error) {
         console.error('Error generating QR code:', error);
@@ -70,7 +70,7 @@ export const AttendeeCheckIn: React.FC<AttendeeCheckInProps> = ({ event }) => {
       month: 'long',
       day: 'numeric',
       hour: '2-digit',
-      minute: '2-digit'
+      minute: '2-digit',
     });
   };
 
@@ -102,11 +102,11 @@ export const AttendeeCheckIn: React.FC<AttendeeCheckInProps> = ({ event }) => {
   const getStatusMessage = (status: string) => {
     switch (status) {
       case 'registered':
-        return isEventToday() 
+        return isEventToday()
           ? 'Ready for check-in! Show your QR code at the event.'
-          : 'You\'re registered! Check in when the event begins.';
+          : "You're registered! Check in when the event begins.";
       case 'checked_in':
-        return 'You\'re checked in! Enjoy the event.';
+        return "You're checked in! Enjoy the event.";
       case 'completed':
         return 'Event completed! Your completion NFT should be in your wallet.';
       case 'cancelled':
@@ -118,7 +118,7 @@ export const AttendeeCheckIn: React.FC<AttendeeCheckInProps> = ({ event }) => {
 
   const downloadQRCode = () => {
     if (!userQRCode) return;
-    
+
     const link = document.createElement('a');
     link.download = `${event.title}-checkin-qr.png`;
     link.href = userQRCode;
@@ -129,7 +129,7 @@ export const AttendeeCheckIn: React.FC<AttendeeCheckInProps> = ({ event }) => {
     const shareData = {
       title: event.title,
       text: `Join me at ${event.title}!`,
-      url: `${window.location.origin}/events/${event.id}`
+      url: `${window.location.origin}/events/${event.id}`,
     };
 
     try {
@@ -168,9 +168,7 @@ export const AttendeeCheckIn: React.FC<AttendeeCheckInProps> = ({ event }) => {
             You need to register for this event to access check-in.
           </p>
           <Button asChild={true}>
-            <a href={`/events/${event.id}`}>
-              View Event & Register
-            </a>
+            <a href={`/events/${event.id}`}>View Event & Register</a>
           </Button>
         </CardContent>
       </Card>
@@ -198,15 +196,20 @@ export const AttendeeCheckIn: React.FC<AttendeeCheckInProps> = ({ event }) => {
                 )}
               </div>
             </div>
-            
-            <Badge className={`${getStatusColor(registration.registration_status)} text-white`}>
+
+            <Badge
+              className={`${getStatusColor(registration.registration_status)} text-white`}
+            >
               {registration.registration_status}
             </Badge>
           </div>
         </CardHeader>
-        
+
         <CardContent>
-          <div className="rounded-lg p-4" style={{ backgroundColor: '#E8F1EE', border: '1px solid #B8D9CA' }}>
+          <div
+            className="rounded-lg p-4"
+            style={{ backgroundColor: '#E8F1EE', border: '1px solid #B8D9CA' }}
+          >
             <p className="font-medium" style={{ color: '#2F5D50' }}>
               {getStatusMessage(registration.registration_status)}
             </p>
@@ -215,7 +218,8 @@ export const AttendeeCheckIn: React.FC<AttendeeCheckInProps> = ({ event }) => {
       </Card>
 
       {/* Check-in QR Code */}
-      {(registration.registration_status === 'registered' || registration.registration_status === 'checked_in') && (
+      {(registration.registration_status === 'registered' ||
+        registration.registration_status === 'checked_in') && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <Card>
             <CardHeader>
@@ -231,7 +235,9 @@ export const AttendeeCheckIn: React.FC<AttendeeCheckInProps> = ({ event }) => {
                     className="inline-block p-4 bg-white border-2 rounded-lg cursor-pointer transition-transform hover:scale-105"
                     style={{
                       borderColor: isEventToday() ? '#3F7A5A' : '#e5e7eb',
-                      boxShadow: isEventToday() ? '0 10px 15px -3px rgba(0, 0, 0, 0.1)' : 'none'
+                      boxShadow: isEventToday()
+                        ? '0 10px 15px -3px rgba(0, 0, 0, 0.1)'
+                        : 'none',
                     }}
                     onClick={() => setShowQRCode(!showQRCode)}
                   >
@@ -241,16 +247,20 @@ export const AttendeeCheckIn: React.FC<AttendeeCheckInProps> = ({ event }) => {
                       className="w-48 h-48 mx-auto"
                     />
                   </div>
-                  
+
                   <div className="space-y-2">
                     <p className="text-sm text-gray-600">
-                      {isEventToday() 
+                      {isEventToday()
                         ? '🟢 Show this QR code to event organizers for check-in'
                         : '⏰ Save this QR code for event check-in'}
                     </p>
-                    
+
                     <div className="flex justify-center space-x-2">
-                      <Button variant="outline" size="sm" onClick={downloadQRCode}>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={downloadQRCode}
+                      >
                         <Download className="w-4 h-4 mr-1" />
                         Download
                       </Button>
@@ -281,31 +291,48 @@ export const AttendeeCheckIn: React.FC<AttendeeCheckInProps> = ({ event }) => {
                   <p className="font-medium text-gray-600">Event Date</p>
                   <p>{formatDateTime(event.event_date)}</p>
                 </div>
-                
+
                 {event.location && (
                   <div>
                     <p className="font-medium text-gray-600">Location</p>
                     <p>{event.location}</p>
                   </div>
                 )}
-                
+
                 <div>
-                  <p className="font-medium text-gray-600">Registration Status</p>
-                  <p className="capitalize">{registration.registration_status.replace('_', ' ')}</p>
+                  <p className="font-medium text-gray-600">
+                    Registration Status
+                  </p>
+                  <p className="capitalize">
+                    {registration.registration_status.replace('_', ' ')}
+                  </p>
                 </div>
-                
+
                 <div>
                   <p className="font-medium text-gray-600">Registered On</p>
-                  <p>{new Date(registration.registered_at).toLocaleDateString()}</p>
+                  <p>
+                    {new Date(registration.registered_at).toLocaleDateString()}
+                  </p>
                 </div>
               </div>
 
               {registration.checked_in_at && (
-                <div className="rounded-lg p-3" style={{ backgroundColor: '#E8F1EE', border: '1px solid #B8D9CA' }}>
+                <div
+                  className="rounded-lg p-3"
+                  style={{
+                    backgroundColor: '#E8F1EE',
+                    border: '1px solid #B8D9CA',
+                  }}
+                >
                   <div className="flex items-center">
-                    <CheckCircle className="w-5 h-5 mr-2" style={{ color: '#3F7A5A' }} />
+                    <CheckCircle
+                      className="w-5 h-5 mr-2"
+                      style={{ color: '#3F7A5A' }}
+                    />
                     <div>
-                      <p className="font-medium" style={{ color: '#1F453A' }}>Checked In Successfully</p>
+                      <p className="font-medium" style={{ color: '#1F453A' }}>
+                        Checked In Successfully
+                      </p>
                       <p className="text-sm" style={{ color: '#3F7A5A' }}>
                         {new Date(registration.checked_in_at).toLocaleString()}
                       </p>
@@ -315,13 +342,27 @@ export const AttendeeCheckIn: React.FC<AttendeeCheckInProps> = ({ event }) => {
               )}
 
               {registration.completed_at && (
-                <div className="rounded-lg p-3" style={{ backgroundColor: '#E8E4DC', border: '1px solid #D1CBC2' }}>
+                <div
+                  className="rounded-lg p-3"
+                  style={{
+                    backgroundColor: '#E8E4DC',
+                    border: '1px solid #D1CBC2',
+                  }}
+                >
                   <div className="flex items-center">
-                    <Award className="w-5 h-5 mr-2" style={{ color: '#6A5F7A' }} />
+                    <Award
+                      className="w-5 h-5 mr-2"
+                      style={{ color: '#6A5F7A' }}
+                    />
                     <div>
-                      <p className="font-medium" style={{ color: '#4A3F5A' }}>Event Completed</p>
+                      <p className="font-medium" style={{ color: '#4A3F5A' }}>
+                        Event Completed
+                      </p>
                       <p className="text-sm" style={{ color: '#6A5F7A' }}>
-                        Completion NFT issued on {new Date(registration.completed_at).toLocaleDateString()}
+                        Completion NFT issued on{' '}
+                        {new Date(
+                          registration.completed_at,
+                        ).toLocaleDateString()}
                       </p>
                     </div>
                   </div>
@@ -340,8 +381,16 @@ export const AttendeeCheckIn: React.FC<AttendeeCheckInProps> = ({ event }) => {
         <CardContent>
           <div className="space-y-4">
             <div className="flex items-start space-x-3">
-              <div className="rounded-full p-2 flex-shrink-0" style={{ backgroundColor: '#E8F1EE' }}>
-                <span className="font-bold text-sm" style={{ color: '#2F5D50' }}>1</span>
+              <div
+                className="rounded-full p-2 flex-shrink-0"
+                style={{ backgroundColor: '#E8F1EE' }}
+              >
+                <span
+                  className="font-bold text-sm"
+                  style={{ color: '#2F5D50' }}
+                >
+                  1
+                </span>
               </div>
               <div>
                 <p className="font-medium">Arrive at the Event</p>
@@ -352,37 +401,64 @@ export const AttendeeCheckIn: React.FC<AttendeeCheckInProps> = ({ event }) => {
             </div>
 
             <div className="flex items-start space-x-3">
-              <div className="rounded-full p-2 flex-shrink-0" style={{ backgroundColor: '#E8F1EE' }}>
-                <span className="font-bold text-sm" style={{ color: '#2F5D50' }}>2</span>
+              <div
+                className="rounded-full p-2 flex-shrink-0"
+                style={{ backgroundColor: '#E8F1EE' }}
+              >
+                <span
+                  className="font-bold text-sm"
+                  style={{ color: '#2F5D50' }}
+                >
+                  2
+                </span>
               </div>
               <div>
                 <p className="font-medium">Show Your QR Code</p>
                 <p className="text-sm text-gray-600">
-                  Present your QR code to event organizers or scan it at the check-in station.
+                  Present your QR code to event organizers or scan it at the
+                  check-in station.
                 </p>
               </div>
             </div>
 
             <div className="flex items-start space-x-3">
-              <div className="rounded-full p-2 flex-shrink-0" style={{ backgroundColor: '#E8F1EE' }}>
-                <span className="font-bold text-sm" style={{ color: '#2F5D50' }}>3</span>
+              <div
+                className="rounded-full p-2 flex-shrink-0"
+                style={{ backgroundColor: '#E8F1EE' }}
+              >
+                <span
+                  className="font-bold text-sm"
+                  style={{ color: '#2F5D50' }}
+                >
+                  3
+                </span>
               </div>
               <div>
                 <p className="font-medium">Attend the Event</p>
                 <p className="text-sm text-gray-600">
-                  Participate fully in the event to be eligible for completion NFT.
+                  Participate fully in the event to be eligible for completion
+                  NFT.
                 </p>
               </div>
             </div>
 
             <div className="flex items-start space-x-3">
-              <div className="rounded-full p-2 flex-shrink-0" style={{ backgroundColor: '#E8F1EE' }}>
-                <span className="font-bold text-sm" style={{ color: '#2F5D50' }}>4</span>
+              <div
+                className="rounded-full p-2 flex-shrink-0"
+                style={{ backgroundColor: '#E8F1EE' }}
+              >
+                <span
+                  className="font-bold text-sm"
+                  style={{ color: '#2F5D50' }}
+                >
+                  4
+                </span>
               </div>
               <div>
                 <p className="font-medium">Receive Completion NFT</p>
                 <p className="text-sm text-gray-600">
-                  After the event ends, you'll receive a completion NFT certificate in your wallet.
+                  After the event ends, you'll receive a completion NFT
+                  certificate in your wallet.
                 </p>
               </div>
             </div>
@@ -405,7 +481,7 @@ export const AttendeeCheckIn: React.FC<AttendeeCheckInProps> = ({ event }) => {
                 </div>
               </a>
             </Button>
-            
+
             <Button variant="outline" className="h-auto py-4" asChild={true}>
               <a href="/events">
                 <div className="text-center">

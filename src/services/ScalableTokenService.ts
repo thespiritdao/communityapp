@@ -1,5 +1,5 @@
 // src/services/ScalableTokenService.ts
-"use client";
+'use client';
 
 import { supabase } from '@/lib/supabase';
 import { useAccount, usePublicClient } from 'wagmi';
@@ -7,35 +7,35 @@ import { useAccount, usePublicClient } from 'wagmi';
 // Standard ERC721/1155 ABI functions for token balance checking
 const TOKEN_ABI = [
   {
-    name: "balanceOf",
-    type: "function", 
+    name: 'balanceOf',
+    type: 'function',
     inputs: [
-      { name: "owner", type: "address" },
-      { name: "tokenId", type: "uint256" }
+      { name: 'owner', type: 'address' },
+      { name: 'tokenId', type: 'uint256' },
     ],
-    outputs: [{ name: "balance", type: "uint256" }],
-    stateMutability: "view"
+    outputs: [{ name: 'balance', type: 'uint256' }],
+    stateMutability: 'view',
   },
   {
-    name: "balanceOf",
-    type: "function",
-    inputs: [{ name: "owner", type: "address" }],
-    outputs: [{ name: "balance", type: "uint256" }],
-    stateMutability: "view"
-  }
+    name: 'balanceOf',
+    type: 'function',
+    inputs: [{ name: 'owner', type: 'address' }],
+    outputs: [{ name: 'balance', type: 'uint256' }],
+    stateMutability: 'view',
+  },
 ];
 
 const HATS_ABI = [
   {
-    name: "balanceOf", 
-    type: "function",
+    name: 'balanceOf',
+    type: 'function',
     inputs: [
-      { name: "_wearer", type: "address" },
-      { name: "_hatId", type: "uint256" }
+      { name: '_wearer', type: 'address' },
+      { name: '_hatId', type: 'uint256' },
     ],
-    outputs: [{ name: "balance", type: "uint256" }],
-    stateMutability: "view"
-  }
+    outputs: [{ name: 'balance', type: 'uint256' }],
+    stateMutability: 'view',
+  },
 ];
 
 export interface TokenInfo {
@@ -61,7 +61,6 @@ export interface TokenBalance {
  * Uses Supabase tokens table for dynamic token management
  */
 export class ScalableTokenService {
-  
   /**
    * Get all active tokens from database
    */
@@ -129,12 +128,12 @@ export class ScalableTokenService {
   static async checkTokenBalance(
     userAddress: string,
     tokenInfo: TokenInfo,
-    publicClient: any
+    publicClient: any,
   ): Promise<TokenBalance> {
     const result: TokenBalance = {
       tokenInfo,
       balance: 0n,
-      hasToken: false
+      hasToken: false,
     };
 
     try {
@@ -153,9 +152,10 @@ export class ScalableTokenService {
         return result;
       }
 
-      // Handle HAT tokens  
+      // Handle HAT tokens
       if (tokenInfo.token_type === 'hat' && tokenInfo.contract_address) {
-        const hatsContract = process.env.NEXT_PUBLIC_HATS_CONTRACT as `0x${string}`;
+        const hatsContract = process.env
+          .NEXT_PUBLIC_HATS_CONTRACT as `0x${string}`;
         if (!hatsContract) {
           result.error = 'HATS contract not configured';
           return result;
@@ -164,18 +164,27 @@ export class ScalableTokenService {
         const balance = await publicClient.readContract({
           address: hatsContract,
           abi: HATS_ABI,
-          functionName: "balanceOf",
-          args: [userAddress as `0x${string}`, tokenInfo.contract_address as `0x${string}`]
+          functionName: 'balanceOf',
+          args: [
+            userAddress as `0x${string}`,
+            tokenInfo.contract_address as `0x${string}`,
+          ],
         });
 
         result.balance = balance as bigint;
         result.hasToken = Number(balance) > 0;
-        console.log(`🎩 HAT token ${tokenInfo.name}: ${result.hasToken ? 'HELD' : 'NOT HELD'} (balance: ${balance})`);
+        console.log(
+          `🎩 HAT token ${tokenInfo.name}: ${result.hasToken ? 'HELD' : 'NOT HELD'} (balance: ${balance})`,
+        );
         return result;
       }
 
       // Handle ERC721/ERC1155 tokens
-      if ((tokenInfo.token_type === 'erc721' || tokenInfo.token_type === 'erc1155') && tokenInfo.contract_address) {
+      if (
+        (tokenInfo.token_type === 'erc721' ||
+          tokenInfo.token_type === 'erc1155') &&
+        tokenInfo.contract_address
+      ) {
         let balance: bigint;
 
         if (tokenInfo.token_type === 'erc1155' && tokenInfo.token_id) {
@@ -183,28 +192,29 @@ export class ScalableTokenService {
           balance = await publicClient.readContract({
             address: tokenInfo.contract_address as `0x${string}`,
             abi: TOKEN_ABI,
-            functionName: "balanceOf",
-            args: [userAddress as `0x${string}`, BigInt(tokenInfo.token_id)]
+            functionName: 'balanceOf',
+            args: [userAddress as `0x${string}`, BigInt(tokenInfo.token_id)],
           });
         } else {
           // ERC721 - just owner balance
           balance = await publicClient.readContract({
             address: tokenInfo.contract_address as `0x${string}`,
             abi: TOKEN_ABI,
-            functionName: "balanceOf", 
-            args: [userAddress as `0x${string}`]
+            functionName: 'balanceOf',
+            args: [userAddress as `0x${string}`],
           });
         }
 
         result.balance = balance as bigint;
         result.hasToken = Number(balance) > 0;
-        console.log(`🪙 ${tokenInfo.token_type.toUpperCase()} token ${tokenInfo.name}: ${result.hasToken ? 'HELD' : 'NOT HELD'} (balance: ${balance})`);
+        console.log(
+          `🪙 ${tokenInfo.token_type.toUpperCase()} token ${tokenInfo.name}: ${result.hasToken ? 'HELD' : 'NOT HELD'} (balance: ${balance})`,
+        );
         return result;
       }
 
       result.error = `Unsupported token type: ${tokenInfo.token_type}`;
       return result;
-
     } catch (error) {
       console.error(`❌ Error checking token ${tokenInfo.name}:`, error);
       result.error = error instanceof Error ? error.message : 'Unknown error';
@@ -218,17 +228,21 @@ export class ScalableTokenService {
   static async checkMultipleTokenBalances(
     userAddress: string,
     tokens: TokenInfo[],
-    publicClient: any
+    publicClient: any,
   ): Promise<TokenBalance[]> {
     console.log(`🔍 Checking balances for ${tokens.length} tokens...`);
-    
+
     const results = await Promise.all(
-      tokens.map(token => this.checkTokenBalance(userAddress, token, publicClient))
+      tokens.map((token) =>
+        this.checkTokenBalance(userAddress, token, publicClient),
+      ),
     );
 
-    const held = results.filter(r => r.hasToken).length;
-    console.log(`🎫 Token check complete: ${held}/${tokens.length} tokens held`);
-    
+    const held = results.filter((r) => r.hasToken).length;
+    console.log(
+      `🎫 Token check complete: ${held}/${tokens.length} tokens held`,
+    );
+
     return results;
   }
 
@@ -238,14 +252,16 @@ export class ScalableTokenService {
   static async checkTokenRequirement(
     userAddress: string,
     requiredTokenIds: string[],
-    publicClient: any
+    publicClient: any,
   ): Promise<{
     hasAccess: boolean;
     heldTokens: TokenBalance[];
     missingTokens: TokenInfo[];
     details: string;
   }> {
-    console.log(`🔐 Checking token requirement for tokens: ${requiredTokenIds.join(', ')}`);
+    console.log(
+      `🔐 Checking token requirement for tokens: ${requiredTokenIds.join(', ')}`,
+    );
 
     try {
       // Get token info for all required tokens
@@ -264,38 +280,45 @@ export class ScalableTokenService {
           hasAccess: false,
           heldTokens: [],
           missingTokens: [],
-          details: 'No valid tokens found for requirement'
+          details: 'No valid tokens found for requirement',
         };
       }
 
       // Check balances
-      const balances = await this.checkMultipleTokenBalances(userAddress, tokens, publicClient);
-      
-      const heldTokens = balances.filter(b => b.hasToken);
-      const missingTokens = balances.filter(b => !b.hasToken).map(b => b.tokenInfo);
-      
-      const hasAccess = heldTokens.length > 0; // OR logic - need at least one
-      
-      const details = hasAccess
-        ? `Access granted via: ${heldTokens.map(t => t.tokenInfo.name).join(', ')}`
-        : `Missing required tokens: ${missingTokens.map(t => t.name).join(', ')}`;
+      const balances = await this.checkMultipleTokenBalances(
+        userAddress,
+        tokens,
+        publicClient,
+      );
 
-      console.log(`🎯 Token requirement result: ${hasAccess ? 'GRANTED' : 'DENIED'} - ${details}`);
+      const heldTokens = balances.filter((b) => b.hasToken);
+      const missingTokens = balances
+        .filter((b) => !b.hasToken)
+        .map((b) => b.tokenInfo);
+
+      const hasAccess = heldTokens.length > 0; // OR logic - need at least one
+
+      const details = hasAccess
+        ? `Access granted via: ${heldTokens.map((t) => t.tokenInfo.name).join(', ')}`
+        : `Missing required tokens: ${missingTokens.map((t) => t.name).join(', ')}`;
+
+      console.log(
+        `🎯 Token requirement result: ${hasAccess ? 'GRANTED' : 'DENIED'} - ${details}`,
+      );
 
       return {
         hasAccess,
         heldTokens,
         missingTokens,
-        details
+        details,
       };
-
     } catch (error) {
       console.error('❌ Error checking token requirement:', error);
       return {
         hasAccess: false,
         heldTokens: [],
         missingTokens: [],
-        details: `Error checking tokens: ${error instanceof Error ? error.message : 'Unknown error'}`
+        details: `Error checking tokens: ${error instanceof Error ? error.message : 'Unknown error'}`,
       };
     }
   }
@@ -334,7 +357,9 @@ export const useScalableTokenBalances = () => {
   const { address } = useAccount();
   const publicClient = usePublicClient();
 
-  const checkUserTokens = async (tokenIds?: string[]): Promise<TokenBalance[]> => {
+  const checkUserTokens = async (
+    tokenIds?: string[],
+  ): Promise<TokenBalance[]> => {
     if (!address || !publicClient) {
       console.log('🔐 No user address or client available');
       return [];
@@ -342,7 +367,7 @@ export const useScalableTokenBalances = () => {
 
     try {
       let tokens: TokenInfo[];
-      
+
       if (tokenIds && tokenIds.length > 0) {
         // Check specific tokens
         tokens = [];
@@ -358,7 +383,7 @@ export const useScalableTokenBalances = () => {
       return await ScalableTokenService.checkMultipleTokenBalances(
         address,
         tokens,
-        publicClient
+        publicClient,
       );
     } catch (error) {
       console.error('❌ Error in useScalableTokenBalances:', error);
@@ -372,14 +397,14 @@ export const useScalableTokenBalances = () => {
         hasAccess: false,
         heldTokens: [],
         missingTokens: [],
-        details: 'User not connected'
+        details: 'User not connected',
       };
     }
 
     return await ScalableTokenService.checkTokenRequirement(
       address,
       requiredTokenIds,
-      publicClient
+      publicClient,
     );
   };
 
@@ -387,6 +412,6 @@ export const useScalableTokenBalances = () => {
     address,
     checkUserTokens,
     checkTokenRequirement,
-    isConnected: !!address
+    isConnected: !!address,
   };
 };

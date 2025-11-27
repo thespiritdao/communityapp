@@ -16,7 +16,7 @@ export const checkDelegationStatus = async (userAddress: string) => {
   try {
     console.log('=== DELEGATION STATUS ANALYSIS ===');
     console.log('User Address (Coinbase Smart Wallet):', userAddress);
-    
+
     // Check NFT balance
     const balance = await publicClient.readContract({
       address: ADVOCATE_ADDRESS,
@@ -24,7 +24,7 @@ export const checkDelegationStatus = async (userAddress: string) => {
       functionName: 'balanceOf',
       args: [userAddress as `0x${string}`],
     });
-    
+
     // Check current delegate
     const currentDelegate = await publicClient.readContract({
       address: ADVOCATE_ADDRESS,
@@ -32,7 +32,7 @@ export const checkDelegationStatus = async (userAddress: string) => {
       functionName: 'delegates',
       args: [userAddress as `0x${string}`],
     });
-    
+
     // Check voting power
     const votingPower = await publicClient.readContract({
       address: ADVOCATE_ADDRESS,
@@ -40,7 +40,7 @@ export const checkDelegationStatus = async (userAddress: string) => {
       functionName: 'getVotes',
       args: [userAddress as `0x${string}`],
     });
-    
+
     // If delegate is different, check their voting power too
     let delegateVotingPower = 0n;
     if (currentDelegate && currentDelegate !== userAddress) {
@@ -51,19 +51,27 @@ export const checkDelegationStatus = async (userAddress: string) => {
         args: [currentDelegate as `0x${string}`],
       });
     }
-    
+
     console.log('Results:');
     console.log('- NFT Balance:', balance.toString());
     console.log('- Current Delegate:', currentDelegate);
     console.log('- Your Voting Power:', votingPower.toString());
-    console.log('- Delegate\'s Voting Power:', delegateVotingPower.toString());
-    console.log('- Self-Delegated:', currentDelegate?.toLowerCase() === userAddress.toLowerCase());
-    console.log('- Zero Address Delegate:', currentDelegate === '0x0000000000000000000000000000000000000000');
-    
+    console.log("- Delegate's Voting Power:", delegateVotingPower.toString());
+    console.log(
+      '- Self-Delegated:',
+      currentDelegate?.toLowerCase() === userAddress.toLowerCase(),
+    );
+    console.log(
+      '- Zero Address Delegate:',
+      currentDelegate === '0x0000000000000000000000000000000000000000',
+    );
+
     // Diagnosis
     if (balance > 0 && votingPower === 0n) {
       if (currentDelegate === '0x0000000000000000000000000000000000000000') {
-        console.log('🔴 ISSUE: You have NFTs but no delegation set (zero address)');
+        console.log(
+          '🔴 ISSUE: You have NFTs but no delegation set (zero address)',
+        );
         console.log('✅ SOLUTION: Need to delegate to yourself');
       } else if (currentDelegate.toLowerCase() !== userAddress.toLowerCase()) {
         console.log('🔴 ISSUE: NFTs delegated to different address');
@@ -75,15 +83,16 @@ export const checkDelegationStatus = async (userAddress: string) => {
     } else if (balance === 0n) {
       console.log('🔴 ISSUE: No NFTs found at this address');
     }
-    
+
     return {
       balance,
       currentDelegate,
       votingPower,
       delegateVotingPower,
-      needsReDelegation: balance > 0 && currentDelegate?.toLowerCase() !== userAddress.toLowerCase()
+      needsReDelegation:
+        balance > 0 &&
+        currentDelegate?.toLowerCase() !== userAddress.toLowerCase(),
     };
-    
   } catch (error) {
     console.error('Error checking delegation status:', error);
     return null;

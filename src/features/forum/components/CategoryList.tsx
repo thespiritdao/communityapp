@@ -20,7 +20,7 @@ const CategoryList: React.FC<CategoryListProps> = ({ categories }) => {
       <div className={styles.categoryHeader}>
         <h3 className={styles.sectionTitle}>Forum Categories</h3>
       </div>
-      
+
       {categories.length === 0 ? (
         <div className={styles.emptyState}>
           <p>No categories found.</p>
@@ -29,11 +29,17 @@ const CategoryList: React.FC<CategoryListProps> = ({ categories }) => {
         <ul className={styles.categoryList}>
           {categories.map((category) => (
             <li key={category.id} className={styles.categoryItem}>
-              <Link href={`/forum/category/${category.id}`} className={styles.categoryLink}>
+              <Link
+                href={`/forum/category/${category.id}`}
+                className={styles.categoryLink}
+              >
                 <h4 className={styles.categoryTitle}>{category.name}</h4>
-                <p className={styles.categoryDescription}>{category.description}</p>
+                <p className={styles.categoryDescription}>
+                  {category.description}
+                </p>
                 <span className={styles.categoryThreadCount}>
-                  {category.thread_count} {category.thread_count === 1 ? 'Thread' : 'Threads'}
+                  {category.thread_count}{' '}
+                  {category.thread_count === 1 ? 'Thread' : 'Threads'}
                 </span>
               </Link>
             </li>

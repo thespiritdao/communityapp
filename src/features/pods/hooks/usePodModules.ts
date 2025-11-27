@@ -29,9 +29,7 @@ export const usePodModules = (): UsePodModulesReturn => {
   const loadAllModules = async () => {
     try {
       setLoading(true);
-      const { data, error } = await supabase
-        .from('pod_modules')
-        .select(`
+      const { data, error } = await supabase.from('pod_modules').select(`
           pod_id,
           chat_enabled,
           forum_enabled,
@@ -45,40 +43,45 @@ export const usePodModules = (): UsePodModulesReturn => {
 
       // Convert array to lookup map
       const moduleMap: Record<string, PodModules> = {};
-      (data || []).forEach(item => {
+      (data || []).forEach((item) => {
         moduleMap[item.pod_id] = {
           chat_enabled: item.chat_enabled,
           forum_enabled: item.forum_enabled,
           treasury_enabled: item.treasury_enabled,
           events_enabled: item.events_enabled,
           bounties_enabled: item.bounties_enabled,
-          marketplace_enabled: item.marketplace_enabled
+          marketplace_enabled: item.marketplace_enabled,
         };
       });
 
       console.log('usePodModules: Loaded module data:', {
         rawData: data,
-        moduleMap: moduleMap
+        moduleMap: moduleMap,
       });
 
       setModules(moduleMap);
       setError(null);
     } catch (err) {
       console.error('Error loading pod modules:', err);
-      setError(err instanceof Error ? err.message : 'Failed to load pod modules');
+      setError(
+        err instanceof Error ? err.message : 'Failed to load pod modules',
+      );
     } finally {
       setLoading(false);
     }
   };
 
-  const isModuleEnabled = (podId: string, module: keyof PodModules): boolean => {
+  const isModuleEnabled = (
+    podId: string,
+    module: keyof PodModules,
+  ): boolean => {
     const enabled = modules[podId]?.[module] ?? false;
     console.log('usePodModules: isModuleEnabled check:', {
       podId,
       module,
       enabled,
       moduleData: modules[podId],
-      allModules: Object.keys(modules)
+      allModules: Object.keys(modules),
     });
     return enabled;
   };
@@ -93,12 +96,13 @@ export const usePodModules = (): UsePodModulesReturn => {
     // Subscribe to changes in pod_modules
     const subscription = supabase
       .channel('pod_modules_changes')
-      .on('postgres_changes', 
+      .on(
+        'postgres_changes',
         { event: '*', schema: 'public', table: 'pod_modules' },
         (payload) => {
           console.log('usePodModules: Database change detected:', payload);
           loadAllModules();
-        }
+        },
       )
       .subscribe();
 
@@ -114,6 +118,6 @@ export const usePodModules = (): UsePodModulesReturn => {
     loading,
     error,
     isModuleEnabled,
-    refreshModules
+    refreshModules,
   };
 };

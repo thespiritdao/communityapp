@@ -18,11 +18,14 @@ interface ModuleErrorBoundaryProps {
 
 /**
  * ModuleErrorBoundary - Catches webpack module loading errors and provides recovery
- * 
- * Specifically designed to handle the "Cannot read properties of undefined (reading 'call')" 
+ *
+ * Specifically designed to handle the "Cannot read properties of undefined (reading 'call')"
  * webpack errors that occur when modules fail to load properly.
  */
-export class ModuleErrorBoundary extends Component<ModuleErrorBoundaryProps, ModuleErrorBoundaryState> {
+export class ModuleErrorBoundary extends Component<
+  ModuleErrorBoundaryProps,
+  ModuleErrorBoundaryState
+> {
   constructor(props: ModuleErrorBoundaryProps) {
     super(props);
     this.state = { hasError: false };
@@ -30,70 +33,84 @@ export class ModuleErrorBoundary extends Component<ModuleErrorBoundaryProps, Mod
 
   static getDerivedStateFromError(error: Error): ModuleErrorBoundaryState {
     // Detect webpack module loading errors
-    const isModuleLoadingError = 
+    const isModuleLoadingError =
       error.message.includes('Cannot read properties of undefined') ||
-      error.message.includes('reading \'call\'') ||
+      error.message.includes("reading 'call'") ||
       error.message.includes('Loading chunk') ||
       error.message.includes('ChunkLoadError') ||
       error.name === 'ChunkLoadError';
 
     if (isModuleLoadingError) {
       console.error('🚨 Module loading error detected:', error);
-      
+
       // Check if auto-refresh is enabled and we haven't refreshed too many times
-      const autoRefreshEnabled = APP_SETTINGS.errorHandling.enableAutoRefresh && 
-                                localStorage.getItem('autoRefreshEnabled') !== 'false';
-      const refreshCount = Number.parseInt(localStorage.getItem('moduleErrorRefreshCount') || '0', 10);
-      const lastRefreshTime = Number.parseInt(localStorage.getItem('lastModuleErrorRefresh') || '0', 10);
+      const autoRefreshEnabled =
+        APP_SETTINGS.errorHandling.enableAutoRefresh &&
+        localStorage.getItem('autoRefreshEnabled') !== 'false';
+      const refreshCount = Number.parseInt(
+        localStorage.getItem('moduleErrorRefreshCount') || '0',
+        10,
+      );
+      const lastRefreshTime = Number.parseInt(
+        localStorage.getItem('lastModuleErrorRefresh') || '0',
+        10,
+      );
       const timeSinceLastRefresh = Date.now() - lastRefreshTime;
-      
+
       // Only auto-refresh if:
       // 1. Auto-refresh is enabled
       // 2. We haven't exceeded max refresh attempts
       // 3. Minimum refresh interval has passed
-      if (autoRefreshEnabled && 
-          refreshCount < APP_SETTINGS.errorHandling.maxRefreshAttempts && 
-          timeSinceLastRefresh > APP_SETTINGS.errorHandling.minRefreshInterval) {
+      if (
+        autoRefreshEnabled &&
+        refreshCount < APP_SETTINGS.errorHandling.maxRefreshAttempts &&
+        timeSinceLastRefresh > APP_SETTINGS.errorHandling.minRefreshInterval
+      ) {
         // Update refresh tracking
-        localStorage.setItem('moduleErrorRefreshCount', String(refreshCount + 1));
+        localStorage.setItem(
+          'moduleErrorRefreshCount',
+          String(refreshCount + 1),
+        );
         localStorage.setItem('lastModuleErrorRefresh', String(Date.now()));
-        
+
         // Clear refresh count after the time window
         if (refreshCount === 0) {
           setTimeout(() => {
             localStorage.setItem('moduleErrorRefreshCount', '0');
           }, APP_SETTINGS.errorHandling.refreshTimeWindow);
         }
-        
+
         // Attempt to reload the page after configured delay
         setTimeout(() => {
           console.log('🔄 Auto-reloading page due to module loading error...');
           window.location.reload();
         }, APP_SETTINGS.errorHandling.autoRefreshDelay);
       } else {
-        console.log('⚠️ Auto-refresh disabled or limit reached. Manual refresh required.');
+        console.log(
+          '⚠️ Auto-refresh disabled or limit reached. Manual refresh required.',
+        );
       }
     }
 
     return {
       hasError: true,
-      error
+      error,
     };
   }
 
   componentDidCatch(error: Error, errorInfo: { componentStack: string }) {
     console.error('ModuleErrorBoundary caught an error:', error, errorInfo);
-    
+
     this.setState({
       hasError: true,
       error,
-      errorInfo
+      errorInfo,
     });
 
     // Track module loading errors
-    const isModuleLoadingError = 
+    const isModuleLoadingError =
       error.message.includes('Cannot read properties of undefined') ||
-      error.message.includes('reading \'call\'') ||
+      error.message.includes("reading 'call'") ||
       error.message.includes('Loading chunk');
 
     if (isModuleLoadingError) {
@@ -102,7 +119,7 @@ export class ModuleErrorBoundary extends Component<ModuleErrorBoundaryProps, Mod
         stack: error.stack,
         componentStack: errorInfo.componentStack,
         timestamp: new Date().toISOString(),
-        userAgent: navigator.userAgent
+        userAgent: navigator.userAgent,
       });
     }
   }
@@ -122,11 +139,13 @@ export class ModuleErrorBoundary extends Component<ModuleErrorBoundaryProps, Mod
         return this.props.fallback;
       }
 
-      const isModuleLoadingError = this.state.error && (
-        this.state.error.message.includes('Cannot read properties of undefined') ||
-        this.state.error.message.includes('reading \'call\'') ||
-        this.state.error.message.includes('Loading chunk')
-      );
+      const isModuleLoadingError =
+        this.state.error &&
+        (this.state.error.message.includes(
+          'Cannot read properties of undefined',
+        ) ||
+          this.state.error.message.includes("reading 'call'") ||
+          this.state.error.message.includes('Loading chunk'));
 
       return (
         <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
@@ -136,22 +155,25 @@ export class ModuleErrorBoundary extends Component<ModuleErrorBoundaryProps, Mod
                 <div className="text-4xl mb-4">
                   {isModuleLoadingError ? '🔄' : '⚠️'}
                 </div>
-                
+
                 <h2 className="text-xl font-bold text-gray-900 mb-2">
-                  {isModuleLoadingError ? 'Loading Issue Detected' : 'Something went wrong'}
+                  {isModuleLoadingError
+                    ? 'Loading Issue Detected'
+                    : 'Something went wrong'}
                 </h2>
-                
+
                 <p className="text-gray-600 mb-6">
-                  {isModuleLoadingError 
+                  {isModuleLoadingError
                     ? 'A module failed to load properly. The page will refresh automatically in a moment, or you can refresh manually.'
-                    : 'An unexpected error occurred. Please try refreshing the page.'
-                  }
+                    : 'An unexpected error occurred. Please try refreshing the page.'}
                 </p>
 
                 {/* Error details for debugging */}
                 {this.state.error && process.env.NODE_ENV === 'development' && (
                   <details className="text-left mb-4 p-3 bg-gray-100 rounded text-xs">
-                    <summary className="cursor-pointer font-medium">Error Details</summary>
+                    <summary className="cursor-pointer font-medium">
+                      Error Details
+                    </summary>
                     <pre className="mt-2 overflow-auto">
                       {this.state.error.message}
                       {this.state.error.stack}
@@ -166,12 +188,9 @@ export class ModuleErrorBoundary extends Component<ModuleErrorBoundaryProps, Mod
                   >
                     Refresh Page
                   </Button>
-                  
+
                   {!isModuleLoadingError && (
-                    <Button
-                      onClick={this.handleRetry}
-                      variant="outline"
-                    >
+                    <Button onClick={this.handleRetry} variant="outline">
                       Try Again
                     </Button>
                   )}
@@ -198,15 +217,15 @@ export class ModuleErrorBoundary extends Component<ModuleErrorBoundaryProps, Mod
  */
 export function withModuleErrorBoundary<P extends object>(
   Component: React.ComponentType<P>,
-  fallback?: ReactNode
+  fallback?: ReactNode,
 ) {
   const WrappedComponent = (props: P) => (
     <ModuleErrorBoundary fallback={fallback}>
       <Component {...props} />
     </ModuleErrorBoundary>
   );
-  
+
   WrappedComponent.displayName = `withModuleErrorBoundary(${Component.displayName || Component.name})`;
-  
+
   return WrappedComponent;
 }

@@ -3,13 +3,13 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useAccount } from 'wagmi';
 import { EventService } from '../lib/supabase';
 import { supabase } from '../../../utils/supabaseClient';
-import type { 
-  Event, 
-  EventWithStats, 
-  EventRegistration, 
+import type {
+  Event,
+  EventWithStats,
+  EventRegistration,
   EventAgenda,
   CreateEventForm,
-  CreateAgendaForm 
+  CreateAgendaForm,
 } from '../types/event';
 
 export function useEvents(filters?: {
@@ -49,7 +49,7 @@ export function useEvents(filters?: {
     events,
     loading,
     error,
-    refetch: fetchEvents
+    refetch: fetchEvents,
   };
 }
 
@@ -81,7 +81,7 @@ export function useEvent(eventId: string | null) {
     event,
     loading,
     error,
-    refetch: fetchEvent
+    refetch: fetchEvent,
   };
 }
 
@@ -90,29 +90,32 @@ export function useCreateEvent() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const createEvent = useCallback(async (eventData: CreateEventForm): Promise<Event | null> => {
-    if (!address) {
-      setError('Wallet not connected');
-      return null;
-    }
+  const createEvent = useCallback(
+    async (eventData: CreateEventForm): Promise<Event | null> => {
+      if (!address) {
+        setError('Wallet not connected');
+        return null;
+      }
 
-    try {
-      setLoading(true);
-      setError(null);
-      const event = await EventService.createEvent(eventData, address);
-      return event;
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to create event');
-      return null;
-    } finally {
-      setLoading(false);
-    }
-  }, [address]);
+      try {
+        setLoading(true);
+        setError(null);
+        const event = await EventService.createEvent(eventData, address);
+        return event;
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to create event');
+        return null;
+      } finally {
+        setLoading(false);
+      }
+    },
+    [address],
+  );
 
   return {
     createEvent,
     loading,
-    error
+    error,
   };
 }
 
@@ -130,7 +133,9 @@ export function useEventRegistrations(eventId: string | null) {
       const data = await EventService.getEventRegistrations(eventId);
       setRegistrations(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch registrations');
+      setError(
+        err instanceof Error ? err.message : 'Failed to fetch registrations',
+      );
     } finally {
       setLoading(false);
     }
@@ -144,13 +149,15 @@ export function useEventRegistrations(eventId: string | null) {
     registrations,
     loading,
     error,
-    refetch: fetchRegistrations
+    refetch: fetchRegistrations,
   };
 }
 
 export function useEventRegistration(eventId: string | null) {
   const { address } = useAccount();
-  const [registration, setRegistration] = useState<EventRegistration | null>(null);
+  const [registration, setRegistration] = useState<EventRegistration | null>(
+    null,
+  );
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [registering, setRegistering] = useState(false);
@@ -164,36 +171,43 @@ export function useEventRegistration(eventId: string | null) {
       const data = await EventService.getUserRegistration(eventId, address);
       setRegistration(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch registration');
+      setError(
+        err instanceof Error ? err.message : 'Failed to fetch registration',
+      );
     } finally {
       setLoading(false);
     }
   }, [eventId, address]);
 
-  const registerForEvent = useCallback(async (paymentAmount?: string, paymentToken?: string): Promise<boolean> => {
-    if (!eventId || !address) {
-      setError('Event ID or wallet address missing');
-      return false;
-    }
+  const registerForEvent = useCallback(
+    async (paymentAmount?: string, paymentToken?: string): Promise<boolean> => {
+      if (!eventId || !address) {
+        setError('Event ID or wallet address missing');
+        return false;
+      }
 
-    try {
-      setRegistering(true);
-      setError(null);
-      const newRegistration = await EventService.registerForEvent(
-        eventId, 
-        address, 
-        paymentAmount, 
-        paymentToken
-      );
-      setRegistration(newRegistration);
-      return true;
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to register for event');
-      return false;
-    } finally {
-      setRegistering(false);
-    }
-  }, [eventId, address]);
+      try {
+        setRegistering(true);
+        setError(null);
+        const newRegistration = await EventService.registerForEvent(
+          eventId,
+          address,
+          paymentAmount,
+          paymentToken,
+        );
+        setRegistration(newRegistration);
+        return true;
+      } catch (err) {
+        setError(
+          err instanceof Error ? err.message : 'Failed to register for event',
+        );
+        return false;
+      } finally {
+        setRegistering(false);
+      }
+    },
+    [eventId, address],
+  );
 
   const cancelRegistration = useCallback(async (): Promise<boolean> => {
     if (!registration) {
@@ -204,11 +218,15 @@ export function useEventRegistration(eventId: string | null) {
     try {
       setRegistering(true);
       setError(null);
-      const updatedRegistration = await EventService.cancelRegistration(registration.id);
+      const updatedRegistration = await EventService.cancelRegistration(
+        registration.id,
+      );
       setRegistration(updatedRegistration);
       return true;
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to cancel registration');
+      setError(
+        err instanceof Error ? err.message : 'Failed to cancel registration',
+      );
       return false;
     } finally {
       setRegistering(false);
@@ -226,7 +244,7 @@ export function useEventRegistration(eventId: string | null) {
     registering,
     registerForEvent,
     cancelRegistration,
-    refetch: fetchRegistration
+    refetch: fetchRegistration,
   };
 }
 
@@ -250,62 +268,93 @@ export function useEventAgendas(eventId: string | null) {
     }
   }, [eventId]);
 
-  const createAgenda = useCallback(async (agendaData: CreateAgendaForm): Promise<boolean> => {
-    if (!eventId) {
-      console.error('Event ID missing in createAgenda');
-      setError('Event ID missing');
-      return false;
-    }
-
-    try {
-      setError(null);
-      
-      // Check session before proceeding
-      const session = await getCurrentSession();
-      console.log('Hook session check:', { session, sessionError, hasUser: !!session?.user, userId: session?.user?.id });
-      
-      if (sessionError || !session?.user?.id) {
-        console.error('Authentication check failed in hook:', { sessionError, session });
-        setError('Authentication required - please log in again');
+  const createAgenda = useCallback(
+    async (agendaData: CreateAgendaForm): Promise<boolean> => {
+      if (!eventId) {
+        console.error('Event ID missing in createAgenda');
+        setError('Event ID missing');
         return false;
       }
-      
-      console.log('Calling EventService.createAgenda with:', { ...agendaData, event_id: eventId });
-      const result = await EventService.createAgenda({ ...agendaData, event_id: eventId });
-      console.log('EventService.createAgenda result:', result);
-      await fetchAgendas();
-      return true;
-    } catch (err) {
-      console.error('Error in createAgenda hook:', err);
-      const errorMessage = err instanceof Error ? err.message : 'Failed to create agenda';
-      setError(errorMessage);
-      return false;
-    }
-  }, [eventId, fetchAgendas]);
 
-  const updateAgenda = useCallback(async (agendaId: string, updates: Partial<EventAgenda>): Promise<boolean> => {
-    try {
-      setError(null);
-      await EventService.updateAgenda(agendaId, updates);
-      await fetchAgendas();
-      return true;
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to update agenda');
-      return false;
-    }
-  }, [fetchAgendas]);
+      try {
+        setError(null);
 
-  const deleteAgenda = useCallback(async (agendaId: string): Promise<boolean> => {
-    try {
-      setError(null);
-      await EventService.deleteAgenda(agendaId);
-      await fetchAgendas();
-      return true;
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to delete agenda');
-      return false;
-    }
-  }, [fetchAgendas]);
+        // Check session before proceeding
+        const session = await getCurrentSession();
+        console.log('Hook session check:', {
+          session,
+          sessionError,
+          hasUser: !!session?.user,
+          userId: session?.user?.id,
+        });
+
+        if (sessionError || !session?.user?.id) {
+          console.error('Authentication check failed in hook:', {
+            sessionError,
+            session,
+          });
+          setError('Authentication required - please log in again');
+          return false;
+        }
+
+        console.log('Calling EventService.createAgenda with:', {
+          ...agendaData,
+          event_id: eventId,
+        });
+        const result = await EventService.createAgenda({
+          ...agendaData,
+          event_id: eventId,
+        });
+        console.log('EventService.createAgenda result:', result);
+        await fetchAgendas();
+        return true;
+      } catch (err) {
+        console.error('Error in createAgenda hook:', err);
+        const errorMessage =
+          err instanceof Error ? err.message : 'Failed to create agenda';
+        setError(errorMessage);
+        return false;
+      }
+    },
+    [eventId, fetchAgendas],
+  );
+
+  const updateAgenda = useCallback(
+    async (
+      agendaId: string,
+      updates: Partial<EventAgenda>,
+    ): Promise<boolean> => {
+      try {
+        setError(null);
+        await EventService.updateAgenda(agendaId, updates);
+        await fetchAgendas();
+        return true;
+      } catch (err) {
+        setError(
+          err instanceof Error ? err.message : 'Failed to update agenda',
+        );
+        return false;
+      }
+    },
+    [fetchAgendas],
+  );
+
+  const deleteAgenda = useCallback(
+    async (agendaId: string): Promise<boolean> => {
+      try {
+        setError(null);
+        await EventService.deleteAgenda(agendaId);
+        await fetchAgendas();
+        return true;
+      } catch (err) {
+        setError(
+          err instanceof Error ? err.message : 'Failed to delete agenda',
+        );
+        return false;
+      }
+    },
+    [fetchAgendas],
+  );
 
   useEffect(() => {
     fetchAgendas();
@@ -318,7 +367,7 @@ export function useEventAgendas(eventId: string | null) {
     createAgenda,
     updateAgenda,
     deleteAgenda,
-    refetch: fetchAgendas
+    refetch: fetchAgendas,
   };
 }
 
@@ -337,7 +386,9 @@ export function useUserEvents() {
       const data = await EventService.getUserEvents(address);
       setEvents(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch user events');
+      setError(
+        err instanceof Error ? err.message : 'Failed to fetch user events',
+      );
     } finally {
       setLoading(false);
     }
@@ -351,7 +402,7 @@ export function useUserEvents() {
     events,
     loading,
     error,
-    refetch: fetchUserEvents
+    refetch: fetchUserEvents,
   };
 }
 
@@ -362,7 +413,7 @@ export function useEventActions(eventId: string | null) {
 
   const ensureAuthenticated = useCallback(async (): Promise<boolean> => {
     const session = await getCurrentSession();
-    
+
     if (!session?.user?.id && address) {
       // User has wallet connected but no Supabase session - try to authenticate
       try {
@@ -390,25 +441,27 @@ export function useEventActions(eventId: string | null) {
         }
 
         const { supabaseToken } = await verifyRes.json();
-        
+
         if (supabaseToken) {
           const { error } = await supabase.auth.setSession({
             access_token: supabaseToken,
             refresh_token: '',
           });
-          
+
           if (!error) {
             return true;
           }
         }
-        
+
         throw new Error('Failed to set session');
       } catch (error) {
         console.error('Auto-authentication failed:', error);
-        throw new Error('Please sign in with your wallet to perform this action');
+        throw new Error(
+          'Please sign in with your wallet to perform this action',
+        );
       }
     }
-    
+
     return !!session?.user?.id;
   }, [address]);
 
@@ -422,10 +475,10 @@ export function useEventActions(eventId: string | null) {
     try {
       setLoading(true);
       setError(null);
-      
+
       // Ensure user is authenticated before making the request
       await ensureAuthenticated();
-      
+
       console.log('Publishing event:', eventId);
       const result = await EventService.publishEvent(eventId);
       console.log('Publish event result:', result);
@@ -448,10 +501,10 @@ export function useEventActions(eventId: string | null) {
     try {
       setLoading(true);
       setError(null);
-      
+
       // Ensure user is authenticated before making the request
       await ensureAuthenticated();
-      
+
       await EventService.cancelEvent(eventId);
       return true;
     } catch (err) {
@@ -471,10 +524,10 @@ export function useEventActions(eventId: string | null) {
     try {
       setLoading(true);
       setError(null);
-      
+
       // Ensure user is authenticated before making the request
       await ensureAuthenticated();
-      
+
       await EventService.completeEvent(eventId);
       return true;
     } catch (err) {
@@ -490,6 +543,6 @@ export function useEventActions(eventId: string | null) {
     error,
     publishEvent,
     cancelEvent,
-    completeEvent
+    completeEvent,
   };
 }

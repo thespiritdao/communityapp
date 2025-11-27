@@ -1,14 +1,14 @@
 /**
  * Supabase Edge Function for indexing pod members
- * 
+ *
  * This function would be deployed as a Supabase Edge Function and called:
  * 1. By a cron job (every 15-30 minutes)
  * 2. Manually when pods are created/updated
  * 3. Via webhook when HAT transfers occur (future enhancement)
- * 
+ *
  * To deploy:
  * supabase functions deploy index-pod-members
- * 
+ *
  * To call manually:
  * supabase functions invoke index-pod-members
  */
@@ -28,7 +28,7 @@ export default {
       // Initialize Supabase client with service role for full access
       const supabase = createClient(
         env.SUPABASE_URL,
-        env.SUPABASE_SERVICE_ROLE_KEY
+        env.SUPABASE_SERVICE_ROLE_KEY,
       );
 
       // Get request parameters
@@ -43,7 +43,7 @@ export default {
       if (podId) {
         // Index specific pod
         console.log(`🔍 Indexing specific pod: ${podId}`);
-        
+
         // Get pod details
         const { data: pod, error } = await supabase
           .from('pods')
@@ -60,7 +60,7 @@ export default {
           members_added: 0,
           members_removed: 0,
           members_updated: 0,
-          errors: []
+          errors: [],
         };
 
         await MemberIndexingService.indexPodMembership(pod, stats);
@@ -77,17 +77,16 @@ export default {
         JSON.stringify({
           success: true,
           timestamp: new Date().toISOString(),
-          ...result
+          ...result,
         }),
         {
-          headers: { 
+          headers: {
             'Content-Type': 'application/json',
-            'Access-Control-Allow-Origin': '*'
+            'Access-Control-Allow-Origin': '*',
           },
-          status: 200
-        }
+          status: 200,
+        },
       );
-
     } catch (error) {
       console.error('❌ Indexing failed:', error);
 
@@ -95,18 +94,18 @@ export default {
         JSON.stringify({
           success: false,
           error: error instanceof Error ? error.message : 'Unknown error',
-          timestamp: new Date().toISOString()
+          timestamp: new Date().toISOString(),
         }),
         {
-          headers: { 
+          headers: {
             'Content-Type': 'application/json',
-            'Access-Control-Allow-Origin': '*'
+            'Access-Control-Allow-Origin': '*',
           },
-          status: 500
-        }
+          status: 500,
+        },
       );
     }
-  }
+  },
 };
 
 // Cron job configuration (add to supabase/functions/_shared/cron.ts)
@@ -114,16 +113,19 @@ export const cronConfig = {
   // Run every 30 minutes
   schedule: '0 */30 * * * *',
   handler: async () => {
-    const response = await fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/index-pod-members`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${Deno.env.get('SUPABASE_ANON_KEY')}`,
-        'Content-Type': 'application/json'
-      }
-    });
-    
+    const response = await fetch(
+      `${Deno.env.get('SUPABASE_URL')}/functions/v1/index-pod-members`,
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${Deno.env.get('SUPABASE_ANON_KEY')}`,
+          'Content-Type': 'application/json',
+        },
+      },
+    );
+
     const result = await response.json();
     console.log('🕒 Scheduled indexing result:', result);
     return result;
-  }
+  },
 };

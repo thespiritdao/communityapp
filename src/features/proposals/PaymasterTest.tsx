@@ -3,9 +3,9 @@
 import type React from 'react';
 import { useEffect, useState } from 'react';
 import { useAccount, useChainId, useConnectors } from 'wagmi';
-import { 
-  Transaction, 
-  TransactionButton, 
+import {
+  Transaction,
+  TransactionButton,
   TransactionSponsor,
 } from '@coinbase/onchainkit/transaction';
 import { base } from 'viem/chains';
@@ -34,16 +34,17 @@ const PaymasterTest: React.FC = () => {
             connectorName: connector.name,
             connectorId: connector.id,
             connectorType: connector.type,
-            address: address
+            address: address,
           });
 
-          const isCoinbaseConnector = connector.name === 'Coinbase Wallet' || 
-                                     connector.id === 'coinbaseWallet' ||
-                                     connector.id === 'coinbaseWalletSDK';
+          const isCoinbaseConnector =
+            connector.name === 'Coinbase Wallet' ||
+            connector.id === 'coinbaseWallet' ||
+            connector.id === 'coinbaseWalletSDK';
 
           if (isCoinbaseConnector) {
             let provider = null;
-            
+
             if (typeof connector.getProvider === 'function') {
               try {
                 provider = await connector.getProvider();
@@ -51,7 +52,7 @@ const PaymasterTest: React.FC = () => {
                 console.log('getProvider method failed:', error);
               }
             }
-            
+
             if (!provider && connector.provider) {
               provider = connector.provider;
             }
@@ -61,19 +62,23 @@ const PaymasterTest: React.FC = () => {
                 isCoinbaseWallet: provider.isCoinbaseWallet,
                 isSmartWallet: provider.isSmartWallet,
                 selectedProvider: provider.selectedProvider,
-                qrUrl: provider.qrUrl
+                qrUrl: provider.qrUrl,
               });
 
               // Check contract code at address
               try {
                 const code = await provider.request({
                   method: 'eth_getCode',
-                  params: [address, 'latest']
+                  params: [address, 'latest'],
                 });
-                
+
                 const hasContractCode = code && code !== '0x' && code !== '0x0';
-                console.log('Contract code check:', { address, code: code?.substring(0, 20) + '...', hasContractCode });
-                
+                console.log('Contract code check:', {
+                  address,
+                  code: code?.substring(0, 20) + '...',
+                  hasContractCode,
+                });
+
                 setIsSmartWallet(hasContractCode);
                 return;
               } catch (error) {
@@ -83,7 +88,7 @@ const PaymasterTest: React.FC = () => {
               }
             }
           }
-          
+
           setIsSmartWallet(false);
         } catch (error) {
           console.error('Error checking wallet type:', error);
@@ -127,7 +132,8 @@ const PaymasterTest: React.FC = () => {
     });
     console.log('Environment:', {
       paymasterUrl: process.env.NEXT_PUBLIC_PAYMASTER,
-      cdpApiKey: process.env.NEXT_PUBLIC_CDP_API_CLIENT?.substring(0, 8) + '...',
+      cdpApiKey:
+        process.env.NEXT_PUBLIC_CDP_API_CLIENT?.substring(0, 8) + '...',
       chainId,
       baseId: base.id,
     });
@@ -168,7 +174,7 @@ const PaymasterTest: React.FC = () => {
   return (
     <div className="p-6 max-w-md mx-auto bg-white rounded-lg shadow-lg">
       <h2 className="text-xl font-bold mb-4">Enhanced Paymaster Test</h2>
-      
+
       {/* Wallet Type Check */}
       <div className="mb-4 p-3 bg-blue-50 rounded">
         <h3 className="font-medium mb-2">Wallet Information:</h3>
@@ -176,8 +182,13 @@ const PaymasterTest: React.FC = () => {
           <div>Connector: {connector?.name || 'Unknown'}</div>
           <div>Type: {connector?.type || 'Unknown'}</div>
           <div>Smart Wallet: {isSmartWallet ? '✅ Yes' : '❌ No'}</div>
-          <div>Chain: {chainId === base.id ? '✅ Base' : `❌ Wrong (${chainId})`}</div>
-          <div>Address: {address?.substring(0, 6)}...{address?.substring(address.length - 4)}</div>
+          <div>
+            Chain: {chainId === base.id ? '✅ Base' : `❌ Wrong (${chainId})`}
+          </div>
+          <div>
+            Address: {address?.substring(0, 6)}...
+            {address?.substring(address.length - 4)}
+          </div>
         </div>
       </div>
 
@@ -185,9 +196,18 @@ const PaymasterTest: React.FC = () => {
       <div className="mb-4 p-3 bg-gray-100 rounded">
         <h3 className="font-medium mb-2">Environment Check:</h3>
         <div className="text-sm space-y-1">
-          <div>CDP API Key: {process.env.NEXT_PUBLIC_CDP_API_CLIENT ? '✅ Set' : '❌ Missing'}</div>
-          <div>Paymaster URL: {process.env.NEXT_PUBLIC_PAYMASTER ? '✅ Set' : '❌ Missing'}</div>
-          <div>Wallet Connected: {isConnected ? '✅ Connected' : '❌ Not Connected'}</div>
+          <div>
+            CDP API Key:{' '}
+            {process.env.NEXT_PUBLIC_CDP_API_CLIENT ? '✅ Set' : '❌ Missing'}
+          </div>
+          <div>
+            Paymaster URL:{' '}
+            {process.env.NEXT_PUBLIC_PAYMASTER ? '✅ Set' : '❌ Missing'}
+          </div>
+          <div>
+            Wallet Connected:{' '}
+            {isConnected ? '✅ Connected' : '❌ Not Connected'}
+          </div>
         </div>
       </div>
 

@@ -26,11 +26,14 @@ const ThreadPage: React.FC = () => {
     <ForumContainer>
       {/* PostList displays the thread's header, details, and all replies */}
       <PostList threadId={threadId} />
-      
+
       {/* ReplyForm allows users to post a reply to the thread */}
-      <ReplyForm threadId={threadId} onReplySuccess={() => {
-        // Optionally, you can trigger a refresh of the PostList or display a notification here.
-      }} />
+      <ReplyForm
+        threadId={threadId}
+        onReplySuccess={() => {
+          // Optionally, you can trigger a refresh of the PostList or display a notification here.
+        }}
+      />
     </ForumContainer>
   );
 };

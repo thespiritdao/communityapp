@@ -46,8 +46,13 @@ export function useForumUserProfiles(addresses: string[]) {
       // Fetch all profiles in a single query
       const { data, error } = await supabase
         .from('user_profiles')
-        .select('wallet_address, first_name, last_name, profile_picture, bio, website, interests, seeking')
-        .in('wallet_address', sortedAddresses.map(addr => addr.toLowerCase()));
+        .select(
+          'wallet_address, first_name, last_name, profile_picture, bio, website, interests, seeking',
+        )
+        .in(
+          'wallet_address',
+          sortedAddresses.map((addr) => addr.toLowerCase()),
+        );
 
       if (error) {
         console.error('Error fetching user profiles:', error);

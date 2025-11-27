@@ -3,7 +3,13 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/utils/supabaseClient';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from '@/components/ui/card';
 import { EnhancedToggle } from '@/components/ui/enhanced-toggle';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
@@ -15,7 +21,7 @@ import {
   Trophy,
   ShoppingBag,
   Settings,
-  Info
+  Info,
 } from 'lucide-react';
 import PodChatManager from './PodChatManager';
 
@@ -50,7 +56,7 @@ const MODULE_INFO = [
     icon: MessageCircle,
     color: '#2F5D50',
     bgColor: '#E8F1EE',
-    configComponent: 'chat'
+    configComponent: 'chat',
   },
   {
     key: 'forum_enabled',
@@ -59,7 +65,7 @@ const MODULE_INFO = [
     icon: Users,
     color: '#6A5F7A',
     bgColor: '#EDEAF0',
-    configComponent: null
+    configComponent: null,
   },
   {
     key: 'treasury_enabled',
@@ -68,7 +74,7 @@ const MODULE_INFO = [
     icon: DollarSign,
     color: '#3F7A5A',
     bgColor: '#D1E6DC',
-    configComponent: null
+    configComponent: null,
   },
   {
     key: 'events_enabled',
@@ -77,7 +83,7 @@ const MODULE_INFO = [
     icon: Calendar,
     color: '#C6933F',
     bgColor: '#FAF4EC',
-    configComponent: null
+    configComponent: null,
   },
   {
     key: 'bounties_enabled',
@@ -86,7 +92,7 @@ const MODULE_INFO = [
     icon: Trophy,
     color: '#C6933F',
     bgColor: '#FAF4EC',
-    configComponent: null
+    configComponent: null,
   },
   {
     key: 'marketplace_enabled',
@@ -95,16 +101,16 @@ const MODULE_INFO = [
     icon: ShoppingBag,
     color: '#6A5F7A',
     bgColor: '#EDEAF0',
-    configComponent: null
-  }
+    configComponent: null,
+  },
 ];
 
-export default function PodModulesManager({ 
-  podId, 
+export default function PodModulesManager({
+  podId,
   podName,
   isManager,
   managementHatId,
-  membershipHatId
+  membershipHatId,
 }: PodModulesManagerProps) {
   const [modules, setModules] = useState<PodModules>({
     chat_enabled: false,
@@ -112,7 +118,7 @@ export default function PodModulesManager({
     treasury_enabled: true,
     events_enabled: false,
     bounties_enabled: false,
-    marketplace_enabled: false
+    marketplace_enabled: false,
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -126,7 +132,7 @@ export default function PodModulesManager({
   const loadModules = async () => {
     try {
       console.log('PodModulesManager: Loading modules for pod:', podId);
-      
+
       let { data, error } = await supabase
         .from('pod_modules')
         .select('*')
@@ -147,7 +153,7 @@ export default function PodModulesManager({
             forum_enabled: false,
             events_enabled: false,
             bounties_enabled: false,
-            marketplace_enabled: false
+            marketplace_enabled: false,
           })
           .select()
           .single();
@@ -156,7 +162,10 @@ export default function PodModulesManager({
           data = newModules;
           console.log('PodModulesManager: Created new modules:', data);
         } else {
-          console.error('PodModulesManager: Error creating modules:', insertError);
+          console.error(
+            'PodModulesManager: Error creating modules:',
+            insertError,
+          );
         }
       } else if (error) {
         console.error('PodModulesManager: Database error:', error);
@@ -177,7 +186,7 @@ export default function PodModulesManager({
           treasury_config: data.treasury_config,
           events_config: data.events_config,
           bounties_config: data.bounties_config,
-          marketplace_config: data.marketplace_config
+          marketplace_config: data.marketplace_config,
         });
       } else {
         console.warn('PodModulesManager: No data received, using defaults');
@@ -187,7 +196,7 @@ export default function PodModulesManager({
           treasury_enabled: true,
           events_enabled: false,
           bounties_enabled: false,
-          marketplace_enabled: false
+          marketplace_enabled: false,
         });
       }
     } catch (error) {
@@ -200,9 +209,13 @@ export default function PodModulesManager({
   const toggleModule = async (moduleKey: string, enabled: boolean) => {
     if (!isManager) return;
 
-    console.log('PodModulesManager: Toggling module', { moduleKey, enabled, podId });
+    console.log('PodModulesManager: Toggling module', {
+      moduleKey,
+      enabled,
+      podId,
+    });
     setSaving(true);
-    
+
     try {
       const updateData: any = {};
       updateData[moduleKey] = enabled;
@@ -224,9 +237,9 @@ export default function PodModulesManager({
       console.log('PodModulesManager: Database updated successfully:', data);
 
       // Update local state immediately
-      setModules(prev => ({
+      setModules((prev) => ({
         ...prev,
-        [moduleKey]: enabled
+        [moduleKey]: enabled,
       }));
 
       // If enabling chat, expand it to show configuration
@@ -238,9 +251,9 @@ export default function PodModulesManager({
     } catch (error) {
       console.error('PodModulesManager: Error updating module:', error);
       // Revert the UI state on error
-      setModules(prev => ({
+      setModules((prev) => ({
         ...prev,
-        [moduleKey]: !enabled
+        [moduleKey]: !enabled,
       }));
     } finally {
       setSaving(false);
@@ -273,27 +286,35 @@ export default function PodModulesManager({
                 Enable or disable features for {podName}
               </CardDescription>
             </div>
-            {!isManager && (
-              <Badge variant="secondary">View Only</Badge>
-            )}
+            {!isManager && <Badge variant="secondary">View Only</Badge>}
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
           {MODULE_INFO.map((module) => {
             const Icon = module.icon;
-            const isEnabled = modules[module.key as keyof PodModules] as boolean;
+            const isEnabled = modules[
+              module.key as keyof PodModules
+            ] as boolean;
             const isExpanded = expandedModule === module.configComponent;
 
             return (
               <div key={module.key} className="space-y-3">
-                <Card className="p-4" style={{ backgroundColor: isEnabled ? module.bgColor : '#f9fafb' }}>
+                <Card
+                  className="p-4"
+                  style={{
+                    backgroundColor: isEnabled ? module.bgColor : '#f9fafb',
+                  }}
+                >
                   <div className="flex items-start justify-between">
                     <div className="flex gap-3">
-                      <div className="mt-1" style={{ color: isEnabled ? module.color : '#9ca3af' }}>
+                      <div
+                        className="mt-1"
+                        style={{ color: isEnabled ? module.color : '#9ca3af' }}
+                      >
                         <Icon className="h-5 w-5" />
                       </div>
                       <div className="space-y-1">
-                        <Label 
+                        <Label
                           htmlFor={module.key}
                           className="text-base font-medium cursor-pointer"
                         >
@@ -307,7 +328,9 @@ export default function PodModulesManager({
                     <EnhancedToggle
                       id={module.key}
                       checked={isEnabled}
-                      onCheckedChange={(checked) => toggleModule(module.key, checked)}
+                      onCheckedChange={(checked) =>
+                        toggleModule(module.key, checked)
+                      }
                       disabled={!isManager || saving}
                       size="md"
                       variant="button"
@@ -318,9 +341,11 @@ export default function PodModulesManager({
                   {isEnabled && module.configComponent && (
                     <div className="mt-3 pt-3 border-t">
                       <button
-                        onClick={() => setExpandedModule(
-                          isExpanded ? null : module.configComponent
-                        )}
+                        onClick={() =>
+                          setExpandedModule(
+                            isExpanded ? null : module.configComponent,
+                          )
+                        }
                         className="text-sm text-primary hover:underline"
                       >
                         {isExpanded ? 'Hide' : 'Configure'} {module.label}
@@ -330,17 +355,19 @@ export default function PodModulesManager({
                 </Card>
 
                 {/* Expanded configuration panel */}
-                {isExpanded && module.configComponent === 'chat' && modules.chat_enabled && (
-                  <Card className="mt-4 p-4 bg-gray-50">
-                    <PodChatManager
-                      podId={podId}
-                      podName={podName}
-                      managementHatId={managementHatId || ''}
-                      membershipHatId={membershipHatId}
-                      isManager={isManager}
-                    />
-                  </Card>
-                )}
+                {isExpanded &&
+                  module.configComponent === 'chat' &&
+                  modules.chat_enabled && (
+                    <Card className="mt-4 p-4 bg-gray-50">
+                      <PodChatManager
+                        podId={podId}
+                        podName={podName}
+                        managementHatId={managementHatId || ''}
+                        membershipHatId={membershipHatId}
+                        isManager={isManager}
+                      />
+                    </Card>
+                  )}
               </div>
             );
           })}
@@ -351,9 +378,14 @@ export default function PodModulesManager({
       <Card style={{ backgroundColor: '#E8F1EE', borderColor: '#B8D9CA' }}>
         <CardContent className="p-4">
           <div className="flex gap-2">
-            <Info className="h-5 w-5 mt-0.5 flex-shrink-0" style={{ color: '#2F5D50' }} />
+            <Info
+              className="h-5 w-5 mt-0.5 flex-shrink-0"
+              style={{ color: '#2F5D50' }}
+            />
             <div className="text-sm space-y-2">
-              <p className="font-medium" style={{ color: '#1F453A' }}>About Pod Modules</p>
+              <p className="font-medium" style={{ color: '#1F453A' }}>
+                About Pod Modules
+              </p>
               <ul className="space-y-1" style={{ color: '#2F5D50' }}>
                 <li>• Modules can be enabled or disabled at any time</li>
                 <li>• Only pod managers can change module settings</li>

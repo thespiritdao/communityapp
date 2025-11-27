@@ -18,7 +18,11 @@ interface ManageCheckInPageProps {
 export default function ManageCheckInPage({ params }: ManageCheckInPageProps) {
   const resolvedParams = use(params);
   const router = useRouter();
-  const { event, loading: eventLoading, error: eventError } = useEvent(resolvedParams.id);
+  const {
+    event,
+    loading: eventLoading,
+    error: eventError,
+  } = useEvent(resolvedParams.id);
   const { canManage, loading: accessLoading } = useEventAccess(event);
 
   if (eventLoading || accessLoading) {
@@ -54,11 +58,10 @@ export default function ManageCheckInPage({ params }: ManageCheckInPageProps) {
             <CardContent className="p-8 text-center">
               <h2 className="text-xl font-semibold mb-4">Event Not Found</h2>
               <p className="text-gray-600 mb-4">
-                The event you're looking for doesn't exist or is no longer available.
+                The event you're looking for doesn't exist or is no longer
+                available.
               </p>
-              <Button onClick={() => router.back()}>
-                Go Back
-              </Button>
+              <Button onClick={() => router.back()}>Go Back</Button>
             </CardContent>
           </Card>
         </div>
@@ -104,7 +107,7 @@ export default function ManageCheckInPage({ params }: ManageCheckInPageProps) {
             <h1 className="text-3xl font-bold">Event Check-In</h1>
           </div>
         </div>
-        
+
         <EventCheckInSystem event={event} />
       </div>
     </div>

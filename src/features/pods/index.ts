@@ -27,29 +27,27 @@ export * from './hooks';
 // ==========================================
 
 // Core pod types
-export type { 
-  Pod, 
-  MemberRef, 
+export type {
+  Pod,
+  MemberRef,
   PodServiceConfig,
   PodCreationData,
-  AccountabilitySignature 
+  AccountabilitySignature,
 } from './types';
 
 // Service types from PodCoreService
-export type { 
-  GovernanceProposalData 
-} from './services/PodCoreService';
+export type { GovernanceProposalData } from './services/PodCoreService';
 
 // Hook types (re-exported from hooks barrel)
 export type {
   UsePodsConfig,
   UsePodsReturn,
-  UsePodDetailsConfig, 
+  UsePodDetailsConfig,
   UsePodDetailsReturn,
   UsePodPermissionsConfig,
   UsePodPermissionsReturn,
   UseAccountabilityConfig,
-  UseAccountabilityReturn
+  UseAccountabilityReturn,
 } from './hooks';
 
 // ==========================================
@@ -57,7 +55,10 @@ export type {
 // ==========================================
 
 // Treasury utilities
-export { getTreasuryAddress, getTreasuryAddressSync } from './utils/treasuryAddressUtils';
+export {
+  getTreasuryAddress,
+  getTreasuryAddressSync,
+} from './utils/treasuryAddressUtils';
 
 // ==========================================
 // CONSTANTS AND CONFIGURATION
@@ -66,15 +67,15 @@ export { getTreasuryAddress, getTreasuryAddressSync } from './utils/treasuryAddr
 // Export any pod-specific constants
 export const POD_STATUS = {
   DRAFT: 'draft',
-  PROPOSED: 'proposed', 
+  PROPOSED: 'proposed',
   ACTIVE: 'active',
-  INACTIVE: 'inactive'
+  INACTIVE: 'inactive',
 } as const;
 
 export const MEMBERSHIP_TYPES = {
   LEADER: 'leader',
-  MEMBER: 'member', 
-  ADMIN: 'admin'
+  MEMBER: 'member',
+  ADMIN: 'admin',
 } as const;
 
 // ==========================================

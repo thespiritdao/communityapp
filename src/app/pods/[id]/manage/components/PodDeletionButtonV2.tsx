@@ -2,7 +2,12 @@
 
 import type React from 'react';
 import { useState } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, } from '@/components/ui/dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Trash2 } from 'lucide-react';
 import { PodDeletionApprovalFlow } from '@/features/pods/components/PodDeletionApprovalFlow';
@@ -15,13 +20,15 @@ interface PodDeletionButtonV2Props {
   onDeleteComplete?: () => void;
 }
 
-export const PodDeletionButtonV2: React.FC<PodDeletionButtonV2Props> = ({ 
-  pod, 
+export const PodDeletionButtonV2: React.FC<PodDeletionButtonV2Props> = ({
+  pod,
   canManage,
-  onDeleteComplete 
+  onDeleteComplete,
 }) => {
   const [showDeletionModal, setShowDeletionModal] = useState(false);
-  const [deletionMode, setDeletionMode] = useState<'approval' | 'legacy'>('approval');
+  const [deletionMode, setDeletionMode] = useState<'approval' | 'legacy'>(
+    'approval',
+  );
 
   // Determine if pod needs multi-sig approval
   const needsApproval = () => {
@@ -29,7 +36,9 @@ export const PodDeletionButtonV2: React.FC<PodDeletionButtonV2Props> = ({
     if (process.env.NEXT_PUBLIC_FORCE_APPROVAL_FLOW === 'true') {
       return true;
     }
-    const minLeaders = Number.parseInt(process.env.NEXT_PUBLIC_MIN_POD_LEADERS || '3');
+    const minLeaders = Number.parseInt(
+      process.env.NEXT_PUBLIC_MIN_POD_LEADERS || '3',
+    );
     return (pod.pod_leads?.length || 0) >= minLeaders;
   };
 

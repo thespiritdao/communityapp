@@ -1,5 +1,8 @@
 // Test file to verify shopping cart integration
-import { canUserAccessProduct, filterAccessibleProducts } from './services/accessControl';
+import {
+  canUserAccessProduct,
+  filterAccessibleProducts,
+} from './services/accessControl';
 import type { IProduct } from './models';
 import type { UserIdentity } from '@/utils/accessControlUtils';
 
@@ -46,7 +49,7 @@ const testProducts: IProduct[] = [
     currencyFormat: '$',
     isFreeShipping: false,
     required_token: 'dev',
-  }
+  },
 ];
 
 // Mock user identity - no tokens
@@ -63,7 +66,7 @@ const guestUser: UserIdentity = {
     systemBalance: '0',
     selfBalance: '0',
   },
-  hats: []
+  hats: [],
 };
 
 // Mock user identity - executive member
@@ -80,27 +83,36 @@ const execUser: UserIdentity = {
     systemBalance: '100',
     selfBalance: '50',
   },
-  hats: ['0x0000000100000000000000000000000000000000000000000000000000000000']
+  hats: ['0x0000000100000000000000000000000000000000000000000000000000000000'],
 };
 
 // Run tests
 console.log('🛒 Shopping Cart Integration Test\n');
 
 console.log('--- Guest User Access Test ---');
-const guestAccessibleProducts = filterAccessibleProducts(testProducts, guestUser);
-console.log(`Guest can access ${guestAccessibleProducts.length} products:`, 
-  guestAccessibleProducts.map(p => p.title));
+const guestAccessibleProducts = filterAccessibleProducts(
+  testProducts,
+  guestUser,
+);
+console.log(
+  `Guest can access ${guestAccessibleProducts.length} products:`,
+  guestAccessibleProducts.map((p) => p.title),
+);
 
 console.log('\n--- Executive User Access Test ---');
 const execAccessibleProducts = filterAccessibleProducts(testProducts, execUser);
-console.log(`Executive can access ${execAccessibleProducts.length} products:`, 
-  execAccessibleProducts.map(p => p.title));
+console.log(
+  `Executive can access ${execAccessibleProducts.length} products:`,
+  execAccessibleProducts.map((p) => p.title),
+);
 
 console.log('\n--- Individual Product Access Tests ---');
-testProducts.forEach(product => {
+testProducts.forEach((product) => {
   const guestAccess = canUserAccessProduct(product, guestUser);
   const execAccess = canUserAccessProduct(product, execUser);
-  console.log(`${product.title}: Guest(${guestAccess}) Executive(${execAccess})`);
+  console.log(
+    `${product.title}: Guest(${guestAccess}) Executive(${execAccess})`,
+  );
 });
 
 console.log('\n🛒 Integration test complete!');

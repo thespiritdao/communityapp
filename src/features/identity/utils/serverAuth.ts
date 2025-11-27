@@ -7,13 +7,16 @@ import { supabase } from '@/utils/supabaseClient';
  */
 export async function getCurrentSession() {
   try {
-    const { data: { session }, error } = await supabase.auth.getSession();
-    
+    const {
+      data: { session },
+      error,
+    } = await supabase.auth.getSession();
+
     if (error) {
       console.warn('Session retrieval error:', error.message);
       return null;
     }
-    
+
     return session;
   } catch (error) {
     console.warn('Failed to get current session:', error);

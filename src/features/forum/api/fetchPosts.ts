@@ -8,7 +8,12 @@ export type FetchPostsParams = {
   offset?: number;
 };
 
-export const fetchPosts = async ({ threadId, walletAddress, limit = 20, offset = 0 }: FetchPostsParams) => {
+export const fetchPosts = async ({
+  threadId,
+  walletAddress,
+  limit = 20,
+  offset = 0,
+}: FetchPostsParams) => {
   try {
     const query = supabase
       .from('forum_posts')
@@ -29,12 +34,12 @@ export const fetchPosts = async ({ threadId, walletAddress, limit = 20, offset =
 
     const { data, error, count } = await query;
     if (error) throw new Error(`Failed to fetch posts: ${error.message}`);
-	
-	const postsWithToken = data.map(post => ({
-      ...post,
-      required_token: post.required_token || post.forum_threads?.required_token || null,
-    }));
 
+    const postsWithToken = data.map((post) => ({
+      ...post,
+      required_token:
+        post.required_token || post.forum_threads?.required_token || null,
+    }));
 
     return {
       success: true,
@@ -46,7 +51,8 @@ export const fetchPosts = async ({ threadId, walletAddress, limit = 20, offset =
     console.error('Error in fetchPosts:', error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'An unknown error occurred',
+      error:
+        error instanceof Error ? error.message : 'An unknown error occurred',
       posts: [],
       total: 0,
       hasMore: false,

@@ -1,7 +1,13 @@
 // src/context/ProposalContext.tsx
 'use client';
 import type React from 'react';
-import { createContext, useContext, useState, useCallback, type ReactNode } from 'react'
+import {
+  createContext,
+  useContext,
+  useState,
+  useCallback,
+  type ReactNode,
+} from 'react';
 import { useAccount, useReadContract } from 'wagmi';
 import type { Address } from 'viem';
 
@@ -18,16 +24,16 @@ interface ProposalContextType {
   setFormData: (data: ProposalFormData) => void;
   updateFormField: (field: keyof ProposalFormData, value: string) => void;
   resetForm: () => void;
-  
+
   // Validation state
   canPropose: boolean;
   validationMessage: string;
   advocateBalance: bigint;
-  
+
   // UI state
   isSubmitting: boolean;
   setIsSubmitting: (submitting: boolean) => void;
-  
+
   // Form validation
   isFormValid: boolean;
   formErrors: string[];
@@ -59,16 +65,18 @@ interface ProposalProviderProps {
   children: ReactNode;
 }
 
-export const ProposalProvider: React.FC<ProposalProviderProps> = ({ children }) => {
+export const ProposalProvider: React.FC<ProposalProviderProps> = ({
+  children,
+}) => {
   const { address, isConnected } = useAccount();
-  
+
   // Form state
   const [formData, setFormData] = useState<ProposalFormData>({
     title: '',
     body: '',
     forumThreadId: '',
   });
-  
+
   // UI state
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -82,9 +90,12 @@ export const ProposalProvider: React.FC<ProposalProviderProps> = ({ children }) 
   });
 
   // Form field updater
-  const updateFormField = useCallback((field: keyof ProposalFormData, value: string) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
-  }, []);
+  const updateFormField = useCallback(
+    (field: keyof ProposalFormData, value: string) => {
+      setFormData((prev) => ({ ...prev, [field]: value }));
+    },
+    [],
+  );
 
   // Reset form
   const resetForm = useCallback(() => {
@@ -155,16 +166,16 @@ export const ProposalProvider: React.FC<ProposalProviderProps> = ({ children }) 
     setFormData,
     updateFormField,
     resetForm,
-    
+
     // Validation state
     canPropose,
     validationMessage,
     advocateBalance,
-    
+
     // UI state
     isSubmitting,
     setIsSubmitting,
-    
+
     // Form validation
     isFormValid,
     formErrors,

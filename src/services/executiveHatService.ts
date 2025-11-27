@@ -72,12 +72,12 @@ export interface MintHatCall {
  * @returns Transaction call object
  */
 export function createMintExecutiveLeaderHatCall(
-  recipientAddress: `0x${string}`
+  recipientAddress: `0x${string}`,
 ): MintHatCall {
   if (!EXECUTIVE_LEADER_HAT_ID) {
     throw new Error(
       'EXECUTIVE_POD_LEADER hat ID not configured. ' +
-      'Please set NEXT_PUBLIC_EXECUTIVE_POD_LEADER in your environment variables.'
+        'Please set NEXT_PUBLIC_EXECUTIVE_POD_LEADER in your environment variables.',
     );
   }
 
@@ -105,7 +105,7 @@ export function createMintExecutiveLeaderHatCall(
  * @returns Transaction call object
  */
 export function createMintExecutiveMemberHatCall(
-  recipientAddress: `0x${string}`
+  recipientAddress: `0x${string}`,
 ): MintHatCall {
   if (!EXECUTIVE_MEMBER_HAT_ID) {
     throw new Error('EXECUTIVE_POD_MEMBER hat ID not configured');
@@ -131,20 +131,23 @@ export function createMintExecutiveMemberHatCall(
  * @returns Transaction call object
  */
 export function createMintBetaTesterHatCall(
-  recipientAddress: `0x${string}`
+  recipientAddress: `0x${string}`,
 ): MintHatCall {
   if (!BETA_TESTER_HAT_ID) {
     throw new Error(
       'BETA_TESTER_HAT hat ID not configured. ' +
-      'Please set NEXT_PUBLIC_BETA_TESTER_HAT in your environment variables.'
+        'Please set NEXT_PUBLIC_BETA_TESTER_HAT in your environment variables.',
     );
   }
 
   // Validate hat ID format (should be 32-byte hex string)
-  if (BETA_TESTER_HAT_ID === '0x0000000000000000000000000000000000000000000000000000000000000000') {
+  if (
+    BETA_TESTER_HAT_ID ===
+    '0x0000000000000000000000000000000000000000000000000000000000000000'
+  ) {
     throw new Error(
       'BETA_TESTER_HAT is set to zero address. ' +
-      'Please create the Beta Tester hat in Hats Protocol and set the correct hat ID.'
+        'Please create the Beta Tester hat in Hats Protocol and set the correct hat ID.',
     );
   }
 
@@ -178,7 +181,7 @@ export function createMintBetaTesterHatCall(
  */
 export async function isExecutiveLeader(
   address: `0x${string}`,
-  publicClient: any
+  publicClient: any,
 ): Promise<boolean> {
   if (!EXECUTIVE_LEADER_HAT_ID) return false;
 
@@ -206,7 +209,7 @@ export async function isExecutiveLeader(
  */
 export async function isExecutiveMember(
   address: `0x${string}`,
-  publicClient: any
+  publicClient: any,
 ): Promise<boolean> {
   if (!EXECUTIVE_MEMBER_HAT_ID) return false;
 
@@ -235,7 +238,7 @@ export async function isExecutiveMember(
  */
 export async function getExecutiveLeaderHatBalance(
   address: `0x${string}`,
-  publicClient: any
+  publicClient: any,
 ): Promise<number> {
   if (!EXECUTIVE_LEADER_HAT_ID) return 0;
 

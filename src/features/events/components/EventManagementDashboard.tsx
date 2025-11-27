@@ -6,14 +6,19 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { 
-  Calendar, 
-  Users, 
-  DollarSign, 
-  Eye, 
-  Edit, 
-  Play, 
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import {
+  Calendar,
+  Users,
+  DollarSign,
+  Eye,
+  Edit,
+  Play,
   CheckCircle,
   XCircle,
   Download,
@@ -22,26 +27,41 @@ import {
 } from 'lucide-react';
 
 import type { EventWithStats, EventRegistration } from '../types/event';
-import { useEvents, useEventRegistrations, useEventActions } from '../hooks/useEvents';
+import {
+  useEvents,
+  useEventRegistrations,
+  useEventActions,
+} from '../hooks/useEvents';
 import { useEventManagementAccess } from '../hooks/useEventTokenGating';
 import { EventService } from '../lib/supabase';
 import { useAccount } from 'wagmi';
 import Link from 'next/link';
 import { notificationService } from '../../../utils/notificationService';
 import { useSimplifiedEventTransactions } from '../hooks/useSimplifiedEventTransactions';
-import { Transaction, TransactionButton, TransactionSponsor, TransactionStatus, TransactionStatusLabel, TransactionStatusAction } from '@coinbase/onchainkit/transaction';
+import {
+  Transaction,
+  TransactionButton,
+  TransactionSponsor,
+  TransactionStatus,
+  TransactionStatusLabel,
+  TransactionStatusAction,
+} from '@coinbase/onchainkit/transaction';
 
 interface EventManagementDashboardProps {
   eventId?: string;
 }
 
-export const EventManagementDashboard: React.FC<EventManagementDashboardProps> = ({
-  eventId
-}) => {
+export const EventManagementDashboard: React.FC<
+  EventManagementDashboardProps
+> = ({ eventId }) => {
   const { address } = useAccount();
   const { canManageEvents, managedPods } = useEventManagementAccess();
   // Load all events - RLS policies will automatically filter to user's events
-  const { events: allEvents, loading: eventsLoading, error: eventsError } = useEvents();
+  const {
+    events: allEvents,
+    loading: eventsLoading,
+    error: eventsError,
+  } = useEvents();
 
   // Debug logging
   console.log('EventManagementDashboard Debug:', {
@@ -50,34 +70,46 @@ export const EventManagementDashboard: React.FC<EventManagementDashboardProps> =
     managedPods,
     allEvents,
     eventsLoading,
-    eventsError
+    eventsError,
   });
 
-  const [selectedEvent, setSelectedEvent] = useState<EventWithStats | null>(null);
-  const [activeTab, setActiveTab] = useState<'overview' | 'registrations' | 'analytics'>('overview');
+  const [selectedEvent, setSelectedEvent] = useState<EventWithStats | null>(
+    null,
+  );
+  const [activeTab, setActiveTab] = useState<
+    'overview' | 'registrations' | 'analytics'
+  >('overview');
   const [showQRCodeModal, setShowQRCodeModal] = useState(false);
 
   // Filter events based on user's management permissions
-  const managedEvents = allEvents.filter(event => 
-    event.creator_address.toLowerCase() === address?.toLowerCase() ||
-    (event.organizing_pod_id && managedPods.some(pod => pod.id === event.organizing_pod_id))
+  const managedEvents = allEvents.filter(
+    (event) =>
+      event.creator_address.toLowerCase() === address?.toLowerCase() ||
+      (event.organizing_pod_id &&
+        managedPods.some((pod) => pod.id === event.organizing_pod_id)),
   );
 
-  const upcomingEvents = managedEvents.filter(event => 
-    new Date(event.event_date) > new Date() && event.status === 'published'
+  const upcomingEvents = managedEvents.filter(
+    (event) =>
+      new Date(event.event_date) > new Date() && event.status === 'published',
   );
-  
-  const draftEvents = managedEvents.filter(event => event.status === 'draft');
-  const completedEvents = managedEvents.filter(event => event.status === 'completed');
+
+  const draftEvents = managedEvents.filter((event) => event.status === 'draft');
+  const completedEvents = managedEvents.filter(
+    (event) => event.status === 'completed',
+  );
 
   // Calculate total donations from paid events
   const calculateTotalDonations = () => {
     return managedEvents.reduce((total, event) => {
       if (event.price_token === 'free') return total;
-      
-      const systemAmount = Number.parseFloat(event.price_amount || '0') * event.registration_count;
-      const selfAmount = Number.parseFloat(event.price_self_amount || '0') * event.registration_count;
-      
+
+      const systemAmount =
+        Number.parseFloat(event.price_amount || '0') * event.registration_count;
+      const selfAmount =
+        Number.parseFloat(event.price_self_amount || '0') *
+        event.registration_count;
+
       return total + systemAmount + selfAmount;
     }, 0);
   };
@@ -88,7 +120,10 @@ export const EventManagementDashboard: React.FC<EventManagementDashboardProps> =
   const handleExportAttendees = async () => {
     try {
       const csvData = await generateAttendeesCSV(managedEvents);
-      downloadCSV(csvData, `attendees-export-${new Date().toISOString().split('T')[0]}.csv`);
+      downloadCSV(
+        csvData,
+        `attendees-export-${new Date().toISOString().split('T')[0]}.csv`,
+      );
     } catch (error) {
       console.error('Failed to export attendees:', error);
     }
@@ -103,13 +138,15 @@ export const EventManagementDashboard: React.FC<EventManagementDashboardProps> =
       'Payment Amount',
       'Payment Token',
       'Registered At',
-      'Checked In At'
+      'Checked In At',
     ];
 
     const rows = [];
     for (const event of events) {
       try {
-        const registrations = await EventService.getEventRegistrations(event.id);
+        const registrations = await EventService.getEventRegistrations(
+          event.id,
+        );
         for (const reg of registrations) {
           rows.push([
             event.title,
@@ -119,16 +156,21 @@ export const EventManagementDashboard: React.FC<EventManagementDashboardProps> =
             reg.payment_amount,
             reg.payment_token,
             new Date(reg.registered_at).toLocaleDateString(),
-            reg.checked_in_at ? new Date(reg.checked_in_at).toLocaleDateString() : ''
+            reg.checked_in_at
+              ? new Date(reg.checked_in_at).toLocaleDateString()
+              : '',
           ]);
         }
       } catch (error) {
-        console.error(`Failed to fetch registrations for event ${event.id}:`, error);
+        console.error(
+          `Failed to fetch registrations for event ${event.id}:`,
+          error,
+        );
       }
     }
 
     return [headers, ...rows]
-      .map(row => row.map(cell => `"${cell}"`).join(','))
+      .map((row) => row.map((cell) => `"${cell}"`).join(','))
       .join('\n');
   };
 
@@ -152,7 +194,7 @@ export const EventManagementDashboard: React.FC<EventManagementDashboardProps> =
       month: 'short',
       day: 'numeric',
       hour: '2-digit',
-      minute: '2-digit'
+      minute: '2-digit',
     });
   };
 
@@ -170,7 +212,6 @@ export const EventManagementDashboard: React.FC<EventManagementDashboardProps> =
         return 'bg-gradient-to-r from-gray-200 to-gray-300 text-black';
     }
   };
-  
 
   if (!address) {
     return (
@@ -255,17 +296,28 @@ export const EventManagementDashboard: React.FC<EventManagementDashboardProps> =
       <div className="grid grid-cols-2 gap-3 max-w-2xl mx-auto">
         <Card className="shadow-sm">
           <CardContent className="p-3 sm:p-4 text-center">
-            <Play className="w-4 h-4 sm:w-5 sm:h-5 mx-auto mb-1" style={{ color: '#3F7A5A' }} />
-            <p className="text-lg sm:text-xl font-bold text-gray-900">{upcomingEvents.length}</p>
+            <Play
+              className="w-4 h-4 sm:w-5 sm:h-5 mx-auto mb-1"
+              style={{ color: '#3F7A5A' }}
+            />
+            <p className="text-lg sm:text-xl font-bold text-gray-900">
+              {upcomingEvents.length}
+            </p>
             <p className="text-xs text-gray-600">Active Events</p>
           </CardContent>
         </Card>
 
         <Card className="shadow-sm">
           <CardContent className="p-3 sm:p-4 text-center">
-            <Users className="w-4 h-4 sm:w-5 sm:h-5 mx-auto mb-1" style={{ color: '#6A5F7A' }} />
+            <Users
+              className="w-4 h-4 sm:w-5 sm:h-5 mx-auto mb-1"
+              style={{ color: '#6A5F7A' }}
+            />
             <p className="text-lg sm:text-xl font-bold text-gray-900">
-              {managedEvents.reduce((sum, event) => sum + (event.registration_count || 0), 0)}
+              {managedEvents.reduce(
+                (sum, event) => sum + (event.registration_count || 0),
+                0,
+              )}
             </p>
             <p className="text-xs text-gray-600">Total Registrations</p>
           </CardContent>
@@ -273,15 +325,23 @@ export const EventManagementDashboard: React.FC<EventManagementDashboardProps> =
 
         <Card className="shadow-sm">
           <CardContent className="p-3 sm:p-4 text-center">
-            <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5 mx-auto mb-1" style={{ color: '#2F5D50' }} />
-            <p className="text-lg sm:text-xl font-bold text-gray-900">{completedEvents.length}</p>
+            <CheckCircle
+              className="w-4 h-4 sm:w-5 sm:h-5 mx-auto mb-1"
+              style={{ color: '#2F5D50' }}
+            />
+            <p className="text-lg sm:text-xl font-bold text-gray-900">
+              {completedEvents.length}
+            </p>
             <p className="text-xs text-gray-600">Completed</p>
           </CardContent>
         </Card>
 
         <Card className="shadow-sm">
           <CardContent className="p-3 sm:p-4 text-center">
-            <DollarSign className="w-4 h-4 sm:w-5 sm:h-5 mx-auto mb-1" style={{ color: '#C6933F' }} />
+            <DollarSign
+              className="w-4 h-4 sm:w-5 sm:h-5 mx-auto mb-1"
+              style={{ color: '#C6933F' }}
+            />
             <p className="text-lg sm:text-xl font-bold text-gray-900">
               {totalDonations > 0 ? `${totalDonations.toFixed(0)} ETH` : 'Free'}
             </p>
@@ -303,9 +363,9 @@ export const EventManagementDashboard: React.FC<EventManagementDashboardProps> =
                 <span>Create New Event</span>
               </Link>
             </Button>
-            
-            <Button 
-              variant="outline" 
+
+            <Button
+              variant="outline"
               className="h-auto py-4 flex-col"
               disabled={managedEvents.length === 0}
               onClick={() => {
@@ -321,9 +381,9 @@ export const EventManagementDashboard: React.FC<EventManagementDashboardProps> =
               <QrCode className="w-6 h-6 mb-2" />
               <span>Event Check-in Codes</span>
             </Button>
-            
-            <Button 
-              variant="outline" 
+
+            <Button
+              variant="outline"
               className="h-auto py-4 flex-col"
               onClick={() => handleExportAttendees()}
             >
@@ -355,7 +415,11 @@ export const EventManagementDashboard: React.FC<EventManagementDashboardProps> =
               <CardContent>
                 <div className="space-y-3">
                   {draftEvents.map((event) => (
-                    <EventManagementRow key={event.id} event={event} isDraft={true} />
+                    <EventManagementRow
+                      key={event.id}
+                      event={event}
+                      isDraft={true}
+                    />
                   ))}
                 </div>
               </CardContent>
@@ -401,7 +465,11 @@ export const EventManagementDashboard: React.FC<EventManagementDashboardProps> =
               <CardContent>
                 <div className="space-y-3">
                   {completedEvents.map((event) => (
-                    <EventManagementRow key={event.id} event={event} isCompleted={true} />
+                    <EventManagementRow
+                      key={event.id}
+                      event={event}
+                      isCompleted={true}
+                    />
                   ))}
                 </div>
               </CardContent>
@@ -432,30 +500,34 @@ export const EventManagementDashboard: React.FC<EventManagementDashboardProps> =
               Choose which event you want to access check-in codes for:
             </p>
             <div className="space-y-2 max-h-80 overflow-y-auto">
-              {managedEvents.filter(event => event.status === 'published').map((event) => (
-                <div
-                  key={event.id}
-                  className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50 cursor-pointer"
-                  onClick={() => {
-                    window.location.href = `/events/manage/${event.id}/checkin`;
-                  }}
-                >
-                  <div className="flex-1">
-                    <p className="font-medium text-sm">{event.title}</p>
-                    <p className="text-xs text-gray-500">
-                      {new Date(event.event_date).toLocaleDateString()} • {event.registration_count} registered
-                    </p>
+              {managedEvents
+                .filter((event) => event.status === 'published')
+                .map((event) => (
+                  <div
+                    key={event.id}
+                    className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50 cursor-pointer"
+                    onClick={() => {
+                      window.location.href = `/events/manage/${event.id}/checkin`;
+                    }}
+                  >
+                    <div className="flex-1">
+                      <p className="font-medium text-sm">{event.title}</p>
+                      <p className="text-xs text-gray-500">
+                        {new Date(event.event_date).toLocaleDateString()} •{' '}
+                        {event.registration_count} registered
+                      </p>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Badge className={getStatusColor(event.status)}>
+                        {event.status}
+                      </Badge>
+                      <QrCode className="w-4 h-4 text-gray-400" />
+                    </div>
                   </div>
-                  <div className="flex items-center space-x-2">
-                    <Badge className={getStatusColor(event.status)}>
-                      {event.status}
-                    </Badge>
-                    <QrCode className="w-4 h-4 text-gray-400" />
-                  </div>
-                </div>
-              ))}
+                ))}
             </div>
-            {managedEvents.filter(event => event.status === 'published').length === 0 && (
+            {managedEvents.filter((event) => event.status === 'published')
+              .length === 0 && (
               <div className="text-center py-8">
                 <QrCode className="w-12 h-12 mx-auto text-gray-400 mb-4" />
                 <p className="text-gray-500">No published events available</p>
@@ -465,7 +537,10 @@ export const EventManagementDashboard: React.FC<EventManagementDashboardProps> =
               </div>
             )}
             <div className="flex justify-end">
-              <Button variant="outline" onClick={() => setShowQRCodeModal(false)}>
+              <Button
+                variant="outline"
+                onClick={() => setShowQRCodeModal(false)}
+              >
                 Close
               </Button>
             </div>
@@ -483,23 +558,30 @@ interface EventManagementRowProps {
   isCompleted?: boolean;
 }
 
-const EventManagementRow: React.FC<EventManagementRowProps> = ({ 
-  event, 
-  isDraft = false, 
-  isCompleted = false 
+const EventManagementRow: React.FC<EventManagementRowProps> = ({
+  event,
+  isDraft = false,
+  isCompleted = false,
 }) => {
-  const { publishEvent, cancelEvent, completeEvent, loading } = useEventActions(event.id);
+  const { publishEvent, cancelEvent, completeEvent, loading } = useEventActions(
+    event.id,
+  );
   const { address } = useAccount();
   const [showCancelDialog, setShowCancelDialog] = useState(false);
   const [cancellingEvent, setCancellingEvent] = useState(false);
-  const [organizerProfile, setOrganizerProfile] = useState<{ first_name?: string; last_name?: string } | null>(null);
+  const [organizerProfile, setOrganizerProfile] = useState<{
+    first_name?: string;
+    last_name?: string;
+  } | null>(null);
 
   // Fetch organizer profile for notification
   useEffect(() => {
     const fetchOrganizerProfile = async () => {
       if (!event?.creator_address) return;
       try {
-        const profile = await EventService.getUserProfileByWallet(event.creator_address);
+        const profile = await EventService.getUserProfileByWallet(
+          event.creator_address,
+        );
         setOrganizerProfile(profile);
       } catch (error) {
         console.error('Failed to fetch organizer profile:', error);
@@ -511,27 +593,32 @@ const EventManagementRow: React.FC<EventManagementRowProps> = ({
   const { getCancelEventCall } = useSimplifiedEventTransactions();
   const [showSmartContractCancel, setShowSmartContractCancel] = useState(false);
 
-  const handleEventCancellation = async (eventToCancel: EventWithStats): Promise<boolean> => {
+  const handleEventCancellation = async (
+    eventToCancel: EventWithStats,
+  ): Promise<boolean> => {
     try {
       // 1. Get all registrations for the event
-      const registrations = await EventService.getEventRegistrations(eventToCancel.id);
-      
+      const registrations = await EventService.getEventRegistrations(
+        eventToCancel.id,
+      );
+
       // 2. If event has blockchain_event_id, cancel on smart contract first
       if (eventToCancel.blockchain_event_id) {
         // Show smart contract cancellation interface
         setShowSmartContractCancel(true);
         return false; // Prevent modal from closing - smart contract transaction will handle completion
       }
-      
+
       // 3. Cancel the event in Supabase (for legacy events without blockchain ID)
       const success = await cancelEvent();
       if (!success) return false;
-      
+
       // 4. Send notifications to all registered attendees
-      const organizerName = organizerProfile?.first_name && organizerProfile?.last_name 
-        ? `${organizerProfile.first_name} ${organizerProfile.last_name}`
-        : `${event.creator_address.substring(0, 6)}...${event.creator_address.substring(38)}`;
-      
+      const organizerName =
+        organizerProfile?.first_name && organizerProfile?.last_name
+          ? `${organizerProfile.first_name} ${organizerProfile.last_name}`
+          : `${event.creator_address.substring(0, 6)}...${event.creator_address.substring(38)}`;
+
       for (const registration of registrations) {
         if (registration.registration_status === 'registered') {
           await notificationService.createNotification({
@@ -542,11 +629,11 @@ const EventManagementRow: React.FC<EventManagementRowProps> = ({
             message: `The event "${eventToCancel.title}" has been cancelled by ${organizerName}. Any payments will be refunded automatically.`,
             context_type: 'marketplace',
             context_id: eventToCancel.id,
-            context_url: `/events/${eventToCancel.id}`
+            context_url: `/events/${eventToCancel.id}`,
           });
         }
       }
-      
+
       return true;
     } catch (error) {
       console.error('Error in handleEventCancellation:', error);
@@ -554,17 +641,22 @@ const EventManagementRow: React.FC<EventManagementRowProps> = ({
     }
   };
 
-  const handleSmartContractCancellationSuccess = async (eventToCancel: EventWithStats) => {
+  const handleSmartContractCancellationSuccess = async (
+    eventToCancel: EventWithStats,
+  ) => {
     try {
       // 1. Update Supabase status
       await EventService.cancelEvent(eventToCancel.id);
-      
+
       // 2. Send notifications
-      const registrations = await EventService.getEventRegistrations(eventToCancel.id);
-      const organizerName = organizerProfile?.first_name && organizerProfile?.last_name 
-        ? `${organizerProfile.first_name} ${organizerProfile.last_name}`
-        : `${event.creator_address.substring(0, 6)}...${event.creator_address.substring(38)}`;
-      
+      const registrations = await EventService.getEventRegistrations(
+        eventToCancel.id,
+      );
+      const organizerName =
+        organizerProfile?.first_name && organizerProfile?.last_name
+          ? `${organizerProfile.first_name} ${organizerProfile.last_name}`
+          : `${event.creator_address.substring(0, 6)}...${event.creator_address.substring(38)}`;
+
       for (const registration of registrations) {
         if (registration.registration_status === 'registered') {
           await notificationService.createNotification({
@@ -575,18 +667,22 @@ const EventManagementRow: React.FC<EventManagementRowProps> = ({
             message: `The event "${eventToCancel.title}" has been cancelled by ${organizerName}. Refunds have been processed automatically.`,
             context_type: 'marketplace',
             context_id: eventToCancel.id,
-            context_url: `/events/${eventToCancel.id}`
+            context_url: `/events/${eventToCancel.id}`,
           });
         }
       }
-      
+
       setShowSmartContractCancel(false);
       setShowCancelDialog(false);
-      alert('Event cancelled successfully. Attendees have been notified and refunds processed.');
+      alert(
+        'Event cancelled successfully. Attendees have been notified and refunds processed.',
+      );
       window.location.reload();
     } catch (error) {
       console.error('Error in post-cancellation cleanup:', error);
-      alert('Event was cancelled on blockchain but some cleanup failed. Please refresh the page.');
+      alert(
+        'Event was cancelled on blockchain but some cleanup failed. Please refresh the page.',
+      );
     }
   };
 
@@ -594,14 +690,14 @@ const EventManagementRow: React.FC<EventManagementRowProps> = ({
     return new Date(dateString).toLocaleDateString('en-US', {
       month: '2-digit',
       day: '2-digit',
-      year: '2-digit'
+      year: '2-digit',
     });
   };
 
   const formatTime = (dateString: string) => {
     return new Date(dateString).toLocaleTimeString('en-US', {
       hour: '2-digit',
-      minute: '2-digit'
+      minute: '2-digit',
     });
   };
 
@@ -619,7 +715,6 @@ const EventManagementRow: React.FC<EventManagementRowProps> = ({
         return 'bg-gradient-to-r from-gray-200 to-gray-300 text-black';
     }
   };
-  
 
   return (
     <div className="p-4 border rounded-lg hover:bg-gray-50 space-y-3">
@@ -669,8 +764,8 @@ const EventManagementRow: React.FC<EventManagementRowProps> = ({
         </Button>
 
         {isDraft && (
-          <Button 
-            size="sm" 
+          <Button
+            size="sm"
             onClick={async () => {
               const success = await publishEvent();
               if (success) {
@@ -687,8 +782,8 @@ const EventManagementRow: React.FC<EventManagementRowProps> = ({
 
         {!isDraft && !isCompleted && (
           <>
-            <Button 
-              variant="destructive" 
+            <Button
+              variant="destructive"
               size="sm"
               onClick={() => setShowCancelDialog(true)}
               disabled={loading || cancellingEvent}
@@ -696,7 +791,7 @@ const EventManagementRow: React.FC<EventManagementRowProps> = ({
               <XCircle className="w-4 h-4 mr-1" />
               {cancellingEvent ? 'Cancelling...' : 'Cancel'}
             </Button>
-            
+
             {/* Cancel Confirmation Dialog */}
             <Dialog open={showCancelDialog} onOpenChange={setShowCancelDialog}>
               <DialogContent className="max-w-md">
@@ -712,37 +807,54 @@ const EventManagementRow: React.FC<EventManagementRowProps> = ({
                     <li>Process automatic refunds for paid registrations</li>
                     <li>Mark the event as cancelled permanently</li>
                   </ul>
-                  <p className="text-sm font-medium" style={{ color: '#8B3A3A' }}>
+                  <p
+                    className="text-sm font-medium"
+                    style={{ color: '#8B3A3A' }}
+                  >
                     This action cannot be undone.
                   </p>
                   <div className="flex justify-end space-x-2">
-                    <Button variant="outline" onClick={() => setShowCancelDialog(false)}>
+                    <Button
+                      variant="outline"
+                      onClick={() => setShowCancelDialog(false)}
+                    >
                       Keep Event
                     </Button>
                     {showSmartContractCancel ? (
                       <Transaction
                         account={address?.toLowerCase() as `0x${string}`}
                         chainId={8453}
-                        calls={getCancelEventCall(event.blockchain_event_id || event.id)}
+                        calls={getCancelEventCall(
+                          event.blockchain_event_id || event.id,
+                        )}
                         isSponsored={true}
                         onSuccess={async (response) => {
-                          console.log('✅ Event cancellation successful:', response);
+                          console.log(
+                            '✅ Event cancellation successful:',
+                            response,
+                          );
                           await handleSmartContractCancellationSuccess(event);
                         }}
                         onError={(error) => {
                           console.error('❌ Event cancellation failed:', error);
                           setShowSmartContractCancel(false);
-                          alert('Failed to cancel event on blockchain. Please try again.');
+                          alert(
+                            'Failed to cancel event on blockchain. Please try again.',
+                          );
                         }}
                       >
                         <TransactionButton
                           text="Cancel Event on Blockchain"
                           className="text-white"
                           style={{ backgroundColor: '#8B3A3A' }}
-                          onMouseEnter={(e: React.MouseEvent<HTMLButtonElement>) => {
+                          onMouseEnter={(
+                            e: React.MouseEvent<HTMLButtonElement>,
+                          ) => {
                             e.currentTarget.style.backgroundColor = '#5C1F1F';
                           }}
-                          onMouseLeave={(e: React.MouseEvent<HTMLButtonElement>) => {
+                          onMouseLeave={(
+                            e: React.MouseEvent<HTMLButtonElement>,
+                          ) => {
                             e.currentTarget.style.backgroundColor = '#8B3A3A';
                           }}
                         />
@@ -753,22 +865,29 @@ const EventManagementRow: React.FC<EventManagementRowProps> = ({
                         </TransactionStatus>
                       </Transaction>
                     ) : (
-                      <Button 
+                      <Button
                         variant="destructive"
                         onClick={async () => {
                           setCancellingEvent(true);
                           try {
-                            const success = await handleEventCancellation(event);
+                            const success =
+                              await handleEventCancellation(event);
                             if (success) {
                               setShowCancelDialog(false);
-                              alert('Event cancelled successfully. Attendees have been notified.');
+                              alert(
+                                'Event cancelled successfully. Attendees have been notified.',
+                              );
                               window.location.reload();
                             } else if (!showSmartContractCancel) {
-                              alert('Failed to cancel event. Please try again.');
+                              alert(
+                                'Failed to cancel event. Please try again.',
+                              );
                             }
                           } catch (error) {
                             console.error('Error cancelling event:', error);
-                            alert('An error occurred while cancelling the event.');
+                            alert(
+                              'An error occurred while cancelling the event.',
+                            );
                           } finally {
                             setCancellingEvent(false);
                           }
@@ -785,16 +904,17 @@ const EventManagementRow: React.FC<EventManagementRowProps> = ({
           </>
         )}
 
-        {event.status === 'published' && new Date(event.event_date) < new Date() && (
-          <Button 
-            size="sm"
-            onClick={() => completeEvent()}
-            disabled={loading}
-          >
-            <CheckCircle className="w-4 h-4 mr-1" />
-            Complete
-          </Button>
-        )}
+        {event.status === 'published' &&
+          new Date(event.event_date) < new Date() && (
+            <Button
+              size="sm"
+              onClick={() => completeEvent()}
+              disabled={loading}
+            >
+              <CheckCircle className="w-4 h-4 mr-1" />
+              Complete
+            </Button>
+          )}
       </div>
     </div>
   );
@@ -805,30 +925,32 @@ interface RegistrationManagementProps {
   events: EventWithStats[];
 }
 
-const RegistrationManagement: React.FC<RegistrationManagementProps> = ({ events }) => {
+const RegistrationManagement: React.FC<RegistrationManagementProps> = ({
+  events,
+}) => {
   const { address } = useAccount();
   const [selectedEventId, setSelectedEventId] = useState<string>('');
   const { registrations, loading } = useEventRegistrations(selectedEventId);
   const [showNotifyAllModal, setShowNotifyAllModal] = useState(false);
   const [notifyAllMessage, setNotifyAllMessage] = useState('');
   const [sendingNotifyAll, setSendingNotifyAll] = useState(false);
-  
+
   // Get selected event
-  const selectedEvent = events.find(event => event.id === selectedEventId);
-  
+  const selectedEvent = events.find((event) => event.id === selectedEventId);
+
   // Set initial event ID when events load
   useEffect(() => {
     if (events.length > 0 && !selectedEventId) {
       setSelectedEventId(events[0].id);
     }
   }, [events, selectedEventId]);
-  
+
   console.log('🔍 Registration Management Debug:', {
     eventsCount: events.length,
     selectedEventId,
     registrationsCount: registrations.length,
     loading,
-    eventIds: events.map(e => e.id)
+    eventIds: events.map((e) => e.id),
   });
 
   return (
@@ -879,9 +1001,9 @@ const RegistrationManagement: React.FC<RegistrationManagementProps> = ({ events 
           ) : (
             <div className="space-y-3">
               {registrations.map((registration) => (
-                <RegistrationCard 
-                  key={registration.id} 
-                  registration={registration} 
+                <RegistrationCard
+                  key={registration.id}
+                  registration={registration}
                   selectedEvent={selectedEvent}
                   selectedEventId={selectedEventId}
                 />
@@ -903,7 +1025,9 @@ const RegistrationManagement: React.FC<RegistrationManagementProps> = ({ events 
             </p>
             <textarea
               value={notifyAllMessage}
-              onChange={(e) => setNotifyAllMessage(e.target.value.slice(0, 300))}
+              onChange={(e) =>
+                setNotifyAllMessage(e.target.value.slice(0, 300))
+              }
               placeholder="Enter your message (max 300 characters)"
               className="w-full p-3 border rounded-lg resize-none h-24"
               maxLength={300}
@@ -912,30 +1036,37 @@ const RegistrationManagement: React.FC<RegistrationManagementProps> = ({ events 
               {notifyAllMessage.length}/300 characters
             </div>
             <div className="flex justify-end space-x-2">
-              <Button variant="outline" onClick={() => setShowNotifyAllModal(false)}>
+              <Button
+                variant="outline"
+                onClick={() => setShowNotifyAllModal(false)}
+              >
                 Cancel
               </Button>
-              <Button 
+              <Button
                 onClick={async () => {
                   if (!notifyAllMessage.trim()) return;
                   setSendingNotifyAll(true);
                   try {
                     // Send notification to all registered attendees
-                    const notificationPromises = registrations.map(registration => 
-                      notificationService.createNotification({
-                        recipient_address: registration.user_address,
-                        sender_address: selectedEvent?.creator_address || address || '',
-                        notification_type: 'bounty_update',
-                        title: 'Event Update',
-                        message: notifyAllMessage.trim(),
-                        context_type: 'marketplace',
-                        context_id: selectedEventId,
-                        context_url: `/events/${selectedEventId}`
-                      })
+                    const notificationPromises = registrations.map(
+                      (registration) =>
+                        notificationService.createNotification({
+                          recipient_address: registration.user_address,
+                          sender_address:
+                            selectedEvent?.creator_address || address || '',
+                          notification_type: 'bounty_update',
+                          title: 'Event Update',
+                          message: notifyAllMessage.trim(),
+                          context_type: 'marketplace',
+                          context_id: selectedEventId,
+                          context_url: `/events/${selectedEventId}`,
+                        }),
                     );
-                    
+
                     await Promise.all(notificationPromises);
-                    alert(`Message sent to all ${registrations.length} attendees: ${notifyAllMessage}`);
+                    alert(
+                      `Message sent to all ${registrations.length} attendees: ${notifyAllMessage}`,
+                    );
                     setShowNotifyAllModal(false);
                     setNotifyAllMessage('');
                   } catch (error) {
@@ -947,7 +1078,9 @@ const RegistrationManagement: React.FC<RegistrationManagementProps> = ({ events 
                 }}
                 disabled={!notifyAllMessage.trim() || sendingNotifyAll}
               >
-                {sendingNotifyAll ? 'Sending...' : `Send to All (${registrations.length})`}
+                {sendingNotifyAll
+                  ? 'Sending...'
+                  : `Send to All (${registrations.length})`}
               </Button>
             </div>
           </div>
@@ -964,7 +1097,11 @@ interface RegistrationCardProps {
   selectedEventId: string;
 }
 
-const RegistrationCard: React.FC<RegistrationCardProps> = ({ registration, selectedEvent, selectedEventId }) => {
+const RegistrationCard: React.FC<RegistrationCardProps> = ({
+  registration,
+  selectedEvent,
+  selectedEventId,
+}) => {
   const { address } = useAccount();
   const [userProfile, setUserProfile] = useState<{
     first_name?: string;
@@ -979,7 +1116,9 @@ const RegistrationCard: React.FC<RegistrationCardProps> = ({ registration, selec
   useEffect(() => {
     const fetchUserProfile = async () => {
       try {
-        const profile = await EventService.getUserProfileByWallet(registration.user_address);
+        const profile = await EventService.getUserProfileByWallet(
+          registration.user_address,
+        );
         setUserProfile(profile);
       } catch (error) {
         console.error('Failed to fetch user profile:', error);
@@ -993,7 +1132,7 @@ const RegistrationCard: React.FC<RegistrationCardProps> = ({ registration, selec
 
   const handleSendNotification = async () => {
     if (!notificationMessage.trim()) return;
-    
+
     setSendingNotification(true);
     try {
       await notificationService.createNotification({
@@ -1004,10 +1143,12 @@ const RegistrationCard: React.FC<RegistrationCardProps> = ({ registration, selec
         message: notificationMessage.trim(),
         context_type: 'marketplace',
         context_id: selectedEventId,
-        context_url: `/events/${selectedEventId}`
+        context_url: `/events/${selectedEventId}`,
       });
-      
-      alert(`Notification sent to ${userProfile?.first_name || 'attendee'}: ${notificationMessage}`);
+
+      alert(
+        `Notification sent to ${userProfile?.first_name || 'attendee'}: ${notificationMessage}`,
+      );
       setShowNotificationModal(false);
       setNotificationMessage('');
     } catch (error) {
@@ -1018,10 +1159,11 @@ const RegistrationCard: React.FC<RegistrationCardProps> = ({ registration, selec
     }
   };
 
-  const displayName = loading ? 'Loading...' : 
-    (userProfile?.first_name || userProfile?.last_name) ? 
-    `${userProfile.first_name || ''} ${userProfile.last_name || ''}`.trim() :
-    `${registration.user_address.substring(0, 6)}...${registration.user_address.substring(38)}`;
+  const displayName = loading
+    ? 'Loading...'
+    : userProfile?.first_name || userProfile?.last_name
+      ? `${userProfile.first_name || ''} ${userProfile.last_name || ''}`.trim()
+      : `${registration.user_address.substring(0, 6)}...${registration.user_address.substring(38)}`;
 
   return (
     <>
@@ -1029,8 +1171,8 @@ const RegistrationCard: React.FC<RegistrationCardProps> = ({ registration, selec
         <div className="flex items-center space-x-3">
           <div className="w-10 h-10 rounded-full overflow-hidden bg-gray-200 flex items-center justify-center">
             {userProfile?.profile_picture ? (
-              <img 
-                src={userProfile.profile_picture} 
+              <img
+                src={userProfile.profile_picture}
                 alt={displayName}
                 className="w-full h-full object-cover"
                 onError={(e) => {
@@ -1038,7 +1180,7 @@ const RegistrationCard: React.FC<RegistrationCardProps> = ({ registration, selec
                 }}
               />
             ) : (
-              <img 
+              <img
                 src="/images/symbolobinfin.png"
                 alt={displayName}
                 className="w-full h-full object-cover"
@@ -1050,15 +1192,19 @@ const RegistrationCard: React.FC<RegistrationCardProps> = ({ registration, selec
           </div>
         </div>
         <div className="flex items-center space-x-2">
-          <Badge variant={
-            registration.registration_status === 'completed' ? 'default' :
-            registration.registration_status === 'checked_in' ? 'secondary' :
-            'outline'
-          }>
+          <Badge
+            variant={
+              registration.registration_status === 'completed'
+                ? 'default'
+                : registration.registration_status === 'checked_in'
+                  ? 'secondary'
+                  : 'outline'
+            }
+          >
             {registration.registration_status}
           </Badge>
-          <Button 
-            variant="outline" 
+          <Button
+            variant="outline"
             size="sm"
             onClick={() => setShowNotificationModal(true)}
           >
@@ -1069,7 +1215,10 @@ const RegistrationCard: React.FC<RegistrationCardProps> = ({ registration, selec
       </div>
 
       {/* Notification Modal */}
-      <Dialog open={showNotificationModal} onOpenChange={setShowNotificationModal}>
+      <Dialog
+        open={showNotificationModal}
+        onOpenChange={setShowNotificationModal}
+      >
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>Send Notification</DialogTitle>
@@ -1080,7 +1229,9 @@ const RegistrationCard: React.FC<RegistrationCardProps> = ({ registration, selec
             </p>
             <textarea
               value={notificationMessage}
-              onChange={(e) => setNotificationMessage(e.target.value.slice(0, 300))}
+              onChange={(e) =>
+                setNotificationMessage(e.target.value.slice(0, 300))
+              }
               placeholder="Enter your message (max 300 characters)"
               className="w-full p-3 border rounded-lg resize-none h-24"
               maxLength={300}
@@ -1089,10 +1240,13 @@ const RegistrationCard: React.FC<RegistrationCardProps> = ({ registration, selec
               {notificationMessage.length}/300 characters
             </div>
             <div className="flex justify-end space-x-2">
-              <Button variant="outline" onClick={() => setShowNotificationModal(false)}>
+              <Button
+                variant="outline"
+                onClick={() => setShowNotificationModal(false)}
+              >
                 Cancel
               </Button>
-              <Button 
+              <Button
                 onClick={handleSendNotification}
                 disabled={!notificationMessage.trim() || sendingNotification}
               >
@@ -1113,39 +1267,51 @@ interface EventAnalyticsProps {
 
 const EventAnalytics: React.FC<EventAnalyticsProps> = ({ events }) => {
   const totalEvents = events.length;
-  const totalRegistrations = events.reduce((sum, event) => sum + event.registration_count, 0);
-  const averageRegistrations = totalEvents > 0 ? totalRegistrations / totalEvents : 0;
-  const completedEvents = events.filter(e => e.status === 'completed').length;
+  const totalRegistrations = events.reduce(
+    (sum, event) => sum + event.registration_count,
+    0,
+  );
+  const averageRegistrations =
+    totalEvents > 0 ? totalRegistrations / totalEvents : 0;
+  const completedEvents = events.filter((e) => e.status === 'completed').length;
 
   return (
     <div className="space-y-6">
       <h3 className="text-lg font-semibold">Event Analytics</h3>
-      
+
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card>
           <CardContent className="p-6 text-center">
-            <p className="text-2xl font-bold" style={{ color: '#2F5D50' }}>{totalEvents}</p>
+            <p className="text-2xl font-bold" style={{ color: '#2F5D50' }}>
+              {totalEvents}
+            </p>
             <p className="text-sm text-gray-600">Total Events</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardContent className="p-6 text-center">
-            <p className="text-2xl font-bold" style={{ color: '#3F7A5A' }}>{totalRegistrations}</p>
+            <p className="text-2xl font-bold" style={{ color: '#3F7A5A' }}>
+              {totalRegistrations}
+            </p>
             <p className="text-sm text-gray-600">Total Registrations</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardContent className="p-6 text-center">
-            <p className="text-2xl font-bold" style={{ color: '#6A5F7A' }}>{averageRegistrations.toFixed(1)}</p>
+            <p className="text-2xl font-bold" style={{ color: '#6A5F7A' }}>
+              {averageRegistrations.toFixed(1)}
+            </p>
             <p className="text-sm text-gray-600">Avg per Event</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardContent className="p-6 text-center">
-            <p className="text-2xl font-bold" style={{ color: '#C6933F' }}>{completedEvents}</p>
+            <p className="text-2xl font-bold" style={{ color: '#C6933F' }}>
+              {completedEvents}
+            </p>
             <p className="text-sm text-gray-600">Completed</p>
           </CardContent>
         </Card>

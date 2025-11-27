@@ -35,11 +35,11 @@ class HatErrorService {
   logTransaction(log: Omit<HatTransactionLog, 'timestamp'>): void {
     const fullLog: HatTransactionLog = {
       ...log,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     };
-    
+
     this.logs.push(fullLog);
-    
+
     // Log to console with appropriate level
     if (log.success) {
       console.log(`🎩 HAT ${log.type} successful:`, {
@@ -47,7 +47,7 @@ class HatErrorService {
         duration: `${log.duration}ms`,
         hatId: log.hatId,
         user: log.userAddress.slice(0, 8) + '...',
-        details: log.details
+        details: log.details,
       });
     } else {
       console.warn(`⚠️ HAT ${log.type} failed:`, {
@@ -55,10 +55,10 @@ class HatErrorService {
         duration: `${log.duration}ms`,
         hatId: log.hatId,
         user: log.userAddress.slice(0, 8) + '...',
-        details: log.details
+        details: log.details,
       });
     }
-    
+
     // Keep only last 1000 logs to prevent memory issues
     if (this.logs.length > 1000) {
       this.logs = this.logs.slice(-1000);
@@ -71,28 +71,28 @@ class HatErrorService {
   logError(error: Omit<HatTransactionError, 'timestamp'>): void {
     const fullError: HatTransactionError = {
       ...error,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     };
-    
+
     this.errors.push(fullError);
-    
+
     // Log to console with appropriate level based on severity
     const logMethod = {
       low: console.info,
       medium: console.warn,
       high: console.error,
-      critical: console.error
+      critical: console.error,
     }[error.severity];
-    
+
     logMethod(`🚨 HAT Error [${error.severity.toUpperCase()}]:`, {
       code: error.code,
       message: error.message,
       hatId: error.hatId,
       user: error.userAddress.slice(0, 8) + '...',
       txHash: error.transactionHash,
-      details: error.details
+      details: error.details,
     });
-    
+
     // Keep only last 500 errors
     if (this.errors.length > 500) {
       this.errors = this.errors.slice(-500);
@@ -102,18 +102,21 @@ class HatErrorService {
   /**
    * Parse and categorize common HAT protocol errors
    */
-  parseContractError(error: any, context: {
-    userAddress: string;
-    hatId?: string;
-    action: string;
-    transactionHash?: string;
-  }): HatTransactionError {
+  parseContractError(
+    error: any,
+    context: {
+      userAddress: string;
+      hatId?: string;
+      action: string;
+      transactionHash?: string;
+    },
+  ): HatTransactionError {
     let code = 'UNKNOWN_ERROR';
     let message = 'Unknown error occurred';
     let severity: HatTransactionError['severity'] = 'medium';
-    
+
     const errorStr = error?.message || error?.toString() || '';
-    
+
     // Common HAT protocol errors
     if (errorStr.includes('Hat_NotAdmin')) {
       code = 'NOT_ADMIN';
@@ -135,7 +138,10 @@ class HatErrorService {
       code = 'ALREADY_WEARING';
       message = 'User is already wearing this hat';
       severity = 'low';
-    } else if (errorStr.includes('insufficient funds') || errorStr.includes('gas')) {
+    } else if (
+      errorStr.includes('insufficient funds') ||
+      errorStr.includes('gas')
+    ) {
       code = 'INSUFFICIENT_GAS';
       message = 'Insufficient gas or funds for transaction';
       severity = 'medium';
@@ -148,20 +154,20 @@ class HatErrorService {
       message = 'Network connection error';
       severity = 'medium';
     }
-    
+
     return {
       code,
       message,
       details: {
         originalError: errorStr,
         action: context.action,
-        stackTrace: error?.stack
+        stackTrace: error?.stack,
       },
       timestamp: new Date().toISOString(),
       userAddress: context.userAddress,
       hatId: context.hatId,
       transactionHash: context.transactionHash,
-      severity
+      severity,
     };
   }
 
@@ -176,32 +182,39 @@ class HatErrorService {
     since?: string;
   }): HatTransactionLog[] {
     let filteredLogs = [...this.logs];
-    
+
     if (filters) {
       if (filters.type) {
-        filteredLogs = filteredLogs.filter(log => log.type === filters.type);
+        filteredLogs = filteredLogs.filter((log) => log.type === filters.type);
       }
       if (filters.success !== undefined) {
-        filteredLogs = filteredLogs.filter(log => log.success === filters.success);
+        filteredLogs = filteredLogs.filter(
+          (log) => log.success === filters.success,
+        );
       }
       if (filters.hatId) {
-        filteredLogs = filteredLogs.filter(log => log.hatId === filters.hatId);
+        filteredLogs = filteredLogs.filter(
+          (log) => log.hatId === filters.hatId,
+        );
       }
       if (filters.userAddress) {
-        filteredLogs = filteredLogs.filter(log => 
-          log.userAddress.toLowerCase() === filters.userAddress?.toLowerCase()
+        filteredLogs = filteredLogs.filter(
+          (log) =>
+            log.userAddress.toLowerCase() ===
+            filters.userAddress?.toLowerCase(),
         );
       }
       if (filters.since) {
         const sinceDate = new Date(filters.since);
-        filteredLogs = filteredLogs.filter(log => 
-          new Date(log.timestamp) >= sinceDate
+        filteredLogs = filteredLogs.filter(
+          (log) => new Date(log.timestamp) >= sinceDate,
         );
       }
     }
-    
-    return filteredLogs.sort((a, b) => 
-      new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+
+    return filteredLogs.sort(
+      (a, b) =>
+        new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime(),
     );
   }
 
@@ -216,32 +229,41 @@ class HatErrorService {
     since?: string;
   }): HatTransactionError[] {
     let filteredErrors = [...this.errors];
-    
+
     if (filters) {
       if (filters.severity) {
-        filteredErrors = filteredErrors.filter(error => error.severity === filters.severity);
+        filteredErrors = filteredErrors.filter(
+          (error) => error.severity === filters.severity,
+        );
       }
       if (filters.code) {
-        filteredErrors = filteredErrors.filter(error => error.code === filters.code);
+        filteredErrors = filteredErrors.filter(
+          (error) => error.code === filters.code,
+        );
       }
       if (filters.hatId) {
-        filteredErrors = filteredErrors.filter(error => error.hatId === filters.hatId);
+        filteredErrors = filteredErrors.filter(
+          (error) => error.hatId === filters.hatId,
+        );
       }
       if (filters.userAddress) {
-        filteredErrors = filteredErrors.filter(error => 
-          error.userAddress.toLowerCase() === filters.userAddress?.toLowerCase()
+        filteredErrors = filteredErrors.filter(
+          (error) =>
+            error.userAddress.toLowerCase() ===
+            filters.userAddress?.toLowerCase(),
         );
       }
       if (filters.since) {
         const sinceDate = new Date(filters.since);
-        filteredErrors = filteredErrors.filter(error => 
-          new Date(error.timestamp) >= sinceDate
+        filteredErrors = filteredErrors.filter(
+          (error) => new Date(error.timestamp) >= sinceDate,
         );
       }
     }
-    
-    return filteredErrors.sort((a, b) => 
-      new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+
+    return filteredErrors.sort(
+      (a, b) =>
+        new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime(),
     );
   }
 
@@ -255,35 +277,36 @@ class HatErrorService {
     transactionsByType: Record<string, number>;
   } {
     const logs = this.getTransactionLogs();
-    
+
     if (logs.length === 0) {
       return {
         avgTransactionTime: 0,
         successRate: 0,
         errorsByType: {},
-        transactionsByType: {}
+        transactionsByType: {},
       };
     }
-    
-    const avgTransactionTime = logs.reduce((sum, log) => sum + log.duration, 0) / logs.length;
-    const successCount = logs.filter(log => log.success).length;
+
+    const avgTransactionTime =
+      logs.reduce((sum, log) => sum + log.duration, 0) / logs.length;
+    const successCount = logs.filter((log) => log.success).length;
     const successRate = (successCount / logs.length) * 100;
-    
+
     const errorsByType: Record<string, number> = {};
-    this.errors.forEach(error => {
+    this.errors.forEach((error) => {
       errorsByType[error.code] = (errorsByType[error.code] || 0) + 1;
     });
-    
+
     const transactionsByType: Record<string, number> = {};
-    logs.forEach(log => {
+    logs.forEach((log) => {
       transactionsByType[log.type] = (transactionsByType[log.type] || 0) + 1;
     });
-    
+
     return {
       avgTransactionTime: Math.round(avgTransactionTime),
       successRate: Math.round(successRate * 100) / 100,
       errorsByType,
-      transactionsByType
+      transactionsByType,
     };
   }
 
@@ -301,15 +324,18 @@ class HatErrorService {
 export const hatErrorService = new HatErrorService();
 
 // Export wrapper functions for common operations
-export const logHatTransaction = (log: Omit<HatTransactionLog, 'timestamp'>) => 
+export const logHatTransaction = (log: Omit<HatTransactionLog, 'timestamp'>) =>
   hatErrorService.logTransaction(log);
 
-export const logHatError = (error: any, context: {
-  userAddress: string;
-  hatId?: string;
-  action: string;
-  transactionHash?: string;
-}) => {
+export const logHatError = (
+  error: any,
+  context: {
+    userAddress: string;
+    hatId?: string;
+    action: string;
+    transactionHash?: string;
+  },
+) => {
   const parsedError = hatErrorService.parseContractError(error, context);
   hatErrorService.logError(parsedError);
   return parsedError;

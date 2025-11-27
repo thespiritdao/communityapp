@@ -34,14 +34,18 @@ interface TokenGalleryProps {
 const TOKEN_CONFIGS: TokenConfig[] = [
   // === Membership Tokens ===
   {
-    address: process.env.NEXT_PUBLIC_PROOF_OF_CURIOSITY || '0x756d2ad6642c2ed43fd87af70d83f277ec0a669f',
+    address:
+      process.env.NEXT_PUBLIC_PROOF_OF_CURIOSITY ||
+      '0x756d2ad6642c2ed43fd87af70d83f277ec0a669f',
     type: 'erc721',
     label: 'Proof of Curiosity',
     category: 'membership',
   },
 
   {
-    address: process.env.NEXT_PUBLIC_ADVOCATE || '0xe4a2f419b4531417cb18d7ad95527eea620c4095',
+    address:
+      process.env.NEXT_PUBLIC_ADVOCATE ||
+      '0xe4a2f419b4531417cb18d7ad95527eea620c4095',
     type: 'erc721',
     label: 'Advocate',
     category: 'membership',
@@ -65,18 +69,24 @@ const TOKEN_CONFIGS: TokenConfig[] = [
   */
 ];
 
-export const TokenGallery: React.FC<TokenGalleryProps> = ({ walletAddress, category }) => {
-  const [tokenMetadata, setTokenMetadata] = useState<Array<{ uri: string; image: string; name: string; owned: boolean }>>([]);
+export const TokenGallery: React.FC<TokenGalleryProps> = ({
+  walletAddress,
+  category,
+}) => {
+  const [tokenMetadata, setTokenMetadata] = useState<
+    Array<{ uri: string; image: string; name: string; owned: boolean }>
+  >([]);
   const [isLoading, setIsLoading] = useState(true);
 
   // Get dynamic pod credentials for credentials category
-  const { credentials: podCredentials, isLoading: credentialsLoading } = usePodCredentials(
-    category === 'credential' ? walletAddress : undefined
+  const { credentials: podCredentials, isLoading: credentialsLoading } =
+    usePodCredentials(category === 'credential' ? walletAddress : undefined);
+
+  const categoryTokens = TOKEN_CONFIGS.filter(
+    (token) => token.category === category,
   );
 
-  const categoryTokens = TOKEN_CONFIGS.filter(token => token.category === category);
-
-  const contractReads = categoryTokens.map(token => {
+  const contractReads = categoryTokens.map((token) => {
     if (token.type === 'erc721') {
       return {
         address: token.address as `0x${string}`,
@@ -104,7 +114,11 @@ export const TokenGallery: React.FC<TokenGalleryProps> = ({ walletAddress, categ
   // Handle empty token configs (e.g., credentials with no static tokens)
   const hasTokensToCheck = contractReads.length > 0;
 
-  const { data: ownershipData, isError, isLoading: isContractLoading } = useContractReads({
+  const {
+    data: ownershipData,
+    isError,
+    isLoading: isContractLoading,
+  } = useContractReads({
     contracts: contractReads as any[],
     enabled: hasTokensToCheck, // Only run if we have tokens to check
   });
@@ -117,12 +131,14 @@ export const TokenGallery: React.FC<TokenGalleryProps> = ({ walletAddress, categ
       categoryTokens.map(async (token, index) => {
         try {
           const balance = ownershipData?.[index]?.result;
-          const owned = balance && (typeof balance === 'bigint' ? balance > 0n : balance > 0);
-          if (!owned) return { uri: '', image: '', name: token.label, owned: false };
+          const owned =
+            balance &&
+            (typeof balance === 'bigint' ? balance > 0n : balance > 0);
+          if (!owned)
+            return { uri: '', image: '', name: token.label, owned: false };
 
           // Check if we should use local token data first
           if (LocalTokenService.shouldUseLocalMetadata(token.label)) {
-            
             const localToken = LocalTokenService.getTokenInfo(token.label);
             if (localToken) {
               return {
@@ -138,56 +154,75 @@ export const TokenGallery: React.FC<TokenGalleryProps> = ({ walletAddress, categ
           let imageUrl = '';
           let tokenName = token.label;
 
-			if (!publicClient) {
-			  
-			  return { uri: '', image: '', name: token.label, owned: true };
-			}
+          if (!publicClient) {
+            return { uri: '', image: '', name: token.label, owned: true };
+          }
 
-			const provider = new ethers.JsonRpcProvider(publicClient.transport.url);
+          const provider = new ethers.JsonRpcProvider(
+            publicClient.transport.url,
+          );
           if (token.type === 'erc721') {
-            const contract = new ethers.Contract(token.address, erc721ABI, provider);
-            const tokenId = await contract.tokenOfOwnerByIndex(walletAddress, 0).catch(() => null);
+            const contract = new ethers.Contract(
+              token.address,
+              erc721ABI,
+              provider,
+            );
+            const tokenId = await contract
+              .tokenOfOwnerByIndex(walletAddress, 0)
+              .catch(() => null);
             if (tokenId) {
               tokenURI = await contract.tokenURI(tokenId);
             }
           } else if (token.type === 'erc1155') {
-            const contract = new ethers.Contract(token.address, erc1155ABI, provider);
+            const contract = new ethers.Contract(
+              token.address,
+              erc1155ABI,
+              provider,
+            );
             tokenURI = await contract.uri(token.tokenId).catch(() => '');
             if (tokenURI && token.tokenId) {
               const formattedId = token.tokenId.slice(2).padStart(64, '0');
               tokenURI = tokenURI.replace('{id}', formattedId);
             }
           } else if (token.type === 'unlock') {
-            if (!token.metadataUrl) throw new Error('Missing metadata URL for Unlock token');
+            if (!token.metadataUrl)
+              throw new Error('Missing metadata URL for Unlock token');
             tokenURI = token.metadataUrl;
           }
 
           let metadata;
-          
+
           if (tokenURI.startsWith('data:application/json;base64,')) {
             // Handle base64 encoded JSON metadata to avoid CSP violations
-            const base64Data = tokenURI.replace('data:application/json;base64,', '');
+            const base64Data = tokenURI.replace(
+              'data:application/json;base64,',
+              '',
+            );
             const jsonString = atob(base64Data);
             metadata = JSON.parse(jsonString);
           } else {
             if (tokenURI.startsWith('ipfs://')) {
               tokenURI = tokenURI.replace('ipfs://', 'https://ipfs.io/ipfs/');
             }
-            
+
             try {
               const response = await fetch(tokenURI);
               const text = await response.text();
-              
+
               // Check if response is valid JSON
-              if (text.trim().startsWith('<!DOCTYPE') || text.trim().startsWith('<html')) {
+              if (
+                text.trim().startsWith('<!DOCTYPE') ||
+                text.trim().startsWith('<html')
+              ) {
                 throw new Error('Received HTML instead of JSON metadata');
               }
-              
+
               metadata = JSON.parse(text);
             } catch (jsonError) {
-              
               // Use local token image as fallback
-              const fallbackImage = LocalTokenService.getTokenImage(token.label);
+              const fallbackImage = LocalTokenService.getTokenImage(
+                token.label,
+              );
               return {
                 uri: '',
                 image: fallbackImage,
@@ -198,18 +233,17 @@ export const TokenGallery: React.FC<TokenGalleryProps> = ({ walletAddress, categ
           }
 
           imageUrl = metadata.image || '';
-          
+
           // Handle IPFS images by replacing with local versions
           if (imageUrl.startsWith('ipfs://')) {
-            
             imageUrl = LocalTokenService.getTokenImage(token.label, imageUrl);
           } else if (!imageUrl) {
             imageUrl = LocalTokenService.getTokenImage(token.label);
           }
           const metadataName = metadata.name?.toLowerCase();
-		  const isGeneric = !metadataName || ['hat', 'token', 'nft'].includes(metadataName);
-		  tokenName = isGeneric ? token.label : metadata.name;
-
+          const isGeneric =
+            !metadataName || ['hat', 'token', 'nft'].includes(metadataName);
+          tokenName = isGeneric ? token.label : metadata.name;
 
           return {
             uri: tokenURI,
@@ -218,17 +252,16 @@ export const TokenGallery: React.FC<TokenGalleryProps> = ({ walletAddress, categ
             owned: true,
           };
         } catch (error) {
-          
           // Always fall back to local image for errors
           const fallbackImage = LocalTokenService.getTokenImage(token.label);
-          return { 
-            uri: '', 
-            image: fallbackImage, 
-            name: token.label, 
-            owned: false 
+          return {
+            uri: '',
+            image: fallbackImage,
+            name: token.label,
+            owned: false,
           };
         }
-      })
+      }),
     );
 
     setTokenMetadata(results);
@@ -269,7 +302,10 @@ export const TokenGallery: React.FC<TokenGalleryProps> = ({ walletAddress, categ
             {credential.image ? (
               <div className="token-image">
                 <Image
-                  src={LocalTokenService.sanitizeImageUrl(credential.image, credential.label)}
+                  src={LocalTokenService.sanitizeImageUrl(
+                    credential.image,
+                    credential.label,
+                  )}
                   alt={credential.label}
                   width={60}
                   height={60}
@@ -294,7 +330,7 @@ export const TokenGallery: React.FC<TokenGalleryProps> = ({ walletAddress, categ
   }
 
   // For membership tokens, use contract-based checking
-  const ownedTokens = tokenMetadata.filter(token => token.owned);
+  const ownedTokens = tokenMetadata.filter((token) => token.owned);
 
   if (ownedTokens.length === 0) {
     return <div className="no-tokens">No {category} tokens found</div>;
@@ -307,17 +343,20 @@ export const TokenGallery: React.FC<TokenGalleryProps> = ({ walletAddress, categ
           {token.image ? (
             <div className="token-image">
               <Image
-				  src={LocalTokenService.sanitizeImageUrl(token.image, token.name)}
-				  alt={token.name}
-				  width={60}
-				  height={60}
-				  className="rounded-full object-cover"
-				  unoptimized={
-				    token.image?.includes('ui-avatars.com') ||
-				    token.image?.startsWith('ipfs://') ||
-				    false
-				  }
-				/>
+                src={LocalTokenService.sanitizeImageUrl(
+                  token.image,
+                  token.name,
+                )}
+                alt={token.name}
+                width={60}
+                height={60}
+                className="rounded-full object-cover"
+                unoptimized={
+                  token.image?.includes('ui-avatars.com') ||
+                  token.image?.startsWith('ipfs://') ||
+                  false
+                }
+              />
             </div>
           ) : (
             <div className="token-placeholder">

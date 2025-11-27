@@ -6,7 +6,11 @@ import { useState, useEffect } from 'react';
 import { useAccount } from 'wagmi';
 import { useModerationPermissions } from '../hooks/useModerationPermissions';
 import { supabase } from '@/utils/supabaseClient';
-import { muteUser, unmuteUser, type UserMute } from '../services/ModerationService';
+import {
+  muteUser,
+  unmuteUser,
+  type UserMute,
+} from '../services/ModerationService';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -36,7 +40,9 @@ export function MutedUsersList() {
 
   // New mute form state
   const [newMuteAddress, setNewMuteAddress] = useState('');
-  const [muteType, setMuteType] = useState<'temporary' | 'permanent' | 'shadow'>('temporary');
+  const [muteType, setMuteType] = useState<
+    'temporary' | 'permanent' | 'shadow'
+  >('temporary');
   const [reason, setReason] = useState('');
   const [duration, setDuration] = useState('7'); // days
 
@@ -68,16 +74,17 @@ export function MutedUsersList() {
     if (!address || !newMuteAddress) return;
 
     try {
-      const expiresAt = muteType === 'temporary'
-        ? new Date(Date.now() + parseInt(duration) * 24 * 60 * 60 * 1000)
-        : undefined;
+      const expiresAt =
+        muteType === 'temporary'
+          ? new Date(Date.now() + parseInt(duration) * 24 * 60 * 60 * 1000)
+          : undefined;
 
       const result = await muteUser(
         newMuteAddress,
         address,
         muteType,
         reason || undefined,
-        expiresAt
+        expiresAt,
       );
 
       if (result.success) {
@@ -146,7 +153,10 @@ export function MutedUsersList() {
 
               <div>
                 <Label htmlFor="muteType">Mute Type</Label>
-                <Select value={muteType} onValueChange={(val: any) => setMuteType(val)}>
+                <Select
+                  value={muteType}
+                  onValueChange={(val: any) => setMuteType(val)}
+                >
                   <SelectTrigger id="muteType">
                     <SelectValue />
                   </SelectTrigger>
@@ -193,7 +203,7 @@ export function MutedUsersList() {
           <p className="text-gray-500">No muted users</p>
         ) : (
           <div className="space-y-3">
-            {mutes.map(mute => (
+            {mutes.map((mute) => (
               <div
                 key={mute.id}
                 className="border rounded-lg p-3 flex items-start justify-between"
@@ -201,12 +211,18 @@ export function MutedUsersList() {
                 <div className="space-y-1">
                   <div className="flex items-center gap-2">
                     <code className="text-sm">
-                      {mute.user_address.slice(0, 10)}...{mute.user_address.slice(-8)}
+                      {mute.user_address.slice(0, 10)}...
+                      {mute.user_address.slice(-8)}
                     </code>
-                    <Badge variant={
-                      mute.mute_type === 'permanent' ? 'destructive' :
-                      mute.mute_type === 'shadow' ? 'outline' : 'default'
-                    }>
+                    <Badge
+                      variant={
+                        mute.mute_type === 'permanent'
+                          ? 'destructive'
+                          : mute.mute_type === 'shadow'
+                            ? 'outline'
+                            : 'default'
+                      }
+                    >
                       {mute.mute_type}
                     </Badge>
                   </div>

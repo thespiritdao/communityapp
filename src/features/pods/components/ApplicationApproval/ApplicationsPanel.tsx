@@ -30,12 +30,14 @@ interface ApplicationsPanelProps {
  */
 export const ApplicationsPanel: React.FC<ApplicationsPanelProps> = ({
   podId,
-  canManageMembers
+  canManageMembers,
 }) => {
   const { address } = useAccount();
   const [applications, setApplications] = useState<Application[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState<'pending' | 'approved' | 'all'>('pending');
+  const [filter, setFilter] = useState<'pending' | 'approved' | 'all'>(
+    'pending',
+  );
 
   useEffect(() => {
     loadApplications();
@@ -49,11 +51,11 @@ export const ApplicationsPanel: React.FC<ApplicationsPanelProps> = ({
           event: '*',
           schema: 'public',
           table: 'pod_membership_applications',
-          filter: `pod_id=eq.${podId}`
+          filter: `pod_id=eq.${podId}`,
         },
         () => {
           loadApplications();
-        }
+        },
       )
       .subscribe();
 
@@ -84,18 +86,19 @@ export const ApplicationsPanel: React.FC<ApplicationsPanelProps> = ({
   };
 
   // Calculate counts from ALL applications (not filtered)
-  const pendingApps = applications.filter(app => app.status === 'pending');
-  const approvedApps = applications.filter(app => app.status === 'approved');
-  const rejectedApps = applications.filter(app => app.status === 'rejected');
+  const pendingApps = applications.filter((app) => app.status === 'pending');
+  const approvedApps = applications.filter((app) => app.status === 'approved');
+  const rejectedApps = applications.filter((app) => app.status === 'rejected');
 
   // Apply UI filter for display
-  const displayedApplications = filter === 'all'
-    ? applications
-    : filter === 'pending'
-    ? pendingApps
-    : filter === 'approved'
-    ? approvedApps
-    : rejectedApps;
+  const displayedApplications =
+    filter === 'all'
+      ? applications
+      : filter === 'pending'
+        ? pendingApps
+        : filter === 'approved'
+          ? approvedApps
+          : rejectedApps;
 
   if (loading) {
     return (
@@ -141,36 +144,57 @@ export const ApplicationsPanel: React.FC<ApplicationsPanelProps> = ({
         <button
           onClick={() => setFilter('pending')}
           className="px-4 py-2 rounded-lg font-medium transition-colors"
-          style={filter === 'pending'
-            ? { backgroundColor: '#C6933F', color: '#FFFFFF' }
-            : { backgroundColor: '#f3f4f6', color: '#4b5563' }
+          style={
+            filter === 'pending'
+              ? { backgroundColor: '#C6933F', color: '#FFFFFF' }
+              : { backgroundColor: '#f3f4f6', color: '#4b5563' }
           }
-          onMouseEnter={(e) => filter !== 'pending' && (e.currentTarget.style.backgroundColor = '#e5e7eb')}
-          onMouseLeave={(e) => filter !== 'pending' && (e.currentTarget.style.backgroundColor = '#f3f4f6')}
+          onMouseEnter={(e) =>
+            filter !== 'pending' &&
+            (e.currentTarget.style.backgroundColor = '#e5e7eb')
+          }
+          onMouseLeave={(e) =>
+            filter !== 'pending' &&
+            (e.currentTarget.style.backgroundColor = '#f3f4f6')
+          }
         >
           Pending ({pendingApps.length})
         </button>
         <button
           onClick={() => setFilter('approved')}
           className="px-4 py-2 rounded-lg font-medium transition-colors"
-          style={filter === 'approved'
-            ? { backgroundColor: '#3F7A5A', color: '#FFFFFF' }
-            : { backgroundColor: '#f3f4f6', color: '#4b5563' }
+          style={
+            filter === 'approved'
+              ? { backgroundColor: '#3F7A5A', color: '#FFFFFF' }
+              : { backgroundColor: '#f3f4f6', color: '#4b5563' }
           }
-          onMouseEnter={(e) => filter !== 'approved' && (e.currentTarget.style.backgroundColor = '#e5e7eb')}
-          onMouseLeave={(e) => filter !== 'approved' && (e.currentTarget.style.backgroundColor = '#f3f4f6')}
+          onMouseEnter={(e) =>
+            filter !== 'approved' &&
+            (e.currentTarget.style.backgroundColor = '#e5e7eb')
+          }
+          onMouseLeave={(e) =>
+            filter !== 'approved' &&
+            (e.currentTarget.style.backgroundColor = '#f3f4f6')
+          }
         >
           Approved ({approvedApps.length})
         </button>
         <button
           onClick={() => setFilter('all')}
           className="px-4 py-2 rounded-lg font-medium transition-colors"
-          style={filter === 'all'
-            ? { backgroundColor: '#4b5563', color: '#FFFFFF' }
-            : { backgroundColor: '#f3f4f6', color: '#4b5563' }
+          style={
+            filter === 'all'
+              ? { backgroundColor: '#4b5563', color: '#FFFFFF' }
+              : { backgroundColor: '#f3f4f6', color: '#4b5563' }
           }
-          onMouseEnter={(e) => filter !== 'all' && (e.currentTarget.style.backgroundColor = '#e5e7eb')}
-          onMouseLeave={(e) => filter !== 'all' && (e.currentTarget.style.backgroundColor = '#f3f4f6')}
+          onMouseEnter={(e) =>
+            filter !== 'all' &&
+            (e.currentTarget.style.backgroundColor = '#e5e7eb')
+          }
+          onMouseLeave={(e) =>
+            filter !== 'all' &&
+            (e.currentTarget.style.backgroundColor = '#f3f4f6')
+          }
         >
           All ({applications.length})
         </button>
@@ -187,8 +211,8 @@ export const ApplicationsPanel: React.FC<ApplicationsPanelProps> = ({
             {filter === 'pending'
               ? 'No pending applications at the moment.'
               : filter === 'approved'
-              ? 'No approved applications yet.'
-              : 'No applications have been submitted yet.'}
+                ? 'No approved applications yet.'
+                : 'No applications have been submitted yet.'}
           </p>
         </Card>
       ) : (
@@ -208,7 +232,10 @@ export const ApplicationsPanel: React.FC<ApplicationsPanelProps> = ({
         <Card className="p-4">
           <div className="flex items-center justify-around text-center">
             <div>
-              <div className="flex items-center justify-center gap-2 mb-1" style={{ color: '#C6933F' }}>
+              <div
+                className="flex items-center justify-center gap-2 mb-1"
+                style={{ color: '#C6933F' }}
+              >
                 <ClipboardList className="w-5 h-5" />
                 <span className="text-2xl font-bold">{pendingApps.length}</span>
               </div>
@@ -216,17 +243,27 @@ export const ApplicationsPanel: React.FC<ApplicationsPanelProps> = ({
             </div>
             <div className="h-12 w-px bg-gray-200" />
             <div>
-              <div className="flex items-center justify-center gap-2 mb-1" style={{ color: '#3F7A5A' }}>
+              <div
+                className="flex items-center justify-center gap-2 mb-1"
+                style={{ color: '#3F7A5A' }}
+              >
                 <CheckCircle className="w-5 h-5" />
-                <span className="text-2xl font-bold">{approvedApps.length}</span>
+                <span className="text-2xl font-bold">
+                  {approvedApps.length}
+                </span>
               </div>
               <p className="text-sm text-gray-600">Approved</p>
             </div>
             <div className="h-12 w-px bg-gray-200" />
             <div>
-              <div className="flex items-center justify-center gap-2 mb-1" style={{ color: '#8B3A3A' }}>
+              <div
+                className="flex items-center justify-center gap-2 mb-1"
+                style={{ color: '#8B3A3A' }}
+              >
                 <XCircle className="w-5 h-5" />
-                <span className="text-2xl font-bold">{rejectedApps.length}</span>
+                <span className="text-2xl font-bold">
+                  {rejectedApps.length}
+                </span>
               </div>
               <p className="text-sm text-gray-600">Rejected</p>
             </div>

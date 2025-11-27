@@ -1,4 +1,3 @@
-
 import Transaction from '../../../transaction/components/Transaction';
 import TransactionButton from '../../../transaction/components/TransactionButton';
 import TransactionStatus, {

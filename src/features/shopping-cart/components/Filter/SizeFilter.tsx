@@ -1,7 +1,7 @@
-"use client";
+'use client';
 
-import { memo, useCallback } from "react";
-import styled from "styled-components";
+import { memo, useCallback } from 'react';
+import styled from 'styled-components';
 
 const SizeGrid = styled.div`
   display: grid;
@@ -11,9 +11,9 @@ const SizeGrid = styled.div`
 
 const SizeOption = styled.button<{ isSelected: boolean }>`
   padding: 0.5rem;
-  border: 2px solid ${props => props.isSelected ? '#007bff' : '#e0e0e0'};
-  background: ${props => props.isSelected ? '#007bff' : 'white'};
-  color: ${props => props.isSelected ? 'white' : '#333'};
+  border: 2px solid ${(props) => (props.isSelected ? '#007bff' : '#e0e0e0')};
+  background: ${(props) => (props.isSelected ? '#007bff' : 'white')};
+  color: ${(props) => (props.isSelected ? 'white' : '#333')};
   border-radius: 6px;
   font-size: 0.8rem;
   font-weight: 500;
@@ -22,7 +22,7 @@ const SizeOption = styled.button<{ isSelected: boolean }>`
   
   &:hover {
     border-color: #007bff;
-    ${props => !props.isSelected && 'background: #f0f8ff;'}
+    ${(props) => !props.isSelected && 'background: #f0f8ff;'}
   }
 `;
 
@@ -40,17 +40,20 @@ interface SizeFilterProps {
  * - Memoized to prevent re-renders
  */
 const SizeFilter = memo(({ selectedSizes, onSizeChange }: SizeFilterProps) => {
-  const handleSizeToggle = useCallback((size: string) => {
-    const newSizes = selectedSizes.includes(size)
-      ? selectedSizes.filter(s => s !== size)
-      : [...selectedSizes, size];
-    
-    onSizeChange(newSizes);
-  }, [selectedSizes, onSizeChange]);
+  const handleSizeToggle = useCallback(
+    (size: string) => {
+      const newSizes = selectedSizes.includes(size)
+        ? selectedSizes.filter((s) => s !== size)
+        : [...selectedSizes, size];
+
+      onSizeChange(newSizes);
+    },
+    [selectedSizes, onSizeChange],
+  );
 
   return (
     <SizeGrid>
-      {availableSizes.map(size => (
+      {availableSizes.map((size) => (
         <SizeOption
           key={size}
           isSelected={selectedSizes.includes(size)}

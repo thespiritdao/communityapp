@@ -2,58 +2,58 @@
 
 export const UNLOCK_PUBLIC_LOCK_ABI = [
   {
-    "inputs": [
+    inputs: [
       {
-        "internalType": "address",
-        "name": "_recipient",
-        "type": "address"
+        internalType: 'address',
+        name: '_recipient',
+        type: 'address',
       },
       {
-        "internalType": "address",
-        "name": "_referrer",
-        "type": "address"
+        internalType: 'address',
+        name: '_referrer',
+        type: 'address',
       },
       {
-        "internalType": "bytes",
-        "name": "_data",
-        "type": "bytes"
-      }
+        internalType: 'bytes',
+        name: '_data',
+        type: 'bytes',
+      },
     ],
-    "name": "purchase",
-    "outputs": [],
-    "stateMutability": "payable",
-    "type": "function"
+    name: 'purchase',
+    outputs: [],
+    stateMutability: 'payable',
+    type: 'function',
   },
   {
-    "inputs": [
+    inputs: [
       {
-        "internalType": "address",
-        "name": "_recipient",
-        "type": "address"
-      }
+        internalType: 'address',
+        name: '_recipient',
+        type: 'address',
+      },
     ],
-    "name": "grantKeys",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
+    name: 'grantKeys',
+    outputs: [],
+    stateMutability: 'nonpayable',
+    type: 'function',
   },
   {
-    "inputs": [
+    inputs: [
       {
-        "internalType": "address",
-        "name": "_keyOwner",
-        "type": "address"
-      }
+        internalType: 'address',
+        name: '_keyOwner',
+        type: 'address',
+      },
     ],
-    "name": "balanceOf",
-    "outputs": [
+    name: 'balanceOf',
+    outputs: [
       {
-        "internalType": "uint256",
-        "name": "balance",
-        "type": "uint256"
-      }
+        internalType: 'uint256',
+        name: 'balance',
+        type: 'uint256',
+      },
     ],
-    "stateMutability": "view",
-    "type": "function"
-  }
+    stateMutability: 'view',
+    type: 'function',
+  },
 ];

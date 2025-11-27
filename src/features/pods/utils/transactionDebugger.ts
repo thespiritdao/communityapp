@@ -1,11 +1,11 @@
 /**
  * Transaction Debugger Utility
- * 
+ *
  * Helps debug OnChainKit transaction formatting issues
  */
 
 export interface TransactionCall {
-  address: string;  // OnChainKit uses 'address' not 'to'
+  address: string; // OnChainKit uses 'address' not 'to'
   abi: any[];
   functionName: string;
   args: any[];
@@ -50,7 +50,9 @@ export function validateTransactionCalls(calls: TransactionCall[]): {
 
     // Validate address format
     if (call.address && !isValidAddress(call.address)) {
-      errors.push(`${prefix} 'address' must be a valid Ethereum address (got: ${call.address})`);
+      errors.push(
+        `${prefix} 'address' must be a valid Ethereum address (got: ${call.address})`,
+      );
     }
 
     // Validate ABI format
@@ -61,17 +63,22 @@ export function validateTransactionCalls(calls: TransactionCall[]): {
     // Check if function exists in ABI
     if (call.abi && Array.isArray(call.abi) && call.functionName) {
       const functionExists = call.abi.some(
-        (item: any) => item.name === call.functionName && item.type === 'function'
+        (item: any) =>
+          item.name === call.functionName && item.type === 'function',
       );
-      
+
       if (!functionExists) {
-        errors.push(`${prefix} Function '${call.functionName}' not found in ABI`);
+        errors.push(
+          `${prefix} Function '${call.functionName}' not found in ABI`,
+        );
       }
     }
 
     // Validate args
     if (!call.args) {
-      warnings.push(`${prefix} 'args' field is missing (use empty array if no args)`);
+      warnings.push(
+        `${prefix} 'args' field is missing (use empty array if no args)`,
+      );
     } else if (!Array.isArray(call.args)) {
       errors.push(`${prefix} 'args' must be an array`);
     }
@@ -80,14 +87,17 @@ export function validateTransactionCalls(calls: TransactionCall[]): {
   return {
     valid: errors.length === 0,
     errors,
-    warnings
+    warnings,
   };
 }
 
 /**
  * Debug transaction calls with detailed logging
  */
-export function debugTransactionCalls(calls: TransactionCall[], context = 'Transaction') {
+export function debugTransactionCalls(
+  calls: TransactionCall[],
+  context = 'Transaction',
+) {
   console.log(`🐛 ${context} Debug:`);
 
   // Use custom replacer to handle BigInt serialization
@@ -101,28 +111,34 @@ export function debugTransactionCalls(calls: TransactionCall[], context = 'Trans
   console.log('📄 Raw calls object:', JSON.stringify(calls, replacer, 2));
 
   const validation = validateTransactionCalls(calls);
-  
+
   console.log('✅ Validation Results:');
   console.log(`   Valid: ${validation.valid}`);
-  
+
   if (validation.errors.length > 0) {
     console.log('❌ Errors:');
-    validation.errors.forEach(error => console.log(`   - ${error}`));
+    validation.errors.forEach((error) => console.log(`   - ${error}`));
   }
-  
+
   if (validation.warnings.length > 0) {
     console.log('⚠️ Warnings:');
-    validation.warnings.forEach(warning => console.log(`   - ${warning}`));
+    validation.warnings.forEach((warning) => console.log(`   - ${warning}`));
   }
 
   // Detailed call analysis
   calls.forEach((call, index) => {
     console.log(`🔍 Call ${index} Analysis:`);
     console.log(`   address: ${call.address} (${typeof call.address})`);
-    console.log(`   abi: ${Array.isArray(call.abi) ? `Array(${call.abi.length})` : typeof call.abi}`);
-    console.log(`   functionName: ${call.functionName} (${typeof call.functionName})`);
-    console.log(`   args: ${Array.isArray(call.args) ? `Array(${call.args.length})` : typeof call.args}`);
-    
+    console.log(
+      `   abi: ${Array.isArray(call.abi) ? `Array(${call.abi.length})` : typeof call.abi}`,
+    );
+    console.log(
+      `   functionName: ${call.functionName} (${typeof call.functionName})`,
+    );
+    console.log(
+      `   args: ${Array.isArray(call.args) ? `Array(${call.args.length})` : typeof call.args}`,
+    );
+
     if (call.args && Array.isArray(call.args)) {
       call.args.forEach((arg, argIndex) => {
         console.log(`     args[${argIndex}]: ${arg} (${typeof arg})`);
@@ -147,13 +163,13 @@ export function createTransactionCall(
   contractAddress: string,
   abi: any[],
   functionName: string,
-  args: any[] = []
+  args: any[] = [],
 ): TransactionCall {
   const call: TransactionCall = {
-    address: contractAddress,  // Fixed: use 'address'
+    address: contractAddress, // Fixed: use 'address'
     abi,
     functionName,
-    args
+    args,
   };
 
   console.log('🏗️ Created transaction call:');
@@ -167,22 +183,22 @@ export function createTransactionCall(
  */
 export function testTransactionCallCreation() {
   console.log('🧪 Testing transaction call creation...');
-  
+
   const mockABI = [
     {
-      name: "testFunction",
-      type: "function",
-      inputs: [{ name: "param1", type: "string" }],
+      name: 'testFunction',
+      type: 'function',
+      inputs: [{ name: 'param1', type: 'string' }],
       outputs: [],
-      stateMutability: "nonpayable"
-    }
+      stateMutability: 'nonpayable',
+    },
   ];
 
   const testCall = createTransactionCall(
     '0x43C124Df0dFb324CCC742808D9FdF62C764f2644',
     mockABI,
     'testFunction',
-    ['test-parameter']
+    ['test-parameter'],
   );
 
   console.log('✅ Test call created successfully');

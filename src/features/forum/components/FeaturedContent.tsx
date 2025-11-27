@@ -37,7 +37,7 @@ interface FeaturedContentProps {
 
 export function FeaturedContent({
   categoryId,
-  limit = 3
+  limit = 3,
 }: FeaturedContentProps) {
   const [featured, setFeatured] = useState<FeaturedItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -87,13 +87,29 @@ export function FeaturedContent({
   const getTypeColor = (type: string) => {
     switch (type) {
       case 'announcement':
-        return { backgroundColor: '#E8F1EE', color: '#1F453A', borderColor: '#B8D9CA' };
+        return {
+          backgroundColor: '#E8F1EE',
+          color: '#1F453A',
+          borderColor: '#B8D9CA',
+        };
       case 'spotlight':
-        return { backgroundColor: '#FAF4EC', color: '#8F6B2F', borderColor: '#E8D7B8' };
+        return {
+          backgroundColor: '#FAF4EC',
+          color: '#8F6B2F',
+          borderColor: '#E8D7B8',
+        };
       case 'important':
-        return { backgroundColor: '#F5E6E6', color: '#5C1F1F', borderColor: '#D9B3B3' };
+        return {
+          backgroundColor: '#F5E6E6',
+          color: '#5C1F1F',
+          borderColor: '#D9B3B3',
+        };
       default:
-        return { backgroundColor: '#f3f4f6', color: '#1f2937', borderColor: '#d1d5db' };
+        return {
+          backgroundColor: '#f3f4f6',
+          color: '#1f2937',
+          borderColor: '#d1d5db',
+        };
     }
   };
 
@@ -135,7 +151,9 @@ export function FeaturedContent({
           >
             <CardContent className="pt-4">
               <div className="flex items-start gap-3">
-                <span className="text-2xl">{getTypeIcon(item.featured_type)}</span>
+                <span className="text-2xl">
+                  {getTypeIcon(item.featured_type)}
+                </span>
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-2">
                     <Badge variant="outline" className="capitalize">
@@ -178,7 +196,7 @@ interface FeatureContentButtonProps {
 export function FeatureContentButton({
   threadId,
   postId,
-  onFeatureToggle
+  onFeatureToggle,
 }: FeatureContentButtonProps) {
   const [isFeatured, setIsFeatured] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -189,9 +207,7 @@ export function FeatureContentButton({
 
   const checkIfFeatured = async () => {
     try {
-      const query = supabase
-        .from('forum_featured_content')
-        .select('id');
+      const query = supabase.from('forum_featured_content').select('id');
 
       if (threadId) {
         query.eq('thread_id', threadId);

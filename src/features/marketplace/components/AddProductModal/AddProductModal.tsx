@@ -1,45 +1,59 @@
 // src/features/marketplace/components/AddProductModal/AddProductModal.tsx
-"use client";
+'use client';
 
-import type React from "react";
-import { useState, useEffect } from "react";
-import { useAccount } from "wagmi";
-import { createProduct, type ProductFormData } from "../../services/productService";
-import { useProducts } from "@/features/shopping-cart/contexts/products-context";
-import { useTokenBalances } from "@/context/TokenBalancesContext";
-import { useUserAuthorizedTokens } from "@/hooks/useUserAuthorizedTokens";
-import { useMarketplaceManagementAccess } from "../../hooks/useMarketplaceManagementAccess";
+import type React from 'react';
+import { useState, useEffect } from 'react';
+import { useAccount } from 'wagmi';
+import {
+  createProduct,
+  type ProductFormData,
+} from '../../services/productService';
+import { useProducts } from '@/features/shopping-cart/contexts/products-context';
+import { useTokenBalances } from '@/context/TokenBalancesContext';
+import { useUserAuthorizedTokens } from '@/hooks/useUserAuthorizedTokens';
+import { useMarketplaceManagementAccess } from '../../hooks/useMarketplaceManagementAccess';
 import { Loader2, CheckCircle, AlertTriangle, Search } from 'lucide-react';
-import ImageUpload from "../ImageUpload";
-import { PodTreasurySelector, type FundDestination } from "../PodTreasurySelector";
-import * as S from "./AddProductModal.style";
+import ImageUpload from '../ImageUpload';
+import {
+  PodTreasurySelector,
+  type FundDestination,
+} from '../PodTreasurySelector';
+import * as S from './AddProductModal.style';
 
 interface AddProductModalProps {
   isOpen: boolean;
   onClose: () => void;
 }
 
-const availableSizesOptions = ["XS", "S", "M", "L", "XL", "XXL", "One Size"];
+const availableSizesOptions = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'One Size'];
 
-const AddProductModal: React.FC<AddProductModalProps> = ({ isOpen, onClose }) => {
+const AddProductModal: React.FC<AddProductModalProps> = ({
+  isOpen,
+  onClose,
+}) => {
   const { address } = useAccount();
   const { fetchProducts } = useProducts();
   const { balances } = useTokenBalances();
-  const { tokens: authorizedTokens, isLoading: tokensLoading, error: tokensError } = useUserAuthorizedTokens();
-  const { managedPods, isLoading: podsLoading } = useMarketplaceManagementAccess();
-  
+  const {
+    tokens: authorizedTokens,
+    isLoading: tokensLoading,
+    error: tokensError,
+  } = useUserAuthorizedTokens();
+  const { managedPods, isLoading: podsLoading } =
+    useMarketplaceManagementAccess();
+
   const [formData, setFormData] = useState<ProductFormData>({
-    title: "",
-    description: "",
+    title: '',
+    description: '',
     price_self: 0,
     price_system: 0,
     quantity: 1,
     units_available: 1,
-    image_url: "",
+    image_url: '',
     is_free_shipping: false,
-    required_token: "",
-    availableSizes: ["One Size"], // Default to "One Size" checked
-    style: "default",
+    required_token: '',
+    availableSizes: ['One Size'], // Default to "One Size" checked
+    style: 'default',
     sku: 0,
   });
 
@@ -47,9 +61,9 @@ const AddProductModal: React.FC<AddProductModalProps> = ({ isOpen, onClose }) =>
   const [selectedPodId, setSelectedPodId] = useState<string>('');
 
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [error, setError] = useState<string>("");
-  const [success, setSuccess] = useState<string>("");
-  const [uploadError, setUploadError] = useState<string>("");
+  const [error, setError] = useState<string>('');
+  const [success, setSuccess] = useState<string>('');
+  const [uploadError, setUploadError] = useState<string>('');
 
   // Auto-select first managed pod
   useEffect(() => {
@@ -77,101 +91,108 @@ const AddProductModal: React.FC<AddProductModalProps> = ({ isOpen, onClose }) =>
   // }, [tokensLoading, authorizedTokens.length, tokensError, balances]);
 
   const handleInputChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
+    e: React.ChangeEvent<
+      HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
+    >,
   ) => {
     const { name, value, type } = e.target;
-    
+
     if (type === 'checkbox') {
       const checked = (e.target as HTMLInputElement).checked;
-      setFormData(prev => ({ ...prev, [name]: checked }));
+      setFormData((prev) => ({ ...prev, [name]: checked }));
     } else if (type === 'number') {
       const parsedValue = Number.parseFloat(value) || 0;
       console.log(`Price input debug: ${name} = "${value}" -> ${parsedValue}`);
-      setFormData(prev => ({ ...prev, [name]: parsedValue }));
+      setFormData((prev) => ({ ...prev, [name]: parsedValue }));
     } else {
-      setFormData(prev => ({ ...prev, [name]: value }));
+      setFormData((prev) => ({ ...prev, [name]: value }));
     }
   };
 
   const handleSizeChange = (size: string) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
       availableSizes: prev.availableSizes.includes(size)
-        ? prev.availableSizes.filter(s => s !== size)
-        : [...prev.availableSizes, size]
+        ? prev.availableSizes.filter((s) => s !== size)
+        : [...prev.availableSizes, size],
     }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!address) {
-      setError("Wallet not connected");
+      setError('Wallet not connected');
       return;
     }
 
     // Validation
     if (!formData.title || !formData.description) {
-      setError("Title and description are required");
+      setError('Title and description are required');
       return;
     }
 
     if (formData.price_self <= 0 && formData.price_system <= 0) {
-      setError("At least one token price must be greater than 0");
+      setError('At least one token price must be greater than 0');
       return;
     }
 
     if (formData.availableSizes.length === 0) {
-      setError("Please select at least one size");
+      setError('Please select at least one size');
       return;
     }
 
     if (!formData.image_url) {
-      setError("Please upload a product image");
+      setError('Please upload a product image');
       return;
     }
 
     if (!fundDestination) {
-      setError("Please select a fund destination");
+      setError('Please select a fund destination');
       return;
     }
 
     if (!selectedPodId) {
-      setError("Please select a pod");
+      setError('Please select a pod');
       return;
     }
 
     // Check if user is trying to create a product with no token requirement without Executive Pod
-    if (!formData.required_token && !(balances && balances.hasExecutivePod === true)) {
-      setError("Only Executive Pod holders can create products with no token requirement");
+    if (
+      !formData.required_token &&
+      !(balances && balances.hasExecutivePod === true)
+    ) {
+      setError(
+        'Only Executive Pod holders can create products with no token requirement',
+      );
       return;
     }
 
     setIsSubmitting(true);
-    setError("");
-    setSuccess("");
-    setUploadError("");
+    setError('');
+    setSuccess('');
+    setUploadError('');
 
     try {
       await createProduct(formData, address, fundDestination, selectedPodId);
-      setSuccess("Product created successfully!");
-      
+      setSuccess('Product created successfully!');
+
       // Refresh the products list
       await fetchProducts();
-      
+
       // Reset form
       setFormData({
-        title: "",
-        description: "",
+        title: '',
+        description: '',
         price_self: 0,
         price_system: 0,
         quantity: 1,
         units_available: 1,
-        image_url: "",
+        image_url: '',
         is_free_shipping: false,
-        required_token: "",
-        availableSizes: ["One Size"], // Default to "One Size" checked
-        style: "default",
+        required_token: '',
+        availableSizes: ['One Size'], // Default to "One Size" checked
+        style: 'default',
         sku: 0,
       });
       setFundDestination(undefined);
@@ -179,27 +200,28 @@ const AddProductModal: React.FC<AddProductModalProps> = ({ isOpen, onClose }) =>
       // Close modal after a short delay
       setTimeout(() => {
         onClose();
-        setSuccess("");
+        setSuccess('');
       }, 2000);
-      
     } catch (error) {
       console.error('Failed to create product:', error);
-      setError(error instanceof Error ? error.message : 'Failed to create product');
+      setError(
+        error instanceof Error ? error.message : 'Failed to create product',
+      );
     } finally {
       setIsSubmitting(false);
     }
   };
 
   const handleClose = () => {
-    setError("");
-    setSuccess("");
-    setUploadError("");
+    setError('');
+    setSuccess('');
+    setUploadError('');
     onClose();
   };
 
   const handleImageUploadComplete = (imageUrl: string) => {
-    setFormData(prev => ({ ...prev, image_url: imageUrl }));
-    setUploadError("");
+    setFormData((prev) => ({ ...prev, image_url: imageUrl }));
+    setUploadError('');
   };
 
   const handleImageUploadError = (error: string) => {
@@ -221,23 +243,74 @@ const AddProductModal: React.FC<AddProductModalProps> = ({ isOpen, onClose }) =>
             {/* Pod Selection */}
             {podsLoading ? (
               <S.FormGroup>
-                <p style={{ fontSize: '0.875rem', color: '#666', padding: '0.75rem', background: '#f5f5f5', borderRadius: '0.375rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <Loader2 className="w-4 h-4 animate-spin" /> Loading pods and verifying permissions...
+                <p
+                  style={{
+                    fontSize: '0.875rem',
+                    color: '#666',
+                    padding: '0.75rem',
+                    background: '#f5f5f5',
+                    borderRadius: '0.375rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem',
+                  }}
+                >
+                  <Loader2 className="w-4 h-4 animate-spin" /> Loading pods and
+                  verifying permissions...
                 </p>
               </S.FormGroup>
             ) : managedPods.length === 0 ? (
               <S.FormGroup>
-                <div style={{ padding: '1rem', background: '#fff3cd', border: '1px solid #ffc107', borderRadius: '0.375rem' }}>
-                  <h4 style={{ margin: '0 0 0.5rem 0', color: '#856404', fontWeight: 600 }}>No Pods Available for Product Creation</h4>
-                  <p style={{ margin: '0 0 0.5rem 0', fontSize: '0.875rem', color: '#856404' }}>
+                <div
+                  style={{
+                    padding: '1rem',
+                    background: '#fff3cd',
+                    border: '1px solid #ffc107',
+                    borderRadius: '0.375rem',
+                  }}
+                >
+                  <h4
+                    style={{
+                      margin: '0 0 0.5rem 0',
+                      color: '#856404',
+                      fontWeight: 600,
+                    }}
+                  >
+                    No Pods Available for Product Creation
+                  </h4>
+                  <p
+                    style={{
+                      margin: '0 0 0.5rem 0',
+                      fontSize: '0.875rem',
+                      color: '#856404',
+                    }}
+                  >
                     To create products in a pod, you need:
                   </p>
-                  <ul style={{ margin: '0 0 0 1.5rem', fontSize: '0.875rem', color: '#856404' }}>
-                    <li><strong>Marketplace Module ON</strong> (pod-wide setting)</li>
-                    <li><strong>Marketplace Access Permission</strong> (your role in the pod)</li>
+                  <ul
+                    style={{
+                      margin: '0 0 0 1.5rem',
+                      fontSize: '0.875rem',
+                      color: '#856404',
+                    }}
+                  >
+                    <li>
+                      <strong>Marketplace Module ON</strong> (pod-wide setting)
+                    </li>
+                    <li>
+                      <strong>Marketplace Access Permission</strong> (your role
+                      in the pod)
+                    </li>
                   </ul>
-                  <p style={{ margin: '0.5rem 0 0 0', fontSize: '0.875rem', color: '#856404' }}>
-                    Contact your pod administrators to enable the marketplace module or grant you marketplace access permissions.
+                  <p
+                    style={{
+                      margin: '0.5rem 0 0 0',
+                      fontSize: '0.875rem',
+                      color: '#856404',
+                    }}
+                  >
+                    Contact your pod administrators to enable the marketplace
+                    module or grant you marketplace access permissions.
                   </p>
                 </div>
               </S.FormGroup>
@@ -251,22 +324,48 @@ const AddProductModal: React.FC<AddProductModalProps> = ({ isOpen, onClose }) =>
                   required={true}
                 >
                   <option value="">Select a pod...</option>
-                  {managedPods.map(pod => (
+                  {managedPods.map((pod) => (
                     <option key={pod.id} value={pod.id}>
                       {pod.name}
                     </option>
                   ))}
                 </S.Select>
                 {selectedPodId && (
-                  <div style={{ marginTop: '0.5rem', fontSize: '0.75rem', color: '#3F7A5A' }}>
-                    <p style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                      <CheckCircle className="w-3 h-3" /> Pod selected: {managedPods.find(p => p.id === selectedPodId)?.name}
+                  <div
+                    style={{
+                      marginTop: '0.5rem',
+                      fontSize: '0.75rem',
+                      color: '#3F7A5A',
+                    }}
+                  >
+                    <p
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.25rem',
+                      }}
+                    >
+                      <CheckCircle className="w-3 h-3" /> Pod selected:{' '}
+                      {managedPods.find((p) => p.id === selectedPodId)?.name}
                     </p>
-                    <p style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                    <p
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.25rem',
+                      }}
+                    >
                       <CheckCircle className="w-3 h-3" /> Marketplace Module: ON
                     </p>
-                    <p style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                      <CheckCircle className="w-3 h-3" /> Marketplace Access Permission: Granted
+                    <p
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.25rem',
+                      }}
+                    >
+                      <CheckCircle className="w-3 h-3" /> Marketplace Access
+                      Permission: Granted
                     </p>
                   </div>
                 )}
@@ -372,28 +471,61 @@ const AddProductModal: React.FC<AddProductModalProps> = ({ isOpen, onClose }) =>
             </S.FormGrid>
 
             <S.FormGroup>
-              <S.Label htmlFor="required_token">Token Gating (Optional)</S.Label>
-              
+              <S.Label htmlFor="required_token">
+                Token Gating (Optional)
+              </S.Label>
+
               {/* Status information */}
               {tokensLoading && (
-                <p style={{ fontSize: '0.875rem', color: '#666', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <Search className="w-4 h-4" /> Checking your pod memberships and available tokens...
+                <p
+                  style={{
+                    fontSize: '0.875rem',
+                    color: '#666',
+                    marginBottom: '0.5rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem',
+                  }}
+                >
+                  <Search className="w-4 h-4" /> Checking your pod memberships
+                  and available tokens...
                 </p>
               )}
 
               {!tokensLoading && tokensError && (
-                <p style={{ fontSize: '0.875rem', color: '#d32f2f', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <AlertTriangle className="w-4 h-4" /> Error loading tokens: {tokensError}
+                <p
+                  style={{
+                    fontSize: '0.875rem',
+                    color: '#d32f2f',
+                    marginBottom: '0.5rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem',
+                  }}
+                >
+                  <AlertTriangle className="w-4 h-4" /> Error loading tokens:{' '}
+                  {tokensError}
                 </p>
               )}
 
+              {!tokensLoading &&
+                !tokensError &&
+                authorizedTokens.length === 0 && (
+                  <p
+                    style={{
+                      fontSize: '0.875rem',
+                      color: '#ed6c02',
+                      marginBottom: '0.5rem',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.5rem',
+                    }}
+                  >
+                    <AlertTriangle className="w-4 h-4" /> No tokens available
+                    for gating. You need pod membership with marketplace access.
+                  </p>
+                )}
 
-              {!tokensLoading && !tokensError && authorizedTokens.length === 0 && (
-                <p style={{ fontSize: '0.875rem', color: '#ed6c02', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <AlertTriangle className="w-4 h-4" /> No tokens available for gating. You need pod membership with marketplace access.
-                </p>
-              )}
-              
               <S.Select
                 id="required_token"
                 name="required_token"
@@ -405,37 +537,63 @@ const AddProductModal: React.FC<AddProductModalProps> = ({ isOpen, onClose }) =>
                 {balances && balances.hasExecutivePod === true ? (
                   <option value="">No token required (open to everyone)</option>
                 ) : (
-                  <option value="" disabled={true}>No token required (Executive Pod only)</option>
+                  <option value="" disabled={true}>
+                    No token required (Executive Pod only)
+                  </option>
                 )}
-                
+
                 {tokensLoading ? (
-                  <option disabled={true}>Loading your available tokens...</option>
+                  <option disabled={true}>
+                    Loading your available tokens...
+                  </option>
                 ) : tokensError ? (
-                  <option disabled={true}>Error loading tokens - please refresh the page</option>
+                  <option disabled={true}>
+                    Error loading tokens - please refresh the page
+                  </option>
                 ) : authorizedTokens.length === 0 ? (
-                  <option disabled={true}>No tokens available - you need pod membership</option>
+                  <option disabled={true}>
+                    No tokens available - you need pod membership
+                  </option>
                 ) : (
                   authorizedTokens.map((token) => (
                     <option key={token.id} value={token.id}>
-                      {token.displayName || token.name} {token.symbol ? `(${token.symbol})` : ''}
+                      {token.displayName || token.name}{' '}
+                      {token.symbol ? `(${token.symbol})` : ''}
                     </option>
                   ))
                 )}
               </S.Select>
-              
+
               {/* Debug info for development */}
               {process.env.NODE_ENV === 'development' && !tokensLoading && (
-                <details style={{ marginTop: '0.5rem', fontSize: '0.75rem', color: '#666' }}>
+                <details
+                  style={{
+                    marginTop: '0.5rem',
+                    fontSize: '0.75rem',
+                    color: '#666',
+                  }}
+                >
                   <summary>Debug Info (dev only)</summary>
                   <pre style={{ fontSize: '0.7rem', marginTop: '0.25rem' }}>
-                    {JSON.stringify({
-                      tokensLoading,
-                      tokensError,
-                      authorizedTokensCount: authorizedTokens.length,
-                      hasExecutivePod: balances?.hasExecutivePod,
-                      baseTokens: authorizedTokens.filter(t => t.gatingType === 'token').map(t => ({ id: t.id, name: t.name })),
-                      podRoleOptions: authorizedTokens.filter(t => t.gatingType === 'pod_role').map(t => ({ id: t.id, displayName: t.displayName }))
-                    }, null, 2)}
+                    {JSON.stringify(
+                      {
+                        tokensLoading,
+                        tokensError,
+                        authorizedTokensCount: authorizedTokens.length,
+                        hasExecutivePod: balances?.hasExecutivePod,
+                        baseTokens: authorizedTokens
+                          .filter((t) => t.gatingType === 'token')
+                          .map((t) => ({ id: t.id, name: t.name })),
+                        podRoleOptions: authorizedTokens
+                          .filter((t) => t.gatingType === 'pod_role')
+                          .map((t) => ({
+                            id: t.id,
+                            displayName: t.displayName,
+                          })),
+                      },
+                      null,
+                      2,
+                    )}
                   </pre>
                 </details>
               )}
@@ -483,10 +641,10 @@ const AddProductModal: React.FC<AddProductModalProps> = ({ isOpen, onClose }) =>
                 Cancel
               </S.CancelButton>
               <S.SubmitButton type="submit" disabled={isSubmitting}>
-                {isSubmitting ? "Creating..." : "Create Product"}
+                {isSubmitting ? 'Creating...' : 'Create Product'}
               </S.SubmitButton>
             </S.ButtonGroup>
-            
+
             {/* Error messages below the buttons */}
             {error && <S.ErrorMessage>{error}</S.ErrorMessage>}
             {uploadError && <S.ErrorMessage>{uploadError}</S.ErrorMessage>}

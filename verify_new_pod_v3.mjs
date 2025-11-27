@@ -10,7 +10,7 @@ const FACTORY_ADDRESS = '0x52122e732700568760e475FA8289a13A4568d886';
 
 const client = createPublicClient({
   chain: base,
-  transport: http()
+  transport: http(),
 });
 
 console.log('🔍 Checking if pod exists in V3 factory\n');
@@ -22,15 +22,17 @@ try {
   // V3 uses getProxyAddress instead of getPodProxy
   const proxyAddress = await client.readContract({
     address: FACTORY_ADDRESS,
-    abi: [{
-      name: 'getProxyAddress',
-      type: 'function',
-      inputs: [{ name: 'podId', type: 'string' }],
-      outputs: [{ name: '', type: 'address' }],
-      stateMutability: 'view'
-    }],
+    abi: [
+      {
+        name: 'getProxyAddress',
+        type: 'function',
+        inputs: [{ name: 'podId', type: 'string' }],
+        outputs: [{ name: '', type: 'address' }],
+        stateMutability: 'view',
+      },
+    ],
     functionName: 'getProxyAddress',
-    args: [POD_ID]
+    args: [POD_ID],
   });
 
   console.log('Proxy Address:', proxyAddress);
@@ -39,7 +41,7 @@ try {
     console.error('\n❌ CRITICAL: Pod NOT registered in factory!');
     console.error('   This means createPodProxy transaction either:');
     console.error('   1. Failed silently');
-    console.error('   2. Hasn\'t been executed yet');
+    console.error("   2. Hasn't been executed yet");
     console.error('   3. Used wrong factory address\n');
     process.exit(1);
   } else {
@@ -48,7 +50,6 @@ try {
     console.log('\n   This means the authorization issue is elsewhere.');
     console.log('   Proceeding to check HAT ownership...\n');
   }
-
 } catch (error) {
   console.error('❌ Error:', error.message);
   process.exit(1);

@@ -6,21 +6,35 @@ import { useState, useEffect } from 'react';
 import { useAccount } from 'wagmi';
 import { useRouter } from 'next/navigation';
 import { EventTokenDisplay } from './EventTokenDisplay';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Calendar, Clock, MapPin, Users, Wallet, AlertCircle, CheckCircle, Ticket } from 'lucide-react';
+import {
+  Calendar,
+  Clock,
+  MapPin,
+  Users,
+  Wallet,
+  AlertCircle,
+  CheckCircle,
+  Ticket,
+} from 'lucide-react';
 
 // Transaction components
-import { 
-  Transaction, 
-  TransactionButton, 
-  TransactionSponsor, 
-  TransactionStatus, 
-  TransactionStatusLabel, 
-  TransactionStatusAction 
-} from "@coinbase/onchainkit/transaction";
+import {
+  Transaction,
+  TransactionButton,
+  TransactionSponsor,
+  TransactionStatus,
+  TransactionStatusLabel,
+  TransactionStatusAction,
+} from '@coinbase/onchainkit/transaction';
 
 import { useSimplifiedEventTransactions } from '../hooks/useSimplifiedEventTransactions';
 import { useEventAccess } from '../hooks/useEventTokenGating';
@@ -69,39 +83,54 @@ export const EventRegistrationModal: React.FC<EventRegistrationModalProps> = ({
   isOpen,
   onClose,
   onSuccess,
-  currentRegistrationCount = 0
+  currentRegistrationCount = 0,
 }) => {
   const { address } = useAccount();
   const router = useRouter();
-  const { getRegisterEventCall, isConnected } = useSimplifiedEventTransactions();
-  const { canRegister, canView, loading: accessLoading } = useEventAccess(event);
-  const { isRegistered, registrationStatus: regStatus, loading: regLoading } = useRegistrationStatus(event.id);
-  
+  const { getRegisterEventCall, isConnected } =
+    useSimplifiedEventTransactions();
+  const {
+    canRegister,
+    canView,
+    loading: accessLoading,
+  } = useEventAccess(event);
+  const {
+    isRegistered,
+    registrationStatus: regStatus,
+    loading: regLoading,
+  } = useRegistrationStatus(event.id);
+
   const [isRegistering, setIsRegistering] = useState(false);
-  const [registrationStatus, setRegistrationStatus] = useState<'idle' | 'checking' | 'eligible' | 'ineligible' | 'approving' | 'ready'>('idle');
+  const [registrationStatus, setRegistrationStatus] = useState<
+    'idle' | 'checking' | 'eligible' | 'ineligible' | 'approving' | 'ready'
+  >('idle');
   const [hasAccess, setHasAccess] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [showApprovalFlow, setShowApprovalFlow] = useState(false);
   const [systemTokenAmount, setSystemTokenAmount] = useState('0');
   const [selfTokenAmount, setSelfTokenAmount] = useState('0');
-  
+
   // Check if event exists on-chain using the blockchain event ID
   const blockchainEventId = event.blockchain_event_id;
-  const { data: onChainEvent, error: contractError, isLoading: contractLoading } = useReadContract({
+  const {
+    data: onChainEvent,
+    error: contractError,
+    isLoading: contractLoading,
+  } = useReadContract({
     address: EVENT_MANAGER_CONTRACT,
     abi: EventManagerABI,
     functionName: 'getEvent',
     args: [blockchainEventId],
     query: {
       enabled: !!blockchainEventId && isOpen,
-      retry: false
-    }
+      retry: false,
+    },
   });
 
   // Check eligibility when modal opens
   useEffect(() => {
     const checkEligibility = async () => {
-  const { session, isAuthenticated, signIn } = useAuthContext();
+      const { session, isAuthenticated, signIn } = useAuthContext();
       if (!address || !isOpen) return;
 
       setRegistrationStatus('checking');
@@ -111,23 +140,27 @@ export const EventRegistrationModal: React.FC<EventRegistrationModalProps> = ({
         // Use shared registration status hook
         if (isRegistered) {
           setRegistrationStatus('ineligible');
-          setErrorMessage(`You are already registered for this event (Status: ${regStatus})`);
+          setErrorMessage(
+            `You are already registered for this event (Status: ${regStatus})`,
+          );
           return;
         }
 
         // Check token requirements using the hook
         setHasAccess(canRegister);
-        
+
         if (!canRegister && event.required_tokens.length > 0) {
           setRegistrationStatus('ineligible');
-          setErrorMessage(`You need the following tokens to register: ${event.required_tokens.join(', ')}`);
+          setErrorMessage(
+            `You need the following tokens to register: ${event.required_tokens.join(', ')}`,
+          );
           return;
         }
 
         // Set token amounts from event pricing
         // Parse the price_amount to determine SYSTEM vs SELF token amounts
         const priceAmount = Number.parseFloat(event.price_amount || '0');
-        
+
         if (event.price_token === 'SYSTEM') {
           setSystemTokenAmount(priceAmount.toString());
           setSelfTokenAmount('0');
@@ -145,7 +178,10 @@ export const EventRegistrationModal: React.FC<EventRegistrationModalProps> = ({
         }
 
         // Check capacity using current registration count
-        if (event.max_attendees && currentRegistrationCount >= event.max_attendees) {
+        if (
+          event.max_attendees &&
+          currentRegistrationCount >= event.max_attendees
+        ) {
           setRegistrationStatus('ineligible');
           setErrorMessage('This event is at full capacity');
           return;
@@ -161,16 +197,16 @@ export const EventRegistrationModal: React.FC<EventRegistrationModalProps> = ({
 
         // Use blockchain_event_id for on-chain operations
         const blockchainEventId = event.blockchain_event_id;
-        
+
         console.log('🔍 Event Registration Debugging:', {
           eventId: event.id,
           blockchain_event_id: event.blockchain_event_id,
           finalEventId: blockchainEventId,
           status: event.status,
           title: event.title,
-          note: 'Using blockchain_event_id if available, otherwise database id as fallback'
+          note: 'Using blockchain_event_id if available, otherwise database id as fallback',
         });
-        
+
         // Log blockchain verification results
         if (!contractLoading) {
           if (contractError) {
@@ -178,7 +214,8 @@ export const EventRegistrationModal: React.FC<EventRegistrationModalProps> = ({
               eventId: blockchainEventId,
               error: contractError.message,
               reason: 'Event was never created on-chain or wrong ID used',
-              solution: 'Event must be created on blockchain before registration'
+              solution:
+                'Event must be created on blockchain before registration',
             });
           } else if (onChainEvent) {
             console.log('✅ Event found on blockchain:', {
@@ -187,31 +224,34 @@ export const EventRegistrationModal: React.FC<EventRegistrationModalProps> = ({
               organizer: onChainEvent.organizer,
               status: onChainEvent.status,
               currentAttendees: onChainEvent.currentAttendees.toString(),
-              maxAttendees: onChainEvent.maxAttendees.toString()
+              maxAttendees: onChainEvent.maxAttendees.toString(),
             });
           }
         }
-        
+
         if (!blockchainEventId) {
           setRegistrationStatus('ineligible');
-          setErrorMessage('Event is not available for blockchain registration - missing blockchain_event_id');
+          setErrorMessage(
+            'Event is not available for blockchain registration - missing blockchain_event_id',
+          );
           return;
         }
-        
+
         // Check if event exists on blockchain after contract call completes
         if (!contractLoading) {
           if (contractError || !onChainEvent) {
             setRegistrationStatus('ineligible');
             setErrorMessage(
               `Event not found on blockchain (ID: ${blockchainEventId}). ` +
-              'This event may not have been properly created on-chain. ' +
-              'Please contact the event organizer.'
+                'This event may not have been properly created on-chain. ' +
+                'Please contact the event organizer.',
             );
             return;
           }
-          
+
           // Verify event status on blockchain
-          if (onChainEvent.status !== 0) { // 0 = Active status
+          if (onChainEvent.status !== 0) {
+            // 0 = Active status
             setRegistrationStatus('ineligible');
             setErrorMessage('Event is not active on blockchain');
             return;
@@ -227,33 +267,46 @@ export const EventRegistrationModal: React.FC<EventRegistrationModalProps> = ({
     };
 
     checkEligibility();
-  }, [address, event, isOpen, canRegister, contractLoading, contractError, onChainEvent, isRegistered, regStatus]);
+  }, [
+    address,
+    event,
+    isOpen,
+    canRegister,
+    contractLoading,
+    contractError,
+    onChainEvent,
+    isRegistered,
+    regStatus,
+  ]);
 
   const formatEventDate = (dateString: string) => {
     const date = new Date(dateString);
     return {
-      date: date.toLocaleDateString('en-US', { 
+      date: date.toLocaleDateString('en-US', {
         weekday: 'long',
         year: 'numeric',
-        month: 'long', 
-        day: 'numeric' 
+        month: 'long',
+        day: 'numeric',
       }),
-      time: date.toLocaleTimeString('en-US', { 
-        hour: 'numeric', 
+      time: date.toLocaleTimeString('en-US', {
+        hour: 'numeric',
         minute: '2-digit',
-        hour12: true 
-      })
+        hour12: true,
+      }),
     };
   };
 
   const getEventPrice = () => {
-    if (event.price_token === 'free' || Number.parseFloat(event.price_amount) === 0) {
+    if (
+      event.price_token === 'free' ||
+      Number.parseFloat(event.price_amount) === 0
+    ) {
       return { amount: '0', display: 'Free', isFree: true };
     }
-    return { 
-      amount: event.price_amount, 
-      display: `${event.price_amount} ETH`, 
-      isFree: false 
+    return {
+      amount: event.price_amount,
+      display: `${event.price_amount} ETH`,
+      isFree: false,
     };
   };
 
@@ -261,16 +314,16 @@ export const EventRegistrationModal: React.FC<EventRegistrationModalProps> = ({
     if (!address || registrationStatus !== 'eligible') return null;
 
     const price = getEventPrice();
-    
+
     try {
       // Use blockchain_event_id for registration
       const blockchainEventId = event.blockchain_event_id;
-      
+
       if (!blockchainEventId) {
         console.error('Event missing blockchain_event_id:', event);
         return null;
       }
-      
+
       console.log('🔧 Preparing Registration Transaction:', {
         eventId: blockchainEventId,
         eventTitle: event.title,
@@ -279,14 +332,14 @@ export const EventRegistrationModal: React.FC<EventRegistrationModalProps> = ({
         isFree: price.isFree,
         eventStatus: event.status,
         contractAddress: process.env.NEXT_PUBLIC_EVENT_MANAGER,
-        note: 'This will call registerForEvent() on the smart contract'
+        note: 'This will call registerForEvent() on the smart contract',
       });
-      
+
       const calls = getRegisterEventCall({
         eventId: blockchainEventId,
-        paymentAmount: price.isFree ? undefined : price.amount
+        paymentAmount: price.isFree ? undefined : price.amount,
       });
-      
+
       console.log('📋 Registration Transaction Calls:', calls);
       return calls;
     } catch (error) {
@@ -302,10 +355,10 @@ export const EventRegistrationModal: React.FC<EventRegistrationModalProps> = ({
     try {
       // Ensure user is authenticated with Supabase before storing registration
       // Using centralized auth session
-      
+
       if (!isAuthenticated || !session?.user?.id) {
         console.log('🔐 No Supabase session, attempting authentication...');
-        
+
         // Get nonce and sign message for authentication
         const nonceRes = await fetch('/api/auth/nonce');
         if (!nonceRes.ok) {
@@ -330,24 +383,26 @@ export const EventRegistrationModal: React.FC<EventRegistrationModalProps> = ({
         }
 
         const { supabaseToken } = await verifyRes.json();
-        
+
         if (supabaseToken) {
           const { error } = await supabase.auth.setSession({
             access_token: supabaseToken,
             refresh_token: '',
           });
-          
+
           if (error) {
             throw new Error('Failed to set session');
           }
-          
+
           console.log('✅ Successfully authenticated with Supabase');
         }
       }
 
       // Get the current session to include user_id for RLS policies
-      const { data: { session: currentSession } } = await supabase.auth.getSession();
-      
+      const {
+        data: { session: currentSession },
+      } = await supabase.auth.getSession();
+
       // Store registration in Supabase using upsert to handle duplicates
       const registrationData = {
         event_id: event.id,
@@ -357,7 +412,7 @@ export const EventRegistrationModal: React.FC<EventRegistrationModalProps> = ({
         payment_token: event.price_token,
         payment_tx_hash: response?.transactionReceipts?.[0]?.transactionHash,
         payment_status: 'completed',
-        registered_at: new Date().toISOString() // Update timestamp on upsert
+        registered_at: new Date().toISOString(), // Update timestamp on upsert
       };
 
       // Note: RLS policies use user_address for event_registrations table
@@ -368,7 +423,7 @@ export const EventRegistrationModal: React.FC<EventRegistrationModalProps> = ({
         .from('event_registrations')
         .upsert(registrationData, {
           onConflict: 'event_id,user_address', // Handle the unique constraint
-          ignoreDuplicates: false // Update existing record if found
+          ignoreDuplicates: false, // Update existing record if found
         });
 
       if (upsertError) {
@@ -376,43 +431,51 @@ export const EventRegistrationModal: React.FC<EventRegistrationModalProps> = ({
         // Still consider success since blockchain transaction worked
       } else {
         console.log('✅ Registration stored successfully in database');
-        
+
         // Trigger notifications to event organizer and manager (non-blocking)
         // Add a small delay to prevent duplicate notifications from rapid successive calls
         setTimeout(async () => {
           try {
-            const { notificationService } = await import('../../../utils/notificationService');
-            
+            const { notificationService } = await import(
+              '../../../utils/notificationService'
+            );
+
             // Send notification to event creator
             await notificationService.createEventRegistrationNotification(
               event.creator_address,
               address!,
               event.id,
-              event.title
+              event.title,
             );
             console.log('✅ Event registration notification sent to creator');
-            
+
             // Send notification to event manager if different from creator
-            if (event.manager_address && event.manager_address.toLowerCase() !== event.creator_address.toLowerCase()) {
+            if (
+              event.manager_address &&
+              event.manager_address.toLowerCase() !==
+                event.creator_address.toLowerCase()
+            ) {
               await notificationService.createEventRegistrationNotification(
                 event.manager_address,
                 address!,
                 event.id,
-                event.title
+                event.title,
               );
               console.log('✅ Event registration notification sent to manager');
             }
           } catch (notificationError) {
-            console.log('Failed to send registration notification - continuing with registration');
+            console.log(
+              'Failed to send registration notification - continuing with registration',
+            );
             // Don't fail the registration for notification errors - this is expected due to RLS
           }
         }, 1000); // 1 second delay to prevent duplicates
       }
 
       // TODO: Add to user's calendar
-      
+
       onSuccess();
-      
+
       // Redirect to main events page after successful registration
       setTimeout(() => {
         router.push('/events/');
@@ -420,7 +483,7 @@ export const EventRegistrationModal: React.FC<EventRegistrationModalProps> = ({
     } catch (error) {
       console.error('Error handling registration success:', error);
       onSuccess(); // Still call success since blockchain transaction worked
-      
+
       // Still redirect even if there were database/notification errors since blockchain transaction worked
       setTimeout(() => {
         router.push('/events/');
@@ -433,21 +496,24 @@ export const EventRegistrationModal: React.FC<EventRegistrationModalProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl w-full p-6" style={{ maxWidth: '42rem', width: '90vw' }}>
+      <DialogContent
+        className="max-w-2xl w-full p-6"
+        style={{ maxWidth: '42rem', width: '90vw' }}
+      >
         <DialogHeader>
-        <DialogTitle>
-          <div className="flex items-center space-x-2">
-            <Ticket className="w-5 h-5" />
-            <span>Register for Event</span>
-          </div>
-        </DialogTitle>
+          <DialogTitle>
+            <div className="flex items-center space-x-2">
+              <Ticket className="w-5 h-5" />
+              <span>Register for Event</span>
+            </div>
+          </DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4">
           {/* Event Summary */}
           <div className="bg-gray-50 p-4 rounded-lg">
             <h3 className="font-semibold mb-2">{event.title}</h3>
-            
+
             <div className="space-y-2 text-sm text-gray-600">
               <div className="flex items-center">
                 <Calendar className="w-4 h-4 mr-2" />
@@ -468,16 +534,24 @@ export const EventRegistrationModal: React.FC<EventRegistrationModalProps> = ({
                   onClick={() => {
                     // Create Google Calendar URL
                     const startDate = new Date(event.event_date);
-                    const endDate = new Date(startDate.getTime() + 2 * 60 * 60 * 1000); // Default 2 hours
-                    const formatDate = (date: Date) => date.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+                    const endDate = new Date(
+                      startDate.getTime() + 2 * 60 * 60 * 1000,
+                    ); // Default 2 hours
+                    const formatDate = (date: Date) =>
+                      date.toISOString().replace(/[-:]/g, '').split('.')[0] +
+                      'Z';
 
                     const googleCalendarUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(event.title)}&dates=${formatDate(startDate)}/${formatDate(endDate)}&details=${encodeURIComponent(event.description || '')}&location=${encodeURIComponent(event.location || '')}`;
                     window.open(googleCalendarUrl, '_blank');
                   }}
                   className="text-sm underline"
                   style={{ color: '#2F5D50' }}
-                  onMouseEnter={(e) => e.currentTarget.style.color = '#1F453A'}
-                  onMouseLeave={(e) => e.currentTarget.style.color = '#2F5D50'}
+                  onMouseEnter={(e) =>
+                    (e.currentTarget.style.color = '#1F453A')
+                  }
+                  onMouseLeave={(e) =>
+                    (e.currentTarget.style.color = '#2F5D50')
+                  }
                 >
                   Add to Google Calendar
                 </button>
@@ -491,9 +565,15 @@ export const EventRegistrationModal: React.FC<EventRegistrationModalProps> = ({
           </div>
 
           {/* Registration Price */}
-          <div className="flex justify-between items-center p-3 rounded-lg" style={{ backgroundColor: '#E8F1EE' }}>
+          <div
+            className="flex justify-between items-center p-3 rounded-lg"
+            style={{ backgroundColor: '#E8F1EE' }}
+          >
             <span className="font-medium">Registration Fee:</span>
-            <Badge variant={price.isFree ? 'secondary' : 'default'} className="text-sm">
+            <Badge
+              variant={price.isFree ? 'secondary' : 'default'}
+              className="text-sm"
+            >
               <Wallet className="w-3 h-3 mr-1" />
               {price.display}
             </Badge>
@@ -515,10 +595,9 @@ export const EventRegistrationModal: React.FC<EventRegistrationModalProps> = ({
             <div className="p-3 border rounded-lg">
               <h4 className="text-sm font-medium mb-2">Description</h4>
               <p className="text-sm text-gray-600">
-                {event.description.length > 500 
+                {event.description.length > 500
                   ? `${event.description.substring(0, 500)}...`
-                  : event.description
-                }
+                  : event.description}
               </p>
             </div>
           )}
@@ -530,7 +609,7 @@ export const EventRegistrationModal: React.FC<EventRegistrationModalProps> = ({
                 <AlertCircle className="w-4 h-4 mr-2" />
                 <span className="text-sm font-medium">Token Requirements:</span>
               </div>
-              <EventTokenDisplay 
+              <EventTokenDisplay
                 tokenIds={event.required_tokens}
                 showImages={true}
                 compact={true}
@@ -552,9 +631,7 @@ export const EventRegistrationModal: React.FC<EventRegistrationModalProps> = ({
           {registrationStatus === 'ineligible' && !isRegistered && (
             <Alert variant="destructive">
               <AlertCircle className="h-4 w-4" />
-              <AlertDescription>
-                {errorMessage}
-              </AlertDescription>
+              <AlertDescription>{errorMessage}</AlertDescription>
             </Alert>
           )}
 
@@ -592,11 +669,15 @@ export const EventRegistrationModal: React.FC<EventRegistrationModalProps> = ({
                 Cancel
               </Button>
 
-              {isConnected && (registrationStatus === 'eligible' || registrationStatus === 'ready') ? (
+              {isConnected &&
+              (registrationStatus === 'eligible' ||
+                registrationStatus === 'ready') ? (
                 (() => {
                   // Check if we need approvals first
-                  const needsTokens = Number.parseFloat(systemTokenAmount) > 0 || Number.parseFloat(selfTokenAmount) > 0;
-                  
+                  const needsTokens =
+                    Number.parseFloat(systemTokenAmount) > 0 ||
+                    Number.parseFloat(selfTokenAmount) > 0;
+
                   if (needsTokens && registrationStatus === 'eligible') {
                     return (
                       <Button
@@ -611,13 +692,9 @@ export const EventRegistrationModal: React.FC<EventRegistrationModalProps> = ({
 
                   // Ready to register (approvals complete or free event)
                   const calls = prepareRegistration();
-                  
+
                   if (!calls) {
-                    return (
-                      <Button disabled={true}>
-                        Unable to Register
-                      </Button>
-                    );
+                    return <Button disabled={true}>Unable to Register</Button>;
                   }
 
                   return (
@@ -637,15 +714,19 @@ export const EventRegistrationModal: React.FC<EventRegistrationModalProps> = ({
                             isSponsored: true,
                             chainId: BASE_CHAIN_ID,
                             eventId: blockchainEventId,
-                            paymasterConfig: process.env.NEXT_PUBLIC_PAYMASTER ? 'configured' : 'missing',
-                            contractAddress: process.env.NEXT_PUBLIC_EVENT_MANAGER
+                            paymasterConfig: process.env.NEXT_PUBLIC_PAYMASTER
+                              ? 'configured'
+                              : 'missing',
+                            contractAddress:
+                              process.env.NEXT_PUBLIC_EVENT_MANAGER,
                           });
                         }
                         if (status.statusName === 'error') {
                           console.error('❌ Registration Transaction Error:', {
                             error: status.error,
                             eventId: blockchainEventId,
-                            reason: 'Possible causes: Event not created on-chain, insufficient approvals, or contract error'
+                            reason:
+                              'Possible causes: Event not created on-chain, insufficient approvals, or contract error',
                           });
                         }
                       }}
@@ -663,18 +744,29 @@ export const EventRegistrationModal: React.FC<EventRegistrationModalProps> = ({
                             'Insufficient token approvals',
                             'Paymaster/sponsorship failure',
                             'Contract execution error',
-                            'Network connectivity issue'
-                          ]
+                            'Network connectivity issue',
+                          ],
                         });
                         setIsRegistering(false);
-                        setErrorMessage(`Registration failed: ${error?.message || error}`);
+                        setErrorMessage(
+                          `Registration failed: ${error?.message || error}`,
+                        );
                       }}
                     >
                       <TransactionButton
-                        text={isRegistering ? 'Registering...' : `Register${needsTokens ? ` (${systemTokenAmount} SYSTEM + ${selfTokenAmount} SELF)` : ''}`}
+                        text={
+                          isRegistering
+                            ? 'Registering...'
+                            : `Register${needsTokens ? ` (${systemTokenAmount} SYSTEM + ${selfTokenAmount} SELF)` : ''}`
+                        }
                         disabled={isRegistering}
                         className="hover:opacity-90 disabled:bg-gray-400 disabled:text-gray-600"
-                        style={{ backgroundColor: isRegistering ? undefined : '#2F5D50', color: isRegistering ? undefined : '#FFFFFF' }}
+                        style={{
+                          backgroundColor: isRegistering
+                            ? undefined
+                            : '#2F5D50',
+                          color: isRegistering ? undefined : '#FFFFFF',
+                        }}
                       />
                       <TransactionSponsor />
                       <TransactionStatus>
@@ -686,15 +778,17 @@ export const EventRegistrationModal: React.FC<EventRegistrationModalProps> = ({
                 })()
               ) : (
                 <Button disabled={true}>
-                  {isConnected ? 
-                   registrationStatus === 'checking' ? 'Checking...' :
-                   registrationStatus === 'ineligible' ? 'Cannot Register' :
-                   'Register' : 'Connect Wallet'}
+                  {isConnected
+                    ? registrationStatus === 'checking'
+                      ? 'Checking...'
+                      : registrationStatus === 'ineligible'
+                        ? 'Cannot Register'
+                        : 'Register'
+                    : 'Connect Wallet'}
                 </Button>
               )}
             </div>
           )}
-
         </div>
       </DialogContent>
     </Dialog>

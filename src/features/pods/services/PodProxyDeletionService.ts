@@ -18,87 +18,67 @@ const POD_AUTH_PROXY_ABI = [
     type: 'function',
     inputs: [
       { name: '_managementHatId', type: 'uint256' },
-      { name: '_membershipHatId', type: 'uint256' }
+      { name: '_membershipHatId', type: 'uint256' },
     ],
     outputs: [],
-    stateMutability: 'nonpayable'
+    stateMutability: 'nonpayable',
   },
   {
     name: 'setProxyAdminHat',
     type: 'function',
-    inputs: [
-      { name: '_proxyAdminHatId', type: 'uint256' }
-    ],
+    inputs: [{ name: '_proxyAdminHatId', type: 'uint256' }],
     outputs: [],
-    stateMutability: 'nonpayable'
+    stateMutability: 'nonpayable',
   },
   {
     name: 'canManage',
     type: 'function',
-    inputs: [
-      { name: 'user', type: 'address' }
-    ],
-    outputs: [
-      { name: '', type: 'bool' }
-    ],
-    stateMutability: 'view'
+    inputs: [{ name: 'user', type: 'address' }],
+    outputs: [{ name: '', type: 'bool' }],
+    stateMutability: 'view',
   },
   {
     name: 'isActive',
     type: 'function',
     inputs: [],
-    outputs: [
-      { name: '', type: 'bool' }
-    ],
-    stateMutability: 'view'
+    outputs: [{ name: '', type: 'bool' }],
+    stateMutability: 'view',
   },
   {
     name: 'managementHatId',
     type: 'function',
     inputs: [],
-    outputs: [
-      { name: '', type: 'uint256' }
-    ],
-    stateMutability: 'view'
+    outputs: [{ name: '', type: 'uint256' }],
+    stateMutability: 'view',
   },
   {
     name: 'membershipHatId',
     type: 'function',
     inputs: [],
-    outputs: [
-      { name: '', type: 'uint256' }
-    ],
-    stateMutability: 'view'
+    outputs: [{ name: '', type: 'uint256' }],
+    stateMutability: 'view',
   },
   {
     name: 'proxyAdminHatId',
     type: 'function',
     inputs: [],
-    outputs: [
-      { name: '', type: 'uint256' }
-    ],
-    stateMutability: 'view'
+    outputs: [{ name: '', type: 'uint256' }],
+    stateMutability: 'view',
   },
   {
     name: 'getProxyAdminHatId',
     type: 'function',
     inputs: [],
-    outputs: [
-      { name: '', type: 'uint256' }
-    ],
-    stateMutability: 'view'
+    outputs: [{ name: '', type: 'uint256' }],
+    stateMutability: 'view',
   },
   {
     name: 'isProxyAdminOfHat',
     type: 'function',
-    inputs: [
-      { name: '_hatId', type: 'uint256' }
-    ],
-    outputs: [
-      { name: '', type: 'bool' }
-    ],
-    stateMutability: 'view'
-  }
+    inputs: [{ name: '_hatId', type: 'uint256' }],
+    outputs: [{ name: '', type: 'bool' }],
+    stateMutability: 'view',
+  },
 ] as const;
 
 // Hats Protocol ABI - For setHatStatus calls
@@ -108,25 +88,21 @@ const HATS_PROTOCOL_ABI = [
     type: 'function',
     inputs: [
       { name: '_hatId', type: 'uint256' },
-      { name: '_newStatus', type: 'bool' }
+      { name: '_newStatus', type: 'bool' },
     ],
-    outputs: [
-      { name: 'toggled', type: 'bool' }
-    ],
-    stateMutability: 'nonpayable'
+    outputs: [{ name: 'toggled', type: 'bool' }],
+    stateMutability: 'nonpayable',
   },
   {
     name: 'isAdminOfHat',
     type: 'function',
     inputs: [
       { name: '_user', type: 'address' },
-      { name: '_hatId', type: 'uint256' }
+      { name: '_hatId', type: 'uint256' },
     ],
-    outputs: [
-      { name: '', type: 'bool' }
-    ],
-    stateMutability: 'view'
-  }
+    outputs: [{ name: '', type: 'bool' }],
+    stateMutability: 'view',
+  },
 ] as const;
 
 export interface ProxyDeactivationResult {
@@ -137,7 +113,9 @@ export interface ProxyDeactivationResult {
 }
 
 export class PodProxyDeletionService {
-  private static HATS_CONTRACT_ADDRESS = (process.env.NEXT_PUBLIC_HATS_CONTRACT || '0x3bc1A0Ad72417f2d411118085256fC53CBdDd137') as `0x${string}`;
+  private static HATS_CONTRACT_ADDRESS = (process.env
+    .NEXT_PUBLIC_HATS_CONTRACT ||
+    '0x3bc1A0Ad72417f2d411118085256fC53CBdDd137') as `0x${string}`;
 
   /**
    * Validate that proxy contract is properly set up for deletion
@@ -145,7 +123,7 @@ export class PodProxyDeletionService {
   static async validateProxySetup(
     publicClient: PublicClient,
     pod: Pod,
-    userAddress: string
+    userAddress: string,
   ): Promise<{
     isValid: boolean;
     reason?: string;
@@ -159,7 +137,8 @@ export class PodProxyDeletionService {
     if (!pod.proxy_contract_address) {
       return {
         isValid: false,
-        reason: 'Pod does not have a proxy contract address. This may be a legacy pod created before proxy pattern was implemented.'
+        reason:
+          'Pod does not have a proxy contract address. This may be a legacy pod created before proxy pattern was implemented.',
       };
     }
 
@@ -172,7 +151,7 @@ export class PodProxyDeletionService {
         address: proxyAddress,
         abi: POD_AUTH_PROXY_ABI,
         functionName: 'canManage',
-        args: [userAddress as `0x${string}`]
+        args: [userAddress as `0x${string}`],
       });
 
       console.log('   User can manage:', canManage);
@@ -182,7 +161,7 @@ export class PodProxyDeletionService {
           isValid: false,
           reason: `User ${userAddress} does not have management permissions for this pod via proxy contract.`,
           proxyAddress,
-          canManage: false
+          canManage: false,
         };
       }
 
@@ -191,7 +170,7 @@ export class PodProxyDeletionService {
         address: proxyAddress,
         abi: POD_AUTH_PROXY_ABI,
         functionName: 'isActive',
-        args: []
+        args: [],
       });
 
       console.log('   Proxy is active:', isActive);
@@ -199,20 +178,24 @@ export class PodProxyDeletionService {
       if (!isActive) {
         return {
           isValid: false,
-          reason: 'Proxy contract is not active. Pod may already be deactivated.',
+          reason:
+            'Proxy contract is not active. Pod may already be deactivated.',
           proxyAddress,
           canManage: true,
-          isProxyActive: false
+          isProxyActive: false,
         };
       }
 
       // Verify proxy is admin of the hats
-      if (pod.management_hat_id && pod.management_hat_id !== 'extracted_from_tx') {
+      if (
+        pod.management_hat_id &&
+        pod.management_hat_id !== 'extracted_from_tx'
+      ) {
         const isAdmin = await publicClient.readContract({
           address: proxyAddress,
           abi: POD_AUTH_PROXY_ABI,
           functionName: 'isProxyAdminOfHat',
-          args: [BigInt(pod.management_hat_id)]
+          args: [BigInt(pod.management_hat_id)],
         });
 
         console.log('   Proxy is admin of management hat:', isAdmin);
@@ -220,10 +203,11 @@ export class PodProxyDeletionService {
         if (!isAdmin) {
           return {
             isValid: false,
-            reason: 'Proxy contract is not admin of pod hats. Hat admin structure may be misconfigured.',
+            reason:
+              'Proxy contract is not admin of pod hats. Hat admin structure may be misconfigured.',
             proxyAddress,
             canManage: true,
-            isProxyActive: true
+            isProxyActive: true,
           };
         }
       }
@@ -232,15 +216,14 @@ export class PodProxyDeletionService {
         isValid: true,
         proxyAddress,
         canManage: true,
-        isProxyActive: true
+        isProxyActive: true,
       };
-
     } catch (error) {
       console.error('Failed to validate proxy setup:', error);
       return {
         isValid: false,
         reason: `Failed to query proxy contract: ${error instanceof Error ? error.message : 'Unknown error'}`,
-        proxyAddress
+        proxyAddress,
       };
     }
   }
@@ -261,40 +244,57 @@ export class PodProxyDeletionService {
     pod: Pod,
     hatId: string,
     hatType: 'management' | 'membership',
-    userAddress: string
+    userAddress: string,
   ): Promise<ProxyDeactivationResult> {
-    console.log(`\n🎯 ==================== HAT DEACTIVATION VIA PROXY ====================`);
+    console.log(
+      `\n🎯 ==================== HAT DEACTIVATION VIA PROXY ====================`,
+    );
     console.log(`🎯 Deactivating ${hatType} hat: ${hatId}`);
     console.log(`   Pod: ${pod.name}`);
     console.log(`   User: ${userAddress}`);
     console.log(`   Proxy: ${pod.proxy_contract_address}`);
-    console.log(`🎯 ====================================================================\n`);
+    console.log(
+      `🎯 ====================================================================\n`,
+    );
 
     // Skip if hat ID is invalid or placeholder
-    if (!hatId || hatId === 'extracted_from_tx' || hatId === 'pending_creation') {
+    if (
+      !hatId ||
+      hatId === 'extracted_from_tx' ||
+      hatId === 'pending_creation'
+    ) {
       console.log(`⏭️  Skipping ${hatType} hat (invalid ID): ${hatId}`);
       return {
         success: true,
         method: 'skipped',
-        error: `Hat ID is placeholder: ${hatId}`
+        error: `Hat ID is placeholder: ${hatId}`,
       };
     }
 
     // Validate proxy setup
-    const validation = await this.validateProxySetup(publicClient, pod, userAddress);
+    const validation = await this.validateProxySetup(
+      publicClient,
+      pod,
+      userAddress,
+    );
     if (!validation.isValid) {
       console.error(`❌ Proxy validation failed: ${validation.reason}`);
 
       // If no proxy, fall back to direct deactivation
       if (!pod.proxy_contract_address) {
         console.log('⚠️  No proxy contract, attempting direct deactivation...');
-        return this.deactivateHatDirect(publicClient, walletClient, hatId, userAddress);
+        return this.deactivateHatDirect(
+          publicClient,
+          walletClient,
+          hatId,
+          userAddress,
+        );
       }
 
       return {
         success: false,
         error: validation.reason,
-        method: 'proxy'
+        method: 'proxy',
       };
     }
 
@@ -305,14 +305,21 @@ export class PodProxyDeletionService {
         address: this.HATS_CONTRACT_ADDRESS,
         abi: HATS_PROTOCOL_ABI,
         functionName: 'isAdminOfHat',
-        args: [proxyAddress, BigInt(hatId)]
+        args: [proxyAddress, BigInt(hatId)],
       });
 
       console.log(`🔐 Proxy admin status for ${hatType} hat:`, isProxyAdmin);
 
       if (!isProxyAdmin) {
-        console.warn(`⚠️  Proxy is not admin of ${hatType} hat, attempting direct deactivation...`);
-        return this.deactivateHatDirect(publicClient, walletClient, hatId, userAddress);
+        console.warn(
+          `⚠️  Proxy is not admin of ${hatType} hat, attempting direct deactivation...`,
+        );
+        return this.deactivateHatDirect(
+          publicClient,
+          walletClient,
+          hatId,
+          userAddress,
+        );
       }
 
       // Since PodAuthProxy doesn't expose a deactivateHat function,
@@ -322,7 +329,9 @@ export class PodProxyDeletionService {
       // 2. Proxy is the admin (verified above)
       // 3. User is effectively acting on behalf of the proxy through their leadership role
 
-      console.log(`🎯 Calling setHatStatus on Hats Protocol for ${hatType} hat...`);
+      console.log(
+        `🎯 Calling setHatStatus on Hats Protocol for ${hatType} hat...`,
+      );
       console.log(`   Contract: ${this.HATS_CONTRACT_ADDRESS}`);
       console.log(`   Hat ID: ${hatId}`);
       console.log(`   New Status: false (deactivated)`);
@@ -331,23 +340,25 @@ export class PodProxyDeletionService {
         address: this.HATS_CONTRACT_ADDRESS,
         abi: HATS_PROTOCOL_ABI,
         functionName: 'setHatStatus',
-        args: [BigInt(hatId), false] // false = deactivated
+        args: [BigInt(hatId), false], // false = deactivated
       });
 
-      console.log(`✅ ${hatType} hat deactivation transaction submitted: ${hash}`);
+      console.log(
+        `✅ ${hatType} hat deactivation transaction submitted: ${hash}`,
+      );
 
       return {
         success: true,
         transactionHash: hash,
-        method: 'proxy'
+        method: 'proxy',
       };
-
     } catch (error) {
       console.error(`Failed to deactivate ${hatType} hat via proxy:`, error);
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Failed to deactivate hat',
-        method: 'proxy'
+        error:
+          error instanceof Error ? error.message : 'Failed to deactivate hat',
+        method: 'proxy',
       };
     }
   }
@@ -359,7 +370,7 @@ export class PodProxyDeletionService {
     publicClient: PublicClient,
     walletClient: WalletClient,
     hatId: string,
-    userAddress: string
+    userAddress: string,
   ): Promise<ProxyDeactivationResult> {
     console.log(`🔄 Attempting direct hat deactivation (fallback)...`);
 
@@ -369,14 +380,15 @@ export class PodProxyDeletionService {
         address: this.HATS_CONTRACT_ADDRESS,
         abi: HATS_PROTOCOL_ABI,
         functionName: 'isAdminOfHat',
-        args: [userAddress as `0x${string}`, BigInt(hatId)]
+        args: [userAddress as `0x${string}`, BigInt(hatId)],
       });
 
       if (!isAdmin) {
         return {
           success: false,
-          error: 'User is not admin of this hat and no proxy contract available',
-          method: 'direct'
+          error:
+            'User is not admin of this hat and no proxy contract available',
+          method: 'direct',
         };
       }
 
@@ -384,7 +396,7 @@ export class PodProxyDeletionService {
         address: this.HATS_CONTRACT_ADDRESS,
         abi: HATS_PROTOCOL_ABI,
         functionName: 'setHatStatus',
-        args: [BigInt(hatId), false]
+        args: [BigInt(hatId), false],
       });
 
       console.log(`✅ Direct hat deactivation successful: ${hash}`);
@@ -392,15 +404,17 @@ export class PodProxyDeletionService {
       return {
         success: true,
         transactionHash: hash,
-        method: 'direct'
+        method: 'direct',
       };
-
     } catch (error) {
       console.error('Direct hat deactivation failed:', error);
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Failed to deactivate hat directly',
-        method: 'direct'
+        error:
+          error instanceof Error
+            ? error.message
+            : 'Failed to deactivate hat directly',
+        method: 'direct',
       };
     }
   }
@@ -412,7 +426,7 @@ export class PodProxyDeletionService {
     publicClient: PublicClient,
     walletClient: WalletClient,
     pod: Pod,
-    userAddress: string
+    userAddress: string,
   ): Promise<{
     success: boolean;
     managementHat?: ProxyDeactivationResult;
@@ -427,11 +441,14 @@ export class PodProxyDeletionService {
       membershipHat?: ProxyDeactivationResult;
       error?: string;
     } = {
-      success: true
+      success: true,
     };
 
     // Deactivate management hat
-    if (pod.management_hat_id && pod.management_hat_id !== 'extracted_from_tx') {
+    if (
+      pod.management_hat_id &&
+      pod.management_hat_id !== 'extracted_from_tx'
+    ) {
       console.log('📋 Deactivating management hat...');
       const managementResult = await this.deactivateHatViaProxy(
         publicClient,
@@ -439,7 +456,7 @@ export class PodProxyDeletionService {
         pod,
         pod.management_hat_id,
         'management',
-        userAddress
+        userAddress,
       );
 
       results.managementHat = managementResult;
@@ -453,7 +470,10 @@ export class PodProxyDeletionService {
     }
 
     // Deactivate membership hat
-    if (pod.membership_hat_id && pod.membership_hat_id !== 'extracted_from_tx') {
+    if (
+      pod.membership_hat_id &&
+      pod.membership_hat_id !== 'extracted_from_tx'
+    ) {
       console.log('📋 Deactivating membership hat...');
       const membershipResult = await this.deactivateHatViaProxy(
         publicClient,
@@ -461,7 +481,7 @@ export class PodProxyDeletionService {
         pod,
         pod.membership_hat_id,
         'membership',
-        userAddress
+        userAddress,
       );
 
       results.membershipHat = membershipResult;

@@ -25,7 +25,14 @@ export interface ReactionSummary {
 
 // Available emoji reactions
 export const AVAILABLE_REACTIONS = [
-  '👍', '❤️', '😂', '🎉', '🤔', '👀', '🔥', '💯'
+  '👍',
+  '❤️',
+  '😂',
+  '🎉',
+  '🤔',
+  '👀',
+  '🔥',
+  '💯',
 ];
 
 // ============================================================================
@@ -39,7 +46,7 @@ export async function addReaction(
   emoji: string,
   userAddress: string,
   postId?: string,
-  threadId?: string
+  threadId?: string,
 ): Promise<{ success: boolean; error?: string }> {
   try {
     if (!AVAILABLE_REACTIONS.includes(emoji)) {
@@ -47,7 +54,10 @@ export async function addReaction(
     }
 
     if (!postId && !threadId) {
-      return { success: false, error: 'Must specify either postId or threadId' };
+      return {
+        success: false,
+        error: 'Must specify either postId or threadId',
+      };
     }
 
     // Check if user already reacted with this emoji
@@ -64,14 +74,12 @@ export async function addReaction(
     }
 
     // Add reaction
-    const { error } = await supabase
-      .from('forum_post_reactions')
-      .insert({
-        post_id: postId,
-        thread_id: threadId,
-        reaction_type: emoji,
-        reactor_address: userAddress.toLowerCase()
-      });
+    const { error } = await supabase.from('forum_post_reactions').insert({
+      post_id: postId,
+      thread_id: threadId,
+      reaction_type: emoji,
+      reactor_address: userAddress.toLowerCase(),
+    });
 
     if (error) throw error;
 
@@ -89,7 +97,7 @@ export async function removeReaction(
   emoji: string,
   userAddress: string,
   postId?: string,
-  threadId?: string
+  threadId?: string,
 ): Promise<{ success: boolean; error?: string }> {
   try {
     const query = supabase
@@ -103,7 +111,10 @@ export async function removeReaction(
     } else if (threadId) {
       query.eq('thread_id', threadId);
     } else {
-      return { success: false, error: 'Must specify either postId or threadId' };
+      return {
+        success: false,
+        error: 'Must specify either postId or threadId',
+      };
     }
 
     const { error } = await query;
@@ -124,7 +135,7 @@ export async function toggleReaction(
   emoji: string,
   userAddress: string,
   postId?: string,
-  threadId?: string
+  threadId?: string,
 ): Promise<{ success: boolean; added?: boolean; error?: string }> {
   try {
     // Check if reaction exists
@@ -167,7 +178,7 @@ export async function toggleReaction(
 export async function getReactionSummary(
   postId?: string,
   threadId?: string,
-  userAddress?: string
+  userAddress?: string,
 ): Promise<{
   success: boolean;
   reactions?: ReactionSummary[];
@@ -175,7 +186,10 @@ export async function getReactionSummary(
 }> {
   try {
     if (!postId && !threadId) {
-      return { success: false, error: 'Must specify either postId or threadId' };
+      return {
+        success: false,
+        error: 'Must specify either postId or threadId',
+      };
     }
 
     const query = supabase
@@ -201,21 +215,24 @@ export async function getReactionSummary(
         reactionMap.set(emoji, {
           reaction_type: emoji,
           count: 0,
-          userReacted: false
+          userReacted: false,
         });
       }
 
       const summary = reactionMap.get(emoji)!;
       summary.count++;
 
-      if (userAddress && reaction.reactor_address === userAddress.toLowerCase()) {
+      if (
+        userAddress &&
+        reaction.reactor_address === userAddress.toLowerCase()
+      ) {
         summary.userReacted = true;
       }
     });
 
     // Convert to array and sort by count
     const reactions = Array.from(reactionMap.values()).sort(
-      (a, b) => b.count - a.count
+      (a, b) => b.count - a.count,
     );
 
     return { success: true, reactions };
@@ -230,7 +247,7 @@ export async function getReactionSummary(
  */
 export async function getAllReactions(
   postId?: string,
-  threadId?: string
+  threadId?: string,
 ): Promise<{
   success: boolean;
   reactions?: Reaction[];
@@ -238,7 +255,10 @@ export async function getAllReactions(
 }> {
   try {
     if (!postId && !threadId) {
-      return { success: false, error: 'Must specify either postId or threadId' };
+      return {
+        success: false,
+        error: 'Must specify either postId or threadId',
+      };
     }
 
     const query = supabase
@@ -269,7 +289,7 @@ export async function getAllReactions(
 export async function getUserReactions(
   userAddress: string,
   postId?: string,
-  threadId?: string
+  threadId?: string,
 ): Promise<{
   success: boolean;
   emojis?: string[];
@@ -291,7 +311,7 @@ export async function getUserReactions(
 
     if (error) throw error;
 
-    const emojis = data?.map(r => r.reaction_type) || [];
+    const emojis = data?.map((r) => r.reaction_type) || [];
 
     return { success: true, emojis };
   } catch (error: any) {

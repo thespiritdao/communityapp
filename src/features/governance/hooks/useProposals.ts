@@ -22,10 +22,12 @@ interface Proposal {
 
 const GOVERNOR_ADDRESS = CONTRACT_ADDRESSES.DAO_GOVERNOR;
 const PROPOSAL_CREATED_TOPIC = keccak256(
-  'ProposalCreated(uint256,address,address[],uint256[],bytes[],uint64,uint64,string)'
+  'ProposalCreated(uint256,address,address[],uint256[],bytes[],uint64,uint64,string)',
 );
 
-const fetchProposalsOnChain = async (publicClient: ReturnType<typeof usePublicClient>): Promise<Proposal[]> => {
+const fetchProposalsOnChain = async (
+  publicClient: ReturnType<typeof usePublicClient>,
+): Promise<Proposal[]> => {
   // 1) Fetch ProposalCreated logs
   const logs = await publicClient.getLogs({
     chainId: base.id,
@@ -35,14 +37,14 @@ const fetchProposalsOnChain = async (publicClient: ReturnType<typeof usePublicCl
 
   // 2) Decode each log to extract id & description
   const eventAbi = DAOGovernorABI.find(
-    (item) => item.type === 'event' && item.name === 'ProposalCreated'
+    (item) => item.type === 'event' && item.name === 'ProposalCreated',
   )!;
   const decoded = logs.map((log) =>
     decodeEventLog({
       abi: [eventAbi],
       data: log.data,
       topics: log.topics,
-    })
+    }),
   );
 
   const proposals: Proposal[] = [];
@@ -51,13 +53,13 @@ const fetchProposalsOnChain = async (publicClient: ReturnType<typeof usePublicCl
     const description = (ev.args as any).description as string;
 
     // 3) Read on‑chain proposal core data
-    const core = await publicClient.readContract({
+    const core = (await publicClient.readContract({
       chainId: base.id,
       address: GOVERNOR_ADDRESS,
       abi: DAOGovernorABI,
       functionName: 'proposals',
       args: [BigInt(id)],
-    }) as {
+    })) as {
       proposer: `0x${string}`;
       startBlock: bigint;
       endBlock: bigint;
@@ -74,30 +76,31 @@ const fetchProposalsOnChain = async (publicClient: ReturnType<typeof usePublicCl
 
     try {
       state = await retryContractRead(
-        () => publicClient.readContract({
-          chainId: base.id,
-          address: GOVERNOR_ADDRESS,
-          abi: DAOGovernorABI,
-          functionName: 'state',
-          args: [BigInt(id)],
-        }) as Promise<number>,
+        () =>
+          publicClient.readContract({
+            chainId: base.id,
+            address: GOVERNOR_ADDRESS,
+            abi: DAOGovernorABI,
+            functionName: 'state',
+            args: [BigInt(id)],
+          }) as Promise<number>,
         {
           retries: 3,
           initialDelay: 500,
           onRetry: (error, attempt) => {
             console.warn(
               `[Proposal ${id}] Retry ${attempt}/3 - Failed to fetch state:`,
-              error.message
+              error.message,
             );
-          }
-        }
+          },
+        },
       );
 
       console.log(`[Proposal ${id}] State fetched successfully: ${state}`);
     } catch (error) {
       console.error(
         `[Proposal ${id}] Failed to fetch state after 3 retries:`,
-        error
+        error,
       );
 
       // Mark as error state instead of assuming it's active
@@ -144,13 +147,17 @@ export const useProposals = () => {
       const { data: metadata } = await supabase
         .from('proposal_metadata')
         .select('*')
-        .in('onchain_proposal_id', onChainProposals.map(p => p.id));
-      return onChainProposals.map(proposal => ({
+        .in(
+          'onchain_proposal_id',
+          onChainProposals.map((p) => p.id),
+        );
+      return onChainProposals.map((proposal) => ({
         ...proposal,
-        metadata: metadata?.find(m => m.onchain_proposal_id === proposal.id) || null
+        metadata:
+          metadata?.find((m) => m.onchain_proposal_id === proposal.id) || null,
       }));
     },
     staleTime: 60_000,
-    refetchInterval: 2 * 60_000
+    refetchInterval: 2 * 60_000,
   });
 };

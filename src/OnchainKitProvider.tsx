@@ -56,14 +56,14 @@ export function OnchainKitProvider({
       },
       projectId: projectId ?? null,
       schemaId: schemaId ?? COINBASE_VERIFIED_ACCOUNT_SCHEMA_ID,
-    
     };
 
     setOnchainKitConfig(onchainKitConfig);
     return onchainKitConfig;
   }, [address, apiKey, chain, config, projectId, schemaId]);
 
-  const { providedWagmiConfig, providedQueryClient } = useProviderDependencies();
+  const { providedWagmiConfig, providedQueryClient } =
+    useProviderDependencies();
 
   const defaultConfig = useMemo(() => {
     return (

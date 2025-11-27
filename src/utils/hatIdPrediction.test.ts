@@ -7,23 +7,31 @@ import {
   predictAdminHatId,
   isValidHatId,
   getHatDepth,
-  formatHatIdDebug
+  formatHatIdDebug,
 } from './hatIdPrediction';
 
 describe('Hat ID Prediction', () => {
   describe('predictChildHatId', () => {
     it('should predict first child correctly', () => {
       // Example: Management hat at level 2
-      const parentId = BigInt('0x0001000200000000000000000000000000000000000000000000000000000000');
-      const expectedChild = BigInt('0x0001000200010000000000000000000000000000000000000000000000000000');
+      const parentId = BigInt(
+        '0x0001000200000000000000000000000000000000000000000000000000000000',
+      );
+      const expectedChild = BigInt(
+        '0x0001000200010000000000000000000000000000000000000000000000000000',
+      );
 
       const result = predictChildHatId(parentId, 1);
       expect(result).toBe(expectedChild);
     });
 
     it('should predict second child correctly', () => {
-      const parentId = BigInt('0x0001000200000000000000000000000000000000000000000000000000000000');
-      const expectedChild = BigInt('0x0001000200020000000000000000000000000000000000000000000000000000');
+      const parentId = BigInt(
+        '0x0001000200000000000000000000000000000000000000000000000000000000',
+      );
+      const expectedChild = BigInt(
+        '0x0001000200020000000000000000000000000000000000000000000000000000',
+      );
 
       const result = predictChildHatId(parentId, 2);
       expect(result).toBe(expectedChild);
@@ -31,15 +39,21 @@ describe('Hat ID Prediction', () => {
 
     it('should predict child at deeper level', () => {
       // Parent at level 3
-      const parentId = BigInt('0x0001000200030000000000000000000000000000000000000000000000000000');
-      const expectedChild = BigInt('0x0001000200030001000000000000000000000000000000000000000000000000');
+      const parentId = BigInt(
+        '0x0001000200030000000000000000000000000000000000000000000000000000',
+      );
+      const expectedChild = BigInt(
+        '0x0001000200030001000000000000000000000000000000000000000000000000',
+      );
 
       const result = predictChildHatId(parentId, 1);
       expect(result).toBe(expectedChild);
     });
 
     it('should handle max child index (65535)', () => {
-      const parentId = BigInt('0x0001000200000000000000000000000000000000000000000000000000000000');
+      const parentId = BigInt(
+        '0x0001000200000000000000000000000000000000000000000000000000000000',
+      );
       const maxChildIndex = 65535;
 
       const result = predictChildHatId(parentId, maxChildIndex);
@@ -47,7 +61,9 @@ describe('Hat ID Prediction', () => {
     });
 
     it('should throw error for invalid child index (0)', () => {
-      const parentId = BigInt('0x0001000200000000000000000000000000000000000000000000000000000000');
+      const parentId = BigInt(
+        '0x0001000200000000000000000000000000000000000000000000000000000000',
+      );
 
       expect(() => {
         predictChildHatId(parentId, 0);
@@ -55,7 +71,9 @@ describe('Hat ID Prediction', () => {
     });
 
     it('should throw error for invalid child index (> 65535)', () => {
-      const parentId = BigInt('0x0001000200000000000000000000000000000000000000000000000000000000');
+      const parentId = BigInt(
+        '0x0001000200000000000000000000000000000000000000000000000000000000',
+      );
 
       expect(() => {
         predictChildHatId(parentId, 65536);
@@ -66,7 +84,9 @@ describe('Hat ID Prediction', () => {
   describe('predictAdminHatId', () => {
     it('should predict admin hat as first child', () => {
       // Use properly formatted 16-level hat ID (3-level management hat)
-      const managementId = BigInt('0x0001000200030000000000000000000000000000000000000000000000000000');
+      const managementId = BigInt(
+        '0x0001000200030000000000000000000000000000000000000000000000000000',
+      );
       const adminId = predictAdminHatId(managementId);
 
       // Admin hat should be greater than management hat
@@ -79,12 +99,18 @@ describe('Hat ID Prediction', () => {
 
     it('should work with different management hat IDs', () => {
       const managementIds = [
-        BigInt('0x0001000200000000000000000000000000000000000000000000000000000000'),
-        BigInt('0x0005000300000000000000000000000000000000000000000000000000000000'),
-        BigInt('0x0001000200030004000000000000000000000000000000000000000000000000') // 4-level hat
+        BigInt(
+          '0x0001000200000000000000000000000000000000000000000000000000000000',
+        ),
+        BigInt(
+          '0x0005000300000000000000000000000000000000000000000000000000000000',
+        ),
+        BigInt(
+          '0x0001000200030004000000000000000000000000000000000000000000000000',
+        ), // 4-level hat
       ];
 
-      managementIds.forEach(managementId => {
+      managementIds.forEach((managementId) => {
         const adminId = predictAdminHatId(managementId);
         expect(adminId).toBeGreaterThan(managementId);
         expect(isValidHatId(adminId)).toBe(true);
@@ -95,12 +121,18 @@ describe('Hat ID Prediction', () => {
   describe('isValidHatId', () => {
     it('should validate correct hat IDs', () => {
       const validIds = [
-        BigInt('0x0001000000000000000000000000000000000000000000000000000000000000'),
-        BigInt('0x0001000200000000000000000000000000000000000000000000000000000000'),
-        BigInt('0x0001000200030004000000000000000000000000000000000000000000000000')
+        BigInt(
+          '0x0001000000000000000000000000000000000000000000000000000000000000',
+        ),
+        BigInt(
+          '0x0001000200000000000000000000000000000000000000000000000000000000',
+        ),
+        BigInt(
+          '0x0001000200030004000000000000000000000000000000000000000000000000',
+        ),
       ];
 
-      validIds.forEach(id => {
+      validIds.forEach((id) => {
         expect(isValidHatId(id)).toBe(true);
       });
     });
@@ -116,30 +148,40 @@ describe('Hat ID Prediction', () => {
     });
 
     it('should reject hat ID with all zeros', () => {
-      const allZeros = BigInt('0x0000000000000000000000000000000000000000000000000000000000000000');
+      const allZeros = BigInt(
+        '0x0000000000000000000000000000000000000000000000000000000000000000',
+      );
       expect(isValidHatId(allZeros)).toBe(false);
     });
   });
 
   describe('getHatDepth', () => {
     it('should return correct depth for single level', () => {
-      const hatId = BigInt('0x0001000000000000000000000000000000000000000000000000000000000000');
+      const hatId = BigInt(
+        '0x0001000000000000000000000000000000000000000000000000000000000000',
+      );
       expect(getHatDepth(hatId)).toBe(0);
     });
 
     it('should return correct depth for two levels', () => {
-      const hatId = BigInt('0x0001000200000000000000000000000000000000000000000000000000000000');
+      const hatId = BigInt(
+        '0x0001000200000000000000000000000000000000000000000000000000000000',
+      );
       expect(getHatDepth(hatId)).toBe(1);
     });
 
     it('should return correct depth for three levels', () => {
-      const hatId = BigInt('0x0001000200030000000000000000000000000000000000000000000000000000');
+      const hatId = BigInt(
+        '0x0001000200030000000000000000000000000000000000000000000000000000',
+      );
       expect(getHatDepth(hatId)).toBe(2);
     });
 
     it('should return correct depth for deep hierarchy', () => {
       // Create a hat ID with 5 levels
-      let hatId = BigInt('0x0001000000000000000000000000000000000000000000000000000000000000');
+      let hatId = BigInt(
+        '0x0001000000000000000000000000000000000000000000000000000000000000',
+      );
       hatId = hatId | (BigInt(2) << BigInt(16 * 14)); // Level 1
       hatId = hatId | (BigInt(3) << BigInt(16 * 13)); // Level 2
       hatId = hatId | (BigInt(4) << BigInt(16 * 12)); // Level 3
@@ -151,13 +193,17 @@ describe('Hat ID Prediction', () => {
 
   describe('formatHatIdDebug', () => {
     it('should format single level hat', () => {
-      const hatId = BigInt('0x0001000000000000000000000000000000000000000000000000000000000000');
+      const hatId = BigInt(
+        '0x0001000000000000000000000000000000000000000000000000000000000000',
+      );
       const formatted = formatHatIdDebug(hatId);
       expect(formatted).toBe('Level 0: 1');
     });
 
     it('should format multi-level hat', () => {
-      const hatId = BigInt('0x0001000200030000000000000000000000000000000000000000000000000000');
+      const hatId = BigInt(
+        '0x0001000200030000000000000000000000000000000000000000000000000000',
+      );
       const formatted = formatHatIdDebug(hatId);
       expect(formatted).toBe('Level 0: 1, Level 1: 2, Level 2: 3');
     });
@@ -172,16 +218,24 @@ describe('Hat ID Prediction', () => {
   describe('Real-world scenarios', () => {
     it('should correctly predict for actual Hats Protocol hat IDs', () => {
       // Example of a typical 3-level management hat ID (similar to real Hats Protocol structure)
-      const managementHatId = BigInt('0x0001000200030000000000000000000000000000000000000000000000000000');
+      const managementHatId = BigInt(
+        '0x0001000200030000000000000000000000000000000000000000000000000000',
+      );
 
       // Predict admin hat (first child)
       const adminHatId = predictAdminHatId(managementHatId);
 
       console.log('\n=== Real-world Hat ID Prediction ===');
       console.log('Management HAT ID:', managementHatId.toString());
-      console.log('Management HAT ID (hex):', '0x' + managementHatId.toString(16));
+      console.log(
+        'Management HAT ID (hex):',
+        '0x' + managementHatId.toString(16),
+      );
       console.log('Predicted Admin HAT ID:', adminHatId.toString());
-      console.log('Predicted Admin HAT ID (hex):', '0x' + adminHatId.toString(16));
+      console.log(
+        'Predicted Admin HAT ID (hex):',
+        '0x' + adminHatId.toString(16),
+      );
       console.log('Management depth:', getHatDepth(managementHatId));
       console.log('Admin depth:', getHatDepth(adminHatId));
       console.log('Management structure:', formatHatIdDebug(managementHatId));
@@ -195,7 +249,9 @@ describe('Hat ID Prediction', () => {
 
     it('should match Hats Protocol createHat behavior', () => {
       // Simulate what Hats Protocol does when creating a child hat
-      const parentHatId = BigInt('0x0001000200000000000000000000000000000000000000000000000000000000');
+      const parentHatId = BigInt(
+        '0x0001000200000000000000000000000000000000000000000000000000000000',
+      );
 
       // First child (index 1)
       const firstChild = predictChildHatId(parentHatId, 1);

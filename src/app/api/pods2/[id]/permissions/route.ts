@@ -28,7 +28,7 @@ const publicClient = createPublicClient({
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: { id: string } },
 ) {
   try {
     const { id } = params;
@@ -39,7 +39,7 @@ export async function GET(
     if (!userAddress) {
       return NextResponse.json(
         { error: 'Address parameter required' },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -51,10 +51,7 @@ export async function GET(
       .single();
 
     if (podError || !pod) {
-      return NextResponse.json(
-        { error: 'Pod not found' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: 'Pod not found' }, { status: 404 });
     }
 
     // If using cache, check database first
@@ -80,7 +77,8 @@ export async function GET(
           canCreateProposals: true,
           canCreateThreads: true,
           canModerateContent: isAdmin,
-          hasAccess: member.is_active && member.is_eligible && member.in_good_standing,
+          hasAccess:
+            member.is_active && member.is_eligible && member.in_good_standing,
           cached: true,
           lastVerified: member.last_verified_at,
         };
@@ -92,20 +90,20 @@ export async function GET(
       publicClient,
       userAddress as Address,
       BigInt(pod.admin_hat_id),
-      BigInt(pod.member_hat_id)
+      BigInt(pod.member_hat_id),
     );
 
     // Get detailed member status
     const adminStatus = await PodPermissionService.getMemberStatus(
       publicClient,
       userAddress as Address,
-      BigInt(pod.admin_hat_id)
+      BigInt(pod.admin_hat_id),
     );
 
     const memberStatus = await PodPermissionService.getMemberStatus(
       publicClient,
       userAddress as Address,
-      BigInt(pod.member_hat_id)
+      BigInt(pod.member_hat_id),
     );
 
     return NextResponse.json({
@@ -126,12 +124,14 @@ export async function GET(
         },
       },
     });
-
   } catch (error) {
     console.error('GET /api/pods2/[id]/permissions error:', error);
     return NextResponse.json(
-      { error: 'Internal server error', details: error instanceof Error ? error.message : 'Unknown error' },
-      { status: 500 }
+      {
+        error: 'Internal server error',
+        details: error instanceof Error ? error.message : 'Unknown error',
+      },
+      { status: 500 },
     );
   }
 }
@@ -142,7 +142,7 @@ export async function GET(
  */
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: { id: string } },
 ) {
   try {
     const { id } = params;
@@ -152,14 +152,14 @@ export async function POST(
     if (!Array.isArray(addresses) || addresses.length === 0) {
       return NextResponse.json(
         { error: 'addresses array required' },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
     if (addresses.length > 50) {
       return NextResponse.json(
         { error: 'Maximum 50 addresses per batch' },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -171,18 +171,15 @@ export async function POST(
       .single();
 
     if (podError || !pod) {
-      return NextResponse.json(
-        { error: 'Pod not found' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: 'Pod not found' }, { status: 404 });
     }
 
     // Batch check access levels
     const accessMap = await PodPermissionService.batchCheckAccess(
       publicClient,
-      addresses.map(addr => addr as Address),
+      addresses.map((addr) => addr as Address),
       BigInt(pod.admin_hat_id),
-      BigInt(pod.member_hat_id)
+      BigInt(pod.member_hat_id),
     );
 
     // Convert to array format
@@ -193,7 +190,7 @@ export async function POST(
           publicClient,
           address as Address,
           BigInt(pod.admin_hat_id),
-          BigInt(pod.member_hat_id)
+          BigInt(pod.member_hat_id),
         );
 
         return {
@@ -202,7 +199,7 @@ export async function POST(
           isMember: access?.isMember || false,
           permissions,
         };
-      })
+      }),
     );
 
     return NextResponse.json({
@@ -213,12 +210,14 @@ export async function POST(
       results,
       total: results.length,
     });
-
   } catch (error) {
     console.error('POST /api/pods2/[id]/permissions/batch error:', error);
     return NextResponse.json(
-      { error: 'Internal server error', details: error instanceof Error ? error.message : 'Unknown error' },
-      { status: 500 }
+      {
+        error: 'Internal server error',
+        details: error instanceof Error ? error.message : 'Unknown error',
+      },
+      { status: 500 },
     );
   }
 }

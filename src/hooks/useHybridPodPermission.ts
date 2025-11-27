@@ -36,7 +36,7 @@ import type { HatPermissions } from '@/services/hatPermissionsService';
  */
 export function useHybridPodPermission(
   podId: string | null | undefined,
-  permissionKey: keyof HatPermissions
+  permissionKey: keyof HatPermissions,
 ): { hasPermission: boolean; isLoading: boolean; error: string | null } {
   const { address } = useAccount();
 
@@ -47,24 +47,22 @@ export function useHybridPodPermission(
   const hasDbPermission = usePodPermission(podId, permissionKey);
 
   // Step 3: Check agreement signatures (NEW - for accountability)
-  const {
-    hasUnsignedAgreements,
-    loading: agreementsLoading
-  } = usePodEligibilityAgreements(podId || '');
+  const { hasUnsignedAgreements, loading: agreementsLoading } =
+    usePodEligibilityAgreements(podId || '');
 
   // Step 4: Find the HAT ID for this pod
   const podRole = useMemo(() => {
     if (!podId || !userRoles || userRoles.length === 0) {
       return null;
     }
-    return userRoles.find(role => role.podId === podId);
+    return userRoles.find((role) => role.podId === podId);
   }, [podId, userRoles]);
 
   // Step 5: Check on-chain HAT ownership (if we have a HAT ID)
   const {
     data: hatBalance,
     isLoading: hatLoading,
-    error: hatError
+    error: hatError,
   } = useReadContract({
     address: HATS_PROTOCOL_ADDRESS,
     abi: HatsProtocolABI,
@@ -74,7 +72,7 @@ export function useHybridPodPermission(
       enabled: Boolean(address && podRole?.hatId),
       // Cache for 10 seconds - balance can change if HAT is revoked
       staleTime: 10_000,
-    }
+    },
   });
 
   // Compute final permission
@@ -84,7 +82,7 @@ export function useHybridPodPermission(
       return {
         hasPermission: false,
         isLoading: true,
-        error: null
+        error: null,
       };
     }
 
@@ -93,7 +91,7 @@ export function useHybridPodPermission(
       return {
         hasPermission: false,
         isLoading: false,
-        error: null
+        error: null,
       };
     }
 
@@ -102,7 +100,7 @@ export function useHybridPodPermission(
       return {
         hasPermission: false,
         isLoading: false,
-        error: null
+        error: null,
       };
     }
 
@@ -112,7 +110,7 @@ export function useHybridPodPermission(
       return {
         hasPermission: false,
         isLoading: false,
-        error: null
+        error: null,
       };
     }
 
@@ -130,7 +128,7 @@ export function useHybridPodPermission(
       hasUnsignedAgreements,
       hatId: podRole.hatId,
       hatBalance: hatBalance?.toString(),
-      allChecksPass
+      allChecksPass,
     });
 
     // If there was an error checking HAT, fail closed (deny access)
@@ -139,7 +137,7 @@ export function useHybridPodPermission(
       return {
         hasPermission: false,
         isLoading: false,
-        error: 'Failed to verify role ownership on-chain'
+        error: 'Failed to verify role ownership on-chain',
       };
     }
 
@@ -149,7 +147,8 @@ export function useHybridPodPermission(
       return {
         hasPermission: false,
         isLoading: false,
-        error: 'You must sign required agreements before accessing this feature'
+        error:
+          'You must sign required agreements before accessing this feature',
       };
     }
 
@@ -157,7 +156,7 @@ export function useHybridPodPermission(
     return {
       hasPermission: allChecksPass,
       isLoading: false,
-      error: null
+      error: null,
     };
   }, [
     address,
@@ -170,7 +169,7 @@ export function useHybridPodPermission(
     hatLoading,
     rolesLoading,
     agreementsLoading,
-    hatError
+    hatError,
   ]);
 
   return result;
@@ -193,16 +192,16 @@ export function useHybridPodPermission(
  */
 export function useHybridPodPermissions(
   podId: string | null | undefined,
-  permissionKeys: (keyof HatPermissions)[]
+  permissionKeys: (keyof HatPermissions)[],
 ): Record<string, boolean> {
-  const results = permissionKeys.map(key => ({
+  const results = permissionKeys.map((key) => ({
     key,
-    result: useHybridPodPermission(podId, key)
+    result: useHybridPodPermission(podId, key),
   }));
 
   return useMemo(() => {
     return Object.fromEntries(
-      results.map(({ key, result }) => [key, result.hasPermission])
+      results.map(({ key, result }) => [key, result.hasPermission]),
     );
   }, [results]);
 }
@@ -221,14 +220,11 @@ export function useHybridPodRole(podId: string | null | undefined) {
     if (!podId || !userRoles || userRoles.length === 0) {
       return null;
     }
-    return userRoles.find(role => role.podId === podId);
+    return userRoles.find((role) => role.podId === podId);
   }, [podId, userRoles]);
 
   // Verify HAT ownership on-chain
-  const {
-    data: hatBalance,
-    isLoading
-  } = useReadContract({
+  const { data: hatBalance, isLoading } = useReadContract({
     address: HATS_PROTOCOL_ADDRESS,
     abi: HatsProtocolABI,
     functionName: 'balanceOf',
@@ -236,7 +232,7 @@ export function useHybridPodRole(podId: string | null | undefined) {
     query: {
       enabled: Boolean(address && podRole?.hatId),
       staleTime: 10_000,
-    }
+    },
   });
 
   return useMemo(() => {

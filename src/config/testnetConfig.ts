@@ -16,8 +16,10 @@
 // ============================================================
 
 export const isTestnet = (): boolean => {
-  return process.env.NEXT_PUBLIC_IS_TESTNET === 'true' ||
-         process.env.NEXT_PUBLIC_CHAIN_ID === '84532'; // Base Sepolia
+  return (
+    process.env.NEXT_PUBLIC_IS_TESTNET === 'true' ||
+    process.env.NEXT_PUBLIC_CHAIN_ID === '84532'
+  ); // Base Sepolia
 };
 
 export const isMainnet = (): boolean => {
@@ -101,7 +103,8 @@ const TESTNET_CONFIG: AppConfig = {
 
   // Governance - Fast cycles for testing
   proposalThreshold: Number(process.env.NEXT_PUBLIC_PROPOSAL_THRESHOLD) || 100, // 100 tokens
-  votingPeriod: Number(process.env.NEXT_PUBLIC_GOVERNANCE_VOTING_PERIOD) || 3600, // 1 hour
+  votingPeriod:
+    Number(process.env.NEXT_PUBLIC_GOVERNANCE_VOTING_PERIOD) || 3600, // 1 hour
   votingDelay: Number(process.env.NEXT_PUBLIC_GOVERNANCE_VOTING_DELAY) || 300, // 5 minutes
   quorumPercentage: 10, // 10% quorum (vs 51% on mainnet)
 
@@ -129,8 +132,14 @@ const TESTNET_CONFIG: AppConfig = {
   // Features - Testnet only
   enableAutoAirdrop: process.env.NEXT_PUBLIC_ENABLE_AUTO_AIRDROP === 'true',
   airdropAmounts: {
-    system: BigInt((Number(process.env.NEXT_PUBLIC_TESTNET_AIRDROP_AMOUNT_SYSTEM) || 100) * 1e18),
-    self: BigInt((Number(process.env.NEXT_PUBLIC_TESTNET_AIRDROP_AMOUNT_SELF) || 100) * 1e18),
+    system: BigInt(
+      (Number(process.env.NEXT_PUBLIC_TESTNET_AIRDROP_AMOUNT_SYSTEM) || 100) *
+        1e18,
+    ),
+    self: BigInt(
+      (Number(process.env.NEXT_PUBLIC_TESTNET_AIRDROP_AMOUNT_SELF) || 100) *
+        1e18,
+    ),
   },
 
   // UI/UX - Show testnet warnings
@@ -207,7 +216,9 @@ export function getConfig(): AppConfig {
 /**
  * Get a specific config value
  */
-export function getConfigValue<K extends keyof AppConfig>(key: K): AppConfig[K] {
+export function getConfigValue<K extends keyof AppConfig>(
+  key: K,
+): AppConfig[K] {
   const config = getConfig();
   return config[key];
 }

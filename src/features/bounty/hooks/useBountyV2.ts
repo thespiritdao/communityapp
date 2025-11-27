@@ -9,10 +9,16 @@ import type { BountyFormV2Data } from '../components/BountyFormV2';
 import BountyManagerV2ABI from '@/abis/BountyManagerV2.json';
 import PodBountyServiceABI from '@/abis/PodBountyService.json';
 
-const BOUNTY_MANAGER_V2_ADDRESS = (process.env.NEXT_PUBLIC_BOUNTY_MANAGER_ADDRESS || '0x29e653502083442B8B6C7c969557022F6a3CC64C') as `0x${string}`;
-const POD_BOUNTY_SERVICE_ADDRESS = (process.env.NEXT_PUBLIC_POD_BOUNTY_SERVICE || '0xbccee13f13Ca4f97758c79C8FF05ff7EB9290396') as `0x${string}`;
-const SYSTEM_TOKEN_ADDRESS = (process.env.NEXT_PUBLIC_SYSTEM_TOKEN || '0x1317Ae277266D38C4E492558f8693F14143a6A65') as `0x${string}`;
-const SELF_TOKEN_ADDRESS = (process.env.NEXT_PUBLIC_SELF_TOKEN || '0xe9b4aB2eB9397fa41AC3223e96f9d988BeFF5D21') as `0x${string}`;
+const BOUNTY_MANAGER_V2_ADDRESS = (process.env
+  .NEXT_PUBLIC_BOUNTY_MANAGER_ADDRESS ||
+  '0x29e653502083442B8B6C7c969557022F6a3CC64C') as `0x${string}`;
+const POD_BOUNTY_SERVICE_ADDRESS = (process.env
+  .NEXT_PUBLIC_POD_BOUNTY_SERVICE ||
+  '0xbccee13f13Ca4f97758c79C8FF05ff7EB9290396') as `0x${string}`;
+const SYSTEM_TOKEN_ADDRESS = (process.env.NEXT_PUBLIC_SYSTEM_TOKEN ||
+  '0x1317Ae277266D38C4E492558f8693F14143a6A65') as `0x${string}`;
+const SELF_TOKEN_ADDRESS = (process.env.NEXT_PUBLIC_SELF_TOKEN ||
+  '0xe9b4aB2eB9397fa41AC3223e96f9d988BeFF5D21') as `0x${string}`;
 
 export interface BountyV2 {
   id: string;
@@ -47,21 +53,26 @@ export interface UseBountyV2Return {
   // Transaction call generators for OnchainKit
   createBountyCall: (data: BountyFormV2Data) => any;
   placeBidCall: (bountyId: string, proposalIpfsHash: string) => any;
-  assignBountyCall: (bountyId: string, bidIndex: number, reviewer: string, approver: string) => any;
+  assignBountyCall: (
+    bountyId: string,
+    bidIndex: number,
+    reviewer: string,
+    approver: string,
+  ) => any;
   releasePaymentCall: (bountyId: string, amount: string) => any;
   cancelBountyCall: (bountyId: string) => any;
-  
+
   // Data fetching
   getBounty: (bountyId: string) => Promise<BountyV2 | null>;
   getBounties: (podId?: string) => Promise<BountyV2[]>;
   getBountyDetails: (bountyId: string) => Promise<BountyV2 | null>;
   getAssignment: (bountyId: string) => Promise<Assignment | null>;
   getBids: (bountyId: string) => Promise<Bid[]>;
-  
+
   // Permission checks
   canManageBounties: (podId: string) => Promise<boolean>;
   canUsePodTreasury: (podId: string) => Promise<boolean>;
-  
+
   // State
   isLoading: boolean;
   error: string | null;
@@ -77,7 +88,7 @@ export const useBountyV2 = (): UseBountyV2Return => {
     const response = await fetch('/api/bounty/ipfs', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'upload', metadata })
+      body: JSON.stringify({ action: 'upload', metadata }),
     });
 
     if (!response.ok) {
@@ -91,61 +102,77 @@ export const useBountyV2 = (): UseBountyV2Return => {
   /**
    * Generate createBounty transaction call for OnchainKit
    */
-  const createBountyCall = useCallback((data: BountyFormV2Data) => {
-    if (!BOUNTY_MANAGER_V2_ADDRESS) {
-      throw new Error('Bounty Manager V2 address not configured');
-    }
+  const createBountyCall = useCallback(
+    (data: BountyFormV2Data) => {
+      if (!BOUNTY_MANAGER_V2_ADDRESS) {
+        throw new Error('Bounty Manager V2 address not configured');
+      }
 
-    return {
-      address: BOUNTY_MANAGER_V2_ADDRESS,
-      abi: BountyManagerV2ABI,
-      functionName: 'createBounty' as const,
-      args: [
-        parseEther(data.value.amount), // value (uint128)
-        data.value.token === 'SYSTEM' ? SYSTEM_TOKEN_ADDRESS : SELF_TOKEN_ADDRESS, // token
-        0, // paymentType (0=Completion)
-        data.podId, // podId
-        `temp_${Date.now()}` // ipfsHash (temporary, will be updated)
-      ]
-    };
-  }, [address]);
+      return {
+        address: BOUNTY_MANAGER_V2_ADDRESS,
+        abi: BountyManagerV2ABI,
+        functionName: 'createBounty' as const,
+        args: [
+          parseEther(data.value.amount), // value (uint128)
+          data.value.token === 'SYSTEM'
+            ? SYSTEM_TOKEN_ADDRESS
+            : SELF_TOKEN_ADDRESS, // token
+          0, // paymentType (0=Completion)
+          data.podId, // podId
+          `temp_${Date.now()}`, // ipfsHash (temporary, will be updated)
+        ],
+      };
+    },
+    [address],
+  );
 
   /**
    * Generate placeBid transaction call for OnchainKit
    */
-  const placeBidCall = useCallback((bountyId: string, proposalIpfsHash: string) => {
-    if (!BOUNTY_MANAGER_V2_ADDRESS) {
-      throw new Error('Bounty Manager V2 address not configured');
-    }
+  const placeBidCall = useCallback(
+    (bountyId: string, proposalIpfsHash: string) => {
+      if (!BOUNTY_MANAGER_V2_ADDRESS) {
+        throw new Error('Bounty Manager V2 address not configured');
+      }
 
-    return {
-      address: BOUNTY_MANAGER_V2_ADDRESS,
-      abi: BountyManagerV2ABI,
-      functionName: 'placeBid' as const,
-      args: [BigInt(bountyId), proposalIpfsHash]
-    };
-  }, []);
+      return {
+        address: BOUNTY_MANAGER_V2_ADDRESS,
+        abi: BountyManagerV2ABI,
+        functionName: 'placeBid' as const,
+        args: [BigInt(bountyId), proposalIpfsHash],
+      };
+    },
+    [],
+  );
 
   /**
    * Generate assignBounty transaction call for OnchainKit
    */
-  const assignBountyCall = useCallback((
-    bountyId: string, 
-    bidIndex: number, 
-    reviewer: string, 
-    approver: string
-  ) => {
-    if (!BOUNTY_MANAGER_V2_ADDRESS) {
-      throw new Error('Bounty Manager V2 address not configured');
-    }
+  const assignBountyCall = useCallback(
+    (
+      bountyId: string,
+      bidIndex: number,
+      reviewer: string,
+      approver: string,
+    ) => {
+      if (!BOUNTY_MANAGER_V2_ADDRESS) {
+        throw new Error('Bounty Manager V2 address not configured');
+      }
 
-    return {
-      address: BOUNTY_MANAGER_V2_ADDRESS,
-      abi: BountyManagerV2ABI,
-      functionName: 'assignBounty' as const,
-      args: [BigInt(bountyId), BigInt(bidIndex), reviewer as `0x${string}`, approver as `0x${string}`]
-    };
-  }, []);
+      return {
+        address: BOUNTY_MANAGER_V2_ADDRESS,
+        abi: BountyManagerV2ABI,
+        functionName: 'assignBounty' as const,
+        args: [
+          BigInt(bountyId),
+          BigInt(bidIndex),
+          reviewer as `0x${string}`,
+          approver as `0x${string}`,
+        ],
+      };
+    },
+    [],
+  );
 
   /**
    * Generate releasePayment transaction call for OnchainKit
@@ -159,7 +186,7 @@ export const useBountyV2 = (): UseBountyV2Return => {
       address: BOUNTY_MANAGER_V2_ADDRESS,
       abi: BountyManagerV2ABI,
       functionName: 'releasePayment' as const,
-      args: [BigInt(bountyId), parseEther(amount)]
+      args: [BigInt(bountyId), parseEther(amount)],
     };
   }, []);
 
@@ -175,89 +202,106 @@ export const useBountyV2 = (): UseBountyV2Return => {
       address: BOUNTY_MANAGER_V2_ADDRESS,
       abi: BountyManagerV2ABI,
       functionName: 'cancelBounty' as const,
-      args: [BigInt(bountyId)]
+      args: [BigInt(bountyId)],
     };
   }, []);
 
   /**
    * Fetch bounty data from contract
    */
-  const getBounty = useCallback(async (bountyId: string): Promise<BountyV2 | null> => {
-    try {
-      setIsLoading(true);
-      setError(null);
+  const getBounty = useCallback(
+    async (bountyId: string): Promise<BountyV2 | null> => {
+      try {
+        setIsLoading(true);
+        setError(null);
 
-      const response = await fetch(`/api/bounty/get?id=${bountyId}`);
-      if (!response.ok) {
-        throw new Error('Failed to fetch bounty');
+        const response = await fetch(`/api/bounty/get?id=${bountyId}`);
+        if (!response.ok) {
+          throw new Error('Failed to fetch bounty');
+        }
+
+        const bountyData = await response.json();
+        return bountyData;
+      } catch (err) {
+        const errorMessage =
+          err instanceof Error ? err.message : 'Unknown error';
+        setError(errorMessage);
+        return null;
+      } finally {
+        setIsLoading(false);
       }
-
-      const bountyData = await response.json();
-      return bountyData;
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
-      setError(errorMessage);
-      return null;
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
+    },
+    [],
+  );
 
   /**
    * Fetch all bounties for a pod (or all if no podId)
    */
-  const getBounties = useCallback(async (podId?: string): Promise<BountyV2[]> => {
-    try {
-      setIsLoading(true);
-      setError(null);
+  const getBounties = useCallback(
+    async (podId?: string): Promise<BountyV2[]> => {
+      try {
+        setIsLoading(true);
+        setError(null);
 
-      const url = podId ? `/api/bounty/list?podId=${podId}` : '/api/bounty/list';
-      const response = await fetch(url);
-      if (!response.ok) {
-        throw new Error('Failed to fetch bounties');
+        const url = podId
+          ? `/api/bounty/list?podId=${podId}`
+          : '/api/bounty/list';
+        const response = await fetch(url);
+        if (!response.ok) {
+          throw new Error('Failed to fetch bounties');
+        }
+
+        const bountiesData = await response.json();
+        return bountiesData;
+      } catch (err) {
+        const errorMessage =
+          err instanceof Error ? err.message : 'Unknown error';
+        setError(errorMessage);
+        return [];
+      } finally {
+        setIsLoading(false);
       }
-
-      const bountiesData = await response.json();
-      return bountiesData;
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
-      setError(errorMessage);
-      return [];
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
+    },
+    [],
+  );
 
   /**
    * Fetch detailed bounty data (alias for getBounty)
    */
-  const getBountyDetails = useCallback(async (bountyId: string): Promise<BountyV2 | null> => {
-    return getBounty(bountyId);
-  }, [getBounty]);
+  const getBountyDetails = useCallback(
+    async (bountyId: string): Promise<BountyV2 | null> => {
+      return getBounty(bountyId);
+    },
+    [getBounty],
+  );
 
   /**
    * Fetch assignment data from contract
    */
-  const getAssignment = useCallback(async (bountyId: string): Promise<Assignment | null> => {
-    try {
-      setIsLoading(true);
-      setError(null);
+  const getAssignment = useCallback(
+    async (bountyId: string): Promise<Assignment | null> => {
+      try {
+        setIsLoading(true);
+        setError(null);
 
-      const response = await fetch(`/api/bounty/assignment?id=${bountyId}`);
-      if (!response.ok) {
-        throw new Error('Failed to fetch assignment');
+        const response = await fetch(`/api/bounty/assignment?id=${bountyId}`);
+        if (!response.ok) {
+          throw new Error('Failed to fetch assignment');
+        }
+
+        const assignmentData = await response.json();
+        return assignmentData;
+      } catch (err) {
+        const errorMessage =
+          err instanceof Error ? err.message : 'Unknown error';
+        setError(errorMessage);
+        return null;
+      } finally {
+        setIsLoading(false);
       }
-
-      const assignmentData = await response.json();
-      return assignmentData;
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
-      setError(errorMessage);
-      return null;
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
+    },
+    [],
+  );
 
   /**
    * Fetch bids for a bounty
@@ -286,39 +330,49 @@ export const useBountyV2 = (): UseBountyV2Return => {
   /**
    * Check if user can manage bounties for a pod
    */
-  const canManageBounties = useCallback(async (podId: string): Promise<boolean> => {
-    if (!address || !POD_BOUNTY_SERVICE_ADDRESS) return false;
+  const canManageBounties = useCallback(
+    async (podId: string): Promise<boolean> => {
+      if (!address || !POD_BOUNTY_SERVICE_ADDRESS) return false;
 
-    try {
-      // This would use useReadContract in a real implementation
-      const response = await fetch(`/api/pod/permissions?user=${address}&pod=${podId}&action=manage_bounties`);
-      if (!response.ok) return false;
+      try {
+        // This would use useReadContract in a real implementation
+        const response = await fetch(
+          `/api/pod/permissions?user=${address}&pod=${podId}&action=manage_bounties`,
+        );
+        if (!response.ok) return false;
 
-      const { canManage } = await response.json();
-      return canManage;
-    } catch (err) {
-      console.error('Error checking bounty management permission:', err);
-      return false;
-    }
-  }, [address]);
+        const { canManage } = await response.json();
+        return canManage;
+      } catch (err) {
+        console.error('Error checking bounty management permission:', err);
+        return false;
+      }
+    },
+    [address],
+  );
 
   /**
    * Check if user can use pod treasury
    */
-  const canUsePodTreasury = useCallback(async (podId: string): Promise<boolean> => {
-    if (!address || !POD_BOUNTY_SERVICE_ADDRESS) return false;
+  const canUsePodTreasury = useCallback(
+    async (podId: string): Promise<boolean> => {
+      if (!address || !POD_BOUNTY_SERVICE_ADDRESS) return false;
 
-    try {
-      const response = await fetch(`/api/pod/permissions?user=${address}&pod=${podId}&action=use_treasury`);
-      if (!response.ok) return false;
+      try {
+        const response = await fetch(
+          `/api/pod/permissions?user=${address}&pod=${podId}&action=use_treasury`,
+        );
+        if (!response.ok) return false;
 
-      const { canUse } = await response.json();
-      return canUse;
-    } catch (err) {
-      console.error('Error checking treasury permission:', err);
-      return false;
-    }
-  }, [address]);
+        const { canUse } = await response.json();
+        return canUse;
+      } catch (err) {
+        console.error('Error checking treasury permission:', err);
+        return false;
+      }
+    },
+    [address],
+  );
 
   return {
     // Transaction calls for OnchainKit
@@ -327,21 +381,21 @@ export const useBountyV2 = (): UseBountyV2Return => {
     assignBountyCall,
     releasePaymentCall,
     cancelBountyCall,
-    
+
     // Data fetching
     getBounty,
     getBounties,
     getBountyDetails,
     getAssignment,
     getBids,
-    
+
     // Permission checks
     canManageBounties,
     canUsePodTreasury,
-    
+
     // State
     isLoading,
-    error
+    error,
   };
 };
 
@@ -356,8 +410,8 @@ export const useBountyReader = (bountyId?: string) => {
     functionName: 'getBounty',
     args: bountyId ? [BigInt(bountyId)] : undefined,
     query: {
-      enabled: !!bountyId && !!BOUNTY_MANAGER_V2_ADDRESS
-    }
+      enabled: !!bountyId && !!BOUNTY_MANAGER_V2_ADDRESS,
+    },
   });
 
   // Read bounty metadata
@@ -367,8 +421,8 @@ export const useBountyReader = (bountyId?: string) => {
     functionName: 'getBountyMetadata',
     args: bountyId ? [BigInt(bountyId)] : undefined,
     query: {
-      enabled: !!bountyId && !!BOUNTY_MANAGER_V2_ADDRESS
-    }
+      enabled: !!bountyId && !!BOUNTY_MANAGER_V2_ADDRESS,
+    },
   });
 
   // Read assignment data
@@ -378,14 +432,14 @@ export const useBountyReader = (bountyId?: string) => {
     functionName: 'getAssignment',
     args: bountyId ? [BigInt(bountyId)] : undefined,
     query: {
-      enabled: !!bountyId && !!BOUNTY_MANAGER_V2_ADDRESS
-    }
+      enabled: !!bountyId && !!BOUNTY_MANAGER_V2_ADDRESS,
+    },
   });
 
   return {
     bountyData,
     bountyMetadata,
-    assignmentData
+    assignmentData,
   };
 };
 

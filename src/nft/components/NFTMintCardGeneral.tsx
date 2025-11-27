@@ -45,31 +45,45 @@ export function NFTMintCardGeneral({
   const { address, isConnected } = useAccount();
 
   // Check for valid arguments
-  const isArgsValid = Array.isArray(mintArgs) && mintArgs.every(arg => arg !== undefined && arg !== null);
+  const isArgsValid =
+    Array.isArray(mintArgs) &&
+    mintArgs.every((arg) => arg !== undefined && arg !== null);
 
-  const contracts = isConnected && isArgsValid
-    ? [{
-        address: contractAddress,
-        abi,
-        functionName: 'mint',
-        args: mintArgs,
-      }]
-    : [];
+  const contracts =
+    isConnected && isArgsValid
+      ? [
+          {
+            address: contractAddress,
+            abi,
+            functionName: 'mint',
+            args: mintArgs,
+          },
+        ]
+      : [];
 
   return (
-    <div className={cn("bg-white rounded-2xl shadow-lg p-6 w-full max-w-md", className)}>
+    <div
+      className={cn(
+        'bg-white rounded-2xl shadow-lg p-6 w-full max-w-md',
+        className,
+      )}
+    >
       {/* Media/Preview */}
       {mediaUrl && (
-        <img src={mediaUrl} alt={title || "NFT"} className="rounded-xl mb-4 object-cover w-full h-64" />
+        <img
+          src={mediaUrl}
+          alt={title || 'NFT'}
+          className="rounded-xl mb-4 object-cover w-full h-64"
+        />
       )}
 
       {/* Collection and Title */}
       {collectionName && (
-        <div className="text-xs text-blue-500 font-medium mb-1">{collectionName}</div>
+        <div className="text-xs text-blue-500 font-medium mb-1">
+          {collectionName}
+        </div>
       )}
-      {title && (
-        <div className="text-lg font-bold mb-2">{title}</div>
-      )}
+      {title && <div className="text-lg font-bold mb-2">{title}</div>}
       {description && (
         <div className="text-gray-500 text-sm mb-4">{description}</div>
       )}
@@ -90,7 +104,9 @@ export function NFTMintCardGeneral({
           chainId={chainId}
           onSuccess={onSuccess}
           onError={onError}
-          onProgress={step => console.log('[NFTMintCardGeneral] step →', step)}
+          onProgress={(step) =>
+            console.log('[NFTMintCardGeneral] step →', step)
+          }
         >
           <TransactionButton
             text="Mint NFT"
@@ -103,7 +119,10 @@ export function NFTMintCardGeneral({
           </TransactionStatus>
         </Transaction>
       ) : (
-        <button disabled={true} className="px-4 py-2 bg-gray-400 text-white rounded w-full opacity-50">
+        <button
+          disabled={true}
+          className="px-4 py-2 bg-gray-400 text-white rounded w-full opacity-50"
+        >
           Connect wallet to mint
         </button>
       )}

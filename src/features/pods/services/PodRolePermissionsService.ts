@@ -1,6 +1,9 @@
 import { supabase } from '@/utils/supabaseClient';
 import type { HatPermissions } from '@/services/hatPermissionsService';
-import { EligibilityService, type EligibilityCriteria } from './EligibilityService';
+import {
+  EligibilityService,
+  type EligibilityCriteria,
+} from './EligibilityService';
 
 export interface PodRolePermission {
   id: string;
@@ -30,10 +33,12 @@ export class PodRolePermissionsService {
   /**
    * Get all role permissions for a pod with enhanced eligibility criteria
    */
-  static async getPodRolePermissions(podId: string): Promise<PodRolePermission[]> {
+  static async getPodRolePermissions(
+    podId: string,
+  ): Promise<PodRolePermission[]> {
     try {
       console.log(`🔍 Fetching role permissions for pod: ${podId}`);
-      
+
       const { data, error } = await supabase
         .from('pod_role_permissions')
         .select('*')
@@ -55,48 +60,60 @@ export class PodRolePermissionsService {
       // Enhance eligibility criteria with token names from database
       const enhancedData = await Promise.all(
         data.map(async (rolePermission) => {
-          if (rolePermission.eligibility_criteria && Array.isArray(rolePermission.eligibility_criteria)) {
+          if (
+            rolePermission.eligibility_criteria &&
+            Array.isArray(rolePermission.eligibility_criteria)
+          ) {
             const enhancedCriteria = await Promise.all(
-              rolePermission.eligibility_criteria.map(async (criterion: any) => {
-                // If criterion has contract_address but no token_name, look it up
-                if (criterion.contract_address && !criterion.token_name) {
-                  try {
-                    const { data: tokenData, error: tokenError } = await supabase
-                      .from('tokens')
-                      .select('id, name, symbol')
-                      .eq('contract_address', criterion.contract_address)
-                      .eq('is_active', true)
-                      .single();
+              rolePermission.eligibility_criteria.map(
+                async (criterion: any) => {
+                  // If criterion has contract_address but no token_name, look it up
+                  if (criterion.contract_address && !criterion.token_name) {
+                    try {
+                      const { data: tokenData, error: tokenError } =
+                        await supabase
+                          .from('tokens')
+                          .select('id, name, symbol')
+                          .eq('contract_address', criterion.contract_address)
+                          .eq('is_active', true)
+                          .single();
 
-                    if (tokenData && !tokenError) {
-                      console.log(`🎫 Found token for ${criterion.contract_address}: ${tokenData.name}`);
-                      return {
-                        ...criterion,
-                        token_name: tokenData.name,
-                        token_symbol: tokenData.symbol,
-                        token_id: tokenData.id
-                      };
-                    } else {
-                      console.log(`⚠️ No token found for contract: ${criterion.contract_address}`);
+                      if (tokenData && !tokenError) {
+                        console.log(
+                          `🎫 Found token for ${criterion.contract_address}: ${tokenData.name}`,
+                        );
+                        return {
+                          ...criterion,
+                          token_name: tokenData.name,
+                          token_symbol: tokenData.symbol,
+                          token_id: tokenData.id,
+                        };
+                      } else {
+                        console.log(
+                          `⚠️ No token found for contract: ${criterion.contract_address}`,
+                        );
+                      }
+                    } catch (tokenLookupError) {
+                      console.warn('Error looking up token:', tokenLookupError);
                     }
-                  } catch (tokenLookupError) {
-                    console.warn('Error looking up token:', tokenLookupError);
                   }
-                }
-                return criterion;
-              })
+                  return criterion;
+                },
+              ),
             );
-            
+
             return {
               ...rolePermission,
-              eligibility_criteria: enhancedCriteria
+              eligibility_criteria: enhancedCriteria,
             };
           }
           return rolePermission;
-        })
+        }),
       );
 
-      console.log(`🎯 Enhanced ${enhancedData.length} role permissions with token data`);
+      console.log(
+        `🎯 Enhanced ${enhancedData.length} role permissions with token data`,
+      );
       return enhancedData;
     } catch (error) {
       console.error(`Failed to get role permissions for pod ${podId}:`, error);
@@ -107,7 +124,10 @@ export class PodRolePermissionsService {
   /**
    * Get specific role permission by HAT ID
    */
-  static async getRolePermissionByHatId(podId: string, hatId: string): Promise<PodRolePermission | null> {
+  static async getRolePermissionByHatId(
+    podId: string,
+    hatId: string,
+  ): Promise<PodRolePermission | null> {
     try {
       const { data, error } = await supabase
         .from('pod_role_permissions')
@@ -177,11 +197,11 @@ export class PodRolePermissionsService {
       max_holders?: number;
       is_active?: boolean;
       updated_by: string;
-    }
+    },
   ): Promise<PodRolePermission> {
     try {
       console.log(`🔧 Attempting to update role permission ${id}:`, updates);
-      
+
       // First check if the record exists
       const { data: existing, error: checkError } = await supabase
         .from('pod_role_permissions')
@@ -191,7 +211,9 @@ export class PodRolePermissionsService {
 
       if (checkError && checkError.code === 'PGRST116') {
         console.error(`❌ Role permission ${id} not found in database`);
-        throw new Error(`Role permission with ID ${id} not found. Please refresh the page and try again.`);
+        throw new Error(
+          `Role permission with ID ${id} not found. Please refresh the page and try again.`,
+        );
       }
 
       if (checkError) {
@@ -207,16 +229,20 @@ export class PodRolePermissionsService {
         id,
         updates: {
           ...updates,
-          updated_at: new Date().toISOString()
-        }
+          updated_at: new Date().toISOString(),
+        },
       });
-      
+
       // Use regular client with fixed RLS policies
-      const { data: updateData, error: updateError, count } = await supabase
+      const {
+        data: updateData,
+        error: updateError,
+        count,
+      } = await supabase
         .from('pod_role_permissions')
         .update({
           ...updates,
-          updated_at: new Date().toISOString()
+          updated_at: new Date().toISOString(),
         })
         .eq('id', id)
         .select('*', { count: 'exact' });
@@ -224,7 +250,7 @@ export class PodRolePermissionsService {
       console.log('📊 Update result:', {
         affectedRows: count,
         data: updateData,
-        error: updateError
+        error: updateError,
       });
 
       if (updateError) {
@@ -233,7 +259,9 @@ export class PodRolePermissionsService {
       }
 
       if (!updateData || updateData.length === 0) {
-        throw new Error(`No rows were updated. This might be a Row Level Security (RLS) policy issue. Record ID: ${id}`);
+        throw new Error(
+          `No rows were updated. This might be a Row Level Security (RLS) policy issue. Record ID: ${id}`,
+        );
       }
 
       if (updateData.length > 1) {
@@ -256,7 +284,7 @@ export class PodRolePermissionsService {
   static async updateSyncStatus(
     id: string,
     syncStatus: 'synced' | 'pending' | 'error',
-    syncError?: string
+    syncError?: string,
   ): Promise<void> {
     try {
       const { error } = await supabase
@@ -264,7 +292,8 @@ export class PodRolePermissionsService {
         .update({
           sync_status: syncStatus,
           sync_error: syncError || null,
-          last_synced_at: syncStatus === 'synced' ? new Date().toISOString() : undefined,
+          last_synced_at:
+            syncStatus === 'synced' ? new Date().toISOString() : undefined,
         })
         .eq('id', id);
 
@@ -273,7 +302,10 @@ export class PodRolePermissionsService {
         throw error;
       }
     } catch (error) {
-      console.error(`Failed to update sync status for permission ${id}:`, error);
+      console.error(
+        `Failed to update sync status for permission ${id}:`,
+        error,
+      );
       throw error;
     }
   }
@@ -284,15 +316,14 @@ export class PodRolePermissionsService {
   static async checkUserPermission(
     userWallet: string,
     podId: string,
-    permissionKey: keyof HatPermissions
+    permissionKey: keyof HatPermissions,
   ): Promise<boolean> {
     try {
-      const { data, error } = await supabase
-        .rpc('check_pod_permission', {
-          p_user_wallet: userWallet,
-          p_pod_id: podId,
-          p_permission_key: permissionKey,
-        });
+      const { data, error } = await supabase.rpc('check_pod_permission', {
+        p_user_wallet: userWallet,
+        p_pod_id: podId,
+        p_permission_key: permissionKey,
+      });
 
       if (error) {
         console.error('Failed to check user permission:', error);
@@ -301,7 +332,10 @@ export class PodRolePermissionsService {
 
       return data || false;
     } catch (error) {
-      console.error(`Failed to check permission ${permissionKey} for ${userWallet}:`, error);
+      console.error(
+        `Failed to check permission ${permissionKey} for ${userWallet}:`,
+        error,
+      );
       return false;
     }
   }
@@ -324,7 +358,10 @@ export class PodRolePermissionsService {
 
       return data || [];
     } catch (error) {
-      console.error(`Failed to get history for permission ${permissionId}:`, error);
+      console.error(
+        `Failed to get history for permission ${permissionId}:`,
+        error,
+      );
       throw error;
     }
   }
@@ -336,7 +373,7 @@ export class PodRolePermissionsService {
     podId: string,
     leaderHatId: string,
     memberHatId: string,
-    createdBy: string
+    createdBy: string,
   ): Promise<void> {
     try {
       // Create leader role permissions
@@ -381,7 +418,10 @@ export class PodRolePermissionsService {
         created_by: createdBy,
       });
     } catch (error) {
-      console.error(`Failed to initialize default roles for pod ${podId}:`, error);
+      console.error(
+        `Failed to initialize default roles for pod ${podId}:`,
+        error,
+      );
       throw error;
     }
   }
@@ -392,10 +432,13 @@ export class PodRolePermissionsService {
   static async updateEligibilityCriteria(
     roleId: string,
     criteria: EligibilityCriteria[],
-    updatedBy: string
+    updatedBy: string,
   ): Promise<PodRolePermission> {
     try {
-      console.log(`🔧 Updating eligibility criteria for role ${roleId}:`, criteria);
+      console.log(
+        `🔧 Updating eligibility criteria for role ${roleId}:`,
+        criteria,
+      );
 
       const updatedRole = await this.updateRolePermission(roleId, {
         updated_by: updatedBy,
@@ -408,7 +451,7 @@ export class PodRolePermissionsService {
         .update({
           eligibility_criteria: criteria,
           updated_by: updatedBy,
-          updated_at: new Date().toISOString()
+          updated_at: new Date().toISOString(),
         })
         .eq('id', roleId)
         .select()
@@ -421,9 +464,11 @@ export class PodRolePermissionsService {
 
       console.log('✅ Successfully updated eligibility criteria');
       return data;
-
     } catch (error) {
-      console.error(`Failed to update eligibility criteria for role ${roleId}:`, error);
+      console.error(
+        `Failed to update eligibility criteria for role ${roleId}:`,
+        error,
+      );
       throw error;
     }
   }
@@ -433,7 +478,7 @@ export class PodRolePermissionsService {
    */
   static async checkUserEligibility(
     userAddress: string,
-    roleId: string
+    roleId: string,
   ): Promise<{ eligible: boolean; evaluation: any }> {
     try {
       // Get the role and its criteria
@@ -448,7 +493,10 @@ export class PodRolePermissionsService {
       }
 
       // If no eligibility criteria, user is eligible by default
-      if (!role.eligibility_criteria || role.eligibility_criteria.length === 0) {
+      if (
+        !role.eligibility_criteria ||
+        role.eligibility_criteria.length === 0
+      ) {
         return {
           eligible: true,
           evaluation: {
@@ -457,12 +505,12 @@ export class PodRolePermissionsService {
             overallResult: {
               passed: 0,
               total: 0,
-              message: 'No eligibility criteria defined - access granted'
+              message: 'No eligibility criteria defined - access granted',
             },
             evaluatedAt: new Date().toISOString(),
             userAddress,
-            roleId
-          }
+            roleId,
+          },
         };
       }
 
@@ -471,14 +519,13 @@ export class PodRolePermissionsService {
         userAddress,
         podId: role.pod_id,
         roleId,
-        criteria: role.eligibility_criteria
+        criteria: role.eligibility_criteria,
       });
 
       return {
         eligible: evaluation.eligible,
-        evaluation
+        evaluation,
       };
-
     } catch (error) {
       console.error(`Failed to check eligibility for role ${roleId}:`, error);
       throw error;
@@ -490,29 +537,36 @@ export class PodRolePermissionsService {
    */
   static async getEligibleRolesForUser(
     userAddress: string,
-    podId: string
-  ): Promise<{ role: PodRolePermission; eligible: boolean; evaluation: any }[]> {
+    podId: string,
+  ): Promise<
+    { role: PodRolePermission; eligible: boolean; evaluation: any }[]
+  > {
     try {
       // Get all active roles for the pod
       const roles = await this.getPodRolePermissions(podId);
-      
+
       const results = await Promise.allSettled(
         roles.map(async (role) => {
-          const eligibilityCheck = await this.checkUserEligibility(userAddress, role.id);
+          const eligibilityCheck = await this.checkUserEligibility(
+            userAddress,
+            role.id,
+          );
           return {
             role,
             eligible: eligibilityCheck.eligible,
-            evaluation: eligibilityCheck.evaluation
+            evaluation: eligibilityCheck.evaluation,
           };
-        })
+        }),
       );
 
       return results
-        .filter(result => result.status === 'fulfilled')
-        .map(result => (result as PromiseFulfilledResult<any>).value);
-
+        .filter((result) => result.status === 'fulfilled')
+        .map((result) => (result as PromiseFulfilledResult<any>).value);
     } catch (error) {
-      console.error(`Failed to get eligible roles for user ${userAddress} in pod ${podId}:`, error);
+      console.error(
+        `Failed to get eligible roles for user ${userAddress} in pod ${podId}:`,
+        error,
+      );
       throw error;
     }
   }
@@ -522,25 +576,32 @@ export class PodRolePermissionsService {
    */
   static async autoAssignEligibleRoles(
     userAddress: string,
-    podId: string
+    podId: string,
   ): Promise<string[]> {
     try {
-      const eligibleRoles = await this.getEligibleRolesForUser(userAddress, podId);
+      const eligibleRoles = await this.getEligibleRolesForUser(
+        userAddress,
+        podId,
+      );
       const assignedRoles: string[] = [];
 
       for (const { role, eligible } of eligibleRoles) {
         if (eligible && role.is_active) {
           // Here you would integrate with the actual role assignment system
           // For now, we'll just log the eligible role
-          console.log(`✅ User ${userAddress} is eligible for role ${role.role_name}`);
+          console.log(
+            `✅ User ${userAddress} is eligible for role ${role.role_name}`,
+          );
           assignedRoles.push(role.id);
         }
       }
 
       return assignedRoles;
-
     } catch (error) {
-      console.error(`Failed to auto-assign roles for user ${userAddress}:`, error);
+      console.error(
+        `Failed to auto-assign roles for user ${userAddress}:`,
+        error,
+      );
       throw error;
     }
   }

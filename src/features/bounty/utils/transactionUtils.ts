@@ -108,17 +108,19 @@ export const validateTransactionData = (data: any): TransactionValidation => {
   const validation: TransactionValidation = {
     isValid: true,
     issues: [],
-    data: {}
+    data: {},
   };
 
   try {
     // Deep clone with BigInt handling
-    validation.data = JSON.parse(JSON.stringify(data, (key, value) => {
-      if (typeof value === 'bigint') {
-        return value.toString();
-      }
-      return value;
-    }));
+    validation.data = JSON.parse(
+      JSON.stringify(data, (key, value) => {
+        if (typeof value === 'bigint') {
+          return value.toString();
+        }
+        return value;
+      }),
+    );
 
     // Validate required fields
     if (!validation.data.address) validation.issues.push('Missing address');
@@ -128,10 +130,13 @@ export const validateTransactionData = (data: any): TransactionValidation => {
     // Validate calls array
     if (Array.isArray(validation.data.calls)) {
       validation.data.calls.forEach((call: any, index: number) => {
-        if (!call.address) validation.issues.push(`Call ${index}: Missing address`);
+        if (!call.address)
+          validation.issues.push(`Call ${index}: Missing address`);
         if (!call.abi) validation.issues.push(`Call ${index}: Missing ABI`);
-        if (!call.functionName) validation.issues.push(`Call ${index}: Missing functionName`);
-        if (!Array.isArray(call.args)) validation.issues.push(`Call ${index}: Missing args array`);
+        if (!call.functionName)
+          validation.issues.push(`Call ${index}: Missing functionName`);
+        if (!Array.isArray(call.args))
+          validation.issues.push(`Call ${index}: Missing args array`);
       });
     } else {
       validation.issues.push('Calls is not an array');
@@ -140,7 +145,9 @@ export const validateTransactionData = (data: any): TransactionValidation => {
     validation.isValid = validation.issues.length === 0;
   } catch (e) {
     validation.isValid = false;
-    validation.issues.push(`Serialization error: ${e instanceof Error ? e.message : String(e)}`);
+    validation.issues.push(
+      `Serialization error: ${e instanceof Error ? e.message : String(e)}`,
+    );
   }
 
   return validation;
@@ -155,10 +162,12 @@ export const validateTransactionData = (data: any): TransactionValidation => {
  */
 export const checkETHBalance = async (
   address: string,
-  publicClient: PublicClient
+  publicClient: PublicClient,
 ): Promise<boolean> => {
   try {
-    const balance = await publicClient.getBalance({ address: address as `0x${string}` });
+    const balance = await publicClient.getBalance({
+      address: address as `0x${string}`,
+    });
     return balance >= MIN_ETH_FOR_GAS;
   } catch (error) {
     console.error('❌ Error checking ETH balance:', error);
@@ -171,12 +180,12 @@ export const checkETHBalance = async (
  */
 export const logWalletState = async (
   userAddress: string,
-  publicClient: PublicClient
+  publicClient: PublicClient,
 ): Promise<WalletState | null> => {
   try {
     const [balance, blockNumber] = await Promise.all([
       publicClient.getBalance({ address: userAddress as `0x${string}` }),
-      publicClient.getBlockNumber()
+      publicClient.getBlockNumber(),
     ]);
 
     const state: WalletState = {
@@ -184,7 +193,7 @@ export const logWalletState = async (
       balance: balance.toString(),
       balanceInEth: Number(balance) / 1e18,
       blockNumber: blockNumber.toString(),
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     };
 
     console.log('💼 Wallet State:', state);
@@ -199,12 +208,12 @@ export const logWalletState = async (
  * Logs current network conditions for debugging
  */
 export const logNetworkConditions = async (
-  publicClient: PublicClient
+  publicClient: PublicClient,
 ): Promise<NetworkConditions | null> => {
   try {
     const [gasPrice, block] = await Promise.all([
       publicClient.getGasPrice(),
-      publicClient.getBlock()
+      publicClient.getBlock(),
     ]);
 
     const conditions: NetworkConditions = {
@@ -213,7 +222,7 @@ export const logNetworkConditions = async (
       blockNumber: block.number.toString(),
       blockTimestamp: new Date(Number(block.timestamp) * 1000).toISOString(),
       baseFeePerGas: block.baseFeePerGas?.toString(),
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     };
 
     console.log('🌐 Network Conditions:', conditions);
@@ -233,7 +242,7 @@ export const logNetworkConditions = async (
  */
 export const getTransactionConfig = async (
   userAddress: string,
-  publicClient: PublicClient
+  publicClient: PublicClient,
 ): Promise<TransactionConfig> => {
   try {
     // Log initial state
@@ -248,9 +257,14 @@ export const getTransactionConfig = async (
       paymasterStatus,
       address: userAddress,
       timestamp: new Date().toISOString(),
-      decision: hasETH && !paymasterStatus ? 'non-sponsored' :
-                hasETH && paymasterStatus ? 'sponsored-with-fallback' :
-                !hasETH && paymasterStatus ? 'sponsored-only' : 'cannot-proceed'
+      decision:
+        hasETH && !paymasterStatus
+          ? 'non-sponsored'
+          : hasETH && paymasterStatus
+            ? 'sponsored-with-fallback'
+            : !hasETH && paymasterStatus
+              ? 'sponsored-only'
+              : 'cannot-proceed',
     });
 
     // If we have ETH and paymaster is not working, use non-sponsored
@@ -258,7 +272,7 @@ export const getTransactionConfig = async (
       console.log('💰 Using non-sponsored transaction (paymaster unavailable)');
       return {
         isSponsored: false,
-        chainId: BASE_CHAIN_ID
+        chainId: BASE_CHAIN_ID,
       };
     }
 
@@ -268,7 +282,7 @@ export const getTransactionConfig = async (
       return {
         isSponsored: true,
         hasFallback: true,
-        chainId: BASE_CHAIN_ID
+        chainId: BASE_CHAIN_ID,
       };
     }
 
@@ -278,7 +292,7 @@ export const getTransactionConfig = async (
       return {
         isSponsored: true,
         hasFallback: false,
-        chainId: BASE_CHAIN_ID
+        chainId: BASE_CHAIN_ID,
       };
     }
 
@@ -299,7 +313,7 @@ export const getTransactionConfig = async (
  */
 export const logTransactionLifecycle = (
   stage: string,
-  data: any
+  data: any,
 ): TransactionLifecycleLog => {
   const timestamp = new Date().toISOString();
   const log: TransactionLifecycleLog = {
@@ -308,8 +322,8 @@ export const logTransactionLifecycle = (
     data,
     paymasterConfig: {
       endpoint: process.env.NEXT_PUBLIC_PAYMASTER,
-      isValid: validatePaymasterConfig()
-    }
+      isValid: validatePaymasterConfig(),
+    },
   };
 
   console.log(`[${timestamp}] 📊 Transaction ${stage}:`, log);
@@ -321,24 +335,24 @@ export const logTransactionLifecycle = (
  */
 export const logTransactionParameters = (
   calls: TransactionCallData[],
-  isSponsored: boolean
+  isSponsored: boolean,
 ): void => {
   console.log('📋 Transaction Parameters:', {
-    calls: calls.map(call => ({
+    calls: calls.map((call) => ({
       address: call.address,
       functionName: call.functionName,
       args: call.args.map((arg: any) => {
         if (typeof arg === 'bigint') {
           return {
             value: arg.toString(),
-            type: 'bigint'
+            type: 'bigint',
           };
         }
         return arg;
-      })
+      }),
     })),
     isSponsored,
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
   });
 };
 
@@ -352,7 +366,7 @@ export const logTransactionParameters = (
 export const simulateTransaction = async (
   calls: TransactionCallData[],
   publicClient: PublicClient,
-  userAddress: string
+  userAddress: string,
 ): Promise<boolean> => {
   try {
     const simulation = await publicClient.simulateContract({
@@ -363,7 +377,7 @@ export const simulateTransaction = async (
     console.log('✅ Transaction simulation successful:', {
       simulation,
       calls: calls[0],
-      account: userAddress
+      account: userAddress,
     });
 
     return true;
@@ -371,7 +385,7 @@ export const simulateTransaction = async (
     console.error('❌ Transaction simulation failed:', {
       error,
       calls: calls[0],
-      account: userAddress
+      account: userAddress,
     });
     return false;
   }
@@ -385,8 +399,10 @@ export const simulateTransaction = async (
  * Checks if error is from Coinbase Wallet infrastructure
  */
 export const isCoinbaseWalletError = (error: any): boolean => {
-  return error?.message?.includes('scanTxTimeout') ||
-         error?.message?.includes('api.wallet.coinbase.com');
+  return (
+    error?.message?.includes('scanTxTimeout') ||
+    error?.message?.includes('api.wallet.coinbase.com')
+  );
 };
 
 /**
@@ -397,7 +413,7 @@ export const handleTransactionError = async (
   context: string,
   calls: TransactionCallData[],
   userAddress: string,
-  publicClient: PublicClient
+  publicClient: PublicClient,
 ): Promise<TransactionErrorResult> => {
   try {
     if (!userAddress) {
@@ -408,7 +424,11 @@ export const handleTransactionError = async (
     await logWalletState(userAddress, publicClient);
     await logNetworkConditions(publicClient);
 
-    const simulationSuccess = await simulateTransaction(calls, publicClient, userAddress);
+    const simulationSuccess = await simulateTransaction(
+      calls,
+      publicClient,
+      userAddress,
+    );
 
     // Get current transaction config
     const txConfig = await getTransactionConfig(userAddress, publicClient);
@@ -427,7 +447,7 @@ export const handleTransactionError = async (
         ...(error instanceof BaseError && {
           details: error.details,
           shortMessage: error.shortMessage,
-        })
+        }),
       },
       transactionData: {
         address: userAddress,
@@ -436,15 +456,15 @@ export const handleTransactionError = async (
         ...txConfig,
         simulationSuccess,
         walletType: 'coinbase',
-        timestamp: new Date().toISOString()
-      }
+        timestamp: new Date().toISOString(),
+      },
     });
 
     // If it's a Coinbase Wallet error and we have a fallback available
     if (isCoinbaseError && txConfig.hasFallback) {
       console.warn('⚠️ Coinbase Wallet error detected with fallback available', {
         error: error.message,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       });
       return { shouldRetry: true, useSponsored: false };
     }
@@ -470,12 +490,12 @@ export const pollForTransactionReceipt = async (
   onSuccess: (receipt: TransactionReceipt) => void,
   onTimeout: () => void,
   pollInterval: number = TRANSACTION_POLL_INTERVAL,
-  timeout: number = TRANSACTION_POLL_TIMEOUT
+  timeout: number = TRANSACTION_POLL_TIMEOUT,
 ): Promise<() => void> => {
   console.log('⏱️ Starting transaction receipt polling:', {
     transactionHash,
     pollInterval,
-    timeout
+    timeout,
   });
 
   let isActive = true;
@@ -487,7 +507,7 @@ export const pollForTransactionReceipt = async (
       console.log('🔍 Polling for transaction receipt:', transactionHash);
 
       const receipt = await publicClient.getTransactionReceipt({
-        hash: transactionHash as `0x${string}`
+        hash: transactionHash as `0x${string}`,
       });
 
       if (receipt && receipt.status === 'success') {
@@ -543,13 +563,15 @@ export interface TransactionStatusHandlers {
  */
 export const createTransactionStatusHandler = (
   handlers: TransactionStatusHandlers,
-  context: string
+  context: string,
 ) => {
   return (status: any) => {
     logTransactionLifecycle(`${context} Status`, {
       statusName: status.statusName,
-      hasReceipts: !!(status.transactionReceipts || status.statusData?.transactionReceipts),
-      timestamp: new Date().toISOString()
+      hasReceipts: !!(
+        status.transactionReceipts || status.statusData?.transactionReceipts
+      ),
+      timestamp: new Date().toISOString(),
     });
 
     if (status.statusName === 'init' && handlers.onInit) {
@@ -565,7 +587,8 @@ export const createTransactionStatusHandler = (
     if (status.statusName === 'success') {
       console.log(`✅ ${context}: Transaction succeeded`);
 
-      const receipts = status.transactionReceipts || status.statusData?.transactionReceipts;
+      const receipts =
+        status.transactionReceipts || status.statusData?.transactionReceipts;
       if (receipts && receipts.length > 0 && handlers.onSuccess) {
         handlers.onSuccess(receipts[0] as TransactionReceipt);
       }
@@ -577,7 +600,10 @@ export const createTransactionStatusHandler = (
     }
 
     // Call onComplete for any terminal state
-    if ((status.statusName === 'success' || status.statusName === 'error') && handlers.onComplete) {
+    if (
+      (status.statusName === 'success' || status.statusName === 'error') &&
+      handlers.onComplete
+    ) {
       handlers.onComplete();
     }
   };

@@ -1,7 +1,13 @@
 'use client';
 
 import type React from 'react';
-import { Clock, AlertTriangle, CheckCircle, XCircle, Loader2 } from 'lucide-react';
+import {
+  Clock,
+  AlertTriangle,
+  CheckCircle,
+  XCircle,
+  Loader2,
+} from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -12,19 +18,18 @@ interface TimeBoundMembershipStatusProps {
   hatId?: bigint;
   roleType: 'leader' | 'member';
   showActions?: boolean;
-  onUpdateTimeBounds?: (validFrom: Date | null, validUntil: Date | null) => void;
+  onUpdateTimeBounds?: (
+    validFrom: Date | null,
+    validUntil: Date | null,
+  ) => void;
 }
 
 /**
  * Component that displays time-bound membership status and expiration warnings
  */
-export const TimeBoundMembershipStatus: React.FC<TimeBoundMembershipStatusProps> = ({
-  podId,
-  hatId,
-  roleType,
-  showActions = false,
-  onUpdateTimeBounds
-}) => {
+export const TimeBoundMembershipStatus: React.FC<
+  TimeBoundMembershipStatusProps
+> = ({ podId, hatId, roleType, showActions = false, onUpdateTimeBounds }) => {
   const {
     membership,
     loading,
@@ -33,12 +38,12 @@ export const TimeBoundMembershipStatus: React.FC<TimeBoundMembershipStatusProps>
     refresh,
     isExpiringSoon,
     formattedTimeRemaining,
-    statusInfo
+    statusInfo,
   } = useTimeBoundMembership({
     podId,
     hatId,
     autoRefresh: true,
-    refreshInterval: 60000 // Check every minute
+    refreshInterval: 60000, // Check every minute
   });
 
   const getStatusIcon = () => {
@@ -48,7 +53,9 @@ export const TimeBoundMembershipStatus: React.FC<TimeBoundMembershipStatusProps>
       case 'green':
         return <CheckCircle className="h-4 w-4" style={{ color: '#3F7A5A' }} />;
       case 'yellow':
-        return <AlertTriangle className="h-4 w-4" style={{ color: '#C6933F' }} />;
+        return (
+          <AlertTriangle className="h-4 w-4" style={{ color: '#C6933F' }} />
+        );
       case 'red':
         return <XCircle className="h-4 w-4" style={{ color: '#8B3A3A' }} />;
       case 'blue':
@@ -115,13 +122,11 @@ export const TimeBoundMembershipStatus: React.FC<TimeBoundMembershipStatusProps>
           <Clock className="h-4 w-4" />
           Time-Bound {roleType === 'leader' ? 'Leadership' : 'Membership'}
           {membership && (
-            <Badge variant={getStatusBadgeVariant()}>
-              {membership.status}
-            </Badge>
+            <Badge variant={getStatusBadgeVariant()}>{membership.status}</Badge>
           )}
         </CardTitle>
       </CardHeader>
-      
+
       <CardContent className="space-y-4">
         {loading && (
           <div className="flex items-center gap-2 text-gray-500">
@@ -156,45 +161,73 @@ export const TimeBoundMembershipStatus: React.FC<TimeBoundMembershipStatusProps>
             )}
 
             {formattedTimeRemaining && membership.status === 'active' && (
-              <div className="text-sm" style={{ color: isExpiringSoon ? '#C6933F' : '#6b7280', fontWeight: isExpiringSoon ? 500 : 400 }}>
-                <span className="font-medium">Time Remaining:</span> {formattedTimeRemaining}
+              <div
+                className="text-sm"
+                style={{
+                  color: isExpiringSoon ? '#C6933F' : '#6b7280',
+                  fontWeight: isExpiringSoon ? 500 : 400,
+                }}
+              >
+                <span className="font-medium">Time Remaining:</span>{' '}
+                {formattedTimeRemaining}
               </div>
             )}
 
             {/* Expiration Warning */}
             {isExpiringSoon && membership.status === 'active' && (
-              <div className="border rounded-lg p-3" style={{ backgroundColor: '#FAF4EC', borderColor: '#E8D7B8' }}>
-                <div className="flex items-center gap-2" style={{ color: '#8F6B2F' }}>
+              <div
+                className="border rounded-lg p-3"
+                style={{ backgroundColor: '#FAF4EC', borderColor: '#E8D7B8' }}
+              >
+                <div
+                  className="flex items-center gap-2"
+                  style={{ color: '#8F6B2F' }}
+                >
                   <AlertTriangle className="h-4 w-4" />
                   <span className="text-sm font-medium">
-                    Your {roleType} membership expires in {formattedTimeRemaining}!
+                    Your {roleType} membership expires in{' '}
+                    {formattedTimeRemaining}!
                   </span>
                 </div>
                 <p className="text-xs mt-1" style={{ color: '#A67E35' }}>
-                  Contact pod administrators to extend your membership if needed.
+                  Contact pod administrators to extend your membership if
+                  needed.
                 </p>
               </div>
             )}
 
             {/* Expired Notice */}
             {membership.status === 'expired' && (
-              <div className="border rounded-lg p-3" style={{ backgroundColor: '#F5E6E6', borderColor: '#D9B3B3' }}>
-                <div className="flex items-center gap-2" style={{ color: '#5C1F1F' }}>
+              <div
+                className="border rounded-lg p-3"
+                style={{ backgroundColor: '#F5E6E6', borderColor: '#D9B3B3' }}
+              >
+                <div
+                  className="flex items-center gap-2"
+                  style={{ color: '#5C1F1F' }}
+                >
                   <XCircle className="h-4 w-4" />
                   <span className="text-sm font-medium">
                     Your {roleType} membership has expired
                   </span>
                 </div>
                 <p className="text-xs mt-1" style={{ color: '#8B3A3A' }}>
-                  You no longer have access to {roleType} privileges in this pod.
+                  You no longer have access to {roleType} privileges in this
+                  pod.
                 </p>
               </div>
             )}
 
             {/* Pending Activation */}
             {membership.status === 'pending' && (
-              <div className="border rounded-lg p-3" style={{ backgroundColor: '#E8F1EE', borderColor: '#B8D9CA' }}>
-                <div className="flex items-center gap-2" style={{ color: '#1F453A' }}>
+              <div
+                className="border rounded-lg p-3"
+                style={{ backgroundColor: '#E8F1EE', borderColor: '#B8D9CA' }}
+              >
+                <div
+                  className="flex items-center gap-2"
+                  style={{ color: '#1F453A' }}
+                >
                   <Clock className="h-4 w-4" />
                   <span className="text-sm font-medium">
                     Your {roleType} membership is pending activation
@@ -211,7 +244,12 @@ export const TimeBoundMembershipStatus: React.FC<TimeBoundMembershipStatusProps>
 
         {/* Actions */}
         <div className="flex items-center gap-2 pt-2 border-t">
-          <Button size="sm" variant="outline" onClick={refresh} disabled={loading}>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={refresh}
+            disabled={loading}
+          >
             {loading ? (
               <Loader2 className="h-3 w-3 animate-spin mr-1" />
             ) : (
@@ -221,15 +259,15 @@ export const TimeBoundMembershipStatus: React.FC<TimeBoundMembershipStatusProps>
           </Button>
 
           {showActions && onUpdateTimeBounds && (
-            <Button 
-              size="sm" 
+            <Button
+              size="sm"
               variant="outline"
               onClick={() => {
                 // This would open a modal to update time bounds
                 // For now, just call the callback with current values
                 onUpdateTimeBounds(
                   membership?.validFrom || null,
-                  membership?.validUntil || null
+                  membership?.validUntil || null,
                 );
               }}
             >
@@ -256,10 +294,11 @@ export const TimeBoundStatusIndicator: React.FC<{
   roleType: 'leader' | 'member';
   compact?: boolean;
 }> = ({ hatId, roleType, compact = false }) => {
-  const { membership, loading, isExpiringSoon, statusInfo } = useTimeBoundMembership({
-    hatId,
-    autoRefresh: true
-  });
+  const { membership, loading, isExpiringSoon, statusInfo } =
+    useTimeBoundMembership({
+      hatId,
+      autoRefresh: true,
+    });
 
   if (loading) {
     return (
@@ -274,18 +313,25 @@ export const TimeBoundStatusIndicator: React.FC<{
     return (
       <div className="flex items-center gap-1">
         <Clock className="h-3 w-3 text-gray-400" />
-        {!compact && <span className="text-xs text-gray-500">No restrictions</span>}
+        {!compact && (
+          <span className="text-xs text-gray-500">No restrictions</span>
+        )}
       </div>
     );
   }
 
   const getIconColor = () => {
     switch (statusInfo.color) {
-      case 'green': return isExpiringSoon ? '#C6933F' : '#3F7A5A';
-      case 'yellow': return '#C6933F';
-      case 'red': return '#8B3A3A';
-      case 'blue': return '#2F5D50';
-      default: return '#6b7280';
+      case 'green':
+        return isExpiringSoon ? '#C6933F' : '#3F7A5A';
+      case 'yellow':
+        return '#C6933F';
+      case 'red':
+        return '#8B3A3A';
+      case 'blue':
+        return '#2F5D50';
+      default:
+        return '#6b7280';
     }
   };
 

@@ -1,4 +1,3 @@
-
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useIcon } from '../../internal/hooks/useIcon';
 import { background, border, cn, pressable, text } from '../../styles/theme';
@@ -20,7 +19,6 @@ export function SwapSettings({
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   const handleToggle = useCallback(() => {
-
     setIsOpen((prev) => !prev);
   }, []);
 
@@ -43,7 +41,6 @@ export function SwapSettings({
       document.removeEventListener('mousedown', handleClickOutsideComponent);
     };
   }, [handleClickOutsideComponent]);
-
 
   const iconSvg = useIcon({ icon });
 

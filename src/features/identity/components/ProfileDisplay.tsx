@@ -1,9 +1,24 @@
 'use client';
 
 import { mapStoredValuesToLabels } from '@/features/identity/utils/formatProfileValues';
-import { interestsOptions, seekingOptions } from '@/features/identity/constants/profileOptions';
-import { Lightbulb, Search, ChevronsRightLeft, Twitter, Instagram, Facebook,
-         Youtube, Github, Linkedin, Mail, MessageCircle, Video } from 'lucide-react';
+import {
+  interestsOptions,
+  seekingOptions,
+} from '@/features/identity/constants/profileOptions';
+import {
+  Lightbulb,
+  Search,
+  ChevronsRightLeft,
+  Twitter,
+  Instagram,
+  Facebook,
+  Youtube,
+  Github,
+  Linkedin,
+  Mail,
+  MessageCircle,
+  Video,
+} from 'lucide-react';
 
 interface ProfileDisplayProps {
   profile: any;
@@ -22,7 +37,7 @@ const SOCIAL_PLATFORMS = [
   { key: 'twitch', label: 'Twitch', Icon: Video },
   { key: 'github', label: 'GitHub', Icon: Github },
   { key: 'linkedin', label: 'LinkedIn', Icon: Linkedin },
-  { key: 'email', label: 'Email', Icon: Mail }
+  { key: 'email', label: 'Email', Icon: Mail },
 ];
 
 // Format social link to show readable username/handle
@@ -45,8 +60,13 @@ const formatSocialLink = (url: string) => {
   return formatted;
 };
 
-export const ProfileDisplay: React.FC<ProfileDisplayProps> = ({ profile, address, onEditClick }) => {
-  const profilePictureUrl = profile?.profile_picture || '/images/symbolobinfin.png';
+export const ProfileDisplay: React.FC<ProfileDisplayProps> = ({
+  profile,
+  address,
+  onEditClick,
+}) => {
+  const profilePictureUrl =
+    profile?.profile_picture || '/images/symbolobinfin.png';
 
   // Debug logging
   console.log('[ProfileDisplay] Rendering with profile:', {
@@ -56,7 +76,7 @@ export const ProfileDisplay: React.FC<ProfileDisplayProps> = ({ profile, address
     open_to_connect: profile?.open_to_connect,
     twitter: profile?.twitter,
     discord: profile?.discord,
-    allKeys: profile ? Object.keys(profile) : []
+    allKeys: profile ? Object.keys(profile) : [],
   });
 
   return (
@@ -105,11 +125,17 @@ export const ProfileDisplay: React.FC<ProfileDisplayProps> = ({ profile, address
             </span>
             Interests
           </h3>
-          {profile?.interests && mapStoredValuesToLabels(profile.interests, interestsOptions).length > 0 ? (
+          {profile?.interests &&
+          mapStoredValuesToLabels(profile.interests, interestsOptions).length >
+            0 ? (
             <div className="interests-tags">
-              {mapStoredValuesToLabels(profile.interests, interestsOptions).map((label, i) => (
-                <span key={i} className="interest-tag">{label}</span>
-              ))}
+              {mapStoredValuesToLabels(profile.interests, interestsOptions).map(
+                (label, i) => (
+                  <span key={i} className="interest-tag">
+                    {label}
+                  </span>
+                ),
+              )}
             </div>
           ) : (
             <p className="interests-empty">No interests specified</p>
@@ -123,14 +149,22 @@ export const ProfileDisplay: React.FC<ProfileDisplayProps> = ({ profile, address
             </span>
             Seeking
           </h3>
-          {profile?.seeking && mapStoredValuesToLabels(profile.seeking, seekingOptions).length > 0 ? (
+          {profile?.seeking &&
+          mapStoredValuesToLabels(profile.seeking, seekingOptions).length >
+            0 ? (
             <div className="interests-tags">
-              {mapStoredValuesToLabels(profile.seeking, seekingOptions).map((label, i) => (
-                <span key={i} className="interest-tag seeking-tag">{label}</span>
-              ))}
+              {mapStoredValuesToLabels(profile.seeking, seekingOptions).map(
+                (label, i) => (
+                  <span key={i} className="interest-tag seeking-tag">
+                    {label}
+                  </span>
+                ),
+              )}
             </div>
           ) : (
-            <p className="interests-empty">Not seeking anything at the moment</p>
+            <p className="interests-empty">
+              Not seeking anything at the moment
+            </p>
           )}
         </div>
 
@@ -142,14 +176,14 @@ export const ProfileDisplay: React.FC<ProfileDisplayProps> = ({ profile, address
             Open to Connect
           </h3>
           <div className="connect-status">
-            <span className={`connect-badge ${profile?.open_to_connect || 'not-specified'}`}>
-              {
-                {
-                  low_limited: "Low / Limited",
-                  open_available: "Open / Available",
-                  actively_collaborate: "Actively looking to collaborate",
-                }[profile?.open_to_connect || ''] || "Not specified"
-              }
+            <span
+              className={`connect-badge ${profile?.open_to_connect || 'not-specified'}`}
+            >
+              {{
+                low_limited: 'Low / Limited',
+                open_available: 'Open / Available',
+                actively_collaborate: 'Actively looking to collaborate',
+              }[profile?.open_to_connect || ''] || 'Not specified'}
             </span>
           </div>
         </div>
@@ -161,28 +195,26 @@ export const ProfileDisplay: React.FC<ProfileDisplayProps> = ({ profile, address
       <div className="profile-section">
         <h3>Connect</h3>
         <div className="social-links">
-          {SOCIAL_PLATFORMS
-            .filter(({ key }) => {
-              const value = profile?.[key];
-              return value && value !== '';
-            })
-            .map(({ key, label, Icon }) => {
-              const url = profile?.[key] as string;
-              return (
-                <div key={key} className="social-link-item">
-                  <Icon size={16} className="social-link-icon" />
-                  <span className="social-link-label">{label}:</span>
-                  <a
-                    href={url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="social-link-url"
-                  >
-                    {formatSocialLink(url)}
-                  </a>
-                </div>
-              );
-            })}
+          {SOCIAL_PLATFORMS.filter(({ key }) => {
+            const value = profile?.[key];
+            return value && value !== '';
+          }).map(({ key, label, Icon }) => {
+            const url = profile?.[key] as string;
+            return (
+              <div key={key} className="social-link-item">
+                <Icon size={16} className="social-link-icon" />
+                <span className="social-link-label">{label}:</span>
+                <a
+                  href={url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="social-link-url"
+                >
+                  {formatSocialLink(url)}
+                </a>
+              </div>
+            );
+          })}
           {SOCIAL_PLATFORMS.filter(({ key }) => {
             const value = profile?.[key];
             return value && value !== '';

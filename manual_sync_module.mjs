@@ -17,15 +17,16 @@ import { keccak256, toHex, encodeBytes32String } from 'viem';
 // ============================================================================
 
 const ELIGIBILITY_MODULE_ADDRESS = '0x437e353Ad09cA2fc870bAf19D08AEb08cA81B925';
-const MANAGEMENT_HAT_ID = '3666553570037153594601873464196473588829543881174501214639906936061952';
+const MANAGEMENT_HAT_ID =
+  '3666553570037153594601873464196473588829543881174501214639906936061952';
 
 // Your agreement CID (from IPFS)
 // TODO: Get this from your database or from the agreement creation
-const AGREEMENT_CID = 'YOUR_AGREEMENT_CID_HERE';  // ← REPLACE THIS
+const AGREEMENT_CID = 'YOUR_AGREEMENT_CID_HERE'; // ← REPLACE THIS
 
 // Your private key (keep this secure!)
 // You can also use process.env.PRIVATE_KEY
-const PRIVATE_KEY = process.env.PRIVATE_KEY || 'YOUR_PRIVATE_KEY_HERE';  // ← REPLACE THIS
+const PRIVATE_KEY = process.env.PRIVATE_KEY || 'YOUR_PRIVATE_KEY_HERE'; // ← REPLACE THIS
 
 // Whether all criteria must be met (true) or any (false)
 const REQUIRE_ALL = true;
@@ -42,17 +43,17 @@ const ELIGIBILITY_MODULE_ABI = [
     inputs: [
       { name: '_hatId', type: 'uint256' },
       { name: '_agreementHash', type: 'bytes32' },
-      { name: '_requireAll', type: 'bool' }
+      { name: '_requireAll', type: 'bool' },
     ],
-    outputs: []
+    outputs: [],
   },
   {
     name: 'getHatCriteria',
     type: 'function',
     stateMutability: 'view',
     inputs: [{ name: '_hatId', type: 'uint256' }],
-    outputs: [{ name: '', type: 'bytes32[]' }]
-  }
+    outputs: [{ name: '', type: 'bytes32[]' }],
+  },
 ];
 
 // ============================================================================
@@ -86,21 +87,23 @@ async function main() {
     console.log('\nOption 1: Set environment variable:');
     console.log('  export PRIVATE_KEY=0x...');
     console.log('  node manual_sync_module.mjs\n');
-    console.log('Option 2: Update PRIVATE_KEY in the script (not recommended)\n');
+    console.log(
+      'Option 2: Update PRIVATE_KEY in the script (not recommended)\n',
+    );
     process.exit(1);
   }
 
   // Create clients
   const publicClient = createPublicClient({
     chain: base,
-    transport: http()
+    transport: http(),
   });
 
   const account = privateKeyToAccount(PRIVATE_KEY);
   const walletClient = createWalletClient({
     account,
     chain: base,
-    transport: http()
+    transport: http(),
   });
 
   console.log('📋 Configuration:');
@@ -121,7 +124,7 @@ async function main() {
       address: ELIGIBILITY_MODULE_ADDRESS,
       abi: ELIGIBILITY_MODULE_ABI,
       functionName: 'getHatCriteria',
-      args: [BigInt(MANAGEMENT_HAT_ID)]
+      args: [BigInt(MANAGEMENT_HAT_ID)],
     });
 
     console.log(`   Current criteria count: ${currentCriteria.length}`);
@@ -152,7 +155,7 @@ async function main() {
       address: ELIGIBILITY_MODULE_ADDRESS,
       abi: ELIGIBILITY_MODULE_ABI,
       functionName: 'addAgreementCriterion',
-      args: [BigInt(MANAGEMENT_HAT_ID), agreementHash, REQUIRE_ALL]
+      args: [BigInt(MANAGEMENT_HAT_ID), agreementHash, REQUIRE_ALL],
     });
 
     console.log(`   ⏳ Transaction submitted: ${hash}`);
@@ -171,7 +174,7 @@ async function main() {
         address: ELIGIBILITY_MODULE_ADDRESS,
         abi: ELIGIBILITY_MODULE_ABI,
         functionName: 'getHatCriteria',
-        args: [BigInt(MANAGEMENT_HAT_ID)]
+        args: [BigInt(MANAGEMENT_HAT_ID)],
       });
 
       console.log(`   ✅ Updated criteria count: ${updatedCriteria.length}`);
@@ -186,18 +189,19 @@ async function main() {
       console.log('1. Refresh your pod management page');
       console.log('2. Check console for: isEligible: true');
       console.log('3. Click "Claim Management HAT" button\n');
-
     } else {
       console.error('❌ Transaction failed!');
       console.log(`   Receipt: ${JSON.stringify(receipt, null, 2)}\n`);
     }
-
   } catch (error) {
     console.error('❌ Error adding criterion:', error.message);
 
     if (error.message.includes('insufficient funds')) {
       console.log('\n💡 Your wallet needs ETH on Base to pay for gas.');
-    } else if (error.message.includes('not authorized') || error.message.includes('Ownable')) {
+    } else if (
+      error.message.includes('not authorized') ||
+      error.message.includes('Ownable')
+    ) {
       console.log('\n💡 Your address is not authorized to modify this module.');
       console.log('   Only the HAT admin can add criteria.');
       console.log(`   Your address: ${account.address}`);

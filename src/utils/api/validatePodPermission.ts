@@ -46,18 +46,19 @@ export async function validatePodPermission(
   request: Request,
   podId: string,
   permissionKey: keyof HatPermissions,
-  walletAddress?: string
+  walletAddress?: string,
 ): Promise<PermissionValidationResult> {
   try {
     // Step 1: Verify authentication
-    const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+    const { data: sessionData, error: sessionError } =
+      await supabase.auth.getSession();
 
     if (sessionError || !sessionData?.session) {
       console.error('❌ API Permission Check: No authenticated session');
       return {
         allowed: false,
         error: 'Unauthorized - Please sign in',
-        statusCode: 401
+        statusCode: 401,
       };
     }
 
@@ -78,7 +79,7 @@ export async function validatePodPermission(
         return {
           allowed: false,
           error: 'User profile not found',
-          statusCode: 404
+          statusCode: 404,
         };
       }
 
@@ -93,10 +94,13 @@ export async function validatePodPermission(
         .eq('user_id', userId)
         .single();
 
-      if (!userProfile || userProfile.wallet_address.toLowerCase() !== walletAddress.toLowerCase()) {
+      if (
+        !userProfile ||
+        userProfile.wallet_address.toLowerCase() !== walletAddress.toLowerCase()
+      ) {
         console.error('❌ API Permission Check: Wallet mismatch', {
           authenticated: userProfile?.wallet_address,
-          claimed: walletAddress
+          claimed: walletAddress,
         });
         return {
           allowed: false,
@@ -104,8 +108,8 @@ export async function validatePodPermission(
           statusCode: 403,
           details: {
             userId,
-            walletAddress: userProfile?.wallet_address
-          }
+            walletAddress: userProfile?.wallet_address,
+          },
         };
       }
     }
@@ -130,14 +134,14 @@ export async function validatePodPermission(
         details: {
           userId,
           walletAddress: userWallet,
-          podId
-        }
+          podId,
+        },
       };
     }
 
     console.log('📋 API Permission Check: Found pod membership:', {
       hat_id: membership.hat_id?.slice(0, 10) + '...',
-      type: membership.membership_type
+      type: membership.membership_type,
     });
 
     // Step 5: Get role permissions
@@ -149,7 +153,10 @@ export async function validatePodPermission(
       .single();
 
     if (roleError || !rolePermissions) {
-      console.error('❌ API Permission Check: Role permissions not found for HAT', membership.hat_id);
+      console.error(
+        '❌ API Permission Check: Role permissions not found for HAT',
+        membership.hat_id,
+      );
       return {
         allowed: false,
         error: 'Forbidden - Role permissions not configured',
@@ -158,15 +165,16 @@ export async function validatePodPermission(
           userId,
           walletAddress: userWallet,
           podId,
-          hatId: membership.hat_id
-        }
+          hatId: membership.hat_id,
+        },
       };
     }
 
     // Step 6: Parse and check specific permission
-    const permissions = typeof rolePermissions.permissions === 'string'
-      ? JSON.parse(rolePermissions.permissions)
-      : rolePermissions.permissions;
+    const permissions =
+      typeof rolePermissions.permissions === 'string'
+        ? JSON.parse(rolePermissions.permissions)
+        : rolePermissions.permissions;
 
     const hasPermission = permissions[permissionKey] === true;
 
@@ -174,7 +182,7 @@ export async function validatePodPermission(
       role: rolePermissions.role_name,
       permissionKey,
       hasPermission,
-      allPermissions: Object.keys(permissions)
+      allPermissions: Object.keys(permissions),
     });
 
     if (!hasPermission) {
@@ -189,8 +197,8 @@ export async function validatePodPermission(
           podId,
           permissionKey,
           roleName: rolePermissions.role_name,
-          hasPermission: false
-        }
+          hasPermission: false,
+        },
       };
     }
 
@@ -204,16 +212,15 @@ export async function validatePodPermission(
         podId,
         permissionKey,
         roleName: rolePermissions.role_name,
-        hasPermission: true
-      }
+        hasPermission: true,
+      },
     };
-
   } catch (error) {
     console.error('❌ API Permission Check: Unexpected error:', error);
     return {
       allowed: false,
       error: 'Internal server error',
-      statusCode: 500
+      statusCode: 500,
     };
   }
 }
@@ -225,17 +232,18 @@ export async function validatePodPermission(
 export async function validatePodMembership(
   request: Request,
   podId: string,
-  walletAddress?: string
+  walletAddress?: string,
 ): Promise<PermissionValidationResult> {
   try {
     // Step 1: Verify authentication
-    const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+    const { data: sessionData, error: sessionError } =
+      await supabase.auth.getSession();
 
     if (sessionError || !sessionData?.session) {
       return {
         allowed: false,
         error: 'Unauthorized - Please sign in',
-        statusCode: 401
+        statusCode: 401,
       };
     }
 
@@ -253,7 +261,7 @@ export async function validatePodMembership(
         return {
           allowed: false,
           error: 'User profile not found',
-          statusCode: 404
+          statusCode: 404,
         };
       }
 
@@ -273,7 +281,7 @@ export async function validatePodMembership(
       return {
         allowed: false,
         error: 'Forbidden - You are not a member of this pod',
-        statusCode: 403
+        statusCode: 403,
       };
     }
 
@@ -281,16 +289,15 @@ export async function validatePodMembership(
       allowed: true,
       details: {
         walletAddress: userWallet,
-        podId
-      }
+        podId,
+      },
     };
-
   } catch (error) {
     console.error('❌ Membership Check: Unexpected error:', error);
     return {
       allowed: false,
       error: 'Internal server error',
-      statusCode: 500
+      statusCode: 500,
     };
   }
 }

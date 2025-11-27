@@ -3,7 +3,7 @@ import { unifiedNotificationService } from '@/services/unifiedNotificationServic
 import {
   getFulfillmentManagers,
   getUserProfile,
-  formatUserDisplayName
+  formatUserDisplayName,
 } from '@/features/marketplace/utils/marketplaceNotificationHelpers';
 
 /**
@@ -40,14 +40,17 @@ export async function POST(request: NextRequest) {
           productId,
           orderId,
           requiredToken,
-          transactionHash
+          transactionHash,
         } = notificationData;
 
         // Validate required fields
         if (!buyerAddress || !productName || !productId) {
           return NextResponse.json(
-            { error: 'Missing required fields: buyerAddress, productName, productId' },
-            { status: 400 }
+            {
+              error:
+                'Missing required fields: buyerAddress, productName, productId',
+            },
+            { status: 400 },
           );
         }
 
@@ -57,7 +60,7 @@ export async function POST(request: NextRequest) {
           productId,
           orderId,
           requiredToken,
-          transactionHash
+          transactionHash,
         });
 
         // Get fulfillment managers using HATS-based membership
@@ -67,7 +70,7 @@ export async function POST(request: NextRequest) {
           console.warn('⚠️ No fulfillment managers found for this product');
           return NextResponse.json({
             success: true,
-            warning: 'No fulfillment managers found'
+            warning: 'No fulfillment managers found',
           });
         }
 
@@ -95,20 +98,25 @@ export async function POST(request: NextRequest) {
                 product_id: productId,
                 product_name: productName,
                 required_token: requiredToken,
-                transaction_hash: transactionHash
-              }
+                transaction_hash: transactionHash,
+              },
             });
 
-            console.log(`✅ Notified fulfillment manager: ${manager.wallet_address}`);
+            console.log(
+              `✅ Notified fulfillment manager: ${manager.wallet_address}`,
+            );
           } catch (notifError) {
-            console.error(`❌ Failed to notify ${manager.wallet_address}:`, notifError);
+            console.error(
+              `❌ Failed to notify ${manager.wallet_address}:`,
+              notifError,
+            );
             // Continue notifying other managers
           }
         }
 
         return NextResponse.json({
           success: true,
-          managers_notified: managers.length
+          managers_notified: managers.length,
         });
       }
 
@@ -119,14 +127,14 @@ export async function POST(request: NextRequest) {
           contextType,
           contextId,
           contextUrl,
-          message
+          message,
         } = notificationData;
 
         // Validate required fields
         if (!recipientAddress || !senderAddress || !contextType || !contextId) {
           return NextResponse.json(
             { error: 'Missing required fields for user mention notification' },
-            { status: 400 }
+            { status: 400 },
           );
         }
 
@@ -147,7 +155,7 @@ export async function POST(request: NextRequest) {
           context_url: contextUrl,
           context_type: contextType as any,
           context_id: contextId,
-          priority: 'medium'
+          priority: 'medium',
         });
 
         console.log('✅ User mention notification created');
@@ -162,14 +170,23 @@ export async function POST(request: NextRequest) {
           productName: orderProductName,
           orderId: statusUpdateOrderId,
           trackingNumber: orderTrackingNumber,
-          notes: orderNotes
+          notes: orderNotes,
         } = notificationData;
 
         // Validate required fields
-        if (!orderBuyerAddress || !managerAddress || !orderStatus || !orderProductName || !statusUpdateOrderId) {
+        if (
+          !orderBuyerAddress ||
+          !managerAddress ||
+          !orderStatus ||
+          !orderProductName ||
+          !statusUpdateOrderId
+        ) {
           return NextResponse.json(
-            { error: 'Missing required fields for order status update notification' },
-            { status: 400 }
+            {
+              error:
+                'Missing required fields for order status update notification',
+            },
+            { status: 400 },
           );
         }
 
@@ -177,11 +194,15 @@ export async function POST(request: NextRequest) {
 
         // Get manager profile for display name
         const managerProfile = await getUserProfile(managerAddress);
-        const managerName = formatUserDisplayName(managerAddress, managerProfile);
+        const managerName = formatUserDisplayName(
+          managerAddress,
+          managerProfile,
+        );
 
         // Format status-specific message
         let statusMessage = '';
-        let notificationPriority: 'low' | 'medium' | 'high' | 'urgent' = 'medium';
+        let notificationPriority: 'low' | 'medium' | 'high' | 'urgent' =
+          'medium';
 
         switch (orderStatus.toLowerCase()) {
           case 'processing':
@@ -215,7 +236,10 @@ export async function POST(request: NextRequest) {
             notificationPriority = 'medium';
         }
 
-        if (orderNotes && !['cancelled', 'refunded'].includes(orderStatus.toLowerCase())) {
+        if (
+          orderNotes &&
+          !['cancelled', 'refunded'].includes(orderStatus.toLowerCase())
+        ) {
           statusMessage += ` Note: ${orderNotes}`;
         }
 
@@ -235,8 +259,8 @@ export async function POST(request: NextRequest) {
             order_status: orderStatus,
             product_name: orderProductName,
             tracking_number: orderTrackingNumber,
-            notes: orderNotes
-          }
+            notes: orderNotes,
+          },
         });
 
         console.log('✅ Order status update notification created');
@@ -246,14 +270,16 @@ export async function POST(request: NextRequest) {
       default:
         return NextResponse.json(
           { error: `Unsupported notification type: ${type}` },
-          { status: 400 }
+          { status: 400 },
         );
     }
   } catch (error) {
     console.error('❌ Notification API error:', error);
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Internal server error' },
-      { status: 500 }
+      {
+        error: error instanceof Error ? error.message : 'Internal server error',
+      },
+      { status: 500 },
     );
   }
 }

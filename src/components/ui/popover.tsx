@@ -1,5 +1,5 @@
-import * as React from "react";
-import * as RadixPopover from "@radix-ui/react-popover";
+import * as React from 'react';
+import * as RadixPopover from '@radix-ui/react-popover';
 
 export const Popover = RadixPopover.Root;
 export const PopoverTrigger = RadixPopover.Trigger;
@@ -11,4 +11,4 @@ export const PopoverContent = React.forwardRef<
     {children}
   </RadixPopover.Content>
 ));
-PopoverContent.displayName = "PopoverContent"; 
+PopoverContent.displayName = 'PopoverContent';

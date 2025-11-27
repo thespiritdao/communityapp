@@ -4,7 +4,7 @@ import { unifiedNotificationService } from '@/services/unifiedNotificationServic
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
+  process.env.SUPABASE_SERVICE_ROLE_KEY!,
 );
 
 /**
@@ -42,24 +42,34 @@ export async function POST(request: NextRequest) {
       desiredResolution,
       disputedAmount,
       disputedToken,
-      priority = 'medium'
+      priority = 'medium',
     } = body;
 
     console.log('🚨 Dispute filing request:', {
       bountyId,
       bidId,
       filerAddress,
-      disputeType
+      disputeType,
     });
 
     // =====================================================
     // 1. VALIDATION
     // =====================================================
 
-    if (!bountyId || !filerAddress || !disputeType || !disputeTitle || !disputeDescription || !desiredResolution) {
+    if (
+      !bountyId ||
+      !filerAddress ||
+      !disputeType ||
+      !disputeTitle ||
+      !disputeDescription ||
+      !desiredResolution
+    ) {
       return NextResponse.json(
-        { error: 'Missing required fields: bountyId, filerAddress, disputeType, disputeTitle, disputeDescription, desiredResolution' },
-        { status: 400 }
+        {
+          error:
+            'Missing required fields: bountyId, filerAddress, disputeType, disputeTitle, disputeDescription, desiredResolution',
+        },
+        { status: 400 },
       );
     }
 
@@ -72,13 +82,15 @@ export async function POST(request: NextRequest) {
       'deadline_missed',
       'communication_failed',
       'terms_violated',
-      'other'
+      'other',
     ];
 
     if (!validDisputeTypes.includes(disputeType)) {
       return NextResponse.json(
-        { error: `Invalid dispute type. Must be one of: ${validDisputeTypes.join(', ')}` },
-        { status: 400 }
+        {
+          error: `Invalid dispute type. Must be one of: ${validDisputeTypes.join(', ')}`,
+        },
+        { status: 400 },
       );
     }
 
@@ -88,23 +100,22 @@ export async function POST(request: NextRequest) {
 
     const { data: bounty, error: bountyError } = await supabase
       .from('bounties')
-      .select('id, title, creator_address, status, value_amount, value_token, pod_id')
+      .select(
+        'id, title, creator_address, status, value_amount, value_token, pod_id',
+      )
       .eq('id', bountyId)
       .single();
 
     if (bountyError || !bounty) {
       console.error('❌ Bounty not found:', bountyError);
-      return NextResponse.json(
-        { error: 'Bounty not found' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: 'Bounty not found' }, { status: 404 });
     }
 
     // Check if bounty is already cancelled
     if (bounty.status === 'cancelled') {
       return NextResponse.json(
         { error: 'Cannot file dispute on cancelled bounty' },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -131,7 +142,7 @@ export async function POST(request: NextRequest) {
         if (bidError || !bid) {
           return NextResponse.json(
             { error: 'Bid not found or does not belong to this bounty' },
-            { status: 404 }
+            { status: 404 },
           );
         }
 
@@ -139,7 +150,7 @@ export async function POST(request: NextRequest) {
       } else {
         return NextResponse.json(
           { error: 'Creators must specify a bid when filing a dispute' },
-          { status: 400 }
+          { status: 400 },
         );
       }
     } else {
@@ -147,7 +158,7 @@ export async function POST(request: NextRequest) {
       if (!bidId) {
         return NextResponse.json(
           { error: 'Bidders must specify their bid when filing a dispute' },
-          { status: 400 }
+          { status: 400 },
         );
       }
 
@@ -161,7 +172,7 @@ export async function POST(request: NextRequest) {
       if (bidError || !bid) {
         return NextResponse.json(
           { error: 'Bid not found or does not belong to this bounty' },
-          { status: 404 }
+          { status: 404 },
         );
       }
 
@@ -170,8 +181,11 @@ export async function POST(request: NextRequest) {
         filedAgainst = bounty.creator_address?.toLowerCase() || '';
       } else {
         return NextResponse.json(
-          { error: 'You can only file disputes for bounties you created or bid on' },
-          { status: 403 }
+          {
+            error:
+              'You can only file disputes for bounties you created or bid on',
+          },
+          { status: 403 },
         );
       }
     }
@@ -179,7 +193,7 @@ export async function POST(request: NextRequest) {
     if (!filerRole || !filedAgainst) {
       return NextResponse.json(
         { error: 'Could not determine dispute parties' },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -191,7 +205,12 @@ export async function POST(request: NextRequest) {
       .from('bounty_disputes')
       .select('id, status')
       .eq('bounty_id', bountyId)
-      .in('status', ['open', 'under_review', 'awaiting_evidence', 'pending_resolution']);
+      .in('status', [
+        'open',
+        'under_review',
+        'awaiting_evidence',
+        'pending_resolution',
+      ]);
 
     if (existingError) {
       console.error('❌ Error checking existing disputes:', existingError);
@@ -200,10 +219,11 @@ export async function POST(request: NextRequest) {
     if (existingDisputes && existingDisputes.length > 0) {
       return NextResponse.json(
         {
-          error: 'There is already an open dispute for this bounty. Please wait for it to be resolved.',
-          existingDisputeId: existingDisputes[0].id
+          error:
+            'There is already an open dispute for this bounty. Please wait for it to be resolved.',
+          existingDisputeId: existingDisputes[0].id,
         },
-        { status: 409 }
+        { status: 409 },
       );
     }
 
@@ -229,7 +249,7 @@ export async function POST(request: NextRequest) {
         disputed_amount: disputedAmount || bounty.value_amount,
         disputed_token: disputedToken || bounty.value_token,
         created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
+        updated_at: new Date().toISOString(),
       })
       .select()
       .single();
@@ -238,7 +258,7 @@ export async function POST(request: NextRequest) {
       console.error('❌ Error creating dispute:', insertError);
       return NextResponse.json(
         { error: 'Failed to create dispute', details: insertError?.message },
-        { status: 500 }
+        { status: 500 },
       );
     }
 
@@ -257,7 +277,7 @@ export async function POST(request: NextRequest) {
         comment_text: `Dispute filed by ${filerRole === 'creator' ? 'bounty creator' : 'bidder'}. Type: ${disputeType.replace('_', ' ')}`,
         comment_type: 'system_message',
         is_private: false,
-        created_at: new Date().toISOString()
+        created_at: new Date().toISOString(),
       });
 
     if (commentError) {
@@ -280,10 +300,13 @@ export async function POST(request: NextRequest) {
         context_type: 'bounty',
         context_id: newDispute.id,
         context_url: `/bounty/dispute/${newDispute.id}`,
-        priority: priority === 'urgent' ? 'high' : 'medium'
+        priority: priority === 'urgent' ? 'high' : 'medium',
       });
     } catch (opponentNotifError) {
-      console.error('⚠️ Error sending opponent notification:', opponentNotifError);
+      console.error(
+        '⚠️ Error sending opponent notification:',
+        opponentNotifError,
+      );
     }
 
     // Notify pod leaders if bounty belongs to a pod
@@ -296,9 +319,10 @@ export async function POST(request: NextRequest) {
 
       if (pod && pod.pod_leads && pod.pod_leads.length > 0) {
         const podLeaderPromises = pod.pod_leads
-          .filter((lead: string) =>
-            lead.toLowerCase() !== filerAddress.toLowerCase() &&
-            lead.toLowerCase() !== filedAgainst
+          .filter(
+            (lead: string) =>
+              lead.toLowerCase() !== filerAddress.toLowerCase() &&
+              lead.toLowerCase() !== filedAgainst,
           )
           .map((lead: string) =>
             unifiedNotificationService.createNotification({
@@ -310,8 +334,8 @@ export async function POST(request: NextRequest) {
               context_type: 'bounty',
               context_id: newDispute.id,
               context_url: `/bounty/dispute/${newDispute.id}`,
-              priority: 'high'
-            })
+              priority: 'high',
+            }),
           );
 
         if (podLeaderPromises.length > 0) {
@@ -326,7 +350,9 @@ export async function POST(request: NextRequest) {
     // =====================================================
 
     if (bounty.status === 'in-progress') {
-      console.log('⚠️ Bounty is in-progress, payment release should be paused until dispute resolves');
+      console.log(
+        '⚠️ Bounty is in-progress, payment release should be paused until dispute resolves',
+      );
       // This will be enforced in the payment release component
     }
 
@@ -344,16 +370,19 @@ export async function POST(request: NextRequest) {
         disputeTitle: newDispute.dispute_title,
         status: newDispute.status,
         priority: newDispute.priority,
-        createdAt: newDispute.created_at
+        createdAt: newDispute.created_at,
       },
-      message: 'Dispute filed successfully. Both parties and pod leaders have been notified.'
+      message:
+        'Dispute filed successfully. Both parties and pod leaders have been notified.',
     });
-
   } catch (error) {
     console.error('❌ Error in dispute filing API:', error);
     return NextResponse.json(
-      { error: 'Internal server error', details: error instanceof Error ? error.message : 'Unknown error' },
-      { status: 500 }
+      {
+        error: 'Internal server error',
+        details: error instanceof Error ? error.message : 'Unknown error',
+      },
+      { status: 500 },
     );
   }
 }

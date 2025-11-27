@@ -1,6 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
 import { PodCoreService } from '../services/PodCoreService';
-import { getTreasuryAddress, getTreasuryAddressSync } from '../utils/treasuryAddressUtils';
+import {
+  getTreasuryAddress,
+  getTreasuryAddressSync,
+} from '../utils/treasuryAddressUtils';
 import type { Pod } from '../types';
 
 export interface UsePodDetailsConfig {
@@ -21,7 +24,9 @@ export interface UsePodDetailsReturn {
  * Hook for loading and managing single pod details
  * Includes treasury address resolution and validation
  */
-export function usePodDetails({ podId }: UsePodDetailsConfig): UsePodDetailsReturn {
+export function usePodDetails({
+  podId,
+}: UsePodDetailsConfig): UsePodDetailsReturn {
   const [pod, setPod] = useState<Pod | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -30,7 +35,8 @@ export function usePodDetails({ podId }: UsePodDetailsConfig): UsePodDetailsRetu
 
   // Validate pod ID format
   const isValidPodId = useCallback(() => {
-    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    const uuidRegex =
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
     return uuidRegex.test(podId);
   }, [podId]);
 
@@ -45,21 +51,21 @@ export function usePodDetails({ podId }: UsePodDetailsConfig): UsePodDetailsRetu
       setError('Invalid pod ID format');
       return;
     }
-    
+
     try {
       setLoading(true);
       setError(null);
-      
+
       // Load pod data
       console.log('🔄 Loading pod details for:', podId);
       const podData = await PodCoreService.getPodById(podId);
-      
+
       if (!podData) {
         setError('Pod not found');
         setPod(null);
         return;
       }
-      
+
       setPod(podData);
       console.log('✅ Pod loaded:', podData.name);
 
@@ -69,21 +75,22 @@ export function usePodDetails({ podId }: UsePodDetailsConfig): UsePodDetailsRetu
         try {
           console.log('🏦 Resolving treasury address...');
           const factoryTreasuryAddress = await getTreasuryAddress(
-            podData.id, 
-            podData.treasury_contract_address
+            podData.id,
+            podData.treasury_contract_address,
           );
           setTreasuryAddress(factoryTreasuryAddress);
           console.log('✅ Treasury address resolved:', factoryTreasuryAddress);
         } catch (treasuryError) {
           console.error('❌ Treasury address lookup failed:', treasuryError);
           // Fallback to sync method with database value
-          const syncTreasuryAddress = getTreasuryAddressSync(podData.treasury_contract_address);
+          const syncTreasuryAddress = getTreasuryAddressSync(
+            podData.treasury_contract_address,
+          );
           setTreasuryAddress(syncTreasuryAddress);
         } finally {
           setTreasuryLoading(false);
         }
       }
-      
     } catch (err) {
       console.error('❌ Failed to load pod:', err);
       setError(err instanceof Error ? err.message : 'Failed to load pod');

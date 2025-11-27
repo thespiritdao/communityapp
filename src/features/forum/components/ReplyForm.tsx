@@ -17,40 +17,41 @@ export function ReplyForm({ threadId, onReplySuccess }: ReplyFormProps) {
   const { submitPost, isLoading, address } = useForum();
   const [isReady, setIsReady] = useState(false);
   const [requiredToken, setRequiredToken] = useState<string | null>(null);
-  
+
   // Fetch the required_token from the thread's category
-	useEffect(() => {
-	  async function fetchThreadToken() {
-		try {
-		  const { data: threadData, error: threadError } = await supabase
-			.from('forum_threads')
-			.select('required_token, category_id')  // <-- Add category_id here
-			.eq('id', threadId)
-			.single();
+  useEffect(() => {
+    async function fetchThreadToken() {
+      try {
+        const { data: threadData, error: threadError } = await supabase
+          .from('forum_threads')
+          .select('required_token, category_id') // <-- Add category_id here
+          .eq('id', threadId)
+          .single();
 
-		  if (threadError || !threadData) {
-			console.error('Error fetching thread data:', threadError);
-			return;
-		  }
+        if (threadError || !threadData) {
+          console.error('Error fetching thread data:', threadError);
+          return;
+        }
 
-		  console.log(`Fetched thread data:`, threadData);
-		  setRequiredToken(threadData.required_token || null);
-		  // Store the category_id as well in a new state variable
-		  setCategoryId(threadData.category_id || null);
-		} catch (error) {
-		  console.error('Unexpected error fetching thread data:', error);
-		}
-	  }
+        console.log(`Fetched thread data:`, threadData);
+        setRequiredToken(threadData.required_token || null);
+        // Store the category_id as well in a new state variable
+        setCategoryId(threadData.category_id || null);
+      } catch (error) {
+        console.error('Unexpected error fetching thread data:', error);
+      }
+    }
 
-	  fetchThreadToken();
-	}, [threadId]);
+    fetchThreadToken();
+  }, [threadId]);
 
-	// Add a new state variable at the top:
-	const [categoryId, setCategoryId] = useState<string | null>(null);
+  // Add a new state variable at the top:
+  const [categoryId, setCategoryId] = useState<string | null>(null);
 
   // Ensure the form is ready only when the user has a valid wallet
   useEffect(() => {
-    const hasValidAddress = !!address && typeof address === 'string' && address.startsWith('0x');
+    const hasValidAddress =
+      !!address && typeof address === 'string' && address.startsWith('0x');
     setIsReady(hasValidAddress);
   }, [address]);
 
@@ -71,7 +72,7 @@ export function ReplyForm({ threadId, onReplySuccess }: ReplyFormProps) {
     // If requiredToken is still null, try to fetch it one more time
     let tokenToUse = requiredToken;
     if (tokenToUse === null) {
-      console.log("Re-fetching required_token before posting...");
+      console.log('Re-fetching required_token before posting...');
       const { data: threadData, error: threadError } = await supabase
         .from('forum_threads')
         .select('required_token')
@@ -115,25 +116,25 @@ export function ReplyForm({ threadId, onReplySuccess }: ReplyFormProps) {
           Connecting to your wallet...
         </div>
       )}
-     <form className={styles.replyForm} onSubmit={handleSubmit}>
-		  <UserTagging
-			value={content}
-			onChange={(value) => setContent(value)}
-			placeholder="Write your reply here... Use @ to mention someone"
-			className={styles.replyTextarea}
-			contextType="forum"
-			contextId={threadId}
-			contextUrl={`/forum/thread/${threadId}`}
-		  />
-		  {error && <div className={styles.submitError}>{error}</div>}
-		  <button
-			type="submit"
-			className={styles.submitButton}
-			disabled={isLoading || !isReady}
-		  >
-			{isLoading ? 'Posting...' : 'Post Reply'}
-		  </button>
-		</form>
+      <form className={styles.replyForm} onSubmit={handleSubmit}>
+        <UserTagging
+          value={content}
+          onChange={(value) => setContent(value)}
+          placeholder="Write your reply here... Use @ to mention someone"
+          className={styles.replyTextarea}
+          contextType="forum"
+          contextId={threadId}
+          contextUrl={`/forum/thread/${threadId}`}
+        />
+        {error && <div className={styles.submitError}>{error}</div>}
+        <button
+          type="submit"
+          className={styles.submitButton}
+          disabled={isLoading || !isReady}
+        >
+          {isLoading ? 'Posting...' : 'Post Reply'}
+        </button>
+      </form>
     </div>
   );
 }

@@ -24,17 +24,18 @@ const authStateListeners: Set<(state: AuthState) => void> = new Set();
 
 function notifyAuthStateListeners(state: AuthState) {
   authStateInstance = state;
-  authStateListeners.forEach(listener => listener(state));
+  authStateListeners.forEach((listener) => listener(state));
 }
 
 export function useAuth(): UseAuthReturn {
-  const [authState, setAuthState] = useState<AuthState>(() => 
-    authStateInstance || {
-      session: null,
-      loading: true,
-      error: null,
-      isAuthenticated: false,
-    }
+  const [authState, setAuthState] = useState<AuthState>(
+    () =>
+      authStateInstance || {
+        session: null,
+        loading: true,
+        error: null,
+        isAuthenticated: false,
+      },
   );
 
   // Track if this hook instance has already initialized
@@ -44,7 +45,7 @@ export function useAuth(): UseAuthReturn {
   // Register this component to listen for auth state changes
   useEffect(() => {
     authStateListeners.add(setAuthState);
-    
+
     // If another component already has auth state, use it
     if (authStateInstance && !hasInitialized.current) {
       setAuthState(authStateInstance);
@@ -57,16 +58,22 @@ export function useAuth(): UseAuthReturn {
 
   // Initialize session once on mount (only first mount across app)
   useEffect(() => {
-    if (hasInitialized.current || (authStateInstance && !authStateInstance.loading)) {
+    if (
+      hasInitialized.current ||
+      (authStateInstance && !authStateInstance.loading)
+    ) {
       return;
     }
-    
+
     hasInitialized.current = true;
-    
+
     const initSession = async () => {
       try {
-        const { data: { session }, error } = await supabase.auth.getSession();
-        
+        const {
+          data: { session },
+          error,
+        } = await supabase.auth.getSession();
+
         if (error) throw error;
 
         const newState = {
@@ -75,7 +82,7 @@ export function useAuth(): UseAuthReturn {
           error: null,
           isAuthenticated: !!session,
         };
-        
+
         notifyAuthStateListeners(newState);
       } catch (error) {
         const newState = {
@@ -84,7 +91,7 @@ export function useAuth(): UseAuthReturn {
           error: error as Error,
           isAuthenticated: false,
         };
-        
+
         notifyAuthStateListeners(newState);
       }
     };
@@ -92,14 +99,16 @@ export function useAuth(): UseAuthReturn {
     initSession();
 
     // Set up auth state change listener
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
       const newState = {
         session,
         loading: false,
         error: null,
         isAuthenticated: !!session,
       };
-      
+
       notifyAuthStateListeners(newState);
     });
 
@@ -108,83 +117,97 @@ export function useAuth(): UseAuthReturn {
     };
   }, []);
 
-  const signIn = useCallback(async (walletAddress: string) => {
-    // Prevent concurrent authentication attempts
-    if (isAuthenticating.current) {
-      return;
-    }
+  const signIn = useCallback(
+    async (walletAddress: string) => {
+      // Prevent concurrent authentication attempts
+      if (isAuthenticating.current) {
+        return;
+      }
 
-    // If already authenticated with same wallet, skip
-    if (authState.session?.user?.user_metadata?.wallet_address === walletAddress.toLowerCase()) {
-      return;
-    }
+      // If already authenticated with same wallet, skip
+      if (
+        authState.session?.user?.user_metadata?.wallet_address ===
+        walletAddress.toLowerCase()
+      ) {
+        return;
+      }
 
-    isAuthenticating.current = true;
-    
-    try {
-      notifyAuthStateListeners({
-        ...authState,
-        loading: true,
-        error: null,
-      });
+      isAuthenticating.current = true;
 
-      // Try to get existing session first
-      const { data: { session: existingSession } } = await supabase.auth.getSession();
-      
-      if (existingSession?.user?.user_metadata?.wallet_address === walletAddress.toLowerCase()) {
-        // Already have valid session for this wallet
+      try {
+        notifyAuthStateListeners({
+          ...authState,
+          loading: true,
+          error: null,
+        });
+
+        // Try to get existing session first
+        const {
+          data: { session: existingSession },
+        } = await supabase.auth.getSession();
+
+        if (
+          existingSession?.user?.user_metadata?.wallet_address ===
+          walletAddress.toLowerCase()
+        ) {
+          // Already have valid session for this wallet
+          const newState = {
+            session: existingSession,
+            loading: false,
+            error: null,
+            isAuthenticated: true,
+          };
+
+          notifyAuthStateListeners(newState);
+          return;
+        }
+
+        // Create new session for wallet
+        const response = await fetch('/api/auth/onchainkit', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ address: walletAddress }),
+        });
+
+        if (!response.ok) {
+          throw new Error(`Authentication failed: ${response.statusText}`);
+        }
+
+        const { supabaseToken, supabaseRefreshToken } = await response.json();
+
+        const {
+          data: { session },
+          error,
+        } = await supabase.auth.setSession({
+          access_token: supabaseToken,
+          refresh_token: supabaseRefreshToken,
+        });
+
+        if (error) throw error;
+
         const newState = {
-          session: existingSession,
+          session,
           loading: false,
           error: null,
           isAuthenticated: true,
         };
-        
+
         notifyAuthStateListeners(newState);
-        return;
+      } catch (error) {
+        const newState = {
+          session: null,
+          loading: false,
+          error: error as Error,
+          isAuthenticated: false,
+        };
+
+        notifyAuthStateListeners(newState);
+      } finally {
+        isAuthenticating.current = false;
       }
-
-      // Create new session for wallet
-      const response = await fetch('/api/auth/onchainkit', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ address: walletAddress }),
-      });
-
-      if (!response.ok) {
-        throw new Error(`Authentication failed: ${response.statusText}`);
-      }
-
-      const { supabaseToken, supabaseRefreshToken } = await response.json();
-      
-      const { data: { session }, error } = await supabase.auth.setSession({
-        access_token: supabaseToken,
-        refresh_token: supabaseRefreshToken,
-      });
-
-      if (error) throw error;
-
-      const newState = {
-        session,
-        loading: false,
-        error: null,
-        isAuthenticated: true,
-      };
-      
-      notifyAuthStateListeners(newState);
-    } catch (error) {
-      const newState = {
-        session: null,
-        loading: false,
-        error: error as Error,
-        isAuthenticated: false,
-      };
-      
-      notifyAuthStateListeners(newState);
-    } finally {
-      isAuthenticating.current = false;
-    }
-  }, [authState]);
+    },
+    [authState],
+  );
 
   const signOut = useCallback(async () => {
     try {
@@ -197,14 +220,14 @@ export function useAuth(): UseAuthReturn {
         error: null,
         isAuthenticated: false,
       };
-      
+
       notifyAuthStateListeners(newState);
     } catch (error) {
       const newState = {
         ...authState,
         error: error as Error,
       };
-      
+
       notifyAuthStateListeners(newState);
     }
   }, [authState]);
@@ -216,8 +239,11 @@ export function useAuth(): UseAuthReturn {
         loading: true,
       });
 
-      const { data: { session }, error } = await supabase.auth.refreshSession();
-      
+      const {
+        data: { session },
+        error,
+      } = await supabase.auth.refreshSession();
+
       if (error) throw error;
 
       const newState = {
@@ -226,7 +252,7 @@ export function useAuth(): UseAuthReturn {
         error: null,
         isAuthenticated: !!session,
       };
-      
+
       notifyAuthStateListeners(newState);
     } catch (error) {
       const newState = {
@@ -235,7 +261,7 @@ export function useAuth(): UseAuthReturn {
         error: error as Error,
         isAuthenticated: false,
       };
-      
+
       notifyAuthStateListeners(newState);
     }
   }, [authState]);

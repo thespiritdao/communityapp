@@ -13,7 +13,7 @@
  * @module MilestoneBountyCard
  */
 
-"use client"
+'use client';
 
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -56,13 +56,15 @@ interface MilestoneBountyCardProps {
 export const MilestoneBountyCard: React.FC<MilestoneBountyCardProps> = ({
   bounty,
   supabaseBounty,
-  onRefreshData
+  onRefreshData,
 }) => {
   const [milestones, setMilestones] = useState<Milestone[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [approvedBid, setApprovedBid] = useState<any>(null);
-  const [selectedMilestone, setSelectedMilestone] = useState<string | null>(null);
+  const [selectedMilestone, setSelectedMilestone] = useState<string | null>(
+    null,
+  );
 
   // ============================================================================
   // DATA LOADING
@@ -111,12 +113,13 @@ export const MilestoneBountyCard: React.FC<MilestoneBountyCardProps> = ({
       console.log('🎯 Loaded milestones for bounty:', {
         bountyId: bounty.id,
         bidId: bid.id,
-        milestonesCount: milestonesData?.length || 0
+        milestonesCount: milestonesData?.length || 0,
       });
-
     } catch (err) {
       console.error('❌ Error loading milestones:', err);
-      setError(err instanceof Error ? err.message : 'Failed to load milestones');
+      setError(
+        err instanceof Error ? err.message : 'Failed to load milestones',
+      );
     } finally {
       setLoading(false);
     }
@@ -131,7 +134,7 @@ export const MilestoneBountyCard: React.FC<MilestoneBountyCardProps> = ({
       return {
         style: { backgroundColor: '#D1E6DC', color: '#1F453A' },
         icon: CheckCircle,
-        label: 'Completed'
+        label: 'Completed',
       };
     }
 
@@ -142,22 +145,22 @@ export const MilestoneBountyCard: React.FC<MilestoneBountyCardProps> = ({
       return {
         style: { backgroundColor: '#F5E6E6', color: '#5C1F1F' },
         icon: Clock,
-        label: 'Overdue'
+        label: 'Overdue',
       };
     }
 
     return {
       style: { backgroundColor: '#FAF4EC', color: '#8F6B2F' },
       icon: Clock,
-      label: 'Pending'
+      label: 'Pending',
     };
   };
 
   const getProgressStats = () => {
-    const completed = milestones.filter(m => m.status === 'completed').length;
+    const completed = milestones.filter((m) => m.status === 'completed').length;
     const total = milestones.length;
     const percentage = total > 0 ? Math.round((completed / total) * 100) : 0;
-    
+
     return { completed, total, percentage };
   };
 
@@ -187,7 +190,14 @@ export const MilestoneBountyCard: React.FC<MilestoneBountyCardProps> = ({
       <Card>
         <CardContent className="pt-6">
           <div className="text-center py-4">
-            <div className="animate-spin rounded-full h-6 w-6 mx-auto mb-2" style={{ borderBottomWidth: '2px', borderBottomStyle: 'solid', borderBottomColor: '#2F5D50' }}></div>
+            <div
+              className="animate-spin rounded-full h-6 w-6 mx-auto mb-2"
+              style={{
+                borderBottomWidth: '2px',
+                borderBottomStyle: 'solid',
+                borderBottomColor: '#2F5D50',
+              }}
+            ></div>
             <p className="text-sm text-gray-600">Loading milestones...</p>
           </div>
         </CardContent>
@@ -200,7 +210,9 @@ export const MilestoneBountyCard: React.FC<MilestoneBountyCardProps> = ({
       <Card>
         <CardContent className="pt-6">
           <div className="text-center py-4">
-            <p className="text-sm" style={{ color: '#8B3A3A' }}>{error}</p>
+            <p className="text-sm" style={{ color: '#8B3A3A' }}>
+              {error}
+            </p>
             <Button
               onClick={loadMilestones}
               variant="outline"
@@ -222,19 +234,23 @@ export const MilestoneBountyCard: React.FC<MilestoneBountyCardProps> = ({
       <CardHeader>
         <div className="flex items-start justify-between">
           <div className="space-y-2">
-            <CardTitle className="text-lg">{bounty.title || `Bounty #${bounty.id}`}</CardTitle>
+            <CardTitle className="text-lg">
+              {bounty.title || `Bounty #${bounty.id}`}
+            </CardTitle>
             <div className="flex items-center gap-4 text-sm text-gray-600">
               <div className="flex items-center gap-1">
                 <DollarSign className="h-4 w-4" />
-                <span>{bounty.value || '0'} {bounty.token}</span>
+                <span>
+                  {bounty.value || '0'} {bounty.token}
+                </span>
               </div>
               {approvedBid && (
                 <div className="flex items-center gap-1">
                   <User className="h-4 w-4" />
-                  <UserProfileDisplay 
-                    walletAddress={approvedBid.bidder_address} 
-                    size="sm" 
-                    showModal={true} 
+                  <UserProfileDisplay
+                    walletAddress={approvedBid.bidder_address}
+                    size="sm"
+                    showModal={true}
                   />
                 </div>
               )}
@@ -269,7 +285,7 @@ export const MilestoneBountyCard: React.FC<MilestoneBountyCardProps> = ({
               const isPaymentSelected = selectedMilestone === milestone.id;
 
               return (
-                <div 
+                <div
                   key={milestone.id}
                   className="border rounded-lg p-4 space-y-3"
                 >
@@ -278,31 +294,44 @@ export const MilestoneBountyCard: React.FC<MilestoneBountyCardProps> = ({
                     <div className="flex-1 space-y-1">
                       <div className="flex items-center gap-2">
                         <StatusIcon className="h-4 w-4" />
-                        <h4 className="font-medium">{milestone.deliverable_description}</h4>
+                        <h4 className="font-medium">
+                          {milestone.deliverable_description}
+                        </h4>
                       </div>
                       <div className="flex items-center gap-4 text-sm text-gray-600">
                         <div className="flex items-center gap-1">
                           <Calendar className="h-3 w-3" />
-                          <span>Due: {format(new Date(milestone.due_date), 'MMM dd, yyyy')}</span>
+                          <span>
+                            Due:{' '}
+                            {format(
+                              new Date(milestone.due_date),
+                              'MMM dd, yyyy',
+                            )}
+                          </span>
                         </div>
                         <div className="flex items-center gap-1">
                           <DollarSign className="h-3 w-3" />
-                          <span>{milestone.payment_amount} {bounty.token}</span>
+                          <span>
+                            {milestone.payment_amount} {bounty.token}
+                          </span>
                         </div>
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
-                      <Badge style={status.style}>
-                        {status.label}
-                      </Badge>
+                      <Badge style={status.style}>{status.label}</Badge>
                       {milestone.status === 'pending' && (
                         <Button
                           onClick={() => setSelectedMilestone(milestone.id)}
                           size="sm"
                           variant="outline"
                           style={{ color: '#3F7A5A', borderColor: '#3F7A5A' }}
-                          onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#D1E6DC'; }}
-                          onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.backgroundColor = '#D1E6DC';
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.backgroundColor =
+                              'transparent';
+                          }}
                         >
                           Release Payment
                         </Button>
@@ -311,36 +340,52 @@ export const MilestoneBountyCard: React.FC<MilestoneBountyCardProps> = ({
                   </div>
 
                   {/* Completion Info */}
-                  {milestone.status === 'completed' && milestone.completed_at && (
-                    <div className="text-xs text-gray-500 p-2 rounded" style={{ backgroundColor: '#D1E6DC' }}>
-                      Completed on {format(new Date(milestone.completed_at), 'MMM dd, yyyy HH:mm')}
-                      {milestone.review_comments && (
-                        <div className="mt-1">Comments: {milestone.review_comments}</div>
-                      )}
-                    </div>
-                  )}
+                  {milestone.status === 'completed' &&
+                    milestone.completed_at && (
+                      <div
+                        className="text-xs text-gray-500 p-2 rounded"
+                        style={{ backgroundColor: '#D1E6DC' }}
+                      >
+                        Completed on{' '}
+                        {format(
+                          new Date(milestone.completed_at),
+                          'MMM dd, yyyy HH:mm',
+                        )}
+                        {milestone.review_comments && (
+                          <div className="mt-1">
+                            Comments: {milestone.review_comments}
+                          </div>
+                        )}
+                      </div>
+                    )}
 
                   {/* Payment Transaction */}
-                  {isPaymentSelected && milestone.status === 'pending' && approvedBid && (
-                    <div className="border-t pt-3 mt-3">
-                      <MilestonePaymentTransaction
-                        onchainBountyId={supabaseBounty.onchain_id?.toString() || '0'}
-                        bountyId={bounty.id}
-                        milestoneId={milestone.id}
-                        onchainMilestoneId="0" // This would need to be tracked properly in production
-                        paymentAmount={milestone.payment_amount}
-                        paymentToken={bounty.token as 'SYSTEM' | 'SELF'}
-                        workerAddress={approvedBid.bidder_address}
-                        creatorAddress={supabaseBounty.creator_address}
-                        bountyTitle={bounty.title || `Bounty #${bounty.id}`}
-                        milestoneDescription={milestone.deliverable_description}
-                        onSuccess={handleMilestonePaymentSuccess}
-                        onError={handleMilestonePaymentError}
-                        onComplete={() => setSelectedMilestone(null)}
-                        onRefreshData={onRefreshData}
-                      />
-                    </div>
-                  )}
+                  {isPaymentSelected &&
+                    milestone.status === 'pending' &&
+                    approvedBid && (
+                      <div className="border-t pt-3 mt-3">
+                        <MilestonePaymentTransaction
+                          onchainBountyId={
+                            supabaseBounty.onchain_id?.toString() || '0'
+                          }
+                          bountyId={bounty.id}
+                          milestoneId={milestone.id}
+                          onchainMilestoneId="0" // This would need to be tracked properly in production
+                          paymentAmount={milestone.payment_amount}
+                          paymentToken={bounty.token as 'SYSTEM' | 'SELF'}
+                          workerAddress={approvedBid.bidder_address}
+                          creatorAddress={supabaseBounty.creator_address}
+                          bountyTitle={bounty.title || `Bounty #${bounty.id}`}
+                          milestoneDescription={
+                            milestone.deliverable_description
+                          }
+                          onSuccess={handleMilestonePaymentSuccess}
+                          onError={handleMilestonePaymentError}
+                          onComplete={() => setSelectedMilestone(null)}
+                          onRefreshData={onRefreshData}
+                        />
+                      </div>
+                    )}
                 </div>
               );
             })}
@@ -349,8 +394,12 @@ export const MilestoneBountyCard: React.FC<MilestoneBountyCardProps> = ({
           {/* No Milestones Message */}
           {milestones.length === 0 && (
             <div className="text-center py-8">
-              <p className="text-gray-600">No milestones found for this bounty.</p>
-              <p className="text-sm text-gray-500 mt-1">Milestones should be created when the bid is approved.</p>
+              <p className="text-gray-600">
+                No milestones found for this bounty.
+              </p>
+              <p className="text-sm text-gray-500 mt-1">
+                Milestones should be created when the bid is approved.
+              </p>
             </div>
           )}
         </div>

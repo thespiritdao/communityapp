@@ -27,7 +27,7 @@ interface Summary {
 export function ThreadSummary({
   threadId,
   threadTitle,
-  threadContent
+  threadContent,
 }: ThreadSummaryProps) {
   const [summary, setSummary] = useState<Summary | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -45,7 +45,9 @@ export function ThreadSummary({
       // Note: 'sentiment' field may not exist yet - will be NULL until migration is complete
       const { data, error } = await supabase
         .from('forum_thread_summaries')
-        .select('id, thread_id, summary_text, key_points, generated_by, generated_at')
+        .select(
+          'id, thread_id, summary_text, key_points, generated_by, generated_at',
+        )
         .eq('thread_id', threadId)
         .order('generated_at', { ascending: false })
         .limit(1)
@@ -81,7 +83,7 @@ export function ThreadSummary({
       const fullContent = [
         threadTitle,
         threadContent || '',
-        ...(posts?.map(p => p.content) || [])
+        ...(posts?.map((p) => p.content) || []),
       ].join('\n\n');
 
       // Call Sensemaker API for summarization
@@ -92,13 +94,15 @@ export function ThreadSummary({
         body: JSON.stringify({
           content: fullContent,
           threadId,
-          threadTitle
-        })
+          threadTitle,
+        }),
       });
 
       if (!sensemakerResponse.ok) {
         // Extract the actual error message from the API response
-        const errorData = await sensemakerResponse.json().catch(() => ({ error: 'Failed to generate summary' }));
+        const errorData = await sensemakerResponse
+          .json()
+          .catch(() => ({ error: 'Failed to generate summary' }));
         throw new Error(errorData.error || 'Failed to generate summary');
       }
 
@@ -128,7 +132,9 @@ export function ThreadSummary({
               alt="Sensemaker AI"
               style={{ width: '32px', height: '32px', objectFit: 'contain' }}
             />
-            <span className="text-base font-semibold text-gray-700">SensemakerAI</span>
+            <span className="text-base font-semibold text-gray-700">
+              SensemakerAI
+            </span>
             <Button
               size="sm"
               variant="outline"
@@ -139,7 +145,9 @@ export function ThreadSummary({
             </Button>
           </div>
           {error && (
-            <p className="text-sm mt-2" style={{ color: '#8B3A3A' }}>{error}</p>
+            <p className="text-sm mt-2" style={{ color: '#8B3A3A' }}>
+              {error}
+            </p>
           )}
         </CardContent>
       </Card>
@@ -159,9 +167,7 @@ export function ThreadSummary({
             <CardTitle className="text-lg">Sensemaker Summary</CardTitle>
           </div>
           {summary.sentiment && summary.sentiment !== 'neutral' && (
-            <Badge variant="outline">
-              {summary.sentiment}
-            </Badge>
+            <Badge variant="outline">{summary.sentiment}</Badge>
           )}
         </div>
       </CardHeader>

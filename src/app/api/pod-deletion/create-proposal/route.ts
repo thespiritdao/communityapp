@@ -9,9 +9,9 @@ const supabaseAdmin = createClient(
   {
     auth: {
       autoRefreshToken: false,
-      persistSession: false
-    }
-  }
+      persistSession: false,
+    },
+  },
 );
 
 export async function POST(request: Request) {
@@ -21,14 +21,14 @@ export async function POST(request: Request) {
     console.log('📝 API: Creating pod deletion proposal:', {
       pod_id: body.pod_id,
       pod_name: body.pod_name,
-      proposed_by: body.proposed_by
+      proposed_by: body.proposed_by,
     });
 
     // Validate required fields
     if (!body.pod_id || !body.pod_name || !body.proposed_by) {
       return NextResponse.json(
         { error: 'Missing required fields: pod_id, pod_name, proposed_by' },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -57,31 +57,27 @@ export async function POST(request: Request) {
         current_approvals: body.current_approvals || [],
         status: 'pending',
         management_hat_id: body.management_hat_id || null,
-        membership_hat_id: body.membership_hat_id || null
+        membership_hat_id: body.membership_hat_id || null,
       })
       .select()
       .single();
 
     if (error) {
       console.error('❌ API: Database error:', error);
-      return NextResponse.json(
-        { error: error.message },
-        { status: 500 }
-      );
+      return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
     console.log('✅ API: Proposal created successfully:', data.id);
 
     return NextResponse.json({
       success: true,
-      proposal: data
+      proposal: data,
     });
-
   } catch (error) {
     console.error('❌ API: Unexpected error:', error);
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Unknown error' },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

@@ -4,11 +4,11 @@ import { Pinecone } from '@pinecone-database/pinecone';
 import OpenAI from 'openai';
 
 const pinecone = new Pinecone({
-  apiKey: process.env.PINECONE_API_KEY!
+  apiKey: process.env.PINECONE_API_KEY!,
 });
 
 const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY!
+  apiKey: process.env.OPENAI_API_KEY!,
 });
 
 export type Namespace = 'spiritdao' | 'temporal-naturalism';
@@ -27,7 +27,7 @@ async function getEmbedding(text: string): Promise<number[]> {
     const response = await openai.embeddings.create({
       model: 'text-embedding-3-small',
       input: text,
-      dimensions: 1536
+      dimensions: 1536,
     });
 
     return response.data[0].embedding;
@@ -46,7 +46,7 @@ async function getEmbedding(text: string): Promise<number[]> {
 export async function queryPinecone(
   userMessage: string,
   namespace: Namespace,
-  topK: number = 5
+  topK: number = 5,
 ): Promise<RelevantContext[]> {
   try {
     // Route to appropriate index based on query type
@@ -57,12 +57,16 @@ export async function queryPinecone(
       // DAO queries use sensemaker index with spiritdao namespace
       indexName = process.env.PINECONE_INDEX_NAME || 'sensemaker';
       useNamespace = true;
-      console.log(`[Pinecone] Querying index: ${indexName}, namespace: ${namespace}`);
+      console.log(
+        `[Pinecone] Querying index: ${indexName}, namespace: ${namespace}`,
+      );
     } else {
       // Philosophy queries use existing spiritdao-books index (default namespace)
       indexName = 'spiritdao-books';
       useNamespace = false;
-      console.log(`[Pinecone] Querying index: ${indexName}, namespace: (default)`);
+      console.log(
+        `[Pinecone] Querying index: ${indexName}, namespace: (default)`,
+      );
     }
 
     // Get the index
@@ -79,7 +83,7 @@ export async function queryPinecone(
       queryResponse = await index.namespace(namespace).query({
         vector: embedding,
         topK,
-        includeMetadata: true
+        includeMetadata: true,
       });
     } else {
       // Philosophy queries: use default namespace (empty string)
@@ -87,24 +91,25 @@ export async function queryPinecone(
       queryResponse = await index.namespace('').query({
         vector: embedding,
         topK,
-        includeMetadata: true
+        includeMetadata: true,
       });
     }
 
     // Format and return results
-    const contexts: RelevantContext[] = queryResponse.matches.map(match => ({
+    const contexts: RelevantContext[] = queryResponse.matches.map((match) => ({
       content: (match.metadata?.text as string) || '',
       score: match.score || 0,
-      metadata: match.metadata
+      metadata: match.metadata,
     }));
 
     console.log(`[Pinecone] Retrieved ${contexts.length} context chunks`);
     if (contexts.length > 0) {
-      console.log(`[Pinecone] Top relevance score: ${(contexts[0].score * 100).toFixed(1)}%`);
+      console.log(
+        `[Pinecone] Top relevance score: ${(contexts[0].score * 100).toFixed(1)}%`,
+      );
     }
 
     return contexts;
-
   } catch (error: any) {
     console.error('[Pinecone] Query error:', error);
     console.error('[Pinecone] Error details:', {
@@ -112,7 +117,7 @@ export async function queryPinecone(
       code: error.code,
       status: error.status,
       indexName,
-      namespace: useNamespace ? namespace : '(default namespace)'
+      namespace: useNamespace ? namespace : '(default namespace)',
     });
 
     // Return empty array on error instead of throwing
@@ -136,7 +141,10 @@ export async function checkPineconeConnection(): Promise<boolean> {
     console.log('[Pinecone] DAO index connection successful');
     console.log(`[Pinecone] DAO index: ${daoIndexName}`);
     console.log(`[Pinecone] DAO total vectors: ${daoStats.totalRecordCount}`);
-    console.log(`[Pinecone] DAO namespaces:`, Object.keys(daoStats.namespaces || {}));
+    console.log(
+      `[Pinecone] DAO namespaces:`,
+      Object.keys(daoStats.namespaces || {}),
+    );
 
     // Check spiritdao-books index (Philosophy)
     const philIndex = pinecone.index('spiritdao-books');
@@ -144,7 +152,9 @@ export async function checkPineconeConnection(): Promise<boolean> {
 
     console.log('[Pinecone] Philosophy index connection successful');
     console.log(`[Pinecone] Philosophy index: spiritdao-books`);
-    console.log(`[Pinecone] Philosophy total vectors: ${philStats.totalRecordCount}`);
+    console.log(
+      `[Pinecone] Philosophy total vectors: ${philStats.totalRecordCount}`,
+    );
 
     return true;
   } catch (error) {
@@ -169,10 +179,13 @@ export async function getNamespaceStats(namespace: Namespace): Promise<{
 
     return {
       vectorCount: namespaceStats?.recordCount || 0,
-      dimensionality: stats.dimension
+      dimensionality: stats.dimension,
     };
   } catch (error) {
-    console.error(`[Pinecone] Error getting stats for namespace ${namespace}:`, error);
+    console.error(
+      `[Pinecone] Error getting stats for namespace ${namespace}:`,
+      error,
+    );
     return { vectorCount: 0 };
   }
 }

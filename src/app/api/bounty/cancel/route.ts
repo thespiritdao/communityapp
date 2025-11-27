@@ -4,29 +4,25 @@ import { unifiedNotificationService } from '@/services/unifiedNotificationServic
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
+  process.env.SUPABASE_SERVICE_ROLE_KEY!,
 );
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
 
-    const {
-      bountyId,
-      cancelerAddress,
-      cancellationReason
-    } = body;
+    const { bountyId, cancelerAddress, cancellationReason } = body;
 
     console.log('🚫 Bounty cancellation request:', {
       bountyId,
-      cancelerAddress
+      cancelerAddress,
     });
 
     // Validation
     if (!bountyId || !cancelerAddress) {
       return NextResponse.json(
         { error: 'Missing required fields: bountyId, cancelerAddress' },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -39,29 +35,27 @@ export async function POST(request: NextRequest) {
 
     if (bountyError || !bounty) {
       console.error('❌ Bounty not found:', bountyError);
-      return NextResponse.json(
-        { error: 'Bounty not found' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: 'Bounty not found' }, { status: 404 });
     }
 
     // Check if bounty can be cancelled
     if (bounty.status === 'completed') {
       return NextResponse.json(
         { error: 'Cannot cancel a completed bounty' },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
     if (bounty.status === 'cancelled') {
       return NextResponse.json(
         { error: 'Bounty is already cancelled' },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
     // Verify canceler is authorized (bounty creator or pod leader)
-    let isAuthorized = bounty.creator_address?.toLowerCase() === cancelerAddress.toLowerCase();
+    let isAuthorized =
+      bounty.creator_address?.toLowerCase() === cancelerAddress.toLowerCase();
 
     if (!isAuthorized && bounty.pod_id) {
       // Check if canceler is a pod leader
@@ -73,7 +67,8 @@ export async function POST(request: NextRequest) {
 
       if (pod && pod.pod_leads) {
         isAuthorized = pod.pod_leads.some(
-          (lead: string) => lead.toLowerCase() === cancelerAddress.toLowerCase()
+          (lead: string) =>
+            lead.toLowerCase() === cancelerAddress.toLowerCase(),
         );
       }
     }
@@ -81,8 +76,11 @@ export async function POST(request: NextRequest) {
     if (!isAuthorized) {
       console.error('❌ Canceler not authorized');
       return NextResponse.json(
-        { error: 'Only the bounty creator or pod leaders can cancel this bounty' },
-        { status: 403 }
+        {
+          error:
+            'Only the bounty creator or pod leaders can cancel this bounty',
+        },
+        { status: 403 },
       );
     }
 
@@ -96,8 +94,11 @@ export async function POST(request: NextRequest) {
     if (bidsError) {
       console.error('❌ Error checking approved bids:', bidsError);
       return NextResponse.json(
-        { error: 'Failed to check for approved bids', details: bidsError.message },
-        { status: 500 }
+        {
+          error: 'Failed to check for approved bids',
+          details: bidsError.message,
+        },
+        { status: 500 },
       );
     }
 
@@ -112,15 +113,18 @@ export async function POST(request: NextRequest) {
       if (workSubmissions && workSubmissions.length > 0) {
         return NextResponse.json(
           {
-            error: 'Cannot cancel bounty with approved bids and submitted work. Please review or reject the work first.',
-            hasWorkSubmissions: true
+            error:
+              'Cannot cancel bounty with approved bids and submitted work. Please review or reject the work first.',
+            hasWorkSubmissions: true,
           },
-          { status: 400 }
+          { status: 400 },
         );
       }
 
       // If there are approved bids but no work submitted yet, allow cancellation but warn
-      console.log('⚠️ Cancelling bounty with approved bids (no work submitted yet)');
+      console.log(
+        '⚠️ Cancelling bounty with approved bids (no work submitted yet)',
+      );
     }
 
     // Update bounty status to cancelled
@@ -131,7 +135,7 @@ export async function POST(request: NextRequest) {
         cancellation_reason: cancellationReason,
         cancelled_at: new Date().toISOString(),
         cancelled_by: cancelerAddress.toLowerCase(),
-        updated_at: new Date().toISOString()
+        updated_at: new Date().toISOString(),
       })
       .eq('id', bountyId)
       .select()
@@ -141,7 +145,7 @@ export async function POST(request: NextRequest) {
       console.error('❌ Error cancelling bounty:', updateError);
       return NextResponse.json(
         { error: 'Failed to cancel bounty', details: updateError.message },
-        { status: 500 }
+        { status: 500 },
       );
     }
 
@@ -152,7 +156,7 @@ export async function POST(request: NextRequest) {
       .from('bids')
       .update({
         status: 'archived',
-        updated_at: new Date().toISOString()
+        updated_at: new Date().toISOString(),
       })
       .eq('bounty_id', bountyId)
       .eq('status', 'pending');
@@ -171,7 +175,7 @@ export async function POST(request: NextRequest) {
       .eq('bounty_id', bountyId);
 
     if (allBids && allBids.length > 0) {
-      const notificationPromises = allBids.map(bid =>
+      const notificationPromises = allBids.map((bid) =>
         unifiedNotificationService.createNotification({
           recipient_address: bid.bidder_address.toLowerCase(),
           sender_address: cancelerAddress.toLowerCase(),
@@ -181,13 +185,15 @@ export async function POST(request: NextRequest) {
           context_type: 'bounty',
           context_id: bountyId,
           context_url: `/bounty/${bountyId}`,
-          priority: 'high'
-        })
+          priority: 'high',
+        }),
       );
 
       try {
         await Promise.all(notificationPromises);
-        console.log(`✅ Cancellation notifications sent to ${allBids.length} bidders`);
+        console.log(
+          `✅ Cancellation notifications sent to ${allBids.length} bidders`,
+        );
       } catch (notifError) {
         console.error('⚠️ Error sending notifications:', notifError);
       }
@@ -201,21 +207,23 @@ export async function POST(request: NextRequest) {
       amount: bounty.value_amount,
       token: bounty.value_token,
       recipient: bounty.creator_address,
-      hasApprovedBids: approvedBids && approvedBids.length > 0
+      hasApprovedBids: approvedBids && approvedBids.length > 0,
     };
 
     return NextResponse.json({
       success: true,
       bounty: updatedBounty,
       refundInfo,
-      archivedBidsCount: allBids?.length || 0
+      archivedBidsCount: allBids?.length || 0,
     });
-
   } catch (error) {
     console.error('❌ Error in bounty cancellation API:', error);
     return NextResponse.json(
-      { error: 'Internal server error', details: error instanceof Error ? error.message : 'Unknown error' },
-      { status: 500 }
+      {
+        error: 'Internal server error',
+        details: error instanceof Error ? error.message : 'Unknown error',
+      },
+      { status: 500 },
     );
   }
 }

@@ -12,24 +12,27 @@ export async function POST(request: NextRequest) {
     }
 
     console.log('🕐 Processing voting reminders via cron job...');
-    
+
     const result = await votingReminderService.processAllVotingReminders();
-    
+
     console.log('✅ Voting reminders processed successfully:', result);
-    
+
     return NextResponse.json({
       success: true,
       message: 'Voting reminders processed successfully',
-      ...result
+      ...result,
     });
-    
   } catch (error) {
     console.error('❌ Error processing voting reminders:', error);
-    
-    return NextResponse.json({
-      success: false,
-      error: error instanceof Error ? error.message : 'Unknown error occurred'
-    }, { status: 500 });
+
+    return NextResponse.json(
+      {
+        success: false,
+        error:
+          error instanceof Error ? error.message : 'Unknown error occurred',
+      },
+      { status: 500 },
+    );
   }
 }
 
@@ -38,29 +41,33 @@ export async function GET(request: NextRequest) {
   try {
     // For testing purposes - you might want to remove this in production
     const testMode = request.nextUrl.searchParams.get('test') === 'true';
-    
+
     if (!testMode) {
-      return NextResponse.json({ 
-        message: 'Voting reminder cron endpoint. Use POST method with proper authentication.' 
+      return NextResponse.json({
+        message:
+          'Voting reminder cron endpoint. Use POST method with proper authentication.',
       });
     }
-    
+
     console.log('🧪 Test mode: Processing voting reminders...');
-    
+
     const result = await votingReminderService.processAllVotingReminders();
-    
+
     return NextResponse.json({
       success: true,
       message: 'Test run completed',
-      ...result
+      ...result,
     });
-    
   } catch (error) {
     console.error('❌ Error in test run:', error);
-    
-    return NextResponse.json({
-      success: false,
-      error: error instanceof Error ? error.message : 'Unknown error occurred'
-    }, { status: 500 });
+
+    return NextResponse.json(
+      {
+        success: false,
+        error:
+          error instanceof Error ? error.message : 'Unknown error occurred',
+      },
+      { status: 500 },
+    );
   }
 }

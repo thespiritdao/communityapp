@@ -41,7 +41,8 @@ export default function CheckInPage({ params }: CheckInPageProps) {
             <CardContent className="p-8 text-center">
               <h2 className="text-xl font-semibold mb-4">Event Not Found</h2>
               <p className="text-gray-600 mb-4">
-                The event you're looking for doesn't exist or is no longer available.
+                The event you're looking for doesn't exist or is no longer
+                available.
               </p>
               <Button asChild={true}>
                 <Link href="/events">View All Events</Link>
@@ -62,7 +63,7 @@ export default function CheckInPage({ params }: CheckInPageProps) {
             Use your QR code to check in to the event
           </p>
         </div>
-        
+
         <AttendeeCheckIn event={event} />
       </div>
     </div>

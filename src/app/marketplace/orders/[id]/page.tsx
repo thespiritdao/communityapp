@@ -1,5 +1,5 @@
 // src/app/marketplace/orders/[id]/page.tsx
-"use client";
+'use client';
 
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
@@ -126,24 +126,36 @@ const StatusBadge = styled.span<{ $status: string }>`
   font-size: 12px;
   font-weight: 600;
   text-transform: uppercase;
-  background: ${props => {
+  background: ${(props) => {
     switch (props.$status) {
-      case 'processing': return '#fff3cd';
-      case 'preparing': return '#d1ecf1';
-      case 'shipped': return '#d4edda';
-      case 'delivered': return '#d1e7dd';
-      case 'cancelled': return '#f8d7da';
-      default: return '#e2e3e5';
+      case 'processing':
+        return '#fff3cd';
+      case 'preparing':
+        return '#d1ecf1';
+      case 'shipped':
+        return '#d4edda';
+      case 'delivered':
+        return '#d1e7dd';
+      case 'cancelled':
+        return '#f8d7da';
+      default:
+        return '#e2e3e5';
     }
   }};
-  color: ${props => {
+  color: ${(props) => {
     switch (props.$status) {
-      case 'processing': return '#856404';
-      case 'preparing': return '#0c5460';
-      case 'shipped': return '#155724';
-      case 'delivered': return '#0f5132';
-      case 'cancelled': return '#721c24';
-      default: return '#383d41';
+      case 'processing':
+        return '#856404';
+      case 'preparing':
+        return '#0c5460';
+      case 'shipped':
+        return '#155724';
+      case 'delivered':
+        return '#0f5132';
+      case 'cancelled':
+        return '#721c24';
+      default:
+        return '#383d41';
     }
   }};
 `;
@@ -286,18 +298,23 @@ export default function OrderDetailPage() {
         const authResponse = await fetch('/api/auth/onchainkit', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ address: address?.toLowerCase() })
+          body: JSON.stringify({ address: address?.toLowerCase() }),
         });
-        
+
         if (!authResponse.ok) {
           throw new Error(`Auth API failed: ${authResponse.status}`);
         }
-        
+
         const authData = await authResponse.json();
-        console.log('✅ Auth API response received:', { hasToken: !!authData.supabaseToken });
-        
+        console.log('✅ Auth API response received:', {
+          hasToken: !!authData.supabaseToken,
+        });
+
         // Create Supabase session
-        await createSupabaseSession(authData.supabaseToken, authData.supabaseRefreshToken);
+        await createSupabaseSession(
+          authData.supabaseToken,
+          authData.supabaseRefreshToken,
+        );
         console.log('✅ Supabase session established for order access');
       } catch (authError) {
         console.error('❌ Failed to establish Supabase session:', authError);
@@ -343,7 +360,9 @@ export default function OrderDetailPage() {
       // Get buyer's profile information for shipping details
       const { data: profileData, error: profileError } = await supabase
         .from('user_profiles')
-        .select('first_name, last_name, address_1, address_2, city, state, zip, email, phone')
+        .select(
+          'first_name, last_name, address_1, address_2, city, state, zip, email, phone',
+        )
         .eq('wallet_address', orderData.buyer_address.toLowerCase())
         .single();
 
@@ -357,7 +376,6 @@ export default function OrderDetailPage() {
 
       // Check if user can manage this order
       await checkManagementPermission(orderData);
-
     } catch (error) {
       console.error('Error loading order data:', error);
       setError('Failed to load order information');
@@ -375,12 +393,13 @@ export default function OrderDetailPage() {
       // 2. Executive pod member (can manage all orders)
       // 3. Pod manager for the product's required token
 
-      const isBuyer = address.toLowerCase() === orderData.buyer_address.toLowerCase();
-      
+      const isBuyer =
+        address.toLowerCase() === orderData.buyer_address.toLowerCase();
+
       // Get user's token balances to check permissions
       const tokenBalances = await fetchTokenBalances(address);
       const hasExecutivePod = tokenBalances.hasExecutivePod;
-      
+
       if (hasExecutivePod) {
         setCanManage(true);
         return;
@@ -423,7 +442,6 @@ export default function OrderDetailPage() {
         // Products with no token requirement can only be managed by executive pod
         setCanManage(false);
       }
-
     } catch (error) {
       console.error('Error checking management permission:', error);
       setCanManage(false);
@@ -440,7 +458,7 @@ export default function OrderDetailPage() {
       // Update order status and tracking number
       const updateData: any = {
         status: newStatus,
-        updated_at: new Date().toISOString()
+        updated_at: new Date().toISOString(),
       };
 
       if (trackingNumber.trim()) {
@@ -470,7 +488,7 @@ export default function OrderDetailPage() {
           old_status: order.status,
           new_status: newStatus,
           changed_by_address: address,
-          notes: statusNotes.trim() || null
+          notes: statusNotes.trim() || null,
         });
 
       if (historyError) {
@@ -493,18 +511,20 @@ export default function OrderDetailPage() {
             productName: order.product_name,
             orderId: orderId,
             trackingNumber: trackingNumber.trim() || undefined,
-            notes: statusNotes.trim() || undefined
-          })
+            notes: statusNotes.trim() || undefined,
+          }),
         });
       } catch (notificationError) {
-        console.error('Failed to send status update notification:', notificationError);
+        console.error(
+          'Failed to send status update notification:',
+          notificationError,
+        );
         // Don't fail the status update for notification errors
       }
 
       // Clear form and reload data
       setStatusNotes('');
       await loadOrderData();
-
     } catch (error) {
       console.error('Error updating order status:', error);
       setError('Failed to update order status');
@@ -521,11 +541,14 @@ export default function OrderDetailPage() {
     return new Date(dateString).toLocaleString();
   };
 
-  const formatTotalValue = (selfPaid: number | string, systemPaid: number | string) => {
+  const formatTotalValue = (
+    selfPaid: number | string,
+    systemPaid: number | string,
+  ) => {
     // Convert to numbers to handle string values from database
     const selfAmount = Number(selfPaid) || 0;
     const systemAmount = Number(systemPaid) || 0;
-    
+
     // Debug logging
     console.log('💰 Total Value Debug:', {
       selfPaid,
@@ -535,13 +558,13 @@ export default function OrderDetailPage() {
       selfType: typeof selfPaid,
       systemType: typeof systemPaid,
       selfIsPositive: selfAmount > 0,
-      systemIsPositive: systemAmount > 0
+      systemIsPositive: systemAmount > 0,
     });
-    
+
     const parts = [];
     if (selfAmount > 0) parts.push(`${selfAmount} $SELF`);
     if (systemAmount > 0) parts.push(`${systemAmount} $SYSTEM`);
-    
+
     if (parts.length === 0) return 'Free';
     if (parts.length === 1) return parts[0];
     return parts.join(' + ');
@@ -593,9 +616,9 @@ export default function OrderDetailPage() {
             <InfoRow>
               <Label>Buyer:</Label>
               <Value>
-                <UserProfileDisplay 
-                  walletAddress={order.buyer_address} 
-                  size="sm" 
+                <UserProfileDisplay
+                  walletAddress={order.buyer_address}
+                  size="sm"
                   className="inline-flex"
                 />
               </Value>
@@ -614,7 +637,7 @@ export default function OrderDetailPage() {
               <InfoRow>
                 <Label>Transaction:</Label>
                 <Value>
-                  <TransactionLink 
+                  <TransactionLink
                     href={`https://basescan.org/tx/${order.transaction_hash}`}
                     target="_blank"
                     rel="noopener noreferrer"
@@ -642,7 +665,12 @@ export default function OrderDetailPage() {
             )}
             <InfoRow>
               <Label>Total Value:</Label>
-              <Value>{formatTotalValue(order.price_paid_self, order.price_paid_system)}</Value>
+              <Value>
+                {formatTotalValue(
+                  order.price_paid_self,
+                  order.price_paid_system,
+                )}
+              </Value>
             </InfoRow>
           </Card>
 
@@ -654,20 +682,28 @@ export default function OrderDetailPage() {
                 <InfoRow>
                   <Label>Name:</Label>
                   <Value>
-                    {[buyerProfile.first_name, buyerProfile.last_name].filter(Boolean).join(' ')}
+                    {[buyerProfile.first_name, buyerProfile.last_name]
+                      .filter(Boolean)
+                      .join(' ')}
                   </Value>
                 </InfoRow>
               ) : null}
-              
+
               {buyerProfile.address_1 && (
                 <InfoRow>
                   <Label>Address:</Label>
                   <Value>
                     <div>
                       <div>{buyerProfile.address_1}</div>
-                      {buyerProfile.address_2 && <div>{buyerProfile.address_2}</div>}
+                      {buyerProfile.address_2 && (
+                        <div>{buyerProfile.address_2}</div>
+                      )}
                       <div>
-                        {[buyerProfile.city, buyerProfile.state, buyerProfile.zip]
+                        {[
+                          buyerProfile.city,
+                          buyerProfile.state,
+                          buyerProfile.zip,
+                        ]
                           .filter(Boolean)
                           .join(', ')}
                       </div>
@@ -675,26 +711,30 @@ export default function OrderDetailPage() {
                   </Value>
                 </InfoRow>
               )}
-              
+
               {buyerProfile.email && (
                 <InfoRow>
                   <Label>Email:</Label>
                   <Value>{buyerProfile.email}</Value>
                 </InfoRow>
               )}
-              
+
               {buyerProfile.phone && (
                 <InfoRow>
                   <Label>Phone:</Label>
                   <Value>{buyerProfile.phone}</Value>
                 </InfoRow>
               )}
-              
-              {(!buyerProfile.address_1 || !buyerProfile.city || !buyerProfile.state || !buyerProfile.zip) && (
+
+              {(!buyerProfile.address_1 ||
+                !buyerProfile.city ||
+                !buyerProfile.state ||
+                !buyerProfile.zip) && (
                 <InfoRow>
                   <Label>⚠️ Notice:</Label>
                   <Value style={{ color: '#d63384', fontSize: '0.9rem' }}>
-                    Incomplete shipping address. Customer needs to update their profile.
+                    Incomplete shipping address. Customer needs to update their
+                    profile.
                   </Value>
                 </InfoRow>
               )}
@@ -708,7 +748,8 @@ export default function OrderDetailPage() {
               <InfoRow>
                 <Label>Status:</Label>
                 <Value style={{ color: '#d63384' }}>
-                  No shipping information available. Customer has not completed their profile.
+                  No shipping information available. Customer has not completed
+                  their profile.
                 </Value>
               </InfoRow>
             </Card>
@@ -719,8 +760,8 @@ export default function OrderDetailPage() {
           {canManage && (
             <Card>
               <CardTitle>Update Status</CardTitle>
-              <Select 
-                value={newStatus} 
+              <Select
+                value={newStatus}
                 onChange={(e) => setNewStatus(e.target.value)}
                 disabled={isUpdating}
               >
@@ -730,7 +771,7 @@ export default function OrderDetailPage() {
                 <option value="delivered">Delivered</option>
                 <option value="cancelled">Cancelled</option>
               </Select>
-              
+
               <Input
                 type="text"
                 placeholder="Tracking number (optional)"
@@ -738,14 +779,14 @@ export default function OrderDetailPage() {
                 onChange={(e) => setTrackingNumber(e.target.value)}
                 disabled={isUpdating}
               />
-              
+
               <TextArea
                 placeholder="Status update notes (optional)"
                 value={statusNotes}
                 onChange={(e) => setStatusNotes(e.target.value)}
                 disabled={isUpdating}
               />
-              
+
               <UpdateButton
                 onClick={handleStatusUpdate}
                 disabled={isUpdating || newStatus === order.status}
@@ -776,11 +817,19 @@ export default function OrderDetailPage() {
                     </div>
                     <HistoryDate>{formatDate(entry.created_at)}</HistoryDate>
                   </HistoryHeader>
-                  <div style={{ fontSize: '14px', color: '#666', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <div
+                    style={{
+                      fontSize: '14px',
+                      color: '#666',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                    }}
+                  >
                     <span>Updated by:</span>
-                    <UserProfileDisplay 
-                      walletAddress={entry.changed_by_address} 
-                      size="sm" 
+                    <UserProfileDisplay
+                      walletAddress={entry.changed_by_address}
+                      size="sm"
                       className="inline-flex"
                     />
                   </div>

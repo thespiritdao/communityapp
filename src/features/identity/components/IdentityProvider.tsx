@@ -12,7 +12,12 @@ export function useIdentityContext() {
   return useContext(IdentityContext);
 }
 
-export function IdentityProvider({ address, chain, children, schemaId }: IdentityProviderReact) {
+export function IdentityProvider({
+  address,
+  chain,
+  children,
+  schemaId,
+}: IdentityProviderReact) {
   const { chain: contextChain } = useOnchainKit();
   const accountChain = chain ?? contextChain;
 

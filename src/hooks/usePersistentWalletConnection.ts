@@ -26,12 +26,12 @@ export function usePersistentWalletConnection() {
   const { address, isConnected, connector } = useAccount();
   const { connect, connectors } = useConnect();
   const { disconnect } = useDisconnect();
-  
+
   const [isRestoringConnection, setIsRestoringConnection] = useState(false);
   const [connectionError, setConnectionError] = useState<string | null>(null);
   const [isSmartWallet, setIsSmartWallet] = useState(false);
   const [isVerifying, setIsVerifying] = useState(false);
-  
+
   const restorationAttempted = useRef(false);
   const verificationInProgress = useRef(false);
   const sessionId = useRef<string>(generateSessionId());
@@ -46,9 +46,9 @@ export function usePersistentWalletConnection() {
         connectorId: connector.id,
         isSmartWallet,
         timestamp: Date.now(),
-        sessionId: sessionId.current
+        sessionId: sessionId.current,
       };
-      
+
       try {
         localStorage.setItem(WALLET_STATE_KEY, JSON.stringify(state));
         console.log('💾 Wallet state saved:', state);
@@ -104,7 +104,7 @@ export function usePersistentWalletConnection() {
         const newState: ConnectionRetryState = {
           count: current.count + 1,
           lastAttempt: Date.now(),
-          backoffMs: Math.min(current.backoffMs * 2, 30000) // Max 30 seconds
+          backoffMs: Math.min(current.backoffMs * 2, 30000), // Max 30 seconds
         };
         localStorage.setItem(CONNECTION_RETRY_KEY, JSON.stringify(newState));
       }
@@ -128,7 +128,7 @@ export function usePersistentWalletConnection() {
       }
 
       const state = JSON.parse(stored) as PersistedWalletState;
-      
+
       // Check if session is still valid
       if (Date.now() - state.timestamp > SESSION_TIMEOUT) {
         console.log('⏰ Wallet session expired, clearing state');
@@ -140,7 +140,9 @@ export function usePersistentWalletConnection() {
       const retryState = getRetryState();
       if (retryState.count >= 3) {
         console.log('⚠️ Max connection retries reached');
-        setConnectionError('Failed to restore wallet connection after multiple attempts');
+        setConnectionError(
+          'Failed to restore wallet connection after multiple attempts',
+        );
         return;
       }
 
@@ -150,7 +152,9 @@ export function usePersistentWalletConnection() {
       setConnectionError(null);
 
       // Find the connector
-      const targetConnector = connectors.find(c => c.id === state.connectorId);
+      const targetConnector = connectors.find(
+        (c) => c.id === state.connectorId,
+      );
       if (!targetConnector) {
         console.error('Connector not found:', state.connectorId);
         updateRetryState(false);
@@ -159,23 +163,26 @@ export function usePersistentWalletConnection() {
 
       // Apply exponential backoff if needed
       if (retryState.count > 0) {
-        console.log(`⏳ Waiting ${retryState.backoffMs}ms before retry attempt ${retryState.count + 1}`);
-        await new Promise(resolve => setTimeout(resolve, retryState.backoffMs));
+        console.log(
+          `⏳ Waiting ${retryState.backoffMs}ms before retry attempt ${retryState.count + 1}`,
+        );
+        await new Promise((resolve) =>
+          setTimeout(resolve, retryState.backoffMs),
+        );
       }
 
       // Attempt to connect
       await connect({ connector: targetConnector });
-      
+
       // Update state
       setIsSmartWallet(state.isSmartWallet);
       updateRetryState(true);
       console.log('✅ Wallet connection restored successfully');
-      
     } catch (error) {
       console.error('❌ Failed to restore wallet connection:', error);
       updateRetryState(false);
       setConnectionError('Failed to restore wallet connection');
-      
+
       // Schedule retry if we haven't exceeded max attempts
       const retryState = getRetryState();
       if (retryState.count < 3) {
@@ -187,7 +194,13 @@ export function usePersistentWalletConnection() {
     } finally {
       setIsRestoringConnection(false);
     }
-  }, [isConnected, isRestoringConnection, connect, connectors, clearWalletState]);
+  }, [
+    isConnected,
+    isRestoringConnection,
+    connect,
+    connectors,
+    clearWalletState,
+  ]);
 
   /**
    * Verify wallet type using centralized service
@@ -200,16 +213,18 @@ export function usePersistentWalletConnection() {
     try {
       verificationInProgress.current = true;
       setIsVerifying(true);
-      
+
       console.log('🔍 Verifying wallet using centralized service');
-      const result = await walletVerificationService.verifyWallet(address, connector);
-      
+      const result = await walletVerificationService.verifyWallet(
+        address,
+        connector,
+      );
+
       setIsSmartWallet(result.isSmartWallet);
       console.log('✅ Wallet verification complete:', result);
-      
+
       // Save state after successful verification
       saveWalletState();
-      
     } catch (error) {
       console.error('❌ Wallet verification failed:', error);
       setConnectionError('Failed to verify wallet type');
@@ -237,7 +252,12 @@ export function usePersistentWalletConnection() {
 
   // Verify wallet when connected
   useEffect(() => {
-    if (isConnected && address && connector && !verificationInProgress.current) {
+    if (
+      isConnected &&
+      address &&
+      connector &&
+      !verificationInProgress.current
+    ) {
       verifyWallet();
     }
   }, [isConnected, address, connector, verifyWallet]);
@@ -247,12 +267,23 @@ export function usePersistentWalletConnection() {
     if (isConnected && address && connector && !isVerifying) {
       saveWalletState();
     }
-  }, [isConnected, address, connector, isSmartWallet, isVerifying, saveWalletState]);
+  }, [
+    isConnected,
+    address,
+    connector,
+    isSmartWallet,
+    isVerifying,
+    saveWalletState,
+  ]);
 
   // Handle page visibility changes
   useEffect(() => {
     const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible' && !isConnected && !restorationAttempted.current) {
+      if (
+        document.visibilityState === 'visible' &&
+        !isConnected &&
+        !restorationAttempted.current
+      ) {
         console.log('📱 Page became visible, checking wallet connection');
         restorationAttempted.current = false;
         restoreConnection();
@@ -291,7 +322,7 @@ export function usePersistentWalletConnection() {
     retryConnection: () => {
       restorationAttempted.current = false;
       restoreConnection();
-    }
+    },
   };
 }
 

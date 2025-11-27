@@ -32,24 +32,24 @@ export const PodAccessGate: React.FC<PodAccessGateProps> = ({
   fallback,
   loadingComponent,
   title = 'Access Restricted',
-  description
+  description,
 }) => {
   const router = useRouter();
   const { address } = useAccount();
-  
+
   const {
     hasAccess,
     isLoading,
     errorMessage,
     isExecutiveMember,
     isPodLeader,
-    isPodMember
+    isPodMember,
   } = usePodAccessControl({
     requireExecutive,
     requirePodLeader,
     requirePodMember,
     requireHat,
-    redirectTo: undefined // We'll handle redirect manually for better UX
+    redirectTo: undefined, // We'll handle redirect manually for better UX
   });
 
   // Loading state
@@ -57,7 +57,7 @@ export const PodAccessGate: React.FC<PodAccessGateProps> = ({
     if (loadingComponent) {
       return <>{loadingComponent}</>;
     }
-    
+
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
         <Card className="max-w-md w-full">
@@ -92,8 +92,10 @@ export const PodAccessGate: React.FC<PodAccessGateProps> = ({
   };
 
   const getAccessIcon = () => {
-    if (requireExecutive) return <Shield className="h-12 w-12" style={{ color: '#2F5D50' }} />;
-    if (requirePodLeader) return <Shield className="h-12 w-12" style={{ color: '#6A5F7A' }} />;
+    if (requireExecutive)
+      return <Shield className="h-12 w-12" style={{ color: '#2F5D50' }} />;
+    if (requirePodLeader)
+      return <Shield className="h-12 w-12" style={{ color: '#6A5F7A' }} />;
     return <Lock className="h-12 w-12 text-gray-500" />;
   };
 
@@ -101,22 +103,28 @@ export const PodAccessGate: React.FC<PodAccessGateProps> = ({
     <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
       <Card className="max-w-lg w-full">
         <CardHeader className="text-center">
-          <div className="flex justify-center mb-4">
-            {getAccessIcon()}
-          </div>
+          <div className="flex justify-center mb-4">{getAccessIcon()}</div>
           <CardTitle className="text-2xl">{title}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           {/* Error/Requirement Message */}
-          <div className="p-4 rounded-lg" style={{ backgroundColor: '#FAF4EC', border: '1px solid #E8D7B8' }}>
+          <div
+            className="p-4 rounded-lg"
+            style={{ backgroundColor: '#FAF4EC', border: '1px solid #E8D7B8' }}
+          >
             <div className="flex items-start gap-3">
-              <AlertTriangle className="h-5 w-5 mt-0.5" style={{ color: '#C6933F' }} />
+              <AlertTriangle
+                className="h-5 w-5 mt-0.5"
+                style={{ color: '#C6933F' }}
+              />
               <div className="flex-1">
                 <p className="font-medium" style={{ color: '#7A5F3F' }}>
                   {getAccessRequirement()} Required
                 </p>
                 <p className="text-sm mt-1" style={{ color: '#9B7F5F' }}>
-                  {errorMessage || description || `You need ${getAccessRequirement().toLowerCase()} to access this page.`}
+                  {errorMessage ||
+                    description ||
+                    `You need ${getAccessRequirement().toLowerCase()} to access this page.`}
                 </p>
               </div>
             </div>
@@ -124,7 +132,13 @@ export const PodAccessGate: React.FC<PodAccessGateProps> = ({
 
           {/* Connection Status */}
           {!address && (
-            <div className="p-4 rounded-lg" style={{ backgroundColor: '#E8F1EE', border: '1px solid #B8D9CA' }}>
+            <div
+              className="p-4 rounded-lg"
+              style={{
+                backgroundColor: '#E8F1EE',
+                border: '1px solid #B8D9CA',
+              }}
+            >
               <p className="text-sm" style={{ color: '#1F453A' }}>
                 Please connect your wallet to verify your access permissions.
               </p>
@@ -134,23 +148,42 @@ export const PodAccessGate: React.FC<PodAccessGateProps> = ({
           {/* Current Status */}
           {address && (
             <div className="space-y-2">
-              <p className="text-sm font-medium text-gray-700">Your Access Status:</p>
+              <p className="text-sm font-medium text-gray-700">
+                Your Access Status:
+              </p>
               <div className="space-y-1">
                 {requireExecutive && (
                   <div className="flex items-center gap-2 text-sm">
-                    <span className="w-2 h-2 rounded-full" style={{ backgroundColor: isExecutiveMember ? '#3F7A5A' : '#8B3A3A' }} />
+                    <span
+                      className="w-2 h-2 rounded-full"
+                      style={{
+                        backgroundColor: isExecutiveMember
+                          ? '#3F7A5A'
+                          : '#8B3A3A',
+                      }}
+                    />
                     <span className="text-gray-600">Executive Pod Member</span>
                   </div>
                 )}
                 {requirePodLeader && (
                   <div className="flex items-center gap-2 text-sm">
-                    <span className="w-2 h-2 rounded-full" style={{ backgroundColor: isPodLeader ? '#3F7A5A' : '#8B3A3A' }} />
+                    <span
+                      className="w-2 h-2 rounded-full"
+                      style={{
+                        backgroundColor: isPodLeader ? '#3F7A5A' : '#8B3A3A',
+                      }}
+                    />
                     <span className="text-gray-600">Pod Leader</span>
                   </div>
                 )}
                 {requirePodMember && (
                   <div className="flex items-center gap-2 text-sm">
-                    <span className="w-2 h-2 rounded-full" style={{ backgroundColor: isPodMember ? '#3F7A5A' : '#8B3A3A' }} />
+                    <span
+                      className="w-2 h-2 rounded-full"
+                      style={{
+                        backgroundColor: isPodMember ? '#3F7A5A' : '#8B3A3A',
+                      }}
+                    />
                     <span className="text-gray-600">Pod Member</span>
                   </div>
                 )}
@@ -176,10 +209,7 @@ export const PodAccessGate: React.FC<PodAccessGateProps> = ({
               </Button>
             )}
             {requirePodMember && !requirePodLeader && (
-              <Button
-                onClick={() => router.push('/pods')}
-                className="flex-1"
-              >
+              <Button onClick={() => router.push('/pods')} className="flex-1">
                 Join a Pod
               </Button>
             )}
@@ -191,7 +221,9 @@ export const PodAccessGate: React.FC<PodAccessGateProps> = ({
 };
 
 // Pre-configured gates for common use cases
-export const ExecutivePodGate: React.FC<{ children: ReactNode }> = ({ children }) => (
+export const ExecutivePodGate: React.FC<{ children: ReactNode }> = ({
+  children,
+}) => (
   <PodAccessGate
     requireExecutive={true}
     title="Executive Access Required"
@@ -201,7 +233,10 @@ export const ExecutivePodGate: React.FC<{ children: ReactNode }> = ({ children }
   </PodAccessGate>
 );
 
-export const PodLeaderGate: React.FC<{ children: ReactNode; podId: string }> = ({ children, podId }) => (
+export const PodLeaderGate: React.FC<{
+  children: ReactNode;
+  podId: string;
+}> = ({ children, podId }) => (
   <PodAccessGate
     requirePodLeader={podId}
     title="Pod Leader Access Required"
@@ -211,7 +246,10 @@ export const PodLeaderGate: React.FC<{ children: ReactNode; podId: string }> = (
   </PodAccessGate>
 );
 
-export const PodMemberGate: React.FC<{ children: ReactNode; podId: string }> = ({ children, podId }) => (
+export const PodMemberGate: React.FC<{
+  children: ReactNode;
+  podId: string;
+}> = ({ children, podId }) => (
   <PodAccessGate
     requirePodMember={podId}
     title="Pod Membership Required"

@@ -1,4 +1,3 @@
-
 import type React from 'react';
 import { useState, useEffect } from 'react';
 import { formatDistanceToNow } from 'date-fns';
@@ -38,12 +37,19 @@ interface PostCardProps {
   podId?: string | null; // NEW: Pod ID for pod-specific permissions
 }
 
-const PostCard: React.FC<PostCardProps> = ({ post, authorProfile: providedProfile, attachments, podId }) => {
+const PostCard: React.FC<PostCardProps> = ({
+  post,
+  authorProfile: providedProfile,
+  attachments,
+  podId,
+}) => {
   const [isEditing, setIsEditing] = useState(false);
   const [editContent, setEditContent] = useState(post.content);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [currentUserWallet, setCurrentUserWallet] = useState<string | null>(null);
+  const [currentUserWallet, setCurrentUserWallet] = useState<string | null>(
+    null,
+  );
   const [showProfileModal, setShowProfileModal] = useState(false);
 
   // Use provided profile or fallback (for backwards compatibility)
@@ -72,18 +78,18 @@ const PostCard: React.FC<PostCardProps> = ({ post, authorProfile: providedProfil
 
   const handleSaveEdit = async () => {
     if (!editContent.trim()) return;
-    
+
     try {
       setIsSubmitting(true);
       setError(null);
-      
+
       const { error: updateError } = await supabase
         .from('forum_posts')
         .update({ content: editContent })
         .eq('id', post.id);
-      
+
       if (updateError) throw updateError;
-      
+
       setIsEditing(false);
       // Update the post content locally so the UI reflects changes
       post.content = editContent;
@@ -107,9 +113,14 @@ const PostCard: React.FC<PostCardProps> = ({ post, authorProfile: providedProfil
         .join(' ')
         .trim();
 
-      return fullName || post.author_address.slice(0, 6) + '...' + post.author_address.slice(-4);
+      return (
+        fullName ||
+        post.author_address.slice(0, 6) + '...' + post.author_address.slice(-4)
+      );
     }
-    return post.author_address.slice(0, 6) + '...' + post.author_address.slice(-4);
+    return (
+      post.author_address.slice(0, 6) + '...' + post.author_address.slice(-4)
+    );
   };
 
   const handleProfileClick = () => {
@@ -121,7 +132,7 @@ const PostCard: React.FC<PostCardProps> = ({ post, authorProfile: providedProfil
   return (
     <div className={styles.postCard}>
       <div className={styles.postHeader}>
-		<div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           {/* Profile picture */}
           {authorProfile?.profile_picture ? (
             <img
@@ -133,7 +144,7 @@ const PostCard: React.FC<PostCardProps> = ({ post, authorProfile: providedProfil
                 height: '40px',
                 borderRadius: '50%',
                 objectFit: 'cover',
-                cursor: 'pointer'
+                cursor: 'pointer',
               }}
             />
           ) : (
@@ -150,17 +161,14 @@ const PostCard: React.FC<PostCardProps> = ({ post, authorProfile: providedProfil
                 fontSize: '16px',
                 fontWeight: 'bold',
                 color: '#666',
-                cursor: 'pointer'
+                cursor: 'pointer',
               }}
             >
               {getAuthorDisplay().charAt(0).toUpperCase()}
             </div>
           )}
           {/* Name/Address */}
-          <strong
-            onClick={handleProfileClick}
-            style={{ cursor: 'pointer' }}
-          >
+          <strong onClick={handleProfileClick} style={{ cursor: 'pointer' }}>
             {getAuthorDisplay()}
           </strong>
         </div>
@@ -186,7 +194,7 @@ const PostCard: React.FC<PostCardProps> = ({ post, authorProfile: providedProfil
           />
         </div>
       </div>
-      
+
       <div className={styles.postContent}>
         {isEditing ? (
           <div className={styles.editContainer}>
@@ -237,8 +245,19 @@ const PostCard: React.FC<PostCardProps> = ({ post, authorProfile: providedProfil
       {/* Post Footer: Reactions + Report + Date */}
       <div className={styles.postFooter}>
         <ReactionPicker postId={post.id} />
-        <div style={{ display: 'flex', gap: '12px', alignItems: 'center', marginLeft: 'auto' }}>
-          <ReportButton targetType="post" targetId={post.id} threadId={post.thread_id} />
+        <div
+          style={{
+            display: 'flex',
+            gap: '12px',
+            alignItems: 'center',
+            marginLeft: 'auto',
+          }}
+        >
+          <ReportButton
+            targetType="post"
+            targetId={post.id}
+            threadId={post.thread_id}
+          />
           <span className={styles.postDate}>{formatDate(post.created_at)}</span>
         </div>
       </div>

@@ -1,14 +1,14 @@
 // src/components/WalletStatus.tsx
-"use client";
+'use client';
 
-import { useEffect } from "react";
-import { useAccount } from "wagmi";
+import { useEffect } from 'react';
+import { useAccount } from 'wagmi';
 
 export function WalletStatus() {
   const { address, isConnected, isConnecting, isDisconnected } = useAccount();
 
   useEffect(() => {
-    console.log("Wallet status updated:", {
+    console.log('Wallet status updated:', {
       address,
       isConnected,
       isConnecting,
@@ -18,11 +18,7 @@ export function WalletStatus() {
 
   return (
     <div>
-      {address ? (
-        <p>Connected: {address}</p>
-      ) : (
-        <p>No wallet connected.</p>
-      )}
+      {address ? <p>Connected: {address}</p> : <p>No wallet connected.</p>}
     </div>
   );
 }

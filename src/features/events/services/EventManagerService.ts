@@ -1,4 +1,11 @@
-import { createPublicClient, createWalletClient, http, type Address, parseEther, encodeFunctionData } from 'viem';
+import {
+  createPublicClient,
+  createWalletClient,
+  http,
+  type Address,
+  parseEther,
+  encodeFunctionData,
+} from 'viem';
 import { base } from 'viem/chains';
 import { CONTRACT_ADDRESSES } from '@/config/contracts';
 import EventManagerABI from '../../../abis/EventManager.json';
@@ -23,7 +30,7 @@ export class EventManagerService {
     fundRecipient: Address,
     priceSystem = '0',
     priceSelf = '0',
-    maxAttendees = 0
+    maxAttendees = 0,
   ): Promise<string> {
     try {
       if (!EVENT_MANAGER_CONTRACT_ADDRESS) {
@@ -42,7 +49,7 @@ export class EventManagerService {
         priceSystemWei: priceSystemWei.toString(),
         priceSelfWei: priceSelfWei.toString(),
         maxAttendees,
-        contractAddress: EVENT_MANAGER_CONTRACT_ADDRESS
+        contractAddress: EVENT_MANAGER_CONTRACT_ADDRESS,
       });
 
       // Return the transaction data for OnChainKit to execute
@@ -56,7 +63,7 @@ export class EventManagerService {
           fundRecipient,
           priceSystemWei,
           priceSelfWei,
-          BigInt(maxAttendees)
+          BigInt(maxAttendees),
         ],
       });
     } catch (error) {
@@ -75,7 +82,7 @@ export class EventManagerService {
     fundRecipient: Address,
     priceSystem = '0',
     priceSelf = '0',
-    maxAttendees: number | undefined = 0
+    maxAttendees: number | undefined = 0,
   ): any[] {
     try {
       if (!EVENT_MANAGER_CONTRACT_ADDRESS) {
@@ -95,25 +102,27 @@ export class EventManagerService {
         priceSystemWei: priceSystemWei.toString(),
         priceSelfWei: priceSelfWei.toString(),
         maxAttendees: maxAttendeesValue,
-        contractAddress: EVENT_MANAGER_CONTRACT_ADDRESS
+        contractAddress: EVENT_MANAGER_CONTRACT_ADDRESS,
       });
 
-      return [{
-        to: EVENT_MANAGER_CONTRACT_ADDRESS,
-        data: encodeFunctionData({
-          abi: EventManagerABI,
-          functionName: 'createEvent',
-          args: [
-            eventId,
-            title,
-            BigInt(eventTimestamp),
-            fundRecipient,
-            priceSystemWei,
-            priceSelfWei,
-            BigInt(maxAttendeesValue)
-          ],
-        })
-      }];
+      return [
+        {
+          to: EVENT_MANAGER_CONTRACT_ADDRESS,
+          data: encodeFunctionData({
+            abi: EventManagerABI,
+            functionName: 'createEvent',
+            args: [
+              eventId,
+              title,
+              BigInt(eventTimestamp),
+              fundRecipient,
+              priceSystemWei,
+              priceSelfWei,
+              BigInt(maxAttendeesValue),
+            ],
+          }),
+        },
+      ];
     } catch (error) {
       console.error('❌ Error preparing create event calls:', error);
       throw error;
@@ -131,17 +140,19 @@ export class EventManagerService {
 
       console.log('✅ Preparing complete event call for:', {
         eventId,
-        contractAddress: EVENT_MANAGER_CONTRACT_ADDRESS
+        contractAddress: EVENT_MANAGER_CONTRACT_ADDRESS,
       });
 
-      return [{
-        to: EVENT_MANAGER_CONTRACT_ADDRESS,
-        data: encodeFunctionData({
-          abi: EventManagerABI,
-          functionName: 'completeEvent',
-          args: [eventId],
-        })
-      }];
+      return [
+        {
+          to: EVENT_MANAGER_CONTRACT_ADDRESS,
+          data: encodeFunctionData({
+            abi: EventManagerABI,
+            functionName: 'completeEvent',
+            args: [eventId],
+          }),
+        },
+      ];
     } catch (error) {
       console.error('❌ Error preparing complete event calls:', error);
       throw error;
@@ -155,7 +166,7 @@ export class EventManagerService {
     eventId: string,
     recipientAddress: Address,
     metadataURI: string,
-    signer: any // wallet signer
+    signer: any, // wallet signer
   ): Promise<string> {
     try {
       const walletClient = createWalletClient({
@@ -164,7 +175,11 @@ export class EventManagerService {
         account: signer.account,
       });
 
-      console.log('🎨 Minting NFT for:', { eventId, recipientAddress, metadataURI });
+      console.log('🎨 Minting NFT for:', {
+        eventId,
+        recipientAddress,
+        metadataURI,
+      });
 
       const txHash = await walletClient.writeContract({
         address: EVENT_MANAGER_CONTRACT_ADDRESS,
@@ -187,31 +202,35 @@ export class EventManagerService {
   static prepareBatchMintCalls(
     eventId: string,
     recipients: Address[],
-    metadataURIs: string[]
+    metadataURIs: string[],
   ): any[] {
     if (recipients.length !== metadataURIs.length) {
       throw new Error('Recipients and metadata arrays must have same length');
     }
 
     if (!EVENT_MANAGER_CONTRACT_ADDRESS) {
-      throw new Error('EVENT_MANAGER_CONTRACT_ADDRESS not configured. Please set NEXT_PUBLIC_EVENT_MANAGER or NEXT_PUBLIC_EVENT_MANAGER environment variable.');
+      throw new Error(
+        'EVENT_MANAGER_CONTRACT_ADDRESS not configured. Please set NEXT_PUBLIC_EVENT_MANAGER or NEXT_PUBLIC_EVENT_MANAGER environment variable.',
+      );
     }
 
-    console.log('🎨 Preparing batch mint calls for:', { 
-      eventId, 
+    console.log('🎨 Preparing batch mint calls for:', {
+      eventId,
       count: recipients.length,
       recipients: recipients.slice(0, 3), // Log first 3 for debugging
-      contractAddress: EVENT_MANAGER_CONTRACT_ADDRESS
+      contractAddress: EVENT_MANAGER_CONTRACT_ADDRESS,
     });
 
-    return [{
-      to: EVENT_MANAGER_CONTRACT_ADDRESS,
-      data: encodeFunctionData({
-        abi: EventManagerABI,
-        functionName: 'batchMintCertificates',
-        args: [eventId, recipients, metadataURIs],
-      })
-    }];
+    return [
+      {
+        to: EVENT_MANAGER_CONTRACT_ADDRESS,
+        data: encodeFunctionData({
+          abi: EventManagerABI,
+          functionName: 'batchMintCertificates',
+          args: [eventId, recipients, metadataURIs],
+        }),
+      },
+    ];
   }
 
   /**
@@ -220,47 +239,49 @@ export class EventManagerService {
   static generateCertificateMetadata(
     event: any,
     recipientAddress: string,
-    userName?: string
+    userName?: string,
   ): any {
     const completionDate = new Date(event.event_end_date || event.event_date);
     const eventDate = new Date(event.event_date);
-    
+
     return {
       name: `${event.title} - Completion Certificate`,
       description: `Completion certificate for "${event.title}" event. This NFT certifies attendance and participation in the community event.`,
-      image: event.event_image_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(event.title)}&size=400&background=bfe7c6&color=000`,
+      image:
+        event.event_image_url ||
+        `https://ui-avatars.com/api/?name=${encodeURIComponent(event.title)}&size=400&background=bfe7c6&color=000`,
       attributes: [
         {
-          trait_type: "Event Title",
-          value: event.title
+          trait_type: 'Event Title',
+          value: event.title,
         },
         {
-          trait_type: "Event Date",
-          value: eventDate.toISOString().split('T')[0]
+          trait_type: 'Event Date',
+          value: eventDate.toISOString().split('T')[0],
         },
         {
-          trait_type: "Completion Date", 
-          value: completionDate.toISOString().split('T')[0]
+          trait_type: 'Completion Date',
+          value: completionDate.toISOString().split('T')[0],
         },
         {
-          trait_type: "Event Location",
-          value: event.location || "Virtual"
+          trait_type: 'Event Location',
+          value: event.location || 'Virtual',
         },
         {
-          trait_type: "Recipient",
-          value: userName || recipientAddress.slice(0, 8) + "..."
+          trait_type: 'Recipient',
+          value: userName || recipientAddress.slice(0, 8) + '...',
         },
         {
-          trait_type: "Organization",
-          value: "Community DAO"
+          trait_type: 'Organization',
+          value: 'Community DAO',
         },
         {
-          trait_type: "Certificate Type",
-          value: "Event Completion"
-        }
+          trait_type: 'Certificate Type',
+          value: 'Event Completion',
+        },
       ],
       external_url: `${typeof window !== 'undefined' ? window.location.origin : ''}/events/${event.id}`,
-      background_color: "bfe7c6"
+      background_color: 'bfe7c6',
     };
   }
 
@@ -280,10 +301,12 @@ export class EventManagerService {
     eventId: string,
     recipients: Address[],
     metadataURIs: string[],
-    signer: any
+    signer: any,
   ): Promise<string> {
-    console.warn('⚠️ batchMintCertificates is deprecated. Use prepareBatchMintCalls with OnchainKit Transaction component instead.');
-    
+    console.warn(
+      '⚠️ batchMintCertificates is deprecated. Use prepareBatchMintCalls with OnchainKit Transaction component instead.',
+    );
+
     try {
       if (recipients.length !== metadataURIs.length) {
         throw new Error('Recipients and metadata arrays must have same length');
@@ -295,10 +318,10 @@ export class EventManagerService {
         account: signer.account,
       });
 
-      console.log('🎨 Batch minting NFTs for:', { 
-        eventId, 
+      console.log('🎨 Batch minting NFTs for:', {
+        eventId,
         count: recipients.length,
-        recipients: recipients.slice(0, 3) // Log first 3 for debugging
+        recipients: recipients.slice(0, 3), // Log first 3 for debugging
       });
 
       const txHash = await walletClient.writeContract({
@@ -321,7 +344,7 @@ export class EventManagerService {
    */
   static async completeEventOnChain(
     eventId: string,
-    signer: any
+    signer: any,
   ): Promise<string> {
     try {
       const walletClient = createWalletClient({
@@ -353,40 +376,42 @@ export class EventManagerService {
   static generateCertificateMetadata(
     event: any,
     recipientAddress: string,
-    recipientName?: string
+    recipientName?: string,
   ): object {
     const metadata = {
       name: `${event.title} - Completion Certificate`,
       description: `Certificate of completion for attending ${event.title} on ${new Date(event.event_date).toLocaleDateString()}`,
-      image: event.event_image_url || `https://api.dicebear.com/7.x/shapes/svg?seed=${event.id}`,
+      image:
+        event.event_image_url ||
+        `https://api.dicebear.com/7.x/shapes/svg?seed=${event.id}`,
       attributes: [
         {
-          trait_type: "Event Title",
-          value: event.title
+          trait_type: 'Event Title',
+          value: event.title,
         },
         {
-          trait_type: "Event Date",
-          value: new Date(event.event_date).toISOString().split('T')[0]
+          trait_type: 'Event Date',
+          value: new Date(event.event_date).toISOString().split('T')[0],
         },
         {
-          trait_type: "Location",
-          value: event.location || "Virtual"
+          trait_type: 'Location',
+          value: event.location || 'Virtual',
         },
         {
-          trait_type: "Recipient",
-          value: recipientName || recipientAddress
+          trait_type: 'Recipient',
+          value: recipientName || recipientAddress,
         },
         {
-          trait_type: "Certificate Type",
-          value: "Event Completion"
+          trait_type: 'Certificate Type',
+          value: 'Event Completion',
         },
         {
-          trait_type: "Issued Date",
-          value: new Date().toISOString().split('T')[0]
-        }
+          trait_type: 'Issued Date',
+          value: new Date().toISOString().split('T')[0],
+        },
       ],
       external_url: `${window.location.origin}/events/${event.id}`,
-      background_color: "ffffff"
+      background_color: 'ffffff',
     };
 
     return metadata;
@@ -423,7 +448,10 @@ export class EventManagerService {
 
       return result;
     } catch (error) {
-      console.log('Event not found on chain or contract not deployed:', eventId);
+      console.log(
+        'Event not found on chain or contract not deployed:',
+        eventId,
+      );
       return null;
     }
   }
@@ -431,7 +459,10 @@ export class EventManagerService {
   /**
    * Check if user is registered for event on chain
    */
-  static async isRegisteredOnChain(eventId: string, userAddress: Address): Promise<boolean> {
+  static async isRegisteredOnChain(
+    eventId: string,
+    userAddress: Address,
+  ): Promise<boolean> {
     try {
       const result = await this.publicClient.readContract({
         address: EVENT_MANAGER_CONTRACT_ADDRESS,

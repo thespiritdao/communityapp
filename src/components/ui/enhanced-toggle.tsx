@@ -11,20 +11,19 @@ interface EnhancedToggleProps {
   variant?: 'switch' | 'button' | 'pill';
 }
 
-export function EnhancedToggle({ 
-  checked, 
-  onCheckedChange, 
-  disabled = false, 
+export function EnhancedToggle({
+  checked,
+  onCheckedChange,
+  disabled = false,
   size = 'md',
   id,
-  variant = 'button'
+  variant = 'button',
 }: EnhancedToggleProps) {
-  
   if (variant === 'button') {
     const sizeClasses = {
       sm: 'px-2 py-1 text-xs',
       md: 'px-3 py-1.5 text-sm',
-      lg: 'px-4 py-2 text-base'
+      lg: 'px-4 py-2 text-base',
     };
 
     return (
@@ -38,13 +37,15 @@ export function EnhancedToggle({
         className={`
           ${sizeClasses[size]}
           inline-flex items-center gap-2 rounded-lg font-medium transition-all duration-200
-          ${checked 
-            ? 'bg-green-100 text-green-800 border-2 border-green-300 hover:bg-green-200' 
-            : 'bg-red-100 text-red-800 border-2 border-red-300 hover:bg-red-200'
+          ${
+            checked
+              ? 'bg-green-100 text-green-800 border-2 border-green-300 hover:bg-green-200'
+              : 'bg-red-100 text-red-800 border-2 border-red-300 hover:bg-red-200'
           }
-          ${disabled 
-            ? 'cursor-not-allowed opacity-50' 
-            : 'cursor-pointer hover:scale-105 active:scale-95'
+          ${
+            disabled
+              ? 'cursor-not-allowed opacity-50'
+              : 'cursor-pointer hover:scale-105 active:scale-95'
           }
           focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2
         `}
@@ -67,20 +68,20 @@ export function EnhancedToggle({
   if (variant === 'pill') {
     const sizeClasses = {
       sm: 'w-12 h-6',
-      md: 'w-16 h-8', 
-      lg: 'w-20 h-10'
+      md: 'w-16 h-8',
+      lg: 'w-20 h-10',
     };
 
     const circleClasses = {
       sm: 'w-4 h-4',
       md: 'w-6 h-6',
-      lg: 'w-8 h-8'
+      lg: 'w-8 h-8',
     };
 
     const translateClasses = {
       sm: 'translate-x-6',
       md: 'translate-x-8',
-      lg: 'translate-x-10'
+      lg: 'translate-x-10',
     };
 
     return (
@@ -94,13 +95,15 @@ export function EnhancedToggle({
         className={`
           ${sizeClasses[size]}
           relative inline-flex items-center rounded-full transition-all duration-300 ease-in-out
-          ${checked 
-            ? 'bg-gradient-to-r from-green-400 to-green-600 shadow-lg' 
-            : 'bg-gradient-to-r from-gray-200 to-gray-400'
+          ${
+            checked
+              ? 'bg-gradient-to-r from-green-400 to-green-600 shadow-lg'
+              : 'bg-gradient-to-r from-gray-200 to-gray-400'
           }
-          ${disabled 
-            ? 'cursor-not-allowed opacity-50' 
-            : 'cursor-pointer hover:shadow-xl'
+          ${
+            disabled
+              ? 'cursor-not-allowed opacity-50'
+              : 'cursor-pointer hover:shadow-xl'
           }
           focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2
           border-2 border-white
@@ -129,18 +132,18 @@ export function EnhancedToggle({
     sm: {
       container: 'w-10 h-5',
       circle: 'w-4 h-4',
-      translate: 'translate-x-5'
+      translate: 'translate-x-5',
     },
     md: {
       container: 'w-12 h-6',
       circle: 'w-5 h-5',
-      translate: 'translate-x-6'
+      translate: 'translate-x-6',
     },
     lg: {
       container: 'w-16 h-8',
       circle: 'w-7 h-7',
-      translate: 'translate-x-8'
-    }
+      translate: 'translate-x-8',
+    },
   };
 
   const currentSize = sizeClasses[size];
@@ -156,13 +159,15 @@ export function EnhancedToggle({
       className={`
         ${currentSize.container}
         relative inline-flex items-center rounded-full transition-all duration-300 ease-in-out
-        ${checked 
-          ? 'bg-gradient-to-r from-blue-500 to-blue-600 shadow-lg' 
-          : 'bg-gradient-to-r from-gray-300 to-gray-400'
+        ${
+          checked
+            ? 'bg-gradient-to-r from-blue-500 to-blue-600 shadow-lg'
+            : 'bg-gradient-to-r from-gray-300 to-gray-400'
         }
-        ${disabled 
-          ? 'cursor-not-allowed opacity-50' 
-          : 'cursor-pointer hover:shadow-xl'
+        ${
+          disabled
+            ? 'cursor-not-allowed opacity-50'
+            : 'cursor-pointer hover:shadow-xl'
         }
         focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2
         border-2 border-white

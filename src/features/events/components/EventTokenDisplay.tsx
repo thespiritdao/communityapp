@@ -27,7 +27,7 @@ export const EventTokenDisplay: React.FC<EventTokenDisplayProps> = ({
   tokenIds,
   showImages = true,
   compact = false,
-  className = ''
+  className = '',
 }) => {
   const [pods, setPods] = useState<Pod[]>([]);
   const [loading, setLoading] = useState(true);
@@ -48,16 +48,17 @@ export const EventTokenDisplay: React.FC<EventTokenDisplayProps> = ({
   }, []);
 
   const getTokenInfo = (tokenId: string) => {
-    const pod = pods.find(p => 
-      p.id === tokenId || 
-      p.contract_address === tokenId ||
-      p.hat_id === tokenId
+    const pod = pods.find(
+      (p) =>
+        p.id === tokenId ||
+        p.contract_address === tokenId ||
+        p.hat_id === tokenId,
     );
-    
+
     return {
       name: pod?.name || tokenId,
       description: pod?.description || '',
-      imageUrl: '/images/symbolobinfin.png' // Default image - you can enhance this
+      imageUrl: '/images/symbolobinfin.png', // Default image - you can enhance this
     };
   };
 
@@ -75,7 +76,9 @@ export const EventTokenDisplay: React.FC<EventTokenDisplayProps> = ({
               compact ? 'text-xs' : 'text-sm'
             }`}
           >
-            <div className={`flex-shrink-0 bg-gray-300 rounded-full ${compact ? 'w-4 h-4' : 'w-6 h-6'}`}></div>
+            <div
+              className={`flex-shrink-0 bg-gray-300 rounded-full ${compact ? 'w-4 h-4' : 'w-6 h-6'}`}
+            ></div>
             <div className="bg-gray-300 rounded w-16 h-4"></div>
           </div>
         ))}
@@ -87,7 +90,7 @@ export const EventTokenDisplay: React.FC<EventTokenDisplayProps> = ({
     <div className={`flex flex-wrap gap-2 ${className}`}>
       {tokenIds.map((tokenId) => {
         const tokenInfo = getTokenInfo(tokenId);
-        
+
         return (
           <div
             key={tokenId}
@@ -96,7 +99,9 @@ export const EventTokenDisplay: React.FC<EventTokenDisplayProps> = ({
             }`}
           >
             {showImages && (
-              <div className={`flex-shrink-0 ${compact ? 'w-4 h-4' : 'w-6 h-6'}`}>
+              <div
+                className={`flex-shrink-0 ${compact ? 'w-4 h-4' : 'w-6 h-6'}`}
+              >
                 <Image
                   src={tokenInfo.imageUrl}
                   alt={tokenInfo.name}
@@ -110,9 +115,7 @@ export const EventTokenDisplay: React.FC<EventTokenDisplayProps> = ({
                 />
               </div>
             )}
-            <span className="font-medium text-gray-700">
-              {tokenInfo.name}
-            </span>
+            <span className="font-medium text-gray-700">{tokenInfo.name}</span>
           </div>
         );
       })}
@@ -124,12 +127,13 @@ export const EventTokenDisplay: React.FC<EventTokenDisplayProps> = ({
 export const getTokenName = async (tokenId: string): Promise<string> => {
   try {
     const pods = await EventService.getPods();
-    const pod = pods.find(p => 
-      p.id === tokenId || 
-      p.contract_address === tokenId ||
-      p.hat_id === tokenId
+    const pod = pods.find(
+      (p) =>
+        p.id === tokenId ||
+        p.contract_address === tokenId ||
+        p.hat_id === tokenId,
     );
-    
+
     return pod?.name || tokenId;
   } catch (error) {
     console.error('Error fetching token name:', error);

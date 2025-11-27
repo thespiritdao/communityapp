@@ -1,5 +1,5 @@
 // src/app/marketplace/my-orders/page.tsx
-"use client";
+'use client';
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
@@ -150,24 +150,36 @@ const StatusBadge = styled.span<{ status: string }>`
   font-size: 12px;
   font-weight: 600;
   text-transform: uppercase;
-  background: ${props => {
+  background: ${(props) => {
     switch (props.status) {
-      case 'processing': return '#fff3cd';
-      case 'preparing': return '#d1ecf1';
-      case 'shipped': return '#d4edda';
-      case 'delivered': return '#d1e7dd';
-      case 'cancelled': return '#f8d7da';
-      default: return '#e2e3e5';
+      case 'processing':
+        return '#fff3cd';
+      case 'preparing':
+        return '#d1ecf1';
+      case 'shipped':
+        return '#d4edda';
+      case 'delivered':
+        return '#d1e7dd';
+      case 'cancelled':
+        return '#f8d7da';
+      default:
+        return '#e2e3e5';
     }
   }};
-  color: ${props => {
+  color: ${(props) => {
     switch (props.status) {
-      case 'processing': return '#856404';
-      case 'preparing': return '#0c5460';
-      case 'shipped': return '#155724';
-      case 'delivered': return '#0f5132';
-      case 'cancelled': return '#721c24';
-      default: return '#383d41';
+      case 'processing':
+        return '#856404';
+      case 'preparing':
+        return '#0c5460';
+      case 'shipped':
+        return '#155724';
+      case 'delivered':
+        return '#0f5132';
+      case 'cancelled':
+        return '#721c24';
+      default:
+        return '#383d41';
     }
   }};
 `;
@@ -252,7 +264,7 @@ export default function MyOrdersPage() {
     preparing: 0,
     shipped: 0,
     delivered: 0,
-    cancelled: 0
+    cancelled: 0,
   });
 
   useEffect(() => {
@@ -273,15 +285,18 @@ export default function MyOrdersPage() {
         const authResponse = await fetch('/api/auth/onchainkit', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ address: address.toLowerCase() })
+          body: JSON.stringify({ address: address.toLowerCase() }),
         });
-        
+
         if (!authResponse.ok) {
           throw new Error(`Auth API failed: ${authResponse.status}`);
         }
-        
+
         const authData = await authResponse.json();
-        await createSupabaseSession(authData.supabaseToken, authData.supabaseRefreshToken);
+        await createSupabaseSession(
+          authData.supabaseToken,
+          authData.supabaseRefreshToken,
+        );
         console.log('✅ Supabase session established for my orders');
       } catch (authError) {
         console.error('❌ Authentication failed:', authError);
@@ -304,7 +319,6 @@ export default function MyOrdersPage() {
 
       setOrders(ordersData || []);
       calculateStats(ordersData || []);
-
     } catch (error) {
       console.error('Error loading user orders:', error);
       setError('Failed to load your order history');
@@ -316,11 +330,11 @@ export default function MyOrdersPage() {
   const calculateStats = (orderData: Order[]) => {
     const stats = {
       total: orderData.length,
-      processing: orderData.filter(o => o.status === 'processing').length,
-      preparing: orderData.filter(o => o.status === 'preparing').length,
-      shipped: orderData.filter(o => o.status === 'shipped').length,
-      delivered: orderData.filter(o => o.status === 'delivered').length,
-      cancelled: orderData.filter(o => o.status === 'cancelled').length
+      processing: orderData.filter((o) => o.status === 'processing').length,
+      preparing: orderData.filter((o) => o.status === 'preparing').length,
+      shipped: orderData.filter((o) => o.status === 'shipped').length,
+      delivered: orderData.filter((o) => o.status === 'delivered').length,
+      cancelled: orderData.filter((o) => o.status === 'cancelled').length,
     };
     setStats(stats);
   };
@@ -331,7 +345,7 @@ export default function MyOrdersPage() {
       month: 'short',
       day: 'numeric',
       hour: '2-digit',
-      minute: '2-digit'
+      minute: '2-digit',
     });
   };
 
@@ -352,7 +366,9 @@ export default function MyOrdersPage() {
         <Header>
           <Title>My Orders</Title>
         </Header>
-        <ErrorMessage>Please connect your wallet to view your order history.</ErrorMessage>
+        <ErrorMessage>
+          Please connect your wallet to view your order history.
+        </ErrorMessage>
       </Container>
     );
   }
@@ -370,7 +386,9 @@ export default function MyOrdersPage() {
       <Container>
         <Header>
           <Title>My Orders</Title>
-          <BackButton onClick={() => router.push('/market')}>← Back to Market</BackButton>
+          <BackButton onClick={() => router.push('/market')}>
+            ← Back to Market
+          </BackButton>
         </Header>
         <ErrorMessage>{error}</ErrorMessage>
       </Container>
@@ -381,7 +399,9 @@ export default function MyOrdersPage() {
     <Container>
       <Header>
         <Title>My Orders</Title>
-        <BackButton onClick={() => router.push('/market')}>← Back to Market</BackButton>
+        <BackButton onClick={() => router.push('/market')}>
+          ← Back to Market
+        </BackButton>
       </Header>
 
       {orders.length > 0 && (
@@ -391,42 +411,52 @@ export default function MyOrdersPage() {
             <Card className="shadow-sm">
               <CardContent className="p-3 sm:p-4 text-center">
                 <Package className="w-4 h-4 sm:w-5 sm:h-5 mx-auto text-blue-500 mb-1" />
-                <p className="text-lg sm:text-xl font-bold text-gray-900">{stats.total}</p>
+                <p className="text-lg sm:text-xl font-bold text-gray-900">
+                  {stats.total}
+                </p>
                 <p className="text-xs text-gray-600">Total</p>
               </CardContent>
             </Card>
-            
+
             <Card className="shadow-sm">
               <CardContent className="p-3 sm:p-4 text-center">
                 <Clock className="w-4 h-4 sm:w-5 sm:h-5 mx-auto text-orange-500 mb-1" />
-                <p className="text-lg sm:text-xl font-bold text-gray-900">{stats.processing}</p>
+                <p className="text-lg sm:text-xl font-bold text-gray-900">
+                  {stats.processing}
+                </p>
                 <p className="text-xs text-gray-600">Processing</p>
               </CardContent>
             </Card>
-            
+
             <Card className="shadow-sm">
               <CardContent className="p-3 sm:p-4 text-center">
                 <Clock className="w-4 h-4 sm:w-5 sm:h-5 mx-auto text-yellow-500 mb-1" />
-                <p className="text-lg sm:text-xl font-bold text-gray-900">{stats.preparing}</p>
+                <p className="text-lg sm:text-xl font-bold text-gray-900">
+                  {stats.preparing}
+                </p>
                 <p className="text-xs text-gray-600">Preparing</p>
               </CardContent>
             </Card>
           </div>
-          
+
           {/* Second Row: Shipped, Delivered */}
           <div className="grid grid-cols-2 gap-2 sm:gap-3 max-w-md mx-auto">
             <Card className="shadow-sm">
               <CardContent className="p-3 sm:p-4 text-center">
                 <Truck className="w-4 h-4 sm:w-5 sm:h-5 mx-auto text-blue-600 mb-1" />
-                <p className="text-lg sm:text-xl font-bold text-gray-900">{stats.shipped}</p>
+                <p className="text-lg sm:text-xl font-bold text-gray-900">
+                  {stats.shipped}
+                </p>
                 <p className="text-xs text-gray-600">Shipped</p>
               </CardContent>
             </Card>
-            
+
             <Card className="shadow-sm">
               <CardContent className="p-3 sm:p-4 text-center">
                 <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5 mx-auto text-green-600 mb-1" />
-                <p className="text-lg sm:text-xl font-bold text-gray-900">{stats.delivered}</p>
+                <p className="text-lg sm:text-xl font-bold text-gray-900">
+                  {stats.delivered}
+                </p>
                 <p className="text-xs text-gray-600">Delivered</p>
               </CardContent>
             </Card>
@@ -438,20 +468,32 @@ export default function MyOrdersPage() {
         {orders.length === 0 ? (
           <EmptyState>
             <div style={{ fontSize: '48px', marginBottom: '20px' }}>📦</div>
-            <div style={{ fontSize: '18px', fontWeight: '600', marginBottom: '10px' }}>
+            <div
+              style={{
+                fontSize: '18px',
+                fontWeight: '600',
+                marginBottom: '10px',
+              }}
+            >
               No Orders Yet
             </div>
             <div>
-              You haven't made any purchases yet. Visit the marketplace to explore available products!
+              You haven't made any purchases yet. Visit the marketplace to
+              explore available products!
             </div>
           </EmptyState>
         ) : (
           orders.map((order) => (
-            <OrderCard key={order.id} onClick={() => router.push(`/marketplace/orders/${order.id}`)}>
+            <OrderCard
+              key={order.id}
+              onClick={() => router.push(`/marketplace/orders/${order.id}`)}
+            >
               <OrderHeader>
                 <ProductName>{order.product_name}</ProductName>
                 <OrderMeta>
-                  <StatusBadge status={order.status}>{order.status}</StatusBadge>
+                  <StatusBadge status={order.status}>
+                    {order.status}
+                  </StatusBadge>
                   <span style={{ fontSize: '14px', color: '#666' }}>
                     {formatDate(order.created_at)}
                   </span>
@@ -465,7 +507,12 @@ export default function MyOrdersPage() {
                 </DetailItem>
                 <DetailItem>
                   <Label>Total Paid:</Label>
-                  <Value>{formatPrice(order.price_paid_self, order.price_paid_system)}</Value>
+                  <Value>
+                    {formatPrice(
+                      order.price_paid_self,
+                      order.price_paid_system,
+                    )}
+                  </Value>
                 </DetailItem>
                 <DetailItem>
                   <Label>Order ID:</Label>
@@ -476,7 +523,7 @@ export default function MyOrdersPage() {
                 {order.transaction_hash && (
                   <DetailItem>
                     <Label>Transaction:</Label>
-                    <TransactionLink 
+                    <TransactionLink
                       href={`https://basescan.org/tx/${order.transaction_hash}`}
                       target="_blank"
                       rel="noopener noreferrer"

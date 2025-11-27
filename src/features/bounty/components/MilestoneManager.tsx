@@ -1,7 +1,7 @@
-"use client"
+'use client';
 
 import type React from 'react';
-import { useState, } from 'react';
+import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -9,13 +9,29 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Calendar } from '@/components/ui/calendar';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { CalendarIcon, CheckCircle, Clock, AlertCircle, Plus } from 'lucide-react';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
+import {
+  CalendarIcon,
+  CheckCircle,
+  Clock,
+  AlertCircle,
+  Plus,
+} from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
-import { Transaction, TransactionButton } from '@coinbase/onchainkit/transaction';
+import {
+  Transaction,
+  TransactionButton,
+} from '@coinbase/onchainkit/transaction';
 import { useAccount } from 'wagmi';
-import { useBountyContractEnhanced, type PaymentStructure } from '../hooks/useBountyContractEnhanced';
+import {
+  useBountyContractEnhanced,
+  type PaymentStructure,
+} from '../hooks/useBountyContractEnhanced';
 
 interface Milestone {
   id: string;
@@ -50,14 +66,13 @@ export const MilestoneManager: React.FC<MilestoneManagerProps> = ({
 }) => {
   const { address } = useAccount();
   const [showCreateForm, setShowCreateForm] = useState(false);
-  const [newMilestones, setNewMilestones] = useState<Omit<Milestone, 'id' | 'status'>[]>([]);
+  const [newMilestones, setNewMilestones] = useState<
+    Omit<Milestone, 'id' | 'status'>[]
+  >([]);
   const [showCalendar, setShowCalendar] = useState<string | null>(null);
 
-  const {
-    createMilestonesOnChain,
-    approveMilestoneOnChain,
-    PaymentStructure,
-  } = useBountyContractEnhanced();
+  const { createMilestonesOnChain, approveMilestoneOnChain, PaymentStructure } =
+    useBountyContractEnhanced();
 
   const addMilestone = () => {
     const newMilestone: Omit<Milestone, 'id' | 'status'> = {
@@ -65,32 +80,38 @@ export const MilestoneManager: React.FC<MilestoneManagerProps> = ({
       dueDate: new Date(),
       paymentAmount: '0',
     };
-    setNewMilestones(prev => [...prev, newMilestone]);
+    setNewMilestones((prev) => [...prev, newMilestone]);
   };
 
-  const updateMilestone = (index: number, field: keyof Omit<Milestone, 'id' | 'status'>, value: any) => {
-    setNewMilestones(prev => 
-      prev.map((milestone, i) => 
-        i === index ? { ...milestone, [field]: value } : milestone
-      )
+  const updateMilestone = (
+    index: number,
+    field: keyof Omit<Milestone, 'id' | 'status'>,
+    value: any,
+  ) => {
+    setNewMilestones((prev) =>
+      prev.map((milestone, i) =>
+        i === index ? { ...milestone, [field]: value } : milestone,
+      ),
     );
   };
 
   const removeMilestone = (index: number) => {
-    setNewMilestones(prev => prev.filter((_, i) => i !== index));
+    setNewMilestones((prev) => prev.filter((_, i) => i !== index));
   };
 
   const handleCreateMilestones = async () => {
     if (newMilestones.length === 0) return;
 
     try {
-      const dueDates = newMilestones.map(m => Math.floor(m.dueDate.getTime() / 1000));
-      const paymentAmounts = newMilestones.map(m => m.paymentAmount);
+      const dueDates = newMilestones.map((m) =>
+        Math.floor(m.dueDate.getTime() / 1000),
+      );
+      const paymentAmounts = newMilestones.map((m) => m.paymentAmount);
 
       await createMilestonesOnChain(
         Number.parseInt(bounty.id),
         dueDates,
-        paymentAmounts
+        paymentAmounts,
       );
 
       // Create frontend milestone objects
@@ -112,7 +133,10 @@ export const MilestoneManager: React.FC<MilestoneManagerProps> = ({
 
   const handleApproveMilestone = async (milestoneId: string) => {
     try {
-      await approveMilestoneOnChain(Number.parseInt(bounty.id), Number.parseInt(milestoneId));
+      await approveMilestoneOnChain(
+        Number.parseInt(bounty.id),
+        Number.parseInt(milestoneId),
+      );
       onMilestoneApproved?.(milestoneId);
     } catch (error) {
       console.error('Error approving milestone:', error);
@@ -122,18 +146,34 @@ export const MilestoneManager: React.FC<MilestoneManagerProps> = ({
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'pending':
-        return <Badge variant="secondary" className="flex items-center gap-1"><Clock className="w-3 h-3" /> Pending</Badge>;
+        return (
+          <Badge variant="secondary" className="flex items-center gap-1">
+            <Clock className="w-3 h-3" /> Pending
+          </Badge>
+        );
       case 'completed':
-        return <Badge variant="default" className="flex items-center gap-1"><CheckCircle className="w-3 h-3" /> Completed</Badge>;
+        return (
+          <Badge variant="default" className="flex items-center gap-1">
+            <CheckCircle className="w-3 h-3" /> Completed
+          </Badge>
+        );
       case 'overdue':
-        return <Badge variant="destructive" className="flex items-center gap-1"><AlertCircle className="w-3 h-3" /> Overdue</Badge>;
+        return (
+          <Badge variant="destructive" className="flex items-center gap-1">
+            <AlertCircle className="w-3 h-3" /> Overdue
+          </Badge>
+        );
       default:
         return <Badge variant="secondary">{status}</Badge>;
     }
   };
 
   const calculateTotalMilestoneAmount = () => {
-    return newMilestones.reduce((total, milestone) => total + Number.parseFloat(milestone.paymentAmount || '0'), 0);
+    return newMilestones.reduce(
+      (total, milestone) =>
+        total + Number.parseFloat(milestone.paymentAmount || '0'),
+      0,
+    );
   };
 
   const isMilestoneAmountValid = () => {
@@ -145,12 +185,16 @@ export const MilestoneManager: React.FC<MilestoneManagerProps> = ({
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold">Milestones</h2>
-        {bounty.paymentStructure === PaymentStructure.Milestones && !showCreateForm && (
-          <Button onClick={() => setShowCreateForm(true)} className="bounty-btn primary">
-            <Plus className="w-4 h-4 mr-2" />
-            Create Milestones
-          </Button>
-        )}
+        {bounty.paymentStructure === PaymentStructure.Milestones &&
+          !showCreateForm && (
+            <Button
+              onClick={() => setShowCreateForm(true)}
+              className="bounty-btn primary"
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              Create Milestones
+            </Button>
+          )}
       </div>
 
       {/* Create Milestones Form */}
@@ -173,39 +217,52 @@ export const MilestoneManager: React.FC<MilestoneManagerProps> = ({
                     size="sm"
                     onClick={() => removeMilestone(index)}
                     style={{ color: '#8B3A3A' }}
-                    onMouseEnter={(e) => { e.currentTarget.style.color = '#5C1F1F'; }}
-                    onMouseLeave={(e) => { e.currentTarget.style.color = '#8B3A3A'; }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.color = '#5C1F1F';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.color = '#8B3A3A';
+                    }}
                   >
                     Remove
                   </Button>
                 </div>
-                
+
                 <div className="space-y-2">
                   <Label className="text-sm">Description</Label>
                   <Textarea
                     value={milestone.description}
-                    onChange={(e) => updateMilestone(index, 'description', e.target.value)}
+                    onChange={(e) =>
+                      updateMilestone(index, 'description', e.target.value)
+                    }
                     placeholder="Describe this milestone..."
                     className="form-textarea"
                     required={true}
                     rows={2}
                   />
                 </div>
-                
+
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label className="text-sm">Due Date</Label>
-                    <Popover open={showCalendar === `new-${index}`} onOpenChange={(open) => setShowCalendar(open ? `new-${index}` : null)}>
+                    <Popover
+                      open={showCalendar === `new-${index}`}
+                      onOpenChange={(open) =>
+                        setShowCalendar(open ? `new-${index}` : null)
+                      }
+                    >
                       <PopoverTrigger asChild={true}>
                         <Button
                           variant="outline"
                           className={cn(
-                            "w-full justify-start text-left font-normal",
-                            !milestone.dueDate && "text-muted-foreground"
+                            'w-full justify-start text-left font-normal',
+                            !milestone.dueDate && 'text-muted-foreground',
                           )}
                         >
                           <CalendarIcon className="mr-2 h-4 w-4" />
-                          {milestone.dueDate ? format(milestone.dueDate, "PPP") : "Pick a date"}
+                          {milestone.dueDate
+                            ? format(milestone.dueDate, 'PPP')
+                            : 'Pick a date'}
                         </Button>
                       </PopoverTrigger>
                       <PopoverContent className="w-auto p-0">
@@ -221,13 +278,17 @@ export const MilestoneManager: React.FC<MilestoneManagerProps> = ({
                       </PopoverContent>
                     </Popover>
                   </div>
-                  
+
                   <div className="space-y-2">
-                    <Label className="text-sm">Payment Amount ({bounty.token})</Label>
+                    <Label className="text-sm">
+                      Payment Amount ({bounty.token})
+                    </Label>
                     <Input
                       type="number"
                       value={milestone.paymentAmount}
-                      onChange={(e) => updateMilestone(index, 'paymentAmount', e.target.value)}
+                      onChange={(e) =>
+                        updateMilestone(index, 'paymentAmount', e.target.value)
+                      }
                       placeholder="0"
                       className="form-input"
                       required={true}
@@ -238,14 +299,19 @@ export const MilestoneManager: React.FC<MilestoneManagerProps> = ({
             ))}
 
             <div className="flex justify-between items-center">
-              <Button onClick={addMilestone} variant="outline" className="bounty-btn secondary">
+              <Button
+                onClick={addMilestone}
+                variant="outline"
+                className="bounty-btn secondary"
+              >
                 <Plus className="w-4 h-4 mr-2" />
                 Add Milestone
               </Button>
-              
+
               <div className="text-right">
                 <p className="text-sm text-gray-600">
-                  Total: {calculateTotalMilestoneAmount().toFixed(2)} {bounty.token}
+                  Total: {calculateTotalMilestoneAmount().toFixed(2)}{' '}
+                  {bounty.token}
                 </p>
                 {!isMilestoneAmountValid() && (
                   <p className="text-sm" style={{ color: '#8B3A3A' }}>
@@ -258,7 +324,9 @@ export const MilestoneManager: React.FC<MilestoneManagerProps> = ({
             <div className="flex gap-2">
               <Button
                 onClick={handleCreateMilestones}
-                disabled={newMilestones.length === 0 || !isMilestoneAmountValid()}
+                disabled={
+                  newMilestones.length === 0 || !isMilestoneAmountValid()
+                }
                 className="bounty-btn primary"
               >
                 Create Milestones
@@ -283,7 +351,10 @@ export const MilestoneManager: React.FC<MilestoneManagerProps> = ({
         <div className="space-y-4">
           <h3 className="text-lg font-semibold">Current Milestones</h3>
           {milestones.map((milestone) => (
-            <Card key={milestone.id} className="hover:shadow-md transition-shadow">
+            <Card
+              key={milestone.id}
+              className="hover:shadow-md transition-shadow"
+            >
               <CardContent className="p-6">
                 <div className="flex justify-between items-start mb-4">
                   <div className="flex-1">
@@ -301,17 +372,23 @@ export const MilestoneManager: React.FC<MilestoneManagerProps> = ({
                       </span>
                     </div>
                   </div>
-                  
+
                   {milestone.status === 'pending' && (
                     <Transaction
                       isSponsored={true}
                       address={address}
-                      contracts={[{
-                        address: process.env.NEXT_PUBLIC_BOUNTY_MANAGER_ADDRESS as `0x${string}`,
-                        abi: [], // Will be filled by OnchainKit
-                        functionName: 'approveMilestone',
-                        args: [Number.parseInt(bounty.id), Number.parseInt(milestone.id)],
-                      }]}
+                      contracts={[
+                        {
+                          address: process.env
+                            .NEXT_PUBLIC_BOUNTY_MANAGER_ADDRESS as `0x${string}`,
+                          abi: [], // Will be filled by OnchainKit
+                          functionName: 'approveMilestone',
+                          args: [
+                            Number.parseInt(bounty.id),
+                            Number.parseInt(milestone.id),
+                          ],
+                        },
+                      ]}
                       onSuccess={() => onMilestoneApproved?.(milestone.id)}
                     >
                       <TransactionButton
@@ -323,9 +400,15 @@ export const MilestoneManager: React.FC<MilestoneManagerProps> = ({
                 </div>
 
                 {milestone.status === 'completed' && (
-                  <div className="p-3 rounded-lg" style={{ backgroundColor: '#D1E6DC' }}>
+                  <div
+                    className="p-3 rounded-lg"
+                    style={{ backgroundColor: '#D1E6DC' }}
+                  >
                     <p className="text-sm" style={{ color: '#1F453A' }}>
-                      Completed on {milestone.completedAt ? format(milestone.completedAt, 'MMM dd, yyyy') : 'Unknown date'}
+                      Completed on{' '}
+                      {milestone.completedAt
+                        ? format(milestone.completedAt, 'MMM dd, yyyy')
+                        : 'Unknown date'}
                       {milestone.completedBy && ` by ${milestone.completedBy}`}
                     </p>
                   </div>
@@ -343,7 +426,9 @@ export const MilestoneManager: React.FC<MilestoneManagerProps> = ({
               <AlertCircle className="w-12 h-12 mx-auto mb-4 text-gray-400" />
               <p>No milestones created yet.</p>
               {bounty.paymentStructure === PaymentStructure.Milestones && (
-                <p className="text-sm mt-2">Create milestones to enable milestone-based payments.</p>
+                <p className="text-sm mt-2">
+                  Create milestones to enable milestone-based payments.
+                </p>
               )}
             </div>
           </CardContent>
@@ -351,4 +436,4 @@ export const MilestoneManager: React.FC<MilestoneManagerProps> = ({
       )}
     </div>
   );
-}; 
+};

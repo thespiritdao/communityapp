@@ -1,7 +1,12 @@
 'use client';
 
-import { useState, } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { useState } from 'react';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -16,21 +21,16 @@ import {
   SafeTransactionSponsor as TransactionSponsor,
   SafeTransactionStatus as TransactionStatus,
   SafeTransactionStatusLabel as TransactionStatusLabel,
-  SafeTransactionStatusAction as TransactionStatusAction
+  SafeTransactionStatusAction as TransactionStatusAction,
 } from './SafeOnchainKit';
-import { parseUnits, } from 'viem';
-import { 
-  DollarSign, 
-  User, 
-  Users, 
-  Wallet,
-  AlertCircle,
-} from 'lucide-react';
+import { parseUnits } from 'viem';
+import { DollarSign, User, Users, Wallet, AlertCircle } from 'lucide-react';
 
 // Token addresses from environment
 const SYSTEM_TOKEN = process.env.NEXT_PUBLIC_SYSTEM_TOKEN as `0x${string}`;
 const SELF_TOKEN = process.env.NEXT_PUBLIC_SELF_TOKEN as `0x${string}`;
-const TREASURY_PROXY_ADDRESS = process.env.NEXT_PUBLIC_TREASURY_PROXY as `0x${string}`;
+const TREASURY_PROXY_ADDRESS = process.env
+  .NEXT_PUBLIC_TREASURY_PROXY as `0x${string}`;
 
 // Standard ERC20 ABI for transfer and approve
 const ERC20_ABI = [
@@ -40,9 +40,9 @@ const ERC20_ABI = [
     stateMutability: 'nonpayable',
     inputs: [
       { name: 'to', type: 'address' },
-      { name: 'amount', type: 'uint256' }
+      { name: 'amount', type: 'uint256' },
     ],
-    outputs: [{ type: 'bool' }]
+    outputs: [{ type: 'bool' }],
   },
   {
     name: 'approve',
@@ -50,10 +50,10 @@ const ERC20_ABI = [
     stateMutability: 'nonpayable',
     inputs: [
       { name: 'spender', type: 'address' },
-      { name: 'amount', type: 'uint256' }
+      { name: 'amount', type: 'uint256' },
     ],
-    outputs: [{ type: 'bool' }]
-  }
+    outputs: [{ type: 'bool' }],
+  },
 ] as const;
 
 // Treasury Proxy ABI for proxyReceiveTokens
@@ -65,10 +65,10 @@ const TREASURY_PROXY_ABI = [
     inputs: [
       { name: 'podId', type: 'string' },
       { name: 'token', type: 'address' },
-      { name: 'amount', type: 'uint256' }
+      { name: 'amount', type: 'uint256' },
     ],
-    outputs: []
-  }
+    outputs: [],
+  },
 ] as const;
 
 interface FundingModalProps {
@@ -91,13 +91,13 @@ export default function FundingModal({
   onClose,
   recipientType,
   recipient,
-  onSuccess
+  onSuccess,
 }: FundingModalProps) {
   const { address } = useAccount();
   const [selectedToken, setSelectedToken] = useState<'SYSTEM' | null>('SYSTEM');
   const [amount, setAmount] = useState('');
   const [message, setMessage] = useState('');
-  
+
   // Get token balances
   const { data: systemBalance, error: systemError } = useBalance({
     address,
@@ -112,19 +112,21 @@ export default function FundingModal({
   const handleSuccess = (response: any) => {
     console.log('💰 Funding successful:', response);
     onSuccess?.(amount, selectedToken || 'SYSTEM');
-    
+
     // Broadcast treasury update event for any listening treasury components
     // Include both the recipient address and podId for treasury components to match
-    window.dispatchEvent(new CustomEvent('treasuryUpdated', { 
-      detail: { 
-        recipientAddress: recipient.address, 
-        podId: recipient.podId, // Include podId for treasury proxy transactions
-        isTreasury: recipient.isTreasury,
-        amount, 
-        token: selectedToken || 'SYSTEM' 
-      } 
-    }));
-    
+    window.dispatchEvent(
+      new CustomEvent('treasuryUpdated', {
+        detail: {
+          recipientAddress: recipient.address,
+          podId: recipient.podId, // Include podId for treasury proxy transactions
+          isTreasury: recipient.isTreasury,
+          amount,
+          token: selectedToken || 'SYSTEM',
+        },
+      }),
+    );
+
     // Reset form
     setAmount('');
     setMessage('');
@@ -151,7 +153,7 @@ export default function FundingModal({
         podId: recipient.podId,
         tokenAddress,
         amount: amountWei.toString(),
-        method: 'proxyReceiveTokens'
+        method: 'proxyReceiveTokens',
       });
 
       return [
@@ -160,15 +162,15 @@ export default function FundingModal({
           address: tokenAddress,
           abi: ERC20_ABI,
           functionName: 'approve',
-          args: [TREASURY_PROXY_ADDRESS, amountWei]
+          args: [TREASURY_PROXY_ADDRESS, amountWei],
         },
         // Step 2: Call proxy's proxyReceiveTokens function
         {
           address: TREASURY_PROXY_ADDRESS,
           abi: TREASURY_PROXY_ABI,
           functionName: 'proxyReceiveTokens',
-          args: [recipient.podId, tokenAddress as `0x${string}`, amountWei]
-        }
+          args: [recipient.podId, tokenAddress as `0x${string}`, amountWei],
+        },
       ];
     }
 
@@ -177,15 +179,17 @@ export default function FundingModal({
       recipientAddress: recipient.address,
       tokenAddress,
       amount: amountWei.toString(),
-      method: 'transfer'
+      method: 'transfer',
     });
 
-    return [{
-      address: tokenAddress,
-      abi: ERC20_ABI,
-      functionName: 'transfer',
-      args: [recipient.address as `0x${string}`, amountWei]
-    }];
+    return [
+      {
+        address: tokenAddress,
+        abi: ERC20_ABI,
+        functionName: 'transfer',
+        args: [recipient.address as `0x${string}`, amountWei],
+      },
+    ];
   };
 
   const getBalance = () => {
@@ -199,7 +203,7 @@ export default function FundingModal({
   const canTransfer = () => {
     const balance = getBalance();
     if (!balance || !amount) return false;
-    
+
     try {
       const amountWei = parseUnits(amount, 18);
       return balance.value >= amountWei;
@@ -216,14 +220,14 @@ export default function FundingModal({
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="mx-auto w-[92vw] max-w-[56rem] rounded-2xl pt-6 px-6 pb-24">
         <DialogHeader>
-        <DialogTitle>
-          <span className="inline-flex items-center gap-2 whitespace-nowrap">
-            <DollarSign className="h-5 w-5 text-blue-600" />
-            <span>Fund {recipientType === 'member' ? 'Member' : 'Pod'}</span>
-          </span>
-        </DialogTitle>
+          <DialogTitle>
+            <span className="inline-flex items-center gap-2 whitespace-nowrap">
+              <DollarSign className="h-5 w-5 text-blue-600" />
+              <span>Fund {recipientType === 'member' ? 'Member' : 'Pod'}</span>
+            </span>
+          </DialogTitle>
         </DialogHeader>
-  
+
         <div className="space-y-6">
           {/* Recipient Display */}
           <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
@@ -248,23 +252,29 @@ export default function FundingModal({
               )}
             </div>
             <div className="flex-1 min-w-0">
-              <h3 className="font-semibold text-gray-900 truncate">{recipient.name}</h3>
+              <h3 className="font-semibold text-gray-900 truncate">
+                {recipient.name}
+              </h3>
               <p className="text-sm text-gray-500 font-mono truncate">
                 {recipient.address.slice(0, 8)}...{recipient.address.slice(-6)}
               </p>
               {recipient.description && (
-                <p className="text-xs text-gray-400 mt-1">{recipient.description}</p>
+                <p className="text-xs text-gray-400 mt-1">
+                  {recipient.description}
+                </p>
               )}
             </div>
           </div>
-  
+
           <div className="space-y-3">
             <Label>Payment Token</Label>
             <div className="p-3 border border-blue-500 bg-blue-50 rounded-lg">
               <div className="flex items-center justify-between">
                 <div>
                   <div className="font-medium">SYSTEM Token</div>
-                  <div className="text-sm text-gray-500">Transferable • 1:1 USD</div>
+                  <div className="text-sm text-gray-500">
+                    Transferable • 1:1 USD
+                  </div>
                 </div>
                 <div className="text-right">
                   <div className="text-sm font-medium">
@@ -274,12 +284,14 @@ export default function FundingModal({
                       `${formatBalance(systemBalance)} SYSTEM`
                     )}
                   </div>
-                  <Badge variant="outline" size="sm">Available</Badge>
+                  <Badge variant="outline" size="sm">
+                    Available
+                  </Badge>
                 </div>
               </div>
             </div>
           </div>
-  
+
           {/* Amount Input */}
           {selectedToken && (
             <div className="space-y-3">
@@ -289,7 +301,7 @@ export default function FundingModal({
                   Balance: {formatBalance(getBalance())} {selectedToken}
                 </div>
               </div>
-  
+
               <div className="space-y-2">
                 <Input
                   id="amount"
@@ -300,7 +312,7 @@ export default function FundingModal({
                   onChange={(e) => setAmount(e.target.value)}
                   className="text-right text-lg"
                 />
-  
+
                 {/* Quick Amount Buttons */}
                 <div className="grid grid-cols-4 gap-2">
                   {quickAmounts.map((quickAmount) => (
@@ -317,7 +329,7 @@ export default function FundingModal({
                   ))}
                 </div>
               </div>
-  
+
               {/* Insufficient Balance Warning */}
               {amount && !canTransfer() && (
                 <div className="flex items-center gap-2 p-2 bg-red-50 text-red-700 rounded text-sm">
@@ -327,7 +339,7 @@ export default function FundingModal({
               )}
             </div>
           )}
-  
+
           {/* Optional Message */}
           <div className="space-y-2">
             <Label htmlFor="message">Message (Optional)</Label>
@@ -339,7 +351,7 @@ export default function FundingModal({
               rows={3}
             />
           </div>
-  
+
           {/* Transaction Section */}
           <div className="border-t pt-4">
             {address && selectedToken && amount && canTransfer() ? (
@@ -350,7 +362,11 @@ export default function FundingModal({
                   </Button>
                 }
                 errorFallback={
-                  <Button disabled={true} variant="outline" className="w-full h-12">
+                  <Button
+                    disabled={true}
+                    variant="outline"
+                    className="w-full h-12"
+                  >
                     Transaction currently unavailable
                   </Button>
                 }
@@ -378,12 +394,16 @@ export default function FundingModal({
             ) : (
               <div className="text-center py-4">
                 <Wallet className="h-8 w-8 mx-auto mb-2 text-gray-300" />
-                <p className="text-sm text-gray-500 mb-1">Ready to send funds?</p>
+                <p className="text-sm text-gray-500 mb-1">
+                  Ready to send funds?
+                </p>
                 <div className="text-xs text-gray-400 space-y-1">
                   <div className={selectedToken ? 'text-green-600' : ''}>
                     {selectedToken ? '✓' : '○'} Token selected
                   </div>
-                  <div className={amount && canTransfer() ? 'text-green-600' : ''}>
+                  <div
+                    className={amount && canTransfer() ? 'text-green-600' : ''}
+                  >
                     {amount && canTransfer() ? '✓' : '○'} Valid amount entered
                   </div>
                 </div>
@@ -394,5 +414,4 @@ export default function FundingModal({
       </DialogContent>
     </Dialog>
   );
-  
 }

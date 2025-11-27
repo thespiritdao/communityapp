@@ -14,15 +14,19 @@ export const ProposalThreadSelector: React.FC<ProposalThreadSelectorProps> = ({
   restrictToUser = false,
 }) => {
   const { address } = useAccount();
-  const { data: categories, isLoading: loadingCategories, error: categoryError } = useForumCategories();
+  const {
+    data: categories,
+    isLoading: loadingCategories,
+    error: categoryError,
+  } = useForumCategories();
   const [selectedCategory, setSelectedCategory] = useState('');
   const {
     data: threads,
     isLoading: loadingThreads,
-    error: threadsError
+    error: threadsError,
   } = useForumThreadsByCategory(
     selectedCategory,
-    restrictToUser ? address || undefined : undefined
+    restrictToUser ? address || undefined : undefined,
   );
 
   // Log state changes for debugging
@@ -34,9 +38,17 @@ export const ProposalThreadSelector: React.FC<ProposalThreadSelectorProps> = ({
       loadingCategories,
       loadingThreads,
       categoryError: categoryError?.message,
-      threadsError: threadsError?.message
+      threadsError: threadsError?.message,
     });
-  }, [selectedCategory, categories, threads, loadingCategories, loadingThreads, categoryError, threadsError]);
+  }, [
+    selectedCategory,
+    categories,
+    threads,
+    loadingCategories,
+    loadingThreads,
+    categoryError,
+    threadsError,
+  ]);
 
   return (
     <div className="space-y-4">
@@ -66,10 +78,14 @@ export const ProposalThreadSelector: React.FC<ProposalThreadSelectorProps> = ({
           ))}
         </select>
         {categoryError && (
-          <p className="text-xs mt-1" style={{ color: '#8B3A3A' }}>Error loading categories: {categoryError.message}</p>
+          <p className="text-xs mt-1" style={{ color: '#8B3A3A' }}>
+            Error loading categories: {categoryError.message}
+          </p>
         )}
         {!loadingCategories && (!categories || categories.length === 0) && (
-          <p className="text-xs mt-1" style={{ color: '#C6933F' }}>No forum categories with threads available</p>
+          <p className="text-xs mt-1" style={{ color: '#C6933F' }}>
+            No forum categories with threads available
+          </p>
         )}
       </div>
 
@@ -93,7 +109,9 @@ export const ProposalThreadSelector: React.FC<ProposalThreadSelectorProps> = ({
               {loadingThreads ? 'Loading threads...' : 'Select Thread'}
             </option>
             {threads?.map((thread: any) => {
-              const date = thread.created_at ? new Date(thread.created_at).toLocaleDateString() : '';
+              const date = thread.created_at
+                ? new Date(thread.created_at).toLocaleDateString()
+                : '';
               return (
                 <option key={thread.id} value={thread.id}>
                   {thread.title} {date && `(${date})`}
@@ -102,7 +120,9 @@ export const ProposalThreadSelector: React.FC<ProposalThreadSelectorProps> = ({
             })}
           </select>
           {threadsError && (
-            <p className="text-xs mt-1" style={{ color: '#8B3A3A' }}>Error loading threads: {threadsError.message}</p>
+            <p className="text-xs mt-1" style={{ color: '#8B3A3A' }}>
+              Error loading threads: {threadsError.message}
+            </p>
           )}
           {!loadingThreads && (!threads || threads.length === 0) && (
             <p className="text-xs mt-1" style={{ color: '#C6933F' }}>
@@ -112,7 +132,8 @@ export const ProposalThreadSelector: React.FC<ProposalThreadSelectorProps> = ({
           )}
           {!loadingThreads && threads && threads.length > 0 && (
             <p className="text-gray-500 text-xs mt-1">
-              Found {threads.length} thread{threads.length !== 1 ? 's' : ''} in this category
+              Found {threads.length} thread{threads.length !== 1 ? 's' : ''} in
+              this category
             </p>
           )}
         </div>

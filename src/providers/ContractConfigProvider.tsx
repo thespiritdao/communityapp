@@ -1,6 +1,12 @@
 'use client';
 
-import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  ReactNode,
+} from 'react';
 import { validateContractAddresses } from '@/config/contracts';
 
 interface ContractConfigState {
@@ -47,8 +53,14 @@ export function ContractConfigProvider({ children }: { children: ReactNode }) {
   // Show error UI if critical addresses missing
   if (!state.isLoading && !state.isValid) {
     return (
-      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: '#FEF2F2' }}>
-        <div className="text-center p-8 bg-white rounded-lg shadow-lg max-w-md" style={{ borderWidth: 1, borderColor: '#FCA5A5' }}>
+      <div
+        className="min-h-screen flex items-center justify-center"
+        style={{ backgroundColor: '#FEF2F2' }}
+      >
+        <div
+          className="text-center p-8 bg-white rounded-lg shadow-lg max-w-md"
+          style={{ borderWidth: 1, borderColor: '#FCA5A5' }}
+        >
           <div className="mb-4">
             <svg
               className="mx-auto h-12 w-12"
@@ -71,28 +83,37 @@ export function ContractConfigProvider({ children }: { children: ReactNode }) {
           </h2>
 
           <p className="mb-4" style={{ color: '#374151' }}>
-            Required contract addresses are missing from your environment configuration:
+            Required contract addresses are missing from your environment
+            configuration:
           </p>
 
-          <ul className="text-left list-disc list-inside mb-6 text-sm" style={{
-            color: '#6B7280',
-            backgroundColor: '#F9FAFB',
-            padding: '1rem',
-            borderRadius: '0.5rem'
-          }}>
+          <ul
+            className="text-left list-disc list-inside mb-6 text-sm"
+            style={{
+              color: '#6B7280',
+              backgroundColor: '#F9FAFB',
+              padding: '1rem',
+              borderRadius: '0.5rem',
+            }}
+          >
             {state.missing.map((addr) => (
-              <li key={addr} className="font-mono">{addr}</li>
+              <li key={addr} className="font-mono">
+                {addr}
+              </li>
             ))}
           </ul>
 
-          <div style={{
-            backgroundColor: '#FEF3C7',
-            padding: '0.75rem',
-            borderRadius: '0.5rem',
-            marginBottom: '1rem'
-          }}>
+          <div
+            style={{
+              backgroundColor: '#FEF3C7',
+              padding: '0.75rem',
+              borderRadius: '0.5rem',
+              marginBottom: '1rem',
+            }}
+          >
             <p className="text-xs" style={{ color: '#92400E' }}>
-              <strong>💡 Fix:</strong> Add the missing addresses to your <code>.env</code> file
+              <strong>💡 Fix:</strong> Add the missing addresses to your{' '}
+              <code>.env</code> file
             </p>
           </div>
 
@@ -101,7 +122,7 @@ export function ContractConfigProvider({ children }: { children: ReactNode }) {
             className="px-4 py-2 rounded font-medium"
             style={{
               backgroundColor: '#2F5D50',
-              color: 'white'
+              color: 'white',
             }}
           >
             Retry

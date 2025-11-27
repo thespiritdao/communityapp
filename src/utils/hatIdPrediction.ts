@@ -23,7 +23,7 @@
  */
 export function predictChildHatId(
   parentHatId: bigint,
-  childIndex: number
+  childIndex: number,
 ): bigint {
   if (childIndex < 1 || childIndex > 65535) {
     throw new Error('Child index must be between 1 and 65535');
@@ -33,7 +33,7 @@ export function predictChildHatId(
   let currentLevel = 0;
   for (let i = 0; i < 16; i++) {
     // Extract 2 bytes at each level (from left to right)
-    const levelValue = (parentHatId >> BigInt(16 * (15 - i))) & BigInt(0xFFFF);
+    const levelValue = (parentHatId >> BigInt(16 * (15 - i))) & BigInt(0xffff);
     if (levelValue > 0n) {
       currentLevel = i;
     }
@@ -88,7 +88,7 @@ export function isValidHatId(hatId: bigint): boolean {
   // Hat ID should have at least one non-zero level
   let hasNonZeroLevel = false;
   for (let i = 0; i < 16; i++) {
-    const levelValue = (hatId >> BigInt(16 * (15 - i))) & BigInt(0xFFFF);
+    const levelValue = (hatId >> BigInt(16 * (15 - i))) & BigInt(0xffff);
     if (levelValue > 0n) {
       hasNonZeroLevel = true;
       break;
@@ -112,7 +112,7 @@ export function isValidHatId(hatId: bigint): boolean {
 export function getHatDepth(hatId: bigint): number {
   let depth = 0;
   for (let i = 0; i < 16; i++) {
-    const levelValue = (hatId >> BigInt(16 * (15 - i))) & BigInt(0xFFFF);
+    const levelValue = (hatId >> BigInt(16 * (15 - i))) & BigInt(0xffff);
     if (levelValue > 0n) {
       depth = i;
     }
@@ -135,7 +135,7 @@ export function formatHatIdDebug(hatId: bigint): string {
   const levels: string[] = [];
 
   for (let i = 0; i < 16; i++) {
-    const levelValue = (hatId >> BigInt(16 * (15 - i))) & BigInt(0xFFFF);
+    const levelValue = (hatId >> BigInt(16 * (15 - i))) & BigInt(0xffff);
     if (levelValue > 0n) {
       levels.push(`Level ${i}: ${levelValue}`);
     }

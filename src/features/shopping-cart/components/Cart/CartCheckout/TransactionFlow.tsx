@@ -1,18 +1,42 @@
-"use client";
+'use client';
 
-import { memo, useState, useCallback, useEffect, lazy, Suspense } from "react";
-import { usePublicClient } from "wagmi";
-import styled from "styled-components";
-import type { ICartProduct } from "../../../models";
-import type { Token } from "./CartCheckout";
+import { memo, useState, useCallback, useEffect, lazy, Suspense } from 'react';
+import { usePublicClient } from 'wagmi';
+import styled from 'styled-components';
+import type { ICartProduct } from '../../../models';
+import type { Token } from './CartCheckout';
 
 // Lazy load OnchainKit transaction components
-const Transaction = lazy(() => import("@coinbase/onchainkit/transaction").then(m => ({ default: m.Transaction })));
-const TransactionButton = lazy(() => import("@coinbase/onchainkit/transaction").then(m => ({ default: m.TransactionButton })));
-const TransactionSponsor = lazy(() => import("@coinbase/onchainkit/transaction").then(m => ({ default: m.TransactionSponsor })));
-const TransactionStatus = lazy(() => import("@coinbase/onchainkit/transaction").then(m => ({ default: m.TransactionStatus })));
-const TransactionStatusLabel = lazy(() => import("@coinbase/onchainkit/transaction").then(m => ({ default: m.TransactionStatusLabel })));
-const TransactionStatusAction = lazy(() => import("@coinbase/onchainkit/transaction").then(m => ({ default: m.TransactionStatusAction })));
+const Transaction = lazy(() =>
+  import('@coinbase/onchainkit/transaction').then((m) => ({
+    default: m.Transaction,
+  })),
+);
+const TransactionButton = lazy(() =>
+  import('@coinbase/onchainkit/transaction').then((m) => ({
+    default: m.TransactionButton,
+  })),
+);
+const TransactionSponsor = lazy(() =>
+  import('@coinbase/onchainkit/transaction').then((m) => ({
+    default: m.TransactionSponsor,
+  })),
+);
+const TransactionStatus = lazy(() =>
+  import('@coinbase/onchainkit/transaction').then((m) => ({
+    default: m.TransactionStatus,
+  })),
+);
+const TransactionStatusLabel = lazy(() =>
+  import('@coinbase/onchainkit/transaction').then((m) => ({
+    default: m.TransactionStatusLabel,
+  })),
+);
+const TransactionStatusAction = lazy(() =>
+  import('@coinbase/onchainkit/transaction').then((m) => ({
+    default: m.TransactionStatusAction,
+  })),
+);
 
 // Import optimized transaction services
 import {
@@ -20,21 +44,19 @@ import {
   needsTokenApproval,
   buildApprovalCalls,
   type TokenAllowances,
-  type ApprovalConfig
+  type ApprovalConfig,
 } from '../../../services/transaction/tokenApproval';
 
 import {
   validatePaymasterSetup,
-  buildPurchaseCall
+  buildPurchaseCall,
 } from '../../../services/transaction/purchaseRouter';
 
-import {
-  processAllOrders
-} from '../../../services/transaction/orderCreation';
+import { processAllOrders } from '../../../services/transaction/orderCreation';
 
 import {
   formatTokenAmount,
-  logTransactionError
+  logTransactionError,
 } from '../../../services/transaction/transactionStatus';
 
 const TransactionContainer = styled.div`
@@ -70,8 +92,8 @@ const StepTitle = styled.h4`
 
 const AllowanceInfo = styled.div<{ needsApproval: boolean }>`
   padding: 0.75rem;
-  background: ${props => props.needsApproval ? '#fff3cd' : '#d4edda'};
-  border: 1px solid ${props => props.needsApproval ? '#ffeaa7' : '#c3e6cb'};
+  background: ${(props) => (props.needsApproval ? '#fff3cd' : '#d4edda')};
+  border: 1px solid ${(props) => (props.needsApproval ? '#ffeaa7' : '#c3e6cb')};
   border-radius: 4px;
   font-size: 0.8rem;
   margin-bottom: 1rem;
@@ -129,185 +151,221 @@ interface TransactionFlowProps {
  * - Lazy loads heavy OnchainKit components
  * - Handles approval and purchase in sequence
  */
-const TransactionFlow = memo(({ 
-  products, 
-  selectedToken, 
-  totalSystemPrice, 
-  totalSelfPrice, 
-  userAddress,
-  onBack 
-}: TransactionFlowProps) => {
-  const publicClient = usePublicClient();
-  
-  const [allowances, setAllowances] = useState<TokenAllowances>({
-    systemAllowance: 0n,
-    selfAllowance: 0n,
-    allowance: 0n
-  });
-  const [isLoadingAllowances, setIsLoadingAllowances] = useState(true);
-  const [transactionState, setTransactionState] = useState<'preparing' | 'ready' | 'processing' | 'success' | 'error'>('preparing');
+const TransactionFlow = memo(
+  ({
+    products,
+    selectedToken,
+    totalSystemPrice,
+    totalSelfPrice,
+    userAddress,
+    onBack,
+  }: TransactionFlowProps) => {
+    const publicClient = usePublicClient();
 
-  // Calculate approval amounts
-  const systemApprovalAmount = selectedToken.symbol === "$SYSTEM" ? formatTokenAmount(totalSystemPrice) : 0n;
-  const selfApprovalAmount = selectedToken.symbol === "$SELF" ? formatTokenAmount(totalSelfPrice) : 0n;
+    const [allowances, setAllowances] = useState<TokenAllowances>({
+      systemAllowance: 0n,
+      selfAllowance: 0n,
+      allowance: 0n,
+    });
+    const [isLoadingAllowances, setIsLoadingAllowances] = useState(true);
+    const [transactionState, setTransactionState] = useState<
+      'preparing' | 'ready' | 'processing' | 'success' | 'error'
+    >('preparing');
 
-  // Check allowances on mount
-  useEffect(() => {
-    const checkAllowances = async () => {
-      if (!publicClient) return;
-      
-      setIsLoadingAllowances(true);
+    // Calculate approval amounts
+    const systemApprovalAmount =
+      selectedToken.symbol === '$SYSTEM'
+        ? formatTokenAmount(totalSystemPrice)
+        : 0n;
+    const selfApprovalAmount =
+      selectedToken.symbol === '$SELF' ? formatTokenAmount(totalSelfPrice) : 0n;
+
+    // Check allowances on mount
+    useEffect(() => {
+      const checkAllowances = async () => {
+        if (!publicClient) return;
+
+        setIsLoadingAllowances(true);
+        try {
+          const { contractAddress, isDecentralized } = validatePaymasterSetup();
+
+          const config: ApprovalConfig = {
+            tokenSymbol: selectedToken.symbol,
+            systemApprovalAmount,
+            selfApprovalAmount,
+            contractAddress,
+            isDecentralized,
+          };
+
+          const allowanceData = await checkTokenAllowances(
+            userAddress,
+            publicClient,
+            config,
+          );
+          setAllowances(allowanceData);
+          setTransactionState('ready');
+        } catch (error) {
+          console.error('Error checking allowances:', error);
+          setTransactionState('error');
+        } finally {
+          setIsLoadingAllowances(false);
+        }
+      };
+
+      checkAllowances();
+    }, [
+      publicClient,
+      selectedToken,
+      systemApprovalAmount,
+      selfApprovalAmount,
+      userAddress,
+    ]);
+
+    // Build transaction calls
+    const buildTransactionCalls = useCallback(() => {
       try {
         const { contractAddress, isDecentralized } = validatePaymasterSetup();
-        
+
         const config: ApprovalConfig = {
           tokenSymbol: selectedToken.symbol,
           systemApprovalAmount,
           selfApprovalAmount,
           contractAddress,
-          isDecentralized
+          isDecentralized,
         };
-        
-        const allowanceData = await checkTokenAllowances(userAddress, publicClient, config);
-        setAllowances(allowanceData);
-        setTransactionState('ready');
+
+        const { needsApproval } = needsTokenApproval(config, allowances);
+        const approveCalls = needsApproval
+          ? buildApprovalCalls(config, allowances)
+          : [];
+
+        const productId = products.map((p) => p.id).join(',');
+        const purchaseCalls = buildPurchaseCall({
+          productId,
+          selectedToken,
+          systemAmount: systemApprovalAmount,
+          selfAmount: selfApprovalAmount,
+          address: userAddress,
+          products,
+          useFallbackRouting: false,
+        });
+
+        return [...approveCalls, ...purchaseCalls];
       } catch (error) {
-        console.error('Error checking allowances:', error);
-        setTransactionState('error');
-      } finally {
-        setIsLoadingAllowances(false);
+        logTransactionError(error);
+        return [];
       }
+    }, [
+      selectedToken,
+      systemApprovalAmount,
+      selfApprovalAmount,
+      allowances,
+      products,
+      userAddress,
+    ]);
+
+    // Handle transaction success
+    const handleSuccess = useCallback(
+      async (response: any) => {
+        setTransactionState('success');
+
+        try {
+          await processAllOrders({
+            products,
+            address: userAddress,
+            selectedToken,
+            transactionHash:
+              response?.transactionReceipts?.[0]?.transactionHash,
+            receipt: response?.transactionReceipts?.[0],
+          });
+
+          // Navigate or close cart after delay
+          setTimeout(() => {
+            // This would typically clear cart and navigate
+            console.log('Order processing complete');
+          }, 2000);
+        } catch (error) {
+          console.error('Error processing orders:', error);
+        }
+      },
+      [products, userAddress, selectedToken],
+    );
+
+    // Handle transaction error
+    const handleError = useCallback((error: any) => {
+      console.error('Transaction error:', error);
+      logTransactionError(error);
+      setTransactionState('error');
+    }, []);
+
+    if (isLoadingAllowances) {
+      return <LoadingSkeleton />;
+    }
+
+    const { contractAddress, isDecentralized } = validatePaymasterSetup();
+    const config: ApprovalConfig = {
+      tokenSymbol: selectedToken.symbol,
+      systemApprovalAmount,
+      selfApprovalAmount,
+      contractAddress,
+      isDecentralized,
     };
 
-    checkAllowances();
-  }, [publicClient, selectedToken, systemApprovalAmount, selfApprovalAmount, userAddress]);
+    const { needsApproval } = needsTokenApproval(config, allowances);
+    const calls = buildTransactionCalls();
 
-  // Build transaction calls
-  const buildTransactionCalls = useCallback(() => {
-    try {
-      const { contractAddress, isDecentralized } = validatePaymasterSetup();
-      
-      const config: ApprovalConfig = {
-        tokenSymbol: selectedToken.symbol,
-        systemApprovalAmount,
-        selfApprovalAmount,
-        contractAddress,
-        isDecentralized
-      };
-      
-      const { needsApproval } = needsTokenApproval(config, allowances);
-      const approveCalls = needsApproval ? buildApprovalCalls(config, allowances) : [];
-      
-      const productId = products.map(p => p.id).join(",");
-      const purchaseCalls = buildPurchaseCall({
-        productId,
-        selectedToken,
-        systemAmount: systemApprovalAmount,
-        selfAmount: selfApprovalAmount,
-        address: userAddress,
-        products,
-        useFallbackRouting: false
-      });
-      
-      return [...approveCalls, ...purchaseCalls];
-    } catch (error) {
-      logTransactionError(error);
-      return [];
-    }
-  }, [selectedToken, systemApprovalAmount, selfApprovalAmount, allowances, products, userAddress]);
+    return (
+      <TransactionContainer>
+        <BackButton onClick={onBack}>← Back to payment options</BackButton>
 
-  // Handle transaction success
-  const handleSuccess = useCallback(async (response: any) => {
-    setTransactionState('success');
-    
-    try {
-      await processAllOrders({
-        products,
-        address: userAddress,
-        selectedToken,
-        transactionHash: response?.transactionReceipts?.[0]?.transactionHash,
-        receipt: response?.transactionReceipts?.[0]
-      });
-      
-      // Navigate or close cart after delay
-      setTimeout(() => {
-        // This would typically clear cart and navigate
-        console.log('Order processing complete');
-      }, 2000);
-    } catch (error) {
-      console.error('Error processing orders:', error);
-    }
-  }, [products, userAddress, selectedToken]);
+        <TransactionStep>
+          <StepTitle>Payment Method: {selectedToken.symbol}</StepTitle>
+          <AllowanceInfo needsApproval={needsApproval}>
+            {needsApproval
+              ? `Token approval required for ${selectedToken.symbol}. This will be included in your transaction.`
+              : `${selectedToken.symbol} is already approved for spending.`}
+          </AllowanceInfo>
+        </TransactionStep>
 
-  // Handle transaction error
-  const handleError = useCallback((error: any) => {
-    console.error('Transaction error:', error);
-    logTransactionError(error);
-    setTransactionState('error');
-  }, []);
+        <Suspense fallback={<LoadingSkeleton />}>
+          <Transaction
+            account={userAddress as `0x${string}`}
+            chainId={BASE_CHAIN_ID}
+            calls={calls}
+            isSponsored={true}
+            onSuccess={handleSuccess}
+            onError={handleError}
+          >
+            <TransactionButtonStyled
+              as={TransactionButton}
+              text={
+                transactionState === 'processing'
+                  ? 'Processing...'
+                  : transactionState === 'success'
+                    ? 'Success!'
+                    : transactionState === 'error'
+                      ? 'Transaction Failed'
+                      : needsApproval
+                        ? 'Approve & Purchase'
+                        : 'Purchase'
+              }
+              disabled={
+                transactionState === 'processing' ||
+                transactionState === 'success'
+              }
+            />
 
-  if (isLoadingAllowances) {
-    return <LoadingSkeleton />;
-  }
-
-  const { contractAddress, isDecentralized } = validatePaymasterSetup();
-  const config: ApprovalConfig = {
-    tokenSymbol: selectedToken.symbol,
-    systemApprovalAmount,
-    selfApprovalAmount,
-    contractAddress,
-    isDecentralized
-  };
-  
-  const { needsApproval } = needsTokenApproval(config, allowances);
-  const calls = buildTransactionCalls();
-
-  return (
-    <TransactionContainer>
-      <BackButton onClick={onBack}>
-        ← Back to payment options
-      </BackButton>
-
-      <TransactionStep>
-        <StepTitle>Payment Method: {selectedToken.symbol}</StepTitle>
-        <AllowanceInfo needsApproval={needsApproval}>
-          {needsApproval 
-            ? `Token approval required for ${selectedToken.symbol}. This will be included in your transaction.`
-            : `${selectedToken.symbol} is already approved for spending.`
-          }
-        </AllowanceInfo>
-      </TransactionStep>
-
-      <Suspense fallback={<LoadingSkeleton />}>
-        <Transaction
-          account={userAddress as `0x${string}`}
-          chainId={BASE_CHAIN_ID}
-          calls={calls}
-          isSponsored={true}
-          onSuccess={handleSuccess}
-          onError={handleError}
-        >
-          <TransactionButtonStyled
-            as={TransactionButton}
-            text={
-              transactionState === 'processing' ? "Processing..." :
-              transactionState === 'success' ? "Success!" :
-              transactionState === 'error' ? "Transaction Failed" :
-              needsApproval ? "Approve & Purchase" : "Purchase"
-            }
-            disabled={transactionState === 'processing' || transactionState === 'success'}
-          />
-          
-          <TransactionSponsor />
-          <TransactionStatus>
-            <TransactionStatusLabel />
-            <TransactionStatusAction />
-          </TransactionStatus>
-        </Transaction>
-      </Suspense>
-    </TransactionContainer>
-  );
-});
+            <TransactionSponsor />
+            <TransactionStatus>
+              <TransactionStatusLabel />
+              <TransactionStatusAction />
+            </TransactionStatus>
+          </Transaction>
+        </Suspense>
+      </TransactionContainer>
+    );
+  },
+);
 
 TransactionFlow.displayName = 'TransactionFlow';
 

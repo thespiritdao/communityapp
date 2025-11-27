@@ -7,9 +7,10 @@ import { FeatureErrorBoundary } from '@/components/ErrorBoundary/FeatureErrorBou
 // Load lazily to keep the route resilient during dev while UI libs reload
 const HatsModulePodCreationForm = dynamic(
   () =>
-    import('@/features/pods/components/HatsModulePodCreationForm')
-      .then(mod => mod.HatsModulePodCreationForm),
-  { ssr: false }
+    import('@/features/pods/components/HatsModulePodCreationForm').then(
+      (mod) => mod.HatsModulePodCreationForm,
+    ),
+  { ssr: false },
 );
 
 export default function CreatePodWithModulesPage() {

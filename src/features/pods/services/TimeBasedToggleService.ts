@@ -16,12 +16,19 @@
  * - Syncs time restrictions from criteria to on-chain toggle module
  */
 
-import { createPublicClient, createWalletClient, custom, http, type Address } from 'viem';
+import {
+  createPublicClient,
+  createWalletClient,
+  custom,
+  http,
+  type Address,
+} from 'viem';
 import { baseSepolia } from 'viem/chains';
 import TimeBasedToggleModuleABI from '@/contracts/TimeBasedToggleModuleABI.json';
 
 // Contract address - will be set after deployment
-const TOGGLE_MODULE_ADDRESS = process.env.NEXT_PUBLIC_TIME_BASED_TOGGLE_MODULE as Address;
+const TOGGLE_MODULE_ADDRESS = process.env
+  .NEXT_PUBLIC_TIME_BASED_TOGGLE_MODULE as Address;
 
 export interface HatTimeWindow {
   startTime: bigint;
@@ -31,12 +38,14 @@ export interface HatTimeWindow {
 }
 
 export class TimeBasedToggleService {
-
   /**
    * Check if the toggle module is deployed and configured
    */
   static isConfigured(): boolean {
-    return !!TOGGLE_MODULE_ADDRESS && TOGGLE_MODULE_ADDRESS !== '0x0000000000000000000000000000000000000000';
+    return (
+      !!TOGGLE_MODULE_ADDRESS &&
+      TOGGLE_MODULE_ADDRESS !== '0x0000000000000000000000000000000000000000'
+    );
   }
 
   /**
@@ -54,10 +63,12 @@ export class TimeBasedToggleService {
    */
   static async setHatExpiration(
     hatId: bigint,
-    expirationTimestamp: bigint
+    expirationTimestamp: bigint,
   ): Promise<`0x${string}`> {
     if (!this.isConfigured()) {
-      throw new Error('TimeBasedToggleModule not configured. Deploy contract and set NEXT_PUBLIC_TIME_BASED_TOGGLE_MODULE');
+      throw new Error(
+        'TimeBasedToggleModule not configured. Deploy contract and set NEXT_PUBLIC_TIME_BASED_TOGGLE_MODULE',
+      );
     }
 
     if (typeof window === 'undefined' || !window.ethereum) {
@@ -66,7 +77,7 @@ export class TimeBasedToggleService {
 
     const walletClient = createWalletClient({
       chain: baseSepolia,
-      transport: custom(window.ethereum)
+      transport: custom(window.ethereum),
     });
 
     const [account] = await walletClient.getAddresses();
@@ -74,7 +85,7 @@ export class TimeBasedToggleService {
     console.log('⏰ Setting HAT expiration:', {
       hatId: hatId.toString(),
       expiration: new Date(Number(expirationTimestamp) * 1000).toISOString(),
-      account
+      account,
     });
 
     const hash = await walletClient.writeContract({
@@ -82,7 +93,7 @@ export class TimeBasedToggleService {
       abi: TimeBasedToggleModuleABI,
       functionName: 'setHatExpiration',
       args: [hatId, expirationTimestamp],
-      account
+      account,
     });
 
     console.log('✅ Expiration set! TX:', hash);
@@ -97,7 +108,7 @@ export class TimeBasedToggleService {
    */
   static async setHatStartTime(
     hatId: bigint,
-    startTimestamp: bigint
+    startTimestamp: bigint,
   ): Promise<`0x${string}`> {
     if (!this.isConfigured()) {
       throw new Error('TimeBasedToggleModule not configured');
@@ -109,15 +120,18 @@ export class TimeBasedToggleService {
 
     const walletClient = createWalletClient({
       chain: baseSepolia,
-      transport: custom(window.ethereum)
+      transport: custom(window.ethereum),
     });
 
     const [account] = await walletClient.getAddresses();
 
     console.log('🕐 Setting HAT start time:', {
       hatId: hatId.toString(),
-      startTime: startTimestamp > 0n ? new Date(Number(startTimestamp) * 1000).toISOString() : 'Immediate',
-      account
+      startTime:
+        startTimestamp > 0n
+          ? new Date(Number(startTimestamp) * 1000).toISOString()
+          : 'Immediate',
+      account,
     });
 
     const hash = await walletClient.writeContract({
@@ -125,7 +139,7 @@ export class TimeBasedToggleService {
       abi: TimeBasedToggleModuleABI,
       functionName: 'setHatStartTime',
       args: [hatId, startTimestamp],
-      account
+      account,
     });
 
     console.log('✅ Start time set! TX:', hash);
@@ -142,7 +156,7 @@ export class TimeBasedToggleService {
   static async setHatTimeWindow(
     hatId: bigint,
     startTimestamp: bigint,
-    expirationTimestamp: bigint
+    expirationTimestamp: bigint,
   ): Promise<`0x${string}`> {
     if (!this.isConfigured()) {
       throw new Error('TimeBasedToggleModule not configured');
@@ -154,16 +168,22 @@ export class TimeBasedToggleService {
 
     const walletClient = createWalletClient({
       chain: baseSepolia,
-      transport: custom(window.ethereum)
+      transport: custom(window.ethereum),
     });
 
     const [account] = await walletClient.getAddresses();
 
     console.log('📅 Setting HAT time window:', {
       hatId: hatId.toString(),
-      startTime: startTimestamp > 0n ? new Date(Number(startTimestamp) * 1000).toISOString() : 'Immediate',
-      expiration: expirationTimestamp > 0n ? new Date(Number(expirationTimestamp) * 1000).toISOString() : 'Never',
-      account
+      startTime:
+        startTimestamp > 0n
+          ? new Date(Number(startTimestamp) * 1000).toISOString()
+          : 'Immediate',
+      expiration:
+        expirationTimestamp > 0n
+          ? new Date(Number(expirationTimestamp) * 1000).toISOString()
+          : 'Never',
+      account,
     });
 
     const hash = await walletClient.writeContract({
@@ -171,7 +191,7 @@ export class TimeBasedToggleService {
       abi: TimeBasedToggleModuleABI,
       functionName: 'setHatTimeWindow',
       args: [hatId, startTimestamp, expirationTimestamp],
-      account
+      account,
     });
 
     console.log('✅ Time window set! TX:', hash);
@@ -190,21 +210,21 @@ export class TimeBasedToggleService {
 
     const publicClient = createPublicClient({
       chain: baseSepolia,
-      transport: http()
+      transport: http(),
     });
 
-    const result = await publicClient.readContract({
+    const result = (await publicClient.readContract({
       address: TOGGLE_MODULE_ADDRESS,
       abi: TimeBasedToggleModuleABI,
       functionName: 'getHatTimeWindow',
-      args: [hatId]
-    }) as [bigint, bigint, boolean, bigint];
+      args: [hatId],
+    })) as [bigint, bigint, boolean, bigint];
 
     return {
       startTime: result[0],
       expiration: result[1],
       isActive: result[2],
-      timeUntilExpiration: result[3]
+      timeUntilExpiration: result[3],
     };
   }
 
@@ -220,15 +240,15 @@ export class TimeBasedToggleService {
 
     const publicClient = createPublicClient({
       chain: baseSepolia,
-      transport: http()
+      transport: http(),
     });
 
-    const status = await publicClient.readContract({
+    const status = (await publicClient.readContract({
       address: TOGGLE_MODULE_ADDRESS,
       abi: TimeBasedToggleModuleABI,
       functionName: 'getHatStatus',
-      args: [hatId]
-    }) as boolean;
+      args: [hatId],
+    })) as boolean;
 
     return status;
   }
@@ -245,15 +265,15 @@ export class TimeBasedToggleService {
 
     const publicClient = createPublicClient({
       chain: baseSepolia,
-      transport: http()
+      transport: http(),
     });
 
-    const expired = await publicClient.readContract({
+    const expired = (await publicClient.readContract({
       address: TOGGLE_MODULE_ADDRESS,
       abi: TimeBasedToggleModuleABI,
       functionName: 'isHatExpired',
-      args: [hatId]
-    }) as boolean;
+      args: [hatId],
+    })) as boolean;
 
     return expired;
   }
@@ -270,15 +290,15 @@ export class TimeBasedToggleService {
 
     const publicClient = createPublicClient({
       chain: baseSepolia,
-      transport: http()
+      transport: http(),
     });
 
-    const started = await publicClient.readContract({
+    const started = (await publicClient.readContract({
       address: TOGGLE_MODULE_ADDRESS,
       abi: TimeBasedToggleModuleABI,
       functionName: 'isHatStarted',
-      args: [hatId]
-    }) as boolean;
+      args: [hatId],
+    })) as boolean;
 
     return started;
   }

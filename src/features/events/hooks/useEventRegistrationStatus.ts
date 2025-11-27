@@ -5,7 +5,9 @@ import type { EventRegistration } from '../types/event';
 
 export function useEventRegistrationStatus(eventId: string | null) {
   const { address } = useAccount();
-  const [registration, setRegistration] = useState<EventRegistration | null>(null);
+  const [registration, setRegistration] = useState<EventRegistration | null>(
+    null,
+  );
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -21,7 +23,9 @@ export function useEventRegistrationStatus(eventId: string | null) {
       const data = await EventService.getUserRegistration(eventId, address);
       setRegistration(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch registration');
+      setError(
+        err instanceof Error ? err.message : 'Failed to fetch registration',
+      );
       setRegistration(null);
     } finally {
       setLoading(false);
@@ -32,22 +36,30 @@ export function useEventRegistrationStatus(eventId: string | null) {
     fetchRegistration();
   }, [fetchRegistration]);
 
-  const isRegistered = registration !== null && 
-    ['registered', 'checked_in', 'completed'].includes(registration.registration_status || '');
+  const isRegistered =
+    registration !== null &&
+    ['registered', 'checked_in', 'completed'].includes(
+      registration.registration_status || '',
+    );
 
   return {
     registration,
     isRegistered,
     loading,
     error,
-    refetch: fetchRegistration
+    refetch: fetchRegistration,
   };
 }
 
 // Batch hook for multiple events (more efficient for lists)
-export function useBatchEventRegistrationStatus(eventIds: string[], refreshKey = 0) {
+export function useBatchEventRegistrationStatus(
+  eventIds: string[],
+  refreshKey = 0,
+) {
   const { address } = useAccount();
-  const [registrations, setRegistrations] = useState<Record<string, EventRegistration>>({});
+  const [registrations, setRegistrations] = useState<
+    Record<string, EventRegistration>
+  >({});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -65,21 +77,23 @@ export function useBatchEventRegistrationStatus(eventIds: string[], refreshKey =
     try {
       setLoading(true);
       setError(null);
-      
+
       // Batch fetch all registrations for this user
       const allRegistrations = await EventService.getUserRegistrations(address);
-      
+
       // Create a map of event_id -> registration for the requested events
       const registrationMap: Record<string, EventRegistration> = {};
-      allRegistrations.forEach(reg => {
+      allRegistrations.forEach((reg) => {
         if (eventIds.includes(reg.event_id)) {
           registrationMap[reg.event_id] = reg;
         }
       });
-      
+
       setRegistrations(registrationMap);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch registrations');
+      setError(
+        err instanceof Error ? err.message : 'Failed to fetch registrations',
+      );
       setRegistrations({});
     } finally {
       setLoading(false);
@@ -90,22 +104,28 @@ export function useBatchEventRegistrationStatus(eventIds: string[], refreshKey =
     fetchRegistrations();
   }, [fetchRegistrations]);
 
-  const getRegistrationStatus = useCallback((eventId: string) => {
-    const registration = registrations[eventId];
-    const isRegistered = registration !== undefined && 
-      ['registered', 'checked_in', 'completed'].includes(registration.registration_status || '');
-    
-    return {
-      registration,
-      isRegistered
-    };
-  }, [registrations]);
+  const getRegistrationStatus = useCallback(
+    (eventId: string) => {
+      const registration = registrations[eventId];
+      const isRegistered =
+        registration !== undefined &&
+        ['registered', 'checked_in', 'completed'].includes(
+          registration.registration_status || '',
+        );
+
+      return {
+        registration,
+        isRegistered,
+      };
+    },
+    [registrations],
+  );
 
   return {
     registrations,
     loading,
     error,
     getRegistrationStatus,
-    refetch: fetchRegistrations
+    refetch: fetchRegistrations,
   };
 }

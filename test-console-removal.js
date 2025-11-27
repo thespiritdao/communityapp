@@ -108,7 +108,9 @@ console.log();
 // console.log (should be REMOVED in production)
 console.log('📝 console.log statements:');
 if (results.consoleLog.length === 0) {
-  console.log('   ✅ PASS: No console.log statements found (correctly removed)');
+  console.log(
+    '   ✅ PASS: No console.log statements found (correctly removed)',
+  );
 } else {
   console.log('   ⚠️  FAIL: Found console.log statements in production build:');
   results.consoleLog.forEach(({ file, count }) => {
@@ -120,7 +122,9 @@ console.log();
 // console.warn (should be REMOVED in production)
 console.log('⚠️  console.warn statements:');
 if (results.consoleWarn.length === 0) {
-  console.log('   ✅ PASS: No console.warn statements found (correctly removed)');
+  console.log(
+    '   ✅ PASS: No console.warn statements found (correctly removed)',
+  );
 } else {
   console.log('   ⚠️  FAIL: Found console.warn statements in production build:');
   results.consoleWarn.forEach(({ file, count }) => {
@@ -132,9 +136,13 @@ console.log();
 // console.debug (should be REMOVED in production)
 console.log('🔍 console.debug statements:');
 if (results.consoleDebug.length === 0) {
-  console.log('   ✅ PASS: No console.debug statements found (correctly removed)');
+  console.log(
+    '   ✅ PASS: No console.debug statements found (correctly removed)',
+  );
 } else {
-  console.log('   ⚠️  FAIL: Found console.debug statements in production build:');
+  console.log(
+    '   ⚠️  FAIL: Found console.debug statements in production build:',
+  );
   results.consoleDebug.forEach(({ file, count }) => {
     console.log(`      - ${file}: ${count} occurrences`);
   });
@@ -144,7 +152,9 @@ console.log();
 // console.info (should be REMOVED in production)
 console.log('ℹ️  console.info statements:');
 if (results.consoleInfo.length === 0) {
-  console.log('   ✅ PASS: No console.info statements found (correctly removed)');
+  console.log(
+    '   ✅ PASS: No console.info statements found (correctly removed)',
+  );
 } else {
   console.log('   ⚠️  FAIL: Found console.info statements in production build:');
   results.consoleInfo.forEach(({ file, count }) => {
@@ -157,8 +167,13 @@ console.log();
 console.log('❌ console.error statements:');
 if (results.consoleError.length > 0) {
   console.log('   ✅ PASS: console.error statements preserved (correct):');
-  const totalErrors = results.consoleError.reduce((sum, { count }) => sum + count, 0);
-  console.log(`      Total: ${totalErrors} occurrences across ${results.consoleError.length} files`);
+  const totalErrors = results.consoleError.reduce(
+    (sum, { count }) => sum + count,
+    0,
+  );
+  console.log(
+    `      Total: ${totalErrors} occurrences across ${results.consoleError.length} files`,
+  );
 } else {
   console.log('   ℹ️  INFO: No console.error statements found');
 }
@@ -180,8 +195,12 @@ if (hasFailures) {
   console.log('💡 TROUBLESHOOTING:');
   console.log('   1. Verify NODE_ENV=production during build');
   console.log('   2. Check next.config.mjs has removeConsole configuration');
-  console.log('   3. Clear .next directory and rebuild: rm -rf .next && npm run build');
-  console.log('   4. Ensure you\'re using Next.js 12.1 or higher (SWC compiler required)');
+  console.log(
+    '   3. Clear .next directory and rebuild: rm -rf .next && npm run build',
+  );
+  console.log(
+    "   4. Ensure you're using Next.js 12.1 or higher (SWC compiler required)",
+  );
   process.exit(1);
 } else {
   console.log('✅ TEST PASSED: Console removal working correctly!');

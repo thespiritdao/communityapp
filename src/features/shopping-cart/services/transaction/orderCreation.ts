@@ -13,22 +13,27 @@ export interface OrderCreationConfig {
 
 export async function ensureSupabaseAuth(address: string): Promise<void> {
   console.log('🔐 Ensuring Supabase authentication for order creation...');
-  
+
   try {
     const authResponse = await fetch('/api/auth/onchainkit', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ address: address.toLowerCase() })
+      body: JSON.stringify({ address: address.toLowerCase() }),
     });
-    
+
     if (!authResponse.ok) {
       throw new Error(`Auth API failed: ${authResponse.status}`);
     }
-    
+
     const authData = await authResponse.json();
-    console.log('✅ Auth API response received:', { hasToken: !!authData.supabaseToken });
-    
-    await createSupabaseSession(authData.supabaseToken, authData.supabaseRefreshToken);
+    console.log('✅ Auth API response received:', {
+      hasToken: !!authData.supabaseToken,
+    });
+
+    await createSupabaseSession(
+      authData.supabaseToken,
+      authData.supabaseRefreshToken,
+    );
     console.log('✅ Supabase session established for order creation');
   } catch (authError) {
     console.error('❌ Failed to establish Supabase session:', authError);
@@ -38,29 +43,33 @@ export async function ensureSupabaseAuth(address: string): Promise<void> {
 
 export async function createOrder(
   product: ICartProduct,
-  config: OrderCreationConfig
+  config: OrderCreationConfig,
 ): Promise<{ orderId?: string; error?: string }> {
   console.log('📦 Creating order record for product:', {
     productName: product.name || product.title,
     productId: product.id.toString(),
     requiredToken: product.required_token,
     buyerAddress: config.address,
-    quantity: product.quantity || 1
+    quantity: product.quantity || 1,
   });
-  
+
   // FIX: Use correct property names with underscores (price_self, price_system)
-  const productSelfPrice = config.selectedToken.symbol === "$SELF" ? 
-    (product.price_self || 0) * (product.quantity || 1) : 0;
-  const productSystemPrice = config.selectedToken.symbol === "$SYSTEM" ? 
-    (product.price_system || 0) * (product.quantity || 1) : 0;
-  
+  const productSelfPrice =
+    config.selectedToken.symbol === '$SELF'
+      ? (product.price_self || 0) * (product.quantity || 1)
+      : 0;
+  const productSystemPrice =
+    config.selectedToken.symbol === '$SYSTEM'
+      ? (product.price_system || 0) * (product.quantity || 1)
+      : 0;
+
   console.log('💰 Price calculation:', {
     token: config.selectedToken.symbol,
     price_self: product.price_self,
     price_system: product.price_system,
     quantity: product.quantity || 1,
     calculatedSelfPrice: productSelfPrice,
-    calculatedSystemPrice: productSystemPrice
+    calculatedSystemPrice: productSystemPrice,
   });
 
   try {
@@ -74,7 +83,7 @@ export async function createOrder(
         price_paid_self: productSelfPrice,
         price_paid_system: productSystemPrice,
         transaction_hash: config.transactionHash,
-        status: 'processing'
+        status: 'processing',
       })
       .select()
       .single();
@@ -95,7 +104,7 @@ export async function createOrder(
 export async function sendOrderNotifications(
   orderData: any,
   product: ICartProduct,
-  config: OrderCreationConfig
+  config: OrderCreationConfig,
 ): Promise<void> {
   try {
     const { data: creatorData } = await supabase
@@ -120,7 +129,7 @@ export async function sendOrderNotifications(
           context_type: 'marketplace',
           context_id: orderData.id,
           context_url: `/marketplace/orders/${orderData.id}`,
-          priority: 'high'
+          priority: 'high',
         });
 
         // Notify buyer of successful order
@@ -133,7 +142,7 @@ export async function sendOrderNotifications(
           context_type: 'marketplace',
           context_id: orderData.id,
           context_url: `/marketplace/orders/${orderData.id}`,
-          priority: 'medium'
+          priority: 'medium',
         });
 
         console.log('✅ Order notifications sent successfully');
@@ -146,29 +155,38 @@ export async function sendOrderNotifications(
   }
 }
 
-export async function processAllOrders(config: OrderCreationConfig): Promise<void> {
+export async function processAllOrders(
+  config: OrderCreationConfig,
+): Promise<void> {
   console.log('🚀 STARTING ORDER CREATION AND NOTIFICATION PROCESS');
   console.log('🛒 Processing', config.products.length, 'products');
-  
+
   await ensureSupabaseAuth(config.address);
-  
+
   const orderPromises = config.products.map(async (product) => {
     const { orderId, error } = await createOrder(product, config);
-    
+
     if (!error && orderId) {
       await sendOrderNotifications({ id: orderId }, product, config);
     }
-    
+
     return { orderId, error };
   });
 
   const results = await Promise.allSettled(orderPromises);
-  
-  const successful = results.filter(r => r.status === 'fulfilled' && r.value.orderId);
-  const failed = results.filter(r => r.status === 'rejected' || (r.status === 'fulfilled' && r.value.error));
-  
-  console.log(`✅ Successfully created ${successful.length}/${config.products.length} orders`);
-  
+
+  const successful = results.filter(
+    (r) => r.status === 'fulfilled' && r.value.orderId,
+  );
+  const failed = results.filter(
+    (r) =>
+      r.status === 'rejected' || (r.status === 'fulfilled' && r.value.error),
+  );
+
+  console.log(
+    `✅ Successfully created ${successful.length}/${config.products.length} orders`,
+  );
+
   if (failed.length > 0) {
     console.error(`❌ Failed to create ${failed.length} orders:`, failed);
   }

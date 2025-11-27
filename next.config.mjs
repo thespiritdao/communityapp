@@ -6,11 +6,12 @@ const nextConfig = {
   compiler: {
     styledComponents: true,
     // Remove console statements in production (keeps console.error for critical errors)
-    removeConsole: process.env.NODE_ENV === 'production'
-      ? {
-          exclude: ['error'], // Keep console.error for production error tracking
-        }
-      : false,
+    removeConsole:
+      process.env.NODE_ENV === 'production'
+        ? {
+            exclude: ['error'], // Keep console.error for production error tracking
+          }
+        : false,
   },
   // Enable compression
   compress: true,
@@ -62,10 +63,7 @@ const nextConfig = {
       const originalResolve = config.resolve;
       config.resolve = {
         ...originalResolve,
-        modules: [
-          ...(originalResolve.modules || []),
-          'node_modules',
-        ],
+        modules: [...(originalResolve.modules || []), 'node_modules'],
       };
     }
     return config;
@@ -132,9 +130,7 @@ const nextConfig = {
         pathname: '/api/**',
       },
     ],
-    domains: [
-      "yqgqodofeliuurrmxlks.supabase.co"
-    ],
+    domains: ['yqgqodofeliuurrmxlks.supabase.co'],
   },
   async headers() {
     return [
@@ -143,7 +139,10 @@ const nextConfig = {
         headers: [
           { key: 'Access-Control-Allow-Origin', value: '*' },
           { key: 'Access-Control-Allow-Methods', value: 'GET' },
-          { key: 'Access-Control-Allow-Headers', value: 'X-Requested-With, content-type, Authorization' },
+          {
+            key: 'Access-Control-Allow-Headers',
+            value: 'X-Requested-With, content-type, Authorization',
+          },
           { key: 'X-Frame-Options', value: 'ALLOWALL' },
         ],
       },
@@ -181,10 +180,12 @@ const nextConfig = {
                 https://ui-avatars.com;
               style-src 'self' 'unsafe-inline';
               frame-src 'self' https://*.coinbase.com https://spiritdao.pythonanywhere.com;
-            `.replace(/\s+/g, ' ').trim()
-          }
-        ]
-      }
+            `
+              .replace(/\s+/g, ' ')
+              .trim(),
+          },
+        ],
+      },
     ];
   },
 };

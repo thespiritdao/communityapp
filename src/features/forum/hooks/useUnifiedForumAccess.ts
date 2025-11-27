@@ -64,7 +64,7 @@ export interface PodRoleWithPermissions {
   roleName: string;
   permissions: {
     chatAccess: boolean;
-    forumAccess: boolean;          // 🆕 Forum access permission
+    forumAccess: boolean; // 🆕 Forum access permission
     forumModeration: boolean;
     governanceParticipation: boolean;
   };
@@ -81,7 +81,8 @@ export interface UseUnifiedForumAccessReturn {
   podRoles: PodRoleWithPermissions[];
 }
 
-const HATS_CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_HATS_CONTRACT as `0x${string}`;
+const HATS_CONTRACT_ADDRESS = process.env
+  .NEXT_PUBLIC_HATS_CONTRACT as `0x${string}`;
 
 export function useUnifiedForumAccess(): UseUnifiedForumAccessReturn {
   const { address, isConnected } = useAccount();
@@ -89,7 +90,9 @@ export function useUnifiedForumAccess(): UseUnifiedForumAccessReturn {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [userHatIds, setUserHatIds] = useState<string[]>([]);
-  const [userPodRoles, setUserPodRoles] = useState<PodRoleWithPermissions[]>([]); // NEW: Store pod roles
+  const [userPodRoles, setUserPodRoles] = useState<PodRoleWithPermissions[]>(
+    [],
+  ); // NEW: Store pod roles
 
   // Define loadPermissions BEFORE useEffects that reference it
   const loadPermissions = useCallback(async () => {
@@ -107,21 +110,34 @@ export function useUnifiedForumAccess(): UseUnifiedForumAccessReturn {
         tokenBalances = await fetchTokenBalances(address);
         console.log('✅ [ForumAccess] Token balances loaded:', tokenBalances);
       } catch (tokenError) {
-        console.warn('⚠️ [ForumAccess] Token balance fetch failed, continuing with HAT-based access only:', tokenError);
+        console.warn(
+          '⚠️ [ForumAccess] Token balance fetch failed, continuing with HAT-based access only:',
+          tokenError,
+        );
         // Continue with empty token balances - HAT-based access will still work
       }
 
       // Step 2: Get all active pod roles with HAT IDs
       const allPodRoles = await getAllActivePodRoles();
-      console.log(`📋 [ForumAccess] Found ${allPodRoles.length} active pod roles`);
+      console.log(
+        `📋 [ForumAccess] Found ${allPodRoles.length} active pod roles`,
+      );
 
       // Step 3: Check which HATs the user actually wears
-      const ownedHats = await checkUserHatOwnership(address, allPodRoles.map(r => r.hatId));
-      console.log(`🎩 [ForumAccess] User owns ${ownedHats.length} HATs:`, ownedHats);
+      const ownedHats = await checkUserHatOwnership(
+        address,
+        allPodRoles.map((r) => r.hatId),
+      );
+      console.log(
+        `🎩 [ForumAccess] User owns ${ownedHats.length} HATs:`,
+        ownedHats,
+      );
       setUserHatIds(ownedHats);
 
       // Step 4: Filter to roles user actually has
-      const userPodRoles = allPodRoles.filter(role => ownedHats.includes(role.hatId));
+      const userPodRoles = allPodRoles.filter((role) =>
+        ownedHats.includes(role.hatId),
+      );
       console.log(`✅ [ForumAccess] User has ${userPodRoles.length} pod roles`);
 
       // Store pod roles in state for pod-specific permission checks
@@ -132,7 +148,8 @@ export function useUnifiedForumAccess(): UseUnifiedForumAccessReturn {
         .filter(([, hasToken]) => hasToken)
         .map(([key]) => {
           // Map token balance keys to addresses
-          if (key === 'hasProofOfCuriosity') return process.env.NEXT_PUBLIC_PROOF_OF_CURIOSITY;
+          if (key === 'hasProofOfCuriosity')
+            return process.env.NEXT_PUBLIC_PROOF_OF_CURIOSITY;
           if (key === 'hasAdvocate') return process.env.NEXT_PUBLIC_ADVOCATE;
           return null;
         })
@@ -140,28 +157,36 @@ export function useUnifiedForumAccess(): UseUnifiedForumAccessReturn {
 
       const accessibleCategories = await getAccessibleCategories(
         tokenAddresses,
-        ownedHats
+        ownedHats,
       );
-      console.log(`📂 [ForumAccess] User can access ${accessibleCategories.length} categories`);
+      console.log(
+        `📂 [ForumAccess] User can access ${accessibleCategories.length} categories`,
+      );
 
       // Step 6: Determine permissions from pod roles
-      const canModerate = userPodRoles.some(role => role.permissions.forumModeration);
-      const canPost = userPodRoles.some(role => role.permissions.forumAccess);  // 🆕 Use forumAccess instead of chatAccess
+      const canModerate = userPodRoles.some(
+        (role) => role.permissions.forumModeration,
+      );
+      const canPost = userPodRoles.some((role) => role.permissions.forumAccess); // 🆕 Use forumAccess instead of chatAccess
       const canParticipateGovernance = userPodRoles.some(
-        role => role.permissions.governanceParticipation
+        (role) => role.permissions.governanceParticipation,
       );
 
       // Build permissions object
       const forumPermissions: ForumPermissions = {
         canViewCategory: (categoryId: string) => {
-          return accessibleCategories.some(cat => cat.id === categoryId);
+          return accessibleCategories.some((cat) => cat.id === categoryId);
         },
         canPostInCategory: (categoryId: string) => {
-          const canView = accessibleCategories.some(cat => cat.id === categoryId);
+          const canView = accessibleCategories.some(
+            (cat) => cat.id === categoryId,
+          );
           return canView && canPost;
         },
         canCreateThread: (categoryId: string) => {
-          const canView = accessibleCategories.some(cat => cat.id === categoryId);
+          const canView = accessibleCategories.some(
+            (cat) => cat.id === categoryId,
+          );
           return canView && canPost;
         },
         canModerate,
@@ -171,11 +196,11 @@ export function useUnifiedForumAccess(): UseUnifiedForumAccessReturn {
         canBanUsers: canModerate,
         canReviewReports: canModerate,
         canParticipateGovernance,
-        accessibleCategories: accessibleCategories.map(cat => cat.id),
+        accessibleCategories: accessibleCategories.map((cat) => cat.id),
         accessibleCategoryObjects: accessibleCategories,
         userHats: ownedHats,
         userTokens: tokenAddresses,
-        podRoles: userPodRoles
+        podRoles: userPodRoles,
       };
 
       setPermissions(forumPermissions);
@@ -185,9 +210,8 @@ export function useUnifiedForumAccess(): UseUnifiedForumAccessReturn {
         accessibleCategories: forumPermissions.accessibleCategories.length,
         canModerate: forumPermissions.canModerate,
         canPost,
-        podRoles: forumPermissions.podRoles.length
+        podRoles: forumPermissions.podRoles.length,
       });
-
     } catch (err) {
       console.error('❌ [ForumAccess] Failed to load permissions:', err);
       setError(err instanceof Error ? err.message : 'Unknown error');
@@ -211,7 +235,9 @@ export function useUnifiedForumAccess(): UseUnifiedForumAccessReturn {
   useEffect(() => {
     if (!address) return;
 
-    console.log('🔄 [ForumAccess] Setting up realtime subscription for permission changes...');
+    console.log(
+      '🔄 [ForumAccess] Setting up realtime subscription for permission changes...',
+    );
 
     // Subscribe to pod_role_permissions changes
     const subscription = supabase
@@ -221,13 +247,13 @@ export function useUnifiedForumAccess(): UseUnifiedForumAccessReturn {
         {
           event: '*', // Listen to all events (INSERT, UPDATE, DELETE)
           schema: 'public',
-          table: 'pod_role_permissions'
+          table: 'pod_role_permissions',
         },
         (payload) => {
           console.log('🔔 [ForumAccess] Permission change detected:', payload);
           console.log('🔄 [ForumAccess] Refreshing permissions...');
           loadPermissions(); // Refresh permissions when database changes
-        }
+        },
       )
       .subscribe();
 
@@ -243,18 +269,20 @@ export function useUnifiedForumAccess(): UseUnifiedForumAccessReturn {
     if (!podId) return false;
 
     // Filter to roles for this specific pod
-    const podRoles = userPodRoles.filter(role => role.podId === podId);
+    const podRoles = userPodRoles.filter((role) => role.podId === podId);
 
     if (podRoles.length === 0) {
       console.log(`⚠️ [ForumAccess] No roles found for pod ${podId}`);
       return false;
     }
 
-    const canModerate = podRoles.some(role => role.permissions.forumModeration);
+    const canModerate = podRoles.some(
+      (role) => role.permissions.forumModeration,
+    );
 
     console.log(`🎯 [ForumAccess] Pod ${podId} moderation check:`, {
       podRolesCount: podRoles.length,
-      canModerate
+      canModerate,
     });
 
     return canModerate;
@@ -268,7 +296,7 @@ export function useUnifiedForumAccess(): UseUnifiedForumAccessReturn {
 
     // Pod-specific methods (NEW)
     canModerateInPod,
-    podRoles: userPodRoles
+    podRoles: userPodRoles,
   };
 }
 
@@ -309,12 +337,12 @@ async function getAllActivePodRoles(): Promise<PodRoleWithPermissions[]> {
       roleName: role.role_name,
       permissions: {
         chatAccess: role.permissions?.chatAccess || false,
-        forumAccess: role.permissions?.forumAccess || false,  // 🆕 Extract forumAccess
+        forumAccess: role.permissions?.forumAccess || false, // 🆕 Extract forumAccess
         forumModeration: role.permissions?.forumModeration || false,
-        governanceParticipation: role.permissions?.governanceParticipation || false
-      }
+        governanceParticipation:
+          role.permissions?.governanceParticipation || false,
+      },
     }));
-
   } catch (error) {
     console.error('Failed to fetch pod roles:', error);
     return [];
@@ -326,7 +354,7 @@ async function getAllActivePodRoles(): Promise<PodRoleWithPermissions[]> {
  */
 async function checkUserHatOwnership(
   userAddress: string,
-  hatIds: string[]
+  hatIds: string[],
 ): Promise<string[]> {
   try {
     if (!HATS_CONTRACT_ADDRESS || hatIds.length === 0) {
@@ -335,11 +363,15 @@ async function checkUserHatOwnership(
     }
 
     // Create multicall contracts for balanceOf checks
-    const contracts = hatIds.map(hatId => ({
+    const contracts = hatIds.map((hatId) => ({
       address: HATS_CONTRACT_ADDRESS,
-      abi: [parseAbiItem('function balanceOf(address account, uint256 hatId) view returns (uint256)')],
+      abi: [
+        parseAbiItem(
+          'function balanceOf(address account, uint256 hatId) view returns (uint256)',
+        ),
+      ],
       functionName: 'balanceOf' as const,
-      args: [userAddress as `0x${string}`, BigInt(hatId)]
+      args: [userAddress as `0x${string}`, BigInt(hatId)],
     }));
 
     // Use wagmi's useReadContracts for batch reading
@@ -349,14 +381,17 @@ async function checkUserHatOwnership(
     // TODO: Implement proper on-chain HAT ownership verification
     // For now, we use pod_role_permissions as source of truth since it's already verified
     // The user has these HATs because they have active pod roles
-    console.log('🎩 [ForumAccess] Using pod role permissions as HAT ownership proof');
+    console.log(
+      '🎩 [ForumAccess] Using pod role permissions as HAT ownership proof',
+    );
 
     return hatIds;
-
   } catch (error) {
     console.error('Failed to check HAT ownership:', error);
     // Fallback: Return all HAT IDs (permissive for testing)
-    console.log('⚠️ [ForumAccess] Using permissive HAT check (all HATs assumed owned)');
+    console.log(
+      '⚠️ [ForumAccess] Using permissive HAT check (all HATs assumed owned)',
+    );
     return hatIds;
   }
 }
@@ -366,22 +401,25 @@ async function checkUserHatOwnership(
  */
 async function getAccessibleCategories(
   userTokens: string[],
-  userHats: string[]
+  userHats: string[],
 ): Promise<ForumCategory[]> {
   try {
     // Lowercase all addresses/hats for consistency
-    const tokensLower = userTokens.map(t => t?.toLowerCase()).filter(Boolean);
-    const hatsLower = userHats.map(h => h?.toLowerCase()).filter(Boolean);
+    const tokensLower = userTokens.map((t) => t?.toLowerCase()).filter(Boolean);
+    const hatsLower = userHats.map((h) => h?.toLowerCase()).filter(Boolean);
 
     console.log('📡 [ForumAccess] Calling forums_accessible_by_identity RPC:', {
       tokens: tokensLower.length,
-      hats: hatsLower.length
+      hats: hatsLower.length,
     });
 
-    const { data, error } = await supabase.rpc('forums_accessible_by_identity', {
-      user_tokens: tokensLower,
-      user_hats: hatsLower
-    });
+    const { data, error } = await supabase.rpc(
+      'forums_accessible_by_identity',
+      {
+        user_tokens: tokensLower,
+        user_hats: hatsLower,
+      },
+    );
 
     if (error) {
       console.error('RPC Error:', error);
@@ -389,7 +427,6 @@ async function getAccessibleCategories(
     }
 
     return (data || []) as ForumCategory[];
-
   } catch (error) {
     console.error('Failed to fetch accessible categories:', error);
 

@@ -31,15 +31,17 @@ interface BountyListProps {
 }
 
 export const BountyList: React.FC<BountyListProps> = ({ bounties, onBid }) => {
-  const [statusFilter, setStatusFilter] = useState<'all' | 'open' | 'in-progress' | 'completed'>('all');
+  const [statusFilter, setStatusFilter] = useState<
+    'all' | 'open' | 'in-progress' | 'completed'
+  >('all');
 
-  const filteredBounties = bounties.filter(bounty => {
+  const filteredBounties = bounties.filter((bounty) => {
     if (statusFilter === 'all') return true;
     return bounty.status === statusFilter;
   });
 
   const getStatusCount = (status: 'open' | 'in-progress' | 'completed') => {
-    return bounties.filter(bounty => bounty.status === status).length;
+    return bounties.filter((bounty) => bounty.status === status).length;
   };
 
   return (
@@ -78,10 +80,9 @@ export const BountyList: React.FC<BountyListProps> = ({ bounties, onBid }) => {
           <div className="bounty-empty">
             <h3>No bounties found</h3>
             <p>
-              {statusFilter === 'all' 
-                ? 'No bounties have been created yet.' 
-                : `No ${statusFilter} bounties found.`
-              }
+              {statusFilter === 'all'
+                ? 'No bounties have been created yet.'
+                : `No ${statusFilter} bounties found.`}
             </p>
           </div>
         ) : (
@@ -97,4 +98,4 @@ export const BountyList: React.FC<BountyListProps> = ({ bounties, onBid }) => {
       </div>
     </div>
   );
-}; 
+};

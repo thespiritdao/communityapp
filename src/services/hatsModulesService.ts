@@ -6,12 +6,18 @@ import { HatsModuleRegistry } from './hatsModuleRegistry';
 // HATS Module IDs (populated from registry with fallback to known IDs)
 export const MODULE_IDS = {
   // Core modules for pod management - real IDs for Base mainnet
-  MULTI_CLAIMS_HATTER: '0x0000000000000000000000000000000000000000000000000000000000000001',
-  AGREEMENT_ELIGIBILITY: '0x0000000000000000000000000000000000000000000000000000000000000002',
-  ALLOWLIST_ELIGIBILITY: '0x0000000000000000000000000000000000000000000000000000000000000003',
-  ERC20_ELIGIBILITY: '0x0000000000000000000000000000000000000000000000000000000000000004',
-  SEASONAL_TOGGLE: '0x0000000000000000000000000000000000000000000000000000000000000005',
-  HATS_SIGNER_GATE: '0x0000000000000000000000000000000000000000000000000000000000000006',
+  MULTI_CLAIMS_HATTER:
+    '0x0000000000000000000000000000000000000000000000000000000000000001',
+  AGREEMENT_ELIGIBILITY:
+    '0x0000000000000000000000000000000000000000000000000000000000000002',
+  ALLOWLIST_ELIGIBILITY:
+    '0x0000000000000000000000000000000000000000000000000000000000000003',
+  ERC20_ELIGIBILITY:
+    '0x0000000000000000000000000000000000000000000000000000000000000004',
+  SEASONAL_TOGGLE:
+    '0x0000000000000000000000000000000000000000000000000000000000000005',
+  HATS_SIGNER_GATE:
+    '0x0000000000000000000000000000000000000000000000000000000000000006',
 } as const;
 
 // Fallback to registry's known modules when unavailable
@@ -58,7 +64,7 @@ export class HatsModulesService {
 
   constructor(
     private publicClient: PublicClient,
-    private walletClient: WalletClient
+    private walletClient: WalletClient,
   ) {}
 
   /**
@@ -81,9 +87,15 @@ export class HatsModulesService {
   private async performInitialization(): Promise<void> {
     try {
       console.log('🎩 Initializing HATS Modules Service...');
-      console.log('🔗 Using chain:', this.publicClient.chain?.name || 'Unknown');
-      console.log('📍 Public client transport:', this.publicClient.transport?.type || 'Unknown');
-      
+      console.log(
+        '🔗 Using chain:',
+        this.publicClient.chain?.name || 'Unknown',
+      );
+      console.log(
+        '📍 Public client transport:',
+        this.publicClient.transport?.type || 'Unknown',
+      );
+
       this.client = new HatsModulesClient({
         publicClient: this.publicClient,
         walletClient: this.walletClient,
@@ -92,14 +104,16 @@ export class HatsModulesService {
       // Essential preparation step - fetches modules from registry
       console.log('📋 Preparing HATS Modules client...');
       console.log('🌐 Attempting to connect to modules registry...');
-      
+
       try {
         await this.client.prepare();
         console.log('✅ HATS Modules client prepared successfully');
       } catch (prepareError) {
         console.error('❌ Failed to prepare HATS client:', prepareError);
         // Continue with fallback modules
-        console.warn('⚠️ Continuing with fallback modules (no registry connection)');
+        console.warn(
+          '⚠️ Continuing with fallback modules (no registry connection)',
+        );
         this.availableModules = FALLBACK_MODULES;
         this.populateModuleIds();
         this.isInitialized = true;
@@ -110,21 +124,37 @@ export class HatsModulesService {
       try {
         console.log('📋 Fetching modules from SDK...');
         const fetchedModules = await this.client.getModules();
-        this.availableModules = Array.isArray(fetchedModules) ? fetchedModules : [];
-        console.log('✅ Available modules loaded from SDK:', this.availableModules.length);
-        
+        this.availableModules = Array.isArray(fetchedModules)
+          ? fetchedModules
+          : [];
+        console.log(
+          '✅ Available modules loaded from SDK:',
+          this.availableModules.length,
+        );
+
         if (this.availableModules.length === 0) {
-          console.warn('⚠️ No modules found via SDK - trying direct registry access...');
+          console.warn(
+            '⚠️ No modules found via SDK - trying direct registry access...',
+          );
           this.availableModules = await HatsModuleRegistry.fetchAllModules();
-          console.log('✅ Loaded modules from registry:', this.availableModules.length);
+          console.log(
+            '✅ Loaded modules from registry:',
+            this.availableModules.length,
+          );
         } else {
-          console.log('📋 Module registry contents:', this.availableModules.map(m => ({ 
-            name: m.name || 'Unknown', 
-            id: m.id?.slice(0, 10) + '...' || 'No ID'
-          })));
+          console.log(
+            '📋 Module registry contents:',
+            this.availableModules.map((m) => ({
+              name: m.name || 'Unknown',
+              id: m.id?.slice(0, 10) + '...' || 'No ID',
+            })),
+          );
         }
       } catch (modulesError) {
-        console.error('❌ Failed to fetch modules from both SDK and registry:', modulesError);
+        console.error(
+          '❌ Failed to fetch modules from both SDK and registry:',
+          modulesError,
+        );
         console.warn('⚠️ Using fallback modules list');
         this.availableModules = FALLBACK_MODULES;
       }
@@ -134,7 +164,6 @@ export class HatsModulesService {
 
       this.isInitialized = true;
       console.log('🚀 HATS Modules Service initialized successfully');
-      
     } catch (error) {
       console.error('❌ Failed to initialize HATS Modules Service:', error);
       this.initializationPromise = null; // Allow retry
@@ -148,19 +177,24 @@ export class HatsModulesService {
   private async updateModuleIds(): Promise<void> {
     try {
       console.log('🔍 Updating module IDs from registry...');
-      
+
       // Get updated module IDs directly from registry
       const updatedIds = await HatsModuleRegistry.getUpdatedModuleIds();
-      
+
       // Update the MODULE_IDS object
       Object.assign(MODULE_IDS, updatedIds);
-      
+
       console.log('📝 Module IDs updated successfully:');
-      console.log('📋 Current MODULE_IDS:', Object.entries(MODULE_IDS).reduce((acc, [key, value]) => ({
-        ...acc,
-        [key]: value ? value.slice(0, 10) + '...' : 'not found'
-      }), {}));
-      
+      console.log(
+        '📋 Current MODULE_IDS:',
+        Object.entries(MODULE_IDS).reduce(
+          (acc, [key, value]) => ({
+            ...acc,
+            [key]: value ? value.slice(0, 10) + '...' : 'not found',
+          }),
+          {},
+        ),
+      );
     } catch (error) {
       console.warn('⚠️ Could not update module IDs from registry:', error);
       console.log('📋 Using default MODULE_IDS');
@@ -172,7 +206,9 @@ export class HatsModulesService {
    */
   private ensureInitialized(): void {
     if (!this.isInitialized || !this.client) {
-      throw new Error('HatsModulesService not initialized. Call initialize() first.');
+      throw new Error(
+        'HatsModulesService not initialized. Call initialize() first.',
+      );
     }
   }
 
@@ -202,18 +238,23 @@ export class HatsModulesService {
 
       // Step 1: Create pod management hat (this might need to be done via HATS SDK directly)
       const managementHatId = await this.createPodManagementHat(config);
-      
+
       // Step 2: Create membership hat under management hat
-      const membershipHatId = await this.createPodMembershipHat(managementHatId, config);
+      const membershipHatId = await this.createPodMembershipHat(
+        managementHatId,
+        config,
+      );
 
       // Step 3: Add Multi Claims Hatter for automated role assignment
       if (MODULE_IDS.MULTI_CLAIMS_HATTER) {
         const claimsHatter = await this.client!.createNewInstance({
-          account: await this.walletClient.getAddresses().then(addrs => addrs[0]),
+          account: await this.walletClient
+            .getAddresses()
+            .then((addrs) => addrs[0]),
           moduleId: MODULE_IDS.MULTI_CLAIMS_HATTER,
           hatId: managementHatId,
           immutableArgs: this.encodeClaimsHatterArgs(config),
-          mutableArgs: this.encodeClaimsHatterMutableArgs(config)
+          mutableArgs: this.encodeClaimsHatterMutableArgs(config),
         });
 
         modules.push({
@@ -221,13 +262,21 @@ export class HatsModulesService {
           moduleId: MODULE_IDS.MULTI_CLAIMS_HATTER,
           hatId: managementHatId,
           isDeployed: true,
-          parameters: config
+          parameters: config,
         });
       }
 
       // Step 4: Add Agreement Eligibility for accountability
-      if (MODULE_IDS.AGREEMENT_ELIGIBILITY && config.eligibilityRules?.some(rule => rule.type === 'agreement_signed')) {
-        const agreementModule = await this.addAgreementEligibility(managementHatId, config);
+      if (
+        MODULE_IDS.AGREEMENT_ELIGIBILITY &&
+        config.eligibilityRules?.some(
+          (rule) => rule.type === 'agreement_signed',
+        )
+      ) {
+        const agreementModule = await this.addAgreementEligibility(
+          managementHatId,
+          config,
+        );
         modules.push(agreementModule);
       }
 
@@ -239,7 +288,10 @@ export class HatsModulesService {
 
       // Step 6: Set up treasury if configured
       if (config.treasuryConfig) {
-        const treasuryModule = await this.setupTreasury(managementHatId, config.treasuryConfig);
+        const treasuryModule = await this.setupTreasury(
+          managementHatId,
+          config.treasuryConfig,
+        );
         if (treasuryModule) modules.push(treasuryModule);
       }
 
@@ -250,27 +302,27 @@ export class HatsModulesService {
         description: config.description,
         parentPodId: config.parentHatId,
         podLeads: config.podLeaders,
-        accountabilitySignatures: await this.generateAccountabilitySignatures(config),
+        accountabilitySignatures:
+          await this.generateAccountabilitySignatures(config),
         image: `https://ui-avatars.com/api/?name=${encodeURIComponent(config.name)}&size=400&background=bfe7c6&color=000&bold=true`,
         managementHatId: managementHatId,
         membershipHatId: membershipHatId,
-        treasuryContractAddress: config.treasuryConfig ? 'pending' : undefined // Will be updated when treasury is deployed
+        treasuryContractAddress: config.treasuryConfig ? 'pending' : undefined, // Will be updated when treasury is deployed
       });
 
       console.log('✅ Modular pod created successfully:', {
         podId: podData.id,
         managementHat: managementHatId,
         membershipHat: membershipHatId,
-        modules: modules.length
+        modules: modules.length,
       });
 
       return {
         podId: podData.id,
         managementHat: managementHatId,
         membershipHat: membershipHatId,
-        modules
+        modules,
       };
-
     } catch (error) {
       console.error('❌ Failed to create modular pod:', error);
       throw error;
@@ -299,11 +351,11 @@ export class HatsModulesService {
             { name: 'eligibility', type: 'address' },
             { name: 'toggle', type: 'address' },
             { name: 'mutable', type: 'bool' },
-            { name: 'imageURI', type: 'string' }
+            { name: 'imageURI', type: 'string' },
           ],
           outputs: [{ name: '', type: 'uint256' }],
-          stateMutability: 'nonpayable'
-        }
+          stateMutability: 'nonpayable',
+        },
       ],
       functionName: 'createHat',
       args: [
@@ -311,10 +363,11 @@ export class HatsModulesService {
         `${config.name}`,
         Math.max(1, config.podLeaders.length),
         '0x0000000000000000000000000000000000000000', // Eligibility module (none for now)
-        this.walletClient.account?.address || '0x0000000000000000000000000000000000000001', // Toggle: creator address or address(1)
+        this.walletClient.account?.address ||
+          '0x0000000000000000000000000000000000000001', // Toggle: creator address or address(1)
         true, // Mutable
-        `https://ui-avatars.com/api/?name=${encodeURIComponent(config.name)}&size=400&background=bfe7c6&color=000&bold=true`
-      ]
+        `https://ui-avatars.com/api/?name=${encodeURIComponent(config.name)}&size=400&background=bfe7c6&color=000&bold=true`,
+      ],
     };
 
     // Note: For membership hat, we'll need the management hat ID first
@@ -332,11 +385,11 @@ export class HatsModulesService {
             { name: 'eligibility', type: 'address' },
             { name: 'toggle', type: 'address' },
             { name: 'mutable', type: 'bool' },
-            { name: 'imageURI', type: 'string' }
+            { name: 'imageURI', type: 'string' },
           ],
           outputs: [{ name: '', type: 'uint256' }],
-          stateMutability: 'nonpayable'
-        }
+          stateMutability: 'nonpayable',
+        },
       ],
       functionName: 'createHat',
       args: [
@@ -345,10 +398,11 @@ export class HatsModulesService {
         `Members of ${config.name}`,
         999, // Large max supply for members
         '0x0000000000000000000000000000000000000000', // Eligibility module (none for now)
-        this.walletClient.account?.address || '0x0000000000000000000000000000000000000001', // Toggle: creator address or address(1)
+        this.walletClient.account?.address ||
+          '0x0000000000000000000000000000000000000001', // Toggle: creator address or address(1)
         true, // Mutable
-        `https://ui-avatars.com/api/?name=${encodeURIComponent(config.name)}%20Members&size=400&background=c6e7ff&color=000&bold=true`
-      ]
+        `https://ui-avatars.com/api/?name=${encodeURIComponent(config.name)}%20Members&size=400&background=c6e7ff&color=000&bold=true`,
+      ],
     };
 
     return { managementHatCall, membershipHatCall };
@@ -357,9 +411,11 @@ export class HatsModulesService {
   /**
    * Create pod management hat using HATS Protocol (deprecated - use prepareCreateHatCalls)
    */
-  private async createPodManagementHat(config: PodCreationConfig): Promise<string> {
+  private async createPodManagementHat(
+    config: PodCreationConfig,
+  ): Promise<string> {
     console.log('🎩 Creating management hat for:', config.name);
-    
+
     try {
       // Use the HATS contract directly via the public client
       const hatId = await this.publicClient.readContract({
@@ -370,11 +426,11 @@ export class HatsModulesService {
             type: 'function',
             inputs: [{ name: 'parent', type: 'uint256' }],
             outputs: [{ name: '', type: 'uint256' }],
-            stateMutability: 'view'
-          }
+            stateMutability: 'view',
+          },
         ],
         functionName: 'getNextId',
-        args: [BigInt(config.parentHatId)]
+        args: [BigInt(config.parentHatId)],
       });
 
       // Now create the hat by calling createHat
@@ -391,11 +447,11 @@ export class HatsModulesService {
               { name: 'eligibility', type: 'address' },
               { name: 'toggle', type: 'address' },
               { name: 'mutable', type: 'bool' },
-              { name: 'imageURI', type: 'string' }
+              { name: 'imageURI', type: 'string' },
             ],
             outputs: [{ name: '', type: 'uint256' }],
-            stateMutability: 'nonpayable'
-          }
+            stateMutability: 'nonpayable',
+          },
         ],
         functionName: 'createHat',
         args: [
@@ -403,21 +459,24 @@ export class HatsModulesService {
           `${config.name}`,
           Math.max(1, config.podLeaders.length),
           '0x0000000000000000000000000000000000000000', // Eligibility module (none for now)
-          this.walletClient.account?.address || '0x0000000000000000000000000000000000000001', // Toggle: creator address or address(1)
+          this.walletClient.account?.address ||
+            '0x0000000000000000000000000000000000000001', // Toggle: creator address or address(1)
           true, // Mutable
-          `https://ui-avatars.com/api/?name=${encodeURIComponent(config.name)}&size=400&background=bfe7c6&color=000&bold=true`
-        ]
+          `https://ui-avatars.com/api/?name=${encodeURIComponent(config.name)}&size=400&background=bfe7c6&color=000&bold=true`,
+        ],
       });
 
       console.log('🎩 Management hat creation transaction:', tx);
       console.log('🎩 Management hat ID:', hatId.toString());
 
       return `0x${hatId.toString(16).padStart(64, '0')}`;
-
     } catch (error) {
       console.error('❌ Failed to create management hat:', error);
       // Fall back to predicted ID for testing
-      const predictedHatId = this.predictHatId(config.parentHatId, config.name + '_management');
+      const predictedHatId = this.predictHatId(
+        config.parentHatId,
+        config.name + '_management',
+      );
       console.warn('⚠️ Using predicted hat ID as fallback:', predictedHatId);
       return predictedHatId;
     }
@@ -426,9 +485,12 @@ export class HatsModulesService {
   /**
    * Create pod membership hat under management hat
    */
-  private async createPodMembershipHat(parentHatId: string, config: PodCreationConfig): Promise<string> {
+  private async createPodMembershipHat(
+    parentHatId: string,
+    config: PodCreationConfig,
+  ): Promise<string> {
     console.log('👥 Creating membership hat under:', parentHatId);
-    
+
     try {
       // Get next ID for the membership hat
       const hatId = await this.publicClient.readContract({
@@ -439,11 +501,11 @@ export class HatsModulesService {
             type: 'function',
             inputs: [{ name: 'parent', type: 'uint256' }],
             outputs: [{ name: '', type: 'uint256' }],
-            stateMutability: 'view'
-          }
+            stateMutability: 'view',
+          },
         ],
         functionName: 'getNextId',
-        args: [BigInt(parentHatId)]
+        args: [BigInt(parentHatId)],
       });
 
       // Create the membership hat
@@ -460,11 +522,11 @@ export class HatsModulesService {
               { name: 'eligibility', type: 'address' },
               { name: 'toggle', type: 'address' },
               { name: 'mutable', type: 'bool' },
-              { name: 'imageURI', type: 'string' }
+              { name: 'imageURI', type: 'string' },
             ],
             outputs: [{ name: '', type: 'uint256' }],
-            stateMutability: 'nonpayable'
-          }
+            stateMutability: 'nonpayable',
+          },
         ],
         functionName: 'createHat',
         args: [
@@ -474,20 +536,25 @@ export class HatsModulesService {
           '0x0000000000000000000000000000000000000000', // Eligibility module (none for now)
           parentHatId, // FIXED: Use parent hat as toggle module instead of null
           true, // Mutable
-          `https://ui-avatars.com/api/?name=${encodeURIComponent(config.name)}%20Members&size=400&background=c6e7ff&color=000&bold=true`
-        ]
+          `https://ui-avatars.com/api/?name=${encodeURIComponent(config.name)}%20Members&size=400&background=c6e7ff&color=000&bold=true`,
+        ],
       });
 
       console.log('👥 Membership hat creation transaction:', tx);
       console.log('👥 Membership hat ID:', hatId.toString());
 
       return `0x${hatId.toString(16).padStart(64, '0')}`;
-
     } catch (error) {
       console.error('❌ Failed to create membership hat:', error);
       // Fall back to predicted ID for testing
-      const predictedHatId = this.predictHatId(parentHatId, config.name + '_membership');
-      console.warn('⚠️ Using predicted membership hat ID as fallback:', predictedHatId);
+      const predictedHatId = this.predictHatId(
+        parentHatId,
+        config.name + '_membership',
+      );
+      console.warn(
+        '⚠️ Using predicted membership hat ID as fallback:',
+        predictedHatId,
+      );
       return predictedHatId;
     }
   }
@@ -495,22 +562,27 @@ export class HatsModulesService {
   /**
    * Add agreement eligibility module
    */
-  private async addAgreementEligibility(hatId: string, config: PodCreationConfig): Promise<ModuleInstance> {
+  private async addAgreementEligibility(
+    hatId: string,
+    config: PodCreationConfig,
+  ): Promise<ModuleInstance> {
     if (!MODULE_IDS.AGREEMENT_ELIGIBILITY) {
       throw new Error('Agreement Eligibility module not available');
     }
 
-    const agreementRule = config.eligibilityRules?.find(rule => rule.type === 'agreement_signed');
+    const agreementRule = config.eligibilityRules?.find(
+      (rule) => rule.type === 'agreement_signed',
+    );
     if (!agreementRule) {
       throw new Error('Agreement eligibility rule not found in config');
     }
 
     const result = await this.client!.createNewInstance({
-      account: await this.walletClient.getAddresses().then(addrs => addrs[0]),
+      account: await this.walletClient.getAddresses().then((addrs) => addrs[0]),
       moduleId: MODULE_IDS.AGREEMENT_ELIGIBILITY,
       hatId: hatId,
       immutableArgs: this.encodeAgreementArgs(agreementRule.config),
-      mutableArgs: this.encodeAgreementMutableArgs(agreementRule.config)
+      mutableArgs: this.encodeAgreementMutableArgs(agreementRule.config),
     });
 
     return {
@@ -518,17 +590,20 @@ export class HatsModulesService {
       moduleId: MODULE_IDS.AGREEMENT_ELIGIBILITY,
       hatId: hatId,
       isDeployed: true,
-      parameters: agreementRule.config
+      parameters: agreementRule.config,
     };
   }
 
   /**
    * Add eligibility rule module
    */
-  private async addEligibilityRule(hatId: string, rule: EligibilityRule): Promise<ModuleInstance | null> {
+  private async addEligibilityRule(
+    hatId: string,
+    rule: EligibilityRule,
+  ): Promise<ModuleInstance | null> {
     try {
       let moduleId = '';
-      
+
       switch (rule.type) {
         case 'token_balance':
           moduleId = MODULE_IDS.ERC20_ELIGIBILITY;
@@ -550,11 +625,13 @@ export class HatsModulesService {
       }
 
       const result = await this.client!.createNewInstance({
-        account: await this.walletClient.getAddresses().then(addrs => addrs[0]),
+        account: await this.walletClient
+          .getAddresses()
+          .then((addrs) => addrs[0]),
         moduleId: moduleId,
         hatId: hatId,
         immutableArgs: this.encodeEligibilityArgs(rule.type, rule.config),
-        mutableArgs: this.encodeEligibilityMutableArgs(rule.type, rule.config)
+        mutableArgs: this.encodeEligibilityMutableArgs(rule.type, rule.config),
       });
 
       return {
@@ -562,9 +639,8 @@ export class HatsModulesService {
         moduleId: moduleId,
         hatId: hatId,
         isDeployed: true,
-        parameters: rule.config
+        parameters: rule.config,
       };
-
     } catch (error) {
       console.error('❌ Failed to add eligibility rule:', error);
       return null;
@@ -574,7 +650,10 @@ export class HatsModulesService {
   /**
    * Set up treasury with HATS Signer Gate
    */
-  private async setupTreasury(managementHatId: string, config: TreasuryConfig): Promise<ModuleInstance | null> {
+  private async setupTreasury(
+    managementHatId: string,
+    config: TreasuryConfig,
+  ): Promise<ModuleInstance | null> {
     try {
       if (!MODULE_IDS.HATS_SIGNER_GATE) {
         console.warn('⚠️ HATS Signer Gate module not available');
@@ -582,11 +661,13 @@ export class HatsModulesService {
       }
 
       const result = await this.client!.createNewInstance({
-        account: await this.walletClient.getAddresses().then(addrs => addrs[0]),
+        account: await this.walletClient
+          .getAddresses()
+          .then((addrs) => addrs[0]),
         moduleId: MODULE_IDS.HATS_SIGNER_GATE,
         hatId: managementHatId,
         immutableArgs: this.encodeTreasuryArgs(config),
-        mutableArgs: this.encodeTreasuryMutableArgs(config)
+        mutableArgs: this.encodeTreasuryMutableArgs(config),
       });
 
       return {
@@ -594,9 +675,8 @@ export class HatsModulesService {
         moduleId: MODULE_IDS.HATS_SIGNER_GATE,
         hatId: managementHatId,
         isDeployed: true,
-        parameters: config
+        parameters: config,
       };
-
     } catch (error) {
       console.error('❌ Failed to setup treasury:', error);
       return null;
@@ -606,26 +686,33 @@ export class HatsModulesService {
   /**
    * Check if a module instance is deployed
    */
-  async isModuleDeployed(moduleId: string, hatId: string, immutableArgs: any): Promise<boolean> {
+  async isModuleDeployed(
+    moduleId: string,
+    hatId: string,
+    immutableArgs: any,
+  ): Promise<boolean> {
     this.ensureInitialized();
-    
+
     return await this.client!.isModuleDeployed({
       moduleId,
       hatId,
       immutableArgs,
-      saltNonce: 0n // Default salt
+      saltNonce: 0n, // Default salt
     });
   }
 
   /**
    * Get instance parameters
    */
-  async getInstanceParameters(moduleId: string, instanceAddress: string): Promise<any> {
+  async getInstanceParameters(
+    moduleId: string,
+    instanceAddress: string,
+  ): Promise<any> {
     this.ensureInitialized();
-    
+
     return await this.client!.getInstanceParameters({
       moduleId,
-      instanceAddress
+      instanceAddress,
     });
   }
 
@@ -636,31 +723,36 @@ export class HatsModulesService {
     moduleId: string,
     instanceAddress: string,
     functionName: string,
-    functionArgs: any[]
+    functionArgs: any[],
   ): Promise<any> {
     this.ensureInitialized();
-    
-    const account = await this.walletClient.getAddresses().then(addrs => addrs[0]);
-    
+
+    const account = await this.walletClient
+      .getAddresses()
+      .then((addrs) => addrs[0]);
+
     return await this.client!.callInstanceWriteFunction({
       account,
       moduleId,
       instanceAddress,
       functionName,
-      functionArgs
+      functionArgs,
     });
   }
 
   /**
    * Generate accountability signatures for pod leaders
    */
-  private async generateAccountabilitySignatures(config: PodCreationConfig): Promise<Record<string, any>> {
+  private async generateAccountabilitySignatures(
+    config: PodCreationConfig,
+  ): Promise<Record<string, any>> {
     try {
       console.log('✍️ Generating accountability signatures for pod leaders...');
-      
+
       const signatures: Record<string, any> = {};
-      const accountabilityStatement = this.generateAccountabilityStatement(config);
-      
+      const accountabilityStatement =
+        this.generateAccountabilityStatement(config);
+
       // For now, create placeholder signatures that match the expected format
       // In a real implementation, these would be signed by each pod leader
       for (const leader of config.podLeaders) {
@@ -674,14 +766,15 @@ export class HatsModulesService {
             podName: config.name,
             managementRole: true,
             membershipRole: false,
-            moduleType: 'HATS_PROTOCOL'
-          }
+            moduleType: 'HATS_PROTOCOL',
+          },
         };
       }
-      
-      console.log(`✅ Generated ${Object.keys(signatures).length} accountability signature placeholders`);
+
+      console.log(
+        `✅ Generated ${Object.keys(signatures).length} accountability signature placeholders`,
+      );
       return signatures;
-      
     } catch (error) {
       console.error('❌ Failed to generate accountability signatures:', error);
       return {};
@@ -773,7 +866,7 @@ By signing this statement, I commit to these principles and understand that viol
     let hash = 0;
     for (let i = 0; i < input.length; i++) {
       const char = input.charCodeAt(i);
-      hash = ((hash << 5) - hash) + char;
+      hash = (hash << 5) - hash + char;
       hash = hash & hash; // Convert to 32-bit integer
     }
     return Math.abs(hash).toString(16);
@@ -785,16 +878,18 @@ let hatsModulesService: HatsModulesService | null = null;
 
 export const getHatsModulesService = (
   publicClient?: PublicClient,
-  walletClient?: WalletClient
+  walletClient?: WalletClient,
 ): HatsModulesService => {
   if (!hatsModulesService && publicClient && walletClient) {
     hatsModulesService = new HatsModulesService(publicClient, walletClient);
   }
-  
+
   if (!hatsModulesService) {
-    throw new Error('HatsModulesService not initialized. Provide clients on first call.');
+    throw new Error(
+      'HatsModulesService not initialized. Provide clients on first call.',
+    );
   }
-  
+
   return hatsModulesService;
 };
 

@@ -1,10 +1,10 @@
-"use client";
+'use client';
 
-import type { IProduct } from "../../models";
-import Product from "./Product/Product";
-import { useMarketplaceIdentity } from "../../hooks/useMarketplaceIdentity";
-import * as S from "./style";
-import { memo } from "react";
+import type { IProduct } from '../../models';
+import Product from './Product/Product';
+import { useMarketplaceIdentity } from '../../hooks/useMarketplaceIdentity';
+import * as S from './style';
+import { memo } from 'react';
 
 interface IProps {
   products: IProduct[];
@@ -42,11 +42,9 @@ const ProductsOptimized = ({ products }: IProps) => {
     <S.Container>
       {products.length === 0 ? (
         <div style={{ padding: '2rem', textAlign: 'center', color: '#666' }}>
-          {identity ? (
-            "🛒 No products available with your current permissions"
-          ) : (
-            "🔐 Connect your wallet to see available products"
-          )}
+          {identity
+            ? '🛒 No products available with your current permissions'
+            : '🔐 Connect your wallet to see available products'}
         </div>
       ) : (
         products.map((p, index) => (

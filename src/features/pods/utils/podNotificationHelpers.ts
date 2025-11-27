@@ -40,15 +40,24 @@ export async function getExecutivePodManagers(): Promise<ExecutiveManager[]> {
 
     // Strategy 1: Try active_pod_members table first (indexed membership data)
     try {
-      const { data: activeMembersData, error: activeMembersError } = await supabase
-        .from('active_pod_members')
-        .select('wallet')
-        .eq('pod_id', 'exec')
-        .eq('membership_type', 'leader');
+      const { data: activeMembersData, error: activeMembersError } =
+        await supabase
+          .from('active_pod_members')
+          .select('wallet')
+          .eq('pod_id', 'exec')
+          .eq('membership_type', 'leader');
 
-      if (!activeMembersError && activeMembersData && activeMembersData.length > 0) {
-        console.log(`✅ Found ${activeMembersData.length} executive managers from active_pod_members`);
-        return activeMembersData.map(member => ({ wallet_address: member.wallet }));
+      if (
+        !activeMembersError &&
+        activeMembersData &&
+        activeMembersData.length > 0
+      ) {
+        console.log(
+          `✅ Found ${activeMembersData.length} executive managers from active_pod_members`,
+        );
+        return activeMembersData.map((member) => ({
+          wallet_address: member.wallet,
+        }));
       }
 
       // If error is not "table doesn't exist", throw it
@@ -56,7 +65,9 @@ export async function getExecutivePodManagers(): Promise<ExecutiveManager[]> {
         throw activeMembersError;
       }
 
-      console.log('⚠️ active_pod_members table not found or empty, falling back to pods table');
+      console.log(
+        '⚠️ active_pod_members table not found or empty, falling back to pods table',
+      );
     } catch (indexedError) {
       console.log('⚠️ Indexed lookup failed, falling back to pods table');
     }
@@ -83,9 +94,10 @@ export async function getExecutivePodManagers(): Promise<ExecutiveManager[]> {
       return [];
     }
 
-    console.log(`✅ Found ${podData.pod_leads.length} executive managers from pods.pod_leads`);
-    return podData.pod_leads.map(wallet => ({ wallet_address: wallet }));
-
+    console.log(
+      `✅ Found ${podData.pod_leads.length} executive managers from pods.pod_leads`,
+    );
+    return podData.pod_leads.map((wallet) => ({ wallet_address: wallet }));
   } catch (error) {
     console.error('❌ Error fetching executive pod managers:', error);
 
@@ -103,21 +115,32 @@ export async function getExecutivePodManagers(): Promise<ExecutiveManager[]> {
  * @param podId - The ID of the pod to get managers for
  * @returns Array of managers with their wallet addresses
  */
-export async function getPodManagers(podId: string): Promise<ExecutiveManager[]> {
+export async function getPodManagers(
+  podId: string,
+): Promise<ExecutiveManager[]> {
   try {
     console.log(`🔍 Fetching managers for pod: ${podId}`);
 
     // Strategy 1: Try active_pod_members table first
     try {
-      const { data: activeMembersData, error: activeMembersError } = await supabase
-        .from('active_pod_members')
-        .select('wallet')
-        .eq('pod_id', podId)
-        .eq('membership_type', 'leader');
+      const { data: activeMembersData, error: activeMembersError } =
+        await supabase
+          .from('active_pod_members')
+          .select('wallet')
+          .eq('pod_id', podId)
+          .eq('membership_type', 'leader');
 
-      if (!activeMembersError && activeMembersData && activeMembersData.length > 0) {
-        console.log(`✅ Found ${activeMembersData.length} managers from active_pod_members`);
-        return activeMembersData.map(member => ({ wallet_address: member.wallet }));
+      if (
+        !activeMembersError &&
+        activeMembersData &&
+        activeMembersData.length > 0
+      ) {
+        console.log(
+          `✅ Found ${activeMembersData.length} managers from active_pod_members`,
+        );
+        return activeMembersData.map((member) => ({
+          wallet_address: member.wallet,
+        }));
       }
 
       if (activeMembersError && activeMembersError.code !== '42P01') {
@@ -147,9 +170,10 @@ export async function getPodManagers(podId: string): Promise<ExecutiveManager[]>
       return [];
     }
 
-    console.log(`✅ Found ${podData.pod_leads.length} managers from pods.pod_leads`);
-    return podData.pod_leads.map(wallet => ({ wallet_address: wallet }));
-
+    console.log(
+      `✅ Found ${podData.pod_leads.length} managers from pods.pod_leads`,
+    );
+    return podData.pod_leads.map((wallet) => ({ wallet_address: wallet }));
   } catch (error) {
     console.error(`❌ Error fetching pod managers for ${podId}:`, error);
     return [];

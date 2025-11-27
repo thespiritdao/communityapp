@@ -1,9 +1,9 @@
-"use client";
+'use client';
 
-import { memo, useMemo } from "react";
-import styled from "styled-components";
-import formatPrice from "@/utils/formatPrice";
-import type { ICartTotal } from "../../../models";
+import { memo, useMemo } from 'react';
+import styled from 'styled-components';
+import formatPrice from '@/utils/formatPrice';
+import type { ICartTotal } from '../../../models';
 
 const SummaryContainer = styled.div`
   padding: 1rem;
@@ -77,14 +77,14 @@ const CartSummary = memo(({ total, productCount }: CartSummaryProps) => {
     const selfTotal = total?.totalSelfPrice ?? 0;
     const hasSystemPrice = systemTotal > 0;
     const hasSelfPrice = selfTotal > 0;
-    
+
     return {
       systemTotal,
       selfTotal,
       hasSystemPrice,
       hasSelfPrice,
       itemCount: total?.productQuantity ?? productCount,
-      grandTotal: systemTotal + selfTotal
+      grandTotal: systemTotal + selfTotal,
     };
   }, [total, productCount]);
 
@@ -95,14 +95,15 @@ const CartSummary = memo(({ total, productCount }: CartSummaryProps) => {
   return (
     <SummaryContainer>
       <ItemCount>
-        {calculations.itemCount} item{calculations.itemCount !== 1 ? 's' : ''} in cart
+        {calculations.itemCount} item{calculations.itemCount !== 1 ? 's' : ''}{' '}
+        in cart
       </ItemCount>
 
       {calculations.hasSystemPrice && (
         <SummaryRow>
           <TokenLabel className="system">$SYSTEM Total:</TokenLabel>
           <PriceValue className="system">
-            {formatPrice(calculations.systemTotal, "$")}
+            {formatPrice(calculations.systemTotal, '$')}
           </PriceValue>
         </SummaryRow>
       )}
@@ -111,7 +112,7 @@ const CartSummary = memo(({ total, productCount }: CartSummaryProps) => {
         <SummaryRow>
           <TokenLabel className="self">$SELF Total:</TokenLabel>
           <PriceValue className="self">
-            {formatPrice(calculations.selfTotal, "$")}
+            {formatPrice(calculations.selfTotal, '$')}
           </PriceValue>
         </SummaryRow>
       )}
@@ -119,7 +120,7 @@ const CartSummary = memo(({ total, productCount }: CartSummaryProps) => {
       {calculations.hasSystemPrice && calculations.hasSelfPrice && (
         <SummaryRow className="total">
           <span>Combined Value:</span>
-          <span>{formatPrice(calculations.grandTotal, "$")}</span>
+          <span>{formatPrice(calculations.grandTotal, '$')}</span>
         </SummaryRow>
       )}
 

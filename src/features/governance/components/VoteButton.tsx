@@ -24,18 +24,23 @@ interface VoteButtonProps {
 
 const BASE_CHAIN_ID = 8453;
 
-const VoteButton: React.FC<VoteButtonProps> = ({ proposalId, choice, approvingPodId }) => {
+const VoteButton: React.FC<VoteButtonProps> = ({
+  proposalId,
+  choice,
+  approvingPodId,
+}) => {
   const { address } = useAccount();
   const publicClient = usePublicClient();
   const { toast } = useToast();
   const [isProcessing, setIsProcessing] = useState(false);
-  const GOVERNOR_ADDRESS = process.env.NEXT_PUBLIC_DAO_GOVERNOR as `0x${string}`;
+  const GOVERNOR_ADDRESS = process.env
+    .NEXT_PUBLIC_DAO_GOVERNOR as `0x${string}`;
 
   // ✅ ARCHITECTURE FIX: Check governance permission for correct pod
   // On-chain governance proposals typically require Executive Pod permission
   const { canParticipate: hasGovernancePermission } = useGovernancePermission(
     approvingPodId,
-    'dao-wide'
+    'dao-wide',
   );
 
   // ✅ FIX: Block voting if no permission
@@ -50,65 +55,65 @@ const VoteButton: React.FC<VoteButtonProps> = ({ proposalId, choice, approvingPo
       </button>
     );
   }
-  
+
   // Handle direct transaction (no smart wallet)
   const handleDirectVote = async () => {
     if (!address || !publicClient) {
       toast({
-        title: "Error",
-        description: "Wallet not connected",
-        variant: "destructive"
+        title: 'Error',
+        description: 'Wallet not connected',
+        variant: 'destructive',
       });
       return;
     }
-    
+
     setIsProcessing(true);
-    
+
     try {
-      console.log(`Attempting direct vote on proposal ${proposalId} with choice ${choice}`);
-      
+      console.log(
+        `Attempting direct vote on proposal ${proposalId} with choice ${choice}`,
+      );
+
       // Simulate first
-	  const { request } = await publicClient.simulateContract({
-		chainId: BASE_CHAIN_ID,
-		account: address,
-		address: GOVERNOR_ADDRESS,
-		abi: DAOGovernorABI,
-		functionName: 'castVote',
-		args: [BigInt(proposalId), Number(choice)],
-	  });
-	  
-      
-      console.log("Simulation successful, executing transaction");
-      
+      const { request } = await publicClient.simulateContract({
+        chainId: BASE_CHAIN_ID,
+        account: address,
+        address: GOVERNOR_ADDRESS,
+        abi: DAOGovernorABI,
+        functionName: 'castVote',
+        args: [BigInt(proposalId), Number(choice)],
+      });
+
+      console.log('Simulation successful, executing transaction');
+
       // Execute the transaction
       const walletClient = await getWalletClient({ chainId: BASE_CHAIN_ID });
-	  const hash = await walletClient.writeContract(request);
-      
+      const hash = await walletClient.writeContract(request);
+
       console.log(`Transaction submitted: ${hash}`);
-      
+
       toast({
-        title: "Vote submitted",
+        title: 'Vote submitted',
         description: `Transaction sent: ${hash.substring(0, 8) ?? hash}`,
-        variant: "success"
+        variant: 'success',
       });
-      
     } catch (error: any) {
-      console.error("Vote transaction failed:", error);
-      
-      let errorMessage = "Unknown error occurred";
+      console.error('Vote transaction failed:', error);
+
+      let errorMessage = 'Unknown error occurred';
       if (error.shortMessage) errorMessage = error.shortMessage;
       else if (error.message) errorMessage = error.message;
-      
+
       toast({
-        title: "Vote failed",
+        title: 'Vote failed',
         description: errorMessage,
-        variant: "destructive"
+        variant: 'destructive',
       });
     } finally {
       setIsProcessing(false);
     }
   };
-  
+
   const voteCall = [
     {
       address: GOVERNOR_ADDRESS,
@@ -140,21 +145,23 @@ const VoteButton: React.FC<VoteButtonProps> = ({ proposalId, choice, approvingPo
     <div className="flex flex-col space-y-4">
       <div className="flex space-x-4">
         {/* Direct transaction button */}
-        <button 
+        <button
           onClick={handleDirectVote}
           disabled={isProcessing || !address}
           className={`px-4 py-2 text-white rounded ${isProcessing ? 'opacity-50' : ''}`}
           style={{ backgroundColor: '#2F5D50' }}
           onMouseEnter={(e) => {
-            if (!isProcessing) e.currentTarget.style.backgroundColor = '#1F453A';
+            if (!isProcessing)
+              e.currentTarget.style.backgroundColor = '#1F453A';
           }}
           onMouseLeave={(e) => {
-            if (!isProcessing) e.currentTarget.style.backgroundColor = '#2F5D50';
+            if (!isProcessing)
+              e.currentTarget.style.backgroundColor = '#2F5D50';
           }}
         >
           {isProcessing ? 'Processing...' : 'Vote Directly (No Smart Wallet)'}
         </button>
-        
+
         {/* Smart wallet transaction button */}
         <Transaction
           isSponsored={false} // Try without sponsorship first
@@ -174,18 +181,29 @@ const VoteButton: React.FC<VoteButtonProps> = ({ proposalId, choice, approvingPo
           onSuccess={(response) => {
             console.group('✅ Vote Transaction Success (Non-Sponsored)');
             console.log('📋 Transaction Response:', response);
-            console.log('📋 Transaction Hash:', response?.transactionReceipts?.[0]?.transactionHash);
-            console.log('📋 Block Number:', response?.transactionReceipts?.[0]?.blockNumber);
-            console.log('📋 Status:', response?.transactionReceipts?.[0]?.status);
+            console.log(
+              '📋 Transaction Hash:',
+              response?.transactionReceipts?.[0]?.transactionHash,
+            );
+            console.log(
+              '📋 Block Number:',
+              response?.transactionReceipts?.[0]?.blockNumber,
+            );
+            console.log(
+              '📋 Status:',
+              response?.transactionReceipts?.[0]?.status,
+            );
             console.groupEnd();
-            handleSuccess(response?.transactionReceipts?.[0]?.transactionHash || '');
+            handleSuccess(
+              response?.transactionReceipts?.[0]?.transactionHash || '',
+            );
           }}
           onError={(error) => {
             console.group('❌ Vote Transaction Error (Non-Sponsored)');
             console.error('📋 Error Details:', {
               name: error.name,
               message: error.message,
-              stack: error.stack
+              stack: error.stack,
             });
             console.groupEnd();
             handleError(error);
@@ -202,57 +220,63 @@ const VoteButton: React.FC<VoteButtonProps> = ({ proposalId, choice, approvingPo
           </TransactionStatus>
         </Transaction>
       </div>
-      
+
       {/* Sponsored transaction button */}
-		<Transaction
-		  isSponsored={true}
-		  address={address}
-		  chainId={BASE_CHAIN_ID}
-		  calls={voteCall}
-		  onTransactionStarted={() => {
-            console.group('🚀 Vote Transaction Started (Sponsored)');
-            console.log('📋 Proposal ID:', proposalId);
-            console.log('📋 Choice:', choice);
-            console.log('📋 Contract Address:', GOVERNOR_ADDRESS);
-            console.log('📋 User Address:', address);
-            console.log('📋 Chain ID:', BASE_CHAIN_ID);
-            console.log('📋 Timestamp:', new Date().toISOString());
-            console.groupEnd();
-          }}
-          onSuccess={(response) => {
-            console.group('✅ Vote Transaction Success (Sponsored)');
-            console.log('📋 Transaction Response:', response);
-            console.log('📋 Transaction Hash:', response?.transactionReceipts?.[0]?.transactionHash);
-            console.log('📋 Block Number:', response?.transactionReceipts?.[0]?.blockNumber);
-            console.log('📋 Status:', response?.transactionReceipts?.[0]?.status);
-            console.groupEnd();
-            handleSuccess(response?.transactionReceipts?.[0]?.transactionHash || '');
-          }}
-          onError={(error) => {
-            console.group('❌ Vote Transaction Error (Sponsored)');
-            console.error('📋 Error Details:', {
-              name: error.name,
-              message: error.message,
-              stack: error.stack
-            });
-            console.groupEnd();
-            handleError(error);
-          }}
-		>
-		  <TransactionButton
-			text="Vote with Smart Wallet (Sponsored)"
-			className="newProposalButton"
-			disabled={!address}
-		  />
-		  <TransactionSponsor />           
-		  <TransactionStatus>
-			<TransactionStatusLabel />
-			<TransactionStatusAction />
-		  </TransactionStatus>
-		</Transaction>
+      <Transaction
+        isSponsored={true}
+        address={address}
+        chainId={BASE_CHAIN_ID}
+        calls={voteCall}
+        onTransactionStarted={() => {
+          console.group('🚀 Vote Transaction Started (Sponsored)');
+          console.log('📋 Proposal ID:', proposalId);
+          console.log('📋 Choice:', choice);
+          console.log('📋 Contract Address:', GOVERNOR_ADDRESS);
+          console.log('📋 User Address:', address);
+          console.log('📋 Chain ID:', BASE_CHAIN_ID);
+          console.log('📋 Timestamp:', new Date().toISOString());
+          console.groupEnd();
+        }}
+        onSuccess={(response) => {
+          console.group('✅ Vote Transaction Success (Sponsored)');
+          console.log('📋 Transaction Response:', response);
+          console.log(
+            '📋 Transaction Hash:',
+            response?.transactionReceipts?.[0]?.transactionHash,
+          );
+          console.log(
+            '📋 Block Number:',
+            response?.transactionReceipts?.[0]?.blockNumber,
+          );
+          console.log('📋 Status:', response?.transactionReceipts?.[0]?.status);
+          console.groupEnd();
+          handleSuccess(
+            response?.transactionReceipts?.[0]?.transactionHash || '',
+          );
+        }}
+        onError={(error) => {
+          console.group('❌ Vote Transaction Error (Sponsored)');
+          console.error('📋 Error Details:', {
+            name: error.name,
+            message: error.message,
+            stack: error.stack,
+          });
+          console.groupEnd();
+          handleError(error);
+        }}
+      >
+        <TransactionButton
+          text="Vote with Smart Wallet (Sponsored)"
+          className="newProposalButton"
+          disabled={!address}
+        />
+        <TransactionSponsor />
+        <TransactionStatus>
+          <TransactionStatusLabel />
+          <TransactionStatusAction />
+        </TransactionStatus>
+      </Transaction>
 
-
-      
       {/* Debug information */}
       <div className="mt-4 p-4 bg-gray-100 rounded text-xs">
         <div>Debug Info:</div>

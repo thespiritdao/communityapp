@@ -25,22 +25,26 @@ interface ForumAccessOptions {
   allowPublic?: boolean; // Allow public access if no requirement specified
 }
 
-export function useForumAccess(options: ForumAccessOptions = {}): ForumAccessResult {
+export function useForumAccess(
+  options: ForumAccessOptions = {},
+): ForumAccessResult {
   const { address, isConnected } = useAccount();
   const { userHats, userRoles } = useHatPermissions();
   const { balances } = useTokenBalances();
-  
+
   const [hasAccess, setHasAccess] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [accessType, setAccessType] = useState<'hat' | 'token' | 'role' | 'none'>('none');
+  const [accessType, setAccessType] = useState<
+    'hat' | 'token' | 'role' | 'none'
+  >('none');
 
   const { requiredToken, categoryId, allowPublic = false } = options;
 
   // Normalize PoC token address
   const POC = useMemo(
-    () => (process.env.NEXT_PUBLIC_PROOF_OF_CURIOSITY || "").toLowerCase(),
-    []
+    () => (process.env.NEXT_PUBLIC_PROOF_OF_CURIOSITY || '').toLowerCase(),
+    [],
   );
 
   const checkForumAccess = async () => {
@@ -69,7 +73,7 @@ export function useForumAccess(options: ForumAccessOptions = {}): ForumAccessRes
           setIsLoading(false);
           return;
         }
-        
+
         // Default to PoC token requirement if no specific requirement
         const hasPoC = !!balances?.hasProofOfCuriosity;
         setHasAccess(hasPoC);
@@ -82,7 +86,7 @@ export function useForumAccess(options: ForumAccessOptions = {}): ForumAccessRes
 
       // Check 1: Direct HAT ownership
       const hasHatToken = (userHats || []).some(
-        (hatId) => String(hatId || "").toLowerCase() === requiredTokenLower
+        (hatId) => String(hatId || '').toLowerCase() === requiredTokenLower,
       );
 
       if (hasHatToken) {
@@ -103,8 +107,8 @@ export function useForumAccess(options: ForumAccessOptions = {}): ForumAccessRes
       // Check 3: Role-based permissions with forumAccess
       const hasForumRole = (userRoles || []).some(
         (role) =>
-          String(role.hatId || "").toLowerCase() === requiredTokenLower &&
-          (role.permissions?.forumAccess || role.permissions?.chatAccess) // Allow chat access for forum too
+          String(role.hatId || '').toLowerCase() === requiredTokenLower &&
+          (role.permissions?.forumAccess || role.permissions?.chatAccess), // Allow chat access for forum too
       );
 
       if (hasForumRole) {
@@ -118,7 +122,6 @@ export function useForumAccess(options: ForumAccessOptions = {}): ForumAccessRes
       setHasAccess(false);
       setAccessType('none');
       setIsLoading(false);
-
     } catch (err) {
       console.error('Error checking forum access:', err);
       setError(err instanceof Error ? err.message : 'Access check failed');
@@ -130,7 +133,17 @@ export function useForumAccess(options: ForumAccessOptions = {}): ForumAccessRes
 
   useEffect(() => {
     checkForumAccess();
-  }, [isConnected, address, userHats, userRoles, balances, requiredToken, categoryId, allowPublic, POC]);
+  }, [
+    isConnected,
+    address,
+    userHats,
+    userRoles,
+    balances,
+    requiredToken,
+    categoryId,
+    allowPublic,
+    POC,
+  ]);
 
   return {
     hasAccess,
@@ -141,7 +154,7 @@ export function useForumAccess(options: ForumAccessOptions = {}): ForumAccessRes
       userHats,
       userRoles,
       hasProofOfCuriosity: balances?.hasProofOfCuriosity,
-      checkedRequirement: requiredToken
-    }
+      checkedRequirement: requiredToken,
+    },
   };
 }

@@ -38,7 +38,6 @@ export const getSocials = async ({
       });
       return result || null;
     } catch (error) {
-      
       return null;
     }
   };

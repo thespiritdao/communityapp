@@ -1,8 +1,11 @@
 // src/features/marketplace/services/productService.ts
 import { useAuthContext } from '@/features/identity';
 import { supabase } from '@/lib/supabase';
-import { getUserIdentity, getAccessibleProducts } from '@/utils/accessControlUtils';
-import type { IProduct } from "@/features/shopping-cart/models";
+import {
+  getUserIdentity,
+  getAccessibleProducts,
+} from '@/utils/accessControlUtils';
+import type { IProduct } from '@/features/shopping-cart/models';
 
 export interface Token {
   id: string;
@@ -45,13 +48,16 @@ export const fetchTokens = async (): Promise<Token[]> => {
       .select('*')
       .not('name', 'in', '($SELF,$SYSTEM)')
       .order('name', { ascending: true });
-    
+
     if (error) {
       console.error('Error fetching tokens:', error);
       throw error;
     }
-    
-    console.log('Fetched marketplace tokens (excluding SELF/SYSTEM):', data?.length || 0);
+
+    console.log(
+      'Fetched marketplace tokens (excluding SELF/SYSTEM):',
+      data?.length || 0,
+    );
     return data || [];
   } catch (error) {
     console.error('Failed to fetch tokens:', error);
@@ -64,20 +70,23 @@ export const createProduct = async (
   productData: ProductFormData,
   ownerAddress: string,
   fundDestination?: FundDestination,
-  podId?: string
+  podId?: string,
 ): Promise<IProduct> => {
   try {
     // First check if we have an active session
-    const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
-    
+    const { data: sessionData, error: sessionError } =
+      await supabase.auth.getSession();
+
     if (!isAuthenticated || !sessionError) {
       console.error('Session error:', sessionError);
       throw new Error('Failed to verify authentication session');
     }
 
     if (!isAuthenticated || !sessionData?.session?.user) {
-      console.warn('No active Supabase session found. Attempting to authenticate...');
-      
+      console.warn(
+        'No active Supabase session found. Attempting to authenticate...',
+      );
+
       // If no session, try to authenticate using wallet address
       try {
         const authResponse = await fetch('/api/auth/onchainkit', {
@@ -95,32 +104,41 @@ export const createProduct = async (
         }
 
         const authData = await authResponse.json();
-        
+
         if (authData.supabaseToken && authData.supabaseRefreshToken) {
           console.log('Setting Supabase session with tokens...');
-          const { data: newSession, error: setSessionError } = await supabase.auth.setSession({
-            access_token: authData.supabaseToken,
-            refresh_token: authData.supabaseRefreshToken,
-          });
+          const { data: newSession, error: setSessionError } =
+            await supabase.auth.setSession({
+              access_token: authData.supabaseToken,
+              refresh_token: authData.supabaseRefreshToken,
+            });
 
           if (setSessionError) {
             console.error('Failed to set session:', setSessionError);
             throw new Error('Failed to establish authentication session');
           }
 
-          console.log('Authentication session established for user:', newSession.session?.user?.id);
+          console.log(
+            'Authentication session established for user:',
+            newSession.session?.user?.id,
+          );
         } else {
           throw new Error('No authentication tokens received');
         }
       } catch (authError) {
         console.error('Authentication process failed:', authError);
-        throw new Error('Authentication required to create products. Please ensure your wallet is connected.');
+        throw new Error(
+          'Authentication required to create products. Please ensure your wallet is connected.',
+        );
       }
     }
 
     // Now get the authenticated user
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
-    
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser();
+
     if (userError || !user?.id) {
       console.error('User verification failed:', userError);
       throw new Error('User authentication verification failed');
@@ -130,30 +148,46 @@ export const createProduct = async (
 
     // Security check: Only Executive Pod members can create products with no token requirement
     if (!productData.required_token || productData.required_token === '') {
-      console.log('🔒 Validating Executive Pod access for no-token-required product...');
-      
+      console.log(
+        '🔒 Validating Executive Pod access for no-token-required product...',
+      );
+
       try {
         // Import the token balances fetcher to check executive pod membership
-        const { fetchTokenBalances } = await import('@/utils/fetchTokenBalances');
+        const { fetchTokenBalances } = await import(
+          '@/utils/fetchTokenBalances'
+        );
         const userTokenBalances = await fetchTokenBalances(ownerAddress);
-        
+
         if (!userTokenBalances.hasExecutivePod) {
-          throw new Error('Only Executive Pod members can create products with no token requirements. This restriction prevents spam and inappropriate content.');
+          throw new Error(
+            'Only Executive Pod members can create products with no token requirements. This restriction prevents spam and inappropriate content.',
+          );
         }
-        
-        console.log('✅ Executive Pod membership verified for no-token product creation');
+
+        console.log(
+          '✅ Executive Pod membership verified for no-token product creation',
+        );
       } catch (balanceError) {
-        console.error('Failed to verify Executive Pod membership:', balanceError);
-        throw new Error('Unable to verify Executive Pod membership. Only Executive Pod members can create products with no token requirements.');
+        console.error(
+          'Failed to verify Executive Pod membership:',
+          balanceError,
+        );
+        throw new Error(
+          'Unable to verify Executive Pod membership. Only Executive Pod members can create products with no token requirements.',
+        );
       }
     }
 
     // Prepare fund routing data
     const fundRouting = {
       fund_destination_type: fundDestination?.type || 'wallet',
-      destination_address: fundDestination?.type === 'wallet' ? ownerAddress : fundDestination?.treasuryAddress || null,
+      destination_address:
+        fundDestination?.type === 'wallet'
+          ? ownerAddress
+          : fundDestination?.treasuryAddress || null,
       creator_wallet: ownerAddress,
-      pod_id: fundDestination?.podId || null
+      pod_id: fundDestination?.podId || null,
     };
 
     console.log('🎯 Creating product with fund routing:', fundRouting);
@@ -181,7 +215,7 @@ export const createProduct = async (
         creator_wallet: fundRouting.creator_wallet,
         pod_id: fundRouting.pod_id,
         // Pod context - NEW: Track which pod this product was created in
-        creating_pod_id: podId || null
+        creating_pod_id: podId || null,
       })
       .select()
       .single();
@@ -198,15 +232,22 @@ export const createProduct = async (
     if (fundDestination) {
       setImmediate(async () => {
         try {
-          console.log('🎯 DECENTRALIZED: Setting product destination in smart contract...');
-          
+          console.log(
+            '🎯 DECENTRALIZED: Setting product destination in smart contract...',
+          );
+
           // Check if user can perform this action
-          const permissionCheck = await fetch(`/api/products/set-destination-decentralized?userAddress=${ownerAddress}&podId=${fundDestination.podId || ''}`, {
-            method: 'GET'
-          });
+          const permissionCheck = await fetch(
+            `/api/products/set-destination-decentralized?userAddress=${ownerAddress}&podId=${fundDestination.podId || ''}`,
+            {
+              method: 'GET',
+            },
+          );
 
           if (!permissionCheck.ok) {
-            console.error('❌ Permission check failed for decentralized destination setting');
+            console.error(
+              '❌ Permission check failed for decentralized destination setting',
+            );
             return;
           }
 
@@ -214,45 +255,64 @@ export const createProduct = async (
           console.log('🔍 User permissions:', permissionData.permissions);
 
           // Validate permissions based on destination type
-          if (fundDestination.type === 'pod_treasury' && !permissionData.permissions.canSetPodTreasuryDestination) {
-            console.error('❌ User lacks permission to set pod treasury destination');
+          if (
+            fundDestination.type === 'pod_treasury' &&
+            !permissionData.permissions.canSetPodTreasuryDestination
+          ) {
+            console.error(
+              '❌ User lacks permission to set pod treasury destination',
+            );
             return;
           }
 
           // Get transaction data for frontend execution
-          const response = await fetch('/api/products/set-destination-decentralized', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
+          const response = await fetch(
+            '/api/products/set-destination-decentralized',
+            {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                productId: data.id.toString(),
+                fundDestinationType: fundDestination.type,
+                destinationAddress:
+                  fundDestination.type === 'wallet'
+                    ? ownerAddress
+                    : fundDestination.treasuryAddress,
+                podId: fundDestination.podId || null,
+                userAddress: ownerAddress,
+                // Note: No private key included - user will execute via frontend
+              }),
             },
-            body: JSON.stringify({
-              productId: data.id.toString(),
-              fundDestinationType: fundDestination.type,
-              destinationAddress: fundDestination.type === 'wallet' ? ownerAddress : fundDestination.treasuryAddress,
-              podId: fundDestination.podId || null,
-              userAddress: ownerAddress
-              // Note: No private key included - user will execute via frontend
-            })
-          });
+          );
 
           if (response.ok) {
             const responseData = await response.json();
             if (responseData.requiresUserTransaction) {
-              console.log('✅ Product destination transaction data prepared - user needs to execute via frontend');
+              console.log(
+                '✅ Product destination transaction data prepared - user needs to execute via frontend',
+              );
               console.log('📋 Transaction data:', {
                 contractAddress: responseData.contractAddress,
                 functionName: responseData.functionName,
-                args: responseData.args
+                args: responseData.args,
               });
             } else {
               console.log('✅ Product destination set in smart contract');
             }
           } else {
             const errorData = await response.json();
-            console.error('❌ Failed to set product destination in smart contract:', errorData);
+            console.error(
+              '❌ Failed to set product destination in smart contract:',
+              errorData,
+            );
           }
         } catch (contractError) {
-          console.error('❌ Error setting product destination in smart contract:', contractError);
+          console.error(
+            '❌ Error setting product destination in smart contract:',
+            contractError,
+          );
         }
       });
     }
@@ -268,23 +328,32 @@ export const createProduct = async (
 export const updateProduct = async (
   productId: string,
   productData: Partial<ProductFormData>,
-  fundDestination?: FundDestination
+  fundDestination?: FundDestination,
 ): Promise<IProduct> => {
   try {
     // Transform camelCase to snake_case for database
     const dbData: any = {};
-    
+
     if (productData.title !== undefined) dbData.title = productData.title;
     if (productData.title !== undefined) dbData.name = productData.title; // Keep both for compatibility
-    if (productData.description !== undefined) dbData.description = productData.description;
-    if (productData.price_self !== undefined) dbData.price_self = productData.price_self;
-    if (productData.price_system !== undefined) dbData.price_system = productData.price_system;
-    if (productData.quantity !== undefined) dbData.quantity = productData.quantity;
-    if (productData.units_available !== undefined) dbData.units_available = productData.units_available;
-    if (productData.image_url !== undefined) dbData.image_url = productData.image_url;
-    if (productData.is_free_shipping !== undefined) dbData.is_free_shipping = productData.is_free_shipping;
-    if (productData.required_token !== undefined) dbData.required_token = productData.required_token;
-    if (productData.availableSizes !== undefined) dbData.available_sizes = productData.availableSizes; // Convert to snake_case
+    if (productData.description !== undefined)
+      dbData.description = productData.description;
+    if (productData.price_self !== undefined)
+      dbData.price_self = productData.price_self;
+    if (productData.price_system !== undefined)
+      dbData.price_system = productData.price_system;
+    if (productData.quantity !== undefined)
+      dbData.quantity = productData.quantity;
+    if (productData.units_available !== undefined)
+      dbData.units_available = productData.units_available;
+    if (productData.image_url !== undefined)
+      dbData.image_url = productData.image_url;
+    if (productData.is_free_shipping !== undefined)
+      dbData.is_free_shipping = productData.is_free_shipping;
+    if (productData.required_token !== undefined)
+      dbData.required_token = productData.required_token;
+    if (productData.availableSizes !== undefined)
+      dbData.available_sizes = productData.availableSizes; // Convert to snake_case
     if (productData.style !== undefined) dbData.style = productData.style;
     if (productData.sku !== undefined) dbData.sku = productData.sku;
 
@@ -327,7 +396,7 @@ export const updateProduct = async (
 export const deleteProduct = async (productId: string): Promise<void> => {
   try {
     console.log('🗑️ Attempting to delete product:', productId);
-    
+
     const { data, error } = await supabase
       .from('products')
       .delete()
@@ -342,7 +411,9 @@ export const deleteProduct = async (productId: string): Promise<void> => {
     }
 
     if (!data || data.length === 0) {
-      console.warn('⚠️ No rows were deleted. Product may not exist or you may not have permission.');
+      console.warn(
+        '⚠️ No rows were deleted. Product may not exist or you may not have permission.',
+      );
       throw new Error('Product not found or permission denied');
     }
 
@@ -357,16 +428,20 @@ export const deleteProduct = async (productId: string): Promise<void> => {
 export const getAccessibleProductsForUser = async (
   userAddress: string,
   tokenBalances?: any,
-  userHats?: string[]
+  userHats?: string[],
 ): Promise<IProduct[]> => {
   try {
     console.log(`🛍️ Fetching accessible products for user: ${userAddress}`);
-    
+
     // Get user identity using the new normalized system
-    const identity = await getUserIdentity(userAddress, tokenBalances, userHats);
+    const identity = await getUserIdentity(
+      userAddress,
+      tokenBalances,
+      userHats,
+    );
     console.log(`🎩 User identity for marketplace:`, {
       tokens: identity.userTokens.length,
-      hats: identity.userHats.length
+      hats: identity.userHats.length,
     });
 
     // Get accessible products using the new utility
@@ -385,16 +460,16 @@ export const canUserAccessProduct = async (
   productId: string,
   userAddress: string,
   tokenBalances?: any,
-  userHats?: string[]
+  userHats?: string[],
 ): Promise<boolean> => {
   try {
     const accessibleProducts = await getAccessibleProductsForUser(
       userAddress,
       tokenBalances,
-      userHats
+      userHats,
     );
-    
-    return accessibleProducts.some(product => product.id === productId);
+
+    return accessibleProducts.some((product) => product.id === productId);
   } catch (error) {
     console.error('Error checking product access:', error);
     return false;
@@ -403,7 +478,7 @@ export const canUserAccessProduct = async (
 
 // Get products manageable by a user based on pod permissions
 export const getUserManagedProducts = async (
-  userAddress: string
+  userAddress: string,
 ): Promise<IProduct[]> => {
   try {
     console.log(`🛍️ Fetching manageable products for user: ${userAddress}`);
@@ -435,7 +510,9 @@ export const getUserManagedProducts = async (
 
     // If user has Executive Pod, they can manage all products
     if (hasExecutivePod) {
-      console.log(`👑 Executive Pod member - can manage all ${allProducts.length} products`);
+      console.log(
+        `👑 Executive Pod member - can manage all ${allProducts.length} products`,
+      );
       return allProducts;
     }
 
@@ -443,14 +520,14 @@ export const getUserManagedProducts = async (
     // Get user's pod permissions directly using hat balances
     const { createPublicClient, http } = await import('viem');
     const { base } = await import('viem/chains');
-    
+
     const publicClient = createPublicClient({
       chain: base,
-      transport: http()
+      transport: http(),
     });
 
     const hatsContract = process.env.NEXT_PUBLIC_HATS_CONTRACT as `0x${string}`;
-    
+
     if (!hatsContract) {
       console.error('🎩 HATS_CONTRACT not configured');
       return [];
@@ -461,21 +538,25 @@ export const getUserManagedProducts = async (
       .from('pod_permission_lookup')
       .select('pod_id, role_name, permissions, hat_id')
       .eq('is_active', true);
-    
+
     if (permError) {
       console.error('Error fetching pod permissions:', permError);
       return [];
     }
 
     // Filter to only permissions with marketplaceManage = true
-    const manageableRoles = managementPermissions?.filter(perm => {
-      const permissions = typeof perm.permissions === 'string' 
-        ? JSON.parse(perm.permissions) 
-        : perm.permissions;
-      return permissions.marketplaceManage === true;
-    }) || [];
+    const manageableRoles =
+      managementPermissions?.filter((perm) => {
+        const permissions =
+          typeof perm.permissions === 'string'
+            ? JSON.parse(perm.permissions)
+            : perm.permissions;
+        return permissions.marketplaceManage === true;
+      }) || [];
 
-    console.log(`🎯 Found ${manageableRoles.length} roles with marketplace management permissions`);
+    console.log(
+      `🎯 Found ${manageableRoles.length} roles with marketplace management permissions`,
+    );
 
     if (manageableRoles.length === 0) {
       console.log('❌ No roles found with marketplace management permissions');
@@ -487,14 +568,14 @@ export const getUserManagedProducts = async (
     const HATS_ABI = [
       {
         inputs: [
-          { name: "account", type: "address" },
-          { name: "hat", type: "uint256" }
+          { name: 'account', type: 'address' },
+          { name: 'hat', type: 'uint256' },
         ],
-        name: "balanceOf",
-        outputs: [{ name: "", type: "uint256" }],
-        stateMutability: "view",
-        type: "function"
-      }
+        name: 'balanceOf',
+        outputs: [{ name: '', type: 'uint256' }],
+        stateMutability: 'view',
+        type: 'function',
+      },
     ];
 
     for (const role of manageableRoles) {
@@ -502,16 +583,21 @@ export const getUserManagedProducts = async (
         const balance = await publicClient.readContract({
           address: hatsContract,
           abi: HATS_ABI,
-          functionName: "balanceOf",
+          functionName: 'balanceOf',
           args: [userAddress as `0x${string}`, role.hat_id as `0x${string}`],
         });
 
         if (Number(balance) > 0) {
           userManageableRoles.push(role);
-          console.log(`✅ User has manageable role: ${role.role_name} in pod ${role.pod_id}`);
+          console.log(
+            `✅ User has manageable role: ${role.role_name} in pod ${role.pod_id}`,
+          );
         }
       } catch (error) {
-        console.error(`Error checking hat balance for ${role.role_name}:`, error);
+        console.error(
+          `Error checking hat balance for ${role.role_name}:`,
+          error,
+        );
       }
     }
 
@@ -521,7 +607,7 @@ export const getUserManagedProducts = async (
     }
 
     // Now filter products based on what pods the user can manage
-    const manageableProducts = allProducts.filter(product => {
+    const manageableProducts = allProducts.filter((product) => {
       // Products with no required_token can only be managed by Executive Pod (already handled above)
       if (!product.required_token) {
         return false; // Non-executive users can't manage unrestricted products
@@ -530,10 +616,10 @@ export const getUserManagedProducts = async (
       // Check if the product's required_token matches any pod this user can manage
       // For simple tokens like 'dev', 'exec', we need to map them to pod permissions
       const productToken = product.required_token;
-      
+
       // Check if any of the user's manageable roles can manage this product token
-      const canManage = userManageableRoles.some(role => {
-        // For now, simplified logic: if user can manage marketplace for any pod, 
+      const canManage = userManageableRoles.some((role) => {
+        // For now, simplified logic: if user can manage marketplace for any pod,
         // they can manage products with matching simple tokens
         return (
           productToken === 'dev' ||
@@ -545,9 +631,10 @@ export const getUserManagedProducts = async (
       return canManage;
     });
 
-    console.log(`🎯 User can manage ${manageableProducts.length} out of ${allProducts.length} products`);
+    console.log(
+      `🎯 User can manage ${manageableProducts.length} out of ${allProducts.length} products`,
+    );
     return manageableProducts;
-    
   } catch (error) {
     console.error('Failed to get user managed products:', error);
     throw error;
@@ -557,10 +644,12 @@ export const getUserManagedProducts = async (
 // Check if user can manage a specific product based on pod permissions
 export const canUserManageProduct = async (
   productId: string,
-  userAddress: string
+  userAddress: string,
 ): Promise<boolean> => {
   try {
-    console.log(`🔍 Checking if user ${userAddress} can manage product ${productId}`);
+    console.log(
+      `🔍 Checking if user ${userAddress} can manage product ${productId}`,
+    );
 
     // Get the specific product
     const { data: product, error: productError } = await supabase
@@ -576,11 +665,14 @@ export const canUserManageProduct = async (
 
     // Use the new pod-based system to check management permissions
     const managedProducts = await getUserManagedProducts(userAddress);
-    const canManage = managedProducts.some(p => p.id.toString() === productId);
-    
-    console.log(`${canManage ? '✅' : '❌'} User ${canManage ? 'can' : 'cannot'} manage product: ${product.title}`);
+    const canManage = managedProducts.some(
+      (p) => p.id.toString() === productId,
+    );
+
+    console.log(
+      `${canManage ? '✅' : '❌'} User ${canManage ? 'can' : 'cannot'} manage product: ${product.title}`,
+    );
     return canManage;
-    
   } catch (error) {
     console.error('Error checking product management permission:', error);
     return false;

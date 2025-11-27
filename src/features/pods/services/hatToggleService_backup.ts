@@ -4,7 +4,8 @@ import { HatsToggleModuleService } from '../../../services/hatsToggleModuleServi
 import type { PublicClient, WalletClient } from 'viem';
 
 // HATS Protocol Contract Address
-const HATS_CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_HATS_CONTRACT as `0x${string}`;
+const HATS_CONTRACT_ADDRESS = process.env
+  .NEXT_PUBLIC_HATS_CONTRACT as `0x${string}`;
 
 // For OnchainKit Transaction - we'll use the Hats SDK to prepare the transaction
 export interface HatToggleTransaction {
@@ -23,27 +24,29 @@ export interface HatToggleResult {
  * Service for toggling HAT status using OnchainKit transactions
  */
 export class HatToggleService {
-  
   /**
    * Retry RPC calls with exponential backoff to handle rate limiting
    */
   private static async retryWithBackoff<T>(
     operation: () => Promise<T>,
     maxRetries = 3,
-    initialDelay = 1000
+    initialDelay = 1000,
   ): Promise<T> {
     for (let attempt = 0; attempt < maxRetries; attempt++) {
       try {
         return await operation();
       } catch (error: any) {
-        const isRateLimit = error.message?.includes('429') || 
-                           error.message?.includes('Too Many Requests') ||
-                           error.message?.includes('rate limit');
-        
+        const isRateLimit =
+          error.message?.includes('429') ||
+          error.message?.includes('Too Many Requests') ||
+          error.message?.includes('rate limit');
+
         if (isRateLimit && attempt < maxRetries - 1) {
           const delay = initialDelay * Math.pow(2, attempt);
-          console.log(`⏳ Rate limited, retrying in ${delay}ms (attempt ${attempt + 1}/${maxRetries})`);
-          await new Promise(resolve => setTimeout(resolve, delay));
+          console.log(
+            `⏳ Rate limited, retrying in ${delay}ms (attempt ${attempt + 1}/${maxRetries})`,
+          );
+          await new Promise((resolve) => setTimeout(resolve, delay));
           continue;
         }
         throw error;
@@ -58,28 +61,32 @@ export class HatToggleService {
   static async validateTogglePermissions(
     publicClient: PublicClient,
     userAddress: string,
-    hatId: string
+    hatId: string,
   ): Promise<{ canToggle: boolean; error?: string }> {
     try {
       // Check if HAT is valid
-      const isValid = await HatDeactivationService.isValidHat(publicClient, hatId);
+      const isValid = await HatDeactivationService.isValidHat(
+        publicClient,
+        hatId,
+      );
       if (!isValid) {
         return {
           canToggle: false,
-          error: 'Invalid HAT ID'
+          error: 'Invalid HAT ID',
         };
       }
 
       // Check admin permissions
-      const hasAdminPermission = await HatDeactivationService.checkAdminPermissions(
-        publicClient, 
-        userAddress, 
-        hatId
-      );
+      const hasAdminPermission =
+        await HatDeactivationService.checkAdminPermissions(
+          publicClient,
+          userAddress,
+          hatId,
+        );
       if (!hasAdminPermission) {
         return {
           canToggle: false,
-          error: 'You do not have admin permissions for this HAT'
+          error: 'You do not have admin permissions for this HAT',
         };
       }
 
@@ -88,7 +95,7 @@ export class HatToggleService {
       console.error('Failed to validate toggle permissions:', error);
       return {
         canToggle: false,
-        error: 'Failed to validate permissions'
+        error: 'Failed to validate permissions',
       };
     }
   }
@@ -99,7 +106,7 @@ export class HatToggleService {
    */
   static async getCurrentHatStatus(
     publicClient: PublicClient,
-    hatId: string
+    hatId: string,
   ): Promise<{ isActive: boolean; error?: string }> {
     console.log('📊 READING HAT STATUS FROM HATS CORE');
     console.log('===================================');
@@ -120,16 +127,18 @@ export class HatToggleService {
               type: 'function',
               stateMutability: 'view',
               inputs: [{ name: '_hatId', type: 'uint256' }],
-              outputs: [{ name: 'active', type: 'bool' }]
-            }
+              outputs: [{ name: 'active', type: 'bool' }],
+            },
           ],
           functionName: 'isActive',
-          args: [BigInt(hatId)]
+          args: [BigInt(hatId)],
         });
       });
 
       console.log(`✅ HAT isActive() result: ${isActive}`);
-      console.log(`🔍 This reflects the true HAT status controlled by toggle modules`);
+      console.log(
+        `🔍 This reflects the true HAT status controlled by toggle modules`,
+      );
 
       // Optional: Get additional HAT details for debugging
       try {
@@ -154,12 +163,12 @@ export class HatToggleService {
                   { name: 'imageURI', type: 'string' },
                   { name: 'lastHatId', type: 'uint16' },
                   { name: 'mutable', type: 'bool' },
-                  { name: 'active', type: 'bool' }
-                ]
-              }
+                  { name: 'active', type: 'bool' },
+                ],
+              },
             ],
             functionName: 'viewHat',
-            args: [BigInt(hatId)]
+            args: [BigInt(hatId)],
           });
         });
 
@@ -176,7 +185,9 @@ export class HatToggleService {
           console.log('⚠️  INCONSISTENCY DETECTED!');
           console.log(`   - isActive(): ${isActive}`);
           console.log(`   - viewHat.active: ${hatDetails[8]}`);
-          console.log('💡 This may indicate a race condition or toggle module issue');
+          console.log(
+            '💡 This may indicate a race condition or toggle module issue',
+          );
         } else {
           console.log('✅ isActive() and viewHat.active are consistent');
         }
@@ -184,7 +195,9 @@ export class HatToggleService {
         // Analyze toggle module configuration
         const toggleModule = hatDetails[4];
         if (toggleModule === '0x0000000000000000000000000000000000000000') {
-          console.log('📝 No toggle module set - HAT uses default toggle behavior');
+          console.log(
+            '📝 No toggle module set - HAT uses default toggle behavior',
+          );
         } else if (toggleModule.toLowerCase().startsWith('0x000000')) {
           console.log('🎩 Toggle module appears to be HAT-based');
           console.log(`   - Toggle HAT ID: ${toggleModule}`);
@@ -192,39 +205,53 @@ export class HatToggleService {
           console.log('📄 Toggle module appears to be a contract');
           console.log(`   - Toggle Contract: ${toggleModule}`);
         }
-
       } catch (detailsError) {
         console.log('⚠️  Could not fetch additional HAT details for debugging');
-        console.log(`   Error: ${detailsError instanceof Error ? detailsError.message : String(detailsError)}`);
+        console.log(
+          `   Error: ${detailsError instanceof Error ? detailsError.message : String(detailsError)}`,
+        );
       }
 
-      console.log(`\n✅ FINAL RESULT: HAT ${hatId} is ${isActive ? 'ACTIVE' : 'INACTIVE'}`);
-      console.log('💡 This is the authoritative status from Hats Protocol core');
+      console.log(
+        `\n✅ FINAL RESULT: HAT ${hatId} is ${isActive ? 'ACTIVE' : 'INACTIVE'}`,
+      );
+      console.log(
+        '💡 This is the authoritative status from Hats Protocol core',
+      );
 
       return {
-        isActive
+        isActive,
       };
     } catch (error) {
       console.error('❌ FAILED TO GET HAT STATUS:', error);
-      
+
       // Provide detailed error analysis
       let errorMessage = 'Failed to get HAT status';
       console.log('\n🚨 ERROR ANALYSIS');
       console.log('----------------');
 
       if (error instanceof Error) {
-        if (error.message.includes('429') || error.message.includes('rate limit')) {
+        if (
+          error.message.includes('429') ||
+          error.message.includes('rate limit')
+        ) {
           errorMessage = 'Rate limited by RPC provider';
           console.log('⏱️  Issue: Rate limit detected');
-          console.log('💡 Solution: Wait and retry, or use different RPC endpoint');
+          console.log(
+            '💡 Solution: Wait and retry, or use different RPC endpoint',
+          );
         } else if (error.message.includes('revert')) {
           errorMessage = 'Contract call reverted - HAT may not exist';
           console.log('🚨 Issue: Contract call reverted');
-          console.log(`💡 Possible causes: HAT ID ${hatId} may not exist or be invalid`);
+          console.log(
+            `💡 Possible causes: HAT ID ${hatId} may not exist or be invalid`,
+          );
         } else if (error.message.includes('network')) {
           errorMessage = 'Network error - check connection';
           console.log('🌐 Issue: Network connectivity problem');
-          console.log('💡 Solution: Check internet connection and RPC endpoint');
+          console.log(
+            '💡 Solution: Check internet connection and RPC endpoint',
+          );
         } else {
           errorMessage = error.message;
           console.log(`🐛 Unexpected error: ${error.message}`);
@@ -235,10 +262,10 @@ export class HatToggleService {
 
       console.log(`\n💔 RETURNING ERROR STATE: isActive = false`);
       console.log(`📝 Error message: ${errorMessage}`);
-      
+
       return {
         isActive: false,
-        error: errorMessage
+        error: errorMessage,
       };
     }
   }
@@ -250,7 +277,7 @@ export class HatToggleService {
     publicClient: PublicClient,
     walletClient: WalletClient,
     hatId: string,
-    userAddress: string
+    userAddress: string,
   ): Promise<{
     canToggle: boolean;
     hatDetails: any;
@@ -265,13 +292,13 @@ export class HatToggleService {
 
       // Get detailed HAT information
       const hatDetails = await hatsService.getHatDetails(hatId);
-      
+
       console.log('🔍 HAT Details:', {
         hatId,
         status: hatDetails?.status,
         toggle: hatDetails?.toggle,
         admin: hatDetails?.admin,
-        mutable: hatDetails?.mutable
+        mutable: hatDetails?.mutable,
       });
 
       return {
@@ -279,9 +306,8 @@ export class HatToggleService {
         hatDetails,
         toggleModule: hatDetails?.toggle || 'Unknown',
         adminHat: hatDetails?.admin,
-        error: 'Detailed analysis needed - check console logs'
+        error: 'Detailed analysis needed - check console logs',
       };
-
     } catch (error) {
       console.error('❌ Failed to diagnose HAT permissions:', error);
       return {
@@ -289,7 +315,8 @@ export class HatToggleService {
         hatDetails: null,
         toggleModule: 'Unknown',
         adminHat: null,
-        error: error instanceof Error ? error.message : 'Failed to get HAT details'
+        error:
+          error instanceof Error ? error.message : 'Failed to get HAT details',
       };
     }
   }
@@ -297,11 +324,11 @@ export class HatToggleService {
   /**
    * Execute HAT toggle using Hats Modules SDK with setHatStatus
    * Based on Hats team guidance: Use Modules SDK and call setHatStatus on the module
-   * 
+   *
    * IMPORTANT DISTINCTION (per Hats team):
    * - STATUS: Whether a HAT is active/inactive (what toggles control)
    * - MUTABILITY: Whether a HAT can be modified/transferred
-   * 
+   *
    * This function manages HAT STATUS (active/inactive) via toggle modules.
    * Toggle modules control the "active" state, not the "mutable" property.
    */
@@ -309,13 +336,13 @@ export class HatToggleService {
     publicClient: PublicClient,
     walletClient: WalletClient,
     hatId: string,
-    newStatus: boolean
+    newStatus: boolean,
   ): Promise<HatToggleResult> {
     try {
       console.log('🎩 Starting HAT toggle with Modules SDK:', {
         hatId,
         newStatus,
-        approach: 'Modules SDK setHatStatus (Hats team guidance)'
+        approach: 'Modules SDK setHatStatus (Hats team guidance)',
       });
 
       // Get user address and toggle module
@@ -328,16 +355,25 @@ export class HatToggleService {
       console.log('🎛️ Toggle module:', toggleModuleAddress);
 
       if (!toggleModuleAddress) {
-        throw new Error('No toggle module configured for this HAT in environment variables');
+        throw new Error(
+          'No toggle module configured for this HAT in environment variables',
+        );
       }
 
       // Step 1: Check current status using Modules SDK approach
-      console.log('\n🔍 Step 1: Checking current HAT STATUS (active/inactive) via module...');
-      console.log('💡 Note: STATUS != MUTABILITY. We are toggling active/inactive state, not mutability.');
-      
+      console.log(
+        '\n🔍 Step 1: Checking current HAT STATUS (active/inactive) via module...',
+      );
+      console.log(
+        '💡 Note: STATUS != MUTABILITY. We are toggling active/inactive state, not mutability.',
+      );
+
       try {
         // Use the Hats Modules SDK service
-        const modulesService = new HatsToggleModuleService(publicClient, walletClient);
+        const modulesService = new HatsToggleModuleService(
+          publicClient,
+          walletClient,
+        );
         await modulesService.initialize();
 
         console.log('✅ Modules SDK initialized successfully');
@@ -346,7 +382,9 @@ export class HatToggleService {
         let isCurrentlyActive = false;
         try {
           // Try to read current status from the main contract (module-aware)
-          console.log('📡 Reading HAT status from contract (with rate limit handling)...');
+          console.log(
+            '📡 Reading HAT status from contract (with rate limit handling)...',
+          );
           isCurrentlyActive = await publicClient.readContract({
             address: HATS_CONTRACT_ADDRESS,
             abi: [
@@ -355,20 +393,30 @@ export class HatToggleService {
                 type: 'function',
                 stateMutability: 'view',
                 inputs: [{ name: '_hatId', type: 'uint256' }],
-                outputs: [{ name: 'active', type: 'bool' }]
-              }
+                outputs: [{ name: 'active', type: 'bool' }],
+              },
             ],
             functionName: 'isActive',
-            args: [BigInt(hatId)]
+            args: [BigInt(hatId)],
           });
-          console.log('📋 Current HAT status (module-aware):', isCurrentlyActive);
+          console.log(
+            '📋 Current HAT status (module-aware):',
+            isCurrentlyActive,
+          );
         } catch (statusError) {
           console.log('⚠️ Could not check isActive:', statusError.message);
           // Check if it's a rate limiting error
-          if (statusError.message?.includes('429') || statusError.message?.includes('rate limit')) {
-            console.log('🔄 Rate limited - proceeding with toggle anyway (assuming status needs update)');
+          if (
+            statusError.message?.includes('429') ||
+            statusError.message?.includes('rate limit')
+          ) {
+            console.log(
+              '🔄 Rate limited - proceeding with toggle anyway (assuming status needs update)',
+            );
           } else {
-            console.log('⚠️ Other error - proceeding with toggle anyway (assuming status needs update)');
+            console.log(
+              '⚠️ Other error - proceeding with toggle anyway (assuming status needs update)',
+            );
           }
         }
 
@@ -378,10 +426,12 @@ export class HatToggleService {
 
         // Only skip if we successfully read the status AND it matches
         if (isCurrentlyActive === newStatus) {
-          console.log(`✅ HAT is already ${newStatus ? 'active' : 'inactive'} - no change needed`);
+          console.log(
+            `✅ HAT is already ${newStatus ? 'active' : 'inactive'} - no change needed`,
+          );
           return {
             success: true,
-            error: `HAT is already ${newStatus ? 'active' : 'inactive'}`
+            error: `HAT is already ${newStatus ? 'active' : 'inactive'}`,
           };
         }
 
@@ -389,61 +439,72 @@ export class HatToggleService {
 
         // Step 2: Use Modules SDK to call setHatStatus
         console.log('\n🔍 Step 2: Calling setHatStatus via Modules SDK...');
-        console.log('💡 This is the correct approach for Hat Controlled Module');
-        console.log('🎯 setHatStatus controls STATUS (active/inactive), not MUTABILITY');
+        console.log(
+          '💡 This is the correct approach for Hat Controlled Module',
+        );
+        console.log(
+          '🎯 setHatStatus controls STATUS (active/inactive), not MUTABILITY',
+        );
 
         // Find the module ID for the toggle module
-        const moduleInfo = await modulesService.findModuleByAddress(toggleModuleAddress);
-        
+        const moduleInfo =
+          await modulesService.findModuleByAddress(toggleModuleAddress);
+
         if (!moduleInfo) {
-          console.log('⚠️ Could not identify module from registry, trying direct approach...');
-          
+          console.log(
+            '⚠️ Could not identify module from registry, trying direct approach...',
+          );
+
           // Try calling setHatStatus directly on the module
           const result = await this.callSetHatStatusDirectly(
             publicClient,
             walletClient,
             toggleModuleAddress,
             hatId,
-            newStatus
+            newStatus,
           );
-          
+
           return {
             success: true,
-            transactionHash: result.transactionHash
+            transactionHash: result.transactionHash,
           };
         }
 
         console.log('✅ Module identified:', {
           id: moduleInfo.id,
           name: moduleInfo.name,
-          address: toggleModuleAddress
+          address: toggleModuleAddress,
         });
 
         // Verify this is a toggle module, not an eligibility module
-        const isToggleModule = moduleInfo.name && 
-          (moduleInfo.name.toLowerCase().includes('toggle') || 
-           moduleInfo.name.toLowerCase().includes('hat-controlled') ||
-           moduleInfo.name.toLowerCase().includes('season'));
-        
-        const isEligibilityModule = moduleInfo.name && 
-          (moduleInfo.name.toLowerCase().includes('eligibility') || 
-           moduleInfo.name.toLowerCase().includes('agreement'));
+        const isToggleModule =
+          moduleInfo.name &&
+          (moduleInfo.name.toLowerCase().includes('toggle') ||
+            moduleInfo.name.toLowerCase().includes('hat-controlled') ||
+            moduleInfo.name.toLowerCase().includes('season'));
+
+        const isEligibilityModule =
+          moduleInfo.name &&
+          (moduleInfo.name.toLowerCase().includes('eligibility') ||
+            moduleInfo.name.toLowerCase().includes('agreement'));
 
         if (isEligibilityModule && !isToggleModule) {
-          console.log('⚠️ Identified module is eligibility-only, not a toggle module. Using direct approach...');
-          
+          console.log(
+            '⚠️ Identified module is eligibility-only, not a toggle module. Using direct approach...',
+          );
+
           // Try calling setHatStatus directly on the module
           const result = await this.callSetHatStatusDirectly(
             publicClient,
             walletClient,
             toggleModuleAddress,
             hatId,
-            newStatus
+            newStatus,
           );
-          
+
           return {
             success: true,
-            transactionHash: result.transactionHash
+            transactionHash: result.transactionHash,
           };
         }
 
@@ -452,17 +513,17 @@ export class HatToggleService {
           moduleId: moduleInfo.id,
           instanceAddress: toggleModuleAddress,
           functionName: 'setHatStatus',
-          args: [BigInt(hatId), newStatus]
+          args: [BigInt(hatId), newStatus],
         });
 
         console.log('📊 Modules SDK result:', result);
 
         if (result.status === 'success' && result.transactionHash) {
           console.log('✅ HAT toggle successful via Modules SDK!');
-          
+
           // Step 3: Verify the result
           console.log('\n🔍 Step 3: Verifying HAT status after toggle...');
-          
+
           try {
             const finalStatus = await publicClient.readContract({
               address: HATS_CONTRACT_ADDRESS,
@@ -472,76 +533,85 @@ export class HatToggleService {
                   type: 'function',
                   stateMutability: 'view',
                   inputs: [{ name: '_hatId', type: 'uint256' }],
-                  outputs: [{ name: 'active', type: 'bool' }]
-                }
+                  outputs: [{ name: 'active', type: 'bool' }],
+                },
               ],
               functionName: 'isActive',
-              args: [BigInt(hatId)]
+              args: [BigInt(hatId)],
             });
 
             console.log('📋 Final HAT status:', finalStatus);
-            
-            if (finalStatus === newStatus) {
-              console.log(`🎉 SUCCESS! HAT status changed to ${newStatus ? 'active' : 'inactive'}`);
-            } else {
-              console.log(`⚠️ Status is ${finalStatus ? 'active' : 'inactive'}, expected ${newStatus ? 'active' : 'inactive'}`);
-              console.log('💡 The module may have its own logic for determining final status');
-            }
 
+            if (finalStatus === newStatus) {
+              console.log(
+                `🎉 SUCCESS! HAT status changed to ${newStatus ? 'active' : 'inactive'}`,
+              );
+            } else {
+              console.log(
+                `⚠️ Status is ${finalStatus ? 'active' : 'inactive'}, expected ${newStatus ? 'active' : 'inactive'}`,
+              );
+              console.log(
+                '💡 The module may have its own logic for determining final status',
+              );
+            }
           } catch (verifyError) {
-            console.log('⚠️ Could not verify final status:', verifyError.message);
+            console.log(
+              '⚠️ Could not verify final status:',
+              verifyError.message,
+            );
           }
 
           return {
             success: true,
-            transactionHash: result.transactionHash
+            transactionHash: result.transactionHash,
           };
-          
         } else {
           throw new Error(`Modules SDK call failed: ${result.status}`);
         }
-
       } catch (modulesError) {
         console.log('❌ Modules SDK approach failed:', modulesError.message);
-        
+
         // Fallback: Direct module call
         console.log('🔄 Falling back to direct module call...');
-        
+
         const result = await this.callSetHatStatusDirectly(
           publicClient,
           walletClient,
           toggleModuleAddress,
           hatId,
-          newStatus
+          newStatus,
         );
-        
+
         return {
           success: true,
-          transactionHash: result.transactionHash
+          transactionHash: result.transactionHash,
         };
       }
-
     } catch (error) {
       console.error('❌ HAT toggle failed:', error);
-      
+
       // Provide more specific error messages
       let errorMessage = 'Failed to toggle HAT status';
-      
+
       if (error instanceof Error) {
-        if (error.message.includes('User rejected') || error.message.includes('user rejected')) {
+        if (
+          error.message.includes('User rejected') ||
+          error.message.includes('user rejected')
+        ) {
           errorMessage = 'Transaction cancelled by user.';
         } else if (error.message.includes('no toggle module')) {
           errorMessage = 'No toggle module configured for this HAT.';
         } else if (error.message.includes('execution reverted')) {
-          errorMessage = 'Transaction failed. You may not have the required controller HAT to toggle this HAT.';
+          errorMessage =
+            'Transaction failed. You may not have the required controller HAT to toggle this HAT.';
         } else {
           errorMessage = error.message;
         }
       }
-      
+
       return {
         success: false,
-        error: errorMessage
+        error: errorMessage,
       };
     }
   }
@@ -554,55 +624,62 @@ export class HatToggleService {
     walletClient: WalletClient,
     toggleModuleAddress: string,
     hatId: string,
-    newStatus: boolean
+    newStatus: boolean,
   ): Promise<{ transactionHash: string }> {
     try {
       console.log('🔧 Calling toggle module contract directly:', {
         toggleModuleAddress,
         hatId,
-        newStatus
+        newStatus,
       });
 
       // Get user account
       const [account] = await walletClient.getAddresses();
-      
+
       console.log('📋 Contract call details:', {
         contractAddress: toggleModuleAddress,
         functionName: 'toggleHat',
         args: [BigInt(hatId), newStatus],
-        account
+        account,
       });
-      
+
       // First, let's try to read the contract to see if it exists and has the expected function
       try {
         const contractCode = await publicClient.getCode({
-          address: toggleModuleAddress as `0x${string}`
+          address: toggleModuleAddress as `0x${string}`,
         });
-        
+
         if (!contractCode || contractCode === '0x') {
-          throw new Error('Toggle module contract not found at address: ' + toggleModuleAddress);
+          throw new Error(
+            'Toggle module contract not found at address: ' +
+              toggleModuleAddress,
+          );
         }
-        
-        console.log('✅ Toggle module contract exists at:', toggleModuleAddress);
+
+        console.log(
+          '✅ Toggle module contract exists at:',
+          toggleModuleAddress,
+        );
         console.log('📝 Contract code length:', contractCode.length, 'bytes');
-        
+
         // Try to read toggle module configuration
         console.log('🔍 Checking toggle module configuration...');
         await this.diagnoseToggleModulePermissions(
           publicClient,
           toggleModuleAddress,
           hatId,
-          account
+          account,
         );
-        
+
         console.log('🔍 Will attempt to call function: toggleHat');
-        console.log('💡 If this fails, the contract might use a different function name');
-        
+        console.log(
+          '💡 If this fails, the contract might use a different function name',
+        );
       } catch (contractError) {
         console.error('❌ Contract validation failed:', contractError);
         throw contractError;
       }
-      
+
       // Try different function signatures based on common toggle module patterns
       const toggleFunctions = [
         // Standard Hats toggle module patterns (created via GUI)
@@ -614,10 +691,10 @@ export class HatToggleService {
             stateMutability: 'nonpayable',
             inputs: [
               { name: '_wearer', type: 'address' },
-              { name: '_hatId', type: 'uint256' }
+              { name: '_hatId', type: 'uint256' },
             ],
-            outputs: [{ name: '', type: 'bool' }]
-          }
+            outputs: [{ name: '', type: 'bool' }],
+          },
         },
         // Alternative: Direct toggle call (our custom contract)
         {
@@ -628,10 +705,10 @@ export class HatToggleService {
             stateMutability: 'nonpayable',
             inputs: [
               { name: 'hatId', type: 'uint256' },
-              { name: 'newStatus', type: 'bool' }
+              { name: 'newStatus', type: 'bool' },
             ],
-            outputs: []
-          }
+            outputs: [],
+          },
         },
         // Alternative: Standard Hats protocol function
         {
@@ -642,21 +719,21 @@ export class HatToggleService {
             stateMutability: 'nonpayable',
             inputs: [
               { name: '_hatId', type: 'uint256' },
-              { name: '_newStatus', type: 'bool' }
+              { name: '_newStatus', type: 'bool' },
             ],
-            outputs: []
-          }
-        }
+            outputs: [],
+          },
+        },
       ];
-      
+
       let hash: string | undefined;
       let successfulFunction = '';
-      
+
       // Try each function signature
       for (const func of toggleFunctions) {
         try {
           console.log(`🔄 Attempting to call: ${func.name}`);
-          
+
           // Different functions require different arguments
           let args: any[];
           if (func.name === 'checkToggle') {
@@ -664,34 +741,34 @@ export class HatToggleService {
           } else {
             args = [BigInt(hatId), newStatus];
           }
-          
+
           hash = await walletClient.writeContract({
             address: toggleModuleAddress as `0x${string}`,
             abi: [func.abi],
             functionName: func.name,
             args,
             account,
-            chain: walletClient.chain
+            chain: walletClient.chain,
           });
-          
+
           successfulFunction = func.name;
           console.log(`✅ Successfully called: ${func.name}`);
           break;
-          
         } catch (funcError) {
           console.log(`❌ ${func.name} failed:`, funcError.message);
-          
+
           // Check if user cancelled - if so, don't try other functions
-          if (funcError instanceof Error && (
-              funcError.message.includes('User rejected') ||
+          if (
+            funcError instanceof Error &&
+            (funcError.message.includes('User rejected') ||
               funcError.message.includes('user rejected') ||
               funcError.message.includes('User cancelled') ||
-              funcError.message.includes('cancelled transaction')
-            )) {
+              funcError.message.includes('cancelled transaction'))
+          ) {
             console.log('🛑 User cancelled transaction - stopping attempts');
             throw funcError;
           }
-          
+
           // If this is the last function to try, throw the error
           if (func === toggleFunctions[toggleFunctions.length - 1]) {
             throw funcError;
@@ -701,18 +778,22 @@ export class HatToggleService {
       }
 
       if (!hash) {
-        throw new Error('All function calls failed - contract might not have expected toggle functions');
+        throw new Error(
+          'All function calls failed - contract might not have expected toggle functions',
+        );
       }
 
-      console.log(`✅ Direct toggle module call successful via ${successfulFunction}:`, hash);
+      console.log(
+        `✅ Direct toggle module call successful via ${successfulFunction}:`,
+        hash,
+      );
       return { transactionHash: hash };
-
     } catch (error) {
       console.error('❌ Direct toggle module call failed:', error);
       throw new Error(
-        error instanceof Error 
+        error instanceof Error
           ? `Toggle module call failed: ${error.message}`
-          : 'Toggle module call failed with unknown error'
+          : 'Toggle module call failed with unknown error',
       );
     }
   }
@@ -723,28 +804,27 @@ export class HatToggleService {
   static async executeAdminToggle(
     hatsService: HatsCoreService,
     hatId: string,
-    newStatus: boolean
+    newStatus: boolean,
   ): Promise<{ transactionHash: string }> {
     try {
       console.log('🔧 Executing admin toggle via changeHatStatus:', {
         hatId,
-        newStatus
+        newStatus,
       });
 
       const result = await hatsService.toggleHatStatusViaAdmin({
         hatId,
-        newStatus
+        newStatus,
       });
 
       console.log('✅ Admin toggle successful:', result);
       return result;
-
     } catch (error) {
       console.error('❌ Admin toggle failed:', error);
       throw new Error(
-        error instanceof Error 
+        error instanceof Error
           ? `Admin toggle failed: ${error.message}`
-          : 'Admin toggle failed with unknown error'
+          : 'Admin toggle failed with unknown error',
       );
     }
   }
@@ -757,15 +837,19 @@ export class HatToggleService {
     walletClient: WalletClient,
     userAddress: string,
     hatId: string,
-    newStatus: boolean
+    newStatus: boolean,
   ): Promise<HatToggleResult> {
     try {
       // Validate permissions
-      const validation = await this.validateTogglePermissions(publicClient, userAddress, hatId);
+      const validation = await this.validateTogglePermissions(
+        publicClient,
+        userAddress,
+        hatId,
+      );
       if (!validation.canToggle) {
         return {
           success: false,
-          error: validation.error
+          error: validation.error,
         };
       }
 
@@ -774,20 +858,20 @@ export class HatToggleService {
       if (currentStatus.error) {
         return {
           success: false,
-          error: currentStatus.error
+          error: currentStatus.error,
         };
       }
 
       if (currentStatus.isActive === newStatus) {
         return {
           success: false,
-          error: `HAT is already ${newStatus ? 'active' : 'inactive'}`
+          error: `HAT is already ${newStatus ? 'active' : 'inactive'}`,
         };
       }
 
       // Get user account
       const [account] = await walletClient.getAddresses();
-      
+
       // Execute transaction (simplified ABI for setHatStatus)
       const hash = await walletClient.writeContract({
         address: HATS_CONTRACT_ADDRESS,
@@ -798,27 +882,29 @@ export class HatToggleService {
             stateMutability: 'nonpayable',
             inputs: [
               { name: 'hatId', type: 'uint256' },
-              { name: 'newStatus', type: 'bool' }
+              { name: 'newStatus', type: 'bool' },
             ],
-            outputs: []
-          }
+            outputs: [],
+          },
         ],
         functionName: 'setHatStatus',
         args: [BigInt(hatId), newStatus],
         account,
-        chain: walletClient.chain
+        chain: walletClient.chain,
       });
 
       return {
         success: true,
-        transactionHash: hash
+        transactionHash: hash,
       };
-
     } catch (error) {
       console.error('Failed to toggle HAT status:', error);
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Failed to toggle HAT status'
+        error:
+          error instanceof Error
+            ? error.message
+            : 'Failed to toggle HAT status',
       };
     }
   }
@@ -829,9 +915,9 @@ export class HatToggleService {
    */
   static async getHatStatusAndMutabilityInfo(
     publicClient: PublicClient,
-    hatId: string
+    hatId: string,
   ): Promise<{
-    status: boolean;  // Active/inactive (controlled by toggle modules)
+    status: boolean; // Active/inactive (controlled by toggle modules)
     mutable: boolean; // Can be modified/transferred (set during HAT creation)
     exists: boolean;
     error?: string;
@@ -850,11 +936,11 @@ export class HatToggleService {
               type: 'function',
               stateMutability: 'view',
               inputs: [{ name: '_hatId', type: 'uint256' }],
-              outputs: [{ name: 'active', type: 'bool' }]
-            }
+              outputs: [{ name: 'active', type: 'bool' }],
+            },
           ],
           functionName: 'isActive',
-          args: [BigInt(hatId)]
+          args: [BigInt(hatId)],
         }),
         // Get HAT details including mutability
         publicClient.readContract({
@@ -873,34 +959,42 @@ export class HatToggleService {
                 { name: 'toggle', type: 'address' },
                 { name: 'imageURI', type: 'string' },
                 { name: 'lastHatId', type: 'uint16' },
-                { name: 'mutable', type: 'bool' }  // MUTABILITY - set at creation
-              ]
-            }
+                { name: 'mutable', type: 'bool' }, // MUTABILITY - set at creation
+              ],
+            },
           ],
           functionName: 'viewHat',
-          args: [BigInt(hatId)]
-        })
+          args: [BigInt(hatId)],
+        }),
       ]);
 
       console.log('📊 HAT Information:');
-      console.log('- STATUS (active/inactive):', isActive, '← This is what toggles control');
-      console.log('- MUTABILITY (can be modified):', hatData[7], '← Set during HAT creation, not controlled by toggles');
+      console.log(
+        '- STATUS (active/inactive):',
+        isActive,
+        '← This is what toggles control',
+      );
+      console.log(
+        '- MUTABILITY (can be modified):',
+        hatData[7],
+        '← Set during HAT creation, not controlled by toggles',
+      );
       console.log('- Toggle module:', hatData[4]);
       console.log('- Eligibility module:', hatData[3]);
 
       return {
         status: isActive,
         mutable: hatData[7],
-        exists: true
+        exists: true,
       };
-
     } catch (error) {
       console.error('❌ Failed to get HAT status and mutability:', error);
       return {
         status: false,
         mutable: false,
         exists: false,
-        error: error instanceof Error ? error.message : 'Failed to get HAT info'
+        error:
+          error instanceof Error ? error.message : 'Failed to get HAT info',
       };
     }
   }
@@ -925,19 +1019,20 @@ export class HatToggleService {
   static getKnownToggleModule(hatId: string): string | null {
     // Check if this is the Executive Pod Member HAT
     const executivePodMember = process.env.NEXT_PUBLIC_EXECUTIVE_POD_MEMBER;
-    const executivePodMemberToggleModule = process.env.NEXT_PUBLIC_EXECUTIVE_POD_MEMBER_TOGGLE_MODULE;
-    
+    const executivePodMemberToggleModule =
+      process.env.NEXT_PUBLIC_EXECUTIVE_POD_MEMBER_TOGGLE_MODULE;
+
     if (hatId === executivePodMember && executivePodMemberToggleModule) {
       console.log('🎯 Found known toggle module for Executive Pod Member HAT');
       return executivePodMemberToggleModule;
     }
-    
+
     // Add more HAT ID mappings here as needed
     // Example:
     // if (hatId === process.env.NEXT_PUBLIC_OTHER_HAT && process.env.NEXT_PUBLIC_OTHER_HAT_TOGGLE_MODULE) {
     //   return process.env.NEXT_PUBLIC_OTHER_HAT_TOGGLE_MODULE;
     // }
-    
+
     return null;
   }
 
@@ -950,36 +1045,45 @@ export class HatToggleService {
     walletClient: WalletClient,
     toggleModuleAddress: string,
     hatId: string,
-    newStatus: boolean
+    newStatus: boolean,
   ): Promise<{ transactionCall: any; account: string; isSponsored: boolean }> {
     try {
       console.log('🔧 Triggering HAT status check via HATS protocol:', {
         toggleModuleAddress,
         hatId,
         newStatus,
-        approach: 'checkHatStatus on HATS contract (protocol-recommended)'
+        approach: 'checkHatStatus on HATS contract (protocol-recommended)',
       });
 
       // Get user account
       const [account] = await walletClient.getAddresses();
-      
+
       // Verify the contract exists
       const contractCode = await publicClient.getCode({
-        address: toggleModuleAddress as `0x${string}`
+        address: toggleModuleAddress as `0x${string}`,
       });
-      
+
       if (!contractCode || contractCode === '0x') {
-        throw new Error(`Toggle module contract not found at address: ${toggleModuleAddress}`);
+        throw new Error(
+          `Toggle module contract not found at address: ${toggleModuleAddress}`,
+        );
       }
-      
-      console.log('✅ Toggle module contract verified at:', toggleModuleAddress);
-      
+
+      console.log(
+        '✅ Toggle module contract verified at:',
+        toggleModuleAddress,
+      );
+
       // CORRECTED APPROACH: Use checkHatStatus instead of setHatStatus
       // Per Hats Protocol docs: "have the protocol pull the updates, ie via IHats.checkHatStatus"
       // This triggers the HATS contract to read from the Hat Controlled Module and update status
-      console.log('🔧 Using checkHatStatus to trigger protocol status update...');
-      console.log('💡 This will cause HATS contract to read from the toggle module and update the HAT status');
-      
+      console.log(
+        '🔧 Using checkHatStatus to trigger protocol status update...',
+      );
+      console.log(
+        '💡 This will cause HATS contract to read from the toggle module and update the HAT status',
+      );
+
       // Prepare transaction call for OnchainKit with sponsorship
       const transactionCall = {
         address: HATS_CONTRACT_ADDRESS as `0x${string}`,
@@ -988,33 +1092,31 @@ export class HatToggleService {
             name: 'checkHatStatus',
             type: 'function',
             stateMutability: 'nonpayable',
-            inputs: [
-              { name: '_hatId', type: 'uint256' }
-            ],
-            outputs: [
-              { name: 'toggled', type: 'bool' }
-            ]
-          }
+            inputs: [{ name: '_hatId', type: 'uint256' }],
+            outputs: [{ name: 'toggled', type: 'bool' }],
+          },
         ],
         functionName: 'checkHatStatus',
-        args: [BigInt(hatId)]
+        args: [BigInt(hatId)],
       };
 
-      console.log('🎯 Prepared transaction call for OnchainKit:', transactionCall);
-      
+      console.log(
+        '🎯 Prepared transaction call for OnchainKit:',
+        transactionCall,
+      );
+
       // Return the transaction call for OnchainKit Transaction component
       return {
         transactionCall,
         account,
-        isSponsored: true // Enable sponsorship for HAT toggles
+        isSponsored: true, // Enable sponsorship for HAT toggles
       };
-
     } catch (error) {
       console.error('❌ setHatStatus direct call failed:', error);
       throw new Error(
-        error instanceof Error 
+        error instanceof Error
           ? `setHatStatus call failed: ${error.message}`
-          : 'setHatStatus call failed with unknown error'
+          : 'setHatStatus call failed with unknown error',
       );
     }
   }
@@ -1028,55 +1130,63 @@ export class HatToggleService {
     toggleModuleAddress: string,
     hatId: string,
     newStatus: boolean,
-    userAddress: string
+    userAddress: string,
   ): Promise<{ transactionHash: string }> {
     try {
       console.log('🏭 Initializing Hats Modules SDK for toggle operation...', {
         toggleModuleAddress,
         hatId,
         newStatus,
-        userAddress
+        userAddress,
       });
 
       // Initialize the Hats Toggle Module Service
-      const moduleService = new HatsToggleModuleService(publicClient, walletClient);
+      const moduleService = new HatsToggleModuleService(
+        publicClient,
+        walletClient,
+      );
       await moduleService.initialize();
-      
+
       console.log('✅ Hats Modules SDK initialized successfully');
-      
+
       // Check if module is deployed
-      const isDeployed = await moduleService.isModuleDeployed(toggleModuleAddress);
+      const isDeployed =
+        await moduleService.isModuleDeployed(toggleModuleAddress);
       if (!isDeployed) {
-        throw new Error(`Toggle module not deployed at address: ${toggleModuleAddress}`);
+        throw new Error(
+          `Toggle module not deployed at address: ${toggleModuleAddress}`,
+        );
       }
-      
-      console.log('✅ Toggle module contract verified at:', toggleModuleAddress);
-      
+
+      console.log(
+        '✅ Toggle module contract verified at:',
+        toggleModuleAddress,
+      );
+
       // Execute the toggle via the Modules SDK using systematic approach
       const result = await moduleService.toggleHatViaAllModules(
         toggleModuleAddress,
         hatId,
         newStatus,
-        userAddress
+        userAddress,
       );
-      
+
       if (result.status === 'success' && result.transactionHash) {
         console.log('✅ Hats Modules SDK toggle successful:', {
           transactionHash: result.transactionHash,
-          moduleId: result.moduleId
+          moduleId: result.moduleId,
         });
-        
+
         return { transactionHash: result.transactionHash };
       } else {
         throw new Error(`Toggle failed via Modules SDK: ${result.status}`);
       }
-      
     } catch (error) {
       console.error('❌ Hats Modules SDK toggle failed:', error);
       throw new Error(
-        error instanceof Error 
+        error instanceof Error
           ? `Hats Modules SDK toggle failed: ${error.message}`
-          : 'Hats Modules SDK toggle failed with unknown error'
+          : 'Hats Modules SDK toggle failed with unknown error',
       );
     }
   }
@@ -1088,7 +1198,7 @@ export class HatToggleService {
     publicClient: PublicClient,
     toggleModuleAddress: string,
     hatId: string,
-    userAddress: string
+    userAddress: string,
   ): Promise<void> {
     try {
       console.log('🔬 Diagnosing toggle module permissions...');
@@ -1106,8 +1216,8 @@ export class HatToggleService {
             type: 'function',
             stateMutability: 'view',
             inputs: [{ name: '', type: 'uint256' }],
-            outputs: [{ name: '', type: 'uint256' }]
-          }
+            outputs: [{ name: '', type: 'uint256' }],
+          },
         },
         // Alternative: hatStatus
         {
@@ -1117,9 +1227,9 @@ export class HatToggleService {
             type: 'function',
             stateMutability: 'view',
             inputs: [{ name: '', type: 'uint256' }],
-            outputs: [{ name: '', type: 'bool' }]
-          }
-        }
+            outputs: [{ name: '', type: 'bool' }],
+          },
+        },
       ];
 
       for (const func of commonReadFunctions) {
@@ -1128,24 +1238,26 @@ export class HatToggleService {
             address: toggleModuleAddress as `0x${string}`,
             abi: [func.abi],
             functionName: func.name,
-            args: [BigInt(hatId)]
+            args: [BigInt(hatId)],
           });
-          
+
           console.log(`✅ ${func.name}(${hatId}):`, result);
-          
+
           if (func.name === 'hatControllers' && result) {
             console.log('🎯 Controller HAT ID found:', result.toString());
-            console.log('💡 You need to wear this controller HAT to toggle the target HAT');
+            console.log(
+              '💡 You need to wear this controller HAT to toggle the target HAT',
+            );
           }
-          
         } catch (readError) {
           console.log(`❌ Cannot read ${func.name}:`, readError.message);
         }
       }
-
     } catch (error) {
       console.log('⚠️  Toggle module diagnosis failed:', error.message);
-      console.log('💡 This is expected if the contract uses a different interface');
+      console.log(
+        '💡 This is expected if the contract uses a different interface',
+      );
     }
   }
 
@@ -1157,13 +1269,16 @@ export class HatToggleService {
     publicClient: PublicClient,
     walletClient: WalletClient,
     hatId: string,
-    newStatus: boolean
+    newStatus: boolean,
   ): Promise<{ transactionCall: any; isSponsored: boolean }> {
     try {
-      console.log('🔧 Preparing HAT toggle for OnchainKit Transaction component:', {
-        hatId,
-        newStatus
-      });
+      console.log(
+        '🔧 Preparing HAT toggle for OnchainKit Transaction component:',
+        {
+          hatId,
+          newStatus,
+        },
+      );
 
       // Use native Hats Protocol checkHatStatus function to trigger toggle module
       // This allows the toggle module to determine and update the HAT status
@@ -1174,34 +1289,35 @@ export class HatToggleService {
             name: 'checkHatStatus',
             type: 'function',
             stateMutability: 'nonpayable',
-            inputs: [
-              { name: '_hatId', type: 'uint256' }
-            ],
-            outputs: [
-              { name: 'toggled', type: 'bool' }
-            ]
-          }
+            inputs: [{ name: '_hatId', type: 'uint256' }],
+            outputs: [{ name: 'toggled', type: 'bool' }],
+          },
         ],
         functionName: 'checkHatStatus',
-        args: [BigInt(hatId)]
+        args: [BigInt(hatId)],
       };
 
-      console.log('✅ Transaction prepared for OnchainKit with sponsorship enabled');
+      console.log(
+        '✅ Transaction prepared for OnchainKit with sponsorship enabled',
+      );
       console.log('📋 Transaction call structure:', {
         address: transactionCall.address,
         functionName: transactionCall.functionName,
         args: transactionCall.args,
-        abiLength: transactionCall.abi.length
+        abiLength: transactionCall.abi.length,
       });
-      console.log('💡 This uses native Hats Protocol checkHatStatus function');  
-      console.log('🎯 Expected behavior: checkHatStatus will trigger toggle module to update status');
-      console.log('📍 Toggle module determines the new status based on its own logic');
-      
+      console.log('💡 This uses native Hats Protocol checkHatStatus function');
+      console.log(
+        '🎯 Expected behavior: checkHatStatus will trigger toggle module to update status',
+      );
+      console.log(
+        '📍 Toggle module determines the new status based on its own logic',
+      );
+
       return {
         transactionCall,
-        isSponsored: true
+        isSponsored: true,
       };
-      
     } catch (error) {
       console.error('❌ Failed to prepare HAT toggle transaction:', error);
       throw error;
@@ -1215,7 +1331,7 @@ export class HatToggleService {
   static async validateTogglePermissions(
     publicClient: PublicClient,
     userAddress: string,
-    hatId: string
+    hatId: string,
   ): Promise<{ canToggle: boolean; error?: string; details?: any }> {
     console.log('🔐 VALIDATING TOGGLE PERMISSIONS');
     console.log('================================');
@@ -1227,7 +1343,7 @@ export class HatToggleService {
       // Get full HAT details from Hats Protocol core
       console.log('\n1️⃣ READING HAT DETAILS FROM CORE');
       console.log('--------------------------------');
-      
+
       const hatDetails = await this.retryWithBackoff(async () => {
         return await publicClient.readContract({
           address: HATS_CONTRACT_ADDRESS,
@@ -1246,12 +1362,12 @@ export class HatToggleService {
                 { name: 'imageURI', type: 'string' },
                 { name: 'lastHatId', type: 'uint16' },
                 { name: 'mutable', type: 'bool' },
-                { name: 'active', type: 'bool' }
-              ]
-            }
+                { name: 'active', type: 'bool' },
+              ],
+            },
           ],
           functionName: 'viewHat',
-          args: [BigInt(hatId)]
+          args: [BigInt(hatId)],
         });
       });
 
@@ -1269,7 +1385,9 @@ export class HatToggleService {
       // Check if toggle module is set (not zero address)
       if (toggleModule === '0x0000000000000000000000000000000000000000') {
         console.log('❌ NO TOGGLE MODULE SET');
-        console.log('💡 This HAT cannot be toggled - no toggle module assigned');
+        console.log(
+          '💡 This HAT cannot be toggled - no toggle module assigned',
+        );
         return {
           canToggle: false,
           error: 'This role cannot be toggled - no toggle module assigned',
@@ -1277,8 +1395,8 @@ export class HatToggleService {
             reason: 'NO_TOGGLE_MODULE',
             toggleModule,
             hatActive: hatDetails[8],
-            userAddress
-          }
+            userAddress,
+          },
         };
       }
 
@@ -1286,7 +1404,9 @@ export class HatToggleService {
       console.log('-------------------------------');
 
       // Check if toggle module is a HAT ID (starts with many zeros, indicating HAT-based toggle)
-      const isHatBasedToggle = toggleModule.toLowerCase().startsWith('0x000000');
+      const isHatBasedToggle = toggleModule
+        .toLowerCase()
+        .startsWith('0x000000');
       console.log(`🎩 HAT-based Toggle: ${isHatBasedToggle}`);
 
       if (isHatBasedToggle) {
@@ -1307,13 +1427,13 @@ export class HatToggleService {
                 stateMutability: 'view',
                 inputs: [
                   { name: '_user', type: 'address' },
-                  { name: '_hatId', type: 'uint256' }
+                  { name: '_hatId', type: 'uint256' },
                 ],
-                outputs: [{ name: '', type: 'bool' }]
-              }
+                outputs: [{ name: '', type: 'bool' }],
+              },
             ],
             functionName: 'isWearerOfHat',
-            args: [userAddress as `0x${string}`, BigInt(toggleModule)]
+            args: [userAddress as `0x${string}`, BigInt(toggleModule)],
           });
         });
 
@@ -1321,7 +1441,9 @@ export class HatToggleService {
 
         if (!isWearerOfToggleHat) {
           console.log('❌ USER DOES NOT WEAR REQUIRED TOGGLE HAT');
-          console.log(`💡 User must wear HAT ${toggleModule} to toggle this role`);
+          console.log(
+            `💡 User must wear HAT ${toggleModule} to toggle this role`,
+          );
           return {
             canToggle: false,
             error: `You must wear the required HAT to toggle this role`,
@@ -1329,8 +1451,8 @@ export class HatToggleService {
               reason: 'NOT_TOGGLE_HAT_WEARER',
               requiredHat: toggleModule,
               userAddress,
-              isWearerOfToggleHat
-            }
+              isWearerOfToggleHat,
+            },
           };
         }
 
@@ -1341,10 +1463,9 @@ export class HatToggleService {
             reason: 'HAT_BASED_TOGGLE_AUTHORIZED',
             toggleModule,
             userAddress,
-            isWearerOfToggleHat: true
-          }
+            isWearerOfToggleHat: true,
+          },
         };
-
       } else {
         console.log('📄 Toggle module appears to be a contract address');
         console.log(`🔧 Toggle Module Contract: ${toggleModule}`);
@@ -1353,8 +1474,12 @@ export class HatToggleService {
         // This is more complex and depends on the specific module implementation
         console.log('\n3️⃣ CHECKING CONTRACT MODULE PERMISSIONS');
         console.log('--------------------------------------');
-        console.log('⚠️  Contract-based toggle modules require specific implementation checks');
-        console.log('💡 For now, we\'ll check if user is admin of the target HAT');
+        console.log(
+          '⚠️  Contract-based toggle modules require specific implementation checks',
+        );
+        console.log(
+          "💡 For now, we'll check if user is admin of the target HAT",
+        );
 
         // Check if user is admin of the target HAT (fallback permission check)
         const isAdminOfHat = await this.retryWithBackoff(async () => {
@@ -1367,13 +1492,13 @@ export class HatToggleService {
                 stateMutability: 'view',
                 inputs: [
                   { name: '_user', type: 'address' },
-                  { name: '_hatId', type: 'uint256' }
+                  { name: '_hatId', type: 'uint256' },
                 ],
-                outputs: [{ name: '', type: 'bool' }]
-              }
+                outputs: [{ name: '', type: 'bool' }],
+              },
             ],
             functionName: 'isAdminOfHat',
-            args: [userAddress as `0x${string}`, BigInt(hatId)]
+            args: [userAddress as `0x${string}`, BigInt(hatId)],
           });
         });
 
@@ -1381,7 +1506,9 @@ export class HatToggleService {
 
         if (!isAdminOfHat) {
           console.log('❌ USER IS NOT ADMIN OF TARGET HAT');
-          console.log('💡 Contract-based toggle modules typically require admin permissions');
+          console.log(
+            '💡 Contract-based toggle modules typically require admin permissions',
+          );
           return {
             canToggle: false,
             error: 'You do not have admin permissions for this HAT',
@@ -1389,18 +1516,24 @@ export class HatToggleService {
               reason: 'NOT_HAT_ADMIN',
               toggleModule,
               userAddress,
-              isAdminOfHat: false
-            }
+              isAdminOfHat: false,
+            },
           };
         }
 
         // Special case: PassthroughModule (eligibility module) incorrectly assigned as toggle
         const PASSTHROUGH_MODULE = '0xBDB317b6734Af8311460e457C74a0953f73B0704';
         if (toggleModule.toLowerCase() === PASSTHROUGH_MODULE.toLowerCase()) {
-          console.log('🔍 SPECIAL CASE: PassthroughModule detected as toggle module');
-          console.log('💡 This is an eligibility module incorrectly assigned as toggle');
-          console.log('✅ User has admin permissions - allowing toggle with fallback to setHatStatus');
-          
+          console.log(
+            '🔍 SPECIAL CASE: PassthroughModule detected as toggle module',
+          );
+          console.log(
+            '💡 This is an eligibility module incorrectly assigned as toggle',
+          );
+          console.log(
+            '✅ User has admin permissions - allowing toggle with fallback to setHatStatus',
+          );
+
           return {
             canToggle: true,
             details: {
@@ -1408,32 +1541,37 @@ export class HatToggleService {
               toggleModule,
               userAddress,
               isAdminOfHat: true,
-              note: 'Using admin permissions to call setHatStatus directly (PassthroughModule fallback)'
-            }
+              note: 'Using admin permissions to call setHatStatus directly (PassthroughModule fallback)',
+            },
           };
         }
 
         console.log('⚠️  CONTRACT MODULE DETECTED - ADVANCED VALIDATION NEEDED');
-        console.log('💡 User has admin permissions, but contract module may have specific rules');
+        console.log(
+          '💡 User has admin permissions, but contract module may have specific rules',
+        );
         return {
           canToggle: false,
-          error: 'Contract-based toggle modules require specific implementation - please configure HAT-based toggle',
+          error:
+            'Contract-based toggle modules require specific implementation - please configure HAT-based toggle',
           details: {
             reason: 'CONTRACT_MODULE_UNSUPPORTED',
             toggleModule,
             userAddress,
             isAdminOfHat: true,
-            suggestion: 'Set toggle module to a HAT ID for simpler permissions'
-          }
+            suggestion: 'Set toggle module to a HAT ID for simpler permissions',
+          },
         };
       }
-
     } catch (error) {
       console.error('❌ TOGGLE PERMISSION VALIDATION FAILED:', error);
-      
+
       let errorMessage = 'Failed to validate toggle permissions';
       if (error instanceof Error) {
-        if (error.message.includes('429') || error.message.includes('rate limit')) {
+        if (
+          error.message.includes('429') ||
+          error.message.includes('rate limit')
+        ) {
           errorMessage = 'Rate limited by RPC provider - try again';
           console.log('⏱️  Rate limit detected, user should retry');
         } else if (error.message.includes('revert')) {
@@ -1452,8 +1590,8 @@ export class HatToggleService {
           reason: 'VALIDATION_ERROR',
           originalError: error instanceof Error ? error.message : String(error),
           userAddress,
-          hatId
-        }
+          hatId,
+        },
       };
     }
   }

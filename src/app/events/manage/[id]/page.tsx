@@ -6,14 +6,19 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { 
-  Calendar, 
-  Users, 
-  DollarSign, 
-  Eye, 
-  Edit, 
-  Play, 
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import {
+  Calendar,
+  Users,
+  DollarSign,
+  Eye,
+  Edit,
+  Play,
   CheckCircle,
   XCircle,
   Download,
@@ -22,13 +27,17 @@ import {
   ArrowLeft,
   Clock,
   UserCheck,
-  User
+  User,
 } from 'lucide-react';
 
-import { useEvent, useEventRegistrations, useEventActions } from '@/features/events/hooks/useEvents';
+import {
+  useEvent,
+  useEventRegistrations,
+  useEventActions,
+} from '@/features/events/hooks/useEvents';
 import { useEventManagementAccess } from '@/features/events/hooks/useEventTokenGating';
 import { EventService } from '@/features/events/lib/supabase';
-import { notificationService } from '@/utils/notificationService';
+import { notificationService } from '@/services/unifiedNotificationService';
 import { useAccount } from 'wagmi';
 import Link from 'next/link';
 
@@ -42,12 +51,24 @@ export default function EventManagePage({ params }: EventManagePageProps) {
   const resolvedParams = use(params);
   const router = useRouter();
   const { address } = useAccount();
-  const { event, loading: eventLoading, error: eventError } = useEvent(resolvedParams.id);
-  const { registrations, loading: registrationsLoading } = useEventRegistrations(resolvedParams.id);
+  const {
+    event,
+    loading: eventLoading,
+    error: eventError,
+  } = useEvent(resolvedParams.id);
+  const { registrations, loading: registrationsLoading } =
+    useEventRegistrations(resolvedParams.id);
   const { canManageEvents } = useEventManagementAccess();
-  const { publishEvent, cancelEvent, completeEvent, loading: actionLoading } = useEventActions(resolvedParams.id);
-  
-  const [activeTab, setActiveTab] = useState<'overview' | 'registrations' | 'analytics'>('overview');
+  const {
+    publishEvent,
+    cancelEvent,
+    completeEvent,
+    loading: actionLoading,
+  } = useEventActions(resolvedParams.id);
+
+  const [activeTab, setActiveTab] = useState<
+    'overview' | 'registrations' | 'analytics'
+  >('overview');
   const [profiles, setProfiles] = useState<Map<string, any>>(new Map());
   const [profilesLoading, setProfilesLoading] = useState(false);
   const [showNotificationModal, setShowNotificationModal] = useState(false);
@@ -59,7 +80,7 @@ export default function EventManagePage({ params }: EventManagePageProps) {
     return new Date(dateString).toLocaleDateString('en-US', {
       month: '2-digit',
       day: '2-digit',
-      year: '2-digit'
+      year: '2-digit',
     });
   };
 
@@ -70,7 +91,7 @@ export default function EventManagePage({ params }: EventManagePageProps) {
       month: 'long',
       day: 'numeric',
       hour: '2-digit',
-      minute: '2-digit'
+      minute: '2-digit',
     });
   };
 
@@ -88,7 +109,6 @@ export default function EventManagePage({ params }: EventManagePageProps) {
         return 'bg-gradient-to-r from-gray-200 to-gray-300 text-black';
     }
   };
-  
 
   const canUserManageEvent = () => {
     if (!event || !address) return false;
@@ -109,21 +129,26 @@ export default function EventManagePage({ params }: EventManagePageProps) {
         await Promise.all(
           registrations.map(async (registration) => {
             try {
-              const profile = await EventService.getUserProfileByWallet(registration.user_address);
+              const profile = await EventService.getUserProfileByWallet(
+                registration.user_address,
+              );
               if (profile) {
                 profileMap.set(registration.user_address, profile);
               }
             } catch (error) {
-              console.warn(`Failed to fetch profile for ${registration.user_address}:`, error);
+              console.warn(
+                `Failed to fetch profile for ${registration.user_address}:`,
+                error,
+              );
               // Set a default profile with wallet address
               profileMap.set(registration.user_address, {
                 wallet_address: registration.user_address,
                 first_name: registration.user_address.slice(0, 6) + '...',
                 last_name: '',
-                profile_picture: null
+                profile_picture: null,
               });
             }
-          })
+          }),
         );
         setProfiles(profileMap);
       } catch (error) {
@@ -143,7 +168,7 @@ export default function EventManagePage({ params }: EventManagePageProps) {
   // Handle sending notification to individual attendee
   const handleSendNotification = async () => {
     if (!notificationMessage.trim() || !selectedRegistration) return;
-    
+
     setSendingNotification(true);
     try {
       await notificationService.createNotification({
@@ -154,11 +179,13 @@ export default function EventManagePage({ params }: EventManagePageProps) {
         message: notificationMessage.trim(),
         context_type: 'event',
         context_id: resolvedParams.id,
-        context_url: `/events/${resolvedParams.id}`
+        context_url: `/events/${resolvedParams.id}`,
       });
-      
+
       const profile = profiles.get(selectedRegistration.user_address);
-      const displayName = profile?.first_name || selectedRegistration.user_address.slice(0, 6) + '...';
+      const displayName =
+        profile?.first_name ||
+        selectedRegistration.user_address.slice(0, 6) + '...';
       alert(`Notification sent to ${displayName}: ${notificationMessage}`);
       setShowNotificationModal(false);
       setNotificationMessage('');
@@ -199,7 +226,8 @@ export default function EventManagePage({ params }: EventManagePageProps) {
             <CardContent className="p-8 text-center">
               <h2 className="text-xl font-semibold mb-4">Event Not Found</h2>
               <p className="text-gray-600 mb-4">
-                The event you're looking for doesn't exist or you don't have permission to manage it.
+                The event you're looking for doesn't exist or you don't have
+                permission to manage it.
               </p>
               <Button onClick={() => router.push('/events/manage')}>
                 <ArrowLeft className="w-4 h-4 mr-2" />
@@ -224,7 +252,10 @@ export default function EventManagePage({ params }: EventManagePageProps) {
                 You don't have permission to manage this event.
               </p>
               <div className="space-x-4">
-                <Button variant="outline" onClick={() => router.push(`/events/${resolvedParams.id}`)}>
+                <Button
+                  variant="outline"
+                  onClick={() => router.push(`/events/${resolvedParams.id}`)}
+                >
                   <Eye className="w-4 h-4 mr-2" />
                   View Event
                 </Button>
@@ -240,7 +271,7 @@ export default function EventManagePage({ params }: EventManagePageProps) {
     );
   }
 
-  // Main component render 
+  // Main component render
   return (
     <div className="min-h-screen bg-gray-50 p-4 pb-20">
       <div className="max-w-7xl mx-auto space-y-6">
@@ -248,7 +279,7 @@ export default function EventManagePage({ params }: EventManagePageProps) {
         <div className="space-y-4">
           {/* Back Button and Title */}
           <div className="flex items-center space-x-4">
-            <Button 
+            <Button
               variant="outline"
               size="sm"
               onClick={() => router.push('/events/manage')}
@@ -259,13 +290,13 @@ export default function EventManagePage({ params }: EventManagePageProps) {
             </Button>
             <h1 className="text-3xl font-bold">{event.title}</h1>
           </div>
-          
+
           {/* Status and Date */}
           <div className="flex items-center space-x-4">
             <Badge className={getStatusColor(event.status)}>
               {event.status}
             </Badge>
-            
+
             <span className="flex items-center text-gray-600">
               <Calendar className="w-4 h-4 mr-1" />
               {formatDate(event.event_date)}
@@ -280,7 +311,7 @@ export default function EventManagePage({ params }: EventManagePageProps) {
                 View
               </Link>
             </Button>
-          
+
             <Button variant="outline" asChild={true}>
               <Link href={`/events/manage/${event.id}/edit`}>
                 <Edit className="w-4 h-4 mr-2" />
@@ -289,35 +320,34 @@ export default function EventManagePage({ params }: EventManagePageProps) {
             </Button>
 
             {event.status === 'draft' && (
-              <Button 
-                onClick={() => publishEvent()}
-                disabled={actionLoading}
-              >
+              <Button onClick={() => publishEvent()} disabled={actionLoading}>
                 <Play className="w-4 h-4 mr-2" />
                 Publish
               </Button>
             )}
 
-            {event.status === 'published' && new Date(event.event_date) < new Date() && (
-              <Button 
-                onClick={() => completeEvent()}
-                disabled={actionLoading}
-              >
-                <CheckCircle className="w-4 h-4 mr-2" />
-                Complete
-              </Button>
-            )}
+            {event.status === 'published' &&
+              new Date(event.event_date) < new Date() && (
+                <Button
+                  onClick={() => completeEvent()}
+                  disabled={actionLoading}
+                >
+                  <CheckCircle className="w-4 h-4 mr-2" />
+                  Complete
+                </Button>
+              )}
 
-            {event.status === 'published' && new Date(event.event_date) > new Date() && (
-              <Button 
-                variant="destructive"
-                onClick={() => cancelEvent()}
-                disabled={actionLoading}
-              >
-                <XCircle className="w-4 h-4 mr-2" />
-                Cancel
-              </Button>
-            )}
+            {event.status === 'published' &&
+              new Date(event.event_date) > new Date() && (
+                <Button
+                  variant="destructive"
+                  onClick={() => cancelEvent()}
+                  disabled={actionLoading}
+                >
+                  <XCircle className="w-4 h-4 mr-2" />
+                  Cancel
+                </Button>
+              )}
           </div>
         </div>
 
@@ -326,37 +356,47 @@ export default function EventManagePage({ params }: EventManagePageProps) {
           <Card className="shadow-sm">
             <CardContent className="p-3 sm:p-4 text-center">
               <Users className="w-4 h-4 sm:w-5 sm:h-5 mx-auto text-blue-500 mb-1" />
-              <p className="text-lg sm:text-xl font-bold text-gray-900">{event.registration_count}</p>
+              <p className="text-lg sm:text-xl font-bold text-gray-900">
+                {event.registration_count}
+              </p>
               <p className="text-xs text-gray-600">Registrations</p>
             </CardContent>
           </Card>
-          
+
           <Card className="shadow-sm">
             <CardContent className="p-3 sm:p-4 text-center">
               <UserCheck className="w-4 h-4 sm:w-5 sm:h-5 mx-auto text-green-500 mb-1" />
-              <p className="text-lg sm:text-xl font-bold text-gray-900">{event.checked_in_count || 0}</p>
+              <p className="text-lg sm:text-xl font-bold text-gray-900">
+                {event.checked_in_count || 0}
+              </p>
               <p className="text-xs text-gray-600">Check-ins</p>
             </CardContent>
           </Card>
-          
+
           <Card className="shadow-sm">
             <CardContent className="p-3 sm:p-4 text-center">
               <DollarSign className="w-4 h-4 sm:w-5 sm:h-5 mx-auto text-yellow-500 mb-1" />
               <p className="text-lg sm:text-xl font-bold text-gray-900">
-                {event.price_token === 'free' ? 'Free' : 
-                 `${event.price_amount} ${event.price_token}`}
+                {event.price_token === 'free'
+                  ? 'Free'
+                  : `${event.price_amount} ${event.price_token}`}
               </p>
               <p className="text-xs text-gray-600">Donations</p>
             </CardContent>
           </Card>
-          
+
           <Card className="shadow-sm">
             <CardContent className="p-3 sm:p-4 text-center">
               <Clock className="w-4 h-4 sm:w-5 sm:h-5 mx-auto text-purple-500 mb-1" />
               <p className="text-lg sm:text-xl font-bold text-gray-900">
-                {new Date(event.event_date) > new Date() 
-                  ? Math.ceil((new Date(event.event_date).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))
-                  : 0} days
+                {new Date(event.event_date) > new Date()
+                  ? Math.ceil(
+                      (new Date(event.event_date).getTime() -
+                        new Date().getTime()) /
+                        (1000 * 60 * 60 * 24),
+                    )
+                  : 0}{' '}
+                days
               </p>
               <p className="text-xs text-gray-600">Next Event</p>
             </CardContent>
@@ -382,34 +422,37 @@ export default function EventManagePage({ params }: EventManagePageProps) {
                   <h4 className="font-medium mb-2">Description</h4>
                   <p className="text-gray-600">{event.description}</p>
                 </div>
-                
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <h4 className="font-medium mb-2">Event Date</h4>
-                    <p className="text-gray-600">{formatFullDate(event.event_date)}</p>
+                    <p className="text-gray-600">
+                      {formatFullDate(event.event_date)}
+                    </p>
                   </div>
-                  
+
                   {event.location && (
                     <div>
                       <h4 className="font-medium mb-2">Location</h4>
                       <p className="text-gray-600">{event.location}</p>
                     </div>
                   )}
-                  
+
                   {event.max_attendees && (
                     <div>
                       <h4 className="font-medium mb-2">Max Attendees</h4>
                       <p className="text-gray-600">{event.max_attendees}</p>
                     </div>
                   )}
-                  
+
                   <div>
                     <h4 className="font-medium mb-2">Pricing</h4>
                     <p className="text-gray-600">
-                      {event.price_token === 'free' 
-                        ? 'Free Event' 
+                      {event.price_token === 'free'
+                        ? 'Free Event'
                         : `${event.price_amount} ${event.price_token}`}
-                      {event.price_self_amount && ` + ${event.price_self_amount} SELF`}
+                      {event.price_self_amount &&
+                        ` + ${event.price_self_amount} SELF`}
                     </p>
                   </div>
                 </div>
@@ -429,12 +472,12 @@ export default function EventManagePage({ params }: EventManagePageProps) {
                       <span>Check-in Management</span>
                     </Link>
                   </Button>
-                  
+
                   <Button variant="outline" className="h-auto py-4 flex-col">
                     <Download className="w-6 h-6 mb-2" />
                     <span>Export Attendees</span>
                   </Button>
-                  
+
                   <Button variant="outline" className="h-auto py-4 flex-col">
                     <Bell className="w-6 h-6 mb-2" />
                     <span>Send Notifications</span>
@@ -470,7 +513,10 @@ export default function EventManagePage({ params }: EventManagePageProps) {
                 ) : profilesLoading ? (
                   <div className="animate-pulse space-y-3">
                     {registrations.map((registration) => (
-                      <div key={registration.id} className="flex items-center space-x-3">
+                      <div
+                        key={registration.id}
+                        className="flex items-center space-x-3"
+                      >
                         <div className="w-10 h-10 bg-gray-200 rounded-full"></div>
                         <div className="flex-1 space-y-1">
                           <div className="h-4 bg-gray-200 rounded w-1/3"></div>
@@ -484,11 +530,14 @@ export default function EventManagePage({ params }: EventManagePageProps) {
                     {registrations.map((registration) => {
                       const profile = profiles.get(registration.user_address);
                       return (
-                        <div key={registration.id} className="flex items-center space-x-3 p-3 border rounded-lg hover:bg-gray-50">
+                        <div
+                          key={registration.id}
+                          className="flex items-center space-x-3 p-3 border rounded-lg hover:bg-gray-50"
+                        >
                           <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center overflow-hidden">
                             {profile?.profile_picture ? (
-                              <img 
-                                src={profile.profile_picture} 
+                              <img
+                                src={profile.profile_picture}
                                 alt={`${profile.first_name} ${profile.last_name}`}
                                 className="w-full h-full object-cover"
                               />
@@ -498,29 +547,38 @@ export default function EventManagePage({ params }: EventManagePageProps) {
                           </div>
                           <div className="flex-1">
                             <p className="font-medium text-sm">
-                              {profile?.first_name || 'Anonymous'} {profile?.last_name || ''}
+                              {profile?.first_name || 'Anonymous'}{' '}
+                              {profile?.last_name || ''}
                             </p>
                             <p className="text-xs text-gray-500">
-                              {registration.user_address.slice(0, 6)}...{registration.user_address.slice(-4)}
+                              {registration.user_address.slice(0, 6)}...
+                              {registration.user_address.slice(-4)}
                             </p>
                             {registration.payment_amount !== '0' && (
                               <p className="text-xs text-gray-500">
-                                Paid: {registration.payment_amount} {registration.payment_token}
+                                Paid: {registration.payment_amount}{' '}
+                                {registration.payment_token}
                               </p>
                             )}
                           </div>
                           <div className="text-right space-y-1">
-                            <Badge variant={
-                              registration.registration_status === 'completed' ? 'default' :
-                              registration.registration_status === 'checked_in' ? 'secondary' :
-                              'outline'
-                            } className="text-xs">
+                            <Badge
+                              variant={
+                                registration.registration_status === 'completed'
+                                  ? 'default'
+                                  : registration.registration_status ===
+                                      'checked_in'
+                                    ? 'secondary'
+                                    : 'outline'
+                              }
+                              className="text-xs"
+                            >
                               {registration.registration_status}
                             </Badge>
 
-                            <Button 
-                              variant="outline" 
-                              size="sm" 
+                            <Button
+                              variant="outline"
+                              size="sm"
                               className="h-6 px-2 text-xs"
                               onClick={() => {
                                 setSelectedRegistration(registration);
@@ -556,24 +614,48 @@ export default function EventManagePage({ params }: EventManagePageProps) {
                       </div>
                     </div>
                   </div>
-                  
+
                   <div>
                     <h4 className="font-medium mb-4">Event Performance</h4>
                     <div className="space-y-3">
                       <div className="flex justify-between">
                         <span>Registration Rate</span>
-                        <span>{event.max_attendees ? 
-                          Math.round((event.registration_count / event.max_attendees) * 100) : 100}%</span>
+                        <span>
+                          {event.max_attendees
+                            ? Math.round(
+                                (event.registration_count /
+                                  event.max_attendees) *
+                                  100,
+                              )
+                            : 100}
+                          %
+                        </span>
                       </div>
                       <div className="flex justify-between">
                         <span>Check-in Rate</span>
-                        <span>{event.registration_count > 0 ? 
-                          Math.round(((event.checked_in_count || 0) / event.registration_count) * 100) : 0}%</span>
+                        <span>
+                          {event.registration_count > 0
+                            ? Math.round(
+                                ((event.checked_in_count || 0) /
+                                  event.registration_count) *
+                                  100,
+                              )
+                            : 0}
+                          %
+                        </span>
                       </div>
                       <div className="flex justify-between">
                         <span>Completion Rate</span>
-                        <span>{event.registration_count > 0 ? 
-                          Math.round(((event.completed_count || 0) / event.registration_count) * 100) : 0}%</span>
+                        <span>
+                          {event.registration_count > 0
+                            ? Math.round(
+                                ((event.completed_count || 0) /
+                                  event.registration_count) *
+                                  100,
+                              )
+                            : 0}
+                          %
+                        </span>
                       </div>
                     </div>
                   </div>
@@ -584,21 +666,27 @@ export default function EventManagePage({ params }: EventManagePageProps) {
         </Tabs>
 
         {/* Notification Modal */}
-        <Dialog open={showNotificationModal} onOpenChange={setShowNotificationModal}>
+        <Dialog
+          open={showNotificationModal}
+          onOpenChange={setShowNotificationModal}
+        >
           <DialogContent className="max-w-md">
             <DialogHeader>
               <DialogTitle>Send Notification</DialogTitle>
             </DialogHeader>
             <div className="space-y-4">
               <p className="text-sm text-gray-600">
-                Send a message to {selectedRegistration && (
-                  profiles.get(selectedRegistration.user_address)?.first_name || 
-                  `${selectedRegistration.user_address.slice(0, 6)}...${selectedRegistration.user_address.slice(-4)}`
-                )}
+                Send a message to{' '}
+                {selectedRegistration &&
+                  (profiles.get(selectedRegistration.user_address)
+                    ?.first_name ||
+                    `${selectedRegistration.user_address.slice(0, 6)}...${selectedRegistration.user_address.slice(-4)}`)}
               </p>
               <textarea
                 value={notificationMessage}
-                onChange={(e) => setNotificationMessage(e.target.value.slice(0, 300))}
+                onChange={(e) =>
+                  setNotificationMessage(e.target.value.slice(0, 300))
+                }
                 placeholder="Enter your message (max 300 characters)"
                 className="w-full p-3 border rounded-lg resize-none h-24"
                 maxLength={300}
@@ -607,10 +695,13 @@ export default function EventManagePage({ params }: EventManagePageProps) {
                 {notificationMessage.length}/300 characters
               </div>
               <div className="flex justify-end space-x-2">
-                <Button variant="outline" onClick={() => setShowNotificationModal(false)}>
+                <Button
+                  variant="outline"
+                  onClick={() => setShowNotificationModal(false)}
+                >
                   Cancel
                 </Button>
-                <Button 
+                <Button
                   onClick={handleSendNotification}
                   disabled={!notificationMessage.trim() || sendingNotification}
                 >

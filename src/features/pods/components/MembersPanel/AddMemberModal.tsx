@@ -33,7 +33,7 @@ export const AddMemberModal: React.FC<AddMemberModalProps> = ({
   onClose,
   podId,
   existingMembers,
-  currentUserAddress
+  currentUserAddress,
 }) => {
   const router = useRouter();
   const [searchTerm, setSearchTerm] = useState('');
@@ -42,7 +42,9 @@ export const AddMemberModal: React.FC<AddMemberModalProps> = ({
   const [sendingInvite, setSendingInvite] = useState(false);
   const [selectedUser, setSelectedUser] = useState<UserOption | null>(null);
   const [selectedRole, setSelectedRole] = useState<InvitationRole>('member');
-  const [memberRoleExists, setMemberRoleExists] = useState<boolean | null>(null);
+  const [memberRoleExists, setMemberRoleExists] = useState<boolean | null>(
+    null,
+  );
   const [checkingRole, setCheckingRole] = useState(false);
   const { toast } = useToast();
 
@@ -71,7 +73,8 @@ export const AddMemberModal: React.FC<AddMemberModalProps> = ({
         }
 
         // Check if membership_hat_id is valid (not null, not 'pending_creation', not 'null')
-        const hasValidMemberRole = pod?.membership_hat_id &&
+        const hasValidMemberRole =
+          pod?.membership_hat_id &&
           pod.membership_hat_id !== 'pending_creation' &&
           pod.membership_hat_id !== 'null';
 
@@ -80,7 +83,7 @@ export const AddMemberModal: React.FC<AddMemberModalProps> = ({
         console.log('🔍 Member role check:', {
           podId,
           membership_hat_id: pod?.membership_hat_id,
-          hasValidMemberRole
+          hasValidMemberRole,
         });
       } catch (error) {
         console.error('Error checking member role:', error);
@@ -108,24 +111,26 @@ export const AddMemberModal: React.FC<AddMemberModalProps> = ({
         if (error) throw error;
 
         const userOptions: UserOption[] = (profiles || [])
-          .filter(profile =>
-            // Exclude existing members and current user
-            profile.wallet_address &&
-            !existingMembers.includes(profile.wallet_address.toLowerCase()) &&
-            profile.wallet_address.toLowerCase() !== currentUserAddress?.toLowerCase()
+          .filter(
+            (profile) =>
+              // Exclude existing members and current user
+              profile.wallet_address &&
+              !existingMembers.includes(profile.wallet_address.toLowerCase()) &&
+              profile.wallet_address.toLowerCase() !==
+                currentUserAddress?.toLowerCase(),
           )
-          .map(profile => ({
+          .map((profile) => ({
             address: profile.wallet_address,
-            profile: profile as UserProfile
+            profile: profile as UserProfile,
           }));
 
         setAllUsers(userOptions);
       } catch (error) {
         console.error('Failed to fetch users:', error);
         toast({
-          title: "Error",
-          description: "Failed to load users. Please try again.",
-          variant: "destructive"
+          title: 'Error',
+          description: 'Failed to load users. Please try again.',
+          variant: 'destructive',
         });
       } finally {
         setLoading(false);
@@ -142,25 +147,29 @@ export const AddMemberModal: React.FC<AddMemberModalProps> = ({
     if (!searchTerm.trim()) return allUsers.slice(0, 10); // Show first 10 if no search
 
     const term = searchTerm.toLowerCase();
-    return allUsers.filter(user => {
-      const firstName = user.profile.first_name?.toLowerCase() || '';
-      const lastName = user.profile.last_name?.toLowerCase() || '';
-      const fullName = `${firstName} ${lastName}`.trim();
-      
-      return firstName.includes(term) || 
-             lastName.includes(term) || 
-             fullName.includes(term) ||
-             user.address.toLowerCase().includes(term);
-    }).slice(0, 10); // Limit to 10 results
+    return allUsers
+      .filter((user) => {
+        const firstName = user.profile.first_name?.toLowerCase() || '';
+        const lastName = user.profile.last_name?.toLowerCase() || '';
+        const fullName = `${firstName} ${lastName}`.trim();
+
+        return (
+          firstName.includes(term) ||
+          lastName.includes(term) ||
+          fullName.includes(term) ||
+          user.address.toLowerCase().includes(term)
+        );
+      })
+      .slice(0, 10); // Limit to 10 results
   }, [allUsers, searchTerm]);
 
   // Handle sending invitation
   const handleSendInvite = async (user: UserOption) => {
     if (!currentUserAddress) return;
-    
+
     try {
       setSendingInvite(true);
-      
+
       // Get pod name for the invitation
       const { data: pod, error: podError } = await supabase
         .from('pods')
@@ -177,9 +186,10 @@ export const AddMemberModal: React.FC<AddMemberModalProps> = ({
 
       // Create role-specific invitation message
       const roleLabel = selectedRole === 'leader' ? 'pod leader' : 'member';
-      const invitationMessage = selectedRole === 'leader'
-        ? `You've been invited to join "${podName}" as a pod leader. Click to view the pod and apply for leadership.`
-        : `You've been invited to join "${podName}" as a member. Click to view the pod and apply for membership.`;
+      const invitationMessage =
+        selectedRole === 'leader'
+          ? `You've been invited to join "${podName}" as a pod leader. Click to view the pod and apply for leadership.`
+          : `You've been invited to join "${podName}" as a member. Click to view the pod and apply for membership.`;
 
       // ✅ ISSUE #1 FIX: Link directly to application page for easy access
       const applicationUrl = `/pods/${podId}/applications/apply`;
@@ -188,7 +198,10 @@ export const AddMemberModal: React.FC<AddMemberModalProps> = ({
       await unifiedNotificationService.createNotification({
         recipient_address: user.address,
         sender_address: currentUserAddress,
-        notification_type: selectedRole === 'leader' ? 'pod_leadership_invitation' as any : 'pod_membership_invitation' as any,
+        notification_type:
+          selectedRole === 'leader'
+            ? ('pod_leadership_invitation' as any)
+            : ('pod_membership_invitation' as any),
         title: `Pod Invitation: ${podName}`,
         message: invitationMessage,
         context_type: 'governance',
@@ -196,26 +209,28 @@ export const AddMemberModal: React.FC<AddMemberModalProps> = ({
         context_url: applicationUrl, // Direct link to application page
         priority: 'medium',
         metadata: {
-          invitation_type: selectedRole === 'leader' ? 'pod_leadership' : 'pod_membership',
+          invitation_type:
+            selectedRole === 'leader' ? 'pod_leadership' : 'pod_membership',
           intended_role: selectedRole,
           pod_name: podName,
-          invited_by: currentUserAddress
-        }
+          invited_by: currentUserAddress,
+        },
       });
 
       toast({
-        title: "Invitation Sent!",
+        title: 'Invitation Sent!',
         description: `Sent ${roleLabel} invitation to ${userName}. They'll receive a notification and can apply to join.`,
-        duration: 5000
+        duration: 5000,
       });
 
       onClose();
     } catch (error) {
       console.error('Failed to send invitation:', error);
       toast({
-        title: "Failed to Send Invitation",
-        description: error instanceof Error ? error.message : "Unknown error occurred",
-        variant: "destructive"
+        title: 'Failed to Send Invitation',
+        description:
+          error instanceof Error ? error.message : 'Unknown error occurred',
+        variant: 'destructive',
       });
     } finally {
       setSendingInvite(false);
@@ -236,7 +251,8 @@ export const AddMemberModal: React.FC<AddMemberModalProps> = ({
             </Button>
           </div>
           <p className="text-sm text-gray-600 mt-2">
-            Search and invite users to join this pod. They'll receive a notification and can apply for membership.
+            Search and invite users to join this pod. They'll receive a
+            notification and can apply for membership.
           </p>
         </div>
 
@@ -260,16 +276,26 @@ export const AddMemberModal: React.FC<AddMemberModalProps> = ({
         <div className="p-4 border-b" style={{ backgroundColor: '#E8F1EE' }}>
           <Label className="text-sm font-medium">Invitation Role</Label>
           <p className="text-xs text-gray-600 mt-1 mb-3">
-            Select the role you'd like to invite users for. They'll apply for this specific role.
+            Select the role you'd like to invite users for. They'll apply for
+            this specific role.
           </p>
           <div className="flex gap-3">
             <button
               type="button"
               onClick={() => setSelectedRole('member')}
               className="flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-lg border-2 transition-all"
-              style={selectedRole === 'member'
-                ? { borderColor: '#2F5D50', backgroundColor: '#E8F1EE', color: '#1F453A' }
-                : { borderColor: '#e5e7eb', backgroundColor: '#ffffff', color: '#374151' }
+              style={
+                selectedRole === 'member'
+                  ? {
+                      borderColor: '#2F5D50',
+                      backgroundColor: '#E8F1EE',
+                      color: '#1F453A',
+                    }
+                  : {
+                      borderColor: '#e5e7eb',
+                      backgroundColor: '#ffffff',
+                      color: '#374151',
+                    }
               }
               onMouseEnter={(e) => {
                 if (selectedRole !== 'member') {
@@ -292,9 +318,18 @@ export const AddMemberModal: React.FC<AddMemberModalProps> = ({
               type="button"
               onClick={() => setSelectedRole('leader')}
               className="flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-lg border-2 transition-all"
-              style={selectedRole === 'leader'
-                ? { borderColor: '#6A5F7A', backgroundColor: '#EDEAF0', color: '#4A3F5A' }
-                : { borderColor: '#e5e7eb', backgroundColor: '#ffffff', color: '#374151' }
+              style={
+                selectedRole === 'leader'
+                  ? {
+                      borderColor: '#6A5F7A',
+                      backgroundColor: '#EDEAF0',
+                      color: '#4A3F5A',
+                    }
+                  : {
+                      borderColor: '#e5e7eb',
+                      backgroundColor: '#ffffff',
+                      color: '#374151',
+                    }
               }
               onMouseEnter={(e) => {
                 if (selectedRole !== 'leader') {
@@ -318,22 +353,40 @@ export const AddMemberModal: React.FC<AddMemberModalProps> = ({
 
         {/* ✅ ISSUE #2 FIX: Warning if no member role exists */}
         {selectedRole === 'member' && memberRoleExists === false && (
-          <div className="mx-4 mt-4 mb-0 p-4 border-l-4 rounded" style={{ backgroundColor: '#FAF4EC', borderColor: '#C6933F' }}>
+          <div
+            className="mx-4 mt-4 mb-0 p-4 border-l-4 rounded"
+            style={{ backgroundColor: '#FAF4EC', borderColor: '#C6933F' }}
+          >
             <div className="flex items-start gap-3">
               <div className="flex-shrink-0 mt-0.5">
-                <svg className="w-5 h-5" style={{ color: '#C6933F' }} fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                <svg
+                  className="w-5 h-5"
+                  style={{ color: '#C6933F' }}
+                  fill="currentColor"
+                  viewBox="0 0 20 20"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
+                    clipRule="evenodd"
+                  />
                 </svg>
               </div>
               <div className="flex-1">
-                <h4 className="text-sm font-semibold mb-1" style={{ color: '#8F6B2F' }}>
+                <h4
+                  className="text-sm font-semibold mb-1"
+                  style={{ color: '#8F6B2F' }}
+                >
                   No Member Role Created Yet
                 </h4>
                 <p className="text-xs mb-2" style={{ color: '#A67E35' }}>
-                  This pod doesn't have a member role yet. When you approve this application, you'll have the option to auto-create the member role on-demand.
+                  This pod doesn't have a member role yet. When you approve this
+                  application, you'll have the option to auto-create the member
+                  role on-demand.
                 </p>
                 <p className="text-xs" style={{ color: '#C6933F' }}>
-                  <strong>Note:</strong> The approval process will handle role creation automatically. You can still send this invitation.
+                  <strong>Note:</strong> The approval process will handle role
+                  creation automatically. You can still send this invitation.
                 </p>
               </div>
             </div>
@@ -400,9 +453,11 @@ export const AddMemberModal: React.FC<AddMemberModalProps> = ({
         {/* Footer */}
         <div className="p-4 border-t bg-gray-50">
           <p className="text-xs text-gray-600">
-            <strong>Current role:</strong> {selectedRole === 'leader' ? 'Pod Leader' : 'Member'}
+            <strong>Current role:</strong>{' '}
+            {selectedRole === 'leader' ? 'Pod Leader' : 'Member'}
             {' • '}
-            Invited users will receive a notification and can apply for this role.
+            Invited users will receive a notification and can apply for this
+            role.
           </p>
         </div>
       </div>

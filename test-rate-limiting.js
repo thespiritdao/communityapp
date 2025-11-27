@@ -35,7 +35,7 @@ function logSection(title) {
 }
 
 async function sleep(ms) {
-  return new Promise(resolve => setTimeout(resolve, ms));
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 /**
@@ -56,15 +56,15 @@ async function testSensemakerRateLimit() {
         body: JSON.stringify({
           message: `Test request ${i}`,
           conversationHistory: [],
-          sessionId: `test-rate-limit-${Date.now()}`
-        })
+          sessionId: `test-rate-limit-${Date.now()}`,
+        }),
       });
 
       const data = await response.json();
       const rateLimit = {
         limit: response.headers.get('X-RateLimit-Limit'),
         remaining: response.headers.get('X-RateLimit-Remaining'),
-        reset: response.headers.get('X-RateLimit-Reset')
+        reset: response.headers.get('X-RateLimit-Reset'),
       };
 
       results.push({
@@ -72,13 +72,19 @@ async function testSensemakerRateLimit() {
         status: response.status,
         success: response.ok,
         rateLimit,
-        message: data.error || data.response?.substring(0, 50) || 'Success'
+        message: data.error || data.response?.substring(0, 50) || 'Success',
       });
 
       if (response.ok) {
-        log(`  Request ${i}: ✅ ${response.status} | Remaining: ${rateLimit.remaining}/${rateLimit.limit}`, colors.green);
+        log(
+          `  Request ${i}: ✅ ${response.status} | Remaining: ${rateLimit.remaining}/${rateLimit.limit}`,
+          colors.green,
+        );
       } else {
-        log(`  Request ${i}: ❌ ${response.status} | ${data.error}`, colors.red);
+        log(
+          `  Request ${i}: ❌ ${response.status} | ${data.error}`,
+          colors.red,
+        );
       }
 
       // Small delay to avoid overwhelming the server
@@ -89,15 +95,15 @@ async function testSensemakerRateLimit() {
         requestNum: i,
         status: 'ERROR',
         success: false,
-        error: error.message
+        error: error.message,
       });
     }
   }
 
   // Analysis
   log('\nAnalysis:', colors.yellow);
-  const successCount = results.filter(r => r.success).length;
-  const rateLimitedCount = results.filter(r => r.status === 429).length;
+  const successCount = results.filter((r) => r.success).length;
+  const rateLimitedCount = results.filter((r) => r.status === 429).length;
 
   log(`  Total requests: ${results.length}`);
   log(`  Successful: ${successCount} (expected: 10)`);
@@ -130,15 +136,15 @@ async function testAirdropRateLimit() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          walletAddress: testWallet
-        })
+          walletAddress: testWallet,
+        }),
       });
 
       const data = await response.json();
       const rateLimit = {
         limit: response.headers.get('X-RateLimit-Limit'),
         remaining: response.headers.get('X-RateLimit-Remaining'),
-        reset: response.headers.get('X-RateLimit-Reset')
+        reset: response.headers.get('X-RateLimit-Reset'),
       };
 
       results.push({
@@ -146,15 +152,24 @@ async function testAirdropRateLimit() {
         status: response.status,
         success: response.ok,
         rateLimit,
-        message: data.error || data.message || 'Success'
+        message: data.error || data.message || 'Success',
       });
 
       if (response.ok) {
-        log(`  Request ${i}: ✅ ${response.status} | Remaining: ${rateLimit.remaining}/${rateLimit.limit}`, colors.green);
+        log(
+          `  Request ${i}: ✅ ${response.status} | Remaining: ${rateLimit.remaining}/${rateLimit.limit}`,
+          colors.green,
+        );
       } else if (response.status === 429) {
-        log(`  Request ${i}: ⏱️  ${response.status} | Rate limited (expected after 3rd request)`, colors.yellow);
+        log(
+          `  Request ${i}: ⏱️  ${response.status} | Rate limited (expected after 3rd request)`,
+          colors.yellow,
+        );
       } else {
-        log(`  Request ${i}: ❌ ${response.status} | ${data.error}`, colors.red);
+        log(
+          `  Request ${i}: ❌ ${response.status} | ${data.error}`,
+          colors.red,
+        );
       }
 
       await sleep(100);
@@ -164,15 +179,17 @@ async function testAirdropRateLimit() {
         requestNum: i,
         status: 'ERROR',
         success: false,
-        error: error.message
+        error: error.message,
       });
     }
   }
 
   // Analysis
   log('\nAnalysis:', colors.yellow);
-  const successCount = results.filter(r => r.success || r.status === 200).length;
-  const rateLimitedCount = results.filter(r => r.status === 429).length;
+  const successCount = results.filter(
+    (r) => r.success || r.status === 200,
+  ).length;
+  const rateLimitedCount = results.filter((r) => r.status === 429).length;
 
   log(`  Total requests: ${results.length}`);
   log(`  Successful: ${successCount} (expected: 3 or less if user exists)`);
@@ -182,8 +199,14 @@ async function testAirdropRateLimit() {
     log('\n✅ TEST PASSED: Airdrop rate limiting working!', colors.green);
     return true;
   } else {
-    log('\n❌ TEST FAILED: Airdrop rate limiting not working as expected', colors.red);
-    log('   Note: This could be expected if rate limit window hasn\'t reset', colors.yellow);
+    log(
+      '\n❌ TEST FAILED: Airdrop rate limiting not working as expected',
+      colors.red,
+    );
+    log(
+      "   Note: This could be expected if rate limit window hasn't reset",
+      colors.yellow,
+    );
     return false;
   }
 }
@@ -203,8 +226,8 @@ async function testRateLimitHeaders() {
       body: JSON.stringify({
         message: 'Test headers',
         conversationHistory: [],
-        sessionId: 'header-test'
-      })
+        sessionId: 'header-test',
+      }),
     });
 
     const headers = {
@@ -218,7 +241,11 @@ async function testRateLimitHeaders() {
     log(`  X-RateLimit-Remaining: ${headers['X-RateLimit-Remaining']}`);
     log(`  X-RateLimit-Reset: ${headers['X-RateLimit-Reset']}`);
 
-    if (headers['X-RateLimit-Limit'] && headers['X-RateLimit-Remaining'] && headers['X-RateLimit-Reset']) {
+    if (
+      headers['X-RateLimit-Limit'] &&
+      headers['X-RateLimit-Remaining'] &&
+      headers['X-RateLimit-Reset']
+    ) {
       log('\n✅ TEST PASSED: All rate limit headers present', colors.green);
       return true;
     } else {
@@ -248,8 +275,8 @@ async function testRateLimitReset() {
         body: JSON.stringify({
           message: `Reset test ${i}`,
           conversationHistory: [],
-          sessionId: `reset-test-${i}`
-        })
+          sessionId: `reset-test-${i}`,
+        }),
       });
       await sleep(50);
     }
@@ -261,8 +288,8 @@ async function testRateLimitReset() {
       body: JSON.stringify({
         message: 'Should be rate limited',
         conversationHistory: [],
-        sessionId: 'reset-test-final'
-      })
+        sessionId: 'reset-test-final',
+      }),
     });
 
     if (response.status === 429) {
@@ -282,7 +309,10 @@ async function testRateLimitReset() {
       log('\n✅ TEST PASSED: Reset time information correct', colors.green);
       return true;
     } else {
-      log('\n⚠️  TEST SKIPPED: Could not trigger rate limit (may have been reset)', colors.yellow);
+      log(
+        '\n⚠️  TEST SKIPPED: Could not trigger rate limit (may have been reset)',
+        colors.yellow,
+      );
       return true;
     }
   } catch (error) {
@@ -296,7 +326,10 @@ async function testRateLimitReset() {
  */
 async function runAllTests() {
   logSection('RATE LIMITING TEST SUITE');
-  log('Testing rate limiting implementation for SpiritDAO API endpoints\n', colors.blue);
+  log(
+    'Testing rate limiting implementation for SpiritDAO API endpoints\n',
+    colors.blue,
+  );
 
   log(`API Base URL: ${API_BASE}`, colors.blue);
   log('Ensure dev server is running: npm run dev\n', colors.blue);
@@ -305,7 +338,7 @@ async function runAllTests() {
     sensemaker: false,
     airdrop: false,
     headers: false,
-    reset: false
+    reset: false,
   };
 
   try {
@@ -331,25 +364,31 @@ async function runAllTests() {
       { name: 'Sensemaker AI Rate Limiting', result: results.sensemaker },
       { name: 'Airdrop Rate Limiting', result: results.airdrop },
       { name: 'Rate Limit Headers', result: results.headers },
-      { name: 'Rate Limit Reset Time', result: results.reset }
+      { name: 'Rate Limit Reset Time', result: results.reset },
     ];
 
-    tests.forEach(test => {
+    tests.forEach((test) => {
       const status = test.result ? '✅ PASSED' : '❌ FAILED';
       const color = test.result ? colors.green : colors.red;
       log(`  ${status} - ${test.name}`, color);
     });
 
-    const passedCount = tests.filter(t => t.result).length;
+    const passedCount = tests.filter((t) => t.result).length;
     const totalCount = tests.length;
 
     log(`\nTotal: ${passedCount}/${totalCount} tests passed`, colors.yellow);
 
     if (passedCount === totalCount) {
-      log('\n🎉 ALL TESTS PASSED! Rate limiting is working correctly.', colors.green);
+      log(
+        '\n🎉 ALL TESTS PASSED! Rate limiting is working correctly.',
+        colors.green,
+      );
       process.exit(0);
     } else {
-      log('\n⚠️  SOME TESTS FAILED. Please review the output above.', colors.red);
+      log(
+        '\n⚠️  SOME TESTS FAILED. Please review the output above.',
+        colors.red,
+      );
       log('\nTroubleshooting:', colors.yellow);
       log('  1. Ensure UPSTASH_REDIS env vars are configured');
       log('  2. Restart dev server: npm run dev');
@@ -357,7 +396,6 @@ async function runAllTests() {
       log('  4. Wait 1 minute and try again (rate limits may need to reset)');
       process.exit(1);
     }
-
   } catch (error) {
     log(`\n❌ TEST SUITE FAILED: ${error.message}`, colors.red);
     log(error.stack, colors.red);

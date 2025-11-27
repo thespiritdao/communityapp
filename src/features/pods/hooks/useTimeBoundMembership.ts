@@ -24,18 +24,22 @@ interface UseTimeBoundMembershipOptions {
  * Hook for managing time-bound membership with HATs Protocol
  * Monitors eligibility, expiration, and automatic membership revocation
  */
-export function useTimeBoundMembership(options: UseTimeBoundMembershipOptions = {}) {
+export function useTimeBoundMembership(
+  options: UseTimeBoundMembershipOptions = {},
+) {
   const { address } = useAccount();
   const { data: walletClient } = useWalletClient();
-  
+
   const {
     podId,
     hatId,
     autoRefresh = true,
-    refreshInterval = 60000 // 1 minute
+    refreshInterval = 60000, // 1 minute
   } = options;
 
-  const [membership, setMembership] = useState<TimeBoundMembership | null>(null);
+  const [membership, setMembership] = useState<TimeBoundMembership | null>(
+    null,
+  );
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [lastChecked, setLastChecked] = useState<Date | null>(null);
@@ -55,17 +59,19 @@ export function useTimeBoundMembership(options: UseTimeBoundMembershipOptions = 
 
       console.log('🔍 Checking time-bound membership status:', {
         userAddress: address,
-        hatId: hatId.toString()
+        hatId: hatId.toString(),
       });
 
       // Check HAT eligibility with time bounds
-      const eligibilityResult = await HatEligibilityIntegration.checkHatEligibility(
-        address as `0x${string}`,
-        hatId
-      );
+      const eligibilityResult =
+        await HatEligibilityIntegration.checkHatEligibility(
+          address as `0x${string}`,
+          hatId,
+        );
 
       // Get time-bound summary
-      const timeBoundSummary = await HatEligibilityIntegration.getHatTimeBoundSummary(hatId);
+      const timeBoundSummary =
+        await HatEligibilityIntegration.getHatTimeBoundSummary(hatId);
 
       // Calculate time remaining if there's an expiration
       let timeRemaining: number | undefined;
@@ -75,14 +81,16 @@ export function useTimeBoundMembership(options: UseTimeBoundMembershipOptions = 
         const now = new Date();
         const expiration = timeBoundSummary.validUntil;
         timeRemaining = Math.max(0, expiration.getTime() - now.getTime());
-        
+
         if (timeRemaining === 0) {
           status = 'expired';
         } else if (!eligibilityResult.eligible) {
           status = 'error';
         }
       } else if (!eligibilityResult.eligible) {
-        status = eligibilityResult.reason?.includes('Not valid until') ? 'pending' : 'error';
+        status = eligibilityResult.reason?.includes('Not valid until')
+          ? 'pending'
+          : 'error';
       }
 
       const membershipData: TimeBoundMembership = {
@@ -93,14 +101,13 @@ export function useTimeBoundMembership(options: UseTimeBoundMembershipOptions = 
         validUntil: timeBoundSummary.validUntil,
         timeRemaining,
         status,
-        reason: eligibilityResult.reason
+        reason: eligibilityResult.reason,
       };
 
       setMembership(membershipData);
       setLastChecked(new Date());
 
       console.log('✅ Membership status checked:', membershipData);
-
     } catch (error: any) {
       console.error('❌ Failed to check membership status:', error);
       setError(error.message || 'Failed to check membership status');
@@ -113,41 +120,40 @@ export function useTimeBoundMembership(options: UseTimeBoundMembershipOptions = 
   /**
    * Update time-bound criteria
    */
-  const updateTimeBounds = useCallback(async (
-    newValidFrom: Date | null,
-    newValidUntil: Date | null
-  ) => {
-    if (!hatId || !walletClient) {
-      throw new Error('HAT ID and wallet client required');
-    }
-
-    try {
-      setLoading(true);
-      
-      const result = await HatEligibilityIntegration.updateTimeBoundCriteria(
-        hatId,
-        newValidFrom,
-        newValidUntil,
-        walletClient
-      );
-
-      if (!result.success) {
-        throw new Error(result.error || 'Failed to update time bounds');
+  const updateTimeBounds = useCallback(
+    async (newValidFrom: Date | null, newValidUntil: Date | null) => {
+      if (!hatId || !walletClient) {
+        throw new Error('HAT ID and wallet client required');
       }
 
-      // Refresh membership status after update
-      await checkMembershipStatus();
+      try {
+        setLoading(true);
 
-      return result;
+        const result = await HatEligibilityIntegration.updateTimeBoundCriteria(
+          hatId,
+          newValidFrom,
+          newValidUntil,
+          walletClient,
+        );
 
-    } catch (error: any) {
-      console.error('❌ Failed to update time bounds:', error);
-      setError(error.message || 'Failed to update time bounds');
-      throw error;
-    } finally {
-      setLoading(false);
-    }
-  }, [hatId, walletClient, checkMembershipStatus]);
+        if (!result.success) {
+          throw new Error(result.error || 'Failed to update time bounds');
+        }
+
+        // Refresh membership status after update
+        await checkMembershipStatus();
+
+        return result;
+      } catch (error: any) {
+        console.error('❌ Failed to update time bounds:', error);
+        setError(error.message || 'Failed to update time bounds');
+        throw error;
+      } finally {
+        setLoading(false);
+      }
+    },
+    [hatId, walletClient, checkMembershipStatus],
+  );
 
   /**
    * Force refresh membership status
@@ -163,8 +169,12 @@ export function useTimeBoundMembership(options: UseTimeBoundMembershipOptions = 
     if (!membership?.timeRemaining) return null;
 
     const days = Math.floor(membership.timeRemaining / (1000 * 60 * 60 * 24));
-    const hours = Math.floor((membership.timeRemaining % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-    const minutes = Math.floor((membership.timeRemaining % (1000 * 60 * 60)) / (1000 * 60));
+    const hours = Math.floor(
+      (membership.timeRemaining % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60),
+    );
+    const minutes = Math.floor(
+      (membership.timeRemaining % (1000 * 60 * 60)) / (1000 * 60),
+    );
 
     if (days > 0) {
       return `${days} day${days !== 1 ? 's' : ''}, ${hours} hour${hours !== 1 ? 's' : ''}`;
@@ -200,7 +210,10 @@ export function useTimeBoundMembership(options: UseTimeBoundMembershipOptions = 
       case 'pending':
         return { color: 'blue', message: 'Membership pending activation' };
       case 'error':
-        return { color: 'red', message: membership.reason || 'Membership error' };
+        return {
+          color: 'red',
+          message: membership.reason || 'Membership error',
+        };
       default:
         return { color: 'gray', message: 'Unknown status' };
     }
@@ -232,18 +245,18 @@ export function useTimeBoundMembership(options: UseTimeBoundMembershipOptions = 
     loading,
     error,
     lastChecked,
-    
+
     // Actions
     refresh,
     updateTimeBounds,
-    
+
     // Computed values
     isExpiringSoon: isExpiringSoon(),
     formattedTimeRemaining: getFormattedTimeRemaining(),
     statusInfo: getStatusInfo(),
-    
+
     // Utilities
-    checkMembershipStatus
+    checkMembershipStatus,
   };
 }
 
@@ -252,7 +265,9 @@ export function useTimeBoundMembership(options: UseTimeBoundMembershipOptions = 
  */
 export function useMultipleTimeBoundMemberships(hatIds: bigint[]) {
   const { address } = useAccount();
-  const [memberships, setMemberships] = useState<Map<string, TimeBoundMembership>>(new Map());
+  const [memberships, setMemberships] = useState<
+    Map<string, TimeBoundMembership>
+  >(new Map());
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -269,27 +284,34 @@ export function useMultipleTimeBoundMemberships(hatIds: bigint[]) {
       const results = await Promise.all(
         hatIds.map(async (hatId) => {
           try {
-            const eligibilityResult = await HatEligibilityIntegration.checkHatEligibility(
-              address as `0x${string}`,
-              hatId
-            );
-            
-            const timeBoundSummary = await HatEligibilityIntegration.getHatTimeBoundSummary(hatId);
+            const eligibilityResult =
+              await HatEligibilityIntegration.checkHatEligibility(
+                address as `0x${string}`,
+                hatId,
+              );
+
+            const timeBoundSummary =
+              await HatEligibilityIntegration.getHatTimeBoundSummary(hatId);
 
             let timeRemaining: number | undefined;
             let status: TimeBoundMembership['status'] = 'active';
 
             if (timeBoundSummary.validUntil) {
               const now = new Date();
-              timeRemaining = Math.max(0, timeBoundSummary.validUntil.getTime() - now.getTime());
-              
+              timeRemaining = Math.max(
+                0,
+                timeBoundSummary.validUntil.getTime() - now.getTime(),
+              );
+
               if (timeRemaining === 0) {
                 status = 'expired';
               } else if (!eligibilityResult.eligible) {
                 status = 'error';
               }
             } else if (!eligibilityResult.eligible) {
-              status = eligibilityResult.reason?.includes('Not valid until') ? 'pending' : 'error';
+              status = eligibilityResult.reason?.includes('Not valid until')
+                ? 'pending'
+                : 'error';
             }
 
             return {
@@ -300,14 +322,16 @@ export function useMultipleTimeBoundMemberships(hatIds: bigint[]) {
               validUntil: timeBoundSummary.validUntil,
               timeRemaining,
               status,
-              reason: eligibilityResult.reason
+              reason: eligibilityResult.reason,
             } as TimeBoundMembership;
-
           } catch (error: any) {
-            console.error(`❌ Failed to check membership for HAT ${hatId}:`, error);
+            console.error(
+              `❌ Failed to check membership for HAT ${hatId}:`,
+              error,
+            );
             return null;
           }
-        })
+        }),
       );
 
       const membershipMap = new Map<string, TimeBoundMembership>();
@@ -318,7 +342,6 @@ export function useMultipleTimeBoundMemberships(hatIds: bigint[]) {
       });
 
       setMemberships(membershipMap);
-
     } catch (error: any) {
       console.error('❌ Failed to check multiple memberships:', error);
       setError(error.message || 'Failed to check memberships');
@@ -336,10 +359,12 @@ export function useMultipleTimeBoundMemberships(hatIds: bigint[]) {
     loading,
     error,
     refresh: checkAllMemberships,
-    getExpiringSoon: () => Array.from(memberships.values()).filter(m => 
-      m.timeRemaining && m.timeRemaining <= 24 * 60 * 60 * 1000
-    ),
-    getExpired: () => Array.from(memberships.values()).filter(m => m.status === 'expired')
+    getExpiringSoon: () =>
+      Array.from(memberships.values()).filter(
+        (m) => m.timeRemaining && m.timeRemaining <= 24 * 60 * 60 * 1000,
+      ),
+    getExpired: () =>
+      Array.from(memberships.values()).filter((m) => m.status === 'expired'),
   };
 }
 

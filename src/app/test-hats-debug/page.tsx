@@ -14,7 +14,10 @@ export default function TestHatsDebugPage() {
 
   const addLog = (message: string) => {
     console.log(message);
-    setLogs(prev => [...prev, `${new Date().toLocaleTimeString()}: ${message}`]);
+    setLogs((prev) => [
+      ...prev,
+      `${new Date().toLocaleTimeString()}: ${message}`,
+    ]);
   };
 
   const testHatsModulesConnection = async () => {
@@ -25,12 +28,12 @@ export default function TestHatsDebugPage() {
 
     setIsLoading(true);
     setLogs([]);
-    
+
     try {
       addLog('🎩 Starting HATS Modules SDK test...');
       addLog(`🔗 Chain: ${publicClient.chain?.name || 'Unknown'}`);
       addLog(`📍 Transport: ${publicClient.transport?.type || 'Unknown'}`);
-      
+
       // Test 1: Initialize client
       addLog('1️⃣ Creating HatsModulesClient...');
       const client = new HatsModulesClient({
@@ -46,7 +49,9 @@ export default function TestHatsDebugPage() {
         addLog('✅ client.prepare() completed successfully');
       } catch (prepError) {
         addLog('❌ client.prepare() failed:');
-        addLog(prepError instanceof Error ? prepError.message : String(prepError));
+        addLog(
+          prepError instanceof Error ? prepError.message : String(prepError),
+        );
         addLog('⚠️ This indicates the registry connection failed');
         return;
       }
@@ -56,13 +61,15 @@ export default function TestHatsDebugPage() {
       try {
         const modules = await client.getModules();
         addLog(`✅ Found ${modules.length} modules in registry`);
-        
+
         if (modules.length === 0) {
           addLog('⚠️ No modules found - possible registry connection issue');
         } else {
           addLog('📋 Available modules:');
           modules.slice(0, 5).forEach((module, index) => {
-            addLog(`   ${index + 1}. ${module.name || 'Unnamed'} (${module.id?.slice(0, 10)}...)`);
+            addLog(
+              `   ${index + 1}. ${module.name || 'Unnamed'} (${module.id?.slice(0, 10)}...)`,
+            );
           });
           if (modules.length > 5) {
             addLog(`   ... and ${modules.length - 5} more modules`);
@@ -70,11 +77,14 @@ export default function TestHatsDebugPage() {
         }
       } catch (modulesError) {
         addLog('❌ client.getModules() failed:');
-        addLog(modulesError instanceof Error ? modulesError.message : String(modulesError));
+        addLog(
+          modulesError instanceof Error
+            ? modulesError.message
+            : String(modulesError),
+        );
       }
 
       addLog('🎉 HATS Modules SDK test completed');
-      
     } catch (error) {
       addLog('❌ Test failed with error:');
       addLog(error instanceof Error ? error.message : String(error));
@@ -91,10 +101,11 @@ export default function TestHatsDebugPage() {
         </CardHeader>
         <CardContent className="space-y-4">
           <p className="text-gray-600">
-            This page directly tests the HATS Modules SDK connection to help debug registry issues.
+            This page directly tests the HATS Modules SDK connection to help
+            debug registry issues.
           </p>
-          
-          <Button 
+
+          <Button
             onClick={testHatsModulesConnection}
             disabled={isLoading || !publicClient || !walletClient}
           >
@@ -115,7 +126,9 @@ export default function TestHatsDebugPage() {
           )}
 
           <div className="text-sm text-gray-500 mt-4">
-            <p><strong>What this test does:</strong></p>
+            <p>
+              <strong>What this test does:</strong>
+            </p>
             <ol className="list-decimal list-inside space-y-1 mt-2">
               <li>Creates a HatsModulesClient instance</li>
               <li>Calls client.prepare() to connect to the modules registry</li>

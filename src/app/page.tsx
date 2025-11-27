@@ -9,7 +9,11 @@ import { useAuthContext } from '@/features/identity';
 import { walletVerificationService } from '@/services/walletVerificationService';
 import { usePersistentWalletConnection } from '@/hooks/usePersistentWalletConnection';
 import { InviteCodeModal } from '@/components/InviteCodeModal';
-import { isFirstUser, hasCompletedOnboarding, updateUserWithReferrer } from '@/services/inviteCodeService';
+import {
+  isFirstUser,
+  hasCompletedOnboarding,
+  updateUserWithReferrer,
+} from '@/services/inviteCodeService';
 
 export default function Page() {
   const [isInitialized, setIsInitialized] = useState(false);
@@ -31,7 +35,7 @@ function PageContent() {
   const { connect, connectors } = useConnect();
   const { disconnect } = useDisconnect();
   const router = useRouter();
-  
+
   // Use centralized auth system
   const { isAuthenticated, signIn, loading: authLoading } = useAuthContext();
 
@@ -82,7 +86,9 @@ function PageContent() {
   }, [address, isSmartWallet]);
 
   // Invite code validation handler
-  const handleInviteValidation = async (inviteCode: string): Promise<boolean> => {
+  const handleInviteValidation = async (
+    inviteCode: string,
+  ): Promise<boolean> => {
     if (!address) return false;
 
     try {
@@ -148,7 +154,7 @@ function PageContent() {
   // Check if the connected wallet is a Smart Wallet using centralized service
   useEffect(() => {
     let cancelled = false;
-  
+
     const checkSmartWallet = async () => {
       if (!address || !connector) {
         setIsSmartWallet(false);
@@ -157,29 +163,38 @@ function PageContent() {
         verificationRef.current = { isComplete: true, isSmartWallet: false };
         return;
       }
-  
+
       setIsVerifyingWallet(true);
       setIsVerificationComplete(false);
       verificationRef.current = { isComplete: false, isSmartWallet: false };
-  
+
       try {
-        console.log('🔍 Starting centralized wallet verification for:', address);
-        
+        console.log(
+          '🔍 Starting centralized wallet verification for:',
+          address,
+        );
+
         // Use the centralized wallet verification service
-        const result = await walletVerificationService.verifyWallet(address, connector);
-        
+        const result = await walletVerificationService.verifyWallet(
+          address,
+          connector,
+        );
+
         if (!cancelled) {
           console.log('✅ Wallet verification complete:', result);
-          
+
           // Update state with verification result
-          verificationRef.current = { isComplete: true, isSmartWallet: result.isSmartWallet };
+          verificationRef.current = {
+            isComplete: true,
+            isSmartWallet: result.isSmartWallet,
+          };
           setIsSmartWallet(result.isSmartWallet);
           setIsVerifyingWallet(false);
           setIsVerificationComplete(true);
         }
       } catch (error) {
         console.error('❌ Wallet verification failed:', error);
-        
+
         if (!cancelled) {
           verificationRef.current = { isComplete: true, isSmartWallet: false };
           setIsSmartWallet(false);
@@ -188,14 +203,13 @@ function PageContent() {
         }
       }
     };
-  
+
     checkSmartWallet();
-  
+
     return () => {
       cancelled = true;
     };
   }, [address, connector]);
-  
 
   // Disconnect effect
   useEffect(() => {
@@ -203,18 +217,19 @@ function PageContent() {
       console.log('Verification complete, checking wallet status:', {
         isSmartWallet: verificationRef.current.isSmartWallet,
         address,
-        isVerificationComplete: verificationRef.current.isComplete
+        isVerificationComplete: verificationRef.current.isComplete,
       });
-      
+
       if (verificationRef.current.isSmartWallet) {
         console.log('Smart Wallet verified, proceeding with connection');
       } else {
-        console.log('Non-Smart Wallet detected after complete verification. Disconnecting...');
+        console.log(
+          'Non-Smart Wallet detected after complete verification. Disconnecting...',
+        );
         disconnect();
       }
     }
   }, [address, isVerificationComplete, disconnect]);
-  
 
   // Use centralized auth system when Smart Wallet is connected AND onboarding is complete
   useEffect(() => {
@@ -229,7 +244,9 @@ function PageContent() {
         !authLoading &&
         (onboardingComplete || isFirstUserAccount)
       ) {
-        console.log('Smart Wallet is connected and onboarding complete. Using centralized auth system...');
+        console.log(
+          'Smart Wallet is connected and onboarding complete. Using centralized auth system...',
+        );
         setIsProcessing(true);
         try {
           await signIn(address);
@@ -243,33 +260,61 @@ function PageContent() {
     };
 
     initiateAuthentication();
-  }, [address, isSmartWallet, isAuthenticated, isConnecting, isDisconnected, authLoading, signIn, onboardingComplete, isFirstUserAccount]);
+  }, [
+    address,
+    isSmartWallet,
+    isAuthenticated,
+    isConnecting,
+    isDisconnected,
+    authLoading,
+    signIn,
+    onboardingComplete,
+    isFirstUserAccount,
+  ]);
 
   // Once the Smart Wallet is connected and authenticated, redirect the user.
   useEffect(() => {
-    if (address && isSmartWallet && isAuthenticated && !hasRedirected && !authLoading) {
-      console.log(`User authenticated with Smart Wallet: ${address}. Redirecting...`);
+    if (
+      address &&
+      isSmartWallet &&
+      isAuthenticated &&
+      !hasRedirected &&
+      !authLoading
+    ) {
+      console.log(
+        `User authenticated with Smart Wallet: ${address}. Redirecting...`,
+      );
       setHasRedirected(true);
       router.push('/home');
     }
-  }, [address, isSmartWallet, isAuthenticated, hasRedirected, authLoading, router]);
+  }, [
+    address,
+    isSmartWallet,
+    isAuthenticated,
+    hasRedirected,
+    authLoading,
+    router,
+  ]);
 
   // Function to connect Smart Wallet only
   const connectSmartWallet = () => {
     // Find the Coinbase Wallet connector
     const coinbaseConnector = connectors.find(
-      (connector) => connector.name === 'Coinbase Wallet' || 
-                    connector.id === 'coinbaseWallet' ||
-                    connector.id === 'coinbaseWalletSDK'
+      (connector) =>
+        connector.name === 'Coinbase Wallet' ||
+        connector.id === 'coinbaseWallet' ||
+        connector.id === 'coinbaseWalletSDK',
     );
-    
+
     if (coinbaseConnector) {
       console.log('Connecting with Coinbase Smart Wallet:', coinbaseConnector);
       setIsProcessing(true);
       connect({ connector: coinbaseConnector });
     } else {
-      console.error('Coinbase Wallet connector not found. Available connectors:', 
-        connectors.map(c => ({ name: c.name, id: c.id })));
+      console.error(
+        'Coinbase Wallet connector not found. Available connectors:',
+        connectors.map((c) => ({ name: c.name, id: c.id })),
+      );
     }
   };
 
@@ -287,9 +332,13 @@ function PageContent() {
   if (!isClient) return null;
 
   // Show loading state during any processing
-  const isLoading = isConnecting || isVerifyingWallet || isProcessing || authLoading ||
-                   (address && isSmartWallet && !isAuthenticated) || 
-                   (address && isSmartWallet && isAuthenticated && !hasRedirected);
+  const isLoading =
+    isConnecting ||
+    isVerifyingWallet ||
+    isProcessing ||
+    authLoading ||
+    (address && isSmartWallet && !isAuthenticated) ||
+    (address && isSmartWallet && isAuthenticated && !hasRedirected);
 
   // If everything is ready and user should be redirected, show redirect message
   if (address && isSmartWallet && isAuthenticated && !hasRedirected) {

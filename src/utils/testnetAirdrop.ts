@@ -8,7 +8,13 @@
  * Can be used on mainnet or testnet depending on configuration
  */
 
-import { createWalletClient, createPublicClient, http, parseEther, formatEther } from 'viem';
+import {
+  createWalletClient,
+  createPublicClient,
+  http,
+  parseEther,
+  formatEther,
+} from 'viem';
 import { base, baseSepolia } from 'viem/chains';
 import { privateKeyToAccount } from 'viem/accounts';
 import { getConfig, isTestnet, getAirdropConfig } from '@/config/testnetConfig';
@@ -21,8 +27,10 @@ const CHAIN = process.env.NEXT_PUBLIC_CHAIN_ID === '8453' ? base : baseSepolia;
 // Configuration
 // ============================================================
 
-const FAUCET_PRIVATE_KEY = process.env.TESTNET_FAUCET_PRIVATE_KEY || process.env.PRIVATE_KEY;
-const SYSTEM_TOKEN_ADDRESS = process.env.NEXT_PUBLIC_SYSTEM_TOKEN as `0x${string}`;
+const FAUCET_PRIVATE_KEY =
+  process.env.TESTNET_FAUCET_PRIVATE_KEY || process.env.PRIVATE_KEY;
+const SYSTEM_TOKEN_ADDRESS = process.env
+  .NEXT_PUBLIC_SYSTEM_TOKEN as `0x${string}`;
 const SELF_TOKEN_ADDRESS = process.env.NEXT_PUBLIC_SELF_TOKEN as `0x${string}`;
 
 // ERC20 ABI for transfer function
@@ -69,7 +77,8 @@ async function hasReceivedAirdrop(walletAddress: string): Promise<boolean> {
       .eq('wallet_address', walletAddress.toLowerCase())
       .single();
 
-    if (error && error.code !== 'PGRST116') { // PGRST116 = no rows returned
+    if (error && error.code !== 'PGRST116') {
+      // PGRST116 = no rows returned
       console.error('Error checking airdrop status:', error);
       return false;
     }
@@ -88,18 +97,16 @@ async function recordAirdrop(
   walletAddress: string,
   systemAmount: bigint,
   selfAmount: bigint,
-  txHash?: string
+  txHash?: string,
 ): Promise<void> {
   try {
-    const { error } = await supabase
-      .from('testnet_airdrops')
-      .insert({
-        wallet_address: walletAddress.toLowerCase(),
-        system_amount: systemAmount.toString(),
-        self_amount: selfAmount.toString(),
-        transaction_hash: txHash,
-        airdropped_at: new Date().toISOString(),
-      });
+    const { error } = await supabase.from('testnet_airdrops').insert({
+      wallet_address: walletAddress.toLowerCase(),
+      system_amount: systemAmount.toString(),
+      self_amount: selfAmount.toString(),
+      transaction_hash: txHash,
+      airdropped_at: new Date().toISOString(),
+    });
 
     if (error) {
       console.error('Error recording airdrop:', error);
@@ -120,7 +127,7 @@ async function transferTokens(
   toAddress: string,
   tokenAddress: `0x${string}`,
   amount: bigint,
-  tokenSymbol: string
+  tokenSymbol: string,
 ): Promise<string> {
   if (!FAUCET_PRIVATE_KEY) {
     throw new Error('Faucet private key not configured');
@@ -139,7 +146,9 @@ async function transferTokens(
     transport: http(process.env.NEXT_PUBLIC_RPC_URL),
   });
 
-  console.log(`📤 Transferring ${formatEther(amount)} ${tokenSymbol} to ${toAddress}...`);
+  console.log(
+    `📤 Transferring ${formatEther(amount)} ${tokenSymbol} to ${toAddress}...`,
+  );
 
   // Execute transfer
   const hash = await walletClient.writeContract({
@@ -200,8 +209,12 @@ async function checkFaucetBalance(): Promise<boolean> {
 
     if (!hasEnoughSystem || !hasEnoughSelf) {
       console.warn('⚠️ Faucet balance low:');
-      console.warn(`   SYSTEM: ${formatEther(systemBalance)} (need ${formatEther(config.amounts.system)})`);
-      console.warn(`   SELF: ${formatEther(selfBalance)} (need ${formatEther(config.amounts.self)})`);
+      console.warn(
+        `   SYSTEM: ${formatEther(systemBalance)} (need ${formatEther(config.amounts.system)})`,
+      );
+      console.warn(
+        `   SELF: ${formatEther(selfBalance)} (need ${formatEther(config.amounts.self)})`,
+      );
       return false;
     }
 
@@ -231,7 +244,9 @@ export interface AirdropResult {
  * @param walletAddress - User's wallet address
  * @returns Airdrop result with success status and details
  */
-export async function airdropToUser(walletAddress: string): Promise<AirdropResult> {
+export async function airdropToUser(
+  walletAddress: string,
+): Promise<AirdropResult> {
   // SECURITY: Only run on testnet
   if (!isTestnet()) {
     console.warn('❌ Airdrop attempted on mainnet - BLOCKED');
@@ -278,7 +293,7 @@ export async function airdropToUser(walletAddress: string): Promise<AirdropResul
       walletAddress,
       SYSTEM_TOKEN_ADDRESS,
       airdropConfig.amounts.system,
-      'SYSTEM'
+      'SYSTEM',
     );
 
     // Transfer SELF tokens
@@ -286,7 +301,7 @@ export async function airdropToUser(walletAddress: string): Promise<AirdropResul
       walletAddress,
       SELF_TOKEN_ADDRESS,
       airdropConfig.amounts.self,
-      'SELF'
+      'SELF',
     );
 
     // Record airdrop in database
@@ -294,7 +309,7 @@ export async function airdropToUser(walletAddress: string): Promise<AirdropResul
       walletAddress,
       airdropConfig.amounts.system,
       airdropConfig.amounts.self,
-      systemTxHash
+      systemTxHash,
     );
 
     console.log(`✅ Airdrop complete for ${walletAddress}`);

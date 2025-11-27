@@ -1,5 +1,5 @@
 'use client';
-import { useCallback, } from 'react';
+import { useCallback } from 'react';
 import { useAccount } from 'wagmi';
 import {
   Transaction,
@@ -48,24 +48,29 @@ const validateTransactionData = (data: any) => {
   const validation = {
     isValid: true,
     issues: [] as string[],
-    data: {} as any
+    data: {} as any,
   };
   try {
-    validation.data = JSON.parse(JSON.stringify(data, (key, value) => {
-      if (typeof value === 'bigint') {
-        return value.toString();
-      }
-      return value;
-    }));
+    validation.data = JSON.parse(
+      JSON.stringify(data, (key, value) => {
+        if (typeof value === 'bigint') {
+          return value.toString();
+        }
+        return value;
+      }),
+    );
     if (!validation.data.address) validation.issues.push('Missing address');
     if (!validation.data.chainId) validation.issues.push('Missing chainId');
     if (!validation.data.calls) validation.issues.push('Missing calls');
     if (Array.isArray(validation.data.calls)) {
       validation.data.calls.forEach((call: any, index: number) => {
-        if (!call.address) validation.issues.push(`Call ${index}: Missing address`);
+        if (!call.address)
+          validation.issues.push(`Call ${index}: Missing address`);
         if (!call.abi) validation.issues.push(`Call ${index}: Missing ABI`);
-        if (!call.functionName) validation.issues.push(`Call ${index}: Missing functionName`);
-        if (!Array.isArray(call.args)) validation.issues.push(`Call ${index}: Missing args array`);
+        if (!call.functionName)
+          validation.issues.push(`Call ${index}: Missing functionName`);
+        if (!Array.isArray(call.args))
+          validation.issues.push(`Call ${index}: Missing args array`);
       });
     } else {
       validation.issues.push('Calls is not an array');
@@ -73,7 +78,9 @@ const validateTransactionData = (data: any) => {
     validation.isValid = validation.issues.length === 0;
   } catch (e) {
     validation.isValid = false;
-    validation.issues.push(`Serialization error: ${e instanceof Error ? e.message : String(e)}`);
+    validation.issues.push(
+      `Serialization error: ${e instanceof Error ? e.message : String(e)}`,
+    );
   }
   return validation;
 };
@@ -112,10 +119,10 @@ function InnerProposalSubmissionPage() {
       const targets: Address[] = [];
       const values: bigint[] = [];
       const calldatas: `0x${string}`[] = [];
-      
+
       // Format description with markdown
       const description = `# ${formData.title}\n\n${formData.body}`;
-      
+
       return {
         address: process.env.NEXT_PUBLIC_DAO_GOVERNOR as Address,
         abi: GOVERNOR_ABI,
@@ -135,62 +142,78 @@ function InnerProposalSubmissionPage() {
     }
   }, [formData, isFormValid, canPropose]);
 
-  const handleSuccess = useCallback(async (txResult) => {
-    console.group('✅ Proposal Transaction Success');
-    console.log('📋 Transaction Response:', txResult);
-    console.log('📋 Transaction Hash:', txResult?.transactionReceipts?.[0]?.transactionHash);
-    console.log('📋 Block Number:', txResult?.transactionReceipts?.[0]?.blockNumber);
-    console.log('📋 Status:', txResult?.transactionReceipts?.[0]?.status);
-    console.log('📋 Gas Used:', txResult?.transactionReceipts?.[0]?.gasUsed);
-    console.log('📋 To Address:', txResult?.transactionReceipts?.[0]?.to);
-    console.log('📋 From Address:', txResult?.transactionReceipts?.[0]?.from);
-    console.log('📋 Logs Count:', txResult?.transactionReceipts?.[0]?.logs?.length);
-    console.groupEnd();
-    
-    setIsSubmitting(false);
-    resetForm();
-    // Extract on-chain proposal ID from txResult if available
-    const proposalId = txResult?.transactionReceipts?.[0]?.logs?.find(
-      (log) => log.topics && log.topics.length > 0 && log.topics[0].startsWith('0x')
-    )?.topics?.[1];
-    // Save metadata to Supabase
-    if (proposalId) {
-      await supabase.from('proposal_metadata').insert([
-        {
-          onchain_proposal_id: proposalId,
-          title: formData.title,
-          description: formData.body,
-          proposer_address: address,
-          forum_thread_id: formData.forumThreadId || null,
-          mentions: formData.mentions || [],
-        }
-      ]);
-    }
-    console.log('Proposal submitted successfully!');
-  }, [resetForm, setIsSubmitting, formData, address]);
+  const handleSuccess = useCallback(
+    async (txResult) => {
+      console.group('✅ Proposal Transaction Success');
+      console.log('📋 Transaction Response:', txResult);
+      console.log(
+        '📋 Transaction Hash:',
+        txResult?.transactionReceipts?.[0]?.transactionHash,
+      );
+      console.log(
+        '📋 Block Number:',
+        txResult?.transactionReceipts?.[0]?.blockNumber,
+      );
+      console.log('📋 Status:', txResult?.transactionReceipts?.[0]?.status);
+      console.log('📋 Gas Used:', txResult?.transactionReceipts?.[0]?.gasUsed);
+      console.log('📋 To Address:', txResult?.transactionReceipts?.[0]?.to);
+      console.log('📋 From Address:', txResult?.transactionReceipts?.[0]?.from);
+      console.log(
+        '📋 Logs Count:',
+        txResult?.transactionReceipts?.[0]?.logs?.length,
+      );
+      console.groupEnd();
 
-  const handleError = useCallback((error: Error) => {
-    console.group('❌ Proposal Transaction Error');
-    console.error('📋 Error Details:', {
-      name: error.name,
-      message: error.message,
-      stack: error.stack
-    });
-    console.error('📋 Error Type:', typeof error);
-    console.error('📋 Error Constructor:', error.constructor.name);
-    console.groupEnd();
-    
-    setIsSubmitting(false);
-    console.error('Transaction failed:', error);
-    // You can add error notification here
-  }, [setIsSubmitting]);
+      setIsSubmitting(false);
+      resetForm();
+      // Extract on-chain proposal ID from txResult if available
+      const proposalId = txResult?.transactionReceipts?.[0]?.logs?.find(
+        (log) =>
+          log.topics && log.topics.length > 0 && log.topics[0].startsWith('0x'),
+      )?.topics?.[1];
+      // Save metadata to Supabase
+      if (proposalId) {
+        await supabase.from('proposal_metadata').insert([
+          {
+            onchain_proposal_id: proposalId,
+            title: formData.title,
+            description: formData.body,
+            proposer_address: address,
+            forum_thread_id: formData.forumThreadId || null,
+            mentions: formData.mentions || [],
+          },
+        ]);
+      }
+      console.log('Proposal submitted successfully!');
+    },
+    [resetForm, setIsSubmitting, formData, address],
+  );
+
+  const handleError = useCallback(
+    (error: Error) => {
+      console.group('❌ Proposal Transaction Error');
+      console.error('📋 Error Details:', {
+        name: error.name,
+        message: error.message,
+        stack: error.stack,
+      });
+      console.error('📋 Error Type:', typeof error);
+      console.error('📋 Error Constructor:', error.constructor.name);
+      console.groupEnd();
+
+      setIsSubmitting(false);
+      console.error('Transaction failed:', error);
+      // You can add error notification here
+    },
+    [setIsSubmitting],
+  );
 
   const transactionData = prepareTransaction();
   const validation = validateTransactionData({
     address: address?.toLowerCase() as `0x${string}`,
     chainId: base.id,
     calls: transactionData ? [transactionData] : [],
-    isSponsored: true
+    isSponsored: true,
   });
   if (validation.isValid) {
     console.log('Validated transaction data:', validation.data);
@@ -207,8 +230,8 @@ function InnerProposalSubmissionPage() {
             Submit DAO Proposal
           </h1>
           <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-            Create a new proposal for the SpiritDAO community to vote on. 
-            Your proposal will be recorded on-chain and open for voting.
+            Create a new proposal for the SpiritDAO community to vote on. Your
+            proposal will be recorded on-chain and open for voting.
           </p>
         </div>
 
@@ -218,7 +241,9 @@ function InnerProposalSubmissionPage() {
             <div className="flex items-center justify-between text-white">
               <div className="flex items-center space-x-4">
                 <div className="flex items-center space-x-2">
-                  <div className={`w-3 h-3 rounded-full ${isConnected ? 'bg-green-400' : 'bg-red-400'}`} />
+                  <div
+                    className={`w-3 h-3 rounded-full ${isConnected ? 'bg-green-400' : 'bg-red-400'}`}
+                  />
                   <span className="text-sm font-medium">
                     {isConnected ? 'Wallet Connected' : 'Wallet Disconnected'}
                   </span>
@@ -226,11 +251,13 @@ function InnerProposalSubmissionPage() {
                 {isConnected && (
                   <div className="text-sm">
                     <span className="opacity-75">Advocate NFTs: </span>
-                    <span className="font-semibold">{advocateBalance.toString()}</span>
+                    <span className="font-semibold">
+                      {advocateBalance.toString()}
+                    </span>
                   </div>
                 )}
               </div>
-              
+
               <Wallet>
                 <ConnectWallet>
                   <WalletDropdown>
@@ -258,7 +285,9 @@ function InnerProposalSubmissionPage() {
               <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
                 <div className="flex items-center">
                   <div className="w-5 h-5 text-yellow-600 mr-3">⚠️</div>
-                  <p className="text-yellow-800 font-medium">{validationMessage}</p>
+                  <p className="text-yellow-800 font-medium">
+                    {validationMessage}
+                  </p>
                 </div>
               </div>
             )}
@@ -266,7 +295,9 @@ function InnerProposalSubmissionPage() {
             {/* Form Errors */}
             {formErrors.length > 0 && (
               <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
-                <h4 className="text-red-800 font-medium mb-2">Please fix the following errors:</h4>
+                <h4 className="text-red-800 font-medium mb-2">
+                  Please fix the following errors:
+                </h4>
                 <ul className="text-red-700 text-sm space-y-1">
                   {formErrors.map((error, index) => (
                     <li key={index}>• {error}</li>
@@ -279,7 +310,10 @@ function InnerProposalSubmissionPage() {
             <div className="space-y-6">
               {/* Title */}
               <div>
-                <label htmlFor="title" className="block text-sm font-semibold text-gray-700 mb-2">
+                <label
+                  htmlFor="title"
+                  className="block text-sm font-semibold text-gray-700 mb-2"
+                >
                   Proposal Title *
                 </label>
                 <input
@@ -287,14 +321,15 @@ function InnerProposalSubmissionPage() {
                   type="text"
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
                   value={formData.title}
-                  onChange={e => updateFormField('title', e.target.value)}
+                  onChange={(e) => updateFormField('title', e.target.value)}
                   placeholder="Enter a clear, descriptive title for your proposal"
                   disabled={isSubmitting}
                   maxLength={200}
                 />
                 <div className="flex justify-between mt-1">
                   <p className="text-xs text-gray-500">
-                    Make it clear and specific - this will be the main identifier for your proposal
+                    Make it clear and specific - this will be the main
+                    identifier for your proposal
                   </p>
                   <span className="text-xs text-gray-400">
                     {formData.title.length}/200
@@ -304,7 +339,10 @@ function InnerProposalSubmissionPage() {
 
               {/* Description */}
               <div>
-                <label htmlFor="body" className="block text-sm font-semibold text-gray-700 mb-2">
+                <label
+                  htmlFor="body"
+                  className="block text-sm font-semibold text-gray-700 mb-2"
+                >
                   Proposal Description *
                 </label>
                 <UserTagging
@@ -322,7 +360,8 @@ function InnerProposalSubmissionPage() {
                 />
                 <div className="flex justify-between mt-1">
                   <p className="text-xs text-gray-500">
-                    Supports Markdown formatting and @mentions. Be thorough - voters need enough detail to make informed decisions.
+                    Supports Markdown formatting and @mentions. Be thorough -
+                    voters need enough detail to make informed decisions.
                   </p>
                   <span className="text-xs text-gray-400">
                     {formData.body.length}/10,000
@@ -336,7 +375,9 @@ function InnerProposalSubmissionPage() {
                   Forum Discussion (Optional)
                 </label>
                 <ProposalThreadSelector
-                  onThreadSelect={threadId => updateFormField('forumThreadId', threadId)}
+                  onThreadSelect={(threadId) =>
+                    updateFormField('forumThreadId', threadId)
+                  }
                 />
                 {formData.forumThreadId && (
                   <p className="mt-1 text-sm text-gray-600">
@@ -363,7 +404,11 @@ function InnerProposalSubmissionPage() {
                   <TransactionButton
                     className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold py-4 px-8 rounded-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl"
                     disabled={!isFormValid || isSubmitting}
-                    text={isSubmitting ? "Submitting Proposal..." : "Submit Proposal to DAO"}
+                    text={
+                      isSubmitting
+                        ? 'Submitting Proposal...'
+                        : 'Submit Proposal to DAO'
+                    }
                   />
                   <TransactionSponsor />
                   <div className="mt-4">
@@ -379,34 +424,56 @@ function InnerProposalSubmissionPage() {
                     disabled={true}
                     className="w-full bg-gray-300 text-gray-500 font-semibold py-4 px-8 rounded-lg cursor-not-allowed"
                   >
-                    {isConnected ? 'Requirements Not Met' : 'Connect Wallet to Submit'}
+                    {isConnected
+                      ? 'Requirements Not Met'
+                      : 'Connect Wallet to Submit'}
                   </button>
                 </div>
               )}
-
             </div>
 
             {/* Requirements */}
-            <div className="mt-8 p-6 rounded-lg" style={{ backgroundColor: '#E8F1EE', borderWidth: '1px', borderStyle: 'solid', borderColor: '#B8D9CA' }}>
-              <h4 className="font-semibold mb-3" style={{ color: '#1F453A' }}>📋 Proposal Requirements</h4>
-              <div className="grid md:grid-cols-2 gap-4 text-sm" style={{ color: '#2F5D50' }}>
+            <div
+              className="mt-8 p-6 rounded-lg"
+              style={{
+                backgroundColor: '#E8F1EE',
+                borderWidth: '1px',
+                borderStyle: 'solid',
+                borderColor: '#B8D9CA',
+              }}
+            >
+              <h4 className="font-semibold mb-3" style={{ color: '#1F453A' }}>
+                📋 Proposal Requirements
+              </h4>
+              <div
+                className="grid md:grid-cols-2 gap-4 text-sm"
+                style={{ color: '#2F5D50' }}
+              >
                 <div className="space-y-2">
                   <div className="flex items-center">
-                    <span className={`w-2 h-2 rounded-full mr-2 ${isConnected ? 'bg-green-500' : 'bg-red-500'}`} />
+                    <span
+                      className={`w-2 h-2 rounded-full mr-2 ${isConnected ? 'bg-green-500' : 'bg-red-500'}`}
+                    />
                     Wallet connected
                   </div>
                   <div className="flex items-center">
-                    <span className={`w-2 h-2 rounded-full mr-2 ${advocateBalance > 0 ? 'bg-green-500' : 'bg-red-500'}`} />
+                    <span
+                      className={`w-2 h-2 rounded-full mr-2 ${advocateBalance > 0 ? 'bg-green-500' : 'bg-red-500'}`}
+                    />
                     Hold at least 1 Advocate NFT
                   </div>
                 </div>
                 <div className="space-y-2">
                   <div className="flex items-center">
-                    <span className={`w-2 h-2 rounded-full mr-2 ${formData.title.length >= 10 ? 'bg-green-500' : 'bg-yellow-500'}`} />
+                    <span
+                      className={`w-2 h-2 rounded-full mr-2 ${formData.title.length >= 10 ? 'bg-green-500' : 'bg-yellow-500'}`}
+                    />
                     Clear, descriptive title
                   </div>
                   <div className="flex items-center">
-                    <span className={`w-2 h-2 rounded-full mr-2 ${formData.body.length >= 50 ? 'bg-green-500' : 'bg-yellow-500'}`} />
+                    <span
+                      className={`w-2 h-2 rounded-full mr-2 ${formData.body.length >= 50 ? 'bg-green-500' : 'bg-yellow-500'}`}
+                    />
                     Detailed description (50+ chars)
                   </div>
                 </div>

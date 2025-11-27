@@ -7,22 +7,22 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/components/ui/use-toast';
-import { 
-  Trash2, 
-  Shield, 
-  AlertTriangle, 
-  Users, 
-  CheckCircle, 
+import {
+  Trash2,
+  Shield,
+  AlertTriangle,
+  Users,
+  CheckCircle,
   XCircle,
-  Crown
+  Crown,
 } from 'lucide-react';
-import { 
-  Transaction, 
-  TransactionButton, 
-  TransactionSponsor, 
-  TransactionStatus, 
-  TransactionStatusLabel, 
-  TransactionStatusAction 
+import {
+  Transaction,
+  TransactionButton,
+  TransactionSponsor,
+  TransactionStatus,
+  TransactionStatusLabel,
+  TransactionStatusAction,
 } from '@coinbase/onchainkit/transaction';
 import { base } from 'viem/chains';
 import { PodDeletionService } from '../services/PodDeletionService';
@@ -37,7 +37,7 @@ interface PodDeletionManagerProps {
 export const PodDeletionManager: React.FC<PodDeletionManagerProps> = ({
   pod,
   onPodDeleted,
-  className = ''
+  className = '',
 }) => {
   const { address } = useAccount();
   const publicClient = usePublicClient();
@@ -52,30 +52,32 @@ export const PodDeletionManager: React.FC<PodDeletionManagerProps> = ({
     requiredLeaders?: number;
   } | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
-  const [deletionStep, setDeletionStep] = useState<'checking' | 'preparing' | 'hats' | 'database' | 'complete'>('checking');
+  const [deletionStep, setDeletionStep] = useState<
+    'checking' | 'preparing' | 'hats' | 'database' | 'complete'
+  >('checking');
 
   // Check deletion permissions
   const checkDeletionPermissions = async () => {
     if (!address) return;
-    
+
     setIsChecking(true);
     try {
       const result = await PodDeletionService.canDeletePod(pod.id, address);
       setCanDelete(result);
-      
+
       if (!result.canDelete) {
         toast({
-          title: "Cannot Delete Pod",
+          title: 'Cannot Delete Pod',
           description: result.reason,
-          variant: "destructive"
+          variant: 'destructive',
         });
       }
     } catch (error) {
       console.error('Failed to check deletion permissions:', error);
       toast({
-        title: "Error",
-        description: "Failed to check deletion permissions",
-        variant: "destructive"
+        title: 'Error',
+        description: 'Failed to check deletion permissions',
+        variant: 'destructive',
       });
     } finally {
       setIsChecking(false);
@@ -85,12 +87,12 @@ export const PodDeletionManager: React.FC<PodDeletionManagerProps> = ({
   // Prepare Hat deactivation transactions for OnchainKit
   const prepareHatDeactivationTransactions = async () => {
     if (!address || !publicClient) return null;
-    
+
     setDeletionStep('preparing');
     return await PodDeletionService.prepareHatDeactivationTransactions(
       pod,
       address,
-      publicClient
+      publicClient,
     );
   };
 
@@ -98,17 +100,20 @@ export const PodDeletionManager: React.FC<PodDeletionManagerProps> = ({
   const handleHatDeactivationSuccess = async (txHash: string) => {
     console.log('✅ Hat deactivation successful:', txHash);
     setDeletionStep('database');
-    
+
     // Now delete from database
     if (!address) return;
-    
+
     try {
-      const result = await PodDeletionService.deletePodDatabase(pod.id, address);
-      
+      const result = await PodDeletionService.deletePodDatabase(
+        pod.id,
+        address,
+      );
+
       if (result.success) {
         setDeletionStep('complete');
         toast({
-          title: "Pod Deleted Successfully",
+          title: 'Pod Deleted Successfully',
           description: `${pod.name} has been completely removed with all Hats deactivated.`,
         });
         onPodDeleted?.();
@@ -118,9 +123,10 @@ export const PodDeletionManager: React.FC<PodDeletionManagerProps> = ({
     } catch (error) {
       console.error('Database deletion failed:', error);
       toast({
-        title: "Partial Deletion",
-        description: "Hats were deactivated but database cleanup failed. Contact admin.",
-        variant: "destructive"
+        title: 'Partial Deletion',
+        description:
+          'Hats were deactivated but database cleanup failed. Contact admin.',
+        variant: 'destructive',
       });
     }
   };
@@ -129,9 +135,9 @@ export const PodDeletionManager: React.FC<PodDeletionManagerProps> = ({
   const handleHatDeactivationError = (error: string) => {
     console.error('❌ Hat deactivation failed:', error);
     toast({
-      title: "Hat Deactivation Failed",
+      title: 'Hat Deactivation Failed',
       description: `Failed to deactivate Hats: ${error}. Pod data preserved.`,
-      variant: "destructive"
+      variant: 'destructive',
     });
     setIsDeleting(false);
     setDeletionStep('checking');
@@ -140,17 +146,20 @@ export const PodDeletionManager: React.FC<PodDeletionManagerProps> = ({
   // Legacy deletion fallback (for pods without valid Hat IDs)
   const handleLegacyDeletion = async () => {
     if (!address) return;
-    
+
     setIsDeleting(true);
     setDeletionStep('database');
-    
+
     try {
-      const result = await PodDeletionService.deletePodDatabase(pod.id, address);
-      
+      const result = await PodDeletionService.deletePodDatabase(
+        pod.id,
+        address,
+      );
+
       if (result.success) {
         setDeletionStep('complete');
         toast({
-          title: "Pod Deleted",
+          title: 'Pod Deleted',
           description: `${pod.name} has been removed from database.`,
         });
         onPodDeleted?.();
@@ -160,9 +169,10 @@ export const PodDeletionManager: React.FC<PodDeletionManagerProps> = ({
     } catch (error) {
       console.error('Legacy deletion failed:', error);
       toast({
-        title: "Deletion Failed",
-        description: error instanceof Error ? error.message : 'Failed to delete pod',
-        variant: "destructive"
+        title: 'Deletion Failed',
+        description:
+          error instanceof Error ? error.message : 'Failed to delete pod',
+        variant: 'destructive',
       });
     } finally {
       setIsDeleting(false);
@@ -206,7 +216,7 @@ export const PodDeletionManager: React.FC<PodDeletionManagerProps> = ({
   // Check if pod has valid Hat IDs that need on-chain deactivation
   const hasValidHats = Boolean(
     (pod.management_hat_id && pod.management_hat_id !== 'extracted_from_tx') ||
-    (pod.membership_hat_id && pod.membership_hat_id !== 'extracted_from_tx')
+      (pod.membership_hat_id && pod.membership_hat_id !== 'extracted_from_tx'),
   );
 
   if (!address) {
@@ -244,7 +254,7 @@ export const PodDeletionManager: React.FC<PodDeletionManagerProps> = ({
               {pod.status}
             </Badge>
           </div>
-          
+
           {/* Hat Status */}
           <div className="grid grid-cols-2 gap-2 text-xs">
             <div className="flex items-center gap-1">
@@ -301,7 +311,14 @@ export const PodDeletionManager: React.FC<PodDeletionManagerProps> = ({
             </div>
 
             {canDelete.reason && !canDelete.canDelete && (
-              <div className="p-2 border rounded text-sm" style={{ backgroundColor: '#F5E6E6', borderColor: '#D9B3B3', color: '#5C1F1F' }}>
+              <div
+                className="p-2 border rounded text-sm"
+                style={{
+                  backgroundColor: '#F5E6E6',
+                  borderColor: '#D9B3B3',
+                  color: '#5C1F1F',
+                }}
+              >
                 <AlertTriangle className="h-4 w-4 inline mr-1" />
                 {canDelete.reason}
               </div>
@@ -310,7 +327,8 @@ export const PodDeletionManager: React.FC<PodDeletionManagerProps> = ({
             {canDelete.canDelete && (
               <div className="space-y-2">
                 <div className="text-xs text-muted-foreground">
-                  Leaders: {canDelete.leaderCount}/{canDelete.requiredLeaders} required
+                  Leaders: {canDelete.leaderCount}/{canDelete.requiredLeaders}{' '}
+                  required
                 </div>
 
                 {/* Hat-based Deletion */}
@@ -329,15 +347,21 @@ export const PodDeletionManager: React.FC<PodDeletionManagerProps> = ({
                       className="w-full"
                       disabled={isDeleting}
                       style={{ backgroundColor: '#8B3A3A' }}
-                      onMouseEnter={(e: React.MouseEvent<HTMLButtonElement>) => {
+                      onMouseEnter={(
+                        e: React.MouseEvent<HTMLButtonElement>,
+                      ) => {
                         e.currentTarget.style.backgroundColor = '#5C1F1F';
                       }}
-                      onMouseLeave={(e: React.MouseEvent<HTMLButtonElement>) => {
+                      onMouseLeave={(
+                        e: React.MouseEvent<HTMLButtonElement>,
+                      ) => {
                         e.currentTarget.style.backgroundColor = '#8B3A3A';
                       }}
                     >
                       <Trash2 className="h-4 w-4 mr-2" />
-                      {isDeleting ? getStatusText() : 'Delete Pod & Deactivate Hats'}
+                      {isDeleting
+                        ? getStatusText()
+                        : 'Delete Pod & Deactivate Hats'}
                     </TransactionButton>
                     <TransactionSponsor />
                     <TransactionStatus>
@@ -354,15 +378,23 @@ export const PodDeletionManager: React.FC<PodDeletionManagerProps> = ({
                     className="w-full"
                   >
                     <Trash2 className="h-4 w-4 mr-2" />
-                    {isDeleting ? getStatusText() : 'Delete Pod (Database Only)'}
+                    {isDeleting
+                      ? getStatusText()
+                      : 'Delete Pod (Database Only)'}
                   </Button>
                 )}
 
                 <div className="text-xs text-muted-foreground">
                   {hasValidHats ? (
-                    <>⚠️ This will deactivate all pod Hats on-chain and remove all data.</>
+                    <>
+                      ⚠️ This will deactivate all pod Hats on-chain and remove
+                      all data.
+                    </>
                   ) : (
-                    <>⚠️ This will remove pod data from database. No valid Hats found.</>
+                    <>
+                      ⚠️ This will remove pod data from database. No valid Hats
+                      found.
+                    </>
                   )}
                 </div>
               </div>
@@ -372,10 +404,18 @@ export const PodDeletionManager: React.FC<PodDeletionManagerProps> = ({
 
         {/* Deletion Complete */}
         {deletionStep === 'complete' && (
-          <div className="p-3 border rounded" style={{ backgroundColor: '#D1E6DC', borderColor: '#B8D9CA' }}>
-            <div className="flex items-center gap-2" style={{ color: '#1F453A' }}>
+          <div
+            className="p-3 border rounded"
+            style={{ backgroundColor: '#D1E6DC', borderColor: '#B8D9CA' }}
+          >
+            <div
+              className="flex items-center gap-2"
+              style={{ color: '#1F453A' }}
+            >
               <CheckCircle className="h-4 w-4" style={{ color: '#3F7A5A' }} />
-              <span className="text-sm font-medium">Pod deletion completed successfully</span>
+              <span className="text-sm font-medium">
+                Pod deletion completed successfully
+              </span>
             </div>
           </div>
         )}

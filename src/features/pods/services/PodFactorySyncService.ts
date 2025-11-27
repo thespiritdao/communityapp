@@ -11,85 +11,83 @@ import { base } from 'viem/chains';
 // import PodAuthorizationFactoryABI from '@/abis/PodAuthorizationFactory.json';
 
 // Deployed factory contract address
-const POD_AUTHORIZATION_FACTORY_ADDRESS = process.env.NEXT_PUBLIC_POD_AUTH_FACTORY as `0x${string}` || '0xeCdDB060cD38439E0aC8874f159E961eB856407D' as `0x${string}`;
+const POD_AUTHORIZATION_FACTORY_ADDRESS =
+  (process.env.NEXT_PUBLIC_POD_AUTH_FACTORY as `0x${string}`) ||
+  ('0xeCdDB060cD38439E0aC8874f159E961eB856407D' as `0x${string}`);
 
 // Temporary ABI definition until we compile and generate the JSON
 const PodAuthorizationFactoryABI = [
   {
-    "inputs": [
-      {"name": "podId", "type": "string"},
-      {"name": "creator", "type": "address"},
-      {"name": "leaders", "type": "address[]"},
-      {"name": "treasuryAddress", "type": "address"}
+    inputs: [
+      { name: 'podId', type: 'string' },
+      { name: 'creator', type: 'address' },
+      { name: 'leaders', type: 'address[]' },
+      { name: 'treasuryAddress', type: 'address' },
     ],
-    "name": "createPodProxy",
-    "outputs": [{"name": "proxy", "type": "address"}],
-    "stateMutability": "nonpayable",
-    "type": "function"
+    name: 'createPodProxy',
+    outputs: [{ name: 'proxy', type: 'address' }],
+    stateMutability: 'nonpayable',
+    type: 'function',
   },
   {
-    "inputs": [
-      {"name": "podId", "type": "string"},
-      {"name": "newLeaders", "type": "address[]"},
-      {"name": "newTreasuryAddress", "type": "address"},
-      {"name": "isActive", "type": "bool"}
+    inputs: [
+      { name: 'podId', type: 'string' },
+      { name: 'newLeaders', type: 'address[]' },
+      { name: 'newTreasuryAddress', type: 'address' },
+      { name: 'isActive', type: 'bool' },
     ],
-    "name": "updatePodProxy",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
+    name: 'updatePodProxy',
+    outputs: [],
+    stateMutability: 'nonpayable',
+    type: 'function',
   },
   {
-    "inputs": [
-      {"name": "user", "type": "address"},
-      {"name": "podId", "type": "string"}
+    inputs: [
+      { name: 'user', type: 'address' },
+      { name: 'podId', type: 'string' },
     ],
-    "name": "canManageBounties",
-    "outputs": [{"name": "", "type": "bool"}],
-    "stateMutability": "view",
-    "type": "function"
+    name: 'canManageBounties',
+    outputs: [{ name: '', type: 'bool' }],
+    stateMutability: 'view',
+    type: 'function',
   },
   {
-    "inputs": [
-      {"name": "user", "type": "address"},
-      {"name": "podId", "type": "string"}
+    inputs: [
+      { name: 'user', type: 'address' },
+      { name: 'podId', type: 'string' },
     ],
-    "name": "canUsePodTreasury",
-    "outputs": [{"name": "", "type": "bool"}],
-    "stateMutability": "view",
-    "type": "function"
+    name: 'canUsePodTreasury',
+    outputs: [{ name: '', type: 'bool' }],
+    stateMutability: 'view',
+    type: 'function',
   },
   {
-    "inputs": [
-      {"name": "podId", "type": "string"}
-    ],
-    "name": "isValidPod",
-    "outputs": [{"name": "", "type": "bool"}],
-    "stateMutability": "view",
-    "type": "function"
+    inputs: [{ name: 'podId', type: 'string' }],
+    name: 'isValidPod',
+    outputs: [{ name: '', type: 'bool' }],
+    stateMutability: 'view',
+    type: 'function',
   },
   {
-    "inputs": [],
-    "name": "getAllPods",
-    "outputs": [{"name": "", "type": "string[]"}],
-    "stateMutability": "view",
-    "type": "function"
+    inputs: [],
+    name: 'getAllPods',
+    outputs: [{ name: '', type: 'string[]' }],
+    stateMutability: 'view',
+    type: 'function',
   },
   {
-    "inputs": [
-      {"name": "podId", "type": "string"}
-    ],
-    "name": "getPodProxy",
-    "outputs": [{"name": "", "type": "address"}],
-    "stateMutability": "view",
-    "type": "function"
-  }
+    inputs: [{ name: 'podId', type: 'string' }],
+    name: 'getPodProxy',
+    outputs: [{ name: '', type: 'address' }],
+    stateMutability: 'view',
+    type: 'function',
+  },
 ] as const;
 
 export class PodFactorySyncService {
   private static publicClient = createPublicClient({
     chain: base,
-    transport: http()
+    transport: http(),
   });
 
   /**
@@ -101,7 +99,7 @@ export class PodFactorySyncService {
         address: POD_AUTHORIZATION_FACTORY_ADDRESS,
         abi: PodAuthorizationFactoryABI,
         functionName: 'isValidPod',
-        args: [podId]
+        args: [podId],
       });
       return result as boolean;
     } catch (error) {
@@ -118,7 +116,7 @@ export class PodFactorySyncService {
       const result = await this.publicClient.readContract({
         address: POD_AUTHORIZATION_FACTORY_ADDRESS,
         abi: PodAuthorizationFactoryABI,
-        functionName: 'getAllPods'
+        functionName: 'getAllPods',
       });
       return result as string[];
     } catch (error) {
@@ -132,15 +130,15 @@ export class PodFactorySyncService {
    */
   static generateCreatePodCall(pod: any) {
     console.log('🔄 Generating createPodProxy transaction call for:', pod.name);
-    
+
     // Extract leaders from pod data
     const leaders: `0x${string}`[] = [];
-    
+
     // Add creator as leader
     if (pod.created_by_address) {
       leaders.push(pod.created_by_address as `0x${string}`);
     }
-    
+
     // Add pod leads (excluding duplicates)
     if (pod.pod_leads && Array.isArray(pod.pod_leads)) {
       pod.pod_leads.forEach((leader: string) => {
@@ -151,7 +149,9 @@ export class PodFactorySyncService {
     }
 
     // Use treasury address or zero address as fallback
-    const treasuryAddress = pod.treasury_contract_address || '0x0000000000000000000000000000000000000000';
+    const treasuryAddress =
+      pod.treasury_contract_address ||
+      '0x0000000000000000000000000000000000000000';
 
     return {
       to: POD_AUTHORIZATION_FACTORY_ADDRESS,
@@ -161,8 +161,8 @@ export class PodFactorySyncService {
         pod.id, // podId
         pod.created_by_address as `0x${string}`, // creator
         leaders, // leaders array
-        treasuryAddress as `0x${string}` // treasuryAddress
-      ]
+        treasuryAddress as `0x${string}`, // treasuryAddress
+      ],
     };
   }
 
@@ -171,15 +171,15 @@ export class PodFactorySyncService {
    */
   static generateUpdatePodCall(pod: any) {
     console.log('🔄 Generating updatePodProxy transaction call for:', pod.name);
-    
+
     // Extract leaders from pod data
     const leaders: `0x${string}`[] = [];
-    
+
     // Add creator as leader
     if (pod.created_by_address) {
       leaders.push(pod.created_by_address as `0x${string}`);
     }
-    
+
     // Add pod leads (excluding duplicates)
     if (pod.pod_leads && Array.isArray(pod.pod_leads)) {
       pod.pod_leads.forEach((leader: string) => {
@@ -190,7 +190,9 @@ export class PodFactorySyncService {
     }
 
     // Use treasury address or zero address as fallback
-    const treasuryAddress = pod.treasury_contract_address || '0x0000000000000000000000000000000000000000';
+    const treasuryAddress =
+      pod.treasury_contract_address ||
+      '0x0000000000000000000000000000000000000000';
     const isActive = pod.status === 'active';
 
     return {
@@ -201,31 +203,36 @@ export class PodFactorySyncService {
         pod.id, // podId
         leaders, // newLeaders
         treasuryAddress as `0x${string}`, // newTreasuryAddress
-        isActive // isActive
-      ]
+        isActive, // isActive
+      ],
     };
   }
 
   /**
    * Get pods that need to be synced to factory
    */
-  static async getPodsNeedingSync(): Promise<{ toRegister: any[], toUpdate: any[] }> {
+  static async getPodsNeedingSync(): Promise<{
+    toRegister: any[];
+    toUpdate: any[];
+  }> {
     try {
       console.log('🔄 Checking which pods need factory sync...');
-      
+
       // Get all active pods from database
       const pods = await PodCoreService.getAllPods({ filter: 'active' });
       const registeredPodIds = await this.getRegisteredPods();
-      
+
       console.log(`📊 Found ${pods.length} active pods in database`);
-      console.log(`📊 Found ${registeredPodIds.length} registered pods in factory`);
-      
+      console.log(
+        `📊 Found ${registeredPodIds.length} registered pods in factory`,
+      );
+
       const toRegister: any[] = [];
       const toUpdate: any[] = [];
-      
+
       for (const pod of pods) {
         const isRegistered = registeredPodIds.includes(pod.id);
-        
+
         if (!isRegistered) {
           toRegister.push(pod);
           console.log(`📝 Pod "${pod.name}" needs to be registered`);
@@ -234,7 +241,7 @@ export class PodFactorySyncService {
           console.log(`🔄 Pod "${pod.name}" needs to be updated`);
         }
       }
-      
+
       return { toRegister, toUpdate };
     } catch (error) {
       console.error('Error checking pods needing sync:', error);
@@ -245,13 +252,16 @@ export class PodFactorySyncService {
   /**
    * Check if user can manage bounties for a pod (from factory)
    */
-  static async canManageBounties(userAddress: string, podId: string): Promise<boolean> {
+  static async canManageBounties(
+    userAddress: string,
+    podId: string,
+  ): Promise<boolean> {
     try {
       const result = await this.publicClient.readContract({
         address: POD_AUTHORIZATION_FACTORY_ADDRESS,
         abi: PodAuthorizationFactoryABI,
         functionName: 'canManageBounties',
-        args: [userAddress as `0x${string}`, podId]
+        args: [userAddress as `0x${string}`, podId],
       });
       return result as boolean;
     } catch (error) {
@@ -263,13 +273,16 @@ export class PodFactorySyncService {
   /**
    * Check if user can use pod treasury (from factory)
    */
-  static async canUsePodTreasury(userAddress: string, podId: string): Promise<boolean> {
+  static async canUsePodTreasury(
+    userAddress: string,
+    podId: string,
+  ): Promise<boolean> {
     try {
       const result = await this.publicClient.readContract({
         address: POD_AUTHORIZATION_FACTORY_ADDRESS,
         abi: PodAuthorizationFactoryABI,
         functionName: 'canUsePodTreasury',
-        args: [userAddress as `0x${string}`, podId]
+        args: [userAddress as `0x${string}`, podId],
       });
       return result as boolean;
     } catch (error) {
@@ -287,7 +300,7 @@ export class PodFactorySyncService {
         address: POD_AUTHORIZATION_FACTORY_ADDRESS,
         abi: PodAuthorizationFactoryABI,
         functionName: 'getPodProxy',
-        args: [podId]
+        args: [podId],
       });
       return result as string;
     } catch (error) {

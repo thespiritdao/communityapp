@@ -14,14 +14,14 @@ export async function POST(request: NextRequest) {
     if (!userAddress || !criteria) {
       return NextResponse.json(
         { error: 'User address and criteria are required' },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
     if (!Array.isArray(criteria)) {
       return NextResponse.json(
         { error: 'Criteria must be an array' },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -30,7 +30,7 @@ export async function POST(request: NextRequest) {
       if (!criterion.type) {
         return NextResponse.json(
           { error: 'Each criterion must have a type' },
-          { status: 400 }
+          { status: 400 },
         );
       }
     }
@@ -39,7 +39,7 @@ export async function POST(request: NextRequest) {
       userAddress,
       podId: podId || null,
       roleId: roleId || null,
-      criteria: criteria as EligibilityCriteria[]
+      criteria: criteria as EligibilityCriteria[],
     });
 
     return NextResponse.json({
@@ -47,14 +47,18 @@ export async function POST(request: NextRequest) {
       podId: podId || null,
       roleId: roleId || null,
       evaluation,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     });
-
   } catch (error) {
     console.error('Failed to verify eligibility:', error);
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Failed to verify eligibility' },
-      { status: 500 }
+      {
+        error:
+          error instanceof Error
+            ? error.message
+            : 'Failed to verify eligibility',
+      },
+      { status: 500 },
     );
   }
 }
@@ -71,21 +75,21 @@ export async function PUT(request: NextRequest) {
     if (!Array.isArray(userAddresses) || !criteria) {
       return NextResponse.json(
         { error: 'User addresses array and criteria are required' },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
     if (userAddresses.length === 0) {
       return NextResponse.json(
         { error: 'At least one user address is required' },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
     if (userAddresses.length > 50) {
       return NextResponse.json(
         { error: 'Maximum 50 user addresses allowed per batch' },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -95,25 +99,26 @@ export async function PUT(request: NextRequest) {
           userAddress,
           podId: podId || null,
           roleId: roleId || null,
-          criteria: criteria as EligibilityCriteria[]
+          criteria: criteria as EligibilityCriteria[],
         });
 
         return {
           userAddress,
-          evaluation
+          evaluation,
         };
-      })
+      }),
     );
 
     const successful = results
-      .filter(result => result.status === 'fulfilled')
-      .map(result => (result as PromiseFulfilledResult<any>).value);
+      .filter((result) => result.status === 'fulfilled')
+      .map((result) => (result as PromiseFulfilledResult<any>).value);
 
     const failed = results
-      .filter(result => result.status === 'rejected')
+      .filter((result) => result.status === 'rejected')
       .map((result, index) => ({
         userAddress: userAddresses[index],
-        error: (result as PromiseRejectedResult).reason?.message || 'Unknown error'
+        error:
+          (result as PromiseRejectedResult).reason?.message || 'Unknown error',
       }));
 
     return NextResponse.json({
@@ -124,14 +129,18 @@ export async function PUT(request: NextRequest) {
       failed: failed.length,
       results: successful,
       errors: failed,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     });
-
   } catch (error) {
     console.error('Failed to batch verify eligibility:', error);
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Failed to batch verify eligibility' },
-      { status: 500 }
+      {
+        error:
+          error instanceof Error
+            ? error.message
+            : 'Failed to batch verify eligibility',
+      },
+      { status: 500 },
     );
   }
 }

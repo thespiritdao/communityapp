@@ -1,6 +1,6 @@
 /**
  * Access Control Utilities
- * 
+ *
  * Centralized utilities for token gating and HAT-based access control
  * using the new link table system.
  */
@@ -18,24 +18,32 @@ export const normalizeAddress = (addr?: string | null): string => {
 /**
  * Normalize an array of addresses
  */
-export const normalizeAddresses = (addresses: (string | null | undefined)[]): string[] => {
+export const normalizeAddresses = (
+  addresses: (string | null | undefined)[],
+): string[] => {
   return addresses
     .filter(Boolean)
-    .map(addr => normalizeAddress(addr))
-    .filter(addr => addr.length > 0);
+    .map((addr) => normalizeAddress(addr))
+    .filter((addr) => addr.length > 0);
 };
 
 /**
  * Check if two addresses are equal (case-insensitive)
  */
-export const addressEquals = (addr1?: string | null, addr2?: string | null): boolean => {
+export const addressEquals = (
+  addr1?: string | null,
+  addr2?: string | null,
+): boolean => {
   return normalizeAddress(addr1) === normalizeAddress(addr2);
 };
 
 /**
  * Check if an address is in an array of addresses (case-insensitive)
  */
-export const addressInArray = (address: string | null | undefined, addresses: (string | null | undefined)[]): boolean => {
+export const addressInArray = (
+  address: string | null | undefined,
+  addresses: (string | null | undefined)[],
+): boolean => {
   if (!address) return false;
   const normalizedAddress = normalizeAddress(address);
   return normalizeAddresses(addresses).includes(normalizedAddress);
@@ -45,8 +53,8 @@ export const addressInArray = (address: string | null | undefined, addresses: (s
  * User identity for access control checks
  */
 export interface UserIdentity {
-  userTokens: string[];  // Normalized token addresses the user holds
-  userHats: string[];    // Normalized hat IDs the user holds
+  userTokens: string[]; // Normalized token addresses the user holds
+  userHats: string[]; // Normalized hat IDs the user holds
 }
 
 /**
@@ -55,18 +63,22 @@ export interface UserIdentity {
 export const getUserIdentity = async (
   userAddress: string,
   tokenBalances?: any,
-  userHats?: string[]
+  userHats?: string[],
 ): Promise<UserIdentity> => {
   const userTokens: string[] = [];
   const discoveredHats: string[] = [];
-  
+
   // Add tokens based on balance checks
   if (tokenBalances) {
     if (tokenBalances.hasProofOfCuriosity) {
-      userTokens.push(normalizeAddress(process.env.NEXT_PUBLIC_PROOF_OF_CURIOSITY));
+      userTokens.push(
+        normalizeAddress(process.env.NEXT_PUBLIC_PROOF_OF_CURIOSITY),
+      );
     }
     if (tokenBalances.hasExecutivePod) {
-      userTokens.push(normalizeAddress(process.env.NEXT_PUBLIC_EXECUTIVE_POD_LEADER));
+      userTokens.push(
+        normalizeAddress(process.env.NEXT_PUBLIC_EXECUTIVE_POD_LEADER),
+      );
     }
     if (tokenBalances.hasDevPod) {
       userTokens.push(normalizeAddress(process.env.NEXT_PUBLIC_DEV_POD_HAT_ID));
@@ -83,7 +95,7 @@ export const getUserIdentity = async (
         .from('pod_permission_lookup')
         .select('hat_id, role_name, pod_id')
         .eq('is_active', true);
-        
+
       if (!error && permissions) {
         // We'll need to check each hat individually using the HATs contract
         // For now, add the hat IDs that we know the user should have based on permissions
@@ -104,7 +116,7 @@ export const getUserIdentity = async (
 
   return {
     userTokens: [...new Set(userTokens.filter(Boolean))], // Remove duplicates and empty strings
-    userHats: allHats
+    userHats: allHats,
   };
 };
 
@@ -113,10 +125,13 @@ export const getUserIdentity = async (
  */
 export const getAccessibleForums = async (identity: UserIdentity) => {
   try {
-    const { data, error } = await supabase.rpc('forums_accessible_by_identity', {
-      user_tokens: identity.userTokens,
-      user_hats: identity.userHats
-    });
+    const { data, error } = await supabase.rpc(
+      'forums_accessible_by_identity',
+      {
+        user_tokens: identity.userTokens,
+        user_hats: identity.userHats,
+      },
+    );
 
     if (error) {
       console.error('Error calling forums_accessible_by_identity:', error);
@@ -135,7 +150,7 @@ export const getAccessibleForums = async (identity: UserIdentity) => {
  */
 export const hasForumAccess = async (
   categoryId: string,
-  identity: UserIdentity
+  identity: UserIdentity,
 ): Promise<boolean> => {
   try {
     const accessibleForums = await getAccessibleForums(identity);
@@ -154,7 +169,7 @@ export const getAccessibleChatGroups = async (identity: UserIdentity) => {
   try {
     // For now, fall back to checking forum_category_required_tokens pattern
     // This should eventually have its own chat_group_required_tokens table
-    
+
     const { data: chatGroups, error } = await supabase
       .from('chat_groups')
       .select('*')
@@ -167,12 +182,12 @@ export const getAccessibleChatGroups = async (identity: UserIdentity) => {
     // Filter based on required tokens
     const accessibleGroups = (chatGroups || []).filter((group: any) => {
       const requiredToken = normalizeAddress(group.required_token);
-      
+
       // No token requirement - allow access
       if (!requiredToken) {
         return true;
       }
-      
+
       // Check if user has the required token or HAT
       return (
         identity.userTokens.includes(requiredToken) ||
@@ -205,12 +220,12 @@ export const getAccessibleProducts = async (identity: UserIdentity) => {
     // Filter based on required tokens
     const accessibleProducts = (products || []).filter((product: any) => {
       const requiredToken = normalizeAddress(product.required_token);
-      
+
       // No token requirement - allow access
       if (!requiredToken) {
         return true;
       }
-      
+
       // Check if user has the required token or HAT
       return (
         identity.userTokens.includes(requiredToken) ||
@@ -230,21 +245,21 @@ export const getAccessibleProducts = async (identity: UserIdentity) => {
  */
 export const canParticipateInGovernance = (
   identity: UserIdentity,
-  requiredTokens?: string[]
+  requiredTokens?: string[],
 ): boolean => {
   // Default governance tokens if none specified
   const defaultGovTokens = [
     normalizeAddress(process.env.NEXT_PUBLIC_PROOF_OF_CURIOSITY),
     normalizeAddress(process.env.NEXT_PUBLIC_EXECUTIVE_POD_LEADER),
-    normalizeAddress(process.env.NEXT_PUBLIC_DEV_POD_HAT_ID)
+    normalizeAddress(process.env.NEXT_PUBLIC_DEV_POD_HAT_ID),
   ].filter(Boolean);
 
-  const tokensToCheck = requiredTokens 
+  const tokensToCheck = requiredTokens
     ? normalizeAddresses(requiredTokens)
     : defaultGovTokens;
 
   return (
-    tokensToCheck.some(token => identity.userTokens.includes(token)) ||
+    tokensToCheck.some((token) => identity.userTokens.includes(token)) ||
     identity.userHats.length > 0 // Any HAT grants governance participation
   );
 };
@@ -257,11 +272,11 @@ export const canAccessBounties = (identity: UserIdentity): boolean => {
   const bountyTokens = [
     normalizeAddress(process.env.NEXT_PUBLIC_EXECUTIVE_POD_LEADER),
     normalizeAddress(process.env.NEXT_PUBLIC_DEV_POD_HAT_ID),
-    normalizeAddress(process.env.NEXT_PUBLIC_MARKET_ADMIN)
+    normalizeAddress(process.env.NEXT_PUBLIC_MARKET_ADMIN),
   ].filter(Boolean);
 
   return (
-    bountyTokens.some(token => identity.userTokens.includes(token)) ||
+    bountyTokens.some((token) => identity.userTokens.includes(token)) ||
     identity.userHats.length > 0 // Any HAT grants bounty access
   );
 };
@@ -270,14 +285,20 @@ export const canAccessBounties = (identity: UserIdentity): boolean => {
  * Legacy compatibility function - maps old token balance checks to new system
  * @deprecated Use getUserIdentity instead
  */
-export const mapTokenBalancesToIdentity = (tokenBalances: any): Partial<UserIdentity> => {
+export const mapTokenBalancesToIdentity = (
+  tokenBalances: any,
+): Partial<UserIdentity> => {
   const userTokens: string[] = [];
-  
+
   if (tokenBalances?.hasProofOfCuriosity) {
-    userTokens.push(normalizeAddress(process.env.NEXT_PUBLIC_PROOF_OF_CURIOSITY));
+    userTokens.push(
+      normalizeAddress(process.env.NEXT_PUBLIC_PROOF_OF_CURIOSITY),
+    );
   }
   if (tokenBalances?.hasExecutivePod) {
-    userTokens.push(normalizeAddress(process.env.NEXT_PUBLIC_EXECUTIVE_POD_LEADER));
+    userTokens.push(
+      normalizeAddress(process.env.NEXT_PUBLIC_EXECUTIVE_POD_LEADER),
+    );
   }
   if (tokenBalances?.hasDevPod) {
     userTokens.push(normalizeAddress(process.env.NEXT_PUBLIC_DEV_POD_HAT_ID));
@@ -287,7 +308,7 @@ export const mapTokenBalancesToIdentity = (tokenBalances: any): Partial<UserIden
   }
 
   return {
-    userTokens: [...new Set(userTokens.filter(Boolean))]
+    userTokens: [...new Set(userTokens.filter(Boolean))],
   };
 };
 
@@ -296,10 +317,13 @@ export const mapTokenBalancesToIdentity = (tokenBalances: any): Partial<UserIden
  */
 export const getAccessibleEvents = async (identity: UserIdentity) => {
   try {
-    const { data, error } = await supabase.rpc('events_accessible_by_identity', {
-      user_tokens: identity.userTokens,
-      user_hats: identity.userHats
-    });
+    const { data, error } = await supabase.rpc(
+      'events_accessible_by_identity',
+      {
+        user_tokens: identity.userTokens,
+        user_hats: identity.userHats,
+      },
+    );
 
     if (error) {
       console.error('Error calling events_accessible_by_identity:', error);
@@ -318,7 +342,7 @@ export const getAccessibleEvents = async (identity: UserIdentity) => {
  */
 export const hasEventAccess = async (
   eventId: string,
-  identity: UserIdentity
+  identity: UserIdentity,
 ): Promise<boolean> => {
   try {
     const accessibleEvents = await getAccessibleEvents(identity);
@@ -345,11 +369,11 @@ export const canCreateEvents = (identity: UserIdentity): boolean => {
   const creationTokens = [
     normalizeAddress(process.env.NEXT_PUBLIC_EXECUTIVE_POD_LEADER),
     normalizeAddress(process.env.NEXT_PUBLIC_DEV_POD_HAT_ID),
-    normalizeAddress(process.env.NEXT_PUBLIC_MARKET_ADMIN)
+    normalizeAddress(process.env.NEXT_PUBLIC_MARKET_ADMIN),
   ].filter(Boolean);
 
   return (
-    creationTokens.some(token => identity.userTokens.includes(token)) ||
+    creationTokens.some((token) => identity.userTokens.includes(token)) ||
     identity.userHats.length > 0 // Any HAT grants event creation access
   );
 };
@@ -357,11 +381,14 @@ export const canCreateEvents = (identity: UserIdentity): boolean => {
 /**
  * Debug helper to log user identity
  */
-export const logUserIdentity = (identity: UserIdentity, label = 'User Identity') => {
+export const logUserIdentity = (
+  identity: UserIdentity,
+  label = 'User Identity',
+) => {
   console.log(`🔐 ${label}:`, {
     tokens: identity.userTokens.length,
     hats: identity.userHats.length,
     tokenList: identity.userTokens,
-    hatList: identity.userHats
+    hatList: identity.userHats,
   });
 };

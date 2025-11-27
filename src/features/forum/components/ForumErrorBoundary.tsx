@@ -32,11 +32,14 @@ export class ForumErrorBoundary extends React.Component<Props, State> {
       if (Fallback) {
         return <Fallback error={this.state.error} />;
       }
-      
+
       return (
         <div className="error-boundary">
           <h2>Forum Loading Error</h2>
-          <p>There was an error loading the forum component. Please refresh the page.</p>
+          <p>
+            There was an error loading the forum component. Please refresh the
+            page.
+          </p>
           <button onClick={() => window.location.reload()}>Refresh Page</button>
         </div>
       );

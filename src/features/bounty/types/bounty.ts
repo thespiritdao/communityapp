@@ -11,7 +11,11 @@ export interface BountyTokenGating {
     token_type: 'token' | 'pod_role' | 'system';
     minimum_balance?: string;
   }>;
-  restriction_level?: 'public' | 'token_holders' | 'pod_members' | 'invite_only';
+  restriction_level?:
+    | 'public'
+    | 'token_holders'
+    | 'pod_members'
+    | 'invite_only';
 }
 
 export interface FrontendBounty {
@@ -66,9 +70,9 @@ export interface FrontendBid {
   first_name?: string;
   last_name?: string;
   // On-chain bid placement tracking
-  onchainBidIndex?: number;  // Index in contract bids[bountyId][] array
-  placementTxHash?: string;  // Transaction hash from placeBid() call
-  bidIpfsHash?: string;      // IPFS hash of bid metadata
+  onchainBidIndex?: number; // Index in contract bids[bountyId][] array
+  placementTxHash?: string; // Transaction hash from placeBid() call
+  bidIpfsHash?: string; // IPFS hash of bid metadata
 }
 
 export interface FrontendBidReview {
@@ -87,7 +91,14 @@ export interface FrontendNotification {
   recipientAddress: string;
   bountyId?: string;
   bidId?: string;
-  notificationType: 'bid_submitted' | 'bid_approved' | 'bid_rejected' | 'review_requested' | 'deliverable_due' | 'milestone_completed' | 'bounty_completed';
+  notificationType:
+    | 'bid_submitted'
+    | 'bid_approved'
+    | 'bid_rejected'
+    | 'review_requested'
+    | 'deliverable_due'
+    | 'milestone_completed'
+    | 'bounty_completed';
   title: string;
   message: string;
   isRead: boolean;
@@ -130,4 +141,4 @@ export interface FrontendWorkSubmission {
   previousSubmissionId?: string;
   createdAt: Date;
   updatedAt: Date;
-} 
+}

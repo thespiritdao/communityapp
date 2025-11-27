@@ -10,9 +10,9 @@ export function prepareDirectDistribution(
   recipients: string[],
   amounts: string[],
   decimals: number,
-  reason: string
+  reason: string,
 ) {
-  const amountsBigInt = amounts.map(amount => parseUnits(amount, decimals));
+  const amountsBigInt = amounts.map((amount) => parseUnits(amount, decimals));
 
   return {
     address: treasuryAddress as `0x${string}`,
@@ -24,19 +24,19 @@ export function prepareDirectDistribution(
           { name: 'token', type: 'address' },
           { name: 'recipients', type: 'address[]' },
           { name: 'amounts', type: 'uint256[]' },
-          { name: 'reason', type: 'string' }
+          { name: 'reason', type: 'string' },
         ],
         outputs: [],
-        stateMutability: 'nonpayable'
-      }
+        stateMutability: 'nonpayable',
+      },
     ],
     functionName: 'distributeTokens',
     args: [
       tokenAddress as `0x${string}`,
       recipients as `0x${string}`[],
       amountsBigInt,
-      reason
-    ]
+      reason,
+    ],
   };
 }
 
@@ -46,7 +46,7 @@ export function prepareDirectEqualDistribution(
   recipients: string[],
   totalAmount: string,
   decimals: number,
-  reason: string
+  reason: string,
 ) {
   const totalAmountBigInt = parseUnits(totalAmount, decimals);
 
@@ -60,18 +60,18 @@ export function prepareDirectEqualDistribution(
           { name: 'token', type: 'address' },
           { name: 'recipients', type: 'address[]' },
           { name: 'totalAmount', type: 'uint256' },
-          { name: 'reason', type: 'string' }
+          { name: 'reason', type: 'string' },
         ],
         outputs: [],
-        stateMutability: 'nonpayable'
-      }
+        stateMutability: 'nonpayable',
+      },
     ],
     functionName: 'distributeTokensEvenly',
     args: [
       tokenAddress as `0x${string}`,
       recipients as `0x${string}`[],
       totalAmountBigInt,
-      reason
-    ]
+      reason,
+    ],
   };
 }

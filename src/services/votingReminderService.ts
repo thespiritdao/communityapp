@@ -14,7 +14,13 @@ export interface ActiveProposal {
   title: string;
   description: string;
   proposer: string;
-  status: 'active' | 'pending' | 'succeeded' | 'defeated' | 'executed' | 'canceled';
+  status:
+    | 'active'
+    | 'pending'
+    | 'succeeded'
+    | 'defeated'
+    | 'executed'
+    | 'canceled';
   startBlock: string;
   endBlock: string;
   created_at: string;
@@ -34,8 +40,8 @@ class VotingReminderService {
   private readonly REMINDER_INTERVALS = {
     '48h': 48 * 60 * 60 * 1000, // 48 hours in milliseconds
     '24h': 24 * 60 * 60 * 1000, // 24 hours
-    '6h': 6 * 60 * 60 * 1000,   // 6 hours
-    '1h': 1 * 60 * 60 * 1000    // 1 hour
+    '6h': 6 * 60 * 60 * 1000, // 6 hours
+    '1h': 1 * 60 * 60 * 1000, // 1 hour
   };
 
   /**
@@ -80,10 +86,10 @@ class VotingReminderService {
 
       // Transform to TokenHolder format
       // In a real implementation, you'd check actual token balances
-      return (data || []).map(user => ({
+      return (data || []).map((user) => ({
         address: user.wallet_address,
         balance: '1', // Placeholder - would be actual balance
-        tokenType: 'SYSTEM' as const // Placeholder - would be determined by balance check
+        tokenType: 'SYSTEM' as const, // Placeholder - would be determined by balance check
       }));
     } catch (error) {
       console.error('Failed to get eligible voters:', error);
@@ -94,7 +100,10 @@ class VotingReminderService {
   /**
    * Check if user has already voted on a proposal
    */
-  async hasUserVoted(proposalId: string, userAddress: string): Promise<boolean> {
+  async hasUserVoted(
+    proposalId: string,
+    userAddress: string,
+  ): Promise<boolean> {
     try {
       // Check if user has voted (this would need to be implemented based on your voting system)
       // For now, we'll check the governance_notifications table for vote notifications
@@ -122,9 +131,9 @@ class VotingReminderService {
    * Check if reminder has already been sent
    */
   async hasReminderBeenSent(
-    proposalId: string, 
-    userAddress: string, 
-    reminderType: '48h' | '24h' | '6h' | '1h'
+    proposalId: string,
+    userAddress: string,
+    reminderType: '48h' | '24h' | '6h' | '1h',
   ): Promise<boolean> {
     try {
       const { data, error } = await supabase
@@ -150,26 +159,31 @@ class VotingReminderService {
   /**
    * Calculate time remaining until proposal deadline
    */
-  calculateTimeRemaining(endBlock: string, currentBlock?: string): {
+  calculateTimeRemaining(
+    endBlock: string,
+    currentBlock?: string,
+  ): {
     hours: number;
     isExpiringSoon: boolean;
   } {
     // This is a simplified calculation
     // In reality, you'd need to get the current block number and calculate based on block time
-    
+
     // For now, we'll use a mock calculation
     // Assuming average block time of 2 seconds on Base
     const AVERAGE_BLOCK_TIME = 2000; // 2 seconds in milliseconds
     const endBlockNum = Number.parseInt(endBlock);
-    const currentBlockNum = currentBlock ? Number.parseInt(currentBlock) : endBlockNum - 100; // Mock current block
-    
+    const currentBlockNum = currentBlock
+      ? Number.parseInt(currentBlock)
+      : endBlockNum - 100; // Mock current block
+
     const blocksRemaining = endBlockNum - currentBlockNum;
     const millisecondsRemaining = blocksRemaining * AVERAGE_BLOCK_TIME;
     const hoursRemaining = millisecondsRemaining / (1000 * 60 * 60);
 
     return {
       hours: Math.max(0, hoursRemaining),
-      isExpiringSoon: hoursRemaining <= 48 && hoursRemaining > 0
+      isExpiringSoon: hoursRemaining <= 48 && hoursRemaining > 0,
     };
   }
 
@@ -193,10 +207,13 @@ class VotingReminderService {
       }
 
       // Calculate time remaining
-      const { hours: hoursRemaining, isExpiringSoon } = this.calculateTimeRemaining(proposal.endBlock);
+      const { hours: hoursRemaining, isExpiringSoon } =
+        this.calculateTimeRemaining(proposal.endBlock);
 
       if (!isExpiringSoon) {
-        console.log(`⏳ Proposal ${proposalId} not expiring soon (${hoursRemaining.toFixed(1)}h remaining)`);
+        console.log(
+          `⏳ Proposal ${proposalId} not expiring soon (${hoursRemaining.toFixed(1)}h remaining)`,
+        );
         return;
       }
 
@@ -228,7 +245,11 @@ class VotingReminderService {
           }
 
           // Skip if reminder already sent
-          const reminderSent = await this.hasReminderBeenSent(proposalId, voter.address, reminderType);
+          const reminderSent = await this.hasReminderBeenSent(
+            proposalId,
+            voter.address,
+            reminderType,
+          );
           if (reminderSent) {
             continue;
           }
@@ -237,7 +258,8 @@ class VotingReminderService {
           await unifiedNotificationService.createNotification({
             recipient_address: voter.address,
             sender_address: 'system',
-            notification_type: `governance_voting_reminder_${reminderType}` as any,
+            notification_type:
+              `governance_voting_reminder_${reminderType}` as any,
             title: `Voting reminder: ${proposal.title}`,
             message: `⏰ ${Math.ceil(hoursRemaining)} hours remaining to vote on this proposal. Your ${voter.tokenType} token gives you voting power!`,
             context_type: 'governance',
@@ -249,22 +271,30 @@ class VotingReminderService {
               reminderType,
               hoursRemaining: Math.ceil(hoursRemaining),
               tokenType: voter.tokenType,
-              proposalEndBlock: proposal.endBlock
-            }
+              proposalEndBlock: proposal.endBlock,
+            },
           });
 
           // Record that reminder was sent
-          await this.recordReminderSent(proposalId, voter.address, reminderType);
+          await this.recordReminderSent(
+            proposalId,
+            voter.address,
+            reminderType,
+          );
           remindersSent++;
-
         } catch (error) {
           console.error(`Failed to send reminder to ${voter.address}:`, error);
         }
       }
 
-      console.log(`✅ Sent ${remindersSent} voting reminders for proposal ${proposalId}`);
+      console.log(
+        `✅ Sent ${remindersSent} voting reminders for proposal ${proposalId}`,
+      );
     } catch (error) {
-      console.error(`Failed to process voting reminders for proposal ${proposalId}:`, error);
+      console.error(
+        `Failed to process voting reminders for proposal ${proposalId}:`,
+        error,
+      );
     }
   }
 
@@ -280,9 +310,9 @@ class VotingReminderService {
 
       for (const proposal of activeProposals) {
         await this.sendVotingReminders(proposal.id);
-        
+
         // Add small delay to avoid overwhelming the system
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        await new Promise((resolve) => setTimeout(resolve, 1000));
       }
 
       console.log('✅ Completed voting reminder processing');
@@ -297,17 +327,17 @@ class VotingReminderService {
   private async recordReminderSent(
     proposalId: string,
     userAddress: string,
-    reminderType: '48h' | '24h' | '6h' | '1h'
+    reminderType: '48h' | '24h' | '6h' | '1h',
   ): Promise<void> {
     try {
-      const { error } = await supabase
-        .from('voting_reminders')
-        .insert([{
+      const { error } = await supabase.from('voting_reminders').insert([
+        {
           proposal_id: proposalId,
           user_address: userAddress.toLowerCase(),
           reminder_type: reminderType,
-          sent_at: new Date().toISOString()
-        }]);
+          sent_at: new Date().toISOString(),
+        },
+      ]);
 
       if (error) {
         console.error('Error recording reminder sent:', error);
@@ -323,14 +353,14 @@ class VotingReminderService {
   async notifyTokenHoldersOfNewProposal(
     proposalId: string,
     proposalTitle: string,
-    proposerAddress: string
+    proposerAddress: string,
   ): Promise<void> {
     console.log(`📢 Notifying token holders of new proposal: ${proposalTitle}`);
 
     try {
       const eligibleVoters = await this.getEligibleVoters();
-      
-      const promises = eligibleVoters.map(voter => 
+
+      const promises = eligibleVoters.map((voter) =>
         unifiedNotificationService.createNotification({
           recipient_address: voter.address,
           sender_address: proposerAddress,
@@ -344,13 +374,15 @@ class VotingReminderService {
           priority: 'medium',
           metadata: {
             tokenType: voter.tokenType,
-            proposalType: 'new_proposal'
-          }
-        })
+            proposalType: 'new_proposal',
+          },
+        }),
       );
 
       await Promise.all(promises);
-      console.log(`✅ Notified ${promises.length} token holders of new proposal`);
+      console.log(
+        `✅ Notified ${promises.length} token holders of new proposal`,
+      );
     } catch (error) {
       console.error('Failed to notify token holders of new proposal:', error);
     }
@@ -377,20 +409,24 @@ class VotingReminderService {
 
       if (error) {
         console.error('Error getting reminder stats:', error);
-        return { totalSent: 0, byType: { '48h': 0, '24h': 0, '6h': 0, '1h': 0 } };
+        return {
+          totalSent: 0,
+          byType: { '48h': 0, '24h': 0, '6h': 0, '1h': 0 },
+        };
       }
 
       const stats = {
         totalSent: data?.length || 0,
         byType: { '48h': 0, '24h': 0, '6h': 0, '1h': 0 },
-        byProposal: {} as Record<string, number>
+        byProposal: {} as Record<string, number>,
       };
 
-      data?.forEach(reminder => {
+      data?.forEach((reminder) => {
         stats.byType[reminder.reminder_type]++;
-        
+
         if (!proposalId) {
-          stats.byProposal![reminder.proposal_id] = (stats.byProposal![reminder.proposal_id] || 0) + 1;
+          stats.byProposal![reminder.proposal_id] =
+            (stats.byProposal![reminder.proposal_id] || 0) + 1;
         }
       });
 

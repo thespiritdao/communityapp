@@ -1,14 +1,14 @@
 /**
  * Pod Operations Service - High-level pod operations with transaction management
- * 
+ *
  * Provides user-friendly pod operations that integrate with the TransactionRunner
  * for feedback and the RPC queue for rate limiting.
  */
 
-import { 
-  createTransactionRunner, 
+import {
+  createTransactionRunner,
   type TransactionResult,
-  type TransactionUpdateCallback 
+  type TransactionUpdateCallback,
 } from '@/lib/transactions/TransactionRunner';
 import { globalRpcQueue } from '@/lib/rpc/RpcQueue';
 import { HatsCoreService } from '../../../services/hatsCoreService';
@@ -55,7 +55,7 @@ export class PodOperationsService {
 
   constructor(
     private publicClient: PublicClient,
-    private walletClient?: WalletClient
+    private walletClient?: WalletClient,
   ) {
     this.hatsService = new HatsCoreService(publicClient, walletClient);
     this.modulesService = new HatsModulesService(publicClient, walletClient);
@@ -66,15 +66,22 @@ export class PodOperationsService {
    */
   async createPod(
     params: CreatePodParams,
-    onUpdate?: TransactionUpdateCallback
-  ): Promise<TransactionResult<{ podId: string; managementHatId: string; membershipHatId: string; treasuryAddress?: string }>> {
+    onUpdate?: TransactionUpdateCallback,
+  ): Promise<
+    TransactionResult<{
+      podId: string;
+      managementHatId: string;
+      membershipHatId: string;
+      treasuryAddress?: string;
+    }>
+  > {
     const runner = createTransactionRunner('CREATE_POD', onUpdate);
 
     return runner.execute([
       // Step 1: Validate pod configuration
       async (onProgress) => {
         onProgress?.({ status: 'running' });
-        
+
         // Validate pod name uniqueness
         const existingPods = await PodService.searchPods(params.name, 1);
         if (existingPods.length > 0) {
@@ -100,9 +107,9 @@ export class PodOperationsService {
       // Step 2: Create HATs (management and membership)
       async (onProgress) => {
         onProgress?.({ status: 'running' });
-        
+
         await this.hatsService.initialize();
-        
+
         // Create management HAT (for pod leaders)
         const managementHat = await this.hatsService.createHat({
           name: `${params.name} - Management`,
@@ -111,9 +118,9 @@ export class PodOperationsService {
           maxSupply: params.podLeads.length.toString(),
           details: JSON.stringify({
             type: 'pod_management',
-            podName: params.name
+            podName: params.name,
           }),
-          imageUri: params.image || ''
+          imageUri: params.image || '',
         });
 
         // Create membership HAT (for pod members)
@@ -124,29 +131,29 @@ export class PodOperationsService {
           maxSupply: '1000', // Allow many members
           details: JSON.stringify({
             type: 'pod_membership',
-            podName: params.name
+            podName: params.name,
           }),
-          imageUri: params.image || ''
+          imageUri: params.image || '',
         });
 
         // Mint management HATs to pod leaders
         for (const leader of params.podLeads) {
           await this.hatsService.mintHat({
             hatId: managementHat.hatId,
-            wearer: leader
+            wearer: leader,
           });
         }
 
         return {
           managementHatId: managementHat.hatId,
-          membershipHatId: membershipHat.hatId
+          membershipHatId: membershipHat.hatId,
         };
       },
 
       // Step 3: Deploy treasury contract (if configured)
       async (onProgress) => {
         onProgress?.({ status: 'running' });
-        
+
         let treasuryAddress: string | undefined;
 
         if (params.treasuryConfig) {
@@ -155,7 +162,7 @@ export class PodOperationsService {
             podName: params.name,
             managementHatId: '', // Will be set from previous step
             threshold: params.treasuryConfig.threshold,
-            signers: params.treasuryConfig.signers
+            signers: params.treasuryConfig.signers,
           });
 
           treasuryAddress = treasury.treasuryAddress;
@@ -167,7 +174,7 @@ export class PodOperationsService {
       // Step 4: Save pod to database
       async (onProgress) => {
         onProgress?.({ status: 'running' });
-        
+
         // Get results from previous steps
         const managementHatId = arguments[1]?.managementHatId;
         const membershipHatId = arguments[1]?.membershipHatId;
@@ -178,7 +185,7 @@ export class PodOperationsService {
           // Add HAT and treasury data
           managementHatId,
           membershipHatId,
-          treasuryAddress
+          treasuryAddress,
         });
 
         // Trigger initial member indexing
@@ -186,24 +193,24 @@ export class PodOperationsService {
           {
             id: result.podId,
             management_hat_id: managementHatId,
-            membership_hat_id: membershipHatId
+            membership_hat_id: membershipHatId,
           },
           {
             pods_processed: 0,
             members_added: 0,
             members_removed: 0,
             members_updated: 0,
-            errors: []
-          }
+            errors: [],
+          },
         );
 
         return {
           podId: result.podId,
           managementHatId,
           membershipHatId,
-          treasuryAddress
+          treasuryAddress,
         };
-      }
+      },
     ]);
   }
 
@@ -212,22 +219,27 @@ export class PodOperationsService {
    */
   async updateMembers(
     params: UpdateMembersParams,
-    onUpdate?: TransactionUpdateCallback
-  ): Promise<TransactionResult<{ membersAdded: number; membersRemoved: number }>> {
+    onUpdate?: TransactionUpdateCallback,
+  ): Promise<
+    TransactionResult<{ membersAdded: number; membersRemoved: number }>
+  > {
     const runner = createTransactionRunner('UPDATE_MEMBERS', onUpdate);
 
     return runner.execute([
       // Step 1: Validate member changes
       async (onProgress) => {
         onProgress?.({ status: 'running' });
-        
+
         const pod = await PodService.getPodById(params.podId);
         if (!pod) {
           throw new Error(`Pod ${params.podId} not found`);
         }
 
         // Validate addresses
-        const allAddresses = [...(params.addMembers || []), ...(params.removeMembers || [])];
+        const allAddresses = [
+          ...(params.addMembers || []),
+          ...(params.removeMembers || []),
+        ];
         for (const address of allAddresses) {
           if (!/^0x[a-fA-F0-9]{40}$/.test(address)) {
             throw new Error(`Invalid address format: ${address}`);
@@ -240,16 +252,17 @@ export class PodOperationsService {
       // Step 2: Update HAT assignments
       async (onProgress) => {
         onProgress?.({ status: 'running' });
-        
+
         const { pod } = arguments[0];
         await this.hatsService.initialize();
 
         let membersAdded = 0;
         let membersRemoved = 0;
 
-        const targetHatId = params.membershipType === 'leader' 
-          ? pod.management_hat_id 
-          : pod.membership_hat_id;
+        const targetHatId =
+          params.membershipType === 'leader'
+            ? pod.management_hat_id
+            : pod.membership_hat_id;
 
         if (!targetHatId) {
           throw new Error(`No ${params.membershipType} HAT configured for pod`);
@@ -261,11 +274,14 @@ export class PodOperationsService {
             try {
               await this.hatsService.mintHat({
                 hatId: targetHatId,
-                wearer: address
+                wearer: address,
               });
               membersAdded++;
             } catch (error) {
-              console.error(`Failed to mint HAT ${targetHatId} to ${address}:`, error);
+              console.error(
+                `Failed to mint HAT ${targetHatId} to ${address}:`,
+                error,
+              );
               throw error;
             }
           }
@@ -277,11 +293,14 @@ export class PodOperationsService {
             try {
               await this.hatsService.revokeHat({
                 hatId: targetHatId,
-                wearer: address
+                wearer: address,
               });
               membersRemoved++;
             } catch (error) {
-              console.error(`Failed to revoke HAT ${targetHatId} from ${address}:`, error);
+              console.error(
+                `Failed to revoke HAT ${targetHatId} from ${address}:`,
+                error,
+              );
               throw error;
             }
           }
@@ -293,23 +312,20 @@ export class PodOperationsService {
       // Step 3: Sync database with blockchain state
       async (onProgress) => {
         onProgress?.({ status: 'running' });
-        
+
         // Trigger member indexing to sync database
         const { pod } = arguments[0];
-        await MemberIndexingService.indexPodMembership(
-          pod,
-          {
-            pods_processed: 0,
-            members_added: 0,
-            members_removed: 0,
-            members_updated: 0,
-            errors: []
-          }
-        );
+        await MemberIndexingService.indexPodMembership(pod, {
+          pods_processed: 0,
+          members_added: 0,
+          members_removed: 0,
+          members_updated: 0,
+          errors: [],
+        });
 
         const { membersAdded, membersRemoved } = arguments[1];
         return { membersAdded, membersRemoved };
-      }
+      },
     ]);
   }
 
@@ -318,7 +334,7 @@ export class PodOperationsService {
    */
   async executeTreasuryTransaction(
     params: TreasuryTransactionParams,
-    onUpdate?: TransactionUpdateCallback
+    onUpdate?: TransactionUpdateCallback,
   ): Promise<TransactionResult<{ txHash: string; safe: string }>> {
     const runner = createTransactionRunner('TREASURY_TRANSACTION', onUpdate);
 
@@ -326,7 +342,7 @@ export class PodOperationsService {
       // Step 1: Prepare transaction
       async (onProgress) => {
         onProgress?.({ status: 'running' });
-        
+
         const pod = await PodService.getPodById(params.podId);
         if (!pod) {
           throw new Error(`Pod ${params.podId} not found`);
@@ -337,23 +353,26 @@ export class PodOperationsService {
         }
 
         // Validate executor has management access
-        const membership = await PodService.checkPodMembership(params.podId, params.executedByAddress);
+        const membership = await PodService.checkPodMembership(
+          params.podId,
+          params.executedByAddress,
+        );
         if (!membership.is_member || membership.membership_type !== 'leader') {
           throw new Error('Only pod leaders can execute treasury transactions');
         }
 
-        return { 
+        return {
           pod,
-          treasuryAddress: pod.treasury_contract_address
+          treasuryAddress: pod.treasury_contract_address,
         };
       },
 
       // Step 2: Execute transaction
       async (onProgress) => {
         onProgress?.({ status: 'running' });
-        
+
         const { treasuryAddress } = arguments[0];
-        
+
         // Use treasury service to execute transaction
         // This would integrate with Safe or custom treasury contract
         const result = await globalRpcQueue.enqueueHighPriority(async () => {
@@ -368,41 +387,42 @@ export class PodOperationsService {
       // Step 3: Confirm transaction
       async (onProgress) => {
         onProgress?.({ status: 'running' });
-        
+
         const txResult = arguments[1];
-        
+
         // Wait for transaction confirmation
         const receipt = await this.publicClient.waitForTransactionReceipt({
-          hash: txResult.txHash as `0x${string}`
+          hash: txResult.txHash as `0x${string}`,
         });
 
         // Log transaction in database
-        await supabase
-          .from('pod_treasury_transactions')
-          .insert({
-            pod_id: params.podId,
-            tx_hash: txResult.txHash,
-            to_address: params.to,
-            value: params.value,
-            data: params.data,
-            description: params.description,
-            executed_by: params.executedByAddress,
-            block_number: receipt.blockNumber.toString(),
-            status: 'confirmed'
-          });
+        await supabase.from('pod_treasury_transactions').insert({
+          pod_id: params.podId,
+          tx_hash: txResult.txHash,
+          to_address: params.to,
+          value: params.value,
+          data: params.data,
+          description: params.description,
+          executed_by: params.executedByAddress,
+          block_number: receipt.blockNumber.toString(),
+          status: 'confirmed',
+        });
 
         return {
           txHash: txResult.txHash,
-          safe: arguments[0].treasuryAddress
+          safe: arguments[0].treasuryAddress,
         };
-      }
+      },
     ]);
   }
 
   /**
    * Get pod operation status and capabilities
    */
-  async getPodCapabilities(podId: string, userAddress: string): Promise<{
+  async getPodCapabilities(
+    podId: string,
+    userAddress: string,
+  ): Promise<{
     canManageMembers: boolean;
     canExecuteTreasuryTx: boolean;
     canEditPodSettings: boolean;
@@ -413,14 +433,15 @@ export class PodOperationsService {
     const [pod, membership, stats] = await Promise.all([
       PodService.getPodById(podId),
       PodService.checkPodMembership(podId, userAddress),
-      PodService.getPodMemberStats(podId)
+      PodService.getPodMemberStats(podId),
     ]);
 
     if (!pod) {
       throw new Error(`Pod ${podId} not found`);
     }
 
-    const isLeader = membership.is_member && membership.membership_type === 'leader';
+    const isLeader =
+      membership.is_member && membership.membership_type === 'leader';
 
     return {
       canManageMembers: isLeader,
@@ -428,7 +449,7 @@ export class PodOperationsService {
       canEditPodSettings: isLeader,
       hasTreasury: !!pod.treasury_contract_address,
       memberCount: stats.total_members,
-      lastIndexedAt: stats.last_indexed_at
+      lastIndexedAt: stats.last_indexed_at,
     };
   }
 
@@ -450,7 +471,7 @@ export class PodOperationsService {
       members_added: 0,
       members_removed: 0,
       members_updated: 0,
-      errors: []
+      errors: [],
     };
 
     await MemberIndexingService.indexPodMembership(pod, stats);
@@ -458,7 +479,7 @@ export class PodOperationsService {
     return {
       membersAdded: stats.members_added,
       membersRemoved: stats.members_removed,
-      errors: stats.errors
+      errors: stats.errors,
     };
   }
 
@@ -470,7 +491,7 @@ export class PodOperationsService {
     podId: string,
     inviteeAddress: string,
     inviterAddress: string,
-    podName: string
+    podName: string,
   ): Promise<{ success: boolean; error?: string }> {
     try {
       // Validate addresses
@@ -485,7 +506,9 @@ export class PodOperationsService {
       }
 
       // Import notification service dynamically to avoid circular dependency
-      const { unifiedNotificationService } = await import('@/services/unifiedNotificationService');
+      const { unifiedNotificationService } = await import(
+        '@/services/unifiedNotificationService'
+      );
 
       // Send invitation notification
       await unifiedNotificationService.createNotification({
@@ -502,18 +525,20 @@ export class PodOperationsService {
           pod_id: podId,
           pod_name: podName,
           inviter_address: inviterAddress,
-          invitation_type: 'leader'
-        }
+          invitation_type: 'leader',
+        },
       });
 
-      console.log(`✅ Leadership invitation sent to ${inviteeAddress} for pod ${podId}`);
+      console.log(
+        `✅ Leadership invitation sent to ${inviteeAddress} for pod ${podId}`,
+      );
 
       return { success: true };
     } catch (error) {
       console.error('Error sending leadership invitation:', error);
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error'
+        error: error instanceof Error ? error.message : 'Unknown error',
       };
     }
   }

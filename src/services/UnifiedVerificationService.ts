@@ -1,5 +1,5 @@
 import { supabase } from '@/utils/supabaseClient';
-import { PodRolePermissionsService, } from '@/features/pods/services/PodRolePermissionsService';
+import { PodRolePermissionsService } from '@/features/pods/services/PodRolePermissionsService';
 import { EligibilityService } from '@/features/pods/services/EligibilityService';
 import HatMetadataService from './HatMetadataService';
 import type { HatPermissions } from './hatPermissionsService';
@@ -41,26 +41,36 @@ export class UnifiedVerificationService {
   static async verifyUserAccess(
     userAddress: string,
     podId: string,
-    requiredPermission?: keyof HatPermissions
+    requiredPermission?: keyof HatPermissions,
   ): Promise<VerificationResult> {
     try {
-      console.log(`🔍 Verifying access for ${userAddress} in pod ${podId}`, { requiredPermission });
+      console.log(`🔍 Verifying access for ${userAddress} in pod ${podId}`, {
+        requiredPermission,
+      });
 
       // 1. Fast database check first
-      const dbResult = await this.verifyDatabaseAccess(userAddress, podId, requiredPermission);
-      
+      const dbResult = await this.verifyDatabaseAccess(
+        userAddress,
+        podId,
+        requiredPermission,
+      );
+
       // 2. If specific permission required, check it quickly
       if (requiredPermission && dbResult.permissions[requiredPermission]) {
-        console.log('✅ Database verification successful for specific permission');
+        console.log(
+          '✅ Database verification successful for specific permission',
+        );
         return dbResult;
       }
 
       // 3. For comprehensive verification, also check blockchain metadata
-      const blockchainResult = await this.verifyBlockchainAccess(userAddress, podId);
-      
+      const blockchainResult = await this.verifyBlockchainAccess(
+        userAddress,
+        podId,
+      );
+
       // 4. Combine results with preference for blockchain data if available
       return this.combineVerificationResults(dbResult, blockchainResult);
-
     } catch (error) {
       console.error('❌ Verification failed:', error);
       return {
@@ -70,8 +80,8 @@ export class UnifiedVerificationService {
         eligibility: {
           meets: false,
           criteriaResults: {},
-          reason: 'Verification error'
-        }
+          reason: 'Verification error',
+        },
       };
     }
   }
@@ -82,7 +92,7 @@ export class UnifiedVerificationService {
   private static async verifyDatabaseAccess(
     userAddress: string,
     podId: string,
-    requiredPermission?: keyof HatPermissions
+    requiredPermission?: keyof HatPermissions,
   ): Promise<VerificationResult> {
     try {
       // Get user's roles in the pod
@@ -111,8 +121,8 @@ export class UnifiedVerificationService {
           eligibility: {
             meets: false,
             criteriaResults: {},
-            reason: 'Not a member of this pod'
-          }
+            reason: 'Not a member of this pod',
+          },
         };
       }
 
@@ -138,7 +148,7 @@ export class UnifiedVerificationService {
         const rolePerms = userRole.pod_role_permissions;
         if (rolePerms && rolePerms.is_active) {
           // Merge permissions (OR logic - if any role grants permission, user has it)
-          Object.keys(aggregatedPermissions).forEach(key => {
+          Object.keys(aggregatedPermissions).forEach((key) => {
             const permKey = key as keyof HatPermissions;
             if (rolePerms.permissions[permKey]) {
               aggregatedPermissions[permKey] = true;
@@ -146,24 +156,31 @@ export class UnifiedVerificationService {
           });
 
           // Check eligibility for this role
-          if (rolePerms.eligibility_criteria && rolePerms.eligibility_criteria.length > 0) {
+          if (
+            rolePerms.eligibility_criteria &&
+            rolePerms.eligibility_criteria.length > 0
+          ) {
             try {
-              const eligibilityCheck = await EligibilityService.evaluateCriteria({
-                userAddress,
-                podId,
-                roleId: rolePerms.id,
-                criteria: rolePerms.eligibility_criteria
-              });
+              const eligibilityCheck =
+                await EligibilityService.evaluateCriteria({
+                  userAddress,
+                  podId,
+                  roleId: rolePerms.id,
+                  criteria: rolePerms.eligibility_criteria,
+                });
               eligibilityResults[rolePerms.id] = eligibilityCheck;
             } catch (error) {
-              console.warn(`Failed to check eligibility for role ${rolePerms.id}:`, error);
+              console.warn(
+                `Failed to check eligibility for role ${rolePerms.id}:`,
+                error,
+              );
             }
           }
         }
       }
 
-      const hasRequiredPermission = requiredPermission 
-        ? aggregatedPermissions[requiredPermission] 
+      const hasRequiredPermission = requiredPermission
+        ? aggregatedPermissions[requiredPermission]
         : Object.values(aggregatedPermissions).some(Boolean);
 
       return {
@@ -171,11 +188,12 @@ export class UnifiedVerificationService {
         source: 'database',
         permissions: aggregatedPermissions,
         eligibility: {
-          meets: Object.values(eligibilityResults).every((result: any) => result.eligible),
-          criteriaResults: eligibilityResults
-        }
+          meets: Object.values(eligibilityResults).every(
+            (result: any) => result.eligible,
+          ),
+          criteriaResults: eligibilityResults,
+        },
       };
-
     } catch (error) {
       console.error('Database verification failed:', error);
       throw error;
@@ -187,12 +205,13 @@ export class UnifiedVerificationService {
    */
   private static async verifyBlockchainAccess(
     userAddress: string,
-    podId: string
+    podId: string,
   ): Promise<VerificationResult> {
     try {
       // Get roles with blockchain metadata
-      const roles = await PodRolePermissionsService.getPodRolePermissions(podId);
-      const blockchainRoles = roles.filter(role => role.metadata_hash);
+      const roles =
+        await PodRolePermissionsService.getPodRolePermissions(podId);
+      const blockchainRoles = roles.filter((role) => role.metadata_hash);
 
       if (blockchainRoles.length === 0) {
         return {
@@ -202,11 +221,11 @@ export class UnifiedVerificationService {
           eligibility: {
             meets: false,
             criteriaResults: {},
-            reason: 'No blockchain metadata found'
+            reason: 'No blockchain metadata found',
           },
           metadata: {
-            syncStatus: 'no_metadata'
-          }
+            syncStatus: 'no_metadata',
+          },
         };
       }
 
@@ -234,17 +253,20 @@ export class UnifiedVerificationService {
           try {
             const verification = await HatMetadataService.verifyPermissions(
               role.metadata_hash,
-              userAddress
+              userAddress,
             );
 
             if (verification.metadata) {
               foundMetadata = true;
-              if (role.last_synced_at && (!latestSync || role.last_synced_at > latestSync)) {
+              if (
+                role.last_synced_at &&
+                (!latestSync || role.last_synced_at > latestSync)
+              ) {
                 latestSync = role.last_synced_at;
               }
 
               // Merge permissions from blockchain metadata
-              Object.keys(verification.hasPermission).forEach(key => {
+              Object.keys(verification.hasPermission).forEach((key) => {
                 const permKey = key as keyof HatPermissions;
                 if (verification.hasPermission[permKey]) {
                   aggregatedPermissions[permKey] = true;
@@ -252,7 +274,10 @@ export class UnifiedVerificationService {
               });
             }
           } catch (error) {
-            console.warn(`Failed to verify metadata for role ${role.id}:`, error);
+            console.warn(
+              `Failed to verify metadata for role ${role.id}:`,
+              error,
+            );
           }
         }
       }
@@ -264,14 +289,13 @@ export class UnifiedVerificationService {
         eligibility: {
           meets: true, // Blockchain verification assumes eligibility was checked at grant time
           criteriaResults: {},
-          reason: 'Verified via blockchain metadata'
+          reason: 'Verified via blockchain metadata',
         },
         metadata: {
           lastSynced: latestSync,
-          syncStatus: foundMetadata ? 'synced' : 'no_metadata'
-        }
+          syncStatus: foundMetadata ? 'synced' : 'no_metadata',
+        },
       };
-
     } catch (error) {
       console.error('Blockchain verification failed:', error);
       throw error;
@@ -283,7 +307,7 @@ export class UnifiedVerificationService {
    */
   private static combineVerificationResults(
     dbResult: VerificationResult,
-    blockchainResult: VerificationResult
+    blockchainResult: VerificationResult,
   ): VerificationResult {
     // If blockchain has metadata, prefer it for permissions verification
     if (blockchainResult.metadata?.syncStatus === 'synced') {
@@ -293,10 +317,10 @@ export class UnifiedVerificationService {
         permissions: {
           // Use database permissions as base, override with blockchain where available
           ...dbResult.permissions,
-          ...blockchainResult.permissions
+          ...blockchainResult.permissions,
         },
         eligibility: dbResult.eligibility, // Keep database eligibility checks (more current)
-        metadata: blockchainResult.metadata
+        metadata: blockchainResult.metadata,
       };
     }
 
@@ -305,8 +329,8 @@ export class UnifiedVerificationService {
       ...dbResult,
       source: 'hybrid',
       metadata: blockchainResult.metadata || {
-        syncStatus: 'no_metadata'
-      }
+        syncStatus: 'no_metadata',
+      },
     };
   }
 
@@ -315,11 +339,14 @@ export class UnifiedVerificationService {
    */
   static async getMembershipStatus(
     userAddress: string,
-    podId: string
+    podId: string,
   ): Promise<MembershipStatus> {
     try {
-      const verificationResult = await this.verifyUserAccess(userAddress, podId);
-      
+      const verificationResult = await this.verifyUserAccess(
+        userAddress,
+        podId,
+      );
+
       // Get active roles
       const { data: userRoles, error } = await supabase
         .from('pod_members')
@@ -330,24 +357,35 @@ export class UnifiedVerificationService {
 
       if (error) throw error;
 
-      const activeRoles = userRoles?.map(r => r.pod_role_permissions.role_name) || [];
+      const activeRoles =
+        userRoles?.map((r) => r.pod_role_permissions.role_name) || [];
 
       // Get eligibility status for all pod roles
-      const allRoles = await PodRolePermissionsService.getPodRolePermissions(podId);
-      const eligibilityStatus: Record<string, { eligible: boolean; evaluation: any }> = {};
+      const allRoles =
+        await PodRolePermissionsService.getPodRolePermissions(podId);
+      const eligibilityStatus: Record<
+        string,
+        { eligible: boolean; evaluation: any }
+      > = {};
 
       for (const role of allRoles) {
         try {
-          const eligibilityCheck = await PodRolePermissionsService.checkUserEligibility(
-            userAddress,
-            role.id
-          );
+          const eligibilityCheck =
+            await PodRolePermissionsService.checkUserEligibility(
+              userAddress,
+              role.id,
+            );
           eligibilityStatus[role.role_name] = eligibilityCheck;
         } catch (error) {
-          console.warn(`Failed to check eligibility for role ${role.role_name}:`, error);
+          console.warn(
+            `Failed to check eligibility for role ${role.role_name}:`,
+            error,
+          );
           eligibilityStatus[role.role_name] = {
             eligible: false,
-            evaluation: { error: error instanceof Error ? error.message : 'Unknown error' }
+            evaluation: {
+              error: error instanceof Error ? error.message : 'Unknown error',
+            },
           };
         }
       }
@@ -357,9 +395,8 @@ export class UnifiedVerificationService {
         activeRoles,
         permissions: verificationResult.permissions as HatPermissions,
         eligibilityStatus,
-        verificationSource: verificationResult.source
+        verificationSource: verificationResult.source,
       };
-
     } catch (error) {
       console.error('Failed to get membership status:', error);
       throw error;
@@ -373,14 +410,14 @@ export class UnifiedVerificationService {
   static async quickPermissionCheck(
     userAddress: string,
     podId: string,
-    permission: keyof HatPermissions
+    permission: keyof HatPermissions,
   ): Promise<boolean> {
     try {
       // Use simple database function for speed
       return await PodRolePermissionsService.checkUserPermission(
         userAddress,
         podId,
-        permission
+        permission,
       );
     } catch (error) {
       console.error('Quick permission check failed:', error);
@@ -396,8 +433,13 @@ export class UnifiedVerificationService {
     podId: string,
     roleId: string,
     walletClient?: any,
-    updateOnChain = true
-  ): Promise<{ success: boolean; ipfsHash?: string; txHash?: string; error?: string }> {
+    updateOnChain = true,
+  ): Promise<{
+    success: boolean;
+    ipfsHash?: string;
+    txHash?: string;
+    error?: string;
+  }> {
     try {
       // Fetch the role to get the actual HAT ID
       const { data: role, error: roleError } = await supabase
@@ -407,23 +449,28 @@ export class UnifiedVerificationService {
         .single();
 
       if (roleError || !role || !role.token_address) {
-        throw new Error(`Role not found or missing token address: ${roleError?.message || 'No token address found'}`);
+        throw new Error(
+          `Role not found or missing token address: ${roleError?.message || 'No token address found'}`,
+        );
       }
 
-      console.log('🎯 UnifiedVerificationService using token address from database:', role.token_address);
+      console.log(
+        '🎯 UnifiedVerificationService using token address from database:',
+        role.token_address,
+      );
 
       return await HatMetadataService.syncRoleToHatMetadata({
         roleId,
         podId,
         hatId: role.token_address, // Use actual token address from database
         walletClient,
-        updateOnChain
+        updateOnChain,
       });
     } catch (error) {
       console.error('Failed to sync permissions to blockchain:', error);
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Sync failed'
+        error: error instanceof Error ? error.message : 'Sync failed',
       };
     }
   }
@@ -441,43 +488,53 @@ export class UnifiedVerificationService {
     }>;
   }> {
     try {
-      const roles = await PodRolePermissionsService.getPodRolePermissions(podId);
+      const roles =
+        await PodRolePermissionsService.getPodRolePermissions(podId);
       const discrepancies: any[] = [];
 
       for (const role of roles) {
         if (role.metadata_hash) {
           try {
-            const metadata = await HatMetadataService.getFromIPFS(role.metadata_hash);
+            const metadata = await HatMetadataService.getFromIPFS(
+              role.metadata_hash,
+            );
             if (metadata) {
               // Compare database permissions with blockchain metadata
               const dbPermissions = role.permissions;
               const blockchainPermissions = metadata.permissions;
 
-              const permissionsMatch = Object.keys(dbPermissions).every(key => {
-                const permKey = key as keyof HatPermissions;
-                return dbPermissions[permKey] === blockchainPermissions[permKey];
-              });
+              const permissionsMatch = Object.keys(dbPermissions).every(
+                (key) => {
+                  const permKey = key as keyof HatPermissions;
+                  return (
+                    dbPermissions[permKey] === blockchainPermissions[permKey]
+                  );
+                },
+              );
 
               if (!permissionsMatch) {
                 discrepancies.push({
                   roleId: role.id,
                   roleName: role.role_name,
                   issue: 'Permissions mismatch between database and blockchain',
-                  recommendation: 'Sync permissions to blockchain to ensure consistency'
+                  recommendation:
+                    'Sync permissions to blockchain to ensure consistency',
                 });
               }
 
               // Check if sync is recent (within 24 hours)
               if (role.last_synced_at) {
-                const syncAge = Date.now() - new Date(role.last_synced_at).getTime();
+                const syncAge =
+                  Date.now() - new Date(role.last_synced_at).getTime();
                 const hoursOld = syncAge / (1000 * 60 * 60);
-                
+
                 if (hoursOld > 24) {
                   discrepancies.push({
                     roleId: role.id,
                     roleName: role.role_name,
                     issue: `Last sync was ${Math.round(hoursOld)} hours ago`,
-                    recommendation: 'Consider re-syncing to ensure metadata is current'
+                    recommendation:
+                      'Consider re-syncing to ensure metadata is current',
                   });
                 }
               }
@@ -487,7 +544,8 @@ export class UnifiedVerificationService {
               roleId: role.id,
               roleName: role.role_name,
               issue: 'Cannot retrieve blockchain metadata',
-              recommendation: 'Re-sync permissions to restore blockchain verification'
+              recommendation:
+                'Re-sync permissions to restore blockchain verification',
             });
           }
         } else {
@@ -495,16 +553,15 @@ export class UnifiedVerificationService {
             roleId: role.id,
             roleName: role.role_name,
             issue: 'No blockchain metadata found',
-            recommendation: 'Deploy to blockchain for verifiable membership'
+            recommendation: 'Deploy to blockchain for verifiable membership',
           });
         }
       }
 
       return {
         inSync: discrepancies.length === 0,
-        discrepancies
+        discrepancies,
       };
-
     } catch (error) {
       console.error('Sync validation failed:', error);
       throw error;

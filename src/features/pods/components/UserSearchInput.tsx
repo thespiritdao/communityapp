@@ -21,8 +21,8 @@ interface UserSearchInputProps {
 
 export const UserSearchInput: React.FC<UserSearchInputProps> = ({
   onUserSelect,
-  placeholder = "Search for a member...",
-  disabled = false
+  placeholder = 'Search for a member...',
+  disabled = false,
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [users, setUsers] = useState<UserProfile[]>([]);
@@ -30,7 +30,7 @@ export const UserSearchInput: React.FC<UserSearchInputProps> = ({
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [loadingUsers, setLoadingUsers] = useState(true);
-  
+
   const inputRef = useRef<HTMLInputElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -67,11 +67,14 @@ export const UserSearchInput: React.FC<UserSearchInputProps> = ({
       return;
     }
 
-    const filtered = users.filter(user => {
-      const fullName = `${user.first_name || ''} ${user.last_name || ''}`.toLowerCase();
+    const filtered = users.filter((user) => {
+      const fullName =
+        `${user.first_name || ''} ${user.last_name || ''}`.toLowerCase();
       const search = searchTerm.toLowerCase();
-      return fullName.includes(search) || 
-             user.wallet_address?.toLowerCase().includes(search);
+      return (
+        fullName.includes(search) ||
+        user.wallet_address?.toLowerCase().includes(search)
+      );
     });
 
     setFilteredUsers(filtered.slice(0, 10)); // Limit to 10 results
@@ -81,14 +84,18 @@ export const UserSearchInput: React.FC<UserSearchInputProps> = ({
   // Handle clicks outside dropdown
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target as Node)
+      ) {
         setIsDropdownOpen(false);
       }
     };
 
     if (isDropdownOpen) {
       document.addEventListener('mousedown', handleClickOutside);
-      return () => document.removeEventListener('mousedown', handleClickOutside);
+      return () =>
+        document.removeEventListener('mousedown', handleClickOutside);
     }
   }, [isDropdownOpen]);
 
@@ -108,11 +115,11 @@ export const UserSearchInput: React.FC<UserSearchInputProps> = ({
 
   const getProfilePictureUrl = (user: UserProfile) => {
     if (!user.profile_picture) return null;
-    
+
     if (user.profile_picture.startsWith('http')) {
       return user.profile_picture;
     }
-    
+
     return `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/profile_images/${user.profile_picture}`;
   };
 
@@ -125,7 +132,7 @@ export const UserSearchInput: React.FC<UserSearchInputProps> = ({
           type="text"
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
-          placeholder={loadingUsers ? "Loading users..." : placeholder}
+          placeholder={loadingUsers ? 'Loading users...' : placeholder}
           disabled={disabled || loadingUsers}
           className="pl-10 pr-4"
           onFocus={() => {
@@ -154,7 +161,9 @@ export const UserSearchInput: React.FC<UserSearchInputProps> = ({
                       className="w-full h-full object-cover"
                       onError={(e) => {
                         e.currentTarget.style.display = 'none';
-                        e.currentTarget.nextElementSibling?.classList.remove('hidden');
+                        e.currentTarget.nextElementSibling?.classList.remove(
+                          'hidden',
+                        );
                       }}
                     />
                   ) : (
@@ -166,13 +175,14 @@ export const UserSearchInput: React.FC<UserSearchInputProps> = ({
                     {getDisplayName(user)}
                   </p>
                   <p className="text-xs text-gray-500 truncate">
-                    {user.wallet_address?.slice(0, 8)}...{user.wallet_address?.slice(-6)}
+                    {user.wallet_address?.slice(0, 8)}...
+                    {user.wallet_address?.slice(-6)}
                   </p>
                 </div>
               </div>
             </button>
           ))}
-          
+
           {searchTerm && filteredUsers.length === 0 && !loadingUsers && (
             <div className="px-4 py-8 text-center text-gray-500">
               <Users className="h-8 w-8 mx-auto mb-2 opacity-50" />

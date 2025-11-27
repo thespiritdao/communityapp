@@ -69,7 +69,7 @@ export const Wallet = ({ children, className }: WalletReact) => {
 export const useWallet = () => {
   const context = useWalletContext();
   if (!context) {
-    throw new Error("useWallet must be used within a WalletProvider");
+    throw new Error('useWallet must be used within a WalletProvider');
   }
   return context;
 };

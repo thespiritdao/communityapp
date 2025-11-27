@@ -1,7 +1,7 @@
-"use client";
+'use client';
 
-import { memo, useCallback } from "react";
-import styled from "styled-components";
+import { memo, useCallback } from 'react';
+import styled from 'styled-components';
 
 const TokenList = styled.div`
   display: flex;
@@ -14,8 +14,8 @@ const TokenOption = styled.label<{ isSelected: boolean }>`
   align-items: center;
   gap: 0.75rem;
   padding: 0.75rem;
-  border: 1px solid ${props => props.isSelected ? '#007bff' : '#e0e0e0'};
-  background: ${props => props.isSelected ? '#f0f8ff' : 'white'};
+  border: 1px solid ${(props) => (props.isSelected ? '#007bff' : '#e0e0e0')};
+  background: ${(props) => (props.isSelected ? '#f0f8ff' : 'white')};
   border-radius: 6px;
   cursor: pointer;
   transition: all 0.2s ease;
@@ -51,33 +51,33 @@ const tokenOptions = [
   {
     value: 'no_token',
     name: 'Public Access',
-    description: 'No token required'
+    description: 'No token required',
   },
   {
     value: 'exec',
     name: 'Executive Pod',
-    description: 'Executive pod members only'
+    description: 'Executive pod members only',
   },
   {
     value: 'dev',
     name: 'Developer Pod',
-    description: 'Developer pod members only'
+    description: 'Developer pod members only',
   },
   {
     value: 'bounty',
     name: 'Bounty Hunters',
-    description: 'Bounty token holders'
+    description: 'Bounty token holders',
   },
   {
     value: 'advocate',
     name: 'Advocates',
-    description: 'Community advocates'
+    description: 'Community advocates',
   },
   {
     value: 'poc',
     name: 'Proof of Curiosity',
-    description: 'POC token holders'
-  }
+    description: 'POC token holders',
+  },
 ];
 
 interface TokenFilterProps {
@@ -91,37 +91,42 @@ interface TokenFilterProps {
  * - Single-select for simplicity
  * - Memoized for performance
  */
-const TokenFilter = memo(({ selectedTokens, onTokenChange }: TokenFilterProps) => {
-  const handleTokenToggle = useCallback((tokenValue: string) => {
-    // For token filters, typically single-select makes more sense
-    const newTokens = selectedTokens.includes(tokenValue) 
-      ? [] 
-      : [tokenValue];
-    
-    onTokenChange(newTokens);
-  }, [selectedTokens, onTokenChange]);
+const TokenFilter = memo(
+  ({ selectedTokens, onTokenChange }: TokenFilterProps) => {
+    const handleTokenToggle = useCallback(
+      (tokenValue: string) => {
+        // For token filters, typically single-select makes more sense
+        const newTokens = selectedTokens.includes(tokenValue)
+          ? []
+          : [tokenValue];
 
-  return (
-    <TokenList>
-      {tokenOptions.map(token => (
-        <TokenOption
-          key={token.value}
-          isSelected={selectedTokens.includes(token.value)}
-        >
-          <TokenCheckbox
-            type="checkbox"
-            checked={selectedTokens.includes(token.value)}
-            onChange={() => handleTokenToggle(token.value)}
-          />
-          <TokenInfo>
-            <TokenName>{token.name}</TokenName>
-            <TokenDescription>{token.description}</TokenDescription>
-          </TokenInfo>
-        </TokenOption>
-      ))}
-    </TokenList>
-  );
-});
+        onTokenChange(newTokens);
+      },
+      [selectedTokens, onTokenChange],
+    );
+
+    return (
+      <TokenList>
+        {tokenOptions.map((token) => (
+          <TokenOption
+            key={token.value}
+            isSelected={selectedTokens.includes(token.value)}
+          >
+            <TokenCheckbox
+              type="checkbox"
+              checked={selectedTokens.includes(token.value)}
+              onChange={() => handleTokenToggle(token.value)}
+            />
+            <TokenInfo>
+              <TokenName>{token.name}</TokenName>
+              <TokenDescription>{token.description}</TokenDescription>
+            </TokenInfo>
+          </TokenOption>
+        ))}
+      </TokenList>
+    );
+  },
+);
 
 TokenFilter.displayName = 'TokenFilter';
 

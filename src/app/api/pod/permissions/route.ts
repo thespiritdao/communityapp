@@ -12,7 +12,10 @@ export async function GET(request: NextRequest) {
     const action = searchParams.get('action');
 
     if (!user || !pod || !action) {
-      return NextResponse.json({ error: 'Missing required parameters' }, { status: 400 });
+      return NextResponse.json(
+        { error: 'Missing required parameters' },
+        { status: 400 },
+      );
     }
 
     const supabase = createClient(supabaseUrl, supabaseAnonKey);
@@ -34,7 +37,10 @@ export async function GET(request: NextRequest) {
 
     if (error) {
       console.error('Error checking permissions:', error);
-      return NextResponse.json({ error: 'Failed to check permissions' }, { status: 500 });
+      return NextResponse.json(
+        { error: 'Failed to check permissions' },
+        { status: 500 },
+      );
     }
 
     let hasPermission = false;
@@ -44,12 +50,13 @@ export async function GET(request: NextRequest) {
       for (const member of membership) {
         if (member.pod_roles) {
           const rolePermissions = member.pod_roles.role_permissions || [];
-          const hasActionPermission = rolePermissions.some((perm: any) => 
-            perm.permission === action || 
-            perm.permission === 'admin' || 
-            perm.permission === 'all'
+          const hasActionPermission = rolePermissions.some(
+            (perm: any) =>
+              perm.permission === action ||
+              perm.permission === 'admin' ||
+              perm.permission === 'all',
           );
-          
+
           if (hasActionPermission) {
             hasPermission = true;
             break;
@@ -66,9 +73,11 @@ export async function GET(request: NextRequest) {
     } else {
       return NextResponse.json({ hasPermission });
     }
-
   } catch (error) {
     console.error('Error in pod permissions API:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 },
+    );
   }
 }

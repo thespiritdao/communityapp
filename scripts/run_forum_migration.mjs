@@ -31,8 +31,8 @@ if (!supabaseUrl || !supabaseServiceKey) {
 const supabase = createClient(supabaseUrl, supabaseServiceKey, {
   auth: {
     autoRefreshToken: false,
-    persistSession: false
-  }
+    persistSession: false,
+  },
 });
 
 async function runMigration() {
@@ -40,7 +40,12 @@ async function runMigration() {
 
   try {
     // Read the migration file
-    const migrationPath = join(__dirname, '..', 'migrations', '003_pod_forum_integration.sql');
+    const migrationPath = join(
+      __dirname,
+      '..',
+      'migrations',
+      '003_pod_forum_integration.sql',
+    );
     console.log(`📄 Reading migration file: ${migrationPath}`);
 
     const sqlContent = readFileSync(migrationPath, 'utf8');
@@ -49,8 +54,14 @@ async function runMigration() {
     // We need to execute them one by one because Supabase RPC doesn't support multi-statement SQL well
     const statements = sqlContent
       .split(';')
-      .map(s => s.trim())
-      .filter(s => s.length > 0 && !s.startsWith('--') && s !== 'BEGIN' && s !== 'COMMIT');
+      .map((s) => s.trim())
+      .filter(
+        (s) =>
+          s.length > 0 &&
+          !s.startsWith('--') &&
+          s !== 'BEGIN' &&
+          s !== 'COMMIT',
+      );
 
     console.log(`📝 Found ${statements.length} SQL statements to execute\n`);
 
@@ -73,7 +84,9 @@ async function runMigration() {
         const preview = statement.substring(0, 100).replace(/\s+/g, ' ');
         console.log(`   ${preview}${statement.length > 100 ? '...' : ''}`);
 
-        const { error } = await supabase.rpc('exec_sql', { sql: statement + ';' });
+        const { error } = await supabase.rpc('exec_sql', {
+          sql: statement + ';',
+        });
 
         if (error) {
           // Check if it's a benign error (like "already exists")
@@ -117,15 +130,16 @@ async function runMigration() {
     if (verifyError) {
       console.error('❌ Verification failed:', verifyError);
     } else {
-      console.log(`✅ Verification passed: ${sampleCategories?.length || 0} forum categories found`);
+      console.log(
+        `✅ Verification passed: ${sampleCategories?.length || 0} forum categories found`,
+      );
       if (sampleCategories && sampleCategories.length > 0) {
         console.log('\nSample categories:');
-        sampleCategories.forEach(cat => {
+        sampleCategories.forEach((cat) => {
           console.log(`   - ${cat.name} (pod_id: ${cat.pod_id || 'global'})`);
         });
       }
     }
-
   } catch (error) {
     console.error('\n❌ Migration failed:', error);
     process.exit(1);
@@ -140,7 +154,10 @@ async function checkExecSql() {
     const { error } = await supabase.rpc('exec_sql', { sql: 'SELECT 1;' });
 
     if (error) {
-      if (error.message?.includes('function') && error.message?.includes('does not exist')) {
+      if (
+        error.message?.includes('function') &&
+        error.message?.includes('does not exist')
+      ) {
         console.log('❌ exec_sql function does not exist');
         console.log('\n📝 You need to create the exec_sql function first.');
         console.log('   Run this SQL in your Supabase SQL editor:\n');
@@ -150,7 +167,9 @@ async function checkExecSql() {
         console.log('     EXECUTE sql;');
         console.log('   END;');
         console.log('   $$ LANGUAGE plpgsql SECURITY DEFINER;');
-        console.log('\n   GRANT EXECUTE ON FUNCTION exec_sql(TEXT) TO service_role;\n');
+        console.log(
+          '\n   GRANT EXECUTE ON FUNCTION exec_sql(TEXT) TO service_role;\n',
+        );
         process.exit(1);
       } else {
         throw error;

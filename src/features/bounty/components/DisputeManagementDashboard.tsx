@@ -2,11 +2,23 @@
 
 import React, { useState, useEffect } from 'react';
 import { useAccount } from 'wagmi';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -19,7 +31,7 @@ import {
   XCircle,
   Clock,
   AlertTriangle,
-  Send
+  Send,
 } from 'lucide-react';
 
 interface DisputeManagementDashboardProps {
@@ -27,10 +39,9 @@ interface DisputeManagementDashboardProps {
   onClose?: () => void;
 }
 
-export const DisputeManagementDashboard: React.FC<DisputeManagementDashboardProps> = ({
-  disputeId,
-  onClose
-}) => {
+export const DisputeManagementDashboard: React.FC<
+  DisputeManagementDashboardProps
+> = ({ disputeId, onClose }) => {
   const { address } = useAccount();
 
   // State
@@ -72,7 +83,7 @@ export const DisputeManagementDashboard: React.FC<DisputeManagementDashboardProp
       const [disputeRes, evidenceRes, resolutionsRes] = await Promise.all([
         fetch(`/api/bounty/dispute?disputeId=${disputeId}`),
         fetch(`/api/bounty/dispute/evidence?disputeId=${disputeId}`),
-        fetch(`/api/bounty/dispute/resolve?disputeId=${disputeId}`)
+        fetch(`/api/bounty/dispute/resolve?disputeId=${disputeId}`),
       ]);
 
       if (disputeRes.ok) {
@@ -89,7 +100,6 @@ export const DisputeManagementDashboard: React.FC<DisputeManagementDashboardProp
         const resolutionsData = await resolutionsRes.json();
         setResolutions(resolutionsData.resolutions || []);
       }
-
     } catch (err) {
       console.error('❌ Error loading dispute data:', err);
       setError('Failed to load dispute data');
@@ -101,12 +111,20 @@ export const DisputeManagementDashboard: React.FC<DisputeManagementDashboardProp
   const handleSubmitEvidence = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!address || !evidenceType || !evidenceTitle.trim() || !evidenceDescription.trim()) {
+    if (
+      !address ||
+      !evidenceType ||
+      !evidenceTitle.trim() ||
+      !evidenceDescription.trim()
+    ) {
       setError('Please fill in all required evidence fields');
       return;
     }
 
-    const links = evidenceLinks.trim().split('\n').filter(l => l.trim().length > 0);
+    const links = evidenceLinks
+      .trim()
+      .split('\n')
+      .filter((l) => l.trim().length > 0);
     if (links.length === 0) {
       setError('Please provide at least one link or file URL');
       return;
@@ -125,8 +143,8 @@ export const DisputeManagementDashboard: React.FC<DisputeManagementDashboardProp
           evidenceType,
           evidenceTitle: evidenceTitle.trim(),
           evidenceDescription: evidenceDescription.trim(),
-          externalLinks: links
-        })
+          externalLinks: links,
+        }),
       });
 
       const data = await response.json();
@@ -143,10 +161,11 @@ export const DisputeManagementDashboard: React.FC<DisputeManagementDashboardProp
       setEvidenceDescription('');
       setEvidenceLinks('');
       await loadDisputeData();
-
     } catch (err) {
       console.error('❌ Error submitting evidence:', err);
-      setError(err instanceof Error ? err.message : 'Failed to submit evidence');
+      setError(
+        err instanceof Error ? err.message : 'Failed to submit evidence',
+      );
     } finally {
       setSubmittingEvidence(false);
     }
@@ -172,8 +191,8 @@ export const DisputeManagementDashboard: React.FC<DisputeManagementDashboardProp
           proposerAddress: address,
           resolutionType,
           resolutionDescription: resolutionDescription.trim(),
-          executeImmediately: false // Users propose, pod leaders execute
-        })
+          executeImmediately: false, // Users propose, pod leaders execute
+        }),
       });
 
       const data = await response.json();
@@ -188,10 +207,11 @@ export const DisputeManagementDashboard: React.FC<DisputeManagementDashboardProp
       setResolutionType('');
       setResolutionDescription('');
       await loadDisputeData();
-
     } catch (err) {
       console.error('❌ Error proposing resolution:', err);
-      setError(err instanceof Error ? err.message : 'Failed to propose resolution');
+      setError(
+        err instanceof Error ? err.message : 'Failed to propose resolution',
+      );
     } finally {
       setSubmittingResolution(false);
     }
@@ -200,17 +220,38 @@ export const DisputeManagementDashboard: React.FC<DisputeManagementDashboardProp
   const getStatusBadge = (status: string) => {
     const statusMap: Record<string, { color: string; label: string }> = {
       open: { color: 'bg-blue-100 text-blue-800', label: 'Open' },
-      under_review: { color: 'bg-yellow-100 text-yellow-800', label: 'Under Review' },
-      awaiting_evidence: { color: 'bg-orange-100 text-orange-800', label: 'Awaiting Evidence' },
-      pending_resolution: { color: 'bg-purple-100 text-purple-800', label: 'Pending Resolution' },
-      resolved_for_creator: { color: 'bg-green-100 text-green-800', label: 'Resolved - Creator' },
-      resolved_for_bidder: { color: 'bg-green-100 text-green-800', label: 'Resolved - Bidder' },
-      resolved_compromise: { color: 'bg-green-100 text-green-800', label: 'Resolved - Compromise' },
+      under_review: {
+        color: 'bg-yellow-100 text-yellow-800',
+        label: 'Under Review',
+      },
+      awaiting_evidence: {
+        color: 'bg-orange-100 text-orange-800',
+        label: 'Awaiting Evidence',
+      },
+      pending_resolution: {
+        color: 'bg-purple-100 text-purple-800',
+        label: 'Pending Resolution',
+      },
+      resolved_for_creator: {
+        color: 'bg-green-100 text-green-800',
+        label: 'Resolved - Creator',
+      },
+      resolved_for_bidder: {
+        color: 'bg-green-100 text-green-800',
+        label: 'Resolved - Bidder',
+      },
+      resolved_compromise: {
+        color: 'bg-green-100 text-green-800',
+        label: 'Resolved - Compromise',
+      },
       withdrawn: { color: 'bg-gray-100 text-gray-800', label: 'Withdrawn' },
-      closed: { color: 'bg-gray-100 text-gray-800', label: 'Closed' }
+      closed: { color: 'bg-gray-100 text-gray-800', label: 'Closed' },
     };
 
-    const statusInfo = statusMap[status] || { color: 'bg-gray-100 text-gray-800', label: status };
+    const statusInfo = statusMap[status] || {
+      color: 'bg-gray-100 text-gray-800',
+      label: status,
+    };
     return <Badge className={statusInfo.color}>{statusInfo.label}</Badge>;
   };
 
@@ -219,10 +260,13 @@ export const DisputeManagementDashboard: React.FC<DisputeManagementDashboardProp
       low: { color: 'bg-gray-100 text-gray-800', label: 'Low' },
       medium: { color: 'bg-blue-100 text-blue-800', label: 'Medium' },
       high: { color: 'bg-orange-100 text-orange-800', label: 'High' },
-      urgent: { color: 'bg-red-100 text-red-800', label: 'Urgent' }
+      urgent: { color: 'bg-red-100 text-red-800', label: 'Urgent' },
     };
 
-    const priorityInfo = priorityMap[priority] || { color: 'bg-gray-100 text-gray-800', label: priority };
+    const priorityInfo = priorityMap[priority] || {
+      color: 'bg-gray-100 text-gray-800',
+      label: priority,
+    };
     return <Badge className={priorityInfo.color}>{priorityInfo.label}</Badge>;
   };
 
@@ -263,7 +307,7 @@ export const DisputeManagementDashboard: React.FC<DisputeManagementDashboardProp
     { value: 'video', label: 'Video' },
     { value: 'document', label: 'Document' },
     { value: 'link', label: 'External Link' },
-    { value: 'other', label: 'Other' }
+    { value: 'other', label: 'Other' },
   ];
 
   const resolutionTypes = [
@@ -275,7 +319,7 @@ export const DisputeManagementDashboard: React.FC<DisputeManagementDashboardProp
     { value: 'extend_deadline', label: 'Extend Deadline' },
     { value: 'reduce_scope', label: 'Reduce Scope' },
     { value: 'no_action', label: 'No Action' },
-    { value: 'other', label: 'Other' }
+    { value: 'other', label: 'Other' },
   ];
 
   return (
@@ -290,7 +334,8 @@ export const DisputeManagementDashboard: React.FC<DisputeManagementDashboardProp
                 {dispute.dispute_title}
               </CardTitle>
               <CardDescription className="mt-2">
-                Dispute #{disputeId.slice(0, 8)}... • Filed {new Date(dispute.created_at).toLocaleDateString()}
+                Dispute #{disputeId.slice(0, 8)}... • Filed{' '}
+                {new Date(dispute.created_at).toLocaleDateString()}
               </CardDescription>
             </div>
             {onClose && (
@@ -313,26 +358,36 @@ export const DisputeManagementDashboard: React.FC<DisputeManagementDashboardProp
           <div className="space-y-4">
             <div>
               <h4 className="font-semibold text-sm mb-2">Description</h4>
-              <p className="text-sm text-gray-700 whitespace-pre-wrap">{dispute.dispute_description}</p>
+              <p className="text-sm text-gray-700 whitespace-pre-wrap">
+                {dispute.dispute_description}
+              </p>
             </div>
 
             <div>
               <h4 className="font-semibold text-sm mb-2">Desired Resolution</h4>
-              <p className="text-sm text-gray-700 whitespace-pre-wrap">{dispute.desired_resolution}</p>
+              <p className="text-sm text-gray-700 whitespace-pre-wrap">
+                {dispute.desired_resolution}
+              </p>
             </div>
 
             <div className="grid grid-cols-2 gap-4 text-sm">
               <div>
                 <span className="font-semibold">Filed By:</span>
-                <p className="text-gray-700">{dispute.filed_by.slice(0, 10)}... ({dispute.filer_role})</p>
+                <p className="text-gray-700">
+                  {dispute.filed_by.slice(0, 10)}... ({dispute.filer_role})
+                </p>
               </div>
               <div>
                 <span className="font-semibold">Filed Against:</span>
-                <p className="text-gray-700">{dispute.filed_against.slice(0, 10)}...</p>
+                <p className="text-gray-700">
+                  {dispute.filed_against.slice(0, 10)}...
+                </p>
               </div>
               <div>
                 <span className="font-semibold">Disputed Amount:</span>
-                <p className="text-gray-700">{dispute.disputed_amount} {dispute.disputed_token}</p>
+                <p className="text-gray-700">
+                  {dispute.disputed_amount} {dispute.disputed_token}
+                </p>
               </div>
             </div>
           </div>
@@ -361,7 +416,9 @@ export const DisputeManagementDashboard: React.FC<DisputeManagementDashboardProp
           <Card>
             <CardHeader>
               <CardTitle className="text-lg">Evidence</CardTitle>
-              <CardDescription>Evidence submitted by both parties</CardDescription>
+              <CardDescription>
+                Evidence submitted by both parties
+              </CardDescription>
             </CardHeader>
             <CardContent>
               {evidence.length === 0 ? (
@@ -375,9 +432,12 @@ export const DisputeManagementDashboard: React.FC<DisputeManagementDashboardProp
                       <CardHeader className="pb-3">
                         <div className="flex items-start justify-between">
                           <div>
-                            <CardTitle className="text-base">{item.evidence_title}</CardTitle>
+                            <CardTitle className="text-base">
+                              {item.evidence_title}
+                            </CardTitle>
                             <CardDescription>
-                              Submitted by {item.submitter_role} • {new Date(item.created_at).toLocaleDateString()}
+                              Submitted by {item.submitter_role} •{' '}
+                              {new Date(item.created_at).toLocaleDateString()}
                             </CardDescription>
                           </div>
                           <Badge className="bg-blue-100 text-blue-800">
@@ -386,23 +446,28 @@ export const DisputeManagementDashboard: React.FC<DisputeManagementDashboardProp
                         </div>
                       </CardHeader>
                       <CardContent>
-                        <p className="text-sm text-gray-700 mb-3">{item.evidence_description}</p>
-                        {item.external_links && item.external_links.length > 0 && (
-                          <div className="space-y-1">
-                            <p className="text-sm font-semibold">Links:</p>
-                            {item.external_links.map((link: string, idx: number) => (
-                              <a
-                                key={idx}
-                                href={link}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="block text-sm text-blue-600 hover:underline truncate"
-                              >
-                                {link}
-                              </a>
-                            ))}
-                          </div>
-                        )}
+                        <p className="text-sm text-gray-700 mb-3">
+                          {item.evidence_description}
+                        </p>
+                        {item.external_links &&
+                          item.external_links.length > 0 && (
+                            <div className="space-y-1">
+                              <p className="text-sm font-semibold">Links:</p>
+                              {item.external_links.map(
+                                (link: string, idx: number) => (
+                                  <a
+                                    key={idx}
+                                    href={link}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="block text-sm text-blue-600 hover:underline truncate"
+                                  >
+                                    {link}
+                                  </a>
+                                ),
+                              )}
+                            </div>
+                          )}
                       </CardContent>
                     </Card>
                   ))}
@@ -417,7 +482,9 @@ export const DisputeManagementDashboard: React.FC<DisputeManagementDashboardProp
           <Card>
             <CardHeader>
               <CardTitle className="text-lg">Proposed Resolutions</CardTitle>
-              <CardDescription>Resolution proposals from parties and mediators</CardDescription>
+              <CardDescription>
+                Resolution proposals from parties and mediators
+              </CardDescription>
             </CardHeader>
             <CardContent>
               {resolutions.length === 0 ? (
@@ -435,24 +502,35 @@ export const DisputeManagementDashboard: React.FC<DisputeManagementDashboardProp
                               {resolution.resolution_type.replace(/_/g, ' ')}
                             </CardTitle>
                             <CardDescription>
-                              Proposed by {resolution.proposer_role} • {new Date(resolution.created_at).toLocaleDateString()}
+                              Proposed by {resolution.proposer_role} •{' '}
+                              {new Date(
+                                resolution.created_at,
+                              ).toLocaleDateString()}
                             </CardDescription>
                           </div>
-                          <Badge className={
-                            resolution.status === 'executed' ? 'bg-green-100 text-green-800' :
-                            resolution.status === 'approved' ? 'bg-blue-100 text-blue-800' :
-                            resolution.status === 'rejected' ? 'bg-red-100 text-red-800' :
-                            'bg-yellow-100 text-yellow-800'
-                          }>
+                          <Badge
+                            className={
+                              resolution.status === 'executed'
+                                ? 'bg-green-100 text-green-800'
+                                : resolution.status === 'approved'
+                                  ? 'bg-blue-100 text-blue-800'
+                                  : resolution.status === 'rejected'
+                                    ? 'bg-red-100 text-red-800'
+                                    : 'bg-yellow-100 text-yellow-800'
+                            }
+                          >
                             {resolution.status}
                           </Badge>
                         </div>
                       </CardHeader>
                       <CardContent>
-                        <p className="text-sm text-gray-700">{resolution.resolution_description}</p>
+                        <p className="text-sm text-gray-700">
+                          {resolution.resolution_description}
+                        </p>
                         {resolution.executed_at && (
                           <p className="text-xs text-green-600 mt-2">
-                            ✅ Executed on {new Date(resolution.executed_at).toLocaleString()}
+                            ✅ Executed on{' '}
+                            {new Date(resolution.executed_at).toLocaleString()}
                           </p>
                         )}
                       </CardContent>
@@ -474,13 +552,18 @@ export const DisputeManagementDashboard: React.FC<DisputeManagementDashboardProp
                   <Upload className="h-5 w-5" />
                   Submit Evidence
                 </CardTitle>
-                <CardDescription>Provide evidence to support your case</CardDescription>
+                <CardDescription>
+                  Provide evidence to support your case
+                </CardDescription>
               </CardHeader>
               <CardContent>
                 <form onSubmit={handleSubmitEvidence} className="space-y-4">
                   <div className="space-y-2">
                     <Label htmlFor="evidenceType">Evidence Type *</Label>
-                    <Select value={evidenceType} onValueChange={setEvidenceType}>
+                    <Select
+                      value={evidenceType}
+                      onValueChange={setEvidenceType}
+                    >
                       <SelectTrigger>
                         <SelectValue placeholder="Select type..." />
                       </SelectTrigger>
@@ -518,7 +601,9 @@ export const DisputeManagementDashboard: React.FC<DisputeManagementDashboardProp
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="evidenceLinks">Links (one per line) *</Label>
+                    <Label htmlFor="evidenceLinks">
+                      Links (one per line) *
+                    </Label>
                     <Textarea
                       id="evidenceLinks"
                       value={evidenceLinks}
@@ -546,13 +631,18 @@ export const DisputeManagementDashboard: React.FC<DisputeManagementDashboardProp
                   <CheckCircle2 className="h-5 w-5" />
                   Propose Resolution
                 </CardTitle>
-                <CardDescription>Suggest how this dispute should be resolved</CardDescription>
+                <CardDescription>
+                  Suggest how this dispute should be resolved
+                </CardDescription>
               </CardHeader>
               <CardContent>
                 <form onSubmit={handleSubmitResolution} className="space-y-4">
                   <div className="space-y-2">
                     <Label htmlFor="resolutionType">Resolution Type *</Label>
-                    <Select value={resolutionType} onValueChange={setResolutionType}>
+                    <Select
+                      value={resolutionType}
+                      onValueChange={setResolutionType}
+                    >
                       <SelectTrigger>
                         <SelectValue placeholder="Select type..." />
                       </SelectTrigger>
@@ -567,7 +657,9 @@ export const DisputeManagementDashboard: React.FC<DisputeManagementDashboardProp
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="resolutionDescription">Resolution Details *</Label>
+                    <Label htmlFor="resolutionDescription">
+                      Resolution Details *
+                    </Label>
                     <Textarea
                       id="resolutionDescription"
                       value={resolutionDescription}
@@ -582,7 +674,9 @@ export const DisputeManagementDashboard: React.FC<DisputeManagementDashboardProp
                     disabled={submittingResolution}
                     className="w-full"
                   >
-                    {submittingResolution ? 'Submitting...' : 'Propose Resolution'}
+                    {submittingResolution
+                      ? 'Submitting...'
+                      : 'Propose Resolution'}
                   </Button>
                 </form>
               </CardContent>
@@ -594,7 +688,9 @@ export const DisputeManagementDashboard: React.FC<DisputeManagementDashboardProp
       {error && (
         <Alert className="bg-red-50 border-red-200">
           <AlertTriangle className="h-4 w-4 text-red-600" />
-          <AlertDescription className="text-red-800 ml-2">{error}</AlertDescription>
+          <AlertDescription className="text-red-800 ml-2">
+            {error}
+          </AlertDescription>
         </Alert>
       )}
     </div>

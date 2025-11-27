@@ -42,7 +42,7 @@ export async function POST(request: NextRequest) {
           success: false,
           error: 'Wallet address is required',
         },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -56,12 +56,15 @@ export async function POST(request: NextRequest) {
           success: false,
           error: 'Invalid wallet address format',
         },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
     // Validate invite code (unless first user)
-    const validationResult = await validateInviteCode(inviteCode, normalizedWallet);
+    const validationResult = await validateInviteCode(
+      inviteCode,
+      normalizedWallet,
+    );
 
     if (!validationResult.isValid) {
       return NextResponse.json(
@@ -69,7 +72,7 @@ export async function POST(request: NextRequest) {
           success: false,
           error: validationResult.error || 'Invalid invite code',
         },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -87,11 +90,14 @@ export async function POST(request: NextRequest) {
       await recordInviteCodeUsage(
         inviteCode,
         normalizedWallet,
-        validationResult.referrerWallet
+        validationResult.referrerWallet,
       );
 
       // Update new user's profile with referrer info
-      await updateUserWithReferrer(normalizedWallet, validationResult.referrerWallet);
+      await updateUserWithReferrer(
+        normalizedWallet,
+        validationResult.referrerWallet,
+      );
     }
 
     // Return success
@@ -107,7 +113,7 @@ export async function POST(request: NextRequest) {
         success: false,
         error: 'An error occurred while validating your invite code',
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -127,7 +133,7 @@ export async function GET(request: NextRequest) {
           success: false,
           error: 'Wallet address is required',
         },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -142,7 +148,7 @@ export async function GET(request: NextRequest) {
           success: false,
           error: 'No invite code found for this wallet',
         },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
@@ -157,7 +163,7 @@ export async function GET(request: NextRequest) {
         success: false,
         error: 'An error occurred while fetching invite code',
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

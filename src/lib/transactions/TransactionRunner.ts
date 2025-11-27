@@ -1,6 +1,6 @@
 /**
  * Transaction Runner - User-friendly blockchain transaction execution
- * 
+ *
  * Provides a clean interface for executing blockchain transactions with
  * user feedback, progress tracking, and error handling.
  */
@@ -49,7 +49,8 @@ export interface TransactionResult<T = any> {
  * Individual transaction step executor
  */
 export type TransactionStepExecutor<T = any> = (
-    onProgress?: (progress: Partial<TransactionProgress>) => void) => Promise<T>
+  onProgress?: (progress: Partial<TransactionProgress>) => void,
+) => Promise<T>;
 
 export class TransactionRunner {
   private isCancelled = false;
@@ -57,7 +58,7 @@ export class TransactionRunner {
 
   constructor(
     private config: TransactionConfig,
-    onUpdate?: TransactionUpdateCallback
+    onUpdate?: TransactionUpdateCallback,
   ) {
     this.onUpdate = onUpdate;
   }
@@ -66,10 +67,12 @@ export class TransactionRunner {
    * Execute a multi-step transaction with user feedback
    */
   async execute<T>(
-    stepExecutors: TransactionStepExecutor<any>[]
+    stepExecutors: TransactionStepExecutor<any>[],
   ): Promise<TransactionResult<T>> {
     if (stepExecutors.length !== this.config.steps.length) {
-      throw new Error(`Step executor count (${stepExecutors.length}) doesn't match config steps (${this.config.steps.length})`);
+      throw new Error(
+        `Step executor count (${stepExecutors.length}) doesn't match config steps (${this.config.steps.length})`,
+      );
     }
 
     this.isCancelled = false;
@@ -84,7 +87,7 @@ export class TransactionRunner {
           this.updateProgress(i, 'cancelled');
           return {
             success: false,
-            error: new Error('Transaction cancelled by user')
+            error: new Error('Transaction cancelled by user'),
           };
         }
 
@@ -96,11 +99,13 @@ export class TransactionRunner {
 
         try {
           // Execute step with RPC queue for rate limiting
-          const stepResult = await globalRpcQueue.enqueueHighPriority(async () => {
-            return executor((stepProgress) => {
-              this.updateProgress(i, 'running', stepProgress);
-            });
-          });
+          const stepResult = await globalRpcQueue.enqueueHighPriority(
+            async () => {
+              return executor((stepProgress) => {
+                this.updateProgress(i, 'running', stepProgress);
+              });
+            },
+          );
 
           // Extract transaction details if available
           if (stepResult?.hash) {
@@ -115,17 +120,16 @@ export class TransactionRunner {
 
           results.push(stepResult);
           this.updateProgress(i, 'completed', { txHash });
-
         } catch (error) {
           console.error(`Transaction step ${step.id} failed:`, error);
-          this.updateProgress(i, 'failed', { 
-            error: error instanceof Error ? error : new Error(String(error))
+          this.updateProgress(i, 'failed', {
+            error: error instanceof Error ? error : new Error(String(error)),
           });
-          
+
           return {
             success: false,
             error: error instanceof Error ? error : new Error(String(error)),
-            txHash
+            txHash,
           };
         }
       }
@@ -135,15 +139,14 @@ export class TransactionRunner {
         data: results.length === 1 ? results[0] : results,
         txHash,
         gasUsed,
-        blockNumber
+        blockNumber,
       };
-
     } catch (error) {
       console.error('Transaction execution failed:', error);
       return {
         success: false,
         error: error instanceof Error ? error : new Error(String(error)),
-        txHash
+        txHash,
       };
     }
   }
@@ -168,7 +171,7 @@ export class TransactionRunner {
   private updateProgress(
     stepIndex: number,
     status: TransactionProgress['status'],
-    extra: Partial<TransactionProgress> = {}
+    extra: Partial<TransactionProgress> = {},
   ): void {
     const step = this.config.steps[stepIndex];
     const progress: TransactionProgress = {
@@ -178,8 +181,11 @@ export class TransactionRunner {
       stepName: step.name,
       stepDescription: step.description,
       status,
-      estimatedTimeRemaining: this.calculateEstimatedTimeRemaining(stepIndex, status),
-      ...extra
+      estimatedTimeRemaining: this.calculateEstimatedTimeRemaining(
+        stepIndex,
+        status,
+      ),
+      ...extra,
     };
 
     this.onUpdate?.(progress);
@@ -190,9 +196,13 @@ export class TransactionRunner {
    */
   private calculateEstimatedTimeRemaining(
     currentStepIndex: number,
-    status: TransactionProgress['status']
+    status: TransactionProgress['status'],
   ): number | undefined {
-    if (status === 'completed' || status === 'failed' || status === 'cancelled') {
+    if (
+      status === 'completed' ||
+      status === 'failed' ||
+      status === 'cancelled'
+    ) {
       return 0;
     }
 
@@ -225,29 +235,29 @@ export const PodTransactionConfigs = {
         id: 'validate',
         name: 'Validate',
         description: 'Validating pod configuration',
-        estimatedMs: 1000
+        estimatedMs: 1000,
       },
       {
         id: 'create-hats',
         name: 'Create HATs',
         description: 'Creating management and member HATs',
-        estimatedMs: 8000
+        estimatedMs: 8000,
       },
       {
         id: 'deploy-treasury',
         name: 'Deploy Treasury',
         description: 'Deploying pod treasury contract',
-        estimatedMs: 10000
+        estimatedMs: 10000,
       },
       {
         id: 'save-pod',
         name: 'Save Pod',
         description: 'Saving pod to database',
-        estimatedMs: 2000
-      }
+        estimatedMs: 2000,
+      },
     ],
     requireConfirmation: true,
-    allowCancel: true
+    allowCancel: true,
   } as TransactionConfig,
 
   UPDATE_MEMBERS: {
@@ -258,23 +268,23 @@ export const PodTransactionConfigs = {
         id: 'validate',
         name: 'Validate',
         description: 'Validating member changes',
-        estimatedMs: 500
+        estimatedMs: 500,
       },
       {
         id: 'update-hats',
         name: 'Update HATs',
         description: 'Updating HAT assignments',
-        estimatedMs: 5000
+        estimatedMs: 5000,
       },
       {
         id: 'sync-database',
         name: 'Sync Database',
         description: 'Updating member records',
-        estimatedMs: 1000
-      }
+        estimatedMs: 1000,
+      },
     ],
     requireConfirmation: true,
-    allowCancel: true
+    allowCancel: true,
   } as TransactionConfig,
 
   TREASURY_TRANSACTION: {
@@ -285,24 +295,24 @@ export const PodTransactionConfigs = {
         id: 'prepare',
         name: 'Prepare',
         description: 'Preparing transaction data',
-        estimatedMs: 1000
+        estimatedMs: 1000,
       },
       {
         id: 'execute',
         name: 'Execute',
         description: 'Executing transaction',
-        estimatedMs: 8000
+        estimatedMs: 8000,
       },
       {
         id: 'confirm',
         name: 'Confirm',
         description: 'Waiting for confirmation',
-        estimatedMs: 5000
-      }
+        estimatedMs: 5000,
+      },
     ],
     requireConfirmation: true,
-    allowCancel: false // Treasury transactions shouldn't be cancelled mid-flight
-  } as TransactionConfig
+    allowCancel: false, // Treasury transactions shouldn't be cancelled mid-flight
+  } as TransactionConfig,
 };
 
 /**
@@ -310,12 +320,13 @@ export const PodTransactionConfigs = {
  */
 export function createTransactionRunner(
   configKey: keyof typeof PodTransactionConfigs | TransactionConfig,
-  onUpdate?: TransactionUpdateCallback
+  onUpdate?: TransactionUpdateCallback,
 ): TransactionRunner {
-  const config = typeof configKey === 'string' 
-    ? PodTransactionConfigs[configKey]
-    : configKey;
-    
+  const config =
+    typeof configKey === 'string'
+      ? PodTransactionConfigs[configKey]
+      : configKey;
+
   return new TransactionRunner(config, onUpdate);
 }
 
@@ -327,7 +338,7 @@ export interface UseTransactionRunnerResult {
   isRunning: boolean;
   execute: <T>(
     config: keyof typeof PodTransactionConfigs | TransactionConfig,
-    executors: TransactionStepExecutor<any>[]
+    executors: TransactionStepExecutor<any>[],
   ) => Promise<TransactionResult<T>>;
   cancel: () => void;
 }
@@ -337,24 +348,30 @@ export interface UseTransactionRunnerResult {
  * (This would normally be in a separate hooks file, but including here for completeness)
  */
 export function useTransactionRunner(): UseTransactionRunnerResult {
-  const [progress, setProgress] = React.useState<TransactionProgress | null>(null);
-  const [currentRunner, setCurrentRunner] = React.useState<TransactionRunner | null>(null);
+  const [progress, setProgress] = React.useState<TransactionProgress | null>(
+    null,
+  );
+  const [currentRunner, setCurrentRunner] =
+    React.useState<TransactionRunner | null>(null);
 
-  const execute = React.useCallback(async <T>(
-    config: keyof typeof PodTransactionConfigs | TransactionConfig,
-    executors: TransactionStepExecutor<any>[]
-  ): Promise<TransactionResult<T>> => {
-    const runner = createTransactionRunner(config, setProgress);
-    setCurrentRunner(runner);
-    
-    try {
-      const result = await runner.execute<T>(executors);
-      return result;
-    } finally {
-      setCurrentRunner(null);
-      setProgress(null);
-    }
-  }, []);
+  const execute = React.useCallback(
+    async <T>(
+      config: keyof typeof PodTransactionConfigs | TransactionConfig,
+      executors: TransactionStepExecutor<any>[],
+    ): Promise<TransactionResult<T>> => {
+      const runner = createTransactionRunner(config, setProgress);
+      setCurrentRunner(runner);
+
+      try {
+        const result = await runner.execute<T>(executors);
+        return result;
+      } finally {
+        setCurrentRunner(null);
+        setProgress(null);
+      }
+    },
+    [],
+  );
 
   const cancel = React.useCallback(() => {
     currentRunner?.cancel();
@@ -364,7 +381,7 @@ export function useTransactionRunner(): UseTransactionRunnerResult {
     progress,
     isRunning: !!currentRunner,
     execute,
-    cancel
+    cancel,
   };
 }
 

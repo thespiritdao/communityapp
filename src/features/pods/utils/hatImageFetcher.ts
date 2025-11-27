@@ -9,20 +9,16 @@ const HATS_ABI = [
   {
     name: 'getImageURIForHat',
     type: 'function',
-    inputs: [
-      { name: 'hatId', type: 'uint256' }
-    ],
-    outputs: [
-      { name: '', type: 'string' }
-    ],
-    stateMutability: 'view'
-  }
+    inputs: [{ name: 'hatId', type: 'uint256' }],
+    outputs: [{ name: '', type: 'string' }],
+    stateMutability: 'view',
+  },
 ] as const;
 
 // Create public client for Base
 const publicClient = createPublicClient({
   chain: base,
-  transport: http()
+  transport: http(),
 });
 
 /**
@@ -39,7 +35,7 @@ export async function fetchHatImageURI(hatId: string): Promise<string> {
       address: HATS_CONTRACT,
       abi: HATS_ABI,
       functionName: 'getImageURIForHat',
-      args: [hatIdBigInt]
+      args: [hatIdBigInt],
     });
 
     console.log('🔍 Raw URI returned:', { hatId, uri });
@@ -58,10 +54,9 @@ export async function fetchHatImageURI(hatId: string): Promise<string> {
 
     console.log('✅ Retrieved HAT image:', { hatId, uri, imageUrl });
     return imageUrl;
-
   } catch (error) {
     console.error('❌ Failed to fetch HAT image URI:', error);
-    
+
     // Fallback to generated image if HAT image fetch fails
     const fallbackUrl = `https://ui-avatars.com/api/?name=Executive+Pod&size=400&background=bfe7c6&color=000&bold=true`;
     console.log('📋 Using fallback image:', fallbackUrl);
@@ -72,11 +67,13 @@ export async function fetchHatImageURI(hatId: string): Promise<string> {
 /**
  * Fetch image URIs for multiple HATs
  */
-export async function fetchMultipleHatImages(hatIds: string[]): Promise<Record<string, string>> {
+export async function fetchMultipleHatImages(
+  hatIds: string[],
+): Promise<Record<string, string>> {
   console.log('🎩 Fetching images for multiple HATs:', hatIds.length);
-  
+
   const results: Record<string, string> = {};
-  
+
   // Fetch all images in parallel
   const promises = hatIds.map(async (hatId) => {
     const imageUri = await fetchHatImageURI(hatId);
@@ -84,7 +81,7 @@ export async function fetchMultipleHatImages(hatIds: string[]): Promise<Record<s
   });
 
   await Promise.all(promises);
-  
+
   console.log('✅ Retrieved all HAT images:', results);
   return results;
 }
@@ -93,12 +90,17 @@ export async function fetchMultipleHatImages(hatIds: string[]): Promise<Record<s
  * Your specific HAT IDs for easy reference
  */
 export const EXISTING_HATS = {
-  EXECUTIVE_POD: '0x0000008800010000000000000000000000000000000000000000000000000000',
+  EXECUTIVE_POD:
+    '0x0000008800010000000000000000000000000000000000000000000000000000',
   DEV_POD: '0x0000008800020000000000000000000000000000000000000000000000000000',
-  BOUNTY_MANAGEMENT: '0x0000008800010001000100000000000000000000000000000000000000000000',
-  FORUM_MANAGEMENT: '0x0000008800010001000400000000000000000000000000000000000000000000',
-  CHAT_MANAGEMENT: '0x0000008800010001000300000000000000000000000000000000000000000000',
-  EVENT_MANAGEMENT: '0x0000008800010001000500000000000000000000000000000000000000000000',
+  BOUNTY_MANAGEMENT:
+    '0x0000008800010001000100000000000000000000000000000000000000000000',
+  FORUM_MANAGEMENT:
+    '0x0000008800010001000400000000000000000000000000000000000000000000',
+  CHAT_MANAGEMENT:
+    '0x0000008800010001000300000000000000000000000000000000000000000000',
+  EVENT_MANAGEMENT:
+    '0x0000008800010001000500000000000000000000000000000000000000000000',
 } as const;
 
 /**

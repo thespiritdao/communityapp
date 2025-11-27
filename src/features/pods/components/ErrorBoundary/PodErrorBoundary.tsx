@@ -1,6 +1,6 @@
 /**
  * Pod Error Boundary - Preserves existing UX design language
- * 
+ *
  * Provides error handling with the same visual style as existing components
  * including the blue theme for info states and consistent card layouts.
  */
@@ -9,7 +9,12 @@
 
 import React from 'react';
 import { AlertCircle, RefreshCw, ExternalLink } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '../../../../components/ui/card';
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from '../../../../components/ui/card';
 import { Button } from '../../../../components/ui/button';
 
 interface PodErrorBoundaryState {
@@ -27,105 +32,117 @@ interface PodErrorBoundaryProps {
 /**
  * Custom error fallback that matches existing UX patterns
  */
-const DefaultErrorFallback = React.memo<{ error: Error; retry: () => void }>(({ 
-  error, 
-  retry 
-}) => {
-  const isNetworkError = error.message.toLowerCase().includes('network') || 
-                        error.message.toLowerCase().includes('fetch');
-  
-  const isRpcError = error.message.toLowerCase().includes('rpc') ||
-                    error.message.toLowerCase().includes('rate limit');
+const DefaultErrorFallback = React.memo<{ error: Error; retry: () => void }>(
+  ({ error, retry }) => {
+    const isNetworkError =
+      error.message.toLowerCase().includes('network') ||
+      error.message.toLowerCase().includes('fetch');
 
-  // Use Sacred Minimalism color system
-  const getErrorStyle = () => {
-    if (isNetworkError || isRpcError) {
-      return { backgroundColor: '#E8F1EE', borderColor: '#B8D9CA', color: '#1F453A' };
-    }
-    return { backgroundColor: '#F5E6E6', borderColor: '#D9B3B3', color: '#5C1F1F' };
-  };
+    const isRpcError =
+      error.message.toLowerCase().includes('rpc') ||
+      error.message.toLowerCase().includes('rate limit');
 
-  const getErrorTitle = () => {
-    if (isNetworkError) return 'Connection Issue';
-    if (isRpcError) return 'Blockchain Temporarily Unavailable';
-    return 'Something went wrong';
-  };
+    // Use Sacred Minimalism color system
+    const getErrorStyle = () => {
+      if (isNetworkError || isRpcError) {
+        return {
+          backgroundColor: '#E8F1EE',
+          borderColor: '#B8D9CA',
+          color: '#1F453A',
+        };
+      }
+      return {
+        backgroundColor: '#F5E6E6',
+        borderColor: '#D9B3B3',
+        color: '#5C1F1F',
+      };
+    };
 
-  const getErrorMessage = () => {
-    if (isNetworkError) {
-      return 'Unable to connect to the network. Please check your connection and try again.';
-    }
-    if (isRpcError) {
-      return 'The blockchain network is busy. Please wait a moment and try again.';
-    }
-    return 'An unexpected error occurred. Please try refreshing the page.';
-  };
+    const getErrorTitle = () => {
+      if (isNetworkError) return 'Connection Issue';
+      if (isRpcError) return 'Blockchain Temporarily Unavailable';
+      return 'Something went wrong';
+    };
 
-  return (
-    <Card className="w-full max-w-6xl mx-auto">
-      <CardHeader>
-        <CardTitle className="flex items-center space-x-2" style={{ color: '#8B3A3A' }}>
-          <AlertCircle className="h-5 w-5" />
-          <span>{getErrorTitle()}</span>
-        </CardTitle>
-      </CardHeader>
+    const getErrorMessage = () => {
+      if (isNetworkError) {
+        return 'Unable to connect to the network. Please check your connection and try again.';
+      }
+      if (isRpcError) {
+        return 'The blockchain network is busy. Please wait a moment and try again.';
+      }
+      return 'An unexpected error occurred. Please try refreshing the page.';
+    };
 
-      <CardContent>
-        <div className="p-4 border rounded-lg" style={getErrorStyle()}>
-          <p className="mb-4">{getErrorMessage()}</p>
-          
-          <div className="flex items-center space-x-3">
-            <Button
-              onClick={retry}
-              className="px-4 py-2 rounded text-white"
-              size="sm"
-              style={{ backgroundColor: '#2F5D50' }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = '#1F453A';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = '#2F5D50';
-              }}
-            >
-              <RefreshCw className="h-4 w-4 mr-2" />
-              Try Again
-            </Button>
+    return (
+      <Card className="w-full max-w-6xl mx-auto">
+        <CardHeader>
+          <CardTitle
+            className="flex items-center space-x-2"
+            style={{ color: '#8B3A3A' }}
+          >
+            <AlertCircle className="h-5 w-5" />
+            <span>{getErrorTitle()}</span>
+          </CardTitle>
+        </CardHeader>
 
-            {(isNetworkError || isRpcError) && (
-              <a
-                href="https://status.base.org"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-sm flex items-center"
-                style={{ color: '#2F5D50' }}
+        <CardContent>
+          <div className="p-4 border rounded-lg" style={getErrorStyle()}>
+            <p className="mb-4">{getErrorMessage()}</p>
+
+            <div className="flex items-center space-x-3">
+              <Button
+                onClick={retry}
+                className="px-4 py-2 rounded text-white"
+                size="sm"
+                style={{ backgroundColor: '#2F5D50' }}
                 onMouseEnter={(e) => {
-                  e.currentTarget.style.color = '#1F453A';
+                  e.currentTarget.style.backgroundColor = '#1F453A';
                 }}
                 onMouseLeave={(e) => {
-                  e.currentTarget.style.color = '#2F5D50';
+                  e.currentTarget.style.backgroundColor = '#2F5D50';
                 }}
               >
-                Check Network Status
-                <ExternalLink className="h-3 w-3 ml-1" />
-              </a>
+                <RefreshCw className="h-4 w-4 mr-2" />
+                Try Again
+              </Button>
+
+              {(isNetworkError || isRpcError) && (
+                <a
+                  href="https://status.base.org"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sm flex items-center"
+                  style={{ color: '#2F5D50' }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.color = '#1F453A';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.color = '#2F5D50';
+                  }}
+                >
+                  Check Network Status
+                  <ExternalLink className="h-3 w-3 ml-1" />
+                </a>
+              )}
+            </div>
+
+            {process.env.NODE_ENV === 'development' && (
+              <details className="mt-4">
+                <summary className="cursor-pointer text-sm font-medium">
+                  Developer Details
+                </summary>
+                <pre className="mt-2 text-xs bg-gray-100 p-2 rounded overflow-auto">
+                  {error.stack}
+                </pre>
+              </details>
             )}
           </div>
-          
-          {process.env.NODE_ENV === 'development' && (
-            <details className="mt-4">
-              <summary className="cursor-pointer text-sm font-medium">
-                Developer Details
-              </summary>
-              <pre className="mt-2 text-xs bg-gray-100 p-2 rounded overflow-auto">
-                {error.stack}
-              </pre>
-            </details>
-          )}
-        </div>
-      </CardContent>
-    </Card>
-  );
-});
+        </CardContent>
+      </Card>
+    );
+  },
+);
 
 DefaultErrorFallback.displayName = 'DefaultErrorFallback';
 
@@ -145,7 +162,9 @@ export class PodErrorBoundary extends React.Component<
     };
   }
 
-  static getDerivedStateFromError(error: Error): Partial<PodErrorBoundaryState> {
+  static getDerivedStateFromError(
+    error: Error,
+  ): Partial<PodErrorBoundaryState> {
     return {
       hasError: true,
       error,
@@ -183,13 +202,8 @@ export class PodErrorBoundary extends React.Component<
   render() {
     if (this.state.hasError && this.state.error) {
       const FallbackComponent = this.props.fallback || DefaultErrorFallback;
-      
-      return (
-        <FallbackComponent 
-          error={this.state.error} 
-          retry={this.retry}
-        />
-      );
+
+      return <FallbackComponent error={this.state.error} retry={this.retry} />;
     }
 
     return this.props.children;

@@ -22,7 +22,7 @@ export default function ForumAccessGate({
   requireModeration = false,
   requirePosting = false,
   allowPublic = false,
-  fallbackMessage
+  fallbackMessage,
 }: ForumAccessGateProps) {
   const router = useRouter();
   const { isConnected, address } = useAccount();
@@ -30,7 +30,9 @@ export default function ForumAccessGate({
 
   // Handle wallet connection
   const handleConnectWallet = () => {
-    router.push('/login?redirect=' + encodeURIComponent(window.location.pathname));
+    router.push(
+      '/login?redirect=' + encodeURIComponent(window.location.pathname),
+    );
   };
 
   // Loading state
@@ -126,7 +128,9 @@ export default function ForumAccessGate({
           <Button variant="outline" onClick={() => router.push('/forum')}>
             Back to Forum
           </Button>
-          <Button onClick={() => window.location.reload()}>Refresh Access</Button>
+          <Button onClick={() => window.location.reload()}>
+            Refresh Access
+          </Button>
         </div>
       </div>
     );
@@ -139,7 +143,8 @@ export default function ForumAccessGate({
         <Lock className="w-12 h-12 text-destructive mb-4" />
         <h1 className="text-2xl font-bold">Moderator Access Required</h1>
         <p className="text-muted-foreground mt-2 mb-6">
-          This page requires forum moderation permissions via pod_role_permissions.
+          This page requires forum moderation permissions via
+          pod_role_permissions.
         </p>
         <div className="bg-muted p-4 rounded-lg mb-6 max-w-md">
           <p className="text-sm">
@@ -155,20 +160,26 @@ export default function ForumAccessGate({
   }
 
   // Check posting requirement
-  if (requirePosting && categoryId && !permissions.canPostInCategory(categoryId)) {
+  if (
+    requirePosting &&
+    categoryId &&
+    !permissions.canPostInCategory(categoryId)
+  ) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen p-4">
         <Lock className="w-12 h-12 text-destructive mb-4" />
         <h1 className="text-2xl font-bold">Posting Not Allowed</h1>
         <p className="text-muted-foreground mt-2 mb-6">
-          You can view this category but don't have forumAccess permission to post.
+          You can view this category but don't have forumAccess permission to
+          post.
         </p>
         <div className="bg-muted p-4 rounded-lg mb-6 max-w-md">
           <p className="text-sm">
             <strong>Required Permission:</strong> forumAccess = true
           </p>
           <p className="text-sm text-muted-foreground mt-2">
-            Join a pod or request forumAccess permissions to participate in discussions.
+            Join a pod or request forumAccess permissions to participate in
+            discussions.
           </p>
         </div>
         <Button onClick={() => router.push(`/forum/category/${categoryId}`)}>

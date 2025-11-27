@@ -5,7 +5,7 @@ dotenv.config({ path: '.env' });
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY
+  process.env.SUPABASE_SERVICE_ROLE_KEY,
 );
 
 console.log('🔍 Verifying Bounty #30 is ready for testing...\n');
@@ -55,7 +55,10 @@ if (bidError) {
   console.log('  Bidder:', approvedBid.bidder_address);
   console.log('  Status:', approvedBid.status);
   console.log('  Reviewer:', approvedBid.reviewer_address || 'NOT SET ❌');
-  console.log('  Final Approver:', approvedBid.final_approver_address || 'NOT SET ❌');
+  console.log(
+    '  Final Approver:',
+    approvedBid.final_approver_address || 'NOT SET ❌',
+  );
   console.log('  Reviewed At:', approvedBid.reviewed_at || 'NOT SET ❌');
   console.log('  On-chain Index:', approvedBid.onchain_bid_index);
 
@@ -63,7 +66,9 @@ if (bidError) {
   if (approvedBid.reviewer_address && approvedBid.final_approver_address) {
     console.log('\n✅ Reviewer addresses are SET');
   } else {
-    console.log('\n⚠️ Reviewer addresses are MISSING (this is expected for old bid)');
+    console.log(
+      '\n⚠️ Reviewer addresses are MISSING (this is expected for old bid)',
+    );
     console.log('   New bids will have reviewer addresses stored correctly');
   }
 }
@@ -89,10 +94,16 @@ if (workError) {
 console.log('\n🎯 UI Filter Check:');
 console.log('When you filter by "Assigned" in the UI:');
 
-const statusNumber = bounty.status === 'open' ? 0 :
-                     bounty.status === 'assigned' ? 1 :
-                     bounty.status === 'completed' ? 2 :
-                     bounty.status === 'draft' ? 0 : 3;
+const statusNumber =
+  bounty.status === 'open'
+    ? 0
+    : bounty.status === 'assigned'
+      ? 1
+      : bounty.status === 'completed'
+        ? 2
+        : bounty.status === 'draft'
+          ? 0
+          : 3;
 
 console.log('  Database status:', `"${bounty.status}"`);
 console.log('  Converts to number:', statusNumber);

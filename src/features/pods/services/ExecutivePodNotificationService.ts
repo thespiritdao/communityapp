@@ -4,7 +4,8 @@ import { supabase } from '@/utils/supabaseClient';
 import { fetchTokenBalances } from '@/utils/fetchTokenBalances';
 
 // Environment variables for executive tokens
-const EXECUTIVE_TOKEN_ADDRESS = process.env.NEXT_PUBLIC_EXECUTIVE_TOKEN || '0x1234567890abcdef';
+const EXECUTIVE_TOKEN_ADDRESS =
+  process.env.NEXT_PUBLIC_EXECUTIVE_TOKEN || '0x1234567890abcdef';
 
 export interface ExecutiveNotificationData {
   type: 'pod_approval_request';
@@ -25,7 +26,7 @@ export class ExecutivePodNotificationService {
     try {
       // First, get all unique addresses from recent transactions and database records
       const uniqueAddresses = new Set<string>();
-      
+
       // Get addresses from pod creation records
       const { data: pods } = await supabase
         .from('pods')
@@ -33,7 +34,7 @@ export class ExecutivePodNotificationService {
         .not('created_by_address', 'is', null);
 
       if (pods) {
-        pods.forEach(pod => {
+        pods.forEach((pod) => {
           if (pod.created_by_address) {
             uniqueAddresses.add(pod.created_by_address.toLowerCase());
           }
@@ -49,11 +50,14 @@ export class ExecutivePodNotificationService {
       const { data: notifications } = await supabase
         .from('governance_notifications')
         .select('recipient_address')
-        .gte('created_at', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()) // Last 30 days
+        .gte(
+          'created_at',
+          new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
+        ) // Last 30 days
         .not('recipient_address', 'is', null);
 
       if (notifications) {
-        notifications.forEach(notif => {
+        notifications.forEach((notif) => {
           if (notif.recipient_address) {
             uniqueAddresses.add(notif.recipient_address.toLowerCase());
           }
@@ -62,27 +66,29 @@ export class ExecutivePodNotificationService {
 
       // Convert to array for balance checking
       const addressArray = Array.from(uniqueAddresses);
-      
+
       if (addressArray.length === 0) {
         console.warn('No addresses found for executive token balance checking');
         return [];
       }
 
       // Check balances for all addresses
-      console.log(`🏛️ Checking executive token balances for ${addressArray.length} addresses...`);
-      
+      console.log(
+        `🏛️ Checking executive token balances for ${addressArray.length} addresses...`,
+      );
+
       const executiveHolders: string[] = [];
-      
+
       // Process in batches to avoid overwhelming the RPC
       const batchSize = 10;
       for (let i = 0; i < addressArray.length; i += batchSize) {
         const batch = addressArray.slice(i, i + batchSize);
         const batchAddresses = Array.from(batch);
-        
+
         try {
           const balances = await fetchTokenBalances(
             batchAddresses[0], // This function expects single address, so we'll call it for each
-            [EXECUTIVE_TOKEN_ADDRESS]
+            [EXECUTIVE_TOKEN_ADDRESS],
           );
 
           // For each address in the batch, check if they have executive tokens
@@ -90,15 +96,23 @@ export class ExecutivePodNotificationService {
             try {
               const individualBalances = await fetchTokenBalances(
                 batchAddresses[j],
-                [EXECUTIVE_TOKEN_ADDRESS]
+                [EXECUTIVE_TOKEN_ADDRESS],
               );
-              
-              if (individualBalances.length > 0 && Number.parseFloat(individualBalances[0]) > 0) {
+
+              if (
+                individualBalances.length > 0 &&
+                Number.parseFloat(individualBalances[0]) > 0
+              ) {
                 executiveHolders.push(batchAddresses[j]);
-                console.log(`✅ Executive token holder found: ${batchAddresses[j]} (Balance: ${individualBalances[0]})`);
+                console.log(
+                  `✅ Executive token holder found: ${batchAddresses[j]} (Balance: ${individualBalances[0]})`,
+                );
               }
             } catch (error) {
-              console.warn(`Failed to check balance for ${batchAddresses[j]}:`, error);
+              console.warn(
+                `Failed to check balance for ${batchAddresses[j]}:`,
+                error,
+              );
             }
           }
         } catch (error) {
@@ -106,9 +120,10 @@ export class ExecutivePodNotificationService {
         }
       }
 
-      console.log(`🏛️ Found ${executiveHolders.length} executive pod token holders`);
+      console.log(
+        `🏛️ Found ${executiveHolders.length} executive pod token holders`,
+      );
       return executiveHolders;
-
     } catch (error) {
       console.error('Error getting executive pod holders:', error);
       return [];
@@ -118,19 +133,23 @@ export class ExecutivePodNotificationService {
   /**
    * Send governance notifications to all executive pod holders
    */
-  static async notifyExecutivePodHolders(notificationData: ExecutiveNotificationData): Promise<void> {
+  static async notifyExecutivePodHolders(
+    notificationData: ExecutiveNotificationData,
+  ): Promise<void> {
     try {
       const executiveHolders = await this.getExecutivePodHolders();
-      
+
       if (executiveHolders.length === 0) {
         console.warn('No executive pod holders found to notify');
         return;
       }
 
-      console.log(`🔔 Sending pod approval notifications to ${executiveHolders.length} executive holders`);
+      console.log(
+        `🔔 Sending pod approval notifications to ${executiveHolders.length} executive holders`,
+      );
 
       // Create notification records for each executive holder
-      const notifications = executiveHolders.map(holderAddress => ({
+      const notifications = executiveHolders.map((holderAddress) => ({
         recipient_address: holderAddress,
         sender_address: notificationData.createdBy,
         notification_type: 'pod_approval_request',
@@ -140,7 +159,7 @@ export class ExecutivePodNotificationService {
         context_type: 'pod_governance',
         context_id: notificationData.podId,
         proposal_id: notificationData.podId,
-        is_read: false
+        is_read: false,
       }));
 
       // Insert all notifications in batch
@@ -153,8 +172,9 @@ export class ExecutivePodNotificationService {
         throw error;
       }
 
-      console.log(`✅ Successfully sent ${notifications.length} pod approval notifications`);
-
+      console.log(
+        `✅ Successfully sent ${notifications.length} pod approval notifications`,
+      );
     } catch (error) {
       console.error('Error notifying executive pod holders:', error);
       throw error;
@@ -169,22 +189,24 @@ export class ExecutivePodNotificationService {
     podName: string,
     status: 'approved' | 'rejected',
     createdBy: string,
-    approvedBy?: string
+    approvedBy?: string,
   ): Promise<void> {
     try {
       const notification = {
         recipient_address: createdBy,
         sender_address: approvedBy || 'system',
-        notification_type: status === 'approved' ? 'proposal_executed' : 'proposal_cancelled',
+        notification_type:
+          status === 'approved' ? 'proposal_executed' : 'proposal_cancelled',
         title: `Pod ${status === 'approved' ? 'Approved' : 'Rejected'}: ${podName}`,
-        message: status === 'approved' 
-          ? `Congratulations! Your pod "${podName}" has been approved by executive governance and is now active. You can now begin using all pod features including treasury management, event creation, and member management.`
-          : `Your pod "${podName}" has been rejected by executive governance. Please review the feedback and consider resubmitting with requested changes.`,
+        message:
+          status === 'approved'
+            ? `Congratulations! Your pod "${podName}" has been approved by executive governance and is now active. You can now begin using all pod features including treasury management, event creation, and member management.`
+            : `Your pod "${podName}" has been rejected by executive governance. Please review the feedback and consider resubmitting with requested changes.`,
         context_url: `/pods/${podId}`,
         context_type: 'pod_governance',
         context_id: podId,
         proposal_id: podId,
-        is_read: false
+        is_read: false,
       };
 
       const { error } = await supabase
@@ -196,8 +218,9 @@ export class ExecutivePodNotificationService {
         throw error;
       }
 
-      console.log(`✅ Sent pod ${status} notification to creator: ${createdBy}`);
-
+      console.log(
+        `✅ Sent pod ${status} notification to creator: ${createdBy}`,
+      );
     } catch (error) {
       console.error('Error notifying pod status update:', error);
       throw error;
@@ -229,7 +252,6 @@ export class ExecutivePodNotificationService {
       }
 
       return data || [];
-
     } catch (error) {
       console.error('Error getting pending pod approvals:', error);
       return [];
@@ -239,7 +261,10 @@ export class ExecutivePodNotificationService {
   /**
    * Mark pod approval notification as read
    */
-  static async markPodApprovalAsRead(notificationId: string, userAddress: string): Promise<void> {
+  static async markPodApprovalAsRead(
+    notificationId: string,
+    userAddress: string,
+  ): Promise<void> {
     try {
       const { error } = await supabase
         .from('governance_notifications')
@@ -251,7 +276,6 @@ export class ExecutivePodNotificationService {
         console.error('Error marking notification as read:', error);
         throw error;
       }
-
     } catch (error) {
       console.error('Error marking pod approval as read:', error);
       throw error;

@@ -14,10 +14,10 @@ import PodTreasurySync from '@/features/pods/components/PodTreasurySync';
 import { useHatPermissions } from '@/hooks/useHatPermissions';
 import { useHatsModules } from '@/hooks/useHatsModules';
 import { useTokenBalances } from '@/context/TokenBalancesContext';
-import { 
-  Code, 
-  Database, 
-  Image, 
+import {
+  Code,
+  Database,
+  Image,
   Settings,
   Zap,
   TestTube,
@@ -26,14 +26,18 @@ import {
   CheckCircle,
   XCircle,
   Clock,
-  Crown
+  Crown,
 } from 'lucide-react';
 
 export default function PodDevToolsPage() {
   const [activeModule, setActiveModule] = useState<string>('overview');
 
   // Hooks for development tools
-  const { balances, refreshBalances, isLoading: tokenLoading } = useTokenBalances();
+  const {
+    balances,
+    refreshBalances,
+    isLoading: tokenLoading,
+  } = useTokenBalances();
   const {
     permissions,
     userRoles,
@@ -45,21 +49,24 @@ export default function PodDevToolsPage() {
     canViewTreasury,
     canManageMembers,
     isPodLeader,
-    refreshPermissions
+    refreshPermissions,
   } = useHatPermissions();
-  
+
   const {
     isInitialized: modulesInitialized,
     isInitializing: modulesInitializing,
     availableModules,
-    error: modulesError
+    error: modulesError,
   } = useHatsModules();
 
   const handlePodCreated = (podId: string) => {
     console.log('Pod created in contract:', podId);
   };
 
-  const StatusIndicator = ({ condition, label }: { condition: boolean; label: string }) => (
+  const StatusIndicator = ({
+    condition,
+    label,
+  }: { condition: boolean; label: string }) => (
     <div className="flex items-center gap-2">
       {condition ? (
         <CheckCircle className="h-4 w-4 text-green-500" />
@@ -79,31 +86,53 @@ export default function PodDevToolsPage() {
       maxWidth="wide"
     >
       <div className="mb-6">
-        <Badge variant="outline" className="bg-yellow-50 text-yellow-800 border-yellow-200">
+        <Badge
+          variant="outline"
+          className="bg-yellow-50 text-yellow-800 border-yellow-200"
+        >
           <TestTube className="h-3 w-3 mr-1" />
           Development Environment Only
         </Badge>
       </div>
 
-      <Tabs value={activeModule} onValueChange={setActiveModule} className="space-y-6">
+      <Tabs
+        value={activeModule}
+        onValueChange={setActiveModule}
+        className="space-y-6"
+      >
         <TabsList className="grid w-full grid-cols-2 lg:grid-cols-7 mb-6 h-auto p-2 gap-2">
-          <TabsTrigger value="overview" className="flex items-center gap-2 py-3">
+          <TabsTrigger
+            value="overview"
+            className="flex items-center gap-2 py-3"
+          >
             <Settings className="h-4 w-4" />
             <span className="hidden sm:inline">Overview</span>
           </TabsTrigger>
-          <TabsTrigger value="permissions" className="flex items-center gap-2 py-3">
+          <TabsTrigger
+            value="permissions"
+            className="flex items-center gap-2 py-3"
+          >
             <Shield className="h-4 w-4" />
             <span className="hidden sm:inline">Permissions</span>
           </TabsTrigger>
-          <TabsTrigger value="contract" className="flex items-center gap-2 py-3">
+          <TabsTrigger
+            value="contract"
+            className="flex items-center gap-2 py-3"
+          >
             <Code className="h-4 w-4" />
             <span className="hidden sm:inline">Contracts</span>
           </TabsTrigger>
-          <TabsTrigger value="treasury" className="flex items-center gap-2 py-3">
+          <TabsTrigger
+            value="treasury"
+            className="flex items-center gap-2 py-3"
+          >
             <Database className="h-4 w-4" />
             <span className="hidden sm:inline">Treasury</span>
           </TabsTrigger>
-          <TabsTrigger value="registration" className="flex items-center gap-2 py-3">
+          <TabsTrigger
+            value="registration"
+            className="flex items-center gap-2 py-3"
+          >
             <Users className="h-4 w-4" />
             <span className="hidden sm:inline">Registration</span>
           </TabsTrigger>
@@ -129,14 +158,25 @@ export default function PodDevToolsPage() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-2">
-                  <StatusIndicator condition={!permissionsLoading} label="Service Ready" />
-                  <StatusIndicator condition={canAccessChat} label="Chat Access" />
-                  <StatusIndicator condition={canParticipateInGovernance} label="Governance" />
+                  <StatusIndicator
+                    condition={!permissionsLoading}
+                    label="Service Ready"
+                  />
+                  <StatusIndicator
+                    condition={canAccessChat}
+                    label="Chat Access"
+                  />
+                  <StatusIndicator
+                    condition={canParticipateInGovernance}
+                    label="Governance"
+                  />
                   <StatusIndicator condition={isPodLeader} label="Leadership" />
                 </div>
                 <div className="mt-3">
                   <Badge variant="outline">{userRoles.length} Roles</Badge>
-                  <Badge variant="outline" className="ml-2">{userHats.length} HATs</Badge>
+                  <Badge variant="outline" className="ml-2">
+                    {userHats.length} HATs
+                  </Badge>
                 </div>
               </CardContent>
             </Card>
@@ -150,17 +190,26 @@ export default function PodDevToolsPage() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-2">
-                  <StatusIndicator 
-                    condition={modulesInitialized && !modulesError} 
-                    label={modulesInitializing ? "Initializing..." : "Service Ready"} 
+                  <StatusIndicator
+                    condition={modulesInitialized && !modulesError}
+                    label={
+                      modulesInitializing ? 'Initializing...' : 'Service Ready'
+                    }
                   />
-                  <StatusIndicator condition={availableModules.length > 0} label="Modules Available" />
+                  <StatusIndicator
+                    condition={availableModules.length > 0}
+                    label="Modules Available"
+                  />
                 </div>
                 <div className="mt-3">
-                  <Badge variant="outline">{availableModules.length} Modules</Badge>
+                  <Badge variant="outline">
+                    {availableModules.length} Modules
+                  </Badge>
                 </div>
                 {modulesError && (
-                  <div className="mt-2 text-xs text-red-600">{modulesError}</div>
+                  <div className="mt-2 text-xs text-red-600">
+                    {modulesError}
+                  </div>
                 )}
               </CardContent>
             </Card>
@@ -174,12 +223,22 @@ export default function PodDevToolsPage() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-2">
-                  <StatusIndicator condition={balances?.hasExecutivePod || false} label="Executive Pod" />
-                  <StatusIndicator condition={balances?.hasDevPod || false} label="Dev Pod" />
-                  <StatusIndicator condition={balances?.hasBountyHat || false} label="Bounty Hat" />
+                  <StatusIndicator
+                    condition={balances?.hasExecutivePod || false}
+                    label="Executive Pod"
+                  />
+                  <StatusIndicator
+                    condition={balances?.hasDevPod || false}
+                    label="Dev Pod"
+                  />
+                  <StatusIndicator
+                    condition={balances?.hasBountyHat || false}
+                    label="Bounty Hat"
+                  />
                 </div>
                 <div className="mt-3 text-xs text-gray-600">
-                  System: {balances?.systemBalance || '0'} • Self: {balances?.selfBalance || '0'}
+                  System: {balances?.systemBalance || '0'} • Self:{' '}
+                  {balances?.selfBalance || '0'}
                 </div>
               </CardContent>
             </Card>
@@ -197,7 +256,10 @@ export default function PodDevToolsPage() {
                   size="sm"
                   variant="outline"
                   onClick={async () => {
-                    await Promise.all([refreshBalances(), refreshPermissions()]);
+                    await Promise.all([
+                      refreshBalances(),
+                      refreshPermissions(),
+                    ]);
                   }}
                   disabled={tokenLoading || permissionsLoading}
                 >
@@ -219,11 +281,16 @@ export default function PodDevToolsPage() {
                 <div className="space-y-6">
                   {/* User Roles */}
                   <div>
-                    <h3 className="font-semibold mb-3">Your Roles ({userRoles.length})</h3>
+                    <h3 className="font-semibold mb-3">
+                      Your Roles ({userRoles.length})
+                    </h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       {userRoles.length > 0 ? (
                         userRoles.map((role, index) => (
-                          <div key={index} className="p-3 border rounded-lg bg-[#E8F1EE]">
+                          <div
+                            key={index}
+                            className="p-3 border rounded-lg bg-[#E8F1EE]"
+                          >
                             <div className="flex items-center gap-2 mb-2">
                               {role.isLeaderRole ? (
                                 <Crown className="h-4 w-4 text-yellow-500" />
@@ -232,7 +299,9 @@ export default function PodDevToolsPage() {
                               )}
                               <span className="font-medium">{role.name}</span>
                               {role.isLeaderRole && (
-                                <Badge variant="outline" className="text-xs">Leader</Badge>
+                                <Badge variant="outline" className="text-xs">
+                                  Leader
+                                </Badge>
                               )}
                             </div>
                             <p className="text-xs text-gray-600 font-mono">
@@ -252,12 +321,30 @@ export default function PodDevToolsPage() {
                   <div>
                     <h3 className="font-semibold mb-3">Permission Matrix</h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                      <StatusIndicator condition={canAccessChat} label="Chat Access" />
-                      <StatusIndicator condition={canParticipateInGovernance} label="Governance Participation" />
-                      <StatusIndicator condition={canCreateEvents} label="Event Creation" />
-                      <StatusIndicator condition={canViewTreasury} label="Treasury Viewing" />
-                      <StatusIndicator condition={canManageMembers} label="Member Management" />
-                      <StatusIndicator condition={isPodLeader} label="Pod Leadership" />
+                      <StatusIndicator
+                        condition={canAccessChat}
+                        label="Chat Access"
+                      />
+                      <StatusIndicator
+                        condition={canParticipateInGovernance}
+                        label="Governance Participation"
+                      />
+                      <StatusIndicator
+                        condition={canCreateEvents}
+                        label="Event Creation"
+                      />
+                      <StatusIndicator
+                        condition={canViewTreasury}
+                        label="Treasury Viewing"
+                      />
+                      <StatusIndicator
+                        condition={canManageMembers}
+                        label="Member Management"
+                      />
+                      <StatusIndicator
+                        condition={isPodLeader}
+                        label="Pod Leadership"
+                      />
                     </div>
                   </div>
                 </div>
@@ -277,7 +364,8 @@ export default function PodDevToolsPage() {
             </CardHeader>
             <CardContent>
               <p className="text-gray-600 mb-6">
-                Create pod entries in the smart contract for treasury functionality.
+                Create pod entries in the smart contract for treasury
+                functionality.
               </p>
               <PodContractCreator onPodCreated={handlePodCreated} />
             </CardContent>
@@ -299,7 +387,8 @@ export default function PodDevToolsPage() {
             </CardHeader>
             <CardContent>
               <p className="text-gray-600 mb-6">
-                Deploy and manage pod treasuries with practical, working solutions that leverage your existing HATS integration.
+                Deploy and manage pod treasuries with practical, working
+                solutions that leverage your existing HATS integration.
               </p>
               <ConsolidatedTreasuryDeployer />
             </CardContent>
@@ -317,7 +406,8 @@ export default function PodDevToolsPage() {
             </CardHeader>
             <CardContent>
               <p className="text-gray-600 mb-6">
-                Register existing HATS-based pods for full treasury functionality.
+                Register existing HATS-based pods for full treasury
+                functionality.
               </p>
               <PodRegistrationManager />
             </CardContent>
@@ -335,7 +425,8 @@ export default function PodDevToolsPage() {
             </CardHeader>
             <CardContent>
               <p className="text-gray-600 mb-6">
-                Fetch real image URIs from deployed HATS for pod proposal creation.
+                Fetch real image URIs from deployed HATS for pod proposal
+                creation.
               </p>
               <HatImageViewer />
             </CardContent>

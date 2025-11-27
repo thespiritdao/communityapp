@@ -1,7 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useAccount } from 'wagmi';
 import { fetchTokenBalances } from '../../../utils/fetchTokenBalances';
-import { getUserIdentity, canAccessBounties, logUserIdentity } from '../../../utils/accessControlUtils';
+import {
+  getUserIdentity,
+  canAccessBounties,
+  logUserIdentity,
+} from '../../../utils/accessControlUtils';
 import { useHatPermissions } from '../../../hooks/useHatPermissions';
 import type { Bounty, BountyNotification } from '../components/BountyList';
 
@@ -24,19 +28,18 @@ export const useBounty = () => {
       try {
         // Get token balances
         const balances = await fetchTokenBalances(address);
-        
+
         // Legacy token holder check (backwards compatibility)
-        const legacyTokenHolder = (
+        const legacyTokenHolder =
           balances.hasExecutivePod ||
           balances.hasDevPod ||
-          balances.hasMarketAdmin
-        );
+          balances.hasMarketAdmin;
         setIsTokenHolder(legacyTokenHolder);
 
         // NEW: Use normalized access control system
         const identity = await getUserIdentity(address, balances, userHats);
         logUserIdentity(identity, 'Bounty Access Check');
-        
+
         const hasAccess = canAccessBounties(identity);
         console.log(`💰 User can access bounties: ${hasAccess}`);
         setBountyAccess(hasAccess);
@@ -94,9 +97,7 @@ export const useBounty = () => {
     if (!bounty) return;
 
     setBounties((prev) =>
-      prev.map((b) =>
-        b.id === bountyId ? { ...b, status: 'completed' } : b
-      )
+      prev.map((b) => (b.id === bountyId ? { ...b, status: 'completed' } : b)),
     );
 
     const notification: BountyNotification = {
@@ -119,4 +120,4 @@ export const useBounty = () => {
     placeBid,
     completeBounty,
   };
-}; 
+};

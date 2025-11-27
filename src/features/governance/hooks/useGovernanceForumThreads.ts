@@ -1,6 +1,6 @@
 // src/features/governance/hooks/useGovernanceForumThreads.ts
 import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/utils/supabaseClient';      // or wherever your client lives
+import { supabase } from '@/utils/supabaseClient'; // or wherever your client lives
 
 export interface Thread {
   id: string;
@@ -25,6 +25,6 @@ export function useGovernanceForumThreads(userAddress?: string) {
       if (error) throw error;
       return data;
     },
-    { staleTime: 60_000 }
+    { staleTime: 60_000 },
   );
 }

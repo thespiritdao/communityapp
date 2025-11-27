@@ -8,13 +8,19 @@ import {
   TransactionButton,
   TransactionStatus,
   TransactionStatusAction,
-  TransactionStatusLabel
+  TransactionStatusLabel,
 } from '@coinbase/onchainkit/transaction';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -52,12 +58,13 @@ interface BountyFormV2Props {
 export const BountyFormV2: React.FC<BountyFormV2Props> = ({
   onSuccess,
   onCancel,
-  categories
+  categories,
 }) => {
   const { address } = useAccount();
   const { createBountyCall } = useBountyV2();
-  const { managedPods: managablePods, isLoading: podsLoading } = useBountyManagementAccess();
-  
+  const { managedPods: managablePods, isLoading: podsLoading } =
+    useBountyManagementAccess();
+
   const [formData, setFormData] = useState<BountyFormV2Data>({
     title: '',
     description: '',
@@ -72,7 +79,7 @@ export const BountyFormV2: React.FC<BountyFormV2Props> = ({
     // Bid limit defaults
     bid_acceptance_mode: 'single',
     max_bids_accepted: 1,
-    bids_accepted_count: 0
+    bids_accepted_count: 0,
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -84,7 +91,7 @@ export const BountyFormV2: React.FC<BountyFormV2Props> = ({
 
   // Get permissions for selected pod (only when podId is valid)
   const { canManageBounties, canUseTreasury } = usePodFactoryPermissions(
-    formData.podId && formData.podId.trim() !== '' ? formData.podId : null
+    formData.podId && formData.podId.trim() !== '' ? formData.podId : null,
   );
 
   // Precompute form validity without setting state (prevents infinite re-renders)
@@ -105,8 +112,12 @@ export const BountyFormV2: React.FC<BountyFormV2Props> = ({
   // which filters based on both module settings AND role permissions
 
   useEffect(() => {
-    if (managablePods.length === 1 && !formData.podId && !hasSetInitialPod.current) {
-      setFormData(prev => ({ ...prev, podId: managablePods[0].id }));
+    if (
+      managablePods.length === 1 &&
+      !formData.podId &&
+      !hasSetInitialPod.current
+    ) {
+      setFormData((prev) => ({ ...prev, podId: managablePods[0].id }));
       hasSetInitialPod.current = true;
     }
   }, [managablePods]);
@@ -117,18 +128,18 @@ export const BountyFormV2: React.FC<BountyFormV2Props> = ({
       const metadata = {
         title: formData.title,
         description: formData.description,
-        requirements: formData.requirements.filter(r => r.trim()),
-        questions: formData.questions.filter(q => q.trim()),
-        work_requirements: formData.work_requirements.filter(w => w.trim()),
+        requirements: formData.requirements.filter((r) => r.trim()),
+        questions: formData.questions.filter((q) => q.trim()),
+        work_requirements: formData.work_requirements.filter((w) => w.trim()),
         creator_address: address,
-        timestamp: Date.now()
+        timestamp: Date.now(),
       };
 
       console.log('📤 Uploading metadata to IPFS...');
       const response = await fetch('/api/bounty/ipfs', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'upload', metadata })
+        body: JSON.stringify({ action: 'upload', metadata }),
       });
 
       if (!response.ok) {
@@ -138,7 +149,6 @@ export const BountyFormV2: React.FC<BountyFormV2Props> = ({
       const { ipfsHash: hash } = await response.json();
       setIpfsHash(hash);
       console.log('✅ Metadata uploaded to IPFS:', hash);
-      
     } catch (error) {
       console.error('Error uploading to IPFS:', error);
       setErrors({ ipfs: 'Failed to upload metadata. Please try again.' });
@@ -150,7 +160,8 @@ export const BountyFormV2: React.FC<BountyFormV2Props> = ({
     const newErrors: Record<string, string> = {};
 
     if (!formData.title.trim()) newErrors.title = 'Title is required';
-    if (!formData.description.trim()) newErrors.description = 'Description is required';
+    if (!formData.description.trim())
+      newErrors.description = 'Description is required';
     if (!formData.category) newErrors.category = 'Category is required';
     if (!formData.value.amount || parseFloat(formData.value.amount) <= 0) {
       newErrors.amount = 'Valid amount is required';
@@ -158,7 +169,8 @@ export const BountyFormV2: React.FC<BountyFormV2Props> = ({
     if (!formData.podId) newErrors.podId = 'Pod selection is required';
 
     if (formData.funding_source === 'pod_treasury' && !canUseTreasury) {
-      newErrors.funding = 'You do not have permission to use this pod\'s treasury';
+      newErrors.funding =
+        "You do not have permission to use this pod's treasury";
     }
 
     setErrors(newErrors);
@@ -171,24 +183,31 @@ export const BountyFormV2: React.FC<BountyFormV2Props> = ({
 
     try {
       // Token address based on selection
-      const tokenAddress = formData.value.token === 'SYSTEM'
-        ? (process.env.NEXT_PUBLIC_SYSTEM_TOKEN || '0x1317Ae277266D38C4E492558f8693F14143a6A65') as `0x${string}`
-        : (process.env.NEXT_PUBLIC_SELF_TOKEN || '0xe9b4aB2eB9397fa41AC3223e96f9d988BeFF5D21') as `0x${string}`;
+      const tokenAddress =
+        formData.value.token === 'SYSTEM'
+          ? ((process.env.NEXT_PUBLIC_SYSTEM_TOKEN ||
+              '0x1317Ae277266D38C4E492558f8693F14143a6A65') as `0x${string}`)
+          : ((process.env.NEXT_PUBLIC_SELF_TOKEN ||
+              '0xe9b4aB2eB9397fa41AC3223e96f9d988BeFF5D21') as `0x${string}`);
 
-      const BOUNTY_MANAGER_V2 = (process.env.NEXT_PUBLIC_BOUNTY_MANAGER_ADDRESS || '0x29e653502083442B8B6C7c969557022F6a3CC64C') as `0x${string}`;
+      const BOUNTY_MANAGER_V2 = (process.env
+        .NEXT_PUBLIC_BOUNTY_MANAGER_ADDRESS ||
+        '0x29e653502083442B8B6C7c969557022F6a3CC64C') as `0x${string}`;
       const amount = parseEther(formData.value.amount);
 
       // ERC20 approve ABI
-      const ERC20_APPROVE_ABI = [{
-        name: 'approve',
-        type: 'function',
-        inputs: [
-          { name: 'spender', type: 'address' },
-          { name: 'amount', type: 'uint256' }
-        ],
-        outputs: [{ name: '', type: 'bool' }],
-        stateMutability: 'nonpayable'
-      }] as const;
+      const ERC20_APPROVE_ABI = [
+        {
+          name: 'approve',
+          type: 'function',
+          inputs: [
+            { name: 'spender', type: 'address' },
+            { name: 'amount', type: 'uint256' },
+          ],
+          outputs: [{ name: '', type: 'bool' }],
+          stateMutability: 'nonpayable',
+        },
+      ] as const;
 
       // Build base bounty call
       const baseCall = createBountyCall(formData);
@@ -196,8 +215,8 @@ export const BountyFormV2: React.FC<BountyFormV2Props> = ({
         ...baseCall,
         args: [
           ...baseCall.args.slice(0, -1), // Remove temp IPFS hash
-          ipfsHash // Add real IPFS hash
-        ]
+          ipfsHash, // Add real IPFS hash
+        ],
       };
 
       // Return array of calls: [approve, createBounty]
@@ -206,9 +225,9 @@ export const BountyFormV2: React.FC<BountyFormV2Props> = ({
           address: tokenAddress,
           abi: ERC20_APPROVE_ABI,
           functionName: 'approve' as const,
-          args: [BOUNTY_MANAGER_V2, amount]
+          args: [BOUNTY_MANAGER_V2, amount],
         },
-        bountyCall
+        bountyCall,
       ];
     } catch (error) {
       console.error('Error creating transaction calls:', error);
@@ -220,28 +239,30 @@ export const BountyFormV2: React.FC<BountyFormV2Props> = ({
   const updateArrayField = (
     field: 'requirements' | 'questions' | 'work_requirements',
     index: number,
-    value: string
+    value: string,
   ) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      [field]: prev[field].map((item, i) => i === index ? value : item)
+      [field]: prev[field].map((item, i) => (i === index ? value : item)),
     }));
   };
 
-  const addArrayField = (field: 'requirements' | 'questions' | 'work_requirements') => {
-    setFormData(prev => ({
+  const addArrayField = (
+    field: 'requirements' | 'questions' | 'work_requirements',
+  ) => {
+    setFormData((prev) => ({
       ...prev,
-      [field]: [...prev[field], '']
+      [field]: [...prev[field], ''],
     }));
   };
 
   const removeArrayField = (
     field: 'requirements' | 'questions' | 'work_requirements',
-    index: number
+    index: number,
   ) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      [field]: prev[field].filter((_, i) => i !== index)
+      [field]: prev[field].filter((_, i) => i !== index),
     }));
   };
 
@@ -250,7 +271,14 @@ export const BountyFormV2: React.FC<BountyFormV2Props> = ({
       <Card>
         <CardContent className="p-6">
           <div className="flex items-center justify-center">
-            <div className="animate-spin rounded-full h-8 w-8" style={{ borderBottomWidth: '2px', borderBottomStyle: 'solid', borderBottomColor: '#2F5D50' }}></div>
+            <div
+              className="animate-spin rounded-full h-8 w-8"
+              style={{
+                borderBottomWidth: '2px',
+                borderBottomStyle: 'solid',
+                borderBottomColor: '#2F5D50',
+              }}
+            ></div>
             <span className="ml-2">Loading pods...</span>
           </div>
         </CardContent>
@@ -272,14 +300,22 @@ export const BountyFormV2: React.FC<BountyFormV2Props> = ({
     return (
       <Alert>
         <AlertDescription>
-          <p className="font-semibold mb-2">No pods available for bounty creation.</p>
+          <p className="font-semibold mb-2">
+            No pods available for bounty creation.
+          </p>
           <p className="text-sm">To create bounties in a pod, you need:</p>
           <ul className="list-disc list-inside text-sm mt-2 space-y-1">
-            <li><strong>Bounty Module ON</strong> (pod-wide setting)</li>
-            <li><strong>Bounty Management Permission</strong> (your role in the pod)</li>
+            <li>
+              <strong>Bounty Module ON</strong> (pod-wide setting)
+            </li>
+            <li>
+              <strong>Bounty Management Permission</strong> (your role in the
+              pod)
+            </li>
           </ul>
           <p className="text-sm mt-2 text-gray-600">
-            Contact your pod administrators to enable the bounty module or grant you bounty management permissions.
+            Contact your pod administrators to enable the bounty module or grant
+            you bounty management permissions.
           </p>
         </AlertDescription>
       </Alert>
@@ -292,28 +328,31 @@ export const BountyFormV2: React.FC<BountyFormV2Props> = ({
         <CardTitle>Create New Bounty</CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">
-        
         {/* Pod Selection */}
         <div className="space-y-2">
           <Label htmlFor="pod">Pod</Label>
           <Select
             value={formData.podId}
             onValueChange={(value) => {
-              setFormData(prev => ({ ...prev, podId: value }));
+              setFormData((prev) => ({ ...prev, podId: value }));
             }}
           >
             <SelectTrigger>
               <SelectValue placeholder="Select a pod" />
             </SelectTrigger>
             <SelectContent>
-              {managablePods.map(pod => (
+              {managablePods.map((pod) => (
                 <SelectItem key={pod.id} value={pod.id}>
                   {pod.name} ({pod.status})
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
-          {errors.podId && <p className="text-sm" style={{ color: '#8B3A3A' }}>{errors.podId}</p>}
+          {errors.podId && (
+            <p className="text-sm" style={{ color: '#8B3A3A' }}>
+              {errors.podId}
+            </p>
+          )}
         </div>
 
         {/* Basic Information */}
@@ -323,28 +362,42 @@ export const BountyFormV2: React.FC<BountyFormV2Props> = ({
             <Input
               id="title"
               value={formData.title}
-              onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
+              onChange={(e) =>
+                setFormData((prev) => ({ ...prev, title: e.target.value }))
+              }
               placeholder="Brief, descriptive title"
             />
-            {errors.title && <p className="text-sm" style={{ color: '#8B3A3A' }}>{errors.title}</p>}
+            {errors.title && (
+              <p className="text-sm" style={{ color: '#8B3A3A' }}>
+                {errors.title}
+              </p>
+            )}
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="category">Category</Label>
             <Select
               value={formData.category}
-              onValueChange={(value) => setFormData(prev => ({ ...prev, category: value }))}
+              onValueChange={(value) =>
+                setFormData((prev) => ({ ...prev, category: value }))
+              }
             >
               <SelectTrigger>
                 <SelectValue placeholder="Select category" />
               </SelectTrigger>
               <SelectContent>
-                {categories.map(category => (
-                  <SelectItem key={category} value={category}>{category}</SelectItem>
+                {categories.map((category) => (
+                  <SelectItem key={category} value={category}>
+                    {category}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
-            {errors.category && <p className="text-sm" style={{ color: '#8B3A3A' }}>{errors.category}</p>}
+            {errors.category && (
+              <p className="text-sm" style={{ color: '#8B3A3A' }}>
+                {errors.category}
+              </p>
+            )}
           </div>
         </div>
 
@@ -354,11 +407,17 @@ export const BountyFormV2: React.FC<BountyFormV2Props> = ({
           <Textarea
             id="description"
             value={formData.description}
-            onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+            onChange={(e) =>
+              setFormData((prev) => ({ ...prev, description: e.target.value }))
+            }
             placeholder="Detailed description of the bounty"
             rows={4}
           />
-          {errors.description && <p className="text-sm" style={{ color: '#8B3A3A' }}>{errors.description}</p>}
+          {errors.description && (
+            <p className="text-sm" style={{ color: '#8B3A3A' }}>
+              {errors.description}
+            </p>
+          )}
         </div>
 
         {/* Value and Funding */}
@@ -370,23 +429,31 @@ export const BountyFormV2: React.FC<BountyFormV2Props> = ({
               type="number"
               step="0.0001"
               value={formData.value.amount}
-              onChange={(e) => setFormData(prev => ({ 
-                ...prev, 
-                value: { ...prev.value, amount: e.target.value }
-              }))}
+              onChange={(e) =>
+                setFormData((prev) => ({
+                  ...prev,
+                  value: { ...prev.value, amount: e.target.value },
+                }))
+              }
               placeholder="0.0000"
             />
-            {errors.amount && <p className="text-sm" style={{ color: '#8B3A3A' }}>{errors.amount}</p>}
+            {errors.amount && (
+              <p className="text-sm" style={{ color: '#8B3A3A' }}>
+                {errors.amount}
+              </p>
+            )}
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="token">Token</Label>
             <Select
               value={formData.value.token}
-              onValueChange={(value: 'SYSTEM' | 'SELF') => setFormData(prev => ({ 
-                ...prev, 
-                value: { ...prev.value, token: value }
-              }))}
+              onValueChange={(value: 'SYSTEM' | 'SELF') =>
+                setFormData((prev) => ({
+                  ...prev,
+                  value: { ...prev.value, token: value },
+                }))
+              }
             >
               <SelectTrigger>
                 <SelectValue />
@@ -402,10 +469,12 @@ export const BountyFormV2: React.FC<BountyFormV2Props> = ({
             <Label htmlFor="funding">Funding Source</Label>
             <Select
               value={formData.funding_source}
-              onValueChange={(value: 'wallet' | 'pod_treasury') => setFormData(prev => ({ 
-                ...prev, 
-                funding_source: value
-              }))}
+              onValueChange={(value: 'wallet' | 'pod_treasury') =>
+                setFormData((prev) => ({
+                  ...prev,
+                  funding_source: value,
+                }))
+              }
             >
               <SelectTrigger>
                 <SelectValue />
@@ -417,7 +486,11 @@ export const BountyFormV2: React.FC<BountyFormV2Props> = ({
                 </SelectItem>
               </SelectContent>
             </Select>
-            {errors.funding && <p className="text-sm" style={{ color: '#8B3A3A' }}>{errors.funding}</p>}
+            {errors.funding && (
+              <p className="text-sm" style={{ color: '#8B3A3A' }}>
+                {errors.funding}
+              </p>
+            )}
           </div>
         </div>
 
@@ -428,7 +501,9 @@ export const BountyFormV2: React.FC<BountyFormV2Props> = ({
             id="deadline"
             type="datetime-local"
             value={formData.deadline}
-            onChange={(e) => setFormData(prev => ({ ...prev, deadline: e.target.value }))}
+            onChange={(e) =>
+              setFormData((prev) => ({ ...prev, deadline: e.target.value }))
+            }
           />
         </div>
 
@@ -446,7 +521,9 @@ export const BountyFormV2: React.FC<BountyFormV2Props> = ({
               <div key={index} className="flex gap-2">
                 <Input
                   value={req}
-                  onChange={(e) => updateArrayField('requirements', index, e.target.value)}
+                  onChange={(e) =>
+                    updateArrayField('requirements', index, e.target.value)
+                  }
                   placeholder="Enter requirement"
                 />
                 <Button
@@ -476,7 +553,9 @@ export const BountyFormV2: React.FC<BountyFormV2Props> = ({
               <div key={index} className="flex gap-2">
                 <Input
                   value={question}
-                  onChange={(e) => updateArrayField('questions', index, e.target.value)}
+                  onChange={(e) =>
+                    updateArrayField('questions', index, e.target.value)
+                  }
                   placeholder="Enter question for applicants"
                 />
                 <Button
@@ -506,7 +585,9 @@ export const BountyFormV2: React.FC<BountyFormV2Props> = ({
               <div key={index} className="flex gap-2">
                 <Input
                   value={work}
-                  onChange={(e) => updateArrayField('work_requirements', index, e.target.value)}
+                  onChange={(e) =>
+                    updateArrayField('work_requirements', index, e.target.value)
+                  }
                   placeholder="Enter required task"
                 />
                 <Button
@@ -534,19 +615,26 @@ export const BountyFormV2: React.FC<BountyFormV2Props> = ({
         {/* Bid Acceptance Settings */}
         <div className="space-y-4 border-2 border-gray-200 rounded-lg p-4 bg-gray-50">
           <div>
-            <Label className="text-lg font-semibold">Bid Acceptance Settings</Label>
-            <p className="text-sm text-gray-600 mt-1">Control how many bids you want to accept for this bounty</p>
+            <Label className="text-lg font-semibold">
+              Bid Acceptance Settings
+            </Label>
+            <p className="text-sm text-gray-600 mt-1">
+              Control how many bids you want to accept for this bounty
+            </p>
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="bid-acceptance-mode">Acceptance Mode</Label>
             <Select
               value={formData.bid_acceptance_mode || 'single'}
-              onValueChange={(value: 'single' | 'multiple' | 'unlimited' | 'date_limited') =>
-                setFormData(prev => ({
+              onValueChange={(
+                value: 'single' | 'multiple' | 'unlimited' | 'date_limited',
+              ) =>
+                setFormData((prev) => ({
                   ...prev,
                   bid_acceptance_mode: value,
-                  max_bids_accepted: value === 'multiple' ? 3 : (value === 'single' ? 1 : 0)
+                  max_bids_accepted:
+                    value === 'multiple' ? 3 : value === 'single' ? 1 : 0,
                 }))
               }
             >
@@ -555,9 +643,13 @@ export const BountyFormV2: React.FC<BountyFormV2Props> = ({
               </SelectTrigger>
               <SelectContent className="bg-white">
                 <SelectItem value="single">Accept 1 Bid (Default)</SelectItem>
-                <SelectItem value="multiple">Accept Multiple Bids (X)</SelectItem>
+                <SelectItem value="multiple">
+                  Accept Multiple Bids (X)
+                </SelectItem>
                 <SelectItem value="unlimited">Accept Unlimited Bids</SelectItem>
-                <SelectItem value="date_limited">Accept Until Deadline</SelectItem>
+                <SelectItem value="date_limited">
+                  Accept Until Deadline
+                </SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -571,10 +663,15 @@ export const BountyFormV2: React.FC<BountyFormV2Props> = ({
                 min="2"
                 max="100"
                 value={formData.max_bids_accepted || 3}
-                onChange={(e) => setFormData(prev => ({
-                  ...prev,
-                  max_bids_accepted: Math.max(2, Math.min(100, parseInt(e.target.value) || 2))
-                }))}
+                onChange={(e) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    max_bids_accepted: Math.max(
+                      2,
+                      Math.min(100, parseInt(e.target.value) || 2),
+                    ),
+                  }))
+                }
                 className="bg-white"
               />
             </div>
@@ -583,25 +680,52 @@ export const BountyFormV2: React.FC<BountyFormV2Props> = ({
           {/* Mode Description */}
           <Alert
             style={
-              formData.bid_acceptance_mode === 'single' ? { borderColor: '#B8D9CA', backgroundColor: '#E8F1EE', borderWidth: '1px', borderStyle: 'solid' } :
-              formData.bid_acceptance_mode === 'multiple' ? { borderColor: '#D1CAD9', backgroundColor: '#EDEAF0', borderWidth: '1px', borderStyle: 'solid' } :
-              formData.bid_acceptance_mode === 'unlimited' ? { borderColor: '#B8D9CA', backgroundColor: '#D1E6DC', borderWidth: '1px', borderStyle: 'solid' } :
-              { borderColor: '#E8D7B8', backgroundColor: '#FAF4EC', borderWidth: '1px', borderStyle: 'solid' }
+              formData.bid_acceptance_mode === 'single'
+                ? {
+                    borderColor: '#B8D9CA',
+                    backgroundColor: '#E8F1EE',
+                    borderWidth: '1px',
+                    borderStyle: 'solid',
+                  }
+                : formData.bid_acceptance_mode === 'multiple'
+                  ? {
+                      borderColor: '#D1CAD9',
+                      backgroundColor: '#EDEAF0',
+                      borderWidth: '1px',
+                      borderStyle: 'solid',
+                    }
+                  : formData.bid_acceptance_mode === 'unlimited'
+                    ? {
+                        borderColor: '#B8D9CA',
+                        backgroundColor: '#D1E6DC',
+                        borderWidth: '1px',
+                        borderStyle: 'solid',
+                      }
+                    : {
+                        borderColor: '#E8D7B8',
+                        backgroundColor: '#FAF4EC',
+                        borderWidth: '1px',
+                        borderStyle: 'solid',
+                      }
             }
           >
             <AlertDescription
               style={
-                formData.bid_acceptance_mode === 'single' ? { color: '#1F453A' } :
-                formData.bid_acceptance_mode === 'multiple' ? { color: '#574C66' } :
-                formData.bid_acceptance_mode === 'unlimited' ? { color: '#1F453A' } :
-                { color: '#8F6B2F' }
+                formData.bid_acceptance_mode === 'single'
+                  ? { color: '#1F453A' }
+                  : formData.bid_acceptance_mode === 'multiple'
+                    ? { color: '#574C66' }
+                    : formData.bid_acceptance_mode === 'unlimited'
+                      ? { color: '#1F453A' }
+                      : { color: '#8F6B2F' }
               }
             >
               {formData.bid_acceptance_mode === 'single' && (
                 <div>
                   <div className="font-medium mb-1">Single Bid Mode</div>
                   <div className="text-sm">
-                    You will select ONE winning bid. Once accepted, the bounty automatically closes.
+                    You will select ONE winning bid. Once accepted, the bounty
+                    automatically closes.
                   </div>
                 </div>
               )}
@@ -609,7 +733,9 @@ export const BountyFormV2: React.FC<BountyFormV2Props> = ({
                 <div>
                   <div className="font-medium mb-1">Multiple Bids Mode</div>
                   <div className="text-sm">
-                    You can accept up to {formData.max_bids_accepted} bids. Useful for parallel work, redundancy, or team collaboration. Bounty closes after reaching the limit.
+                    You can accept up to {formData.max_bids_accepted} bids.
+                    Useful for parallel work, redundancy, or team collaboration.
+                    Bounty closes after reaching the limit.
                   </div>
                 </div>
               )}
@@ -617,7 +743,9 @@ export const BountyFormV2: React.FC<BountyFormV2Props> = ({
                 <div>
                   <div className="font-medium mb-1">Unlimited Bids Mode</div>
                   <div className="text-sm">
-                    Accept as many bids as you want. Bounty stays open until you manually close it. Ideal for ongoing work or community contributions.
+                    Accept as many bids as you want. Bounty stays open until you
+                    manually close it. Ideal for ongoing work or community
+                    contributions.
                   </div>
                 </div>
               )}
@@ -625,7 +753,9 @@ export const BountyFormV2: React.FC<BountyFormV2Props> = ({
                 <div>
                   <div className="font-medium mb-1">Date-Limited Mode</div>
                   <div className="text-sm">
-                    Accept bids until the deadline. After the deadline passes, no more bids can be accepted. You can accept multiple bids before the deadline.
+                    Accept bids until the deadline. After the deadline passes,
+                    no more bids can be accepted. You can accept multiple bids
+                    before the deadline.
                   </div>
                 </div>
               )}
@@ -635,8 +765,17 @@ export const BountyFormV2: React.FC<BountyFormV2Props> = ({
 
         {/* IPFS Upload Error */}
         {errors.ipfs && (
-          <Alert style={{ backgroundColor: '#F5E6E6', borderWidth: '1px', borderStyle: 'solid', borderColor: '#D9B3B3' }}>
-            <AlertDescription style={{ color: '#5C1F1F' }}>{errors.ipfs}</AlertDescription>
+          <Alert
+            style={{
+              backgroundColor: '#F5E6E6',
+              borderWidth: '1px',
+              borderStyle: 'solid',
+              borderColor: '#D9B3B3',
+            }}
+          >
+            <AlertDescription style={{ color: '#5C1F1F' }}>
+              {errors.ipfs}
+            </AlertDescription>
           </Alert>
         )}
 
@@ -652,9 +791,12 @@ export const BountyFormV2: React.FC<BountyFormV2Props> = ({
                   console.log('✅ Treasury funding set successfully');
 
                   // Now save to database with correct funding source
-                  const tokenAddress = formData.value.token === 'SYSTEM'
-                    ? (process.env.NEXT_PUBLIC_SYSTEM_TOKEN || '0x1317Ae277266D38C4E492558f8693F14143a6A65')
-                    : (process.env.NEXT_PUBLIC_SELF_TOKEN || '0xe9b4aB2eB9397fa41AC3223e96f9d988BeFF5D21');
+                  const tokenAddress =
+                    formData.value.token === 'SYSTEM'
+                      ? process.env.NEXT_PUBLIC_SYSTEM_TOKEN ||
+                        '0x1317Ae277266D38C4E492558f8693F14143a6A65'
+                      : process.env.NEXT_PUBLIC_SELF_TOKEN ||
+                        '0xe9b4aB2eB9397fa41AC3223e96f9d988BeFF5D21';
 
                   try {
                     const response = await fetch('/api/bounty/create', {
@@ -673,19 +815,29 @@ export const BountyFormV2: React.FC<BountyFormV2Props> = ({
                         category: formData.category,
                         deadline: formData.deadline,
                         funding_source: 'pod_treasury', // CRITICAL: Set to pod_treasury
-                        requirements: formData.requirements.filter(r => r.trim()),
-                        questions: formData.questions.filter(q => q.trim()),
-                        bid_acceptance_mode: formData.bid_acceptance_mode || 'single',
-                        max_bids_accepted: formData.bid_acceptance_mode === 'multiple' ? formData.max_bids_accepted : (formData.bid_acceptance_mode === 'single' ? 1 : 0),
-                        bids_accepted_count: 0
-                      })
+                        requirements: formData.requirements.filter((r) =>
+                          r.trim(),
+                        ),
+                        questions: formData.questions.filter((q) => q.trim()),
+                        bid_acceptance_mode:
+                          formData.bid_acceptance_mode || 'single',
+                        max_bids_accepted:
+                          formData.bid_acceptance_mode === 'multiple'
+                            ? formData.max_bids_accepted
+                            : formData.bid_acceptance_mode === 'single'
+                              ? 1
+                              : 0,
+                        bids_accepted_count: 0,
+                      }),
                     });
 
                     if (response.ok) {
                       console.log('✅ Pod-funded bounty saved to database');
                       onSuccess?.(createdBountyId.toString());
                     } else {
-                      console.error('❌ Failed to save pod-funded bounty to database');
+                      console.error(
+                        '❌ Failed to save pod-funded bounty to database',
+                      );
                     }
                   } catch (error) {
                     console.error('❌ Error saving pod-funded bounty:', error);
@@ -719,21 +871,27 @@ export const BountyFormV2: React.FC<BountyFormV2Props> = ({
                   statusName: status.statusName,
                   hasReceipts: !!status.transactionReceipts,
                   receiptsLength: status.transactionReceipts?.length,
-                  statusData: status.statusData
+                  statusData: status.statusData,
                 });
 
                 if (status.statusName === 'success') {
-                  console.log('✅ Transaction succeeded! Checking for receipts...');
+                  console.log(
+                    '✅ Transaction succeeded! Checking for receipts...',
+                  );
 
                   // Receipts can be in status.transactionReceipts OR status.statusData.transactionReceipts
-                  const receipts = status.transactionReceipts || status.statusData?.transactionReceipts;
+                  const receipts =
+                    status.transactionReceipts ||
+                    status.statusData?.transactionReceipts;
                   console.log('transactionReceipts:', receipts);
 
                   if (receipts && receipts.length > 0) {
                     const receipt = receipts[0];
 
                     // Prevent duplicate saves - check if we've already saved this transaction
-                    if (savedTransactions.current.has(receipt.transactionHash)) {
+                    if (
+                      savedTransactions.current.has(receipt.transactionHash)
+                    ) {
                       console.log('⏭️ Already saved this transaction, skipping');
                       return;
                     }
@@ -742,86 +900,124 @@ export const BountyFormV2: React.FC<BountyFormV2Props> = ({
 
                     console.log('📋 Total logs in receipt:', logs?.length);
 
-                  // Find BountyCreated event
-                  // Event signature: BountyCreated(uint256 indexed id, address indexed creator, string podId, string ipfsHash)
-                  // The indexed bountyId is in topics[1]
-                  const bountyCreatedLog = logs?.find(log =>
-                    log.topics && log.topics.length >= 2 &&
-                    // BountyManagerV2 address
-                    log.address?.toLowerCase() === (process.env.NEXT_PUBLIC_BOUNTY_MANAGER_ADDRESS || '0x29e653502083442B8B6C7c969557022F6a3CC64C').toLowerCase()
-                  );
+                    // Find BountyCreated event
+                    // Event signature: BountyCreated(uint256 indexed id, address indexed creator, string podId, string ipfsHash)
+                    // The indexed bountyId is in topics[1]
+                    const bountyCreatedLog = logs?.find(
+                      (log) =>
+                        log.topics &&
+                        log.topics.length >= 2 &&
+                        // BountyManagerV2 address
+                        log.address?.toLowerCase() ===
+                          (
+                            process.env.NEXT_PUBLIC_BOUNTY_MANAGER_ADDRESS ||
+                            '0x29e653502083442B8B6C7c969557022F6a3CC64C'
+                          ).toLowerCase(),
+                    );
 
-                  if (bountyCreatedLog && bountyCreatedLog.topics?.[1]) {
-                    const bountyIdHex = bountyCreatedLog.topics[1];
-                    const bountyId = BigInt(bountyIdHex).toString();
-                    console.log('✅ Bounty created on-chain with ID:', bountyId);
-
-                    // Mark this transaction as saved to prevent duplicates
-                    savedTransactions.current.add(receipt.transactionHash);
-
-                    // Store bounty ID for potential treasury funding step
-                    setCreatedBountyId(parseInt(bountyId));
-
-                    // If pod treasury funding, show Step 2 and DON'T save to database yet
-                    if (formData.funding_source === 'pod_treasury') {
-                      console.log('🏦 Pod treasury funding detected - showing Step 2');
-                      setShowTreasuryFunding(true);
-                      return; // Don't save to database until treasury funding is set
-                    }
-
-                    // Save to database (fire and forget - don't await)
-                    const tokenAddress = formData.value.token === 'SYSTEM'
-                      ? (process.env.NEXT_PUBLIC_SYSTEM_TOKEN || '0x1317Ae277266D38C4E492558f8693F14143a6A65')
-                      : (process.env.NEXT_PUBLIC_SELF_TOKEN || '0xe9b4aB2eB9397fa41AC3223e96f9d988BeFF5D21');
-
-                    console.log('💾 Initiating database save...');
-                    fetch('/api/bounty/create', {
-                      method: 'POST',
-                      headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({
+                    if (bountyCreatedLog && bountyCreatedLog.topics?.[1]) {
+                      const bountyIdHex = bountyCreatedLog.topics[1];
+                      const bountyId = BigInt(bountyIdHex).toString();
+                      console.log(
+                        '✅ Bounty created on-chain with ID:',
                         bountyId,
-                        transactionHash: receipt.transactionHash,
-                        creator: address,
-                        value: formData.value.amount,
-                        token: tokenAddress,
-                        podId: formData.podId,
-                        ipfsHash,
-                        title: formData.title,
-                        description: formData.description,
-                        category: formData.category,
-                        deadline: formData.deadline,
-                        funding_source: formData.funding_source,
-                        requirements: formData.requirements.filter(r => r.trim()),
-                        questions: formData.questions.filter(q => q.trim()),
-                        // Bid acceptance configuration
-                        bid_acceptance_mode: formData.bid_acceptance_mode || 'single',
-                        max_bids_accepted: formData.bid_acceptance_mode === 'multiple' ? formData.max_bids_accepted : (formData.bid_acceptance_mode === 'single' ? 1 : 0),
-                        bids_accepted_count: 0
-                      })
-                    })
-                    .then(async (saveResponse) => {
-                      if (!saveResponse.ok) {
-                        const errorData = await saveResponse.json();
-                        console.error('❌ Failed to save bounty to database:', errorData);
-                      } else {
-                        const saveData = await saveResponse.json();
-                        console.log('✅ Bounty saved to database successfully:', saveData);
-                        onSuccess?.(bountyId);
+                      );
+
+                      // Mark this transaction as saved to prevent duplicates
+                      savedTransactions.current.add(receipt.transactionHash);
+
+                      // Store bounty ID for potential treasury funding step
+                      setCreatedBountyId(parseInt(bountyId));
+
+                      // If pod treasury funding, show Step 2 and DON'T save to database yet
+                      if (formData.funding_source === 'pod_treasury') {
+                        console.log(
+                          '🏦 Pod treasury funding detected - showing Step 2',
+                        );
+                        setShowTreasuryFunding(true);
+                        return; // Don't save to database until treasury funding is set
                       }
-                    })
-                    .catch((saveError) => {
-                      console.error('❌ Error saving bounty to database:', saveError);
-                    });
+
+                      // Save to database (fire and forget - don't await)
+                      const tokenAddress =
+                        formData.value.token === 'SYSTEM'
+                          ? process.env.NEXT_PUBLIC_SYSTEM_TOKEN ||
+                            '0x1317Ae277266D38C4E492558f8693F14143a6A65'
+                          : process.env.NEXT_PUBLIC_SELF_TOKEN ||
+                            '0xe9b4aB2eB9397fa41AC3223e96f9d988BeFF5D21';
+
+                      console.log('💾 Initiating database save...');
+                      fetch('/api/bounty/create', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                          bountyId,
+                          transactionHash: receipt.transactionHash,
+                          creator: address,
+                          value: formData.value.amount,
+                          token: tokenAddress,
+                          podId: formData.podId,
+                          ipfsHash,
+                          title: formData.title,
+                          description: formData.description,
+                          category: formData.category,
+                          deadline: formData.deadline,
+                          funding_source: formData.funding_source,
+                          requirements: formData.requirements.filter((r) =>
+                            r.trim(),
+                          ),
+                          questions: formData.questions.filter((q) => q.trim()),
+                          // Bid acceptance configuration
+                          bid_acceptance_mode:
+                            formData.bid_acceptance_mode || 'single',
+                          max_bids_accepted:
+                            formData.bid_acceptance_mode === 'multiple'
+                              ? formData.max_bids_accepted
+                              : formData.bid_acceptance_mode === 'single'
+                                ? 1
+                                : 0,
+                          bids_accepted_count: 0,
+                        }),
+                      })
+                        .then(async (saveResponse) => {
+                          if (!saveResponse.ok) {
+                            const errorData = await saveResponse.json();
+                            console.error(
+                              '❌ Failed to save bounty to database:',
+                              errorData,
+                            );
+                          } else {
+                            const saveData = await saveResponse.json();
+                            console.log(
+                              '✅ Bounty saved to database successfully:',
+                              saveData,
+                            );
+                            onSuccess?.(bountyId);
+                          }
+                        })
+                        .catch((saveError) => {
+                          console.error(
+                            '❌ Error saving bounty to database:',
+                            saveError,
+                          );
+                        });
+                    } else {
+                      console.error(
+                        '❌ Could not find BountyCreated event in logs',
+                      );
+                      console.log(
+                        'Available logs:',
+                        logs?.map((log, i) => ({
+                          index: i,
+                          address: log.address,
+                          topicsCount: log.topics?.length,
+                        })),
+                      );
+                    }
                   } else {
-                    console.error('❌ Could not find BountyCreated event in logs');
-                    console.log('Available logs:', logs?.map((log, i) => ({
-                      index: i,
-                      address: log.address,
-                      topicsCount: log.topics?.length
-                    })));
-                  }
-                  } else {
-                    console.warn('⚠️ Success status but no transaction receipts found');
+                    console.warn(
+                      '⚠️ Success status but no transaction receipts found',
+                    );
                   }
                 }
               }}
@@ -843,13 +1039,20 @@ export const BountyFormV2: React.FC<BountyFormV2Props> = ({
 
         {/* Permissions Info */}
         {formData.podId && (
-          <Alert style={{ backgroundColor: '#E8F1EE', borderWidth: '1px', borderStyle: 'solid', borderColor: '#B8D9CA' }}>
+          <Alert
+            style={{
+              backgroundColor: '#E8F1EE',
+              borderWidth: '1px',
+              borderStyle: 'solid',
+              borderColor: '#B8D9CA',
+            }}
+          >
             <AlertDescription style={{ color: '#1F453A' }}>
               <strong>Permissions for selected pod:</strong>
-              <br />
-              • Bounty Management: {canManageBounties ? '✅ Allowed' : '❌ Not allowed'}
-              <br />
-              • Treasury Access: {canUseTreasury ? '✅ Allowed' : '❌ Not allowed'}
+              <br />• Bounty Management:{' '}
+              {canManageBounties ? '✅ Allowed' : '❌ Not allowed'}
+              <br />• Treasury Access:{' '}
+              {canUseTreasury ? '✅ Allowed' : '❌ Not allowed'}
             </AlertDescription>
           </Alert>
         )}

@@ -23,16 +23,20 @@ interface PodManageClientProps {
  * - Advanced settings and permissions
  * - Treasury management
  */
-export function PodManageClient({ 
-  initialPod, 
-  initialLeaderProfiles, 
-  podId 
+export function PodManageClient({
+  initialPod,
+  initialLeaderProfiles,
+  podId,
 }: PodManageClientProps) {
   const { address } = useAccount();
   const { toast } = useToast();
-  const { selectedUser, users, isOpen, openProfileModal, closeProfileModal } = useProfileModal();
+  const { selectedUser, users, isOpen, openProfileModal, closeProfileModal } =
+    useProfileModal();
 
-  console.log('🔄 PodManageClient: Using robust management container for pod:', podId);
+  console.log(
+    '🔄 PodManageClient: Using robust management container for pod:',
+    podId,
+  );
 
   // Create a handler that opens the profile modal instead of navigating
   const handleClickName = (userAddress: string) => {

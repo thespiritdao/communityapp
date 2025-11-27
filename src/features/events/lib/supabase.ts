@@ -1,29 +1,32 @@
-import { getCurrentSession } from "@/features/identity/utils/serverAuth";
+import { getCurrentSession } from '@/features/identity/utils/serverAuth';
 import { supabase } from '@/utils/supabaseClient';
-import type { 
-  Event, 
-  EventRegistration, 
-  EventAgenda, 
+import type {
+  Event,
+  EventRegistration,
+  EventAgenda,
   EventNotification,
   EventToken,
   EventEscrow,
   CreateEventForm,
   CreateAgendaForm,
   EventWithStats,
-  Pod
+  Pod,
 } from '../types/event';
 
 export class EventService {
   // Event CRUD operations
-  static async createEvent(eventData: CreateEventForm, creatorAddress: string): Promise<Event> {
+  static async createEvent(
+    eventData: CreateEventForm,
+    creatorAddress: string,
+  ): Promise<Event> {
     const { agendas, ...event } = eventData;
-    
+
     // Ensure user session is valid for authenticated operations
     const session = await getCurrentSession();
     if (!session?.user?.id) {
       throw new Error('Authentication required');
     }
-    
+
     // Fetch user profile details (same pattern as forum)
     const { data: profileData, error: profileError } = await supabase
       .from('user_profiles')
@@ -34,17 +37,17 @@ export class EventService {
     if (profileError || !profileData?.wallet_address) {
       throw new Error('No wallet address found in user_profiles');
     }
-    
+
     // Insert event with user_id for RLS policies
     const { data: eventResult, error: eventError } = await supabase
       .from('events')
       .insert({
         ...event,
         creator_address: profileData.wallet_address,
-        user_id: session.user.id,  // Add user_id for RLS
+        user_id: session.user.id, // Add user_id for RLS
         event_date: event.event_date.toISOString(),
         event_end_date: event.event_end_date?.toISOString(),
-        status: 'draft'
+        status: 'draft',
       })
       .select()
       .single();
@@ -55,7 +58,7 @@ export class EventService {
         message: eventError.message,
         details: eventError.details,
         hint: eventError.hint,
-        code: eventError.code
+        code: eventError.code,
       });
       throw eventError;
     }
@@ -69,7 +72,7 @@ export class EventService {
         agenda_date: agenda.agenda_date.toISOString().split('T')[0],
         start_time: agenda.start_time,
         end_time: agenda.end_time,
-        sort_order: agenda.sort_order
+        sort_order: agenda.sort_order,
       }));
 
       const { error: agendasError } = await supabase
@@ -89,9 +92,11 @@ export class EventService {
     upcoming_only?: boolean;
   }): Promise<EventWithStats[]> {
     // Force using the events table to ensure blockchain_event_id is included
-    console.log('📊 Forcing events table usage to preserve blockchain_event_id');
+    console.log(
+      '📊 Forcing events table usage to preserve blockchain_event_id',
+    );
     return this.getEventsFromTable(filters);
-    
+
     // Original view-first approach (disabled to test blockchain_event_id issue)
     /*
     let query = supabase
@@ -157,87 +162,105 @@ export class EventService {
       // Use event_end_date if available, otherwise fall back to event_date
       // Events are upcoming if they haven't ended yet
       const now = new Date().toISOString();
-      query = query.or(`event_end_date.gte.${now},and(event_end_date.is.null,event_date.gte.${now})`);
-      
+      query = query.or(
+        `event_end_date.gte.${now},and(event_end_date.is.null,event_date.gte.${now})`,
+      );
+
       console.log('📅 Database upcoming_only filter applied:', {
         now,
-        logic: 'event_end_date >= now OR (event_end_date is null AND event_date >= now)'
+        logic:
+          'event_end_date >= now OR (event_end_date is null AND event_date >= now)',
       });
     }
 
     const { data, error } = await query;
 
     if (error) throw error;
-    
+
     // Debug: Check blockchain_event_id in fetched data
     console.log('📊 Events fetched from table with blockchain_event_id:', {
       totalEvents: data?.length || 0,
-      eventsWithBlockchainId: data?.filter(e => e.blockchain_event_id).length || 0,
-      sampleEvent: data?.[0] ? {
-        id: data[0].id,
-        title: data[0].title,
-        blockchain_event_id: data[0].blockchain_event_id,
-        hasBlockchainId: !!data[0].blockchain_event_id
-      } : null
+      eventsWithBlockchainId:
+        data?.filter((e) => e.blockchain_event_id).length || 0,
+      sampleEvent: data?.[0]
+        ? {
+            id: data[0].id,
+            title: data[0].title,
+            blockchain_event_id: data[0].blockchain_event_id,
+            hasBlockchainId: !!data[0].blockchain_event_id,
+          }
+        : null,
     });
-    
+
     // Calculate registration counts for each event
-    const eventsWithStats = await Promise.all((data || []).map(async (event: any) => {
-      try {
-        // Get registration count for this event
-        const { count: registrationCount } = await supabase
-          .from('event_registrations')
-          .select('*', { count: 'exact', head: true })
-          .eq('event_id', event.id)
-          .in('registration_status', ['registered', 'checked_in', 'completed']);
+    const eventsWithStats = await Promise.all(
+      (data || []).map(async (event: any) => {
+        try {
+          // Get registration count for this event
+          const { count: registrationCount } = await supabase
+            .from('event_registrations')
+            .select('*', { count: 'exact', head: true })
+            .eq('event_id', event.id)
+            .in('registration_status', [
+              'registered',
+              'checked_in',
+              'completed',
+            ]);
 
-        // Get checked-in count
-        const { count: checkedInCount } = await supabase
-          .from('event_registrations')
-          .select('*', { count: 'exact', head: true })
-          .eq('event_id', event.id)
-          .in('registration_status', ['checked_in', 'completed']);
+          // Get checked-in count
+          const { count: checkedInCount } = await supabase
+            .from('event_registrations')
+            .select('*', { count: 'exact', head: true })
+            .eq('event_id', event.id)
+            .in('registration_status', ['checked_in', 'completed']);
 
-        // Get completed count
-        const { count: completedCount } = await supabase
-          .from('event_registrations')
-          .select('*', { count: 'exact', head: true })
-          .eq('event_id', event.id)
-          .eq('registration_status', 'completed');
+          // Get completed count
+          const { count: completedCount } = await supabase
+            .from('event_registrations')
+            .select('*', { count: 'exact', head: true })
+            .eq('event_id', event.id)
+            .eq('registration_status', 'completed');
 
-        return {
-          ...event,
-          registration_count: registrationCount || 0,
-          checked_in_count: checkedInCount || 0,
-          completed_count: completedCount || 0,
-          pod_name: null
-        };
-      } catch (countError) {
-        console.error(`Failed to get counts for event ${event.id}:`, countError);
-        return {
-          ...event,
-          registration_count: 0,
-          checked_in_count: 0,
-          completed_count: 0,
-          pod_name: null
-        };
-      }
-    }));
-    
+          return {
+            ...event,
+            registration_count: registrationCount || 0,
+            checked_in_count: checkedInCount || 0,
+            completed_count: completedCount || 0,
+            pod_name: null,
+          };
+        } catch (countError) {
+          console.error(
+            `Failed to get counts for event ${event.id}:`,
+            countError,
+          );
+          return {
+            ...event,
+            registration_count: 0,
+            checked_in_count: 0,
+            completed_count: 0,
+            pod_name: null,
+          };
+        }
+      }),
+    );
+
     return eventsWithStats;
   }
 
   static async getEvent(eventId: string): Promise<EventWithStats | null> {
     // Always try events table first to ensure blockchain_event_id is included
     console.log('📊 Fetching event with blockchain_event_id support:', eventId);
-    
+
     try {
       const tableResult = await this.getEventFromTable(eventId);
       if (tableResult) {
         return tableResult;
       }
     } catch (tableError) {
-      console.warn('📊 Failed to fetch from events table, trying view:', tableError);
+      console.warn(
+        '📊 Failed to fetch from events table, trying view:',
+        tableError,
+      );
     }
 
     // Fallback to events_with_stats view
@@ -248,7 +271,11 @@ export class EventService {
       .single();
 
     // If the view doesn't exist, we already tried the table above
-    if (error && (error.code === '42P01' || error.message.includes('relation "events_with_stats" does not exist'))) {
+    if (
+      error &&
+      (error.code === '42P01' ||
+        error.message.includes('relation "events_with_stats" does not exist'))
+    ) {
       console.log('📊 events_with_stats view not found and table failed');
       return null;
     }
@@ -263,13 +290,15 @@ export class EventService {
       eventId,
       hasBlockchainId: !!data?.blockchain_event_id,
       blockchain_event_id: data?.blockchain_event_id,
-      allFields: Object.keys(data || {})
+      allFields: Object.keys(data || {}),
     });
 
     return data;
   }
 
-  static async getEventFromTable(eventId: string): Promise<EventWithStats | null> {
+  static async getEventFromTable(
+    eventId: string,
+  ): Promise<EventWithStats | null> {
     const { data, error } = await supabase
       .from('events')
       .select('*')
@@ -286,7 +315,7 @@ export class EventService {
       eventId,
       hasBlockchainId: !!data?.blockchain_event_id,
       blockchain_event_id: data?.blockchain_event_id,
-      allFields: Object.keys(data || {})
+      allFields: Object.keys(data || {}),
     });
 
     // Calculate registration counts for this event
@@ -318,7 +347,7 @@ export class EventService {
         registration_count: registrationCount || 0,
         checked_in_count: checkedInCount || 0,
         completed_count: completedCount || 0,
-        pod_name: null
+        pod_name: null,
       };
     } catch (countError) {
       console.error(`Failed to get counts for event ${eventId}:`, countError);
@@ -328,12 +357,15 @@ export class EventService {
         registration_count: 0,
         checked_in_count: 0,
         completed_count: 0,
-        pod_name: null
+        pod_name: null,
       };
     }
   }
 
-  static async updateEvent(eventId: string, updates: Partial<Event>): Promise<Event> {
+  static async updateEvent(
+    eventId: string,
+    updates: Partial<Event>,
+  ): Promise<Event> {
     // Ensure user session is valid for authenticated operations
     await this.ensureAuthenticated();
 
@@ -349,10 +381,7 @@ export class EventService {
   }
 
   static async deleteEvent(eventId: string): Promise<void> {
-    const { error } = await supabase
-      .from('events')
-      .delete()
-      .eq('id', eventId);
+    const { error } = await supabase.from('events').delete().eq('id', eventId);
 
     if (error) throw error;
   }
@@ -401,17 +430,17 @@ export class EventService {
 
   // Event Registration operations
   static async registerForEvent(
-    eventId: string, 
+    eventId: string,
     userAddress: string,
     paymentAmount = '0',
-    paymentToken = 'free'
+    paymentToken = 'free',
   ): Promise<EventRegistration> {
     // Ensure user session is valid for authenticated operations
     const session = await getCurrentSession();
     if (!session?.user?.id) {
       throw new Error('Authentication required');
     }
-    
+
     const { data, error } = await supabase
       .from('event_registrations')
       .insert({
@@ -419,7 +448,7 @@ export class EventService {
         user_address: userAddress,
         payment_amount: paymentAmount,
         payment_token: paymentToken,
-        payment_status: paymentAmount === '0' ? 'completed' : 'pending'
+        payment_status: paymentAmount === '0' ? 'completed' : 'pending',
       })
       .select()
       .single();
@@ -428,7 +457,9 @@ export class EventService {
     return data;
   }
 
-  static async getEventRegistrations(eventId: string): Promise<EventRegistration[]> {
+  static async getEventRegistrations(
+    eventId: string,
+  ): Promise<EventRegistration[]> {
     const { data, error } = await supabase
       .from('event_registrations')
       .select('*')
@@ -440,19 +471,24 @@ export class EventService {
   }
 
   static async getUserRegistration(
-    eventId: string, 
-    userAddress: string
+    eventId: string,
+    userAddress: string,
   ): Promise<EventRegistration | null> {
     try {
       // Check if user session is valid for authenticated operations
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      const {
+        data: { session },
+        error: sessionError,
+      } = await supabase.auth.getSession();
       if (sessionError) {
         console.warn('Session error in getUserRegistration:', sessionError);
         return null; // Return null instead of throwing
       }
-      
+
       if (!session?.user?.id) {
-        console.warn('No authenticated session in getUserRegistration, returning null');
+        console.warn(
+          'No authenticated session in getUserRegistration, returning null',
+        );
         return null; // Return null instead of throwing
       }
 
@@ -477,8 +513,8 @@ export class EventService {
   }
 
   static async updateRegistration(
-    registrationId: string, 
-    updates: Partial<EventRegistration>
+    registrationId: string,
+    updates: Partial<EventRegistration>,
   ): Promise<EventRegistration> {
     const { data, error } = await supabase
       .from('event_registrations')
@@ -491,24 +527,28 @@ export class EventService {
     return data;
   }
 
-  static async cancelRegistration(registrationId: string): Promise<EventRegistration> {
+  static async cancelRegistration(
+    registrationId: string,
+  ): Promise<EventRegistration> {
     return this.updateRegistration(registrationId, {
       registration_status: 'cancelled',
-      cancelled_at: new Date().toISOString()
+      cancelled_at: new Date().toISOString(),
     });
   }
 
   static async checkInUser(registrationId: string): Promise<EventRegistration> {
     return this.updateRegistration(registrationId, {
       registration_status: 'checked_in',
-      checked_in_at: new Date().toISOString()
+      checked_in_at: new Date().toISOString(),
     });
   }
 
-  static async completeUserRegistration(registrationId: string): Promise<EventRegistration> {
+  static async completeUserRegistration(
+    registrationId: string,
+  ): Promise<EventRegistration> {
     return this.updateRegistration(registrationId, {
       registration_status: 'completed',
-      completed_at: new Date().toISOString()
+      completed_at: new Date().toISOString(),
     });
   }
 
@@ -525,16 +565,26 @@ export class EventService {
     return data || [];
   }
 
-  static async createAgenda(agendaData: CreateAgendaForm & { event_id: string }): Promise<EventAgenda> {
+  static async createAgenda(
+    agendaData: CreateAgendaForm & { event_id: string },
+  ): Promise<EventAgenda> {
     // Ensure user session is valid for authenticated operations
-    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-    console.log('Session check in createAgenda:', { session, sessionError, hasUser: !!session?.user, userId: session?.user?.id });
-    
+    const {
+      data: { session },
+      error: sessionError,
+    } = await supabase.auth.getSession();
+    console.log('Session check in createAgenda:', {
+      session,
+      sessionError,
+      hasUser: !!session?.user,
+      userId: session?.user?.id,
+    });
+
     if (sessionError) {
       console.error('Session error:', sessionError);
       throw new Error(`Session error: ${sessionError.message}`);
     }
-    
+
     if (!session?.user?.id) {
       console.error('No valid session found:', { session });
       throw new Error('Authentication required - please log in again');
@@ -558,8 +608,14 @@ export class EventService {
       .eq('id', agendaData.event_id)
       .single();
 
-    if (!eventData || (eventData.user_id !== session.user.id && eventData.creator_address !== profileData.wallet_address)) {
-      throw new Error('Permission denied: You can only add agenda items to events you created');
+    if (
+      !eventData ||
+      (eventData.user_id !== session.user.id &&
+        eventData.creator_address !== profileData.wallet_address)
+    ) {
+      throw new Error(
+        'Permission denied: You can only add agenda items to events you created',
+      );
     }
 
     const { data, error } = await supabase
@@ -568,7 +624,7 @@ export class EventService {
         ...agendaData,
         agenda_date: agendaData.agenda_date.toISOString().split('T')[0],
         // Include sort_order as number, not string
-        sort_order: Number(agendaData.sort_order)
+        sort_order: Number(agendaData.sort_order),
       })
       .select()
       .single();
@@ -579,14 +635,17 @@ export class EventService {
         message: error.message,
         details: error.details,
         hint: error.hint,
-        code: error.code
+        code: error.code,
       });
       throw error;
     }
     return data;
   }
 
-  static async updateAgenda(agendaId: string, updates: Partial<EventAgenda>): Promise<EventAgenda> {
+  static async updateAgenda(
+    agendaId: string,
+    updates: Partial<EventAgenda>,
+  ): Promise<EventAgenda> {
     const { data, error } = await supabase
       .from('event_agendas')
       .update(updates)
@@ -609,14 +668,14 @@ export class EventService {
 
   // Notification operations
   static async createNotification(
-    notificationData: Omit<EventNotification, 'id' | 'created_at'>
+    notificationData: Omit<EventNotification, 'id' | 'created_at'>,
   ): Promise<EventNotification> {
     // Ensure user session is valid for authenticated operations
     const session = await getCurrentSession();
     if (!session?.user?.id) {
       throw new Error('Authentication required');
     }
-    
+
     const { data, error } = await supabase
       .from('event_notifications')
       .insert(notificationData)
@@ -627,7 +686,9 @@ export class EventService {
     return data;
   }
 
-  static async getUserNotifications(userAddress: string): Promise<EventNotification[]> {
+  static async getUserNotifications(
+    userAddress: string,
+  ): Promise<EventNotification[]> {
     const { data, error } = await supabase
       .from('event_notifications')
       .select('*')
@@ -648,13 +709,15 @@ export class EventService {
   }
 
   // Token operations
-  static async createEventToken(tokenData: Omit<EventToken, 'id' | 'minted_at'>): Promise<EventToken> {
-    // Ensure user session is valid for authenticated operations  
+  static async createEventToken(
+    tokenData: Omit<EventToken, 'id' | 'minted_at'>,
+  ): Promise<EventToken> {
+    // Ensure user session is valid for authenticated operations
     const session = await getCurrentSession();
     if (!session?.user?.id) {
       throw new Error('Authentication required');
     }
-    
+
     const { data, error } = await supabase
       .from('event_tokens')
       .insert(tokenData)
@@ -665,7 +728,10 @@ export class EventService {
     return data;
   }
 
-  static async getEventTokens(eventId: string, tokenType?: 'registration' | 'completion'): Promise<EventToken[]> {
+  static async getEventTokens(
+    eventId: string,
+    tokenType?: 'registration' | 'completion',
+  ): Promise<EventToken[]> {
     let query = supabase
       .from('event_tokens')
       .select('*')
@@ -675,13 +741,18 @@ export class EventService {
       query = query.eq('token_type', tokenType);
     }
 
-    const { data, error } = await query.order('minted_at', { ascending: false });
+    const { data, error } = await query.order('minted_at', {
+      ascending: false,
+    });
 
     if (error) throw error;
     return data || [];
   }
 
-  static async getUserEventTokens(userAddress: string, eventId?: string): Promise<EventToken[]> {
+  static async getUserEventTokens(
+    userAddress: string,
+    eventId?: string,
+  ): Promise<EventToken[]> {
     let query = supabase
       .from('event_tokens')
       .select('*')
@@ -691,20 +762,24 @@ export class EventService {
       query = query.eq('event_id', eventId);
     }
 
-    const { data, error } = await query.order('minted_at', { ascending: false });
+    const { data, error } = await query.order('minted_at', {
+      ascending: false,
+    });
 
     if (error) throw error;
     return data || [];
   }
 
   // Escrow operations
-  static async createEscrow(escrowData: Omit<EventEscrow, 'id' | 'created_at'>): Promise<EventEscrow> {
+  static async createEscrow(
+    escrowData: Omit<EventEscrow, 'id' | 'created_at'>,
+  ): Promise<EventEscrow> {
     // Ensure user session is valid for authenticated operations
     const session = await getCurrentSession();
     if (!session?.user?.id) {
       throw new Error('Authentication required');
     }
-    
+
     const { data, error } = await supabase
       .from('event_escrow')
       .insert(escrowData)
@@ -730,7 +805,10 @@ export class EventService {
     return data;
   }
 
-  static async updateEscrow(escrowId: string, updates: Partial<EventEscrow>): Promise<EventEscrow> {
+  static async updateEscrow(
+    escrowId: string,
+    updates: Partial<EventEscrow>,
+  ): Promise<EventEscrow> {
     const { data, error } = await supabase
       .from('event_escrow')
       .update(updates)
@@ -754,19 +832,19 @@ export class EventService {
     membershipHatId?: string;
     treasuryContractAddress?: string;
     status?: string;
-    podId?: string;                      // NEW: Optional pod ID for tracking
-    proxyContractAddress?: string;       // NEW: Proxy contract address
-    proxyAdminHatId?: string;           // NEW: Proxy admin HAT ID
-    blockchainPodId?: string;           // NEW: Blockchain pod ID for factory (format: "pod-{timestamp}-{random}")
+    podId?: string; // NEW: Optional pod ID for tracking
+    proxyContractAddress?: string; // NEW: Proxy contract address
+    proxyAdminHatId?: string; // NEW: Proxy admin HAT ID
+    blockchainPodId?: string; // NEW: Blockchain pod ID for factory (format: "pod-{timestamp}-{random}")
   }): Promise<Pod> {
     console.log('🏗️ Creating pod in Supabase:', podData.name);
-    
+
     // Get user session for RLS
     const session = await getCurrentSession();
     if (!session?.user?.id) {
       throw new Error('Authentication required');
     }
-    
+
     // Get user profile for wallet address
     const { data: profileData, error: profileError } = await supabase
       .from('user_profiles')
@@ -787,13 +865,22 @@ export class EventService {
         .eq('management_hat_id', podData.parentPodId)
         .order('created_at', { ascending: false }) // Get most recent pod with this HAT ID
         .limit(1);
-      
+
       if (parentPodError || !parentPodData || parentPodData.length === 0) {
-        console.warn('Could not find parent pod with HAT ID:', podData.parentPodId, parentPodError);
+        console.warn(
+          'Could not find parent pod with HAT ID:',
+          podData.parentPodId,
+          parentPodError,
+        );
         // Continue without parent (creates orphaned pod, but better than failing)
       } else {
         parentPodUuid = parentPodData[0].id;
-        console.log('Found parent pod UUID:', parentPodUuid, 'for HAT ID:', podData.parentPodId);
+        console.log(
+          'Found parent pod UUID:',
+          parentPodUuid,
+          'for HAT ID:',
+          podData.parentPodId,
+        );
       }
     }
 
@@ -805,15 +892,17 @@ export class EventService {
         description: podData.description,
         parent_pod_id: parentPodUuid, // Use the UUID, not the HAT ID
         pod_leads: podData.podLeads,
-        accountability_signatures: JSON.stringify(podData.accountabilitySignatures),
+        accountability_signatures: JSON.stringify(
+          podData.accountabilitySignatures,
+        ),
         pod_image_url: podData.image,
         management_hat_id: podData.managementHatId,
         membership_hat_id: podData.membershipHatId,
         token_address: podData.managementHatId, // Set token_address to management HAT ID for compatibility
         treasury_contract_address: podData.treasuryContractAddress,
-        proxy_contract_address: podData.proxyContractAddress || null,  // NEW: Store proxy address
-        proxy_admin_hat_id: podData.proxyAdminHatId || null,           // NEW: Store proxy admin HAT
-        blockchain_pod_id: podData.blockchainPodId || null,            // NEW: Store blockchain pod ID for factory operations
+        proxy_contract_address: podData.proxyContractAddress || null, // NEW: Store proxy address
+        proxy_admin_hat_id: podData.proxyAdminHatId || null, // NEW: Store proxy admin HAT
+        blockchain_pod_id: podData.blockchainPodId || null, // NEW: Store blockchain pod ID for factory operations
         created_by_address: profileData.wallet_address,
         status: podData.status || 'active',
         pod_metadata: JSON.stringify({
@@ -822,8 +911,8 @@ export class EventService {
           auth_user_id: session.user.id, // Store auth user ID in metadata instead
           proxy_contract_address: podData.proxyContractAddress, // Also in metadata for redundancy
           proxy_admin_hat_id: podData.proxyAdminHatId,
-          blockchain_pod_id: podData.blockchainPodId // Also in metadata for tracking
-        })
+          blockchain_pod_id: podData.blockchainPodId, // Also in metadata for tracking
+        }),
       })
       .select()
       .single();
@@ -838,15 +927,18 @@ export class EventService {
   }
 
   // Update Pod Function
-  static async updatePod(podId: string, updates: {
-    treasuryContractAddress?: string;
-    treasuryDeploymentHash?: string;
-    status?: string;
-    managementHatId?: string;
-    membershipHatId?: string;
-  }): Promise<Pod> {
+  static async updatePod(
+    podId: string,
+    updates: {
+      treasuryContractAddress?: string;
+      treasuryDeploymentHash?: string;
+      status?: string;
+      managementHatId?: string;
+      membershipHatId?: string;
+    },
+  ): Promise<Pod> {
     console.log('🔄 Updating pod in Supabase:', podId, updates);
-    
+
     const { data, error } = await supabase
       .from('pods')
       .update({
@@ -856,7 +948,7 @@ export class EventService {
         management_hat_id: updates.managementHatId,
         membership_hat_id: updates.membershipHatId,
         token_address: updates.managementHatId, // Keep token_address in sync with management_hat_id
-        updated_at: new Date().toISOString()
+        updated_at: new Date().toISOString(),
       })
       .eq('id', podId)
       .select()
@@ -874,7 +966,7 @@ export class EventService {
   // Utility functions
   static async getPods(): Promise<Pod[]> {
     console.log('🔄 Getting pods from dedicated pods table...');
-    
+
     // Check if user is authenticated for RLS policies
     const session = await getCurrentSession();
     console.log('🔐 User authentication status:', !!session?.user?.id);
@@ -882,9 +974,9 @@ export class EventService {
       userId: session?.user?.id,
       userEmail: session?.user?.email,
       userRole: session?.user?.role,
-      sessionExpiry: session?.expires_at
+      sessionExpiry: session?.expires_at,
     });
-    
+
     // Get user profile for RLS context (might be needed for wallet address matching)
     let userWalletAddress = null;
     if (session?.user?.id) {
@@ -894,21 +986,27 @@ export class EventService {
           .select('wallet_address')
           .eq('user_id', session.user.id)
           .single();
-        
+
         if (!profileError && profileData) {
           userWalletAddress = profileData.wallet_address;
-          console.log('🔐 User wallet address from profile:', userWalletAddress);
+          console.log(
+            '🔐 User wallet address from profile:',
+            userWalletAddress,
+          );
         } else {
-          console.log('⚠️ Could not get user wallet address:', profileError?.message);
+          console.log(
+            '⚠️ Could not get user wallet address:',
+            profileError?.message,
+          );
         }
       } catch (profileFetchError) {
         console.log('⚠️ Error fetching user profile:', profileFetchError);
       }
     }
-    
+
     // Get pods from the dedicated 'pods' table only - this is the correct source
     // All pods are tokens, but not all tokens are pods (events, permissions, etc. also create tokens)
-    
+
     // First, try with RLS bypass for debugging
     let data, error;
     try {
@@ -925,18 +1023,17 @@ export class EventService {
           updated_at
         `)
         .order('name', { ascending: true });
-      
+
       data = bypassData;
       error = bypassError;
-      
+
       console.log('🔍 RLS bypass result:', {
         dataLength: data?.length || 0,
-        error: error?.message || 'none'
+        error: error?.message || 'none',
       });
-      
     } catch (bypassAttemptError) {
       console.log('⚠️ RLS bypass failed, using standard query...');
-      
+
       // Fallback to standard query
       const { data: standardData, error: standardError } = await supabase
         .from('pods')
@@ -950,22 +1047,23 @@ export class EventService {
           updated_at
         `)
         .order('name', { ascending: true });
-      
+
       data = standardData;
       error = standardError;
     }
 
-    console.log('🔍 Pods query result:', { 
-      dataLength: data?.length || 0, 
+    console.log('🔍 Pods query result:', {
+      dataLength: data?.length || 0,
       error: error?.message || 'none',
       errorCode: error?.code || 'none',
-      sampleData: data?.slice(0, 2)?.map(p => ({ 
-        id: p.id, 
-        name: p.name, 
-        status: p.status,
-        pod_image_url: p.pod_image_url,
-        management_hat_id: p.management_hat_id
-      })) || []
+      sampleData:
+        data?.slice(0, 2)?.map((p) => ({
+          id: p.id,
+          name: p.name,
+          status: p.status,
+          pod_image_url: p.pod_image_url,
+          management_hat_id: p.management_hat_id,
+        })) || [],
     });
 
     if (error) {
@@ -977,7 +1075,9 @@ export class EventService {
     return data || [];
   }
 
-  static async getAllTokens(): Promise<{ id: string; name: string; symbol?: string; contract_address?: string }[]> {
+  static async getAllTokens(): Promise<
+    { id: string; name: string; symbol?: string; contract_address?: string }[]
+  > {
     // First try with symbol, if it fails, fallback without symbol
     try {
       const { data, error } = await supabase
@@ -985,7 +1085,7 @@ export class EventService {
         .select('id, name, symbol, contract_address')
         .eq('is_active', true)
         .order('name', { ascending: true });
-      
+
       if (error && error.code === '42703') {
         // Column doesn't exist, try without symbol
         console.warn('Symbol column does not exist, querying without it');
@@ -994,11 +1094,14 @@ export class EventService {
           .select('id, name, contract_address')
           .eq('is_active', true)
           .order('name', { ascending: true });
-        
+
         if (fallbackError) throw fallbackError;
-        return (fallbackData || []).map(token => ({ ...token, symbol: undefined }));
+        return (fallbackData || []).map((token) => ({
+          ...token,
+          symbol: undefined,
+        }));
       }
-      
+
       if (error) throw error;
       return data || [];
     } catch (err) {
@@ -1009,26 +1112,33 @@ export class EventService {
         .select('id, name')
         .eq('is_active', true)
         .order('name', { ascending: true });
-      
+
       if (basicError) throw basicError;
-      return (basicData || []).map(token => ({ ...token, symbol: undefined, contract_address: undefined }));
+      return (basicData || []).map((token) => ({
+        ...token,
+        symbol: undefined,
+        contract_address: undefined,
+      }));
     }
   }
 
   static async getUserEvents(userAddress: string): Promise<EventWithStats[]> {
-    const { data, error } = await supabase
-      .rpc('get_user_events', { user_wallet_address: userAddress });
+    const { data, error } = await supabase.rpc('get_user_events', {
+      user_wallet_address: userAddress,
+    });
 
     if (error) throw error;
     return data || [];
   }
 
-  static async canUserRegisterForEvent(eventId: string, userAddress: string): Promise<boolean> {
-    const { data, error } = await supabase
-      .rpc('can_user_register_for_event', { 
-        event_uuid: eventId, 
-        user_wallet_address: userAddress 
-      });
+  static async canUserRegisterForEvent(
+    eventId: string,
+    userAddress: string,
+  ): Promise<boolean> {
+    const { data, error } = await supabase.rpc('can_user_register_for_event', {
+      event_uuid: eventId,
+      user_wallet_address: userAddress,
+    });
 
     if (error) throw error;
     return data || false;
@@ -1057,11 +1167,14 @@ export class EventService {
   }
 
   // Search and filtering
-  static async searchEvents(searchTerm: string, filters?: {
-    status?: string;
-    price_token?: string;
-    organizing_pod_id?: string;
-  }): Promise<EventWithStats[]> {
+  static async searchEvents(
+    searchTerm: string,
+    filters?: {
+      status?: string;
+      price_token?: string;
+      organizing_pod_id?: string;
+    },
+  ): Promise<EventWithStats[]> {
     let query = supabase
       .from('events_with_stats')
       .select('*')
@@ -1079,22 +1192,27 @@ export class EventService {
       query = query.eq('organizing_pod_id', filters.organizing_pod_id);
     }
 
-    const { data, error } = await query.order('event_date', { ascending: true });
+    const { data, error } = await query.order('event_date', {
+      ascending: true,
+    });
 
     if (error) throw error;
     return data || [];
   }
 
   // Cancel registration
-  static async cancelEventRegistration(eventId: string, userAddress: string): Promise<boolean> {
+  static async cancelEventRegistration(
+    eventId: string,
+    userAddress: string,
+  ): Promise<boolean> {
     try {
       console.log('📝 Cancelling registration:', { eventId, userAddress });
-      
+
       const { data, error } = await supabase
         .from('event_registrations')
-        .update({ 
+        .update({
           registration_status: 'cancelled',
-          cancelled_at: new Date().toISOString()
+          cancelled_at: new Date().toISOString(),
         })
         .eq('event_id', eventId)
         .eq('user_address', userAddress.toLowerCase())
@@ -1106,35 +1224,40 @@ export class EventService {
           errorCode: error.code,
           errorMessage: error.message,
           eventId,
-          userAddress
+          userAddress,
         });
         return false;
       }
 
       if (!data || data.length === 0) {
-        console.error('❌ No registration found to cancel:', { eventId, userAddress });
+        console.error('❌ No registration found to cancel:', {
+          eventId,
+          userAddress,
+        });
         return false;
       }
 
       console.log('✅ Registration cancelled successfully:', {
         eventId,
         userAddress,
-        updatedRecord: data[0]
+        updatedRecord: data[0],
       });
-      
+
       return true;
     } catch (error) {
       console.error('❌ Exception while cancelling registration:', {
         error,
         eventId,
-        userAddress
+        userAddress,
       });
       return false;
     }
   }
 
   // Get all registrations for a user
-  static async getUserRegistrations(userAddress: string): Promise<EventRegistration[]> {
+  static async getUserRegistrations(
+    userAddress: string,
+  ): Promise<EventRegistration[]> {
     const { data, error } = await supabase
       .from('event_registrations')
       .select('*')
@@ -1148,9 +1271,11 @@ export class EventService {
   // Helper method to ensure user is authenticated with Supabase
   private static async ensureAuthenticated(): Promise<void> {
     const session = await getCurrentSession();
-    
+
     if (!session?.user?.id) {
-      throw new Error('Authentication required - please connect your wallet and sign in');
+      throw new Error(
+        'Authentication required - please connect your wallet and sign in',
+      );
     }
   }
 }

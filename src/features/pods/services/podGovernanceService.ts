@@ -12,7 +12,7 @@ export interface PodCreationData {
   name: string;
   description: string;
   parent_pod_id: string | null;
-  parent_hat_id?: string;                // ✅ NEW: Parent HAT ID for efficient child index queries
+  parent_hat_id?: string; // ✅ NEW: Parent HAT ID for efficient child index queries
   pod_leads: string[];
   accountability_signatures: Record<string, AccountabilitySignature>;
   created_by_address: string;
@@ -23,8 +23,8 @@ export interface PodCreationData {
   management_hat_id?: string;
   membership_hat_id?: string;
   treasury_contract_address?: string;
-  proxy_contract_address?: string;      // NEW: Proxy contract address
-  proxy_admin_hat_id?: string;          // NEW: Proxy admin HAT ID
+  proxy_contract_address?: string; // NEW: Proxy contract address
+  proxy_admin_hat_id?: string; // NEW: Proxy admin HAT ID
   leaderEligibilityCriteria?: EligibilityCriteria[];
   memberEligibilityCriteria?: EligibilityCriteria[];
 }
@@ -52,12 +52,12 @@ export class PodGovernanceService {
    */
   static async generatePodApprovalProposal(
     podData: PodCreationData,
-    parentPods: Pod[]
+    parentPods: Pod[],
   ): Promise<GovernanceProposalData> {
-    const parentPod = parentPods.find(p => p.id === podData.parent_pod_id);
-    
+    const parentPod = parentPods.find((p) => p.id === podData.parent_pod_id);
+
     const proposalTitle = `Approve New Pod: ${podData.name}`;
-    
+
     // Get creator profile for display
     let creatorDisplay = `\`${podData.created_by_address}\``;
     try {
@@ -66,9 +66,10 @@ export class PodGovernanceService {
         .select('first_name, last_name')
         .eq('wallet_address', podData.created_by_address.toLowerCase())
         .single();
-      
+
       if (creatorProfile?.first_name || creatorProfile?.last_name) {
-        creatorDisplay = `${creatorProfile.first_name || ''} ${creatorProfile.last_name || ''}`.trim();
+        creatorDisplay =
+          `${creatorProfile.first_name || ''} ${creatorProfile.last_name || ''}`.trim();
       }
     } catch (error) {
       console.log('Could not fetch creator profile, using address');
@@ -77,30 +78,35 @@ export class PodGovernanceService {
     // Get pod leads display with profiles
     let podLeadsDisplay = 'No pod leads assigned';
     let profiles: any[] = [];
-    
+
     if (podData.pod_leads && podData.pod_leads.length > 0) {
       try {
         const { data: fetchedProfiles } = await supabase
           .from('user_profiles')
           .select('wallet_address, first_name, last_name')
-          .in('wallet_address', podData.pod_leads.map(addr => addr.toLowerCase()));
-        
+          .in(
+            'wallet_address',
+            podData.pod_leads.map((addr) => addr.toLowerCase()),
+          );
+
         profiles = fetchedProfiles || [];
-        
-        const leadsWithNames = podData.pod_leads.map(address => {
-          const profile = profiles.find(p => p.wallet_address.toLowerCase() === address.toLowerCase());
+
+        const leadsWithNames = podData.pod_leads.map((address) => {
+          const profile = profiles.find(
+            (p) => p.wallet_address.toLowerCase() === address.toLowerCase(),
+          );
           if (profile?.first_name || profile?.last_name) {
             return `${profile.first_name || ''} ${profile.last_name || ''}`.trim();
           }
           return `\`${address}\``;
         });
-        
+
         podLeadsDisplay = `${leadsWithNames.join(', ')} (${podData.pod_leads.length} member${podData.pod_leads.length !== 1 ? 's' : ''})`;
       } catch (error) {
         podLeadsDisplay = `${podData.pod_leads.join(', ')} (${podData.pod_leads.length} member${podData.pod_leads.length !== 1 ? 's' : ''})`;
       }
     }
-    
+
     const proposalBody = `
 # **Pod Creation Proposal**
 
@@ -114,23 +120,31 @@ export class PodGovernanceService {
 ${podData.description}
 
 ### Leadership Team
-${podData.pod_leads && podData.pod_leads.length > 0 
-  ? podData.pod_leads.map((lead, index) => {
-      const signature = podData.accountability_signatures[lead.toLowerCase()];
-      // Try to get profile name from profiles we fetched earlier
-      const profile = profiles?.find(p => p.wallet_address.toLowerCase() === lead.toLowerCase());
-      const displayName = (profile?.first_name || profile?.last_name) 
-        ? `${profile.first_name || ''} ${profile.last_name || ''}`.trim()
-        : `\`${lead}\``;
-      return `**Lead ${index + 1}:** ${displayName} ${signature?.isValid ? '✅ Accountability Statement Signed' : '❌ Signature Pending'}`;
-    }).join('\n')
-  : '*No pod leads have been assigned yet. Pod leads can be added after approval.*'
+${
+  podData.pod_leads && podData.pod_leads.length > 0
+    ? podData.pod_leads
+        .map((lead, index) => {
+          const signature =
+            podData.accountability_signatures[lead.toLowerCase()];
+          // Try to get profile name from profiles we fetched earlier
+          const profile = profiles?.find(
+            (p) => p.wallet_address.toLowerCase() === lead.toLowerCase(),
+          );
+          const displayName =
+            profile?.first_name || profile?.last_name
+              ? `${profile.first_name || ''} ${profile.last_name || ''}`.trim()
+              : `\`${lead}\``;
+          return `**Lead ${index + 1}:** ${displayName} ${signature?.isValid ? '✅ Accountability Statement Signed' : '❌ Signature Pending'}`;
+        })
+        .join('\n')
+    : '*No pod leads have been assigned yet. Pod leads can be added after approval.*'
 }
 
 ### Accountability Compliance
-${podData.pod_leads && podData.pod_leads.length > 0 
-  ? 'All pod leads have signed the SpiritDAO Pod Leadership Accountability Statement, committing to:'
-  : 'Upon assignment of pod leads, they will be required to sign the SpiritDAO Pod Leadership Accountability Statement, committing to:'
+${
+  podData.pod_leads && podData.pod_leads.length > 0
+    ? 'All pod leads have signed the SpiritDAO Pod Leadership Accountability Statement, committing to:'
+    : 'Upon assignment of pod leads, they will be required to sign the SpiritDAO Pod Leadership Accountability Statement, committing to:'
 }
 - Acting with integrity and transparency
 - Compliance with DAO terms of service
@@ -177,7 +191,9 @@ This pod requests permission to:
     return {
       title: proposalTitle,
       body: proposalBody,
-      targetContract: process.env.NEXT_PUBLIC_POD_CREATION_CONTRACT || '0x43C124Df0dFb324CCC742808D9FdF62C764f2644',
+      targetContract:
+        process.env.NEXT_PUBLIC_POD_CREATION_CONTRACT ||
+        '0x43C124Df0dFb324CCC742808D9FdF62C764f2644',
       functionName: 'activatePod',
       args: [podData.id],
     };
@@ -212,8 +228,8 @@ This pod requests permission to:
           management_hat_id: podData.management_hat_id,
           membership_hat_id: podData.membership_hat_id,
           treasury_contract_address: podData.treasury_contract_address,
-          proxy_contract_address: podData.proxy_contract_address || null,     // NEW: Store proxy address
-          proxy_admin_hat_id: podData.proxy_admin_hat_id || null               // NEW: Store proxy admin HAT ID
+          proxy_contract_address: podData.proxy_contract_address || null, // NEW: Store proxy address
+          proxy_admin_hat_id: podData.proxy_admin_hat_id || null, // NEW: Store proxy admin HAT ID
         })
         .select()
         .single();
@@ -221,7 +237,9 @@ This pod requests permission to:
       if (podError) throw podError;
 
       // Store accountability signatures
-      const signatureInserts = Object.values(podData.accountability_signatures).map(sig => ({
+      const signatureInserts = Object.values(
+        podData.accountability_signatures,
+      ).map((sig) => ({
         pod_id: podData.id,
         signer_address: sig.address,
         signature_data: sig.signature,
@@ -238,8 +256,10 @@ This pod requests permission to:
 
       // Initialize default role permissions with eligibility criteria
       if (podData.management_hat_id && podData.membership_hat_id) {
-        console.log('🔐 Setting up role permissions with eligibility criteria...');
-        
+        console.log(
+          '🔐 Setting up role permissions with eligibility criteria...',
+        );
+
         // Create leader role with custom eligibility criteria if provided
         await PodRolePermissionsService.createRolePermission({
           pod_id: podData.id,
@@ -290,7 +310,9 @@ This pod requests permission to:
       // 🆕 ADD LEADERS TO active_pod_members TABLE
       // This ensures leaders can access chats and other pod features immediately
       try {
-        const { HatsMembershipService } = await import('./HatsMembershipService');
+        const { HatsMembershipService } = await import(
+          './HatsMembershipService'
+        );
 
         console.log('👥 Adding pod leaders to active_pod_members table...');
 
@@ -299,20 +321,25 @@ This pod requests permission to:
             podData.id,
             leaderAddress,
             'leader',
-            podData.management_hat_id
+            podData.management_hat_id,
           );
         }
 
-        console.log(`✅ Added ${podData.pod_leads.length} leader(s) to active_pod_members`);
+        console.log(
+          `✅ Added ${podData.pod_leads.length} leader(s) to active_pod_members`,
+        );
       } catch (membershipError) {
-        console.error('⚠️ Failed to add leaders to active_pod_members:', membershipError);
+        console.error(
+          '⚠️ Failed to add leaders to active_pod_members:',
+          membershipError,
+        );
         // Don't fail pod creation if membership indexing fails
       }
 
       // Notify executive pod holders about the new pod approval request
       try {
         const parentPod = await this.getParentPodInfo(podData.parent_pod_id);
-        
+
         await ExecutivePodNotificationService.notifyExecutivePodHolders({
           type: 'pod_approval_request',
           podId: podData.id,
@@ -321,12 +348,17 @@ This pod requests permission to:
           createdBy: podData.created_by_address,
           parentPodName: parentPod?.name || 'SpiritDAO Root',
           podLeads: podData.pod_leads,
-          contextUrl: `/governance`
+          contextUrl: `/governance`,
         });
 
-        console.log('🔔 Executive pod holders notified about pod approval request');
+        console.log(
+          '🔔 Executive pod holders notified about pod approval request',
+        );
       } catch (notificationError) {
-        console.error('Failed to notify executive pod holders:', notificationError);
+        console.error(
+          'Failed to notify executive pod holders:',
+          notificationError,
+        );
         // Don't fail the pod creation if notification fails
       }
 
@@ -340,7 +372,9 @@ This pod requests permission to:
   /**
    * Get parent pod information
    */
-  static async getParentPodInfo(parentPodId: string | null): Promise<Pod | null> {
+  static async getParentPodInfo(
+    parentPodId: string | null,
+  ): Promise<Pod | null> {
     if (!parentPodId) return null;
 
     try {
@@ -367,19 +401,19 @@ This pod requests permission to:
    */
   static async submitGovernanceProposal(
     proposalData: GovernanceProposalData,
-    creatorAddress: string
+    creatorAddress: string,
   ): Promise<string> {
     try {
       // Here you would integrate with the existing CreateProposalForm logic
       // For now, we'll simulate the process and return a proposal ID
-      
+
       console.log('Submitting governance proposal:', {
         title: proposalData.title,
         bodyLength: proposalData.body.length,
         targetContract: proposalData.targetContract,
         functionName: proposalData.functionName,
         args: proposalData.args,
-        creator: creatorAddress
+        creator: creatorAddress,
       });
 
       // In a real implementation, this would:
@@ -389,7 +423,7 @@ This pod requests permission to:
       // 4. Return the proposal ID
 
       const simulatedProposalId = `prop-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-      
+
       return simulatedProposalId;
     } catch (error) {
       console.error('Failed to submit governance proposal:', error);
@@ -401,19 +435,19 @@ This pod requests permission to:
    * Approve pod proposal (executive action)
    */
   static async approvePodProposal(
-    podId: string, 
+    podId: string,
     approverAddress: string,
-    proposalId?: string
+    proposalId?: string,
   ): Promise<void> {
     try {
       // Update pod status to active
       const { data: podData, error: updateError } = await supabase
         .from('pods')
-        .update({ 
-          status: 'active', 
+        .update({
+          status: 'active',
           is_active: true,
           governance_proposal_id: proposalId,
-          updated_at: new Date().toISOString()
+          updated_at: new Date().toISOString(),
         })
         .eq('id', podId)
         .select('name, created_by_address')
@@ -428,12 +462,11 @@ This pod requests permission to:
           podData.name,
           'approved',
           podData.created_by_address,
-          approverAddress
+          approverAddress,
         );
       }
 
       console.log(`✅ Pod ${podId} approved by ${approverAddress}`);
-
     } catch (error) {
       console.error('Failed to approve pod proposal:', error);
       throw error;
@@ -444,23 +477,23 @@ This pod requests permission to:
    * Reject pod proposal (executive action)
    */
   static async rejectPodProposal(
-    podId: string, 
+    podId: string,
     rejectorAddress: string,
-    reason?: string
+    reason?: string,
   ): Promise<void> {
     try {
       // Update pod status to rejected
       const { data: podData, error: updateError } = await supabase
         .from('pods')
-        .update({ 
+        .update({
           status: 'rejected',
           is_active: false,
-          pod_metadata: supabase.sql`pod_metadata || ${JSON.stringify({ 
+          pod_metadata: supabase.sql`pod_metadata || ${JSON.stringify({
             rejection_reason: reason,
             rejected_by: rejectorAddress,
-            rejected_at: new Date().toISOString()
+            rejected_at: new Date().toISOString(),
           })}`,
-          updated_at: new Date().toISOString()
+          updated_at: new Date().toISOString(),
         })
         .eq('id', podId)
         .select('name, created_by_address')
@@ -475,12 +508,11 @@ This pod requests permission to:
           podData.name,
           'rejected',
           podData.created_by_address,
-          rejectorAddress
+          rejectorAddress,
         );
       }
 
       console.log(`❌ Pod ${podId} rejected by ${rejectorAddress}`);
-
     } catch (error) {
       console.error('Failed to reject pod proposal:', error);
       throw error;
@@ -490,10 +522,14 @@ This pod requests permission to:
   /**
    * Update pod status after governance approval
    */
-  static async activatePod(podId: string, hatIds: { managementHatId: string; membershipHatId: string }, treasuryAddress: string): Promise<void> {
+  static async activatePod(
+    podId: string,
+    hatIds: { managementHatId: string; membershipHatId: string },
+    treasuryAddress: string,
+  ): Promise<void> {
     try {
       console.log(`🚀 Activating pod ${podId} with HAT integration...`);
-      
+
       // Get pod details for role creation
       const { data: pod, error: podError } = await supabase
         .from('pods')
@@ -524,22 +560,27 @@ This pod requests permission to:
       // Create default role permissions for the activated pod
       try {
         console.log(`🎩 Creating role permissions for pod ${podId}...`);
-        
+
         await PodRolePermissionsService.initializeDefaultRoles(
           podId,
           hatIds.managementHatId,
           hatIds.membershipHatId,
-          pod.created_by_address || 'system'
+          pod.created_by_address || 'system',
         );
 
         console.log(`✅ Role permissions created for pod ${podId}`);
       } catch (roleError) {
-        console.error(`⚠️ Failed to create role permissions for pod ${podId}:`, roleError);
+        console.error(
+          `⚠️ Failed to create role permissions for pod ${podId}:`,
+          roleError,
+        );
         // Don't throw here - pod activation should succeed even if role creation fails
         // Role permissions can be created manually later if needed
       }
 
-      console.log(`🎉 Pod ${podId} activated successfully with role permissions`);
+      console.log(
+        `🎉 Pod ${podId} activated successfully with role permissions`,
+      );
     } catch (error) {
       console.error('Failed to activate pod:', error);
       throw error;
@@ -569,7 +610,8 @@ This pod requests permission to:
       if (sigError) throw sigError;
 
       // Transform signatures to expected format
-      const accountabilitySignatures: Record<string, AccountabilitySignature> = {};
+      const accountabilitySignatures: Record<string, AccountabilitySignature> =
+        {};
       for (const sig of signatures || []) {
         accountabilitySignatures[sig.signer_address.toLowerCase()] = {
           address: sig.signer_address,
@@ -607,14 +649,22 @@ This pod requests permission to:
    * Note: Uses the dedicated 'pods' table, not 'tokens' table
    * All pods are tokens, but not all tokens are pods (events, permissions, etc. also create tokens)
    */
-  static async getPods(filters?: { status?: string; parentPodId?: string }): Promise<Pod[]> {
+  static async getPods(filters?: {
+    status?: string;
+    parentPodId?: string;
+  }): Promise<Pod[]> {
     try {
-      console.log('🔄 PodGovernanceService: Getting pods from dedicated pods table...');
-      
+      console.log(
+        '🔄 PodGovernanceService: Getting pods from dedicated pods table...',
+      );
+
       // Check authentication status
       const session = await getCurrentSession();
-      console.log('🔐 PodGovernanceService: User authentication status:', !!session?.user?.id);
-      
+      console.log(
+        '🔐 PodGovernanceService: User authentication status:',
+        !!session?.user?.id,
+      );
+
       let query = supabase.from('pods').select(`
         *,
         pod_image_url,
@@ -635,13 +685,18 @@ This pod requests permission to:
         console.log('🔍 Filtering by parent pod ID:', filters.parentPodId);
       }
 
-      const { data, error } = await query.order('created_at', { ascending: false });
+      const { data, error } = await query.order('created_at', {
+        ascending: false,
+      });
 
-      console.log('🔍 PodGovernanceService query result:', { 
-        dataLength: data?.length || 0, 
+      console.log('🔍 PodGovernanceService query result:', {
+        dataLength: data?.length || 0,
         error: error?.message || 'none',
         errorCode: error?.code || 'none',
-        sampleData: data?.slice(0, 2)?.map(p => ({ id: p.id, name: p.name, status: p.status })) || []
+        sampleData:
+          data
+            ?.slice(0, 2)
+            ?.map((p) => ({ id: p.id, name: p.name, status: p.status })) || [],
       });
 
       if (error) throw error;
@@ -659,8 +714,11 @@ This pod requests permission to:
    */
   static async getUserLeadershipPods(userAddress: string): Promise<Pod[]> {
     try {
-      console.log('🔄 PodGovernanceService: Getting leadership pods for user:', userAddress);
-      
+      console.log(
+        '🔄 PodGovernanceService: Getting leadership pods for user:',
+        userAddress,
+      );
+
       if (!userAddress) {
         console.log('❌ No user address provided');
         return [];
@@ -676,19 +734,22 @@ This pod requests permission to:
           membership_hat_id,
           treasury_contract_address
         `)
-        .or(`pod_leads.cs.{${userAddress.toLowerCase()}},created_by_address.eq.${userAddress.toLowerCase()}`)
+        .or(
+          `pod_leads.cs.{${userAddress.toLowerCase()}},created_by_address.eq.${userAddress.toLowerCase()}`,
+        )
         .order('created_at', { ascending: false });
 
-      console.log('🔍 PodGovernanceService leadership query result:', { 
-        dataLength: data?.length || 0, 
+      console.log('🔍 PodGovernanceService leadership query result:', {
+        dataLength: data?.length || 0,
         error: error?.message || 'none',
-        sampleData: data?.slice(0, 2)?.map(p => ({ 
-          id: p.id, 
-          name: p.name, 
-          status: p.status,
-          pod_leads: p.pod_leads,
-          created_by_address: p.created_by_address
-        })) || []
+        sampleData:
+          data?.slice(0, 2)?.map((p) => ({
+            id: p.id,
+            name: p.name,
+            status: p.status,
+            pod_leads: p.pod_leads,
+            created_by_address: p.created_by_address,
+          })) || [],
       });
 
       if (error) throw error;
@@ -704,7 +765,10 @@ This pod requests permission to:
   /**
    * Insert a new accountability signature for a pod leader
    */
-  static async addAccountabilitySignature(podId: string, signature: AccountabilitySignature): Promise<void> {
+  static async addAccountabilitySignature(
+    podId: string,
+    signature: AccountabilitySignature,
+  ): Promise<void> {
     const { error } = await supabase
       .from('pod_accountability_signatures')
       .insert({
@@ -722,7 +786,9 @@ This pod requests permission to:
   /**
    * Get all accountability signatures for a pod
    */
-  static async getAccountabilitySignatures(podId: string): Promise<AccountabilitySignature[]> {
+  static async getAccountabilitySignatures(
+    podId: string,
+  ): Promise<AccountabilitySignature[]> {
     const { data, error } = await supabase
       .from('pod_accountability_signatures')
       .select('*')
@@ -731,7 +797,7 @@ This pod requests permission to:
 
     if (error) throw error;
 
-    return (data || []).map(sig => ({
+    return (data || []).map((sig) => ({
       address: sig.signer_address,
       signature: sig.signature_data,
       timestamp: sig.signed_at,
@@ -743,7 +809,15 @@ This pod requests permission to:
   /**
    * Update pod status
    */
-  static async updatePodStatus(podId: string, status: 'draft' | 'proposed' | 'active' | 'inactive', extra?: Partial<{ management_hat_id: string; membership_hat_id: string; treasury_contract_address: string; }>): Promise<void> {
+  static async updatePodStatus(
+    podId: string,
+    status: 'draft' | 'proposed' | 'active' | 'inactive',
+    extra?: Partial<{
+      management_hat_id: string;
+      membership_hat_id: string;
+      treasury_contract_address: string;
+    }>,
+  ): Promise<void> {
     const { error } = await supabase
       .from('pods')
       .update({ status, ...(extra || {}) })
@@ -754,24 +828,29 @@ This pod requests permission to:
   /**
    * Update pod treasury address (for direct treasury deployment)
    */
-  static async updatePodTreasuryAddress(podId: string, treasuryAddress: string): Promise<void> {
-    console.log(`🏦 Updating pod ${podId} with treasury address: ${treasuryAddress}`);
-    
+  static async updatePodTreasuryAddress(
+    podId: string,
+    treasuryAddress: string,
+  ): Promise<void> {
+    console.log(
+      `🏦 Updating pod ${podId} with treasury address: ${treasuryAddress}`,
+    );
+
     const { error } = await supabase
       .from('pods')
-      .update({ 
+      .update({
         treasury_contract_address: treasuryAddress,
         // Ensure pod is marked as active if it has a treasury
-        status: 'active'
+        status: 'active',
         // Removed is_active since it doesn't exist in schema
       })
       .eq('id', podId);
-      
+
     if (error) {
       console.error('❌ Failed to update pod treasury address:', error);
       throw error;
     }
-    
+
     console.log(`✅ Pod ${podId} treasury address updated successfully`);
   }
 
@@ -780,19 +859,26 @@ This pod requests permission to:
    *
    * MIGRATED: Phase 2 - Now uses unifiedNotificationService
    */
-  static async notifyPodInvites(podId: string, podName: string, recipients: string[], creatorAddress: string): Promise<void> {
-    const notifications = recipients.map((recipient) => unifiedNotificationService.createNotification({
-      recipient_address: recipient.toLowerCase(),
-      sender_address: creatorAddress.toLowerCase(),
-      notification_type: 'user_mentioned',
-      category: 'general',
-      title: 'Pod Leadership Invitation',
-      message: `You have been invited to co-lead the pod "${podName}". Please review and sign the leadership agreement.`,
-      context_type: 'governance',
-      context_id: podId,
-      context_url: `/pods/${podId}`,
-      priority: 'high'
-    }));
+  static async notifyPodInvites(
+    podId: string,
+    podName: string,
+    recipients: string[],
+    creatorAddress: string,
+  ): Promise<void> {
+    const notifications = recipients.map((recipient) =>
+      unifiedNotificationService.createNotification({
+        recipient_address: recipient.toLowerCase(),
+        sender_address: creatorAddress.toLowerCase(),
+        notification_type: 'user_mentioned',
+        category: 'general',
+        title: 'Pod Leadership Invitation',
+        message: `You have been invited to co-lead the pod "${podName}". Please review and sign the leadership agreement.`,
+        context_type: 'governance',
+        context_id: podId,
+        context_url: `/pods/${podId}`,
+        priority: 'high',
+      }),
+    );
 
     await Promise.all(notifications);
   }
@@ -802,7 +888,11 @@ This pod requests permission to:
    *
    * MIGRATED: Phase 2 - Now uses unifiedNotificationService and podNotificationHelpers
    */
-  static async notifyExecutiveForApproval(podId: string, podName: string, creatorAddress: string): Promise<void> {
+  static async notifyExecutiveForApproval(
+    podId: string,
+    podName: string,
+    creatorAddress: string,
+  ): Promise<void> {
     try {
       // Check if notification was already sent for this pod to prevent spam
       const { data: existingNotifications, error } = await supabase
@@ -819,35 +909,50 @@ This pod requests permission to:
 
       // If notification already exists, don't send duplicates
       if (existingNotifications && existingNotifications.length > 0) {
-        console.log(`📄 Pod approval notification already sent for ${podName} (${podId})`);
+        console.log(
+          `📄 Pod approval notification already sent for ${podName} (${podId})`,
+        );
         return;
       }
 
       // Get executive pod managers using new helper function
       const managers = await getExecutivePodManagers();
       if (!managers || managers.length === 0) {
-        console.log('⚠️ No Executive Pod managers found for approval notification');
+        console.log(
+          '⚠️ No Executive Pod managers found for approval notification',
+        );
         return;
       }
 
-      console.log(`📨 Sending pod approval notification for ${podName} to ${managers.length} Executive Pod members`);
+      console.log(
+        `📨 Sending pod approval notification for ${podName} to ${managers.length} Executive Pod members`,
+      );
 
-      await Promise.all(managers.map((manager) => unifiedNotificationService.createNotification({
-        recipient_address: manager.wallet_address.toLowerCase(),
-        sender_address: creatorAddress.toLowerCase(),
-        notification_type: 'user_mentioned',
-        category: 'general',
-        title: 'Pod Approval Required',
-        message: `New pod "${podName}" is ready for Executive approval. Consensus threshold is set to 1 for testing.`,
-        context_type: 'governance',
-        context_id: podId,
-        context_url: `/pods/${podId}`,
-        priority: 'high'
-      })));
+      await Promise.all(
+        managers.map((manager) =>
+          unifiedNotificationService.createNotification({
+            recipient_address: manager.wallet_address.toLowerCase(),
+            sender_address: creatorAddress.toLowerCase(),
+            notification_type: 'user_mentioned',
+            category: 'general',
+            title: 'Pod Approval Required',
+            message: `New pod "${podName}" is ready for Executive approval. Consensus threshold is set to 1 for testing.`,
+            context_type: 'governance',
+            context_id: podId,
+            context_url: `/pods/${podId}`,
+            priority: 'high',
+          }),
+        ),
+      );
 
-      console.log(`✅ Pod approval notifications sent successfully for ${podName}`);
+      console.log(
+        `✅ Pod approval notifications sent successfully for ${podName}`,
+      );
     } catch (error) {
-      console.error(`❌ Failed to send pod approval notifications for ${podName}:`, error);
+      console.error(
+        `❌ Failed to send pod approval notifications for ${podName}:`,
+        error,
+      );
     }
   }
 }
@@ -856,17 +961,23 @@ This pod requests permission to:
  * Hook for pod governance operations
  */
 export function usePodGovernance() {
-  const createPodProposal = async (podData: PodCreationData, parentPods: Pod[]) => {
+  const createPodProposal = async (
+    podData: PodCreationData,
+    parentPods: Pod[],
+  ) => {
     // Create pod in database
     const podId = await PodGovernanceService.createPodProposal(podData);
-    
+
     // Generate governance proposal
-    const proposalData = await PodGovernanceService.generatePodApprovalProposal(podData, parentPods);
-    
+    const proposalData = await PodGovernanceService.generatePodApprovalProposal(
+      podData,
+      parentPods,
+    );
+
     // Submit to governance system
     const proposalId = await PodGovernanceService.submitGovernanceProposal(
       proposalData,
-      podData.created_by_address
+      podData.created_by_address,
     );
 
     return { podId, proposalId };

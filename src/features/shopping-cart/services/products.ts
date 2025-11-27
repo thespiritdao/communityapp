@@ -1,7 +1,7 @@
 // src\features\shopping-cart\services\products.ts
 
-import { createClient } from "@supabase/supabase-js";
-import type { IProduct } from "models";
+import { createClient } from '@supabase/supabase-js';
+import type { IProduct } from 'models';
 
 // ✅ Supabase Setup
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -14,16 +14,16 @@ const supabase = createClient(supabaseUrl, supabaseAnonKey);
  */
 export const getProducts = async (): Promise<IProduct[]> => {
   try {
-    const { data, error } = await supabase.from("products").select("*");
+    const { data, error } = await supabase.from('products').select('*');
 
     if (error) {
-      console.error("❌ Error fetching products:", error);
+      console.error('❌ Error fetching products:', error);
       return [];
     }
 
     return data || [];
   } catch (error) {
-    console.error("❌ Unexpected error fetching products:", error);
+    console.error('❌ Unexpected error fetching products:', error);
     return [];
   }
 };

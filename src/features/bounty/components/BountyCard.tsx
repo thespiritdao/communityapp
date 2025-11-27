@@ -42,19 +42,21 @@ export const BountyCard: React.FC<BountyCardProps> = ({
 
   // Map token symbols to balance properties
   const TOKEN_SYMBOL_MAP = {
-    'EXEC': 'hasExecutivePod',
-    'DEV': 'hasDevPod', 
-    'MARKET': 'hasMarketManagement',
-    'BOUNTY': 'hasBountyHat',
-    'EVENT': 'hasEventManagement'
+    EXEC: 'hasExecutivePod',
+    DEV: 'hasDevPod',
+    MARKET: 'hasMarketManagement',
+    BOUNTY: 'hasBountyHat',
+    EVENT: 'hasEventManagement',
   } as const;
 
   useEffect(() => {
     const checkAccess = async () => {
       // If no token gating or restriction level is public, allow access
-      if (!token_gating || 
-          token_gating.restriction_level === 'public' || 
-          !token_gating.required_tokens?.length) {
+      if (
+        !token_gating ||
+        token_gating.restriction_level === 'public' ||
+        !token_gating.required_tokens?.length
+      ) {
         setHasAccess(true);
         return;
       }
@@ -68,17 +70,22 @@ export const BountyCard: React.FC<BountyCardProps> = ({
       setIsCheckingAccess(true);
       try {
         const balances = await fetchTokenBalances(address);
-        
+
         // Check if user has any of the required tokens
-        const hasRequiredTokens = token_gating.required_tokens.some(requiredToken => {
-          const balanceKey = TOKEN_SYMBOL_MAP[requiredToken.token_id as keyof typeof TOKEN_SYMBOL_MAP];
-          if (balanceKey && balances[balanceKey]) {
-            // For now, we just check if they have the token (balance > 0)
-            // In the future, we could implement minimum balance checking
-            return true;
-          }
-          return false;
-        });
+        const hasRequiredTokens = token_gating.required_tokens.some(
+          (requiredToken) => {
+            const balanceKey =
+              TOKEN_SYMBOL_MAP[
+                requiredToken.token_id as keyof typeof TOKEN_SYMBOL_MAP
+              ];
+            if (balanceKey && balances[balanceKey]) {
+              // For now, we just check if they have the token (balance > 0)
+              // In the future, we could implement minimum balance checking
+              return true;
+            }
+            return false;
+          },
+        );
 
         setHasAccess(hasRequiredTokens);
       } catch (error) {
@@ -93,7 +100,11 @@ export const BountyCard: React.FC<BountyCardProps> = ({
   }, [address, token_gating]);
 
   // Show access denied state for token-gated bounties
-  if (hasAccess === false && token_gating && token_gating.restriction_level !== 'public') {
+  if (
+    hasAccess === false &&
+    token_gating &&
+    token_gating.restriction_level !== 'public'
+  ) {
     return (
       <Card className="w-full max-w-md mx-auto bounty-card border-gray-300 opacity-75">
         <CardHeader className="relative bounty-header">
@@ -103,22 +114,38 @@ export const BountyCard: React.FC<BountyCardProps> = ({
               Restricted
             </Badge>
           </div>
-          <CardTitle className="text-xl font-bold bounty-title text-gray-600">{title}</CardTitle>
+          <CardTitle className="text-xl font-bold bounty-title text-gray-600">
+            {title}
+          </CardTitle>
         </CardHeader>
         <CardContent className="bounty-content">
           <div className="space-y-4">
-            <Alert style={{ backgroundColor: '#FAF4EC', borderWidth: '1px', borderStyle: 'solid', borderColor: '#E8D7B8' }}>
+            <Alert
+              style={{
+                backgroundColor: '#FAF4EC',
+                borderWidth: '1px',
+                borderStyle: 'solid',
+                borderColor: '#E8D7B8',
+              }}
+            >
               <Shield className="h-4 w-4" style={{ color: '#C6933F' }} />
               <AlertDescription style={{ color: '#8F6B2F' }}>
                 <div className="font-medium mb-1">Access Restricted</div>
                 <div className="text-sm">
-                  This bounty requires one of the following roles: {' '}
-                  {token_gating.required_tokens?.map(token => token.token_name).join(', ')}
+                  This bounty requires one of the following roles:{' '}
+                  {token_gating.required_tokens
+                    ?.map((token) => token.token_name)
+                    .join(', ')}
                 </div>
               </AlertDescription>
             </Alert>
             <div className="flex justify-between items-center bounty-meta">
-              <Badge variant="secondary" className="bounty-category text-gray-500">{category}</Badge>
+              <Badge
+                variant="secondary"
+                className="bounty-category text-gray-500"
+              >
+                {category}
+              </Badge>
               <div className="text-right">
                 <p className="font-semibold bounty-value text-gray-500">
                   <Lock className="h-4 w-4 inline mr-1" />
@@ -137,7 +164,9 @@ export const BountyCard: React.FC<BountyCardProps> = ({
     return (
       <Card className="w-full max-w-md mx-auto bounty-card">
         <CardHeader className="relative bounty-header">
-          <CardTitle className="text-xl font-bold bounty-title">{title}</CardTitle>
+          <CardTitle className="text-xl font-bold bounty-title">
+            {title}
+          </CardTitle>
         </CardHeader>
         <CardContent className="bounty-content">
           <div className="space-y-4">
@@ -153,35 +182,56 @@ export const BountyCard: React.FC<BountyCardProps> = ({
 
   // Show full bounty card for accessible bounties
   return (
-    <Card 
-      className="w-full max-w-md mx-auto bounty-card" 
-      data-status={status}
-    >
+    <Card className="w-full max-w-md mx-auto bounty-card" data-status={status}>
       <CardHeader className="relative bounty-header">
         <div className="absolute top-2 right-2 flex gap-2">
           {funding_source === 'pod_treasury' && (
-            <Badge variant="outline" style={{ backgroundColor: '#EDEAF0', color: '#574C66', borderWidth: '1px', borderStyle: 'solid', borderColor: '#D1CAD9' }}>
+            <Badge
+              variant="outline"
+              style={{
+                backgroundColor: '#EDEAF0',
+                color: '#574C66',
+                borderWidth: '1px',
+                borderStyle: 'solid',
+                borderColor: '#D1CAD9',
+              }}
+            >
               <Shield className="h-3 w-3 mr-1" />
               Pod Treasury
             </Badge>
           )}
-          {token_gating && token_gating.restriction_level !== 'public' && token_gating.required_tokens?.length && (
-            <Badge variant="outline" style={{ backgroundColor: '#E8F1EE', color: '#1F453A', borderWidth: '1px', borderStyle: 'solid', borderColor: '#B8D9CA' }}>
-              <Shield className="h-3 w-3 mr-1" />
-              Role Gated
-            </Badge>
-          )}
+          {token_gating &&
+            token_gating.restriction_level !== 'public' &&
+            token_gating.required_tokens?.length && (
+              <Badge
+                variant="outline"
+                style={{
+                  backgroundColor: '#E8F1EE',
+                  color: '#1F453A',
+                  borderWidth: '1px',
+                  borderStyle: 'solid',
+                  borderColor: '#B8D9CA',
+                }}
+              >
+                <Shield className="h-3 w-3 mr-1" />
+                Role Gated
+              </Badge>
+            )}
           <Badge variant="outline" className={`bounty-status ${status}`}>
             {status}
           </Badge>
         </div>
-        <CardTitle className="text-xl font-bold bounty-title">{title}</CardTitle>
+        <CardTitle className="text-xl font-bold bounty-title">
+          {title}
+        </CardTitle>
       </CardHeader>
       <CardContent className="bounty-content">
         <div className="space-y-4">
           <p className="text-gray-600 bounty-description">{description}</p>
           <div className="flex justify-between items-center bounty-meta">
-            <Badge variant="secondary" className="bounty-category">{category}</Badge>
+            <Badge variant="secondary" className="bounty-category">
+              {category}
+            </Badge>
             <div className="text-right">
               <p className="font-semibold bounty-value">
                 {value.amount} {value.token}
@@ -197,4 +247,4 @@ export const BountyCard: React.FC<BountyCardProps> = ({
       </CardContent>
     </Card>
   );
-}; 
+};

@@ -13,7 +13,7 @@ export function clearBrowserStorage() {
     console.log('Cleared sessionStorage');
 
     // Clear cookies
-    document.cookie.split(';').forEach(cookie => {
+    document.cookie.split(';').forEach((cookie) => {
       const [name] = cookie.split('=');
       document.cookie = `${name.trim()}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`;
     });
@@ -30,4 +30,4 @@ export function clearBrowserStorage() {
     console.error('Error clearing browser storage:', error);
     return false;
   }
-} 
+}

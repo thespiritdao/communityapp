@@ -21,7 +21,11 @@ interface Mention {
 }
 
 interface ChatInputProps {
-  onSendMessage: (content: string, attachments?: string[], mentions?: Mention[]) => void;
+  onSendMessage: (
+    content: string,
+    attachments?: string[],
+    mentions?: Mention[],
+  ) => void;
   chatId?: string;
 }
 
@@ -36,7 +40,10 @@ export default function ChatInput({ onSendMessage, chatId }: ChatInputProps) {
 
   const hasText = message.trim().length > 0;
 
-  const contextUrl = useMemo(() => (chatId ? `/chat/${chatId}` : undefined), [chatId]);
+  const contextUrl = useMemo(
+    () => (chatId ? `/chat/${chatId}` : undefined),
+    [chatId],
+  );
 
   useEffect(() => {
     console.log('ChatInput received chatId:', chatId);
@@ -47,7 +54,9 @@ export default function ChatInput({ onSendMessage, chatId }: ChatInputProps) {
     const checkMuteStatus = async () => {
       if (!chatId) return;
 
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       if (!user) return;
 
       // Get user's wallet address
@@ -85,13 +94,15 @@ export default function ChatInput({ onSendMessage, chatId }: ChatInputProps) {
           event: '*', // Listen to INSERT (mute) and DELETE (unmute)
           schema: 'public',
           table: 'chat_muted_users',
-          filter: `chat_group_id=eq.${chatId}`
+          filter: `chat_group_id=eq.${chatId}`,
         },
         async (payload) => {
           console.log('🔔 [ChatInput] Mute status change detected:', payload);
 
           // Re-check mute status when changes occur
-          const { data: { user } } = await supabase.auth.getUser();
+          const {
+            data: { user },
+          } = await supabase.auth.getUser();
           if (!user) return;
 
           const { data: profile } = await supabase
@@ -117,7 +128,7 @@ export default function ChatInput({ onSendMessage, chatId }: ChatInputProps) {
           if (!newMuteStatus && uploadError?.includes('muted')) {
             setUploadError(null);
           }
-        }
+        },
       )
       .subscribe();
 
@@ -159,7 +170,10 @@ export default function ChatInput({ onSendMessage, chatId }: ChatInputProps) {
       }
 
       if (hasText || attachments.length > 0) {
-        console.log('ChatInput: Enter key - sending message with mentions:', mentions);
+        console.log(
+          'ChatInput: Enter key - sending message with mentions:',
+          mentions,
+        );
         onSendMessage(message.trim(), attachments, mentions);
         setMessage('');
         setAttachments([]);
@@ -178,7 +192,9 @@ export default function ChatInput({ onSendMessage, chatId }: ChatInputProps) {
 
       for (const file of Array.from(files)) {
         if (file.size > maxFileSize) {
-          setUploadError(`File "${file.name}" is too large. Maximum allowed size is 5MB.`);
+          setUploadError(
+            `File "${file.name}" is too large. Maximum allowed size is 5MB.`,
+          );
           continue;
         }
 
@@ -189,13 +205,14 @@ export default function ChatInput({ onSendMessage, chatId }: ChatInputProps) {
 
         if (uploadErr) {
           console.error('Upload error:', uploadErr);
-          setUploadError(`Error uploading file "${file.name}". Please try again.`);
+          setUploadError(
+            `Error uploading file "${file.name}". Please try again.`,
+          );
           continue;
         }
 
-        const { data: publicUrlData, error: publicUrlErr } = await supabase.storage
-          .from('attachments')
-          .getPublicUrl(filePath);
+        const { data: publicUrlData, error: publicUrlErr } =
+          await supabase.storage.from('attachments').getPublicUrl(filePath);
 
         if (publicUrlErr || !publicUrlData.publicUrl) {
           console.error('Public URL error:', publicUrlErr);
@@ -290,10 +307,18 @@ export default function ChatInput({ onSendMessage, chatId }: ChatInputProps) {
             </button>
           ) : (
             <>
-              <button type="button" className="icon paperclip" onClick={handleAttachmentClick}>
+              <button
+                type="button"
+                className="icon paperclip"
+                onClick={handleAttachmentClick}
+              >
                 <FontAwesomeIcon icon={faPaperclip} />
               </button>
-              <button type="button" className="icon mic" onClick={handleVoiceToText}>
+              <button
+                type="button"
+                className="icon mic"
+                onClick={handleVoiceToText}
+              >
                 <FontAwesomeIcon icon={faMicrophone} />
               </button>
             </>
@@ -316,7 +341,10 @@ export default function ChatInput({ onSendMessage, chatId }: ChatInputProps) {
       </div>
 
       {uploadError && (
-        <div className="upload-error" style={{ color: 'red', marginTop: '8px' }}>
+        <div
+          className="upload-error"
+          style={{ color: 'red', marginTop: '8px' }}
+        >
           {uploadError}
         </div>
       )}

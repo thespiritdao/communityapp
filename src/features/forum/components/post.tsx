@@ -73,7 +73,11 @@ const PostPage: React.FC = () => {
       <div className={styles.centeredContainer}>
         <Lock className={styles.icon} />
         <h1 className={styles.pageTitle}>Connect Wallet to View Post</h1>
-        <Button onClick={() => router.push('/login?redirect=' + encodeURIComponent(router.asPath))}>
+        <Button
+          onClick={() =>
+            router.push('/login?redirect=' + encodeURIComponent(router.asPath))
+          }
+        >
           Connect Wallet
         </Button>
       </div>
