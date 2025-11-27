@@ -6,7 +6,7 @@ import { usePathname } from 'next/navigation';
 import { CommunityProvider } from '@/context/CommunityContext';
 import { UnifiedNotificationProvider } from '@/context/UnifiedNotificationContext';
 import { TokenBalancesProvider } from '@/context/TokenBalancesContext';
-import { OnchainProviders } from '../wallet/components/OnchainProviders';
+import { OnchainProviders } from '../wallet/components/OnChainProviders';
 import { ProfilesProvider } from '@/features/identity/context/ProfilesProvider';
 import { AuthProvider } from '@/features/identity';
 import { ModuleErrorBoundary } from '@/components/ModuleErrorBoundary';
