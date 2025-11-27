@@ -85,7 +85,13 @@
       "dist",
       "esm",
       "framegear",
-      "create-onchain"
+      "create-onchain",
+      "artifacts",
+      "cache",
+      "node_modules",
+      "*.config.js",
+      "deploy*.js",
+      "*.mjs"
     ]
   }
 }
