@@ -1,11 +1,12 @@
 // src/features/shopping-cart/components/Products/Products.tsx
 "use client";
 
-import { IProduct } from "models";
+import type { IProduct } from "../../models";
 import Product from "./Product/Product"; // Ensure this file exports a default component.
 import { useEffect, useState } from "react";
-import { fetchTokenBalances, TokenBalances } from "src/utils/fetchTokenBalances";
 import { useAccount } from "wagmi";
+import { useTokenBalances } from "@/context/TokenBalancesContext";
+import { getUserIdentity, type UserIdentity } from "@/utils/accessControlUtils";
 import * as S from "./style";
 
 interface IProps {
@@ -14,61 +15,70 @@ interface IProps {
 
 const Products = ({ products }: IProps) => {
   const { address } = useAccount();
-
-  // Our token balances are an object.
-  const [ownedTokens, setOwnedTokens] = useState<TokenBalances>({
-    hasProofOfCuriosity: false,
-    hasMarketAdmin: false,
-    hasMarketManagement: false,
-    hasExecutivePod: false,
-    hasDevPod: false,
-    hasBountyHat: false,
-    systemBalance: "0",
-    selfBalance: "0",
-  });
+  const { balances: tokenBalances, isLoading: tokenLoading } = useTokenBalances();
+  const [userIdentity, setUserIdentity] = useState<UserIdentity | null>(null);
+  const [isLoadingIdentity, setIsLoadingIdentity] = useState(true);
 
   useEffect(() => {
-    const checkTokens = async () => {
-      if (address) {
-        try {
-          const tokens = await fetchTokenBalances(address);
-          setOwnedTokens(tokens);
-        } catch (error) {
-          console.error("Error fetching token balances in Products:", error);
-        }
+    const loadUserIdentity = async () => {
+      if (!address || !tokenBalances || tokenLoading) {
+        setUserIdentity(null);
+        setIsLoadingIdentity(false);
+        return;
+      }
+
+      setIsLoadingIdentity(true);
+      try {
+        const identity = await getUserIdentity(address, tokenBalances);
+        setUserIdentity(identity);
+        console.log("🛒 Products loaded user identity:", identity);
+      } catch (error) {
+        console.error("🛒 Error loading user identity in Products:", error);
+        setUserIdentity(null);
+      } finally {
+        setIsLoadingIdentity(false);
       }
     };
 
-    checkTokens();
-  }, [address]);
+    loadUserIdentity();
+  }, [address, tokenBalances, tokenLoading]);
 
-  // Helper function to decide if a product is accessible.
-  const isAccessibleForProduct = (product: IProduct): boolean => {
-    if (!product.requiredToken) return true;
-    if (product.requiredToken === process.env.NEXT_PUBLIC_PROOF_OF_CURIOSITY) {
-      return ownedTokens.hasProofOfCuriosity;
-    }
-    if (product.requiredToken === process.env.NEXT_PUBLIC_SELF_TOKEN) {
-      return Number(ownedTokens.selfBalance) > 0;
-    }
-    if (product.requiredToken === process.env.NEXT_PUBLIC_SYSTEM_TOKEN) {
-      return Number(ownedTokens.systemBalance) > 0;
-    }
-    if (product.requiredToken === process.env.NEXT_PUBLIC_MARKET_MANAGEMENT) {
-      return ownedTokens.hasMarketAdmin; // Using backward compatibility property
-    }
-    return false;
-  };
+  // Show loading state while identity is loading
+  if (isLoadingIdentity || tokenLoading) {
+    return (
+      <S.Container>
+        <div style={{ padding: '2rem', textAlign: 'center', color: '#666' }}>
+          🛒 Loading products...
+        </div>
+      </S.Container>
+    );
+  }
+
+  // Products are already filtered by useProducts hook using async access control
+  // No need to filter again here as it would use sync version and incorrectly filter pod_ tokens
+  const accessibleProducts = products || [];
+  
+  console.log(`🛒 Rendering ${accessibleProducts.length} accessible products out of ${products?.length || 0} total`);
 
   return (
     <S.Container>
-      {products?.map((p, index) => (
-        <Product
-          product={p}
-          key={p.sku ? `${p.sku}-${index}` : index.toString()}
-          isAccessible={isAccessibleForProduct(p)}
-        />
-      ))}
+      {accessibleProducts.length === 0 ? (
+        <div style={{ padding: '2rem', textAlign: 'center', color: '#666' }}>
+          {userIdentity ? (
+            "🛒 No products available with your current permissions"
+          ) : (
+            "🔐 Connect your wallet to see available products"
+          )}
+        </div>
+      ) : (
+        accessibleProducts.map((p, index) => (
+          <Product
+            product={p}
+            key={p.sku ? `${p.sku}-${index}` : index.toString()}
+            isAccessible={true} // Already filtered, so all remaining products are accessible
+          />
+        ))
+      )}
     </S.Container>
   );
 };

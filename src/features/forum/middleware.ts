@@ -1,7 +1,7 @@
 // src/app/features/forum/middleware.ts
-import { NextRequest, NextResponse } from 'next/server';
-import { supabaseAdmin } from 'src/utils/supabaseAdminClient';
-import { fetchTokenBalances } from 'src/utils/fetchTokenBalances';
+import { type NextRequest, NextResponse } from 'next/server';
+import { supabaseAdmin } from '@/utils/supabaseAdminClient';
+import { fetchTokenBalances } from '@/utils/fetchTokenBalances';
 
 export async function middleware(request: NextRequest) {
   if (

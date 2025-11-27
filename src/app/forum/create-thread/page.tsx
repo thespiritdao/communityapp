@@ -2,9 +2,9 @@
 'use client';
 
 import { useSearchParams } from 'next/navigation';
-import { NewThreadForm } from 'src/features/forum/components/NewThreadForm';
-import ForumContainer from 'src/features/forum/components/ForumContainer';
-import styles from 'src/features/forum/styles/Forum.module.css';
+import { NewThreadForm } from '@/features/forum/components/NewThreadForm';
+import ForumContainer from '@/features/forum/components/ForumContainer';
+import ForumAccessGate from '@/features/forum/components/ForumAccessGate';
 
 export default function CreateThreadPage() {
   const searchParams = useSearchParams();
@@ -12,8 +12,14 @@ export default function CreateThreadPage() {
   const categoryId = searchParams.get('categoryId') || '';
 
   return (
-    <ForumContainer>
-      <NewThreadForm categoryId={categoryId} />
-    </ForumContainer>
+    <ForumAccessGate
+      categoryId={categoryId || undefined}
+      requirePosting={true}
+      fallbackMessage="You need chatAccess permission in your pod role to create threads."
+    >
+      <ForumContainer>
+        <NewThreadForm categoryId={categoryId} />
+      </ForumContainer>
+    </ForumAccessGate>
   );
 }

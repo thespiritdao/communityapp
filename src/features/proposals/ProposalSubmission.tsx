@@ -1,6 +1,7 @@
 // src/features/proposals/ProposalSubmission.tsx
 
-import React, { useCallback } from 'react';
+import type React from 'react';
+import { useCallback } from 'react';
 import {
   Transaction,
   TransactionButton,
@@ -19,12 +20,11 @@ import {
   WalletDropdownDisconnect,
 } from '@coinbase/onchainkit/wallet';
 import { useAccount } from 'wagmi';
-import { encodeFunctionData, Address } from 'viem';
+import type { Address } from 'viem';
 import { base } from 'wagmi/chains';
-import { useProposal } from 'src/context/ProposalContext';
-import UserTagging from 'src/components/UserTagging';
-import { supabase } from 'src/lib/supabase';
-import DAOGovernorABI from 'src/abis/DAO_GovernorABI.json';
+import { useProposal } from '@/context/ProposalContext';
+import UserTagging from '@/components/UserTagging';
+import DAOGovernorABI from '@/abis/DAO_GovernorABI.json';
 
 interface ProposalSubmissionProps {
   className?: string;
@@ -159,8 +159,8 @@ export const ProposalSubmission: React.FC<ProposalSubmissionProps> = ({
               </div>
             </Transaction>
           ) : (
-            <button disabled className="w-full bg-gray-300 text-gray-500 py-2 px-4 rounded-md cursor-not-allowed">
-              {!isConnected ? 'Connect Wallet' : 'Requirements Not Met'}
+            <button disabled={true} className="w-full bg-gray-300 text-gray-500 py-2 px-4 rounded-md cursor-not-allowed">
+              {isConnected ? 'Requirements Not Met' : 'Connect Wallet'}
             </button>
           )}
         </div>
@@ -241,7 +241,7 @@ export const ProposalSubmission: React.FC<ProposalSubmissionProps> = ({
             </Transaction>
           ) : (
             <ConnectWallet className="w-full">
-              <button className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-6 rounded-lg">
+              <button className="w-full text-white font-medium py-3 px-6 rounded-lg hover:bg-[#254A40]" style={{ backgroundColor: '#2F5D50' }}>
                 Connect Wallet to Submit
               </button>
             </ConnectWallet>
@@ -338,7 +338,7 @@ export const ProposalSubmission: React.FC<ProposalSubmissionProps> = ({
             className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             value={formData.title}
             onChange={e => updateFormField('title', e.target.value)}
-            required
+            required={true}
             placeholder="Enter a clear, descriptive title"
             disabled={isSubmitting}
             maxLength={200}
@@ -428,10 +428,10 @@ export const ProposalSubmission: React.FC<ProposalSubmissionProps> = ({
           ) : (
             <div className="text-center">
               <button
-                disabled
+                disabled={true}
                 className="w-full bg-gray-300 text-gray-500 font-semibold py-4 px-8 rounded-lg cursor-not-allowed"
               >
-                {!isConnected ? 'Connect Wallet to Submit' : 'Requirements Not Met'}
+                {isConnected ? 'Requirements Not Met' : 'Connect Wallet to Submit'}
               </button>
             </div>
           )}

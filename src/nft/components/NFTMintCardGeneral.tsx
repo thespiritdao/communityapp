@@ -1,6 +1,5 @@
 // src/components/NFTMintCardGeneral.tsx
 'use client';
-import React from 'react';
 import { useAccount } from 'wagmi';
 import {
   Transaction,
@@ -10,7 +9,7 @@ import {
   TransactionStatusLabel,
   TransactionStatusAction,
 } from '@coinbase/onchainkit/transaction';
-import { cn } from 'src/styles/theme';
+import { cn } from '@/lib/utils';
 
 export interface NFTMintCardGeneralProps {
   contractAddress: string;
@@ -104,7 +103,7 @@ export function NFTMintCardGeneral({
           </TransactionStatus>
         </Transaction>
       ) : (
-        <button disabled className="px-4 py-2 bg-gray-400 text-white rounded w-full opacity-50">
+        <button disabled={true} className="px-4 py-2 bg-gray-400 text-white rounded w-full opacity-50">
           Connect wallet to mint
         </button>
       )}

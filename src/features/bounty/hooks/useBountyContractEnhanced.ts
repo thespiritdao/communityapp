@@ -1,14 +1,13 @@
 import { useAccount, usePublicClient } from 'wagmi';
-import { parseEther } from 'viem';
-import BountyManagerABI from '../../../contracts/BountyManager.json';
+import { parseUnits, parseEther } from 'viem';
+import BountyManagerABI from '@/abis/BountyManagerV2.json';
+import { CreateBountyParams, PaymentStructure } from '@/types/bounty';
+import { CONTRACT_ADDRESSES, CHAIN_CONFIG } from '@/config/contracts';
 
-const BASE_CHAIN_ID = 8453;
+const BASE_CHAIN_ID = CHAIN_CONFIG.CHAIN_ID;
 
-export enum PaymentStructure {
-  Completion = 0,
-  Milestones = 1,
-  Split = 2,
-}
+// Re-export from types for compatibility
+export { PaymentStructure } from '@/types/bounty';
 
 export enum BountyStatus {
   Open = 0,
@@ -35,7 +34,7 @@ export const useBountyContractEnhanced = () => {
       throw new Error('Public client not available');
     }
     
-    const contractAddress = process.env.NEXT_PUBLIC_BOUNTY_MANAGER_ADDRESS as `0x${string}`;
+    const contractAddress = CONTRACT_ADDRESSES.BOUNTY_MANAGER;
     if (!contractAddress) {
       throw new Error('Bounty manager contract address not configured');
     }
@@ -49,71 +48,50 @@ export const useBountyContractEnhanced = () => {
   };
 
   const createBountyOnChain = async (
-    title: string,
-    category: string,
-    value: string,
-    token: 'SYSTEM' | 'SELF',
-    paymentStructure: PaymentStructure,
-    upfrontAmount: string = '0',
-    completionAmount: string = '0'
+    params: CreateBountyParams
   ): Promise<{hash: `0x${string}`, bountyId: bigint}> => {
     const { contractAddress, account } = preflightCheck();
     
-    console.log('🔍 createBountyOnChain received parameters:');
-    console.log('title:', title, 'type:', typeof title);
-    console.log('category:', category, 'type:', typeof category);
-    console.log('value:', value, 'type:', typeof value);
-    console.log('token:', token, 'type:', typeof token);
-    console.log('paymentStructure:', paymentStructure, 'type:', typeof paymentStructure);
-    console.log('upfrontAmount:', upfrontAmount, 'type:', typeof upfrontAmount);
-    console.log('completionAmount:', completionAmount, 'type:', typeof completionAmount);
-    
-    // Ensure all numeric parameters are strings
-    const valueString = String(value);
-    const upfrontAmountString = String(upfrontAmount);
-    const completionAmountString = String(completionAmount);
-    
-    console.log('🔍 After string conversion:');
-    console.log('valueString:', valueString, 'type:', typeof valueString);
-    console.log('upfrontAmountString:', upfrontAmountString, 'type:', typeof upfrontAmountString);
-    console.log('completionAmountString:', completionAmountString, 'type:', typeof completionAmountString);
-    
-    const tokenAddress =
-      token === 'SYSTEM'
-        ? process.env.NEXT_PUBLIC_SYSTEM_TOKEN
-        : process.env.NEXT_PUBLIC_SELF_TOKEN;
-
-    console.log('🔍 About to call parseEther on value:', valueString);
-    const parsedValue = parseEther(valueString);
-    console.log('🔍 parseEther result:', parsedValue);
-    
-    console.log('🔍 About to call parseEther on upfrontAmount:', upfrontAmountString);
-    const parsedUpfrontAmount = parseEther(upfrontAmountString);
-    console.log('🔍 parseEther result for upfrontAmount:', parsedUpfrontAmount);
-    
-    console.log('🔍 About to call parseEther on completionAmount:', completionAmountString);
-    const parsedCompletionAmount = parseEther(completionAmountString);
-    console.log('🔍 parseEther result for completionAmount:', parsedCompletionAmount);
+    console.log('🔍 createBountyOnChain received params:', params);
 
     const calls = [{
       address: contractAddress,
       abi: BountyManagerABI,
       functionName: 'createBounty',
-      args: [
-        title,
-        category,
-        parsedValue,
-        tokenAddress,
-        paymentStructure,
-        parsedUpfrontAmount,
-        parsedCompletionAmount,
-      ],
+      args: [params], // Single struct parameter
     }];
 
     console.log('🔍 Transaction calls:', calls);
 
     // For now, return a placeholder since we're using Transaction component
     return { hash: '0x' as `0x${string}`, bountyId: BigInt(0) };
+  };
+
+  // Helper function to convert form data to contract params
+  const prepareCreateBountyParams = (
+    title: string,
+    category: string,
+    value: string,
+    token: 'SYSTEM' | 'SELF',
+    paymentStructure: PaymentStructure,
+    upfrontAmount = '0',
+    completionAmount = '0'
+  ): CreateBountyParams => {
+    const decimals = 18; // Standard for both SYSTEM and SELF tokens
+    
+    const tokenAddress = token === 'SYSTEM'
+      ? CONTRACT_ADDRESSES.SYSTEM_TOKEN
+      : CONTRACT_ADDRESSES.SELF_TOKEN;
+
+    return {
+      title,
+      category,
+      value: parseUnits(String(value), decimals),
+      token: tokenAddress,
+      paymentStructure,
+      upfrontAmount: parseUnits(String(upfrontAmount), decimals),
+      completionAmount: parseUnits(String(completionAmount), decimals),
+    };
   };
 
   const createMilestonesOnChain = async (
@@ -193,6 +171,7 @@ export const useBountyContractEnhanced = () => {
 
   return {
     createBountyOnChain,
+    prepareCreateBountyParams,
     createMilestonesOnChain,
     placeBidOnChain,
     assignBountyOnChain,

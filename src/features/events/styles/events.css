@@ -9,35 +9,43 @@
 }
 
 .event-status-published {
-  @apply bg-green-500 text-white;
+  background-color: #3F7A5A;
+  color: white;
 }
 
 .event-status-draft {
-  @apply bg-yellow-500 text-white;
+  background-color: #C6933F;
+  color: white;
 }
 
 .event-status-cancelled {
-  @apply bg-red-500 text-white;
+  background-color: #8B3A3A;
+  color: white;
 }
 
 .event-status-completed {
-  @apply bg-blue-500 text-white;
+  background-color: #2F5D50;
+  color: white;
 }
 
 .registration-status-registered {
-  @apply bg-blue-500 text-white;
+  background-color: #2F5D50;
+  color: white;
 }
 
 .registration-status-checked_in {
-  @apply bg-green-500 text-white;
+  background-color: #3F7A5A;
+  color: white;
 }
 
 .registration-status-completed {
-  @apply bg-purple-500 text-white;
+  background-color: #2F5D50;
+  color: white;
 }
 
 .registration-status-cancelled {
-  @apply bg-red-500 text-white;
+  background-color: #8B3A3A;
+  color: white;
 }
 
 .token-gated-event {
@@ -59,18 +67,18 @@
 }
 
 .event-agenda-item {
-  border-left: 4px solid theme('colors.blue.500');
+  border-left: 4px solid #2F5D50;
   padding-left: 1rem;
   margin-bottom: 1rem;
 }
 
 .event-agenda-item.completed {
-  border-left-color: theme('colors.green.500');
+  border-left-color: #3F7A5A;
 }
 
 .event-agenda-item.active {
-  border-left-color: theme('colors.orange.500');
-  background-color: theme('colors.orange.50');
+  border-left-color: #C6933F;
+  background-color: #FAF4EC;
 }
 
 .event-registration-modal {
@@ -110,7 +118,7 @@
 }
 
 .event-filter-tab.active {
-  background: theme('colors.blue.500');
+  background: #2F5D50;
   color: white;
 }
 
@@ -127,31 +135,36 @@
 }
 
 .event-price-free {
-  @apply text-green-600 font-medium;
+  color: #3F7A5A;
+  font-weight: 500;
 }
 
 .event-price-paid {
-  @apply text-blue-600 font-medium;
+  color: #2F5D50;
+  font-weight: 500;
 }
 
 .event-capacity-full {
-  @apply text-red-600 font-medium;
+  color: #8B3A3A;
+  font-weight: 500;
 }
 
 .event-capacity-available {
-  @apply text-green-600 font-medium;
+  color: #3F7A5A;
+  font-weight: 500;
 }
 
 .event-time-past {
-  @apply text-gray-500;
+  color: #6b7280;
 }
 
 .event-time-upcoming {
-  @apply text-blue-600;
+  color: #2F5D50;
 }
 
 .event-time-today {
-  @apply text-orange-600 font-semibold;
+  color: #C6933F;
+  font-weight: 600;
 }
 
 /* Animation classes */

@@ -1,19 +1,26 @@
 'use client';
-import React, { useCallback, useState } from 'react';
-import CreateProposalForm from 'src/features/governance/components/CreateProposalForm';
-import VoteButton from 'src/features/governance/components/VoteButton';
-import { useProposals } from 'src/features/governance/hooks/useProposals';
-import { useGovernanceForumPosts } from 'src/features/governance/hooks/useGovernanceForumPosts';
+import { useCallback, useState } from 'react';
+import { useAccount } from 'wagmi';
+import CreateProposalForm from '@/features/governance/components/CreateProposalForm';
+import VoteButton from '@/features/governance/components/VoteButton';
+import { EnhancedVoteButton } from '@/features/governance/components/EnhancedVoteButton';
+import { useEnhancedProposals } from '@/features/governance/hooks/useEnhancedProposals';
+import { useGovernanceForumPosts } from '@/features/governance/hooks/useGovernanceForumPosts';
+import { Badge } from '@/components/ui/badge';
+import { Shield, FileText } from 'lucide-react';
+import { FeatureErrorBoundary } from '@/components/ErrorBoundary/FeatureErrorBoundary';
 
 export default function GovernancePage() {
-  // 1) On‑chain proposals
+  const { address } = useAccount();
+  
+  // Enhanced proposals that include both on-chain and pod proposals with HAT-based filtering
   const {
-    data: proposals = [],
+    data: enhancedProposals = [],
     isLoading: proposalsLoading,
     isError: proposalsError,
     error,
     refetch: refetchProposals,
-  } = useProposals();
+  } = useEnhancedProposals();
 
 
 // 2) Forum posts: dynamic based on dropdown selection
@@ -38,15 +45,19 @@ export default function GovernancePage() {
     refetchProposals();
   }, [refetchProposals]);
 
-  console.log('on‑chain proposals:', proposals);
+  console.log('enhanced proposals:', enhancedProposals);
   console.log('governance forum posts:', posts);
 
   return (
-    <main className="max-w-4xl mx-auto p-4">
-      {/* Header */}
-      <header className="mb-8">
-        <h1 className="text-3xl font-bold">Governance</h1>
-      </header>
+    <FeatureErrorBoundary featureName="Governance & Voting">
+      <main className="max-w-4xl mx-auto p-4">
+        {/* Header */}
+        <header className="mb-8">
+          <h1 className="text-3xl font-bold">Governance</h1>
+          <p className="text-gray-600 mt-2">
+            Create and vote on proposals. Available proposals are filtered based on your pod memberships.
+          </p>
+        </header>
 
 
       {/* Create Proposal */}
@@ -62,26 +73,92 @@ export default function GovernancePage() {
         >
           Active Proposals
         </h2>
-        {proposalsLoading && <p>Loading proposals…</p>}
-        {proposalsError && (
+        {!address && (
+          <div className="text-center p-8 border rounded-lg">
+            <Shield className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+            <p className="text-gray-600">Connect your wallet to view available proposals</p>
+          </div>
+        )}
+        
+        {address && proposalsLoading && <p>Loading proposals…</p>}
+        {address && proposalsError && (
           <p className="text-red-600">Error loading proposals: {error?.message}</p>
         )}
-        {!proposalsLoading && !proposalsError && proposals.length === 0 && (
-          <p>No proposals found. Be the first to create one!</p>
+        {address && !proposalsLoading && !proposalsError && enhancedProposals.length === 0 && (
+          <div className="text-center p-8 border rounded-lg">
+            <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+            <p>No proposals available for your current permissions</p>
+            <p className="text-sm text-gray-500 mt-2">
+              Proposals are filtered based on your pod memberships and HAT permissions
+            </p>
+          </div>
         )}
-        {!proposalsLoading && !proposalsError && proposals.length > 0 && (
+        {address && !proposalsLoading && !proposalsError && enhancedProposals.length > 0 && (
           <ul className="space-y-6">
-            {proposals.map(({ id, title, body, choices }) => (
-              <li key={id} className="proposal-card border rounded-lg p-4">
-                <h3 className="text-xl font-medium mb-2">{title}</h3>
-                <p className="mb-4 whitespace-pre-wrap">{body}</p>
+            {enhancedProposals.map((proposal) => (
+              <li key={proposal.id} className="proposal-card border rounded-lg p-6">
+                <div className="flex items-start justify-between mb-4">
+                  <div>
+                    <h3 className="text-xl font-medium mb-2">{proposal.title}</h3>
+                    <div className="flex items-center gap-2 mb-2">
+                      <Badge variant={proposal.type === 'governance' ? 'default' : 'secondary'}>
+                        {proposal.type === 'governance' ? 'Governance' : 'Pod Creation'}
+                      </Badge>
+                      {proposal.status && (
+                        <Badge variant="outline">
+                          {proposal.status}
+                        </Badge>
+                      )}
+                      {proposal.required_hat && (
+                        <Badge variant="outline" className="text-xs">
+                          <Shield className="h-3 w-3 mr-1" />
+                          Executive Pod Required
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+                  <div className="text-sm text-gray-500">
+                    {new Date(proposal.created_at).toLocaleDateString()}
+                  </div>
+                </div>
+                
+                <p className="mb-4 whitespace-pre-wrap text-gray-700">{proposal.body}</p>
+                
+                {/* Vote counts display */}
+                {proposal.type === 'pod_creation' && (
+                  <div className="mb-4 flex items-center gap-4 text-sm">
+                    <span className="text-gray-500">Current votes:</span>
+                    <Badge variant="outline" className="bg-green-50">
+                      For: {(proposal as any).vote_counts?.for || 0}
+                    </Badge>
+                    <Badge variant="outline" className="bg-red-50">
+                      Against: {(proposal as any).vote_counts?.against || 0}
+                    </Badge>
+                    <Badge variant="outline" className="bg-gray-50">
+                      Abstain: {(proposal as any).vote_counts?.abstain || 0}
+                    </Badge>
+                    <Badge variant="secondary">
+                      Total: {(proposal as any).vote_counts?.total || 0}
+                    </Badge>
+                  </div>
+                )}
+                
                 <div className="flex flex-wrap gap-2">
-                  {choices.map((_, idx) => (
-                    <VoteButton
-                      key={`${id}-${idx}`}
-                      proposalId={id}
-                      choice={idx + 1}
-                    />
+                  {proposal.choices.map((choice, idx) => (
+                    proposal.type === 'governance' ? (
+                      <VoteButton
+                        key={`${proposal.id}-${idx}`}
+                        proposalId={proposal.id}
+                        choice={idx + 1}
+                      />
+                    ) : (
+                      <EnhancedVoteButton
+                        key={`${proposal.id}-${idx}`}
+                        proposal={proposal}
+                        choice={idx + 1}
+                        onVoteSuccess={refetchProposals}
+                      />
+                    )
                   ))}
                 </div>
               </li>
@@ -89,6 +166,7 @@ export default function GovernancePage() {
           </ul>
         )}
       </section>
-    </main>
+      </main>
+    </FeatureErrorBoundary>
   );
 }

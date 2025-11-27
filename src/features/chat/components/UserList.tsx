@@ -1,7 +1,7 @@
 // src/features/chat/components/UserList.tsx
 
-import React, { useState } from 'react';
-import { UserProfile } from '../types';
+import { useState } from 'react';
+import type { UserProfile } from '../types';
 import '../styles/Chat.css';
 
 interface UserListProps {

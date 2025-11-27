@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { useAccount, usePublicClient, useContractRead, useContractWrite } from 'wagmi';
+import type React from 'react';
+import { useState, useEffect } from 'react';
+import { useAccount, usePublicClient, useContractWrite } from 'wagmi';
 import { parseAbiItem } from 'viem';
 import DAOGovernorABI from '@/abis/DAOGovernorABI.json';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -9,9 +10,8 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
-import { AlertTriangle, Clock, Calendar } from 'lucide-react';
+import { AlertTriangle, Clock, } from 'lucide-react';
 import Link from 'next/link';
-import { createPublicClient, http } from 'viem';
 
 // Contract addresses from environment variables
 const GOVERNOR_ADDRESS = process.env.NEXT_PUBLIC_DAO_GOVERNOR as `0x${string}`;
@@ -23,7 +23,8 @@ interface ProposalData {
   proposer: string;
   startBlock: bigint;
   endBlock: bigint;
-  state: number;
+  state: number; // -1 = Error/Unknown, 0-7 = Valid states
+  stateError?: boolean; // Flag indicating state fetch failed
   forVotes: bigint;
   againstVotes: bigint;
   abstainVotes: bigint;
@@ -231,6 +232,11 @@ export const ProposalsList: React.FC = () => {
 
   // Utility function to get state badge color
   const getStateBadgeVariant = (state: number) => {
+    // Error state - use destructive to indicate problem
+    if (state === -1) {
+      return "destructive"; // Red - indicates error
+    }
+
     switch (state) {
       case 1: // Active
         return "default"; // Green
@@ -253,6 +259,8 @@ export const ProposalsList: React.FC = () => {
 
   // Map proposal state to human-readable text
   const getProposalStateText = (state: number) => {
+    if (state === -1) return 'State Unknown';
+
     const states = [
       'Pending',
       'Active',
@@ -337,17 +345,36 @@ export const ProposalsList: React.FC = () => {
             
             <CardContent>
               <p className="text-sm text-gray-700 mb-4">
-                {proposal.description.length > 200 
-                  ? `${proposal.description.substring(0, 200)}...` 
+                {proposal.description.length > 200
+                  ? `${proposal.description.substring(0, 200)}...`
                   : proposal.description}
               </p>
-              
+
+              {/* Show error warning if state fetch failed */}
+              {proposal.stateError && (
+                <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md">
+                  <div className="flex items-start gap-2">
+                    <svg className="w-5 h-5 text-red-600 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                    </svg>
+                    <div className="flex-1">
+                      <p className="text-sm font-medium text-red-800">
+                        Unable to determine proposal state
+                      </p>
+                      <p className="text-xs text-red-700 mt-1">
+                        There was an error fetching the current state from the blockchain. The proposal may be active, pending, or closed. Please try refreshing the page or check back later.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {proposal.metadata && (
                 <div className="mt-2 text-xs text-gray-500">
                   {proposal.metadata.forum_thread_id && (
                     <div>
                       <span>Forum Thread: </span>
-                      <a href={`/forum/thread/${proposal.metadata.forum_thread_id}`} className="underline text-blue-600">{proposal.metadata.forum_thread_id}</a>
+                      <a href={`/forum/thread/${proposal.metadata.forum_thread_id}`} className="underline" style={{ color: '#2F5D50' }}>{proposal.metadata.forum_thread_id}</a>
                     </div>
                   )}
                   {proposal.metadata.mentions && proposal.metadata.mentions.length > 0 && (
@@ -380,9 +407,10 @@ export const ProposalsList: React.FC = () => {
             <CardFooter className="flex justify-between">
               <div className="flex gap-2">
                 {proposal.forumThreadId && (
-                  <Link 
-                    href={`/forum/${proposal.forumThreadId}`} 
-                    className="text-sm text-blue-600 hover:underline"
+                  <Link
+                    href={`/forum/${proposal.forumThreadId}`}
+                    className="text-sm hover:underline"
+                    style={{ color: '#2F5D50' }}
                   >
                     View Discussion
                   </Link>
@@ -404,10 +432,10 @@ export const ProposalsList: React.FC = () => {
               {isVotingActive(proposal) ? (
                 hasVotedMap[proposal.id] ? (
                   <button
-                    className="w-full py-2 px-4 bg-green-600 text-white rounded-lg font-semibold cursor-not-allowed opacity-60"
-                    disabled
+                    className="w-full py-2 px-4 text-white rounded-lg font-semibold cursor-not-allowed opacity-60"
+                    disabled={true}
                     title="You have already voted on this proposal."
-                    style={{ pointerEvents: 'none' }}
+                    style={{ pointerEvents: 'none', backgroundColor: '#3F7A5A' }}
                   >
                     ✓ Voted
                   </button>
@@ -434,7 +462,7 @@ export const ProposalsList: React.FC = () => {
         <DialogContent>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <AlertTriangle className="w-5 h-5 text-red-500" />
+              <AlertTriangle className="w-5 h-5" style={{ color: '#8B3A3A' }} />
               Cancel Proposal
             </DialogTitle>
             <DialogDescription>

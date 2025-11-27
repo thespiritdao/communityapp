@@ -1,5 +1,5 @@
 // src/utils/tokenGateService.ts
-import { fetchTokenBalances, TokenBalances, fetchERC1155Balance } from './fetchTokenBalances';
+import { fetchTokenBalances, type TokenBalances, fetchERC1155Balance } from './fetchTokenBalances';
 
 export async function fetchUnifiedTokenBalances(walletAddress: string): Promise<{
   hasProofOfCuriosity: boolean;

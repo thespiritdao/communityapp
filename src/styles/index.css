@@ -5,7 +5,7 @@
 /* Font */
 @font-face {
   font-family: 'Source Sans Pro';
-  src: url('/fonts/SourceSansPro/SourceSansPro-Regular.ttf') format('truetype');
+  src: url('/fonts/SourceSansPro/SourceSansPro-Regular.otf') format('truetype');
   font-weight: 400;
   font-style: normal;
 }
@@ -25,9 +25,95 @@
 }
 
 
+/* Default height fallback in case JS doesn't run immediately */
+:root {
+  --bottom-nav-height: 50px; /* will be updated on mount to the exact px height */
+}
+
+/* Ensure page content never hides behind the fixed bottom nav */
 body {
   font-family: 'Source Sans Pro', Arial, sans-serif;
   background-color: #f5f4ed;
+}
+
+/* Apply bottom padding when nav is present - but not to elements that already have bottom padding */
+body:has([data-testid="mobile-bottom-nav"]) {
+  padding-bottom: max(var(--bottom-nav-height), env(safe-area-inset-bottom));
+}
+
+/* Exclude containers that already handle their own bottom spacing */
+.container.pb-20,
+.pb-20 {
+  margin-bottom: calc(-1 * max(var(--bottom-nav-height), env(safe-area-inset-bottom))) !important;
+}
+
+/* Avoid global transform rules that can break component layouts */
+/* Only apply when bottom nav needs protection from transform conflicts */
+
+/* Optional: improve tap behavior on iOS */
+.rn-bottom-nav {
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* CRITICAL DEBUG: Force bottom nav to show even if other CSS fights it */
+[data-testid="mobile-bottom-nav"] { 
+  display: flex !important; 
+  position: fixed !important;
+  bottom: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  width: 100% !important;
+  z-index: 2147483647 !important;
+  background: #f5f4ed !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+  pointer-events: auto !important;
+  transform: none !important;
+  min-height: 50px !important;
+  height: auto !important;
+  box-sizing: border-box !important;
+}
+
+/* ALWAYS show nav on ALL screen sizes - NEVER HIDE */
+@media all {
+  [data-testid="mobile-bottom-nav"] { 
+    display: flex !important;
+    position: fixed !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    width: 100% !important;
+    z-index: 2147483647 !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+  }
+}
+
+/* Ensure no parent containers can hide the nav - but don't break other layouts */
+html {
+  transform: none !important;
+}
+
+/* Removed aggressive global body styles that interfere with component layouts */
+
+/* Additional mobile-specific overrides */
+@media (max-width: 480px) {
+  [data-testid="mobile-bottom-nav"] { 
+    display: flex !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    height: auto !important;
+    min-height: 50px !important;
+    bottom: 0 !important;
+  }
+}
+
+/* Specific fix for chat and other pages where nav gets cut off */
+.chat-shell,
+.chat-container {
+  padding-bottom: calc(var(--bottom-nav-height) + 8px) !important;
+  margin-bottom: 0 !important;
 }
 
 .ock-font-family {
@@ -235,34 +321,78 @@ body {
   border-color: var(--ock-line-inverse);
 }
 
-/* Bottom Navigation Bar */
+/* Bottom Navigation Bar - Primary */
 .bottom-nav {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  width: 100%;
-  background-color: #f5f4ed; 
-  display: flex;
-  justify-content: space-around; /* Evenly distribute icons */
-  align-items: center;
-  padding: 10px 0;
-  box-shadow: 0 -2px 5px rgba(0, 0, 0, 0.1);
-  z-index: 10;
+  position: fixed !important;
+  bottom: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  width: 100% !important;
+  background-color: #f5f4ed !important; 
+  display: flex !important;
+  justify-content: space-around !important; /* Evenly distribute icons */
+  align-items: center !important;
+  padding: 12px 0 !important;
+  z-index: 2147483647 !important; /* Maximum possible z-index value */
+  border-top: 1px solid rgba(0, 0, 0, 0.1) !important; /* Subtle border for definition */
+  box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1) !important;
+  min-height: 50px !important; /* Ensure consistent height */
+  max-height: 50px !important; /* Prevent height variations */
+  visibility: visible !important;
+  opacity: 1 !important;
+  pointer-events: auto !important; /* Ensure clicks work */
+  transform: none !important; /* Prevent transforms from hiding it */
+  box-sizing: border-box !important;
+}
+
+/* Bottom Navigation Bar - Fallback (identical styling) */
+.bottom-nav-fallback {
+  position: fixed !important;
+  bottom: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  width: 100% !important;
+  background-color: #f5f4ed !important; 
+  display: flex !important;
+  justify-content: space-around !important;
+  align-items: center !important;
+  padding: 12px 0 !important;
+  z-index: 2147483647 !important;
+  border-top: 1px solid rgba(0, 0, 0, 0.1) !important;
+  box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1) !important;
+  min-height: 50px !important;
+  max-height: 50px !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  pointer-events: auto !important;
+  transform: none !important;
+  box-sizing: border-box !important;
 }
 
 /* Navigation Icons */
 .bottom-nav-link {
-  color: #333; /* Dark gray */
-  text-decoration: none;
-  display: flex;
+  color: #333 !important; /* Dark gray */
+  text-decoration: none !important;
+  display: flex !important;
   align-items: center;
   justify-content: center;
+  padding: 8px;
+  border-radius: 8px;
+  transition: background-color 0.2s ease;
+  position: relative;
+  min-width: 48px;
+  min-height: 48px;
+}
+
+.bottom-nav-link:hover {
+  background-color: rgba(0, 0, 0, 0.1);
 }
 
 .bottom-nav-link svg {
-  width: 32px; /* Increase icon size */
-  height: 32px;
-  color: #333; /* Ensure icon color is dark */
+  width: 32px !important; /* Increase icon size */
+  height: 32px !important;
+  color: #333 !important; /* Ensure icon color is dark */
+  stroke: #333 !important;
 }
 
 /* Remove text below icons */
@@ -274,4 +404,42 @@ body {
   border: none !important;
   background: transparent !important;
   box-shadow: none !important;
+}
+
+/* Utility class for pages with BottomNav to ensure proper spacing */
+.bottom-nav-spacing {
+  padding-bottom: 80px !important; /* 20px more than BottomNav height for comfortable spacing */
+  min-height: calc(100vh - 80px) !important; /* Ensure content fills space above nav */
+}
+
+/* For pages that need extra spacing due to scrollable content */
+.bottom-nav-spacing-large {
+  padding-bottom: 100px !important;
+  min-height: calc(100vh - 100px) !important;
+}
+
+/* Override any potential conflicting styles */
+.bottom-nav,
+.bottom-nav-fallback {
+  contain: layout style !important;
+  will-change: transform !important;
+  isolation: isolate !important;
+}
+
+/* Ensure no parent containers can hide the bottom nav - removed aggressive body positioning */
+
+/* Prevent modals and overlays from covering bottom nav */
+[data-radix-popper-content-wrapper],
+[data-overlay],
+.modal-overlay,
+.dialog-overlay {
+  z-index: 2147483646 !important; /* Just below bottom nav */
+}
+
+/* Force bottom nav above everything else */
+.bottom-nav,
+.bottom-nav-fallback {
+  position: fixed !important;
+  z-index: 2147483647 !important;
+  isolation: isolate !important;
 }

@@ -14,11 +14,11 @@ html, body {
 .home-container {
   max-width: 900px;
   margin: 20px auto; 
+  margin-bottom: 80px; /* Add space for BottomNav */
   padding: 30px;
   background-color: #fff; /* White or very light background */
   border-radius: 10px; 
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
-  
 }
 
 /* Large heading for your home page */
@@ -51,8 +51,8 @@ html, body {
 .home-section {
   margin-bottom: 20px;
   padding: 20px;
-  background-color: #e8fcff; 
-  color: #000;
+  background-color: #F0ECE6; /* SpiritDAO warm off-white */
+  color: #3A3A3A;
   border-radius: 10px;
   box-shadow: 0 2px 5px rgba(0,0,0,0.05);
 }
@@ -60,7 +60,8 @@ html, body {
 .home-section-2 {
   margin-bottom: 20px;
   padding: 20px;
-  background-color: #e9f9ec; 
+  background-color: #E8E4DC; /* SpiritDAO neutral warm tone */
+  color: #3A3A3A;
   border-radius: 10px;
   box-shadow: 0 2px 5px rgba(0,0,0,0.05);
 }
@@ -135,11 +136,11 @@ html, body {
   cursor: pointer;
   font-weight: bold;
   transition: all 0.3s ease;
-  background-color: #bfe7c6;
-  color: #fff;
+  background-color: #2F5D50; /* SpiritDAO primary green */
+  color: #FFFFFF;
   margin-top: 10px;
 }
 
 .home-footer-button:hover {
-  background-color: #4a6fb0;
+  background-color: #254A40; /* SpiritDAO primary green hover */
 }

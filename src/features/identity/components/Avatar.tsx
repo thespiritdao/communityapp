@@ -1,10 +1,10 @@
 import { Children, useMemo } from 'react';
-import { defaultAvatarSVG } from 'src/internal/svg/defaultAvatarSVG';
-import { defaultLoadingSVG } from 'src/internal/svg/defaultLoadingSVG';
-import { findComponent } from 'src/internal/utils/findComponent';
-import { cn } from 'src/styles/theme';
-import { useAvatar } from 'src/features/identity/hooks/useAvatar';
-import { useName } from 'src/features/identity/hooks/useName';
+import { defaultAvatarSVG } from '../../../internal/svg/defaultAvatarSVG';
+import { defaultLoadingSVG } from '../../../internal/svg/defaultLoadingSVG';
+import { findComponent } from '../../../internal/utils/findComponent';
+import { cn } from '../../../styles/theme';
+import { useAvatar } from '../../../features/identity/hooks/useAvatar';
+import { useName } from '../../../features/identity/hooks/useName';
 import type { AvatarReact } from '../types';
 import { Badge } from './Badge';
 import { DisplayBadge } from './DisplayBadge';

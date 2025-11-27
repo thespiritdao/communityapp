@@ -2,20 +2,17 @@
 
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import type React from 'react';
+import { useState, useEffect } from 'react';
 import { useAccount, useContractRead } from 'wagmi';
-import { formatEther } from 'viem';
 import { Transaction, TransactionButton, TransactionSponsor, TransactionStatus, TransactionStatusLabel, TransactionStatusAction } from '@coinbase/onchainkit/transaction';
-import AdvocateMembershipABI from 'src/abis/AdvocateMembershipABI.json';
-import DAOGovernorABI from 'src/abis/DAO_GovernorABI.json';
-// import MembershipNFTABI from '@/abis/MembershipNFTABI.json';
+import AdvocateMembershipABI from '@/abis/AdvocateMembershipABI.json';
+import DAOGovernorABI from '@/abis/DAO_GovernorABI.json';
+// import MembershipNFTABI from '../../../abis/MembershipNFTABI.json';
 import { useToast } from '@/components/ui/use-toast';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { governanceNotificationService } from 'src/utils/governanceNotificationService';
 import VotingCountdown from './VotingCountdown';
-import { useGovernanceNotifications } from '@/context/GovernanceNotificationContext';
+import { useUnifiedNotifications } from '@/context/UnifiedNotificationContext';
 
 interface ProposalVoteFormProps {
   proposalId: string;
@@ -40,7 +37,7 @@ const VoteType = {
 export const ProposalVoteForm: React.FC<ProposalVoteFormProps> = ({ proposalId, proposalTitle, proposalState: propProposalState, hasVoted: hasVotedProp, onSuccess }) => {
   const { address } = useAccount();
   const { toast } = useToast();
-  const { refreshNotifications } = useGovernanceNotifications();
+  const { refreshNotifications } = useUnifiedNotifications();
   const [selectedVote, setSelectedVote] = useState<number | null>(null);
   const [hasVoted, setHasVoted] = useState(!!hasVotedProp);
   const [isLoading, setIsLoading] = useState(false);
@@ -121,6 +118,8 @@ export const ProposalVoteForm: React.FC<ProposalVoteFormProps> = ({ proposalId, 
 
   const getProposalStateText = (state: number | undefined) => {
     if (state === undefined) return 'Unknown';
+    if (state === -1) return 'State Unknown';
+
     const states = [
       'Pending',
       'Active',
@@ -135,17 +134,22 @@ export const ProposalVoteForm: React.FC<ProposalVoteFormProps> = ({ proposalId, 
   };
 
   // Status badge color logic (match /vote/page.tsx)
-  const getStatusBadgeClass = (state: number | undefined) => {
+  const getStatusBadgeStyle = (state: number | undefined) => {
+    // Error state - red background
+    if (state === -1) {
+      return { backgroundColor: '#FEE2E2', color: '#991B1B' }; // Red
+    }
+
     switch (state) {
-      case 1: return 'bg-blue-100 text-blue-800'; // Active
-      case 4: return 'bg-green-100 text-green-800'; // Passed
-      case 3: return 'bg-red-100 text-red-800'; // Failed
-      case 7: return 'bg-purple-100 text-purple-800'; // Executed
-      case 2: return 'bg-gray-100 text-gray-800'; // Canceled
-      case 6: return 'bg-yellow-100 text-yellow-800'; // Expired
-      case 5: return 'bg-orange-100 text-orange-800'; // Queued
-      case 0: return 'bg-gray-100 text-gray-800'; // Pending
-      default: return 'bg-gray-100 text-gray-800';
+      case 1: return { backgroundColor: '#E8F1EE', color: '#1F453A' }; // Active
+      case 4: return { backgroundColor: '#D1E6DC', color: '#1F453A' }; // Passed
+      case 3: return { backgroundColor: '#F5E6E6', color: '#5C1F1F' }; // Failed
+      case 7: return { backgroundColor: '#EDEAF0', color: '#574C66' }; // Executed
+      case 2: return { backgroundColor: '#f3f4f6', color: '#1f2937' }; // Canceled
+      case 6: return { backgroundColor: '#FAF4EC', color: '#8F6B2F' }; // Expired
+      case 5: return { backgroundColor: '#FAF4EC', color: '#A67E35' }; // Queued
+      case 0: return { backgroundColor: '#f3f4f6', color: '#1f2937' }; // Pending
+      default: return { backgroundColor: '#f3f4f6', color: '#1f2937' };
     }
   };
 
@@ -154,7 +158,7 @@ export const ProposalVoteForm: React.FC<ProposalVoteFormProps> = ({ proposalId, 
       <CardHeader>
         <CardTitle className="flex justify-between items-center">
           <span>Cast Your Vote</span>
-          <span className={`ml-2 px-2 py-1 text-xs font-medium rounded-full ${getStatusBadgeClass(Number(proposalState))}`}>
+          <span className="ml-2 px-2 py-1 text-xs font-medium rounded-full" style={getStatusBadgeStyle(Number(proposalState))}>
             {getProposalStateText(Number(proposalState))}
           </span>
         </CardTitle>
@@ -166,9 +170,9 @@ export const ProposalVoteForm: React.FC<ProposalVoteFormProps> = ({ proposalId, 
         {hasVoted ? (
           <div className="text-center p-4">
             <button
-              className="w-full py-2 px-4 bg-green-600 text-white rounded-lg font-semibold cursor-not-allowed opacity-60"
-              disabled
-              style={{ pointerEvents: 'none' }}
+              className="w-full py-2 px-4 text-white rounded-lg font-semibold cursor-not-allowed opacity-60"
+              disabled={true}
+              style={{ pointerEvents: 'none', backgroundColor: '#3F7A5A' }}
             >
               ✓ Voted
             </button>
@@ -176,7 +180,23 @@ export const ProposalVoteForm: React.FC<ProposalVoteFormProps> = ({ proposalId, 
           </div>
         ) : (
           <>
-            {proposalState !== 1 ? (
+            {proposalState === -1 ? (
+              <div className="p-4 bg-red-50 border border-red-200 rounded-md">
+                <div className="flex items-start gap-2">
+                  <svg className="w-5 h-5 text-red-600 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                  </svg>
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-red-800">
+                      Unable to determine proposal state
+                    </p>
+                    <p className="text-xs text-red-700 mt-1">
+                      Cannot verify if this proposal is open for voting. Please try refreshing the page or check back later.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            ) : proposalState !== 1 ? (
               <p className="text-center p-4 text-amber-600">
                 This proposal is not currently active for voting
               </p>

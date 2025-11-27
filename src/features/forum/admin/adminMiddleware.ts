@@ -1,6 +1,6 @@
 // src/app/features/forum/admin/adminMiddleware.ts
-import { NextRequest, NextResponse } from 'next/server';
-import { fetchUnifiedTokenBalances } from 'src/utils/tokenGateService';
+import { type NextRequest, NextResponse } from 'next/server';
+import { fetchUnifiedTokenBalances } from '@/utils/tokenGateService';
 
 export async function middleware(request: NextRequest) {
   // Only apply on admin routes

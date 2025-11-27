@@ -1,13 +1,14 @@
 // src/features/marketplace/components/AddProductButton/AddProductButton.tsx
 "use client";
 
-import React, { useState } from "react";
-import { useMarketManagementAccess } from "src/utils/marketManagement";
+import { useState } from "react";
+import { useMarketplaceManagementAccess } from "@/features/marketplace/hooks/useMarketplaceManagementAccess";
 import AddProductModal from "../AddProductModal/AddProductModal";
+import { Plus } from "lucide-react";
 import * as S from "./AddProductButton.style";
 
 const AddProductButton = () => {
-  const { hasAccess, isChecking } = useMarketManagementAccess();
+  const { managedPods, isLoading } = useMarketplaceManagementAccess();
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   const handleOpenModal = () => {
@@ -19,23 +20,21 @@ const AddProductButton = () => {
   };
 
   // Don't show button if user doesn't have access or we're still checking
-  if (!hasAccess || isChecking) {
+  if (managedPods.length === 0 || isLoading) {
     return null;
   }
 
   return (
     <>
       <S.AddProductButton onClick={handleOpenModal}>
-        <S.PlusIcon>+</S.PlusIcon>
+        <Plus aria-hidden="true" />
         <S.ButtonText>Add Product</S.ButtonText>
       </S.AddProductButton>
       
-      {isModalOpen && (
-        <AddProductModal 
-          isOpen={isModalOpen} 
-          onClose={handleCloseModal}
-        />
-      )}
+      <AddProductModal 
+        isOpen={isModalOpen} 
+        onClose={handleCloseModal}
+      />
     </>
   );
 };

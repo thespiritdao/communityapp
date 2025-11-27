@@ -27,7 +27,7 @@
 }
 
 button {
-  background-color: #5ba3f4;
+  background-color: #2F5D50;
   color: white;
   border: none;
   padding: 6px 12px;
@@ -43,8 +43,8 @@ button[disabled] {
 
 .newProposalButton {
   display: inline-block;
-  background-color: #d7f8fd;
-  color: #000;
+  background-color: #2F5D50;
+  color: #FFFFFF;
   border: none;
   border-radius: 6px;
   padding: 0.75rem 1.5rem;

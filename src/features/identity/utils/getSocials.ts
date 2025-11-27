@@ -1,9 +1,9 @@
 import type { Chain } from 'viem';
 import { mainnet } from 'viem/chains';
 import { normalize } from 'viem/ens';
-import { isBase } from 'src/isBase';
-import { isEthereum } from 'src/isEthereum';
-import { getChainPublicClient } from 'src/network/getChainPublicClient';
+import { isBase } from '@/isBase';
+import { isEthereum } from '@/isEthereum';
+import { getChainPublicClient } from '@/network/getChainPublicClient';
 import { RESOLVER_ADDRESSES_BY_CHAIN_ID } from '../constants';
 import type { GetSocialsReturnType } from '../types';
 
@@ -38,7 +38,7 @@ export const getSocials = async ({
       });
       return result || null;
     } catch (error) {
-      console.warn(`Failed to fetch ENS text record for ${key}:`, error);
+      
       return null;
     }
   };

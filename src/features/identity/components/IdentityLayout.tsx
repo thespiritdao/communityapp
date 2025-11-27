@@ -1,8 +1,8 @@
 import { Children, cloneElement, useMemo } from 'react';
 import type { ReactNode } from 'react';
-import { findComponent } from 'src/internal/utils/findComponent';
-import { background, cn, color } from 'src/styles/theme';
-import { useTheme } from 'src/useTheme';
+import { findComponent } from '../../../internal/utils/findComponent';
+import { background, cn, color } from '../../../styles/theme';
+import { useTheme } from '../../../useTheme';
 import { Address } from './Address';
 import { Avatar } from './Avatar';
 import { EthBalance } from './EthBalance';

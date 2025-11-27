@@ -1,6 +1,6 @@
 import { Children, useMemo } from 'react';
-import { findComponent } from 'src/internal/utils/findComponent';
-import { cn, color, text } from 'src/styles/theme';
+import { findComponent } from '../../../internal/utils/findComponent';
+import { cn, color, text } from '../../../styles/theme';
 import { useName } from '../hooks/useName';
 import type { NameReact } from '../types';
 import { getSlicedAddress } from '../utils/getSlicedAddress';

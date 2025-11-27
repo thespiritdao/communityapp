@@ -1,20 +1,21 @@
 "use client"
 
-import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from 'src/components/ui/card';
-import { Badge } from 'src/components/ui/badge';
-import { Button } from 'src/components/ui/button';
-import { Input } from 'src/components/ui/input';
-import { Textarea } from 'src/components/ui/textarea';
-import { Label } from 'src/components/ui/label';
-import { Calendar } from 'src/components/ui/calendar';
-import { Popover, PopoverContent, PopoverTrigger } from 'src/components/ui/popover';
+import type React from 'react';
+import { useState, } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { CalendarIcon, CheckCircle, Clock, AlertCircle, Plus } from 'lucide-react';
 import { format } from 'date-fns';
-import { cn } from 'src/lib/utils';
+import { cn } from '@/lib/utils';
 import { Transaction, TransactionButton } from '@coinbase/onchainkit/transaction';
 import { useAccount } from 'wagmi';
-import { useBountyContractEnhanced, PaymentStructure } from '../hooks/useBountyContractEnhanced';
+import { useBountyContractEnhanced, type PaymentStructure } from '../hooks/useBountyContractEnhanced';
 
 interface Milestone {
   id: string;
@@ -87,7 +88,7 @@ export const MilestoneManager: React.FC<MilestoneManagerProps> = ({
       const paymentAmounts = newMilestones.map(m => m.paymentAmount);
 
       await createMilestonesOnChain(
-        parseInt(bounty.id),
+        Number.parseInt(bounty.id),
         dueDates,
         paymentAmounts
       );
@@ -111,7 +112,7 @@ export const MilestoneManager: React.FC<MilestoneManagerProps> = ({
 
   const handleApproveMilestone = async (milestoneId: string) => {
     try {
-      await approveMilestoneOnChain(parseInt(bounty.id), parseInt(milestoneId));
+      await approveMilestoneOnChain(Number.parseInt(bounty.id), Number.parseInt(milestoneId));
       onMilestoneApproved?.(milestoneId);
     } catch (error) {
       console.error('Error approving milestone:', error);
@@ -132,12 +133,12 @@ export const MilestoneManager: React.FC<MilestoneManagerProps> = ({
   };
 
   const calculateTotalMilestoneAmount = () => {
-    return newMilestones.reduce((total, milestone) => total + parseFloat(milestone.paymentAmount || '0'), 0);
+    return newMilestones.reduce((total, milestone) => total + Number.parseFloat(milestone.paymentAmount || '0'), 0);
   };
 
   const isMilestoneAmountValid = () => {
     const total = calculateTotalMilestoneAmount();
-    return Math.abs(total - parseFloat(bounty.totalValue)) < 0.01; // Allow small rounding differences
+    return Math.abs(total - Number.parseFloat(bounty.totalValue)) < 0.01; // Allow small rounding differences
   };
 
   return (
@@ -171,7 +172,9 @@ export const MilestoneManager: React.FC<MilestoneManagerProps> = ({
                     variant="outline"
                     size="sm"
                     onClick={() => removeMilestone(index)}
-                    className="text-red-600 hover:text-red-700"
+                    style={{ color: '#8B3A3A' }}
+                    onMouseEnter={(e) => { e.currentTarget.style.color = '#5C1F1F'; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.color = '#8B3A3A'; }}
                   >
                     Remove
                   </Button>
@@ -184,7 +187,7 @@ export const MilestoneManager: React.FC<MilestoneManagerProps> = ({
                     onChange={(e) => updateMilestone(index, 'description', e.target.value)}
                     placeholder="Describe this milestone..."
                     className="form-textarea"
-                    required
+                    required={true}
                     rows={2}
                   />
                 </div>
@@ -193,7 +196,7 @@ export const MilestoneManager: React.FC<MilestoneManagerProps> = ({
                   <div className="space-y-2">
                     <Label className="text-sm">Due Date</Label>
                     <Popover open={showCalendar === `new-${index}`} onOpenChange={(open) => setShowCalendar(open ? `new-${index}` : null)}>
-                      <PopoverTrigger asChild>
+                      <PopoverTrigger asChild={true}>
                         <Button
                           variant="outline"
                           className={cn(
@@ -213,7 +216,7 @@ export const MilestoneManager: React.FC<MilestoneManagerProps> = ({
                             updateMilestone(index, 'dueDate', date);
                             setShowCalendar(null);
                           }}
-                          initialFocus
+                          initialFocus={true}
                         />
                       </PopoverContent>
                     </Popover>
@@ -227,7 +230,7 @@ export const MilestoneManager: React.FC<MilestoneManagerProps> = ({
                       onChange={(e) => updateMilestone(index, 'paymentAmount', e.target.value)}
                       placeholder="0"
                       className="form-input"
-                      required
+                      required={true}
                     />
                   </div>
                 </div>
@@ -245,7 +248,7 @@ export const MilestoneManager: React.FC<MilestoneManagerProps> = ({
                   Total: {calculateTotalMilestoneAmount().toFixed(2)} {bounty.token}
                 </p>
                 {!isMilestoneAmountValid() && (
-                  <p className="text-sm text-red-600">
+                  <p className="text-sm" style={{ color: '#8B3A3A' }}>
                     Total must equal {bounty.totalValue} {bounty.token}
                   </p>
                 )}
@@ -307,7 +310,7 @@ export const MilestoneManager: React.FC<MilestoneManagerProps> = ({
                         address: process.env.NEXT_PUBLIC_BOUNTY_MANAGER_ADDRESS as `0x${string}`,
                         abi: [], // Will be filled by OnchainKit
                         functionName: 'approveMilestone',
-                        args: [parseInt(bounty.id), parseInt(milestone.id)],
+                        args: [Number.parseInt(bounty.id), Number.parseInt(milestone.id)],
                       }]}
                       onSuccess={() => onMilestoneApproved?.(milestone.id)}
                     >
@@ -320,8 +323,8 @@ export const MilestoneManager: React.FC<MilestoneManagerProps> = ({
                 </div>
 
                 {milestone.status === 'completed' && (
-                  <div className="bg-green-50 p-3 rounded-lg">
-                    <p className="text-sm text-green-800">
+                  <div className="p-3 rounded-lg" style={{ backgroundColor: '#D1E6DC' }}>
+                    <p className="text-sm" style={{ color: '#1F453A' }}>
                       Completed on {milestone.completedAt ? format(milestone.completedAt, 'MMM dd, yyyy') : 'Unknown date'}
                       {milestone.completedBy && ` by ${milestone.completedBy}`}
                     </p>

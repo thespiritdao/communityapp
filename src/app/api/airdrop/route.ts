@@ -1,8 +1,9 @@
 // /src/app/api/airdrop/route.ts
 
 import { NextResponse } from "next/server";
-import { supabase } from "src/utils/supabaseClient";
-import { airdropMembership, checkAirdropStatus } from "src/utils/airdrop";
+import { supabase } from "@/utils/supabaseClient";
+import { airdropMembership, checkAirdropStatus } from "@/utils/airdrop";
+import { rateLimiters, rateLimitErrorResponse } from "@/lib/ratelimit";
 
 
 export async function POST(req: Request) {
@@ -13,6 +14,33 @@ export async function POST(req: Request) {
     if (!walletAddress) {
       return NextResponse.json({ error: "Wallet address is required" }, { status: 400 });
     }
+
+    // Rate limiting (CRITICAL - prevents airdrop spam)
+    // Limit: 3 requests per hour per wallet address
+    const normalizedAddress = walletAddress.toLowerCase();
+    const { success, limit, remaining, reset } = await rateLimiters.airdrop.limit(normalizedAddress);
+
+    if (!success) {
+      console.warn(`[Airdrop] Rate limit exceeded for wallet: ${normalizedAddress}`);
+      return NextResponse.json(
+        {
+          ...rateLimitErrorResponse(reset),
+          message: "Too many airdrop requests. You can request another airdrop in " +
+                   Math.ceil((reset - Date.now()) / 1000 / 60) + " minutes."
+        },
+        {
+          status: 429,
+          headers: {
+            'X-RateLimit-Limit': limit.toString(),
+            'X-RateLimit-Remaining': remaining.toString(),
+            'X-RateLimit-Reset': reset.toString(),
+            'Retry-After': Math.ceil((reset - Date.now()) / 1000).toString(),
+          },
+        }
+      );
+    }
+
+    console.log(`[Airdrop] Rate limit check passed: ${remaining}/${limit} remaining for ${normalizedAddress}`);
 
     // Check existing membership
     const { data: existingUser, error } = await supabase
@@ -32,9 +60,9 @@ export async function POST(req: Request) {
     }
 
     // Submit via Gelato Relay
-    const { success, taskId, error: airdropError } = await airdropMembership(walletAddress);
+    const { success: airdropSuccess, taskId, error: airdropError } = await airdropMembership(walletAddress);
 
-    if (!success || !taskId) {
+    if (!airdropSuccess || !taskId) {
       console.error("❌ Airdrop submission failed:", airdropError);
       return NextResponse.json({ error: "Airdrop submission failed" }, { status: 500 });
     }
@@ -52,10 +80,20 @@ export async function POST(req: Request) {
       console.error("❌ Failed to record task:", insertError);
     }
 
-    return NextResponse.json({ 
-      message: "Airdrop submitted", 
-      taskId 
-    }, { status: 200 });
+    return NextResponse.json(
+      {
+        message: "Airdrop submitted",
+        taskId
+      },
+      {
+        status: 200,
+        headers: {
+          'X-RateLimit-Limit': limit.toString(),
+          'X-RateLimit-Remaining': remaining.toString(),
+          'X-RateLimit-Reset': reset.toString(),
+        },
+      }
+    );
 
   } catch (error) {
     console.error("❌ Airdrop API error:", error);

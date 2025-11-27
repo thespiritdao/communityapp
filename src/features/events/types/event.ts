@@ -7,6 +7,9 @@ export interface Event {
   location?: string;
   max_attendees?: number;
   
+  // Blockchain integration
+  blockchain_event_id?: string; // Unique ID used on smart contract
+  
   // Pricing and token info
   price_amount: string;
   price_self_amount?: string;
@@ -22,6 +25,7 @@ export interface Event {
   
   // Event creator and management
   creator_address: string;
+  manager_address?: string;
   
   // Event tokens/NFTs
   registration_contract_address?: string;
@@ -154,6 +158,7 @@ export interface CreateEventForm {
   event_end_date?: Date;
   location?: string;
   max_attendees?: number;
+  blockchain_event_id?: string; // Unique ID for blockchain contract
   price_amount: string;
   price_self_amount?: string;
   price_token: 'free' | 'SELF' | 'SYSTEM' | 'dual';
@@ -161,7 +166,12 @@ export interface CreateEventForm {
   organizing_pod_id?: string;
   fund_recipient_pod_id?: string;
   fund_recipient_type: 'pod' | 'dao';
+  manager_address?: string; // Event manager address
   event_image_url?: string;
+  event_metadata?: string; // JSON metadata for the event
+  qr_code_data?: string; // QR code data for check-in
+  registration_contract_address?: string; // Contract address for registrations
+  completion_contract_address?: string; // Contract address for completions
   agendas: CreateAgendaForm[];
 }
 
@@ -197,6 +207,26 @@ export interface Pod {
   hat_id?: string | null;
   is_active: boolean;
   created_at: string;
+
+  // Additional fields from the actual pods table structure
+  updated_at?: string;
+  token_address?: string | null;
+  treasury_address?: string | null;
+  status?: string;
+  parent_pod_id?: string | null;
+  pod_leads?: string[];
+  accountability_signatures?: string;
+  treasury_contract_address?: string | null;
+  management_hat_id?: string | null;
+  membership_hat_id?: string | null;
+  governance_proposal_id?: string | null;
+  created_by_address?: string;
+  pod_image_url?: string;
+  pod_metadata?: string;
+
+  // Proxy contract fields (v2.0 architecture)
+  proxy_contract_address?: string | null;
+  proxy_admin_hat_id?: string | null;
 }
 
 // Utility types

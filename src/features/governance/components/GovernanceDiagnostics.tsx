@@ -1,6 +1,6 @@
 // src/components/PaymasterTest.tsx
 'use client';
-import React from 'react';
+import type React from 'react';
 import { useAccount } from 'wagmi';
 import { Transaction, TransactionButton, TransactionSponsor } from '@coinbase/onchainkit/transaction';
 
@@ -67,7 +67,14 @@ const PaymasterTest: React.FC = () => {
         >
           <TransactionButton
             text="Test Paymaster"
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded"
+            className="w-full text-white font-medium py-2 px-4 rounded"
+            style={{ backgroundColor: '#2F5D50' }}
+            onMouseEnter={(e: React.MouseEvent<HTMLButtonElement>) => {
+              e.currentTarget.style.backgroundColor = '#1F453A';
+            }}
+            onMouseLeave={(e: React.MouseEvent<HTMLButtonElement>) => {
+              e.currentTarget.style.backgroundColor = '#2F5D50';
+            }}
           />
           <TransactionSponsor className="mt-2 text-center" />
         </Transaction>

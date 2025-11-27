@@ -1,10 +1,22 @@
 // src/app/features/forum/components/ThreadCard.tsx
 
 
-import React from 'react';
+import type React from 'react';
 import Link from 'next/link';
 import { formatDistanceToNow } from 'date-fns';
-import styles from '../styles/Forum.module.css';
+
+// Defensive CSS import with fallback
+let styles: any = {};
+try {
+  styles = require('../styles/Forum.module.css');
+} catch (error) {
+  console.warn('Failed to load Forum.module.css, using fallback styles');
+  styles = {
+    threadCard: 'thread-card-fallback',
+    threadMeta: 'thread-meta-fallback',
+    postCountBadge: 'post-count-badge-fallback'
+  };
+}
 
 interface Thread {
   id: string;

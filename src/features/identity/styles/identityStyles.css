@@ -40,6 +40,8 @@ html, body {
   background-color: #f9f9f9; /* Light gray inside. Could remove if you want all white. */
   border-radius: 10px; /* match chat style or keep 15px if you prefer */
   box-shadow: 0 2px 5px rgba(0,0,0,0.05); /* optional subtle inner shadow */
+  height: auto !important;
+  min-height: 0 !important;
 }
 
 h2 {
@@ -284,3 +286,4 @@ textarea.input {
   font-weight: 400;
   font-size: 0.95rem; /* Optional: adjust size if needed */
 }
+

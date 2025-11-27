@@ -1,24 +1,25 @@
-import React from 'react';
-import { Avatar } from './Avatar';
-import { Name } from './Name';
-import { Address } from './Address';
-import type { Address as AddressType } from 'viem'; // assuming Address type comes from viem
+
 
 type ProfileHeaderProps = {
-  // The user’s data, including the profile_picture URL
+  // The user's data, including the profile_picture URL
   profile?: {
     first_name?: string;
     last_name?: string;
     profile_picture?: string | null;
     wallet_address?: string;
   };
+  address?: string; // Wallet address from useAccount hook
+  showCopy?: boolean; // For backwards compatibility
   className?: string;
 };
 
-export function ProfileHeader({ profile, className }: ProfileHeaderProps) {
+export function ProfileHeader({ profile, address, showCopy, className }: ProfileHeaderProps) {
   if (!profile) {
     return null; // or some fallback
   }
+
+  // Use address from props if profile doesn't have wallet_address
+  const walletAddress = profile.wallet_address || address;
 
   return (
     <div className={`profile-header ${className}`}>
@@ -38,14 +39,15 @@ export function ProfileHeader({ profile, className }: ProfileHeaderProps) {
       {/* Basic Name / Address Info */}
       <div style={{ marginTop: '10px' }}>
         <h3>
-          {profile.first_name} {profile.last_name}
+          <strong>{profile.first_name}</strong> <strong>{profile.last_name}</strong>
         </h3>
         
-        {/* 
-          If you want to show the address with line breaks, 
-          you can style it to wrap. 
-        */}
-        <p className="wallet-address">{profile.wallet_address}</p>
+        {/* Formatted wallet address with ellipsis */}
+        <p className="wallet-address">
+          {walletAddress && (
+            `${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}`
+          )}
+        </p>
       </div>
     </div>
   );

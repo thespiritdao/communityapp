@@ -1,8 +1,5 @@
 // src/utils/fetchTokenBalances.ts
 import Web3 from "web3";
-import BN from "bn.js";
-import { useContractRead } from 'wagmi';
-import { HATS_ABI } from '@/contracts/abis/Hats';
 
 // Minimal JSON ABIs for ERC20 and ERC721
 const erc20Abi = [
@@ -78,7 +75,7 @@ const MULTICALL_ADDRESS =
  //hats
  
 const HATS_CONTRACT = process.env.NEXT_PUBLIC_HATS_CONTRACT;
-const EXECUTIVE_POD_HAT_ID = process.env.NEXT_PUBLIC_EXECUTIVE_POD_HAT_ID; // raw hat id (hex string)
+const EXECUTIVE_POD_HAT_ID = process.env.NEXT_PUBLIC_EXECUTIVE_POD_LEADER; // raw hat id (hex string)
 const DEV_POD_HAT_ID = process.env.NEXT_PUBLIC_DEV_POD_HAT_ID; // raw hat id (hex string)
 
 // Add bounty hat ID
@@ -89,6 +86,9 @@ const MARKET_MANAGEMENT_HAT_ID = process.env.NEXT_PUBLIC_MARKET_MANAGEMENT;
 
 // Add event management hat ID
 const EVENT_MANAGEMENT_HAT_ID = process.env.NEXT_PUBLIC_EVENT_MANAGEMENT;
+
+// Add Advocate NFT contract
+const ADVOCATE_TOKEN_CONTRACT = "0x592E560171D2a882474cdfc3BbeeDb21cEB4015d";
 
 // Create a Web3 provider and instance.
 const provider = new Web3.providers.HttpProvider(RPC_URL, { chainId: NETWORK_CHAIN_ID });
@@ -106,6 +106,7 @@ interface TokenBalance {
   hasDevPod: boolean;
   hasBountyHat: boolean;
   hasEventManagement: boolean;
+  hasAdvocate: boolean; // Advocate NFT for universal bounty access
   systemBalance: string;
   selfBalance: string;
 }
@@ -122,12 +123,12 @@ interface ContractCall {
   callData: string;
 }
 
-// Add rate limiting and retry configuration
+// Add rate limiting and retry configuration - more conservative for Infura
 const RATE_LIMIT = {
-  maxRequests: 5,
-  timeWindow: 1000, // 1 second
-  retryAttempts: 3,
-  retryDelay: 1000, // 1 second
+  maxRequests: 3, // Reduced from 5 to be more conservative
+  timeWindow: 2000, // 2 seconds (increased from 1 second)
+  retryAttempts: 2, // Reduced from 3 to prevent excessive retries  
+  retryDelay: 2000, // 2 seconds (increased from 1 second)
 };
 
 // Add request tracking
@@ -188,27 +189,46 @@ function isValidAddress(addr: string | undefined): boolean {
   );
 }
 
-// --- Basic In-Memory Cache Setup ---
+// --- Enhanced In-Memory Cache Setup ---
 const tokenBalancesCache: Record<string, CacheEntry> = {};
-const CACHE_TTL = 30 * 1000; // 30 seconds
+const CACHE_TTL = 5 * 60 * 1000; // 5 minutes (increased from 30 seconds)
+
+// Add a pending requests cache to prevent duplicate concurrent requests
+const pendingRequests: Record<string, Promise<TokenBalance>> = {};
 
 export async function fetchTokenBalances(walletAddress: string): Promise<TokenBalance> {
   if (!walletAddress) {
     throw new Error("No wallet address provided");
   }
   
+  const normalizedAddress = walletAddress.toLowerCase();
   const now = Date.now();
-  if (tokenBalancesCache[walletAddress] && (now - tokenBalancesCache[walletAddress].timestamp < CACHE_TTL)) {
-    return tokenBalancesCache[walletAddress].data;
+  
+  // Check cache first
+  if (tokenBalancesCache[normalizedAddress] && (now - tokenBalancesCache[normalizedAddress].timestamp < CACHE_TTL)) {
+    console.log(`🔄 Cache hit for ${normalizedAddress.slice(0, 6)}...${normalizedAddress.slice(-4)}`);
+    return tokenBalancesCache[normalizedAddress].data;
+  }
+  
+  // Check if there's already a pending request for this address
+  if (pendingRequests[normalizedAddress]) {
+    console.log(`⏳ Reusing pending request for ${normalizedAddress.slice(0, 6)}...${normalizedAddress.slice(-4)}`);
+    return await pendingRequests[normalizedAddress];
   }
 
-  try {
-    const calls: ContractCall[] = [];
+  // Create and cache the pending request
+  const fetchPromise = async (): Promise<TokenBalance> => {
+    console.log(`🔍 Fetching fresh token balances for ${normalizedAddress.slice(0, 6)}...${normalizedAddress.slice(-4)}`);
+    
+    try {
+      const calls: ContractCall[] = [];
     let proofIndex = -1;
     let systemIndex = -1;
     let selfIndex = -1;
-    let executivePodIndex = -1;
+    let executivePodLeaderIndex = -1;
+    let executivePodMemberIndex = -1;
     let devPodIndex = -1;
+    let advocateIndex = -1;
 
     // --- Proof of Curiosity (ERC721) ---
     if (isValidAddress((PROOF_OF_CURIOSITY_CONTRACT ?? "") as string)) {
@@ -255,28 +275,67 @@ export async function fetchTokenBalances(walletAddress: string): Promise<TokenBa
     } else {
       console.warn("Self Token contract address is a placeholder. Using balance 0.");
     }
+    
+    // --- Advocate NFT (ERC721) ---
+    if (isValidAddress(ADVOCATE_TOKEN_CONTRACT)) {
+      try {
+        const advocateContract = new web3.eth.Contract(erc721Abi as any, ADVOCATE_TOKEN_CONTRACT);
+        advocateIndex = calls.length;
+        calls.push({
+          target: ADVOCATE_TOKEN_CONTRACT,
+          callData: advocateContract.methods.balanceOf(walletAddress).encodeABI(),
+        });
+        console.log("  ✅ Advocate NFT call added at index:", advocateIndex);
+      } catch (error) {
+        console.error("Error setting up Advocate NFT call:", error);
+      }
+    }
 
     // Market Admin Token (ERC20) removed - replaced by Market Management Hat (ERC1155)
 
     // --- Executive Pod Token (ERC1155) ---
+    console.log("🔍 Executive Pod Token Setup:");
+    console.log("  HATS_CONTRACT:", HATS_CONTRACT);
+    console.log("  NEXT_PUBLIC_EXECUTIVE_POD_LEADER:", process.env.NEXT_PUBLIC_EXECUTIVE_POD_LEADER);
+    console.log("  NEXT_PUBLIC_EXECUTIVE_POD_MEMBER:", process.env.NEXT_PUBLIC_EXECUTIVE_POD_MEMBER);
+    console.log("  Wallet Address:", walletAddress);
+    
     if (isValidAddress(HATS_CONTRACT ?? "")) {
-      const execHatId = process.env.NEXT_PUBLIC_EXECUTIVE_POD_HAT_ID ?? "0";
-      if (execHatId) {
+      // Check BOTH EXECUTIVE_POD_LEADER and EXECUTIVE_POD_MEMBER
+      const leaderHatId = process.env.NEXT_PUBLIC_EXECUTIVE_POD_LEADER || "0";
+      const memberHatId = process.env.NEXT_PUBLIC_EXECUTIVE_POD_MEMBER || "0";
+      
+      // Check LEADER hat first (higher privilege)
+      if (leaderHatId && leaderHatId !== "0") {
         try {
           const hatsContract = new web3.eth.Contract(erc1155Abi as any, (HATS_CONTRACT ?? "") as string);
-          executivePodIndex = calls.length;
+          executivePodLeaderIndex = calls.length;
           calls.push({
             target: (HATS_CONTRACT ?? "") as string,
-            callData: hatsContract.methods.balanceOf(walletAddress, execHatId).encodeABI(),
+            callData: hatsContract.methods.balanceOf(walletAddress, leaderHatId).encodeABI(),
           });
+          console.log("  ✅ Executive Pod LEADER Token call added at index:", executivePodLeaderIndex);
         } catch (error) {
-          console.error("Error setting up Executive Pod Token call:", error);
+          console.error("  ❌ Error setting up Executive Pod Leader call:", error);
         }
-      } else {
-        console.warn("Executive Pod Hat ID is not defined; defaulting to balance 0.");
+      }
+      
+      // Also check MEMBER hat (will be checked separately)
+      if (memberHatId && memberHatId !== "0" && memberHatId !== leaderHatId) {
+        try {
+          const hatsContract = new web3.eth.Contract(erc1155Abi as any, (HATS_CONTRACT ?? "") as string);
+          executivePodMemberIndex = calls.length;
+          calls.push({
+            target: (HATS_CONTRACT ?? "") as string,
+            callData: hatsContract.methods.balanceOf(walletAddress, memberHatId).encodeABI(),
+          });
+          console.log("  ✅ Executive Pod MEMBER Token call added at index:", executivePodMemberIndex);
+        } catch (error) {
+          console.error("  ❌ Error setting up Executive Pod Member call:", error);
+        }
       }
     } else {
-      console.warn("HATS_CONTRACT is not valid; cannot check Executive Pod Token.");
+      console.warn("  ❌ HATS_CONTRACT is not valid; cannot check Executive Pod Token.");
     }
 
     // --- Dev Pod Token (ERC1155) ---
@@ -388,6 +447,7 @@ export async function fetchTokenBalances(walletAddress: string): Promise<TokenBa
       hasDevPod: false,
       hasBountyHat: false,
       hasEventManagement: false,
+      hasAdvocate: false,
       systemBalance: "0",
       selfBalance: "0",
     };
@@ -421,13 +481,47 @@ export async function fetchTokenBalances(walletAddress: string): Promise<TokenBa
 
     // Market Admin balance processing removed - replaced by Market Management Hat processing
 
+    console.log("🎯 Processing Executive Pod Token balance:");
+    console.log("  executivePodLeaderIndex:", executivePodLeaderIndex);
+    console.log("  executivePodMemberIndex:", executivePodMemberIndex);
+    console.log("  returnData length:", returnData.length);
+    
     try {
-      if (executivePodIndex >= 0 && returnData[executivePodIndex]) {
-        const execPodBalance = web3.utils.hexToNumberString((returnData[executivePodIndex] ?? "0") as string);
-        balances.hasExecutivePod = Number(execPodBalance) > 0;
+      let hasExecutivePod = false;
+      
+      // Check LEADER hat balance
+      if (executivePodLeaderIndex >= 0 && returnData[executivePodLeaderIndex]) {
+        const leaderRawData = returnData[executivePodLeaderIndex];
+        console.log("  Leader Hat raw return data:", leaderRawData);
+        
+        const leaderBalance = web3.utils.hexToNumberString((returnData[executivePodLeaderIndex] ?? "0") as string);
+        console.log("  Leader Hat parsed balance:", leaderBalance);
+        
+        if (Number(leaderBalance) > 0) {
+          hasExecutivePod = true;
+          console.log("  ✅ Has Executive Pod LEADER Token!");
+        }
       }
+      
+      // Check MEMBER hat balance (only if not already has leader)
+      if (!hasExecutivePod && executivePodMemberIndex >= 0 && returnData[executivePodMemberIndex]) {
+        const memberRawData = returnData[executivePodMemberIndex];
+        console.log("  Member Hat raw return data:", memberRawData);
+        
+        const memberBalance = web3.utils.hexToNumberString((returnData[executivePodMemberIndex] ?? "0") as string);
+        console.log("  Member Hat parsed balance:", memberBalance);
+        
+        if (Number(memberBalance) > 0) {
+          hasExecutivePod = true;
+          console.log("  ✅ Has Executive Pod MEMBER Token!");
+        }
+      }
+      
+      console.log("  Final Executive Pod Status:", hasExecutivePod);
+      balances.hasExecutivePod = hasExecutivePod;
+      
     } catch (error) {
-      console.error("Error processing Executive Pod Token balance:", error);
+      console.error("  ❌ Error processing Executive Pod Token balance:", error);
     }
 
     try {
@@ -468,27 +562,67 @@ export async function fetchTokenBalances(walletAddress: string): Promise<TokenBa
       console.error("Error processing Event Management Hat balance:", error);
     }
 
-    // Cache the results
-    tokenBalancesCache[walletAddress] = {
-      data: balances,
-      timestamp: now
-    };
+    try {
+      if (advocateIndex >= 0 && returnData[advocateIndex]) {
+        const advocateBalance = web3.utils.hexToNumberString((returnData[advocateIndex] ?? "0") as string);
+        balances.hasAdvocate = Number(advocateBalance) > 0;
+        console.log("  ✅ Advocate NFT balance:", advocateBalance, "hasAdvocate:", balances.hasAdvocate);
+      }
+    } catch (error) {
+      console.error("Error processing Advocate NFT balance:", error);
+    }
 
-    return balances;
-  } catch (error) {
-    console.error("Error in fetchTokenBalances:", error);
-    // Return default values on error
-    return {
-      hasProofOfCuriosity: false,
-      hasMarketAdmin: false, // Backward compatibility
-      hasMarketManagement: false,
-      hasExecutivePod: false,
-      hasDevPod: false,
-      hasBountyHat: false,
-      hasEventManagement: false,
-      systemBalance: "0",
-      selfBalance: "0",
-    };
+      // Log final results
+      console.log("📊 Final Token Balances for", normalizedAddress.slice(0, 6) + "..." + normalizedAddress.slice(-4) + ":");
+      console.log("  hasExecutivePod:", balances.hasExecutivePod);
+      console.log("  hasDevPod:", balances.hasDevPod);
+      console.log("  hasMarketManagement:", balances.hasMarketManagement);
+      console.log("  hasBountyHat:", balances.hasBountyHat);
+      console.log("  hasEventManagement:", balances.hasEventManagement);
+      console.log("  hasProofOfCuriosity:", balances.hasProofOfCuriosity);
+      console.log("  hasAdvocate:", balances.hasAdvocate);
+
+      // Cache the results
+      tokenBalancesCache[normalizedAddress] = {
+        data: balances,
+        timestamp: now
+      };
+
+      return balances;
+    } catch (error) {
+      console.error("Error in fetchTokenBalances:", error);
+      
+      // Return cached data if available, even if expired, as fallback
+      if (tokenBalancesCache[normalizedAddress]) {
+        console.log("🚨 Using expired cache data as fallback due to RPC error");
+        return tokenBalancesCache[normalizedAddress].data;
+      }
+      
+      // Return default values on error as last resort
+      return {
+        hasProofOfCuriosity: false,
+        hasMarketAdmin: false, // Backward compatibility
+        hasMarketManagement: false,
+        hasExecutivePod: false,
+        hasDevPod: false,
+        hasBountyHat: false,
+        hasEventManagement: false,
+        hasAdvocate: false,
+        systemBalance: "0",
+        selfBalance: "0",
+      };
+    }
+  };
+
+  // Store the promise and execute it
+  pendingRequests[normalizedAddress] = fetchPromise();
+
+  try {
+    const result = await pendingRequests[normalizedAddress];
+    return result;
+  } finally {
+    // Clean up the pending request
+    delete pendingRequests[normalizedAddress];
   }
 }
 
@@ -497,6 +631,9 @@ export interface BountyTokenBalances {
   hasExecutivePod: boolean;
   hasDevPod: boolean;
   hasMarketManagement: boolean;
+  hasBountyHat: boolean;
+  hasEventManagement: boolean;
+  hasAdvocate: boolean;  // Universal verified member access
 }
 
 // Helper function for bounty system to check if user can create bounties
@@ -506,6 +643,9 @@ export const checkBountyPermissions = async (address: string): Promise<BountyTok
     hasExecutivePod: balances.hasExecutivePod,
     hasDevPod: balances.hasDevPod,
     hasMarketManagement: balances.hasMarketManagement,
+    hasBountyHat: balances.hasBountyHat,
+    hasEventManagement: balances.hasEventManagement,
+    hasAdvocate: balances.hasAdvocate,
   };
 };
 
@@ -563,8 +703,8 @@ export const fetchExtendedTokenBalances = async (
       hasProofOfCuriosity: baseBalances.hasProofOfCuriosity,
       hasMarketAdmin: baseBalances.hasMarketManagement, // Map to market management since hasMarketAdmin is deprecated
       hasERC1155Token,
-      systemBalance: BigInt(parseFloat(baseBalances.systemBalance) * 1e18), // Convert to wei
-      selfBalance: BigInt(parseFloat(baseBalances.selfBalance) * 1e18), // Convert to wei
+      systemBalance: BigInt(Number.parseFloat(baseBalances.systemBalance) * 1e18), // Convert to wei
+      selfBalance: BigInt(Number.parseFloat(baseBalances.selfBalance) * 1e18), // Convert to wei
     };
   } catch (error) {
     console.error('Error in fetchExtendedTokenBalances:', error);

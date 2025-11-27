@@ -1,6 +1,6 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useAccount } from 'wagmi';
-import { useBountyContractEnhanced, PaymentStructure } from './useBountyContractEnhanced';
+import { useBountyContractEnhanced, } from './useBountyContractEnhanced';
 import { 
   bountyApi, 
   bidApi, 
@@ -13,7 +13,7 @@ import {
   type BountyNotification as DbBountyNotification
 } from '../lib/supabase';
 
-import { FrontendBounty, FrontendBid, FrontendNotification } from '../types/bounty';
+import type { FrontendBounty, FrontendBid, FrontendNotification } from '../types/bounty';
 
 export const useBountySupabase = () => {
   const { address } = useAccount();
@@ -28,15 +28,30 @@ export const useBountySupabase = () => {
     try {
       setLoading(true);
       setError(null);
+      console.log('🚀 useBountySupabase: Loading bounties from API...');
       const dbBounties = await bountyApi.getAllBounties();
+      console.log('✅ useBountySupabase: Raw bounties from DB:', dbBounties);
       const frontendBounties = dbBounties.map(convertBountyFromDb);
+      console.log('✅ useBountySupabase: Converted bounties:', frontendBounties);
       setBounties(frontendBounties);
     } catch (err) {
-      console.error('Error loading bounties:', err);
+      console.error('❌ useBountySupabase: Error loading bounties:', err);
       setError(err instanceof Error ? err.message : 'Failed to load bounties');
     } finally {
       setLoading(false);
     }
+  }, []);
+
+  // Load bounties on initialization and whenever loadBounties changes
+  useEffect(() => {
+    console.log('🚀 useBountySupabase: Initial load effect triggered');
+    loadBounties();
+  }, [loadBounties]);
+
+  // Return a stable loadBounties function that can be called to force refresh
+  // This ensures that when the component remounts with a new key, it fetches fresh data
+  useEffect(() => {
+    console.log('🔄 Component mounted/remounted - forcing fresh bounty load');
   }, []);
 
   const loadAllBids = useCallback(async () => {
@@ -58,9 +73,10 @@ export const useBountySupabase = () => {
     setError(null);
     try {
       // Only create bounty in Supabase
+      // IMPORTANT: Normalize address to lowercase to match authentication flow
       const dbBountyData = convertBountyToDb({
         ...bountyData,
-        creator_address: address,
+        creator_address: address?.toLowerCase(),
       });
       const newDbBounty = await bountyApi.createBounty(dbBountyData);
       const newFrontendBounty = convertBountyFromDb(newDbBounty);
@@ -78,18 +94,21 @@ export const useBountySupabase = () => {
 
   const submitBid = useCallback(async (bidData: Omit<FrontendBid, 'id' | 'submittedAt' | 'bidderAddress' | 'status'>) => {
     if (!address) throw new Error('Wallet not connected');
-    
+
     setLoading(true);
     setError(null);
     try {
       // TODO: Add on-chain bid placement call here
-      
+
+      // IMPORTANT: Normalize address to lowercase to match authentication flow
+      const normalizedAddress = address.toLowerCase();
+
       const dbBidData = convertBidToDb({
         ...bidData,
-        bidderAddress: address,
+        bidderAddress: normalizedAddress,
         status: 'pending'
       });
-      
+
       const newDbBid = await bidApi.submitBid(dbBidData);
       // You may want to update local state here if you are displaying bids
       return convertBidFromDb(newDbBid);
@@ -97,6 +116,34 @@ export const useBountySupabase = () => {
     } catch(err) {
       console.error('Error submitting bid:', err);
       const errorMessage = err instanceof Error ? err.message : 'Failed to submit bid';
+      setError(errorMessage);
+      throw new Error(errorMessage);
+    } finally {
+      setLoading(false);
+    }
+  }, [address]);
+
+  const updateBid = useCallback(async (bidId: string, bidData: Omit<FrontendBid, 'id' | 'submittedAt' | 'bidderAddress' | 'status'>) => {
+    if (!address) throw new Error('Wallet not connected');
+
+    setLoading(true);
+    setError(null);
+    try {
+      const dbBidData = convertBidToDb({
+        ...bidData,
+        bidderAddress: address.toLowerCase(),
+        status: 'pending' // Keep as pending when editing
+      });
+
+      // Remove fields that shouldn't be updated
+      const { bidder_address, status, ...updateData } = dbBidData;
+
+      const updatedDbBid = await bidApi.updateBid(bidId, updateData);
+      return convertBidFromDb(updatedDbBid);
+
+    } catch(err) {
+      console.error('Error updating bid:', err);
+      const errorMessage = err instanceof Error ? err.message : 'Failed to update bid';
       setError(errorMessage);
       throw new Error(errorMessage);
     } finally {
@@ -189,6 +236,7 @@ export const useBountySupabase = () => {
     loadAllBids,
     createBounty,
     submitBid,
+    updateBid,
     updateBidStatus,
     createBidReview,
     createNotification,

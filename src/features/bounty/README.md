@@ -178,7 +178,7 @@ src/features/bounty/
 The following environment variables are used:
 - `NEXT_PUBLIC_BOUNTY_MANAGER_ADDRESS`: Smart contract address for bounty management
 - `NEXT_PUBLIC_HATS_ADDRESS`: Hats Protocol contract address
-- `NEXT_PUBLIC_EXECUTIVE_POD_HAT_ID`: Hat ID for executive pod access
+- `NEXT_PUBLIC_EXECUTIVE_POD_LEADER`: Hat ID for executive pod access
 - `NEXT_PUBLIC_DEV_POD_HAT_ID`: Hat ID for dev pod access
 - `NEXT_PUBLIC_MARKET_ADMIN_HAT_ID`: Hat ID for market admin access
 - `NEXT_PUBLIC_SYSTEM_TOKEN`: SYSTEM token contract address

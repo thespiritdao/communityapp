@@ -1,14 +1,14 @@
 // src/features/governance/pages/ProposalDetailPage.tsx
 'use client';
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { useAccount, usePublicClient } from 'wagmi';
-import DAOGovernorABI from 'src/abis/DAO_GovernorABI.json';
+import DAOGovernorABI from '@/abis/DAO_GovernorABI.json';
 import { base } from 'viem/chains';
 import { keccak256, decodeEventLog } from 'viem';
-import { VoteButton } from 'src/features/governance/components/VoteButton';
-import { useForumPostTitle } from 'src/features/governance/hooks/useForumPostTitle';
+import { VoteButton } from '@/features/governance/components/VoteButton';
+import { useForumPostTitle } from '@/features/governance/hooks/useForumPostTitle';
 
 interface OnChainProposal {
   proposer: `0x${string}`;
@@ -144,8 +144,20 @@ export default function ProposalDetailPage() {
     })();
   }, [id, address, publicClient]);
 
-  if (loading) return <div>Loading proposal...</div>;
-  if (!proposal) return <div>Proposal not found.</div>;
+  if (loading) return (
+    <div className="max-w-4xl mx-auto p-4 bottom-nav-spacing">
+      <div className="flex justify-center items-center min-h-[200px]">
+        <div>Loading proposal...</div>
+      </div>
+    </div>
+  );
+  if (!proposal) return (
+    <div className="max-w-4xl mx-auto p-4 bottom-nav-spacing">
+      <div className="flex justify-center items-center min-h-[200px]">
+        <div>Proposal not found.</div>
+      </div>
+    </div>
+  );
 
   const { data: forumTitle } = useForumPostTitle(
     proposal.metadata.forumPostId || undefined

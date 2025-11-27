@@ -1,29 +1,41 @@
 // src/app/features/forum/components/PostList.tsx
 'use client';
 
-import React, { useEffect, useState } from 'react';
-import { supabase } from 'src/utils/supabaseClient';
+import type React from 'react';
+import { useEffect, useState, useMemo } from 'react';
+import { supabase } from '@/utils/supabaseClient';
 import PostCard from './PostCard';
 import { useRouter } from 'next/navigation';
 import styles from '../styles/Forum.module.css';
-import UserTagging from 'src/components/UserTagging';
-import { useForum } from 'src/features/forum/hooks/useForum';
+import UserTagging from '@/components/UserTagging';
+import { useForum } from '@/features/forum/hooks/useForum';
+import { ModerationToolbar } from './ModerationToolbar';
+import { ThreadSummary } from './ThreadSummary';
+import { PollDisplay } from './PollDisplay';
+import { MediaUpload } from './MediaUpload';
+import { getPollByThreadId } from '../services/PollService';
+import { useForumUserProfiles } from '../hooks/useForumUserProfiles';
+import type { MediaAttachment } from '../services/MediaUploadService';
 
 interface Post {
   id: string;
   thread_id: string;
   content: string;
-  author_wallet: string;
-  author_first_name: string | null;
-  author_last_name: string | null;
+  author_address: string;
   created_at: string;
 }
 
 interface ThreadInfo {
   id: string;
   title: string;
+  content?: string;
+  author_address: string;
+  created_at: string;
   category_id: string;
   category_name: string;
+  pod_id: string | null;
+  is_pinned?: boolean;
+  is_locked?: boolean;
 }
 
 interface PostListProps {
@@ -33,55 +45,93 @@ interface PostListProps {
 const PostList: React.FC<PostListProps> = ({ threadId }) => {
   const [posts, setPosts] = useState<Post[]>([]);
   const [threadInfo, setThreadInfo] = useState<ThreadInfo | null>(null);
+  const [pollId, setPollId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [replyContent, setReplyContent] = useState('');
+  const [replyAttachments, setReplyAttachments] = useState<any[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [threadAttachments, setThreadAttachments] = useState<Record<string, MediaAttachment[]>>({});
   const router = useRouter();
   const { submitPost, isLoading: forumLoading, address } = useForum();
+
+  // Batch fetch user profiles for all post authors (prevents N+1 queries)
+  const uniqueAuthors = useMemo(() => {
+    const authors = posts.map(p => p.author_address);
+    if (threadInfo?.author_address) {
+      authors.push(threadInfo.author_address);
+    }
+    return [...new Set(authors)];
+  }, [posts, threadInfo]);
+
+  const { data: profileMap, isLoading: profilesLoading } = useForumUserProfiles(uniqueAuthors);
 
   useEffect(() => {
     const fetchThreadAndPosts = async () => {
       try {
         setIsLoading(true);
 
-        // 1) Fetch thread metadata including forum_categories required token
-        const { data: threadData, error: threadError } = await supabase
-          .from('forum_threads')
-          .select(`
-            id,
-            title,
-            category_id,
-            forum_categories (
-              name,
-              required_token
-            )
-          `)
-          .eq('id', threadId)
-          .single();
+        // Fetch thread, posts, and poll in parallel for better performance
+        const [threadResult, pollResult, attachmentsResult] = await Promise.all([
+          // 1) Fetch thread metadata + posts in single query
+          supabase
+            .from('forum_threads')
+            .select(`
+              id,
+              title,
+              content,
+              author_address,
+              created_at,
+              category_id,
+              is_pinned,
+              is_locked,
+              forum_categories (
+                name,
+                required_token,
+                pod_id
+              )
+            `)
+            .eq('id', threadId)
+            .single(),
 
-        if (threadError) throw threadError;
-        if (!threadData) throw new Error('Thread not found');
+          // 2) Fetch poll (if exists)
+          getPollByThreadId(threadId),
 
-        // Build the thread info object
+          // 3) Fetch all attachments for thread in single query
+          supabase
+            .from('forum_media_attachments')
+            .select('*')
+            .eq('thread_id', threadId)
+            .order('created_at', { ascending: true })
+        ]);
+
+        // Handle thread data
+        if (threadResult.error) throw threadResult.error;
+        if (!threadResult.data) throw new Error('Thread not found');
+
+        const threadData = threadResult.data;
         setThreadInfo({
           id: threadData.id,
           title: threadData.title,
+          content: threadData.content,
+          author_address: threadData.author_address,
+          created_at: threadData.created_at,
           category_id: threadData.category_id,
           category_name: threadData.forum_categories.name,
+          pod_id: threadData.forum_categories.pod_id || null,
+          is_pinned: threadData.is_pinned,
+          is_locked: threadData.is_locked,
         });
 
-        // 2) Fetch all posts (including OP) from forum_posts
+        // Fetch posts separately (after thread is loaded)
         const { data: postsData, error: postsError } = await supabase
           .from('forum_posts')
           .select(`
             id,
             thread_id,
             content,
-            author_wallet,
-            author_first_name,
-            author_last_name,
+            author_address,
             created_at
           `)
           .eq('thread_id', threadId)
@@ -89,6 +139,24 @@ const PostList: React.FC<PostListProps> = ({ threadId }) => {
 
         if (postsError) throw postsError;
         setPosts(postsData || []);
+
+        // Handle poll data
+        if (pollResult.success && pollResult.poll) {
+          setPollId(pollResult.poll.id);
+        }
+
+        // Handle attachments - group by post_id for efficient lookup
+        if (!attachmentsResult.error && attachmentsResult.data) {
+          const attachmentMap: Record<string, MediaAttachment[]> = {};
+          attachmentsResult.data.forEach((attachment) => {
+            const key = attachment.post_id || 'thread';
+            if (!attachmentMap[key]) {
+              attachmentMap[key] = [];
+            }
+            attachmentMap[key].push(attachment);
+          });
+          setThreadAttachments(attachmentMap);
+        }
       } catch (err: any) {
         setError(err.message);
       } finally {
@@ -111,14 +179,41 @@ const PostList: React.FC<PostListProps> = ({ threadId }) => {
       setSubmitError(null);
 
       // Use submitPost from useForum to handle reply, tagging, and notifications
+      console.log('[PostList] Submitting post with replyAttachments:', replyAttachments);
       const result = await submitPost(threadId, replyContent);
+      console.log('[PostList] submitPost result:', result);
+
       if (!result.success) {
         setSubmitError(result.error || 'Failed to post reply');
         return;
       }
 
+      // Link uploaded attachments to the created post
+      if (result.post && replyAttachments.length > 0) {
+        const postId = result.post.id;
+        try {
+          const attachmentIds = replyAttachments.map(att => att.id);
+          console.log('[PostList] Linking attachments:', attachmentIds, 'to post:', postId);
+
+          const { data: updateResult, error: attachmentError } = await supabase
+            .from('forum_media_attachments')
+            .update({ post_id: postId })
+            .in('id', attachmentIds)
+            .select();
+
+          if (attachmentError) {
+            console.error('Error linking attachments to post:', attachmentError);
+          } else {
+            console.log(`Successfully linked ${updateResult?.length || 0} attachments to post ${postId}`, updateResult);
+          }
+        } catch (err) {
+          console.error('Error updating attachments:', err);
+        }
+      }
+
       // Reset form
       setReplyContent('');
+      setReplyAttachments([]);
 
       // Refresh posts
       const { data: updatedPosts, error: fetchError } = await supabase
@@ -127,9 +222,7 @@ const PostList: React.FC<PostListProps> = ({ threadId }) => {
           id,
           thread_id,
           content,
-          author_wallet,
-          author_first_name,
-          author_last_name,
+          author_address,
           created_at
         `)
         .eq('thread_id', threadId)
@@ -156,10 +249,14 @@ const PostList: React.FC<PostListProps> = ({ threadId }) => {
     return <div className={styles.error}>Thread not found</div>;
   }
 
-  // Separate the original post (OP) from replies.
-  // We assume the OP is the forum post whose id equals the thread id.
-  const originalPost = posts.find((p) => p.id === threadInfo.id);
-  const replies = posts.filter((p) => p.id !== threadInfo.id);
+  // Create original post from thread data
+  const originalPost: Post | null = threadInfo ? {
+    id: threadInfo.id,
+    thread_id: threadInfo.id,
+    content: threadInfo.content || '',
+    author_address: threadInfo.author_address,
+    created_at: threadInfo.created_at
+  } : null;
 
   return (
     <div className={styles.threadContainer}>
@@ -173,61 +270,127 @@ const PostList: React.FC<PostListProps> = ({ threadId }) => {
             {threadInfo.category_name}
           </a>
           <span className={styles.breadcrumbSeparator}>/</span>
-          <h1 className={styles.threadTitle}>{threadInfo.title}</h1>
+          <h1 className={styles.threadTitle}>
+            {threadInfo.is_pinned && '📌 '}
+            {threadInfo.is_locked && '🔒 '}
+            {threadInfo.title}
+          </h1>
         </div>
+
+        {/* Moderation Toolbar */}
+        <ModerationToolbar
+          targetType="thread"
+          targetId={threadInfo.id}
+          isPinned={threadInfo.is_pinned}
+          podId={threadInfo.pod_id}
+          isLocked={threadInfo.is_locked}
+          onActionComplete={() => {
+            // Refresh thread data after moderation action
+            window.location.reload();
+          }}
+        />
       </div>
 
-      {/* Display the original post if it exists */}
+      {/* AI Summary */}
+      {threadInfo && (
+        <ThreadSummary
+          threadId={threadId}
+          threadTitle={threadInfo.title}
+          threadContent={threadInfo.content}
+        />
+      )}
+
+      {/* Poll Display */}
+      {pollId && (
+        <div style={{ marginBottom: '20px' }}>
+          <PollDisplay pollId={pollId} />
+        </div>
+      )}
+
+      {/* Display the original post */}
       {originalPost && (
         <div className={styles.postsContainer}>
           <h2>Original Post</h2>
-          <PostCard post={originalPost} />
+          <PostCard
+            post={originalPost}
+            authorProfile={profileMap?.[originalPost.author_address]}
+            attachments={threadAttachments['thread'] || []}
+            podId={threadInfo.pod_id}
+          />
         </div>
       )}
 
       {/* Display replies */}
       <div className={styles.postsContainer}>
-        {replies.length === 0 ? (
+        {posts.length === 0 ? (
           <div className={styles.emptyState}>
             <p>No replies yet. Be the first to reply!</p>
           </div>
         ) : (
-          <ul className={styles.postsList}>
-            {replies.map((post) => (
-              <li key={post.id} className={styles.postItem}>
-                <PostCard post={post} />
-              </li>
-            ))}
-          </ul>
+          <>
+            <h2>Replies ({posts.length})</h2>
+            <ul className={styles.postsList}>
+              {posts.map((post) => (
+                <li key={post.id} className={styles.postItem}>
+                  <PostCard
+                    post={post}
+                    authorProfile={profileMap?.[post.author_address]}
+                    attachments={threadAttachments[post.id] || []}
+                    podId={threadInfo.pod_id}
+                  />
+                </li>
+              ))}
+            </ul>
+          </>
         )}
       </div>
 
-      {/* Reply form */}
-      <div className={styles.replyFormContainer}>
-        <h3 className={styles.replyFormTitle}>Post a Reply</h3>
-        <form onSubmit={handleSubmitReply} className={styles.replyForm}>
-          <UserTagging
-            value={replyContent}
-            onChange={setReplyContent}
-            placeholder="Write your reply here... Use @ to mention someone"
-            className={styles.replyTextarea}
-            multiLine={true}
-            contextType="forum"
-            contextId={threadId}
-            contextUrl={`/forum/thread/${threadId}`}
-          />
-          {submitError && (
-            <div className={styles.submitError}>{submitError}</div>
-          )}
-          <button
-            type="submit"
-            className={styles.submitButton}
-            disabled={isSubmitting}
-          >
-            {isSubmitting ? 'Posting...' : 'Post Reply'}
-          </button>
-        </form>
-      </div>
+      {/* Reply form - hide if thread is locked */}
+      {threadInfo.is_locked ? (
+        <div className={styles.replyFormContainer}>
+          <div className={styles.lockedMessage}>
+            🔒 This thread has been locked. No new replies can be posted.
+          </div>
+        </div>
+      ) : (
+        <div className={styles.replyFormContainer}>
+          <h3 className={styles.replyFormTitle}>Post a Reply</h3>
+          <form onSubmit={handleSubmitReply} className={styles.replyForm}>
+            <UserTagging
+              value={replyContent}
+              onChange={setReplyContent}
+              placeholder="Write your reply here... Use @ to mention someone"
+              className={styles.replyTextarea}
+              multiLine={true}
+              contextType="forum"
+              contextId={threadId}
+              contextUrl={`/forum/thread/${threadId}`}
+            />
+
+            {/* Media Upload for replies */}
+            <div style={{ marginTop: '15px', marginBottom: '15px' }}>
+              <MediaUpload
+                threadId={threadId}
+                onUploadComplete={(attachments) => {
+                  setReplyAttachments([...replyAttachments, ...attachments]);
+                }}
+                maxFiles={5}
+              />
+            </div>
+
+            {submitError && (
+              <div className={styles.submitError}>{submitError}</div>
+            )}
+            <button
+              type="submit"
+              className={styles.submitButton}
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? 'Posting...' : 'Post Reply'}
+            </button>
+          </form>
+        </div>
+      )}
     </div>
   );
 };

@@ -1,0 +1,155 @@
+/* Rich Text Editor Container */
+.richTextContainer {
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 0.25rem;
+  overflow: hidden;
+  background-color: #fff;
+}
+
+/* Toolbar */
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 8px;
+  background-color: #f5f5f5;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.toolbar button {
+  padding: 6px 10px;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 4px;
+  background-color: #fff;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.2s;
+  min-width: 36px;
+}
+
+.toolbar button:hover:not(:disabled) {
+  background-color: #e8e8e8;
+  border-color: rgba(0, 0, 0, 0.2);
+}
+
+.toolbar button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.toolbar button.active {
+  background-color: #0066cc;
+  color: white;
+  border-color: #0052a3;
+}
+
+.divider {
+  width: 1px;
+  height: 24px;
+  background-color: rgba(0, 0, 0, 0.1);
+  margin: 0 4px;
+  align-self: center;
+}
+
+/* Editor Content */
+.editor {
+  box-sizing: border-box;
+  padding: 12px;
+  font-family: inherit;
+  font-size: inherit;
+  line-height: 1.6;
+  outline: none;
+  overflow-y: auto;
+}
+
+/* Placeholder */
+.editor p.is-editor-empty:first-child::before {
+  color: #adb5bd;
+  content: attr(data-placeholder);
+  float: left;
+  height: 0;
+  pointer-events: none;
+}
+
+/* Typography inside editor */
+.editor h1 {
+  font-size: 2em;
+  font-weight: bold;
+  margin: 0.67em 0;
+}
+
+.editor h2 {
+  font-size: 1.5em;
+  font-weight: bold;
+  margin: 0.75em 0;
+}
+
+.editor h3 {
+  font-size: 1.17em;
+  font-weight: bold;
+  margin: 0.83em 0;
+}
+
+.editor p {
+  margin: 0.5em 0;
+}
+
+.editor ul,
+.editor ol {
+  padding-left: 1.5em;
+  margin: 0.5em 0;
+}
+
+.editor li {
+  margin: 0.25em 0;
+}
+
+.editor blockquote {
+  border-left: 3px solid #ccc;
+  padding-left: 1em;
+  margin: 1em 0;
+  color: #666;
+  font-style: italic;
+}
+
+.editor code {
+  background-color: #f4f4f4;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-family: 'Courier New', monospace;
+  font-size: 0.9em;
+}
+
+.editor pre {
+  background-color: #f4f4f4;
+  padding: 1em;
+  border-radius: 6px;
+  overflow-x: auto;
+  margin: 1em 0;
+}
+
+.editor pre code {
+  background-color: transparent;
+  padding: 0;
+  font-size: inherit;
+}
+
+.editor a {
+  color: #0066cc;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.editor a:hover {
+  color: #0052a3;
+}
+
+/* Focus state */
+.editor:focus {
+  outline: none;
+}
+
+.richTextContainer:focus-within {
+  border-color: #0066cc;
+  box-shadow: 0 0 0 2px rgba(0, 102, 204, 0.1);
+}

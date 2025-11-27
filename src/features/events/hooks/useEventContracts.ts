@@ -1,15 +1,16 @@
 import { useState, useCallback } from 'react';
 import { useAccount, usePublicClient, useWalletClient } from 'wagmi';
-import { parseAbi, encodeFunctionData, parseUnits } from 'viem';
-import EventRegistrationNFTABI from '@/abis/EventRegistrationNFTABI.json';
-import EventCompletionNFTABI from '@/abis/EventCompletionNFTABI.json';
+import { parseUnits } from 'viem';
 import EventEscrowABI from '@/abis/EventEscrowABI.json';
-import { Event, EventRegistration } from '../types/event';
+import EventRegistrationNFTFactoryABI from '@/abis/EventRegistrationFactoryABI.json';
+import EventCompletionNFTFactoryABI from '@/abis/EventCompletionNFTFactoryABI.json';
+import { CONTRACT_ADDRESSES } from '@/config/contracts';
+import type { Event, } from '../types/event';
 
-// Contract addresses
-const EVENT_ESCROW_CONTRACT = process.env.NEXT_PUBLIC_EVENT_ESCROW_CONTRACT as `0x${string}`;
-const EVENT_REGISTRATION_FACTORY = process.env.NEXT_PUBLIC_EVENT_REGISTRATION_FACTORY as `0x${string}`;
-const EVENT_COMPLETION_FACTORY = process.env.NEXT_PUBLIC_EVENT_COMPLETION_FACTORY as `0x${string}`;
+// Contract addresses from central config
+const EVENT_ESCROW_CONTRACT = CONTRACT_ADDRESSES.EVENT_ESCROW;
+const EVENT_REGISTRATION_FACTORY = CONTRACT_ADDRESSES.EVENT_REGISTRATION_FACTORY;
+const EVENT_COMPLETION_FACTORY = CONTRACT_ADDRESSES.EVENT_COMPLETION_FACTORY;
 
 export function useEventContracts() {
   const { address } = useAccount();

@@ -2,18 +2,15 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useAccount } from 'wagmi';
-import { supabase } from '../../utils/supabaseClient';
-import ProfileModal from '../../features/identity/components/ProfileModal';
+import { supabase } from '@/utils/supabaseClient';
+import { ProfileModal } from '@/features/identity/components/ProfileModal';
 import Link from 'next/link';
-import { ExternalLink, Clock, User, FileText, MessageSquare, Key } from 'lucide-react';
-import { createPublicClient, http } from 'viem';
-import DAOGovernorABI from '../../abis/DAO_GovernorABI.json';
-import { base } from 'viem/chains';
-import '../../features/governance/styles/vote.css';
-import { ProposalVoteForm } from '../../features/governance/components/ProposalVoteForm';
-import VotingCountdown from '../../features/governance/components/VotingCountdown';
-import '../../features/governance/styles/vote-modal.css';
-import { useGovernanceParticipation } from '../../features/governance/hooks/useGovernanceParticipation';
+import { ExternalLink, Clock, User, MessageSquare, Key } from 'lucide-react';
+import '@/features/governance/styles/vote.css';
+import { ProposalVoteForm } from '@/features/governance/components/ProposalVoteForm';
+import VotingCountdown from '@/features/governance/components/VotingCountdown';
+import '@/features/governance/styles/vote-modal.css';
+import { useGovernanceParticipation } from '@/features/governance/hooks/useGovernanceParticipation';
 
 interface ProposalMetadata {
   id: string;
@@ -85,7 +82,7 @@ export default function VotePage() {
   // Add a cache for user profiles
   const userProfileCache: Record<string, any> = {};
 
-  const fetchProposalStates = async (userAddress: string, force: boolean = false) => {
+  const fetchProposalStates = async (userAddress: string, force = false) => {
     if (!userAddress) return;
     const url = force ? `/api/proposalStates?user=${userAddress}&force=true` : `/api/proposalStates?user=${userAddress}`;
     const res = await fetch(url);
@@ -312,15 +309,15 @@ export default function VotePage() {
   }
 
   return (
-    <div className="vote-bg min-h-screen p-4">
+    <div className="vote-bg min-h-screen p-4 bottom-nav-spacing">
       <div className="max-w-6xl mx-auto pr-2">
         <div className="flex justify-center mb-8 mt-8">
             <div className="w-1/5" />
             <div className="flex-1 flex justify-center">
               <Link
                 href="/governance"
-                className="px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors text-lg font-semibold shadow-md text-center"
-                style={{ minWidth: 340 }}
+                className="px-6 py-3 text-white rounded-lg transition-colors text-lg font-semibold shadow-md text-center hover:bg-[#254A40]"
+                style={{ minWidth: 340, backgroundColor: '#2F5D50' }}
               >
                 Create Proposal
               </Link>
@@ -334,9 +331,10 @@ export default function VotePage() {
               onClick={() => setStatusFilter('all')}
               className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                 statusFilter === 'all'
-                  ? 'bg-blue-600 text-white'
+                  ? 'text-white'
                   : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-300'
               }`}
+              style={statusFilter === 'all' ? { backgroundColor: '#2F5D50' } : {}}
             >
               All ({proposals.length})
             </button>
@@ -344,9 +342,10 @@ export default function VotePage() {
               onClick={() => setStatusFilter('active')}
               className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                 statusFilter === 'active'
-                  ? 'bg-blue-600 text-white'
+                  ? 'text-white'
                   : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-300'
               }`}
+              style={statusFilter === 'active' ? { backgroundColor: '#2F5D50' } : {}}
             >
               Active ({getStatusCount('active')})
             </button>
@@ -354,9 +353,10 @@ export default function VotePage() {
               onClick={() => setStatusFilter('passed')}
               className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                 statusFilter === 'passed'
-                  ? 'bg-green-600 text-white'
+                  ? 'text-white'
                   : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-300'
               }`}
+              style={statusFilter === 'passed' ? { backgroundColor: '#3F7A5A' } : {}}
             >
               Passed ({getStatusCount('passed')})
             </button>
@@ -364,9 +364,10 @@ export default function VotePage() {
               onClick={() => setStatusFilter('failed')}
               className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                 statusFilter === 'failed'
-                  ? 'bg-red-600 text-white'
+                  ? 'text-white'
                   : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-300'
               }`}
+              style={statusFilter === 'failed' ? { backgroundColor: '#8B3A3A' } : {}}
             >
               Failed ({getStatusCount('failed')})
             </button>
@@ -399,7 +400,8 @@ export default function VotePage() {
               <p className="text-gray-500">Be the first to create a proposal for the DAO community to vote on.</p>
               <Link
                 href="/governance"
-                className="inline-block mt-4 px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+                className="inline-block mt-4 px-6 py-2 text-white rounded-lg transition-colors hover:bg-[#254A40]"
+                style={{ backgroundColor: '#2F5D50' }}
               >
                 Create First Proposal
               </Link>
@@ -416,17 +418,28 @@ export default function VotePage() {
                     {/* Title and Status */}
                     <h2 className="text-xl font-bold mb-2 flex items-center gap-2">
                       {proposal.title}
-                      <span className={`ml-2 px-2 py-1 text-xs font-medium rounded-full ${
-                        proposalStates[getProposalKey(proposal)]?.state === 1 ? 'bg-blue-100 text-blue-800' : // Active
-                        proposalStates[getProposalKey(proposal)]?.state === 4 ? 'bg-green-100 text-green-800' : // Succeeded/Passed
-                        proposalStates[getProposalKey(proposal)]?.state === 3 ? 'bg-red-100 text-red-800' : // Defeated/Failed
-                        proposalStates[getProposalKey(proposal)]?.state === 7 ? 'bg-purple-100 text-purple-800' : // Executed
-                        proposalStates[getProposalKey(proposal)]?.state === 2 ? 'bg-gray-100 text-gray-800' : // Canceled
-                        proposalStates[getProposalKey(proposal)]?.state === 6 ? 'bg-yellow-100 text-yellow-800' : // Expired
-                        proposalStates[getProposalKey(proposal)]?.state === 5 ? 'bg-orange-100 text-orange-800' : // Queued
-                        proposalStates[getProposalKey(proposal)]?.state === 0 ? 'bg-gray-100 text-gray-800' : // Pending
-                        'bg-gray-100 text-gray-800' // Unknown
-                      }`}>
+                      <span
+                        className={`ml-2 px-2 py-1 text-xs font-medium rounded-full ${
+                          proposalStates[getProposalKey(proposal)]?.state === 1
+                            ? 'bg-gradient-to-r from-blue-200 to-blue-300 text-blue-900'     // Active
+                          : proposalStates[getProposalKey(proposal)]?.state === 4
+                            ? 'bg-gradient-to-r from-green-200 to-green-300 text-green-900'  // Succeeded/Passed
+                          : proposalStates[getProposalKey(proposal)]?.state === 3
+                            ? 'bg-gradient-to-r from-red-200 to-red-300 text-red-900'        // Defeated/Failed
+                          : proposalStates[getProposalKey(proposal)]?.state === 7
+                            ? 'bg-gradient-to-r from-purple-200 to-purple-300 text-purple-900' // Executed
+                          : proposalStates[getProposalKey(proposal)]?.state === 2
+                            ? 'bg-gradient-to-r from-gray-200 to-gray-300 text-gray-900'     // Canceled
+                          : proposalStates[getProposalKey(proposal)]?.state === 6
+                            ? 'bg-gradient-to-r from-yellow-200 to-yellow-300 text-yellow-900' // Expired
+                          : proposalStates[getProposalKey(proposal)]?.state === 5
+                            ? 'bg-gradient-to-r from-orange-200 to-orange-300 text-orange-900' // Queued
+                          : proposalStates[getProposalKey(proposal)]?.state === 0
+                            ? 'bg-gradient-to-r from-gray-200 to-gray-300 text-gray-900'     // Pending
+                          : 'bg-gradient-to-r from-gray-200 to-gray-300 text-gray-900'       // Unknown
+                        }`}
+                      >
+
                         {proposalStates[getProposalKey(proposal)]?.state !== undefined && proposalStates[getProposalKey(proposal)]?.state >= 0 
                           ? (() => {
                               const state = proposalStates[getProposalKey(proposal)]?.state;
@@ -508,20 +521,21 @@ export default function VotePage() {
                     {proposalStates[getProposalKey(proposal)]?.state === 1 ? (
                       proposalStates[getProposalKey(proposal)]?.hasVoted ? (
                         <button
-                          className="w-full py-2 px-4 bg-green-600 text-white rounded-lg font-semibold cursor-not-allowed opacity-60"
-                          disabled
+                          className="w-full py-2 px-4 text-white rounded-lg font-semibold cursor-not-allowed opacity-60"
+                          disabled={true}
                           title="You have already voted on this proposal."
-                          style={{ pointerEvents: 'none' }}
+                          style={{ pointerEvents: 'none', backgroundColor: '#3F7A5A' }}
                         >
                           ✓ Voted
                         </button>
                       ) : (
                         <button
-                          className="w-full py-2 px-4 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors"
+                          className="w-full py-2 px-4 text-white rounded-lg font-semibold transition-colors hover:bg-[#254A40]"
                           onClick={e => {
                             e.stopPropagation();
                             setVotingProposal(proposal);
                           }}
+                          style={{ backgroundColor: '#2F5D50' }}
                         >
                           Vote
                         </button>
@@ -529,7 +543,7 @@ export default function VotePage() {
                     ) : (
                       <button
                         className="w-full py-2 px-4 bg-gray-300 text-gray-500 rounded-lg font-semibold cursor-not-allowed"
-                        disabled
+                        disabled={true}
                         title="Voting is only available for active proposals."
                       >
                         Vote (Not Active)

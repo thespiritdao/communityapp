@@ -1,8 +1,8 @@
 // src/app/api/auth/onchainkit/route.ts
 
-import { NextRequest, NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import jwt from 'jsonwebtoken';
-import { supabaseAdmin } from 'src/utils/supabaseAdminClient';
+import { supabaseAdmin } from '@/utils/supabaseAdminClient';
 
 /**
  * This route takes in a wallet address (already verified by OnchainKit).
@@ -32,7 +32,7 @@ export async function POST(req: NextRequest) {
 
     // 2) Check if the user exists in user_profiles
     console.log('API Route: Checking if user exists in user_profiles...');
-    let { data: userProfile, error } = await supabaseAdmin
+    const { data: userProfile, error } = await supabaseAdmin
       .from('user_profiles')
       .select('user_id')
       .eq('wallet_address', normalizedAddress)
@@ -158,7 +158,8 @@ export async function POST(req: NextRequest) {
 
     const userClaims = {
       aud: 'authenticated',
-      role: 'authenticated'
+      role: 'authenticated',
+      wallet_address: normalizedAddress  // ✅ Add wallet_address to JWT
     };
 
     const jwtPayload = { sub: userId, ...userClaims };

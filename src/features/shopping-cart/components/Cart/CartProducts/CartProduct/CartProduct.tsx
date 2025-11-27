@@ -1,9 +1,7 @@
 // src/features/shopping-cart/components/cart/cartproducts/CartProduct/CartProduct.tsx
 "use client";
-
-import React from "react";
-import { ICartProduct } from "models";
-import useCart from "src/features/shopping-cart/contexts/cart-context/useCart";
+import type { ICartProduct } from "models";
+import useCart from "@/features/shopping-cart/contexts/cart-context/useCart";
 
 import * as S from "./style"; // adjust path as needed
 
@@ -22,6 +20,11 @@ const CartProduct = ({ product }: CartProductProps) => {
       <S.ProductImage src={product.image_url} alt={product.name} />
       <div style={{ display: "flex", flexDirection: "column" }}>
         <S.ProductName>{product.name}</S.ProductName>
+        {product.selectedSize && (
+          <div style={{ fontSize: '0.875rem', color: '#666', marginBottom: '0.5rem' }}>
+            Size: {product.selectedSize}
+          </div>
+        )}
         <div>
           <S.QuantityButton onClick={() => decreaseProductQuantity(product)}>
             -

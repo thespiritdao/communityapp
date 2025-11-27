@@ -1,9 +1,12 @@
 // src/app/governance/layout.tsx
 'use client';
 
-import React from 'react';
-import Providers from "src/providers/Providers";
+import type React from 'react';
 
 export default function GovernanceLayout({ children }: { children: React.ReactNode }) {
-  return <Providers>{children}</Providers>;
+  return (
+    <>
+      {children}
+    </>
+  );
 }

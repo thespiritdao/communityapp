@@ -1,17 +1,19 @@
 // src/features/shopping-cart/commons/style/styled-components.ts
 
-import * as styledComponents from 'styled-components';
-import { ThemedStyledComponentsModule } from 'styled-components';
+import styled, { 
+  css, 
+  createGlobalStyle, 
+  keyframes, 
+  ThemeProvider as StyledThemeProvider,
+  type ThemedStyledComponentsModule 
+} from 'styled-components';
 
-import { StyleClosetTheme } from './theme';
+import type { StyleClosetTheme } from './theme';
 
-const {
-  default: styled,
-  css,
-  createGlobalStyle,
-  keyframes,
-  ThemeProvider,
-} = styledComponents as ThemedStyledComponentsModule<StyleClosetTheme>;
+// Type the styled function with our theme
+const typedStyled = styled as unknown as ThemedStyledComponentsModule<StyleClosetTheme>['default'];
 
-export { css, createGlobalStyle, keyframes, ThemeProvider };
-export default styled;
+// Re-export with proper typing
+export { css, createGlobalStyle, keyframes };
+export const ThemeProvider = StyledThemeProvider;
+export default typedStyled;

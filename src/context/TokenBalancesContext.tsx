@@ -1,8 +1,9 @@
 // src/context/TokenBalancesContext.tsx
 // used for token balances throughout app without causing infura errors 
 
-import React, { createContext, useState, useEffect, useCallback, useContext } from "react";
-import { fetchTokenBalances, TokenBalances } from "src/utils/fetchTokenBalances";
+import type React from "react";
+import { createContext, useState, useEffect, useCallback, useContext } from "react";
+import { fetchTokenBalances, type TokenBalances } from "@/utils/fetchTokenBalances";
 import { useAccount } from "wagmi";
 
 interface TokenBalancesContextValue {
@@ -12,7 +13,7 @@ interface TokenBalancesContextValue {
   error: Error | null;
 }
 
-const TokenBalancesContext = createContext<TokenBalancesContextValue | undefined>(undefined);
+export const TokenBalancesContext = createContext<TokenBalancesContextValue | undefined>(undefined);
 
 export const TokenBalancesProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { address } = useAccount();

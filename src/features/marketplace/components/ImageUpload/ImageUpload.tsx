@@ -1,7 +1,8 @@
 // src/features/marketplace/components/ImageUpload/ImageUpload.tsx
 "use client";
 
-import React, { useState, useRef } from "react";
+import type React from "react";
+import { useState, useRef } from "react";
 import { uploadProductImage, validateImageFile } from "../../services/imageUploadService";
 import * as S from "./ImageUpload.style";
 

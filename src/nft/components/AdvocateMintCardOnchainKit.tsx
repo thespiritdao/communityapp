@@ -1,6 +1,6 @@
 // src/nft/components/AdvocateMintCardOnchainKit.tsx
 
-import AdvocateMembershipABI from 'src/abis/AdvocateMembershipABI.json';
+import AdvocateMembershipABI from '../../../abis/AdvocateMembershipABI.json';
 import {
   Transaction,
   TransactionButton,
@@ -29,7 +29,7 @@ export function AdvocateMintCardOnchainKit({
 
   return (
     <Transaction
-      isSponsored
+      isSponsored={true}
       address={address}
       contracts={contracts}
       chainId={8453}

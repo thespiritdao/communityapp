@@ -1,8 +1,7 @@
 // src/utils/auth.ts
 
-import { supabase } from "src/utils/supabaseClient";
-import { airdropMembershipToken } from "src/utils/airdrop";
-import { ethers } from "ethers";
+import { supabase } from "@/utils/supabaseClient";
+import { airdropMembership } from "@/utils/airdrop";
 
 // Function to handle user login
 export async function handleUserLogin(walletAddress: string) {
@@ -19,7 +18,9 @@ export async function handleUserLogin(walletAddress: string) {
     throw error;
   }
 
-  if (!user) {
+  if (user) {
+    console.log(`✅ User ${walletAddress} already exists.`);
+  } else {
     console.log(`🆕 New user detected: ${walletAddress}. Creating profile...`);
 
     // Create user profile in Supabase
@@ -38,8 +39,6 @@ export async function handleUserLogin(walletAddress: string) {
     console.log(`✅ Profile created for ${walletAddress}.`);
 
     // 🎉 Airdrop token to new user
-    await airdropMembershipToken(walletAddress);
-  } else {
-    console.log(`✅ User ${walletAddress} already exists.`);
+    await airdropMembership(walletAddress);
   }
 }

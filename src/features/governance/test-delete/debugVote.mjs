@@ -1,9 +1,9 @@
-import { getWalletClient, getAccount, readContract, simulateContract } from 'wagmi/actions';
+import { getWalletClient, } from 'wagmi/actions';
 import { publicClient } from 'wagmi';                 // whichever client you already use
 import DAOGovernorABI from 'src/abis/DAO_GovernorABI.json';
 import TokenABI from 'src/abis/AdvocateTokenABI.json';   // <-- replace with your NFT ABI
 
-const GOVERNOR_ADDRESS = process.env.NEXT_PUBLIC_DAO_GOVERNOR as `0x${string}`;
+const GOVERNOR_ADDRESS = process.env.NEXT_PUBLIC_DAO_GOVERNOR;
 const TOKEN_ADDRESS     = "0xe4a2f419b4531417cb18d7ad95527eea620c4095"; // your Advocate NFT
 const BASE_CHAIN_ID     = 8453;
 const proposalId        = 1;          // the proposal you’re testing
@@ -44,7 +44,7 @@ async function debugVote() {
       args: [BigInt(proposalId), choice],
     });
     console.log("✅ Simulation succeeded — should pass bundler too");
-  } catch (err: any) {
+  } catch (err) {
     console.error("❌ Simulation reverted:", err.shortMessage || err.message);
   }
 }

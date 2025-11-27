@@ -1,7 +1,7 @@
 // src/app/features/forum/hooks/useExtendedTokenGate.ts  ERC-1155
 import { useState, useEffect } from 'react';
 import { useAccount } from 'wagmi';
-import { fetchExtendedTokenBalances } from 'src/utils/fetchTokenBalances';
+import { fetchExtendedTokenBalances } from '@/utils/fetchTokenBalances';
 
 interface ExtendedTokenGateResult {
   hasAccess: boolean;

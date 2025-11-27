@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SpiritDAO Knowledge Assistant</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        .container {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 40px;
+            backdrop-filter: blur(10px);
+        }
+        h1 {
+            margin-top: 0;
+        }
+        .info-box {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+        a {
+            color: #fff;
+            text-decoration: underline;
+        }
+        code {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🕉️ SpiritDAO Knowledge Assistant</h1>
+        <p>Welcome to the SpiritDAO academic chatbot. This AI assistant can answer questions about books and academic documents in our knowledge base.</p>
+
+        <div class="info-box">
+            <h2>Available Endpoints</h2>
+            <ul>
+                <li><strong>/widget</strong> - Interactive chat widget</li>
+                <li><strong>/api/chat</strong> - Chat API endpoint (POST)</li>
+                <li><strong>/api/health</strong> - Health check</li>
+                <li><strong>/embed-code</strong> - Get embedding code for your website</li>
+            </ul>
+        </div>
+
+        <div class="info-box">
+            <h2>Quick Links</h2>
+            <ul>
+                <li><a href="/widget">Try the Chat Widget</a></li>
+                <li><a href="/embed-code">Get Embed Code</a></li>
+                <li><a href="/api/health">API Health Check</a></li>
+            </ul>
+        </div>
+
+        <div class="info-box">
+            <h3>API Usage Example</h3>
+            <pre><code>POST /api/chat
+{
+  "query": "What does the text say about consciousness?",
+  "session_id": "optional-session-id"
+}</code></pre>
+        </div>
+    </div>
+</body>
+</html>

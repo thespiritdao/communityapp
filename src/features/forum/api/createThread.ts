@@ -1,6 +1,6 @@
 // src/features/forum/api/createThread.ts
-import { supabase } from 'src/utils/supabaseClient';
-import { fetchUnifiedTokenBalances } from 'src/utils/tokenGateService';
+import { supabase } from '@/utils/supabaseClient';
+import { fetchUnifiedTokenBalances } from '@/utils/tokenGateService';
 
 export type CreateThreadParams = {
   categoryId: string;

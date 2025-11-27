@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useReducer, useEffect } from 'react';
+import type React from 'react';
+import { createContext, useContext, useReducer, } from 'react';
 import { useBountyContract } from '../hooks/useBountyContract';
 import { useBounty } from '../hooks/useBounty';
 import type { Bounty, BountyNotification } from '../components/BountyList';
@@ -101,7 +102,7 @@ export const BountyProvider: React.FC<{ children: React.ReactNode }> = ({
   const handlePlaceBid = async (bountyId: string) => {
     try {
       dispatch({ type: 'SET_LOADING', payload: true });
-      await placeBidOnChain(parseInt(bountyId));
+      await placeBidOnChain(Number.parseInt(bountyId));
       await placeBid(bountyId);
       dispatch({ type: 'SET_ERROR', payload: null });
     } catch (error) {
@@ -117,7 +118,7 @@ export const BountyProvider: React.FC<{ children: React.ReactNode }> = ({
   const handleCompleteBounty = async (bountyId: string) => {
     try {
       dispatch({ type: 'SET_LOADING', payload: true });
-      await approveCompletionOnChain(parseInt(bountyId));
+      await approveCompletionOnChain(Number.parseInt(bountyId));
       await completeBounty(bountyId);
       dispatch({ type: 'SET_ERROR', payload: null });
     } catch (error) {

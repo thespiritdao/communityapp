@@ -1,5 +1,4 @@
-import * as React from 'react';
-import { ThemedStyledComponentsModule } from 'styled-components';
+import type * as React from 'react';
 
 declare module 'styled-components' {
   export interface ThemedStyledComponentsModule<T> {

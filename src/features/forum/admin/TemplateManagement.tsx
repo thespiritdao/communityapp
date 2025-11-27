@@ -1,8 +1,6 @@
 // src/features/forum/components/admin/TemplateManagement.tsx
 import { useState, useEffect } from 'react';
-import { supabase } from 'src/utils/supabaseClient';
 import styles from '../../styles/Forum.module.css';
-import { useExtendedTokenGate } from 'src/app/features/forum/hooks/useExtendedTokenGate';
 
 
 // Template interface matching the one from NewThreadForm
@@ -243,7 +241,7 @@ export function TemplateManagement() {
             className={styles.formInput}
             placeholder="e.g. Governance Proposal"
             disabled={isLoading}
-            required
+            required={true}
           />
         </div>
         
@@ -261,7 +259,7 @@ export function TemplateManagement() {
             className={styles.formInput}
             placeholder="e.g. [PROPOSAL] {proposal_title}"
             disabled={isLoading}
-            required
+            required={true}
           />
         </div>
         

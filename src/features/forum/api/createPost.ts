@@ -1,4 +1,5 @@
-import { supabase } from 'src/utils/supabaseClient';
+import { getCurrentSession } from '@/features/identity/utils/serverAuth';
+import { supabase } from '@/utils/supabaseClient';
 
 export default async function createPost(req, res) {
   try {
@@ -7,7 +8,7 @@ export default async function createPost(req, res) {
     // Log request body
     console.log('📩 Received request body:', req.body);
 
-    const { data: { session } } = await supabase.auth.getSession();
+    const session = await getCurrentSession();
     if (!session?.user?.id) {
       console.error('❌ Unauthorized request - No session found');
       return res.status(401).json({ error: 'Unauthorized' });

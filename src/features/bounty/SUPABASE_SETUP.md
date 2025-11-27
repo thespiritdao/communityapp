@@ -37,7 +37,7 @@ NEXT_PUBLIC_SYSTEM_TOKEN=your_system_token_address
 NEXT_PUBLIC_SELF_TOKEN=your_self_token_address
 
 # For testing (using Executive Pod)
-NEXT_PUBLIC_EXECUTIVE_POD_HAT_ID=your_executive_pod_hat_id
+NEXT_PUBLIC_EXECUTIVE_POD=your_executive_pod_hat_id
 ```
 
 ## Features

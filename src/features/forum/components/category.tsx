@@ -1,7 +1,7 @@
 // src/features/forum/category.tsx
-import React from 'react';
+import type React from 'react';
 import Link from 'next/link';
-import CategoryList from 'src/app/features/forum/components/CategoryList';
+import CategoryList from '@/features/forum/components/CategoryList';
 import styles from '../styles/Forum.module.css';
 
 const ForumCategoriesPage: React.FC = () => {

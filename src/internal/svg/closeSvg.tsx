@@ -1,4 +1,4 @@
-import { icon } from 'src/styles/theme';
+import { icon } from '../../../styles/theme';
 
 export const closeSvg = (
   <svg

@@ -1,5 +1,5 @@
-import { useLifecycleStatus } from 'src/internal/hooks/useLifecycleStatus';
-import { useValue } from 'src/internal/hooks/useValue';
+import { useLifecycleStatus } from '../../../internal/hooks/useLifecycleStatus';
+import { useValue } from '../../../internal/hooks/useValue';
 import { createContext, useContext, useEffect } from 'react';
 import type {
   LifecycleStatus,

@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState } from 'react';
+import type React from 'react';
+import { useState } from 'react';
 import { useAccount } from 'wagmi';
 import { 
   Transaction, 
@@ -11,9 +12,11 @@ import {
   TransactionStatusAction 
 } from "@coinbase/onchainkit/transaction";
 
-import { useEventTransactions } from '../hooks/useEventTransactions';
-import { useEventRegistration } from '../hooks/useEvents';
-import { EventWithStats } from '../types/event';
+import { useSimplifiedEventTransactions } from '../hooks/useSimplifiedEventTransactions';
+import { TokenApprovalFlow } from './TokenApprovalFlow';
+import type { EventWithStats } from '../types/event';
+import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, } from '@/components/ui/dialog';
 
 interface EventRegistrationButtonProps {
   event: EventWithStats;
@@ -21,35 +24,40 @@ interface EventRegistrationButtonProps {
   className?: string;
 }
 
+const BASE_CHAIN_ID = 8453;
+
 export const EventRegistrationButton: React.FC<EventRegistrationButtonProps> = ({
   event,
   onSuccess,
   className
 }) => {
-  const { address } = useAccount();
-  const { getRegisterForEventCall, getTransactionConfig, isConnected } = useEventTransactions();
-  const { registerForEvent } = useEventRegistration();
+  const { address, isConnected } = useAccount();
+  const { getRegisterEventCall } = useSimplifiedEventTransactions();
   
   const [isTransactionPending, setIsTransactionPending] = useState(false);
+  const [showApprovalDialog, setShowApprovalDialog] = useState(false);
+  const [isApprovalComplete, setIsApprovalComplete] = useState(false);
 
+  // Determine token amounts from event pricing
+  const systemTokenAmount = (event.price_system || 0).toString();
+  const selfTokenAmount = (event.price_self || 0).toString();
+  const needsTokenApproval = Number.parseFloat(systemTokenAmount) > 0 || Number.parseFloat(selfTokenAmount) > 0;
+
+  // Handle basic validation states
   if (!isConnected) {
     return (
-      <TransactionButton
-        text="Connect Wallet to Register"
-        disabled={true}
-        className={className}
-      />
+      <Button disabled={true} className={className}>
+        Connect Wallet to Register
+      </Button>
     );
   }
 
   // Check if event is full
-  if (event.max_attendees && event.stats.registered_count >= event.max_attendees) {
+  if (event.max_attendees && event.stats?.registered_count >= event.max_attendees) {
     return (
-      <TransactionButton
-        text="Event Full"
-        disabled={true}
-        className={className}
-      />
+      <Button disabled={true} className={className}>
+        Event Full
+      </Button>
     );
   }
 
@@ -58,59 +66,131 @@ export const EventRegistrationButton: React.FC<EventRegistrationButtonProps> = (
   const eventDate = new Date(event.event_date);
   if (eventDate < now) {
     return (
-      <TransactionButton
-        text="Event Has Passed"
-        disabled={true}
-        className={className}
-      />
+      <Button disabled={true} className={className}>
+        Event Has Passed
+      </Button>
     );
   }
 
+  // For legacy events without blockchain_event_id, use the database id
+  // All events in a DAO should support blockchain registration
+  const blockchainEventId = event.blockchain_event_id || event.id;
+
+  // Prepare registration transaction
+  const prepareRegistration = () => {
+    try {
+      if (!blockchainEventId) {
+        console.error('Event missing both blockchain_event_id and id:', event);
+        return null;
+      }
+      
+      return getRegisterEventCall({
+        eventId: blockchainEventId
+      });
+    } catch (error) {
+      console.error('Error preparing registration:', error);
+      return null;
+    }
+  };
+
   return (
-    <Transaction
-      {...getTransactionConfig()}
-      calls={getRegisterForEventCall({
-        escrowAddress: process.env.NEXT_PUBLIC_EVENT_ESCROW_CONTRACT as string,
-        eventId: event.id
-      })}
-      onStatus={(status) => {
-        console.log('Event registration status:', status);
-        setIsTransactionPending(status.statusName === 'buildingTransaction');
-      }}
-      onSuccess={async (response) => {
-        console.log('Event registration successful:', response);
-        
-        try {
-          // Update local registration state
-          await registerForEvent(event.id);
+    <>
+      {/* Approval Dialog */}
+      <Dialog open={showApprovalDialog} onOpenChange={setShowApprovalDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Token Approval Required</DialogTitle>
+          </DialogHeader>
+          <TokenApprovalFlow
+            systemTokenAmount={systemTokenAmount}
+            selfTokenAmount={selfTokenAmount}
+            onApprovalComplete={() => {
+              setIsApprovalComplete(true);
+              setShowApprovalDialog(false);
+            }}
+            onCancel={() => {
+              setShowApprovalDialog(false);
+            }}
+          />
+        </DialogContent>
+      </Dialog>
+
+      {/* Main Registration Button */}
+      {needsTokenApproval && !isApprovalComplete ? (
+        <Button
+          onClick={() => setShowApprovalDialog(true)}
+          className={className || "font-medium py-2 px-4 rounded transition-colors hover:opacity-90"}
+          style={{
+            backgroundColor: '#8FAAA1',
+            color: '#FFFFFF',
+            border: 'none'
+          }}
+          onMouseEnter={(e) => {e.currentTarget.style.backgroundColor = '#6F8F86'}}
+          onMouseLeave={(e) => {e.currentTarget.style.backgroundColor = '#8FAAA1'}}
+        >
+          Approve Tokens & Register
+        </Button>
+      ) : (
+        (() => {
+          const calls = prepareRegistration();
           
-          if (onSuccess) {
-            onSuccess();
+          if (!calls) {
+            return (
+              <Button disabled={true} className={className}>
+                Unable to Register
+              </Button>
+            );
           }
-          
-          console.log('Registration completed successfully');
-        } catch (error) {
-          console.error('Failed to update registration state:', error);
-        }
-      }}
-      onError={(error) => {
-        console.error('Event registration failed:', error);
-        setIsTransactionPending(false);
-      }}
-    >
-      <TransactionButton
-        text={isTransactionPending ? 'Registering...' : 
-              event.price_system > 0 || event.price_self > 0 ? 
-              `Register (${event.price_system > 0 ? `${event.price_system} $SYSTEM` : `${event.price_self} $SELF`})` :
-              'Register (Free)'}
-        disabled={isTransactionPending}
-        className={className || "bg-green-600 hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-medium py-2 px-4 rounded transition-colors"}
-      />
-      <TransactionSponsor />
-      <TransactionStatus>
-        <TransactionStatusLabel />
-        <TransactionStatusAction />
-      </TransactionStatus>
-    </Transaction>
+
+          return (
+            <Transaction
+              account={address?.toLowerCase() as `0x${string}`}
+              chainId={BASE_CHAIN_ID}
+              calls={calls}
+              isSponsored={true} // ✅ Ensure sponsorship is enabled
+              onStatus={(status) => {
+                console.log('📋 Event registration status:', status);
+                if (status.statusName === 'buildingTransaction') {
+                  setIsTransactionPending(true);
+                }
+              }}
+              onSuccess={async (response) => {
+                console.log('✅ Event registration successful:', response);
+                setIsTransactionPending(false);
+                
+                if (onSuccess) {
+                  onSuccess();
+                }
+              }}
+              onError={(error) => {
+                console.error('❌ Event registration failed:', error);
+                setIsTransactionPending(false);
+              }}
+            >
+              <TransactionButton
+                text={
+                  isTransactionPending ? 'Registering...' :
+                  needsTokenApproval ?
+                    `Register (${systemTokenAmount !== '0' ? `${systemTokenAmount} SYSTEM` : ''}${systemTokenAmount !== '0' && selfTokenAmount !== '0' ? ' + ' : ''}${selfTokenAmount !== '0' ? `${selfTokenAmount} SELF` : ''})` :
+                    'Register (Free)'
+                }
+                disabled={isTransactionPending}
+                className={className || "font-medium py-2 px-4 rounded transition-colors hover:opacity-90"}
+                style={{
+                  backgroundColor: '#8FAAA1',
+                  color: '#FFFFFF',
+                  border: 'none'
+                }}
+              />
+              <TransactionSponsor /> {/* ✅ This ensures sponsorship UI is shown */}
+              <TransactionStatus>
+                <TransactionStatusLabel />
+                <TransactionStatusAction />
+              </TransactionStatus>
+            </Transaction>
+          );
+        })()
+      )}
+    </>
   );
 };

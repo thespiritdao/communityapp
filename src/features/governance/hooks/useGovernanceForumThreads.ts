@@ -1,6 +1,6 @@
 // src/features/governance/hooks/useGovernanceForumThreads.ts
 import { useQuery } from '@tanstack/react-query';
-import { supabase } from 'src/utils/supabaseClient';      // or wherever your client lives
+import { supabase } from '@/utils/supabaseClient';      // or wherever your client lives
 
 export interface Thread {
   id: string;

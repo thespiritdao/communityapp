@@ -1,6 +1,5 @@
 'use client';
-
-import React from 'react';
+import { use } from 'react';
 import { AttendeeCheckIn } from '@/features/events/components/AttendeeCheckIn';
 import { useEvent } from '@/features/events/hooks/useEvents';
 import { Card, CardContent } from '@/components/ui/card';
@@ -8,13 +7,14 @@ import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 
 interface CheckInPageProps {
-  params: {
+  params: Promise<{
     id: string;
-  };
+  }>;
 }
 
 export default function CheckInPage({ params }: CheckInPageProps) {
-  const { event, loading, error } = useEvent(params.id);
+  const resolvedParams = use(params);
+  const { event, loading, error } = useEvent(resolvedParams.id);
 
   if (loading) {
     return (
@@ -43,7 +43,7 @@ export default function CheckInPage({ params }: CheckInPageProps) {
               <p className="text-gray-600 mb-4">
                 The event you're looking for doesn't exist or is no longer available.
               </p>
-              <Button asChild>
+              <Button asChild={true}>
                 <Link href="/events">View All Events</Link>
               </Button>
             </CardContent>

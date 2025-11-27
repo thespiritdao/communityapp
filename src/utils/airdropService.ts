@@ -27,7 +27,7 @@ export class AirdropService {
       const relayResponse = await this.gelato.grantMembership(recipientAddress);
 
       // 3. Store the task information
-      await supabase.from('airdrop_tasks').insert({
+      await supabase.from('relay_tasks').insert({
         wallet_address: recipientAddress,
         task_id: relayResponse.taskId,
         status: 'pending'
@@ -49,7 +49,7 @@ export class AirdropService {
     
     if (status.task?.taskState === 'ExecSuccess') {
       // Update database with success status
-      await supabase.from('airdrop_tasks').update({
+      await supabase.from('relay_tasks').update({
         status: 'completed',
         transaction_hash: status.task.transactionHash
       }).eq('task_id', taskId);

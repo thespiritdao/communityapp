@@ -2,7 +2,7 @@
 
 import { useCartContext } from './CartContextProvider';
 import useCartTotal from './useCartTotal';
-import { ICartProduct } from 'models';
+import type { ICartProduct } from 'models';
 
 const useCartProducts = () => {
   const { products, setProducts } = useCartContext();
@@ -19,7 +19,7 @@ const useCartProducts = () => {
       const currentQty =
         typeof currentProduct.quantity === "number"
           ? currentProduct.quantity
-          : parseInt(currentProduct.quantity, 10) || 0;
+          : Number.parseInt(currentProduct.quantity, 10) || 0;
       return {
         ...currentProduct,
         quantity: currentQty + quantityChange,

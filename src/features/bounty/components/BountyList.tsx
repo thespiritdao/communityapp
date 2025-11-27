@@ -1,5 +1,7 @@
-import React, { useState } from 'react';
+import type React from 'react';
+import { useState } from 'react';
 import { BountyCard } from './BountyCard';
+import type { BountyTokenGating } from '../types/bounty';
 
 export interface Bounty {
   id: string;
@@ -12,6 +14,7 @@ export interface Bounty {
   };
   status: 'open' | 'in-progress' | 'completed';
   createdAt: Date;
+  token_gating?: BountyTokenGating;
 }
 
 export interface BountyNotification {
@@ -86,6 +89,7 @@ export const BountyList: React.FC<BountyListProps> = ({ bounties, onBid }) => {
             <BountyCard
               key={bounty.id}
               {...bounty}
+              token_gating={bounty.token_gating}
               onBid={onBid ? () => onBid(bounty.id) : undefined}
             />
           ))

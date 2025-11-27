@@ -1,11 +1,12 @@
 "use client"
 
-import React, { useState, useEffect } from 'react';
+import type React from 'react';
+import { useState, useEffect } from 'react';
 import { useAccount } from 'wagmi';
-import { fetchTokenBalances } from 'src/utils/fetchTokenBalances';
-import { Card, CardContent, CardHeader, CardTitle } from 'src/components/ui/card';
-import { Badge } from 'src/components/ui/badge';
-import { Button } from 'src/components/ui/button';
+import { fetchTokenBalances } from '../../../utils/fetchTokenBalances';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 
 export const TokenDebugger: React.FC = () => {
   const { address, isConnected } = useAccount();
@@ -68,7 +69,7 @@ export const TokenDebugger: React.FC = () => {
           <div className="space-y-1 text-sm">
             <p><strong>HATS_CONTRACT:</strong> {process.env.NEXT_PUBLIC_HATS_CONTRACT || 'Not set'}</p>
             <p><strong>BOUNTY_MANAGEMENT:</strong> {process.env.NEXT_PUBLIC_BOUNTY_MANAGEMENT || 'Not set'}</p>
-            <p><strong>EXECUTIVE_POD_HAT_ID:</strong> {process.env.NEXT_PUBLIC_EXECUTIVE_POD_HAT_ID || 'Not set'}</p>
+            <p><strong>EXECUTIVE_POD_HAT_ID:</strong> {process.env.NEXT_PUBLIC_EXECUTIVE_POD_LEADER || 'Not set'}</p>
             <p><strong>DEV_POD_HAT_ID:</strong> {process.env.NEXT_PUBLIC_DEV_POD_HAT_ID || 'Not set'}</p>
             <p><strong>PROOF_OF_CURIOSITY:</strong> {process.env.NEXT_PUBLIC_PROOF_OF_CURIOSITY || 'Not set'}</p>
             <p><strong>MARKET_MANAGEMENT:</strong> {process.env.NEXT_PUBLIC_MARKET_MANAGEMENT || 'Not set'}</p>
@@ -77,8 +78,8 @@ export const TokenDebugger: React.FC = () => {
 
         {/* Error Display */}
         {error && (
-          <div className="p-3 bg-red-50 border border-red-200 rounded">
-            <p className="text-red-800 text-sm"><strong>Error:</strong> {error}</p>
+          <div className="p-3 rounded" style={{ backgroundColor: '#F5E6E6', borderWidth: '1px', borderStyle: 'solid', borderColor: '#D9B3B3' }}>
+            <p className="text-sm" style={{ color: '#5C1F1F' }}><strong>Error:</strong> {error}</p>
           </div>
         )}
 
@@ -124,7 +125,7 @@ export const TokenDebugger: React.FC = () => {
 
         {/* Bounty Access Status */}
         {tokenBalances && (
-          <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded">
+          <div className="mt-4 p-3 rounded" style={{ backgroundColor: '#E8F1EE', borderWidth: '1px', borderStyle: 'solid', borderColor: '#B8D9CA' }}>
             <h3 className="font-semibold mb-2">Bounty Access Status</h3>
             <div className="space-y-1">
               <p className="text-sm">

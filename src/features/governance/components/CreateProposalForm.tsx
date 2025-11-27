@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, } from 'react';
 import {
   useAccount,
   useChainId,
@@ -19,17 +19,20 @@ import {
 import { useQueryClient } from '@tanstack/react-query';
 import { base } from 'viem/chains';
 import { encodeFunctionData } from 'viem';
-import AdvocateMembershipABI from 'src/abis/AdvocateMembershipABI.json';
-import DAOGovernorABI from 'src/abis/DAO_GovernorABI.json';
+import AdvocateMembershipABI from '@/abis/AdvocateMembershipABI.json';
+import DAOGovernorABI from '@/abis/DAO_GovernorABI.json';
 import { ProposalThreadSelector } from './ProposalThreadSelector';
-import { useToast } from 'src/components/ui/use-toast';
+import { useToast } from '@/components/ui/use-toast';
 import { createPublicClient, http } from 'viem';
-import { useForum } from 'src/features/forum/hooks/useForum';
-import { supabase } from 'src/utils/supabaseClient';
-import { fetchTokenBalances } from 'src/utils/fetchTokenBalances';
-import UserTagging from 'src/components/UserTagging';
-import { useGovernanceNotifications } from 'src/context/GovernanceNotificationContext';
-import { governanceNotificationService } from 'src/utils/governanceNotificationService';
+import { useForum } from '@/features/forum/hooks/useForum';
+import { supabase } from '@/utils/supabaseClient';
+import { fetchTokenBalances } from '@/utils/fetchTokenBalances';
+import { getUserIdentity, canParticipateInGovernance, logUserIdentity } from '@/utils/accessControlUtils';
+import { useHatPermissions } from '@/hooks/useHatPermissions';
+import { useGovernancePermission } from '@/hooks/useGovernancePermission';
+import UserTagging from '@/components/UserTagging';
+import { useUnifiedNotifications } from '@/context/UnifiedNotificationContext';
+import { votingReminderService } from '@/services/votingReminderService';
 import { parseAbiItem, parseEventLogs } from 'viem';
 
 const GOVERNOR_ADDRESS = process.env.NEXT_PUBLIC_DAO_GOVERNOR as `0x${string}`;
@@ -190,6 +193,10 @@ export const CreateProposalForm: React.FC<CreateProposalFormProps> = ({ onSucces
   const chainId = useChainId();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { userHats } = useHatPermissions();
+
+  // ✅ NEW: Check governance participation permission
+  const { canParticipate: hasGovernancePermission, governanceRole } = useGovernancePermission();
 
   const [formData, setFormData] = useState<ProposalFormData>({
     title: '',
@@ -199,14 +206,45 @@ export const CreateProposalForm: React.FC<CreateProposalFormProps> = ({ onSucces
   });
   const [userTokens, setUserTokens] = useState<{ id: string; label: string }[]>([]);
   const { loadPosts } = useForum();
-  const { createProposalMentionNotification, createProposalCreatedNotification, refreshNotifications } = useGovernanceNotifications();
+  const { refreshNotifications } = useUnifiedNotifications();
 
   const [debugMode, setDebugMode] = useState(true);
   const [isDelegating, setIsDelegating] = useState(false);
   const [delegationTxHash, setDelegationTxHash] = useState<`0x${string}` | undefined>();
   const [validationError, setValidationError] = useState<string | null>(null);
   const [hasInteracted, setHasInteracted] = useState(false);
+  const [governanceAccess, setGovernanceAccess] = useState<boolean | null>(null); // null = loading, boolean = result
   const [hasProcessedProposal, setHasProcessedProposal] = useState<string | null>(null);
+
+  // Check governance access when wallet connects
+  useEffect(() => {
+    const checkGovernanceAccess = async () => {
+      if (!address || !isConnected) {
+        setGovernanceAccess(false);
+        return;
+      }
+
+      try {
+        // Fetch token balances
+        const tokenBalances = await fetchTokenBalances(address);
+        
+        // Get user identity
+        const identity = await getUserIdentity(address, tokenBalances, userHats);
+        logUserIdentity(identity, 'Governance Access Check');
+        
+        // Check if user can participate in governance
+        const canParticipate = canParticipateInGovernance(identity);
+        console.log(`🗳️ User can participate in governance: ${canParticipate}`);
+        
+        setGovernanceAccess(canParticipate);
+      } catch (error) {
+        console.error('Error checking governance access:', error);
+        setGovernanceAccess(false);
+      }
+    };
+
+    checkGovernanceAccess();
+  }, [address, isConnected, userHats]);
 
   // Get the latest block number (Base chain)
   const { data: latestBlock } = useBlockNumber();
@@ -446,23 +484,41 @@ export const CreateProposalForm: React.FC<CreateProposalFormProps> = ({ onSucces
     }
   };
 
-  // Check if user can create proposals
-  const canCreateProposal = React.useMemo(() => {
-    
-    // Proper null/undefined checks
+  // Check voting power separately so we can show specific error messages
+  const hasVotingPower = React.useMemo(() => {
     if (votingPower === undefined || proposalThreshold === undefined) {
       return false;
     }
+
     try {
       const votingPowerBigInt = BigInt(votingPower.toString());
       const thresholdBigInt = BigInt(proposalThreshold.toString());
-      const canCreate = votingPowerBigInt >= thresholdBigInt;
-      return canCreate;
+      return votingPowerBigInt >= thresholdBigInt;
     } catch (error) {
       console.error('BigInt conversion error:', error);
       return false;
     }
-  }, [votingPower, proposalThreshold, isLoadingThreshold]);
+  }, [votingPower, proposalThreshold]);
+
+  // Check if user can create proposals
+  const canCreateProposal = React.useMemo(() => {
+    // ✅ FIX: Must have BOTH governance permission AND voting power
+
+    // Check permission first
+    if (!hasGovernancePermission) {
+      console.log('❌ Cannot create proposal: No governanceParticipation permission');
+      return false;
+    }
+
+    // Then check voting power
+    if (!hasVotingPower) {
+      console.log('❌ Cannot create proposal: Insufficient voting power');
+      return false;
+    }
+
+    console.log('✅ Can create proposal: Has permission AND voting power');
+    return true;
+  }, [hasGovernancePermission, hasVotingPower]);
 
   // ENHANCED: Memoized proposal arguments with comprehensive validation and logging
 	const proposalArgs = React.useMemo(() => {
@@ -549,7 +605,7 @@ export const CreateProposalForm: React.FC<CreateProposalFormProps> = ({ onSucces
     return (
       <div className="proposal-form p-6">
         <h2 className="text-2xl font-bold mb-4">Create a New Proposal</h2>
-        <div className="text-red-600 mb-4">
+        <div className="mb-4" style={{ color: '#8B3A3A' }}>
           Please connect your wallet to create proposals.
         </div>
       </div>
@@ -560,7 +616,7 @@ export const CreateProposalForm: React.FC<CreateProposalFormProps> = ({ onSucces
     return (
       <div className="proposal-form p-6">
         <h2 className="text-2xl font-bold mb-4">Create a New Proposal</h2>
-        <div className="text-red-600 mb-4">
+        <div className="mb-4" style={{ color: '#8B3A3A' }}>
           Please switch to Base network. Currently on chain ID: {chainId}
         </div>
       </div>
@@ -571,7 +627,7 @@ export const CreateProposalForm: React.FC<CreateProposalFormProps> = ({ onSucces
     return (
       <div className="proposal-form p-6">
         <h2 className="text-2xl font-bold mb-4">Create a New Proposal</h2>
-        <div className="text-red-600 mb-4">
+        <div className="mb-4" style={{ color: '#8B3A3A' }}>
           Missing contract addresses in environment variables.
         </div>
       </div>
@@ -593,10 +649,10 @@ export const CreateProposalForm: React.FC<CreateProposalFormProps> = ({ onSucces
     isSponsored: true
   };
   const validation = validateTransactionData(transactionData);
-  if (!validation.isValid) {
-    console.error('Invalid transaction data:', validation.issues);
-  } else {
+  if (validation.isValid) {
     // Transaction data validated successfully
+  } else {
+    console.error('Invalid transaction data:', validation.issues);
   }
 
   return (
@@ -618,7 +674,7 @@ export const CreateProposalForm: React.FC<CreateProposalFormProps> = ({ onSucces
                           <div className="flex items-center justify-between">
               <div className="flex items-center space-x-4">
                 <div className="flex items-center space-x-2">
-                  <div className={`w-3 h-3 rounded-full ${isConnected ? 'bg-green-400' : 'bg-red-400'}`} />
+                  <div className="w-3 h-3 rounded-full" style={{ backgroundColor: isConnected ? '#3F7A5A' : '#8B3A3A' }} />
                   <span className="text-sm font-medium">
                     {isConnected ? 'Identity Confirmed' : 'Identity Unconfirmed'}
                   </span>
@@ -638,35 +694,35 @@ export const CreateProposalForm: React.FC<CreateProposalFormProps> = ({ onSucces
       
             {/* Validation Error Display */}
             {validationError && (
-              <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
-                <h4 className="text-red-800 font-medium mb-2">Validation Error</h4>
-                <p className="text-red-700 text-sm">{validationError}</p>
+              <div className="mb-6 p-4 rounded-lg" style={{ backgroundColor: '#F5E6E6', borderWidth: '1px', borderStyle: 'solid', borderColor: '#D9B3B3' }}>
+                <h4 className="font-medium mb-2" style={{ color: '#5C1F1F' }}>Validation Error</h4>
+                <p className="text-sm" style={{ color: '#8B3A3A' }}>{validationError}</p>
               </div>
             )}
       
 
 
             {/* Requirements */}
-            <div className="mb-8 p-6 bg-blue-50 border border-blue-200 rounded-lg">
-              <h4 className="text-blue-900 font-semibold mb-3">📋 Proposal Requirements</h4>
-              <div className="grid md:grid-cols-2 gap-4 text-sm text-blue-800">
+            <div className="mb-8 p-6 rounded-lg" style={{ backgroundColor: '#E8F1EE', borderWidth: '1px', borderStyle: 'solid', borderColor: '#B8D9CA' }}>
+              <h4 className="font-semibold mb-3" style={{ color: '#1F453A' }}>📋 Proposal Requirements</h4>
+              <div className="grid md:grid-cols-2 gap-4 text-sm" style={{ color: '#2F5D50' }}>
                 <div className="space-y-2">
                   <div className="flex items-center">
-                    <span className={`w-2 h-2 rounded-full mr-2 ${isConnected ? 'bg-green-500' : 'bg-red-500'}`} />
+                    <span className="w-2 h-2 rounded-full mr-2" style={{ backgroundColor: isConnected ? '#3F7A5A' : '#8B3A3A' }} />
                     Wallet connected
                   </div>
                   <div className="flex items-center">
-                    <span className={`w-2 h-2 rounded-full mr-2 ${nftBalance && BigInt(nftBalance.toString()) > 0n ? 'bg-green-500' : 'bg-red-500'}`} />
+                    <span className="w-2 h-2 rounded-full mr-2" style={{ backgroundColor: nftBalance && BigInt(nftBalance.toString()) > 0n ? '#3F7A5A' : '#8B3A3A' }} />
                     Hold at least 1 Advocate NFT
                   </div>
                 </div>
                 <div className="space-y-2">
                   <div className="flex items-center">
-                    <span className={`w-2 h-2 rounded-full mr-2 ${formData.title.length >= 10 ? 'bg-green-500' : 'bg-yellow-500'}`} />
+                    <span className="w-2 h-2 rounded-full mr-2" style={{ backgroundColor: formData.title.length >= 10 ? '#3F7A5A' : '#C6933F' }} />
                     Clear, descriptive title
                   </div>
                   <div className="flex items-center">
-                    <span className={`w-2 h-2 rounded-full mr-2 ${formData.body.length >= 50 ? 'bg-green-500' : 'bg-yellow-500'}`} />
+                    <span className="w-2 h-2 rounded-full mr-2" style={{ backgroundColor: formData.body.length >= 50 ? '#3F7A5A' : '#C6933F' }} />
                     Detailed description (50+ chars)
                   </div>
                 </div>
@@ -675,17 +731,17 @@ export const CreateProposalForm: React.FC<CreateProposalFormProps> = ({ onSucces
 
                         {/* Enhanced Delegation Section */}
             {needsDelegation && (
-              <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+              <div className="mb-6 p-4 rounded-lg" style={{ backgroundColor: '#FAF4EC', borderWidth: '1px', borderStyle: 'solid', borderColor: '#E8D7B8' }}>
                 <div className="flex items-center">
-                  <div className="w-5 h-5 text-yellow-600 mr-3">⚠️</div>
-                  <p className="text-yellow-800 font-medium">Delegation Required</p>
+                  <div className="w-5 h-5 mr-3" style={{ color: '#C6933F' }}>⚠️</div>
+                  <p className="font-medium" style={{ color: '#8F6B2F' }}>Delegation Required</p>
                 </div>
-                <p className="text-sm text-yellow-700 mt-2">
+                <p className="text-sm mt-2" style={{ color: '#C6933F' }}>
                   You own {nftBalance?.toString()} NFT(s) but need to delegate voting power to yourself to create proposals.
                 </p>
-          
+
                 {isDelegating && (
-                  <div className="mb-3 p-2 bg-blue-50 border border-blue-200 rounded text-sm text-blue-700">
+                  <div className="mb-3 p-2 rounded text-sm" style={{ backgroundColor: '#E8F1EE', borderWidth: '1px', borderStyle: 'solid', borderColor: '#B8D9CA', color: '#2F5D50' }}>
                     {isDelegationPending ? '⏳ Waiting for transaction confirmation...' : '🔄 Delegation in progress...'}
                   </div>
                 )}
@@ -717,7 +773,14 @@ export const CreateProposalForm: React.FC<CreateProposalFormProps> = ({ onSucces
               <TransactionButton
                 text={isDelegating ? "Delegating..." : "Delegate Voting Power to Myself"}
                 disabled={isDelegating || !address}
-                className="w-full bg-yellow-600 hover:bg-yellow-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-medium py-2 px-4 rounded transition-colors"
+                className="w-full disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-medium py-2 px-4 rounded transition-colors"
+                style={{ backgroundColor: '#C6933F' }}
+                onMouseEnter={(e: React.MouseEvent<HTMLButtonElement>) => {
+                  if (!isDelegating && address) e.currentTarget.style.backgroundColor = '#8F6B2F';
+                }}
+                onMouseLeave={(e: React.MouseEvent<HTMLButtonElement>) => {
+                  if (!isDelegating && address) e.currentTarget.style.backgroundColor = '#C6933F';
+                }}
               />
               <TransactionSponsor />
               <TransactionStatus>
@@ -725,7 +788,7 @@ export const CreateProposalForm: React.FC<CreateProposalFormProps> = ({ onSucces
                 <TransactionStatusAction />
               </TransactionStatus>
             </Transaction>
-            <div className="text-xs text-yellow-600">
+            <div className="text-xs" style={{ color: '#C6933F' }}>
               This transaction will delegate your NFT voting power to yourself, enabling you to vote and create proposals.
               {address && <div className="mt-1">Delegating to: {address}</div>}
             </div>
@@ -734,15 +797,15 @@ export const CreateProposalForm: React.FC<CreateProposalFormProps> = ({ onSucces
       )}
 
             {/* Force Delegation Section - for when user has NFTs but no voting power */}
-            {!needsDelegation && nftBalance && BigInt(nftBalance.toString()) > 0n && 
+            {!needsDelegation && nftBalance && BigInt(nftBalance.toString()) > 0n &&
              (!votingPower || BigInt(votingPower.toString()) === 0n) && (
-              <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+              <div className="mb-6 p-4 rounded-lg" style={{ backgroundColor: '#F5E6E6', borderWidth: '1px', borderStyle: 'solid', borderColor: '#D9B3B3' }}>
                 <div className="flex items-center">
-                  <div className="w-5 h-5 text-red-600 mr-3">🚨</div>
-                  <p className="text-red-800 font-medium">Voting Power Issue Detected</p>
+                  <div className="w-5 h-5 mr-3" style={{ color: '#8B3A3A' }}>🚨</div>
+                  <p className="font-medium" style={{ color: '#5C1F1F' }}>Voting Power Issue Detected</p>
                 </div>
-                <p className="text-sm text-red-700 mt-2">
-                  You own {nftBalance.toString()} NFT(s) but have {votingPower?.toString() || '0'} voting power. 
+                <p className="text-sm mt-2" style={{ color: '#8B3A3A' }}>
+                  You own {nftBalance.toString()} NFT(s) but have {votingPower?.toString() || '0'} voting power.
                   This may be due to a contract redeployment. Please delegate your voting power.
                 </p>
           
@@ -779,7 +842,14 @@ export const CreateProposalForm: React.FC<CreateProposalFormProps> = ({ onSucces
             >
               <TransactionButton
                 text="Force Delegate Voting Power"
-                className="w-full bg-red-600 hover:bg-red-700 text-white font-medium py-2 px-4 rounded transition-colors"
+                className="w-full text-white font-medium py-2 px-4 rounded transition-colors"
+                style={{ backgroundColor: '#8B3A3A' }}
+                onMouseEnter={(e: React.MouseEvent<HTMLButtonElement>) => {
+                  e.currentTarget.style.backgroundColor = '#5C1F1F';
+                }}
+                onMouseLeave={(e: React.MouseEvent<HTMLButtonElement>) => {
+                  e.currentTarget.style.backgroundColor = '#8B3A3A';
+                }}
               />
               <TransactionSponsor />
               <TransactionStatus>
@@ -787,7 +857,7 @@ export const CreateProposalForm: React.FC<CreateProposalFormProps> = ({ onSucces
                 <TransactionStatusAction />
               </TransactionStatus>
             </Transaction>
-            <div className="text-xs text-red-600">
+            <div className="text-xs" style={{ color: '#8B3A3A' }}>
               This will delegate your NFT voting power to yourself. This is needed after contract redeployments.
             </div>
           </div>
@@ -813,6 +883,8 @@ export const CreateProposalForm: React.FC<CreateProposalFormProps> = ({ onSucces
           <div>Proposal Threshold: {proposalThreshold?.toString() || 'N/A'}</div>
           <div>Current Delegate: {currentDelegate || 'N/A'}</div>
           <div>Needs Delegation: {needsDelegation ? 'Yes' : 'No'}</div>
+          <div className="font-bold" style={{ color: '#2F5D50' }}>Has Governance Permission: {hasGovernancePermission ? 'Yes ✅' : 'No ❌'}</div>
+          <div className="font-bold" style={{ color: '#2F5D50' }}>Has Voting Power: {hasVotingPower ? 'Yes ✅' : 'No ❌'}</div>
           <div>Can Create Proposal: {canCreateProposal ? 'Yes' : 'No'}</div>
           <div>Can Submit Proposal: {canSubmitProposal ? 'Yes' : 'No'}</div>
           <div>Is Delegating: {isDelegating ? 'Yes' : 'No'}</div>
@@ -822,9 +894,9 @@ export const CreateProposalForm: React.FC<CreateProposalFormProps> = ({ onSucces
           <div>Proposal Args Length: targets={proposalArgs[0].length}, values={proposalArgs[1].length}, calldatas={proposalArgs[2].length}</div>
           <div>Proposal Values: [{proposalArgs[1].map(v => v.toString()).join(', ')}]</div>
           <div>Proposal Value Types: [{proposalArgs[1].map(v => typeof v).join(', ')}]</div>
-          {balanceError && <div className="text-red-600">Balance Error: {balanceError.message}</div>}
-          {votingPowerError && <div className="text-red-600">Voting Power Error: {votingPowerError.message}</div>}
-          {delegateError && <div className="text-red-600">Delegate Error: {delegateError.message}</div>}
+          {balanceError && <div style={{ color: '#8B3A3A' }}>Balance Error: {balanceError.message}</div>}
+          {votingPowerError && <div style={{ color: '#8B3A3A' }}>Voting Power Error: {votingPowerError.message}</div>}
+          {delegateError && <div style={{ color: '#8B3A3A' }}>Delegate Error: {delegateError.message}</div>}
         </div>
       </details>
 
@@ -839,7 +911,7 @@ export const CreateProposalForm: React.FC<CreateProposalFormProps> = ({ onSucces
                   onThreadSelect={handleThreadSelect}
                 />
                 {!formData.forumThreadId && (
-                  <p className="text-red-600 text-xs mt-1">Forum thread is required.</p>
+                  <p className="text-xs mt-1" style={{ color: '#8B3A3A' }}>Forum thread is required.</p>
                 )}
               </div>
               {/* Title */}
@@ -850,7 +922,12 @@ export const CreateProposalForm: React.FC<CreateProposalFormProps> = ({ onSucces
                 <input
                   id="title"
                   type="text"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:border-transparent transition-colors"
+                  style={{
+                    '--tw-ring-color': '#2F5D50'
+                  } as React.CSSProperties}
+                  onFocus={(e) => { e.currentTarget.style.boxShadow = '0 0 0 2px #2F5D50'; }}
+                  onBlur={(e) => { e.currentTarget.style.boxShadow = ''; }}
                   value={formData.title}
                   onChange={e => handleFormChange('title', e.target.value)}
                   placeholder="Enter a clear, descriptive title for your proposal"
@@ -875,7 +952,10 @@ export const CreateProposalForm: React.FC<CreateProposalFormProps> = ({ onSucces
                   value={formData.body}
                   onChange={(value) => handleFormChange('body', value)}
                   placeholder="Provide a detailed description of your proposal... Use @ to mention someone"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors resize-none"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:border-transparent transition-colors resize-none"
+                  style={{
+                    '--tw-ring-color': '#2F5D50'
+                  } as React.CSSProperties}
                   multiLine={true}
                   contextType="governance"
                   contextId="new-proposal"
@@ -897,10 +977,15 @@ export const CreateProposalForm: React.FC<CreateProposalFormProps> = ({ onSucces
                 </label>
                 <select
                   id="token"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:border-transparent transition-colors"
+                  style={{
+                    '--tw-ring-color': '#2F5D50'
+                  } as React.CSSProperties}
+                  onFocus={(e) => { e.currentTarget.style.boxShadow = '0 0 0 2px #2F5D50'; }}
+                  onBlur={(e) => { e.currentTarget.style.boxShadow = ''; }}
                   value={formData.selectedToken}
                   onChange={e => handleFormChange('selectedToken', e.target.value)}
-                  required
+                  required={true}
                 >
                   <option value="">Select a token</option>
                   {userTokens.map(token => (
@@ -908,7 +993,7 @@ export const CreateProposalForm: React.FC<CreateProposalFormProps> = ({ onSucces
                   ))}
                 </select>
                 {!formData.selectedToken && (
-                  <p className="text-red-600 text-xs mt-1">Token selection is required.</p>
+                  <p className="text-xs mt-1" style={{ color: '#8B3A3A' }}>Token selection is required.</p>
                 )}
               </div>
             </div>
@@ -917,10 +1002,23 @@ export const CreateProposalForm: React.FC<CreateProposalFormProps> = ({ onSucces
             <div className="mt-8 pt-6 border-t border-gray-200">
               {/* Show specific blocking reasons */}
               {!canSubmitProposal && hasInteracted && (
-                <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-                  <h4 className="text-yellow-800 font-medium mb-2">Cannot Submit Proposal:</h4>
-                  <ul className="text-yellow-700 text-sm space-y-1">
-                    {!canCreateProposal && <li>• Insufficient voting power</li>}
+                <div className="mb-6 p-4 rounded-lg" style={{ backgroundColor: '#FAF4EC', borderWidth: '1px', borderStyle: 'solid', borderColor: '#E8D7B8' }}>
+                  <h4 className="font-medium mb-2" style={{ color: '#8F6B2F' }}>Cannot Submit Proposal:</h4>
+                  <ul className="text-sm space-y-1" style={{ color: '#C6933F' }}>
+                    {!hasGovernancePermission && (
+                      <li>
+                        • <span className="font-semibold">No governance participation permission</span>
+                        <br />
+                        <span className="text-xs ml-4">You need the "governanceParticipation" permission in your pod role to create proposals</span>
+                      </li>
+                    )}
+                    {hasGovernancePermission && !hasVotingPower && (
+                      <li>
+                        • <span className="font-semibold">Insufficient voting power</span>
+                        <br />
+                        <span className="text-xs ml-4">You need more Advocate NFTs or voting tokens to meet the proposal threshold</span>
+                      </li>
+                    )}
                     {needsDelegation && <li>• Need to delegate voting power first</li>}
                     {!formData.title.trim() && <li>• Title is required</li>}
                     {!formData.body.trim() && <li>• Description is required</li>}
@@ -1026,16 +1124,16 @@ export const CreateProposalForm: React.FC<CreateProposalFormProps> = ({ onSucces
                             console.error('❌ Error inserting proposal metadata:', metadataError);
                           }
                         }
-                        // Create notifications for token holders if a token is selected
+                        // Create notifications for token holders using voting reminder service
                         if (formData.selectedToken) {
                           try {
-                            await governanceNotificationService.createTokenHolderNotifications(
-                              formData.selectedToken,
-                              address!,
+                            await votingReminderService.notifyTokenHoldersOfNewProposal(
                               realProposalId,
                               formData.title,
-                              transactionHash
+                              address!,
+                              formData.selectedToken
                             );
+                            console.log('✅ Token holder notifications sent via voting reminder service');
                           } catch (tokenNotificationError) {
                             console.error('❌ Error creating token holder notifications:', tokenNotificationError);
                           }
@@ -1047,31 +1145,10 @@ export const CreateProposalForm: React.FC<CreateProposalFormProps> = ({ onSucces
                         while ((match = mentionRegex.exec(formData.body)) !== null) {
                           mentions.push(match[2]); // match[2] is the wallet address
                         }
-                        // Create notifications for mentioned users
-                        for (const mentionedAddress of mentions) {
-                          try {
-                            await governanceNotificationService.createProposalMentionNotification(
-                              mentionedAddress,
-                              address!,
-                              realProposalId,
-                              formData.title,
-                              transactionHash
-                            );
-                          } catch (mentionError) {
-                            console.error(`❌ Error creating mention notification for ${mentionedAddress}:`, mentionError);
-                          }
-                        }
-                        // --- Ensure notification is sent ---
-                        try {
-                          await governanceNotificationService.createProposalCreatedNotification(
-                            address!,
-                            realProposalId,
-                            formData.title,
-                            transactionHash
-                          );
-                        } catch (notifErr) {
-                          console.error('Error creating proposal created notification:', notifErr);
-                        }
+                        // NOTE: Mention notifications are now handled automatically by UserTagging component
+                        // when the form is submitted with mentions in the description
+                        
+                        console.log('✅ Proposal creation completed with metadata and notifications');
                         // --- End notification logic ---
                       } catch (error) {
                         console.error('❌ Error in post-transaction processing:', error);
@@ -1149,10 +1226,10 @@ export const CreateProposalForm: React.FC<CreateProposalFormProps> = ({ onSucces
               ) : (
                 <div className="text-center">
                   <button
-                    disabled
+                    disabled={true}
                     className="w-full bg-gray-300 text-gray-500 font-semibold py-4 px-8 rounded-lg cursor-not-allowed"
                   >
-                    {!isConnected ? 'Connect Wallet to Submit' : 'Requirements Not Met'}
+                    {isConnected ? 'Requirements Not Met' : 'Connect Wallet to Submit'}
                   </button>
                 </div>
               )}

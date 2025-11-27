@@ -2,8 +2,8 @@
 
 "use client";
 
-import { useProducts } from "src/features/shopping-cart/contexts/products-context";
-import { useTokenBalances } from "src/context/TokenBalancesContext";
+import { useProducts } from "@/features/shopping-cart/contexts/products-context";
+import { useTokenBalances } from "@/context/TokenBalancesContext";
 import { useState, useMemo } from "react";
 import * as S from "./style";
 

@@ -4,6 +4,16 @@ export interface Deliverable {
   payment_amount: string;
 }
 
+export interface BountyTokenGating {
+  required_tokens?: Array<{
+    token_id: string;
+    token_name: string;
+    token_type: 'token' | 'pod_role' | 'system';
+    minimum_balance?: string;
+  }>;
+  restriction_level?: 'public' | 'token_holders' | 'pod_members' | 'invite_only';
+}
+
 export interface FrontendBounty {
   id: string; // This will be the Supabase UUID
   onchain_id: number; // This will be the uint256 ID from the contract
@@ -16,9 +26,18 @@ export interface FrontendBounty {
   };
   requirements?: string[];
   questions?: string[];
-  status: 'open' | 'in-progress' | 'completed' | 'cancelled';
+  token_gating?: BountyTokenGating;
+  work_requirements?: string[]; // Separated from role requirements
+  status: 'open' | 'in-progress' | 'completed' | 'cancelled' | 'closed';
   createdAt: Date;
   creator_address?: string;
+  // Pod and funding information
+  pod_id?: string; // UUID of the pod this bounty belongs to
+  funding_source?: 'personal_wallet' | 'pod_treasury'; // Where funds come from
+  // Bid acceptance configuration
+  bid_acceptance_mode?: 'single' | 'multiple' | 'unlimited' | 'date_limited';
+  max_bids_accepted?: number;
+  bids_accepted_count?: number;
 }
 
 export interface FrontendBid {
@@ -38,7 +57,7 @@ export interface FrontendBid {
   };
   answers: Record<string, string>;
   additionalNotes: string;
-  status: 'pending' | 'approved' | 'rejected' | 'archived';
+  status: 'pending' | 'approved' | 'rejected' | 'archived' | 'legacy_pending';
   reviewerAddress?: string;
   finalApproverAddress?: string;
   submittedAt: Date;
@@ -46,6 +65,10 @@ export interface FrontendBid {
   reviewedBy?: string;
   first_name?: string;
   last_name?: string;
+  // On-chain bid placement tracking
+  onchainBidIndex?: number;  // Index in contract bids[bountyId][] array
+  placementTxHash?: string;  // Transaction hash from placeBid() call
+  bidIpfsHash?: string;      // IPFS hash of bid metadata
 }
 
 export interface FrontendBidReview {
@@ -82,4 +105,29 @@ export interface FrontendMilestone {
   completedBy?: string;
   reviewComments?: string;
   createdAt: Date;
+}
+
+export interface DeliverableUrl {
+  label: string;
+  url: string;
+}
+
+export interface FrontendWorkSubmission {
+  id: string;
+  bountyId: string;
+  bidId: string;
+  submitterAddress: string;
+  submissionTitle: string;
+  submissionDescription: string;
+  deliverableUrls: DeliverableUrl[];
+  attachmentUrls: string[];
+  completedDeliverables: string[]; // IDs of deliverables from bid
+  status: 'pending' | 'approved' | 'rejected' | 'revision_requested';
+  reviewerAddress?: string;
+  reviewComments?: string;
+  reviewedAt?: Date;
+  revisionNumber: number;
+  previousSubmissionId?: string;
+  createdAt: Date;
+  updatedAt: Date;
 } 

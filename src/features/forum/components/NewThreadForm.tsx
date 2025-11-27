@@ -1,9 +1,14 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useForum } from 'src/features/forum/hooks/useForum';
-import { useTokenGate } from 'src/features/forum/hooks/useTokenGate';
-import { supabase } from 'src/utils/supabaseClient';
-import UserTagging from 'src/components/UserTagging';
+import { useAccount } from 'wagmi';
+import { useForum } from '@/features/forum/hooks/useForum';
+import { useUnifiedForumAccess } from '@/features/forum/hooks/useUnifiedForumAccess';
+import { supabase } from '@/utils/supabaseClient';
+import UserTagging from '@/components/UserTagging';
+import { PollCreationForm } from './PollCreationForm';
+import { MediaUpload } from './MediaUpload';
+import { RichTextEditor } from './RichTextEditor';
+import { saveDraft, getDraft, deleteDraftByContext, AutoSaveManager } from '../services/DraftService';
 import styles from '../styles/Forum.module.css';
 import DatePicker from 'react-datepicker';
 import "react-datepicker/dist/react-datepicker.css";
@@ -20,7 +25,7 @@ export interface ThreadTemplate {
 export interface PlaceholderField {
   id: string;
   label: string;
-  type: 'text' | 'textarea' | 'select' | 'date' | 'daterange' | 'radio' | 'number' | 'tags';
+  type: 'text' | 'textarea' | 'richtext' | 'select' | 'date' | 'daterange' | 'radio' | 'number' | 'tags';
   helpText?: string;
   required?: boolean;
   options?: string[];
@@ -37,8 +42,9 @@ export type NewThreadFormProps = {
 
 export function NewThreadForm({ categoryId, customTemplates = [] }: NewThreadFormProps) {
   const router = useRouter();
+  const { address } = useAccount();
   const { submitThread, isLoading } = useForum();
-  const { tokenBalances } = useTokenGate();
+  const { permissions } = useUnifiedForumAccess();
 
   // Log incoming prop categoryId for debugging
   useEffect(() => {
@@ -51,52 +57,42 @@ export function NewThreadForm({ categoryId, customTemplates = [] }: NewThreadFor
   const [selectedTemplate, setSelectedTemplate] = useState<ThreadTemplate | null>(null);
   const [placeholderValues, setPlaceholderValues] = useState<Record<string, string>>({});
   const [templateContent, setTemplateContent] = useState('');
-  
+
+  // New feature states
+  const [showPollForm, setShowPollForm] = useState(false);
+  const [createdThreadId, setCreatedThreadId] = useState<string | null>(null);
+  const [uploadedAttachments, setUploadedAttachments] = useState<any[]>([]);
+
   // Initialize local state with the incoming prop
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(categoryId || null);
-  
+
   // Log selectedCategoryId for debugging
   useEffect(() => {
     console.log("Initial selectedCategoryId:", selectedCategoryId);
   }, [selectedCategoryId]);
-  
+
   const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
   const [error, setError] = useState('');
   const [supabaseTemplates, setSupabaseTemplates] = useState<ThreadTemplate[]>([]);
 
-  // Fetch forum categories from Supabase
+  // Use accessible categories from unified forum access
   useEffect(() => {
-    async function fetchCategories() {
-      const { data, error } = await supabase
-        .from('forum_categories')
-        .select('id, name, required_token');
+    if (permissions?.accessibleCategoryObjects) {
+      const accessibleCategories = permissions.accessibleCategoryObjects.map(cat => ({
+        id: cat.id,
+        name: cat.name
+      }));
 
-      if (error) {
-        console.error('Error fetching categories:', error);
-        return;
-      }
-
-      const filteredCategories = data.filter((category) => {
-        const requiredToken = category.required_token?.toLowerCase();
-        return (
-          !requiredToken ||
-          (requiredToken === process.env.NEXT_PUBLIC_PROOF_OF_CURIOSITY?.toLowerCase() && tokenBalances?.hasProofOfCuriosity) ||
-          (requiredToken === process.env.NEXT_PUBLIC_EXECUTIVE_POD_HAT_ID?.toLowerCase() && tokenBalances?.hasExecutivePod) ||
-          (requiredToken === process.env.NEXT_PUBLIC_DEV_POD_HAT_ID?.toLowerCase() && tokenBalances?.hasDevPod)
-        );
-      });
-
-      console.log("Fetched categories:", filteredCategories);
-      setCategories(filteredCategories);
+      console.log("Accessible categories from permissions:", accessibleCategories);
+      setCategories(accessibleCategories);
 
       // If no category is currently selected, set the default
-      if (!selectedCategoryId && filteredCategories.length > 0) {
-        setSelectedCategoryId(filteredCategories[0].id);
-        console.log("Default selectedCategoryId set to:", filteredCategories[0].id);
+      if (!selectedCategoryId && accessibleCategories.length > 0) {
+        setSelectedCategoryId(accessibleCategories[0].id);
+        console.log("Default selectedCategoryId set to:", accessibleCategories[0].id);
       }
     }
-    fetchCategories();
-  }, [tokenBalances, selectedCategoryId]);
+  }, [permissions, selectedCategoryId]);
 
   // Fetch templates from Supabase
   useEffect(() => {
@@ -167,6 +163,34 @@ export function NewThreadForm({ categoryId, customTemplates = [] }: NewThreadFor
     return result;
   };
 
+  // Load draft on mount
+  useEffect(() => {
+    if (!address || !selectedCategoryId) return;
+
+    const loadDraft = async () => {
+      const result = await getDraft(address, selectedCategoryId);
+      if (result.draft) {
+        setTitle(result.draft.draft_title || '');
+        setContent(result.draft.draft_content);
+      }
+    };
+
+    loadDraft();
+  }, [address, selectedCategoryId]);
+
+  // Setup autosave
+  useEffect(() => {
+    if (!address || !selectedCategoryId) return;
+
+    const autoSave = new AutoSaveManager(async () => {
+      const finalTitle = selectedTemplate ? generateTitle() : title;
+      const finalContent = selectedTemplate ? generateContent() : content;
+      await saveDraft(address, finalContent, selectedCategoryId, undefined, finalTitle);
+    }, 2000, 30000);
+
+    return () => autoSave.destroy();
+  }, [address, content, title, selectedCategoryId, selectedTemplate]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
@@ -185,10 +209,60 @@ export function NewThreadForm({ categoryId, customTemplates = [] }: NewThreadFor
     const finalContent = selectedTemplate ? generateContent() : content;
 
     // Call the submitThread function and handle the response
+    console.log('Calling submitThread with:', {
+      categoryId: selectedCategoryId,
+      title: finalTitle,
+      contentLength: finalContent.length,
+      hasAttachments: uploadedAttachments.length > 0,
+      hasPoll: showPollForm
+    });
+
     const result = await submitThread(selectedCategoryId, finalTitle, finalContent, 'governance');
 
+    console.log('submitThread result:', result);
+
     if (result.success && result.thread) {
-      router.push(`/forum/thread/${result.thread.id}`);
+      const threadId = result.thread.id;
+
+      // Link uploaded attachments to the thread
+      if (uploadedAttachments.length > 0) {
+        try {
+          // Update attachments to link them to the created thread
+          const attachmentIds = uploadedAttachments.map(att => att.id);
+          const { error: attachmentError } = await supabase
+            .from('forum_media_attachments')
+            .update({ thread_id: threadId })
+            .in('id', attachmentIds);
+
+          if (attachmentError) {
+            console.error('Error linking attachments to thread:', attachmentError);
+            // Don't fail the whole operation, just log the error
+          } else {
+            console.log(`Linked ${attachmentIds.length} attachments to thread ${threadId}`);
+          }
+        } catch (err) {
+          console.error('Error updating attachments:', err);
+        }
+      }
+
+      // Delete draft after successful submission
+      if (address) {
+        await deleteDraftByContext(address, selectedCategoryId);
+      }
+
+      // Always redirect to the thread after creation
+      // If poll form was requested, the poll modal will handle that separately
+      console.log('Thread created successfully, redirecting to:', `/forum/thread/${threadId}`);
+
+      if (showPollForm) {
+        setCreatedThreadId(threadId);
+        // Still redirect after a short delay to let poll creation happen
+        setTimeout(() => {
+          router.push(`/forum/thread/${threadId}`);
+        }, 100);
+      } else {
+        router.push(`/forum/thread/${threadId}`);
+      }
     } else {
       setError('Failed to create the thread.');
     }
@@ -290,7 +364,7 @@ export function NewThreadForm({ categoryId, customTemplates = [] }: NewThreadFor
                       }}
                       startDate={startDate}
                       endDate={endDate}
-                      selectsRange
+                      selectsRange={true}
                       className={styles.placeholderInput}
                       dateFormat="MM/dd/yyyy"
                     />
@@ -318,6 +392,19 @@ export function NewThreadForm({ categoryId, customTemplates = [] }: NewThreadFor
                   </div>
                 );
               }
+              if (placeholder.type === 'richtext') {
+                return (
+                  <div key={placeholder.id} className={styles.placeholderField}>
+                    <label>{placeholder.label}</label>
+                    <RichTextEditor
+                      value={placeholderValues[placeholder.id] || ''}
+                      onChange={(val) => handlePlaceholderChange(placeholder.id, val)}
+                      placeholder={placeholder.helpText || ''}
+                      minHeight="200px"
+                    />
+                  </div>
+                );
+              }
               if (placeholder.type === 'textarea' || placeholder.type === 'text') {
                 return (
                   <div key={placeholder.id} className={styles.placeholderField}>
@@ -326,7 +413,7 @@ export function NewThreadForm({ categoryId, customTemplates = [] }: NewThreadFor
                       value={placeholderValues[placeholder.id] || ''}
                       onChange={(val) => handlePlaceholderChange(placeholder.id, val)}
                       placeholder={placeholder.helpText || ''}
-                      className={styles.replyTextarea}
+                      className={placeholder.type === 'text' ? styles.threadTitleInput : styles.replyTextarea}
                       multiLine={placeholder.type === 'textarea'}
                       contextType="forum"
                       contextId={selectedCategoryId || 'new-thread'}
@@ -359,19 +446,40 @@ export function NewThreadForm({ categoryId, customTemplates = [] }: NewThreadFor
               placeholder="Thread title"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              className={styles.replyTextarea}
+              className={styles.threadTitleInput}
             />
-            <UserTagging
+            <RichTextEditor
               value={content}
               onChange={(value) => setContent(value)}
-              placeholder="Thread details... Use @ to mention someone"
-              className={styles.replyTextarea}
-              multiLine={true}
-              contextType="forum"
-              contextId={selectedCategoryId || 'new-thread'}
-              contextUrl={selectedCategoryId ? `/forum/category/${selectedCategoryId}` : undefined}
+              placeholder="Write your thread content here... Use the toolbar for formatting."
+              minHeight="250px"
             />
           </>
+        )}
+
+        {/* Poll Toggle */}
+        <div style={{ marginTop: '20px', marginBottom: '15px' }}>
+          <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+            <input
+              type="checkbox"
+              checked={showPollForm}
+              onChange={(e) => setShowPollForm(e.target.checked)}
+            />
+            <span>📊 Add a poll to this thread</span>
+          </label>
+        </div>
+
+        {/* Media Upload */}
+        {!createdThreadId && (
+          <div style={{ marginBottom: '20px' }}>
+            <MediaUpload
+              threadId={undefined}
+              onUploadComplete={(attachments) => {
+                setUploadedAttachments([...uploadedAttachments, ...attachments]);
+              }}
+              maxFiles={5}
+            />
+          </div>
         )}
 
         {error && <div className={styles.submitError}>{error}</div>}
@@ -379,6 +487,22 @@ export function NewThreadForm({ categoryId, customTemplates = [] }: NewThreadFor
           {isLoading ? 'Creating...' : 'Create Thread'}
         </button>
       </form>
+
+      {/* Poll Creation Form - shown after thread is created */}
+      {createdThreadId && showPollForm && (
+        <div style={{ marginTop: '30px' }}>
+          <PollCreationForm
+            threadId={createdThreadId}
+            onPollCreated={(pollId) => {
+              console.log('Poll created:', pollId);
+              router.push(`/forum/thread/${createdThreadId}`);
+            }}
+            onCancel={() => {
+              router.push(`/forum/thread/${createdThreadId}`);
+            }}
+          />
+        </div>
+      )}
     </div>
   );
 }

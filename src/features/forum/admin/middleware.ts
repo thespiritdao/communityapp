@@ -1,5 +1,5 @@
 // src/features/forum/admin/middleware.ts
-import { NextRequest, NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import { fetchExtendedTokenBalances } from '@/utils/fetchTokenBalances';
 
 // Helper to extract cookie value (same as our existing helper)
@@ -37,7 +37,7 @@ export async function middleware(request: NextRequest) {
     const { hasERC1155Token } = await fetchExtendedTokenBalances(
       walletAddress,
       process.env.NEXT_PUBLIC_HATS_CONTRACT as `0x${string}`,
-      parseInt(process.env.NEXT_PUBLIC_MARKET_MANAGEMENT || '0', 16)
+      Number.parseInt(process.env.NEXT_PUBLIC_MARKET_MANAGEMENT || '0', 16)
     );
 
     if (!hasERC1155Token) {

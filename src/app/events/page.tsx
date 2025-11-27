@@ -1,21 +1,22 @@
 'use client';
 
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { EventList } from '@/features/events/components/EventList';
+import { CommunityEventCalendar } from '@/features/events/components/CommunityEventCalendar';
 import { useEventManagementAccess } from '@/features/events/hooks/useEventTokenGating';
 import { useEventStats } from '@/features/events/hooks/useEventStats';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Calendar, Plus, Users, Trophy } from 'lucide-react';
+import { Calendar, Plus, Users, Trophy, CalendarDays } from 'lucide-react';
 import Link from 'next/link';
 
 export default function EventsPage() {
   const { canManageEvents } = useEventManagementAccess();
   const { upcomingEvents, totalParticipants, completedEvents, loading: statsLoading, error: statsError } = useEventStats();
-  const [activeTab, setActiveTab] = useState<'all' | 'my-events' | 'past'>('my-events');
+  const [activeTab, setActiveTab] = useState<'all' | 'my-events' | 'past' | 'calendar'>('my-events');
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4">
+    <div className="min-h-screen bg-gray-50 p-4 bottom-nav-spacing">
       <div className="max-w-7xl mx-auto">
         {/* Hero Section */}
         <div className="mb-8">
@@ -78,8 +79,9 @@ export default function EventsPage() {
           )}
 
           {/* Navigation Tabs - Centered */}
-          <div className="flex flex-col sm:flex-row justify-center items-center space-y-4 sm:space-y-0">
-            <div className="flex space-x-1 bg-white rounded-lg p-1 shadow-sm">
+          <div className="flex flex-col sm:flex-row justify-center items-center space-y-4 sm:space-y-0 pt-4">
+            <div className="flex justify-center mb-4 sm:mb-0">
+              <div className="flex space-x-1 bg-white rounded-lg p-1 shadow-sm">
               <Button
                 variant={activeTab === 'my-events' ? 'default' : 'ghost'}
                 size="sm"
@@ -95,16 +97,25 @@ export default function EventsPage() {
                 All Events
               </Button>
               <Button
+                variant={activeTab === 'calendar' ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => setActiveTab('calendar')}
+              >
+                <CalendarDays className="w-4 h-4 mr-1" />
+                Calendar
+              </Button>
+              <Button
                 variant={activeTab === 'past' ? 'default' : 'ghost'}
                 size="sm"
                 onClick={() => setActiveTab('past')}
               >
                 Past Events
               </Button>
+              </div>
             </div>
 
             {canManageEvents && (
-              <Button asChild>
+              <Button asChild={true}>
                 <Link href="/events/create">
                   <Plus className="w-4 h-4 mr-2" />
                   Create Event
@@ -118,6 +129,7 @@ export default function EventsPage() {
         <div className="space-y-8">
           {activeTab === 'my-events' && (
             <EventList
+              key="my-events"
               showCreateButton={false}
               showTokenGating={true}
               showOnlyUserEvents={true}
@@ -128,6 +140,7 @@ export default function EventsPage() {
 
           {activeTab === 'all' && (
             <EventList
+              key="all-events"
               showCreateButton={false}
               showTokenGating={false}
               showAllEvents={true}
@@ -136,8 +149,15 @@ export default function EventsPage() {
             />
           )}
 
+          {activeTab === 'calendar' && (
+            <div key="calendar" className="bg-white rounded-lg shadow-sm">
+              <CommunityEventCalendar />
+            </div>
+          )}
+
           {activeTab === 'past' && (
             <EventList
+              key="past-events"
               showCreateButton={false}
               showPastEvents={true}
               showTokenGating={false}
@@ -159,13 +179,13 @@ export default function EventsPage() {
                 Set up token gating, manage registrations, and distribute funds to the right pods.
               </p>
               <div className="flex flex-col sm:flex-row justify-center space-y-2 sm:space-y-0 sm:space-x-4">
-                <Button asChild>
+                <Button asChild={true}>
                   <Link href="/events/create">
                     <Plus className="w-4 h-4 mr-2" />
                     Create New Event
                   </Link>
                 </Button>
-                <Button variant="outline" asChild>
+                <Button variant="outline" asChild={true}>
                   <Link href="/events/manage">
                     Manage My Events
                   </Link>

@@ -1,5 +1,5 @@
-import { badgeSvg } from 'src/internal/svg/badgeSvg';
-import { background, cn } from 'src/styles/theme';
+import { badgeSvg } from '../../../internal/svg/badgeSvg';
+import { background, cn } from '../../../styles/theme';
 import type { BadgeReact } from '../types';
 
 /**

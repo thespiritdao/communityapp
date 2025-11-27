@@ -1,12 +1,10 @@
-// src/components/TransactionWrapper.tsx
 
-import React from 'react';
-import Transaction from 'src/transaction/components/Transaction';
-import TransactionButton from 'src/transaction/components/TransactionButton';
+import Transaction from '../../../transaction/components/Transaction';
+import TransactionButton from '../../../transaction/components/TransactionButton';
 import TransactionStatus, {
   TransactionStatusLabel,
   TransactionStatusAction,
-} from 'src/transaction/components/TransactionStatus';
+} from '../../../transaction/components/TransactionStatus';
 
 type TransactionWrapperProps = {
   address: string;
@@ -28,7 +26,7 @@ const TransactionWrapper = ({
 
   return (
     <Transaction
-      isSponsored
+      isSponsored={true}
       address={address}
       contracts={contracts}
       className="w-[450px]"

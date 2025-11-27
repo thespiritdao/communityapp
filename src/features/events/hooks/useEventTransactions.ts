@@ -1,20 +1,19 @@
 import React, { useCallback } from 'react';
 import { useAccount } from 'wagmi';
 import { parseUnits } from 'viem';
-
-// Use require() import pattern like Cart.tsx for better compatibility
-const EventSystemFactoryABI = require('src/abis/EventSystemFactory.json');
-const EventEscrowABI = require('src/abis/EventEscrowABI.json');
-const EventRegistrationNFTFactoryABI = require('src/abis/EventRegistrationFactoryABI.json');
-const EventCompletionNFTFactoryABI = require('src/abis/EventCompletionNFTFactoryABI.json');
+import EventSystemFactoryABI from '@/abis/EventSystemFactory.json';
+import EventEscrowABI from '@/abis/EventEscrowABI.json';
+import EventRegistrationNFTFactoryABI from '@/abis/EventRegistrationFactoryABI.json';
+import EventCompletionNFTFactoryABI from '@/abis/EventCompletionNFTFactoryABI.json';
+import { CONTRACT_ADDRESSES, CHAIN_CONFIG } from '@/config/contracts';
 
 // Use the same chain ID constant as Cart.tsx
-const BASE_CHAIN_ID = 8453;
+const BASE_CHAIN_ID = CHAIN_CONFIG.CHAIN_ID;
 
-const EVENT_SYSTEM_FACTORY = process.env.NEXT_PUBLIC_EVENT_SYSTEM_FACTORY as `0x${string}`;
-const EVENT_ESCROW_CONTRACT = process.env.NEXT_PUBLIC_EVENT_ESCROW_CONTRACT as `0x${string}`;
-const EVENT_REGISTRATION_FACTORY = process.env.NEXT_PUBLIC_EVENT_REGISTRATION_FACTORY as `0x${string}`;
-const EVENT_COMPLETION_FACTORY = process.env.NEXT_PUBLIC_EVENT_COMPLETION_FACTORY as `0x${string}`;
+const EVENT_SYSTEM_FACTORY = CONTRACT_ADDRESSES.EVENT_SYSTEM_FACTORY;
+const EVENT_ESCROW_CONTRACT = CONTRACT_ADDRESSES.EVENT_ESCROW;
+const EVENT_REGISTRATION_FACTORY = CONTRACT_ADDRESSES.EVENT_REGISTRATION_FACTORY;
+const EVENT_COMPLETION_FACTORY = CONTRACT_ADDRESSES.EVENT_COMPLETION_FACTORY;
 
 export interface CreateEventParams {
   eventId: string;
@@ -98,20 +97,24 @@ export function useEventTransactions() {
       throw new Error('Fund recipient is required and must be a valid address');
     }
 
-    // CRITICAL FIX: Ensure timestamp is definitely in future with large buffer
-    const now = Math.floor(Date.now() / 1000); // Current Unix timestamp in seconds  
+    // Timestamp validation - warn if in past but don't force change
+    const now = Math.floor(Date.now() / 1000); // Current Unix timestamp in seconds
     const eventTimestamp = Math.floor(params.eventDate.getTime() / 1000);
-    const finalTimestamp = Math.max(eventTimestamp, now + 300); // At least 5 minutes in future
-    
+
+    // Only warn if timestamp is in past, don't force change
+    if (eventTimestamp < now) {
+      console.warn('⚠️ Event date is in the past, ensure this is intentional');
+    }
+
     const systemAmount = parseUnits(params.priceSystem || '0', 18);
     const selfAmount = parseUnits(params.priceSelf || '0', 18);
 
     console.log('🔍 getCreateEventSystemCall Debug:', {
       originalDate: params.eventDate,
-      originalTimestamp: eventTimestamp,
+      eventTimestamp,
       currentTimestamp: now,
-      finalTimestamp,
-      timeDiff: finalTimestamp - now,
+      isInPast: eventTimestamp < now,
+      timeDiff: eventTimestamp - now,
       systemAmount: systemAmount.toString(),
       selfAmount: selfAmount.toString(),
       priceSystemString: params.priceSystem,
@@ -128,8 +131,8 @@ export function useEventTransactions() {
       functionName: 'createCompleteEventSystem',
       args: [
         params.eventId,                            // string
-        params.eventTitle,                         // string  
-        finalTimestamp,                            // uint256 (Unix timestamp in seconds)
+        params.eventTitle,                         // string
+        eventTimestamp,                            // uint256 (Unix timestamp in seconds) - using actual timestamp now
         address as `0x${string}`,                  // address (eventOrganizer)
         params.fundRecipient as `0x${string}`,    // address
         systemAmount,                              // uint256 (wei)
@@ -161,17 +164,21 @@ export function useEventTransactions() {
       throw new Error('Fund recipient is required and must be a valid address');
     }
 
-    // CRITICAL FIX: Ensure timestamp is definitely in future with large buffer
+    // Timestamp validation - warn if in past but don't force change
     const now = Math.floor(Date.now() / 1000); // Current Unix timestamp in seconds
     const eventTimestamp = Math.floor(eventDate.getTime() / 1000);
-    const finalTimestamp = Math.max(eventTimestamp, now + 300); // At least 5 minutes in future
+
+    // Only warn if timestamp is in past, don't force change
+    if (eventTimestamp < now) {
+      console.warn('⚠️ Event date is in the past, ensure this is intentional');
+    }
 
     console.log('🔍 getCreateFreeEventCall Debug:', {
       originalDate: eventDate,
-      originalTimestamp: eventTimestamp,
+      eventTimestamp,
       currentTimestamp: now,
-      finalTimestamp,
-      timeDiff: finalTimestamp - now,
+      isInPast: eventTimestamp < now,
+      timeDiff: eventTimestamp - now,
       eventId,
       eventTitle,
       fundRecipient,
@@ -185,7 +192,7 @@ export function useEventTransactions() {
       args: [
         eventId,                            // string
         eventTitle,                         // string
-        finalTimestamp,                     // uint256 (Unix timestamp in seconds)
+        eventTimestamp,                     // uint256 (Unix timestamp in seconds) - using actual timestamp now
         address as `0x${string}`,           // address (eventOrganizer)
         fundRecipient as `0x${string}`      // address
       ]

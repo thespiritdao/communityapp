@@ -1,5 +1,5 @@
 'use client';
-import React, { useCallback, useState } from 'react';
+import { useCallback, } from 'react';
 import { useAccount } from 'wagmi';
 import {
   Transaction,
@@ -18,12 +18,12 @@ import {
   WalletDropdownLink,
   WalletDropdownDisconnect,
 } from '@coinbase/onchainkit/wallet';
-import { encodeFunctionData, Address } from 'viem';
+import type { Address } from 'viem';
 import { base } from 'wagmi/chains';
-import { useProposal, ProposalProvider } from 'src/context/ProposalContext';
-import UserTagging from 'src/components/UserTagging';
-import { supabase } from 'src/lib/supabase';
-import { ProposalThreadSelector } from 'src/features/governance/components/ProposalThreadSelector';
+import { useProposal, ProposalProvider } from '@/context/ProposalContext';
+import UserTagging from '@/components/UserTagging';
+import { supabase } from '@/lib/supabase';
+import { ProposalThreadSelector } from '@/features/governance/components/ProposalThreadSelector';
 
 // Governor contract ABI
 const GOVERNOR_ABI = [
@@ -192,10 +192,10 @@ function InnerProposalSubmissionPage() {
     calls: transactionData ? [transactionData] : [],
     isSponsored: true
   });
-  if (!validation.isValid) {
-    console.error('Invalid transaction data:', validation.issues);
-  } else {
+  if (validation.isValid) {
     console.log('Validated transaction data:', validation.data);
+  } else {
+    console.error('Invalid transaction data:', validation.issues);
   }
 
   return (
@@ -376,10 +376,10 @@ function InnerProposalSubmissionPage() {
               ) : (
                 <div className="text-center">
                   <button
-                    disabled
+                    disabled={true}
                     className="w-full bg-gray-300 text-gray-500 font-semibold py-4 px-8 rounded-lg cursor-not-allowed"
                   >
-                    {!isConnected ? 'Connect Wallet to Submit' : 'Requirements Not Met'}
+                    {isConnected ? 'Requirements Not Met' : 'Connect Wallet to Submit'}
                   </button>
                 </div>
               )}
@@ -387,9 +387,9 @@ function InnerProposalSubmissionPage() {
             </div>
 
             {/* Requirements */}
-            <div className="mt-8 p-6 bg-blue-50 border border-blue-200 rounded-lg">
-              <h4 className="text-blue-900 font-semibold mb-3">📋 Proposal Requirements</h4>
-              <div className="grid md:grid-cols-2 gap-4 text-sm text-blue-800">
+            <div className="mt-8 p-6 rounded-lg" style={{ backgroundColor: '#E8F1EE', borderWidth: '1px', borderStyle: 'solid', borderColor: '#B8D9CA' }}>
+              <h4 className="font-semibold mb-3" style={{ color: '#1F453A' }}>📋 Proposal Requirements</h4>
+              <div className="grid md:grid-cols-2 gap-4 text-sm" style={{ color: '#2F5D50' }}>
                 <div className="space-y-2">
                   <div className="flex items-center">
                     <span className={`w-2 h-2 rounded-full mr-2 ${isConnected ? 'bg-green-500' : 'bg-red-500'}`} />

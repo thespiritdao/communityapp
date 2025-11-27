@@ -1,6 +1,6 @@
 // src/context/SnapshotContext.tsx
 
-import React, { createContext, ReactNode, useContext } from 'react';
+import { createContext, type ReactNode, useContext } from 'react';
 import snapshot from '@snapshot-labs/snapshot.js';
 
 const SnapshotContext = createContext<snapshot.Client712 | null>(null);

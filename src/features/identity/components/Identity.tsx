@@ -1,5 +1,5 @@
-import { useOnchainKit } from 'src/useOnchainKit';
-import type { IdentityReact } from 'src/features/identity/types';
+import { useOnchainKit } from '../../../useOnchainKit';
+import type { IdentityReact } from '../../../features/identity/types';
 import { IdentityLayout } from './IdentityLayout';
 import { IdentityProvider } from './IdentityProvider';
 

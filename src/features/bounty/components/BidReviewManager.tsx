@@ -1,37 +1,62 @@
 "use client"
 
-import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '../../../components/ui/card';
-import { Badge } from '../../../components/ui/badge';
-import { Button } from '../../../components/ui/button';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../../components/ui/tabs';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '../../../components/ui/dialog';
-import { Textarea } from '../../../components/ui/textarea';
-import { Label } from '../../../components/ui/label';
+import type React from 'react';
+import { useState, useEffect } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
 import { useAccount, usePublicClient } from 'wagmi';
-import { parseEther } from 'viem';
-import BountyManagerABI from '../../../contracts/BountyManager.json';
+import BountyManagerABI from '@/abis/BountyManagerV2.json';
 import { format, parseISO, isValid } from 'date-fns';
 import { 
   CheckCircle, 
-  XCircle, 
-  Eye, 
-  Calendar, 
-  DollarSign, 
-  User,
-  Clock,
-  AlertCircle
 } from 'lucide-react';
 import { useBountySupabase } from '../hooks/useBountySupabase';
-import { type FrontendBid, type FrontendBounty, type FrontendNotification } from '../types/bounty';
-import UserTagging from '../../../components/UserTagging';
-import { isAddress } from 'viem';
+import type { FrontendBid, FrontendNotification } from '../types/bounty';
+import UserTagging from '@/components/UserTagging';
+import { isAddress, parseUnits } from 'viem';
 import { PaymentStructure } from '../hooks/useBountyContractEnhanced';
 import { Transaction, TransactionButton, TransactionSponsor, TransactionStatus, TransactionStatusLabel, TransactionStatusAction } from '@coinbase/onchainkit/transaction';
-import { getPublicClient } from '@wagmi/core';
 import { BaseError } from 'viem';
+import { unifiedNotificationService } from '@/services/unifiedNotificationService';
+import { PodValidationService } from '../services/PodValidationService';
+import { usePodValidation } from '../hooks/usePodValidation';
 
 const BASE_CHAIN_ID = 8453; // Base mainnet chain ID
+
+// Utility function to get token display symbol
+const getTokenSymbol = (tokenType: 'SYSTEM' | 'SELF'): string => {
+  return tokenType === 'SYSTEM' ? '$SYSTEM' : '$SELF';
+};
+
+// Utility function to extract bounty ID from transaction receipt logs
+const extractBountyIdFromLogs = (logs: any[], bountyManagerAddress: string): string | null => {
+  try {
+    // Look for BountyCreated event from BountyManager contract
+    // Event signature: BountyCreated(uint256 indexed id, address indexed creator, string podId, string ipfsHash)
+    // The indexed bounty ID is in topics[1]
+    const bountyCreatedLog = logs?.find(log =>
+      log.topics && log.topics.length >= 2 &&
+      log.address?.toLowerCase() === bountyManagerAddress.toLowerCase()
+    );
+
+    if (bountyCreatedLog && bountyCreatedLog.topics?.[1]) {
+      const bountyIdHex = bountyCreatedLog.topics[1];
+      const bountyId = BigInt(bountyIdHex).toString();
+      console.log('✅ Extracted bounty ID from logs:', bountyId);
+      return bountyId;
+    }
+
+    console.warn('⚠️ Could not find BountyCreated event in logs');
+    return null;
+  } catch (error) {
+    console.error('❌ Error extracting bounty ID from logs:', error);
+    return null;
+  }
+};
 
 // Add error logging utility with rate limiting
 const ERROR_LOG_KEY = 'commapp_bounty_error_logs';
@@ -374,7 +399,18 @@ interface BidReviewManagerProps {
   onNotificationSent?: (notification: FrontendNotification) => void;
 }
 
-export const BidReviewManager: React.FC<BidReviewManagerProps> = ({ 
+// Interface for pending assignment data
+interface PendingAssignment {
+  onchainBountyId: string;
+  onchainBidIndex: number;  // Index from contract bids array (tracked from placeBid)
+  reviewer: `0x${string}`;
+  approver: `0x${string}`;
+  bidId: string;
+  bountyId: string;
+  bidderAddress: string;
+}
+
+export const BidReviewManager: React.FC<BidReviewManagerProps> = ({
   onBidStatusChange,
   onNotificationSent
 }) => {
@@ -386,16 +422,35 @@ export const BidReviewManager: React.FC<BidReviewManagerProps> = ({
   const [rejectionReason, setRejectionReason] = useState('');
   const [selectedBid, setSelectedBid] = useState<FrontendBid | null>(null);
   const [selectedReviewers, setSelectedReviewers] = useState<string[]>([]);
+  const [pendingAssignment, setPendingAssignment] = useState<PendingAssignment | null>(null);
   const { bids, bounties, loadAllBids, loadBounties, updateBidStatus, createBidReview } = useBountySupabase();
+  const { validateMultiplePods, getValidatedPodId, getPodValidationStatus, isValidating } = usePodValidation();
 
   useEffect(() => {
     loadAllBids();
     loadBounties();
   }, [loadAllBids, loadBounties]);
 
+  // Validate pod IDs only when viewing pending bids to avoid rate limiting
+  // Validation is expensive and only needed before approval
+  useEffect(() => {
+    if (activeTab === 'pending' && bounties.length > 0) {
+      const podIds = bounties.map(bounty => bounty.podId).filter(Boolean);
+      if (podIds.length > 0) {
+        console.log('🔄 Pre-validating pod IDs for pending bounties:', podIds);
+        validateMultiplePods(podIds);
+      }
+    }
+  }, [activeTab, bounties, validateMultiplePods]);
+
   const getBountyTitle = (bountyId: string) => {
     const bounty = bounties.find(b => b.id === bountyId);
     return bounty?.title || bountyId;
+  };
+
+  const getTokenSymbolForBid = (bidBountyId: string): string => {
+    const bounty = bounties.find(b => b.id === bidBountyId);
+    return bounty ? getTokenSymbol(bounty.value.token) : 'tokens';
   };
 
   const extractAddress = (mention: string | undefined): `0x${string}` | null => {
@@ -431,17 +486,17 @@ export const BidReviewManager: React.FC<BidReviewManagerProps> = ({
       });
       console.log('✅ Bid review created successfully');
 
-      // Send notification
-      onNotificationSent?.({
-        id: '',
-        recipientAddress: selectedBid.bidderAddress,
-        bountyId: selectedBid.bountyId,
-        bidId: selectedBid.id,
-        notificationType: 'bid_rejected',
+      // Send notification using unified service
+      await unifiedNotificationService.createNotification({
+        recipient_address: selectedBid.bidderAddress,
+        sender_address: address!,
+        notification_type: 'bounty_work_reviewed',
         title: 'Bid Update',
         message: `Your bid for "${getBountyTitle(selectedBid.bountyId)}" was not selected. Reason: ${rejectionReason}`,
-        isRead: false,
-        createdAt: new Date()
+        context_type: 'bounty',
+        context_id: selectedBid.bountyId,
+        context_url: `/bounty/${selectedBid.bountyId}`,
+        priority: 'medium'
       });
 
       setRejectionDialogOpen(false);
@@ -542,7 +597,7 @@ export const BidReviewManager: React.FC<BidReviewManagerProps> = ({
               <div className="space-y-4">
                 <div>
                   <p className="text-sm font-medium text-gray-500">Amount</p>
-                  <p>{bid.proposedAmount} tokens</p>
+                  <p>{bid.proposedAmount} {getTokenSymbolForBid(bid.bountyId)}</p>
                 </div>
                 <div>
                   <p className="text-sm font-medium text-gray-500">Payment</p>
@@ -556,7 +611,7 @@ export const BidReviewManager: React.FC<BidReviewManagerProps> = ({
                   <Button
                     onClick={() => handleReviewBid(bid)}
                     className="flex-1"
-                    style={{ backgroundColor: '#e8fcff', color: '#000' }}
+                    style={{ backgroundColor: '#8FAAA1', color: '#1F2D2A' }}
                   >
                     View Details
                   </Button>
@@ -596,7 +651,7 @@ export const BidReviewManager: React.FC<BidReviewManagerProps> = ({
                   <p>Bidder: {selectedBid.first_name || selectedBid.last_name
                     ? `${selectedBid.first_name || ''} ${selectedBid.last_name || ''}`.trim()
                     : selectedBid.bidderAddress}</p>
-                  <p>Amount: {selectedBid.proposedAmount} tokens</p>
+                  <p>Amount: {selectedBid.proposedAmount} {getTokenSymbolForBid(selectedBid.bountyId)}</p>
                   <p>Payment: {getPaymentOptionLabel(selectedBid.paymentOption)}</p>
                   <p>Submitted: {format(selectedBid.submittedAt, 'MMM dd, yyyy')}</p>
                 </div>
@@ -630,12 +685,12 @@ export const BidReviewManager: React.FC<BidReviewManagerProps> = ({
                             <p className="text-gray-700">{deliverable.description}</p>
                             <div className="text-sm text-gray-600">
                               <p>Due: {(() => {
-                                let dateObj = typeof deliverable.due_date === 'string'
+                                const dateObj = typeof deliverable.due_date === 'string'
                                   ? parseISO(deliverable.due_date)
                                   : deliverable.due_date;
                                 return isValid(dateObj) ? format(dateObj, 'MMM dd, yyyy') : 'Invalid date';
                               })()}</p>
-                              <p>Amount: {deliverable.payment_amount} tokens</p>
+                              <p>Amount: {deliverable.payment_amount} {getTokenSymbolForBid(selectedBid.bountyId)}</p>
                             </div>
                           </div>
                         </div>
@@ -660,26 +715,38 @@ export const BidReviewManager: React.FC<BidReviewManagerProps> = ({
               {/* Reviewer Assignment */}
               <div className="space-y-4">
                 <div>
-                  <Label>Technical Reviewer</Label>
-                  <UserTagging
-                    value={selectedReviewers[0] || ''}
-                    onChange={(value) => setSelectedReviewers([value, selectedReviewers[1]])}
-                    placeholder="Type @ to mention a reviewer..."
-                    contextType="bounty"
-                    contextId={selectedBid?.bountyId || 'review'}
-                    contextUrl={selectedBid?.bountyId ? `/bounty/${selectedBid.bountyId}` : undefined}
-                  />
+                  <Label>Technical Reviewer {selectedBid?.status === 'approved' && '(Assigned)'}</Label>
+                  {selectedBid?.status === 'approved' ? (
+                    <div className="p-2 bg-gray-100 rounded border text-gray-700">
+                      {selectedReviewers[0] || selectedBid?.technical_reviewer || 'Not assigned'}
+                    </div>
+                  ) : (
+                    <UserTagging
+                      value={selectedReviewers[0] || ''}
+                      onChange={(value) => setSelectedReviewers([value, selectedReviewers[1]])}
+                      placeholder="Type @ to mention a reviewer..."
+                      contextType="bounty"
+                      contextId={selectedBid?.bountyId || 'review'}
+                      contextUrl={selectedBid?.bountyId ? `/bounty/${selectedBid.bountyId}` : undefined}
+                    />
+                  )}
                 </div>
                 <div>
-                  <Label>Final Approver</Label>
-                  <UserTagging
-                    value={selectedReviewers[1] || ''}
-                    onChange={(value) => setSelectedReviewers([selectedReviewers[0], value])}
-                    placeholder="Type @ to mention an approver..."
-                    contextType="bounty"
-                    contextId={selectedBid?.bountyId || 'review'}
-                    contextUrl={selectedBid?.bountyId ? `/bounty/${selectedBid.bountyId}` : undefined}
-                  />
+                  <Label>Final Approver {selectedBid?.status === 'approved' && '(Assigned)'}</Label>
+                  {selectedBid?.status === 'approved' ? (
+                    <div className="p-2 bg-gray-100 rounded border text-gray-700">
+                      {selectedReviewers[1] || selectedBid?.final_approver || 'Not assigned'}
+                    </div>
+                  ) : (
+                    <UserTagging
+                      value={selectedReviewers[1] || ''}
+                      onChange={(value) => setSelectedReviewers([selectedReviewers[0], value])}
+                      placeholder="Type @ to mention an approver..."
+                      contextType="bounty"
+                      contextId={selectedBid?.bountyId || 'review'}
+                      contextUrl={selectedBid?.bountyId ? `/bounty/${selectedBid.bountyId}` : undefined}
+                    />
+                  )}
                 </div>
               </div>
 
@@ -708,8 +775,8 @@ export const BidReviewManager: React.FC<BidReviewManagerProps> = ({
                   if (!hasBothReviewers) {
                     return (
                       <Button
-                        disabled
-                        style={{ backgroundColor: '#e8fcff', color: '#000' }}
+                        disabled={true}
+                        style={{ backgroundColor: '#D8D2C8', color: '#8F8A84', opacity: 0.6 }}
                       >
                         <CheckCircle className="w-4 h-4 mr-1" />
                         Approve
@@ -727,11 +794,11 @@ export const BidReviewManager: React.FC<BidReviewManagerProps> = ({
                   if (!techReviewerAddress || !finalApproverAddress || !bounty) {
                     return (
                       <Button
-                        disabled
-                        style={{ backgroundColor: '#e8fcff', color: '#000' }}
+                        disabled={true}
+                        style={{ backgroundColor: '#D8D2C8', color: '#8F8A84', opacity: 0.6 }}
                       >
                         <CheckCircle className="w-4 h-4 mr-1" />
-                        {!bounty ? 'Bounty not found' : 'Invalid reviewer addresses'}
+                        {bounty ? 'Invalid reviewer addresses' : 'Bounty not found'}
                       </Button>
                     );
                   }
@@ -750,20 +817,89 @@ export const BidReviewManager: React.FC<BidReviewManagerProps> = ({
                   const upfrontAmount = selectedBid.paymentDetails?.upfrontAmount || '0';
                   const completionAmount = selectedBid.paymentDetails?.completionAmount || selectedBid.proposedAmount;
 
-                  const calls = [{
+                  // Convert decimal amounts to BigInt using parseUnits (18 decimals for most tokens)
+                  const decimals = 18; // Most ERC20 tokens use 18 decimals
+                  const proposedAmountWei = parseUnits(String(selectedBid.proposedAmount), decimals);
+                  const upfrontAmountWei = parseUnits(String(upfrontAmount), decimals);
+                  const completionAmountWei = parseUnits(String(completionAmount), decimals);
+
+                  // Create the bounty on-chain with assignment to trigger escrow
+                  // TODO: In future, bounties should be created on-chain during creation, not approval
+                  // For now, we create and assign in approval step to ensure escrow is set up
+                  const calls = [];
+
+                  // ALWAYS include approve call for wallet-funded bounties during bid approval
+                  // The bounty.funding_source field may not be set in database during bid approval,
+                  // so we can't rely on it. Instead, we'll always approve when creating from bid approval.
+                  // The paymaster (isSponsored={true}) will handle the approval and gas fees.
+                  console.log('💰 Adding token approval call for bid approval flow');
+                  calls.push({
+                    address: tokenAddress,
+                    abi: [
+                      {
+                        "name": "approve",
+                        "type": "function",
+                        "inputs": [
+                          {"name": "spender", "type": "address"},
+                          {"name": "amount", "type": "uint256"}
+                        ],
+                        "outputs": [{"name": "", "type": "bool"}]
+                      }
+                    ],
+                    functionName: 'approve',
+                    args: [contractAddress, proposedAmountWei],
+                  });
+
+                  // Create the bounty using individual parameters as per ABI
+                  // createBounty(uint128 value, address token, uint8 paymentType, string podId, string ipfsHash)
+                  
+                  // Convert paymentStructure to uint8
+                  let paymentType = 0; // Default: COMPLETION
+                  if (paymentStructure === 'MILESTONE') paymentType = 1;
+                  else if (paymentStructure === 'SPLIT') paymentType = 2;
+                  
+                  // Use the pod ID directly - it should be registered in PodBountyService
+                  // If not registered, the contract will revert with "Invalid pod ID"
+                  const validatedPodId = bounty.podId || '';
+
+                  console.log('🏢 Pod ID for transaction:', {
+                    originalPodId: bounty.podId,
+                    validatedPodId,
+                    note: 'Pod must be registered in PodBountyService contract'
+                  });
+                  
+                  // Create IPFS hash from bounty data (simplified for now)
+                  const ipfsHash = `bounty-${bounty.id}-${Date.now()}`;
+
+                  console.log('🔧 Transaction calls prepared:', {
+                    totalCalls: 2,
+                    call1: 'ERC20.approve() - Allow BountyManager to spend tokens',
+                    call2: 'BountyManagerV2.createBounty() - Create bounty with escrow',
+                    approveAmount: proposedAmountWei.toString(),
+                    bountyAmount: proposedAmountWei.toString(),
+                    tokenAddress,
+                    paymentType,
+                    podId: validatedPodId,
+                    ipfsHash,
+                    contractAddress,
+                    note: 'Paymaster will handle both approve and createBounty calls'
+                  });
+
+                  calls.push({
                     address: contractAddress,
                     abi: BountyManagerABI,
                     functionName: 'createBounty',
                     args: [
-                      bounty.title,
-                      bounty.category,
-                      String(selectedBid.proposedAmount),
-                      tokenAddress,
-                      paymentStructure,
-                      String(upfrontAmount),
-                      String(completionAmount),
+                      proposedAmountWei,  // uint128 value
+                      tokenAddress,       // address token
+                      paymentType,        // uint8 paymentType
+                      validatedPodId,     // string podId (validated with smart contract)
+                      ipfsHash           // string ipfsHash
                     ],
-                  }];
+                  });
+                  
+                  // Note: assignBounty will need to be called separately after creation
+                  // or we need to implement a createAndAssignBounty function in the contract
 
                   // Debug sponsorship config like Cart component
                   console.log("Bounty transaction sponsorship config:", {
@@ -789,7 +925,7 @@ export const BidReviewManager: React.FC<BidReviewManagerProps> = ({
                   if (!validation.isValid) {
                     console.error('Invalid transaction data:', validation.issues);
                     return (
-                      <Button disabled style={{ backgroundColor: '#e8fcff', color: '#000' }}>
+                      <Button disabled={true} style={{ backgroundColor: '#e8fcff', color: '#000' }}>
                         <CheckCircle className="w-4 h-4 mr-1" />
                         Invalid transaction data
                       </Button>
@@ -823,7 +959,7 @@ export const BidReviewManager: React.FC<BidReviewManagerProps> = ({
 
                     if (isLoading) {
                       return (
-                        <Button disabled style={{ backgroundColor: '#e8fcff', color: '#000' }}>
+                        <Button disabled={true} style={{ backgroundColor: '#e8fcff', color: '#000' }}>
                           <CheckCircle className="w-4 h-4 mr-1" />
                           Loading transaction config...
                         </Button>
@@ -832,7 +968,7 @@ export const BidReviewManager: React.FC<BidReviewManagerProps> = ({
 
                     if (!txConfig) {
                       return (
-                        <Button disabled style={{ backgroundColor: '#e8fcff', color: '#000' }}>
+                        <Button disabled={true} style={{ backgroundColor: '#e8fcff', color: '#000' }}>
                           <CheckCircle className="w-4 h-4 mr-1" />
                           Failed to load transaction config
                         </Button>
@@ -847,60 +983,66 @@ export const BidReviewManager: React.FC<BidReviewManagerProps> = ({
                         chainId={BASE_CHAIN_ID}
                         calls={calls}
                         isSponsored={true}
-                        onSuccess={async () => {
-                          console.log('Bounty creation transaction succeeded');
-                          logTransactionLifecycle('Success', {
-                            type: 'bounty_creation',
-                            address: address?.toLowerCase(),
-                            chainId: BASE_CHAIN_ID,
-                            sponsorshipUsed: true
-                          });
-                          
-                          // Update status in Supabase
-                          await updateBidStatus(selectedBid.id, 'approved', techReviewerAddress, finalApproverAddress);
-                          onBidStatusChange?.();
-
-                          // Send notifications
-                          onNotificationSent?.({
-                            id: '',
-                            recipientAddress: selectedBid.bidderAddress,
-                            bountyId: selectedBid.bountyId,
-                            bidId: selectedBid.id,
-                            notificationType: 'bid_approved',
-                            title: 'Bid Approved!',
-                            message: `Your bid for "${getBountyTitle(selectedBid.bountyId)}" has been approved.`,
-                            isRead: false,
-                            createdAt: new Date()
+                        onStatus={async (status) => {
+                          console.log('🔔 Bounty creation status:', {
+                            statusName: status.statusName,
+                            hasReceipts: !!status.transactionReceipts,
+                            receiptsLength: status.transactionReceipts?.length
                           });
 
-                          onNotificationSent?.({
-                            id: '',
-                            recipientAddress: techReviewerAddress,
-                            bountyId: selectedBid.bountyId,
-                            bidId: selectedBid.id,
-                            notificationType: 'review_requested',
-                            title: 'Review Assignment',
-                            message: `You have been assigned as Technical Reviewer for "${getBountyTitle(selectedBid.bountyId)}".`,
-                            isRead: false,
-                            createdAt: new Date()
-                          });
-                          
-                          onNotificationSent?.({
-                            id: '',
-                            recipientAddress: finalApproverAddress,
-                            bountyId: selectedBid.bountyId,
-                            bidId: selectedBid.id,
-                            notificationType: 'review_requested',
-                            title: 'Review Assignment',
-                            message: `You have been assigned as Final Approver for "${getBountyTitle(selectedBid.bountyId)}".`,
-                            isRead: false,
-                            createdAt: new Date()
-                          });
+                          if (status.statusName === 'success') {
+                            console.log('✅ Transaction succeeded! Processing bounty creation...');
+                            logTransactionLifecycle('Success', {
+                              type: 'bounty_creation',
+                              address: address?.toLowerCase(),
+                              chainId: BASE_CHAIN_ID,
+                              sponsorshipUsed: true
+                            });
 
-                          setReviewDialogOpen(false);
-                          setSelectedBid(null);
-                          setSelectedReviewers([]);
-                          await loadAllBids();
+                            // Extract receipts from status
+                            const receipts = status.transactionReceipts || status.statusData?.transactionReceipts;
+
+                            if (receipts && receipts.length > 0) {
+                              // The createBounty transaction is the last call (after approve if wallet funding)
+                              const createBountyReceipt = receipts[receipts.length - 1];
+                              const logs = createBountyReceipt?.logs;
+
+                              // Extract bounty ID from logs
+                              const onchainBountyId = extractBountyIdFromLogs(logs, contractAddress);
+
+                              if (onchainBountyId) {
+                                console.log('✅ Bounty created on-chain with ID:', onchainBountyId);
+
+                                // Prepare assignment data
+                                console.log('🔄 Preparing assignment transaction...');
+                                const assignmentData: PendingAssignment = {
+                                  onchainBountyId,
+                                  onchainBidIndex: selectedBid.onchainBidIndex || 0, // Use tracked bid index from placeBid
+                                  reviewer: techReviewerAddress,
+                                  approver: finalApproverAddress,
+                                  bidId: selectedBid.id,
+                                  bountyId: selectedBid.bountyId,
+                                  bidderAddress: selectedBid.bidderAddress
+                                };
+
+                                console.log('📋 Assignment details prepared:', assignmentData);
+
+                                // Set pending assignment to trigger the assignment transaction
+                                setPendingAssignment(assignmentData);
+
+                                console.log('✅ Assignment will be executed automatically');
+                              } else {
+                                console.error('❌ Could not extract bounty ID from transaction logs');
+                                // If assignment can't proceed, still close the dialog
+                                setReviewDialogOpen(false);
+                                setSelectedBid(null);
+                                setSelectedReviewers([]);
+                              }
+                            } else {
+                              console.warn('⚠️ Success status but no transaction receipts found');
+                              setReviewDialogOpen(false);
+                            }
+                          }
                         }}
                         onError={async (error: Error) => {
                           console.error('Bounty creation transaction failed:', error);
@@ -927,17 +1069,13 @@ export const BidReviewManager: React.FC<BidReviewManagerProps> = ({
                         <TransactionButton
                           text="Approve & Create Bounty (Sponsored)"
                           className="flex-1"
-                          style={{ backgroundColor: '#e8fcff', color: '#000' }}
+                          style={{ backgroundColor: '#2F5D50', color: '#FFFFFF' }}
                         />
                         <TransactionSponsor />
                         <TransactionStatus>
                           <TransactionStatusLabel />
                           <TransactionStatusAction />
                         </TransactionStatus>
-                        {/* DEBUG BUTTON: Should always show */}
-                        <Button style={{ background: 'red', color: '#fff', width: '100%' }}>
-                          DEBUG: Should always show
-                        </Button>
                       </Transaction>
                     );
                   };
@@ -973,7 +1111,7 @@ export const BidReviewManager: React.FC<BidReviewManagerProps> = ({
                   <p>Bidder: {selectedBid.first_name || selectedBid.last_name
                     ? `${selectedBid.first_name || ''} ${selectedBid.last_name || ''}`.trim()
                     : selectedBid.bidderAddress}</p>
-                  <p>Amount: {selectedBid.proposedAmount} tokens</p>
+                  <p>Amount: {selectedBid.proposedAmount} {getTokenSymbolForBid(selectedBid.bountyId)}</p>
                 </div>
               </div>
 
@@ -1011,6 +1149,146 @@ export const BidReviewManager: React.FC<BidReviewManagerProps> = ({
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Assignment Transaction Dialog - Auto-triggered after bounty creation */}
+      {pendingAssignment && (
+        <Dialog open={true} onOpenChange={() => {
+          // Don't allow closing while assignment is pending
+        }}>
+          <DialogContent className="fixed z-50 left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-white rounded-lg shadow-lg focus:outline-none max-w-md">
+            <DialogHeader>
+              <DialogTitle>Assigning Bounty</DialogTitle>
+              <DialogDescription>
+                Completing bounty assignment and setting up escrow...
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-4 p-4">
+              <p className="text-sm text-gray-600">
+                Bounty created successfully! Now assigning it to the bidder and setting up escrow.
+              </p>
+
+              <div className="p-4 rounded-lg space-y-2 text-sm" style={{ backgroundColor: '#E8F1EE' }}>
+                <p><strong>Bounty ID:</strong> {pendingAssignment.onchainBountyId}</p>
+                <p><strong>Bidder:</strong> {pendingAssignment.bidderAddress.substring(0, 10)}...</p>
+                <p><strong>Reviewer:</strong> {pendingAssignment.reviewer.substring(0, 10)}...</p>
+                <p><strong>Approver:</strong> {pendingAssignment.approver.substring(0, 10)}...</p>
+              </div>
+
+              {/* Assignment Transaction */}
+              <Transaction
+                address={address?.toLowerCase() as `0x${string}`}
+                chainId={BASE_CHAIN_ID}
+                calls={[
+                  // Assign the bounty using the tracked bid index
+                  // The bid was already placed on-chain when the bidder submitted it
+                  {
+                    address: process.env.NEXT_PUBLIC_BOUNTY_MANAGER_ADDRESS as `0x${string}`,
+                    abi: BountyManagerABI,
+                    functionName: 'assignBounty',
+                    args: [
+                      BigInt(pendingAssignment.onchainBountyId), // uint256 bountyId
+                      BigInt(pendingAssignment.onchainBidIndex), // uint256 bidIndex (tracked from placeBid)
+                      pendingAssignment.reviewer, // address reviewer
+                      pendingAssignment.approver // address approver
+                    ]
+                  }
+                ]}
+                isSponsored={true}
+                onStatus={async (status) => {
+                  console.log('🔔 Assignment status:', {
+                    statusName: status.statusName,
+                    hasReceipts: !!status.transactionReceipts
+                  });
+
+                  if (status.statusName === 'success') {
+                    console.log('✅ Assignment transaction succeeded!');
+                    logTransactionLifecycle('Assignment Success', {
+                      type: 'bounty_assignment',
+                      bountyId: pendingAssignment.onchainBountyId,
+                      bidder: pendingAssignment.bidderAddress,
+                      address: address?.toLowerCase(),
+                      chainId: BASE_CHAIN_ID
+                    });
+
+                    // Update bid status in Supabase
+                    await updateBidStatus(
+                      pendingAssignment.bidId,
+                      'approved',
+                      pendingAssignment.reviewer,
+                      pendingAssignment.approver
+                    );
+                    onBidStatusChange?.();
+
+                    // Send notifications
+                    await unifiedNotificationService.createNotification({
+                      recipient_address: pendingAssignment.bidderAddress,
+                      sender_address: address!,
+                      notification_type: 'bounty_work_submitted',
+                      title: 'Bid Approved & Bounty Assigned!',
+                      message: `Your bid has been approved and the bounty has been assigned to you. Funds are now in escrow.`,
+                      context_type: 'bounty',
+                      context_id: pendingAssignment.bountyId,
+                      context_url: `/bounty/${pendingAssignment.bountyId}`,
+                      priority: 'high'
+                    });
+
+                    await unifiedNotificationService.createNotification({
+                      recipient_address: pendingAssignment.reviewer,
+                      sender_address: address!,
+                      notification_type: 'bounty_work_submitted',
+                      title: 'Technical Reviewer Assignment',
+                      message: `You have been assigned as Technical Reviewer for a bounty.`,
+                      context_type: 'bounty',
+                      context_id: pendingAssignment.bountyId,
+                      context_url: `/bounty/${pendingAssignment.bountyId}`,
+                      priority: 'high'
+                    });
+
+                    await unifiedNotificationService.createNotification({
+                      recipient_address: pendingAssignment.approver,
+                      sender_address: address!,
+                      notification_type: 'bounty_work_submitted',
+                      title: 'Final Approver Assignment',
+                      message: `You have been assigned as Final Approver for a bounty.`,
+                      context_type: 'bounty',
+                      context_id: pendingAssignment.bountyId,
+                      context_url: `/bounty/${pendingAssignment.bountyId}`,
+                      priority: 'high'
+                    });
+
+                    // Clear pending assignment and reload
+                    setPendingAssignment(null);
+                    await loadAllBids();
+
+                    console.log('✅ Bounty approval and assignment complete!');
+                  }
+                }}
+                onError={async (error) => {
+                  console.error('❌ Assignment transaction failed:', error);
+                  await logError(error, 'Bounty Assignment');
+
+                  alert(`Failed to assign bounty: ${error.message}\n\nThe bounty was created but not assigned. Please contact support.`);
+
+                  // Clear pending assignment even on error
+                  setPendingAssignment(null);
+                }}
+              >
+                <TransactionButton
+                  text="Assign Bounty & Setup Escrow"
+                  className="w-full"
+                  style={{ backgroundColor: '#2F5D50', color: '#FFFFFF' }}
+                />
+                <TransactionSponsor />
+                <TransactionStatus>
+                  <TransactionStatusLabel />
+                  <TransactionStatusAction />
+                </TransactionStatus>
+              </Transaction>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 }; 

@@ -1,279 +1,700 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import { useAuthContext } from '@/features/identity';
+import type React from 'react';
+import { useState, useEffect } from 'react';
 import { useAccount } from 'wagmi';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { useRouter } from 'next/navigation';
+import { EventTokenDisplay } from './EventTokenDisplay';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Calendar, MapPin, Users, DollarSign, Clock, AlertTriangle, CheckCircle } from 'lucide-react';
-import { EventWithStats } from '../types/event';
-import { useEventRegistration } from '../hooks/useEvents';
-import { useEventAccess, useTokenRequirements } from '../hooks/useEventTokenGating';
-import { EventService } from '../lib/supabase';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Calendar, Clock, MapPin, Users, Wallet, AlertCircle, CheckCircle, Ticket } from 'lucide-react';
+
+// Transaction components
+import { 
+  Transaction, 
+  TransactionButton, 
+  TransactionSponsor, 
+  TransactionStatus, 
+  TransactionStatusLabel, 
+  TransactionStatusAction 
+} from "@coinbase/onchainkit/transaction";
+
+import { useSimplifiedEventTransactions } from '../hooks/useSimplifiedEventTransactions';
+import { useEventAccess } from '../hooks/useEventTokenGating';
+import { useRegistrationStatus } from '../hooks/useRegistrationStatus';
+import { TokenApprovalFlow } from './TokenApprovalFlow';
+import { supabase } from '@/lib/supabase';
+import { useReadContract } from 'wagmi';
+import { CONTRACT_ADDRESSES } from '@/config/contracts';
+
+// Import the contract ABI and address
+import EventManagerABI from '@/abis/EventManager.json';
+const EVENT_MANAGER_CONTRACT = CONTRACT_ADDRESSES.EVENT_MANAGER;
+
+const BASE_CHAIN_ID = 8453;
+
+interface Event {
+  id: string;
+  title: string;
+  description: string;
+  event_date: string;
+  location: string;
+  max_attendees?: number;
+  current_attendees?: number;
+  price_amount: string;
+  price_token: string;
+  required_tokens: string[];
+  organizing_pod?: {
+    name: string;
+  };
+  event_image_url?: string;
+  creator_address: string;
+  manager_address?: string;
+  blockchain_event_id?: string;
+}
 
 interface EventRegistrationModalProps {
-  event: EventWithStats;
+  event: Event;
   isOpen: boolean;
   onClose: () => void;
-  onSuccess?: () => void;
+  onSuccess: () => void;
+  currentRegistrationCount?: number; // Pass current count for accurate available spots
 }
 
 export const EventRegistrationModal: React.FC<EventRegistrationModalProps> = ({
   event,
   isOpen,
   onClose,
-  onSuccess
+  onSuccess,
+  currentRegistrationCount = 0
 }) => {
   const { address } = useAccount();
+  const router = useRouter();
+  const { getRegisterEventCall, isConnected } = useSimplifiedEventTransactions();
   const { canRegister, canView, loading: accessLoading } = useEventAccess(event);
-  const { hasRequiredTokens, userTokenBalances, loading: tokenLoading } = useTokenRequirements(event.required_tokens || []);
-  const { registerForEvent, loading: registering, error } = useEventRegistration(event.id);
+  const { isRegistered, registrationStatus: regStatus, loading: regLoading } = useRegistrationStatus(event.id);
   
-  const [step, setStep] = useState<'review' | 'payment' | 'success'>('review');
-  const [paymentProcessing, setPaymentProcessing] = useState(false);
+  const [isRegistering, setIsRegistering] = useState(false);
+  const [registrationStatus, setRegistrationStatus] = useState<'idle' | 'checking' | 'eligible' | 'ineligible' | 'approving' | 'ready'>('idle');
+  const [hasAccess, setHasAccess] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
+  const [showApprovalFlow, setShowApprovalFlow] = useState(false);
+  const [systemTokenAmount, setSystemTokenAmount] = useState('0');
+  const [selfTokenAmount, setSelfTokenAmount] = useState('0');
+  
+  // Check if event exists on-chain using the blockchain event ID
+  const blockchainEventId = event.blockchain_event_id;
+  const { data: onChainEvent, error: contractError, isLoading: contractLoading } = useReadContract({
+    address: EVENT_MANAGER_CONTRACT,
+    abi: EventManagerABI,
+    functionName: 'getEvent',
+    args: [blockchainEventId],
+    query: {
+      enabled: !!blockchainEventId && isOpen,
+      retry: false
+    }
+  });
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      weekday: 'long',
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
+  // Check eligibility when modal opens
+  useEffect(() => {
+    const checkEligibility = async () => {
+  const { session, isAuthenticated, signIn } = useAuthContext();
+      if (!address || !isOpen) return;
+
+      setRegistrationStatus('checking');
+      setErrorMessage('');
+
+      try {
+        // Use shared registration status hook
+        if (isRegistered) {
+          setRegistrationStatus('ineligible');
+          setErrorMessage(`You are already registered for this event (Status: ${regStatus})`);
+          return;
+        }
+
+        // Check token requirements using the hook
+        setHasAccess(canRegister);
+        
+        if (!canRegister && event.required_tokens.length > 0) {
+          setRegistrationStatus('ineligible');
+          setErrorMessage(`You need the following tokens to register: ${event.required_tokens.join(', ')}`);
+          return;
+        }
+
+        // Set token amounts from event pricing
+        // Parse the price_amount to determine SYSTEM vs SELF token amounts
+        const priceAmount = Number.parseFloat(event.price_amount || '0');
+        
+        if (event.price_token === 'SYSTEM') {
+          setSystemTokenAmount(priceAmount.toString());
+          setSelfTokenAmount('0');
+        } else if (event.price_token === 'SELF') {
+          setSystemTokenAmount('0');
+          setSelfTokenAmount(priceAmount.toString());
+        } else if (event.price_token === 'both') {
+          // For "both" token events, split equally or use separate fields if available
+          setSystemTokenAmount((priceAmount / 2).toString());
+          setSelfTokenAmount((priceAmount / 2).toString());
+        } else {
+          // Free event
+          setSystemTokenAmount('0');
+          setSelfTokenAmount('0');
+        }
+
+        // Check capacity using current registration count
+        if (event.max_attendees && currentRegistrationCount >= event.max_attendees) {
+          setRegistrationStatus('ineligible');
+          setErrorMessage('This event is at full capacity');
+          return;
+        }
+
+        // Check if event has already started
+        const eventDate = new Date(event.event_date);
+        if (eventDate <= new Date()) {
+          setRegistrationStatus('ineligible');
+          setErrorMessage('Registration is closed - event has already started');
+          return;
+        }
+
+        // Use blockchain_event_id for on-chain operations
+        const blockchainEventId = event.blockchain_event_id;
+        
+        console.log('🔍 Event Registration Debugging:', {
+          eventId: event.id,
+          blockchain_event_id: event.blockchain_event_id,
+          finalEventId: blockchainEventId,
+          status: event.status,
+          title: event.title,
+          note: 'Using blockchain_event_id if available, otherwise database id as fallback'
+        });
+        
+        // Log blockchain verification results
+        if (!contractLoading) {
+          if (contractError) {
+            console.error('❌ Event NOT found on blockchain:', {
+              eventId: blockchainEventId,
+              error: contractError.message,
+              reason: 'Event was never created on-chain or wrong ID used',
+              solution: 'Event must be created on blockchain before registration'
+            });
+          } else if (onChainEvent) {
+            console.log('✅ Event found on blockchain:', {
+              eventId: blockchainEventId,
+              onChainTitle: onChainEvent.title,
+              organizer: onChainEvent.organizer,
+              status: onChainEvent.status,
+              currentAttendees: onChainEvent.currentAttendees.toString(),
+              maxAttendees: onChainEvent.maxAttendees.toString()
+            });
+          }
+        }
+        
+        if (!blockchainEventId) {
+          setRegistrationStatus('ineligible');
+          setErrorMessage('Event is not available for blockchain registration - missing blockchain_event_id');
+          return;
+        }
+        
+        // Check if event exists on blockchain after contract call completes
+        if (!contractLoading) {
+          if (contractError || !onChainEvent) {
+            setRegistrationStatus('ineligible');
+            setErrorMessage(
+              `Event not found on blockchain (ID: ${blockchainEventId}). ` +
+              'This event may not have been properly created on-chain. ' +
+              'Please contact the event organizer.'
+            );
+            return;
+          }
+          
+          // Verify event status on blockchain
+          if (onChainEvent.status !== 0) { // 0 = Active status
+            setRegistrationStatus('ineligible');
+            setErrorMessage('Event is not active on blockchain');
+            return;
+          }
+        }
+
+        setRegistrationStatus('eligible');
+      } catch (error) {
+        console.error('Error checking eligibility:', error);
+        setRegistrationStatus('ineligible');
+        setErrorMessage('Error checking registration eligibility');
+      }
+    };
+
+    checkEligibility();
+  }, [address, event, isOpen, canRegister, contractLoading, contractError, onChainEvent, isRegistered, regStatus]);
+
+  const formatEventDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return {
+      date: date.toLocaleDateString('en-US', { 
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long', 
+        day: 'numeric' 
+      }),
+      time: date.toLocaleTimeString('en-US', { 
+        hour: 'numeric', 
+        minute: '2-digit',
+        hour12: true 
+      })
+    };
   };
 
-  const isEventFull = event.max_attendees ? event.registration_count >= event.max_attendees : false;
-  const isPaid = event.price_token !== 'free' && parseFloat(event.price_amount) > 0;
-  const isUpcoming = new Date(event.event_date) > new Date();
+  const getEventPrice = () => {
+    if (event.price_token === 'free' || Number.parseFloat(event.price_amount) === 0) {
+      return { amount: '0', display: 'Free', isFree: true };
+    }
+    return { 
+      amount: event.price_amount, 
+      display: `${event.price_amount} ETH`, 
+      isFree: false 
+    };
+  };
 
-  const handleRegister = async () => {
-    if (!address || !canRegister) return;
+  const prepareRegistration = () => {
+    if (!address || registrationStatus !== 'eligible') return null;
 
+    const price = getEventPrice();
+    
     try {
-      if (isPaid) {
-        setStep('payment');
-        setPaymentProcessing(true);
-        
-        // TODO: Implement payment processing with smart contracts
-        // This should integrate with EventEscrow contract
-        // For now, simulate payment processing
-        await new Promise(resolve => setTimeout(resolve, 2000));
-        
-        const success = await registerForEvent(event.price_amount, event.price_token);
-        if (success) {
-          setStep('success');
-          if (onSuccess) onSuccess();
-        }
-      } else {
-        const success = await registerForEvent('0', 'free');
-        if (success) {
-          setStep('success');
-          if (onSuccess) onSuccess();
-        }
+      // Use blockchain_event_id for registration
+      const blockchainEventId = event.blockchain_event_id;
+      
+      if (!blockchainEventId) {
+        console.error('Event missing blockchain_event_id:', event);
+        return null;
       }
-    } catch (err) {
-      console.error('Registration failed:', err);
-    } finally {
-      setPaymentProcessing(false);
+      
+      console.log('🔧 Preparing Registration Transaction:', {
+        eventId: blockchainEventId,
+        eventTitle: event.title,
+        userAddress: address,
+        priceAmount: price.amount,
+        isFree: price.isFree,
+        eventStatus: event.status,
+        contractAddress: process.env.NEXT_PUBLIC_EVENT_MANAGER,
+        note: 'This will call registerForEvent() on the smart contract'
+      });
+      
+      const calls = getRegisterEventCall({
+        eventId: blockchainEventId,
+        paymentAmount: price.isFree ? undefined : price.amount
+      });
+      
+      console.log('📋 Registration Transaction Calls:', calls);
+      return calls;
+    } catch (error) {
+      console.error('Error preparing registration:', error);
+      return null;
     }
   };
 
-  const handleClose = () => {
-    setStep('review');
-    setPaymentProcessing(false);
-    onClose();
+  const handleRegistrationSuccess = async (response: any) => {
+    console.log('✅ Registration successful:', response);
+    setIsRegistering(false);
+
+    try {
+      // Ensure user is authenticated with Supabase before storing registration
+      // Using centralized auth session
+      
+      if (!isAuthenticated || !session?.user?.id) {
+        console.log('🔐 No Supabase session, attempting authentication...');
+        
+        // Get nonce and sign message for authentication
+        const nonceRes = await fetch('/api/auth/nonce');
+        if (!nonceRes.ok) {
+          throw new Error('Failed to get nonce');
+        }
+        const { nonce } = await nonceRes.json();
+
+        // Import signMessage dynamically
+        const { signMessage, getConfig } = await import('wagmi/actions');
+        const config = getConfig();
+        const signature = await signMessage(config, { message: nonce });
+
+        // Verify and get Supabase token
+        const verifyRes = await fetch('/api/auth/verify', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ address, signature }),
+        });
+
+        if (!verifyRes.ok) {
+          throw new Error('Authentication failed');
+        }
+
+        const { supabaseToken } = await verifyRes.json();
+        
+        if (supabaseToken) {
+          const { error } = await supabase.auth.setSession({
+            access_token: supabaseToken,
+            refresh_token: '',
+          });
+          
+          if (error) {
+            throw new Error('Failed to set session');
+          }
+          
+          console.log('✅ Successfully authenticated with Supabase');
+        }
+      }
+
+      // Get the current session to include user_id for RLS policies
+      const { data: { session: currentSession } } = await supabase.auth.getSession();
+      
+      // Store registration in Supabase using upsert to handle duplicates
+      const registrationData = {
+        event_id: event.id,
+        user_address: address!.toLowerCase(), // matches existing schema
+        registration_status: 'registered',
+        payment_amount: getEventPrice().amount,
+        payment_token: event.price_token,
+        payment_tx_hash: response?.transactionReceipts?.[0]?.transactionHash,
+        payment_status: 'completed',
+        registered_at: new Date().toISOString() // Update timestamp on upsert
+      };
+
+      // Note: RLS policies use user_address for event_registrations table
+
+      console.log('💾 Storing registration in database:', registrationData);
+
+      const { error: upsertError } = await supabase
+        .from('event_registrations')
+        .upsert(registrationData, {
+          onConflict: 'event_id,user_address', // Handle the unique constraint
+          ignoreDuplicates: false // Update existing record if found
+        });
+
+      if (upsertError) {
+        console.error('Error storing registration:', upsertError);
+        // Still consider success since blockchain transaction worked
+      } else {
+        console.log('✅ Registration stored successfully in database');
+        
+        // Trigger notifications to event organizer and manager (non-blocking)
+        // Add a small delay to prevent duplicate notifications from rapid successive calls
+        setTimeout(async () => {
+          try {
+            const { notificationService } = await import('../../../utils/notificationService');
+            
+            // Send notification to event creator
+            await notificationService.createEventRegistrationNotification(
+              event.creator_address,
+              address!,
+              event.id,
+              event.title
+            );
+            console.log('✅ Event registration notification sent to creator');
+            
+            // Send notification to event manager if different from creator
+            if (event.manager_address && event.manager_address.toLowerCase() !== event.creator_address.toLowerCase()) {
+              await notificationService.createEventRegistrationNotification(
+                event.manager_address,
+                address!,
+                event.id,
+                event.title
+              );
+              console.log('✅ Event registration notification sent to manager');
+            }
+          } catch (notificationError) {
+            console.log('Failed to send registration notification - continuing with registration');
+            // Don't fail the registration for notification errors - this is expected due to RLS
+          }
+        }, 1000); // 1 second delay to prevent duplicates
+      }
+
+      // TODO: Add to user's calendar
+      
+      onSuccess();
+      
+      // Redirect to main events page after successful registration
+      setTimeout(() => {
+        router.push('/events/');
+      }, 1000); // Small delay to allow success message to be seen
+    } catch (error) {
+      console.error('Error handling registration success:', error);
+      onSuccess(); // Still call success since blockchain transaction worked
+      
+      // Still redirect even if there were database/notification errors since blockchain transaction worked
+      setTimeout(() => {
+        router.push('/events/');
+      }, 1000);
+    }
   };
 
-  if (!isOpen) return null;
-
-  const renderReviewStep = () => (
-    <div className="space-y-6">
-      {/* Event Details */}
-      <Card>
-        <CardContent className="p-6">
-          <h3 className="text-lg font-semibold mb-4">{event.title}</h3>
-          
-          <div className="space-y-3">
-            <div className="flex items-center text-gray-700">
-              <Calendar className="w-5 h-5 mr-3 text-blue-500" />
-              <span>{formatDate(event.event_date)}</span>
-            </div>
-
-            {event.location && (
-              <div className="flex items-center text-gray-700">
-                <MapPin className="w-5 h-5 mr-3 text-green-500" />
-                <span>{event.location}</span>
-              </div>
-            )}
-
-            <div className="flex items-center text-gray-700">
-              <Users className="w-5 h-5 mr-3 text-purple-500" />
-              <span>
-                {event.registration_count} registered
-                {event.max_attendees && ` of ${event.max_attendees} maximum`}
-              </span>
-            </div>
-
-            {isPaid && (
-              <div className="flex items-center text-gray-700">
-                <DollarSign className="w-5 h-5 mr-3 text-yellow-500" />
-                <span className="font-semibold">
-                  {event.price_amount} {event.price_token}
-                </span>
-              </div>
-            )}
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Token Requirements Check */}
-      {event.required_tokens && event.required_tokens.length > 0 && (
-        <Card>
-          <CardContent className="p-6">
-            <h4 className="font-semibold mb-3 flex items-center">
-              <CheckCircle className="w-5 h-5 mr-2 text-green-500" />
-              Token Requirements
-            </h4>
-            <div className="space-y-2">
-              {event.required_tokens.map((tokenId) => (
-                <div key={tokenId} className="flex items-center justify-between">
-                  <span className="text-gray-700">{tokenId}</span>
-                  <Badge 
-                    variant={hasRequiredTokens ? "default" : "destructive"}
-                  >
-                    {hasRequiredTokens ? "✓ Owned" : "✗ Required"}
-                  </Badge>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Registration Status Checks */}
-      <div className="space-y-3">
-        {!isUpcoming && (
-          <div className="flex items-center p-3 bg-red-50 border border-red-200 rounded-lg">
-            <AlertTriangle className="w-5 h-5 mr-2 text-red-500" />
-            <span className="text-red-700">This event has already started or ended.</span>
-          </div>
-        )}
-
-        {isEventFull && (
-          <div className="flex items-center p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-            <AlertTriangle className="w-5 h-5 mr-2 text-yellow-500" />
-            <span className="text-yellow-700">This event is at full capacity.</span>
-          </div>
-        )}
-
-        {!hasRequiredTokens && event.required_tokens && event.required_tokens.length > 0 && (
-          <div className="flex items-center p-3 bg-red-50 border border-red-200 rounded-lg">
-            <AlertTriangle className="w-5 h-5 mr-2 text-red-500" />
-            <span className="text-red-700">You don't have the required tokens to register for this event.</span>
-          </div>
-        )}
-
-        {!address && (
-          <div className="flex items-center p-3 bg-blue-50 border border-blue-200 rounded-lg">
-            <AlertTriangle className="w-5 h-5 mr-2 text-blue-500" />
-            <span className="text-blue-700">Please connect your wallet to register.</span>
-          </div>
-        )}
-      </div>
-
-      {/* Action Buttons */}
-      <div className="flex justify-end space-x-3">
-        <Button variant="outline" onClick={handleClose}>
-          Cancel
-        </Button>
-        <Button 
-          onClick={handleRegister}
-          disabled={!canRegister || !address || !isUpcoming || isEventFull || registering}
-        >
-          {registering ? 'Registering...' : isPaid ? `Pay ${event.price_amount} ${event.price_token}` : 'Register for Free'}
-        </Button>
-      </div>
-
-      {error && (
-        <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
-          <p className="text-red-700">{error}</p>
-        </div>
-      )}
-    </div>
-  );
-
-  const renderPaymentStep = () => (
-    <div className="space-y-6 text-center">
-      <div className="p-8">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
-        <h3 className="text-lg font-semibold mb-2">Processing Payment</h3>
-        <p className="text-gray-600">
-          Please confirm the transaction in your wallet to complete registration.
-        </p>
-        <div className="mt-4 p-4 bg-gray-50 rounded-lg">
-          <p className="font-semibold">Payment Details:</p>
-          <p>{event.price_amount} {event.price_token}</p>
-          <p className="text-sm text-gray-600 mt-1">for {event.title}</p>
-        </div>
-      </div>
-    </div>
-  );
-
-  const renderSuccessStep = () => (
-    <div className="space-y-6 text-center">
-      <div className="p-8">
-        <CheckCircle className="w-16 h-16 text-green-500 mx-auto mb-4" />
-        <h3 className="text-lg font-semibold mb-2">Registration Successful!</h3>
-        <p className="text-gray-600 mb-6">
-          You've successfully registered for {event.title}.
-        </p>
-        
-        <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
-          <p className="text-green-700 font-medium">What's Next?</p>
-          <ul className="text-green-600 text-sm mt-2 space-y-1">
-            <li>• You'll receive a registration NFT in your wallet</li>
-            <li>• Check your notifications for event updates</li>
-            <li>• Mark your calendar for {formatDate(event.event_date)}</li>
-            {event.location && <li>• Event location: {event.location}</li>}
-          </ul>
-        </div>
-
-        <div className="flex justify-center space-x-3">
-          <Button variant="outline" onClick={handleClose}>
-            Close
-          </Button>
-          <Button asChild>
-            <a href={`/events/${event.id}`}>
-              View Event Details
-            </a>
-          </Button>
-        </div>
-      </div>
-    </div>
-  );
+  const { date, time } = formatEventDate(event.event_date);
+  const price = getEventPrice();
 
   return (
-    <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="max-w-2xl w-full p-6" style={{ maxWidth: '42rem', width: '90vw' }}>
         <DialogHeader>
-          <DialogTitle>
-            {step === 'review' && 'Register for Event'}
-            {step === 'payment' && 'Processing Payment'}
-            {step === 'success' && 'Registration Complete'}
-          </DialogTitle>
-          <DialogDescription>
-            {step === 'review' && 'Review the event details and complete your registration.'}
-            {step === 'payment' && 'Your payment is being processed.'}
-            {step === 'success' && 'You have successfully registered for this event.'}
-          </DialogDescription>
+        <DialogTitle>
+          <div className="flex items-center space-x-2">
+            <Ticket className="w-5 h-5" />
+            <span>Register for Event</span>
+          </div>
+        </DialogTitle>
         </DialogHeader>
 
-        <div className="mt-6">
-          {step === 'review' && renderReviewStep()}
-          {step === 'payment' && renderPaymentStep()}
-          {step === 'success' && renderSuccessStep()}
+        <div className="space-y-4">
+          {/* Event Summary */}
+          <div className="bg-gray-50 p-4 rounded-lg">
+            <h3 className="font-semibold mb-2">{event.title}</h3>
+            
+            <div className="space-y-2 text-sm text-gray-600">
+              <div className="flex items-center">
+                <Calendar className="w-4 h-4 mr-2" />
+                <span>{date}</span>
+              </div>
+              <div className="flex items-center">
+                <Clock className="w-4 h-4 mr-2" />
+                <span>{time}</span>
+              </div>
+              {event.location && (
+                <div className="flex items-center">
+                  <MapPin className="w-4 h-4 mr-2" />
+                  <span className="line-clamp-1">{event.location}</span>
+                </div>
+              )}
+              <div className="mt-2">
+                <button
+                  onClick={() => {
+                    // Create Google Calendar URL
+                    const startDate = new Date(event.event_date);
+                    const endDate = new Date(startDate.getTime() + 2 * 60 * 60 * 1000); // Default 2 hours
+                    const formatDate = (date: Date) => date.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+
+                    const googleCalendarUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(event.title)}&dates=${formatDate(startDate)}/${formatDate(endDate)}&details=${encodeURIComponent(event.description || '')}&location=${encodeURIComponent(event.location || '')}`;
+                    window.open(googleCalendarUrl, '_blank');
+                  }}
+                  className="text-sm underline"
+                  style={{ color: '#2F5D50' }}
+                  onMouseEnter={(e) => e.currentTarget.style.color = '#1F453A'}
+                  onMouseLeave={(e) => e.currentTarget.style.color = '#2F5D50'}
+                >
+                  Add to Google Calendar
+                </button>
+              </div>
+              {event.organizing_pod?.name && (
+                <div className="text-xs text-gray-500">
+                  Organized by {event.organizing_pod.name}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Registration Price */}
+          <div className="flex justify-between items-center p-3 rounded-lg" style={{ backgroundColor: '#E8F1EE' }}>
+            <span className="font-medium">Registration Fee:</span>
+            <Badge variant={price.isFree ? 'secondary' : 'default'} className="text-sm">
+              <Wallet className="w-3 h-3 mr-1" />
+              {price.display}
+            </Badge>
+          </div>
+
+          {/* Capacity Info */}
+          {event.max_attendees && (
+            <div className="flex justify-between items-center p-3 border rounded-lg">
+              <span className="text-sm font-medium">Available Spots:</span>
+              <div className="flex items-center text-sm">
+                <Users className="w-4 h-4 mr-1" />
+                {Math.max(0, event.max_attendees - currentRegistrationCount)}
+              </div>
+            </div>
+          )}
+
+          {/* Event Description */}
+          {event.description && (
+            <div className="p-3 border rounded-lg">
+              <h4 className="text-sm font-medium mb-2">Description</h4>
+              <p className="text-sm text-gray-600">
+                {event.description.length > 500 
+                  ? `${event.description.substring(0, 500)}...`
+                  : event.description
+                }
+              </p>
+            </div>
+          )}
+
+          {/* Access Requirements */}
+          {event.required_tokens.length > 0 && (
+            <div className="p-3 border rounded-lg">
+              <div className="flex items-center mb-2">
+                <AlertCircle className="w-4 h-4 mr-2" />
+                <span className="text-sm font-medium">Token Requirements:</span>
+              </div>
+              <EventTokenDisplay 
+                tokenIds={event.required_tokens}
+                showImages={true}
+                compact={true}
+                className="flex flex-wrap gap-2"
+              />
+            </div>
+          )}
+
+          {/* Status Messages */}
+          {registrationStatus === 'checking' && (
+            <Alert>
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>
+                Checking registration eligibility...
+              </AlertDescription>
+            </Alert>
+          )}
+
+          {registrationStatus === 'ineligible' && !isRegistered && (
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>
+                {errorMessage}
+              </AlertDescription>
+            </Alert>
+          )}
+
+          {isRegistered && (
+            <Alert>
+              <CheckCircle className="h-4 w-4" />
+              <AlertDescription>
+                You are already registered for this event!
+              </AlertDescription>
+            </Alert>
+          )}
+
+          {/* Token Approval Flow */}
+          {showApprovalFlow && (
+            <div className="mt-6">
+              <TokenApprovalFlow
+                systemTokenAmount={systemTokenAmount}
+                selfTokenAmount={selfTokenAmount}
+                onApprovalComplete={() => {
+                  setShowApprovalFlow(false);
+                  setRegistrationStatus('ready');
+                }}
+                onCancel={() => {
+                  setShowApprovalFlow(false);
+                  onClose();
+                }}
+              />
+            </div>
+          )}
+
+          {/* Action Buttons */}
+          {!showApprovalFlow && (
+            <div className="flex justify-end space-x-3 pt-4">
+              <Button variant="outline" onClick={onClose}>
+                Cancel
+              </Button>
+
+              {isConnected && (registrationStatus === 'eligible' || registrationStatus === 'ready') ? (
+                (() => {
+                  // Check if we need approvals first
+                  const needsTokens = Number.parseFloat(systemTokenAmount) > 0 || Number.parseFloat(selfTokenAmount) > 0;
+                  
+                  if (needsTokens && registrationStatus === 'eligible') {
+                    return (
+                      <Button
+                        onClick={() => setShowApprovalFlow(true)}
+                        className="hover:opacity-90"
+                        style={{ backgroundColor: '#2F5D50', color: '#FFFFFF' }}
+                      >
+                        Approve Tokens & Register
+                      </Button>
+                    );
+                  }
+
+                  // Ready to register (approvals complete or free event)
+                  const calls = prepareRegistration();
+                  
+                  if (!calls) {
+                    return (
+                      <Button disabled={true}>
+                        Unable to Register
+                      </Button>
+                    );
+                  }
+
+                  return (
+                    <Transaction
+                      account={address?.toLowerCase() as `0x${string}`}
+                      chainId={BASE_CHAIN_ID}
+                      calls={calls}
+                      isSponsored={true}
+                      onStatus={(status) => {
+                        console.log('📋 Registration status:', status);
+                        if (status.statusName === 'buildingTransaction') {
+                          setIsRegistering(true);
+                        }
+                        // Log detailed transaction status
+                        if (status.statusName === 'init') {
+                          console.log('🔧 Registration Transaction Init:', {
+                            isSponsored: true,
+                            chainId: BASE_CHAIN_ID,
+                            eventId: blockchainEventId,
+                            paymasterConfig: process.env.NEXT_PUBLIC_PAYMASTER ? 'configured' : 'missing',
+                            contractAddress: process.env.NEXT_PUBLIC_EVENT_MANAGER
+                          });
+                        }
+                        if (status.statusName === 'error') {
+                          console.error('❌ Registration Transaction Error:', {
+                            error: status.error,
+                            eventId: blockchainEventId,
+                            reason: 'Possible causes: Event not created on-chain, insufficient approvals, or contract error'
+                          });
+                        }
+                      }}
+                      onSuccess={handleRegistrationSuccess}
+                      onError={(error) => {
+                        console.error('❌ Registration Transaction Failed:', {
+                          error,
+                          errorMessage: error?.message,
+                          errorCode: error?.code,
+                          eventId: blockchainEventId,
+                          eventTitle: event.title,
+                          userAddress: address,
+                          possibleCauses: [
+                            'Event not found on blockchain',
+                            'Insufficient token approvals',
+                            'Paymaster/sponsorship failure',
+                            'Contract execution error',
+                            'Network connectivity issue'
+                          ]
+                        });
+                        setIsRegistering(false);
+                        setErrorMessage(`Registration failed: ${error?.message || error}`);
+                      }}
+                    >
+                      <TransactionButton
+                        text={isRegistering ? 'Registering...' : `Register${needsTokens ? ` (${systemTokenAmount} SYSTEM + ${selfTokenAmount} SELF)` : ''}`}
+                        disabled={isRegistering}
+                        className="hover:opacity-90 disabled:bg-gray-400 disabled:text-gray-600"
+                        style={{ backgroundColor: isRegistering ? undefined : '#2F5D50', color: isRegistering ? undefined : '#FFFFFF' }}
+                      />
+                      <TransactionSponsor />
+                      <TransactionStatus>
+                        <TransactionStatusLabel />
+                        <TransactionStatusAction />
+                      </TransactionStatus>
+                    </Transaction>
+                  );
+                })()
+              ) : (
+                <Button disabled={true}>
+                  {isConnected ? 
+                   registrationStatus === 'checking' ? 'Checking...' :
+                   registrationStatus === 'ineligible' ? 'Cannot Register' :
+                   'Register' : 'Connect Wallet'}
+                </Button>
+              )}
+            </div>
+          )}
+
         </div>
       </DialogContent>
     </Dialog>

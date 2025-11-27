@@ -1,5 +1,5 @@
 // src/features/marketplace/services/imageUploadService.ts
-import { supabase } from "src/lib/supabase";
+import { supabase } from '@/lib/supabase';
 
 export interface UploadResult {
   success: boolean;

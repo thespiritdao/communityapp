@@ -1,7 +1,9 @@
-import { useState, useEffect, useCallback } from 'react';
+import { getCurrentSession } from '@/features/identity/utils/serverAuth';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useAccount } from 'wagmi';
 import { EventService } from '../lib/supabase';
-import { 
+import { supabase } from '../../../utils/supabaseClient';
+import type { 
   Event, 
   EventWithStats, 
   EventRegistration, 
@@ -20,6 +22,12 @@ export function useEvents(filters?: {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Stabilize filters object to prevent infinite re-renders
+  const stableFilters = useMemo(() => {
+    if (!filters) return null;
+    return JSON.stringify(filters);
+  }, [filters]);
+
   const fetchEvents = useCallback(async () => {
     try {
       setLoading(true);
@@ -31,7 +39,7 @@ export function useEvents(filters?: {
     } finally {
       setLoading(false);
     }
-  }, [filters]);
+  }, [stableFilters]); // Use stable string instead of object
 
   useEffect(() => {
     fetchEvents();
@@ -244,17 +252,33 @@ export function useEventAgendas(eventId: string | null) {
 
   const createAgenda = useCallback(async (agendaData: CreateAgendaForm): Promise<boolean> => {
     if (!eventId) {
+      console.error('Event ID missing in createAgenda');
       setError('Event ID missing');
       return false;
     }
 
     try {
       setError(null);
-      await EventService.createAgenda({ ...agendaData, event_id: eventId });
+      
+      // Check session before proceeding
+      const session = await getCurrentSession();
+      console.log('Hook session check:', { session, sessionError, hasUser: !!session?.user, userId: session?.user?.id });
+      
+      if (sessionError || !session?.user?.id) {
+        console.error('Authentication check failed in hook:', { sessionError, session });
+        setError('Authentication required - please log in again');
+        return false;
+      }
+      
+      console.log('Calling EventService.createAgenda with:', { ...agendaData, event_id: eventId });
+      const result = await EventService.createAgenda({ ...agendaData, event_id: eventId });
+      console.log('EventService.createAgenda result:', result);
       await fetchAgendas();
       return true;
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to create agenda');
+      console.error('Error in createAgenda hook:', err);
+      const errorMessage = err instanceof Error ? err.message : 'Failed to create agenda';
+      setError(errorMessage);
       return false;
     }
   }, [eventId, fetchAgendas]);
@@ -332,11 +356,65 @@ export function useUserEvents() {
 }
 
 export function useEventActions(eventId: string | null) {
+  const { address } = useAccount();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const ensureAuthenticated = useCallback(async (): Promise<boolean> => {
+    const session = await getCurrentSession();
+    
+    if (!session?.user?.id && address) {
+      // User has wallet connected but no Supabase session - try to authenticate
+      try {
+        // Get a nonce
+        const nonceRes = await fetch('/api/auth/nonce');
+        if (!nonceRes.ok) {
+          throw new Error('Failed to get nonce');
+        }
+        const { nonce } = await nonceRes.json();
+
+        // Import signMessage dynamically to avoid SSR issues
+        const { signMessage, getConfig } = await import('wagmi/actions');
+        const config = getConfig();
+        const signature = await signMessage(config, { message: nonce });
+
+        // Verify and get Supabase token
+        const verifyRes = await fetch('/api/auth/verify', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ address, signature }),
+        });
+
+        if (!verifyRes.ok) {
+          throw new Error('Authentication failed');
+        }
+
+        const { supabaseToken } = await verifyRes.json();
+        
+        if (supabaseToken) {
+          const { error } = await supabase.auth.setSession({
+            access_token: supabaseToken,
+            refresh_token: '',
+          });
+          
+          if (!error) {
+            return true;
+          }
+        }
+        
+        throw new Error('Failed to set session');
+      } catch (error) {
+        console.error('Auto-authentication failed:', error);
+        throw new Error('Please sign in with your wallet to perform this action');
+      }
+    }
+    
+    return !!session?.user?.id;
+  }, [address]);
+
   const publishEvent = useCallback(async (): Promise<boolean> => {
     if (!eventId) {
+      console.error('Event ID missing in publishEvent');
       setError('Event ID missing');
       return false;
     }
@@ -344,15 +422,22 @@ export function useEventActions(eventId: string | null) {
     try {
       setLoading(true);
       setError(null);
-      await EventService.publishEvent(eventId);
+      
+      // Ensure user is authenticated before making the request
+      await ensureAuthenticated();
+      
+      console.log('Publishing event:', eventId);
+      const result = await EventService.publishEvent(eventId);
+      console.log('Publish event result:', result);
       return true;
     } catch (err) {
+      console.error('Error publishing event:', err);
       setError(err instanceof Error ? err.message : 'Failed to publish event');
       return false;
     } finally {
       setLoading(false);
     }
-  }, [eventId]);
+  }, [eventId, ensureAuthenticated]);
 
   const cancelEvent = useCallback(async (): Promise<boolean> => {
     if (!eventId) {
@@ -363,6 +448,10 @@ export function useEventActions(eventId: string | null) {
     try {
       setLoading(true);
       setError(null);
+      
+      // Ensure user is authenticated before making the request
+      await ensureAuthenticated();
+      
       await EventService.cancelEvent(eventId);
       return true;
     } catch (err) {
@@ -371,7 +460,7 @@ export function useEventActions(eventId: string | null) {
     } finally {
       setLoading(false);
     }
-  }, [eventId]);
+  }, [eventId, ensureAuthenticated]);
 
   const completeEvent = useCallback(async (): Promise<boolean> => {
     if (!eventId) {
@@ -382,6 +471,10 @@ export function useEventActions(eventId: string | null) {
     try {
       setLoading(true);
       setError(null);
+      
+      // Ensure user is authenticated before making the request
+      await ensureAuthenticated();
+      
       await EventService.completeEvent(eventId);
       return true;
     } catch (err) {
@@ -390,7 +483,7 @@ export function useEventActions(eventId: string | null) {
     } finally {
       setLoading(false);
     }
-  }, [eventId]);
+  }, [eventId, ensureAuthenticated]);
 
   return {
     loading,

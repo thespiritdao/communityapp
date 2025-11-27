@@ -1,6 +1,5 @@
-// src/features/identity/components/Balances.tsx
-import React from "react";
-import { useTokenBalances } from "src/context/TokenBalancesContext";
+
+import { useTokenBalances } from "@/context/TokenBalancesContext";
 
 export function Balances() {
   const { balances } = useTokenBalances();

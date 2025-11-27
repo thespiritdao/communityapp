@@ -1,7 +1,6 @@
 import type { ReactNode } from 'react';
 import type { Address, Hex, TransactionReceipt } from 'viem';
-import type { Call, TransactionError } from 'src/transaction/types';
-import type { NFTContextType } from 'src/nft/components/NFTProvider';
+import type { Call, TransactionError } from '../../../transaction/types';
 
 export type ContractType = 'ERC721' | 'ERC1155';
 

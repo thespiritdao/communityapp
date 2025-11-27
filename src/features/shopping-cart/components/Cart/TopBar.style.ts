@@ -7,7 +7,7 @@ export const TopBarContainer = styled.div`
   align-items: center;
   background-color: #333;
   color: #000;
-  padding: 0.75rem 1.5rem;
+  padding: 0.75rem 1.5rem 0.75rem 0.75rem;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 `;
 
@@ -23,27 +23,37 @@ export const ConnectedInfo = styled.div`
 `;
 
 export const SystemBalances = styled.div`
-  display: flex;
-  gap: 1rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
   font-size: 0.9rem;
-  span {
+  font-weight: 700;
+  .label { color: #e9f9ec; }                
+  .value {
     background-color: #e9f9ec;
-    padding: 0.25rem 0.5rem;
-    border-radius: 4px;
+    color: #0aba42;
+    padding: 2px 6px;                       /* compact pill */
+    border-radius: 6px;
+    white-space: nowrap;
+    flex: 0 0 auto;
   }
-  font-weight: bold;
 `;
 
 export const SelfBalances = styled.div`
-  display: flex;
-  gap: 1rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
   font-size: 0.9rem;
-  span {
-    background-color: #e8fcff;
-    padding: 0.25rem 0.5rem;
-    border-radius: 4px;
+  font-weight: 700;
+  .label { color: #E8F1EE; }                /* SELF info label */
+  .value {
+    background-color: #E8F1EE;
+    color: #2F5D50;
+    padding: 2px 6px;                       /* compact pill */
+    border-radius: 6px;
+    white-space: nowrap;
+    flex: 0 0 auto;
   }
-  font-weight: bold;
 `;
 
 
@@ -56,9 +66,24 @@ export const CartToggleButton = styled.button`
   padding: 0;
   position: relative;
   cursor: pointer;
-  display: flex;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
+
+  /* Enforce previous visual size */
+  width: 30px;
+  height: 30px;
+  min-width: 30px;
+  min-height: 30px;
+  flex: 0 0 auto;
+  margin-right: 0.4rem; 
+
+  /* Ensure the Next.js <Image>'s <img> renders at the intended size */
+  img {
+    width: 30px;
+    height: 30px;
+    display: block;
+  }
 `;
 
 /* This badge will be positioned over the cart icon */
@@ -81,4 +106,5 @@ export const RightSection = styled.div`
   display: flex;
   align-items: center;
   gap: 1rem;
+  margin-left: 0.75rem;
 `;

@@ -1,7 +1,7 @@
 import { createContext, useContext } from 'react';
 import type { Address } from 'viem';
-import { useValue } from 'src/internal/hooks/useValue';
-import { useOnchainKit } from 'src/useOnchainKit';
+import { useValue } from '../../../internal/hooks/useValue';
+import { useOnchainKit } from '../../../useOnchainKit';
 import type { IdentityContextType, IdentityProviderReact } from '../types';
 
 const emptyContext = {} as IdentityContextType;

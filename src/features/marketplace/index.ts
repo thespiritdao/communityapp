@@ -4,4 +4,4 @@ export { default as AddProductModal } from './components/AddProductModal';
 export { default as ImageUpload } from './components/ImageUpload';
 export * from './services/productService';
 export * from './services/imageUploadService';
-export * from '../../utils/marketManagement';
+export * from '@/utils/marketManagement';

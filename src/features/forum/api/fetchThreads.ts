@@ -1,5 +1,5 @@
 // src/features/forum/api/fetchThreads.ts
-import { supabase } from 'src/utils/supabaseClient';
+import { supabase } from '@/utils/supabaseClient';
 
 export type FetchThreadsParams = {
   categoryId?: string;
@@ -39,7 +39,7 @@ export const fetchThreads = async ({ categoryId, walletAddress, tokenBalances, l
     // Normalize token IDs for comparison
     const normalize = (value: string | null) => value?.trim().toLowerCase() || '';
     const pocToken = normalize(process.env.NEXT_PUBLIC_PROOF_OF_CURIOSITY);
-    const execHatId = normalize(process.env.NEXT_PUBLIC_EXECUTIVE_POD_HAT_ID);
+    const execHatId = normalize(process.env.NEXT_PUBLIC_EXECUTIVE_POD_LEADER);
     const devHatId = normalize(process.env.NEXT_PUBLIC_DEV_POD_HAT_ID);
 
     // Filter threads **before returning them to the client**

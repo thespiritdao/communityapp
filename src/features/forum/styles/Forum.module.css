@@ -13,8 +13,8 @@
 }
 
 .error {
-  background-color: rgba(255, 0, 0, 0.1);
-  color: #d32f2f;
+  background-color: #F5E6E6;
+  color: #8B3A3A;
 }
 
 .emptyState {
@@ -41,7 +41,7 @@
 /* Category List styles */
 .categoryListContainer {
   padding: 1rem;
-  background-color: #e9f9ec;
+  background-color: #E8F1EE;
   border-radius: 8px;
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.08);
 }
@@ -103,7 +103,7 @@
 /* Thread List styles */
 .threadListContainer {
   padding: 1rem;
-  background-color: #e9f5f9;
+  background-color: #E8F1EE;
   border-radius: 8px;
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.08);
   margin-bottom: 5rem;
@@ -124,7 +124,7 @@
 
 .backLink {
   font-size: 0.875rem;
-  color: #2196f3;
+  color: #8FAAA1;
   text-decoration: none;
 }
 
@@ -142,8 +142,8 @@
 /* NEW: Updated New Thread Button style */
 .newThreadButton {
   display: inline-block;
-  background-color: #d7f8fd;
-  color: #000;
+  background-color: #2F5D50;
+  color: #FFFFFF;
   border: none;
   border-radius: 6px;
   padding: 0.75rem 1.5rem;
@@ -155,15 +155,15 @@
 }
 
 .newThreadButton:hover {
-  background-color: #e9f9ec;
+  background-color: #6F8F86;
 }
 
 /* NEW: Updated New Thread Button style */
 .ForumBackButton {
   display: block;
   margin: 0 auto;
-  background-color: #bfe7c6 !important;
-  color: #000;
+  background-color: #8FAAA1 !important;
+  color: #FFFFFF;
   border: none;
   border-radius: 6px;
   padding: 0.75rem 1.5rem;
@@ -175,13 +175,13 @@
 }
 
 .ForumBackButton:hover {
-  background-color: #005bb5;
+  background-color: #6F8F86;
 }
 
 .submitButton {
   display: inline-block;
-  background-color: #d7f8fd !important;
-  color: #000;
+  background-color: #2F5D50 !important;
+  color: #FFFFFF;
   border: none;
   border-radius: 6px;
   padding: 0.75rem 1.5rem;
@@ -193,7 +193,7 @@
 }
 
 .submitButton:hover {
-  background-color: #aceef8;
+  background-color: #6F8F86;
 }
 
 .threadList {
@@ -235,6 +235,57 @@
   justify-content: space-between;
   align-items: center;
   font-size: 0.875rem;
+  margin-top: 0.75rem;
+}
+
+.threadDescription {
+  color: #616161;
+  font-size: 0.875rem;
+  line-height: 1.4;
+  margin: 0.5rem 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.authorSection {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+}
+
+.authorAvatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+
+.authorAvatar:hover {
+  transform: scale(1.1);
+}
+
+.authorAvatarPlaceholder {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background-color: #e0e0e0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  color: #666;
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+
+.authorAvatarPlaceholder:hover {
+  transform: scale(1.1);
 }
 
 .authorInfo {
@@ -244,7 +295,12 @@
 
 .authorName {
   font-weight: 500;
-  margin-right: 0.5rem;
+  cursor: pointer;
+  transition: color 0.2s;
+}
+
+.authorName:hover {
+  color: #3F7A5A;
 }
 
 .threadDate {
@@ -344,14 +400,14 @@
   background: none;
   border: none;
   font-size: 0.75rem;
-  color: #f4c96b; /* New edit button color */
+  color: #C6933F;
   cursor: pointer;
   padding: 0.25rem 0.5rem;
   border-radius: 0.25rem;
 }
 
 .editButton:hover {
-  background-color: rgba(244, 201, 107, 0.2); /* Lighter hover for edit button */
+  background-color: #FAF4EC;
 }
 
 .editContainer {
@@ -385,12 +441,12 @@
 }
 
 .saveButton {
-  background-color: #2196f3;
+  background-color: #2F5D50;
   color: white;
 }
 
 .saveButton:hover:not(:disabled) {
-  background-color: #1976d2;
+  background-color: #6F8F86;
 }
 
 .cancelButton {
@@ -408,10 +464,10 @@
 }
 
 .editError {
-  color: #d32f2f;
+  color: #8B3A3A;
   font-size: 0.875rem;
   padding: 0.5rem;
-  background-color: rgba(255, 0, 0, 0.05);
+  background-color: #F5E6E6;
   border-radius: 0.25rem;
 }
 
@@ -431,6 +487,16 @@
   margin-bottom: 1rem;
 }
 
+.lockedMessage {
+  background-color: #FAF4EC;
+  border: 1px solid #C6933F;
+  border-radius: 0.5rem;
+  padding: 1rem;
+  text-align: center;
+  color: #7A5F3F;
+  font-weight: 500;
+}
+
 .replyForm {
   display: flex;
   flex-direction: column;
@@ -439,15 +505,26 @@
 
 .replyTextarea {
   width: 100%;
-  padding: 0.75rem;
+  box-sizing: border-box;
+  padding: 12px;
   border: 1px solid rgba(0, 0, 0, 0.1);
   border-radius: 0.25rem;
   font-family: inherit;
   font-size: inherit;
   resize: vertical;
+  min-height: 120px;
 }
 
-
+.threadTitleInput {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 12px;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 0.25rem;
+  font-family: inherit;
+  font-size: 1rem;
+  height: 48px;
+}
 
 .submitButton:disabled {
   opacity: 0.7;
@@ -455,10 +532,10 @@
 }
 
 .submitError {
-  color: #d32f2f;
+  color: #8B3A3A;
   font-size: 0.875rem;
   padding: 0.75rem;
-  background-color: rgba(255, 0, 0, 0.05);
+  background-color: #F5E6E6;
   border-radius: 0.25rem;
 }
 
@@ -513,7 +590,7 @@
 
 .placeholderInput:focus {
   outline: none;
-  border-color: #0070f3;
+  border-color: #2F5D50;
 }
 
 .placeholderTextarea {
@@ -527,7 +604,7 @@
 
 .placeholderTextarea:focus {
   outline: none;
-  border-color: #0070f3;
+  border-color: #2F5D50;
 }
 
 .inputFootnote {
@@ -560,13 +637,14 @@
 
 .replyTextarea {
   width: 100%;
-  box-sizing: border-box;  /* Add this line */
-  padding: 0.75rem;
+  box-sizing: border-box;
+  padding: 12px;
   border: 1px solid rgba(0, 0, 0, 0.1);
   border-radius: 0.25rem;
   font-family: inherit;
   font-size: inherit;
   resize: vertical;
+  min-height: 120px;
 }
 
 /* Forum.module.css */
@@ -667,8 +745,8 @@
 .placeholderTextarea:focus,
 .templateSelect:focus {
   outline: none;
-  border-color: #4bb6d1;
-  box-shadow: 0 0 0 3px rgba(75, 182, 209, 0.1);
+  border-color: #2F5D50;
+  box-shadow: 0 0 0 3px rgba(47, 93, 80, 0.1);
 }
 
 .placeholderTextarea {
@@ -746,10 +824,10 @@
 /* Template selector styles */
 .templateSelector {
   margin-bottom: 2rem;
-  background-color: #f0f9fa;
+  background-color: #E8F1EE;
   padding: 1.25rem;
   border-radius: 8px;
-  border-left: 4px solid #4bb6d1;
+  border-left: 4px solid #2F5D50;
 }
 
 .selectLabel {

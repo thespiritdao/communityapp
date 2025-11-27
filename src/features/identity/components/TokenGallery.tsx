@@ -1,12 +1,15 @@
 'use client';
-import React, { useState, useEffect } from 'react';
+import type React from 'react';
+import { useState, useEffect } from 'react';
 import { useContractReads } from 'wagmi';
 import { usePublicClient } from 'wagmi';
-import { erc721ABI } from 'src/utils/erc721ABI';
-import { erc1155ABI } from 'src/utils/erc1155ABI';
-import { UNLOCK_PUBLIC_LOCK_ABI } from 'src/app/api/utils/contractABI';
+import { erc721ABI } from '@/utils/erc721ABI';
+import { erc1155ABI } from '@/utils/erc1155ABI';
+import { UNLOCK_PUBLIC_LOCK_ABI } from '@/app/api/utils/contractABI';
 import { ethers } from 'ethers';
 import Image from 'next/image';
+import { LocalTokenService } from '../services/localTokenService';
+import { usePodCredentials } from '../hooks/usePodCredentials';
 
 type TokenType = 'erc721' | 'erc1155' | 'unlock';
 
@@ -25,6 +28,9 @@ interface TokenGalleryProps {
 }
 
 // === Token Configuration (Add new tokens here) ===
+// NOTE: Hardcoded "Dev Pod" and "Executive Pod" entries removed
+// Pod memberships are now managed dynamically via the unified pod system
+// Users can see their pod memberships in pod-specific interfaces
 const TOKEN_CONFIGS: TokenConfig[] = [
   // === Membership Tokens ===
   {
@@ -33,7 +39,7 @@ const TOKEN_CONFIGS: TokenConfig[] = [
     label: 'Proof of Curiosity',
     category: 'membership',
   },
-  
+
   {
     address: process.env.NEXT_PUBLIC_ADVOCATE || '0xe4a2f419b4531417cb18d7ad95527eea620c4095',
     type: 'erc721',
@@ -41,24 +47,12 @@ const TOKEN_CONFIGS: TokenConfig[] = [
     category: 'membership',
   },
 
-
   // === Credential Tokens ===
-  {
-    address: process.env.NEXT_PUBLIC_HATS_CONTRACT || '0x3bc1a0ad72417f2d411118085256fc53cbddd137',
-    tokenId: process.env.NEXT_PUBLIC_EXECUTIVE_POD_HAT_ID || '0x0000008800010000000000000000000000000000000000000000000000000000',
-    type: 'erc1155',
-    label: 'Executive Pod',
-    category: 'credential',
-  },
-  {
-    address: process.env.NEXT_PUBLIC_HATS_CONTRACT || '0x3bc1a0ad72417f2d411118085256fc53cbddd137',
-    tokenId: process.env.NEXT_PUBLIC_DEV_POD_HAT_ID || '0x0000008800020000000000000000000000000000000000000000000000000000',
-    type: 'erc1155',
-    label: 'Dev Pod',
-    category: 'credential',
-  },
+  // Note: Pod-specific credentials (hats) are dynamically managed
+  // and displayed in pod interfaces, not in the identity modal
 
-  // === Add new tokens here ===
+  // === Add new static tokens here ===
+  // Only add tokens that are universal/community-wide (not pod-specific)
   /*
   {
     address: '0xAnotherTokenAddress',
@@ -74,6 +68,11 @@ const TOKEN_CONFIGS: TokenConfig[] = [
 export const TokenGallery: React.FC<TokenGalleryProps> = ({ walletAddress, category }) => {
   const [tokenMetadata, setTokenMetadata] = useState<Array<{ uri: string; image: string; name: string; owned: boolean }>>([]);
   const [isLoading, setIsLoading] = useState(true);
+
+  // Get dynamic pod credentials for credentials category
+  const { credentials: podCredentials, isLoading: credentialsLoading } = usePodCredentials(
+    category === 'credential' ? walletAddress : undefined
+  );
 
   const categoryTokens = TOKEN_CONFIGS.filter(token => token.category === category);
 
@@ -102,10 +101,14 @@ export const TokenGallery: React.FC<TokenGalleryProps> = ({ walletAddress, categ
     }
   });
 
+  // Handle empty token configs (e.g., credentials with no static tokens)
+  const hasTokensToCheck = contractReads.length > 0;
+
   const { data: ownershipData, isError, isLoading: isContractLoading } = useContractReads({
     contracts: contractReads as any[],
+    enabled: hasTokensToCheck, // Only run if we have tokens to check
   });
-  
+
   const publicClient = usePublicClient();
 
   const fetchTokenMetadata = async () => {
@@ -117,12 +120,26 @@ export const TokenGallery: React.FC<TokenGalleryProps> = ({ walletAddress, categ
           const owned = balance && (typeof balance === 'bigint' ? balance > 0n : balance > 0);
           if (!owned) return { uri: '', image: '', name: token.label, owned: false };
 
+          // Check if we should use local token data first
+          if (LocalTokenService.shouldUseLocalMetadata(token.label)) {
+            
+            const localToken = LocalTokenService.getTokenInfo(token.label);
+            if (localToken) {
+              return {
+                uri: '',
+                image: localToken.image,
+                name: localToken.name,
+                owned: true,
+              };
+            }
+          }
+
           let tokenURI = '';
           let imageUrl = '';
           let tokenName = token.label;
 
 			if (!publicClient) {
-			  console.error('Wagmi publicClient not available');
+			  
 			  return { uri: '', image: '', name: token.label, owned: true };
 			}
 
@@ -145,16 +162,49 @@ export const TokenGallery: React.FC<TokenGalleryProps> = ({ walletAddress, categ
             tokenURI = token.metadataUrl;
           }
 
-          if (tokenURI.startsWith('ipfs://')) {
-            tokenURI = tokenURI.replace('ipfs://', 'https://ipfs.io/ipfs/');
+          let metadata;
+          
+          if (tokenURI.startsWith('data:application/json;base64,')) {
+            // Handle base64 encoded JSON metadata to avoid CSP violations
+            const base64Data = tokenURI.replace('data:application/json;base64,', '');
+            const jsonString = atob(base64Data);
+            metadata = JSON.parse(jsonString);
+          } else {
+            if (tokenURI.startsWith('ipfs://')) {
+              tokenURI = tokenURI.replace('ipfs://', 'https://ipfs.io/ipfs/');
+            }
+            
+            try {
+              const response = await fetch(tokenURI);
+              const text = await response.text();
+              
+              // Check if response is valid JSON
+              if (text.trim().startsWith('<!DOCTYPE') || text.trim().startsWith('<html')) {
+                throw new Error('Received HTML instead of JSON metadata');
+              }
+              
+              metadata = JSON.parse(text);
+            } catch (jsonError) {
+              
+              // Use local token image as fallback
+              const fallbackImage = LocalTokenService.getTokenImage(token.label);
+              return {
+                uri: '',
+                image: fallbackImage,
+                name: token.label,
+                owned: true,
+              };
+            }
           }
 
-          const response = await fetch(tokenURI);
-          const metadata = await response.json();
-
           imageUrl = metadata.image || '';
+          
+          // Handle IPFS images by replacing with local versions
           if (imageUrl.startsWith('ipfs://')) {
-            imageUrl = imageUrl.replace('ipfs://', 'https://ipfs.io/ipfs/');
+            
+            imageUrl = LocalTokenService.getTokenImage(token.label, imageUrl);
+          } else if (!imageUrl) {
+            imageUrl = LocalTokenService.getTokenImage(token.label);
           }
           const metadataName = metadata.name?.toLowerCase();
 		  const isGeneric = !metadataName || ['hat', 'token', 'nft'].includes(metadataName);
@@ -168,8 +218,15 @@ export const TokenGallery: React.FC<TokenGalleryProps> = ({ walletAddress, categ
             owned: true,
           };
         } catch (error) {
-          console.error(`Error fetching metadata for ${token.label}:`, error);
-          return { uri: '', image: '', name: token.label, owned: false };
+          
+          // Always fall back to local image for errors
+          const fallbackImage = LocalTokenService.getTokenImage(token.label);
+          return { 
+            uri: '', 
+            image: fallbackImage, 
+            name: token.label, 
+            owned: false 
+          };
         }
       })
     );
@@ -179,15 +236,64 @@ export const TokenGallery: React.FC<TokenGalleryProps> = ({ walletAddress, categ
   };
 
   useEffect(() => {
+    // If no tokens to check, immediately set loading to false
+    if (!hasTokensToCheck) {
+      setIsLoading(false);
+      setTokenMetadata([]);
+      return;
+    }
+
+    // Otherwise, wait for contract reads to complete
     if (ownershipData && !isContractLoading) {
       fetchTokenMetadata();
     }
-  }, [ownershipData, isContractLoading]);
+  }, [ownershipData, isContractLoading, hasTokensToCheck]);
 
-  if (isLoading || isContractLoading) {
+  // Show loading state
+  if (isLoading || isContractLoading || credentialsLoading) {
     return <div className="loading">Loading {category} tokens...</div>;
   }
 
+  // For credentials, show dynamic pod credentials
+  if (category === 'credential') {
+    console.log('[TokenGallery] Rendering credentials:', podCredentials.length);
+
+    if (podCredentials.length === 0) {
+      return <div className="no-tokens">No credential tokens found</div>;
+    }
+
+    return (
+      <div className="token-gallery">
+        {podCredentials.map((credential, index) => (
+          <div key={index} className="token-card">
+            {credential.image ? (
+              <div className="token-image">
+                <Image
+                  src={LocalTokenService.sanitizeImageUrl(credential.image, credential.label)}
+                  alt={credential.label}
+                  width={60}
+                  height={60}
+                  className="rounded-full object-cover"
+                  unoptimized={
+                    credential.image?.includes('ui-avatars.com') ||
+                    credential.image?.includes('supabase') ||
+                    false
+                  }
+                />
+              </div>
+            ) : (
+              <div className="token-placeholder">
+                <div className="placeholder-text">{credential.label}</div>
+              </div>
+            )}
+            <div className="token-name">{credential.label}</div>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  // For membership tokens, use contract-based checking
   const ownedTokens = tokenMetadata.filter(token => token.owned);
 
   if (ownedTokens.length === 0) {
@@ -200,12 +306,17 @@ export const TokenGallery: React.FC<TokenGalleryProps> = ({ walletAddress, categ
         <div key={index} className="token-card">
           {token.image ? (
             <div className="token-image">
-              <Image 
-				  src={token.image} 
-				  alt={token.name} 
-				  width={60} 
-				  height={60} 
-				  className="rounded-full object-cover" 
+              <Image
+				  src={LocalTokenService.sanitizeImageUrl(token.image, token.name)}
+				  alt={token.name}
+				  width={60}
+				  height={60}
+				  className="rounded-full object-cover"
+				  unoptimized={
+				    token.image?.includes('ui-avatars.com') ||
+				    token.image?.startsWith('ipfs://') ||
+				    false
+				  }
 				/>
             </div>
           ) : (

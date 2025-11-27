@@ -1,186 +1,191 @@
-//src/app/identity/page.tsx
-
 'use client';
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
+import dynamic from 'next/dynamic';
 import { useAccount } from 'wagmi';
-import { OnchainProviders } from 'src/wallet/components/OnchainProviders';
-import { Footer } from 'src/components/Footer';
-import { Badge } from 'src/features/identity/components/Badge';
-import { IdentityCard } from 'src/features/identity/components/IdentityCard';
-import { Socials } from 'src/features/identity/components/Socials';
-import { ProfileHeader } from 'src/features/identity/components/ProfileHeader';
-import { useUserProfile } from 'src/features/identity/hooks/useUserProfile';
-import { updateProfile } from 'src/features/identity/utils/updateProfile';
-import { ProfileEditForm } from 'src/features/identity/components/ProfileEditForm';
-import { supabase } from 'src/utils/supabaseClient';
-import { Balances } from 'src/features/identity/components/Balances'; 
-import { TokenGallery } from 'src/features/identity/components/TokenGallery';
-import { UnlockMembership } from 'src/features/identity/components/UnlockMembership';
+import Link from 'next/link';
+import { useIdentityPage } from '@/features/identity/hooks/useIdentityPage';
+import { TokenGallery } from '@/features/identity/components/TokenGallery';
+import { InviteCodeDisplay } from '@/features/identity/components/InviteCodeDisplay';
 import 'src/features/identity/styles/identityStyles.css';
 import 'src/features/identity/styles/TokenGallery.css';
+import 'src/features/identity/styles/ProfileModal.css';
+
+// Lazy load heavy components with loading skeletons
+const BalancesSection = dynamic(
+  () => import('@/features/identity/components/BalancesSection').then(mod => ({ default: mod.BalancesSection })),
+  {
+    loading: () => (
+      <div className="flex justify-center items-center min-h-[100px]">
+        <div
+          style={{
+            background: '#C6933F',
+            color: '#FFFFFF',
+            padding: '12px 24px',
+            borderRadius: '8px',
+            fontWeight: '600',
+            fontSize: '14px',
+            letterSpacing: '0.02em',
+          }}
+        >
+          Loading balances...
+        </div>
+      </div>
+    ),
+    ssr: false
+  }
+);
+
+const ProfileSection = dynamic(
+  () => import('@/features/identity/components/ProfileSection').then(mod => ({ default: mod.ProfileSection })),
+  {
+    loading: () => (
+      <div className="flex justify-center items-center min-h-[200px]">
+        <div
+          style={{
+            background: '#C6933F',
+            color: '#FFFFFF',
+            padding: '12px 24px',
+            borderRadius: '8px',
+            fontWeight: '600',
+            fontSize: '14px',
+            letterSpacing: '0.02em',
+          }}
+        >
+          Loading profile...
+        </div>
+      </div>
+    ),
+    ssr: false
+  }
+);
 
 export default function IdentityPage() {
-  return (
-    <OnchainProviders>
-      <IdentityPageContent />
-    </OnchainProviders>
-  );
+  return <IdentityPageContent />;
 }
 
 function IdentityPageContent() {
   const [isClient, setIsClient] = useState(false);
-  const [isEditing, setIsEditing] = useState(false);
-  const [authSession, setAuthSession] = useState(null);
   const { address } = useAccount();
-  const { profile, loading, refetch } = useUserProfile(address);
+  
+  const {
+    isEditing,
+    profile,
+    loading,
+    session,
+    handleEditClick,
+    handleCancel,
+    handleSave,
+    handleLogout,
+  } = useIdentityPage(address);
 
-  // Initialize client-side rendering state
   useEffect(() => {
-    console.log("IdentityPageContent mounted. Setting client state.");
     setIsClient(true);
   }, []);
 
-  // Fetch and manage Supabase session
-  useEffect(() => {
-    const fetchSession = async () => {
-      const { data: session, error } = await supabase.auth.getSession();
-
-      if (error) {
-        console.error("Error fetching session:", error.message);
-        return;
-      }
-
-      setAuthSession(session);
-      if (session) {
-        console.log("Supabase Auth Session initialized:", session);
-      } else {
-        console.warn("No active session found. Attempting refresh...");
-        const { data: refreshedSession, error: refreshError } = await supabase.auth.refreshSession();
-        if (refreshError) {
-          console.error("Error refreshing session:", refreshError.message);
-        } else {
-          setAuthSession(refreshedSession);
-          console.log("Refreshed Supabase Auth Session:", refreshedSession);
-        }
-      }
-    };
-
-    fetchSession();
-  }, []);
-
-  // Debugging state changes
-  useEffect(() => {
-    console.log("isEditing state changed:", isEditing);
-  }, [isEditing]);
-
-  useEffect(() => {
-    console.log("Profile fetched:", profile);
-    console.log("Loading state:", loading);
-  }, [profile, loading]);
-
-  // Check if client-side is ready and wallet is connected
   if (!isClient || loading) {
-    console.log("Loading or client not ready. isClient:", isClient, "Loading:", loading);
-    return <p>Loading...</p>;
-  }
-
-  if (!address) {
-    console.log("No wallet address found. Prompting user to connect wallet.");
     return (
-      <div className="wrapper">
-        <p className="text-center text-white">
-          Please connect your wallet to view your profile.
-        </p>
+      <div className="identity-container bottom-nav-spacing">
+        <div className="flex justify-center items-center min-h-[200px]">
+          <div
+            style={{
+              background: '#C6933F',
+              color: '#FFFFFF',
+              padding: '12px 24px',
+              borderRadius: '8px',
+              fontWeight: '600',
+              fontSize: '14px',
+              letterSpacing: '0.02em',
+            }}
+          >
+            Loading...
+          </div>
+        </div>
       </div>
     );
   }
 
-  const handleEditClick = () => {
-    console.log("Edit Profile button clicked. Toggling isEditing state.");
-    setIsEditing(!isEditing);
-  };
-
-  const handleCancel = () => {
-    console.log("Cancel button clicked. Exiting edit mode.");
-    setIsEditing(false);
-  };
-
-  const handleSave = async (data) => {
-    if (!address) {
-      console.log("No wallet address available. Aborting save.");
-      return;
-    }
-    console.log("Saving profile with data:", data);
-    await updateProfile(address, data);
-    console.log("Profile saved successfully. Refetching profile data.");
-    setIsEditing(false);
-    await refetch();
-  };
-
-  const handleLogout = async () => {
-    console.log("Logout button clicked. Signing out user.");
-    await supabase.auth.signOut();
-    setAuthSession(null); // Clear local session state
-    console.log("User signed out successfully.");
-  };
+  if (!address) {
+    return (
+      <div className="identity-container bottom-nav-spacing">
+        <div className="flex justify-center items-center min-h-[200px]">
+          <p className="text-center">
+            Please connect your wallet to view your profile.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="identity-container">
-      <div className="profile-section">
-        <h2>Balances</h2>
-        <Balances walletAddress={address} />
-      </div>
-	
-      <div className="profile-section">
-        <h2>Profile</h2>
-        {isEditing ? (
-          <ProfileEditForm
-            initialData={profile || {}}
-            authSession={authSession}
-            walletAddress={address}
-            onSave={handleSave}
-            onCancel={handleCancel}
-          />
-        ) : (
-          <>
-            <ProfileHeader address={address} profile={profile} showCopy={false} />
-            
-            {profile?.bio && <p>{profile.bio}</p>}
+    <div className="identity-container bottom-nav-spacing">
+      <BalancesSection walletAddress={address} />
 
-            <button 
-              className="button button-enter" 
-              style={{ marginTop: '10px' }}
-              onClick={handleEditClick}
-            >
-              Edit Profile
-            </button>
-          </>
-        )}
-      </div>
+      <ProfileSection
+        profile={profile}
+        address={address}
+        isEditing={isEditing}
+        authSession={session}
+        onEditClick={handleEditClick}
+        onSave={handleSave}
+        onCancel={handleCancel}
+      />
 
-      <div className="badges-section">
-        <h2>Membership</h2>
+      {/* Memberships Section - Using Updated TokenGallery */}
+      <div className="profile-section token-gallery-section">
+        <h3><strong>Memberships</strong></h3>
         <TokenGallery walletAddress={address} category="membership" />
-        <div className="legacy-badges" style={{ marginTop: '20px' }}>
-          <Badge address={address} />
-        </div>
-      </div>
-	  
-      <div className="badges-section">
-        <h2>Credentials</h2>
-        <TokenGallery walletAddress={address} category="credential" />
-        <div className="legacy-badges" style={{ marginTop: '20px' }}>
-          <Badge address={address} />
-        </div>
       </div>
 
-      <div className="form-buttons" style={{ display: 'flex', justifyContent: 'center' }}>
-        <button type="button" onClick={handleLogout}>
+      {/* Credentials Section - Using Updated TokenGallery */}
+      <div className="profile-section token-gallery-section" style={{ marginTop: "20px" }}>
+        <h3><strong>Credentials</strong></h3>
+        <TokenGallery walletAddress={address} category="credential" />
+      </div>
+
+      {/* Invite Code Display - Only visible to account owner */}
+      <InviteCodeDisplay walletAddress={address} />
+
+      <div className="form-buttons" style={{ display: 'flex', justifyContent: 'center', marginTop: '20px' }}>
+        <button type="button" className="btn" onClick={handleLogout}>
           Logout
         </button>
       </div>
 
-      <Footer />
+      {/* Privacy and Terms Links */}
+      <div style={{
+        display: 'flex',
+        justifyContent: 'center',
+        gap: '20px',
+        marginTop: '30px',
+        marginBottom: '30px',
+        fontSize: '14px'
+      }}>
+        <Link
+          href="/privacy"
+          style={{
+            color: '#2F5D50',
+            textDecoration: 'none',
+            fontWeight: '500'
+          }}
+          onMouseEnter={(e) => e.currentTarget.style.textDecoration = 'underline'}
+          onMouseLeave={(e) => e.currentTarget.style.textDecoration = 'none'}
+        >
+          Privacy Policy
+        </Link>
+        <span style={{ color: '#ccc' }}>|</span>
+        <Link
+          href="/terms"
+          style={{
+            color: '#2F5D50',
+            textDecoration: 'none',
+            fontWeight: '500'
+          }}
+          onMouseEnter={(e) => e.currentTarget.style.textDecoration = 'underline'}
+          onMouseLeave={(e) => e.currentTarget.style.textDecoration = 'none'}
+        >
+          Terms of Service
+        </Link>
+      </div>
     </div>
   );
 }

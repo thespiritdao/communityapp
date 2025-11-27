@@ -1,8 +1,8 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import { createPublicClient, http } from 'viem';
 import { base } from 'viem/chains';
-import DAOGovernorABI from 'src/abis/DAO_GovernorABI.json';
-import { supabase } from 'src/utils/supabaseClient';
+import DAOGovernorABI from '@/abis/DAO_GovernorABI.json';
+import { supabase } from '@/utils/supabaseClient';
 
 const GOVERNOR_ADDRESS = process.env.NEXT_PUBLIC_DAO_GOVERNOR as `0x${string}`;
 const RPC_URL = process.env.NEXT_PUBLIC_RPC_URL!;
@@ -52,7 +52,7 @@ export async function GET(req: NextRequest) {
     return now - lastChecked > 15 * 1000; // 15 seconds
   });
 
-  let updates: any[] = [];
+  const updates: any[] = [];
   if (needsUpdate.length > 0) {
     const publicClient = createPublicClient({
       chain: base,

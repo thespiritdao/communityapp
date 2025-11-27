@@ -1,0 +1,60 @@
+=================================================================
+PodAuthorizationFactory V3 - WHITELIST FUNCTION SIGNATURES
+=================================================================
+
+Copy these 9 function signatures to your Coinbase Paymaster whitelist:
+
+Contract Address: [DEPLOY V3 FACTORY AND INSERT ADDRESS HERE]
+
+-----------------------------------------------------------------
+FUNCTION SIGNATURES (copy-paste ready):
+-----------------------------------------------------------------
+
+createPodProxy(string,address,address[],address,uint256)
+
+updatePodProxy(string,address[],address,bool)
+
+setProxyAdminHatViaFactory(string,uint256,address)
+
+setHatIdsViaFactory(string,uint256,uint256,address)
+
+addTokenBalanceCriterionViaFactory(string,address,uint256,address,uint256,bool,address)
+
+addTimeLimitCriterionViaFactory(string,address,uint256,uint256,uint256,bool,address)
+
+addAgreementCriterionViaFactory(string,address,uint256,string,bool,address)
+
+addHatsWornCriterionViaFactory(string,address,uint256,uint256[],bool,address)
+
+clearAllCriteriaViaFactory(string,address,uint256,address)
+
+=================================================================
+CHANGES FROM V2:
+=================================================================
+
+✅ UNCHANGED (2 functions):
+  - createPodProxy(string,address,address[],address,uint256)
+  - updatePodProxy(string,address[],address,bool)
+
+🚀 UPDATED (7 functions - added "address" parameter at the end):
+  - setProxyAdminHatViaFactory
+  - setHatIdsViaFactory
+  - addTokenBalanceCriterionViaFactory
+  - addTimeLimitCriterionViaFactory
+  - addAgreementCriterionViaFactory
+  - addHatsWornCriterionViaFactory
+  - clearAllCriteriaViaFactory
+
+=================================================================
+DEPLOYMENT CHECKLIST:
+=================================================================
+
+[ ] Deploy PodAuthorizationFactory_v3_COMPLETE.sol to Base mainnet
+[ ] Transfer ownership to Executive Pod
+[ ] Update Coinbase Paymaster with all 9 function signatures above
+[ ] Update .env: NEXT_PUBLIC_POD_AUTH_FACTORY=[V3_ADDRESS]
+[ ] Restart dev server: npm run dev
+[ ] Test eligibility sync (should work without "Not authorized")
+[ ] Test pod creation (should work as before)
+
+=================================================================

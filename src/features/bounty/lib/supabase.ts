@@ -1,4 +1,4 @@
-import { supabase } from '../../../lib/supabase';
+import { supabase } from '@/lib/supabase';
 
 // Database types
 export interface Bounty {
@@ -10,8 +10,13 @@ export interface Bounty {
   value_token: 'SYSTEM' | 'SELF';
   requirements: string[];
   questions: string[];
-  status: 'open' | 'in-progress' | 'completed' | 'cancelled';
+  status: 'open' | 'in-progress' | 'completed' | 'cancelled' | 'draft';
   creator_address: string;
+  required_pod_id?: string;
+  pod_id?: string;  // Pod this bounty belongs to
+  funding_source?: 'personal_wallet' | 'pod_treasury';  // Funding source for bounty
+  ipfs_hash?: string;
+  onchain_id?: number;  // On-chain bounty ID from BountyManagerV2
   created_at: string;
   updated_at: string;
 }
@@ -29,12 +34,16 @@ export interface Bid {
   payment_details: any; // Payment schedule details
   answers: Record<string, string>;
   additional_notes: string;
-  status: 'pending' | 'approved' | 'rejected' | 'archived';
+  status: 'pending' | 'approved' | 'rejected' | 'archived' | 'legacy_pending';
   reviewer_address?: string;
   final_approver_address?: string;
   submitted_at: string;
   reviewed_at?: string;
   reviewed_by?: string;
+  // On-chain bid placement tracking
+  onchain_bid_index?: number;
+  placement_tx_hash?: string;
+  bid_ipfs_hash?: string;
 }
 
 export interface BidReview {
@@ -77,16 +86,19 @@ export interface Milestone {
 export const bountyApi = {
   // Get all bounties
   async getAllBounties(): Promise<Bounty[]> {
+    console.log('📥 bountyApi.getAllBounties: Fetching all bounties from database...');
     const { data, error } = await supabase
       .from('bounties')
       .select('*')
       .order('created_at', { ascending: false });
 
     if (error) {
-      console.error('Error fetching bounties:', error);
+      console.error('❌ Error fetching bounties:', error);
       throw error;
     }
 
+    console.log(`✅ bountyApi.getAllBounties: Fetched ${data?.length || 0} bounties from database`);
+    console.log('📋 Raw bounty IDs:', data?.map(b => ({ id: b.id, title: b.title, created_at: b.created_at })));
     return data || [];
   },
 
@@ -187,14 +199,123 @@ export const bidApi = {
 
   // Submit a bid
   async submitBid(bidData: Omit<Bid, 'id' | 'submitted_at'>): Promise<Bid> {
+    // Ensure user profile exists before submitting bid
+    // The issue is that the foreign key expects wallet_address to exist in user_profiles
+    const normalizedAddress = bidData.bidder_address.toLowerCase();
+
+    try {
+      // First check if user profile exists by wallet_address
+      const { data: existingProfile, error: fetchError } = await supabase
+        .from('user_profiles')
+        .select('wallet_address, user_id')
+        .eq('wallet_address', normalizedAddress)
+        .maybeSingle();
+
+      if (fetchError && fetchError.code !== 'PGRST116') {
+        console.error('❌ Error checking user profile:', fetchError);
+        throw fetchError;
+      }
+
+      if (!existingProfile) {
+        console.log('📝 Creating user profile for wallet:', normalizedAddress);
+
+        // Use upsert to handle potential race conditions
+        const { error: upsertError } = await supabase
+          .from('user_profiles')
+          .upsert({
+            wallet_address: normalizedAddress,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          }, {
+            onConflict: 'wallet_address'
+          });
+
+        if (upsertError) {
+          console.error('❌ Failed to upsert user profile:', upsertError);
+          // Try one more time with just insert in case upsert has issues
+          const { error: insertError } = await supabase
+            .from('user_profiles')
+            .insert({
+              wallet_address: normalizedAddress
+            });
+
+          if (insertError && insertError.code !== '23505') { // 23505 is duplicate key
+            console.error('❌ Failed to create user profile on retry:', insertError);
+            throw new Error('Unable to create user profile. Please try refreshing and signing in again.');
+          }
+        }
+        console.log('✅ User profile created/upserted for bid submission');
+      } else {
+        console.log('✅ User profile already exists for bid submission');
+      }
+    } catch (profileError) {
+      console.error('❌ Critical error handling user profile:', profileError);
+      throw profileError; // Throw here as we can't proceed without a valid profile
+    }
+
+    // DEDUPLICATION: Check if bid already exists with same transaction hash
+    if (bidData.placement_tx_hash) {
+      console.log('🔍 Checking for duplicate bid with txHash:', bidData.placement_tx_hash);
+
+      const { data: existingBid, error: checkError } = await supabase
+        .from('bids')
+        .select('id, bounty_id, bidder_address, placement_tx_hash')
+        .eq('placement_tx_hash', bidData.placement_tx_hash)
+        .eq('bounty_id', bidData.bounty_id)
+        .eq('bidder_address', normalizedAddress)
+        .maybeSingle();
+
+      if (checkError && checkError.code !== 'PGRST116') {
+        console.error('❌ Error checking for duplicate bid:', checkError);
+        // Don't throw - continue with insert
+      }
+
+      if (existingBid) {
+        console.log('⚠️ Bid already exists with this transaction hash:', existingBid.id);
+        console.log('✅ Returning existing bid instead of creating duplicate');
+        return existingBid as Bid;
+      }
+    }
+
+    // Ensure bidder_address is normalized before inserting
+    const bidDataWithNormalizedAddress = {
+      ...bidData,
+      bidder_address: normalizedAddress
+    };
+
+    console.log('💾 Inserting new bid to database:', {
+      bounty_id: bidDataWithNormalizedAddress.bounty_id,
+      bidder: normalizedAddress,
+      txHash: bidDataWithNormalizedAddress.placement_tx_hash,
+      bidIndex: bidDataWithNormalizedAddress.onchain_bid_index
+    });
+
     const { data, error } = await supabase
       .from('bids')
-      .insert([bidData])
+      .insert([bidDataWithNormalizedAddress])
       .select()
       .single();
 
     if (error) {
-      console.error('Error submitting bid:', error);
+      console.error('❌ Error submitting bid:', error);
+      throw error;
+    }
+
+    console.log('✅ Bid inserted successfully:', data.id);
+    return data;
+  },
+
+  // Update an existing bid (for editing)
+  async updateBid(id: string, bidData: Partial<Omit<Bid, 'id' | 'submitted_at' | 'bidder_address'>>): Promise<Bid> {
+    const { data, error } = await supabase
+      .from('bids')
+      .update(bidData)
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error updating bid:', error);
       throw error;
     }
 
@@ -220,6 +341,43 @@ export const bidApi = {
     if (error) {
       console.error('Error updating bid status:', error);
       throw error;
+    }
+
+    // If bid is approved, update the bounty status to 'in-progress'
+    if (status === 'approved') {
+      await this.updateBountyStatusToInProgress(id);
+    }
+  },
+
+  // Update bounty status to in-progress when a bid is approved
+  async updateBountyStatusToInProgress(bidId: string): Promise<void> {
+    try {
+      // First get the bid to find the bounty ID
+      const { data: bid, error: bidError } = await supabase
+        .from('bids')
+        .select('bounty_id')
+        .eq('id', bidId)
+        .single();
+
+      if (bidError || !bid) {
+        console.error('Error finding bid for status update:', bidError);
+        return;
+      }
+
+      // Update the bounty status to 'in-progress'
+      const { error: bountyError } = await supabase
+        .from('bounties')
+        .update({ status: 'in-progress' })
+        .eq('id', bid.bounty_id);
+
+      if (bountyError) {
+        console.error('Error updating bounty status to in-progress:', bountyError);
+        throw bountyError;
+      }
+
+      console.log(`✅ Updated bounty ${bid.bounty_id} status to 'in-progress'`);
+    } catch (error) {
+      console.error('Failed to update bounty status:', error);
     }
   },
 
@@ -436,6 +594,8 @@ export const convertBountyToDb = (bounty: any): Omit<Bounty, 'id' | 'created_at'
     questions: bounty.questions || [],
     status: bounty.status || 'open',
     creator_address: bounty.creator_address,
+    required_pod_id: bounty.podId || bounty.required_pod_id || null,
+    ipfs_hash: bounty.ipfs_hash || null,
   };
 };
 
@@ -454,6 +614,12 @@ export const convertBountyFromDb = (bounty: Bounty): any => {
     questions: bounty.questions,
     status: bounty.status,
     createdAt: new Date(bounty.created_at),
+    creator_address: bounty.creator_address,
+    podId: bounty.required_pod_id,
+    pod_id: bounty.pod_id,  // Include pod_id
+    funding_source: bounty.funding_source,  // Include funding_source
+    ipfs_hash: bounty.ipfs_hash,
+    onchain_id: bounty.onchain_id,  // Map on-chain bounty ID
   };
 };
 
@@ -474,6 +640,10 @@ export const convertBidToDb = (bid: any): Omit<Bid, 'id' | 'submitted_at'> => {
     status: bid.status || 'pending',
     reviewer_address: bid.reviewerAddress,
     final_approver_address: bid.finalApproverAddress,
+    // On-chain bid placement tracking
+    onchain_bid_index: bid.onchainBidIndex,
+    placement_tx_hash: bid.placementTxHash,
+    bid_ipfs_hash: bid.bidIpfsHash,
   };
 };
 
@@ -552,6 +722,10 @@ export const convertBidFromDb = (bid: Bid & { user_profile?: { first_name?: stri
     submittedAt: new Date(bid.submitted_at),
     reviewedAt: bid.reviewed_at ? new Date(bid.reviewed_at) : undefined,
     reviewedBy: bid.reviewed_by,
+    // On-chain bid placement tracking
+    onchainBidIndex: bid.onchain_bid_index,
+    placementTxHash: bid.placement_tx_hash,
+    bidIpfsHash: bid.bid_ipfs_hash,
   };
 
   console.log('🔍 convertBidFromDb - Converted bid data:', {

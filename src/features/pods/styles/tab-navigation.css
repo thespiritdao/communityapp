@@ -1,0 +1,33 @@
+/* Tab Navigation Scrollbar Styles */
+.scrollbar-hide {
+  -ms-overflow-style: none; /* IE and Edge */
+  scrollbar-width: none; /* Firefox */
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none; /* Chrome, Safari and Opera */
+}
+
+/* Ensure tabs container doesn't break layout */
+.tabs-container {
+  max-width: 100%;
+  overflow: hidden;
+}
+
+/* Smooth scroll for tab navigation */
+.scroll-smooth {
+  scroll-behavior: smooth;
+}
+
+/* Prevent layout shift on hydration */
+.tab-navigation-wrapper {
+  min-height: 56px; /* Prevents height jump */
+  position: relative;
+  width: 100%;
+}
+
+@media (min-width: 768px) {
+  .tab-navigation-wrapper {
+    min-height: 64px;
+  }
+}

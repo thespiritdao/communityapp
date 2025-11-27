@@ -1,6 +1,15 @@
 import { GelatoRelay } from '@gelatonetwork/relay-sdk';
 import { ethers } from "ethers";
-import { supabase } from "src/utils/supabaseClient";
+import { supabase } from "@/utils/supabaseClient";
+import { GelatoRelayManager } from '@/app/api/utils/gelatoSetup';
+
+// Task states enum
+enum TaskState {
+  WaitingForConfirmation = 'WaitingForConfirmation',
+  ExecSuccess = 'ExecSuccess',
+  ExecReverted = 'ExecReverted',
+  Cancelled = 'Cancelled'
+}
 
 const UNLOCK_CONTRACT = process.env.NEXT_PUBLIC_UNLOCK_CONTRACT!;
 const SAFE_WALLET = process.env.NEXT_PUBLIC_SAFE_WALLET!;
@@ -8,39 +17,25 @@ const GELATO_API_KEY = process.env.GELATO_API_KEY!;
 
 // Initialize Gelato Relay
 const relay = new GelatoRelay();
+const relayManager = new GelatoRelayManager();
 
 // Unlock contract interface
 const unlockInterface = new ethers.Interface([
   "function purchaseKey(address) external payable"
 ]);
 
-// const relayManager = GelatoRelayManager.getInstance();
-
 export async function airdropMembership(walletAddress: string) {
   try {
     console.log(`🔹 Preparing membership airdrop to ${walletAddress}...`);
 
-    // Encode the contract call
-    const unlockInterface = new ethers.Interface([
-      "function purchaseKey(address) external payable"
-    ]);
-    
-    const data = unlockInterface.encodeFunctionData("purchaseKey", [walletAddress]);
-
-    // Submit via Gelato Relay with status tracking
-    const response = await relayManager.sponsoredCall(
-      UNLOCK_CONTRACT,
-      data,
-      async (status: TaskState) => {
-        await updateTaskStatus(response.taskId, status, walletAddress);
-      }
-    );
+    // Submit via Gelato Relay
+    const response = await relayManager.grantMembership(walletAddress);
 
     // Store initial task information
     await supabase.from("relay_tasks").insert({
       wallet_address: walletAddress,
       task_id: response.taskId,
-      status: TaskState.WaitingForConfirmation
+      status: 'pending'
     });
 
     return { 
@@ -56,19 +51,18 @@ export async function airdropMembership(walletAddress: string) {
 
 async function updateTaskStatus(
   taskId: string, 
-  status: TaskState, 
   walletAddress: string
 ) {
   try {
-    const taskDetails = await relayManager.getTaskStatus(taskId);
+    const taskDetails = await relayManager.checkRelayStatus(taskId);
     
     await supabase.from("relay_tasks").update({
-      status: status,
+      status: taskDetails.task?.taskState || 'pending',
       transaction_hash: taskDetails.task?.transactionHash || null,
       updated_at: new Date().toISOString()
     }).eq('task_id', taskId);
 
-    if (status === TaskState.ExecSuccess) {
+    if (taskDetails.task?.taskState === 'ExecSuccess') {
       await supabase.from("user_profiles").update({
         membership_status: true
       }).eq('wallet_address', walletAddress);
@@ -81,7 +75,7 @@ async function updateTaskStatus(
 
 export async function checkAirdropStatus(taskId: string) {
   try {
-    const status = await relay.getTaskStatus(taskId);
+    const status = await relayManager.checkRelayStatus(taskId);
     
     // Update status in database if transaction is completed
     if (status.task?.taskState === 'ExecSuccess') {

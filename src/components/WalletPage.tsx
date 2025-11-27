@@ -1,9 +1,7 @@
 'use client';
-import React from 'react';
-import { ConnectWallet, Wallet } from '@coinbase/onchainkit/wallet';
+import type React from 'react';
 import { useConnect } from 'wagmi';
 import './styles/walletStyles.css';
-import App from '../App'; 
 
 const WalletPage: React.FC = () => {
   // Accessing connectors to create a new wallet or connect

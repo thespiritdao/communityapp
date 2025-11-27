@@ -31,9 +31,12 @@ body {
 .chat-container {
   background-color: #f5f4ed; /* Matches your desired background color */
   height: 100vh; /* Full viewport height */
+  width: 100%;
   display: flex;
   flex-direction: column;
   overflow: hidden; /* Prevent scrollbars from affecting layout */
+  position: relative;
+  z-index: 1; /* Ensure proper stacking below BottomNav */
 }
 
 
@@ -53,6 +56,8 @@ body {
   flex: 1; /* Make it take up remaining space */
   overflow-y: auto; /* Allow scrolling for messages */
   padding: 15px; /* Add padding for aesthetics */
+  padding-top: 75px; /* Space for absolute header (60px + 15px) */
+  padding-bottom: 100px; /* Extra space for fixed input section */
 }
 
 /* Messages section */
@@ -188,31 +193,35 @@ body {
 
 /* Input section */
 .chat-input-section {
-  background-color: transparent;
-  box-shadow: none;
-  padding: 15px; /* Increase padding for a larger input box */
-  position: relative; /* Ensure it's positioned properly */
-  padding-bottom: 60px; /* Adjust based on the height of BottomNav */
-  
+  background-color: transparent; /* Transparent to avoid visual bulk */
+  padding: 0.25rem 0.5rem; /* Minimal padding for just the input bubble */
+  position: fixed; /* Fixed to bottom of screen */
+  bottom: 60px; /* Above BottomNav */
+  left: 0;
+  right: 0;
+  z-index: 100; /* Above chat messages but below BottomNav */
 }
 
 /* Wrapper for input and icons */
 .chat-input-form {
-  width: 100%;
-  margin: 0;
-  padding: 0;
+  padding-right: 1rem; /* leave room for mic icon */
+  font-size: 1rem;
+  min-height: 3.5rem;
 }
 
 /* Container wrapping the input and icons */
 .chat-input-wrapper {
   display: flex;
   align-items: center;
-  width: 95%;
-  padding: 10px 15px;
+  width: calc(100% - 1rem); /* Full width with small margins */
+  max-width: none; /* Remove max-width constraint */
+  padding: 12px 16px; /* Increased padding for better touch targets */
   background-color: #fff;
-  border-radius: 20px;
+  border-radius: 24px; /* Slightly more rounded */
   border: none;
   box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.2);
+  margin: 0 0.5rem; /* Center with small margins */
+  min-height: 48px; /* Minimum height for better mobile usability */
 }
 
 
@@ -263,7 +272,9 @@ body {
   align-items: center;
   justify-content: flex-end;
   margin-left: auto; /* Push to the right */
-  min-width: 60px; /* Ensure minimum width for icon space */
+  min-width: 80px; /* Increased minimum width for better icon spacing */
+  flex-shrink: 0; /* Prevent shrinking on mobile */
+  gap: 4px; /* Add space between icons */
 }
 
 
@@ -302,6 +313,10 @@ body {
   margin-right: 2px;
 }
 
+.mic-icon {
+  right: 1rem;
+  bottom: 1rem;
+}
 
 /* Attachments list */
 .attachments-list {
@@ -322,7 +337,7 @@ body {
 
 .attachment-link {
   text-decoration: none;
-  color: #007bff;
+  color: #2F5D50;
   margin-right: 5px;
 }
 
@@ -400,7 +415,7 @@ body {
 }
 
 .current-user {
-  background-color: #e8f4ff;
+  background-color: #E8F1EE;
 }
 
 .user-avatar {
@@ -468,12 +483,34 @@ body {
   z-index: 1000;
 }
 
-/* Chat Groups List Container - similar to categoryListContainer */
+/* Chat Groups List Container - different for list vs chat view */
 .chat-groups-container {
   padding: 1rem;
+  height: 100%;
+  /* Defensive styling to prevent loading issues */
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+  box-sizing: border-box;
+}
+
+/* List view: restore white background and proper styling */
+.chat-list-view .chat-groups-container {
   background-color: #ffffff;
   border-radius: 8px;
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.08);
+  box-shadow: none; /* Container already has shadow */
+  height: auto;
+  max-width: 100%; /* Prevent overflow */
+  /* Additional defensive styling */
+  width: 100%;
+  overflow-x: hidden;
+}
+
+/* Chat view: transparent background */
+.chat-shell:not(.chat-list-view) .chat-groups-container {
+  background-color: transparent;
+  border-radius: 0;
+  box-shadow: none;
 }
 
 /* Reset list style for chat groups */
@@ -488,12 +525,28 @@ body {
 .chat-group-item {
   margin-bottom: 1rem;
   border-radius: 0.5rem;
-  overflow: hidden;
   background-color: #ffffff;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   transition: transform 0.2s ease, box-shadow 0.2s ease;
   cursor: pointer;
-  padding-left: .75rem;
+  padding: 1rem 1.5rem;
+  text-align: left;
+  border-bottom: 1px solid #eaeaea;
+  display: flex;
+  align-items: center; /* Center align items */
+  gap: 1.25rem;
+  
+  /* Prevent overflow and ensure proper margins - DEFENSIVE */
+  width: calc(100% - 2rem); /* Account for container padding */
+  max-width: calc(100% - 2rem); /* Enforce max width */
+  min-width: 0; /* Allow flexbox to shrink */
+  margin-left: 1rem;
+  margin-right: 1rem;
+  box-sizing: border-box;
+  overflow: hidden; /* Prevent content overflow */
+  
+  /* Ensure consistent positioning */
+  position: relative;
 }
 
 .chat-group-description {
@@ -505,12 +558,12 @@ body {
 
 /* For odd-numbered chat groups */
 .chat-group-item:nth-child(odd) {
-  background-color: #e9f9ec; /* Greenish background */
+  background-color: #F0ECE6; /* Warm ritual off-white */
 }
 
 /* For even-numbered chat groups */
 .chat-group-item:nth-child(even) {
-  background-color: #e8fcff; /* Blueish background */
+  background-color: #E8E4DC; /* Grounded neutral */
 }
 
 
@@ -532,7 +585,19 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-right: 10px;
+  padding: 1rem;
+  background-color: #f5f4ed;
+  position: absolute; /* Use absolute within container */
+  top: 0;
+  left: 0;
+  right: 0;
+  /* Removed width: 100% - left + right already makes it full width */
+  z-index: 50; /* Above messages */
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  box-sizing: border-box;
+  margin: 0;
+  height: 60px; /* Fixed height for consistency */
 }
 
 /* Chat Title styled similar to categoryTitle */
@@ -544,8 +609,8 @@ body {
 
 /* Chat Back Button styled similar to ForumBackButton */
 .back-button {
-  background-color: #bfe7c6;
-  color: #000;
+  background-color: #8FAAA1;
+  color: #FFFFFF;
   padding: 0.5rem 1rem;
   border: none;
   border-radius: 6px;
@@ -628,11 +693,190 @@ body {
 }
 
 .mention {
-  color: #1976d2;
+  color: #2F5D50;
   font-weight: bold;
-  background: #e3f2fd;
+  background: #E8F1EE;
   border-radius: 4px;
   padding: 0 4px;
   margin: 0 2px;
   display: inline-block;
+}
+
+/* --- Chat Shell - Different styling for list vs chat view --- */
+.chat-shell {
+  width: 100%;
+  height: 100vh;
+  margin: 0;
+  background: #f5f4ed; /* Match body background */
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  overflow: hidden;
+  
+  /* Default: no borders for chat view */
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+/* Chat Shell for LIST view - restore white container */
+.chat-shell.chat-list-view {
+  width: calc(100% - 1rem);
+  max-width: 1200px;
+  margin: 0.5rem auto;
+  margin-bottom: calc(var(--bottom-nav-height, 60px) + 1rem); /* Space for bottom nav + margin */
+  height: auto;
+  min-height: calc(100vh - var(--bottom-nav-height, 60px) - 2rem); /* Account for nav height and margins */
+  
+  background: #fff;
+  border: 1px solid rgba(0,0,0,0.08);
+  border-radius: 16px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.06);
+  
+  /* Prevent off-screen extension */
+  max-width: calc(100vw - 1rem);
+  overflow-x: hidden;
+  box-sizing: border-box;
+}
+
+/* space under list H1 */
+.chat-title {
+  margin: 0 0 12px 0; /* or 16px if you want more */
+}
+
+/* center each chat card's content */
+.chat-group-item--centered {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center; /* ensure text is centered too */
+}
+
+/* inline row: [avatar] [name], centered as a unit */
+.chat-group-core {
+  display: inline-flex;
+  align-items: center;
+  gap: 1.25rem;
+}
+
+/* small round avatar (reuse if you already have .pod-avatar) */
+.pod-avatar {
+  border-radius: 9999px;
+  object-fit: cover;
+}
+/* Avatar sizing */
+img.pod-avatar--sm {
+  width: 40px;       /* or 32px if you prefer */
+  height: 40px;
+  max-width: none;   /* cancel global max-width:100% */
+  object-fit: cover; /* keep the face centered */
+  border-radius: 9999px;
+  display: inline-block; /* avoids weird shrink in flex contexts */
+}
+
+
+/* optional: make the name a touch bolder */
+.chat-group-name {
+  font-size: 1.5rem;
+  font-weight: 600;
+}
+
+/* === MOBILE RESPONSIVE STYLES === */
+@media (max-width: 768px) {
+  /* Chat shell - list view keeps container on mobile */
+  .chat-shell.chat-list-view {
+    width: calc(100% - 0.5rem);
+    margin: 0.25rem auto;
+    margin-bottom: calc(var(--bottom-nav-height, 60px) + 0.5rem); /* Space for bottom nav + margin */
+    min-height: calc(100vh - var(--bottom-nav-height, 60px) - 1rem); /* Account for nav height and margins */
+    max-width: calc(100vw - 0.5rem);
+    box-sizing: border-box;
+  }
+  
+  /* Chat shell - chat view goes full screen */
+  .chat-shell:not(.chat-list-view) {
+    height: 100vh;
+    width: 100vw;
+    margin: 0;
+    padding: 0;
+  }
+  
+  /* Chat container mobile adjustments */
+  .chat-container {
+    height: calc(100vh - 60px);
+    width: 100%;
+  }
+  
+  /* Chat input section - ensure full width on mobile */
+  .chat-input-section {
+    left: 0;
+    right: 0;
+    padding: 0.25rem; /* Minimal padding on mobile */
+  }
+  
+  /* Chat input wrapper - optimized for mobile devices */
+  .chat-input-wrapper {
+    width: calc(100% - 0.5rem);
+    margin: 0 0.25rem;
+    padding: 10px 14px;
+    min-height: 46px;
+  }
+  
+  /* Chat groups container - proper spacing on mobile */
+  .chat-groups-container {
+    padding: 0.75rem;
+    height: auto;
+  }
+  
+  /* Chat group items - prevent overflow on mobile */
+  .chat-group-item {
+    width: calc(100% - 1rem);
+    margin-left: 0.5rem;
+    margin-right: 0.5rem;
+    padding: 0.75rem 1rem;
+  }
+  
+  /* Chat header mobile adjustments */
+  .chat-header {
+    padding: 0.75rem 1rem;
+    background-color: #f5f4ed;
+  }
+  
+  /* Chat main area mobile adjustments */
+  .chat-main {
+    padding: 8px;
+    padding-top: 68px; /* Space for header on mobile (60px + 8px) */
+    padding-bottom: 110px; /* Extra space for fixed input */
+  }
+  
+  /* Icon sizing for mobile */
+  .icon {
+    width: 28px;
+    height: 28px;
+    margin: 0 3px;
+  }
+  
+  /* Right icons container - better spacing on mobile */
+  .right-icons {
+    min-width: 90px;
+    gap: 6px;
+  }
+}
+
+/* Additional styles for very narrow screens (like Pixel 7 in portrait) */
+@media (max-width: 430px) {
+  .chat-input-wrapper {
+    width: calc(100% - 0.25rem);
+    margin: 0 0.125rem;
+    padding: 8px 12px;
+  }
+  
+  .chat-input-section {
+    padding: 0.2rem; /* Even less padding on narrow screens */
+  }
+  
+  .right-icons {
+    min-width: 100px;
+    gap: 8px;
+  }
 }

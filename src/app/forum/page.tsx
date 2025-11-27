@@ -1,26 +1,30 @@
 // src/app/forum/page.tsx
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
 import { useAccount } from 'wagmi';
-import { useTokenGate } from 'src/features/forum/hooks/useTokenGate';
-import { supabase } from 'src/utils/supabaseClient';
-import ForumContainer from 'src/features/forum/components/ForumContainer';
-import CategoryList from 'src/features/forum/components/CategoryList';
-import ThreadList from 'src/features/forum/components/ThreadList';
-import { Button } from 'src/components/ui/button';
-import { useForum } from 'src/features/forum/hooks/useForum';
-import { Loader2, Lock, AlertTriangle } from 'lucide-react';
-import styles from 'src/features/forum/styles/Forum.module.css';
+import ForumAccessGate from '@/features/forum/components/ForumAccessGate';
+import { supabase } from '@/utils/supabaseClient';
+import ForumContainer from '@/features/forum/components/ForumContainer';
+import CategoryList from '@/features/forum/components/CategoryList';
+import ThreadList from '@/features/forum/components/ThreadList';
+import ForumErrorBoundary from '@/features/forum/components/ForumErrorBoundary';
+import { Button } from '@/components/ui/button';
+import { useForum } from '@/features/forum/hooks/useForum';
+import { useTokenGate } from '@/features/forum/hooks/useTokenGate';
+import { useHatPermissions } from '@/hooks/useHatPermissions';
+import { getUserIdentity, getAccessibleForums, logUserIdentity } from '@/utils/accessControlUtils';
+import { useForumUserProfiles } from '@/features/forum/hooks/useForumUserProfiles';
+import { Loader2 } from 'lucide-react';
+import styles from '@/features/forum/styles/Forum.module.css';
 
 interface Category {
   id: string;
   name: string;
   description: string | null;
   created_at: string;
-  required_token?: string | null;  // ensure we can read this
+  required_token?: string | null;
   thread_count: number;
 }
 
@@ -28,7 +32,7 @@ interface Thread {
   id: string;
   category_id: string;
   title: string;
-  author_wallet: string;
+  author_address: string;
   created_at: string;
   post_count: number;
   category_name: string;
@@ -37,72 +41,96 @@ interface Thread {
 export default function ForumPage() {
   const router = useRouter();
   const { address, isConnected } = useAccount();
-  const { hasAccess, isLoading, error, tokenBalances } = useTokenGate();
   const { loadThreads } = useForum();
+  const { tokenBalances, isLoading: tokenGateLoading } = useTokenGate();
+  const { userHats, isLoading: hatPermissionsLoading } = useHatPermissions();
   const [categories, setCategories] = useState<Category[]>([]);
   const [recentThreads, setRecentThreads] = useState<Thread[]>([]);
   const [loadingData, setLoadingData] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
 
-  // Fetch forum data if user has access and tokenBalances is available.
+  // Batch fetch user profiles for recent threads (prevents N+1 queries)
+  const uniqueThreadAuthors = useMemo(() => {
+    return [...new Set(recentThreads.map(t => t.author_address))];
+  }, [recentThreads]);
+
+  const { data: profileMap } = useForumUserProfiles(uniqueThreadAuthors);
+
+  // Wait for both token balances and HAT permissions to load before fetching forum data
   useEffect(() => {
-    if (!isLoading && hasAccess && tokenBalances) {
+    if (!tokenGateLoading && !hatPermissionsLoading && tokenBalances && address) {
       fetchForumData();
     }
-  }, [isLoading, hasAccess, tokenBalances]);
+  }, [tokenGateLoading, hatPermissionsLoading, tokenBalances, userHats, address]);
 
-  // Fetch categories and recent threads
+  // NEW: Get user's accessible forums using the RPC function
+  const getUserAccessibleForums = async () => {
+    try {
+      if (!address || !tokenBalances) {
+        console.warn('Cannot get accessible forums: missing address or token balances');
+        return [];
+      }
+
+      // Get user identity from token balances and HAT permissions
+      const identity = await getUserIdentity(address, tokenBalances, userHats);
+      logUserIdentity(identity, 'Forum Access Check');
+
+      // Use the RPC function to get accessible forums
+      const accessibleForums = await getAccessibleForums(identity);
+      console.log(`📋 User has access to ${accessibleForums.length} forum categories`);
+      
+      return accessibleForums;
+    } catch (error) {
+      console.error('Error getting accessible forums:', error);
+      return [];
+    }
+  };
+
+  // NEW: Fetch forum data using the RPC function
   const fetchForumData = async () => {
+    if (!address || !tokenBalances) {
+      console.warn('Cannot fetch forum data: missing address or token balances');
+      return;
+    }
+
     setLoadingData(true);
     setLoadError(null);
 
     try {
-      // 1) Fetch categories
-      const { data: categoryData, error: categoryError } = await supabase
-        .from('forum_categories')
-        .select(`
-          id,
-          name,
-          description,
-          created_at,
-          required_token,
-          thread_count:forum_threads(count)
-        `)
-        .order('name');
+      // 1) Get user's accessible forums using the new RPC system
+      const accessibleForums = await getUserAccessibleForums();
 
-      if (categoryError) {
-        throw new Error(`Error fetching categories: ${categoryError.message}`);
+      // 2) Fetch thread counts for ALL accessible forums in a SINGLE query (performance optimization)
+      const forumIds = accessibleForums.map((forum: any) => forum.id);
+      let threadCounts: Record<string, number> = {};
+
+      if (forumIds.length > 0) {
+        const { data: allThreads, error: countError } = await supabase
+          .from('forum_threads')
+          .select('category_id')
+          .in('category_id', forumIds);
+
+        if (countError) {
+          console.warn('Error getting thread counts:', countError);
+        } else if (allThreads) {
+          // Count threads per category on client side (much faster than N queries)
+          threadCounts = allThreads.reduce((acc, thread) => {
+            acc[thread.category_id] = (acc[thread.category_id] || 0) + 1;
+            return acc;
+          }, {} as Record<string, number>);
+        }
       }
 
-      // Convert each category record
-      const formattedCategories = (categoryData || []).map((category: any) => ({
-        ...category,
-        thread_count: category.thread_count?.[0]?.count || 0,
+      // 3) Attach counts to forums
+      const forumsWithCounts = accessibleForums.map((forum: any) => ({
+        ...forum,
+        thread_count: threadCounts[forum.id] || 0
       }));
 
-      // 2) Filter categories based on required_token and user token balances
-      const pocToken = process.env.NEXT_PUBLIC_PROOF_OF_CURIOSITY?.toLowerCase() || "";
-      const execHatId = process.env.NEXT_PUBLIC_EXECUTIVE_POD_HAT_ID?.toLowerCase() || "";
-      const devHatId = process.env.NEXT_PUBLIC_DEV_POD_HAT_ID?.toLowerCase() || "";
+      console.log(`✅ Successfully loaded ${forumsWithCounts.length} accessible forum categories`);
+      setCategories(forumsWithCounts);
 
-      const filteredCategories = formattedCategories.filter((cat) => {
-        // If no required_token, category is public
-        if (!cat.required_token) return true;
-
-        const catRequired = cat.required_token.trim().toLowerCase();
-
-        // Compare with known tokens/hats
-        if (catRequired === pocToken && tokenBalances?.hasProofOfCuriosity) return true;
-        if (catRequired === execHatId && tokenBalances?.hasExecutivePod) return true;
-        if (catRequired === devHatId && tokenBalances?.hasDevPod) return true;
-
-        // Otherwise, hide this category
-        return false;
-      });
-
-      setCategories(filteredCategories);
-
-      // 3) Fetch recent threads using loadThreads from your useForum hook
+      // 3) Fetch recent threads using loadThreads from useForum hook
       const threadsResult = await loadThreads(undefined, 0, 5);
       if (!threadsResult.success) {
         throw new Error("Failed to load threads");
@@ -117,60 +145,14 @@ export default function ForumPage() {
     }
   };
 
-  // Handle wallet connection
-  const handleConnectWallet = () => {
-    router.push('/login?redirect=/forum');
-  };
-
-  // 1) Checking token access
-  if (isLoading) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-screen p-4">
-        <Loader2 className="w-12 h-12 animate-spin text-primary mb-4" />
-        <h1 className="text-2xl font-bold">Checking token access...</h1>
-        <p className="text-muted-foreground mt-2">
-          Verifying your NEXT_PUBLIC_PROOF_OF_CURIOSITY token
-        </p>
-      </div>
-    );
-  }
-
-  // 2) Not connected
-  if (!isConnected || !address) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-screen p-4">
-        <Lock className="w-12 h-12 text-primary mb-4" />
-        <h1 className="text-2xl font-bold">Connect Wallet to Access Forum</h1>
-        <p className="text-muted-foreground mt-2 mb-6">
-          This forum is token-gated and requires a wallet connection.
-        </p>
-        <Button onClick={handleConnectWallet}>Connect Wallet</Button>
-      </div>
-    );
-  }
-
-  // 3) No access
-  if (!hasAccess) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-screen p-4">
-        <AlertTriangle className="w-12 h-12 text-warning mb-4" />
-        <h1 className="text-2xl font-bold">Token Required</h1>
-        <p className="text-muted-foreground mt-2 mb-2 text-center max-w-md">
-          You need to hold a NEXT_PUBLIC_PROOF_OF_CURIOSITY token to access the forum.
-        </p>
-        <p className="text-sm text-muted-foreground mb-6">
-          Connected wallet: {address.slice(0, 6)}...{address.slice(-4)}
-        </p>
-        <Button onClick={() => router.push('/marketplace')}>Get Token</Button>
-      </div>
-    );
-  }
-
-  // 4) Main forum content
   return (
+    <ForumAccessGate
+      allowPublic={false}
+      fallbackMessage="You need to hold a Proof of Curiosity token or have appropriate HAT permissions to access the forum."
+    >
     <ForumContainer>
-      {/* Add pb-20 to create space at the bottom so the bottom bar doesn't overlap the content */}
-      <div className="pb-20">
+      {/* Add bottom-nav-spacing to create space at the bottom so the bottom bar doesn't overlap the content */}
+      <div className="bottom-nav-spacing">
         {/* Top row: Forum title + "New Thread" button */}
         <div className="flex justify-between items-center mb-8">
           <h1 className="text-3xl font-bold">SpiritDAO Forums</h1>
@@ -195,10 +177,15 @@ export default function ForumPage() {
           </div>
         )}
 
-        {/* Loading spinner */}
-        {loadingData ? (
+        {/* Loading spinner - show loading while token gating, HAT permissions, or data loading */}
+        {(loadingData || tokenGateLoading || hatPermissionsLoading) ? (
           <div className="flex justify-center py-8">
             <Loader2 className="w-8 h-8 animate-spin text-primary" />
+            <div className="ml-3 text-muted-foreground">
+              {tokenGateLoading ? 'Checking token permissions...' : 
+               hatPermissionsLoading ? 'Checking HAT permissions...' : 
+               'Loading forum data...'}
+            </div>
           </div>
         ) : (
           <>
@@ -206,7 +193,9 @@ export default function ForumPage() {
             <section className="mb-12">
               <h2 className="text-2xl font-semibold mb-4"></h2>
               {categories.length > 0 ? (
-                <CategoryList categories={categories} />
+                <ForumErrorBoundary>
+                  <CategoryList categories={categories} />
+                </ForumErrorBoundary>
               ) : (
                 <p className="text-muted-foreground">No categories found.</p>
               )}
@@ -216,7 +205,13 @@ export default function ForumPage() {
             <section>
               <h2 className="text-2xl font-semibold mb-4"></h2>
               {recentThreads.length > 0 ? (
-                <ThreadList threads={recentThreads} />
+                <ForumErrorBoundary>
+                  <ThreadList threads={recentThreads.map(thread => ({
+                    ...thread,
+                    author_first_name: profileMap?.[thread.author_address]?.first_name || null,
+                    author_last_name: profileMap?.[thread.author_address]?.last_name || null
+                  }))} />
+                </ForumErrorBoundary>
               ) : (
                 <p className="text-muted-foreground">No threads yet. Start a conversation!</p>
               )}
@@ -225,5 +220,6 @@ export default function ForumPage() {
         )}
       </div>
     </ForumContainer>
+    </ForumAccessGate>
   );
 }

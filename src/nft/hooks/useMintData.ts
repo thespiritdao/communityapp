@@ -3,11 +3,11 @@
 
 import { useState, useEffect } from 'react';
 import { useAccount, usePublicClient } from 'wagmi';
-import { useNFTLifecycleContext } from 'src/nft/components/NFTLifecycleProvider';
-import type { NFTData, NFTError } from 'src/nft/types';
-import { convertIpfsToHttps } from 'src/nft/utils/ipfs';
-import { useMintDetails } from 'src/nft/hooks/useMintDetails';
-import AdvocateMembershipABI from 'src/abis/AdvocateMembershipABI.json';
+import { useNFTLifecycleContext } from '../../../nft/components/NFTLifecycleProvider';
+import type { NFTData, NFTError } from '../../../nft/types';
+import { convertIpfsToHttps } from '../../../nft/utils/ipfs';
+import { useMintDetails } from '../../../nft/hooks/useMintDetails';
+import AdvocateMembershipABI from '../../../abis/AdvocateMembershipABI.json';
 
 const ADVOCATE_ADDRESS = '0xd05b10248f1F72e8B9fEbd9E9c87887Ab0a1aAB0'.toLowerCase();
 

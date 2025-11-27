@@ -1,8 +1,9 @@
-// src/features/identity/hooks/useUserProfile.ts
+// Optimized hook using centralized auth and ProfileService
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
-import { supabase } from 'src/utils/supabaseClient';
+import { useEffect, useState, useCallback, useRef } from 'react';
+import { useAuth } from './useAuth';
+import { ProfileService } from '../services/ProfileService';
 
 type ProfileData = {
   wallet_address?: string | null;
@@ -16,6 +17,7 @@ type ProfileData = {
   bio?: string | null;
   interests?: string | null;
   seeking?: string | null;
+  open_to_connect?: string | null;
   occupation?: string | null;
   skills_expertise?: string | null;
   workplace_organization?: string | null;
@@ -35,7 +37,11 @@ type ProfileData = {
 export function useUserProfile(walletAddress: string | undefined) {
   const [profile, setProfile] = useState<ProfileData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<any>(null);
+  const [error, setError] = useState<Error | null>(null);
+
+  const { session, isAuthenticated, signIn, loading: authLoading } = useAuth();
+  const lastFetchedAddress = useRef<string | undefined>();
+  const isFetching = useRef(false);
 
   const fetchProfile = useCallback(async () => {
     if (!walletAddress) {
@@ -45,103 +51,54 @@ export function useUserProfile(walletAddress: string | undefined) {
       return;
     }
 
+    // Prevent duplicate fetches for same address
+    if (lastFetchedAddress.current === walletAddress || isFetching.current) {
+      return;
+    }
+
+    // Wait for auth to complete
+    if (authLoading) {
+      return;
+    }
+
+    isFetching.current = true;
+
     try {
       setLoading(true);
       setError(null);
 
-      // First, check authentication status
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-      console.log('Current session:', session);
-
-      if (sessionError) {
-        console.error('Session error:', sessionError);
-        throw sessionError;
+      // Ensure user is authenticated first
+      if (!isAuthenticated) {
+        await signIn(walletAddress);
       }
 
-      // If no session, try to get tokens and create session
-      if (!session) {
-        console.log('No session found, attempting to create one...');
-        try {
-          const response = await fetch('/api/auth/onchainkit', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ address: walletAddress }),
-          });
+      // Use ProfileService for data operations
+      let profileData = await ProfileService.getByWallet(walletAddress);
 
-          if (!response.ok) {
-            throw new Error(`Failed to get auth tokens: ${response.statusText}`);
-          }
-
-          const { supabaseToken, supabaseRefreshToken } = await response.json();
-          
-          // Set the session with the tokens
-          const { error: setSessionError } = await supabase.auth.setSession({
-            access_token: supabaseToken,
-            refresh_token: supabaseRefreshToken,
-          });
-
-          if (setSessionError) {
-            throw setSessionError;
-          }
-        } catch (authError) {
-          console.error('Authentication error:', authError);
-          throw new Error('Failed to authenticate user');
-        }
+      if (!profileData && session) {
+        // Create new profile using ProfileService
+        profileData = await ProfileService.upsert({
+          wallet_address: walletAddress.toLowerCase(),
+          user_id: session.user.id,
+        });
       }
 
-      // Now fetch or create profile
-      const { data: existingProfile, error: fetchError } = await supabase
-        .from('user_profiles')
-        .select('*')
-        .eq('wallet_address', walletAddress.toLowerCase())
-        .maybeSingle();
-
-      if (fetchError) {
-        console.error('Error fetching profile:', fetchError);
-        throw fetchError;
-      }
-
-      // Get current session again after potential authentication
-      const { data: { session: currentSession } } = await supabase.auth.getSession();
-      
-      if (!existingProfile && currentSession) {
-        console.log('No profile found, creating new profile...');
-        const { data: newProfile, error: createError } = await supabase
-          .from('user_profiles')
-          .insert([
-            {
-              wallet_address: walletAddress.toLowerCase(),
-              user_id: currentSession.user.id,
-            }
-          ])
-          .select()
-          .single();
-
-        if (createError) {
-          console.error('Error creating profile:', createError);
-          throw createError;
-        }
-
-        setProfile(newProfile);
-      } else if (existingProfile) {
-        console.log('Existing profile found:', existingProfile);
-        setProfile(existingProfile);
-      }
-
+      setProfile(profileData);
+      lastFetchedAddress.current = walletAddress;
     } catch (err) {
-      console.error('Profile fetch/creation error:', err);
-      setError(err);
+      setError(err as Error);
       setProfile(null);
     } finally {
       setLoading(false);
+      isFetching.current = false;
     }
-  }, [walletAddress]);
+  }, [walletAddress, isAuthenticated, authLoading, signIn, session]); // Removed 'profile' dependency
 
   useEffect(() => {
-    fetchProfile();
-  }, [fetchProfile]);
+    if (!authLoading) {
+      fetchProfile();
+    }
+  }, [fetchProfile, authLoading]);
 
-  return { profile, loading, error, refetch: fetchProfile };
+  return { profile, loading: loading || authLoading, error, refetch: fetchProfile };
 }

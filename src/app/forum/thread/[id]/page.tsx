@@ -3,15 +3,17 @@
 
 import { useParams, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { supabase } from 'src/utils/supabaseClient';
-import ForumContainer from 'src/features/forum/components/ForumContainer';
-import PostList from 'src/features/forum/components/PostList';
-import styles from 'src/features/forum/styles/Forum.module.css';
+import { supabase } from '@/utils/supabaseClient';
+import ForumContainer from '@/features/forum/components/ForumContainer';
+import ForumAccessGate from '@/features/forum/components/ForumAccessGate';
+import PostList from '@/features/forum/components/PostList';
+import styles from '@/features/forum/styles/Forum.module.css';
 
 export default function ThreadDetailPage() {
   const { id } = useParams(); // "id" is the thread ID
   const router = useRouter();
   const [thread, setThread] = useState<any>(null);
+  const [categoryId, setCategoryId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -23,9 +25,7 @@ export default function ThreadDetailPage() {
         .select(`
           id,
           title,
-          author_wallet,
-          author_first_name,
-          author_last_name,
+          author_address,
           created_at,
           category_id,
           forum_categories (
@@ -39,6 +39,9 @@ export default function ThreadDetailPage() {
         setError(error.message);
       } else {
         setThread(data);
+        if (data?.category_id) {
+          setCategoryId(data.category_id);
+        }
       }
       setLoading(false);
     }
@@ -62,7 +65,7 @@ export default function ThreadDetailPage() {
       </ForumContainer>
     );
   }
-  if (!thread) {
+  if (!thread || !categoryId) {
     return (
       <ForumContainer>
         <p>No thread found.</p>
@@ -71,6 +74,10 @@ export default function ThreadDetailPage() {
   }
 
   return (
+    <ForumAccessGate
+      categoryId={categoryId}
+      fallbackMessage="You need appropriate permissions to view this thread."
+    >
     <ForumContainer>
       {/* Example of how you might display metadata if desired:
           <h1>{thread.title}</h1>
@@ -96,5 +103,6 @@ export default function ThreadDetailPage() {
         </button>
       </div>
     </ForumContainer>
+    </ForumAccessGate>
   );
 }

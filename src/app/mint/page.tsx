@@ -1,7 +1,7 @@
 import { useAccount } from 'wagmi';
-import AdvocateMembershipABI from 'src/abis/AdvocateMembershipABI.json';
-import { NFTMintCardGeneral } from 'src/nft/components/NFTMintCardGeneral';
-import { useToast } from 'src/components/ui/use-toast';
+import AdvocateMembershipABI from '@/abis/AdvocateMembershipABI.json';
+import { NFTMintCardGeneral } from '@/nft/components/NFTMintCardGeneral';
+import { useToast } from '@/components/ui/use-toast';
 
 const ADVOCATE_CONTRACT = '0xd05b10248f1F72e8B9fEbd9E9c87887Ab0a1aAB0';
 const DEFAULT_MEMBER_TYPE = 0; // e.g., STANDARD
@@ -12,12 +12,13 @@ export default function MintPage() {
   const { toast } = useToast();
 
   return (
-    <NFTMintCardGeneral
+    <div className="min-h-screen bottom-nav-spacing p-4 flex justify-center items-center">
+      <NFTMintCardGeneral
       contractAddress={ADVOCATE_CONTRACT}
       abi={AdvocateMembershipABI}
       mintArgs={[address, DEFAULT_MEMBER_TYPE, DEFAULT_TOKEN_URI]}
       chainId={8453}
-      isSponsored
+      isSponsored={true}
       mediaUrl="https://your-nft-media-url" // Replace with real URL or from metadata
       collectionName="Advocate Membership"
       title="Mint Your Advocate NFT"
@@ -34,6 +35,7 @@ export default function MintPage() {
         description: err?.shortMessage || err?.message || 'Unknown error',
         variant: 'destructive',
       })}
-    />
+      />
+    </div>
   );
 }

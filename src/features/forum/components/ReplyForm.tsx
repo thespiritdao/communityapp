@@ -1,9 +1,9 @@
 // src/features/forum/components/ReplyForm.tsx
 'use client';
 import { useState, useEffect } from 'react';
-import { useForum } from 'src/features/forum/hooks/useForum';
-import { supabase } from 'src/utils/supabaseClient';
-import UserTagging from 'src/components/UserTagging';
+import { useForum } from '@/features/forum/hooks/useForum';
+import { supabase } from '@/utils/supabaseClient';
+import UserTagging from '@/components/UserTagging';
 import styles from '../styles/Forum.module.css';
 
 type ReplyFormProps = {

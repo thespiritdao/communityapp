@@ -1,8 +1,9 @@
 // src/components/SmartWalletHelper.tsx
 'use client';
-import React, { useEffect, useState } from 'react';
+import type React from 'react';
+import { useEffect, useState } from 'react';
 import { useAccount } from 'wagmi';
-import { useToast } from 'src/components/ui/use-toast';
+import { useToast } from '@/components/ui/use-toast';
 
 export const SmartWalletHelper: React.FC = () => {
   const { address, connector } = useAccount();

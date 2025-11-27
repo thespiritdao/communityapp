@@ -1,5 +1,5 @@
 // src/app/features/forum/components/ForumContainer.tsx
-import React from 'react';
+import type React from 'react';
 
 interface ForumContainerProps {
   children: React.ReactNode;

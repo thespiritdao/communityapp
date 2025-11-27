@@ -1,4 +1,4 @@
-import styled from 'src/features/shopping-cart/commons/style/styled-components';
+import styled from '@/features/shopping-cart/commons/style/styled-components';
 
 export const Container = styled.div`
   position: relative;

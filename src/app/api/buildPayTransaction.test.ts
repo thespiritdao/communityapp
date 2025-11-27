@@ -3,12 +3,12 @@ import type { Mock } from 'vitest';
 import {
   CHECKOUT_INVALID_CHARGE_ERROR_MESSAGE,
   UNCAUGHT_CHECKOUT_ERROR_MESSAGE,
-} from '../checkout/constants';
+} from '@/checkout/constants';
 import {
   CDP_CREATE_PRODUCT_CHARGE,
   CDP_HYDRATE_CHARGE,
-} from 'src/network/definitions/pay';
-import { sendRequest } from 'src/network/request';
+} from '@/network/definitions/pay';
+import { sendRequest } from '@/network/request';
 /**
  * @vitest-environment node
  */

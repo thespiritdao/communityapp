@@ -1,11 +1,11 @@
 // src/features/forum/thread.tsx
 'use client';
 
-import React from 'react';
+import type React from 'react';
 import { useParams } from 'next/navigation';
-import ForumContainer from 'src/app/features/forum/components/ForumContainer';
-import PostList from 'src/app/features/forum/components/PostList';
-import { ReplyForm } from 'src/features/forum/components/ReplyForm';
+import ForumContainer from '@/features/forum/components/ForumContainer';
+import PostList from '@/features/forum/components/PostList';
+import { ReplyForm } from '@/features/forum/components/ReplyForm';
 import styles from '../styles/Forum.module.css';
 
 const ThreadPage: React.FC = () => {

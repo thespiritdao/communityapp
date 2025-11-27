@@ -1,13 +1,13 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { supabase } from 'src/utils/supabaseClient';
+import { supabase } from '@/utils/supabaseClient';
 import { useAccount } from 'wagmi';
-import { useToast } from 'src/components/ui/use-toast';
-import { useTokenGate } from 'src/features/forum/hooks/useTokenGate';
-// Removed direct notificationService import - using context instead
-import { useNotifications } from 'src/context/NotificationContext';
-import { extractMentionedWalletsEnhanced } from 'src/utils/mentions';
+import { useToast } from '@/components/ui/use-toast';
+import { useTokenGate } from '@/features/forum/hooks/useTokenGate';
+import { useAuthContext } from '@/features/identity/components/AuthProvider';
+import { useUnifiedNotifications } from '@/context/UnifiedNotificationContext';
+import { extractMentionedWalletsEnhanced } from '@/utils/mentions';
 
 // Debug mode flag - set to false in production
 const DEBUG = true;
@@ -30,7 +30,7 @@ const getRequiredTokenForCategory = (categoryId: string) => {
   // Map category IDs to their required tokens (replace with actual logic)
   const categoryTokenMap: Record<string, string> = {
     "category-id-1": process.env.NEXT_PUBLIC_PROOF_OF_CURIOSITY || "",
-    "category-id-2": process.env.NEXT_PUBLIC_EXECUTIVE_POD_HAT_ID || "",
+    "category-id-2": process.env.NEXT_PUBLIC_EXECUTIVE_POD_LEADER || "",
     "category-id-3": process.env.NEXT_PUBLIC_DEV_POD_HAT_ID || "",
   };
   
@@ -69,16 +69,17 @@ export function useForum() {
   const [userWalletAddress, setUserWalletAddress] = useState<string | null>(null);
   const { address: wagmiAddress } = useAccount();
   const { toast } = useToast();
+  const { session, isAuthenticated, signIn } = useAuthContext();
   
   // Get token balances from the token gate hook
   const { tokenBalances } = useTokenGate();
-  const { createUserMentionNotification } = useNotifications();
+  const { createNotification } = useUnifiedNotifications();
 
   // Log environment variables for debugging
   useEffect(() => {
     debug('Environment Variables:', {
       poc: process.env.NEXT_PUBLIC_PROOF_OF_CURIOSITY,
-      exec: process.env.NEXT_PUBLIC_EXECUTIVE_POD_HAT_ID,
+      exec: process.env.NEXT_PUBLIC_EXECUTIVE_POD_LEADER,
       dev: process.env.NEXT_PUBLIC_DEV_POD_HAT_ID
     });
   }, []);
@@ -124,13 +125,10 @@ export function useForum() {
 		id,
 		title,
 		category_id,
-		required_token,
-		author_wallet,
-		author_first_name,
-		author_last_name,
+		author_address,
 		created_at,
 		forum_posts(count),
-		forum_categories!threads(name, required_token)
+		forum_categories(name, required_token)
 	  `)
 	  .order('created_at', { ascending: false })
 	  .range(page * pageSize, page * pageSize + (pageSize - 1));
@@ -153,40 +151,26 @@ export function useForum() {
 
       debug('Raw thread data from Supabase:', data);
 
-      // Filter threads based on tokenBalances if available
-      let filteredThreads = data;
-      if (tokenBalances) {
-        const pocToken = normalize(process.env.NEXT_PUBLIC_PROOF_OF_CURIOSITY);
-        const execHatId = normalize(process.env.NEXT_PUBLIC_EXECUTIVE_POD_HAT_ID);
-        const devHatId = normalize(process.env.NEXT_PUBLIC_DEV_POD_HAT_ID);
+      // Note: Token-gating is now handled by ForumAccessGate at the route level
+      // using the unified access control system (useUnifiedForumAccess hook)
+      // We no longer filter threads client-side based on tokenBalances
+      // Instead, we rely on the RPC function forums_accessible_by_identity()
+      // which is called by the access gate component
 
-        filteredThreads = data.filter((thread: any) => {
-          // Use thread.required_token if available, otherwise from joined forum_categories
-          const threadToken = normalize(thread.required_token);
-          const categoryToken = normalize(thread.forum_categories?.required_token);
-          const requiredToken = threadToken || categoryToken;
+      // Transform data for ThreadCard compatibility
+      const transformedThreads = data?.map((thread: any) => ({
+        ...thread,
+        author_wallet: thread.author_address,
+        post_count: Array.isArray(thread.forum_posts) ? thread.forum_posts.length : 0,
+        category_name: thread.forum_categories?.name || null
+      })) || [];
 
-          if (!requiredToken) {
-            debug(`Thread ${thread.id} has no required_token; allowing it.`);
-            return true;
-          }
-
-          debug(`Thread ${thread.id} requires token: "${requiredToken}"`);
-
-          return (
-            (requiredToken === pocToken && tokenBalances?.hasProofOfCuriosity) ||
-            (requiredToken === execHatId && tokenBalances?.hasExecutivePod) ||
-            (requiredToken === devHatId && tokenBalances?.hasDevPod)
-          );
-        });
-      }
-
-      debug('Filtered threads:', filteredThreads);
+      debug('Transformed threads:', transformedThreads);
 
       return {
         success: true,
-        threads: filteredThreads,
-        total: filteredThreads.length,
+        threads: transformedThreads,
+        total: transformedThreads.length,
         hasMore: data.length === pageSize,
       };
     } catch (error) {
@@ -244,7 +228,7 @@ export function useForum() {
       
       if (tokenBalances) {
         const pocToken = normalize(process.env.NEXT_PUBLIC_PROOF_OF_CURIOSITY);
-        const execHatId = normalize(process.env.NEXT_PUBLIC_EXECUTIVE_POD_HAT_ID);
+        const execHatId = normalize(process.env.NEXT_PUBLIC_EXECUTIVE_POD_LEADER);
         const devHatId = normalize(process.env.NEXT_PUBLIC_DEV_POD_HAT_ID);
 
         filteredCategories = data.filter((category: any) => {
@@ -306,11 +290,9 @@ export function useForum() {
         .select(`
           id,
           title,
-          categoryId:category_id,
-          required_token,
-          author_wallet,
-          author_first_name,
-          author_last_name,
+          category_id,
+          author_address,
+          content,
           created_at,
           forum_categories(*)
         `)
@@ -375,7 +357,7 @@ export function useForum() {
 	  categoryId: string,
 	  title: string,
 	  initialPostContent: string,
-	  categoryStr: string = 'governance'
+	  categoryStr = 'governance'
 	) => {
 	  debug('submitThread called with:', { categoryId, title, contentLength: initialPostContent?.length });
 	  debug('Current userWalletAddress:', userWalletAddress);
@@ -392,12 +374,24 @@ export function useForum() {
 	  setIsLoading(true);
 
 	  try {
-		// Step 1: Retrieve the session user
-		const { data: { session } } = await supabase.auth.getSession();
+		// Step 1: Ensure user is authenticated
+		if (!isAuthenticated) {
+		  if (wagmiAddress) {
+			await signIn(wagmiAddress);
+		  } else {
+			toast({
+			  title: 'Authentication required',
+			  description: 'Please connect your wallet & sign in',
+			  variant: 'destructive',
+			});
+			return { success: false };
+		  }
+		}
+		
 		if (!session?.user?.id) {
 		  toast({
-			title: 'Authentication required',
-			description: 'Please connect your wallet & sign in',
+			title: 'Authentication failed',
+			description: 'Unable to authenticate user',
 			variant: 'destructive',
 		  });
 		  return { success: false };
@@ -417,32 +411,13 @@ export function useForum() {
 		}
 		debug('Profile data for thread creation:', profileData);
 
-		// Step 3: Fetch category details
-		const { data: categoryData, error: categoryError } = await supabase
-		  .from('forum_categories')
-		  .select('required_token')
-		  .eq('id', categoryId)
-		  .single();
-
-		if (categoryError) {
-		  debug('Error fetching category required_token:', categoryError);
-		  throw new Error('Failed to retrieve category token requirement');
-		}
-
-		// Determine token to use (inherited from category or fallback)
-		const inheritedToken = categoryData?.required_token || null;
-		const tokenToUse = inheritedToken || categoryStr;
-		debug(`Thread will use token: ${tokenToUse}`);
-
-		// Construct payload for thread insertion
+		// Construct payload for thread insertion (new schema)
 		const payload = {
-		  category_id: categoryId, // Use the database column name "category_id" with the value from the parameter categoryId
+		  category_id: categoryId,
 		  title,
-		  author_wallet: profileData.wallet_address,
-		  author_first_name: profileData.first_name || null,
-		  author_last_name: profileData.last_name || null,
+		  content: initialPostContent, // Store initial content in thread
+		  author_address: profileData.wallet_address,
 		  created_at: new Date().toISOString(),
-		  required_token: tokenToUse,
 		};
 
 		debug("Payload for thread insertion:", payload);
@@ -463,29 +438,8 @@ export function useForum() {
 		debug('Thread created:', newThread);
 		console.log("Inserted thread record:", newThread);
 
-		// Construct payload for initial post insertion
-		const postPayload = {
-		  thread_id: newThread.id,
-		  content: initialPostContent,
-		  author_wallet: profileData.wallet_address,
-		  author_first_name: profileData.first_name || null,
-		  author_last_name: profileData.last_name || null,
-		  created_at: new Date().toISOString(),
-		  required_token: tokenToUse,
-		};
-
-		debug("Payload for initial post insertion:", postPayload);
-		console.log("Payload for initial post insertion:", postPayload);
-
-		// Step 5: Insert the initial post with the same token/tag
-		const { error: postError } = await supabase
-		  .from('forum_posts')
-		  .insert(postPayload);
-
-		if (postError) {
-		  debug('Initial post creation error:', JSON.stringify(postError));
-		  throw postError;
-		}
+		// Note: Initial post content is now stored in the thread itself
+		// No separate initial post is created
 
 		// --- Mention notification logic ---
 		// Extract mentions from initialPostContent using extractMentionedWalletsEnhanced
@@ -495,13 +449,18 @@ export function useForum() {
 			// TODO: Re-enable self-mention rejection before launch
 			// if (wallet !== profileData.wallet_address) {
 			  console.log('Creating forum mention notification for:', wallet.toLowerCase());
-			  await createUserMentionNotification(
-				wallet.toLowerCase(),
-				profileData.wallet_address.toLowerCase(),
-				'forum',  
-				newThread.id,
-				`/forum/thread/${newThread.id}`
-			  );
+			  await createNotification({
+				recipient_address: wallet.toLowerCase(),
+				sender_address: profileData.wallet_address.toLowerCase(),
+				notification_type: 'user_mentioned',
+				category: 'general',
+				title: 'You were mentioned in a forum post',
+				message: `${profileData.first_name || ''} ${profileData.last_name || ''}`.trim() + ' mentioned you in a forum thread',
+				context_type: 'forum',
+				context_id: newThread.id,
+				context_url: `/forum/thread/${newThread.id}`,
+				priority: 'medium'
+			  });
 			// }
 		  }
 		}
@@ -548,47 +507,14 @@ export function useForum() {
 		  passedCategoryId
 		});
 		
-		// Always fetch thread details to get both the token and category_id if missing
-		if (inheritedToken === undefined || inheritedToken === null || postCategoryId === undefined || postCategoryId === null) {
-		  console.log("Fetching thread details from Supabase...");
-		  const { data: threadData, error: threadError } = await supabase
-			.from('forum_threads')
-			.select('category_id, required_token, forum_categories(required_token)')
-			.eq('id', threadId)
-			.single();
-		  
-		  if (threadError || !threadData) {
-			console.error("Error fetching thread details:", threadError);
-			throw new Error('Failed to retrieve thread details');
-		  }
-		  
-		  console.log("Thread data fetched:", threadData);
-		  
-		  // Set category_id regardless of whether we have a token
-		  if (postCategoryId === undefined || postCategoryId === null) {
-			postCategoryId = threadData.category_id;
-			console.log("Setting postCategoryId from thread data:", postCategoryId);
-		  }
-			  
-		  // Only use the passed token if it exists, otherwise use the thread's token
-		  if (inheritedToken === undefined || inheritedToken === null) {
-			inheritedToken = threadData.required_token || threadData.forum_categories?.required_token || null;
-			console.log("Setting inheritedToken from thread data:", inheritedToken);
-		  }
-		}
+		// Note: New schema doesn't require fetching category_id or required_token for posts
+		// Posts only need thread_id, content, and author_address
 
-		if (inheritedToken === null) {
-		  console.error("Required token is missing");
-		  return { success: false, error: 'Error: required token is missing.' };
-		}
-
-		// Build the post payload identical to threads (with category_id)
+		// Build the post payload (new schema)
 		const postPayload = {
 		  thread_id: threadId,
 		  content,
-		  author_wallet: userWalletAddress,
-		  category_id: postCategoryId, 
-		  required_token: inheritedToken,
+		  author_address: userWalletAddress,
 		  created_at: new Date().toISOString(),
 		};
 
@@ -612,20 +538,90 @@ export function useForum() {
 		const mentionedWalletsPost = await extractMentionedWalletsEnhanced(content);
 		for (const wallet of mentionedWalletsPost) {
 		  if (wallet) {
-			// TODO: Re-enable self-mention rejection before launch  
+			// TODO: Re-enable self-mention rejection before launch
 			// if (wallet !== userWalletAddress) {
 			  console.log('Creating forum reply mention notification for:', wallet.toLowerCase());
-			  await createUserMentionNotification(
-				wallet.toLowerCase(),
-				userWalletAddress.toLowerCase(),
-				'forum',
-				threadId,
-				`/forum/thread/${threadId}`
-			  );
+			  await createNotification({
+				recipient_address: wallet.toLowerCase(),
+				sender_address: userWalletAddress.toLowerCase(),
+				notification_type: 'user_mentioned',
+				category: 'general',
+				title: 'You were mentioned in a forum reply',
+				message: 'Someone mentioned you in a forum reply',
+				context_type: 'forum',
+				context_id: threadId,
+				context_url: `/forum/thread/${threadId}`,
+				priority: 'medium'
+			  });
 			// }
 		  }
 		}
 		// --- End mention notification logic ---
+
+		// --- Thread reply notification logic ---
+		try {
+		  // Get thread creator and title
+		  const { data: thread, error: threadError } = await supabase
+			.from('forum_threads')
+			.select('author_address, title')
+			.eq('id', threadId)
+			.single();
+
+		  if (!threadError && thread) {
+			const threadTitle = thread.title || 'a forum thread';
+
+			// Get all previous participants (people who have replied)
+			const { data: previousPosts } = await supabase
+			  .from('forum_posts')
+			  .select('author_address')
+			  .eq('thread_id', threadId);
+
+			// Build unique set of participants
+			const participants = new Set<string>();
+			participants.add(thread.author_address.toLowerCase()); // Thread creator
+			if (previousPosts) {
+			  previousPosts.forEach(post => {
+				if (post.author_address) {
+				  participants.add(post.author_address.toLowerCase());
+				}
+			  });
+			}
+
+			// Remove current user from participants
+			participants.delete(userWalletAddress.toLowerCase());
+
+			// Also remove anyone who was mentioned (they already got a mention notification)
+			mentionedWalletsPost.forEach(wallet => {
+			  if (wallet) participants.delete(wallet.toLowerCase());
+			});
+
+			// Notify all participants
+			for (const participantAddress of participants) {
+			  try {
+				await createNotification({
+				  recipient_address: participantAddress,
+				  sender_address: userWalletAddress.toLowerCase(),
+				  notification_type: 'forum_participating_reply',
+				  category: 'general',
+				  title: 'New Reply in Thread',
+				  message: `New reply in "${threadTitle}"`,
+				  context_type: 'forum',
+				  context_id: threadId,
+				  context_url: `/forum/thread/${threadId}`,
+				  priority: 'medium'
+				});
+				console.log(`Notified participant ${participantAddress} of new reply`);
+			  } catch (participantNotifError) {
+				console.error(`Failed to notify participant ${participantAddress}:`, participantNotifError);
+				// Continue with other notifications
+			  }
+			}
+		  }
+		} catch (threadNotifError) {
+		  console.error('Failed to send thread reply notifications:', threadNotifError);
+		  // Non-fatal - post was created successfully
+		}
+		// --- End thread reply notification logic ---
 
 		console.log("Post successfully created:", data);
 		toast({ title: 'Post created', description: 'Your reply has been successfully added' });

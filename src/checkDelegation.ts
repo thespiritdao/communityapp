@@ -2,14 +2,15 @@
 
 import { createPublicClient, http } from 'viem';
 import { base } from 'viem/chains';
-import AdvocateMembershipABI from 'src/abis/AdvocateMembershipABI.json';
+import AdvocateMembershipABI from '@/abis/AdvocateMembershipABI.json';
 
 const ADVOCATE_ADDRESS = process.env.NEXT_PUBLIC_ADVOCATE as `0x${string}`;
 
 export const checkDelegationStatus = async (userAddress: string) => {
+  // Use Base's public RPC instead of Infura to avoid rate limiting
   const publicClient = createPublicClient({
     chain: base,
-    transport: http('https://base-mainnet.infura.io/v3/f1103e203835402d94489e605683ff50'),
+    transport: http('https://mainnet.base.org'),
   });
 
   try {

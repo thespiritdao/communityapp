@@ -5,7 +5,7 @@ import {
   createBundlerClient,
   estimateUserOperationGas,
 } from 'viem/account-abstraction'
-import DAO_GovernorABI from '../src/abis/DAO_GovernorABI.json' assert { type: 'json' }
+import DAO_GovernorABI from '../src/abis/DAO_GovernorABI.json' with { type: 'json' }
 
 const ENTRY_POINT   = '0x0576a174D229E3cFA37253523E645A78A0C91B57'
 const BUNDLER_URL   = 'https://api.developer.coinbase.com/rpc/v1/base/[REDACTED]'

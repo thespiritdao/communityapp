@@ -1,6 +1,6 @@
 import { useContractRead, useContractWrite, usePrepareContractWrite } from 'wagmi';
 import { parseEther } from 'viem';
-import BountyManagerABI from '@/contracts/BountyManager.json';
+import BountyManagerABI from '@/abis/BountyManager.json';
 
 const BOUNTY_MANAGER_ADDRESS = process.env.NEXT_PUBLIC_BOUNTY_MANAGER_ADDRESS;
 

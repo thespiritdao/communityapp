@@ -1,0 +1,326 @@
+-- Pod Role Permissions Table
+-- Hybrid approach: Store detailed permissions in database while maintaining HAT ownership onchain
+-- This extends the existing pod_members architecture
+
+-- Required for gen_random_uuid()
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
+
+CREATE TABLE IF NOT EXISTS pod_role_permissions (
+  -- Primary identifiers
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  pod_id UUID NOT NULL, -- References pods.id (uuid)
+  hat_id TEXT NOT NULL, -- HAT token ID (hex format like 0x0000008800010000...)
+  role_name TEXT NOT NULL, -- Human readable role name ('Pod Leader', 'Pod Member', etc.)
+
+  -- Core permission flags
+  permissions JSONB NOT NULL DEFAULT '{}'::jsonb, -- Stores permission object
+
+  -- Extended permission metadata
+  eligibility_criteria JSONB DEFAULT '[]'::jsonb, -- Array of criteria objects
+  max_holders INTEGER DEFAULT 50,
+  current_holders INTEGER DEFAULT 0,
+
+  -- HAT status and metadata
+  is_active BOOLEAN NOT NULL DEFAULT true,
+  hat_level INTEGER,
+  parent_hat_id TEXT,
+
+  -- Permission templates and inheritance
+  template_name TEXT,
+  inherits_from TEXT,
+
+  -- Versioning
+  version INTEGER DEFAULT 1,
+  is_governance_managed BOOLEAN DEFAULT false,
+
+  -- Audit trail
+  created_by TEXT NOT NULL,
+  updated_by TEXT NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+
+  -- Contract integration fields
+  contract_address TEXT,
+  last_synced_at TIMESTAMPTZ,
+  sync_status TEXT DEFAULT 'synced' CHECK (sync_status IN ('synced', 'pending', 'error')),
+  sync_error TEXT,
+
+  -- Constraints
+  UNIQUE (pod_id, hat_id),
+  CONSTRAINT fk_pod_role_permissions_pod
+    FOREIGN KEY (pod_id) REFERENCES pods(id) ON DELETE CASCADE
+);
+
+-- Indexes for performance
+CREATE INDEX IF NOT EXISTS idx_pod_role_permissions_pod_id ON pod_role_permissions(pod_id);
+CREATE INDEX IF NOT EXISTS idx_pod_role_permissions_hat_id ON pod_role_permissions(hat_id);
+CREATE INDEX IF NOT EXISTS idx_pod_role_permissions_active ON pod_role_permissions(is_active);
+CREATE INDEX IF NOT EXISTS idx_pod_role_permissions_updated ON pod_role_permissions(updated_at);
+CREATE INDEX IF NOT EXISTS idx_pod_role_permissions_sync ON pod_role_permissions(last_synced_at);
+
+-- Composite indexes
+CREATE INDEX IF NOT EXISTS idx_pod_role_permissions_pod_active ON pod_role_permissions(pod_id, is_active);
+CREATE INDEX IF NOT EXISTS idx_pod_role_permissions_lookup ON pod_role_permissions(pod_id, hat_id, is_active);
+
+-- GIN indexes for JSON
+CREATE INDEX IF NOT EXISTS idx_pod_role_permissions_permissions_gin ON pod_role_permissions USING GIN (permissions);
+CREATE INDEX IF NOT EXISTS idx_pod_role_permissions_criteria_gin ON pod_role_permissions USING GIN (eligibility_criteria);
+
+-- Permission History Table
+CREATE TABLE IF NOT EXISTS pod_role_permissions_history (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  permission_id UUID NOT NULL, -- References pod_role_permissions.id
+  pod_id UUID NOT NULL,
+  hat_id TEXT NOT NULL,
+  role_name TEXT NOT NULL,
+
+  -- Previous values for comparison
+  old_permissions JSONB,
+  new_permissions JSONB,
+  old_eligibility_criteria JSONB,
+  new_eligibility_criteria JSONB,
+
+  -- Change metadata
+  change_type TEXT NOT NULL CHECK (change_type IN ('created', 'updated', 'deleted', 'activated', 'deactivated')),
+  change_reason TEXT,
+  changed_by TEXT NOT NULL,
+  changed_at TIMESTAMPTZ DEFAULT NOW(),
+
+  transaction_hash TEXT, -- If change required onchain transaction
+
+  CONSTRAINT fk_pod_role_permissions_history_permission
+    FOREIGN KEY (permission_id) REFERENCES pod_role_permissions(id) ON DELETE CASCADE
+);
+
+-- Indexes for history table
+CREATE INDEX IF NOT EXISTS idx_pod_role_permissions_history_permission ON pod_role_permissions_history(permission_id);
+CREATE INDEX IF NOT EXISTS idx_pod_role_permissions_history_hat ON pod_role_permissions_history(hat_id);
+CREATE INDEX IF NOT EXISTS idx_pod_role_permissions_history_changed_at ON pod_role_permissions_history(changed_at);
+CREATE INDEX IF NOT EXISTS idx_pod_role_permissions_history_changed_by ON pod_role_permissions_history(changed_by);
+
+-- Trigger: update updated_at/version
+CREATE OR REPLACE FUNCTION update_pod_role_permissions_updated_at()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW.updated_at = NOW();
+  NEW.version = COALESCE(OLD.version, 1) + 1;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS update_pod_role_permissions_updated_at_trigger ON pod_role_permissions;
+CREATE TRIGGER update_pod_role_permissions_updated_at_trigger
+  BEFORE UPDATE ON pod_role_permissions
+  FOR EACH ROW
+  EXECUTE FUNCTION update_pod_role_permissions_updated_at();
+
+-- Trigger: create history
+CREATE OR REPLACE FUNCTION create_pod_role_permissions_history()
+RETURNS TRIGGER AS $$
+BEGIN
+  IF TG_OP = 'INSERT' THEN
+    INSERT INTO pod_role_permissions_history (
+      permission_id, pod_id, hat_id, role_name,
+      new_permissions, new_eligibility_criteria,
+      change_type, changed_by
+    ) VALUES (
+      NEW.id, NEW.pod_id, NEW.hat_id, NEW.role_name,
+      NEW.permissions, NEW.eligibility_criteria,
+      'created', NEW.created_by
+    );
+    RETURN NEW;
+
+  ELSIF TG_OP = 'UPDATE' THEN
+    INSERT INTO pod_role_permissions_history (
+      permission_id, pod_id, hat_id, role_name,
+      old_permissions, new_permissions,
+      old_eligibility_criteria, new_eligibility_criteria,
+      change_type, changed_by
+    ) VALUES (
+      NEW.id, NEW.pod_id, NEW.hat_id, NEW.role_name,
+      OLD.permissions, NEW.permissions,
+      OLD.eligibility_criteria, NEW.eligibility_criteria,
+      CASE
+        WHEN OLD.is_active <> NEW.is_active AND NEW.is_active THEN 'activated'
+        WHEN OLD.is_active <> NEW.is_active AND NOT NEW.is_active THEN 'deactivated'
+        ELSE 'updated'
+      END,
+      NEW.updated_by
+    );
+    RETURN NEW;
+
+  ELSIF TG_OP = 'DELETE' THEN
+    INSERT INTO pod_role_permissions_history (
+      permission_id, pod_id, hat_id, role_name,
+      old_permissions, old_eligibility_criteria,
+      change_type, changed_by
+    ) VALUES (
+      OLD.id, OLD.pod_id, OLD.hat_id, OLD.role_name,
+      OLD.permissions, OLD.eligibility_criteria,
+      'deleted', OLD.updated_by
+    );
+    RETURN OLD;
+  END IF;
+
+  RETURN NULL;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS create_pod_role_permissions_history_trigger ON pod_role_permissions;
+CREATE TRIGGER create_pod_role_permissions_history_trigger
+  AFTER INSERT OR UPDATE OR DELETE ON pod_role_permissions
+  FOR EACH ROW
+  EXECUTE FUNCTION create_pod_role_permissions_history();
+
+-- Views
+CREATE OR REPLACE VIEW pod_role_permissions_active AS
+SELECT
+  id, pod_id, hat_id, role_name, permissions, eligibility_criteria,
+  max_holders, current_holders, hat_level, parent_hat_id,
+  template_name, inherits_from, version,
+  created_by, updated_by, created_at, updated_at,
+  last_synced_at, sync_status
+FROM pod_role_permissions
+WHERE is_active = true AND sync_status = 'synced';
+
+CREATE OR REPLACE VIEW pod_permission_lookup AS
+SELECT
+  pod_id,
+  hat_id,
+  role_name,
+  permissions,
+  is_active,
+  current_holders,
+  max_holders,
+  last_synced_at
+FROM pod_role_permissions
+WHERE is_active = true;
+
+-- RLS Policies
+ALTER TABLE pod_role_permissions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE pod_role_permissions_history ENABLE ROW LEVEL SECURITY;
+
+-- Public read access
+CREATE POLICY "Allow read access to active role permissions" ON pod_role_permissions
+  FOR SELECT
+  USING (is_active = true);
+
+-- Pod managers can manage
+CREATE POLICY "Pod managers can manage role permissions" ON pod_role_permissions
+  FOR ALL
+  USING (
+    pod_id IN (
+      SELECT pod_id::uuid
+      FROM pod_members
+      WHERE wallet = (auth.jwt() ->> 'sub')
+        AND membership_type = 'leader'
+        AND is_active = true
+    )
+  )
+  WITH CHECK (
+    pod_id IN (
+      SELECT pod_id::uuid
+      FROM pod_members
+      WHERE wallet = (auth.jwt() ->> 'sub')
+        AND membership_type = 'leader'
+        AND is_active = true
+    )
+  );
+
+-- Service role full access
+CREATE POLICY "Service role full access to role permissions" ON pod_role_permissions
+  FOR ALL
+  USING (auth.role() = 'service_role')
+  WITH CHECK (auth.role() = 'service_role');
+
+-- History table policies
+CREATE POLICY "Allow read access to role permission history" ON pod_role_permissions_history
+  FOR SELECT
+  USING (
+    pod_id IN (
+      SELECT pod_id::uuid
+      FROM pod_members
+      WHERE wallet = (auth.jwt() ->> 'sub')
+        AND membership_type = 'leader'
+        AND is_active = true
+    )
+  );
+
+CREATE POLICY "Service role can write history" ON pod_role_permissions_history
+  FOR INSERT
+  WITH CHECK (auth.role() = 'service_role');
+
+-- Functions
+CREATE OR REPLACE FUNCTION get_pod_role_permissions(
+  p_pod_id UUID,
+  p_hat_id TEXT DEFAULT NULL
+)
+RETURNS TABLE (
+  role_name TEXT,
+  hat_id TEXT,
+  permissions JSONB,
+  is_active BOOLEAN,
+  current_holders INTEGER,
+  max_holders INTEGER
+) AS $$
+BEGIN
+  IF p_hat_id IS NULL THEN
+    RETURN QUERY
+    SELECT
+      prp.role_name,
+      prp.hat_id,
+      prp.permissions,
+      prp.is_active,
+      prp.current_holders,
+      prp.max_holders
+    FROM pod_role_permissions prp
+    WHERE prp.pod_id = p_pod_id
+    ORDER BY prp.role_name;
+  ELSE
+    RETURN QUERY
+    SELECT
+      prp.role_name,
+      prp.hat_id,
+      prp.permissions,
+      prp.is_active,
+      prp.current_holders,
+      prp.max_holders
+    FROM pod_role_permissions prp
+    WHERE prp.pod_id = p_pod_id AND prp.hat_id = p_hat_id;
+  END IF;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Simplified permission check (no governance references)
+CREATE OR REPLACE FUNCTION check_pod_permission(
+  p_user_wallet TEXT,
+  p_pod_id UUID,
+  p_permission_key TEXT
+)
+RETURNS BOOLEAN AS $$
+DECLARE
+  has_permission BOOLEAN := false;
+BEGIN
+  SELECT EXISTS (
+    SELECT 1
+    FROM pod_members pm
+    JOIN pod_role_permissions prp
+      ON pm.hat_id = prp.hat_id
+     AND pm.pod_id::uuid = prp.pod_id
+    WHERE pm.wallet = p_user_wallet
+      AND pm.pod_id::uuid = p_pod_id
+      AND pm.is_active = true
+      AND prp.is_active = true
+      AND prp.permissions ->> p_permission_key = 'true'
+  ) INTO has_permission;
+
+  RETURN has_permission;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Comments
+COMMENT ON TABLE pod_role_permissions IS 'Stores detailed permission configurations for HAT-based pod roles';
+COMMENT ON COLUMN pod_role_permissions.permissions IS 'JSONB object with permission flags';
+COMMENT ON COLUMN pod_role_permissions.eligibility_criteria IS 'Array of EligibilityCriteria objects for automatic role assignment';
+COMMENT ON COLUMN pod_role_permissions.sync_status IS 'Tracks synchronization status with onchain HAT data';
+COMMENT ON TABLE pod_role_permissions_history IS 'Audit trail for all permission changes with full before/after state';

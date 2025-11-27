@@ -105,13 +105,13 @@ export const Input = styled.input`
   border-radius: 0.375rem;
   font-size: 0.875rem;
   transition: border-color 0.2s ease-in-out;
-  
+
   &:focus {
     outline: none;
-    border-color: #3b82f6;
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    border-color: #2F5D50;
+    box-shadow: 0 0 0 3px rgba(47, 93, 80, 0.1);
   }
-  
+
   &:disabled {
     background-color: #f9fafb;
     color: #6b7280;
@@ -128,11 +128,11 @@ export const TextArea = styled.textarea`
   resize: vertical;
   min-height: 100px;
   font-family: inherit;
-  
+
   &:focus {
     outline: none;
-    border-color: #3b82f6;
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    border-color: #2F5D50;
+    box-shadow: 0 0 0 3px rgba(47, 93, 80, 0.1);
   }
 `;
 
@@ -143,11 +143,11 @@ export const Select = styled.select`
   font-size: 0.875rem;
   transition: border-color 0.2s ease-in-out;
   background-color: white;
-  
+
   &:focus {
     outline: none;
-    border-color: #3b82f6;
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    border-color: #2F5D50;
+    box-shadow: 0 0 0 3px rgba(47, 93, 80, 0.1);
   }
 `;
 
@@ -224,18 +224,18 @@ export const CancelButton = styled.button`
 export const SubmitButton = styled.button`
   padding: 0.75rem 1.5rem;
   border: none;
-  background-color: #d7f8fd;
-  color: #000;
+  background-color: #2F5D50;
+  color: #FFFFFF;
   border-radius: 0.375rem;
   cursor: pointer;
   transition: background-color 0.2s ease;
   font-size: 0.875rem;
   font-weight: 500;
-  
+
   &:hover:not(:disabled) {
-    background-color: #aceef8;
+    background-color: #1F453A;
   }
-  
+
   &:disabled {
     opacity: 0.7;
     cursor: not-allowed;
@@ -253,9 +253,9 @@ export const ErrorMessage = styled.div`
 `;
 
 export const SuccessMessage = styled.div`
-  background-color: #f0fdf4;
-  border: 1px solid #bbf7d0;
-  color: #166534;
+  background-color: #D4E5DF;
+  border: 1px solid #3F7A5A;
+  color: #1F453A;
   padding: 1rem;
   border-radius: 0.375rem;
   margin-bottom: 1rem;

@@ -1,9 +1,11 @@
 //src/components/UserTagging.tsx
 import { useEffect, useState } from 'react';
 import { MentionsInput, Mention } from 'react-mentions';
-import { supabase } from '../utils/supabaseClient';
-import { useNotifications } from '../context/NotificationContext';
+import { supabase } from '@/utils/supabaseClient';
+//import { useNotifications } from '@/context/NotificationContext';
+//import { useGovernanceNotifications } from '@/context/GovernanceNotificationContext';
 import { useAccount } from 'wagmi';
+import { unifiedNotificationService } from '@/services/unifiedNotificationService';
 import styles from './styles/UserTagging.module.css';
 
 interface UserTaggingProps {
@@ -16,7 +18,9 @@ interface UserTaggingProps {
   contextType?: 'forum' | 'chat' | 'bounty' | 'governance';
   contextId?: string;
   contextUrl?: string;
+  proposalId?: string; // For governance mentions
   onMentionsChange?: (mentions: Array<{ id: string; display: string }>) => void;
+  onNotificationSend?: (sendNotifications: () => Promise<void>) => void; // Expose send function to parent
 }
 
 export default function UserTagging({
@@ -29,12 +33,13 @@ export default function UserTagging({
   contextType,
   contextId,
   contextUrl,
+  proposalId,
   onMentionsChange,
+  onNotificationSend,
 }: UserTaggingProps) {
   const [users, setUsers] = useState<Array<any>>([]);
   const [loading, setLoading] = useState(true);
   const [previousMentions, setPreviousMentions] = useState<Array<{ id: string; display: string }>>([]);
-  const { createUserMentionNotification } = useNotifications();
   const { address } = useAccount();
 
   useEffect(() => {
@@ -72,6 +77,67 @@ export default function UserTagging({
     onMentionsChange?.(mentions);
     setPreviousMentions(mentions);
   };
+
+  // Send mention notifications when content is submitted
+  const sendMentionNotifications = async () => {
+    if (!address || !contextType || !contextId) {
+      console.warn('Missing required data for mention notifications');
+      return;
+    }
+
+    const currentMentions = previousMentions || [];
+    if (currentMentions.length === 0) {
+      return;
+    }
+
+    console.log(`Sending ${currentMentions.length} mention notifications`, {
+      contextType,
+      contextId,
+      proposalId,
+      mentions: currentMentions.map(m => ({ id: m.id, display: m.display }))
+    });
+
+    try {
+      // Send notifications for each mention
+      for (const mention of currentMentions) {
+        try {
+          if (contextType === 'governance' && proposalId) {
+            // Use unified service for governance mentions
+            await unifiedNotificationService.createUserMentionNotification(
+              mention.id,
+              address,
+              'governance',
+              contextId,
+              contextUrl,
+              proposalId
+            );
+            console.log(`✅ Sent governance mention notification to ${mention.display}`);
+          } else {
+            // Use unified service for other mentions
+            await unifiedNotificationService.createUserMentionNotification(
+              mention.id,
+              address,
+              contextType,
+              contextId,
+              contextUrl
+            );
+            console.log(`✅ Sent ${contextType} mention notification to ${mention.display}`);
+          }
+        } catch (error) {
+          console.error(`❌ Failed to send mention notification to ${mention.display}:`, error);
+        }
+      }
+    } catch (error) {
+      console.error('Failed to send mention notifications:', error);
+    }
+  };
+
+  // Expose sendMentionNotifications function to parent
+  useEffect(() => {
+    if (onNotificationSend) {
+      onNotificationSend(sendMentionNotifications);
+    }
+  }, [onNotificationSend, sendMentionNotifications]);
 
   const fetchMentionSuggestions = (query, callback) => {
     console.log('Searching for:', query);

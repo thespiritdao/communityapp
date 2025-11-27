@@ -2,9 +2,11 @@
 import { useQuery } from '@tanstack/react-query';
 import { usePublicClient } from 'wagmi';
 import { keccak256, decodeEventLog } from 'viem';
-import DAOGovernorABI from '../../../abis/DAO_GovernorABI.json';
+import DAOGovernorABI from '@/abis/DAO_GovernorABI.json';
 import { base } from 'viem/chains';
-import { supabase } from '../../../utils/supabaseClient';
+import { supabase } from '@/utils/supabaseClient';
+import { CONTRACT_ADDRESSES } from '@/config/contracts';
+import { retryContractRead } from '@/utils/contractReadRetry';
 
 interface Proposal {
   id: string;
@@ -14,10 +16,11 @@ interface Proposal {
   end: number;
   choices: string[];
   scores: number[];
-  state: number; // Add state field
+  state: number; // -1 = Error/Unknown, 0-7 = Valid states
+  stateError?: boolean; // Flag indicating state fetch failed
 }
 
-const GOVERNOR_ADDRESS = process.env.NEXT_PUBLIC_DAO_GOVERNOR as `0x${string}`;
+const GOVERNOR_ADDRESS = CONTRACT_ADDRESSES.DAO_GOVERNOR;
 const PROPOSAL_CREATED_TOPIC = keccak256(
   'ProposalCreated(uint256,address,address[],uint256[],bytes[],uint64,uint64,string)'
 );
@@ -65,20 +68,42 @@ const fetchProposalsOnChain = async (publicClient: ReturnType<typeof usePublicCl
       canceled: boolean;
     };
 
-    // 4) Get proposal state
-    let state = 0; // Default to Pending
+    // 4) Get proposal state with retry logic
+    let state = -1; // Default to Unknown/Error state
+    let stateError = false;
+
     try {
-      state = await publicClient.readContract({
-        chainId: base.id,
-        address: GOVERNOR_ADDRESS,
-        abi: DAOGovernorABI,
-        functionName: 'state',
-        args: [BigInt(id)],
-      }) as number;
+      state = await retryContractRead(
+        () => publicClient.readContract({
+          chainId: base.id,
+          address: GOVERNOR_ADDRESS,
+          abi: DAOGovernorABI,
+          functionName: 'state',
+          args: [BigInt(id)],
+        }) as Promise<number>,
+        {
+          retries: 3,
+          initialDelay: 500,
+          onRetry: (error, attempt) => {
+            console.warn(
+              `[Proposal ${id}] Retry ${attempt}/3 - Failed to fetch state:`,
+              error.message
+            );
+          }
+        }
+      );
+
+      console.log(`[Proposal ${id}] State fetched successfully: ${state}`);
     } catch (error) {
-      console.error(`Error fetching state for proposal ${id}:`, error);
-      // If we can't get the state, assume it's active (state 1)
-      state = 1;
+      console.error(
+        `[Proposal ${id}] Failed to fetch state after 3 retries:`,
+        error
+      );
+
+      // Mark as error state instead of assuming it's active
+      // This prevents misleading users about proposal status
+      state = -1;
+      stateError = true;
     }
 
     // 5) Parse title/body from the markdown description
@@ -102,7 +127,8 @@ const fetchProposalsOnChain = async (publicClient: ReturnType<typeof usePublicCl
       end: Number(core.endBlock),
       choices,
       scores,
-      state, // Include the state
+      state, // Include the state (-1 if error, 0-7 if valid)
+      stateError, // Flag if state fetch failed
     });
   }
 

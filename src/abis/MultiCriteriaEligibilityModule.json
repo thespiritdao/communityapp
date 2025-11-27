@@ -1,0 +1,554 @@
+[
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "_hatsProtocol",
+				"type": "address"
+			}
+		],
+		"stateMutability": "nonpayable",
+		"type": "constructor"
+	},
+	{
+		"anonymous": false,
+		"inputs": [
+			{
+				"indexed": true,
+				"internalType": "uint256",
+				"name": "hatId",
+				"type": "uint256"
+			},
+			{
+				"indexed": true,
+				"internalType": "bytes32",
+				"name": "agreementHash",
+				"type": "bytes32"
+			}
+		],
+		"name": "AgreementCriterionAdded",
+		"type": "event"
+	},
+	{
+		"anonymous": false,
+		"inputs": [
+			{
+				"indexed": true,
+				"internalType": "address",
+				"name": "signer",
+				"type": "address"
+			},
+			{
+				"indexed": true,
+				"internalType": "bytes32",
+				"name": "agreementHash",
+				"type": "bytes32"
+			}
+		],
+		"name": "AgreementSigned",
+		"type": "event"
+	},
+	{
+		"anonymous": false,
+		"inputs": [
+			{
+				"indexed": true,
+				"internalType": "uint256",
+				"name": "hatId",
+				"type": "uint256"
+			},
+			{
+				"indexed": true,
+				"internalType": "address",
+				"name": "credentialContract",
+				"type": "address"
+			},
+			{
+				"indexed": false,
+				"internalType": "uint256",
+				"name": "tokenId",
+				"type": "uint256"
+			}
+		],
+		"name": "CredentialCriterionAdded",
+		"type": "event"
+	},
+	{
+		"anonymous": false,
+		"inputs": [
+			{
+				"indexed": true,
+				"internalType": "uint256",
+				"name": "hatId",
+				"type": "uint256"
+			}
+		],
+		"name": "CriteriaCleared",
+		"type": "event"
+	},
+	{
+		"anonymous": false,
+		"inputs": [
+			{
+				"indexed": true,
+				"internalType": "uint256",
+				"name": "hatId",
+				"type": "uint256"
+			},
+			{
+				"indexed": false,
+				"internalType": "uint256",
+				"name": "validFrom",
+				"type": "uint256"
+			},
+			{
+				"indexed": false,
+				"internalType": "uint256",
+				"name": "validUntil",
+				"type": "uint256"
+			}
+		],
+		"name": "TimeCriterionAdded",
+		"type": "event"
+	},
+	{
+		"anonymous": false,
+		"inputs": [
+			{
+				"indexed": true,
+				"internalType": "uint256",
+				"name": "hatId",
+				"type": "uint256"
+			},
+			{
+				"indexed": true,
+				"internalType": "address",
+				"name": "tokenContract",
+				"type": "address"
+			},
+			{
+				"indexed": false,
+				"internalType": "uint256",
+				"name": "minimumAmount",
+				"type": "uint256"
+			}
+		],
+		"name": "TokenBalanceCriterionAdded",
+		"type": "event"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			},
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"name": "activeCriteriaHashes",
+		"outputs": [
+			{
+				"internalType": "bytes32",
+				"name": "",
+				"type": "bytes32"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			},
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"name": "activeCriteriaTypes",
+		"outputs": [
+			{
+				"internalType": "enum MultiCriteriaEligibilityModule.CriterionType",
+				"name": "",
+				"type": "uint8"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "_hatId",
+				"type": "uint256"
+			},
+			{
+				"internalType": "bytes32",
+				"name": "_agreementHash",
+				"type": "bytes32"
+			},
+			{
+				"internalType": "bool",
+				"name": "_requireAll",
+				"type": "bool"
+			}
+		],
+		"name": "addAgreementCriterion",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "_hatId",
+				"type": "uint256"
+			},
+			{
+				"internalType": "address",
+				"name": "_credentialContract",
+				"type": "address"
+			},
+			{
+				"internalType": "uint256",
+				"name": "_tokenId",
+				"type": "uint256"
+			},
+			{
+				"internalType": "bool",
+				"name": "_requireAll",
+				"type": "bool"
+			}
+		],
+		"name": "addCredentialCriterion",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "_hatId",
+				"type": "uint256"
+			},
+			{
+				"internalType": "uint256",
+				"name": "_validFrom",
+				"type": "uint256"
+			},
+			{
+				"internalType": "uint256",
+				"name": "_validUntil",
+				"type": "uint256"
+			},
+			{
+				"internalType": "bool",
+				"name": "_requireAll",
+				"type": "bool"
+			}
+		],
+		"name": "addTimeCriterion",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "_hatId",
+				"type": "uint256"
+			},
+			{
+				"internalType": "address",
+				"name": "_tokenContract",
+				"type": "address"
+			},
+			{
+				"internalType": "uint256",
+				"name": "_minimumAmount",
+				"type": "uint256"
+			},
+			{
+				"internalType": "bool",
+				"name": "_requireAll",
+				"type": "bool"
+			}
+		],
+		"name": "addTokenBalanceCriterion",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			},
+			{
+				"internalType": "bytes32",
+				"name": "",
+				"type": "bytes32"
+			}
+		],
+		"name": "agreementCriteria",
+		"outputs": [
+			{
+				"internalType": "bytes32",
+				"name": "agreementHash",
+				"type": "bytes32"
+			},
+			{
+				"internalType": "bool",
+				"name": "requireAll",
+				"type": "bool"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "",
+				"type": "address"
+			},
+			{
+				"internalType": "bytes32",
+				"name": "",
+				"type": "bytes32"
+			}
+		],
+		"name": "agreementSignatures",
+		"outputs": [
+			{
+				"internalType": "bool",
+				"name": "",
+				"type": "bool"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "_hatId",
+				"type": "uint256"
+			}
+		],
+		"name": "clearAllCriteria",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			},
+			{
+				"internalType": "bytes32",
+				"name": "",
+				"type": "bytes32"
+			}
+		],
+		"name": "credentialCriteria",
+		"outputs": [
+			{
+				"internalType": "address",
+				"name": "credentialContract",
+				"type": "address"
+			},
+			{
+				"internalType": "uint256",
+				"name": "tokenId",
+				"type": "uint256"
+			},
+			{
+				"internalType": "bool",
+				"name": "requireAll",
+				"type": "bool"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "_wearer",
+				"type": "address"
+			},
+			{
+				"internalType": "uint256",
+				"name": "_hatId",
+				"type": "uint256"
+			}
+		],
+		"name": "getWearerStatus",
+		"outputs": [
+			{
+				"internalType": "bool",
+				"name": "eligible",
+				"type": "bool"
+			},
+			{
+				"internalType": "bool",
+				"name": "standing",
+				"type": "bool"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"name": "hatAdmins",
+		"outputs": [
+			{
+				"internalType": "address",
+				"name": "",
+				"type": "address"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "hatsProtocol",
+		"outputs": [
+			{
+				"internalType": "address",
+				"name": "",
+				"type": "address"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "_hatId",
+				"type": "uint256"
+			},
+			{
+				"internalType": "address",
+				"name": "_admin",
+				"type": "address"
+			}
+		],
+		"name": "setHatAdmin",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "bytes32",
+				"name": "_agreementHash",
+				"type": "bytes32"
+			}
+		],
+		"name": "signAgreement",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			},
+			{
+				"internalType": "bytes32",
+				"name": "",
+				"type": "bytes32"
+			}
+		],
+		"name": "timeCriteria",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "validFrom",
+				"type": "uint256"
+			},
+			{
+				"internalType": "uint256",
+				"name": "validUntil",
+				"type": "uint256"
+			},
+			{
+				"internalType": "bool",
+				"name": "requireAll",
+				"type": "bool"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			},
+			{
+				"internalType": "bytes32",
+				"name": "",
+				"type": "bytes32"
+			}
+		],
+		"name": "tokenBalanceCriteria",
+		"outputs": [
+			{
+				"internalType": "address",
+				"name": "tokenContract",
+				"type": "address"
+			},
+			{
+				"internalType": "uint256",
+				"name": "minimumAmount",
+				"type": "uint256"
+			},
+			{
+				"internalType": "bool",
+				"name": "requireAll",
+				"type": "bool"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	}
+]

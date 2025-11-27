@@ -1,7 +1,7 @@
 // src/features/governance/hooks/useGovernanceForumPosts.ts
 
 import { useQuery } from '@tanstack/react-query';
-import { supabase } from 'src/utils/supabaseClient';
+import { supabase } from '@/utils/supabaseClient';
 
 interface ForumPost {
   id: string;

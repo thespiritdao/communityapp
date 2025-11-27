@@ -1,10 +1,10 @@
 // src/features/shopping-cart/components/Products/Product/Product.tsx
 "use client";
-
-import React from "react";
-import { IProduct } from "models";
+import { useState } from 'react';
+import type { IProduct } from "models";
 import * as S from "./style"; // See style file below.
-import { useCart } from "src/features/shopping-cart/contexts/cart-context";
+import { useCart } from "@/features/shopping-cart/contexts/cart-context";
+import SizeSelectionModal from "../../SizeSelectionModal";
 
 interface ProductProps {
   product: IProduct;
@@ -12,11 +12,39 @@ interface ProductProps {
 }
 
 const Product = ({ product, isAccessible }: ProductProps) => {
+  const { addProduct } = useCart();
+  const [showSizeModal, setShowSizeModal] = useState(false);
 
-    const { addProduct } = useCart();
-	const handleAddToCart = () => {
-	  addProduct(product);
-	};
+  // Check if product has multiple sizes (excluding "One Size")
+  const availableSizes = product.available_sizes || product.availableSizes || [];
+  const hasMultipleSizes = availableSizes.length > 1 || 
+    (availableSizes.length === 1 && !availableSizes.includes("One Size"));
+
+  const handleAddToCart = () => {
+    if (hasMultipleSizes) {
+      setShowSizeModal(true);
+    } else {
+      // For products with only "One Size" or no size info, add directly
+      const productWithSize = {
+        ...product,
+        selectedSize: availableSizes[0] || "One Size"
+      };
+      addProduct(productWithSize);
+    }
+  };
+
+  const handleSizeSelect = (selectedSize: string) => {
+    const productWithSize = {
+      ...product,
+      selectedSize
+    };
+    addProduct(productWithSize);
+    setShowSizeModal(false);
+  };
+
+  const handleCloseModal = () => {
+    setShowSizeModal(false);
+  };
 
 
   return (
@@ -41,14 +69,21 @@ const Product = ({ product, isAccessible }: ProductProps) => {
       <div>
         {isAccessible ? (
           <S.AddButton onClick={handleAddToCart}>
-            Add to Cart
+            {hasMultipleSizes ? 'Select Size' : 'Add to Cart'}
           </S.AddButton>
         ) : (
-          <S.AddButton disabled>
+          <S.AddButton disabled={true}>
             Add to Cart (Token Required)
           </S.AddButton>
         )}
       </div>
+      
+      <SizeSelectionModal
+        product={product}
+        isOpen={showSizeModal}
+        onSizeSelect={handleSizeSelect}
+        onClose={handleCloseModal}
+      />
     </S.ProductCard>
   );
 };

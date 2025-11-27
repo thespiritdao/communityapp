@@ -1,14 +1,14 @@
 "use client"
 
-import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '../../../components/ui/card';
-import { Badge } from '../../../components/ui/badge';
-import { Button } from '../../../components/ui/button';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../../components/ui/tabs';
+import type React from 'react';
+import { useState, useEffect } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { BountyCompletion } from './BountyCompletion';
-import { bidApi, convertBidFromDb, type Bid as DbBid } from '../lib/supabase';
-import { supabase } from '../../../utils/supabaseClient';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '../../../components/ui/dialog';
+import { bidApi, convertBidFromDb, } from '../lib/supabase';
+import { supabase } from '@/utils/supabaseClient';
 import { format } from 'date-fns';
 
 interface FrontendBid {
@@ -29,6 +29,7 @@ interface FrontendBid {
   submittedAt: Date;
   first_name?: string;
   last_name?: string;
+  status?: 'pending' | 'approved' | 'rejected' | 'archived';
 }
 
 interface BountyDetails {
@@ -39,6 +40,8 @@ interface BountyDetails {
     token: 'SYSTEM' | 'SELF';
   };
   status: 'open' | 'in-progress' | 'completed';
+  onchain_id?: number;  // On-chain bounty ID for payment transactions
+  creator_address?: string;  // Bounty creator for notifications
 }
 
 interface BidViewerProps {
@@ -68,13 +71,14 @@ async function mergeUserNamesIntoBids(bids: any[]) {
   }));
 }
 
-export const BidViewer: React.FC<BidViewerProps> = ({ 
-  bounty, 
-  onBountyCompleted 
+export const BidViewer: React.FC<BidViewerProps> = ({
+  bounty,
+  onBountyCompleted
 }) => {
   const [bids, setBids] = useState<FrontendBid[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCompletion, setShowCompletion] = useState(false);
+  const [selectedBidForCompletion, setSelectedBidForCompletion] = useState<FrontendBid | null>(null);
 
   useEffect(() => {
     loadBids();
@@ -96,13 +100,22 @@ export const BidViewer: React.FC<BidViewerProps> = ({
 
   const handleCompleteBounty = () => {
     setShowCompletion(false);
+    setSelectedBidForCompletion(null);
     onBountyCompleted?.();
   };
+
+  const handleShowCompletion = (bid: FrontendBid) => {
+    setSelectedBidForCompletion(bid);
+    setShowCompletion(true);
+  };
+
+  // Find the approved bid (there should only be one for in-progress bounties)
+  const approvedBid = bids.find(bid => bid.status === 'approved');
 
   if (loading) {
     return (
       <div className="flex justify-center items-center py-8">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2" style={{ borderColor: '#2F5D50' }}></div>
       </div>
     );
   }
@@ -182,7 +195,7 @@ export const BidViewer: React.FC<BidViewerProps> = ({
                     <h5 className="font-medium mb-2">Deliverables</h5>
                     <div className="space-y-2">
                       {Array.isArray(bid.deliverables) ? bid.deliverables.map((deliverable, index) => {
-                        let dateObj = new Date(deliverable.due_date);
+                        const dateObj = new Date(deliverable.due_date);
                         const isValidDate = !isNaN(dateObj.getTime());
                         return (
                           <div key={index} className="border-b border-gray-200 pb-2 last:border-0">
@@ -235,9 +248,9 @@ export const BidViewer: React.FC<BidViewerProps> = ({
 
               {/* Action Buttons */}
               <div className="flex gap-2 mt-6">
-                {bounty.status === 'in-progress' && (
-                  <Button 
-                    onClick={() => setShowCompletion(true)}
+                {bounty.status === 'in-progress' && bid.status === 'approved' && (
+                  <Button
+                    onClick={() => handleShowCompletion(bid)}
                     className="flex-1"
                   >
                     Complete Bounty
@@ -250,22 +263,65 @@ export const BidViewer: React.FC<BidViewerProps> = ({
       </div>
 
       {/* Completion Modal */}
-      {showCompletion && (
+      {showCompletion && selectedBidForCompletion && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
-            <BountyCompletion
-              bountyId={bounty.id}
-              bountyTitle={bounty.title}
-              bountyValue={bounty.value}
-              onComplete={handleCompleteBounty}
-            />
-            <Button 
-              variant="outline" 
-              onClick={() => setShowCompletion(false)}
-              className="w-full mt-4"
-            >
-              Cancel
-            </Button>
+            {/* Validation: Check for required data */}
+            {!bounty.onchain_id ? (
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold" style={{ color: '#8B3A3A' }}>Missing On-Chain Data</h3>
+                <p className="text-sm text-gray-700">
+                  This bounty is missing the on-chain bounty ID required to process payment.
+                  Please ensure the bounty was properly created on-chain.
+                </p>
+                <Button
+                  variant="outline"
+                  onClick={() => setShowCompletion(false)}
+                  className="w-full"
+                >
+                  Close
+                </Button>
+              </div>
+            ) : !bounty.creator_address ? (
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold" style={{ color: '#8B3A3A' }}>Missing Creator Data</h3>
+                <p className="text-sm text-gray-700">
+                  This bounty is missing the creator address required to send notifications.
+                  Please contact support.
+                </p>
+                <Button
+                  variant="outline"
+                  onClick={() => setShowCompletion(false)}
+                  className="w-full"
+                >
+                  Close
+                </Button>
+              </div>
+            ) : (
+              <>
+                <BountyCompletion
+                  onchainBountyId={bounty.onchain_id.toString()}
+                  bountyId={bounty.id}
+                  bidId={selectedBidForCompletion.id}
+                  bountyTitle={bounty.title}
+                  bountyValue={bounty.value}
+                  bidderAddress={selectedBidForCompletion.bidderAddress}
+                  creatorAddress={bounty.creator_address}
+                  onComplete={handleCompleteBounty}
+                  onError={(error) => {
+                    console.error('Bounty completion error:', error);
+                    // Keep modal open to show error state from BountyCompletion
+                  }}
+                />
+                <Button
+                  variant="outline"
+                  onClick={() => setShowCompletion(false)}
+                  className="w-full mt-4"
+                >
+                  Cancel
+                </Button>
+              </>
+            )}
           </div>
         </div>
       )}

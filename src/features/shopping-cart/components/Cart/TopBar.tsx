@@ -1,12 +1,10 @@
 // src/components/TopBar.tsx
 "use client";
-
-import React from "react";
 import Image from "next/image";
 import * as S from "./TopBar.style";
-import { useCart } from "src/features/shopping-cart/contexts/cart-context"; // Ensure default export
-import { useTokenBalances } from "src/context/TokenBalancesContext";
-import AddProductButton from "src/features/marketplace/components/AddProductButton";
+import { useCart } from "@/features/shopping-cart/contexts/cart-context"; // Ensure default export
+import { useTokenBalances } from "@/context/TokenBalancesContext";
+import ManageProductsButton from "@/features/marketplace/components/ManageProductsButton";
 
 interface TopBarProps {
   address: string;
@@ -34,16 +32,19 @@ const TopBar = ({ address }: TopBarProps) => {
   return (
     <S.TopBarContainer>
       <S.LeftSection>
-        <S.SystemBalances>
-          <span>$SYSTEM: {balances?.systemBalance || "0"}</span>
-        </S.SystemBalances>
-        <S.SelfBalances>
-          <span>$SELF: {balances?.selfBalance || "0"}</span>
-        </S.SelfBalances>
+      <S.SystemBalances>
+        <span className="label">$SYSTEM:</span>
+        <span className="value">{Number.parseFloat(balances?.systemBalance || "0").toFixed(4)}</span>
+      </S.SystemBalances>
+      <S.SelfBalances>
+        <span className="label">$SELF:</span>
+        <span className="value">{Number.parseFloat(balances?.selfBalance || "0").toFixed(4)}</span>
+      </S.SelfBalances>
+
       </S.LeftSection>
       
       <S.RightSection>
-        <AddProductButton />
+        <ManageProductsButton />
         <S.CartToggleButton onClick={handleCartToggle}>
           <Image
             src="/images/cart/cart-icon.png"

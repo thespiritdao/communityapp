@@ -1,260 +1,527 @@
+// src/features/chat/components/ChatContainer.tsx
+
 "use client";
 
-import React, { useEffect, useState } from "react";
-import { supabase } from "src/utils/supabaseClient";
-import { Message, UserProfile, ChatGroup } from "../types"; // Ensure ChatGroup includes required_token if not already
+import { useAuthContext } from '@/features/identity';
+import { useEffect, useMemo, useState } from "react";
+import { supabase } from "@/utils/supabaseClient";
+import "@/features/chat/styles/Chat.css";
+import { useHatPermissions } from "@/hooks/useHatPermissions";
+import { useTokenBalances } from "@/context/TokenBalancesContext";
+import { useUnifiedNotifications } from "@/context/UnifiedNotificationContext";
+import { usePodModules } from "@/features/pods/hooks/usePodModules";
+import type { ChatGroup, Message, UserProfile } from "../types";
 import ChatInput from "./ChatInput";
 import MessageList from "./MessageList";
-import "../styles/Chat.css";
-// Removed direct notificationService import - using context instead
-import { extractMentionedWalletsEnhanced } from 'src/utils/mentions';
-import { useNotifications } from 'src/context/NotificationContext';
+
+const TABLE_NAME = "chat_messages";
 
 interface ChatContainerProps {
   chatGroupId?: string;
 }
 
 export default function ChatContainer({ chatGroupId }: ChatContainerProps) {
+  const { session, isAuthenticated, signIn } = useAuthContext();
   const [chatGroups, setChatGroups] = useState<ChatGroup[]>([]);
   const [selectedChatGroup, setSelectedChatGroup] = useState<ChatGroup | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
-  const { createUserMentionNotification } = useNotifications();
 
-  // Fetch current user session & profile once on mount.
+  // hats/roles from permissions
+  const { userHats, userRoles, permissions, getPermissionsForPod, hasPermissionInPod } = useHatPermissions();
+
+  // on-chain balances (hasProofOfCuriosity, etc.)
+  const { balances } = useTokenBalances();
+
+  // notifications for mentions
+  const { createNotification } = useUnifiedNotifications();
+
+  // pod modules for permission checking
+  const { isModuleEnabled, modules, loading: modulesLoading, refreshModules } = usePodModules();
+
+  // normalize env Proof of Curiosity address once
+  const POC = useMemo(
+    () => (process.env.NEXT_PUBLIC_PROOF_OF_CURIOSITY || "").toLowerCase(),
+    []
+  );
+
+  // Get current user profile
   useEffect(() => {
-    const fetchUserData = async () => {
-      try {
-        const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
-        if (sessionError || !sessionData.session) {
-          throw new Error("No authenticated user found");
-        }
-        const userId = sessionData.session.user.id;
-        const { data: userProfile, error: userProfileError } = await supabase
-          .from("user_profiles")
-          .select("*")
-          .eq("user_id", userId)
-          .single();
-        if (userProfileError || !userProfile) {
-          throw new Error("User profile not found");
-        }
-        setCurrentUser(userProfile);
-      } catch (error) {
-        console.error("Error fetching user data:", error);
+    const fetchUser = async () => {
+      console.log('👤 ChatContainer: Fetching current user profile...');
+
+      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+
+      if (sessionError) {
+        console.error('❌ ChatContainer: Error getting session:', sessionError);
+        return;
       }
+
+      const userId = sessionData?.session?.user?.id;
+
+      if (!userId) {
+        console.warn('⚠️ ChatContainer: No user ID found in session');
+        return;
+      }
+
+      console.log('👤 ChatContainer: Found user ID:', userId);
+
+      const { data: userProfile, error: profileError } = await supabase
+        .from("user_profiles")
+        .select("*")
+        .eq("user_id", userId)
+        .single();
+
+      if (profileError) {
+        console.error('❌ ChatContainer: Error loading user profile:', profileError);
+        return;
+      }
+
+      console.log('✅ ChatContainer: Loaded user profile:', {
+        wallet: userProfile?.wallet_address,
+        firstName: userProfile?.first_name,
+        lastName: userProfile?.last_name
+      });
+
+      setCurrentUser(userProfile || null);
     };
-    fetchUserData();
+    fetchUser();
   }, []);
 
-  // If a chatGroupId is provided (via URL), fetch that chat group.
+  // Load accessible chat groups
   useEffect(() => {
-    if (chatGroupId) {
-      const fetchChatGroup = async () => {
-        const { data, error } = await supabase
-          .from("chat_groups")
-          .select("*")
-          .eq("id", chatGroupId)
-          .single();
-        if (error) {
-          console.error("Error fetching chat group:", error);
-        } else {
-          setSelectedChatGroup(data);
-        }
-      };
-      fetchChatGroup();
-    }
-  }, [chatGroupId]);
+    const loadGroups = async () => {
+      // all groups
+      const { data: allGroups, error: cgErr } = await supabase.from("chat_groups").select("*");
+      if (cgErr) {
+        console.error("Error loading chat_groups:", cgErr);
+        setChatGroups([]);
+        setLoading(false);
+        return;
+      }
 
-  // If no chat group is currently selected, fetch available chat groups based on token gating.
+      // map token -> pod image
+// --- Pods lookup: prefer pod_id, then any hat address ---
+  const { data: pods, error: podsErr } = await supabase
+    .from("pods")
+    .select("id, pod_image_url, token_address, management_hat_id, membership_hat_id");
+  if (podsErr) {
+    console.error("Error loading pods:", podsErr);
+  }
+
+  // Map pod_id -> image
+  const podImageById = new Map<string, string>();
+  // Map any hat/token address -> image
+  const hatToImage = new Map<string, string>();
+
+  (pods || []).forEach((p) => {
+    const img = p.pod_image_url || "/images/symbolobinfin.png";
+    if (p.id) podImageById.set(String(p.id), img);
+
+    const keys = [
+      String(p.token_address ?? "").toLowerCase(),
+      String(p.management_hat_id ?? "").toLowerCase(),
+      String(p.membership_hat_id ?? "").toLowerCase(),
+    ].filter(Boolean);
+
+    keys.forEach((k) => hatToImage.set(k, img));
+    
+    // Debug logging for pod image mapping
+    console.log('Chat: Pod mapping:', {
+      id: p.id,
+      image: img,
+      token_address: p.token_address,
+      management_hat_id: p.management_hat_id,
+      membership_hat_id: p.membership_hat_id
+    });
+  });
+
+  // --- STEP 1: Filter by module permissions FIRST (more efficient) ---
+  console.log('Chat: Step 1 - Filtering by module permissions first');
+  console.log('Chat: All groups before module filter:', (allGroups || []).map(g => ({
+    id: g.id,
+    title: g.title,
+    pod_id: g.pod_id,
+    required_token: g.required_token
+  })));
+
+  const moduleFilteredGroups = (allGroups || []).filter((group) => {
+    // Non-pod chats (like general community chat) always pass module check
+    if (!group.pod_id) {
+      console.log('Chat: Non-pod chat passes module check:', group.title);
+      return true;
+    }
+
+    // For pod-specific chats, check if chat module is enabled
+    const chatEnabled = isModuleEnabled(group.pod_id, 'chat_enabled');
+    console.log('Chat: Module check for pod', group.pod_id, ':', {
+      groupTitle: group.title,
+      chatEnabled,
+      moduleDataLoaded: Object.keys(modules).length > 0,
+      hasModuleEntry: !!modules[group.pod_id]
+    });
+
+    return chatEnabled;
+  });
+
+  console.log('Chat: Groups after module filter:', moduleFilteredGroups.map(g => ({
+    id: g.id,
+    title: g.title,
+    pod_id: g.pod_id
+  })));
+
+  // --- STEP 2: Filter by eligibility (HAT ownership / permissions) ---
+  console.log('Chat: Step 2 - Checking eligibility for module-enabled chats');
+
+  const allowed = moduleFilteredGroups.filter((group) => {
+    const requiredToken = String(group.required_token || "").toLowerCase();
+
+    console.log('Chat: Checking eligibility for group:', {
+      groupTitle: group.title,
+      requiredToken: requiredToken,
+      userHatsCount: (userHats || []).length,
+      userRolesCount: (userRoles || []).length,
+      userHatsPreview: (userHats || []).slice(0, 3).map(h => String(h).slice(0, 10) + '...'),
+      POC: POC,
+      hasProofOfCuriosity: balances?.hasProofOfCuriosity
+    });
+
+    // 1) Direct HAT ownership (userHats is a list of hat/token ids)
+    const hasHatToken = (userHats || []).some(
+      (h) => String(h || "").toLowerCase() === requiredToken
+    );
+
+    // 2) Explicit PoC token via balances context
+    const hasPoC = requiredToken === POC && !!balances?.hasProofOfCuriosity;
+
+    // 3) Role-level permission with chatAccess
+    const hasPermission = (userRoles || []).some(
+      (role) => {
+        const roleMatch = String(role.hatId || "").toLowerCase() === requiredToken;
+        const hasChatAccess = role.permissions?.chatAccess;
+
+        if (roleMatch) {
+          console.log('Chat: Found matching role for', group.title, ':', {
+            roleName: role.roleName,
+            roleHatId: String(role.hatId).slice(0, 10) + '...',
+            hasChatAccess: hasChatAccess,
+            allPermissions: Object.keys(role.permissions || {})
+          });
+        }
+
+        return roleMatch && hasChatAccess;
+      }
+    );
+
+    // ✅ FIX: For pod chats with permission system, ONLY check permission (not direct HAT ownership)
+    // Direct HAT ownership is already factored into the role permissions loaded from database
+    // PoC is the exception - it grants direct access without permission checks
+    const eligible = hasPermission || hasPoC;
+
+    console.log('Chat: Eligibility result for', group.title, ':', {
+      hasHatToken,
+      hasPoC,
+      hasPermission,
+      eligible,
+      willBeShown: eligible,
+      logic: 'Using permission system (not direct HAT ownership) + PoC'
+    });
+
+    return eligible;
+  });
+
+  console.log('Chat: Groups after eligibility filter:', allowed.map(g => ({
+    id: g.id,
+    title: g.title
+  })));
+
+  // --- STEP 3: Attach images for final display ---
+  const withImages = allowed.map((group) => {
+    const key = String(group.required_token || "").toLowerCase();
+    const byPodId =
+      group.pod_id && podImageById.get(String(group.pod_id));
+    const byHat = hatToImage.get(key);
+    const finalImage = byPodId || byHat || "/images/symbolobinfin.png";
+
+    // Debug logging for image resolution
+    console.log('Chat: Group image resolution:', {
+      groupTitle: group.title,
+      groupPodId: group.pod_id,
+      requiredToken: group.required_token,
+      key: key,
+      byPodId: byPodId,
+      byHat: byHat,
+      finalImage: finalImage
+    });
+
+    return {
+      ...group,
+      pod_image_url: finalImage,
+      name: group.title, // for UI
+    };
+  });
+
+
+      setChatGroups(withImages);
+      setLoading(false);
+    };
+
+    // wait until we have hats/roles and balances and modules are loaded
+    if (userHats && userRoles && balances && !modulesLoading) {
+      console.log('Chat: All dependencies ready, loading groups. Modules state:', {
+        modulesLoading,
+        modulesCount: Object.keys(modules).length,
+        modules
+      });
+      loadGroups();
+    }
+  }, [userHats, userRoles, balances, POC, modulesLoading, modules]);
+
+  // Auto-select if chatGroupId prop provided
   useEffect(() => {
-    if (!selectedChatGroup) {
-      const fetchChatGroups = async () => {
-        if (!currentUser?.wallet_address) return;
-        try {
-          const res = await fetch(`/api/chat-groups?wallet_address=${currentUser.wallet_address}`);
-          const json = await res.json();
-          setChatGroups(json.chatGroups || []);
-        } catch (error) {
-          console.error("Error fetching chat groups:", error);
-        } finally {
-          setLoading(false);
-        }
-      };
-      fetchChatGroups();
-    }
-  }, [selectedChatGroup, currentUser]);
+    if (!chatGroupId || chatGroups.length === 0) return;
+    const match = chatGroups.find((g) => g.id === chatGroupId);
+    if (match) setSelectedChatGroup(match);
+  }, [chatGroupId, chatGroups]);
 
-  // Once a chat group is selected, fetch its messages and associated users.
+  // Load messages for selected group (history + realtime)
   useEffect(() => {
-    if (selectedChatGroup) {
-      const fetchMessages = async () => {
-        setLoading(true);
-        try {
-          const { data: messagesData, error } = await supabase
-            .from("messages")
-            .select("*")
-            .eq("chat_group_id", selectedChatGroup.id)
-            .order("created_at", { ascending: true });
-          if (error) throw error;
-          setMessages(messagesData || []);
-          const { data: usersData, error: usersError } = await supabase.from("user_profiles").select("*");
-          if (usersError) throw usersError;
-          setUsers(usersData || []);
-        } catch (error) {
-          console.error("Error fetching messages:", error);
-        } finally {
-          setLoading(false);
-        }
-      };
+    if (!selectedChatGroup) return;
 
-      fetchMessages();
+    const fetchData = async () => {
+      setLoading(true);
 
-      // Subscribe to realtime message updates for the selected chat group.
-      const subscription = supabase
-        .channel(`messages-${selectedChatGroup.id}`)
-        .on(
-          "postgres_changes",
-          {
-            event: "INSERT",
-            schema: "public",
-            table: "messages",
-            filter: `chat_group_id=eq.${selectedChatGroup.id}`,
-          },
-          (payload) => {
-            console.log('Realtime event received! (INSERT)', payload);
-            console.log('New message received (INSERT):', payload.new);
-            setMessages((prev) => [...prev, payload.new as Message]);
-          }
-        )
-        .on(
-          "postgres_changes",
-          {
-            event: "UPDATE",
-            schema: "public",
-            table: "messages",
-            filter: `chat_group_id=eq.${selectedChatGroup.id}`,
-          },
-          (payload) => {
-            console.log('Realtime event received! (UPDATE)', payload);
-            console.log('Message updated (UPDATE):', payload.new);
-            setMessages((prev) => prev.map(msg => msg.id === payload.new.id ? { ...msg, ...payload.new } : msg));
-          }
-        )
-        .subscribe();
+      const { data: messagesData, error: msgErr } = await supabase
+        .from(TABLE_NAME)
+        .select("*")
+        .eq("chat_group_id", selectedChatGroup.id)
+        .order("created_at", { ascending: true });
+      if (msgErr) {
+        console.error("Error loading messages:", msgErr);
+      }
 
-      return () => {
-        console.log('Cleaning up subscription for chat group:', selectedChatGroup.id);
-        supabase.removeChannel(subscription);
-      };
-    }
+      const { data: usersData, error: usersErr } = await supabase.from("user_profiles").select("*");
+      if (usersErr) {
+        console.error("Error loading user_profiles:", usersErr);
+      }
+
+      setMessages(messagesData || []);
+      setUsers(usersData || []);
+      setLoading(false);
+    };
+
+    fetchData();
+
+    // subscribe to new messages
+    const sub = supabase
+      .channel(`chat-${selectedChatGroup.id}`)
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: TABLE_NAME, filter: `chat_group_id=eq.${selectedChatGroup.id}` },
+        (payload) => setMessages((prev) => [...prev, payload.new as Message])
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(sub);
+    };
   }, [selectedChatGroup]);
 
-  // Handler for sending a new message.
-	const sendMessage = async (content: string, attachments?: string[]) => {
-	  if (!currentUser || !selectedChatGroup) {
-		console.error("No current user or chat group selected.");
-		return;
-	  }
-	  
-	  console.log('Sending message:', {
-	    content,
-	    attachments,
-	    sender: currentUser.wallet_address,
-	    chatGroup: selectedChatGroup.id
-	  });
-	  
-	  try {
-		const messagePayload = {
-		  content,
-		  attachments: attachments || [],
-		  sender_wallet_id: currentUser.wallet_address,
-		  sender_profile_picture: currentUser.profile_picture, // include sender's profile image
-		  chat_group_id: selectedChatGroup.id,
-		  created_at: new Date().toISOString(),
-		  required_token: selectedChatGroup.required_token || null,
-		};
-		console.log('Message payload:', messagePayload);
-		
-		const { data, error } = await supabase.from("messages").insert([messagePayload]);
-		if (error) {
-		  console.error('Error inserting message:', error);
-		  throw error;
-		}
-		console.log('Message sent successfully:', data);
 
-        // Extract mentions and send notifications via context (handles both DB and local state)
-        console.log('Processing mentions in message:', content);
-        const mentionedWallets = await extractMentionedWalletsEnhanced(content);
-        console.log('Extracted mentioned wallets:', mentionedWallets);
+  // Send message
+  const handleSendMessage = async (content: string, attachments?: string[], mentions?: any[]) => {
+    if (!currentUser || !selectedChatGroup) {
+      console.error('❌ ChatContainer: Cannot send message - missing data:', {
+        hasCurrentUser: !!currentUser,
+        hasSelectedChatGroup: !!selectedChatGroup
+      });
+      return;
+    }
+
+    console.log('📤 ChatContainer: Sending message with content:', content);
+    console.log('📤 ChatContainer: Current user:', {
+      wallet: currentUser.wallet_address,
+      userId: currentUser.user_id,
+      profilePic: currentUser.profile_picture
+    });
+    console.log('📤 ChatContainer: Selected chat group:', {
+      id: selectedChatGroup.id,
+      title: selectedChatGroup.title,
+      requiredToken: selectedChatGroup.required_token
+    });
+    console.log('📤 ChatContainer: Mentions received:', mentions);
+
+    try {
+      const messageData = {
+        content,
+        attachments: attachments || [],
+        sender_wallet_id: currentUser.wallet_address,
+        sender_profile_picture: currentUser.profile_picture,
+        chat_group_id: selectedChatGroup.id,
+        created_at: new Date().toISOString(),
+        required_token: selectedChatGroup.required_token || null,
+      };
+
+      console.log('📤 ChatContainer: Attempting to insert message:', messageData);
+
+      // Insert the message
+      const { data, error } = await supabase.from(TABLE_NAME).insert(messageData).select();
+
+      if (error) {
+        console.error("❌ ChatContainer: Error sending message:", {
+          error,
+          errorCode: error.code,
+          errorMessage: error.message,
+          errorDetails: error.details,
+          errorHint: error.hint,
+          messageData
+        });
+        return;
+      }
+
+      console.log('✅ ChatContainer: Message inserted successfully:', data);
+
+      // Process mentions from UserTagging component (not extracted from text)
+      if (mentions && mentions.length > 0) {
+        console.log('Processing mentions for notifications:', mentions);
         
-        for (const wallet of mentionedWallets) {
-          // TODO: Re-enable self-mention rejection before launch
-          // if (wallet.toLowerCase() !== currentUser.wallet_address.toLowerCase()) {
-            console.log('Creating chat mention notification for:', wallet.toLowerCase());
-            await createUserMentionNotification(
-              wallet.toLowerCase(),
-              currentUser.wallet_address.toLowerCase(),
-              'chat',
-              selectedChatGroup.id,
-              `/chat/${selectedChatGroup.id}`
-            );
-          // } else {
-          //   console.log('Skipping self-mention for:', wallet.toLowerCase());
-          // }
+        // Create notifications for each mentioned user
+        for (const mention of mentions) {
+          console.log('ChatContainer: Processing mention:', {
+            mentionId: mention.id,
+            mentionIdLower: mention.id.toLowerCase(),
+            currentUserAddress: currentUser.wallet_address,
+            currentUserAddressLower: currentUser.wallet_address.toLowerCase(),
+            isSelfMention: mention.id.toLowerCase() === currentUser.wallet_address.toLowerCase()
+          });
+          
+          // Don't notify yourself
+          if (mention.id.toLowerCase() !== currentUser.wallet_address.toLowerCase()) {
+            try {
+              console.log('ChatContainer: About to create mention notification for:', {
+                recipientId: mention.id,
+                recipientDisplay: mention.display,
+                senderId: currentUser.wallet_address,
+                senderName: `${currentUser.first_name || ''} ${currentUser.last_name || ''}`.trim(),
+                chatGroupId: selectedChatGroup.id
+              });
+              
+              await createNotification({
+                recipient_address: mention.id,
+                sender_address: currentUser.wallet_address,
+                notification_type: 'user_mentioned',
+                category: 'general',
+                title: 'You were mentioned in a chat',
+                message: `${currentUser.first_name || ''} ${currentUser.last_name || ''}`.trim() + ' mentioned you in a chat',
+                context_type: 'chat',
+                context_id: selectedChatGroup.id,
+                context_url: `/chat/${selectedChatGroup.id}`,
+                priority: 'medium'
+              });
+              
+              console.log('ChatContainer: ✅ Successfully created notification for mention:', mention.display || mention.name);
+            } catch (notificationError) {
+              console.error('ChatContainer: ❌ Error creating mention notification:', notificationError);
+              console.error('ChatContainer: Error details:', {
+                error: notificationError,
+                mentionId: mention.id,
+                chatGroupId: selectedChatGroup.id,
+                currentUserAddress: currentUser.wallet_address
+              });
+              // Don't fail the entire message send if notification fails
+            }
+          } else {
+            console.log('ChatContainer: Skipping self-mention for:', mention.display);
+          }
         }
-	  } catch (error) {
-		console.error("Error sending message:", error);
-	  }
-	};
+      } else {
+        console.log('No mentions found in message');
+      }
+    } catch (error) {
+      console.error("Error in handleSendMessage:", error);
+    }
+  };
 
-
-  // If no chat group is selected, render the chat group selection screen.
+  // Chat list view
   if (!selectedChatGroup) {
     return (
-      <div className="chat-groups-container">
-        <h1 className="text-3xl font-bold">SpiritDAO Chats</h1>
-        {loading ? (
-          <p>Loading chat groups...</p>
-        ) : chatGroups.length > 0 ? (
-          <ul>
-            {chatGroups.map((group) => (
-              <li
-                key={group.id}
-                className="chat-group-item"
-                onClick={() => setSelectedChatGroup(group)}
-                style={{ cursor: "pointer", marginBottom: "1rem" }}
+      <div className="chat-shell chat-list-view">{/* rounded card container with white background */}
+        <div className="chat-groups-container">
+          <div className="flex items-center justify-between mb-4">
+            <h1 className="chat-title text-3xl font-bold">Community Chats</h1>
+            {Object.keys(modules).length === 0 && (
+              <button
+                onClick={refreshModules}
+                className="px-3 py-1 text-xs rounded"
+                style={{ backgroundColor: '#8FAAA1', color: '#FFFFFF' }}
+                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#6F8F86'}
+                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#8FAAA1'}
               >
-                <h3>{group.title}</h3>
-                <p className="chat-group-description">{group.description}</p>
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <p>No chat groups available.</p>
-        )}
+                Refresh Modules
+              </button>
+            )}
+          </div>
+
+          {loading ? (
+            <p>Loading chat groups...</p>
+          ) : chatGroups.length > 0 ? (
+            <ul>
+              {chatGroups.map((group) => (
+                <li
+                  key={group.id}
+                  className="chat-group-item chat-group-item"
+                  onClick={() => setSelectedChatGroup(group)}
+                  style={{ cursor: "pointer" }}
+                >
+                  <div className="chat-group-core">
+                    <img src={group.pod_image_url} alt="" className="pod-avatar pod-avatar--sm" />
+                    <span className="chat-group-name">{group.name}</span>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p>No accessible chat groups.</p>
+          )}
+        </div>
       </div>
     );
   }
 
-  // Render the chat conversation for the selected group.
+  // Selected chat view
   return (
-    <div className="chat-container">
-      <header className="chat-header">
-        <button className="back-button" onClick={() => setSelectedChatGroup(null)}>
-          Chat List
-        </button>
-        <h2>{selectedChatGroup.title}</h2>
-      </header>
-      <main className="chat-main">
-        <section className="chat-messages">
-          <MessageList messages={messages} currentUser={currentUser} loading={loading} users={users} />
-        </section>
-      </main>
-      <footer className="chat-input-section">
-        <ChatInput onSendMessage={sendMessage} chatId={selectedChatGroup?.id} />
-      </footer>
+    <div className="chat-shell">{/* rounded card container */}
+      <div className="chat-container">
+        <header className="chat-header">
+          <button className="back-button" onClick={() => setSelectedChatGroup(null)}>
+            Chat List
+          </button>
+          <h2><b>{selectedChatGroup.name}</b></h2>
+        </header>
+
+        <main className="chat-main">
+          <section className="chat-messages">
+            <MessageList
+              messages={messages}
+              currentUser={currentUser}
+              users={users}
+              loading={loading}
+              canModerate={
+                selectedChatGroup.pod_id
+                  ? hasPermissionInPod(selectedChatGroup.pod_id, 'chatModeration')
+                  : (permissions?.chatModeration || false)
+              }
+              chatGroupId={selectedChatGroup.id}
+            />
+          </section>
+        </main>
+
+        <footer className="chat-input-section">
+          <ChatInput onSendMessage={handleSendMessage} chatId={selectedChatGroup.id} />
+        </footer>
+      </div>
     </div>
   );
 }

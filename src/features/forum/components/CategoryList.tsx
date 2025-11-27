@@ -1,8 +1,6 @@
 // src/app/features/forum/components/CategoryList.tsx
-import React, { useEffect, useState } from 'react';
-import { supabase } from 'src/utils/supabaseClient';
+import type React from 'react';
 import Link from 'next/link';
-import { useTokenGate } from 'src/features/forum/hooks/useTokenGate';
 import styles from '../styles/Forum.module.css';
 
 interface Category {

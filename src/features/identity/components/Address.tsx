@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { border, cn, color, pressable, text } from 'src/styles/theme';
+import { border, cn, color, pressable, text } from '../../../styles/theme';
 import type { AddressReact } from '../types';
 import { getSlicedAddress } from '../utils/getSlicedAddress';
 import { useIdentityContext } from './IdentityProvider';
@@ -44,7 +44,7 @@ export function Address({
       setCopyText('Copied');
       setTimeout(() => setCopyText('Copy'), 2000);
     } catch (err) {
-      console.error('Failed to copy address:', err);
+      
       setCopyText('Failed to copy');
       setTimeout(() => setCopyText('Copy'), 2000);
     }

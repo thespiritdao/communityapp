@@ -1,6 +1,4 @@
-// /src/utils/tokenPricing.ts
 
-import { ethers } from 'ethers';
 
 // Placeholder values for token rates until contracts are live
 const DEFAULT_SYSTEM_RATE = 1.0; // $SYSTEM is pegged 1:1 to fiat

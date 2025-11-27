@@ -1,8 +1,8 @@
 import { type ForwardedRef, forwardRef } from 'react';
-import { caretDownSvg } from 'src/internal/svg/caretDownSvg';
-import { caretUpSvg } from 'src/internal/svg/caretUpSvg';
-import { border, cn, color, line, pressable, text } from 'src/styles/theme';
-import type { TokenSelectButtonReact } from 'src/token/types';
+import { caretDownSvg } from '@/internal/svg/caretDownSvg';
+import { caretUpSvg } from '@/internal/svg/caretUpSvg';
+import { cn } from '@/lib/utils';
+import type { TokenSelectButtonReact } from '../types';
 import { TokenImage } from './TokenImage';
 
 export const TokenSelectButton = forwardRef(function TokenSelectButton(
@@ -14,12 +14,10 @@ export const TokenSelectButton = forwardRef(function TokenSelectButton(
       type="button"
       data-testid="ockTokenSelectButton_Button"
       className={cn(
-        pressable.default,
-        pressable.shadow,
-        border.radius,
-        border.lineDefault,
-        line.default,
         'flex w-fit items-center gap-2 px-3 py-1',
+        'rounded-lg border border-gray-200 bg-white',
+        'hover:bg-gray-50 active:bg-gray-100',
+        'shadow-sm transition-colors',
         className,
       )}
       onClick={onClick}
@@ -31,14 +29,14 @@ export const TokenSelectButton = forwardRef(function TokenSelectButton(
             <TokenImage token={token} size={16} />
           </div>
           <span
-            className={cn(text.headline, color.foreground)}
+            className={cn('text-sm font-medium text-gray-900')}
             data-testid="ockTokenSelectButton_Symbol"
           >
             {token.symbol}
           </span>
         </>
       ) : (
-        <span className={text.headline}>Select token</span>
+        <span className="text-sm font-medium text-gray-900">Select token</span>
       )}
       <div className="relative flex items-center justify-center">
         <div className="absolute top-0 left-0 h-4 w-4" />

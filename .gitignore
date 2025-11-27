@@ -1,8 +1,25 @@
 # See http://help.github.com/ignore-files/ for more about ignoring files.
 
-
-# Environment variables
+# ============================================================
+# CRITICAL: Environment Variables & Secrets
+# NEVER commit these files - they contain private keys & API keys
+# ============================================================
 .env
+.env.local
+.env.*.local
+.env.development
+.env.production
+.env.testnet
+.env.mainnet
+.env.backup
+*.env
+!.env.example
+!.env.*.example
+
+# Private keys and secrets
+**/privateKey.json
+**/secrets.json
+**/*-private-key.txt
 
 
 # compiled output
@@ -27,8 +44,6 @@ node_modules
 *.launch
 .settings/
 *.sublime-workspace
-
-.env.local
 
 
 
@@ -72,70 +87,9 @@ docs/.vitepress/dist
 
 *storybook.log
 storybook-static/
-# See http://help.github.com/ignore-files/ for more about ignoring files.
 
-# compiled output
-dist
-esm
-tmp
-/out-tsc
-site/docs/pages/src/
-site/vocs.config.tsx.timestamp*
-src/styles.css
-src/tailwind.css
-
-# dependencies
-node_modules
-
-# IDEs and editors
-/.idea
-.project
-.classpath
-.c9/
-*.launch
-.settings/
-*.sublime-workspace
-
-# IDE - VSCode
-.vscode/*
-!.vscode/settings.json
-!.vscode/tasks.json
-!.vscode/launch.json
-!.vscode/extensions.json
-
-# misc
-/.sass-cache
-/connect.lock
-/coverage
-/libpeerconnection.log
-npm-debug.log
-yarn-error.log
-testem.log
-/typings
-
-# System Files
-.DS_Store
-Thumbs.db
-
-.nx/cache
-
-package-lock.json
-bun.lockb
-
-# Yarn
-.yarn/*
-!.yarn/patches
-!.yarn/releases
-!.yarn/plugins
-!.yarn/sdks
-!.yarn/versions
-
-# VitePress
-docs/.vitepress/cache
-docs/.vitepress/dist
-
-*storybook.log
-storybook-static/.env 
-node_modules/ 
-.env.local 
-.env.production 
+# Deployment artifacts
+.vercel
+.netlify 
+nul
+src/nul

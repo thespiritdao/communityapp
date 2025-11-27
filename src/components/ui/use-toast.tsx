@@ -1,7 +1,6 @@
 //src/components/ui/use-toast.tsx
 
-import { toast as hotToast, ToastOptions as HotToastOptions } from 'react-hot-toast';
-import React from 'react';
+import { toast as hotToast, type ToastOptions as HotToastOptions } from 'react-hot-toast';
 
 export type ToastVariant = 'default' | 'destructive' | 'success';
 

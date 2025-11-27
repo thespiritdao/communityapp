@@ -224,3 +224,30 @@ export type UseNameOptions = {
   address: Address; // The Ethereum address for which the ENS name is to be fetched.
   chain?: Chain; // Optional chain for domain resolution
 };
+
+/**
+ * User Profile from user_profiles table
+ * Note: exported as public Type
+ */
+export type UserProfile = {
+  user_id?: string;
+  wallet_address: string;
+  first_name?: string;
+  last_name?: string;
+  profile_picture?: string | null;
+  bio?: string | null;
+  website?: string | null;
+  twitter?: string | null;
+  discord?: string | null;
+  github?: string | null;
+  linkedin?: string | null;
+  email?: string | null;
+  tiktok?: string | null;
+  instagram?: string | null;
+  facebook?: string | null;
+  youtube?: string | null;
+  twitch?: string | null;
+  interests?: string | null;
+  seeking?: string | null;
+  open_to_connect?: string | null; // Values: 'low_limited', 'open_available', 'actively_collaborate'
+};

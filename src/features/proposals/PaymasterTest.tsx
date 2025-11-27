@@ -1,13 +1,12 @@
 // Enhanced PaymasterTest with proper connection state handling
 'use client';
-import React, { useEffect, useState } from 'react';
+import type React from 'react';
+import { useEffect, useState } from 'react';
 import { useAccount, useChainId, useConnectors } from 'wagmi';
 import { 
   Transaction, 
   TransactionButton, 
   TransactionSponsor,
-  TransactionStatus,
-  TransactionStatusLabel,
 } from '@coinbase/onchainkit/transaction';
 import { base } from 'viem/chains';
 

@@ -1,7 +1,7 @@
 // src/components/WalletStatus.tsx
 "use client";
 
-import React, { useEffect } from "react";
+import { useEffect } from "react";
 import { useAccount } from "wagmi";
 
 export function WalletStatus() {

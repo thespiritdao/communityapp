@@ -1,15 +1,15 @@
 // src/nft/components/NFTMintCard.tsx
 'use client';
-import React, { ReactNode, ReactElement } from 'react';
-import { background, border, cn, color } from 'src/styles/theme';
-import { useIsMounted } from 'src/useIsMounted';
-import { useTheme } from 'src/useTheme';
-import { LifecycleType, NFTMintCardReact } from 'src/nft/types';
-import NFTErrorBoundary from 'src/nft/components/NFTErrorBoundary';
-import { NFTErrorFallback } from 'src/nft/components/NFTErrorFallback';
-import { NFTLifecycleProvider } from 'src/nft/components/NFTLifecycleProvider';
-import { NFTProvider, useNFTContext } from 'src/nft/components/NFTProvider';
-import AdvocateMembershipABI from 'src/abis/AdvocateMembershipABI.json';
+import type { ReactNode, ReactElement } from 'react';
+import { background, border, cn, color } from '../../../styles/theme';
+import { useIsMounted } from '../../../useIsMounted';
+import { useTheme } from '../../../useTheme';
+import { LifecycleType, type NFTMintCardReact } from '../../../nft/types';
+import NFTErrorBoundary from '../../../nft/components/NFTErrorBoundary';
+import { NFTErrorFallback } from '../../../nft/components/NFTErrorFallback';
+import { NFTLifecycleProvider } from '../../../nft/components/NFTLifecycleProvider';
+import { NFTProvider, useNFTContext } from '../../../nft/components/NFTProvider';
+import AdvocateMembershipABI from '../../../abis/AdvocateMembershipABI.json';
 
 export interface AdvocateMintCardProps
   extends Omit<NFTMintCardReact, 'buildMintTransaction'> {

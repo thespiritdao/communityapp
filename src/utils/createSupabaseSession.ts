@@ -1,6 +1,6 @@
 // src/utils/createSupabaseSession.ts
 
-import { supabase } from 'src/utils/supabaseClient';
+import { supabase } from './supabaseClient';
 
 export async function createSupabaseSession(
   supabaseToken: string,

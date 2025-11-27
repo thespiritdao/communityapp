@@ -1,7 +1,6 @@
 // src/utils/tokenCheck.ts
 
 import { readContract } from "@wagmi/actions";
-import { getAccount } from "wagmi/actions";
 
 // Minimal ABIs for testing
 export const erc20Abi = [

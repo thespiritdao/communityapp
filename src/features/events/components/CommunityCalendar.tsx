@@ -1,10 +1,10 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import type React from 'react';
+import { useState, useMemo } from 'react';
+import { Card, CardContent, } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { 
   Calendar as CalendarIcon, 
   ChevronLeft, 
@@ -18,11 +18,10 @@ import {
   Lock
 } from 'lucide-react';
 
-import { EventWithStats, Pod } from '../types/event';
+import type { EventWithStats, } from '../types/event';
 import { EventRegistrationModal } from './EventRegistrationModal';
 import { useTokenGatedEvents } from '../hooks/useEventTokenGating';
 import { usePods } from '../hooks/useEventTokenGating';
-import { useEventRegistration } from '../hooks/useEvents';
 import Link from 'next/link';
 
 type CalendarView = 'month' | 'week' | 'day';
@@ -40,7 +39,6 @@ export const CommunityCalendar: React.FC<CommunityCalendarProps> = ({
   const [currentDate, setCurrentDate] = useState(new Date());
   const [view, setView] = useState<CalendarView>('month');
   const [selectedEvent, setSelectedEvent] = useState<EventWithStats | null>(null);
-  const [showEventModal, setShowEventModal] = useState(false);
   const [showRegistrationModal, setShowRegistrationModal] = useState(false);
   const [filterPod, setFilterPod] = useState<string>('');
 
@@ -89,11 +87,6 @@ export const CommunityCalendar: React.FC<CommunityCalendarProps> = ({
       newDate.setDate(newDate.getDate() + 1);
     }
     setCurrentDate(newDate);
-  };
-
-  const handleEventClick = (event: EventWithStats) => {
-    setSelectedEvent(event);
-    setShowEventModal(true);
   };
 
   const handleRegisterClick = (event: EventWithStats) => {
@@ -155,7 +148,7 @@ export const CommunityCalendar: React.FC<CommunityCalendarProps> = ({
             Export
           </Button>
           {showCreateButton && (
-            <Button asChild>
+            <Button asChild={true}>
               <Link href="/events/create">
                 <Plus className="w-4 h-4 mr-2" />
                 Create Event
@@ -227,65 +220,42 @@ export const CommunityCalendar: React.FC<CommunityCalendarProps> = ({
       {/* Calendar Display */}
       <Card>
         <CardContent className="p-0">
-          {view === 'month' && <MonthView currentDate={currentDate} eventsByDate={eventsByDate} onEventClick={handleEventClick} />}
-          {view === 'week' && <WeekView currentDate={currentDate} eventsByDate={eventsByDate} onEventClick={handleEventClick} />}
-          {view === 'day' && <DayView currentDate={currentDate} eventsByDate={eventsByDate} onEventClick={handleEventClick} />}
+          {view === 'month' && <MonthView currentDate={currentDate} eventsByDate={eventsByDate} onEventClick={handleRegisterClick} />}
+          {view === 'week' && <WeekView currentDate={currentDate} eventsByDate={eventsByDate} onEventClick={handleRegisterClick} />}
+          {view === 'day' && <DayView currentDate={currentDate} eventsByDate={eventsByDate} onEventClick={handleRegisterClick} />}
         </CardContent>
       </Card>
 
       {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <Card>
-          <CardContent className="p-4 text-center">
-            <p className="text-2xl font-bold text-blue-600">{filteredEvents.length}</p>
-            <p className="text-sm text-gray-600">Total Events</p>
+          <CardContent className="p-4">
+            <div className="flex items-center space-x-3">
+              <CalendarIcon className="w-8 h-8" style={{ color: '#3F7A5A' }} />
+              <div>
+                <p className="text-2xl font-bold" style={{ color: '#3F7A5A' }}>
+                  {filteredEvents.filter(e => new Date(e.event_date) > new Date()).length}
+                </p>
+                <p className="text-sm text-gray-600">Upcoming</p>
+              </div>
+            </div>
           </CardContent>
         </Card>
         
         <Card>
-          <CardContent className="p-4 text-center">
-            <p className="text-2xl font-bold text-green-600">
-              {filteredEvents.filter(e => new Date(e.event_date) > new Date()).length}
-            </p>
-            <p className="text-sm text-gray-600">Upcoming</p>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardContent className="p-4 text-center">
-            <p className="text-2xl font-bold text-purple-600">
-              {filteredEvents.filter(e => e.required_tokens && e.required_tokens.length > 0).length}
-            </p>
-            <p className="text-sm text-gray-600">Token Gated</p>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardContent className="p-4 text-center">
-            <p className="text-2xl font-bold text-orange-600">
-              {filteredEvents.reduce((sum, event) => sum + event.registration_count, 0)}
-            </p>
-            <p className="text-sm text-gray-600">Registrations</p>
+          <CardContent className="p-4">
+            <div className="flex items-center space-x-3">
+              <Users className="w-8 h-8" style={{ color: '#C6933F' }} />
+              <div>
+                <p className="text-2xl font-bold" style={{ color: '#C6933F' }}>
+                  {filteredEvents.reduce((sum, event) => sum + event.registration_count, 0)}
+                </p>
+                <p className="text-sm text-gray-600">Attendees</p>
+              </div>
+            </div>
           </CardContent>
         </Card>
       </div>
-
-      {/* Event Detail Modal */}
-      {selectedEvent && (
-        <EventDetailModal
-          event={selectedEvent}
-          isOpen={showEventModal}
-          onClose={() => {
-            setShowEventModal(false);
-            setSelectedEvent(null);
-          }}
-          onRegister={() => {
-            setShowEventModal(false);
-            setShowRegistrationModal(true);
-          }}
-          onExportToGoogleCalendar={() => exportToGoogleCalendar(selectedEvent)}
-        />
-      )}
 
       {/* Registration Modal */}
       {selectedEvent && (
@@ -368,7 +338,10 @@ const MonthView: React.FC<MonthViewProps> = ({ currentDate, eventsByDate, onEven
                     <div
                       key={event.id}
                       onClick={() => onEventClick(event)}
-                      className="text-xs p-1 bg-blue-100 text-blue-800 rounded cursor-pointer hover:bg-blue-200 truncate"
+                      className="text-xs p-1 rounded cursor-pointer truncate"
+                      style={{ backgroundColor: '#E8F1EE', color: '#2F5D50' }}
+                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#D1E6DC'}
+                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#E8F1EE'}
                     >
                       {event.required_tokens && event.required_tokens.length > 0 && (
                         <Lock className="w-3 h-3 inline mr-1" />
@@ -426,7 +399,10 @@ const WeekView: React.FC<MonthViewProps> = ({ currentDate, eventsByDate, onEvent
                 <div
                   key={event.id}
                   onClick={() => onEventClick(event)}
-                  className="p-2 bg-blue-100 text-blue-800 rounded cursor-pointer hover:bg-blue-200 text-sm"
+                  className="p-2 rounded cursor-pointer text-sm"
+                  style={{ backgroundColor: '#E8F1EE', color: '#2F5D50' }}
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#D1E6DC'}
+                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#E8F1EE'}
                 >
                   <div className="font-medium truncate">{event.title}</div>
                   <div className="text-xs">
@@ -511,115 +487,3 @@ const DayView: React.FC<MonthViewProps> = ({ currentDate, eventsByDate, onEventC
   );
 };
 
-// Event Detail Modal Component
-interface EventDetailModalProps {
-  event: EventWithStats;
-  isOpen: boolean;
-  onClose: () => void;
-  onRegister: () => void;
-  onExportToGoogleCalendar: () => void;
-}
-
-const EventDetailModal: React.FC<EventDetailModalProps> = ({
-  event,
-  isOpen,
-  onClose,
-  onRegister,
-  onExportToGoogleCalendar
-}) => {
-  const { registration } = useEventRegistration(event.id);
-  
-  const formatDateTime = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      weekday: 'long',
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  };
-
-  return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl">
-        <DialogHeader>
-          <DialogTitle>{event.title}</DialogTitle>
-        </DialogHeader>
-        
-        <div className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-            <div className="flex items-center">
-              <CalendarIcon className="w-4 h-4 mr-2 text-blue-500" />
-              <span>{formatDateTime(event.event_date)}</span>
-            </div>
-            
-            {event.location && (
-              <div className="flex items-center">
-                <MapPin className="w-4 h-4 mr-2 text-green-500" />
-                <span>{event.location}</span>
-              </div>
-            )}
-            
-            <div className="flex items-center">
-              <Users className="w-4 h-4 mr-2 text-purple-500" />
-              <span>{event.registration_count} registered</span>
-            </div>
-            
-            {event.price_token !== 'free' && (
-              <div className="flex items-center">
-                <span className="font-semibold">
-                  {event.price_amount} {event.price_token}
-                </span>
-              </div>
-            )}
-          </div>
-          
-          <div>
-            <p className="text-gray-700">{event.description}</p>
-          </div>
-          
-          {event.required_tokens && event.required_tokens.length > 0 && (
-            <div>
-              <p className="font-medium mb-2">Required Tokens:</p>
-              <div className="flex flex-wrap gap-2">
-                {event.required_tokens.map((tokenId) => (
-                  <Badge key={tokenId} variant="outline">
-                    <Lock className="w-3 h-3 mr-1" />
-                    {tokenId}
-                  </Badge>
-                ))}
-              </div>
-            </div>
-          )}
-          
-          <div className="flex justify-between items-center pt-4 border-t">
-            <div className="flex space-x-2">
-              <Button variant="outline" onClick={onExportToGoogleCalendar}>
-                <Download className="w-4 h-4 mr-2" />
-                Add to Google Calendar
-              </Button>
-              <Button variant="outline" asChild>
-                <Link href={`/events/${event.id}`}>
-                  View Details
-                </Link>
-              </Button>
-            </div>
-            
-            {!registration && new Date(event.event_date) > new Date() && (
-              <Button onClick={onRegister}>
-                Register
-              </Button>
-            )}
-            
-            {registration && (
-              <Badge variant="default">
-                Registered
-              </Badge>
-            )}
-          </div>
-        </div>
-      </DialogContent>
-    </Dialog>
-  );
-};

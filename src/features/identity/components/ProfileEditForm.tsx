@@ -1,5 +1,6 @@
 // src/features/identity/components/ProfileEditForm.tsx
-import React, { useEffect, useState } from 'react';
+import type React from 'react';
+import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { supabase } from '../utils/supabaseClient';
 
@@ -12,7 +13,11 @@ type ProfileData = {
   date_of_birth?: string | null;
   email?: string | null;
   phone?: string | null;
-  address?: string | null;
+  address_1?: string | null; // Updated from 'address' to 'address_1'
+  address_2?: string | null; // New shipping field
+  city?: string | null; // New shipping field
+  state?: string | null; // New shipping field
+  zip?: string | null; // New shipping field
   bio?: string | null;
   interests?: string | null; // comma-separated
   seeking?: string | null;   // comma-separated
@@ -166,7 +171,7 @@ export function ProfileEditForm({
 
 	const uploadProfileImage = async () => {
 	  if (!selectedProfileImage || !walletAddress) {
-		console.warn("No file selected or wallet address missing.");
+		
 		return null;
 	  }
 	  
@@ -192,7 +197,7 @@ export function ProfileEditForm({
 		  });
 		  
 		if (uploadError) {
-		  console.error("Error uploading image:", uploadError);
+		  
 		  return null;
 		}
 		
@@ -202,13 +207,13 @@ export function ProfileEditForm({
 		  .getPublicUrl(fileName);
 		
 		if (publicUrlError) {
-		  console.error("Error fetching public URL:", publicUrlError);
+		  
 		  return null;
 		}
 		
 		return publicUrlData?.publicUrl || null;
 	  } catch (err) {
-		console.error("Unexpected error during image upload:", err);
+		
 		return null;
 	  } finally {
 		setUploadingImage(false);
@@ -322,11 +327,6 @@ export function ProfileEditForm({
               </div>
 
               <div className="form-group">
-                <label>Address</label>
-                <input type="text" className="input" {...register('address')} />
-              </div>
-
-              <div className="form-group">
                 <label>Website</label>
                 <input
                   type="url"
@@ -337,6 +337,71 @@ export function ProfileEditForm({
                 <small style={{ fontSize: '0.85rem', color: '#555' }}>
                   Please include https://
                 </small>
+              </div>
+            </div>
+
+            <hr className="section-divider" />
+
+            {/*  Section: Shipping Address - Required for Marketplace */}
+            <div className="profile-section">
+              <h3>Shipping Address</h3>
+              <p style={{ fontSize: '0.9rem', color: '#666', marginBottom: '1rem' }}>
+                <strong>Required for use of Marketplace</strong> - This information is needed for order fulfillment
+              </p>
+              
+              <div className="form-group">
+                <label>Address Line 1 *</label>
+                <input 
+                  type="text" 
+                  className="input" 
+                  placeholder="Street address, P.O. box, etc."
+                  {...register('address_1', { required: "Address line 1 is required for marketplace use" })} 
+                />
+                {errors.address_1 && <p style={{ color: 'red', fontSize: '0.85rem' }}>{errors.address_1.message}</p>}
+              </div>
+
+              <div className="form-group">
+                <label>Address Line 2</label>
+                <input 
+                  type="text" 
+                  className="input" 
+                  placeholder="Apartment, suite, unit, building, floor, etc."
+                  {...register('address_2')} 
+                />
+              </div>
+
+              {/* City on its own row */}
+              <div className="form-group">
+                <label>City *</label>
+                <input
+                  type="text"
+                  className="input"
+                  {...register('city', { required: "City is required for marketplace use" })}
+                />
+                {errors.city && <p style={{ color: 'red', fontSize: '0.85rem' }}>{errors.city.message}</p>}
+              </div>
+
+              {/* State and Zip together in one row */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                <div className="form-group">
+                  <label>State/Province *</label>
+                  <input
+                    type="text"
+                    className="input"
+                    {...register('state', { required: "State is required for marketplace use" })}
+                  />
+                  {errors.state && <p style={{ color: 'red', fontSize: '0.85rem' }}>{errors.state.message}</p>}
+                </div>
+
+                <div className="form-group">
+                  <label>ZIP/Postal Code *</label>
+                  <input
+                    type="text"
+                    className="input"
+                    {...register('zip', { required: "ZIP code is required for marketplace use" })}
+                  />
+                  {errors.zip && <p style={{ color: 'red', fontSize: '0.85rem' }}>{errors.zip.message}</p>}
+                </div>
               </div>
             </div>
 
@@ -520,10 +585,10 @@ export function ProfileEditForm({
 
             {/*  Save / Cancel Buttons  */}
             <div className="form-buttons">
-              <button type="submit" disabled={uploadingImage}>
+              <button type="submit" className="btn" disabled={uploadingImage}>
                 Save
               </button>
-              <button type="button" onClick={onCancel}>
+              <button type="button" className="btn" onClick={onCancel}>
                 Cancel
               </button>
             </div>

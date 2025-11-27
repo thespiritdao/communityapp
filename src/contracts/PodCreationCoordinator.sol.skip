@@ -1,0 +1,168 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.19;
+
+import "./PodAuthorizationFactory.sol";
+import "./interfaces/IHats.sol";
+import "./interfaces/IEligibilityModule.sol";
+
+/**
+ * @title PodCreationCoordinator
+ * @notice Executes all 7 phases of pod creation in a SINGLE transaction
+ * @dev This enables full sponsorship via Coinbase paymaster - user pays ZERO gas
+ *
+ * BENEFITS:
+ * - Single transaction = easy to whitelist in paymaster
+ * - No multi-step UI flow needed
+ * - Atomic operation (all phases succeed or all revert)
+ * - Better UX (one click pod creation)
+ * - Completely gasless for users
+ */
+contract PodCreationCoordinator {
+
+    IHats public immutable HATS;
+    PodAuthorizationFactory public immutable FACTORY;
+    IEligibilityModule public immutable ELIGIBILITY_MODULE;
+    address public immutable TOGGLE_MODULE;
+
+    struct PodCreationParams {
+        string podId;
+        uint256 parentHatId;
+        string managementHatDetails;
+        string managementHatImageURI;
+        uint32 maxSupply;
+        address[] leaders;
+        address treasuryAddress;
+        address eligibilityModule;
+    }
+
+    struct CreationResult {
+        address proxyAddress;
+        uint256 managementHatId;
+        uint256 adminHatId;
+        bool success;
+    }
+
+    event PodCreatedComplete(
+        string indexed podId,
+        address indexed proxyAddress,
+        uint256 managementHatId,
+        uint256 adminHatId,
+        address[] leaders
+    );
+
+    constructor(
+        address _hatsProtocol,
+        address _factory,
+        address _eligibilityModule,
+        address _toggleModule
+    ) {
+        HATS = IHats(_hatsProtocol);
+        FACTORY = PodAuthorizationFactory(_factory);
+        ELIGIBILITY_MODULE = IEligibilityModule(_eligibilityModule);
+        TOGGLE_MODULE = _toggleModule;
+    }
+
+    /**
+     * @notice Create a complete pod with all 7 phases in ONE transaction
+     * @param params Pod creation parameters
+     * @return result Creation results including addresses and HAT IDs
+     *
+     * PHASES EXECUTED:
+     * 1. Create Management HAT
+     * 2. Deploy Proxy via Factory
+     * 3. Mint Management HATs to Leaders
+     * 4. Create Proxy Admin HAT
+     * 5. Mint Admin HAT to Proxy
+     * 6. Set Admin HAT in Proxy
+     * 7. Set Eligibility Module Admin
+     */
+    function createPodComplete(
+        PodCreationParams calldata params
+    ) external returns (CreationResult memory result) {
+
+        // ========================================
+        // PHASE 1: Create Management HAT
+        // ========================================
+        uint256 managementHatId = HATS.createHat(
+            params.parentHatId,
+            params.managementHatDetails,
+            params.maxSupply,
+            params.eligibilityModule,
+            TOGGLE_MODULE,
+            true, // mutable
+            params.managementHatImageURI
+        );
+
+        // ========================================
+        // PHASE 2: Deploy Proxy via Factory
+        // ========================================
+        address proxyAddress = FACTORY.createPodProxy(
+            params.podId,
+            msg.sender, // creator
+            params.leaders,
+            params.treasuryAddress
+        );
+
+        // ========================================
+        // PHASE 3: Mint Management HATs to Leaders
+        // ========================================
+        for (uint i = 0; i < params.leaders.length; i++) {
+            HATS.mintHat(managementHatId, params.leaders[i]);
+        }
+
+        // ========================================
+        // PHASE 4: Create Proxy Admin HAT
+        // ========================================
+        uint256 adminHatId = HATS.createHat(
+            managementHatId, // parent is management HAT
+            "Pod Proxy Admin", // simple details
+            1, // maxSupply: only proxy wears this
+            proxyAddress, // eligibility: only proxy
+            TOGGLE_MODULE, // toggle
+            false, // immutable for security
+            "" // no image URI needed
+        );
+
+        // ========================================
+        // PHASE 5: Mint Admin HAT to Proxy
+        // ========================================
+        HATS.mintHat(adminHatId, proxyAddress);
+
+        // ========================================
+        // PHASE 6: Set Admin HAT in Proxy
+        // ========================================
+        // Call via factory for proper authorization
+        FACTORY.setProxyAdminHatViaFactory(params.podId, adminHatId);
+
+        // ========================================
+        // PHASE 7: Set Eligibility Module Admin
+        // ========================================
+        ELIGIBILITY_MODULE.setHatAdmin(managementHatId, proxyAddress);
+
+        // Return results
+        result = CreationResult({
+            proxyAddress: proxyAddress,
+            managementHatId: managementHatId,
+            adminHatId: adminHatId,
+            success: true
+        });
+
+        emit PodCreatedComplete(
+            params.podId,
+            proxyAddress,
+            managementHatId,
+            adminHatId,
+            params.leaders
+        );
+
+        return result;
+    }
+
+    /**
+     * @notice Get the predicted proxy address before creation
+     * @dev Useful for UI to show address before transaction
+     */
+    function predictProxyAddress(string calldata podId) external view returns (address) {
+        return FACTORY.getPredictedProxyAddress(podId);
+    }
+}

@@ -2,11 +2,10 @@ import type { Address, Chain } from 'viem';
 import { Address as AddressComponent } from './Address';
 import { Avatar } from './Avatar';
 import { Badge } from './Badge';
-import { Identity } from './Identity';
 import { Name } from './Name';
 import { Socials } from './Socials';
 
-import { background, border, cn, line } from 'src/styles/theme';
+import { background, border, cn, line } from '../../../styles/theme';
 
 type IdentityCardProps = {
   address?: Address;

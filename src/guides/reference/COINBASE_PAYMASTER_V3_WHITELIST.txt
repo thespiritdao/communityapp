@@ -1,0 +1,58 @@
+=================================================================
+COINBASE PAYMASTER - V3 FACTORY WHITELIST
+=================================================================
+
+📍 Go to: https://portal.cdp.coinbase.com/products/bundler-and-paymaster
+
+📝 Contract Address: 0x52122e732700568760e475FA8289a13A4568d886
+
+-----------------------------------------------------------------
+COPY-PASTE THESE 9 FUNCTION SIGNATURES:
+-----------------------------------------------------------------
+
+createPodProxy(string,address,address[],address,uint256)
+
+updatePodProxy(string,address[],address,bool)
+
+setProxyAdminHatViaFactory(string,uint256,address)
+
+setHatIdsViaFactory(string,uint256,uint256,address)
+
+addTokenBalanceCriterionViaFactory(string,address,uint256,address,uint256,bool,address)
+
+addTimeLimitCriterionViaFactory(string,address,uint256,uint256,uint256,bool,address)
+
+addAgreementCriterionViaFactory(string,address,uint256,string,bool,address)
+
+addHatsWornCriterionViaFactory(string,address,uint256,uint256[],bool,address)
+
+clearAllCriteriaViaFactory(string,address,uint256,address)
+
+=================================================================
+WHAT CHANGED FROM V2 TO V3?
+=================================================================
+
+✅ UNCHANGED (2 functions):
+  - createPodProxy(string,address,address[],address,uint256)
+  - updatePodProxy(string,address[],address,bool)
+
+🚀 UPDATED (7 functions - added "address" parameter at end):
+  - setProxyAdminHatViaFactory(string,uint256,address)
+  - setHatIdsViaFactory(string,uint256,uint256,address)
+  - addTokenBalanceCriterionViaFactory(string,address,uint256,address,uint256,bool,address)
+  - addTimeLimitCriterionViaFactory(string,address,uint256,uint256,uint256,bool,address)
+  - addAgreementCriterionViaFactory(string,address,uint256,string,bool,address)
+  - addHatsWornCriterionViaFactory(string,address,uint256,uint256[],bool,address)
+  - clearAllCriteriaViaFactory(string,address,uint256,address)
+
+=================================================================
+WHY THIS IS NEEDED?
+=================================================================
+
+The V3 factory accepts an "actualUser" parameter for authorization checks.
+This enables sponsored transactions (ERC-4337) to work correctly by checking
+the ACTUAL user's HAT ownership instead of the bundler's address.
+
+Without this parameter, gas estimation fails with "execution reverted".
+
+=================================================================

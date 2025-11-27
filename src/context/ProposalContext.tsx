@@ -1,8 +1,9 @@
 // src/context/ProposalContext.tsx
 'use client';
-import React, { createContext, useContext, useState, useCallback, ReactNode } from 'react';
+import type React from 'react';
+import { createContext, useContext, useState, useCallback, type ReactNode } from 'react'
 import { useAccount, useReadContract } from 'wagmi';
-import { Address } from 'viem';
+import type { Address } from 'viem';
 
 // Types
 interface ProposalFormData {

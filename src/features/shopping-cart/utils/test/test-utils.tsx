@@ -1,4 +1,4 @@
-import { ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import { render } from '@testing-library/react';
 
 import { ThemeProvider } from 'commons/style/styled-components';

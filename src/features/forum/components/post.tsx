@@ -1,12 +1,14 @@
 // src/features/forum/post.tsx
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import { useAuthContext } from '@/features/identity';
+import type React from 'react';
+import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { supabase } from 'src/utils/supabaseClient';
+import { supabase } from '@/utils/supabaseClient';
 import { useAccount } from 'wagmi';
-import PostCard from 'src/app/features/forum/components/PostCard';
-import { Button } from 'src/components/ui/button';
+import PostCard from '@/features/forum/components/PostCard';
+import { Button } from '@/components/ui/button';
 import { Loader2, Lock } from 'lucide-react';
 import styles from '../styles/Forum.module.css';
 
@@ -22,6 +24,7 @@ interface Post {
 
 const PostPage: React.FC = () => {
   const { postId } = useParams() as { postId: string };
+  const { session, isAuthenticated, signIn } = useAuthContext();
   const router = useRouter();
   const { address, isConnected } = useAccount();
 
@@ -37,7 +40,7 @@ const PostPage: React.FC = () => {
       setError('');
 
       // 1) Ensure user is authenticated with Supabase
-      const { data: { session } } = await supabase.auth.getSession();
+      const session = await getCurrentSession();
       if (!session) {
         setError('You must be logged in (Supabase session) to fetch post.');
         setIsLoading(false);

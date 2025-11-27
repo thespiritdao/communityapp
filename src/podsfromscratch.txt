@@ -1,0 +1,258 @@
+ 📋 Option B: Complete Hard Refresh Plan (12/31/25)
+
+  Here's a step-by-step plan to recreate your entire Hats/Pods structure from scratch:
+
+  Pre-Migration Preparation (Week of 12/24)
+
+  1. Document Current State
+  -- Export current member list
+  SELECT
+    up.wallet_address,
+    up.display_name,
+    string_agg(DISTINCT pr.role_name, ', ') as roles,
+    up.created_at as joined_date
+  FROM user_profiles up
+  LEFT JOIN pod_memberships pm ON up.wallet_address = pm.member_address
+  LEFT JOIN pod_roles pr ON pm.role_id = pr.id
+  GROUP BY up.wallet_address, up.display_name, up.created_at;
+
+  -- Export pod structures
+  SELECT
+    p.id,
+    p.name,
+    p.description,
+    p.management_hat_id,
+    p.blockchain_pod_id
+  FROM pods p;
+
+  2. Backup Critical Data
+  - Export all user profiles
+  - Export all pod memberships
+  - Export all role configurations
+  - Document all hat IDs and relationships
+
+  ---
+  Migration Day (12/31/25) - Step-by-Step
+
+  Phase 1: Deploy New Hats Tree (30 minutes)
+
+  Step 1.1: Create Top Hat
+  // Via Hats Protocol UI or smart contract
+  // https://app.hatsprotocol.xyz/
+
+  1. Go to Hats Protocol
+  2. Click "Create New Tree"
+  3. Name: "SpiritDAO v2"
+  4. Owner: YOUR_SAFE_WALLET (0x...)
+  5. Save Top Hat ID → Store as NEXT_PUBLIC_TOP_HAT_V2
+
+  Step 1.2: Create Executive Pod Structure
+  Top Hat (0x00000088...)
+  ├── Executive Pod Leader (0x0000008800010000...)
+  │   └── Executive Pod Member (0x0000008800010001...)
+  └── Community Pods Parent (0x0000008800020000...)
+
+  Hats to create:
+  1. Executive Pod Leader
+    - Parent: Top Hat
+    - Max Supply: 5
+    - Mutable: Yes
+    - Admin: Top Hat
+  2. Executive Pod Member
+    - Parent: Executive Pod Leader
+    - Max Supply: 100
+    - Mutable: Yes
+    - Admin: Executive Pod Leader
+  3. Community Pods Parent
+    - Parent: Top Hat
+    - Max Supply: 1000
+    - Mutable: Yes
+    - Admin: Executive Pod Leader
+
+  ---
+  Phase 2: Deploy Infrastructure Contracts (45 minutes)
+
+  Step 2.1: Deploy Token Contracts
+  # Deploy new SYSTEM token
+  npx hardhat run scripts/deploy/deploySystemToken.js --network base
+
+  # Deploy new SELF token  
+  npx hardhat run scripts/deploy/deploySelfToken.js --network base
+
+  Step 2.2: Deploy Pod Management Contracts
+  # Deploy PodAuthProxy Factory
+  npx hardhat run scripts/deploy/deployPodAuthFactory.js --network base
+
+  # Deploy Treasury Factory
+  npx hardhat run scripts/deploy/deployTreasuryFactory.js --network base
+
+  # Deploy Pod Creation Manager
+  npx hardhat run scripts/deploy/deployPodCreationManager.js --network base
+
+  Step 2.3: Deploy Governance Contracts
+  # Deploy new Governor with new tokens
+  npx hardhat run scripts/deploy/deployGovernor.js --network base
+
+  # Deploy Timelock
+  npx hardhat run scripts/deploy/deployTimelock.js --network base
+
+  Step 2.4: Create Executive Pod Proxy
+  # Create PodAuthProxy for Executive Pod
+  npx hardhat run scripts/createExecutivePodProxy.js --network base
+
+  ---
+  Phase 3: Update Environment Variables (15 minutes)
+
+  Create new .env.v2 file:
+  # NEW HATS
+  NEXT_PUBLIC_TOP_HAT_V2=0x[new_top_hat_id]
+  NEXT_PUBLIC_EXECUTIVE_POD_LEADER_V2=0x[new_exec_leader_id]
+  NEXT_PUBLIC_EXECUTIVE_POD_MEMBER_V2=0x[new_exec_member_id]
+  NEXT_PUBLIC_COMMUNITY_PODS_PARENT_V2=0x[new_community_parent_id]
+
+  # NEW TOKENS
+  NEXT_PUBLIC_SYSTEM_TOKEN_V2=0x[new_system_token]
+  NEXT_PUBLIC_SELF_TOKEN_V2=0x[new_self_token]
+
+  # NEW CONTRACTS
+  NEXT_PUBLIC_DAO_GOVERNOR_V2=0x[new_governor]
+  NEXT_PUBLIC_POD_CREATION_MANAGER_V2=0x[new_pod_manager]
+  NEXT_PUBLIC_EXECUTIVE_POD_PROXY=0x[new_exec_proxy]
+
+  # Keep old values as backup
+  NEXT_PUBLIC_EXECUTIVE_POD_LEADER_V1=0x0000008800010000...
+
+  ---
+  Phase 4: Database Migration (30 minutes)
+
+  Step 4.1: Create V2 Tables
+  -- Rename old tables
+  ALTER TABLE pods RENAME TO pods_v1_archive;
+  ALTER TABLE pod_memberships RENAME TO pod_memberships_v1_archive;
+  ALTER TABLE pod_roles RENAME TO pod_roles_v1_archive;
+
+  -- Create fresh tables with existing schema
+  CREATE TABLE pods AS SELECT * FROM pods_v1_archive WHERE false;
+  CREATE TABLE pod_memberships AS SELECT * FROM pod_memberships_v1_archive WHERE false;
+  CREATE TABLE pod_roles AS SELECT * FROM pod_roles_v1_archive WHERE false;
+
+  Step 4.2: Create Executive Pod in Database
+  INSERT INTO pods (
+    name,
+    description,
+    management_hat_id,
+    blockchain_pod_id,
+    proxy_contract_address,
+    created_by
+  ) VALUES (
+    'Executive Pod',
+    'Core leadership and governance pod',
+    '0x[NEXT_PUBLIC_EXECUTIVE_POD_LEADER_V2]',
+    1, -- First pod on new system
+    '0x[NEXT_PUBLIC_EXECUTIVE_POD_PROXY]',
+    '0x12a0cf22D632c859B793F852af03b9d515580244'
+  );
+
+  Step 4.3: Migrate User Profiles
+  -- Keep user profiles (wallet addresses stay the same)
+  -- Just reset onboarding status
+  UPDATE user_profiles
+  SET onboarded_at = NULL, -- Will re-onboard to new system
+      referral_key = NULL; -- Will generate new codes
+
+  ---
+  Phase 5: Token Migration (1 hour)
+
+  Step 5.1: Snapshot Current Holders
+  // scripts/snapshotTokenHolders.js
+  const systemHolders = await getTokenHolders(OLD_SYSTEM_TOKEN);
+  const selfHolders = await getTokenHolders(OLD_SELF_TOKEN);
+
+  // Save to file
+  fs.writeFileSync('token-snapshot.json', JSON.stringify({
+    system: systemHolders,
+    self: selfHolders,
+    timestamp: Date.now()
+  }));
+
+  Step 5.2: Airdrop to New Tokens
+  // scripts/migrateTokens.js
+  const snapshot = require('./token-snapshot.json');
+
+  for (const holder of snapshot.system) {
+    await newSystemToken.mint(holder.address, holder.balance);
+  }
+
+  for (const holder of snapshot.self) {
+    await newSelfToken.mint(holder.address, holder.balance);
+  }
+
+  ---
+  Phase 6: Hat Migration (1 hour)
+
+  Step 6.1: Identify Current Hat Holders
+  // scripts/snapshotHatWearers.js
+  const execLeaders = await hatsProtocol.getWearersOfHat(OLD_EXEC_LEADER_HAT);
+  const execMembers = await hatsProtocol.getWearersOfHat(OLD_EXEC_MEMBER_HAT);
+
+  Step 6.2: Mint New Hats
+  // scripts/remintHats.js
+  for (const wearer of execLeaders) {
+    await hatsProtocol.mintHat(NEW_EXEC_LEADER_HAT, wearer);
+  }
+
+  for (const wearer of execMembers) {
+    await hatsProtocol.mintHat(NEW_EXEC_MEMBER_HAT, wearer);
+  }
+
+  ---
+  Phase 7: App Cutover (30 minutes)
+
+  Step 7.1: Deploy New Frontend
+  # Update environment variables
+  cp .env.v2 .env
+
+  # Build with new contracts
+  npm run build
+
+  # Deploy to Vercel/hosting
+  vercel --prod
+
+  Step 7.2: Update Smart Contracts Config
+  // src/config/contracts.ts - Switch to V2
+  export const CONTRACT_ADDRESSES = {
+    HATS_PROTOCOL: '0x3bc1a0ad72417f2d411118085256fc53cbddd137', // Same
+    SYSTEM_TOKEN: process.env.NEXT_PUBLIC_SYSTEM_TOKEN_V2,
+    SELF_TOKEN: process.env.NEXT_PUBLIC_SELF_TOKEN_V2,
+    // ... all V2 addresses
+  };
+
+  Step 7.3: Announcement
+  📢 SpiritDAO V2 is live!
+
+  ✅ Fresh governance tokens airdropped
+  ✅ New pod infrastructure deployed
+  ✅ Beta testing complete - welcome to mainnet!
+
+  Please reconnect your wallet to sync your new roles.
+
+  ---
+  Post-Migration Checklist (Day 2 - 1/1/26)
+
+  - [ ] Verify all token balances migrated correctly
+  - [ ] Verify all hat holders can access features
+  - [ ] Test pod creation with new proxy system
+  - [ ] Test governance voting with new Governor
+  - [ ] Verify paymaster still works
+  - [ ] Check all RPC endpoints responding
+  - [ ] Monitor error logs for 24 hours
+  - [ ] Send thank-you to beta testers with bonus tokens
+
+  ---
+  Rollback Plan (If Needed)
+
+  Keep old contract addresses in env for 7 days:
+  # Quick rollback - just switch env vars
+  cp .env.v1.backup .env
+  npm run build
+  vercel --prod

@@ -1,7 +1,6 @@
 //src/utils/safeTransaction.ts
 
 import SafeApiKit from '@safe-global/api-kit';
-import Safe from '@safe-global/protocol-kit';
 import { ethers } from 'ethers';
 import axios from 'axios';
 

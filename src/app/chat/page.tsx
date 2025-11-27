@@ -1,10 +1,10 @@
 //src/app/chat/page.tsx
 
-import ChatContainer from 'src/features/chat/components/ChatContainer';
+import ChatContainer from '@/features/chat/components/ChatContainer';
 
 export default function ChatPage() {
   return (
-    <div className="h-screen">
+    <div>
       <ChatContainer />
     </div>
   );

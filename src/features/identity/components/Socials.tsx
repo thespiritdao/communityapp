@@ -1,6 +1,6 @@
-import React from 'react';
-import { cn } from 'src/styles/theme'; // If you still need this
-import type { UserProfile } from '@/identity/types'; 
+
+import { cn } from '@/styles/theme';
+import type { UserProfile } from '@/features/identity/types'; 
 // ^ Adjust import path/types as needed
 
 interface SocialsProps {

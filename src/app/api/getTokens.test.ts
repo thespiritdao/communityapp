@@ -1,6 +1,6 @@
 import { type Mock, afterEach, describe, expect, it, vi } from 'vitest';
-import { CDP_LIST_SWAP_ASSETS } from 'src/network/definitions/swap';
-import { sendRequest } from 'src/network/request';
+import { CDP_LIST_SWAP_ASSETS } from '@/network/definitions/swap';
+import { sendRequest } from '@/network/request';
 /**
  * @vitest-environment node
  */

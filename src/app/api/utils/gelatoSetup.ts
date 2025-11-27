@@ -2,10 +2,10 @@
 
 import {
   GelatoRelay,
-  RelayResponse,
-  SponsoredCallRequest
+  type RelayResponse,
+  type SponsoredCallRequest
 } from '@gelatonetwork/relay-sdk';
-import { Contract, ethers } from 'ethers';
+import { Contract, } from 'ethers';
 import { UNLOCK_PUBLIC_LOCK_ABI } from './contractABI';
 
 // Environment variables needed

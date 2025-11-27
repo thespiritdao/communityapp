@@ -1,5 +1,5 @@
-import { createContext, useContext, FC, useState } from 'react';
-import { ICartProduct, ICartTotal } from 'models';
+import { createContext, useContext, type FC, useState } from 'react';
+import type { ICartProduct, ICartTotal } from 'models';
 
 export interface ICartContext {
   isOpen: boolean;

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import { useAccount } from 'wagmi';
 import type { LifecycleStatus, TransactionError, TransactionResponse } from '@coinbase/onchainkit/transaction';
 

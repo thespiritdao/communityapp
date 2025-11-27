@@ -13,6 +13,7 @@ type ProfileData = {
   bio?: string | null;
   interests?: string | null;
   seeking?: string | null;
+  open_to_connect?: string | null;
   occupation?: string | null;
   skills_expertise?: string | null;
   workplace_organization?: string | null;
@@ -46,7 +47,7 @@ export async function updateProfile(wallet_address: string, updates: ProfileData
     .maybeSingle();
 
   if (fetchError) {
-    console.error.error('Error fetching existing profile:', fetchError);
+    console.error('Error fetching existing profile:', fetchError);
     throw fetchError;
   }
 
@@ -75,7 +76,7 @@ export async function updateProfile(wallet_address: string, updates: ProfileData
     .single();
 
   if (error) {
-    console.error('Error updating profile:', error);
+    
     throw error;
   }
 

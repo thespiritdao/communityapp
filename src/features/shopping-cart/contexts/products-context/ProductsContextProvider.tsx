@@ -1,7 +1,7 @@
 // src/features/shopping-cart/contexts/products-context/index.tsx
 
-import React, { createContext, useContext, useState, ReactNode, FC } from 'react';
-import { IProduct } from 'models';
+import { createContext, useContext, useState, type ReactNode, type FC } from 'react';
+import type { IProduct } from 'models';
 
 export interface IProductsContext {
   isFetching: boolean;
@@ -10,6 +10,8 @@ export interface IProductsContext {
   setProducts: (products: IProduct[]) => void;
   filters: string[];
   setFilters: (filters: string[]) => void;
+  totalProductCount: number;
+  setTotalProductCount: (count: number) => void;
 }
 
 const ProductsContext = createContext<IProductsContext | undefined>(undefined);
@@ -30,6 +32,7 @@ export const ProductsProvider: FC<ProductsProviderProps> = ({ children }) => {
   const [isFetching, setIsFetching] = useState(false);
   const [products, setProducts] = useState<IProduct[]>([]);
   const [filters, setFilters] = useState<string[]>([]);
+  const [totalProductCount, setTotalProductCount] = useState(0);
 
   const value: IProductsContext = {
     isFetching,
@@ -38,6 +41,8 @@ export const ProductsProvider: FC<ProductsProviderProps> = ({ children }) => {
     setProducts,
     filters,
     setFilters,
+    totalProductCount,
+    setTotalProductCount,
   };
 
   return (

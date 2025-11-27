@@ -1,10 +1,11 @@
 "use client"
 
-import React, { useState } from 'react';
-import { Button } from 'src/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from 'src/components/ui/card';
+import type React from 'react';
+import { useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useReadContract } from 'wagmi';
-import BountyManagerABI from '../../../contracts/BountyManager.json';
+import BountyManagerABI from '@/abis/BountyManager.json';
 
 interface BountyDebuggerProps {
   bountyId: string;
@@ -22,7 +23,7 @@ export const BountyDebugger: React.FC<BountyDebuggerProps> = ({
     address: process.env.NEXT_PUBLIC_BOUNTY_MANAGER_ADDRESS as `0x${string}`,
     abi: BountyManagerABI,
     functionName: 'getBounty',
-    args: [parseInt(bountyId)]
+    args: [Number.parseInt(bountyId)]
   });
 
   const checkBountyState = async () => {
@@ -88,7 +89,7 @@ export const BountyDebugger: React.FC<BountyDebuggerProps> = ({
           <div className="bg-gray-50 p-4 rounded-lg text-sm">
             <h4 className="font-semibold mb-2">Debug Results:</h4>
             {debugInfo.error ? (
-              <p className="text-red-600">Error: {debugInfo.error}</p>
+              <p style={{ color: '#8B3A3A' }}>Error: {debugInfo.error}</p>
             ) : (
               <div className="space-y-2">
                 <p><strong>Bounty Status:</strong> {debugInfo.bountyStatus}</p>
@@ -97,7 +98,7 @@ export const BountyDebugger: React.FC<BountyDebuggerProps> = ({
                 <p><strong>All Bidders:</strong></p>
                 <ul className="ml-4">
                   {debugInfo.allBidders.map((bidder: string, index: number) => (
-                    <li key={index} className={bidder === debugInfo.lookingFor ? 'text-green-600 font-bold' : ''}>
+                    <li key={index} className={bidder === debugInfo.lookingFor ? 'font-bold' : ''} style={bidder === debugInfo.lookingFor ? { color: '#3F7A5A' } : undefined}>
                       {bidder} {bidder === debugInfo.lookingFor ? '← MATCH!' : ''}
                     </li>
                   ))}

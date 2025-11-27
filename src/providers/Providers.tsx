@@ -1,16 +1,41 @@
 // src/providers/Providers.tsx
 "use client";
-import { ReactNode } from "react";
+import type { ReactNode } from "react";
 import { WagmiProvider } from "wagmi";
-import { wagmiConfig } from "src/config/wagmi.client";
+import { wagmiConfig } from "@/config/wagmi.client";
 import { RainbowKitProvider } from "@rainbow-me/rainbowkit";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { OnchainKitProvider } from "@coinbase/onchainkit";
 import { base } from "viem/chains";
+import { ProfilesProvider } from "../features/identity/context/ProfilesProvider";
 
-const queryClient = new QueryClient();
+function makeQueryClient() {
+  return new QueryClient({
+    defaultOptions: {
+      queries: {
+        staleTime: 60 * 1000, // 1 minute
+        retry: 1,
+      },
+    },
+  });
+}
+
+let browserQueryClient: QueryClient | undefined = undefined;
+
+function getQueryClient() {
+  if (typeof window === 'undefined') {
+    // Server: always make a new query client
+    return makeQueryClient();
+  } else {
+    // Browser: make a new query client if we don't already have one
+    if (!browserQueryClient) browserQueryClient = makeQueryClient();
+    return browserQueryClient;
+  }
+}
 
 export default function Providers({ children }: { children: ReactNode }) {
+  const queryClient = getQueryClient();
+  
   return (
     <WagmiProvider config={wagmiConfig}>
       <QueryClientProvider client={queryClient}>
@@ -33,7 +58,9 @@ export default function Providers({ children }: { children: ReactNode }) {
           }}
         >
           <RainbowKitProvider modalSize="compact">
-            {children}
+            <ProfilesProvider>
+              {children}
+            </ProfilesProvider>
           </RainbowKitProvider>
         </OnchainKitProvider>
       </QueryClientProvider>

@@ -1,7 +1,7 @@
-import { getRoundedAmount } from 'src/internal/utils/getRoundedAmount';
-import { cn, color, text } from 'src/styles/theme';
-import { useGetETHBalance } from 'src/wallet/hooks/useGetETHBalance';
-import type { EthBalanceReact } from 'src/features/identity/types';
+import { getRoundedAmount } from '../../../internal/utils/getRoundedAmount';
+import { cn, color, text } from '../../../styles/theme';
+import { useGetETHBalance } from '../../../wallet/hooks/useGetETHBalance';
+import type { EthBalanceReact } from '../../../features/identity/types';
 import { useIdentityContext } from './IdentityProvider';
 
 export function EthBalance({ address, className }: EthBalanceReact) {

@@ -1,6 +1,5 @@
 'use client';
-
-import React from 'react';
+import { use } from 'react';
 import { EventCheckInSystem } from '@/features/events/components/EventCheckInSystem';
 import { useEvent } from '@/features/events/hooks/useEvents';
 import { useEventAccess } from '@/features/events/hooks/useEventTokenGating';
@@ -11,14 +10,15 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
 interface ManageCheckInPageProps {
-  params: {
+  params: Promise<{
     id: string;
-  };
+  }>;
 }
 
 export default function ManageCheckInPage({ params }: ManageCheckInPageProps) {
+  const resolvedParams = use(params);
   const router = useRouter();
-  const { event, loading: eventLoading, error: eventError } = useEvent(params.id);
+  const { event, loading: eventLoading, error: eventError } = useEvent(resolvedParams.id);
   const { canManage, loading: accessLoading } = useEventAccess(event);
 
   if (eventLoading || accessLoading) {
@@ -81,7 +81,7 @@ export default function ManageCheckInPage({ params }: ManageCheckInPageProps) {
                 <Button variant="outline" onClick={() => router.back()}>
                   Go Back
                 </Button>
-                <Button asChild>
+                <Button asChild={true}>
                   <Link href={`/events/${event.id}`}>View Event</Link>
                 </Button>
               </div>
@@ -93,7 +93,7 @@ export default function ManageCheckInPage({ params }: ManageCheckInPageProps) {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4">
+    <div className="min-h-screen bg-gray-50 p-4 pb-20">
       <div className="max-w-7xl mx-auto">
         <div className="flex items-center space-x-4 mb-6">
           <Button variant="outline" onClick={() => router.back()}>
@@ -101,8 +101,7 @@ export default function ManageCheckInPage({ params }: ManageCheckInPageProps) {
             Back
           </Button>
           <div>
-            <h1 className="text-3xl font-bold">Event Check-In Management</h1>
-            <p className="text-gray-600">{event.title}</p>
+            <h1 className="text-3xl font-bold">Event Check-In</h1>
           </div>
         </div>
         

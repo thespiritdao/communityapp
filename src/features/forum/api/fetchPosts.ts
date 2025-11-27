@@ -1,5 +1,5 @@
 // src/features/forum/api/fetchPosts.ts
-import { supabase } from 'src/utils/supabaseClient';
+import { supabase } from '@/utils/supabaseClient';
 
 export type FetchPostsParams = {
   threadId: string;
@@ -10,7 +10,7 @@ export type FetchPostsParams = {
 
 export const fetchPosts = async ({ threadId, walletAddress, limit = 20, offset = 0 }: FetchPostsParams) => {
   try {
-    let query = supabase
+    const query = supabase
       .from('forum_posts')
       .select(`
         id,

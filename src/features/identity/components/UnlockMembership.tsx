@@ -1,6 +1,6 @@
 //src/features/identity/components/UnlockMembership.tsx
 
-import React from 'react';
+import type React from 'react';
 import { useContractRead } from 'wagmi';
 import { UNLOCK_PUBLIC_LOCK_ABI } from 'utils/contractABI';
 

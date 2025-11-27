@@ -1,7 +1,7 @@
 //src/features/shopping-cart/components/Filter/style.ts
 
-import styled from "src/features/shopping-cart/commons/style/styled-components";
-import CB from "src/features/shopping-cart/commons/Checkbox/Checkbox";
+import styled from "@/features/shopping-cart/commons/style/styled-components";
+import CB from "@/features/shopping-cart/commons/Checkbox/Checkbox";
 
 export const Container = styled.div`
   display: flex;

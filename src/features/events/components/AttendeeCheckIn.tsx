@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import type React from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -15,7 +16,7 @@ import {
   Share2
 } from 'lucide-react';
 
-import { EventWithStats, EventRegistration } from '../types/event';
+import type { EventWithStats, } from '../types/event';
 import { useEventRegistration } from '../hooks/useEvents';
 import { useAccount } from 'wagmi';
 import QRCode from 'qrcode';
@@ -86,13 +87,13 @@ export const AttendeeCheckIn: React.FC<AttendeeCheckInProps> = ({ event }) => {
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'registered':
-        return 'bg-blue-500';
+        return 'bg-[#2F5D50]';
       case 'checked_in':
-        return 'bg-green-500';
+        return 'bg-[#3F7A5A]';
       case 'completed':
-        return 'bg-purple-500';
+        return 'bg-[#2F5D50]';
       case 'cancelled':
-        return 'bg-red-500';
+        return 'bg-[#8B3A3A]';
       default:
         return 'bg-gray-500';
     }
@@ -166,7 +167,7 @@ export const AttendeeCheckIn: React.FC<AttendeeCheckInProps> = ({ event }) => {
           <p className="text-gray-600 mb-4">
             You need to register for this event to access check-in.
           </p>
-          <Button asChild>
+          <Button asChild={true}>
             <a href={`/events/${event.id}`}>
               View Event & Register
             </a>
@@ -205,8 +206,8 @@ export const AttendeeCheckIn: React.FC<AttendeeCheckInProps> = ({ event }) => {
         </CardHeader>
         
         <CardContent>
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-            <p className="text-blue-800 font-medium">
+          <div className="rounded-lg p-4" style={{ backgroundColor: '#E8F1EE', border: '1px solid #B8D9CA' }}>
+            <p className="font-medium" style={{ color: '#2F5D50' }}>
               {getStatusMessage(registration.registration_status)}
             </p>
           </div>
@@ -220,21 +221,23 @@ export const AttendeeCheckIn: React.FC<AttendeeCheckInProps> = ({ event }) => {
             <CardHeader>
               <CardTitle className="flex items-center">
                 <QrCode className="w-5 h-5 mr-2" />
-                Your Check-In QR Code
+                Event Code
               </CardTitle>
             </CardHeader>
             <CardContent className="text-center">
               {userQRCode ? (
                 <div className="space-y-4">
-                  <div 
-                    className={`inline-block p-4 bg-white border-2 rounded-lg cursor-pointer transition-transform hover:scale-105 ${
-                      isEventToday() ? 'border-green-500 shadow-lg' : 'border-gray-200'
-                    }`}
+                  <div
+                    className="inline-block p-4 bg-white border-2 rounded-lg cursor-pointer transition-transform hover:scale-105"
+                    style={{
+                      borderColor: isEventToday() ? '#3F7A5A' : '#e5e7eb',
+                      boxShadow: isEventToday() ? '0 10px 15px -3px rgba(0, 0, 0, 0.1)' : 'none'
+                    }}
                     onClick={() => setShowQRCode(!showQRCode)}
                   >
                     <img
                       src={userQRCode}
-                      alt="Check-in QR Code"
+                      alt="Event Code"
                       className="w-48 h-48 mx-auto"
                     />
                   </div>
@@ -298,12 +301,12 @@ export const AttendeeCheckIn: React.FC<AttendeeCheckInProps> = ({ event }) => {
               </div>
 
               {registration.checked_in_at && (
-                <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                <div className="rounded-lg p-3" style={{ backgroundColor: '#E8F1EE', border: '1px solid #B8D9CA' }}>
                   <div className="flex items-center">
-                    <CheckCircle className="w-5 h-5 text-green-600 mr-2" />
+                    <CheckCircle className="w-5 h-5 mr-2" style={{ color: '#3F7A5A' }} />
                     <div>
-                      <p className="font-medium text-green-800">Checked In Successfully</p>
-                      <p className="text-sm text-green-600">
+                      <p className="font-medium" style={{ color: '#1F453A' }}>Checked In Successfully</p>
+                      <p className="text-sm" style={{ color: '#3F7A5A' }}>
                         {new Date(registration.checked_in_at).toLocaleString()}
                       </p>
                     </div>
@@ -312,12 +315,12 @@ export const AttendeeCheckIn: React.FC<AttendeeCheckInProps> = ({ event }) => {
               )}
 
               {registration.completed_at && (
-                <div className="bg-purple-50 border border-purple-200 rounded-lg p-3">
+                <div className="rounded-lg p-3" style={{ backgroundColor: '#E8E4DC', border: '1px solid #D1CBC2' }}>
                   <div className="flex items-center">
-                    <Award className="w-5 h-5 text-purple-600 mr-2" />
+                    <Award className="w-5 h-5 mr-2" style={{ color: '#6A5F7A' }} />
                     <div>
-                      <p className="font-medium text-purple-800">Event Completed</p>
-                      <p className="text-sm text-purple-600">
+                      <p className="font-medium" style={{ color: '#4A3F5A' }}>Event Completed</p>
+                      <p className="text-sm" style={{ color: '#6A5F7A' }}>
                         Completion NFT issued on {new Date(registration.completed_at).toLocaleDateString()}
                       </p>
                     </div>
@@ -337,8 +340,8 @@ export const AttendeeCheckIn: React.FC<AttendeeCheckInProps> = ({ event }) => {
         <CardContent>
           <div className="space-y-4">
             <div className="flex items-start space-x-3">
-              <div className="bg-blue-100 rounded-full p-2 flex-shrink-0">
-                <span className="text-blue-600 font-bold text-sm">1</span>
+              <div className="rounded-full p-2 flex-shrink-0" style={{ backgroundColor: '#E8F1EE' }}>
+                <span className="font-bold text-sm" style={{ color: '#2F5D50' }}>1</span>
               </div>
               <div>
                 <p className="font-medium">Arrive at the Event</p>
@@ -347,10 +350,10 @@ export const AttendeeCheckIn: React.FC<AttendeeCheckInProps> = ({ event }) => {
                 </p>
               </div>
             </div>
-            
+
             <div className="flex items-start space-x-3">
-              <div className="bg-blue-100 rounded-full p-2 flex-shrink-0">
-                <span className="text-blue-600 font-bold text-sm">2</span>
+              <div className="rounded-full p-2 flex-shrink-0" style={{ backgroundColor: '#E8F1EE' }}>
+                <span className="font-bold text-sm" style={{ color: '#2F5D50' }}>2</span>
               </div>
               <div>
                 <p className="font-medium">Show Your QR Code</p>
@@ -359,10 +362,10 @@ export const AttendeeCheckIn: React.FC<AttendeeCheckInProps> = ({ event }) => {
                 </p>
               </div>
             </div>
-            
+
             <div className="flex items-start space-x-3">
-              <div className="bg-blue-100 rounded-full p-2 flex-shrink-0">
-                <span className="text-blue-600 font-bold text-sm">3</span>
+              <div className="rounded-full p-2 flex-shrink-0" style={{ backgroundColor: '#E8F1EE' }}>
+                <span className="font-bold text-sm" style={{ color: '#2F5D50' }}>3</span>
               </div>
               <div>
                 <p className="font-medium">Attend the Event</p>
@@ -371,10 +374,10 @@ export const AttendeeCheckIn: React.FC<AttendeeCheckInProps> = ({ event }) => {
                 </p>
               </div>
             </div>
-            
+
             <div className="flex items-start space-x-3">
-              <div className="bg-blue-100 rounded-full p-2 flex-shrink-0">
-                <span className="text-blue-600 font-bold text-sm">4</span>
+              <div className="rounded-full p-2 flex-shrink-0" style={{ backgroundColor: '#E8F1EE' }}>
+                <span className="font-bold text-sm" style={{ color: '#2F5D50' }}>4</span>
               </div>
               <div>
                 <p className="font-medium">Receive Completion NFT</p>
@@ -394,7 +397,7 @@ export const AttendeeCheckIn: React.FC<AttendeeCheckInProps> = ({ event }) => {
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Button variant="outline" className="h-auto py-4" asChild>
+            <Button variant="outline" className="h-auto py-4" asChild={true}>
               <a href={`/events/${event.id}`}>
                 <div className="text-center">
                   <Calendar className="w-6 h-6 mx-auto mb-2" />
@@ -403,7 +406,7 @@ export const AttendeeCheckIn: React.FC<AttendeeCheckInProps> = ({ event }) => {
               </a>
             </Button>
             
-            <Button variant="outline" className="h-auto py-4" asChild>
+            <Button variant="outline" className="h-auto py-4" asChild={true}>
               <a href="/events">
                 <div className="text-center">
                   <Clock className="w-6 h-6 mx-auto mb-2" />

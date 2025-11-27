@@ -23,6 +23,8 @@ export interface Message {
   receiver_wallet_id?: string;
   is_read: boolean;
   required_token?: string;
+  is_pinned?: boolean;  // 🆕 For chat moderation
+  chat_group_id?: string;  // 🆕 For moderation actions
 }
 
 

@@ -1,5 +1,5 @@
 import type { Address, Chain } from 'viem';
-import { getAttestationsByFilter } from 'src/network/attestations';
+import { getAttestationsByFilter } from '@/network/attestations';
 import type { Attestation, GetAttestationsOptions } from '../types';
 import { isChainSupported } from './easSupportedChains';
 
@@ -13,7 +13,7 @@ export async function getAttestations(
   options?: GetAttestationsOptions,
 ): Promise<Attestation[]> {
   if (!isChainSupported(chain)) {
-    console.log('Error in getAttestation: Chain is not supported');
+    
     return [];
   }
   try {
@@ -26,7 +26,7 @@ export async function getAttestations(
     const queryVariablesFilter = { ...defaultQueryVariablesFilter, ...options };
     return await getAttestationsByFilter(address, chain, queryVariablesFilter);
   } catch (error) {
-    console.log(`Error in getAttestation: ${(error as Error).message}`);
+    // Silent fail for attestation errors
     return [];
   }
 }

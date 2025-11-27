@@ -1,10 +1,11 @@
 // src/features/governance/components/VoteButton.tsx
 'use client';
-import React, { useState } from 'react';
+import type React from 'react';
+import { useState } from 'react';
 import { useAccount, usePublicClient } from 'wagmi';
-import { useToast } from 'src/components/ui/use-toast';
-import { getWalletClient } from 'wagmi/actions'; 
-import DAOGovernorABI from 'src/abis/DAO_GovernorABI.json';
+import { useToast } from '@/components/ui/use-toast';
+import { getWalletClient } from 'wagmi/actions';
+import DAOGovernorABI from '@/abis/DAO_GovernorABI.json';
 import {
   Transaction,
   TransactionButton,
@@ -13,20 +14,42 @@ import {
   TransactionStatusLabel,
   TransactionStatusAction,
 } from '@coinbase/onchainkit/transaction';
+import { useGovernancePermission } from '@/hooks/useGovernancePermission';
 
 interface VoteButtonProps {
   proposalId: number;
   choice: number;
+  approvingPodId?: string; // Optional: which pod should approve (defaults to Executive Pod)
 }
 
 const BASE_CHAIN_ID = 8453;
 
-const VoteButton: React.FC<VoteButtonProps> = ({ proposalId, choice }) => {
+const VoteButton: React.FC<VoteButtonProps> = ({ proposalId, choice, approvingPodId }) => {
   const { address } = useAccount();
   const publicClient = usePublicClient();
   const { toast } = useToast();
   const [isProcessing, setIsProcessing] = useState(false);
   const GOVERNOR_ADDRESS = process.env.NEXT_PUBLIC_DAO_GOVERNOR as `0x${string}`;
+
+  // ✅ ARCHITECTURE FIX: Check governance permission for correct pod
+  // On-chain governance proposals typically require Executive Pod permission
+  const { canParticipate: hasGovernancePermission } = useGovernancePermission(
+    approvingPodId,
+    'dao-wide'
+  );
+
+  // ✅ FIX: Block voting if no permission
+  if (!hasGovernancePermission) {
+    return (
+      <button
+        disabled
+        className="px-4 py-2 bg-gray-300 text-gray-500 rounded cursor-not-allowed"
+        title="You do not have governance participation permission in the required pod"
+      >
+        Vote (No Permission)
+      </button>
+    );
+  }
   
   // Handle direct transaction (no smart wallet)
   const handleDirectVote = async () => {
@@ -120,7 +143,14 @@ const VoteButton: React.FC<VoteButtonProps> = ({ proposalId, choice }) => {
         <button 
           onClick={handleDirectVote}
           disabled={isProcessing || !address}
-          className={`px-4 py-2 bg-blue-600 text-white rounded ${isProcessing ? 'opacity-50' : ''}`}
+          className={`px-4 py-2 text-white rounded ${isProcessing ? 'opacity-50' : ''}`}
+          style={{ backgroundColor: '#2F5D50' }}
+          onMouseEnter={(e) => {
+            if (!isProcessing) e.currentTarget.style.backgroundColor = '#1F453A';
+          }}
+          onMouseLeave={(e) => {
+            if (!isProcessing) e.currentTarget.style.backgroundColor = '#2F5D50';
+          }}
         >
           {isProcessing ? 'Processing...' : 'Vote Directly (No Smart Wallet)'}
         </button>
