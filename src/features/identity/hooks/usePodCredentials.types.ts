@@ -5,9 +5,9 @@
 
 export interface PodCredential {
   address: string;
-  type: 'hat' as const;
+  type: 'hat';
   label: string;
-  category: 'credential' as const;
+  category: 'credential';
   image?: string;
   podId: string;
   isLeader: boolean;
