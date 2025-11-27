@@ -1,4 +1,4 @@
-import { Address, Avatar, EthBalance, Identity, Name } from '@/identity';
+import { Address, Avatar, EthBalance, Identity, Name } from '@/features/identity';
 import { color } from '@/styles/theme';
 import { ConnectWallet } from './ConnectWallet';
 import { ConnectWalletText } from './ConnectWalletText';
