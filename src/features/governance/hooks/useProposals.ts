@@ -30,6 +30,11 @@ const PROPOSAL_CREATED_TOPIC = keccak256(
 const fetchProposalsOnChain = async (
   publicClient: ReturnType<typeof usePublicClient>,
 ): Promise<Proposal[]> => {
+  if (!publicClient) {
+    console.warn('publicClient is undefined, returning empty proposals');
+    return [];
+  }
+
   // 1) Fetch ProposalCreated logs
   const logs = await publicClient.getLogs({
     chainId: base.id,

@@ -56,7 +56,7 @@ export default function ProposalDetailPage() {
 
   // Fetch on‑chain proposal core + metadata
   useEffect(() => {
-    if (!id) return;
+    if (!id || !publicClient) return;
     setLoading(true);
 
     (async () => {
@@ -123,7 +123,7 @@ export default function ProposalDetailPage() {
 
   // Fetch on‑chain user vote receipt
   useEffect(() => {
-    if (!id || !address) return;
+    if (!id || !address || !publicClient) return;
 
     (async () => {
       try {
