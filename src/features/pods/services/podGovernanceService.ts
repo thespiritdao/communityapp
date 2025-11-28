@@ -870,7 +870,6 @@ This pod requests permission to:
         recipient_address: recipient.toLowerCase(),
         sender_address: creatorAddress.toLowerCase(),
         notification_type: 'user_mentioned',
-        category: 'general',
         title: 'Pod Leadership Invitation',
         message: `You have been invited to co-lead the pod "${podName}". Please review and sign the leadership agreement.`,
         context_type: 'governance',

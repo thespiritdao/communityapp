@@ -384,7 +384,6 @@ export const HatGatedChatContainer: React.FC<HatGatedChatContainerProps> = ({
                   recipient_address: wallet,
                   sender_address: currentUser.wallet_address,
                   notification_type: 'user_mentioned',
-                  category: 'general',
                   title: 'You were mentioned in a chat',
                   message:
                     `${currentUser.first_name || ''} ${currentUser.last_name || ''}`.trim() +

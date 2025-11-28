@@ -697,7 +697,6 @@ export class PodCoreService {
             recipient_address: manager.wallet_address.toLowerCase(),
             sender_address: creatorAddress.toLowerCase(),
             notification_type: 'user_mentioned',
-            category: 'general',
             title: 'Pod Approval Required',
             message: `New pod "${podName}" is ready for Executive approval.`,
             context_type: 'governance',

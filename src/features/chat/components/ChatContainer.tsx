@@ -471,7 +471,6 @@ export default function ChatContainer({ chatGroupId }: ChatContainerProps) {
                 recipient_address: mention.id,
                 sender_address: currentUser.wallet_address,
                 notification_type: 'user_mentioned',
-                category: 'general',
                 title: 'You were mentioned in a chat',
                 message:
                   `${currentUser.first_name || ''} ${currentUser.last_name || ''}`.trim() +
