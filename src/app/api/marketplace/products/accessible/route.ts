@@ -67,7 +67,8 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    let accessibleProducts: IProduct[] = products || [];
+    // Use any[] since database schema uses snake_case, not full IProduct interface
+    let accessibleProducts: any[] = products || [];
 
     // Apply access control if user address provided
     if (userAddress) {
@@ -77,7 +78,7 @@ export async function GET(request: NextRequest) {
 
         // Filter products based on access
         accessibleProducts = await filterAccessibleProductsAsync(
-          products || [],
+          (products || []) as any,
           identity,
         );
 
