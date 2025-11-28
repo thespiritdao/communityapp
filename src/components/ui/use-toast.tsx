@@ -12,12 +12,14 @@ export interface ToastParams {
   title: string;
   description?: React.ReactNode;
   variant?: ToastVariant;
+  duration?: number;
   options?: HotToastOptions;
 }
 
 export function useToast() {
   const toast = (params: ToastParams) => {
-    const { title, description, variant = 'default', options } = params;
+    const { title, description, variant = 'default', duration, options } =
+      params;
 
     const content = (
       <div style={{ padding: '0.5rem 1rem' }}>
@@ -26,15 +28,21 @@ export function useToast() {
       </div>
     );
 
+    // Merge duration into options if provided
+    const mergedOptions: HotToastOptions = {
+      ...options,
+      ...(duration !== undefined && { duration }),
+    };
+
     switch (variant) {
       case 'destructive':
-        hotToast.error(content, options);
+        hotToast.error(content, mergedOptions);
         break;
       case 'success':
-        hotToast.success(content, options);
+        hotToast.success(content, mergedOptions);
         break;
       default:
-        hotToast(content, options);
+        hotToast(content, mergedOptions);
         break;
     }
   };
