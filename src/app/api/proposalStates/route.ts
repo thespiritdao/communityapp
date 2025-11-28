@@ -1,5 +1,5 @@
 import { type NextRequest, NextResponse } from 'next/server';
-import { createPublicClient, http } from 'viem';
+import { createPublicClient, http, type Abi } from 'viem';
 import { base } from 'viem/chains';
 import DAOGovernorABI from '@/abis/DAO_GovernorABI.json';
 import { supabase } from '@/utils/supabaseClient';
@@ -8,7 +8,7 @@ const GOVERNOR_ADDRESS = process.env.NEXT_PUBLIC_DAO_GOVERNOR as `0x${string}`;
 const RPC_URL = process.env.NEXT_PUBLIC_RPC_URL!;
 
 // Type assertion for viem strict ABI typing
-const governorAbi = DAOGovernorABI as const;
+const governorAbi = DAOGovernorABI as Abi;
 
 // Helper: fetch all proposal IDs from Supabase
 async function getProposalIdsFromSupabase() {
