@@ -4,13 +4,15 @@ import type { EligibilityCriteria } from '@/features/pods/services/EligibilitySe
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { roleId: string } },
+  { params }: { params: Promise<{ roleId: string }> },
 ) {
   try {
+    // Next.js 15: params is now async
+    const { roleId } = await params;
     const { searchParams } = new URL(request.url);
     const userAddress = searchParams.get('userAddress');
 
-    if (!params.roleId) {
+    if (!roleId) {
       return NextResponse.json(
         { error: 'Role ID is required' },
         { status: 400 },
@@ -21,7 +23,7 @@ export async function GET(
     const rolePermission =
       await PodRolePermissionsService.getRolePermissionByHatId(
         '', // We'll need to get this from the role record
-        params.roleId,
+        roleId,
       );
 
     if (!rolePermission) {
@@ -29,7 +31,7 @@ export async function GET(
     }
 
     const response: any = {
-      roleId: params.roleId,
+      roleId,
       roleName: rolePermission.role_name,
       eligibilityCriteria: rolePermission.eligibility_criteria || [],
       maxHolders: rolePermission.max_holders,
@@ -41,7 +43,7 @@ export async function GET(
       const eligibilityCheck =
         await PodRolePermissionsService.checkUserEligibility(
           userAddress,
-          params.roleId,
+          roleId,
         );
 
       response.userEligibility = {
@@ -66,13 +68,15 @@ export async function GET(
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { roleId: string } },
+  { params }: { params: Promise<{ roleId: string }> },
 ) {
   try {
+    // Next.js 15: params is now async
+    const { roleId } = await params;
     const body = await request.json();
     const { eligibilityCriteria, updatedBy } = body;
 
-    if (!params.roleId || !updatedBy) {
+    if (!roleId || !updatedBy) {
       return NextResponse.json(
         { error: 'Role ID and updatedBy are required' },
         { status: 400 },
@@ -88,13 +92,13 @@ export async function PUT(
 
     const updatedRole =
       await PodRolePermissionsService.updateEligibilityCriteria(
-        params.roleId,
+        roleId,
         eligibilityCriteria as EligibilityCriteria[],
         updatedBy,
       );
 
     return NextResponse.json({
-      roleId: params.roleId,
+      roleId,
       roleName: updatedRole.role_name,
       eligibilityCriteria: updatedRole.eligibility_criteria,
       updatedAt: updatedRole.updated_at,

@@ -4,14 +4,16 @@ import { EligibilityService } from '@/features/pods/services/EligibilityService'
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } },
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
+    // Next.js 15: params is now async
+    const { id: podId } = await params;
     const { searchParams } = new URL(request.url);
     const userAddress = searchParams.get('userAddress');
     const roleId = searchParams.get('roleId');
 
-    if (!params.id) {
+    if (!podId) {
       return NextResponse.json(
         { error: 'Pod ID is required' },
         { status: 400 },
@@ -34,7 +36,7 @@ export async function GET(
         );
 
       return NextResponse.json({
-        podId: params.id,
+        podId,
         userAddress,
         roleId,
         eligible: eligibilityCheck.eligible,
@@ -46,11 +48,11 @@ export async function GET(
     const eligibleRoles =
       await PodRolePermissionsService.getEligibleRolesForUser(
         userAddress,
-        params.id,
+        podId,
       );
 
     return NextResponse.json({
-      podId: params.id,
+      podId,
       userAddress,
       eligibleRoles: eligibleRoles.map(({ role, eligible, evaluation }) => ({
         roleId: role.id,
@@ -76,13 +78,15 @@ export async function GET(
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } },
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
+    // Next.js 15: params is now async
+    const { id: podId } = await params;
     const body = await request.json();
     const { userAddress, criteria, roleId } = body;
 
-    if (!params.id || !userAddress || !criteria) {
+    if (!podId || !userAddress || !criteria) {
       return NextResponse.json(
         { error: 'Pod ID, user address, and criteria are required' },
         { status: 400 },
@@ -91,13 +95,13 @@ export async function POST(
 
     const evaluation = await EligibilityService.evaluateCriteria({
       userAddress,
-      podId: params.id,
+      podId,
       roleId,
       criteria,
     });
 
     return NextResponse.json({
-      podId: params.id,
+      podId,
       userAddress,
       roleId,
       evaluation,
