@@ -404,7 +404,10 @@ export default function EventManagePage({ params }: EventManagePageProps) {
         </div>
 
         {/* Management Tabs */}
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <Tabs
+          value={activeTab}
+          onValueChange={(value) => setActiveTab(value as 'overview' | 'registrations' | 'analytics')}
+        >
           <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="registrations">Registrations</TabsTrigger>
