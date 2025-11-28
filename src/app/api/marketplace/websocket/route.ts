@@ -217,8 +217,9 @@ export class MarketplaceEventBroadcaster {
 /**
  * Database trigger integration for real-time updates
  * This would be called by database triggers or change streams
+ * Note: Not exported as it's not a route handler
  */
-export function handleDatabaseChange(
+function handleDatabaseChange(
   table: string,
   operation: 'INSERT' | 'UPDATE' | 'DELETE',
   oldRecord?: any,
@@ -295,8 +296,9 @@ export function handleDatabaseChange(
 
 /**
  * Server-Sent Events (SSE) alternative for browsers that don't support WebSockets
+ * Note: Not exported as it's not a route handler - use GET endpoint instead
  */
-export async function handleSSE(request: NextRequest) {
+async function handleSSE(request: NextRequest) {
   const userAddress = new URL(request.url).searchParams.get('address');
   const channels = new URL(request.url).searchParams
     .get('channels')
