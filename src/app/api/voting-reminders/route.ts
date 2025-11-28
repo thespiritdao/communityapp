@@ -13,14 +13,13 @@ export async function POST(request: NextRequest) {
 
     console.log('🕐 Processing voting reminders via cron job...');
 
-    const result = await votingReminderService.processAllVotingReminders();
+    await votingReminderService.processAllVotingReminders();
 
-    console.log('✅ Voting reminders processed successfully:', result);
+    console.log('✅ Voting reminders processed successfully');
 
     return NextResponse.json({
       success: true,
       message: 'Voting reminders processed successfully',
-      ...result,
     });
   } catch (error) {
     console.error('❌ Error processing voting reminders:', error);
@@ -51,12 +50,11 @@ export async function GET(request: NextRequest) {
 
     console.log('🧪 Test mode: Processing voting reminders...');
 
-    const result = await votingReminderService.processAllVotingReminders();
+    await votingReminderService.processAllVotingReminders();
 
     return NextResponse.json({
       success: true,
       message: 'Test run completed',
-      ...result,
     });
   } catch (error) {
     console.error('❌ Error in test run:', error);
