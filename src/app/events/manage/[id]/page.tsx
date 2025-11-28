@@ -177,7 +177,7 @@ export default function EventManagePage({ params }: EventManagePageProps) {
         notification_type: 'event_update',
         title: 'Event Update',
         message: notificationMessage.trim(),
-        context_type: 'event',
+        context_type: 'events',
         context_id: resolvedParams.id,
         context_url: `/events/${resolvedParams.id}`,
       });
