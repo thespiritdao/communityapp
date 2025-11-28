@@ -10,7 +10,7 @@ const MAX_PAGE_SIZE = 100;
 const DEFAULT_PAGE_SIZE = 20;
 
 interface ProductsListResponse {
-  products: IProduct[];
+  products: any[]; // Database schema uses snake_case, not full IProduct interface
   pagination: {
     page: number;
     limit: number;
@@ -174,7 +174,8 @@ export async function GET(request: NextRequest) {
     const totalPages = Math.ceil(totalProducts / limit);
 
     // Apply client-side access control if user address provided
-    let accessibleProducts: IProduct[] = products || [];
+    // Use any[] since database schema uses snake_case, not full IProduct interface
+    let accessibleProducts: any[] = products || [];
 
     if (userAddress) {
       try {
