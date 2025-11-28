@@ -1,7 +1,7 @@
 // src/features/governance/hooks/useProposals.ts
 import { useQuery } from '@tanstack/react-query';
 import { usePublicClient } from 'wagmi';
-import { keccak256, toBytes, decodeEventLog } from 'viem';
+import { decodeEventLog } from 'viem';
 import DAOGovernorABI from '@/abis/DAO_GovernorABI.json';
 import { supabase } from '@/utils/supabaseClient';
 import { CONTRACT_ADDRESSES } from '@/config/contracts';
@@ -20,11 +20,6 @@ interface Proposal {
 }
 
 const GOVERNOR_ADDRESS = CONTRACT_ADDRESSES.DAO_GOVERNOR;
-const PROPOSAL_CREATED_TOPIC = keccak256(
-  toBytes(
-    'ProposalCreated(uint256,address,address[],uint256[],bytes[],uint64,uint64,string)',
-  ),
-);
 
 const fetchProposalsOnChain = async (
   publicClient: ReturnType<typeof usePublicClient>,
@@ -34,16 +29,16 @@ const fetchProposalsOnChain = async (
     return [];
   }
 
-  // 1) Fetch ProposalCreated logs
-  const logs = await publicClient.getLogs({
-    address: GOVERNOR_ADDRESS,
-    topics: [PROPOSAL_CREATED_TOPIC],
-  });
-
-  // 2) Decode each log to extract id & description
+  // 1) Get event ABI for type-safe filtering
   const eventAbi = DAOGovernorABI.find(
     (item) => item.type === 'event' && item.name === 'ProposalCreated',
   )!;
+
+  // 2) Fetch ProposalCreated logs
+  const logs = await publicClient.getLogs({
+    address: GOVERNOR_ADDRESS,
+    event: eventAbi,
+  });
   const decoded = logs.map((log) =>
     decodeEventLog({
       abi: [eventAbi],

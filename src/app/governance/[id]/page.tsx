@@ -5,7 +5,7 @@ import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { useAccount, usePublicClient } from 'wagmi';
 import DAOGovernorABI from '@/abis/DAO_GovernorABI.json';
-import { keccak256, toBytes, decodeEventLog } from 'viem';
+import { decodeEventLog } from 'viem';
 import VoteButton from '@/features/governance/components/VoteButton';
 import { useForumPostTitle } from '@/features/governance/hooks/useForumPostTitle';
 
@@ -44,11 +44,6 @@ export default function ProposalDetailPage() {
 
   const GOVERNOR_ADDRESS = process.env
     .NEXT_PUBLIC_DAO_GOVERNOR as `0x${string}`;
-  const PROPOSAL_CREATED_TOPIC = keccak256(
-    toBytes(
-      'ProposalCreated(uint256,address,address[],uint256[],bytes[],uint256,uint256,string)',
-    ),
-  );
   const eventAbi = DAOGovernorABI.find(
     (item) => item.type === 'event' && item.name === 'ProposalCreated',
   )!;
@@ -63,7 +58,7 @@ export default function ProposalDetailPage() {
         // 1) Get ProposalCreated events for this governor
         const logs = await publicClient.getLogs({
           address: GOVERNOR_ADDRESS,
-          topics: [PROPOSAL_CREATED_TOPIC],
+          event: eventAbi,
         });
         // 2) Decode and filter for our proposalId
         const decoded = logs
