@@ -5,7 +5,7 @@ import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { useAccount, usePublicClient } from 'wagmi';
 import DAOGovernorABI from '@/abis/DAO_GovernorABI.json';
-import { decodeEventLog } from 'viem';
+import { decodeEventLog, type AbiEvent } from 'viem';
 import VoteButton from '@/features/governance/components/VoteButton';
 import { useForumPostTitle } from '@/features/governance/hooks/useForumPostTitle';
 
@@ -46,7 +46,7 @@ export default function ProposalDetailPage() {
     .NEXT_PUBLIC_DAO_GOVERNOR as `0x${string}`;
   const eventAbi = DAOGovernorABI.find(
     (item) => item.type === 'event' && item.name === 'ProposalCreated',
-  )!;
+  )! as AbiEvent;
 
   // Fetch on‑chain proposal core + metadata
   useEffect(() => {

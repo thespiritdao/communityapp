@@ -1,7 +1,7 @@
 // src/features/governance/hooks/useProposals.ts
 import { useQuery } from '@tanstack/react-query';
 import { usePublicClient } from 'wagmi';
-import { decodeEventLog } from 'viem';
+import { decodeEventLog, type AbiEvent } from 'viem';
 import DAOGovernorABI from '@/abis/DAO_GovernorABI.json';
 import { supabase } from '@/utils/supabaseClient';
 import { CONTRACT_ADDRESSES } from '@/config/contracts';
@@ -32,7 +32,7 @@ const fetchProposalsOnChain = async (
   // 1) Get event ABI for type-safe filtering
   const eventAbi = DAOGovernorABI.find(
     (item) => item.type === 'event' && item.name === 'ProposalCreated',
-  )!;
+  )! as AbiEvent;
 
   // 2) Fetch ProposalCreated logs
   const logs = await publicClient.getLogs({
