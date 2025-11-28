@@ -31,7 +31,7 @@ const TEST_ABI = [
     outputs: [],
     stateMutability: 'nonpayable',
   },
-] as const;
+];
 
 export default function DebugTreasuryPage() {
   const { address } = useAccount();
