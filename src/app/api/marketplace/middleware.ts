@@ -2,7 +2,7 @@ import { type NextRequest, NextResponse } from 'next/server';
 
 // Rate limiting configuration
 const RATE_LIMIT_WINDOW = 60 * 1000; // 1 minute
-const RATE_LIMITS = {
+const RATE_LIMITS: { [key: string]: number } = {
   '/api/marketplace/products/list': 100, // 100 requests per minute
   '/api/marketplace/products/search': 50, // 50 searches per minute
   '/api/marketplace/products/accessible': 80, // 80 requests per minute
