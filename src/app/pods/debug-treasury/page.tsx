@@ -53,7 +53,7 @@ export default function DebugTreasuryPage() {
     try {
       const testCall = testTransactionCallCreation();
       output += `   ✅ Test call created successfully\n`;
-      output += `   Contract: ${testCall.to}\n`;
+      output += `   Contract: ${testCall.address}\n`;
       output += `   Function: ${testCall.functionName}\n`;
       output += `   Args: ${JSON.stringify(testCall.args)}\n\n`;
     } catch (error) {
