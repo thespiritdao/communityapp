@@ -13,7 +13,8 @@ const connections = new Map<
 >();
 
 // Event types for real-time updates
-export enum MarketplaceEventType {
+// Note: Not exported as Next.js route files can only export HTTP handlers
+enum MarketplaceEventType {
   PRODUCT_CREATED = 'product_created',
   PRODUCT_UPDATED = 'product_updated',
   PRODUCT_DELETED = 'product_deleted',
@@ -71,8 +72,9 @@ export async function GET(request: NextRequest) {
 
 /**
  * Real-time event broadcaster
+ * Note: Not exported as Next.js route files can only export HTTP handlers
  */
-export class MarketplaceEventBroadcaster {
+class MarketplaceEventBroadcaster {
   private static instance: MarketplaceEventBroadcaster;
 
   static getInstance(): MarketplaceEventBroadcaster {
