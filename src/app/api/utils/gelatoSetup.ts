@@ -34,11 +34,12 @@ export class GelatoRelayManager {
     ]);
 
     // Prepare the sponsored call request
+    // SponsoredCallRequest only accepts: chainId, target, data
+    // Note: 'user' property is for ERC2771 calls, not sponsored calls
     const request: SponsoredCallRequest = {
       chainId: 8453n, // Base Mainnet (bigint for Gelato SDK)
       target: UNLOCK_CONTRACT_ADDRESS,
       data: data,
-      user: SAFE_ADDRESS, // Your Safe wallet address
     };
 
     try {
