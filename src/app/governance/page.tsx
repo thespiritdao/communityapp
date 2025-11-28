@@ -170,7 +170,7 @@ export default function GovernancePage() {
                         proposal.type === 'governance' ? (
                           <VoteButton
                             key={`${proposal.id}-${idx}`}
-                            proposalId={proposal.id}
+                            proposalId={Number(proposal.id)}
                             choice={idx + 1}
                           />
                         ) : (

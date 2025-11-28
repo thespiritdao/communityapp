@@ -222,7 +222,11 @@ export default function ProposalDetailPage() {
         <div style={{ marginTop: '2rem' }}>
           <h3>Cast Your Vote</h3>
           {proposal.choices.map((_, idx) => (
-            <VoteButton key={idx} proposalId={proposal.id} choice={idx + 1} />
+            <VoteButton
+              key={idx}
+              proposalId={Number(proposal.id)}
+              choice={idx + 1}
+            />
           ))}
         </div>
       )}
