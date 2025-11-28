@@ -2,7 +2,7 @@
 'use client';
 import type React from 'react';
 import { WagmiConfig } from 'wagmi';
-import { wagmiConfig } from '@/config/wagmi';
+import { wagmiConfig } from '@/config/wagmi.client';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { OnchainKitProvider } from '@coinbase/onchainkit';
 import { base } from 'viem/chains';
