@@ -1,4 +1,10 @@
-import { createContext, useContext, type FC, useState } from 'react';
+import {
+  createContext,
+  useContext,
+  type FC,
+  type PropsWithChildren,
+  useState,
+} from 'react';
 import type { ICartProduct, ICartTotal } from 'models';
 
 export interface ICartContext {
@@ -29,7 +35,7 @@ const totalInitialValues = {
   currencyFormat: '$',
 };
 
-const CartProvider: FC = (props) => {
+const CartProvider: FC<PropsWithChildren> = ({ children }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [products, setProducts] = useState<ICartProduct[]>([]);
   const [total, setTotal] = useState<ICartTotal>(totalInitialValues);
@@ -43,7 +49,11 @@ const CartProvider: FC = (props) => {
     setTotal,
   };
 
-  return <CartContext.Provider value={CartContextValue} {...props} />;
+  return (
+    <CartContext.Provider value={CartContextValue}>
+      {children}
+    </CartContext.Provider>
+  );
 };
 
 export { CartProvider, useCartContext };
