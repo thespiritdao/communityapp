@@ -1,5 +1,6 @@
 //src/components/ui/use-toast.tsx
 
+import type React from 'react';
 import {
   toast as hotToast,
   type ToastOptions as HotToastOptions,
@@ -9,7 +10,7 @@ export type ToastVariant = 'default' | 'destructive' | 'success';
 
 export interface ToastParams {
   title: string;
-  description?: string;
+  description?: React.ReactNode;
   variant?: ToastVariant;
   options?: HotToastOptions;
 }
