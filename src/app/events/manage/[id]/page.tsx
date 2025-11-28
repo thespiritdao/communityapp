@@ -174,7 +174,7 @@ export default function EventManagePage({ params }: EventManagePageProps) {
       await notificationService.createNotification({
         recipient_address: selectedRegistration.user_address,
         sender_address: event?.creator_address || address || '',
-        notification_type: 'event_notifications',
+        notification_type: 'event_update',
         title: 'Event Update',
         message: notificationMessage.trim(),
         context_type: 'event',

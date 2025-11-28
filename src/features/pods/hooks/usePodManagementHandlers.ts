@@ -161,7 +161,7 @@ export function usePodManagementHandlers({
             await unifiedNotificationService.createNotification({
               recipient_address: address.toLowerCase(),
               sender_address: currentAddress.toLowerCase(),
-              notification_type: 'pod_member_removed' as any,
+              notification_type: 'pod_member_removed',
               title: 'Removed from Pod',
               message: `You have been removed from a pod.`,
               context_type: 'governance',

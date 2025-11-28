@@ -97,7 +97,7 @@ class EventNotificationService {
         const notification7d: Partial<EventNotification> = {
           user_id: attendeeAddress.toLowerCase(),
           event_id: eventId,
-          notification_type: 'event_checkin_prompt' as any,
+          notification_type: 'event_checkin_prompt',
           title: `Check-in opens soon: ${eventTitle}`,
           message: `Check-in for "${eventTitle}" opens in 7 days. Get ready!`,
           scheduled_for: sevenDaysBefore.toISOString(),
@@ -121,7 +121,7 @@ class EventNotificationService {
         const notificationDayOf: Partial<EventNotification> = {
           user_id: attendeeAddress.toLowerCase(),
           event_id: eventId,
-          notification_type: 'event_checkin_prompt' as any,
+          notification_type: 'event_checkin_prompt',
           title: `Check-in now: ${eventTitle}`,
           message: `Check-in is now open for "${eventTitle}"! Don't forget to check in to claim your completion NFT.`,
           scheduled_for: dayOf.toISOString(),
@@ -277,7 +277,7 @@ class EventNotificationService {
       const notifications = registrations.map((registration) => ({
         user_id: registration.user_address.toLowerCase(),
         event_id: eventId,
-        notification_type: 'event_update' as const,
+        notification_type: 'event_update',
         title: `Event Update: ${eventTitle}`,
         message: updateMessage,
         scheduled_for: new Date().toISOString(),
@@ -332,7 +332,7 @@ class EventNotificationService {
       const notifications = registrations.map((registration) => ({
         user_id: registration.user_address.toLowerCase(),
         event_id: eventId,
-        notification_type: 'event_cancellation' as const,
+        notification_type: 'event_cancellation',
         title: `Event Cancelled: ${eventTitle}`,
         message: `Unfortunately, "${eventTitle}" has been cancelled. ${cancellationReason}. Any payments made will be refunded automatically.`,
         scheduled_for: new Date().toISOString(),
@@ -377,7 +377,7 @@ class EventNotificationService {
       const notifications = recipientAddresses.map((address) => ({
         user_id: address.toLowerCase(),
         event_id: eventId,
-        notification_type: 'completion_certificate' as const,
+        notification_type: 'completion_certificate',
         title: `Certificate Available: ${eventTitle}`,
         message: `Congratulations! Your completion certificate for "${eventTitle}" is now available in your wallet. Thank you for attending!`,
         scheduled_for: new Date().toISOString(),

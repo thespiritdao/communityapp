@@ -40,8 +40,16 @@ export type NotificationType =
   | 'bounty_update'
   | 'purchase_completed'
   | 'order_status_updated'
+  // Event notifications
   | 'event_registration'
   | 'event_checkin'
+  | 'event_update'
+  | 'event_cancellation'
+  | 'event_checkin_prompt'
+  | 'completion_certificate'
+  // Pod notifications
+  | 'pod_member_removed'
+  | 'pod_leadership_invitation'
   // Governance notifications
   | 'proposal_mentioned'
   | 'proposal_created'

@@ -514,7 +514,7 @@ export class PodOperationsService {
       await unifiedNotificationService.createNotification({
         recipient_address: inviteeAddress.toLowerCase(),
         sender_address: inviterAddress.toLowerCase(),
-        notification_type: 'pod_leadership_invitation' as any,
+        notification_type: 'pod_leadership_invitation',
         title: 'Pod Leadership Invitation',
         message: `You've been invited to become a leader of "${podName}". Visit the pod page to accept or decline.`,
         context_type: 'governance',
