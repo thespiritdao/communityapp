@@ -276,8 +276,8 @@ export function createOptimizedResponse(
   // Apply compression if beneficial
   const compression = compressionMiddleware(request, data);
 
-  // Combine all headers
-  const headers = {
+  // Combine all headers and filter out undefined values
+  const combinedHeaders = {
     ...middleware.rateLimitHeaders,
     ...middleware.corsHeaders,
     ...middleware.securityHeaders,
@@ -285,6 +285,11 @@ export function createOptimizedResponse(
     ...compression.headers,
     'Content-Type': 'application/json',
   };
+
+  // Filter out undefined values to satisfy HeadersInit type
+  const headers = Object.fromEntries(
+    Object.entries(combinedHeaders).filter(([_, value]) => value !== undefined)
+  ) as Record<string, string>;
 
   return NextResponse.json(data, { headers });
 }
