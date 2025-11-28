@@ -1035,7 +1035,6 @@ export function TreasuryManagement({
                         return (
                           <div>
                             <Transaction
-                              account={address}
                               chainId={8453} // Base mainnet
                               calls={prepareTransactionCalls()}
                               isSponsored={true}

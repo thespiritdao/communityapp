@@ -4504,7 +4504,6 @@ Instructions:
                   {/* Transaction 1: HAT Creation */}
                   {!hatCreationComplete && !podCreated && (
                     <Transaction
-                      account={address}
                       chainId={base.id}
                       calls={[transactionCalls[0]]}
                       isSponsored={true}
@@ -4542,7 +4541,6 @@ Instructions:
                     !podCreated &&
                     transactionCalls.length > 1 && (
                       <Transaction
-                        account={address}
                         chainId={base.id}
                         calls={[transactionCalls[1]]}
                         isSponsored={true}
@@ -4683,7 +4681,6 @@ Instructions:
 
               {showMintTransaction && (
                 <Transaction
-                  account={address}
                   chainId={base.id}
                   calls={mintHatCalls}
                   isSponsored={true}
@@ -4800,7 +4797,6 @@ Instructions:
 
               {showSetHatIdsTransaction && (
                 <Transaction
-                  account={address}
                   chainId={base.id}
                   calls={setHatIdsCalls}
                   isSponsored={true}
@@ -4907,7 +4903,6 @@ Instructions:
 
               {showAdminHatTransaction && (
                 <Transaction
-                  account={address}
                   chainId={base.id}
                   calls={adminHatCalls}
                   isSponsored={true}
@@ -4999,7 +4994,6 @@ Instructions:
 
               {showMintAdminHatTransaction && (
                 <Transaction
-                  account={address}
                   chainId={base.id}
                   calls={mintAdminHatCalls}
                   isSponsored={true}
@@ -5084,7 +5078,6 @@ Instructions:
 
               {showConfigureProxyTransaction && (
                 <Transaction
-                  account={address}
                   chainId={base.id}
                   calls={configureProxyCalls}
                   isSponsored={true}
@@ -5177,7 +5170,6 @@ Instructions:
 
               {showEligibilityAdminTransaction && (
                 <Transaction
-                  account={address}
                   chainId={base.id}
                   calls={eligibilityAdminCalls}
                   isSponsored={true}

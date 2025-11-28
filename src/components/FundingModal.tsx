@@ -372,7 +372,6 @@ export default function FundingModal({
                 }
               >
                 <Transaction
-                  account={address}
                   chainId={8453} // Base mainnet
                   calls={prepareTransferTransaction()}
                   isSponsored={true}

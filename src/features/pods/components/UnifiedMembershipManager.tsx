@@ -668,7 +668,6 @@ export const UnifiedMembershipManager: React.FC<
               </div>
 
               <Transaction
-                account={address}
                 chainId={base.id}
                 calls={syncCalls}
                 isSponsored={true}

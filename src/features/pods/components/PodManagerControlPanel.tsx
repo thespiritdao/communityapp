@@ -1807,7 +1807,6 @@ export const PodManagerControlPanel: React.FC<PodManagerControlPanelProps> = ({
                           }}
                         >
                           <Transaction
-                            account={address as `0x${string}`}
                             chainId={base.id}
                             calls={transactionConfig.transactionCalls}
                             isSponsored={transactionConfig.isSponsored}
@@ -2206,7 +2205,6 @@ export const PodManagerControlPanel: React.FC<PodManagerControlPanelProps> = ({
                         {toggleModuleConfig.targetToggleHat})
                       </p>
                       <Transaction
-                        account={toggleModuleConfig.account as `0x${string}`}
                         chainId={base.id}
                         calls={[toggleModuleConfig.transactionCall]}
                         isSponsored={toggleModuleConfig.isSponsored}
@@ -2313,7 +2311,6 @@ export const PodManagerControlPanel: React.FC<PodManagerControlPanelProps> = ({
               </p>
 
               <Transaction
-                account={address?.toLowerCase() as `0x${string}`}
                 chainId={base.id}
                 calls={syncTransactionConfig.calls}
                 isSponsored={true}

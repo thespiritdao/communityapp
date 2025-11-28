@@ -269,7 +269,6 @@ export function GiftModal({
             }
           >
             <Transaction
-              account={address}
               chainId={8453} // Base mainnet
               calls={prepareTransferTransaction()}
               isSponsored={true}

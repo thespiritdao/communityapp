@@ -447,7 +447,6 @@ export default function ConsolidatedTreasuryDeployerV2() {
             </div>
 
             <Transaction
-              account={address?.toLowerCase() as `0x${string}`}
               chainId={8453}
               calls={[prepareDeployTreasuryTransaction(selectedPod)]}
               isSponsored={true}
@@ -543,7 +542,6 @@ export default function ConsolidatedTreasuryDeployerV2() {
             </div>
 
             <Transaction
-              account={address?.toLowerCase() as `0x${string}`}
               chainId={8453}
               calls={prepareSyncTransactions(
                 selectedPod,

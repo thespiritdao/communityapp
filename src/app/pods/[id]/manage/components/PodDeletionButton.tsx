@@ -247,7 +247,6 @@ export const PodDeletionButton: React.FC<PodDeletionButtonProps> = ({
               </p>
 
               <Transaction
-                account={address?.toLowerCase() as `0x${string}`}
                 chainId={base.id}
                 calls={hatTransactionConfig.calls}
                 isSponsored={true}

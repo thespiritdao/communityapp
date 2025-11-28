@@ -999,7 +999,6 @@ export default function Cart({
               {/* Combined approval + purchase transaction */}
               {totalCalls && totalCalls.length > 0 ? (
                 <Transaction
-                  account={address?.toLowerCase() as `0x${string}`}
                   chainId={BASE_CHAIN_ID}
                   calls={totalCalls}
                   isSponsored={true}

@@ -318,7 +318,6 @@ export function PodSpecificTreasuryManager({
           {address && (
             <div className="pt-4 border-t">
               <Transaction
-                account={address}
                 chainId={8453} // Base mainnet
                 calls={calls}
                 isSponsored={true}

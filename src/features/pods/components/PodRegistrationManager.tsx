@@ -247,7 +247,6 @@ export const PodRegistrationManager: React.FC = () => {
 
               <div className="border-t pt-4">
                 <Transaction
-                  account={address}
                   chainId={base.id}
                   calls={prepareRegistrationCalls(pod.id)}
                   isSponsored={true}

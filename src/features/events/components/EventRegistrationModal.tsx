@@ -699,7 +699,6 @@ export const EventRegistrationModal: React.FC<EventRegistrationModalProps> = ({
 
                   return (
                     <Transaction
-                      account={address?.toLowerCase() as `0x${string}`}
                       chainId={BASE_CHAIN_ID}
                       calls={calls}
                       isSponsored={true}

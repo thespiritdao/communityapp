@@ -362,7 +362,6 @@ export default function ConsolidatedTreasuryDeployer({
 
             {/* Deployment Transaction */}
             <Transaction
-              account={address?.toLowerCase() as `0x${string}`}
               chainId={8453} // Base Chain ID
               calls={[prepareNewTreasuryDeployment(selectedPod)]}
               isSponsored={true}

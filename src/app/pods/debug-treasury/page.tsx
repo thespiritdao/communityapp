@@ -198,7 +198,6 @@ export default function DebugTreasuryPage() {
               </CardHeader>
               <CardContent>
                 <Transaction
-                  account={address}
                   chainId={8453}
                   calls={prepareTreasuryCall()}
                   isSponsored={true}

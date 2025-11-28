@@ -304,7 +304,6 @@ export const TokenApprovalFlow: React.FC<TokenApprovalFlowProps> = ({
             </Alert>
 
             <Transaction
-              account={address?.toLowerCase() as `0x${string}`}
               chainId={BASE_CHAIN_ID}
               calls={getSystemApprovalCall()}
               isSponsored={true}
@@ -345,7 +344,6 @@ export const TokenApprovalFlow: React.FC<TokenApprovalFlowProps> = ({
             </Alert>
 
             <Transaction
-              account={address?.toLowerCase() as `0x${string}`}
               chainId={BASE_CHAIN_ID}
               calls={getSelfApprovalCall()}
               isSponsored={true}

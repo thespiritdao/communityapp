@@ -822,7 +822,6 @@ const EventManagementRow: React.FC<EventManagementRowProps> = ({
                     </Button>
                     {showSmartContractCancel ? (
                       <Transaction
-                        account={address?.toLowerCase() as `0x${string}`}
                         chainId={8453}
                         calls={getCancelEventCall(
                           event.blockchain_event_id || event.id,

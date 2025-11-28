@@ -159,7 +159,6 @@ export const EventRegistrationButton: React.FC<
 
           return (
             <Transaction
-              account={address?.toLowerCase() as `0x${string}`}
               chainId={BASE_CHAIN_ID}
               calls={calls}
               isSponsored={true} // ✅ Ensure sponsorship is enabled

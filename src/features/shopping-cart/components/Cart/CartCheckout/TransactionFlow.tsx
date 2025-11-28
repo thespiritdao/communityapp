@@ -329,7 +329,6 @@ const TransactionFlow = memo(
 
         <Suspense fallback={<LoadingSkeleton />}>
           <Transaction
-            account={userAddress as `0x${string}`}
             chainId={BASE_CHAIN_ID}
             calls={calls}
             isSponsored={true}

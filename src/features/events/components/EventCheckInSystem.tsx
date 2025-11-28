@@ -821,7 +821,6 @@ export const EventCheckInSystem: React.FC<EventCheckInSystemProps> = ({
 
                     return (
                       <Transaction
-                        account={address?.toLowerCase() as `0x${string}`}
                         chainId={BASE_CHAIN_ID}
                         calls={calls}
                         isSponsored={true}
