@@ -7,6 +7,9 @@ import { supabase } from '@/utils/supabaseClient';
 const GOVERNOR_ADDRESS = process.env.NEXT_PUBLIC_DAO_GOVERNOR as `0x${string}`;
 const RPC_URL = process.env.NEXT_PUBLIC_RPC_URL!;
 
+// Type assertion for viem strict ABI typing
+const governorAbi = DAOGovernorABI as const;
+
 // Helper: fetch all proposal IDs from Supabase
 async function getProposalIdsFromSupabase() {
   const { data, error } = await supabase
@@ -64,7 +67,7 @@ export async function GET(req: NextRequest) {
     // Multicall for proposal states
     const stateCalls = needsUpdate.map((id) => ({
       address: GOVERNOR_ADDRESS,
-      abi: DAOGovernorABI,
+      abi: governorAbi,
       functionName: 'state',
       args: [BigInt(id)],
     }));
@@ -77,7 +80,7 @@ export async function GET(req: NextRequest) {
     if (user) {
       const voteCalls = needsUpdate.map((id) => ({
         address: GOVERNOR_ADDRESS,
-        abi: DAOGovernorABI,
+        abi: governorAbi,
         functionName: 'hasVoted',
         args: [BigInt(id), user as `0x${string}`],
       }));
@@ -126,7 +129,7 @@ export async function GET(req: NextRequest) {
     });
     const stateCalls = pendingIds.map((id) => ({
       address: GOVERNOR_ADDRESS,
-      abi: DAOGovernorABI,
+      abi: governorAbi,
       functionName: 'state',
       args: [BigInt(id)],
     }));
