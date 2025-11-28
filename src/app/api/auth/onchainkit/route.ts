@@ -51,6 +51,12 @@ export async function POST(req: NextRequest) {
       userId = userProfile.user_id;
       console.log(`API Route: Existing user found with user_id: ${userId}`);
 
+      // Ensure userId is not null before proceeding
+      if (!userId) {
+        console.error('API Route: User profile exists but user_id is null');
+        throw new Error('User profile exists but user_id is null');
+      }
+
       // 3) Verify if user exists in auth.users
       console.log('API Route: Verifying if user exists in auth.users...');
       const { data: authUser, error: authUserError } =
