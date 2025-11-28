@@ -1,6 +1,6 @@
 'use client';
 import { useRouter } from 'next/navigation';
-import { ConsolidatedTreasuryDeployer } from '@/features/pods/components/ConsolidatedTreasuryDeployerV2';
+import ConsolidatedTreasuryDeployer from '@/features/pods/components/ConsolidatedTreasuryDeployerV2';
 import { PodPageLayout } from '@/features/pods/components/PodPageLayout';
 import { Button } from '@/components/ui/button';
 import { ArrowRight, Wrench } from 'lucide-react';

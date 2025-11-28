@@ -7,7 +7,7 @@ import { useAccount, usePublicClient } from 'wagmi';
 import DAOGovernorABI from '@/abis/DAO_GovernorABI.json';
 import { base } from 'viem/chains';
 import { keccak256, decodeEventLog } from 'viem';
-import { VoteButton } from '@/features/governance/components/VoteButton';
+import VoteButton from '@/features/governance/components/VoteButton';
 import { useForumPostTitle } from '@/features/governance/hooks/useForumPostTitle';
 
 interface OnChainProposal {

@@ -9,7 +9,7 @@ import { PodPageLayout } from '@/features/pods/components/PodPageLayout';
 import { HatImageViewer } from '@/features/pods/components/HatImageViewer';
 import { PodContractCreator } from '@/features/pods/components/PodContractCreator';
 import { PodRegistrationManager } from '@/features/pods/components/PodRegistrationManager';
-import { ConsolidatedTreasuryDeployer } from '@/features/pods/components/ConsolidatedTreasuryDeployerV2';
+import ConsolidatedTreasuryDeployer from '@/features/pods/components/ConsolidatedTreasuryDeployerV2';
 import PodTreasurySync from '@/features/pods/components/PodTreasurySync';
 import { useHatPermissions } from '@/hooks/useHatPermissions';
 import { useHatsModules } from '@/hooks/useHatsModules';

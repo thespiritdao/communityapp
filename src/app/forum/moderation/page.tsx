@@ -2,7 +2,7 @@
 
 'use client';
 
-import { ForumAccessGate } from '@/features/forum/components/ForumAccessGate';
+import ForumAccessGate from '@/features/forum/components/ForumAccessGate';
 import { ModerationLog } from '@/features/forum/components/ModerationLog';
 import { ReportQueue } from '@/features/forum/components/ReportQueue';
 import { MutedUsersList } from '@/features/forum/components/MutedUsersList';

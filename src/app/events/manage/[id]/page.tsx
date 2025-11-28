@@ -37,7 +37,7 @@ import {
 } from '@/features/events/hooks/useEvents';
 import { useEventManagementAccess } from '@/features/events/hooks/useEventTokenGating';
 import { EventService } from '@/features/events/lib/supabase';
-import { notificationService } from '@/services/unifiedNotificationService';
+import { unifiedNotificationService as notificationService } from '@/services/unifiedNotificationService';
 import { useAccount } from 'wagmi';
 import Link from 'next/link';
 

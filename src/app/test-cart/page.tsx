@@ -1,7 +1,7 @@
 // src/pages/test-cart/page.tsx
 'use client';
 
-import { Marketplace } from '@/features/shopping-cart/components/Marketplace/Marketplace';
+import Marketplace from '@/features/shopping-cart/components/Marketplace';
 
 export default function TestCartPage() {
   return (

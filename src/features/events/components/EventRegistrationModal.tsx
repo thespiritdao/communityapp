@@ -436,12 +436,12 @@ export const EventRegistrationModal: React.FC<EventRegistrationModalProps> = ({
         // Add a small delay to prevent duplicate notifications from rapid successive calls
         setTimeout(async () => {
           try {
-            const { notificationService } = await import(
-              '../../../utils/notificationService'
+            const { unifiedNotificationService } = await import(
+              '@/services/unifiedNotificationService'
             );
 
             // Send notification to event creator
-            await notificationService.createEventRegistrationNotification(
+            await unifiedNotificationService.createEventRegistrationNotification(
               event.creator_address,
               address!,
               event.id,
@@ -455,7 +455,7 @@ export const EventRegistrationModal: React.FC<EventRegistrationModalProps> = ({
               event.manager_address.toLowerCase() !==
                 event.creator_address.toLowerCase()
             ) {
-              await notificationService.createEventRegistrationNotification(
+              await unifiedNotificationService.createEventRegistrationNotification(
                 event.manager_address,
                 address!,
                 event.id,

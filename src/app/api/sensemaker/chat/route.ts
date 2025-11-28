@@ -4,7 +4,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { classifyQuery } from '@/services/sensemaker/routingService';
 import { queryPinecone } from '@/services/sensemaker/pineconeService';
 import { generateResponse } from '@/services/sensemaker/responseService';
-import { createClient } from '@/utils/supabaseClient';
+import { supabase } from '@/utils/supabaseClient';
 import {
   rateLimiters,
   getClientIp,
@@ -250,8 +250,6 @@ async function logConversation({
   conversationHistory: any[];
 }) {
   try {
-    const supabase = createClient();
-
     // Get user info if authenticated
     const {
       data: { user },

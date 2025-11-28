@@ -197,10 +197,10 @@ export const EventManagerAssignment: React.FC<EventManagerAssignmentProps> = ({
 
       // Send notification to the assigned manager
       try {
-        const { notificationService } = await import(
-          '../../../utils/notificationService'
+        const { unifiedNotificationService } = await import(
+          '@/services/unifiedNotificationService'
         );
-        await notificationService.createNotification({
+        await unifiedNotificationService.createNotification({
           recipient_address: walletAddress,
           sender_address: event.creator_address,
           notification_type: 'bounty_update', // Using existing valid type
