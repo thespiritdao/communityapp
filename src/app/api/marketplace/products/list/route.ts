@@ -181,7 +181,7 @@ export async function GET(request: NextRequest) {
       try {
         const identity = await getUserIdentity(userAddress);
         accessibleProducts = await filterAccessibleProductsAsync(
-          products || [],
+          (products || []) as any,
           identity,
         );
 
