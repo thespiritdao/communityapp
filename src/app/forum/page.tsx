@@ -244,6 +244,7 @@ export default function ForumPage() {
                     <ThreadList
                       threads={recentThreads.map((thread) => ({
                         ...thread,
+                        author_wallet: thread.author_address,
                         author_first_name:
                           profileMap?.[thread.author_address]?.first_name ||
                           null,
