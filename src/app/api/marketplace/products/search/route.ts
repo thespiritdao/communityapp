@@ -165,10 +165,10 @@ export async function GET(request: NextRequest) {
       } catch (err) {
         console.error('Access control error in search:', err);
         accessibleResults =
-          searchResults?.filter((p) => !p.required_token) || [];
+          searchResults?.filter((p: any) => !p.required_token) || [];
       }
     } else {
-      accessibleResults = searchResults?.filter((p) => !p.required_token) || [];
+      accessibleResults = searchResults?.filter((p: any) => !p.required_token) || [];
     }
 
     // Add matched fields information

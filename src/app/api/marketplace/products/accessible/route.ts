@@ -89,12 +89,12 @@ export async function GET(request: NextRequest) {
         console.error('Error filtering products:', err);
         // Fall back to public products only
         accessibleProducts =
-          products?.filter((p) => !p.required_token && !p.requiredToken) || [];
+          products?.filter((p: any) => !p.required_token && !p.requiredToken) || [];
       }
     } else {
       // No user address - return only public products
       accessibleProducts =
-        products?.filter((p) => !p.required_token && !p.requiredToken) || [];
+        products?.filter((p: any) => !p.required_token && !p.requiredToken) || [];
     }
 
     // Prepare optimized response

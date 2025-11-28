@@ -191,11 +191,11 @@ export async function GET(request: NextRequest) {
       } catch (err) {
         console.error('Access control error:', err);
         // Fallback to public products only
-        accessibleProducts = products?.filter((p) => !p.required_token) || [];
+        accessibleProducts = products?.filter((p: any) => !p.required_token) || [];
       }
     } else {
       // No user address - return only public products
-      accessibleProducts = products?.filter((p) => !p.required_token) || [];
+      accessibleProducts = products?.filter((p: any) => !p.required_token) || [];
     }
 
     // Build response
