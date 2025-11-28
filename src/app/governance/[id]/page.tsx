@@ -5,7 +5,6 @@ import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { useAccount, usePublicClient } from 'wagmi';
 import DAOGovernorABI from '@/abis/DAO_GovernorABI.json';
-import { base } from 'viem/chains';
 import { keccak256, toBytes, decodeEventLog } from 'viem';
 import VoteButton from '@/features/governance/components/VoteButton';
 import { useForumPostTitle } from '@/features/governance/hooks/useForumPostTitle';
@@ -63,7 +62,6 @@ export default function ProposalDetailPage() {
       try {
         // 1) Get ProposalCreated events for this governor
         const logs = await publicClient.getLogs({
-          chainId: base.id,
           address: GOVERNOR_ADDRESS,
           topics: [PROPOSAL_CREATED_TOPIC],
         });
@@ -89,7 +87,6 @@ export default function ProposalDetailPage() {
 
         // 3) Read core proposal struct
         const core = (await publicClient.readContract({
-          chainId: base.id,
           address: GOVERNOR_ADDRESS,
           abi: DAOGovernorABI,
           functionName: 'proposals',
@@ -128,7 +125,6 @@ export default function ProposalDetailPage() {
     (async () => {
       try {
         const receipt = (await publicClient.readContract({
-          chainId: base.id,
           address: GOVERNOR_ADDRESS,
           abi: DAOGovernorABI,
           functionName: 'getReceipt',

@@ -3,7 +3,6 @@ import { useQuery } from '@tanstack/react-query';
 import { usePublicClient } from 'wagmi';
 import { keccak256, toBytes, decodeEventLog } from 'viem';
 import DAOGovernorABI from '@/abis/DAO_GovernorABI.json';
-import { base } from 'viem/chains';
 import { supabase } from '@/utils/supabaseClient';
 import { CONTRACT_ADDRESSES } from '@/config/contracts';
 import { retryContractRead } from '@/utils/contractReadRetry';
@@ -37,7 +36,6 @@ const fetchProposalsOnChain = async (
 
   // 1) Fetch ProposalCreated logs
   const logs = await publicClient.getLogs({
-    chainId: base.id,
     address: GOVERNOR_ADDRESS,
     topics: [PROPOSAL_CREATED_TOPIC],
   });
@@ -61,7 +59,6 @@ const fetchProposalsOnChain = async (
 
     // 3) Read on‑chain proposal core data
     const core = (await publicClient.readContract({
-      chainId: base.id,
       address: GOVERNOR_ADDRESS,
       abi: DAOGovernorABI,
       functionName: 'proposals',
