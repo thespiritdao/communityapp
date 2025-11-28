@@ -17,6 +17,10 @@ const nextConfig = {
   compress: true,
   // Optimize production builds
   swcMinify: true,
+  // Temporarily disable CSS minification to unblock deployment
+  experimental: {
+    optimizeCss: false,
+  },
   // Optimize chunks to prevent loading issues and improve HMR stability
   webpack: (config, { isServer, dev }) => {
     if (!isServer) {
