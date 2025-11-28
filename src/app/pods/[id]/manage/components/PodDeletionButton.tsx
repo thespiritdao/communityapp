@@ -168,6 +168,15 @@ export const PodDeletionButton: React.FC<PodDeletionButtonProps> = ({
   };
 
   const handleHatTransactionSuccess = async () => {
+    if (!address) {
+      toast({
+        title: 'Error',
+        description: 'Wallet not connected',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     try {
       // After successful hat deactivation, complete the database deletion
       const result = await PodDeletionService.deletePodDatabase(
