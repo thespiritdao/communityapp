@@ -40,6 +40,7 @@ export function OnchainKitProvider({
       address: address ?? null,
       apiKey: apiKey ?? null,
       chain: chain,
+      rpcUrl: null,
       config: {
         appearance: {
           name: config?.appearance?.name ?? 'SpiritDAO',
