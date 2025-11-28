@@ -266,7 +266,7 @@ export default function OrderDetailPage() {
   const params = useParams();
   const router = useRouter();
   const { address } = useAccount();
-  const orderId = params.id as string;
+  const orderId = typeof params.id === 'string' ? params.id : '';
 
   const [order, setOrder] = useState<Order | null>(null);
   const [statusHistory, setStatusHistory] = useState<StatusHistory[]>([]);

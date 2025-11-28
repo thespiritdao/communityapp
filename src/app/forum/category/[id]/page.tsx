@@ -14,7 +14,8 @@ import styles from '@/features/forum/styles/Forum.module.css';
 const THREADS_PER_PAGE = 20;
 
 export default function CategoryPage() {
-  const { id: categoryId } = useParams(); // This is the category ID (UUID)
+  const params = useParams();
+  const categoryId = typeof params.id === 'string' ? params.id : '';
   const router = useRouter();
   const [threads, setThreads] = useState<any[]>([]);
   const [categoryName, setCategoryName] = useState<string>('');

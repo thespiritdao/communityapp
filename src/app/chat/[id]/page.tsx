@@ -6,8 +6,9 @@ import ChatContainer from '@/features/chat/components/ChatContainer';
 import '@/features/chat/styles/Chat.css';
 
 export default function ChatGroupPage() {
-  const { id } = useParams(); // "id" corresponds to the chat group id
-  const chatGroupId = Array.isArray(id) ? id[0] : id;
+  const params = useParams();
+  const id = params.id;
+  const chatGroupId = typeof id === 'string' ? id : Array.isArray(id) ? id[0] : undefined;
 
   return (
     <div className="chat-shell">

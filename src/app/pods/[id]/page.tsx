@@ -56,7 +56,8 @@ interface AgreementSignature {
 }
 
 export default function PodDetailPage() {
-  const { id } = useParams();
+  const params = useParams();
+  const id = typeof params.id === 'string' ? params.id : '';
   const router = useRouter();
   const { address } = useAccount();
   const { toast } = useToast();

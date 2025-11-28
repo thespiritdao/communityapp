@@ -10,7 +10,8 @@ import PostList from '@/features/forum/components/PostList';
 import styles from '@/features/forum/styles/Forum.module.css';
 
 export default function ThreadDetailPage() {
-  const { id } = useParams(); // "id" is the thread ID
+  const params = useParams();
+  const id = typeof params.id === 'string' ? params.id : '';
   const router = useRouter();
   const [thread, setThread] = useState<any>(null);
   const [categoryId, setCategoryId] = useState<string | null>(null);
