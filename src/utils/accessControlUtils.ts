@@ -93,15 +93,15 @@ export const getUserIdentity = async (
     try {
       const { data: permissions, error } = await supabase
         .from('pod_permission_lookup')
-        .select('hat_id, role_name, pod_id')
+        .select('token_address, role_name, pod_id')
         .eq('is_active', true);
 
       if (!error && permissions) {
         // We'll need to check each hat individually using the HATs contract
         // For now, add the hat IDs that we know the user should have based on permissions
         for (const perm of permissions) {
-          if (perm.hat_id) {
-            discoveredHats.push(normalizeAddress(perm.hat_id));
+          if (perm.token_address) {
+            discoveredHats.push(normalizeAddress(perm.token_address));
           }
         }
       }

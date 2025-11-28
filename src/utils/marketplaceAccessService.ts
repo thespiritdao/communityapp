@@ -118,7 +118,7 @@ export const useEnhancedMarketplaceAccess = () => {
                   functionName: 'balanceOf',
                   args: [
                     address as `0x${string}`,
-                    perm.hat_id as `0x${string}`,
+                    perm.token_address as `0x${string}`,
                   ],
                 });
 
@@ -129,7 +129,7 @@ export const useEnhancedMarketplaceAccess = () => {
                   );
                 }
               } catch (error) {
-                console.error(`Error checking hat ${perm.hat_id}:`, error);
+                console.error(`Error checking hat ${perm.token_address}:`, error);
               }
             }
           }
@@ -216,10 +216,10 @@ export const fetchPodTokensForMarketplace = async () => {
 
     // Combine the data - map tokens to their pod contexts
     const podTokens = tokens?.map((token) => {
-      // Find matching permission by hat_id
+      // Find matching permission by token_address
       const matchingPermission = permissions?.find(
         (perm) =>
-          perm.hat_id === token.address || token.name.includes(perm.role_name),
+          perm.token_address === token.address || token.name.includes(perm.role_name),
       );
 
       return {
@@ -374,7 +374,7 @@ export const fetchUserAuthorizedTokensForGating = async (
           address: hatsContract,
           abi: HATS_ABI,
           functionName: 'balanceOf',
-          args: [userAddress as `0x${string}`, perm.hat_id as `0x${string}`],
+          args: [userAddress as `0x${string}`, perm.token_address as `0x${string}`],
         });
 
         if (Number(balance) > 0) {
@@ -388,7 +388,7 @@ export const fetchUserAuthorizedTokensForGating = async (
             podId: perm.pod_id,
             podName: podName,
             roleName: perm.role_name,
-            hatId: perm.hat_id,
+            hatId: perm.token_address,
             isExecutive: isExecutive || hasExecutiveAccess, // Include if user has executive access via direct check
           });
 
@@ -397,7 +397,7 @@ export const fetchUserAuthorizedTokensForGating = async (
           );
         }
       } catch (error) {
-        console.error(`🎫 Error checking hat ${perm.hat_id}:`, error);
+        console.error(`🎫 Error checking hat ${perm.token_address}:`, error);
       }
     }
 

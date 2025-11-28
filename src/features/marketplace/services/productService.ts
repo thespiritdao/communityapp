@@ -536,7 +536,7 @@ export const getUserManagedProducts = async (
     // Get all pod permissions with marketplace management enabled
     const { data: managementPermissions, error: permError } = await supabase
       .from('pod_permission_lookup')
-      .select('pod_id, role_name, permissions, hat_id')
+      .select('pod_id, role_name, permissions, token_address')
       .eq('is_active', true);
 
     if (permError) {
@@ -584,7 +584,7 @@ export const getUserManagedProducts = async (
           address: hatsContract,
           abi: HATS_ABI,
           functionName: 'balanceOf',
-          args: [userAddress as `0x${string}`, role.hat_id as `0x${string}`],
+          args: [userAddress as `0x${string}`, role.token_address as `0x${string}`],
         });
 
         if (Number(balance) > 0) {

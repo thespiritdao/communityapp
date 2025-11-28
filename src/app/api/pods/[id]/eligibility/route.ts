@@ -57,7 +57,7 @@ export async function GET(
       eligibleRoles: eligibleRoles.map(({ role, eligible, evaluation }) => ({
         roleId: role.id,
         roleName: role.role_name,
-        hatId: role.hat_id,
+        hatId: role.token_address,
         eligible,
         evaluation,
       })),

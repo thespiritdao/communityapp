@@ -136,7 +136,7 @@ export async function POST(request: NextRequest): Promise<Response> {
       console.log('🎩 Future blockchain sync:', {
         podId: context.podId,
         roleId: roleId,
-        hatId: role.hat_id,
+        hatId: role.token_address,
         permissions: role.permissions,
         action: 'This will sync with HATs Protocol smart contract',
       });
@@ -147,7 +147,7 @@ export async function POST(request: NextRequest): Promise<Response> {
       return PodAuthResponse.success({
         message: 'Role permissions sync initiated',
         roleId: roleId,
-        hatId: role.hat_id,
+        hatId: role.token_address,
         syncStatus: 'synced',
       });
     } catch (error) {
