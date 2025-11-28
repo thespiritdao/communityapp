@@ -12,7 +12,7 @@ export interface UseProfilesResult {
   error: Error | null;
 
   // Helper functions
-  getProfile: (walletAddress: string) => UserProfile | undefined;
+  getProfile: (walletAddress: string) => UserProfile | null;
   hasProfile: (walletAddress: string) => boolean;
   isProfileLoading: (walletAddress: string) => boolean;
 }
@@ -66,9 +66,9 @@ export function useProfiles(
   // Helper functions
   const getProfile = useMemo(
     () =>
-      (walletAddress: string): UserProfile | undefined => {
+      (walletAddress: string): UserProfile | null => {
         const normalizedAddress = walletAddress.toLowerCase();
-        return data[normalizedAddress];
+        return data[normalizedAddress] ?? null;
       },
     [data],
   );
