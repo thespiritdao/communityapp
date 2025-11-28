@@ -74,7 +74,7 @@ const TREASURY_PROXY_ABI = [
 interface FundingModalProps {
   isOpen: boolean;
   onClose: () => void;
-  recipientType: 'member' | 'pod';
+  recipientType: 'member' | 'pod' | null;
   recipient: {
     address: string;
     name: string;
@@ -82,7 +82,7 @@ interface FundingModalProps {
     description?: string;
     isTreasury?: boolean; // New prop to indicate treasury funding
     podId?: string; // Pod ID for treasury proxy routing
-  };
+  } | null;
   onSuccess?: (amount: string, token: string) => void;
 }
 
@@ -97,6 +97,11 @@ export default function FundingModal({
   const [selectedToken, setSelectedToken] = useState<'SYSTEM' | null>('SYSTEM');
   const [amount, setAmount] = useState('');
   const [message, setMessage] = useState('');
+
+  // Early return if no recipient or recipientType (modal closed state)
+  if (!recipient || !recipientType) {
+    return null;
+  }
 
   // Get token balances
   const { data: systemBalance, error: systemError } = useBalance({
