@@ -16,22 +16,12 @@ const nextConfig = {
   // Enable compression
   compress: true,
   // Optimize chunks to prevent loading issues and improve HMR stability
-  webpack: (config, { isServer, dev }) => {
-    // CRITICAL: Disable CSS minification to bypass cssnano error in library CSS
-    // This is a temporary workaround for a CSS syntax issue in node_modules
+  webpack: (config, { isServer, dev, webpack }) => {
+    // CRITICAL: Temporarily disable ALL minification to bypass cssnano CSS error
+    // This is a workaround for CSS syntax issue in a third-party library
+    // Will re-enable JS minification after successful deployment
     if (!dev && !isServer) {
-      config.optimization.minimize = true; // Keep JS minification
-      // Find and disable only the CSS minimizer
-      const TerserPlugin = require('next/dist/compiled/terser-webpack-plugin');
-      config.optimization.minimizer = [
-        new TerserPlugin({
-          terserOptions: {
-            compress: {
-              drop_console: false,
-            },
-          },
-        }),
-      ];
+      config.optimization.minimize = false;
     }
 
     if (!isServer) {
