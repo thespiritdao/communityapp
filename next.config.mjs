@@ -15,14 +15,15 @@ const nextConfig = {
   },
   // Enable compression
   compress: true,
-  // Optimize production builds
-  swcMinify: true,
-  // Temporarily disable CSS minification to unblock deployment
-  experimental: {
-    optimizeCss: false,
-  },
   // Optimize chunks to prevent loading issues and improve HMR stability
   webpack: (config, { isServer, dev }) => {
+    // Disable CSS minification to bypass persistent cssnano error
+    if (!dev && !isServer) {
+      config.optimization.minimizer = config.optimization.minimizer.filter(
+        (plugin) => plugin.constructor.name !== 'CssMinimizerPlugin'
+      );
+    }
+
     if (!isServer) {
       config.resolve.fallback = {
         ...config.resolve.fallback,
