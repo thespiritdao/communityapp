@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { useAccount, usePublicClient } from 'wagmi';
 import DAOGovernorABI from '@/abis/DAO_GovernorABI.json';
 import { base } from 'viem/chains';
-import { keccak256, decodeEventLog } from 'viem';
+import { keccak256, toBytes, decodeEventLog } from 'viem';
 import VoteButton from '@/features/governance/components/VoteButton';
 import { useForumPostTitle } from '@/features/governance/hooks/useForumPostTitle';
 
@@ -46,7 +46,9 @@ export default function ProposalDetailPage() {
   const GOVERNOR_ADDRESS = process.env
     .NEXT_PUBLIC_DAO_GOVERNOR as `0x${string}`;
   const PROPOSAL_CREATED_TOPIC = keccak256(
-    'ProposalCreated(uint256,address,address[],uint256[],bytes[],uint256,uint256,string)',
+    toBytes(
+      'ProposalCreated(uint256,address,address[],uint256[],bytes[],uint256,uint256,string)',
+    ),
   );
   const eventAbi = DAOGovernorABI.find(
     (item) => item.type === 'event' && item.name === 'ProposalCreated',

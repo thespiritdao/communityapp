@@ -1,7 +1,7 @@
 // src/features/governance/hooks/useProposals.ts
 import { useQuery } from '@tanstack/react-query';
 import { usePublicClient } from 'wagmi';
-import { keccak256, decodeEventLog } from 'viem';
+import { keccak256, toBytes, decodeEventLog } from 'viem';
 import DAOGovernorABI from '@/abis/DAO_GovernorABI.json';
 import { base } from 'viem/chains';
 import { supabase } from '@/utils/supabaseClient';
@@ -22,7 +22,9 @@ interface Proposal {
 
 const GOVERNOR_ADDRESS = CONTRACT_ADDRESSES.DAO_GOVERNOR;
 const PROPOSAL_CREATED_TOPIC = keccak256(
-  'ProposalCreated(uint256,address,address[],uint256[],bytes[],uint64,uint64,string)',
+  toBytes(
+    'ProposalCreated(uint256,address,address[],uint256[],bytes[],uint64,uint64,string)',
+  ),
 );
 
 const fetchProposalsOnChain = async (
