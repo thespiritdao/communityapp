@@ -15,7 +15,7 @@ interface SearchResult extends IProduct {
 }
 
 interface SearchResponse {
-  results: SearchResult[];
+  results: any[]; // Database schema uses snake_case, not full SearchResult interface
   query: string;
   suggestions: string[];
   facets: {
@@ -152,13 +152,14 @@ export async function GET(request: NextRequest) {
     }
 
     // Apply access control
-    let accessibleResults: SearchResult[] = searchResults || [];
+    // Use any[] since database schema uses snake_case, not full SearchResult interface
+    let accessibleResults: any[] = searchResults || [];
 
     if (userAddress) {
       try {
         const identity = await getUserIdentity(userAddress);
         accessibleResults = await filterAccessibleProductsAsync(
-          searchResults || [],
+          (searchResults || []) as any,
           identity,
         );
       } catch (err) {
