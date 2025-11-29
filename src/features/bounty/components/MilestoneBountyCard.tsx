@@ -132,7 +132,7 @@ export const MilestoneBountyCard: React.FC<MilestoneBountyCardProps> = ({
   const getMilestoneStatus = (milestone: Milestone) => {
     if (milestone.status === 'completed') {
       return {
-        style: { backgroundColor: '#D1E6DC', color: '#1F453A' },
+        className: 'bg-[#D1E6DC] text-[#1F453A]',
         icon: CheckCircle,
         label: 'Completed',
       };
@@ -143,14 +143,14 @@ export const MilestoneBountyCard: React.FC<MilestoneBountyCardProps> = ({
 
     if (dueDate < now && milestone.status === 'pending') {
       return {
-        style: { backgroundColor: '#F5E6E6', color: '#5C1F1F' },
+        className: 'bg-[#F5E6E6] text-[#5C1F1F]',
         icon: Clock,
         label: 'Overdue',
       };
     }
 
     return {
-      style: { backgroundColor: '#FAF4EC', color: '#8F6B2F' },
+      className: 'bg-[#FAF4EC] text-[#8F6B2F]',
       icon: Clock,
       label: 'Pending',
     };
@@ -318,7 +318,7 @@ export const MilestoneBountyCard: React.FC<MilestoneBountyCardProps> = ({
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
-                      <Badge style={status.style}>{status.label}</Badge>
+                      <Badge className={status.className}>{status.label}</Badge>
                       {milestone.status === 'pending' && (
                         <Button
                           onClick={() => setSelectedMilestone(milestone.id)}

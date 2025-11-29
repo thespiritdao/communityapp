@@ -146,7 +146,7 @@ export const WorkSubmissionReview: React.FC<WorkSubmissionReviewProps> = ({
         return <Badge variant="secondary">Pending Review</Badge>;
       case 'approved':
         return (
-          <Badge style={{ backgroundColor: '#D1E6DC', color: '#1F453A' }}>
+          <Badge className="bg-[#D1E6DC] text-[#1F453A]">
             Approved
           </Badge>
         );
@@ -154,7 +154,7 @@ export const WorkSubmissionReview: React.FC<WorkSubmissionReviewProps> = ({
         return <Badge variant="destructive">Rejected</Badge>;
       case 'revision_requested':
         return (
-          <Badge style={{ backgroundColor: '#FAF4EC', color: '#8F6B2F' }}>
+          <Badge className="bg-[#FAF4EC] text-[#8F6B2F]">
             Revision Requested
           </Badge>
         );

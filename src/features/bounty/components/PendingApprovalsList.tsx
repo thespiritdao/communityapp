@@ -195,18 +195,18 @@ export const PendingApprovalsList: React.FC<PendingApprovalsListProps> = ({
     onApprovalComplete?.(workflowId);
   };
 
-  const getStatusStyle = (status: string) => {
+  const getStatusClassName = (status: string) => {
     switch (status) {
       case 'pending':
-        return { backgroundColor: '#FAF4EC', color: '#8F6B2F' };
+        return 'bg-[#FAF4EC] text-[#8F6B2F]';
       case 'approved':
-        return { backgroundColor: '#D1E6DC', color: '#1F453A' };
+        return 'bg-[#D1E6DC] text-[#1F453A]';
       case 'executed':
-        return { backgroundColor: '#E8F1EE', color: '#1F453A' };
+        return 'bg-[#E8F1EE] text-[#1F453A]';
       case 'expired':
-        return { backgroundColor: '#F5E6E6', color: '#5C1F1F' };
+        return 'bg-[#F5E6E6] text-[#5C1F1F]';
       default:
-        return { backgroundColor: '#F3F4F6', color: '#374151' };
+        return 'bg-[#F3F4F6] text-[#374151]';
     }
   };
 
@@ -307,7 +307,7 @@ export const PendingApprovalsList: React.FC<PendingApprovalsListProps> = ({
                   {bounty.description}
                 </p>
               </div>
-              <Badge style={getStatusStyle(workflow.status)}>
+              <Badge className={getStatusClassName(workflow.status)}>
                 {workflow.status}
               </Badge>
             </div>

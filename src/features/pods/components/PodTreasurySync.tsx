@@ -340,7 +340,7 @@ export default function PodTreasurySync() {
     switch (status) {
       case 'synced':
         return (
-          <Badge className="text-white" style={{ backgroundColor: '#3F7A5A' }}>
+          <Badge className="text-white bg-[#3F7A5A]">
             <CheckCircle className="h-3 w-3 mr-1" /> Synced
           </Badge>
         );
