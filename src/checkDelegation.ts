@@ -18,38 +18,38 @@ export const checkDelegationStatus = async (userAddress: string) => {
     console.log('User Address (Coinbase Smart Wallet):', userAddress);
 
     // Check NFT balance
-    const balance = await publicClient.readContract({
+    const balance = (await publicClient.readContract({
       address: ADVOCATE_ADDRESS,
       abi: AdvocateMembershipABI,
       functionName: 'balanceOf',
       args: [userAddress as `0x${string}`],
-    });
+    })) as bigint;
 
     // Check current delegate
-    const currentDelegate = await publicClient.readContract({
+    const currentDelegate = (await publicClient.readContract({
       address: ADVOCATE_ADDRESS,
       abi: AdvocateMembershipABI,
       functionName: 'delegates',
       args: [userAddress as `0x${string}`],
-    });
+    })) as `0x${string}`;
 
     // Check voting power
-    const votingPower = await publicClient.readContract({
+    const votingPower = (await publicClient.readContract({
       address: ADVOCATE_ADDRESS,
       abi: AdvocateMembershipABI,
       functionName: 'getVotes',
       args: [userAddress as `0x${string}`],
-    });
+    })) as bigint;
 
     // If delegate is different, check their voting power too
     let delegateVotingPower = 0n;
     if (currentDelegate && currentDelegate !== userAddress) {
-      delegateVotingPower = await publicClient.readContract({
+      delegateVotingPower = (await publicClient.readContract({
         address: ADVOCATE_ADDRESS,
         abi: AdvocateMembershipABI,
         functionName: 'getVotes',
         args: [currentDelegate as `0x${string}`],
-      });
+      })) as bigint;
     }
 
     console.log('Results:');
