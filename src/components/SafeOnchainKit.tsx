@@ -60,10 +60,10 @@ export const SafeTransaction = dynamic(
         default: mod.Transaction,
       }))
       .catch(() => ({
-        default: ({ children }: { children: React.ReactNode }) => (
+        default: (props: any) => (
           <div className="text-red-500 p-4 border border-red-200 rounded">
             Transaction component failed to load
-            {children}
+            {props.children}
           </div>
         ),
       })),
@@ -118,7 +118,7 @@ export const SafeTransactionStatus = dynamic(
         default: mod.TransactionStatus,
       }))
       .catch(() => ({
-        default: ({ children }: { children: React.ReactNode }) => (
+        default: (props: any) => (
           <div className="text-sm text-gray-500">Status unavailable</div>
         ),
       })),
