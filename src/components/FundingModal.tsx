@@ -289,7 +289,7 @@ export default function FundingModal({
                       `${formatBalance(systemBalance)} SYSTEM`
                     )}
                   </div>
-                  <Badge variant="outline" size="sm">
+                  <Badge variant="outline">
                     Available
                   </Badge>
                 </div>
