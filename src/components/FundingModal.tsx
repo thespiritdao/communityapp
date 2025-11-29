@@ -385,8 +385,7 @@ export default function FundingModal({
                 >
                   <TransactionButton
                     text={`Send ${amount} ${selectedToken}`}
-                    className="w-full h-12 text-white font-semibold"
-                    style={{ backgroundColor: '#2F5D50' }}
+                    className="w-full h-12 text-white font-semibold bg-[#2F5D50]"
                   />
                   <TransactionSponsor />
                   <TransactionStatus>
