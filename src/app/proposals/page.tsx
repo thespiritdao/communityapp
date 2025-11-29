@@ -8,6 +8,7 @@ import {
   TransactionStatus,
   TransactionStatusAction,
   TransactionStatusLabel,
+  type TransactionResponse,
 } from '@coinbase/onchainkit/transaction';
 import {
   ConnectWallet,
@@ -143,7 +144,7 @@ function InnerProposalSubmissionPage() {
   }, [formData, isFormValid, canPropose]);
 
   const handleSuccess = useCallback(
-    async (txResult) => {
+    async (txResult: TransactionResponse) => {
       console.group('✅ Proposal Transaction Success');
       console.log('📋 Transaction Response:', txResult);
       console.log(
