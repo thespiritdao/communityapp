@@ -15,7 +15,7 @@ interface UserTaggingProps {
   className?: string;
   onKeyDown?: (e: React.KeyboardEvent) => void;
   multiLine?: boolean;
-  contextType?: 'forum' | 'chat' | 'bounty' | 'governance';
+  contextType?: 'forum' | 'chat' | 'bounty' | 'governance' | 'proposal';
   contextId?: string;
   contextUrl?: string;
   proposalId?: string; // For governance mentions
