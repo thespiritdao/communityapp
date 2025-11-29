@@ -16,6 +16,7 @@ interface ProposalFormData {
   title: string;
   body: string;
   forumThreadId: string;
+  mentions?: string[]; // Optional array of mentioned wallet addresses
 }
 
 interface ProposalContextType {
@@ -75,6 +76,7 @@ export const ProposalProvider: React.FC<ProposalProviderProps> = ({
     title: '',
     body: '',
     forumThreadId: '',
+    mentions: [],
   });
 
   // UI state
@@ -103,6 +105,7 @@ export const ProposalProvider: React.FC<ProposalProviderProps> = ({
       title: '',
       body: '',
       forumThreadId: '',
+      mentions: [],
     });
   }, []);
 
