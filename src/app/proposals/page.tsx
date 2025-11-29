@@ -170,7 +170,7 @@ function InnerProposalSubmissionPage() {
       // Extract on-chain proposal ID from txResult if available
       const proposalId = txResult?.transactionReceipts?.[0]?.logs?.find(
         (log) =>
-          log.topics && log.topics.length > 0 && log.topics[0].startsWith('0x'),
+          log.topics && log.topics.length > 0 && log.topics?.[0]?.startsWith('0x'),
       )?.topics?.[1];
       // Save metadata to Supabase
       if (proposalId) {
