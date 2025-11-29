@@ -6,8 +6,7 @@ const AuthPage = () => {
       <h1 className="text-2xl font-bold mb-6">Welcome to SpiritDAO</h1>
       <p className="mb-4">To continue, please connect your wallet:</p>
       <ConnectWallet
-        className="text-white px-4 py-2 rounded-md hover:bg-[#254A40]"
-        style={{ backgroundColor: '#2F5D50' }}
+        className="text-white px-4 py-2 rounded-md bg-[#2F5D50] hover:bg-[#254A40]"
       />
     </div>
   );
