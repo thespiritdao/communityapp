@@ -392,7 +392,6 @@ function InnerProposalSubmissionPage() {
             <div className="mt-8 pt-6 border-t border-gray-200">
               {isConnected && canPropose ? (
                 <Transaction
-                  address={address?.toLowerCase() as `0x${string}`}
                   chainId={base.id}
                   isSponsored={true}
                   calls={transactionData ? [transactionData] : []}
