@@ -9,7 +9,7 @@ import {
   TransactionStatusAction,
   TransactionStatusLabel,
   type TransactionResponse,
-  type APIError,
+  type TransactionError,
 } from '@coinbase/onchainkit/transaction';
 import {
   ConnectWallet,
@@ -192,7 +192,7 @@ function InnerProposalSubmissionPage() {
   );
 
   const handleError = useCallback(
-    (error: APIError) => {
+    (error: TransactionError) => {
       console.group('❌ Proposal Transaction Error');
       console.error('📋 Error Details:', {
         message: error.message,
