@@ -86,14 +86,7 @@ export function ProxyHatIdFixer({
         >
           <TransactionButton
             text="Fix Proxy Configuration"
-            className="w-full"
-            style={{ backgroundColor: '#C6933F' }}
-            onMouseEnter={(e: React.MouseEvent<HTMLButtonElement>) =>
-              (e.currentTarget.style.backgroundColor = '#A67E35')
-            }
-            onMouseLeave={(e: React.MouseEvent<HTMLButtonElement>) =>
-              (e.currentTarget.style.backgroundColor = '#C6933F')
-            }
+            className="w-full bg-[#C6933F] hover:bg-[#A67E35]"
           />
         </Transaction>
       ) : (

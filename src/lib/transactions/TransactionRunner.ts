@@ -5,6 +5,7 @@
  * user feedback, progress tracking, and error handling.
  */
 
+import * as React from 'react';
 import { globalRpcQueue } from '../rpc/RpcQueue';
 
 export interface TransactionStep {
@@ -384,7 +385,3 @@ export function useTransactionRunner(): UseTransactionRunnerResult {
     cancel,
   };
 }
-
-// Note: React import would normally be at the top, but this is a TypeScript utility
-// In actual usage, this would be moved to a separate hooks file with proper React imports
-declare const React: any;

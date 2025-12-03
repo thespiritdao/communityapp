@@ -34,20 +34,6 @@ export const EnhancedVoteButton: React.FC<EnhancedVoteButtonProps> = ({
     proposal.governance_context,
   );
 
-  // ✅ FIX: Block voting if no permission
-  if (!hasGovernancePermission) {
-    return (
-      <Button
-        disabled
-        variant="outline"
-        size="sm"
-        title="You do not have governance participation permission in the required pod"
-      >
-        {getChoiceText(choice)} (No Permission)
-      </Button>
-    );
-  }
-
   const getChoiceText = (choiceNum: number) => {
     const choiceMap = {
       1: 'Against',
@@ -82,6 +68,20 @@ export const EnhancedVoteButton: React.FC<EnhancedVoteButtonProps> = ({
         return { bg: '#2F5D50', hover: '#1F453A' }; // PRIMARY
     }
   };
+
+  // ✅ FIX: Block voting if no permission
+  if (!hasGovernancePermission) {
+    return (
+      <Button
+        disabled
+        variant="outline"
+        size="sm"
+        title="You do not have governance participation permission in the required pod"
+      >
+        {getChoiceText(choice)} (No Permission)
+      </Button>
+    );
+  }
 
   const handleVote = async () => {
     if (!address) {

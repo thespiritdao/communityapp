@@ -260,7 +260,7 @@ export class HatVerificationService {
       // For now, we verify both exist and are active
       // TODO: Implement actual admin relationship check via contract query
 
-      const isValid = childVerification.active && parentVerification.active;
+      const isValid = (childVerification.active ?? false) && (parentVerification.active ?? false);
 
       console.log(
         isValid ? '✅ HAT hierarchy valid' : '⚠️ HAT hierarchy invalid',

@@ -181,7 +181,11 @@ export function usePodManagementHandlers({
             // Trigger member list refresh
             window.location.reload();
           } else {
-            throw new Error(result.error || 'Unknown error removing member');
+            throw new Error(
+              result.error instanceof Error
+                ? result.error.message
+                : result.error || 'Unknown error removing member',
+            );
           }
         } catch (error) {
           console.error(`❌ Error removing member ${address}:`, error);

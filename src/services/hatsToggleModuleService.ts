@@ -111,10 +111,11 @@ export class HatsToggleModuleService {
       return moduleArray;
     } catch (error) {
       console.error('❌ Failed to get available modules:', error);
+      const err = error as Error;
       console.log('🔍 Error details:', {
-        message: error.message,
-        stack: error.stack,
-        name: error.name,
+        message: err.message,
+        stack: err.stack,
+        name: err.name,
       });
       return [];
     }
@@ -250,10 +251,9 @@ export class HatsToggleModuleService {
         instanceAddress,
       });
 
-      const parameters = await this.modulesClient!.getInstanceParameters({
-        moduleId,
-        instance: instanceAddress as `0x${string}`,
-      });
+      const parameters = await this.modulesClient!.getInstanceParameters(
+        instanceAddress as `0x${string}`,
+      );
 
       console.log('📋 Module parameters:', parameters);
       console.log(
@@ -316,7 +316,7 @@ export class HatsToggleModuleService {
         account,
         moduleId,
         instance: instanceAddress as `0x${string}`,
-        func: functionName,
+        func: functionName as any,
         args,
       });
 
@@ -330,7 +330,7 @@ export class HatsToggleModuleService {
     } catch (error) {
       console.error('❌ Module function call failed:', error);
       console.log('🔍 Error type:', typeof error);
-      console.log('🔍 Error constructor:', error.constructor.name);
+      console.log('🔍 Error constructor:', (error as any)?.constructor?.name);
       if (error instanceof Error) {
         console.log('🔍 Error message:', error.message);
         console.log('🔍 Error stack:', error.stack);
@@ -443,7 +443,7 @@ export class HatsToggleModuleService {
               };
             }
           } catch (moduleError) {
-            console.log(`❌ Module ${module.id} failed:`, moduleError.message);
+            console.log(`❌ Module ${module.id} failed:`, (moduleError as Error).message);
             continue;
           }
         }
@@ -464,7 +464,7 @@ export class HatsToggleModuleService {
       } catch (paramError) {
         console.log(
           '⚠️  Could not get instance parameters:',
-          paramError.message,
+          (paramError as Error).message,
         );
       }
 
@@ -507,7 +507,7 @@ export class HatsToggleModuleService {
             console.log(`❌ ${func.name} reverted via SDK:`, result);
           }
         } catch (error) {
-          console.log(`❌ SDK function ${func.name} failed:`, error.message);
+          console.log(`❌ SDK function ${func.name} failed:`, (error as Error).message);
           console.log('📊 Full error details:', error);
         }
       }
@@ -579,7 +579,7 @@ export class HatsToggleModuleService {
           };
         }
       } catch (error) {
-        console.log(`  ❌ Function ${func.name} failed:`, error.message);
+        console.log(`  ❌ Function ${func.name} failed:`, (error as Error).message);
         // Don't throw - try next function
       }
     }
@@ -632,16 +632,17 @@ export class HatsToggleModuleService {
           };
         }
       } catch (moduleError) {
+        const err = moduleError as Error;
         if (
-          moduleError.message.includes('User rejected') ||
-          moduleError.message.includes('cancelled')
+          err.message.includes('User rejected') ||
+          err.message.includes('cancelled')
         ) {
           console.log('🛑 User cancelled transaction');
           throw moduleError;
         }
         console.log(
           `❌ Module ${module.id} failed completely:`,
-          moduleError.message,
+          err.message,
         );
       }
     }

@@ -10,7 +10,7 @@ interface UserListProps {
   onUserSelect?: (user: UserProfile) => void;
 }
 
-const getProfilePictureUrl = (profilePicturePath: string) => {
+const getProfilePictureUrl = (profilePicturePath?: string) => {
   return profilePicturePath
     ? `https://<SUPABASE_PROJECT_ID>.supabase.co/storage/v1/object/public/profile_images/${profilePicturePath}`
     : '/images/symbolobinfin.png';

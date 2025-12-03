@@ -14,7 +14,7 @@ import type {
   SendTransactionMutateAsync,
   SwitchChainMutateAsync,
 } from 'wagmi/query';
-import type { BuildSwapTransaction, RawTransactionData } from '../api/types';
+import type { BuildSwapTransaction, RawTransactionData } from '../app/api/types';
 import type { Token } from '../token/types';
 import type { Call } from '../transaction/types';
 

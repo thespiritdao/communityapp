@@ -97,7 +97,7 @@ export function PodContractCreator({ onPodCreated }: PodContractCreatorProps) {
     ];
 
     console.log('🏗️ Creating pod proposal transaction...');
-    debugTransactionCalls(calls, 'CreatePodProposal');
+    debugTransactionCalls(calls as any, 'CreatePodProposal');
 
     return calls;
   };
@@ -116,7 +116,7 @@ export function PodContractCreator({ onPodCreated }: PodContractCreatorProps) {
     ];
 
     console.log('🏗️ Creating pod activation transaction...');
-    debugTransactionCalls(calls, 'ActivatePod');
+    debugTransactionCalls(calls as any, 'ActivatePod');
 
     return calls;
   };

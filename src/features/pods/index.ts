@@ -32,11 +32,13 @@ export type {
   MemberRef,
   PodServiceConfig,
   PodCreationData,
-  AccountabilitySignature,
 } from './types';
 
 // Service types from PodCoreService
-export type { GovernanceProposalData } from './services/PodCoreService';
+export type {
+  GovernanceProposalData,
+  AccountabilitySignature,
+} from './services/PodCoreService';
 
 // Hook types (re-exported from hooks barrel)
 export type {

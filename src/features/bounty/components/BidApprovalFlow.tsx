@@ -652,8 +652,6 @@ export const BidApprovalFlow: React.FC<BidApprovalFlowProps> = ({
               </div>
             ) : (
               <Transaction
-                address={address?.toLowerCase() as `0x${string}`}
-                chainId={BASE_CHAIN_ID}
                 calls={calls}
                 isSponsored={true}
                 onStatus={onBountyCreationStatus}
@@ -661,7 +659,6 @@ export const BidApprovalFlow: React.FC<BidApprovalFlowProps> = ({
                 <TransactionButton
                   text="Create Bounty (Sponsored)"
                   className="w-full"
-                  style={{ backgroundColor: '#2F5D50', color: '#FFFFFF' }}
                 />
                 <TransactionSponsor />
                 <TransactionStatus>

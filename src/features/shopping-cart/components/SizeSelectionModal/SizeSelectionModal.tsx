@@ -186,10 +186,10 @@ const SizeSelectionModal: React.FC<SizeSelectionModalProps> = ({
         <ProductInfo>
           <ProductName>{product.title || product.name}</ProductName>
           <ProductPrice>
-            {product.price_system > 0 &&
-              formatPrice(product.price_system, '$SYSTEM')}
-            {product.price_system > 0 && product.price_self > 0 && ' • '}
-            {product.price_self > 0 && formatPrice(product.price_self, '$SELF')}
+            {(product.price_system || 0) > 0 &&
+              formatPrice(product.price_system!, '$SYSTEM')}
+            {(product.price_system || 0) > 0 && (product.price_self || 0) > 0 && ' • '}
+            {(product.price_self || 0) > 0 && formatPrice(product.price_self!, '$SELF')}
           </ProductPrice>
         </ProductInfo>
 

@@ -283,7 +283,7 @@ export const BountyApprovalFlow: React.FC<BountyApprovalFlowProps> = ({
               </div>
               <MemberCard
                 address={workflow.proposed_by}
-                profile={userProfiles.get(workflow.proposed_by)}
+                profile={userProfiles.get(workflow.proposed_by) ?? null}
                 showRole={false}
                 size="sm"
               />
@@ -301,7 +301,7 @@ export const BountyApprovalFlow: React.FC<BountyApprovalFlowProps> = ({
                     <MemberCard
                       key={approverAddress}
                       address={approverAddress}
-                      profile={userProfiles.get(approverAddress)}
+                      profile={userProfiles.get(approverAddress) ?? null}
                       showRole={false}
                       size="sm"
                     />

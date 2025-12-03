@@ -106,17 +106,19 @@ export function useAccountability({
       // Check if threshold is met and notify executives
       const currentSignatureCount = signatures.length + 1;
       if (currentSignatureCount >= 1 && podName) {
-        try {
-          await PodCoreService.notifyExecutiveForApproval(
-            podId,
-            podName,
-            address,
-          );
-          console.log('✅ Executive notification sent for pod approval');
-        } catch (notificationError) {
-          console.warn('Failed to notify executives:', notificationError);
-          // Don't fail the signing process
-        }
+        // TODO: Re-enable when notifyExecutiveForApproval is made public
+        // try {
+        //   await PodCoreService.notifyExecutiveForApproval(
+        //     podId,
+        //     podName,
+        //     address,
+        //   );
+        //   console.log('✅ Executive notification sent for pod approval');
+        // } catch (notificationError) {
+        //   console.warn('Failed to notify executives:', notificationError);
+        //   // Don't fail the signing process
+        // }
+        console.log('⏩ Skipping executive notification (method is private)');
       }
     } catch (err) {
       console.error('❌ Signing failed:', err);

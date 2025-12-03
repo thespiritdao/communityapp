@@ -55,7 +55,7 @@ export const createThread = async ({
     const { data, error } = await supabase
       .from('forum_threads')
       .insert({
-        categoryId: category_id,
+        category_id: categoryId,
         title: title.trim(),
         content: content.trim(),
         author_wallet: authorWallet,

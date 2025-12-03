@@ -2,9 +2,11 @@
 
 import type React from 'react';
 import { useState, useEffect } from 'react';
-import { useAccount, usePublicClient, useContractWrite } from 'wagmi';
-import { parseAbiItem } from 'viem';
-import DAOGovernorABI from '@/abis/DAOGovernorABI.json';
+import { useAccount, usePublicClient, useWriteContract } from 'wagmi';
+import { parseAbiItem, type Abi } from 'viem';
+import DAOGovernorABIJson from '@/abis/DAOGovernorABI.json';
+
+const DAOGovernorABI = DAOGovernorABIJson as Abi;
 import {
   Card,
   CardContent,
@@ -33,7 +35,7 @@ interface ProposalData {
   id: string;
   title: string;
   description: string;
-  proposer: string;
+  proposer: `0x${string}`;
   startBlock: bigint;
   endBlock: bigint;
   state: number; // -1 = Error/Unknown, 0-7 = Valid states
@@ -49,7 +51,7 @@ interface ProposalData {
   };
 }
 
-export const ProposalsList: React.FC = () => {
+export const ProposalsList = () => {
   const { address } = useAccount();
   const publicClient = usePublicClient();
   const [proposals, setProposals] = useState<ProposalData[]>([]);
@@ -61,11 +63,7 @@ export const ProposalsList: React.FC = () => {
   const [hasVotedMap, setHasVotedMap] = useState<Record<string, boolean>>({});
 
   // Cancel proposal function
-  const { write: cancelProposal, isLoading: isCancelling } = useContractWrite({
-    address: GOVERNOR_ADDRESS,
-    abi: DAOGovernorABI,
-    functionName: 'cancel',
-  });
+  const { writeContract: cancelProposal, isPending: isCancelling } = useWriteContract();
 
   // Fetch proposals from on-chain events
   useEffect(() => {
@@ -168,7 +166,7 @@ export const ProposalsList: React.FC = () => {
               title ||
               `Proposal ${proposalId.substring(0, 8)}...`,
             description: description,
-            proposer: event.args.proposer || '0x0',
+            proposer: (event.args.proposer || '0x0') as `0x${string}`,
             startBlock: event.args.startBlock || 0n,
             endBlock: event.args.endBlock || 0n,
             state: state,
@@ -182,14 +180,14 @@ export const ProposalsList: React.FC = () => {
         });
 
         const fetchedProposals = (await Promise.all(proposalPromises))
-          .filter((p): p is ProposalData => p !== null)
+          .filter((p) => p !== null)
           .sort((a, b) => {
             // Sort by creation time or block number (most recent first)
             if (a.createdAt && b.createdAt) {
               return Number(b.createdAt - a.createdAt);
             }
             return Number(b.startBlock - a.startBlock);
-          });
+          }) as ProposalData[];
 
         setProposals(fetchedProposals);
         // --- Fetch hasVoted for each proposal ---
@@ -225,7 +223,12 @@ export const ProposalsList: React.FC = () => {
     if (!cancelProposal || !selectedProposal) return;
 
     try {
-      await cancelProposal();
+      await cancelProposal({
+        address: GOVERNOR_ADDRESS,
+        abi: DAOGovernorABI,
+        functionName: 'cancel',
+        args: [selectedProposal.id],
+      });
       setCancelDialogOpen(false);
       setSelectedProposal(null);
       // Refresh proposals after cancellation
@@ -271,13 +274,13 @@ export const ProposalsList: React.FC = () => {
       case 3: // Defeated
         return 'destructive'; // Red
       case 4: // Succeeded
-        return 'success'; // Green
+        return 'default'; // Green
       case 5: // Queued
         return 'outline'; // Gray outline
       case 6: // Expired
         return 'secondary'; // Gray
       case 7: // Executed
-        return 'success'; // Green
+        return 'default'; // Green
       default: // Pending or unknown
         return 'secondary'; // Gray
     }
@@ -527,9 +530,11 @@ export const ProposalsList: React.FC = () => {
       <Dialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <AlertTriangle className="w-5 h-5" style={{ color: '#8B3A3A' }} />
-              Cancel Proposal
+            <DialogTitle>
+              <div className="flex items-center gap-2">
+                <AlertTriangle className="w-5 h-5" style={{ color: '#8B3A3A' }} />
+                Cancel Proposal
+              </div>
             </DialogTitle>
             <DialogDescription>
               Are you sure you want to cancel "{selectedProposal?.title}"? This

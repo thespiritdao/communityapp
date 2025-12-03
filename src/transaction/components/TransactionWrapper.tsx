@@ -1,12 +1,12 @@
-import Transaction from '../../../transaction/components/Transaction';
-import TransactionButton from '../../../transaction/components/TransactionButton';
-import TransactionStatus, {
-  TransactionStatusLabel,
-  TransactionStatusAction,
-} from '../../../transaction/components/TransactionStatus';
+import type { Address } from 'viem';
+import Transaction from './Transaction';
+import { TransactionButton } from './TransactionButton';
+import { TransactionStatus } from './TransactionStatus';
+import { TransactionStatusLabel } from './TransactionStatusLabel';
+import { TransactionStatusAction } from './TransactionStatusAction';
 
 type TransactionWrapperProps = {
-  address: string;
+  address: Address;
   contracts: any; // Replace with your proper type
   handleError: (error: any) => void;
   handleSuccess: (result: any) => void;

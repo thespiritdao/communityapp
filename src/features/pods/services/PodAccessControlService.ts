@@ -104,7 +104,7 @@ export class PodAccessControlService {
           address: HATS_PROTOCOL_ADDRESS,
           abi: HatsProtocolABI,
           functionName: 'balanceOf',
-          args: [userWallet as `0x${string}`, BigInt(userMembership.hat_id)],
+          args: [userWallet as `0x${string}`, BigInt(userMembership.hat_id!)],
         });
 
         if (hatBalance === 0n) {

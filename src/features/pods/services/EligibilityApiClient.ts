@@ -312,16 +312,17 @@ export class EligibilityApiClient {
           }
           break;
 
-        case 'reputation_score':
-          if (
-            criterion.minimum_score === undefined ||
-            criterion.minimum_score < 0
-          ) {
-            errors.push(
-              `Criterion ${index + 1}: Valid minimum score is required for reputation`,
-            );
-          }
-          break;
+        // TODO: Re-enable when 'reputation_score' is added to EligibilityCriteria type
+        // case 'reputation_score':
+        //   if (
+        //     criterion.minimum_score === undefined ||
+        //     criterion.minimum_score < 0
+        //   ) {
+        //     errors.push(
+        //       `Criterion ${index + 1}: Valid minimum score is required for reputation`,
+        //     );
+        //   }
+        //   break;
 
         case 'staking':
           if (!criterion.staking_pool) {

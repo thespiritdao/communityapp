@@ -1,4 +1,4 @@
-import { EventService } from '../features/events/lib/supabase';
+import { supabase } from './supabaseClient';
 import type { PublicClient } from 'viem';
 
 /**
@@ -20,8 +20,13 @@ export class PodAccessService {
   }> {
     try {
       // Get pod details from database
-      const pod = await EventService.getPodById(podId);
-      if (!pod) {
+      const { data: pod, error } = await supabase
+        .from('pods')
+        .select('*')
+        .eq('id', podId)
+        .single();
+
+      if (error || !pod) {
         return {
           hasManagementAccess: false,
           hasMembershipAccess: false,
@@ -103,7 +108,14 @@ export class PodAccessService {
   }> {
     try {
       // Get all active pods
-      const allPods = await EventService.getAllPods();
+      const { data: allPods, error } = await supabase
+        .from('pods')
+        .select('*')
+        .eq('is_active', true);
+
+      if (error || !allPods) {
+        throw error || new Error('Failed to fetch pods');
+      }
 
       const managedPods: any[] = [];
       const memberPods: any[] = [];

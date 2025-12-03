@@ -91,7 +91,7 @@ export function useGovernancePermission(
     console.log('🏛️ Governance Permission Check:', {
       context: context || 'default',
       governancePodId: targetPodId,
-      roleName: governanceRole.roleName,
+      roleName: governanceRole.name,
       hasPermission,
       allPermissions: Object.keys(governanceRole.permissions || {}),
     });

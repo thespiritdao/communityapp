@@ -384,6 +384,7 @@ export const PodManagerControlPanel: React.FC<PodManagerControlPanelProps> = ({
         role_name: 'Pod Leader',
         permissions: {
           chatAccess: true,
+          chatModeration: true,
           governanceParticipation: true,
           eventCreation: true,
           treasuryViewing: true,
@@ -391,6 +392,7 @@ export const PodManagerControlPanel: React.FC<PodManagerControlPanelProps> = ({
           memberManagement: true,
           subPodCreation: true,
           roleAssignment: true,
+          forumAccess: true,
           forumModeration: true,
           bountyManagement: true,
           marketplaceAccess: true,
@@ -598,7 +600,7 @@ export const PodManagerControlPanel: React.FC<PodManagerControlPanelProps> = ({
 
       toast({
         title: 'Permissions Saved',
-        description: `${selectedRole.name} permissions updated in database. Blockchain sync pending.`,
+        description: `${selectedRole.role_name} permissions updated in database. Blockchain sync pending.`,
       });
 
       // TODO: Phase 2 - Sync with HAT protocol
@@ -914,7 +916,7 @@ export const PodManagerControlPanel: React.FC<PodManagerControlPanelProps> = ({
     transactionHash: string,
     roleId?: string,
   ) => {
-    const targetRoleId = roleId || togglePendingRole;
+    const targetRoleId = roleId;
     if (!targetRoleId || !address || !publicClient) return;
 
     try {
@@ -940,7 +942,7 @@ export const PodManagerControlPanel: React.FC<PodManagerControlPanelProps> = ({
         `💡 Checking if HAT ${role.token_address} is actually ${expectedStatus ? 'active' : 'inactive'} on-chain`,
       );
 
-      let actualOnChainStatus: boolean;
+      let actualOnChainStatus: boolean = false;
       let verificationAttempts = 0;
       const maxAttempts = 3;
 
@@ -1296,18 +1298,25 @@ export const PodManagerControlPanel: React.FC<PodManagerControlPanelProps> = ({
     try {
       setLoading(true);
 
-      const newRole: PodRole = {
+      const newRole = {
         id: `custom-role-${Date.now()}`,
-        name: roleData.name || 'New Role',
+        role_name: roleData.role_name || 'New Role',
         token_address: `0x${Math.random().toString(16).substr(2, 64)}`, // Generate new token address
         permissions: roleData.permissions || {
-          chat_access: false,
-          governance_participation: false,
-          event_creation: false,
-          treasury_viewing: false,
-          member_management: false,
-          sub_pod_creation: false,
-          role_assignment: false,
+          chatAccess: false,
+          chatModeration: false,
+          governanceParticipation: false,
+          eventCreation: false,
+          treasuryViewing: false,
+          treasuryManagement: false,
+          memberManagement: false,
+          subPodCreation: false,
+          roleAssignment: false,
+          forumAccess: false,
+          forumModeration: false,
+          bountyManagement: false,
+          marketplaceAccess: false,
+          marketplaceManage: false,
         },
         eligibility_criteria: roleData.eligibility_criteria || [],
         max_holders: roleData.max_holders || 10,
@@ -1315,12 +1324,12 @@ export const PodManagerControlPanel: React.FC<PodManagerControlPanelProps> = ({
         is_active: true,
       };
 
-      setPodRoles((prev) => [...prev, newRole]);
+      setPodRoles((prev) => [...prev, newRole as PodRole]);
       setIsCreatingRole(false);
 
       toast({
         title: 'Role Created',
-        description: `New role "${newRole.name}" has been created`,
+        description: `New role "${newRole.role_name}" has been created`,
       });
     } catch (error) {
       console.error('Failed to create role:', error);
@@ -1534,7 +1543,7 @@ export const PodManagerControlPanel: React.FC<PodManagerControlPanelProps> = ({
 
             if (receipt?.logs) {
               // CRITICAL FIX: Check for the ACTUAL event signature we're seeing
-              const knownHatSignatures = {
+              const knownHatSignatures: { [key: string]: string } = {
                 '0xd2b20cbce23b45fcd09c6b1ebf62d6af6e85a74c7b3a00cb26e3b6cac61b4e4f':
                   'HatCreated',
                 '0x4d38ad12136291322128027bb8c3af7db2261be395032c1d26dd0ad20cf29415':
@@ -1542,7 +1551,7 @@ export const PodManagerControlPanel: React.FC<PodManagerControlPanelProps> = ({
               };
 
               // Reduce logging - only show first 5 logs and Hats contract logs
-              receipt.logs.forEach((log, index) => {
+              receipt.logs.forEach((log: any, index: number) => {
                 const isHatsLog =
                   log.address?.toLowerCase() ===
                   process.env.NEXT_PUBLIC_HATS_CONTRACT?.toLowerCase();
@@ -1563,7 +1572,7 @@ export const PodManagerControlPanel: React.FC<PodManagerControlPanelProps> = ({
                     '0x4d38ad12136291322128027bb8c3af7db2261be395032c1d26dd0ad20cf29415'
                 ) {
                   const eventName =
-                    knownHatSignatures[log.topics[0]] || 'Unknown';
+                    knownHatSignatures[log.topics[0] as string] || 'Unknown';
                   console.log(`🎯 ${eventName} event found!`);
 
                   // For standard HatCreated, HAT ID is in topics[1]
@@ -1612,7 +1621,7 @@ export const PodManagerControlPanel: React.FC<PodManagerControlPanelProps> = ({
               if (receipt?.logs) {
                 for (const signature of alternativeSignatures) {
                   const matchingLog = receipt.logs.find(
-                    (log) => log.topics?.[0] === signature,
+                    (log: any) => log.topics?.[0] === signature,
                   );
                   if (matchingLog) {
                     newHatId = matchingLog.topics?.[1];
@@ -1669,13 +1678,20 @@ export const PodManagerControlPanel: React.FC<PodManagerControlPanelProps> = ({
                 token_address: newHatId,
                 role_name: roleCreationTransaction.roleData.name,
                 permissions: {
-                  chat_access: false,
-                  governance_participation: false,
-                  event_creation: false,
-                  treasury_viewing: false,
-                  member_management: false,
-                  sub_pod_creation: false,
-                  role_assignment: false,
+                  chatAccess: false,
+                  chatModeration: false,
+                  governanceParticipation: false,
+                  eventCreation: false,
+                  treasuryViewing: false,
+                  treasuryManagement: false,
+                  memberManagement: false,
+                  subPodCreation: false,
+                  roleAssignment: false,
+                  forumAccess: false,
+                  forumModeration: false,
+                  bountyManagement: false,
+                  marketplaceAccess: false,
+                  marketplaceManage: false,
                 },
                 eligibility_criteria: [],
                 max_holders: roleCreationTransaction.roleData.maxSupply,
@@ -2317,9 +2333,9 @@ export const PodManagerControlPanel: React.FC<PodManagerControlPanelProps> = ({
                 onSuccess={async (response) => {
                   // Extract transaction hash for BaseScan verification
                   const transactionHash =
-                    response?.transactionHash ||
-                    response?.hash ||
-                    response?.receipt?.transactionHash;
+                    response?.transactionReceipts?.[0]?.transactionHash ||
+                    (response as any)?.hash ||
+                    (response as any)?.receipt?.transactionHash;
                   const baseScanUrl = transactionHash
                     ? `https://basescan.org/tx/${transactionHash}`
                     : undefined;
@@ -2340,7 +2356,7 @@ export const PodManagerControlPanel: React.FC<PodManagerControlPanelProps> = ({
                       podId: '',
                     },
                     moduleDetails: {
-                      moduleAddress: syncTransactionConfig.moduleAddress,
+                      moduleAddress: syncTransactionConfig.moduleAddress || 'unknown',
                       moduleType:
                         syncTransactionConfig.moduleAddress === 'demo-hats'
                           ? 'HATS Core Contract'
@@ -2368,7 +2384,6 @@ export const PodManagerControlPanel: React.FC<PodManagerControlPanelProps> = ({
                       syncTransactionConfig.roleId,
                       'synced',
                       transactionHash,
-                      syncTransactionConfig.moduleAddress,
                     );
 
                     console.log('✅ Database sync status updated successfully');
@@ -2405,7 +2420,7 @@ export const PodManagerControlPanel: React.FC<PodManagerControlPanelProps> = ({
                       podId: '',
                     },
                     moduleDetails: {
-                      moduleAddress: syncTransactionConfig.moduleAddress,
+                      moduleAddress: syncTransactionConfig.moduleAddress || 'unknown',
                       moduleType:
                         syncTransactionConfig.moduleAddress === 'demo-hats'
                           ? 'HATS Core Contract'
@@ -2420,7 +2435,7 @@ export const PodManagerControlPanel: React.FC<PodManagerControlPanelProps> = ({
                     error: {
                       message: error?.message || 'Unknown error',
                       code: error?.code || 'No code',
-                      stack: error?.stack,
+                      stack: (error as any)?.stack,
                     },
                     metadata: {
                       callCount: syncTransactionConfig.calls.length,
@@ -2455,14 +2470,7 @@ export const PodManagerControlPanel: React.FC<PodManagerControlPanelProps> = ({
                 }}
               >
                 <TransactionButton
-                  className="w-full text-white font-medium py-2 px-4 rounded-lg transition-colors"
-                  style={{ backgroundColor: '#2F5D50' }}
-                  onMouseEnter={(e: React.MouseEvent<HTMLButtonElement>) =>
-                    (e.currentTarget.style.backgroundColor = '#1F453A')
-                  }
-                  onMouseLeave={(e: React.MouseEvent<HTMLButtonElement>) =>
-                    (e.currentTarget.style.backgroundColor = '#2F5D50')
-                  }
+                  className="w-full text-white font-medium py-2 px-4 rounded-lg transition-colors bg-[#2F5D50] hover:bg-[#1F453A]"
                   text="Sync to Blockchain"
                 />
                 <TransactionSponsor />

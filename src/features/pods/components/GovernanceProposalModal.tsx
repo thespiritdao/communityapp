@@ -163,7 +163,7 @@ export const GovernanceProposalModal: React.FC<
               <Label>Current Image</Label>
               <div className="flex items-center gap-3 p-2 border rounded-md">
                 <img
-                  src={pod.image_url || '/images/symbolobinfin.png'}
+                  src={(pod as any).image_url || '/images/symbolobinfin.png'}
                   alt={pod.name}
                   className="w-16 h-16 rounded-lg object-cover"
                 />

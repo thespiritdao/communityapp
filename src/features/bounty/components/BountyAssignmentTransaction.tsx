@@ -29,8 +29,10 @@ import {
   TransactionStatusLabel,
   TransactionStatusAction,
 } from '@coinbase/onchainkit/transaction';
-import type { TransactionReceipt } from 'viem';
-import BountyManagerABI from '@/abis/BountyManagerV2.json';
+import type { Abi, TransactionReceipt } from 'viem';
+import BountyManagerABIJson from '@/abis/BountyManagerV2.json';
+
+const BountyManagerABI = BountyManagerABIJson as Abi;
 import { unifiedNotificationService } from '@/services/unifiedNotificationService';
 import { UserProfileDisplay } from '@/components/UserProfileDisplay';
 import {
@@ -225,7 +227,7 @@ export const BountyAssignmentTransaction: React.FC<
         unifiedNotificationService.createNotification({
           recipient_address: bidderAddress,
           sender_address: address!,
-          notification_type: 'bounty_work_submitted',
+          notification_type: 'bounty_update',
           title: 'Bid Approved & Bounty Assigned!',
           message: `Your bid has been approved and the bounty has been assigned to you. Funds are now in escrow.`,
           context_type: 'bounty',
@@ -238,7 +240,7 @@ export const BountyAssignmentTransaction: React.FC<
         unifiedNotificationService.createNotification({
           recipient_address: reviewer,
           sender_address: address!,
-          notification_type: 'bounty_work_submitted',
+          notification_type: 'bounty_update',
           title: 'Technical Reviewer Assignment',
           message: `You have been assigned as Technical Reviewer for a bounty.`,
           context_type: 'bounty',
@@ -251,7 +253,7 @@ export const BountyAssignmentTransaction: React.FC<
         unifiedNotificationService.createNotification({
           recipient_address: approver,
           sender_address: address!,
-          notification_type: 'bounty_work_submitted',
+          notification_type: 'bounty_update',
           title: 'Final Approver Assignment',
           message: `You have been assigned as Final Approver for a bounty.`,
           context_type: 'bounty',
@@ -480,8 +482,6 @@ export const BountyAssignmentTransaction: React.FC<
 
       {/* Transaction Component */}
       <Transaction
-        address={address?.toLowerCase() as `0x${string}`}
-        chainId={BASE_CHAIN_ID}
         calls={[
           {
             address: contractAddress,
@@ -501,7 +501,6 @@ export const BountyAssignmentTransaction: React.FC<
         <TransactionButton
           text="Assign Bounty & Setup Escrow"
           className="w-full"
-          style={{ backgroundColor: '#2F5D50', color: '#FFFFFF' }}
           disabled={isProcessing}
         />
         <TransactionSponsor />

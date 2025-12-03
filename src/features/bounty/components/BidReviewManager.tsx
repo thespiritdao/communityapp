@@ -15,7 +15,10 @@ import {
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { useAccount, usePublicClient } from 'wagmi';
-import BountyManagerABI from '@/abis/BountyManagerV2.json';
+import BountyManagerABIJson from '@/abis/BountyManagerV2.json';
+import type { Abi } from 'viem';
+
+const BountyManagerABI = BountyManagerABIJson as Abi;
 import { format, parseISO, isValid } from 'date-fns';
 import { CheckCircle } from 'lucide-react';
 import { useBountySupabase } from '../hooks/useBountySupabase';
@@ -505,7 +508,7 @@ export const BidReviewManager: React.FC<BidReviewManagerProps> = ({
   // Validation is expensive and only needed before approval
   useEffect(() => {
     if (activeTab === 'pending' && bounties.length > 0) {
-      const podIds = bounties.map((bounty) => bounty.podId).filter(Boolean);
+      const podIds = bounties.map((bounty) => bounty.pod_id).filter(Boolean);
       if (podIds.length > 0) {
         console.log('🔄 Pre-validating pod IDs for pending bounties:', podIds);
         validateMultiplePods(podIds);
@@ -562,7 +565,7 @@ export const BidReviewManager: React.FC<BidReviewManagerProps> = ({
       await unifiedNotificationService.createNotification({
         recipient_address: selectedBid.bidderAddress,
         sender_address: address!,
-        notification_type: 'bounty_work_reviewed',
+        notification_type: 'bounty_update',
         title: 'Bid Update',
         message: `Your bid for "${getBountyTitle(selectedBid.bountyId)}" was not selected. Reason: ${rejectionReason}`,
         context_type: 'bounty',
@@ -1005,7 +1008,12 @@ export const BidReviewManager: React.FC<BidReviewManagerProps> = ({
                   // Create the bounty on-chain with assignment to trigger escrow
                   // TODO: In future, bounties should be created on-chain during creation, not approval
                   // For now, we create and assign in approval step to ensure escrow is set up
-                  const calls = [];
+                  const calls: Array<{
+                    address: `0x${string}`;
+                    abi: readonly unknown[];
+                    functionName: string;
+                    args: readonly unknown[];
+                  }> = [];
 
                   // ALWAYS include approve call for wallet-funded bounties during bid approval
                   // The bounty.funding_source field may not be set in database during bid approval,
@@ -1036,15 +1044,17 @@ export const BidReviewManager: React.FC<BidReviewManagerProps> = ({
 
                   // Convert paymentStructure to uint8
                   let paymentType = 0; // Default: COMPLETION
-                  if (paymentStructure === 'MILESTONE') paymentType = 1;
-                  else if (paymentStructure === 'SPLIT') paymentType = 2;
+                  if (paymentStructure === PaymentStructure.Milestones)
+                    paymentType = 1;
+                  else if (paymentStructure === PaymentStructure.Split)
+                    paymentType = 2;
 
                   // Use the pod ID directly - it should be registered in PodBountyService
                   // If not registered, the contract will revert with "Invalid pod ID"
-                  const validatedPodId = bounty.podId || '';
+                  const validatedPodId = bounty.pod_id || '';
 
                   console.log('🏢 Pod ID for transaction:', {
-                    originalPodId: bounty.podId,
+                    originalPodId: bounty.pod_id,
                     validatedPodId,
                     note: 'Pod must be registered in PodBountyService contract',
                   });
@@ -1188,15 +1198,21 @@ export const BidReviewManager: React.FC<BidReviewManagerProps> = ({
 
                     return (
                       <Transaction
-                        address={address?.toLowerCase() as `0x${string}`}
-                        chainId={BASE_CHAIN_ID}
-                        calls={calls}
+                        calls={calls as any}
                         isSponsored={true}
                         onStatus={async (status) => {
                           console.log('🔔 Bounty creation status:', {
                             statusName: status.statusName,
-                            hasReceipts: !!status.transactionReceipts,
-                            receiptsLength: status.transactionReceipts?.length,
+                            hasReceipts: !!(
+                              status.statusData &&
+                              'transactionReceipts' in status.statusData &&
+                              status.statusData.transactionReceipts
+                            ),
+                            receiptsLength:
+                              status.statusData &&
+                              'transactionReceipts' in status.statusData
+                                ? status.statusData.transactionReceipts?.length
+                                : undefined,
                           });
 
                           if (status.statusName === 'success') {
@@ -1212,8 +1228,10 @@ export const BidReviewManager: React.FC<BidReviewManagerProps> = ({
 
                             // Extract receipts from status
                             const receipts =
-                              status.transactionReceipts ||
-                              status.statusData?.transactionReceipts;
+                              status.statusData &&
+                              'transactionReceipts' in status.statusData
+                                ? status.statusData.transactionReceipts
+                                : undefined;
 
                             if (receipts && receipts.length > 0) {
                               // The createBounty transaction is the last call (after approve if wallet funding)
@@ -1276,7 +1294,7 @@ export const BidReviewManager: React.FC<BidReviewManagerProps> = ({
                             }
                           }
                         }}
-                        onError={async (error: Error) => {
+                        onError={async (error) => {
                           console.error(
                             'Bounty creation transaction failed:',
                             error,
@@ -1284,7 +1302,7 @@ export const BidReviewManager: React.FC<BidReviewManagerProps> = ({
 
                           // Handle transaction error with fallback logic
                           const errorResult = await handleTransactionError(
-                            error,
+                            error as unknown as Error,
                             'bounty_creation',
                             calls,
                             address?.toLowerCase() || '',
@@ -1308,10 +1326,6 @@ export const BidReviewManager: React.FC<BidReviewManagerProps> = ({
                         <TransactionButton
                           text="Approve & Create Bounty (Sponsored)"
                           className="flex-1"
-                          style={{
-                            backgroundColor: '#2F5D50',
-                            color: '#FFFFFF',
-                          }}
                         />
                         <TransactionSponsor />
                         <TransactionStatus>
@@ -1446,8 +1460,6 @@ export const BidReviewManager: React.FC<BidReviewManagerProps> = ({
 
               {/* Assignment Transaction */}
               <Transaction
-                address={address?.toLowerCase() as `0x${string}`}
-                chainId={BASE_CHAIN_ID}
                 calls={[
                   // Assign the bounty using the tracked bid index
                   // The bid was already placed on-chain when the bidder submitted it
@@ -1468,7 +1480,11 @@ export const BidReviewManager: React.FC<BidReviewManagerProps> = ({
                 onStatus={async (status) => {
                   console.log('🔔 Assignment status:', {
                     statusName: status.statusName,
-                    hasReceipts: !!status.transactionReceipts,
+                    hasReceipts: !!(
+                      status.statusData &&
+                      'transactionReceipts' in status.statusData &&
+                      status.statusData.transactionReceipts
+                    ),
                   });
 
                   if (status.statusName === 'success') {
@@ -1494,7 +1510,7 @@ export const BidReviewManager: React.FC<BidReviewManagerProps> = ({
                     await unifiedNotificationService.createNotification({
                       recipient_address: pendingAssignment.bidderAddress,
                       sender_address: address!,
-                      notification_type: 'bounty_work_submitted',
+                      notification_type: 'bounty_update',
                       title: 'Bid Approved & Bounty Assigned!',
                       message: `Your bid has been approved and the bounty has been assigned to you. Funds are now in escrow.`,
                       context_type: 'bounty',
@@ -1506,7 +1522,7 @@ export const BidReviewManager: React.FC<BidReviewManagerProps> = ({
                     await unifiedNotificationService.createNotification({
                       recipient_address: pendingAssignment.reviewer,
                       sender_address: address!,
-                      notification_type: 'bounty_work_submitted',
+                      notification_type: 'bounty_update',
                       title: 'Technical Reviewer Assignment',
                       message: `You have been assigned as Technical Reviewer for a bounty.`,
                       context_type: 'bounty',
@@ -1518,7 +1534,7 @@ export const BidReviewManager: React.FC<BidReviewManagerProps> = ({
                     await unifiedNotificationService.createNotification({
                       recipient_address: pendingAssignment.approver,
                       sender_address: address!,
-                      notification_type: 'bounty_work_submitted',
+                      notification_type: 'bounty_update',
                       title: 'Final Approver Assignment',
                       message: `You have been assigned as Final Approver for a bounty.`,
                       context_type: 'bounty',
@@ -1549,7 +1565,6 @@ export const BidReviewManager: React.FC<BidReviewManagerProps> = ({
                 <TransactionButton
                   text="Assign Bounty & Setup Escrow"
                   className="w-full"
-                  style={{ backgroundColor: '#2F5D50', color: '#FFFFFF' }}
                 />
                 <TransactionSponsor />
                 <TransactionStatus>

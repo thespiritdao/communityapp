@@ -182,7 +182,7 @@ export const RemoveMemberButton: React.FC<RemoveMemberButtonProps> = ({
     }
   };
 
-  const handleError = (error: Error) => {
+  const handleError = (error: any) => {
     console.error('❌ Member removal transaction error:', error);
 
     let errorMessage =
@@ -306,18 +306,7 @@ export const RemoveMemberButton: React.FC<RemoveMemberButtonProps> = ({
             <TransactionButton
               text={`Confirm: Remove ${membershipType === 'leader' ? 'Leader' : 'Member'}`}
               disabled={isProcessing || !address}
-              className="flex-1 text-white px-6 py-3 rounded-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-              style={{ backgroundColor: '#8B3A3A' }}
-              onMouseEnter={(e: React.MouseEvent<HTMLButtonElement>) =>
-                !isProcessing &&
-                !e.currentTarget.disabled &&
-                (e.currentTarget.style.backgroundColor = '#5C1F1F')
-              }
-              onMouseLeave={(e: React.MouseEvent<HTMLButtonElement>) =>
-                !isProcessing &&
-                !e.currentTarget.disabled &&
-                (e.currentTarget.style.backgroundColor = '#8B3A3A')
-              }
+              className="flex-1 text-white px-6 py-3 rounded-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed bg-[#8B3A3A] hover:bg-[#5C1F1F]"
             />
             <button
               onClick={() => setShowConfirmation(false)}

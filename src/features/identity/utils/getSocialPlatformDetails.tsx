@@ -23,7 +23,6 @@ export const PLATFORM_CONFIG: Record<
       const username = value.split('/').pop();
       return `https://warpcast.com/${username}`;
     },
-    href: (value) => value,
     icon: warpcastSvg,
   },
   website: {

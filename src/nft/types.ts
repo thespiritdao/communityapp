@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import type { Address, Hex, TransactionReceipt } from 'viem';
-import type { Call, TransactionError } from '../../../transaction/types';
+import type { Call, TransactionError } from '../transaction/types';
 
 export type ContractType = 'ERC721' | 'ERC1155';
 

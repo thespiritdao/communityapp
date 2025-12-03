@@ -1,4 +1,4 @@
-import type { ICartTotal } from 'models';
+import type { ICartTotal } from '../../../models';
 
 const mockTotal: ICartTotal = {
   productQuantity: 1,

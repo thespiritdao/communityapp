@@ -290,13 +290,9 @@ export function ProfileEditForm({
       }
 
       // Retrieve the permanent public URL using getPublicUrl
-      const { data: publicUrlData, error: publicUrlError } = supabase.storage
+      const { data: publicUrlData } = supabase.storage
         .from('profile_images')
         .getPublicUrl(fileName);
-
-      if (publicUrlError) {
-        return null;
-      }
 
       return publicUrlData?.publicUrl || null;
     } catch (err) {

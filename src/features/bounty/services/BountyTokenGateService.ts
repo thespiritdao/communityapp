@@ -174,7 +174,7 @@ export class BountyTokenGateService {
         const hasRequiredTokens = gatingRules.requiredTokens.some((token) => {
           switch (token.symbol) {
             case 'SYSTEM':
-              return tokenBalances.systemBalance > 0;
+              return Number.parseFloat(tokenBalances.systemBalance) > 0;
             case 'POC':
               return tokenBalances.hasProofOfCuriosity;
             default:

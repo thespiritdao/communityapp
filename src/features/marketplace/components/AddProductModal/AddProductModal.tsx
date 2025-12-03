@@ -557,7 +557,7 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
                 ) : (
                   authorizedTokens.map((token) => (
                     <option key={token.id} value={token.id}>
-                      {token.displayName || token.name}{' '}
+                      {token.name}{' '}
                       {token.symbol ? `(${token.symbol})` : ''}
                     </option>
                   ))
@@ -582,13 +582,13 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
                         authorizedTokensCount: authorizedTokens.length,
                         hasExecutivePod: balances?.hasExecutivePod,
                         baseTokens: authorizedTokens
-                          .filter((t) => t.gatingType === 'token')
+                          .filter((t) => !t.role_name)
                           .map((t) => ({ id: t.id, name: t.name })),
                         podRoleOptions: authorizedTokens
-                          .filter((t) => t.gatingType === 'pod_role')
+                          .filter((t) => !!t.role_name)
                           .map((t) => ({
                             id: t.id,
-                            displayName: t.displayName,
+                            displayName: t.name,
                           })),
                       },
                       null,

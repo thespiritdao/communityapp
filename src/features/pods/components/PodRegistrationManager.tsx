@@ -257,14 +257,7 @@ export const PodRegistrationManager: React.FC = () => {
                 >
                   <TransactionButton
                     text={`Register ${pod.name} in Smart Contract`}
-                    className="w-full"
-                    style={{ backgroundColor: '#2F5D50' }}
-                    onMouseEnter={(e: React.MouseEvent<HTMLButtonElement>) => {
-                      e.currentTarget.style.backgroundColor = '#1F453A';
-                    }}
-                    onMouseLeave={(e: React.MouseEvent<HTMLButtonElement>) => {
-                      e.currentTarget.style.backgroundColor = '#2F5D50';
-                    }}
+                    className="w-full bg-[#2F5D50] hover:bg-[#1F453A]"
                   />
                   <TransactionSponsor />
                   <TransactionStatus>

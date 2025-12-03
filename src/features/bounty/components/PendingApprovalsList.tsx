@@ -42,9 +42,9 @@ export const PendingApprovalsList: React.FC<PendingApprovalsListProps> = ({
     new Map(),
   );
 
-  // Memoize draft bounties to prevent unnecessary re-renders
+  // Memoize open bounties to prevent unnecessary re-renders
   const draftBounties = useMemo(() => {
-    return bounties.filter((b) => b.status === 'draft');
+    return bounties.filter((b) => b.status === 'open');
   }, [bounties]);
 
   // Track previous draft bounty IDs to prevent duplicate loads
@@ -358,12 +358,7 @@ export const PendingApprovalsList: React.FC<PendingApprovalsListProps> = ({
                       profile={userProfiles.get(approverAddress) || null}
                       showRole={false}
                       size="sm"
-                      className="bg-white/50 p-2 rounded-md"
-                      style={{
-                        borderWidth: '1px',
-                        borderStyle: 'solid',
-                        borderColor: '#E8D7B8',
-                      }}
+                      className="bg-white/50 p-2 rounded-md border border-[#E8D7B8]"
                     />
                   ))}
                 </div>

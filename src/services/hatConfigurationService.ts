@@ -226,7 +226,7 @@ export class HatConfigurationService {
         adminHat = '0x' + adminHatId.toString(16).padStart(64, '0');
         console.log('📋 Calculated admin HAT:', adminHat);
       } catch (error) {
-        console.log('❌ Could not calculate admin HAT:', error.message);
+        console.log('❌ Could not calculate admin HAT:', (error as Error).message);
       }
 
       // Check if user owns the admin HAT
@@ -261,7 +261,7 @@ export class HatConfigurationService {
             console.log('✅ User owns HAT:', hat);
           }
         } catch (error) {
-          console.log('❌ Failed to check HAT ownership:', hat, error.message);
+          console.log('❌ Failed to check HAT ownership:', hat, (error as Error).message);
         }
       }
 

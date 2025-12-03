@@ -1,6 +1,6 @@
 import { getCurrentSession } from '@/features/identity/utils/serverAuth';
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { useAccount } from 'wagmi';
+import { useAccount, useConfig } from 'wagmi';
 import { EventService } from '../lib/supabase';
 import { supabase } from '../../../utils/supabaseClient';
 import type {
@@ -283,14 +283,12 @@ export function useEventAgendas(eventId: string | null) {
         const session = await getCurrentSession();
         console.log('Hook session check:', {
           session,
-          sessionError,
           hasUser: !!session?.user,
           userId: session?.user?.id,
         });
 
-        if (sessionError || !session?.user?.id) {
+        if (!session?.user?.id) {
           console.error('Authentication check failed in hook:', {
-            sessionError,
             session,
           });
           setError('Authentication required - please log in again');
@@ -408,6 +406,7 @@ export function useUserEvents() {
 
 export function useEventActions(eventId: string | null) {
   const { address } = useAccount();
+  const config = useConfig();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -425,8 +424,7 @@ export function useEventActions(eventId: string | null) {
         const { nonce } = await nonceRes.json();
 
         // Import signMessage dynamically to avoid SSR issues
-        const { signMessage, getConfig } = await import('wagmi/actions');
-        const config = getConfig();
+        const { signMessage } = await import('wagmi/actions');
         const signature = await signMessage(config, { message: nonce });
 
         // Verify and get Supabase token
@@ -463,7 +461,7 @@ export function useEventActions(eventId: string | null) {
     }
 
     return !!session?.user?.id;
-  }, [address]);
+  }, [address, config]);
 
   const publishEvent = useCallback(async (): Promise<boolean> => {
     if (!eventId) {

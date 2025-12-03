@@ -3,7 +3,7 @@
 import { useAuthContext } from '@/features/identity';
 import type React from 'react';
 import { useState, useEffect } from 'react';
-import { useAccount } from 'wagmi';
+import { useAccount, useConfig } from 'wagmi';
 import { useRouter } from 'next/navigation';
 import { EventTokenDisplay } from './EventTokenDisplay';
 import {
@@ -43,6 +43,7 @@ import { TokenApprovalFlow } from './TokenApprovalFlow';
 import { supabase } from '@/lib/supabase';
 import { useReadContract } from 'wagmi';
 import { CONTRACT_ADDRESSES } from '@/config/contracts';
+import type { Event } from '../types/event';
 
 // Import the contract ABI and address
 import EventManagerABI from '@/abis/EventManager.json';
@@ -50,24 +51,12 @@ const EVENT_MANAGER_CONTRACT = CONTRACT_ADDRESSES.EVENT_MANAGER;
 
 const BASE_CHAIN_ID = 8453;
 
-interface Event {
-  id: string;
+interface OnChainEvent {
   title: string;
-  description: string;
-  event_date: string;
-  location: string;
-  max_attendees?: number;
-  current_attendees?: number;
-  price_amount: string;
-  price_token: string;
-  required_tokens: string[];
-  organizing_pod?: {
-    name: string;
-  };
-  event_image_url?: string;
-  creator_address: string;
-  manager_address?: string;
-  blockchain_event_id?: string;
+  organizer: string;
+  status: number;
+  currentAttendees: bigint;
+  maxAttendees: bigint;
 }
 
 interface EventRegistrationModalProps {
@@ -86,6 +75,7 @@ export const EventRegistrationModal: React.FC<EventRegistrationModalProps> = ({
   currentRegistrationCount = 0,
 }) => {
   const { address } = useAccount();
+  const config = useConfig();
   const router = useRouter();
   const { getRegisterEventCall, isConnected } =
     useSimplifiedEventTransactions();
@@ -113,7 +103,7 @@ export const EventRegistrationModal: React.FC<EventRegistrationModalProps> = ({
   // Check if event exists on-chain using the blockchain event ID
   const blockchainEventId = event.blockchain_event_id;
   const {
-    data: onChainEvent,
+    data: onChainEventData,
     error: contractError,
     isLoading: contractLoading,
   } = useReadContract({
@@ -127,10 +117,14 @@ export const EventRegistrationModal: React.FC<EventRegistrationModalProps> = ({
     },
   });
 
+  const onChainEvent = onChainEventData as OnChainEvent | undefined;
+
+  // Get auth context at component level
+  const authContext = useAuthContext();
+
   // Check eligibility when modal opens
   useEffect(() => {
     const checkEligibility = async () => {
-      const { session, isAuthenticated, signIn } = useAuthContext();
       if (!address || !isOpen) return;
 
       setRegistrationStatus('checking');
@@ -167,8 +161,8 @@ export const EventRegistrationModal: React.FC<EventRegistrationModalProps> = ({
         } else if (event.price_token === 'SELF') {
           setSystemTokenAmount('0');
           setSelfTokenAmount(priceAmount.toString());
-        } else if (event.price_token === 'both') {
-          // For "both" token events, split equally or use separate fields if available
+        } else if (event.price_token === 'dual') {
+          // For "dual" token events, split equally or use separate fields if available
           setSystemTokenAmount((priceAmount / 2).toString());
           setSelfTokenAmount((priceAmount / 2).toString());
         } else {
@@ -337,7 +331,6 @@ export const EventRegistrationModal: React.FC<EventRegistrationModalProps> = ({
 
       const calls = getRegisterEventCall({
         eventId: blockchainEventId,
-        paymentAmount: price.isFree ? undefined : price.amount,
       });
 
       console.log('📋 Registration Transaction Calls:', calls);
@@ -356,7 +349,7 @@ export const EventRegistrationModal: React.FC<EventRegistrationModalProps> = ({
       // Ensure user is authenticated with Supabase before storing registration
       // Using centralized auth session
 
-      if (!isAuthenticated || !session?.user?.id) {
+      if (!authContext.isAuthenticated || !authContext.session?.user?.id) {
         console.log('🔐 No Supabase session, attempting authentication...');
 
         // Get nonce and sign message for authentication
@@ -367,8 +360,7 @@ export const EventRegistrationModal: React.FC<EventRegistrationModalProps> = ({
         const { nonce } = await nonceRes.json();
 
         // Import signMessage dynamically
-        const { signMessage, getConfig } = await import('wagmi/actions');
-        const config = getConfig();
+        const { signMessage } = await import('wagmi/actions');
         const signature = await signMessage(config, { message: nonce });
 
         // Verify and get Supabase token
@@ -441,28 +433,13 @@ export const EventRegistrationModal: React.FC<EventRegistrationModalProps> = ({
             );
 
             // Send notification to event creator
-            await unifiedNotificationService.createEventRegistrationNotification(
-              event.creator_address,
-              address!,
-              event.id,
-              event.title,
-            );
-            console.log('✅ Event registration notification sent to creator');
+            // TODO: Implement event registration notification
+            // await unifiedNotificationService.createEventRegistrationNotification(...)
+            console.log('📧 Event registration notification not yet implemented');
 
             // Send notification to event manager if different from creator
-            if (
-              event.manager_address &&
-              event.manager_address.toLowerCase() !==
-                event.creator_address.toLowerCase()
-            ) {
-              await unifiedNotificationService.createEventRegistrationNotification(
-                event.manager_address,
-                address!,
-                event.id,
-                event.title,
-              );
-              console.log('✅ Event registration notification sent to manager');
-            }
+            // TODO: Implement event registration notification for manager
+            console.log('📧 Manager notification not yet implemented');
           } catch (notificationError) {
             console.log(
               'Failed to send registration notification - continuing with registration',
@@ -556,11 +533,6 @@ export const EventRegistrationModal: React.FC<EventRegistrationModalProps> = ({
                   Add to Google Calendar
                 </button>
               </div>
-              {event.organizing_pod?.name && (
-                <div className="text-xs text-gray-500">
-                  Organized by {event.organizing_pod.name}
-                </div>
-              )}
             </div>
           </div>
 
@@ -722,7 +694,7 @@ export const EventRegistrationModal: React.FC<EventRegistrationModalProps> = ({
                         }
                         if (status.statusName === 'error') {
                           console.error('❌ Registration Transaction Error:', {
-                            error: status.error,
+                            error: status.statusData,
                             eventId: blockchainEventId,
                             reason:
                               'Possible causes: Event not created on-chain, insufficient approvals, or contract error',
@@ -760,12 +732,6 @@ export const EventRegistrationModal: React.FC<EventRegistrationModalProps> = ({
                         }
                         disabled={isRegistering}
                         className="hover:opacity-90 disabled:bg-gray-400 disabled:text-gray-600"
-                        style={{
-                          backgroundColor: isRegistering
-                            ? undefined
-                            : '#2F5D50',
-                          color: isRegistering ? undefined : '#FFFFFF',
-                        }}
                       />
                       <TransactionSponsor />
                       <TransactionStatus>

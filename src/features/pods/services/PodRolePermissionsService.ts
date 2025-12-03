@@ -245,7 +245,7 @@ export class PodRolePermissionsService {
           updated_at: new Date().toISOString(),
         })
         .eq('id', id)
-        .select('*', { count: 'exact' });
+        .select('*');
 
       console.log('📊 Update result:', {
         affectedRows: count,
@@ -383,15 +383,19 @@ export class PodRolePermissionsService {
         role_name: 'Pod Leader',
         permissions: {
           chatAccess: true,
+          chatModeration: true,
           governanceParticipation: true,
           eventCreation: true,
           treasuryViewing: true,
+          treasuryManagement: true,
           memberManagement: true,
           subPodCreation: true,
           roleAssignment: true,
+          forumAccess: true,
           forumModeration: false,
           bountyManagement: true,
           marketplaceAccess: true,
+          marketplaceManage: true,
         },
         max_holders: 5,
         created_by: createdBy,
@@ -404,15 +408,19 @@ export class PodRolePermissionsService {
         role_name: 'Pod Member',
         permissions: {
           chatAccess: true,
+          chatModeration: false,
           governanceParticipation: true,
           eventCreation: false,
           treasuryViewing: false,
+          treasuryManagement: false,
           memberManagement: false,
           subPodCreation: false,
           roleAssignment: false,
+          forumAccess: true,
           forumModeration: false,
           bountyManagement: false,
           marketplaceAccess: true,
+          marketplaceManage: false,
         },
         max_holders: 100,
         created_by: createdBy,

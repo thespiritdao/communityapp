@@ -580,7 +580,7 @@ export class PodDeletionService {
         // This method automatically detects if pod uses proxy pattern and routes accordingly
         const deactivationResult =
           await PodProxyDeletionService.deactivateAllPodHats(
-            publicClient,
+            publicClient as any,
             walletClient,
             pod,
             userAddress,

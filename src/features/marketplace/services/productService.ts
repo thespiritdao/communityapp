@@ -77,12 +77,12 @@ export const createProduct = async (
     const { data: sessionData, error: sessionError } =
       await supabase.auth.getSession();
 
-    if (!isAuthenticated || !sessionError) {
+    if (sessionError) {
       console.error('Session error:', sessionError);
       throw new Error('Failed to verify authentication session');
     }
 
-    if (!isAuthenticated || !sessionData?.session?.user) {
+    if (!sessionData?.session?.user) {
       console.warn(
         'No active Supabase session found. Attempting to authenticate...',
       );
@@ -328,6 +328,7 @@ export const createProduct = async (
 export const updateProduct = async (
   productId: string,
   productData: Partial<ProductFormData>,
+  ownerAddress: string,
   fundDestination?: FundDestination,
 ): Promise<IProduct> => {
   try {
@@ -362,8 +363,8 @@ export const updateProduct = async (
       dbData.fund_destination_type = fundDestination.type;
       if (fundDestination.type === 'wallet') {
         // For wallet destination, use the creator's wallet address
-        dbData.destination_address = userAddress; // Use the actual user's wallet address
-        dbData.creator_wallet = userAddress; // Ensure creator_wallet is also updated
+        dbData.destination_address = ownerAddress; // Use the actual user's wallet address
+        dbData.creator_wallet = ownerAddress; // Ensure creator_wallet is also updated
       } else if (fundDestination.type === 'pod_treasury') {
         dbData.destination_address = fundDestination.treasuryAddress; // Pod treasury address
       }
@@ -469,7 +470,7 @@ export const canUserAccessProduct = async (
       userHats,
     );
 
-    return accessibleProducts.some((product) => product.id === productId);
+    return accessibleProducts.some((product) => product.id.toString() === productId);
   } catch (error) {
     console.error('Error checking product access:', error);
     return false;
@@ -564,7 +565,7 @@ export const getUserManagedProducts = async (
     }
 
     // Check which of these roles the user actually has
-    const userManageableRoles = [];
+    const userManageableRoles: any[] = [];
     const HATS_ABI = [
       {
         inputs: [

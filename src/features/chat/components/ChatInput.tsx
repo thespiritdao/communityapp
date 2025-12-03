@@ -211,11 +211,11 @@ export default function ChatInput({ onSendMessage, chatId }: ChatInputProps) {
           continue;
         }
 
-        const { data: publicUrlData, error: publicUrlErr } =
+        const { data: publicUrlData } =
           await supabase.storage.from('attachments').getPublicUrl(filePath);
 
-        if (publicUrlErr || !publicUrlData.publicUrl) {
-          console.error('Public URL error:', publicUrlErr);
+        if (!publicUrlData.publicUrl) {
+          console.error('Public URL error: No URL returned');
           setUploadError(`Error retrieving URL for file "${file.name}".`);
           continue;
         }
@@ -292,9 +292,15 @@ export default function ChatInput({ onSendMessage, chatId }: ChatInputProps) {
             contextId={chatId || 'general'}
             contextUrl={contextUrl}
             onMentionsChange={(mentions) => {
-              setMentions(mentions);
-              console.log('ChatInput: Mentions changed:', mentions);
-              console.log('ChatInput: Current mentions state:', mentions);
+              // Map UserTagging format {id, display} to Mention format {id, name, address}
+              const mappedMentions = mentions.map((m) => ({
+                id: m.id,
+                name: m.display,
+                address: m.id, // id is the wallet address
+              }));
+              setMentions(mappedMentions);
+              console.log('ChatInput: Mentions changed:', mappedMentions);
+              console.log('ChatInput: Current mentions state:', mappedMentions);
             }}
           />
         </div>

@@ -115,7 +115,7 @@ export class HatsModulesService {
           '⚠️ Continuing with fallback modules (no registry connection)',
         );
         this.availableModules = FALLBACK_MODULES;
-        this.populateModuleIds();
+        this.updateModuleIds();
         this.isInitialized = true;
         return;
       }
@@ -252,7 +252,7 @@ export class HatsModulesService {
             .getAddresses()
             .then((addrs) => addrs[0]),
           moduleId: MODULE_IDS.MULTI_CLAIMS_HATTER,
-          hatId: managementHatId,
+          hatId: BigInt(managementHatId),
           immutableArgs: this.encodeClaimsHatterArgs(config),
           mutableArgs: this.encodeClaimsHatterMutableArgs(config),
         });
@@ -464,6 +464,8 @@ export class HatsModulesService {
           true, // Mutable
           `https://ui-avatars.com/api/?name=${encodeURIComponent(config.name)}&size=400&background=bfe7c6&color=000&bold=true`,
         ],
+        chain: this.walletClient.chain,
+        account: this.walletClient.account ?? null,
       });
 
       console.log('🎩 Management hat creation transaction:', tx);
@@ -534,10 +536,12 @@ export class HatsModulesService {
           `Members of ${config.name}`,
           999, // Large max supply for members
           '0x0000000000000000000000000000000000000000', // Eligibility module (none for now)
-          parentHatId, // FIXED: Use parent hat as toggle module instead of null
+          parentHatId as `0x${string}`, // FIXED: Use parent hat as toggle module instead of null
           true, // Mutable
           `https://ui-avatars.com/api/?name=${encodeURIComponent(config.name)}%20Members&size=400&background=c6e7ff&color=000&bold=true`,
         ],
+        chain: this.walletClient.chain,
+        account: this.walletClient.account ?? null,
       });
 
       console.log('👥 Membership hat creation transaction:', tx);
@@ -580,7 +584,7 @@ export class HatsModulesService {
     const result = await this.client!.createNewInstance({
       account: await this.walletClient.getAddresses().then((addrs) => addrs[0]),
       moduleId: MODULE_IDS.AGREEMENT_ELIGIBILITY,
-      hatId: hatId,
+      hatId: BigInt(hatId),
       immutableArgs: this.encodeAgreementArgs(agreementRule.config),
       mutableArgs: this.encodeAgreementMutableArgs(agreementRule.config),
     });
@@ -629,7 +633,7 @@ export class HatsModulesService {
           .getAddresses()
           .then((addrs) => addrs[0]),
         moduleId: moduleId,
-        hatId: hatId,
+        hatId: BigInt(hatId),
         immutableArgs: this.encodeEligibilityArgs(rule.type, rule.config),
         mutableArgs: this.encodeEligibilityMutableArgs(rule.type, rule.config),
       });
@@ -665,7 +669,7 @@ export class HatsModulesService {
           .getAddresses()
           .then((addrs) => addrs[0]),
         moduleId: MODULE_IDS.HATS_SIGNER_GATE,
-        hatId: managementHatId,
+        hatId: BigInt(managementHatId),
         immutableArgs: this.encodeTreasuryArgs(config),
         mutableArgs: this.encodeTreasuryMutableArgs(config),
       });
@@ -695,7 +699,7 @@ export class HatsModulesService {
 
     return await this.client!.isModuleDeployed({
       moduleId,
-      hatId,
+      hatId: BigInt(hatId),
       immutableArgs,
       saltNonce: 0n, // Default salt
     });
@@ -710,10 +714,9 @@ export class HatsModulesService {
   ): Promise<any> {
     this.ensureInitialized();
 
-    return await this.client!.getInstanceParameters({
-      moduleId,
-      instanceAddress,
-    });
+    return await this.client!.getInstanceParameters(
+      instanceAddress as `0x${string}`,
+    );
   }
 
   /**
@@ -734,9 +737,9 @@ export class HatsModulesService {
     return await this.client!.callInstanceWriteFunction({
       account,
       moduleId,
-      instanceAddress,
-      functionName,
-      functionArgs,
+      instance: instanceAddress as `0x${string}`,
+      func: functionName as any,
+      args: functionArgs,
     });
   }
 

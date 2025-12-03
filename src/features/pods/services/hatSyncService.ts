@@ -5,7 +5,8 @@
 
 import { createPublicClient, http } from 'viem';
 import { base } from 'viem/chains';
-import { EventService } from '../../events/lib/supabase';
+import { PodCoreService } from './PodCoreService';
+import { PodDatabaseService } from './PodDatabaseService';
 import { HATS_CONFIG } from '../utils/podLeaderHats';
 import { logHatTransaction, logHatError } from './hatErrorService';
 
@@ -122,7 +123,7 @@ class HatSyncService {
       console.log('🔄 Starting full HAT synchronization...');
 
       // Get all pods from database
-      const allPods = await EventService.getPods();
+      const allPods = await PodCoreService.getAllPods();
       console.log(`📋 Found ${allPods.length} pods to sync`);
 
       const results = {
@@ -250,7 +251,7 @@ class HatSyncService {
 
       // Apply updates if any
       if (hasUpdates) {
-        await EventService.updatePod(pod.id, updates);
+        await PodDatabaseService.updatePod(pod.id, updates);
         console.log(`📝 Updated pod ${pod.name} with latest HAT status`);
       }
 
@@ -275,7 +276,7 @@ class HatSyncService {
     try {
       console.log(`🔄 On-demand sync for pod: ${podId}`);
 
-      const pod = await EventService.getPodById(podId);
+      const pod = await PodCoreService.getPodById(podId);
       if (!pod) {
         throw new Error(`Pod ${podId} not found`);
       }

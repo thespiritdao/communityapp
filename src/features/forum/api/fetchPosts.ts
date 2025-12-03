@@ -35,11 +35,15 @@ export const fetchPosts = async ({
     const { data, error, count } = await query;
     if (error) throw new Error(`Failed to fetch posts: ${error.message}`);
 
-    const postsWithToken = data.map((post) => ({
-      ...post,
-      required_token:
-        post.required_token || post.forum_threads?.required_token || null,
-    }));
+    const postsWithToken = data.map((post) => {
+      const threadToken = Array.isArray(post.forum_threads)
+        ? post.forum_threads[0]?.required_token
+        : null;
+      return {
+        ...post,
+        required_token: post.required_token || threadToken || null,
+      };
+    });
 
     return {
       success: true,

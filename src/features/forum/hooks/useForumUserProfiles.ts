@@ -18,17 +18,7 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/utils/supabaseClient';
-
-export interface UserProfile {
-  wallet_address: string;
-  profile_picture?: string | null;
-  first_name?: string | null;
-  last_name?: string | null;
-  bio?: string | null;
-  website?: string | null;
-  interests?: string[] | null;
-  seeking?: string[] | null;
-}
+import type { UserProfile } from '@/features/identity/types';
 
 export type UserProfileMap = Record<string, UserProfile>;
 

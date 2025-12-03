@@ -13,14 +13,14 @@ export const useGovernanceForumPosts = (categoryId: string) => {
     queryKey: ['governanceForumPosts', categoryId],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from<ForumPost>('forum_posts')
+        .from('forum_posts')
         .select('id, title')
         .eq('category_id', categoryId)
         .order('created_at', { ascending: false })
         .limit(30);
 
       if (error) throw error;
-      return data;
+      return (data as ForumPost[]) || [];
     },
     enabled: Boolean(categoryId),
     staleTime: 60_000,

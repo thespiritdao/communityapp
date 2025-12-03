@@ -172,12 +172,14 @@ export const DisputeFilingDialog: React.FC<DisputeFilingDialogProps> = ({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="fixed z-50 left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-white rounded-lg shadow-lg focus:outline-none max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle
-            className="flex items-center gap-2"
-            style={{ color: '#C6933F' }}
-          >
-            <Scale className="w-5 h-5" />
-            File a Dispute
+          <DialogTitle>
+            <div
+              className="flex items-center gap-2"
+              style={{ color: '#C6933F' }}
+            >
+              <Scale className="w-5 h-5" />
+              File a Dispute
+            </div>
           </DialogTitle>
           <DialogDescription>{bounty.title}</DialogDescription>
         </DialogHeader>

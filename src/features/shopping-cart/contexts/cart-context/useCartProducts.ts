@@ -2,7 +2,7 @@
 
 import { useCartContext } from './CartContextProvider';
 import useCartTotal from './useCartTotal';
-import type { ICartProduct } from 'models';
+import type { ICartProduct } from '../../models';
 
 const useCartProducts = () => {
   const { products, setProducts } = useCartContext();

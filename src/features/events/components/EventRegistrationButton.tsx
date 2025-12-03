@@ -42,8 +42,12 @@ export const EventRegistrationButton: React.FC<
   const [isApprovalComplete, setIsApprovalComplete] = useState(false);
 
   // Determine token amounts from event pricing
-  const systemTokenAmount = (event.price_system || 0).toString();
-  const selfTokenAmount = (event.price_self || 0).toString();
+  const systemTokenAmount = (
+    event.price_token === 'SYSTEM' || event.price_token === 'dual'
+      ? event.price_amount
+      : '0'
+  );
+  const selfTokenAmount = (event.price_self_amount || '0');
   const needsTokenApproval =
     Number.parseFloat(systemTokenAmount) > 0 ||
     Number.parseFloat(selfTokenAmount) > 0;
@@ -60,7 +64,7 @@ export const EventRegistrationButton: React.FC<
   // Check if event is full
   if (
     event.max_attendees &&
-    event.stats?.registered_count >= event.max_attendees
+    event.registration_count >= event.max_attendees
   ) {
     return (
       <Button disabled={true} className={className}>
@@ -194,11 +198,6 @@ export const EventRegistrationButton: React.FC<
                   className ||
                   'font-medium py-2 px-4 rounded transition-colors hover:opacity-90'
                 }
-                style={{
-                  backgroundColor: '#8FAAA1',
-                  color: '#FFFFFF',
-                  border: 'none',
-                }}
               />
               <TransactionSponsor />{' '}
               {/* ✅ This ensures sponsorship UI is shown */}

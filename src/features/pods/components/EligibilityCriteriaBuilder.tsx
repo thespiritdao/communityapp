@@ -267,7 +267,7 @@ export const EligibilityCriteriaBuilder: React.FC<
           envTokens.push({
             name: 'Executive Pod Leader',
             address: process.env.NEXT_PUBLIC_EXECUTIVE_POD_LEADER,
-            source: 'hats',
+            source: 'pods',
           });
         }
 
@@ -275,7 +275,7 @@ export const EligibilityCriteriaBuilder: React.FC<
           envTokens.push({
             name: 'Executive Pod Member',
             address: process.env.NEXT_PUBLIC_EXECUTIVE_POD_MEMBER,
-            source: 'hats',
+            source: 'pods',
           });
         }
 
@@ -283,7 +283,7 @@ export const EligibilityCriteriaBuilder: React.FC<
           envTokens.push({
             name: 'Market Management',
             address: process.env.NEXT_PUBLIC_MARKET_MANAGEMENT,
-            source: 'hats',
+            source: 'pods',
           });
         }
 
@@ -291,7 +291,7 @@ export const EligibilityCriteriaBuilder: React.FC<
           envTokens.push({
             name: 'Bounty Management',
             address: process.env.NEXT_PUBLIC_BOUNTY_MANAGEMENT,
-            source: 'hats',
+            source: 'pods',
           });
         }
 
@@ -299,7 +299,7 @@ export const EligibilityCriteriaBuilder: React.FC<
           envTokens.push({
             name: 'Event Management',
             address: process.env.NEXT_PUBLIC_EVENT_MANAGEMENT,
-            source: 'hats',
+            source: 'pods',
           });
         }
 
@@ -308,7 +308,7 @@ export const EligibilityCriteriaBuilder: React.FC<
           envTokens.push({
             name: 'Proof of Curiosity',
             address: process.env.NEXT_PUBLIC_PROOF_OF_CURIOSITY,
-            source: 'nft',
+            source: 'tokens',
           });
         }
 
@@ -538,7 +538,7 @@ export const EligibilityCriteriaBuilder: React.FC<
       existingCriteria: EligibilityCriteria[],
     ): string => {
       const baseId = type.toLowerCase().replace(/[^a-z0-9]/g, '_');
-      const existing = existingCriteria.filter((c) => c.id.startsWith(baseId));
+      const existing = existingCriteria.filter((c) => c.id?.startsWith(baseId));
       const counter = existing.length + 1;
       return `${baseId}_${counter}`;
     };
@@ -549,15 +549,15 @@ export const EligibilityCriteriaBuilder: React.FC<
 
       // Add SELF criterion if amount is specified
       if (
-        newCriterion.self_token_amount &&
-        Number.parseFloat(newCriterion.self_token_amount) > 0
+        (newCriterion as any).self_token_amount &&
+        Number.parseFloat((newCriterion as any).self_token_amount) > 0
       ) {
         criteriaToAdd.push({
           ...newCriterion,
           id: generateStableId('token_balance_self', criteria),
           name: '$SELF Token Balance',
           contract_address: SELF_TOKEN_ADDRESS,
-          minimum_amount: newCriterion.self_token_amount,
+          minimum_amount: (newCriterion as any).self_token_amount,
           token_name: 'SELF',
           token_symbol: 'SELF',
         } as EligibilityCriteria);
@@ -565,15 +565,15 @@ export const EligibilityCriteriaBuilder: React.FC<
 
       // Add SYSTEM criterion if amount is specified
       if (
-        newCriterion.system_token_amount &&
-        Number.parseFloat(newCriterion.system_token_amount) > 0
+        (newCriterion as any).system_token_amount &&
+        Number.parseFloat((newCriterion as any).system_token_amount) > 0
       ) {
         criteriaToAdd.push({
           ...newCriterion,
           id: generateStableId('token_balance_system', criteria),
           name: '$SYSTEM Token Balance',
           contract_address: SYSTEM_TOKEN_ADDRESS,
-          minimum_amount: newCriterion.system_token_amount,
+          minimum_amount: (newCriterion as any).system_token_amount,
           token_name: 'SYSTEM',
           token_symbol: 'SYSTEM',
         } as EligibilityCriteria);
@@ -755,7 +755,7 @@ export const EligibilityCriteriaBuilder: React.FC<
                       min="0"
                       step="0.001"
                       value={
-                        criterion.self_token_amount ||
+                        (criterion as any).self_token_amount ||
                         (criterion.contract_address?.toLowerCase() ===
                         SELF_TOKEN_ADDRESS.toLowerCase()
                           ? criterion.minimum_amount
@@ -800,7 +800,7 @@ export const EligibilityCriteriaBuilder: React.FC<
                       min="0"
                       step="0.001"
                       value={
-                        criterion.system_token_amount ||
+                        (criterion as any).system_token_amount ||
                         (criterion.contract_address?.toLowerCase() ===
                         SYSTEM_TOKEN_ADDRESS.toLowerCase()
                           ? criterion.minimum_amount
@@ -1312,13 +1312,13 @@ export const EligibilityCriteriaBuilder: React.FC<
             </div>
           )}
 
-          {criterion.type === 'reputation_score' && (
+          {(criterion.type as any) === 'reputation_score' && (
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label>Minimum Score</Label>
                 <Input
                   type="number"
-                  value={criterion.minimum_score || ''}
+                  value={(criterion as any).minimum_score || ''}
                   onChange={(e) => {
                     if (isNew) {
                       setNewCriterion((prev) => ({
@@ -1334,7 +1334,7 @@ export const EligibilityCriteriaBuilder: React.FC<
               <div>
                 <Label>Scoring Contract (Optional)</Label>
                 <Input
-                  value={criterion.scoring_contract || ''}
+                  value={(criterion as any).scoring_contract || ''}
                   onChange={(e) => {
                     if (isNew) {
                       setNewCriterion((prev) => ({

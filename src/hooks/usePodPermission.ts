@@ -31,7 +31,7 @@ export function usePodPermission(
       if (roleMatches) {
         console.log(`🔐 Permission check for ${podId}:`, {
           permissionKey,
-          roleName: role.roleName,
+          roleName: role.name,
           roleHasPermission: permissionGranted,
           allPermissions: role.permissions,
         });
@@ -77,7 +77,7 @@ export function usePodPermissions(
     }
 
     console.log(`🔐 Multi-permission check for ${podId}:`, {
-      roleName: podRole.roleName,
+      roleName: podRole.name,
       requestedPermissions: permissionKeys,
       rolePermissions: podRole.permissions,
     });

@@ -145,7 +145,7 @@ export const EventDetailView: React.FC<EventDetailViewProps> = ({
         const qrCodeURL = await QRCodeService.generateUserQRCode(
           event.id,
           effectiveRegistration,
-          userProfile,
+          userProfile ?? undefined,
         );
         setQrCodeData(qrCodeURL);
       } catch (error) {
@@ -292,6 +292,11 @@ export const EventDetailView: React.FC<EventDetailViewProps> = ({
         </CardContent>
       </Card>
     );
+  }
+
+  // Type guard: at this point event must exist
+  if (!event) {
+    return null;
   }
 
   return (
@@ -810,7 +815,7 @@ export const EventDetailView: React.FC<EventDetailViewProps> = ({
 
       {/* Registration Modal */}
       <EventRegistrationModal
-        event={event}
+        event={event as any}
         isOpen={showRegistrationModal}
         onClose={() => setShowRegistrationModal(false)}
         onSuccess={() => {

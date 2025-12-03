@@ -2,7 +2,7 @@
 
 import type React from 'react';
 import { useContractRead } from 'wagmi';
-import { UNLOCK_PUBLIC_LOCK_ABI } from 'utils/contractABI';
+import { UNLOCK_PUBLIC_LOCK_ABI } from '@/app/api/utils/contractABI';
 
 interface UnlockMembershipProps {
   walletAddress: string;
@@ -30,12 +30,16 @@ export const UnlockMembership: React.FC<UnlockMembershipProps> = ({
 
   // Determine if the user holds any membership tokens
   const hasMembership =
-    balance && (typeof balance === 'bigint' ? balance > 0n : balance > 0);
+    typeof balance === 'bigint'
+      ? balance > 0n
+      : typeof balance === 'number'
+        ? balance > 0
+        : false;
 
   return (
     <div>
       {hasMembership ? (
-        <p>User holds membership tokens. Balance: {balance.toString()}</p>
+        <p>User holds membership tokens. Balance: {balance ? String(balance) : '0'}</p>
       ) : (
         <p>No membership tokens found.</p>
       )}

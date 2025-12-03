@@ -97,7 +97,7 @@ export async function getExecutivePodManagers(): Promise<ExecutiveManager[]> {
     console.log(
       `✅ Found ${podData.pod_leads.length} executive managers from pods.pod_leads`,
     );
-    return podData.pod_leads.map((wallet) => ({ wallet_address: wallet }));
+    return podData.pod_leads.map((wallet: string) => ({ wallet_address: wallet }));
   } catch (error) {
     console.error('❌ Error fetching executive pod managers:', error);
 
@@ -173,7 +173,7 @@ export async function getPodManagers(
     console.log(
       `✅ Found ${podData.pod_leads.length} managers from pods.pod_leads`,
     );
-    return podData.pod_leads.map((wallet) => ({ wallet_address: wallet }));
+    return podData.pod_leads.map((wallet: string) => ({ wallet_address: wallet }));
   } catch (error) {
     console.error(`❌ Error fetching pod managers for ${podId}:`, error);
     return [];

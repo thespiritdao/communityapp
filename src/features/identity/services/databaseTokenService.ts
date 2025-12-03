@@ -42,7 +42,7 @@ export class DatabaseTokenService {
         token_type: token.token_type as 'erc20' | 'erc721' | 'erc1155',
         token_image: token.token_image,
         category: token.token_type === 'erc20' ? 'credential' : 'membership',
-        hat_id: token.token_id, // Use token_id from database as hat_id for contract calls
+        token_address: token.token_id, // Use token_id from database as token_address for contract calls
         is_active: token.is_active,
         source: 'tokens',
       }));
@@ -80,7 +80,7 @@ export class DatabaseTokenService {
           token_type: 'erc1155' as const,
           token_image: pod.pod_image_url,
           category: 'credential' as const,
-          hat_id: pod.management_hat_id,
+          token_address: pod.management_hat_id,
           is_active: pod.is_active,
           source: 'pods',
         };
@@ -120,7 +120,7 @@ export class DatabaseTokenService {
           token_type: 'erc1155' as const,
           token_image: pod.pod_image_url,
           category: 'credential' as const,
-          hat_id: pod.membership_hat_id,
+          token_address: pod.membership_hat_id,
           is_active: pod.is_active,
           source: 'pods',
         };
@@ -161,9 +161,10 @@ export class DatabaseTokenService {
 
       return (data || []).map((rolePermission) => {
         // Handle pods with IPFS URLs as names
-        const podName = rolePermission.pods.name.startsWith('ipfs://')
+        const pod = Array.isArray(rolePermission.pods) ? rolePermission.pods[0] : rolePermission.pods;
+        const podName = pod?.name?.startsWith('ipfs://')
           ? 'Community Pod' // Default name for IPFS-named pods
-          : rolePermission.pods.name;
+          : pod?.name || 'Unknown Pod';
 
         const displayName = rolePermission.role_name || `${podName} Member`;
 
@@ -175,7 +176,7 @@ export class DatabaseTokenService {
             rolePermission.contract_address ||
             '0x3bc1A0Ad72417f2d411118085256fC53CBdDd137',
           token_type: 'erc1155' as const,
-          token_image: rolePermission.pods.pod_image_url,
+          token_image: pod?.pod_image_url || '',
           category: 'credential' as const,
           token_address: rolePermission.token_address,
           is_active: rolePermission.is_active,

@@ -85,7 +85,7 @@ export function PodCard({ pod, canManage, getProfile }: PodCardProps) {
             <img
               src={(() => {
                 try {
-                  return PodImageService.getPodImageUrl(pod);
+                  return PodImageService.getPodImageUrl(pod as any);
                 } catch (error) {
                   console.error('Error getting pod image URL:', error, pod);
                   return `https://ui-avatars.com/api/?name=${encodeURIComponent(pod?.name || 'Pod')}&size=48&background=8FAAA1&color=fff&bold=true`;

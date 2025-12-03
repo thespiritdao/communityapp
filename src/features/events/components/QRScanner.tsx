@@ -383,9 +383,11 @@ export const QRScanner: React.FC<QRScannerProps> = ({
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Camera className="w-5 h-5" />
-            <span>Confirm Access</span>
+          <DialogTitle>
+            <div className="flex items-center gap-2">
+              <Camera className="w-5 h-5" />
+              <span>Confirm Access</span>
+            </div>
           </DialogTitle>
         </DialogHeader>
 

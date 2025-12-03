@@ -48,10 +48,11 @@ export async function queryPinecone(
   namespace: Namespace,
   topK: number = 5,
 ): Promise<RelevantContext[]> {
+  // Route to appropriate index based on query type
+  let indexName: string = '';
+  let useNamespace: boolean = false;
+
   try {
-    // Route to appropriate index based on query type
-    let indexName: string;
-    let useNamespace: boolean;
 
     if (namespace === 'spiritdao') {
       // DAO queries use sensemaker index with spiritdao namespace

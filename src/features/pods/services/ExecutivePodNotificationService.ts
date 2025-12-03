@@ -88,7 +88,6 @@ export class ExecutivePodNotificationService {
         try {
           const balances = await fetchTokenBalances(
             batchAddresses[0], // This function expects single address, so we'll call it for each
-            [EXECUTIVE_TOKEN_ADDRESS],
           );
 
           // For each address in the batch, check if they have executive tokens
@@ -96,16 +95,12 @@ export class ExecutivePodNotificationService {
             try {
               const individualBalances = await fetchTokenBalances(
                 batchAddresses[j],
-                [EXECUTIVE_TOKEN_ADDRESS],
               );
 
-              if (
-                individualBalances.length > 0 &&
-                Number.parseFloat(individualBalances[0]) > 0
-              ) {
+              if (individualBalances.hasExecutivePod) {
                 executiveHolders.push(batchAddresses[j]);
                 console.log(
-                  `✅ Executive token holder found: ${batchAddresses[j]} (Balance: ${individualBalances[0]})`,
+                  `✅ Executive token holder found: ${batchAddresses[j]}`,
                 );
               }
             } catch (error) {

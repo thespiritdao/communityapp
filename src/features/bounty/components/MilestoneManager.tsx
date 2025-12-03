@@ -27,11 +27,15 @@ import {
   Transaction,
   TransactionButton,
 } from '@coinbase/onchainkit/transaction';
+import type { Abi } from 'viem';
 import { useAccount } from 'wagmi';
+import BountyManagerABIJson from '@/abis/BountyManagerV2.json';
 import {
   useBountyContractEnhanced,
   type PaymentStructure,
 } from '../hooks/useBountyContractEnhanced';
+
+const BountyManagerABI = BountyManagerABIJson as Abi;
 
 interface Milestone {
   id: string;
@@ -103,6 +107,7 @@ export const MilestoneManager: React.FC<MilestoneManagerProps> = ({
     if (newMilestones.length === 0) return;
 
     try {
+      const descriptions = newMilestones.map((m) => m.description);
       const dueDates = newMilestones.map((m) =>
         Math.floor(m.dueDate.getTime() / 1000),
       );
@@ -110,6 +115,7 @@ export const MilestoneManager: React.FC<MilestoneManagerProps> = ({
 
       await createMilestonesOnChain(
         Number.parseInt(bounty.id),
+        descriptions,
         dueDates,
         paymentAmounts,
       );
@@ -376,12 +382,11 @@ export const MilestoneManager: React.FC<MilestoneManagerProps> = ({
                   {milestone.status === 'pending' && (
                     <Transaction
                       isSponsored={true}
-                      address={address}
-                      contracts={[
+                      calls={[
                         {
                           address: process.env
                             .NEXT_PUBLIC_BOUNTY_MANAGER_ADDRESS as `0x${string}`,
-                          abi: [], // Will be filled by OnchainKit
+                          abi: BountyManagerABI,
                           functionName: 'approveMilestone',
                           args: [
                             Number.parseInt(bounty.id),

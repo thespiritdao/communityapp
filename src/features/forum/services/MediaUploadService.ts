@@ -142,7 +142,6 @@ export async function uploadFile(
       console.error('❌ STORAGE UPLOAD ERROR:', {
         error: uploadError,
         message: uploadError.message,
-        statusCode: uploadError.statusCode,
         name: uploadError.name,
       });
       throw uploadError;

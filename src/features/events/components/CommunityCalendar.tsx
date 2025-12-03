@@ -18,7 +18,7 @@ import {
   Lock,
 } from 'lucide-react';
 
-import type { EventWithStats } from '../types/event';
+import type { Event } from '../types/event';
 import { EventRegistrationModal } from './EventRegistrationModal';
 import { useTokenGatedEvents } from '../hooks/useEventTokenGating';
 import { usePods } from '../hooks/useEventTokenGating';
@@ -38,9 +38,7 @@ export const CommunityCalendar: React.FC<CommunityCalendarProps> = ({
 
   const [currentDate, setCurrentDate] = useState(new Date());
   const [view, setView] = useState<CalendarView>('month');
-  const [selectedEvent, setSelectedEvent] = useState<EventWithStats | null>(
-    null,
-  );
+  const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
   const [showRegistrationModal, setShowRegistrationModal] = useState(false);
   const [filterPod, setFilterPod] = useState<string>('');
 
@@ -54,7 +52,7 @@ export const CommunityCalendar: React.FC<CommunityCalendarProps> = ({
 
   // Group events by date for calendar display
   const eventsByDate = useMemo(() => {
-    const grouped: Record<string, EventWithStats[]> = {};
+    const grouped: Record<string, Event[]> = {};
 
     filteredEvents.forEach((event) => {
       const dateKey = new Date(event.event_date).toDateString();
@@ -91,12 +89,12 @@ export const CommunityCalendar: React.FC<CommunityCalendarProps> = ({
     setCurrentDate(newDate);
   };
 
-  const handleRegisterClick = (event: EventWithStats) => {
+  const handleRegisterClick = (event: Event) => {
     setSelectedEvent(event);
     setShowRegistrationModal(true);
   };
 
-  const exportToGoogleCalendar = (event: EventWithStats) => {
+  const exportToGoogleCalendar = (event: Event) => {
     const startDate = new Date(event.event_date);
     const endDate = event.event_end_date
       ? new Date(event.event_end_date)
@@ -289,7 +287,8 @@ export const CommunityCalendar: React.FC<CommunityCalendarProps> = ({
               <div>
                 <p className="text-2xl font-bold" style={{ color: '#C6933F' }}>
                   {filteredEvents.reduce(
-                    (sum, event) => sum + event.registration_count,
+                    (sum, event) =>
+                      sum + ((event as any).registration_count ?? 0),
                     0,
                   )}
                 </p>
@@ -303,7 +302,7 @@ export const CommunityCalendar: React.FC<CommunityCalendarProps> = ({
       {/* Registration Modal */}
       {selectedEvent && (
         <EventRegistrationModal
-          event={selectedEvent}
+          event={selectedEvent as any}
           isOpen={showRegistrationModal}
           onClose={() => {
             setShowRegistrationModal(false);
@@ -322,8 +321,8 @@ export const CommunityCalendar: React.FC<CommunityCalendarProps> = ({
 // Month View Component
 interface MonthViewProps {
   currentDate: Date;
-  eventsByDate: Record<string, EventWithStats[]>;
-  onEventClick: (event: EventWithStats) => void;
+  eventsByDate: Record<string, Event[]>;
+  onEventClick: (event: Event) => void;
 }
 
 const MonthView: React.FC<MonthViewProps> = ({
@@ -546,7 +545,7 @@ const DayView: React.FC<MonthViewProps> = ({
 
                   <div className="flex items-center">
                     <Users className="w-4 h-4 mr-2" />
-                    {event.registration_count} registered
+                    {(event as any).registration_count ?? 0} registered
                   </div>
                 </div>
 

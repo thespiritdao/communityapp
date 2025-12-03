@@ -33,6 +33,11 @@ export function useEventContracts() {
         return null;
       }
 
+      if (!publicClient) {
+        setError('Public client not available');
+        return null;
+      }
+
       try {
         setLoading(true);
         setError(null);
@@ -87,6 +92,11 @@ export function useEventContracts() {
     ): Promise<string | null> => {
       if (!walletClient || !address) {
         setError('Wallet not connected');
+        return null;
+      }
+
+      if (!publicClient) {
+        setError('Public client not available');
         return null;
       }
 
@@ -155,6 +165,11 @@ export function useEventContracts() {
         return null;
       }
 
+      if (!publicClient) {
+        setError('Public client not available');
+        return null;
+      }
+
       try {
         setLoading(true);
         setError(null);
@@ -207,6 +222,11 @@ export function useEventContracts() {
         return null;
       }
 
+      if (!publicClient) {
+        setError('Public client not available');
+        return null;
+      }
+
       try {
         setLoading(true);
         setError(null);
@@ -250,6 +270,11 @@ export function useEventContracts() {
     async (eventId: string, recipients: string[]): Promise<string | null> => {
       if (!walletClient || !address) {
         setError('Wallet not connected');
+        return null;
+      }
+
+      if (!publicClient) {
+        setError('Public client not available');
         return null;
       }
 
@@ -317,6 +342,11 @@ export function useEventContracts() {
         return null;
       }
 
+      if (!publicClient) {
+        setError('Public client not available');
+        return null;
+      }
+
       try {
         setLoading(true);
         setError(null);
@@ -377,6 +407,11 @@ export function useEventContracts() {
         return null;
       }
 
+      if (!publicClient) {
+        setError('Public client not available');
+        return null;
+      }
+
       try {
         setLoading(true);
         setError(null);
@@ -416,6 +451,11 @@ export function useEventContracts() {
     async (eventId: string): Promise<string | null> => {
       if (!walletClient || !address) {
         setError('Wallet not connected');
+        return null;
+      }
+
+      if (!publicClient) {
+        setError('Public client not available');
         return null;
       }
 

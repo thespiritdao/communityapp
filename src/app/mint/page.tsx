@@ -1,3 +1,5 @@
+'use client';
+
 import { useAccount } from 'wagmi';
 import AdvocateMembershipABI from '@/abis/AdvocateMembershipABI.json';
 import { NFTMintCardGeneral } from '@/nft/components/NFTMintCardGeneral';

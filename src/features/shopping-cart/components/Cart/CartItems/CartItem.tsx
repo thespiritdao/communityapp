@@ -126,33 +126,29 @@ interface CartItemProps {
  * - Accessible controls
  */
 const CartItem = memo(({ product }: CartItemProps) => {
-  const { updateProductQuantity, removeProduct } = useCart();
+  const { increaseProductQuantity, decreaseProductQuantity, removeProduct } = useCart();
 
   const handleIncreaseQuantity = useCallback(() => {
-    updateProductQuantity(product.id, (product.quantity || 1) + 1);
-  }, [product.id, product.quantity, updateProductQuantity]);
+    increaseProductQuantity(product);
+  }, [product, increaseProductQuantity]);
 
   const handleDecreaseQuantity = useCallback(() => {
-    const newQuantity = (product.quantity || 1) - 1;
-    if (newQuantity > 0) {
-      updateProductQuantity(product.id, newQuantity);
-    }
-  }, [product.id, product.quantity, updateProductQuantity]);
+    decreaseProductQuantity(product);
+  }, [product, decreaseProductQuantity]);
 
   const handleRemove = useCallback(() => {
-    removeProduct(product.id);
-  }, [product.id, removeProduct]);
+    removeProduct(product);
+  }, [product, removeProduct]);
 
   const quantity = product.quantity || 1;
   const systemPrice =
-    (product.priceSystem || product.price_system || 0) * quantity;
-  const selfPrice = (product.priceSelf || product.price_self || 0) * quantity;
+    (product.price_system || 0) * quantity;
+  const selfPrice = (product.price_self || 0) * quantity;
 
   return (
     <ItemContainer>
       <ItemImage
         src={
-          product.image ||
           product.image_url ||
           '/images/placeholder-product.jpg'
         }

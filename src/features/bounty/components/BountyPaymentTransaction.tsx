@@ -27,10 +27,12 @@ import {
   TransactionStatusLabel,
   TransactionStatusAction,
 } from '@coinbase/onchainkit/transaction';
-import type { TransactionReceipt } from 'viem';
+import type { Abi, TransactionReceipt } from 'viem';
 import { parseEther } from 'viem';
-import BountyManagerABI from '@/abis/BountyManagerV2.json';
+import BountyManagerABIJson from '@/abis/BountyManagerV2.json';
 import { unifiedNotificationService } from '@/services/unifiedNotificationService';
+
+const BountyManagerABI = BountyManagerABIJson as Abi;
 import { UserProfileDisplay } from '@/components/UserProfileDisplay';
 import {
   logTransactionLifecycle,
@@ -171,7 +173,7 @@ export const BountyPaymentTransaction: React.FC<
         unifiedNotificationService.createNotification({
           recipient_address: bidderAddress,
           sender_address: address!,
-          notification_type: 'bounty_work_reviewed',
+          notification_type: 'bounty_update',
           title: 'Bounty Payment Released!',
           message: `Payment of ${paymentAmount} ${paymentToken} has been released for "${bountyTitle}". The bounty is now complete.`,
           context_type: 'bounty',
@@ -184,7 +186,7 @@ export const BountyPaymentTransaction: React.FC<
         unifiedNotificationService.createNotification({
           recipient_address: creatorAddress,
           sender_address: address!,
-          notification_type: 'bounty_work_reviewed',
+          notification_type: 'bounty_update',
           title: 'Bounty Completed',
           message: `Bounty "${bountyTitle}" has been completed and payment released.`,
           context_type: 'bounty',
@@ -363,8 +365,6 @@ export const BountyPaymentTransaction: React.FC<
       {/* Transaction Component */}
       {address && contractAddress ? (
         <Transaction
-          address={address?.toLowerCase() as `0x${string}`}
-          chainId={BASE_CHAIN_ID}
           calls={[
             {
               address: contractAddress,
@@ -379,7 +379,6 @@ export const BountyPaymentTransaction: React.FC<
           <TransactionButton
             text="Release Payment"
             className="w-full"
-            style={{ backgroundColor: '#2F5D50', color: '#FFFFFF' }}
             disabled={isProcessing}
           />
           <TransactionSponsor />

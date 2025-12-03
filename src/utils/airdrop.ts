@@ -55,13 +55,13 @@ async function updateTaskStatus(taskId: string, walletAddress: string) {
     await supabase
       .from('relay_tasks')
       .update({
-        status: taskDetails.task?.taskState || 'pending',
-        transaction_hash: taskDetails.task?.transactionHash || null,
+        status: taskDetails?.taskState || 'pending',
+        transaction_hash: taskDetails?.transactionHash || null,
         updated_at: new Date().toISOString(),
       })
       .eq('task_id', taskId);
 
-    if (taskDetails.task?.taskState === 'ExecSuccess') {
+    if (taskDetails?.taskState === 'ExecSuccess') {
       await supabase
         .from('user_profiles')
         .update({
@@ -79,12 +79,12 @@ export async function checkAirdropStatus(taskId: string) {
     const status = await relayManager.checkRelayStatus(taskId);
 
     // Update status in database if transaction is completed
-    if (status.task?.taskState === 'ExecSuccess') {
+    if (status?.taskState === 'ExecSuccess') {
       await supabase
         .from('relay_tasks')
         .update({
           status: 'completed',
-          transaction_hash: status.task.transactionHash,
+          transaction_hash: status?.transactionHash,
         })
         .eq('task_id', taskId);
     }
@@ -105,9 +105,9 @@ export async function monitorAirdropTask(taskId: string, maxAttempts = 30) {
 
     const status = await checkAirdropStatus(taskId);
 
-    if (status.task?.taskState === 'ExecSuccess') {
-      return status.task.transactionHash;
-    } else if (status.task?.taskState === 'ExecReverted') {
+    if (status?.taskState === 'ExecSuccess') {
+      return status?.transactionHash || null;
+    } else if (status?.taskState === 'ExecReverted') {
       throw new Error('Transaction reverted');
     }
 

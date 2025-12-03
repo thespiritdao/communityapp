@@ -1,6 +1,6 @@
 // src/transaction/components/TransactionDefault.tsx
 import type { TransactionDefaultReact } from '../types';
-import { Transaction } from './Transaction';
+import Transaction from './Transaction';
 import { TransactionButton } from './TransactionButton';
 import { TransactionToast } from './TransactionToast';
 import { TransactionToastAction } from './TransactionToastAction';

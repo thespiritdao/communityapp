@@ -259,8 +259,9 @@ export class EligibilityService {
       case 'time_based':
         return await this.evaluateTimeBased(userAddress, criterion);
 
-      case 'reputation_score':
-        return await this.evaluateReputationScore(userAddress, criterion);
+      // TODO: Re-enable when 'reputation_score' is added to EligibilityCriteria type
+      // case 'reputation_score':
+      //   return await this.evaluateReputationScore(userAddress, criterion);
 
       case 'staking':
         return await this.evaluateStaking(userAddress, criterion);
@@ -481,7 +482,7 @@ export class EligibilityService {
       console.error('Token balance evaluation failed:', error);
       return {
         passed: false,
-        error:
+        details:
           error instanceof Error ? error.message : 'Token balance check failed',
       };
     }
@@ -564,7 +565,7 @@ export class EligibilityService {
       console.error('Agreement evaluation failed:', error);
       return {
         passed: false,
-        error:
+        details:
           error instanceof Error ? error.message : 'Agreement check failed',
       };
     }
@@ -609,7 +610,7 @@ export class EligibilityService {
       console.error('Time-based evaluation failed:', error);
       return {
         passed: false,
-        error:
+        details:
           error instanceof Error ? error.message : 'Time-based check failed',
       };
     }
@@ -825,11 +826,10 @@ export class EligibilityService {
       console.error('❌ Credential ownership evaluation failed:', error);
       return {
         passed: false,
-        error:
+        details:
           error instanceof Error
             ? error.message
             : 'Credential ownership check failed',
-        details: 'Error checking credential ownership',
       };
     }
   }
@@ -845,6 +845,7 @@ export class EligibilityService {
   static async checkAllCriteriaForUser(
     userAddress: string,
     criteria: EligibilityCriteria[],
+    podId: string = '',
   ): Promise<{
     eligible: boolean;
     criteriaStatus: Array<{
@@ -876,6 +877,7 @@ export class EligibilityService {
       try {
         const result = await this.evaluateSingleCriterion(
           userAddress,
+          podId,
           criterion,
         );
 

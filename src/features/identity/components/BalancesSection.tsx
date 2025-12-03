@@ -11,7 +11,7 @@ export const BalancesSection: React.FC<BalancesSectionProps> = React.memo(
       <h2>
         <strong>Balances</strong>
       </h2>
-      <Balances walletAddress={walletAddress} />
+      <Balances />
     </div>
   ),
 );

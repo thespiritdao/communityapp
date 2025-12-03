@@ -3,7 +3,9 @@
 import { createContext, type ReactNode, useContext } from 'react';
 import snapshot from '@snapshot-labs/snapshot.js';
 
-const SnapshotContext = createContext<snapshot.Client712 | null>(null);
+type SnapshotClient = InstanceType<(typeof snapshot)['Client712']>;
+
+const SnapshotContext = createContext<SnapshotClient | null>(null);
 
 const HUB_URL = 'https://hub.snapshot.org';
 
@@ -17,7 +19,7 @@ export const SnapshotProvider = ({ children }: { children: ReactNode }) => {
   );
 };
 
-export const useSnapshot = (): snapshot.Client712 => {
+export const useSnapshot = (): SnapshotClient => {
   const context = useContext(SnapshotContext);
   if (!context) {
     throw new Error('useSnapshot must be used within a SnapshotProvider');

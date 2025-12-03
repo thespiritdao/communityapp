@@ -123,8 +123,12 @@ const PostList: React.FC<PostListProps> = ({ threadId }) => {
           author_address: threadData.author_address,
           created_at: threadData.created_at,
           category_id: threadData.category_id,
-          category_name: threadData.forum_categories.name,
-          pod_id: threadData.forum_categories.pod_id || null,
+          category_name: Array.isArray(threadData.forum_categories)
+            ? threadData.forum_categories[0]?.name
+            : null,
+          pod_id: Array.isArray(threadData.forum_categories)
+            ? threadData.forum_categories[0]?.pod_id || null
+            : null,
           is_pinned: threadData.is_pinned,
           is_locked: threadData.is_locked,
         });

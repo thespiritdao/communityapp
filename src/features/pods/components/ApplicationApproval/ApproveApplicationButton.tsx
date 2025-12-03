@@ -1050,7 +1050,7 @@ export const ApproveApplicationButton: React.FC<
     }
   };
 
-  const handleError = (error: Error) => {
+  const handleError = (error: any) => {
     console.error('❌ HAT minting transaction error:', error);
     console.error('Error details:', {
       message: error.message,
@@ -1138,18 +1138,7 @@ export const ApproveApplicationButton: React.FC<
           <TransactionButton
             text={`Approve & Mint ${roleLabel} Role`}
             disabled={isProcessing || !address}
-            className="text-white px-6 py-3 rounded-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-            style={{ backgroundColor: '#3F7A5A' }}
-            onMouseEnter={(e: React.MouseEvent<HTMLButtonElement>) =>
-              !isProcessing &&
-              !e.currentTarget.disabled &&
-              (e.currentTarget.style.backgroundColor = '#2F5D50')
-            }
-            onMouseLeave={(e: React.MouseEvent<HTMLButtonElement>) =>
-              !isProcessing &&
-              !e.currentTarget.disabled &&
-              (e.currentTarget.style.backgroundColor = '#3F7A5A')
-            }
+            className="text-white px-6 py-3 rounded-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed bg-[#3F7A5A] hover:bg-[#2F5D50]"
           />
 
           <TransactionStatus>

@@ -308,6 +308,11 @@ export const UnifiedNotificationProvider: React.FC<
         const newNotification =
           await unifiedNotificationService.createNotification(data);
 
+        // Check if notification was created successfully
+        if (!newNotification) {
+          throw new Error('Failed to create notification');
+        }
+
         // Add to local state if it's for the current user
         if (data.recipient_address.toLowerCase() === address?.toLowerCase()) {
           setNotifications((prev) => [newNotification, ...prev]);

@@ -752,7 +752,7 @@ export const PodDeletionApprovalFlow: React.FC<
             executed_at: new Date().toISOString(),
             executed_by: address.toLowerCase(),
             hat_deactivation_tx:
-              result.hatDeactivationResults?.managementHat?.transactionHash,
+              (result as any).hatDeactivationResults?.managementHat?.transactionHash,
           })
           .eq('id', activeProposal.id);
 
@@ -925,11 +925,7 @@ export const PodDeletionApprovalFlow: React.FC<
                       onClickName={(addr) => {
                         console.log('Opening profile modal for:', addr);
                       }}
-                      className="flex items-center space-x-2 px-2 py-1 border rounded-lg"
-                      style={{
-                        backgroundColor: '#D1E6DC',
-                        borderColor: '#B8D9CA',
-                      }}
+                      className="flex items-center space-x-2 px-2 py-1 border rounded-lg bg-[#D1E6DC] border-[#B8D9CA]"
                     />
                   ))}
                 </div>
@@ -1007,14 +1003,7 @@ export const PodDeletionApprovalFlow: React.FC<
                   }}
                 >
                   <TransactionButton
-                    className="w-full"
-                    style={{ backgroundColor: '#8B3A3A' }}
-                    onMouseEnter={(e: React.MouseEvent<HTMLButtonElement>) =>
-                      (e.currentTarget.style.backgroundColor = '#5C1F1F')
-                    }
-                    onMouseLeave={(e: React.MouseEvent<HTMLButtonElement>) =>
-                      (e.currentTarget.style.backgroundColor = '#8B3A3A')
-                    }
+                    className="w-full bg-[#8B3A3A] hover:bg-[#5C1F1F]"
                   />
                   <TransactionStatus>
                     <TransactionStatusAction />

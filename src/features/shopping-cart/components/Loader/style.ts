@@ -12,7 +12,7 @@ export const Container = styled.div`
     width: 12px;
     height: 12px;
     margin: 5px;
-    background-color: ${({ theme }) => theme.colors.primary};
+    background-color: ${({ theme }: any) => theme.colors.primary};
     border-radius: 50%;
     display: inline-block;
     animation: bounce 1.2s infinite ease-in-out both;
@@ -20,7 +20,7 @@ export const Container = styled.div`
 
   p {
     margin-top: 10px;
-    color: ${({ theme }) => theme.colors.secondary};
+    color: ${({ theme }: any) => theme.colors.secondary};
     font-size: 14px;
   }
 

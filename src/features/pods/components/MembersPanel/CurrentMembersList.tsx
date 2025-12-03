@@ -40,7 +40,6 @@ export const CurrentMembersList = React.memo<CurrentMembersListProps>(
       isLoading: profilesLoading,
       getProfile,
       error: profilesError,
-      refetch,
     } = useProfiles(members, { staleTime: 5 * 60 * 1000 });
 
     // Add observability tracking - TEMPORARILY DISABLED
@@ -135,7 +134,7 @@ export const CurrentMembersList = React.memo<CurrentMembersListProps>(
           error={profilesError}
           onRetry={() => {
             trackMemberAction('retry_member_load');
-            refetch();
+            // Profiles will be automatically refetched by the ProfilesProvider
           }}
         />
       );

@@ -126,7 +126,8 @@ export function PodDetailsContainer({
               {/* Treasury Actions */}
               {treasuryAddress && (
                 <div className="flex items-center space-x-2">
-                  <FundButton
+                  {/* TODO: Fix FundButton props - currently incompatible with OnchainKit FundButton */}
+                  {/* <FundButton
                     fundingType="pod"
                     fundingTarget={{ podId: pod.id, treasuryAddress }}
                     buttonProps={{
@@ -134,7 +135,7 @@ export function PodDetailsContainer({
                       size: 'sm',
                       disabled: treasuryLoading,
                     }}
-                  />
+                  /> */}
                   <Button
                     size="sm"
                     variant="outline"
@@ -173,11 +174,11 @@ export function PodDetailsContainer({
                     <div
                       key={index}
                       className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg cursor-pointer hover:bg-gray-100 transition-colors"
-                      onClick={() => openProfileModal(lead, allLeadAddresses)}
+                      onClick={() => openProfileModal(lead)}
                     >
-                      {profile?.profile_image_url ? (
+                      {profile?.profile_picture ? (
                         <img
-                          src={profile.profile_image_url}
+                          src={profile.profile_picture}
                           alt={displayName}
                           className="w-10 h-10 rounded-full object-cover"
                         />

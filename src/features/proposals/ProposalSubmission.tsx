@@ -108,7 +108,7 @@ export const ProposalSubmission: React.FC<ProposalSubmissionProps> = ({
   }, [resetForm, setIsSubmitting, onSuccess]);
 
   const handleTransactionError = useCallback(
-    (error: Error) => {
+    (error: any) => {
       setIsSubmitting(false);
       console.error('Transaction failed:', error);
       onError?.(error);
@@ -141,10 +141,9 @@ export const ProposalSubmission: React.FC<ProposalSubmissionProps> = ({
           />
           {isConnected && canPropose ? (
             <Transaction
-              address={address?.toLowerCase() as `0x${string}`}
               chainId={base.id}
               isSponsored={true}
-              calls={transactionData ? [transactionData] : []}
+              contracts={transactionData ? ([transactionData] as any) : []}
               onSuccess={handleTransactionSuccess}
               onError={handleTransactionError}
             >
@@ -233,10 +232,9 @@ export const ProposalSubmission: React.FC<ProposalSubmissionProps> = ({
 
           {isConnected ? (
             <Transaction
-              address={address?.toLowerCase() as `0x${string}`}
               chainId={base.id}
               isSponsored={true}
-              calls={transactionData ? [transactionData] : []}
+              contracts={transactionData ? ([transactionData] as any) : []}
               onSuccess={handleTransactionSuccess}
               onError={handleTransactionError}
             >
@@ -443,10 +441,9 @@ export const ProposalSubmission: React.FC<ProposalSubmissionProps> = ({
         <div className="pt-4">
           {isConnected && canPropose ? (
             <Transaction
-              address={address?.toLowerCase() as `0x${string}`}
               chainId={base.id}
               isSponsored={true}
-              calls={transactionData ? [transactionData] : []}
+              contracts={transactionData ? ([transactionData] as any) : []}
               onSuccess={handleTransactionSuccess}
               onError={handleTransactionError}
             >

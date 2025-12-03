@@ -16,7 +16,8 @@ export interface EventNotification {
     | 'event_reminder'
     | 'event_update'
     | 'event_cancelled'
-    | 'completion_nft_ready';
+    | 'completion_nft_ready'
+    | 'event_checkin_prompt';
   title: string;
   message: string;
   context_url?: string;
@@ -95,18 +96,13 @@ class EventNotificationService {
       );
       if (sevenDaysBefore > now) {
         const notification7d: Partial<EventNotification> = {
-          user_id: attendeeAddress.toLowerCase(),
+          recipient_address: attendeeAddress.toLowerCase(),
           event_id: eventId,
           notification_type: 'event_checkin_prompt',
           title: `Check-in opens soon: ${eventTitle}`,
           message: `Check-in for "${eventTitle}" opens in 7 days. Get ready!`,
           scheduled_for: sevenDaysBefore.toISOString(),
-          delivery_method: 'in_app',
-          status: 'pending',
-          metadata: {
-            reminder_type: 'checkin_7d',
-            event_date: eventDate,
-          },
+          is_read: false,
         };
 
         await supabase.from('event_notifications').insert(notification7d);
@@ -119,18 +115,13 @@ class EventNotificationService {
       const dayOf = new Date(eventDateTime.getTime() - 1 * 60 * 60 * 1000);
       if (dayOf > now) {
         const notificationDayOf: Partial<EventNotification> = {
-          user_id: attendeeAddress.toLowerCase(),
+          recipient_address: attendeeAddress.toLowerCase(),
           event_id: eventId,
           notification_type: 'event_checkin_prompt',
           title: `Check-in now: ${eventTitle}`,
           message: `Check-in is now open for "${eventTitle}"! Don't forget to check in to claim your completion NFT.`,
           scheduled_for: dayOf.toISOString(),
-          delivery_method: 'in_app',
-          status: 'pending',
-          metadata: {
-            reminder_type: 'checkin_day_of',
-            event_date: eventDate,
-          },
+          is_read: false,
         };
 
         await supabase.from('event_notifications').insert(notificationDayOf);
@@ -154,18 +145,13 @@ class EventNotificationService {
   ): Promise<void> {
     try {
       const notification: Partial<EventNotification> = {
-        user_id: organizerAddress.toLowerCase(),
+        recipient_address: organizerAddress.toLowerCase(),
         event_id: eventId,
         notification_type: 'event_update',
         title: 'New Event Registration',
         message: `Someone has registered for your event "${eventTitle}". Check your event dashboard for details.`,
         scheduled_for: new Date().toISOString(),
-        delivery_method: 'in_app',
-        status: 'pending',
-        metadata: {
-          attendee_address: attendeeAddress,
-          action: 'new_registration',
-        },
+        is_read: false,
       };
 
       const { error } = await supabase
@@ -225,18 +211,12 @@ class EventNotificationService {
           // Only schedule if reminder time is in the future
           if (reminderTime > new Date()) {
             const notification: Partial<EventNotification> = {
-              user_id: registration.user_address.toLowerCase(),
+              recipient_address: registration.user_address.toLowerCase(),
               event_id: eventId,
               notification_type: reminder.type as any,
               title: `Event Reminder: ${eventTitle}`,
               message: `Don't forget! "${eventTitle}" starts in ${reminder.label} at ${eventDateTime.toLocaleString()}.`,
               scheduled_for: reminderTime.toISOString(),
-              delivery_method: 'in_app',
-              status: 'pending',
-              metadata: {
-                reminder_type: reminder.type,
-                event_date: eventDate,
-              },
             };
 
             await supabase.from('event_notifications').insert(notification);
@@ -275,18 +255,12 @@ class EventNotificationService {
       }
 
       const notifications = registrations.map((registration) => ({
-        user_id: registration.user_address.toLowerCase(),
+        recipient_address: registration.user_address.toLowerCase(),
         event_id: eventId,
         notification_type: 'event_update',
         title: `Event Update: ${eventTitle}`,
         message: updateMessage,
         scheduled_for: new Date().toISOString(),
-        delivery_method: 'in_app' as const,
-        status: 'pending' as const,
-        metadata: {
-          organizer: organizerAddress,
-          update_type: 'manual',
-        },
       }));
 
       const { error: insertError } = await supabase
@@ -330,18 +304,12 @@ class EventNotificationService {
       }
 
       const notifications = registrations.map((registration) => ({
-        user_id: registration.user_address.toLowerCase(),
+        recipient_address: registration.user_address.toLowerCase(),
         event_id: eventId,
         notification_type: 'event_cancellation',
         title: `Event Cancelled: ${eventTitle}`,
         message: `Unfortunately, "${eventTitle}" has been cancelled. ${cancellationReason}. Any payments made will be refunded automatically.`,
         scheduled_for: new Date().toISOString(),
-        delivery_method: 'in_app' as const,
-        status: 'pending' as const,
-        metadata: {
-          organizer: organizerAddress,
-          reason: cancellationReason,
-        },
       }));
 
       const { error: insertError } = await supabase
@@ -375,18 +343,12 @@ class EventNotificationService {
   ): Promise<void> {
     try {
       const notifications = recipientAddresses.map((address) => ({
-        user_id: address.toLowerCase(),
+        recipient_address: address.toLowerCase(),
         event_id: eventId,
         notification_type: 'completion_certificate',
         title: `Certificate Available: ${eventTitle}`,
         message: `Congratulations! Your completion certificate for "${eventTitle}" is now available in your wallet. Thank you for attending!`,
         scheduled_for: new Date().toISOString(),
-        delivery_method: 'in_app' as const,
-        status: 'pending' as const,
-        metadata: {
-          organizer: organizerAddress,
-          certificate_type: 'completion',
-        },
       }));
 
       const { error } = await supabase
@@ -442,7 +404,6 @@ class EventNotificationService {
       const { error } = await supabase
         .from('event_notifications')
         .update({
-          status: 'sent',
           sent_at: new Date().toISOString(),
         })
         .eq('id', notificationId);
@@ -509,7 +470,6 @@ class EventNotificationService {
         await supabase
           .from('event_notifications')
           .update({
-            status: 'sent',
             sent_at: new Date().toISOString(),
           })
           .eq('id', notification.id);

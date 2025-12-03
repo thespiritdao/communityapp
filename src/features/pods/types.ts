@@ -43,4 +43,6 @@ export type PodAccess = {
 export type PodServiceConfig = {
   bypassRLS?: boolean;
   includeInactive?: boolean;
+  status?: string;
+  parentPodId?: string;
 };

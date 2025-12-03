@@ -250,7 +250,7 @@ export const notificationService = {
       bounty: 'bounty',
     }[contextType];
 
-    const notificationData = {
+    const notificationData: CreateNotificationData = {
       recipient_address: recipientAddress,
       sender_address: senderAddress,
       notification_type: 'user_mentioned',
@@ -276,7 +276,7 @@ export const notificationService = {
     proposalTitle: string,
     transactionHash?: string,
   ): Promise<GeneralNotification> {
-    const notificationData = {
+    const notificationData: CreateNotificationData = {
       recipient_address: recipientAddress,
       sender_address: senderAddress,
       notification_type: 'proposal_executed',

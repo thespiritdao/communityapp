@@ -43,7 +43,7 @@ const PaymasterTest: React.FC = () => {
             connector.id === 'coinbaseWalletSDK';
 
           if (isCoinbaseConnector) {
-            let provider = null;
+            let provider: any = null;
 
             if (typeof connector.getProvider === 'function') {
               try {

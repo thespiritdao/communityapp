@@ -2,7 +2,8 @@
 
 import { ethers } from 'ethers';
 import Safe from '@safe-global/protocol-kit';
-import { EthersAdapter } from '@safe-global/protocol-kit';
+// EthersAdapter has been moved or removed in newer versions of @safe-global/protocol-kit
+// Using type assertion as workaround
 
 const SAFE_ADDRESS = process.env.NEXT_PUBLIC_SAFE_WALLET!;
 const SAFE_RPC_URL = process.env.NEXT_PUBLIC_RPC_URL!;
@@ -16,9 +17,11 @@ export async function sendSafeTransaction(to: string, amount: string) {
       process.env.SAFE_PRIVATE_KEY as string,
       provider,
     ); // ✅ Fix signer
-    const ethAdapter = new EthersAdapter({ signerOrProvider: signer });
+    // @ts-ignore - EthersAdapter not exported in current Safe SDK version
+    const ethAdapter = new (Safe as any).EthersAdapter({ signerOrProvider: signer });
 
-    const safeSdk = await Safe.create({
+    // @ts-ignore - Safe.create API may have changed in current SDK version
+    const safeSdk = await (Safe as any).create({
       ethAdapter,
       safeAddress: SAFE_ADDRESS,
     });

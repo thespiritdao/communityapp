@@ -13,8 +13,8 @@
  * supabase functions invoke index-pod-members
  */
 
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import { MemberIndexingService } from '../services/MemberIndexingService.ts';
+import { createClient } from '@supabase/supabase-js';
+import { MemberIndexingService } from '../services/MemberIndexingService';
 
 interface Env {
   SUPABASE_URL: string;
@@ -114,11 +114,11 @@ export const cronConfig = {
   schedule: '0 */30 * * * *',
   handler: async () => {
     const response = await fetch(
-      `${Deno.env.get('SUPABASE_URL')}/functions/v1/index-pod-members`,
+      `${process.env.SUPABASE_URL}/functions/v1/index-pod-members`,
       {
         method: 'POST',
         headers: {
-          Authorization: `Bearer ${Deno.env.get('SUPABASE_ANON_KEY')}`,
+          Authorization: `Bearer ${process.env.SUPABASE_ANON_KEY}`,
           'Content-Type': 'application/json',
         },
       },

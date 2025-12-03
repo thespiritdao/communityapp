@@ -1,6 +1,7 @@
 // src/features/forum/components/admin/TemplateManagement.tsx
 import { useState, useEffect } from 'react';
 import styles from '../../styles/Forum.module.css';
+import { supabase } from '@/lib/supabase';
 
 // Template interface matching the one from NewThreadForm
 interface ThreadTemplate {
@@ -25,6 +26,7 @@ export function TemplateManagement() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [newPlaceholder, setNewPlaceholder] = useState('');
+  const [hasAccess, setHasAccess] = useState(true); // TODO: Implement proper admin token check
   const erc1155AdminAddress = process.env
     .NEXT_PUBLIC_FORUM_ADMIN_ERC1155 as `0x${string}`;
   const adminTokenId = 1;
@@ -47,7 +49,6 @@ export function TemplateManagement() {
     setError('');
 
     try {
-      const supabase = createClient();
       const { data, error } = await supabase
         .from('forum_templates')
         .select('*')
@@ -94,7 +95,6 @@ export function TemplateManagement() {
     setSuccess('');
 
     try {
-      const supabase = createClient();
       const { error } = await supabase
         .from('forum_templates')
         .delete()
@@ -150,8 +150,6 @@ export function TemplateManagement() {
           ...currentTemplate.placeholders,
         ]),
       ];
-
-      const supabase = createClient();
 
       const templateData = {
         ...currentTemplate,

@@ -263,19 +263,23 @@ This pod requests permission to:
         // Create leader role with custom eligibility criteria if provided
         await PodRolePermissionsService.createRolePermission({
           pod_id: podData.id,
-          hat_id: podData.management_hat_id,
+          token_address: podData.management_hat_id,
           role_name: 'Pod Leader',
           permissions: {
             chatAccess: true,
+            chatModeration: true,
+            forumAccess: true,
+            forumModeration: false,
             governanceParticipation: true,
             eventCreation: true,
             treasuryViewing: true,
+            treasuryManagement: true,
             memberManagement: true,
             subPodCreation: true,
             roleAssignment: true,
-            forumModeration: false,
             bountyManagement: true,
             marketplaceAccess: true,
+            marketplaceManage: true,
           },
           eligibility_criteria: podData.leaderEligibilityCriteria || [],
           max_holders: 5,
@@ -285,19 +289,23 @@ This pod requests permission to:
         // Create member role with custom eligibility criteria if provided
         await PodRolePermissionsService.createRolePermission({
           pod_id: podData.id,
-          hat_id: podData.membership_hat_id,
+          token_address: podData.membership_hat_id,
           role_name: 'Pod Member',
           permissions: {
             chatAccess: true,
+            chatModeration: false,
+            forumAccess: true,
+            forumModeration: false,
             governanceParticipation: true,
             eventCreation: false,
             treasuryViewing: false,
+            treasuryManagement: false,
             memberManagement: false,
             subPodCreation: false,
             roleAssignment: false,
-            forumModeration: false,
             bountyManagement: false,
             marketplaceAccess: true,
+            marketplaceManage: false,
           },
           eligibility_criteria: podData.memberEligibilityCriteria || [],
           max_holders: 100,
@@ -482,17 +490,28 @@ This pod requests permission to:
     reason?: string,
   ): Promise<void> {
     try {
+      // First fetch current metadata to merge
+      const { data: currentPod } = await supabase
+        .from('pods')
+        .select('pod_metadata, name, created_by_address')
+        .eq('id', podId)
+        .single();
+
+      const currentMetadata = currentPod?.pod_metadata || {};
+      const updatedMetadata = {
+        ...currentMetadata,
+        rejection_reason: reason,
+        rejected_by: rejectorAddress,
+        rejected_at: new Date().toISOString(),
+      };
+
       // Update pod status to rejected
       const { data: podData, error: updateError } = await supabase
         .from('pods')
         .update({
           status: 'rejected',
           is_active: false,
-          pod_metadata: supabase.sql`pod_metadata || ${JSON.stringify({
-            rejection_reason: reason,
-            rejected_by: rejectorAddress,
-            rejected_at: new Date().toISOString(),
-          })}`,
+          pod_metadata: updatedMetadata,
           updated_at: new Date().toISOString(),
         })
         .eq('id', podId)
@@ -933,7 +952,6 @@ This pod requests permission to:
             recipient_address: manager.wallet_address.toLowerCase(),
             sender_address: creatorAddress.toLowerCase(),
             notification_type: 'user_mentioned',
-            category: 'general',
             title: 'Pod Approval Required',
             message: `New pod "${podName}" is ready for Executive approval. Consensus threshold is set to 1 for testing.`,
             context_type: 'governance',

@@ -10,9 +10,9 @@ export interface Thread {
 }
 
 export function useGovernanceForumThreads(userAddress?: string) {
-  return useQuery<Thread[]>(
-    ['governanceThreads', userAddress],
-    async () => {
+  return useQuery<Thread[]>({
+    queryKey: ['governanceThreads', userAddress],
+    queryFn: async () => {
       let query = supabase
         .from('forum_threads')
         .select('id, title, created_at');
@@ -23,8 +23,8 @@ export function useGovernanceForumThreads(userAddress?: string) {
 
       const { data, error } = await query;
       if (error) throw error;
-      return data;
+      return (data as Thread[]) || [];
     },
-    { staleTime: 60_000 },
-  );
+    staleTime: 60_000,
+  });
 }

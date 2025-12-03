@@ -186,6 +186,7 @@ export class EventManagerService {
         abi: EventManagerABI,
         functionName: 'mintCompletionCertificate',
         args: [eventId, recipientAddress, metadataURI],
+        account: signer.account,
       });
 
       console.log('✅ NFT mint transaction sent:', txHash);
@@ -329,6 +330,7 @@ export class EventManagerService {
         abi: EventManagerABI,
         functionName: 'batchMintCertificates',
         args: [eventId, recipients, metadataURIs],
+        account: signer.account,
       });
 
       console.log('✅ Batch NFT mint transaction sent:', txHash);
@@ -360,6 +362,7 @@ export class EventManagerService {
         abi: EventManagerABI,
         functionName: 'completeEvent',
         args: [eventId],
+        account: signer.account,
       });
 
       console.log('✅ Event completion transaction sent:', txHash);
@@ -370,69 +373,6 @@ export class EventManagerService {
     }
   }
 
-  /**
-   * Generate metadata URI for completion certificate
-   */
-  static generateCertificateMetadata(
-    event: any,
-    recipientAddress: string,
-    recipientName?: string,
-  ): object {
-    const metadata = {
-      name: `${event.title} - Completion Certificate`,
-      description: `Certificate of completion for attending ${event.title} on ${new Date(event.event_date).toLocaleDateString()}`,
-      image:
-        event.event_image_url ||
-        `https://api.dicebear.com/7.x/shapes/svg?seed=${event.id}`,
-      attributes: [
-        {
-          trait_type: 'Event Title',
-          value: event.title,
-        },
-        {
-          trait_type: 'Event Date',
-          value: new Date(event.event_date).toISOString().split('T')[0],
-        },
-        {
-          trait_type: 'Location',
-          value: event.location || 'Virtual',
-        },
-        {
-          trait_type: 'Recipient',
-          value: recipientName || recipientAddress,
-        },
-        {
-          trait_type: 'Certificate Type',
-          value: 'Event Completion',
-        },
-        {
-          trait_type: 'Issued Date',
-          value: new Date().toISOString().split('T')[0],
-        },
-      ],
-      external_url: `${window.location.origin}/events/${event.id}`,
-      background_color: 'ffffff',
-    };
-
-    return metadata;
-  }
-
-  /**
-   * Upload metadata to IPFS or create data URI
-   * For now, create a data URI - in production you'd upload to IPFS
-   */
-  static async createMetadataURI(metadata: object): Promise<string> {
-    try {
-      // For now, create a data URI with the metadata
-      // In production, you'd upload to IPFS and return the IPFS hash
-      const jsonString = JSON.stringify(metadata);
-      const base64 = btoa(jsonString);
-      return `data:application/json;base64,${base64}`;
-    } catch (error) {
-      console.error('Error creating metadata URI:', error);
-      throw error;
-    }
-  }
 
   /**
    * Check if event exists on chain

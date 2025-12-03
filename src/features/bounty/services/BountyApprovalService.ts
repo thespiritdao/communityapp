@@ -16,7 +16,7 @@ import type { WalletClient, PublicClient } from 'viem';
 export interface BountyApprovalWorkflow {
   id: string;
   bounty_id: string; // Changed from number to string (UUID)
-  approval_type: 'creation' | 'milestone' | 'completion' | 'cancellation';
+  approval_type: 'creation' | 'milestones' | 'completion' | 'cancellation';
   required_approvals: number;
   current_approvals: string[];
   status: 'pending' | 'approved' | 'executed' | 'expired' | 'cancelled';
@@ -443,34 +443,6 @@ export class BountyApprovalService {
   }
 
   /**
-   * Check if a user can approve a specific workflow
-   */
-  static async canUserApprove(
-    workflowId: string,
-    userAddress: string,
-  ): Promise<boolean> {
-    try {
-      const { data: workflow, error } = await supabase
-        .from('bounty_approval_workflows')
-        .select('current_approvals, status')
-        .eq('id', workflowId)
-        .single();
-
-      if (error || !workflow) {
-        return false;
-      }
-
-      return (
-        workflow.status === 'pending' &&
-        !workflow.current_approvals.includes(userAddress.toLowerCase())
-      );
-    } catch (error) {
-      console.error('Failed to check approval permissions:', error);
-      return false;
-    }
-  }
-
-  /**
    * Add approval with signature verification
    */
   static async approveWorkflow(
@@ -504,7 +476,10 @@ export class BountyApprovalService {
 
       console.log('🔏 Requesting signature for bounty approval:', message);
 
-      const signature = await walletClient.signMessage({ message });
+      const signature = await walletClient.signMessage({
+        account: approverAddress as `0x${string}`,
+        message,
+      });
       console.log('✅ Signature obtained:', signature.substring(0, 20) + '...');
 
       // STEP 2: Store signature in audit trail
@@ -695,27 +670,6 @@ export class BountyApprovalService {
     walletClient: WalletClient,
   ): Promise<string> {
     throw new Error('Bounty cancellation execution not yet implemented');
-  }
-
-  /**
-   * Get active approval workflows for a bounty
-   */
-  static async getActiveWorkflows(
-    bountyId: number,
-  ): Promise<BountyApprovalWorkflow[]> {
-    const { data: workflows, error } = await supabase
-      .from('bounty_approval_workflows')
-      .select('*')
-      .eq('bounty_id', bountyId)
-      .in('status', ['pending', 'approved'])
-      .order('created_at', { ascending: false });
-
-    if (error) {
-      console.error('Failed to fetch bounty approval workflows:', error);
-      return [];
-    }
-
-    return workflows || [];
   }
 
   /**

@@ -17,7 +17,7 @@ interface VerificationCache {
 }
 
 interface PendingVerification {
-  [address: string]: Promise<WalletVerificationResult>;
+  [address: string]: Promise<WalletVerificationResult> | undefined;
 }
 
 class WalletVerificationService {
@@ -169,8 +169,8 @@ class WalletVerificationService {
     // Check 3: Connector options (fallback)
     if (!detected && !detectedMethod && connector.options) {
       if (
-        connector.options.preference === 'smartWalletOnly' ||
-        connector.options.enableSmartWallet === true
+        (connector.options as any).preference === 'smartWalletOnly' ||
+        (connector.options as any).enableSmartWallet === true
       ) {
         detected = true;
         detectedMethod = 'Connector options indicate Smart Wallet';

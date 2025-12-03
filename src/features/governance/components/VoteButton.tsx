@@ -3,9 +3,13 @@
 import type React from 'react';
 import { useState } from 'react';
 import { useAccount, usePublicClient } from 'wagmi';
+import type { Abi } from 'viem';
 import { useToast } from '@/components/ui/use-toast';
 import { getWalletClient } from 'wagmi/actions';
-import DAOGovernorABI from '@/abis/DAO_GovernorABI.json';
+import { wagmiConfig } from '@/config/wagmi.client';
+import DAOGovernorABIJson from '@/abis/DAO_GovernorABI.json';
+
+const DAOGovernorABI = DAOGovernorABIJson as Abi;
 import {
   Transaction,
   TransactionButton,
@@ -76,7 +80,6 @@ const VoteButton: React.FC<VoteButtonProps> = ({
 
       // Simulate first
       const { request } = await publicClient.simulateContract({
-        chainId: BASE_CHAIN_ID,
         account: address,
         address: GOVERNOR_ADDRESS,
         abi: DAOGovernorABI,
@@ -87,7 +90,7 @@ const VoteButton: React.FC<VoteButtonProps> = ({
       console.log('Simulation successful, executing transaction');
 
       // Execute the transaction
-      const walletClient = await getWalletClient({ chainId: BASE_CHAIN_ID });
+      const walletClient = await getWalletClient(wagmiConfig, { account: address });
       const hash = await walletClient.writeContract(request);
 
       console.log(`Transaction submitted: ${hash}`);
@@ -164,20 +167,9 @@ const VoteButton: React.FC<VoteButtonProps> = ({
 
         {/* Smart wallet transaction button */}
         <Transaction
-          isSponsored={false} // Try without sponsorship first
-          address={address}
+          isSponsored={false}
           chainId={BASE_CHAIN_ID}
-          calls={voteCall}
-          onTransactionStarted={() => {
-            console.group('🚀 Vote Transaction Started (Non-Sponsored)');
-            console.log('📋 Proposal ID:', proposalId);
-            console.log('📋 Choice:', choice);
-            console.log('📋 Contract Address:', GOVERNOR_ADDRESS);
-            console.log('📋 User Address:', address);
-            console.log('📋 Chain ID:', BASE_CHAIN_ID);
-            console.log('📋 Timestamp:', new Date().toISOString());
-            console.groupEnd();
-          }}
+          contracts={voteCall}
           onSuccess={(response) => {
             console.group('✅ Vote Transaction Success (Non-Sponsored)');
             console.log('📋 Transaction Response:', response);
@@ -201,12 +193,12 @@ const VoteButton: React.FC<VoteButtonProps> = ({
           onError={(error) => {
             console.group('❌ Vote Transaction Error (Non-Sponsored)');
             console.error('📋 Error Details:', {
-              name: error.name,
-              message: error.message,
-              stack: error.stack,
+              name: (error as any).name,
+              message: (error as any).message,
+              stack: (error as any).stack,
             });
             console.groupEnd();
-            handleError(error);
+            handleError(error as any);
           }}
         >
           <TransactionButton
@@ -224,19 +216,8 @@ const VoteButton: React.FC<VoteButtonProps> = ({
       {/* Sponsored transaction button */}
       <Transaction
         isSponsored={true}
-        address={address}
         chainId={BASE_CHAIN_ID}
-        calls={voteCall}
-        onTransactionStarted={() => {
-          console.group('🚀 Vote Transaction Started (Sponsored)');
-          console.log('📋 Proposal ID:', proposalId);
-          console.log('📋 Choice:', choice);
-          console.log('📋 Contract Address:', GOVERNOR_ADDRESS);
-          console.log('📋 User Address:', address);
-          console.log('📋 Chain ID:', BASE_CHAIN_ID);
-          console.log('📋 Timestamp:', new Date().toISOString());
-          console.groupEnd();
-        }}
+        contracts={voteCall}
         onSuccess={(response) => {
           console.group('✅ Vote Transaction Success (Sponsored)');
           console.log('📋 Transaction Response:', response);
@@ -257,12 +238,12 @@ const VoteButton: React.FC<VoteButtonProps> = ({
         onError={(error) => {
           console.group('❌ Vote Transaction Error (Sponsored)');
           console.error('📋 Error Details:', {
-            name: error.name,
-            message: error.message,
-            stack: error.stack,
+            name: (error as any).name,
+            message: (error as any).message,
+            stack: (error as any).stack,
           });
           console.groupEnd();
-          handleError(error);
+          handleError(error as any);
         }}
       >
         <TransactionButton

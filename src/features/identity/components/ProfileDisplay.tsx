@@ -179,11 +179,11 @@ export const ProfileDisplay: React.FC<ProfileDisplayProps> = ({
             <span
               className={`connect-badge ${profile?.open_to_connect || 'not-specified'}`}
             >
-              {{
+              {({
                 low_limited: 'Low / Limited',
                 open_available: 'Open / Available',
                 actively_collaborate: 'Actively looking to collaborate',
-              }[profile?.open_to_connect || ''] || 'Not specified'}
+              } as Record<string, string>)[profile?.open_to_connect || ''] || 'Not specified'}
             </span>
           </div>
         </div>

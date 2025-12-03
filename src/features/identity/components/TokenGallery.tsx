@@ -1,7 +1,7 @@
 'use client';
 import type React from 'react';
 import { useState, useEffect } from 'react';
-import { useContractReads } from 'wagmi';
+import { useReadContracts } from 'wagmi';
 import { usePublicClient } from 'wagmi';
 import { erc721ABI } from '@/utils/erc721ABI';
 import { erc1155ABI } from '@/utils/erc1155ABI';
@@ -118,9 +118,11 @@ export const TokenGallery: React.FC<TokenGalleryProps> = ({
     data: ownershipData,
     isError,
     isLoading: isContractLoading,
-  } = useContractReads({
+  } = useReadContracts({
     contracts: contractReads as any[],
-    enabled: hasTokensToCheck, // Only run if we have tokens to check
+    query: {
+      enabled: hasTokensToCheck, // Only run if we have tokens to check
+    },
   });
 
   const publicClient = usePublicClient();
@@ -132,8 +134,11 @@ export const TokenGallery: React.FC<TokenGalleryProps> = ({
         try {
           const balance = ownershipData?.[index]?.result;
           const owned =
-            balance &&
-            (typeof balance === 'bigint' ? balance > 0n : balance > 0);
+            typeof balance === 'bigint'
+              ? balance > 0n
+              : typeof balance === 'number'
+                ? balance > 0
+                : false;
           if (!owned)
             return { uri: '', image: '', name: token.label, owned: false };
 

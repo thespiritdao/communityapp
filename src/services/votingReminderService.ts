@@ -422,7 +422,7 @@ class VotingReminderService {
       };
 
       data?.forEach((reminder) => {
-        stats.byType[reminder.reminder_type]++;
+        stats.byType[reminder.reminder_type as '48h' | '24h' | '6h' | '1h']++;
 
         if (!proposalId) {
           stats.byProposal![reminder.proposal_id] =

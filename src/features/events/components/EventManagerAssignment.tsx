@@ -235,7 +235,7 @@ export const EventManagerAssignment: React.FC<EventManagerAssignmentProps> = ({
       setAssigning(true);
 
       await EventService.updateEvent(event.id, {
-        manager_address: null,
+        manager_address: undefined,
       });
 
       setAssignedManager(null);
@@ -361,7 +361,7 @@ export const EventManagerAssignment: React.FC<EventManagerAssignmentProps> = ({
               <div className="relative">
                 <UserTagging
                   value={managerInput}
-                  onChange={setManagerInput}
+                  onChange={(value) => setManagerInput(value)}
                   placeholder="@mention a user to assign as manager..."
                   onMentionsChange={handleMentionsChange}
                   contextType="events"

@@ -112,7 +112,7 @@ export async function checkPodFeatureAccess(
       }
     }
 
-    const moduleEnabled = modules?.[`${feature}_enabled`];
+    const moduleEnabled = (modules as any)?.[`${feature}_enabled`];
     console.log(`[PodFeatureAccess] Module ${feature}_enabled:`, moduleEnabled);
 
     if (!moduleEnabled) {

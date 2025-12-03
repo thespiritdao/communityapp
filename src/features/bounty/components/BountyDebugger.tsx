@@ -12,6 +12,13 @@ interface BountyDebuggerProps {
   bidderAddress: string;
 }
 
+interface BountyData {
+  bidders: string[];
+  status: number;
+  creator: string;
+  [key: string]: any;
+}
+
 export const BountyDebugger: React.FC<BountyDebuggerProps> = ({
   bountyId,
   bidderAddress,
@@ -33,7 +40,7 @@ export const BountyDebugger: React.FC<BountyDebuggerProps> = ({
 
       // Refetch bounty data
       const result = await refetch();
-      const bountyData = result.data;
+      const bountyData = result.data as unknown as BountyData;
 
       console.log('📋 Bounty data:', bountyData);
 
@@ -66,7 +73,7 @@ export const BountyDebugger: React.FC<BountyDebuggerProps> = ({
       });
     } catch (error) {
       console.error('❌ Error checking bounty state:', error);
-      setDebugInfo({ error: error.message });
+      setDebugInfo({ error: (error as Error).message });
     } finally {
       setLoading(false);
     }

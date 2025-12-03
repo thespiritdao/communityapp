@@ -219,7 +219,7 @@ export class PodFactorySyncService {
       console.log('🔄 Checking which pods need factory sync...');
 
       // Get all active pods from database
-      const pods = await PodCoreService.getAllPods({ filter: 'active' });
+      const pods = await PodCoreService.getAllPods();
       const registeredPodIds = await this.getRegisteredPods();
 
       console.log(`📊 Found ${pods.length} active pods in database`);

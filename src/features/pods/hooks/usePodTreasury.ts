@@ -495,7 +495,6 @@ export function usePodTreasury(
 
     // Proxy transaction helpers (for sponsored transactions)
     prepareProxyDistribution,
-    prepareProxyDistributeSingle,
     prepareProxyEqualDistribution,
     prepareProxyEmergencyWithdraw,
   };

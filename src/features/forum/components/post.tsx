@@ -4,7 +4,7 @@
 import { useAuthContext } from '@/features/identity';
 import type React from 'react';
 import { useEffect, useState } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, usePathname } from 'next/navigation';
 import { supabase } from '@/utils/supabaseClient';
 import { useAccount } from 'wagmi';
 import PostCard from '@/features/forum/components/PostCard';
@@ -17,6 +17,7 @@ interface Post {
   thread_id: string;
   content: string;
   author_wallet: string;
+  author_address: string;
   author_first_name: string | null;
   author_last_name: string | null;
   created_at: string;
@@ -26,6 +27,7 @@ const PostPage: React.FC = () => {
   const { postId } = useParams() as { postId: string };
   const { session, isAuthenticated, signIn } = useAuthContext();
   const router = useRouter();
+  const pathname = usePathname();
   const { address, isConnected } = useAccount();
 
   const [post, setPost] = useState<Post | null>(null);
@@ -40,8 +42,7 @@ const PostPage: React.FC = () => {
       setError('');
 
       // 1) Ensure user is authenticated with Supabase
-      const session = await getCurrentSession();
-      if (!session) {
+      if (!session || !isAuthenticated) {
         setError('You must be logged in (Supabase session) to fetch post.');
         setIsLoading(false);
         return;
@@ -65,7 +66,7 @@ const PostPage: React.FC = () => {
     };
 
     fetchPost();
-  }, [postId]);
+  }, [postId, session, isAuthenticated]);
 
   // If not connected to a wallet (wagmi) - optional check
   if (!isConnected || !address) {
@@ -75,7 +76,7 @@ const PostPage: React.FC = () => {
         <h1 className={styles.pageTitle}>Connect Wallet to View Post</h1>
         <Button
           onClick={() =>
-            router.push('/login?redirect=' + encodeURIComponent(router.asPath))
+            router.push('/login?redirect=' + encodeURIComponent(pathname))
           }
         >
           Connect Wallet

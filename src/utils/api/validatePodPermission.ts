@@ -165,7 +165,6 @@ export async function validatePodPermission(
           userId,
           walletAddress: userWallet,
           podId,
-          hatId: membership.hat_id,
         },
       };
     }
@@ -266,6 +265,14 @@ export async function validatePodMembership(
       }
 
       userWallet = userProfile.wallet_address;
+    }
+
+    if (!userWallet) {
+      return {
+        allowed: false,
+        error: 'Wallet address not found',
+        statusCode: 404,
+      };
     }
 
     // Step 3: Check membership

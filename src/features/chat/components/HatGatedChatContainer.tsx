@@ -153,7 +153,7 @@ export const HatGatedChatContainer: React.FC<HatGatedChatContainerProps> = ({
 
       try {
         const { data: sessionData, error: sessionError } =
-          await getCurrentSession();
+          await supabase.auth.getSession();
         if (sessionError || !sessionData.session) {
           throw new Error('No authenticated user found');
         }
@@ -226,12 +226,9 @@ export const HatGatedChatContainer: React.FC<HatGatedChatContainerProps> = ({
           if (canAccessChat) {
             availableGroups.push({
               id: 'general',
-              name: 'General Chat',
+              title: 'General Chat',
               description: 'General community discussion',
-              required_token: null,
-              is_active: true,
-              created_at: new Date().toISOString(),
-              updated_at: new Date().toISOString(),
+              required_token: undefined,
             });
           }
 
@@ -240,12 +237,9 @@ export const HatGatedChatContainer: React.FC<HatGatedChatContainerProps> = ({
             if (role.podId) {
               availableGroups.push({
                 id: `pod-${role.podId}`,
-                name: `${role.podId.charAt(0).toUpperCase() + role.podId.slice(1)} Pod Chat`,
+                title: `${role.podId.charAt(0).toUpperCase() + role.podId.slice(1)} Pod Chat`,
                 description: `Private chat for ${role.name}`,
                 required_token: role.hatId,
-                is_active: true,
-                created_at: new Date().toISOString(),
-                updated_at: new Date().toISOString(),
               });
             }
           }
@@ -254,12 +248,9 @@ export const HatGatedChatContainer: React.FC<HatGatedChatContainerProps> = ({
           if (isPodLeader) {
             availableGroups.push({
               id: 'leadership',
-              name: 'Pod Leaders Chat',
+              title: 'Pod Leaders Chat',
               description: 'Private chat for pod leaders',
               required_token: 'leadership',
-              is_active: true,
-              created_at: new Date().toISOString(),
-              updated_at: new Date().toISOString(),
             });
           }
 
@@ -375,7 +366,7 @@ export const HatGatedChatContainer: React.FC<HatGatedChatContainerProps> = ({
             setMessages((prev) => [...prev, newMessage]);
 
             // Handle mentions
-            const mentionedWallets = extractMentionedWalletsEnhanced(
+            const mentionedWallets = await extractMentionedWalletsEnhanced(
               newMessage.content,
             );
             if (mentionedWallets.length > 0 && currentUser) {
@@ -397,11 +388,13 @@ export const HatGatedChatContainer: React.FC<HatGatedChatContainerProps> = ({
             }
 
             // Add sender to users if not already present
-            if (!users.find((u) => u.user_id === newMessage.user_id)) {
+            if (
+              !users.find((u) => u.wallet_address === newMessage.sender_wallet_id)
+            ) {
               const { data: userData } = await supabase
                 .from('user_profiles')
                 .select('*')
-                .eq('user_id', newMessage.user_id)
+                .eq('wallet_address', newMessage.sender_wallet_id)
                 .single();
 
               if (userData) {
@@ -425,9 +418,8 @@ export const HatGatedChatContainer: React.FC<HatGatedChatContainerProps> = ({
     try {
       const { error } = await supabase.from('messages').insert({
         content,
-        user_id: currentUser.user_id,
+        sender_wallet_id: currentUser.wallet_address,
         chat_group_id: selectedChatGroup.id,
-        wallet_address: currentUser.wallet_address,
       });
 
       if (error) throw error;
@@ -565,7 +557,7 @@ export const HatGatedChatContainer: React.FC<HatGatedChatContainerProps> = ({
             <Shield className="h-5 w-5" style={{ color: '#3F7A5A' }} />
           )}
           <span>
-            {selectedPodMeta?.name ?? selectedChatGroup?.name ?? 'Chat'}
+            {selectedPodMeta?.name ?? selectedChatGroup?.title ?? 'Chat'}
           </span>
           {selectedChatGroup?.required_token && (
             <Badge variant="outline" className="ml-2">
@@ -593,7 +585,7 @@ export const HatGatedChatContainer: React.FC<HatGatedChatContainerProps> = ({
                 {group.id.startsWith('pod-') &&
                 podsMeta[group.id.slice(4)]?.name
                   ? podsMeta[group.id.slice(4)]!.name
-                  : group.name}
+                  : group.title}
               </button>
             ))}
           </div>
@@ -606,13 +598,14 @@ export const HatGatedChatContainer: React.FC<HatGatedChatContainerProps> = ({
             messages={messages}
             users={users}
             currentUser={currentUser}
+            loading={loading}
           />
         </div>
 
         <div className="border-t p-4">
           <ChatInput
             onSendMessage={handleSendMessage}
-            disabled={!selectedChatGroup || accessDenied}
+            chatId={selectedChatGroup?.id}
           />
         </div>
       </CardContent>

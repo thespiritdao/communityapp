@@ -1,4 +1,4 @@
-import { Avatar, Badge, Identity, Name } from '../../../identity';
+import { Avatar, Badge, Identity, Name } from '../../../features/identity';
 import { cn } from '../../../styles/theme';
 import { useOnchainKit } from '../../../useOnchainKit';
 import { useNFTContext } from '../NFTProvider';

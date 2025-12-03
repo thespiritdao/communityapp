@@ -178,8 +178,8 @@ export function usePodCreation(options: UsePodCreationOptions = {}) {
           },
           status: 'draft',
           is_active: false,
-          management_hat_id: null, // Will be set after HAT creation
-          membership_hat_id: null, // Will be set after HAT creation
+          management_hat_id: undefined, // Will be set after HAT creation
+          membership_hat_id: undefined, // Will be set after HAT creation
           leaderEligibilityCriteria: podData.leaderEligibilityCriteria || [],
           memberEligibilityCriteria: podData.memberEligibilityCriteria || [],
         };
@@ -220,7 +220,7 @@ export function usePodCreation(options: UsePodCreationOptions = {}) {
         const proposalData =
           await PodGovernanceService.generatePodApprovalProposal(
             completePodData,
-            availablePods,
+            availablePods as any,
           );
 
         console.log('✅ Pod proposal generated:', {

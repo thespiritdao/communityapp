@@ -185,7 +185,7 @@ export async function debugTreasuryHatMismatch(
 
 // Browser helper
 if (typeof window !== 'undefined') {
-  window.debugTreasuryHatMismatch = debugTreasuryHatMismatch;
+  (window as any).debugTreasuryHatMismatch = debugTreasuryHatMismatch;
   console.log('🔍 Treasury HAT Debug loaded:');
   console.log('Usage: debugTreasuryHatMismatch("YOUR_WALLET_ADDRESS")');
   console.log('Example: debugTreasuryHatMismatch("0x1234...")');

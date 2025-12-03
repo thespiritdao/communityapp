@@ -132,7 +132,7 @@ export function getSpiritDAOButtonHoverStyle(
   const colors = SPIRITDAO_COLORS[intent];
 
   return {
-    backgroundColor: colors.hover || colors.background,
+    backgroundColor: (colors as any).hover || (colors as any).active || colors.background,
   };
 }
 

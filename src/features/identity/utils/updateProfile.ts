@@ -69,7 +69,7 @@ export async function updateProfile(
   }
 
   // Set the conflict target. Use the primary key (user_id) if profile exists; otherwise, use wallet_address.
-  const conflictTarget = existingProfile ? ['user_id'] : ['wallet_address'];
+  const conflictTarget = existingProfile ? 'user_id' : 'wallet_address';
 
   const { data, error } = await supabase
     .from('user_profiles')

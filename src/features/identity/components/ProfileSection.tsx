@@ -29,7 +29,6 @@ export const ProfileSection: React.FC<ProfileSectionProps> = React.memo(
       {isEditing ? (
         <ProfileEditForm
           initialData={profile || {}}
-          authSession={authSession}
           walletAddress={address}
           onSave={onSave}
           onCancel={onCancel}

@@ -43,6 +43,8 @@ export interface ICartTotal {
   totalPrice: number;
   currencyId: string;
   currencyFormat: string;
+  totalSystemPrice?: number;
+  totalSelfPrice?: number;
 }
 
 export interface IGetProductsResponse {

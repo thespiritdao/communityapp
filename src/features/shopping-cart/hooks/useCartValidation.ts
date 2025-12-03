@@ -57,7 +57,7 @@ const validatePaymasterSetup = () => {
     contractConfigured: Boolean(contractAddress),
     isValid: Boolean(paymasterEndpoint && contractAddress),
     useRouter: shouldUseRouter,
-    contractAddress,
+    contractAddress: contractAddress || '',
     isDecentralized: Boolean(purchaseRouterDecentralized),
   };
 };
@@ -159,19 +159,19 @@ export const useCartValidation = (
             }),
           ]);
 
-          setSystemAllowance(BigInt(systemResult));
-          setSelfAllowance(BigInt(selfResult));
+          setSystemAllowance(BigInt(systemResult as bigint));
+          setSelfAllowance(BigInt(selfResult as bigint));
 
           // For backwards compatibility, set allowance to the selected token's allowance
           setAllowance(
             selectedToken.symbol === '$SYSTEM'
-              ? BigInt(systemResult)
-              : BigInt(selfResult),
+              ? BigInt(systemResult as bigint)
+              : BigInt(selfResult as bigint),
           );
 
           console.log('Current allowances (decentralized):', {
-            systemAllowance: systemResult.toString(),
-            selfAllowance: selfResult.toString(),
+            systemAllowance: (systemResult as bigint).toString(),
+            selfAllowance: (selfResult as bigint).toString(),
             systemRequired: systemApprovalAmount.toString(),
             selfRequired: selfApprovalAmount.toString(),
             allowanceContract: allowanceContractAddress,
@@ -193,19 +193,19 @@ export const useCartValidation = (
             ],
           });
 
-          setAllowance(BigInt(result));
+          setAllowance(BigInt(result as bigint));
           // Set individual allowances for debugging
           if (selectedToken.symbol === '$SYSTEM') {
-            setSystemAllowance(BigInt(result));
+            setSystemAllowance(BigInt(result as bigint));
             setSelfAllowance(BigInt(0));
           } else {
-            setSelfAllowance(BigInt(result));
+            setSelfAllowance(BigInt(result as bigint));
             setSystemAllowance(BigInt(0));
           }
 
           console.log('Current allowance (non-decentralized):', {
             token: selectedToken.symbol,
-            allowance: result.toString(),
+            allowance: (result as bigint).toString(),
             required: (selectedToken.symbol === '$SYSTEM'
               ? systemApprovalAmount
               : selfApprovalAmount
@@ -268,7 +268,7 @@ export const useCartValidation = (
     selfNeedsApproval,
 
     // Contract validation
-    contractAddress: contractConfig.contractAddress,
+    contractAddress: contractConfig.contractAddress || '',
     isDecentralized: contractConfig.isDecentralized,
     paymasterValid,
   };
@@ -316,12 +316,12 @@ export const useUpdateAllowances = () => {
               ],
             }),
           ]);
-          setSystemAllowance(BigInt(systemResult));
-          setSelfAllowance(BigInt(selfResult));
+          setSystemAllowance(BigInt(systemResult as bigint));
+          setSelfAllowance(BigInt(selfResult as bigint));
           setAllowance(
             selectedToken.symbol === '$SYSTEM'
-              ? BigInt(systemResult)
-              : BigInt(selfResult),
+              ? BigInt(systemResult as bigint)
+              : BigInt(selfResult as bigint),
           );
         } else {
           // Update only selected token allowance
@@ -338,7 +338,7 @@ export const useUpdateAllowances = () => {
               purchaseContractAddress as `0x${string}`,
             ],
           });
-          setAllowance(BigInt(result));
+          setAllowance(BigInt(result as bigint));
         }
       } catch (error) {
         console.error('Error updating allowance after transaction:', error);

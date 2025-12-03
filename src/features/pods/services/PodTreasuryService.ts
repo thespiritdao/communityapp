@@ -104,7 +104,7 @@ export const POD_TREASURY_ABI = [
 
 // Treasury Proxy ABI for routing transactions through single whitelisted contract
 // Use the official ABI from the compiled contract
-export const TREASURY_PROXY_ABI = TreasuryProxyABI as const;
+export const TREASURY_PROXY_ABI = TreasuryProxyABI;
 
 // ERC20 ABI (minimal for balance queries)
 export const ERC20_ABI = [
@@ -226,7 +226,7 @@ export class PodTreasuryService {
             let internalBalance;
             try {
               internalBalance = (await treasuryContract.read.getBalance([
-                tokenAddress,
+                tokenAddress as `0x${string}`,
               ])) as bigint;
               console.log('🏦 Treasury internal balance:', {
                 token: tokenAddress,
@@ -259,7 +259,7 @@ export class PodTreasuryService {
               name,
               balance: formattedBalance,
               decimals,
-              valueUSD: undefined, // TODO: Add price oracle integration
+              // TODO: Add price oracle integration for valueUSD
             };
           } catch (error) {
             console.error(
@@ -745,7 +745,7 @@ export class PodTreasuryService {
             tokenContract.read.balanceOf([
               treasuryAddress as `0x${string}`,
             ]) as Promise<bigint>,
-            treasuryContract.read.getBalance([tokenAddress]) as Promise<bigint>,
+            treasuryContract.read.getBalance([tokenAddress as `0x${string}`]) as Promise<bigint>,
           ]);
 
           // If external balance > internal balance, we need to sync

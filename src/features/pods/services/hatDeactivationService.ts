@@ -363,6 +363,8 @@ export class HatDeactivationService {
           abi: HATS_DEACTIVATION_ABI,
           functionName: 'setHatStatus',
           args: [BigInt(hatId), false], // false = deactivated
+          chain: undefined,
+          account: walletClient.account ?? null,
         });
 
         console.log(
@@ -396,6 +398,8 @@ export class HatDeactivationService {
           abi: HATS_DEACTIVATION_ABI,
           functionName: 'setHatStatus',
           args: [BigInt(hatId), false], // false = deactivated
+          chain: undefined,
+          account: walletClient.account ?? null,
         });
 
         console.log(
@@ -440,6 +444,8 @@ export class HatDeactivationService {
           ],
           functionName: 'setHatStatus',
           args: [BigInt(hatId), false], // false = deactivated
+          chain: undefined,
+          account: walletClient.account ?? null,
         });
 
         console.log(
@@ -464,6 +470,8 @@ export class HatDeactivationService {
           ],
           functionName: 'checkHatStatus',
           args: [BigInt(hatId)],
+          chain: undefined,
+          account: walletClient.account ?? null,
         });
 
         console.log(
@@ -539,6 +547,8 @@ export class HatDeactivationService {
         abi: HATS_DEACTIVATION_ABI,
         functionName: 'setHatStatus',
         args: [BigInt(hatId), true], // true = activated
+        chain: undefined,
+        account: walletClient.account ?? null,
       });
 
       return {
@@ -604,6 +614,8 @@ export class HatDeactivationService {
           wearerAddress as `0x${string}`,
           '0x0000000000000000000000000000000000000000' as `0x${string}`,
         ],
+        chain: undefined,
+        account: walletClient.account ?? null,
       });
 
       return {
@@ -636,6 +648,8 @@ export class HatDeactivationService {
         abi: HATS_DEACTIVATION_ABI,
         functionName: 'renounceHat',
         args: [BigInt(hatId)],
+        chain: undefined,
+        account: walletClient.account ?? null,
       });
 
       return {

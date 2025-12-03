@@ -1,7 +1,7 @@
 // src/app/features/forum/hooks/useTokenGate.ts
 import { useState, useEffect } from 'react';
 import { useAccount } from 'wagmi';
-import { fetchTokenBalances } from '@/utils/fetchTokenBalances';
+import { fetchTokenBalances, type TokenBalance } from '@/utils/fetchTokenBalances';
 import { useEligibility } from '../../pods/hooks/useEligibility';
 import type { EligibilityCriteria } from '../../pods/services/EligibilityService';
 
@@ -10,12 +10,7 @@ interface TokenGateResult {
   isLoading: boolean;
   error: Error | null;
   checkAccess: () => Promise<boolean>;
-  tokenBalances: {
-    hasProofOfCuriosity: boolean;
-    hasMarketAdmin: boolean;
-    systemBalance: bigint;
-    selfBalance: bigint;
-  } | null;
+  tokenBalances: TokenBalance | null;
   eligibilityResult?: any;
 }
 
@@ -31,12 +26,7 @@ export function useTokenGate(options: TokenGateOptions = {}): TokenGateResult {
   const [hasAccess, setHasAccess] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<Error | null>(null);
-  const [tokenBalances, setTokenBalances] = useState<{
-    hasProofOfCuriosity: boolean;
-    hasMarketAdmin: boolean;
-    systemBalance: bigint;
-    selfBalance: bigint;
-  } | null>(null);
+  const [tokenBalances, setTokenBalances] = useState<TokenBalance | null>(null);
   const [eligibilityResult, setEligibilityResult] = useState<any>(null);
 
   // Eligibility checking hook

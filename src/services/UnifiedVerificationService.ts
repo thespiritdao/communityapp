@@ -137,6 +137,8 @@ export class UnifiedVerificationService {
         subPodCreation: false,
         roleAssignment: false,
         forumModeration: false,
+        chatModeration: false,
+        forumAccess: false,
         bountyManagement: false,
         marketplaceAccess: false,
         marketplaceManage: false,
@@ -145,7 +147,7 @@ export class UnifiedVerificationService {
       const eligibilityResults: any = {};
 
       for (const userRole of userRoles) {
-        const rolePerms = userRole.pod_role_permissions;
+        const rolePerms = userRole.pod_role_permissions as any;
         if (rolePerms && rolePerms.is_active) {
           // Merge permissions (OR logic - if any role grants permission, user has it)
           Object.keys(aggregatedPermissions).forEach((key) => {
@@ -239,6 +241,8 @@ export class UnifiedVerificationService {
         subPodCreation: false,
         roleAssignment: false,
         forumModeration: false,
+        chatModeration: false,
+        forumAccess: false,
         bountyManagement: false,
         marketplaceAccess: false,
         marketplaceManage: false,
@@ -358,7 +362,7 @@ export class UnifiedVerificationService {
       if (error) throw error;
 
       const activeRoles =
-        userRoles?.map((r) => r.pod_role_permissions.role_name) || [];
+        userRoles?.map((r) => (r.pod_role_permissions as any).role_name) || [];
 
       // Get eligibility status for all pod roles
       const allRoles =

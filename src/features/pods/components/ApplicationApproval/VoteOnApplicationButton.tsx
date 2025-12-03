@@ -94,7 +94,7 @@ export const VoteOnApplicationButton: React.FC<
     }
   };
 
-  const handleError = (error: Error) => {
+  const handleError = (error: any) => {
     console.error('Transaction error:', error);
     toast({
       title: 'Transaction Failed',
@@ -135,18 +135,7 @@ export const VoteOnApplicationButton: React.FC<
         <TransactionButton
           text="Record Approval Vote (Onchain)"
           disabled={isProcessing || !address}
-          className="w-full text-white px-6 py-3 rounded-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-          style={{ backgroundColor: '#2F5D50' }}
-          onMouseEnter={(e: React.MouseEvent<HTMLButtonElement>) =>
-            !isProcessing &&
-            !e.currentTarget.disabled &&
-            (e.currentTarget.style.backgroundColor = '#1F453A')
-          }
-          onMouseLeave={(e: React.MouseEvent<HTMLButtonElement>) =>
-            !isProcessing &&
-            !e.currentTarget.disabled &&
-            (e.currentTarget.style.backgroundColor = '#2F5D50')
-          }
+          className="w-full text-white px-6 py-3 rounded-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed bg-[#2F5D50] hover:bg-[#1F453A]"
         />
         <TransactionStatus>
           <div className="flex flex-col gap-2 p-3 border rounded-lg bg-gray-50 text-sm">

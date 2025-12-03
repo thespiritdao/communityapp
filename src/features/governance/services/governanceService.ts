@@ -128,8 +128,8 @@ export class GovernanceService {
     } catch (error) {
       // Only log unexpected errors, not the common 406 ones
       if (
-        !error.message?.includes('Not Acceptable') &&
-        !error.message?.includes('No acceptable')
+        !(error as any).message?.includes('Not Acceptable') &&
+        !(error as any).message?.includes('No acceptable')
       ) {
         console.error('Failed to get user vote:', error);
       }

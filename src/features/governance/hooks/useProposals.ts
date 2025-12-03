@@ -77,7 +77,6 @@ const fetchProposalsOnChain = async (
       state = await retryContractRead(
         () =>
           publicClient.readContract({
-            chainId: base.id,
             address: GOVERNOR_ADDRESS,
             abi: DAOGovernorABI,
             functionName: 'state',

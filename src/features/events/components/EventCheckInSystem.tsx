@@ -209,8 +209,8 @@ export const EventCheckInSystem: React.FC<EventCheckInSystemProps> = ({
       console.error('❌ Error checking in user:', {
         error,
         registrationId,
-        errorMessage: error?.message,
-        errorCode: error?.code,
+        errorMessage: (error as any)?.message,
+        errorCode: (error as any)?.code,
       });
       // Show user-friendly error
       alert('Failed to check in user. Please try again.');
@@ -339,12 +339,14 @@ export const EventCheckInSystem: React.FC<EventCheckInSystemProps> = ({
               try {
                 await EventService.createEventToken({
                   event_id: event.id,
-                  user_address: nftMintingData.recipients[i],
+                  token_type: 'completion',
+                  contract_address: event.completion_contract_address || '',
                   token_id: tokenId,
-                  transaction_hash: txHash || '',
-                  metadata_uri: nftMintingData.metadataURIs[i],
-                  minted_at: new Date().toISOString(),
-                  token_type: 'completion_certificate',
+                  owner_address: nftMintingData.recipients[i],
+                  token_metadata: {
+                    transaction_hash: txHash || '',
+                    metadata_uri: nftMintingData.metadataURIs[i],
+                  },
                 });
                 console.log(
                   `✅ Created event_tokens entry for ${nftMintingData.recipients[i]}`,
@@ -446,7 +448,9 @@ export const EventCheckInSystem: React.FC<EventCheckInSystemProps> = ({
           'Smart contract not configured. Please contact the administrator to configure the EventManager contract address.',
         );
       } else {
-        alert(`Error preparing NFT transaction: ${error.message || error}`);
+        alert(
+          `Error preparing NFT transaction: ${(error as any).message || error}`,
+        );
       }
 
       return null;
@@ -763,10 +767,10 @@ export const EventCheckInSystem: React.FC<EventCheckInSystemProps> = ({
       {/* NFT Minting Modal */}
       <Dialog open={showNFTMintingModal} onOpenChange={setShowNFTMintingModal}>
         <DialogContent className="max-w-md">
-          <DialogHeader className="space-y-0">
+          <DialogHeader>
             <div className="flex items-center gap-2 min-w-0">
               <Award className="w-5 h-5 shrink-0" />
-              <DialogTitle className="leading-tight m-0">
+              <DialogTitle>
                 Complete Event & Mint Certificates
               </DialogTitle>
             </div>
@@ -848,19 +852,6 @@ export const EventCheckInSystem: React.FC<EventCheckInSystemProps> = ({
                           }
                           disabled={mintingNFTs}
                           className="flex-1 text-white disabled:bg-gray-400"
-                          style={{ backgroundColor: '#6A5F7A' }}
-                          onMouseEnter={(
-                            e: React.MouseEvent<HTMLButtonElement>,
-                          ) => {
-                            if (!mintingNFTs)
-                              e.currentTarget.style.backgroundColor = '#574C66';
-                          }}
-                          onMouseLeave={(
-                            e: React.MouseEvent<HTMLButtonElement>,
-                          ) => {
-                            if (!mintingNFTs)
-                              e.currentTarget.style.backgroundColor = '#6A5F7A';
-                          }}
                         />
                         <TransactionSponsor />
                         <TransactionStatus>
@@ -878,12 +869,6 @@ export const EventCheckInSystem: React.FC<EventCheckInSystemProps> = ({
       </Dialog>
 
       {/* QR Scanner */}
-      {showScannerModal &&
-        console.log('🎯 EventCheckInSystem: Rendering QRScanner with:', {
-          eventId: event.id,
-          eventTitle: event.title,
-          isShowingScannerModal: showScannerModal,
-        })}
 
       {/* Event Completion Modal */}
       {showCompletionModal && (
@@ -893,9 +878,11 @@ export const EventCheckInSystem: React.FC<EventCheckInSystemProps> = ({
         >
           <DialogContent className="max-w-md">
             <DialogHeader>
-              <DialogTitle className="flex items-center">
-                <Award className="w-5 h-5 mr-2" style={{ color: '#3F7A5A' }} />
-                Complete Event
+              <DialogTitle>
+                <div className="flex items-center">
+                  <Award className="w-5 h-5 mr-2" style={{ color: '#3F7A5A' }} />
+                  Complete Event
+                </div>
               </DialogTitle>
             </DialogHeader>
 

@@ -11,10 +11,10 @@ interface Category {
 }
 
 interface CategoryListProps {
-  categories: Category[];
+  categories?: Category[];
 }
 
-const CategoryList: React.FC<CategoryListProps> = ({ categories }) => {
+const CategoryList: React.FC<CategoryListProps> = ({ categories = [] }) => {
   return (
     <div className={styles.categoryListContainer}>
       <div className={styles.categoryHeader}>

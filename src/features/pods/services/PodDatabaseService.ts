@@ -418,54 +418,6 @@ export class PodDatabaseService {
   }
 
   /**
-   * Get accountability signatures for a pod
-   */
-  static async getAccountabilitySignatures(
-    podId: string,
-  ): Promise<DatabaseResult<any[]>> {
-    try {
-      console.log('📊 Getting accountability signatures for pod:', podId);
-
-      await this.ensureAuthenticated();
-
-      const { data, error } = await supabase
-        .from('pod_accountability_signatures')
-        .select('*')
-        .eq('pod_id', podId)
-        .order('signed_at', { ascending: true });
-
-      if (error) {
-        console.error(
-          'Database error getting accountability signatures:',
-          error,
-        );
-        return { data: null, error: error.message };
-      }
-
-      console.log('✅ Retrieved accountability signatures:', data?.length || 0);
-      console.log(
-        '🔍 Raw signature data:',
-        data?.map((sig) => ({
-          id: sig.id,
-          signer_address: sig.signer_address,
-          signature_data: sig.signature_data ? 'present' : 'missing',
-          signed_at: sig.signed_at,
-          is_valid: sig.is_valid,
-        })),
-      );
-      return { data: data || [], error: null };
-    } catch (err) {
-      const error =
-        err instanceof Error ? err.message : 'Database operation failed';
-      console.error(
-        'PodDatabaseService.getAccountabilitySignatures error:',
-        error,
-      );
-      return { data: null, error };
-    }
-  }
-
-  /**
    * Add single accountability signature
    */
   static async addAccountabilitySignature(

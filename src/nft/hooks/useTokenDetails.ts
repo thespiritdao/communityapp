@@ -1,6 +1,6 @@
 import { type UseQueryResult, useQuery } from '@tanstack/react-query';
-import { getTokenDetails } from '../../api/getTokenDetails';
-import type { GetTokenDetailsParams, TokenDetails } from '../../api/types';
+import { getTokenDetails } from '../../app/api/getTokenDetails';
+import type { GetTokenDetailsParams, TokenDetails } from '../../app/api/types';
 import { isNFTError } from '../utils/isNFTError';
 
 export function useTokenDetails({

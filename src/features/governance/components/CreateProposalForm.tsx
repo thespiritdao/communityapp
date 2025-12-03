@@ -18,10 +18,13 @@ import {
 } from '@coinbase/onchainkit/transaction';
 import { useQueryClient } from '@tanstack/react-query';
 import { base } from 'viem/chains';
-import { encodeFunctionData } from 'viem';
-import AdvocateMembershipABI from '@/abis/AdvocateMembershipABI.json';
-import DAOGovernorABI from '@/abis/DAO_GovernorABI.json';
+import { encodeFunctionData, type Abi } from 'viem';
+import AdvocateMembershipABIJson from '@/abis/AdvocateMembershipABI.json';
+import DAOGovernorABIJson from '@/abis/DAO_GovernorABI.json';
 import { ProposalThreadSelector } from './ProposalThreadSelector';
+
+const AdvocateMembershipABI = AdvocateMembershipABIJson as Abi;
+const DAOGovernorABI = DAOGovernorABIJson as Abi;
 import { useToast } from '@/components/ui/use-toast';
 import { createPublicClient, http } from 'viem';
 import { useForum } from '@/features/forum/hooks/useForum';
@@ -232,9 +235,9 @@ const validateTransactionData = (data: any) => {
   return validation;
 };
 
-export const CreateProposalForm: React.FC<CreateProposalFormProps> = ({
+export function CreateProposalForm({
   onSuccess,
-}) => {
+}: CreateProposalFormProps): React.ReactElement {
   const { address, isConnected, connector } = useAccount();
   const chainId = useChainId();
   const { toast } = useToast();
@@ -498,9 +501,10 @@ export const CreateProposalForm: React.FC<CreateProposalFormProps> = ({
     // If we have voting power, check if we're properly delegated
     if (votingPower && BigInt(votingPower.toString()) > 0n) {
       // Check if we're delegated to ourselves
+      const delegateAddress = currentDelegate as string | undefined;
       const isDelegatedToSelf =
-        currentDelegate &&
-        currentDelegate.toLowerCase() === address.toLowerCase();
+        delegateAddress &&
+        delegateAddress.toLowerCase() === address.toLowerCase();
       return !isDelegatedToSelf;
     }
 
@@ -574,7 +578,7 @@ export const CreateProposalForm: React.FC<CreateProposalFormProps> = ({
 
   // Check voting power separately so we can show specific error messages
   const hasVotingPower = React.useMemo(() => {
-    if (votingPower === undefined || proposalThreshold === undefined) {
+    if (votingPower === undefined || votingPower === null || proposalThreshold === undefined || proposalThreshold === null) {
       return false;
     }
 
@@ -760,7 +764,7 @@ export const CreateProposalForm: React.FC<CreateProposalFormProps> = ({
   return (
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Header */}
+
         <div className="text-center mb-8">
           <h1 className="text-4xl font-bold text-gray-900 mb-4">
             Submit Proposal
@@ -771,7 +775,7 @@ export const CreateProposalForm: React.FC<CreateProposalFormProps> = ({
         </div>
 
         <div className="bg-white rounded-xl shadow-lg overflow-hidden">
-          {/* Status Bar */}
+
           <div
             className="px-6 py-4"
             style={{ backgroundColor: '#e9f9ec', color: '#000' }}
@@ -803,10 +807,10 @@ export const CreateProposalForm: React.FC<CreateProposalFormProps> = ({
             </div>
           </div>
 
-          {/* Form Content */}
+
           <div className="p-8">
-            {/* Validation Error Display */}
-            {validationError && (
+
+            {validationError ? (
               <div
                 className="mb-6 p-4 rounded-lg"
                 style={{
@@ -823,9 +827,8 @@ export const CreateProposalForm: React.FC<CreateProposalFormProps> = ({
                   {validationError}
                 </p>
               </div>
-            )}
+            ) : null}
 
-            {/* Requirements */}
             <div
               className="mb-8 p-6 rounded-lg"
               style={{
@@ -857,7 +860,7 @@ export const CreateProposalForm: React.FC<CreateProposalFormProps> = ({
                       className="w-2 h-2 rounded-full mr-2"
                       style={{
                         backgroundColor:
-                          nftBalance && BigInt(nftBalance.toString()) > 0n
+                          nftBalance !== undefined && nftBalance !== null && BigInt(String(nftBalance)) > 0n
                             ? '#3F7A5A'
                             : '#8B3A3A',
                       }}
@@ -890,7 +893,7 @@ export const CreateProposalForm: React.FC<CreateProposalFormProps> = ({
               </div>
             </div>
 
-            {/* Enhanced Delegation Section */}
+
             {needsDelegation && (
               <div
                 className="mb-6 p-4 rounded-lg"
@@ -967,20 +970,7 @@ export const CreateProposalForm: React.FC<CreateProposalFormProps> = ({
                           : 'Delegate Voting Power to Myself'
                       }
                       disabled={isDelegating || !address}
-                      className="w-full disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-medium py-2 px-4 rounded transition-colors"
-                      style={{ backgroundColor: '#C6933F' }}
-                      onMouseEnter={(
-                        e: React.MouseEvent<HTMLButtonElement>,
-                      ) => {
-                        if (!isDelegating && address)
-                          e.currentTarget.style.backgroundColor = '#8F6B2F';
-                      }}
-                      onMouseLeave={(
-                        e: React.MouseEvent<HTMLButtonElement>,
-                      ) => {
-                        if (!isDelegating && address)
-                          e.currentTarget.style.backgroundColor = '#C6933F';
-                      }}
+                      className="w-full disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-medium py-2 px-4 rounded transition-colors bg-[#C6933F] hover:bg-[#8F6B2F]"
                     />
                     <TransactionSponsor />
                     <TransactionStatus>
@@ -999,11 +989,11 @@ export const CreateProposalForm: React.FC<CreateProposalFormProps> = ({
               </div>
             )}
 
-            {/* Force Delegation Section - for when user has NFTs but no voting power */}
+
             {!needsDelegation &&
               nftBalance &&
               BigInt(nftBalance.toString()) > 0n &&
-              (!votingPower || BigInt(votingPower.toString()) === 0n) && (
+              (!votingPower || BigInt(votingPower.toString()) === 0n) ? (
                 <div
                   className="mb-6 p-4 rounded-lg"
                   style={{
@@ -1064,18 +1054,7 @@ export const CreateProposalForm: React.FC<CreateProposalFormProps> = ({
                     >
                       <TransactionButton
                         text="Force Delegate Voting Power"
-                        className="w-full text-white font-medium py-2 px-4 rounded transition-colors"
-                        style={{ backgroundColor: '#8B3A3A' }}
-                        onMouseEnter={(
-                          e: React.MouseEvent<HTMLButtonElement>,
-                        ) => {
-                          e.currentTarget.style.backgroundColor = '#5C1F1F';
-                        }}
-                        onMouseLeave={(
-                          e: React.MouseEvent<HTMLButtonElement>,
-                        ) => {
-                          e.currentTarget.style.backgroundColor = '#8B3A3A';
-                        }}
+                        className="w-full text-white font-medium py-2 px-4 rounded transition-colors bg-[#8B3A3A] hover:bg-[#5C1F1F]"
                       />
                       <TransactionSponsor />
                       <TransactionStatus>
@@ -1089,9 +1068,9 @@ export const CreateProposalForm: React.FC<CreateProposalFormProps> = ({
                     </div>
                   </div>
                 </div>
-              )}
+              ) : null}
 
-            {/* Enhanced Debug Info */}
+
             <details className="mb-6">
               <summary className="cursor-pointer text-sm text-gray-600 hover:text-gray-800 flex items-center gap-2">
                 <input
@@ -1110,7 +1089,7 @@ export const CreateProposalForm: React.FC<CreateProposalFormProps> = ({
                 <div>
                   Proposal Threshold: {proposalThreshold?.toString() || 'N/A'}
                 </div>
-                <div>Current Delegate: {currentDelegate || 'N/A'}</div>
+                <div>Current Delegate: {currentDelegate ? String(currentDelegate) : 'N/A'}</div>
                 <div>Needs Delegation: {needsDelegation ? 'Yes' : 'No'}</div>
                 <div className="font-bold" style={{ color: '#2F5D50' }}>
                   Has Governance Permission:{' '}
@@ -1162,9 +1141,9 @@ export const CreateProposalForm: React.FC<CreateProposalFormProps> = ({
               </div>
             </details>
 
-            {/* Proposal Form */}
+
             <div className="space-y-6">
-              {/* Forum Thread Selection (now required and above) */}
+
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
                   Link Forum Discussion
@@ -1176,7 +1155,7 @@ export const CreateProposalForm: React.FC<CreateProposalFormProps> = ({
                   </p>
                 )}
               </div>
-              {/* Title */}
+
               <div>
                 <label
                   htmlFor="title"
@@ -1215,7 +1194,7 @@ export const CreateProposalForm: React.FC<CreateProposalFormProps> = ({
                   </span>
                 </div>
               </div>
-              {/* Description */}
+
               <div>
                 <label
                   htmlFor="body"
@@ -1248,7 +1227,7 @@ export const CreateProposalForm: React.FC<CreateProposalFormProps> = ({
                   </span>
                 </div>
               </div>
-              {/* Pod/Token Dropdown */}
+
               <div>
                 <label
                   htmlFor="token"
@@ -1291,9 +1270,9 @@ export const CreateProposalForm: React.FC<CreateProposalFormProps> = ({
               </div>
             </div>
 
-            {/* Submit Section */}
+
             <div className="mt-8 pt-6 border-t border-gray-200">
-              {/* Show specific blocking reasons */}
+
               {!canSubmitProposal && hasInteracted && (
                 <div
                   className="mb-6 p-4 rounded-lg"
@@ -1482,7 +1461,6 @@ export const CreateProposalForm: React.FC<CreateProposalFormProps> = ({
                               realProposalId,
                               formData.title,
                               address!,
-                              formData.selectedToken,
                             );
                             console.log(
                               '✅ Token holder notifications sent via voting reminder service',
@@ -1609,6 +1587,6 @@ export const CreateProposalForm: React.FC<CreateProposalFormProps> = ({
       </div>
     </div>
   );
-};
+}
 
 export default CreateProposalForm;

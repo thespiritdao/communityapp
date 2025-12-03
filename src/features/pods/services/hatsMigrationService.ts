@@ -252,13 +252,16 @@ export class HatsMigrationService {
                 imageURI: hatData[5],
               });
             }
-          } catch (error) {
+          } catch (err: unknown) {
             // If we get rate limited, wait a bit
-            if (error instanceof Error && error.message.includes('429')) {
-              console.log('⏳ Rate limited, waiting 2 seconds...');
-              await new Promise((resolve) => setTimeout(resolve, 2000));
-              i--; // Retry this iteration
-              continue;
+            if (err instanceof Error) {
+              const error = err as Error;
+              if (error.message.includes('429')) {
+                console.log('⏳ Rate limited, waiting 2 seconds...');
+                await new Promise((resolve) => setTimeout(resolve, 2000));
+                i--; // Retry this iteration
+                continue;
+              }
             }
             // HAT doesn't exist or other error, skip silently
             continue;

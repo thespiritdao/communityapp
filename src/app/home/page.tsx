@@ -97,7 +97,6 @@ export default function HomePage() {
 
       {/* SPIRITDAO MODULES */}
       <section className="home-section-2">
-        <h2>SpiritDAO</h2>
         <div className="home-module-list">
           <Link href="/chat" className="home-module-card" prefetch={true}>
             <Image

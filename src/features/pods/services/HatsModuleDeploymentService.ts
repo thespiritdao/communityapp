@@ -526,9 +526,9 @@ export class HatsModuleDeploymentService {
         }
 
       case 'time_based':
-      case 'reputation_score':
       case 'staking':
         // These would require additional contract methods
+        // TODO: Add 'reputation_score' case when it's added to EligibilityCriteria type
         throw new Error(
           `Criterion type ${criterion.type} not yet implemented in module`,
         );

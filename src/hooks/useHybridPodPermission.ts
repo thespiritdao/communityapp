@@ -115,7 +115,7 @@ export function useHybridPodPermission(
     }
 
     // Check on-chain HAT balance
-    const hasHat = hatBalance !== undefined && hatBalance > 0n;
+    const hasHat = hatBalance !== undefined && hatBalance !== null && (hatBalance as bigint) > 0n;
 
     // ✅ THREE-FACTOR CHECK: HAT + DB Permission + Agreement Signatures
     const allChecksPass = hasHat && hasDbPermission && !hasUnsignedAgreements;
@@ -240,7 +240,7 @@ export function useHybridPodRole(podId: string | null | undefined) {
       return null;
     }
 
-    const hasHat = hatBalance !== undefined && hatBalance > 0n;
+    const hasHat = hatBalance !== undefined && hatBalance !== null && (hatBalance as bigint) > 0n;
     return hasHat ? podRole : null;
   }, [podRole, hatBalance, isLoading]);
 }

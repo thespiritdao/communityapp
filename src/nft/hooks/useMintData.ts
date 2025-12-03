@@ -3,11 +3,11 @@
 
 import { useState, useEffect } from 'react';
 import { useAccount, usePublicClient } from 'wagmi';
-import { useNFTLifecycleContext } from '../../../nft/components/NFTLifecycleProvider';
-import type { NFTData, NFTError } from '../../../nft/types';
-import { convertIpfsToHttps } from '../../../nft/utils/ipfs';
-import { useMintDetails } from '../../../nft/hooks/useMintDetails';
-import AdvocateMembershipABI from '../../../abis/AdvocateMembershipABI.json';
+import { useNFTLifecycleContext } from '../components/NFTLifecycleProvider';
+import type { NFTData, NFTError } from '../types';
+import { convertIpfsToHttps } from '../utils/ipfs';
+import { useMintDetails } from './useMintDetails';
+import AdvocateMembershipABI from '@/abis/AdvocateMembershipABI.json';
 
 const ADVOCATE_ADDRESS =
   '0xd05b10248f1F72e8B9fEbd9E9c87887Ab0a1aAB0'.toLowerCase();
@@ -32,7 +32,7 @@ export function useMintData(
     const [isEligibleToMint, setIsEligibleToMint] = useState(false);
 
     useEffect(() => {
-      if (!address) return;
+      if (!address || !publicClient) return;
       publicClient
         .readContract({
           address: contractAddress,
@@ -40,8 +40,8 @@ export function useMintData(
           functionName: 'balanceOf',
           args: [address],
         })
-        .then((bal: bigint) => {
-          setIsEligibleToMint(bal === 0n);
+        .then((bal) => {
+          setIsEligibleToMint((bal as bigint) === 0n);
         })
         .catch((err) => {
           const nftErr: NFTError = {
@@ -66,8 +66,8 @@ export function useMintData(
       mimeType: undefined,
       contractType: 'ERC721',
       maxMintsPerWallet: 1,
-      price: 0n,
-      mintFee: 0n,
+      price: { amount: '0', currency: 'ETH', amountUSD: '0' },
+      mintFee: { amount: '0', currency: 'ETH', amountUSD: '0' },
       isEligibleToMint,
       creatorAddress: undefined,
       totalOwners: undefined,

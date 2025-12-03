@@ -1,6 +1,6 @@
 // src/features/shopping-cart/components/cart/cartproducts/CartProduct/CartProduct.tsx
 'use client';
-import type { ICartProduct } from 'models';
+import type { ICartProduct } from '../../../../models';
 import useCart from '@/features/shopping-cart/contexts/cart-context/useCart';
 
 import * as S from './style'; // adjust path as needed

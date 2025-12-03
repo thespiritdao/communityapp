@@ -1,7 +1,7 @@
 // src\features\shopping-cart\services\products.ts
 
 import { createClient } from '@supabase/supabase-js';
-import type { IProduct } from 'models';
+import type { IProduct } from '../models';
 
 // ✅ Supabase Setup
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;

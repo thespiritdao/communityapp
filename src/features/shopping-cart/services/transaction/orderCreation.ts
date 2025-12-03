@@ -37,7 +37,7 @@ export async function ensureSupabaseAuth(address: string): Promise<void> {
     console.log('✅ Supabase session established for order creation');
   } catch (authError) {
     console.error('❌ Failed to establish Supabase session:', authError);
-    throw new Error(`Authentication failed: ${authError.message}`);
+    throw new Error(`Authentication failed: ${(authError as Error).message || 'Unknown error'}`);
   }
 }
 
@@ -97,7 +97,7 @@ export async function createOrder(
     return { orderId: orderData.id };
   } catch (error) {
     console.error('❌ Failed to create order:', error);
-    return { error: error.message };
+    return { error: (error as Error).message || 'Unknown error' };
   }
 }
 
@@ -123,7 +123,7 @@ export async function sendOrderNotifications(
         await unifiedNotificationService.createNotification({
           recipient_address: creatorAddress.toLowerCase(),
           sender_address: config.address.toLowerCase(),
-          notification_type: 'marketplace_purchase_fulfillment',
+          notification_type: 'marketplace_purchase_fulfillment' as any,
           title: 'New Order Received',
           message: `You received an order for ${product.name || product.title} (qty: ${product.quantity || 1})`,
           context_type: 'marketplace',
@@ -136,7 +136,7 @@ export async function sendOrderNotifications(
         await unifiedNotificationService.createNotification({
           recipient_address: config.address.toLowerCase(),
           sender_address: 'system',
-          notification_type: 'marketplace_order_status',
+          notification_type: 'marketplace_order_status' as any,
           title: 'Order Placed Successfully',
           message: `Your order for ${product.name || product.title} has been placed`,
           context_type: 'marketplace',

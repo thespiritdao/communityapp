@@ -74,7 +74,7 @@ export const TokenBalanceInput: React.FC<TokenBalanceInputProps> = ({
       setSelectedToken(token);
       onChange({
         contract_address: token.address,
-        token_type: token.type === 'HAT' ? 'ERC20' : token.type,
+        token_type: (token.type === 'HAT' || token.type === 'NATIVE' ? 'ERC20' : token.type) as 'ERC20' | 'ERC721' | 'ERC1155' | undefined,
         name: `${token.name} Balance Requirement`,
         description:
           token.description ||

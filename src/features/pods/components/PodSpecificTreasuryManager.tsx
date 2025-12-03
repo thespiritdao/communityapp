@@ -204,7 +204,7 @@ export function PodSpecificTreasuryManager({
   };
 
   // Handle deployment error
-  const handleError = (error: Error) => {
+  const handleError = (error: any) => {
     console.error('Treasury deployment failed:', error);
     toast({
       title: 'Deployment Failed',

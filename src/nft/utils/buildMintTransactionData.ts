@@ -1,9 +1,9 @@
 // //src/nft/utils/builtMintTransactionData.ts
 
 import type { Address } from 'viem';
-import type { Call } from '../../../transaction/types';
-import type { BuildMintTransactionParams } from '../../../api/types';
-import { buildMintTransaction as genericBuild } from '../../../api/buildMintTransaction';
+import type { Call } from '../../transaction/types';
+import type { BuildMintTransactionParams } from '../../app/api/types';
+import { buildMintTransaction as genericBuild } from '../../app/api/buildMintTransaction';
 
 const ADVOCATE_ADDRESS =
   '0xd05b10248f1F72e8B9fEbd9E9c87887Ab0a1aAB0'.toLowerCase();

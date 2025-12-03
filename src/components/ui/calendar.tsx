@@ -8,6 +8,8 @@ export interface CalendarProps {
   onSelect?: (date: Date | undefined) => void;
   initialFocus?: boolean;
   className?: string;
+  fromDate?: Date;
+  toDate?: Date;
 }
 
 export const Calendar: React.FC<CalendarProps> = ({
@@ -16,6 +18,8 @@ export const Calendar: React.FC<CalendarProps> = ({
   onSelect,
   initialFocus,
   className = '',
+  fromDate,
+  toDate,
 }) => {
   // Only support single mode as per usage
   return (
@@ -25,6 +29,8 @@ export const Calendar: React.FC<CalendarProps> = ({
       onSelect={onSelect}
       className={className}
       initialFocus={initialFocus}
+      fromDate={fromDate}
+      toDate={toDate}
     />
   );
 };

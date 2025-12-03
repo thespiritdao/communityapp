@@ -381,7 +381,6 @@ export const ClaimManagementHATButton: React.FC<
           {/* OnchainKit Transaction Component */}
           {address && (
             <Transaction
-              address={address.toLowerCase() as `0x${string}`}
               chainId={BASE_CHAIN_ID}
               calls={calls as any}
               isSponsored={true}
@@ -389,14 +388,7 @@ export const ClaimManagementHATButton: React.FC<
             >
               <TransactionButton
                 text="Claim Management HAT (Sponsored)"
-                className="w-full text-white"
-                style={{ backgroundColor: '#C6933F' }}
-                onMouseEnter={(e: React.MouseEvent<HTMLButtonElement>) =>
-                  (e.currentTarget.style.backgroundColor = '#9B7F5F')
-                }
-                onMouseLeave={(e: React.MouseEvent<HTMLButtonElement>) =>
-                  (e.currentTarget.style.backgroundColor = '#C6933F')
-                }
+                className="w-full text-white bg-[#C6933F] hover:bg-[#9B7F5F]"
               />
               <TransactionSponsor />
               <TransactionStatus>

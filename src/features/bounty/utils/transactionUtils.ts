@@ -450,8 +450,6 @@ export const handleTransactionError = async (
         }),
       },
       transactionData: {
-        address: userAddress,
-        chainId: BASE_CHAIN_ID,
         calls,
         ...txConfig,
         simulationSuccess,

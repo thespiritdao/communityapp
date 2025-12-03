@@ -89,7 +89,7 @@ export const EligibilityCriteriaDisplay: React.FC<
   }, [showUserStatus, address, criteria.length]);
 
   const getCriterionIcon = (type: EligibilityCriteria['type']) => {
-    return CRITERION_ICONS[type] || AlertCircle;
+    return CRITERION_ICONS[type as keyof typeof CRITERION_ICONS] || AlertCircle;
   };
 
   const getCredentialDisplayName = (criterion: EligibilityCriteria) => {
@@ -116,7 +116,7 @@ export const EligibilityCriteriaDisplay: React.FC<
       if (contractLower === SELF_ADDRESS) {
         // Check for the correct amount field - could be minimum_amount or self_token_amount
         const rawAmount =
-          criterion.minimum_amount || criterion.self_token_amount || '1';
+          criterion.minimum_amount || (criterion as any).self_token_amount || '1';
         const amount = Number.parseFloat(rawAmount).toFixed(3);
         console.log('💰 SELF amount display:', {
           rawAmount,
@@ -129,7 +129,7 @@ export const EligibilityCriteriaDisplay: React.FC<
       if (contractLower === SYSTEM_ADDRESS) {
         // Check for the correct amount field - could be minimum_amount or system_token_amount
         const rawAmount =
-          criterion.minimum_amount || criterion.system_token_amount || '1';
+          criterion.minimum_amount || (criterion as any).system_token_amount || '1';
         const amount = Number.parseFloat(rawAmount).toFixed(3);
         console.log('💰 SYSTEM amount display:', {
           rawAmount,
@@ -202,7 +202,7 @@ export const EligibilityCriteriaDisplay: React.FC<
   };
 
   const formatCriterionValue = (criterion: EligibilityCriteria) => {
-    switch (criterion.type) {
+    switch (criterion.type as any) {
       case 'token_balance':
         // Amount is already shown in the title for token_balance
         return 'Token holding requirement';
@@ -216,9 +216,9 @@ export const EligibilityCriteriaDisplay: React.FC<
           ? `Until ${new Date(criterion.valid_until).toLocaleDateString()}`
           : 'Time restricted';
       case 'reputation_score':
-        return `Score ≥ ${criterion.minimum_score}`;
+        return `Score ≥ ${(criterion as any).minimum_score}`;
       case 'staking':
-        return `${criterion.minimum_staked} staked`;
+        return `${(criterion as any).minimum_staked} staked`;
       default:
         return 'Custom requirement';
     }

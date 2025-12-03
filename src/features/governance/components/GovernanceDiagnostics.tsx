@@ -2,6 +2,7 @@
 'use client';
 import type React from 'react';
 import { useAccount } from 'wagmi';
+import type { Abi } from 'viem';
 import {
   Transaction,
   TransactionButton,
@@ -22,7 +23,7 @@ const PaymasterTest: React.FC = () => {
         stateMutability: 'view',
         type: 'function',
       },
-    ],
+    ] as const as Abi,
     functionName: 'name',
     args: [],
   };
@@ -70,7 +71,6 @@ const PaymasterTest: React.FC = () => {
 
         <Transaction
           isSponsored={true}
-          address={address}
           contracts={[testContract]}
           onSuccess={(receipt) => {
             console.log('✅ PAYMASTER TEST SUCCESS:', receipt);
@@ -80,20 +80,10 @@ const PaymasterTest: React.FC = () => {
             console.error('❌ PAYMASTER TEST FAILED:', error);
             alert(`Paymaster test failed: ${error.message}`);
           }}
-          onTransactionStarted={() => {
-            console.log('🚀 PAYMASTER TEST STARTED');
-          }}
         >
           <TransactionButton
             text="Test Paymaster"
-            className="w-full text-white font-medium py-2 px-4 rounded"
-            style={{ backgroundColor: '#2F5D50' }}
-            onMouseEnter={(e: React.MouseEvent<HTMLButtonElement>) => {
-              e.currentTarget.style.backgroundColor = '#1F453A';
-            }}
-            onMouseLeave={(e: React.MouseEvent<HTMLButtonElement>) => {
-              e.currentTarget.style.backgroundColor = '#2F5D50';
-            }}
+            className="w-full text-white font-medium py-2 px-4 rounded bg-[#2F5D50] hover:bg-[#1F453A]"
           />
           <TransactionSponsor className="mt-2 text-center" />
         </Transaction>

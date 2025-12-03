@@ -395,7 +395,12 @@ export const EventManagementDashboard: React.FC<
       </Card>
 
       {/* Events Management */}
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
+      <Tabs
+        value={activeTab}
+        onValueChange={(value) =>
+          setActiveTab(value as 'overview' | 'registrations' | 'analytics')
+        }
+      >
         <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="overview">Event Overview</TabsTrigger>
           <TabsTrigger value="registrations">Registrations</TabsTrigger>
@@ -490,9 +495,11 @@ export const EventManagementDashboard: React.FC<
       <Dialog open={showQRCodeModal} onOpenChange={setShowQRCodeModal}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <QrCode className="w-5 h-5" />
-              Select Event for Check-in
+            <DialogTitle>
+              <div className="flex items-center gap-2">
+                <QrCode className="w-5 h-5" />
+                Select Event for Check-in
+              </div>
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
@@ -845,17 +852,6 @@ const EventManagementRow: React.FC<EventManagementRowProps> = ({
                         <TransactionButton
                           text="Cancel Event on Blockchain"
                           className="text-white"
-                          style={{ backgroundColor: '#8B3A3A' }}
-                          onMouseEnter={(
-                            e: React.MouseEvent<HTMLButtonElement>,
-                          ) => {
-                            e.currentTarget.style.backgroundColor = '#5C1F1F';
-                          }}
-                          onMouseLeave={(
-                            e: React.MouseEvent<HTMLButtonElement>,
-                          ) => {
-                            e.currentTarget.style.backgroundColor = '#8B3A3A';
-                          }}
                         />
                         <TransactionSponsor />
                         <TransactionStatus>

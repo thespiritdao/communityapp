@@ -1,4 +1,4 @@
-import type { ICartProduct } from 'models';
+import type { ICartProduct } from '../../../models';
 
 const mockProducts: ICartProduct[] = [
   {

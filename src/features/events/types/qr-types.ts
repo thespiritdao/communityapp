@@ -1,5 +1,7 @@
 // Enhanced QR Code Types for Event Check-In System
 
+import type { EventRegistration, EventWithStats } from './event';
+
 export interface QRCodeData {
   eventId: string;
   walletAddress: string;
@@ -48,9 +50,6 @@ export interface CheckInProcessingResult {
   error?: string;
 }
 
-// Re-export from existing types
-export type { EventRegistration, EventWithStats } from '../types/event';
-
 // User profile type based on existing structure
 export interface UserProfile {
   user_id: string; // Add user_id field that exists in the database
@@ -68,3 +67,6 @@ export interface UserProfile {
   discord?: string;
   github?: string;
 }
+
+// Re-export imported types
+export type { EventRegistration, EventWithStats };

@@ -25,9 +25,11 @@ import {
   TransactionStatusLabel,
   TransactionStatusAction,
 } from '@coinbase/onchainkit/transaction';
-import type { TransactionReceipt } from 'viem';
+import type { Abi, TransactionReceipt } from 'viem';
 import { parseEther } from 'viem';
-import BountyManagerABI from '@/abis/BountyManagerV2.json';
+import BountyManagerABIJson from '@/abis/BountyManagerV2.json';
+
+const BountyManagerABI = BountyManagerABIJson as Abi;
 import { unifiedNotificationService } from '@/services/unifiedNotificationService';
 import { UserProfileDisplay } from '@/components/UserProfileDisplay';
 import {
@@ -191,7 +193,7 @@ export const MilestonePaymentTransaction: React.FC<
         unifiedNotificationService.createNotification({
           recipient_address: workerAddress,
           sender_address: address!,
-          notification_type: 'bounty_work_reviewed',
+          notification_type: 'bounty_update',
           title: 'Milestone Payment Released!',
           message: `Payment of ${paymentAmount} ${paymentToken} has been released for milestone "${milestoneDescription}" in bounty "${bountyTitle}".`,
           context_type: 'bounty',
@@ -204,7 +206,7 @@ export const MilestonePaymentTransaction: React.FC<
         unifiedNotificationService.createNotification({
           recipient_address: creatorAddress,
           sender_address: address!,
-          notification_type: 'bounty_work_reviewed',
+          notification_type: 'bounty_update',
           title: 'Milestone Payment Released',
           message: `Milestone "${milestoneDescription}" has been completed and payment released for bounty "${bountyTitle}".`,
           context_type: 'bounty',
@@ -392,8 +394,6 @@ export const MilestonePaymentTransaction: React.FC<
       {/* Transaction Component */}
       {address && contractAddress ? (
         <Transaction
-          address={address?.toLowerCase() as `0x${string}`}
-          chainId={BASE_CHAIN_ID}
           calls={[
             {
               address: contractAddress,
@@ -412,7 +412,6 @@ export const MilestonePaymentTransaction: React.FC<
           <TransactionButton
             text={`Release Milestone Payment`}
             className="w-full"
-            style={{ backgroundColor: '#3F7A5A', color: '#FFFFFF' }}
             disabled={isProcessing}
           />
           <TransactionSponsor />

@@ -43,8 +43,9 @@ export const EventImageUpload: React.FC<EventImageUploadProps> = ({
       setError(null);
 
       // Ensure user session is valid for authenticated operations
-      const session = await getCurrentSession();
-      if (!session?.user?.id) {
+      const { data: sessionData, error: sessionError } =
+        await supabase.auth.getSession();
+      if (!sessionData?.session?.user?.id) {
         setError('Authentication required');
         return;
       }

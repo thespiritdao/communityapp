@@ -1,4 +1,5 @@
-import { getPublicClient } from '@wagmi/core';
+import { publicClient } from '@/config/wagmi.client';
+import { BaseError } from 'viem';
 
 const ERROR_LOG_KEY = 'purchase-errors';
 
@@ -25,7 +26,6 @@ export function formatTokenAmount(amount: number): bigint {
 
 export async function checkETHBalance(address: string): Promise<boolean> {
   try {
-    const publicClient = await getPublicClient();
     const balance = await publicClient.getBalance({
       address: address as `0x${string}`,
     });
@@ -55,10 +55,8 @@ export function validatePaymasterConfig(): boolean {
 
 export async function logWalletState(userAddress: string): Promise<void> {
   try {
-    const publicClient = await getPublicClient();
-    const [balance, network, blockNumber] = await Promise.all([
+    const [balance, blockNumber] = await Promise.all([
       publicClient.getBalance({ address: userAddress as `0x${string}` }),
-      publicClient.getNetwork(),
       publicClient.getBlockNumber(),
     ]);
 
@@ -67,8 +65,8 @@ export async function logWalletState(userAddress: string): Promise<void> {
       balance: balance.toString(),
       balanceInEth: Number(balance) / 1e18,
       network: {
-        chainId: network.chainId,
-        name: network.name,
+        chainId: publicClient.chain.id,
+        name: publicClient.chain.name,
       },
       blockNumber: blockNumber.toString(),
       timestamp: new Date().toISOString(),
@@ -80,7 +78,6 @@ export async function logWalletState(userAddress: string): Promise<void> {
 
 export async function logNetworkConditions(): Promise<void> {
   try {
-    const publicClient = await getPublicClient();
     const [gasPrice, block] = await Promise.all([
       publicClient.getGasPrice(),
       publicClient.getBlock(),

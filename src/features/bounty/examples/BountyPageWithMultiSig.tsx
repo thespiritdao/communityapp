@@ -142,7 +142,7 @@ export const BountyPageWithMultiSig: React.FC = () => {
           <div className="space-y-4">
             <h2 className="text-xl font-semibold">Approval Process</h2>
             <BountyApprovalFlow
-              bountyId={createdBounty.id as number}
+              bountyId={createdBounty.id}
               bountyTitle={createdBounty.title}
               bountyValue={`$${createdBounty.value.amount}`}
               onApprovalComplete={handleApprovalComplete}

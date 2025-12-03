@@ -164,8 +164,8 @@ export async function debugPodTreasuryPermissions(
 
 // Browser helper
 if (typeof window !== 'undefined') {
-  window.debugHatPermissions = debugHatPermissions;
-  window.debugPodTreasuryPermissions = debugPodTreasuryPermissions;
+  (window as any).debugHatPermissions = debugHatPermissions;
+  (window as any).debugPodTreasuryPermissions = debugPodTreasuryPermissions;
   console.log('🎩 HAT Debug functions loaded:');
   console.log('- debugHatPermissions(userAddress, managementHatId)');
   console.log(

@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { useAccount } from 'wagmi';
+import type { Abi } from 'viem';
 import {
   Transaction,
   TransactionButton,
@@ -24,8 +25,10 @@ import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AlertTriangle, XCircle, ArrowLeft } from 'lucide-react';
 import type { FrontendBounty } from '../types/bounty';
-import BountyManagerABI from '@/abis/BountyManagerV2.json';
+import BountyManagerABIJson from '@/abis/BountyManagerV2.json';
 import { UserProfileDisplay } from '@/components/UserProfileDisplay';
+
+const BountyManagerABI = BountyManagerABIJson as Abi;
 
 interface BountyCancellationDialogProps {
   bounty: FrontendBounty;
@@ -165,7 +168,7 @@ export const BountyCancellationDialog: React.FC<
     >
       <DialogContent className="fixed z-50 left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-white rounded-lg shadow-lg focus:outline-none max-w-xl">
         <DialogHeader>
-          <DialogTitle asChild>
+          <DialogTitle>
             <div
               className="flex flex-nowrap items-center gap-2 whitespace-nowrap"
               style={{ color: '#8B3A3A' }}
@@ -391,16 +394,6 @@ export const BountyCancellationDialog: React.FC<
                 </Alert>
               )}
 
-              {console.log('🎯 Rendering Transaction component with:', {
-                bountyId: bounty.onchain_id,
-                userAddress: address,
-                contractAddress: BOUNTY_MANAGER_ADDRESS,
-                addressType: typeof BOUNTY_MANAGER_ADDRESS,
-                addressLength: BOUNTY_MANAGER_ADDRESS?.length,
-                hasABI: !!BountyManagerABI,
-                abiLength: BountyManagerABI?.length,
-              })}
-
               {!BOUNTY_MANAGER_ADDRESS && (
                 <Alert
                   className="mb-4"
@@ -421,8 +414,6 @@ export const BountyCancellationDialog: React.FC<
 
               {BOUNTY_MANAGER_ADDRESS && address && (
                 <Transaction
-                  address={address.toLowerCase() as `0x${string}`}
-                  chainId={8453}
                   calls={[
                     {
                       address: BOUNTY_MANAGER_ADDRESS,
@@ -438,7 +429,6 @@ export const BountyCancellationDialog: React.FC<
                     <TransactionButton
                       text="Execute Refund"
                       className="w-full font-semibold py-3"
-                      style={{ backgroundColor: '#2F5D50', color: '#FFFFFF' }}
                     />
                     <TransactionSponsor />
                     <TransactionStatus>

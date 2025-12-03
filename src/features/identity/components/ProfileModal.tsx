@@ -192,10 +192,10 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
             </span>
             Interests
           </h3>
-          {mapStoredValuesToLabels(user.interests, interestsOptions).length >
+          {mapStoredValuesToLabels(user.interests ?? null, interestsOptions).length >
           0 ? (
             <div className="interests-tags">
-              {mapStoredValuesToLabels(user.interests, interestsOptions).map(
+              {mapStoredValuesToLabels(user.interests ?? null, interestsOptions).map(
                 (label, i) => (
                   <span key={i} className="interest-tag">
                     {label}
@@ -215,9 +215,9 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
             </span>
             Seeking
           </h3>
-          {mapStoredValuesToLabels(user.seeking, seekingOptions).length > 0 ? (
+          {mapStoredValuesToLabels(user.seeking ?? null, seekingOptions).length > 0 ? (
             <div className="interests-tags">
-              {mapStoredValuesToLabels(user.seeking, seekingOptions).map(
+              {mapStoredValuesToLabels(user.seeking ?? null, seekingOptions).map(
                 (label, i) => (
                   <span key={i} className="interest-tag seeking-tag">
                     {label}

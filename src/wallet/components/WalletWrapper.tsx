@@ -1,11 +1,11 @@
 // src/wallet/components/WalletWrapper.tsx
 
 import type { ReactNode } from 'react';
-import ConnectWallet from '../../../wallet/components/ConnectWallet';
-import WalletProvider from '../../../wallet/components//WalletProvider';
-import WalletDropdown from '../../../wallet/components//WalletDropdown';
-import WalletDropdownDisconnect from '../../../wallet/components//WalletDropdownDisconnect';
-import WalletDropdownLink from '../../../wallet/components//WalletDropdownLink';
+import ConnectWallet from './ConnectWallet';
+import WalletProvider from './WalletProvider';
+import WalletDropdown from './WalletDropdown';
+import WalletDropdownDisconnect from './WalletDropdownDisconnect';
+import WalletDropdownLink from './WalletDropdownLink';
 
 type Props = {
   children?: ReactNode;

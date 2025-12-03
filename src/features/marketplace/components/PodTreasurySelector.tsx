@@ -243,7 +243,7 @@ export function PodTreasurySelector({
         const hasManagementHat = Number(balance) > 0;
         console.log(`🎩 Management hat check for ${pod.name}:`, {
           hatId: pod.management_hat_id,
-          balance: balance.toString(),
+          balance: String(balance),
           hasHat: hasManagementHat,
         });
 

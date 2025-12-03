@@ -70,6 +70,7 @@ export const SimplifiedEventCreationForm: React.FC<
   const router = useRouter();
   const { address } = useAccount();
   const config = useConfig();
+  const authContext = useAuthContext();
   const {
     createEvent,
     loading: creating,
@@ -225,7 +226,7 @@ export const SimplifiedEventCreationForm: React.FC<
       );
       if (fundRecipientPod && fundRecipientPod.treasury_contract_address) {
         // Use pod treasury address if available
-        fundRecipient = fundRecipientPod.treasury_contract_address;
+        fundRecipient = fundRecipientPod.treasury_contract_address as `0x${string}`;
         console.log('💰 Event funds will go to pod treasury:', {
           podName: fundRecipientPod.name,
           podId: fundRecipientPodId,
@@ -285,7 +286,7 @@ export const SimplifiedEventCreationForm: React.FC<
         // Ensure user is authenticated with Supabase before storing event data
         // Using centralized auth session
 
-        if (!isAuthenticated || !session?.user?.id) {
+        if (!authContext.isAuthenticated || !authContext.session?.user?.id) {
           console.log('🔐 No Supabase session, attempting authentication...');
 
           // Get nonce and sign message for authentication
@@ -567,7 +568,7 @@ export const SimplifiedEventCreationForm: React.FC<
                           handleInputChange('event_date', newStartDate);
                         }
                       }}
-                      disabled={(date) => date < new Date()}
+                      fromDate={new Date()}
                       initialFocus={true}
                     />
                     <div className="flex space-x-2">
@@ -630,7 +631,7 @@ export const SimplifiedEventCreationForm: React.FC<
                           handleInputChange('event_end_date', newEndDate);
                         }
                       }}
-                      disabled={(date) => date < formData.event_date}
+                      fromDate={formData.event_date}
                       initialFocus={true}
                     />
                     <div className="flex space-x-2">
@@ -1104,7 +1105,8 @@ export const SimplifiedEventCreationForm: React.FC<
                           {
                             eventId,
                             transactionHash:
-                              status.transactionReceipts?.[0]?.transactionHash,
+                              status.statusData.transactionReceipts?.[0]
+                                ?.transactionHash,
                             note: 'Users should now be able to register for this event',
                           },
                         );
@@ -1112,7 +1114,7 @@ export const SimplifiedEventCreationForm: React.FC<
                       if (status.statusName === 'error') {
                         console.error('❌ Event creation transaction failed:', {
                           eventId,
-                          error: status.error,
+                          error: status.statusData,
                           reason:
                             'Event will not exist on blockchain - registrations will fail',
                         });
@@ -1129,13 +1131,6 @@ export const SimplifiedEventCreationForm: React.FC<
                       }
                       disabled={isTransactionPending || transactionCompleted}
                       className="disabled:bg-gray-400 disabled:cursor-not-allowed font-medium py-2 px-4 rounded transition-colors hover:opacity-90"
-                      style={{
-                        backgroundColor:
-                          isTransactionPending || transactionCompleted
-                            ? undefined
-                            : '#2F5D50',
-                        color: '#FFFFFF',
-                      }}
                     />
                     <TransactionSponsor />
                     <TransactionStatus>

@@ -10,6 +10,15 @@ import {
   TransactionStatusAction,
 } from '@coinbase/onchainkit/transaction';
 
+interface AdvocateMintCardOnchainKitProps {
+  address: `0x${string}`;
+  contractAddress: `0x${string}`;
+  memberType: number;
+  tokenURI: string;
+  onSuccess?: () => void;
+  onError?: (error: any) => void;
+}
+
 export function AdvocateMintCardOnchainKit({
   address,
   contractAddress,
@@ -17,7 +26,7 @@ export function AdvocateMintCardOnchainKit({
   tokenURI,
   onSuccess,
   onError,
-}) {
+}: AdvocateMintCardOnchainKitProps) {
   if (!address) return null;
 
   const contracts = [
@@ -32,7 +41,6 @@ export function AdvocateMintCardOnchainKit({
   return (
     <Transaction
       isSponsored={true}
-      address={address}
       contracts={contracts}
       chainId={8453}
       onSuccess={onSuccess}

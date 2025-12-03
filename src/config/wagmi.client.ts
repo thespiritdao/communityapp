@@ -21,25 +21,36 @@ console.log('🔗 Wagmi RPC Configuration:', {
     !process.env.NEXT_PUBLIC_CDP_API_CLIENT && !process.env.NEXT_PUBLIC_RPC_URL,
 });
 
+// Create transports for each chain
+const getBaseTransport = () => {
+  if (process.env.NEXT_PUBLIC_CDP_API_CLIENT) {
+    return http(
+      `https://api.developer.coinbase.com/rpc/v1/base/${process.env.NEXT_PUBLIC_CDP_API_CLIENT}`,
+    );
+  }
+  if (process.env.NEXT_PUBLIC_RPC_URL) {
+    return http(process.env.NEXT_PUBLIC_RPC_URL);
+  }
+  return http();
+};
+
+const getBaseSepoliaTransport = () => {
+  if (process.env.NEXT_PUBLIC_CDP_API_CLIENT) {
+    return http(
+      `https://api.developer.coinbase.com/rpc/v1/base-sepolia/${process.env.NEXT_PUBLIC_CDP_API_CLIENT}`,
+    );
+  }
+  return http();
+};
+
 export const wagmiConfig = createConfig({
   chains: [base, baseSepolia],
   connectors: [coinbaseWalletConnector],
   transports: {
-    [base.id]: process.env.NEXT_PUBLIC_CDP_API_CLIENT
-      ? http(
-          `https://api.developer.coinbase.com/rpc/v1/base/${process.env.NEXT_PUBLIC_CDP_API_CLIENT}`,
-        )
-      : process.env.NEXT_PUBLIC_RPC_URL
-        ? http(process.env.NEXT_PUBLIC_RPC_URL)
-        : http(), // fallback to default if no API key or RPC URL
-    [baseSepolia.id]: process.env.NEXT_PUBLIC_CDP_API_CLIENT
-      ? http(
-          `https://api.developer.coinbase.com/rpc/v1/base-sepolia/${process.env.NEXT_PUBLIC_CDP_API_CLIENT}`,
-        )
-      : http(),
+    [base.id]: getBaseTransport(),
+    [baseSepolia.id]: getBaseSepoliaTransport(),
   },
   ssr: true, // Enable SSR support
-  storage: typeof window !== 'undefined' ? window.localStorage : undefined,
 });
 
 // Create public client for contract reads

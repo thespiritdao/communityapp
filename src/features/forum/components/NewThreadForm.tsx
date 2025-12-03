@@ -210,8 +210,8 @@ export function NewThreadForm({
     const loadDraft = async () => {
       const result = await getDraft(address, selectedCategoryId);
       if (result.draft) {
-        setTitle(result.draft.draft_title || '');
-        setContent(result.draft.draft_content);
+        setTitle(result.draft.title || '');
+        setContent(result.draft.content);
       }
     };
 

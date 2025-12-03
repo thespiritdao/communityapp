@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useState } from 'react';
-import { useValue } from '../../../internal/hooks/useValue';
-import type { NFTContextType, NFTProviderReact } from '../../../nft/types';
+import { useValue } from '../../internal/hooks/useValue';
+import type { NFTContextType, NFTProviderReact } from '../types';
 
 const emptyContext = {} as NFTContextType;
 
@@ -42,5 +42,9 @@ export function NFTProvider({
     ...nftData,
   });
 
-  return <NFTContext.Provider value={value}>{children}</NFTContext.Provider>;
+  return (
+    <NFTContext.Provider value={value}>
+      {typeof children === 'function' ? children(value) : children}
+    </NFTContext.Provider>
+  );
 }

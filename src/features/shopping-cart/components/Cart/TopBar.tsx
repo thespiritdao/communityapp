@@ -8,7 +8,7 @@ import ManageProductsButton from '@/features/marketplace/components/ManageProduc
 
 interface TopBarProps {
   address: string;
-  tokenBalances: {
+  tokenBalances?: {
     systemBalance: string;
     selfBalance: string;
     hasProofOfCuriosity: boolean;

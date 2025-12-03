@@ -1,6 +1,6 @@
 import type { Dispatch, ReactNode, SetStateAction } from 'react';
 import type { Address, Chain, PublicClient } from 'viem';
-import type { UserOperation } from 'viem/_types/account-abstraction';
+import type { UserOperation } from 'viem/account-abstraction';
 import type { UseBalanceReturnType, UseReadContractReturnType } from 'wagmi';
 import type { SwapError } from '../swap';
 

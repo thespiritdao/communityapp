@@ -40,7 +40,11 @@ const markMessagesAsRead = async (receiver_wallet_id: string) => {
     return;
   }
 
-  if (!session?.session || session.session.expires_at < Date.now() / 1000) {
+  if (
+    !session?.session ||
+    !session.session.expires_at ||
+    session.session.expires_at < Date.now() / 1000
+  ) {
     console.warn('MessageList: Session expired, skipping mark as read');
     return;
   }

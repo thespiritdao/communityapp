@@ -2,7 +2,7 @@
 
 import type React from 'react';
 import { useState, useEffect } from 'react';
-import { useAccount } from 'wagmi';
+import { useAccount, usePublicClient } from 'wagmi';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -39,6 +39,7 @@ export const HatsModuleManager: React.FC<HatsModuleManagerProps> = ({
   onSyncComplete,
 }) => {
   const { address } = useAccount();
+  const publicClient = usePublicClient();
   const { toast } = useToast();
 
   const [syncStatus, setSyncStatus] = useState<SyncStatus[]>([]);
@@ -156,6 +157,7 @@ export const HatsModuleManager: React.FC<HatsModuleManagerProps> = ({
         moduleAddress,
         hatId,
         address,
+        publicClient,
       );
 
       toast({

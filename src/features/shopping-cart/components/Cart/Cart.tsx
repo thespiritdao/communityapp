@@ -5,7 +5,7 @@ import { useEffect, useState, useMemo, useRef } from 'react';
 import styled from 'styled-components';
 import { useAccount, usePublicClient, useWalletClient } from 'wagmi';
 import { useRouter } from 'next/navigation';
-import { keccak256, toBytes } from 'viem';
+import { keccak256, toBytes, type Log } from 'viem';
 const purchaseBurnABI = require('src/abis/purchaseBurnABI.json');
 const purchaseRouterABI = require('src/abis/PurchaseRouter.json');
 const purchaseRouterDecentralizedABI = require('src/abis/PurchaseRouterDecentralized.json');
@@ -31,6 +31,7 @@ import { prepareTransactionData } from '../../services/transactionService';
 import debounce from 'lodash.debounce';
 import { BaseError } from 'viem';
 import { getPublicClient } from '@wagmi/core';
+import { wagmiConfig } from '@/config/wagmi.client';
 import { supabase } from '@/lib/supabase';
 import { createSupabaseSession } from '@/utils/createSupabaseSession';
 
@@ -256,7 +257,7 @@ const isCoinbaseWalletError = (error: any): boolean => {
 
 const checkETHBalance = async (address: string): Promise<boolean> => {
   try {
-    const publicClient = await getPublicClient();
+    const publicClient = getPublicClient(wagmiConfig);
     const balance = await publicClient.getBalance({
       address: address as `0x${string}`,
     });
@@ -271,10 +272,10 @@ const checkETHBalance = async (address: string): Promise<boolean> => {
 
 const logWalletState = async (userAddress: string) => {
   try {
-    const publicClient = await getPublicClient();
-    const [balance, network, blockNumber] = await Promise.all([
+    const publicClient = getPublicClient(wagmiConfig);
+    const [balance, chainId, blockNumber] = await Promise.all([
       publicClient.getBalance({ address: userAddress as `0x${string}` }),
-      publicClient.getNetwork(),
+      publicClient.getChainId(),
       publicClient.getBlockNumber(),
     ]);
 
@@ -283,8 +284,8 @@ const logWalletState = async (userAddress: string) => {
       balance: balance.toString(),
       balanceInEth: Number(balance) / 1e18,
       network: {
-        chainId: network.chainId,
-        name: network.name,
+        chainId,
+        name: wagmiConfig.chains.find((c) => c.id === chainId)?.name || 'Unknown',
       },
       blockNumber: blockNumber.toString(),
       timestamp: new Date().toISOString(),
@@ -296,7 +297,7 @@ const logWalletState = async (userAddress: string) => {
 
 const logNetworkConditions = async () => {
   try {
-    const publicClient = await getPublicClient();
+    const publicClient = getPublicClient(wagmiConfig);
     const [gasPrice, block] = await Promise.all([
       publicClient.getGasPrice(),
       publicClient.getBlock(),
@@ -517,7 +518,7 @@ const verifyContractEvents = async (
 
   if (!publicClientToUse) {
     try {
-      publicClientToUse = await getPublicClient();
+      publicClientToUse = getPublicClient(wagmiConfig);
     } catch (error) {
       console.error(
         'Failed to get public client in verifyContractEvents:',
@@ -545,7 +546,7 @@ const verifyContractEvents = async (
 
     // Filter logs for our contract
     const contractLogs = receipt.logs.filter(
-      (log) => log.address.toLowerCase() === contractAddress.toLowerCase(),
+      (log: Log) => log.address.toLowerCase() === contractAddress.toLowerCase(),
     );
 
     console.log('📋 Contract Logs Found:', contractLogs.length);
@@ -554,7 +555,7 @@ const verifyContractEvents = async (
       console.log('📋 Contract Events:', contractLogs);
 
       // Check for purchase events (different for router vs burn)
-      const purchaseEvents = contractLogs.filter((log) => {
+      const purchaseEvents = contractLogs.filter((log: Log) => {
         if (!('topics' in log) || !Array.isArray((log as any).topics))
           return false;
         try {
@@ -608,7 +609,7 @@ const verifyContractEvents = async (
   }
 };
 
-function DebugTransaction(props) {
+function DebugTransaction(props: any) {
   console.log(
     'DebugTransaction received calls:',
     JSON.stringify(props.calls, null, 2),
@@ -619,8 +620,8 @@ function DebugTransaction(props) {
 export default function Cart({
   tokenBalances,
 }: {
-  tokenBalances: { systemBalance: string; selfBalance: string };
-}) {
+  tokenBalances?: { systemBalance: string; selfBalance: string };
+} = {}) {
   const { products = [], total, isOpen, closeCart, clearCart } = useCart();
   const { address } = useAccount();
   const publicClient = usePublicClient();
@@ -702,19 +703,19 @@ export default function Cart({
           .NEXT_PUBLIC_SYSTEM_TOKEN as `0x${string}`;
         const selfToken = process.env.NEXT_PUBLIC_SELF_TOKEN as `0x${string}`;
 
-        const systemBalance = await publicClient.readContract({
+        const systemBalance = (await publicClient.readContract({
           address: systemToken,
           abi: parsedErc20ABI,
           functionName: 'balanceOf',
           args: [address as `0x${string}`],
-        });
+        })) as bigint;
 
-        const selfBalance = await publicClient.readContract({
+        const selfBalance = (await publicClient.readContract({
           address: selfToken,
           abi: parsedErc20ABI,
           functionName: 'balanceOf',
           args: [address as `0x${string}`],
-        });
+        })) as bigint;
 
         console.log('Token balances:', {
           system: systemBalance.toString(),
@@ -789,20 +790,20 @@ export default function Cart({
       purchaseRouterABI: {
         length: purchaseRouterABI.length,
         hasPurchaseWithRouting: purchaseRouterABI.some(
-          (item) => item.name === 'purchaseWithRouting',
+          (item: any) => item.name === 'purchaseWithRouting',
         ),
         functions: purchaseRouterABI
-          .filter((item) => item.type === 'function')
-          .map((item) => item.name),
+          .filter((item: any) => item.type === 'function')
+          .map((item: any) => item.name),
       },
       purchaseBurnABI: {
         length: purchaseBurnABI.length,
         hasPurchaseArtifact: purchaseBurnABI.some(
-          (item) => item.name === 'purchaseArtifact',
+          (item: any) => item.name === 'purchaseArtifact',
         ),
         functions: purchaseBurnABI
-          .filter((item) => item.type === 'function')
-          .map((item) => item.name),
+          .filter((item: any) => item.type === 'function')
+          .map((item: any) => item.name),
       },
     });
 
@@ -1006,7 +1007,7 @@ export default function Cart({
                     // Use a more stable transaction ID to prevent duplicates
                     const txHash =
                       response?.transactionReceipts?.[0]?.transactionHash;
-                    const userOpHash = response?.userOpHash;
+                    const userOpHash = (response as any)?.userOpHash;
                     const transactionId =
                       txHash ||
                       userOpHash ||
@@ -1060,10 +1061,10 @@ export default function Cart({
                     console.log('📋 Approval + Purchase executed together');
 
                     // Handle Account Abstraction (ERC-4337) transaction response
-                    if (response?.userOpHash) {
+                    if ((response as any)?.userOpHash) {
                       console.log(
                         '📋 UserOperation Hash:',
-                        response.userOpHash,
+                        (response as any).userOpHash,
                       );
                       console.log('📋 This is the AA transaction identifier');
                     }
@@ -1238,13 +1239,13 @@ export default function Cart({
                       setIsProcessingOrders(true);
 
                       // CRITICAL: Add transaction-specific flag to prevent duplicate processing
-                      if (window[orderProcessingKey]) {
+                      if ((window as any)[orderProcessingKey]) {
                         console.log(
                           '⚠️ Orders already being processed for this transaction, skipping duplicate',
                         );
                         return;
                       }
-                      window[orderProcessingKey] = true;
+                      (window as any)[orderProcessingKey] = true;
 
                       console.log(
                         '🚀 STARTING ORDER CREATION AND NOTIFICATION PROCESS',
@@ -1263,7 +1264,7 @@ export default function Cart({
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({
-                              address: address.toLowerCase(),
+                              address: address!.toLowerCase(),
                             }),
                           },
                         );
@@ -1293,7 +1294,7 @@ export default function Cart({
                           authError,
                         );
                         throw new Error(
-                          `Authentication failed: ${authError.message}`,
+                          `Authentication failed: ${(authError as any).message}`,
                         );
                       }
 
@@ -1333,7 +1334,7 @@ export default function Cart({
                           await supabase
                             .from('marketplace_orders')
                             .insert({
-                              buyer_address: address.toLowerCase(),
+                              buyer_address: address!.toLowerCase(),
                               product_id: product.id.toString(),
                               product_name: product.name || product.title,
                               quantity: product.quantity || 1,
@@ -1424,8 +1425,8 @@ export default function Cart({
                     } finally {
                       setIsProcessingOrders(false);
                       // Clean up the processing flag after completion
-                      if (window[orderProcessingKey]) {
-                        delete window[orderProcessingKey];
+                      if ((window as any)[orderProcessingKey]) {
+                        delete (window as any)[orderProcessingKey];
                       }
                     }
 
@@ -1447,9 +1448,9 @@ export default function Cart({
 
                     console.group('❌ Combined Transaction Error');
                     console.error('📋 Error Details:', {
-                      name: error.name,
-                      message: error.message,
-                      stack: error.stack,
+                      name: (error as any).name,
+                      message: (error as any).message,
+                      stack: (error as any).stack,
                     });
                     console.error('📋 Error Type:', typeof error);
                     console.error(
@@ -1534,12 +1535,12 @@ export default function Cart({
                       error,
                     );
                     handleTransactionError(
-                      error,
+                      error as unknown as Error,
                       'approval + purchase',
                       address?.toLowerCase(),
                     ).then((paymasterResult) => {
                       if (
-                        paymasterResult.isInfrastructureError &&
+                        (paymasterResult as any).isInfrastructureError &&
                         retryCount < MAX_RETRIES
                       ) {
                         console.log(
@@ -1551,10 +1552,10 @@ export default function Cart({
                         // Wait before retry
                         setTimeout(() => {
                           setIsRetrying(false);
-                        }, paymasterResult.retryDelay);
+                        }, (paymasterResult as any).retryDelay);
                       } else {
                         handleTransactionError(
-                          error,
+                          error as unknown as Error,
                           'approval + purchase',
                           address?.toLowerCase(),
                         );
@@ -1572,8 +1573,7 @@ export default function Cart({
                             ? 'Approve & Purchase'
                             : 'Purchase'
                     }
-                    className="text-white px-4 py-2 rounded hover:bg-[#254A40]"
-                    style={{ backgroundColor: '#2F5D50' }}
+                    className="text-white px-4 py-2 rounded bg-[#2F5D50] hover:bg-[#254A40]"
                     disabled={isLoading || isSuccess}
                   />
                   <TransactionSponsor />

@@ -153,11 +153,14 @@ export const EventEditForm: React.FC<EventEditFormProps> = ({ eventId }) => {
     const pod = pods.find((p) => p.id === podId);
     if (!pod?.contract_address) return;
 
+    const contractAddress = pod.contract_address;
     setFormData((prev) => ({
       ...prev,
-      required_tokens: prev.required_tokens?.includes(pod.contract_address)
-        ? prev.required_tokens.filter((addr) => addr !== pod.contract_address)
-        : [...(prev.required_tokens || []), pod.contract_address],
+      required_tokens: prev.required_tokens?.includes(contractAddress)
+        ? prev.required_tokens.filter((addr) => addr !== contractAddress)
+        : [...(prev.required_tokens || []), contractAddress].filter(
+            (addr): addr is string => typeof addr === 'string',
+          ),
     }));
   };
 

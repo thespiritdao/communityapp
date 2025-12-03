@@ -1,4 +1,4 @@
-import { GelatoRelay, type TaskState } from '@gelatonetwork/relay-sdk';
+import { GelatoRelay, type TaskState, type TransactionStatusResponse } from '@gelatonetwork/relay-sdk';
 
 export class GelatoRelayManager {
   private relay: GelatoRelay;
@@ -35,7 +35,7 @@ export class GelatoRelayManager {
   ) {
     try {
       const request = {
-        chainId: 8453, // Base
+        chainId: 8453n, // Base
         target: contractAddress,
         data: data,
         user: process.env.NEXT_PUBLIC_SAFE_WALLET!,
@@ -77,7 +77,7 @@ export class GelatoRelayManager {
     };
   }
 
-  async getTaskStatus(taskId: string): Promise<TaskState> {
+  async getTaskStatus(taskId: string): Promise<TransactionStatusResponse | undefined> {
     return await this.relay.getTaskStatus(taskId);
   }
 }

@@ -115,7 +115,7 @@ export class ImageService {
       const response = await fetch(url, { method: 'HEAD' });
       return (
         response.ok &&
-        response.headers.get('content-type')?.startsWith('image/')
+        (response.headers.get('content-type')?.startsWith('image/') ?? false)
       );
     } catch {
       return false;

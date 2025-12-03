@@ -28,8 +28,8 @@ export function useSendCalls({
           },
         });
       },
-      onSuccess: (id) => {
-        setTransactionId(id);
+      onSuccess: (result) => {
+        setTransactionId(result.id);
       },
     },
   });

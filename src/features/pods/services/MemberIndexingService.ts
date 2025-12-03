@@ -1,5 +1,6 @@
 import { supabase } from '../../../utils/supabaseClient';
 import { createPublicClient, http, getContract } from 'viem';
+import type { PublicClient } from 'viem';
 import { base } from 'viem/chains';
 import { globalRpcQueue } from '@/lib/rpc/RpcQueue';
 import { HatsCoreService } from '../../../services/hatsCoreService';
@@ -34,7 +35,7 @@ export class MemberIndexingService {
     transport: http(),
   });
 
-  private static hatsService = new HatsCoreService(this.publicClient);
+  private static hatsService = new HatsCoreService(this.publicClient as any as PublicClient);
 
   /**
    * Index all pod memberships
@@ -170,7 +171,7 @@ export class MemberIndexingService {
 
         // Extract addresses from wearer objects and filter out null/undefined
         const addresses = wearers
-          .map((wearer) => wearer.id || wearer.address)
+          .map((wearer) => wearer.id)
           .filter(
             (address) =>
               address &&
@@ -240,7 +241,7 @@ export class MemberIndexingService {
       const hatContract = getContract({
         address: HATS_CONTRACT_ADDRESS,
         abi: HATS_ABI,
-        publicClient: this.publicClient,
+        client: this.publicClient,
       });
 
       // Since we can't enumerate all holders directly, we'll need to check

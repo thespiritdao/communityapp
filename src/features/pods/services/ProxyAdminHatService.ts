@@ -109,7 +109,7 @@ export class ProxyAdminHatService {
         args: [parentValidation.hatIdBigInt],
       });
 
-      if (!parentHatDetails[8]) {
+      if (!parentHatDetails.active) {
         // active field
         return {
           success: false,

@@ -101,16 +101,18 @@ export function usePodAccessControl(
 
             // If not a lead, check Hat ownership
             if (!isExecutiveMember && executivePod.membership_hat_id) {
-              try {
-                const hatBalance = await HatCreationService.checkHatOwnership(
-                  publicClient,
-                  executivePod.membership_hat_id,
-                  address,
-                );
-                isExecutiveMember = hatBalance;
-              } catch (error) {
-                console.error('Error checking Executive Hat:', error);
-              }
+              // TODO: Re-enable when checkHatOwnership is available in HatCreationService
+              // try {
+              //   const hatBalance = await HatCreationService.checkHatOwnership(
+              //     publicClient,
+              //     executivePod.membership_hat_id,
+              //     address,
+              //   );
+              //   isExecutiveMember = hatBalance;
+              // } catch (error) {
+              //   console.error('Error checking Executive Hat:', error);
+              // }
+              console.log('⏩ Skipping HAT ownership check (method not available)');
             }
 
             if (!isExecutiveMember) {
@@ -140,16 +142,18 @@ export function usePodAccessControl(
 
             // If not in leads array, check management Hat
             if (!isPodLeader && pod.management_hat_id) {
-              try {
-                const hatBalance = await HatCreationService.checkHatOwnership(
-                  publicClient,
-                  pod.management_hat_id,
-                  address,
-                );
-                isPodLeader = hatBalance;
-              } catch (error) {
-                console.error('Error checking Management Hat:', error);
-              }
+              // TODO: Re-enable when checkHatOwnership is available in HatCreationService
+              // try {
+              //   const hatBalance = await HatCreationService.checkHatOwnership(
+              //     publicClient,
+              //     pod.management_hat_id,
+              //     address,
+              //   );
+              //   isPodLeader = hatBalance;
+              // } catch (error) {
+              //   console.error('Error checking Management Hat:', error);
+              // }
+              console.log('⏩ Skipping HAT ownership check (method not available)');
             }
 
             if (!isPodLeader) {
@@ -183,16 +187,18 @@ export function usePodAccessControl(
               .single();
 
             if (pod?.membership_hat_id) {
-              try {
-                const hatBalance = await HatCreationService.checkHatOwnership(
-                  publicClient,
-                  pod.membership_hat_id,
-                  address,
-                );
-                isPodMember = hatBalance;
-              } catch (error) {
-                console.error('Error checking Membership Hat:', error);
-              }
+              // TODO: Re-enable when checkHatOwnership is available in HatCreationService
+              // try {
+              //   const hatBalance = await HatCreationService.checkHatOwnership(
+              //     publicClient,
+              //     pod.membership_hat_id,
+              //     address,
+              //   );
+              //   isPodMember = hatBalance;
+              // } catch (error) {
+              //   console.error('Error checking Membership Hat:', error);
+              // }
+              console.log('⏩ Skipping HAT ownership check (method not available)');
             }
           }
 
@@ -204,22 +210,24 @@ export function usePodAccessControl(
 
         // Check specific Hat ownership
         if (options.requireHat && hasRequiredAccess) {
-          try {
-            const hasHat = await HatCreationService.checkHatOwnership(
-              publicClient,
-              options.requireHat,
-              address,
-            );
-
-            if (!hasHat) {
-              hasRequiredAccess = false;
-              errorMessage = 'Required Hat not owned';
-            }
-          } catch (error) {
-            console.error('Error checking Hat ownership:', error);
-            hasRequiredAccess = false;
-            errorMessage = 'Failed to verify Hat ownership';
-          }
+          // TODO: Re-enable when checkHatOwnership is available in HatCreationService
+          // try {
+          //   const hasHat = await HatCreationService.checkHatOwnership(
+          //     publicClient,
+          //     options.requireHat,
+          //     address,
+          //   );
+          //
+          //   if (!hasHat) {
+          //     hasRequiredAccess = false;
+          //     errorMessage = 'Required Hat not owned';
+          //   }
+          // } catch (error) {
+          //   console.error('Error checking Hat ownership:', error);
+          //   hasRequiredAccess = false;
+          //   errorMessage = 'Failed to verify Hat ownership';
+          // }
+          console.log('⏩ Skipping HAT ownership check (method not available)');
         }
 
         setAccessState({

@@ -1,5 +1,5 @@
-import { useLifecycleStatus } from '../../../internal/hooks/useLifecycleStatus';
-import { useValue } from '../../../internal/hooks/useValue';
+import { useLifecycleStatus } from '../hooks/useLifecycleStatus';
+import { useValue } from '../../internal/hooks/useValue';
 import { createContext, useContext, useEffect } from 'react';
 import type {
   LifecycleStatus,
@@ -30,7 +30,7 @@ export function NFTLifecycleProvider({
   children,
 }: NFTLifecycleProviderReact) {
   const [lifecycleStatus, updateLifecycleStatus] =
-    useLifecycleStatus<LifecycleStatus>({
+    useLifecycleStatus({
       statusName: 'init',
       statusData: null,
     }); // Component lifecycle

@@ -62,7 +62,7 @@ export class TokenService {
           decimals: 18, // Default to 18
           isSystemToken: false,
           description:
-            dbToken.description || `Community token: ${dbToken.name}`,
+            (dbToken as any).description || `Community token: ${dbToken.name}`,
         }));
 
       // Combine currency tokens and membership tokens

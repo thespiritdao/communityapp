@@ -4,7 +4,8 @@
 
 import type React from 'react';
 import { useState, useEffect } from 'react';
-import { useAccount, useContractRead } from 'wagmi';
+import { useAccount, useReadContract } from 'wagmi';
+import type { Abi } from 'viem';
 import {
   Transaction,
   TransactionButton,
@@ -13,8 +14,11 @@ import {
   TransactionStatusLabel,
   TransactionStatusAction,
 } from '@coinbase/onchainkit/transaction';
-import AdvocateMembershipABI from '@/abis/AdvocateMembershipABI.json';
-import DAOGovernorABI from '@/abis/DAO_GovernorABI.json';
+import AdvocateMembershipABIJson from '@/abis/AdvocateMembershipABI.json';
+import DAOGovernorABIJson from '@/abis/DAO_GovernorABI.json';
+
+const AdvocateMembershipABI = AdvocateMembershipABIJson as Abi;
+const DAOGovernorABI = DAOGovernorABIJson as Abi;
 // import MembershipNFTABI from '../../../abis/MembershipNFTABI.json';
 import { useToast } from '@/components/ui/use-toast';
 import {
@@ -66,32 +70,38 @@ export const ProposalVoteForm: React.FC<ProposalVoteFormProps> = ({
   }, [hasVotedProp]);
 
   // Get proposal details
-  const { data: proposal } = useContractRead({
+  const { data: proposal } = useReadContract({
     address: GOVERNOR_ADDRESS,
     abi: DAOGovernorABI,
     functionName: 'proposals',
     args: [proposalId],
-    enabled: !!proposalId,
+    query: {
+      enabled: !!proposalId,
+    },
   });
 
   // Use propProposalState if provided, else use contract read
-  const { data: proposalStateRaw } = useContractRead({
+  const { data: proposalStateRaw } = useReadContract({
     address: GOVERNOR_ADDRESS,
     abi: DAOGovernorABI,
     functionName: 'state',
     args: [proposalId],
-    enabled: !!proposalId && propProposalState === undefined,
+    query: {
+      enabled: !!proposalId && propProposalState === undefined,
+    },
   });
   const proposalState =
     propProposalState !== undefined ? propProposalState : proposalStateRaw;
 
   // Get proposal metadata if available (move this up before any use)
-  const { data: metadata } = useContractRead({
+  const { data: metadata } = useReadContract({
     address: GOVERNOR_ADDRESS,
     abi: DAOGovernorABI,
     functionName: 'proposalMetadata',
     args: [proposalId],
-    enabled: !!proposalId,
+    query: {
+      enabled: !!proposalId,
+    },
   });
 
   // Determine required token for voting from proposal metadata (onchain or Supabase)
@@ -119,12 +129,14 @@ export const ProposalVoteForm: React.FC<ProposalVoteFormProps> = ({
   }, [metadata]);
 
   // Get voting power
-  const { data: votingPower } = useContractRead({
+  const { data: votingPower } = useReadContract({
     address: votingTokenAddress as `0x${string}`,
     abi: votingTokenABI,
     functionName: 'getVotes',
     args: [address as `0x${string}`],
-    enabled: !!address && !!votingTokenAddress,
+    query: {
+      enabled: !!address && !!votingTokenAddress,
+    },
   });
 
   // Define canVote: proposal must be active, user must have voting power, and not have already voted
@@ -266,8 +278,8 @@ export const ProposalVoteForm: React.FC<ProposalVoteFormProps> = ({
                     </strong>
                   </p>
                 </div>
-                {metadata?.voting_end && (
-                  <VotingCountdown votingEnd={metadata.voting_end} />
+                {(metadata as any)?.voting_end && (
+                  <VotingCountdown votingEnd={(metadata as any).voting_end} />
                 )}
                 <div className="vote-options grid grid-cols-3 gap-3 mb-6">
                   <button
@@ -293,10 +305,9 @@ export const ProposalVoteForm: React.FC<ProposalVoteFormProps> = ({
                   </button>
                 </div>
                 <Transaction
-                  address={address?.toLowerCase() as `0x${string}`}
                   isSponsored={true}
                   chainId={Number(process.env.NEXT_PUBLIC_CHAIN_ID) || 8453}
-                  calls={voteCall}
+                  contracts={voteCall}
                   onSuccess={async (txResult) => {
                     toast({
                       title: 'Vote cast successfully',
@@ -306,14 +317,10 @@ export const ProposalVoteForm: React.FC<ProposalVoteFormProps> = ({
                     setHasVoted(true);
                     if (address && proposalId) {
                       try {
-                        await governanceNotificationService.markAllNotificationsForProposalAsReadForUser(
-                          proposalId,
-                          address,
-                        );
                         await refreshNotifications();
                       } catch (error) {
                         console.error(
-                          'Error marking notifications as read:',
+                          'Error refreshing notifications:',
                           error,
                         );
                       }

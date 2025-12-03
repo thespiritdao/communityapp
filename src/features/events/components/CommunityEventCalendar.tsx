@@ -18,12 +18,12 @@ interface Event {
   description: string;
   event_date: string;
   event_end_date?: string;
-  location: string;
+  location?: string;
   max_attendees?: number;
   price_amount: string;
   price_token: string;
   required_tokens: string[];
-  organizing_pod_id: string;
+  organizing_pod_id?: string;
   event_image_url?: string;
   organizer?: {
     name: string;
@@ -284,8 +284,8 @@ export const CommunityEventCalendar: React.FC<CommunityEventCalendarProps> = ({
                       <div className="flex items-center text-sm text-gray-600">
                         <Users className="w-4 h-4 mr-2" />
                         <span>
-                          {event.current_attendees || 0}/{event.max_attendees}{' '}
-                          attendees
+                          {(event as any).current_attendees || 0}/
+                          {event.max_attendees} attendees
                         </span>
                       </div>
                     )}
@@ -333,9 +333,9 @@ export const CommunityEventCalendar: React.FC<CommunityEventCalendarProps> = ({
                   )}
 
                   {/* Organizing Pod */}
-                  {event.organizing_pod?.name && (
+                  {(event as any).organizing_pod?.name && (
                     <p className="text-xs text-gray-500 mb-3">
-                      Organized by {event.organizing_pod.name}
+                      Organized by {(event as any).organizing_pod.name}
                     </p>
                   )}
 
@@ -424,7 +424,7 @@ export const CommunityEventCalendar: React.FC<CommunityEventCalendarProps> = ({
       {/* Registration Modal */}
       {selectedEvent && (
         <EventRegistrationModal
-          event={selectedEvent}
+          event={selectedEvent as any}
           isOpen={showRegistrationModal}
           onClose={() => setShowRegistrationModal(false)}
           onSuccess={() => {
@@ -432,8 +432,8 @@ export const CommunityEventCalendar: React.FC<CommunityEventCalendarProps> = ({
             // Refresh events or show success message
           }}
           currentRegistrationCount={
-            selectedEvent.registration_count ||
-            selectedEvent.current_attendees ||
+            (selectedEvent as any).registration_count ||
+            (selectedEvent as any).current_attendees ||
             0
           }
         />

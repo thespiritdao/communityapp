@@ -43,6 +43,12 @@ export const CONTRACT_ADDRESSES = {
   // Events
   EVENT_MANAGER: process.env.NEXT_PUBLIC_EVENT_MANAGER as `0x${string}`,
   EVENT_ESCROW: process.env.NEXT_PUBLIC_EVENT_ESCROW_CONTRACT as `0x${string}`,
+  EVENT_SYSTEM_FACTORY: process.env
+    .NEXT_PUBLIC_EVENT_SYSTEM_FACTORY as `0x${string}`,
+  EVENT_REGISTRATION_FACTORY: process.env
+    .NEXT_PUBLIC_EVENT_REGISTRATION_FACTORY as `0x${string}`,
+  EVENT_COMPLETION_FACTORY: process.env
+    .NEXT_PUBLIC_EVENT_COMPLETION_FACTORY as `0x${string}`,
 
   // Bounties
   BOUNTY_MANAGER: process.env
@@ -145,21 +151,21 @@ export function validateContractAddresses(): ValidationResult {
 
   // Check required
   Object.entries(required).forEach(([key, value]) => {
-    if (!value || value === '0x' || value === 'undefined') {
+    if (!value || value === '0x' || (value as string) === 'undefined') {
       missing.push(key);
     }
   });
 
   // Check critical (will cause feature failures)
   Object.entries(critical).forEach(([key, value]) => {
-    if (!value || value === '0x' || value === 'undefined') {
+    if (!value || value === '0x' || (value as string) === 'undefined') {
       missing.push(key);
     }
   });
 
   // Check optional
   Object.entries(optional).forEach(([key, value]) => {
-    if (!value || value === '0x' || value === 'undefined') {
+    if (!value || value === '0x' || (value as string) === 'undefined') {
       warnings.push(`${key} not configured - related features may not work`);
     }
   });

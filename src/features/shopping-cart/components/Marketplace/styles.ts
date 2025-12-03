@@ -37,7 +37,7 @@ export const Header = styled.div`
   flex-direction: column;
   gap: 10px;
   /* Optional: add background or border to distinguish the header */
-  background-color: ${({ theme }) => theme.colors.secondaryLight};
+  background-color: ${({ theme }: any) => theme.colors.secondaryLight};
   padding: 10px;
   border-radius: 5px;
 `;

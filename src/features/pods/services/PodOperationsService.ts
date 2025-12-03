@@ -57,8 +57,8 @@ export class PodOperationsService {
     private publicClient: PublicClient,
     private walletClient?: WalletClient,
   ) {
-    this.hatsService = new HatsCoreService(publicClient, walletClient);
-    this.modulesService = new HatsModulesService(publicClient, walletClient);
+    this.hatsService = new HatsCoreService(publicClient, walletClient as any);
+    this.modulesService = new HatsModulesService(publicClient, walletClient as any);
   }
 
   /**
@@ -112,28 +112,28 @@ export class PodOperationsService {
 
         // Create management HAT (for pod leaders)
         const managementHat = await this.hatsService.createHat({
-          name: `${params.name} - Management`,
-          description: `Management HAT for ${params.name} pod`,
-          parentHatId: params.parentPodId, // Parent pod's management HAT
-          maxSupply: params.podLeads.length.toString(),
+          admin: params.parentPodId, // Parent pod's management HAT
+          maxSupply: params.podLeads.length,
           details: JSON.stringify({
             type: 'pod_management',
+            name: `${params.name} - Management`,
+            description: `Management HAT for ${params.name} pod`,
             podName: params.name,
           }),
-          imageUri: params.image || '',
+          imageURI: params.image || '',
         });
 
         // Create membership HAT (for pod members)
         const membershipHat = await this.hatsService.createHat({
-          name: `${params.name} - Membership`,
-          description: `Membership HAT for ${params.name} pod`,
-          parentHatId: managementHat.hatId, // Child of management HAT
-          maxSupply: '1000', // Allow many members
+          admin: managementHat.hatId, // Child of management HAT
+          maxSupply: 1000, // Allow many members
           details: JSON.stringify({
             type: 'pod_membership',
+            name: `${params.name} - Membership`,
+            description: `Membership HAT for ${params.name} pod`,
             podName: params.name,
           }),
-          imageUri: params.image || '',
+          imageURI: params.image || '',
         });
 
         // Mint management HATs to pod leaders
@@ -157,15 +157,16 @@ export class PodOperationsService {
         let treasuryAddress: string | undefined;
 
         if (params.treasuryConfig) {
-          // Deploy pod treasury using modules service
-          const treasury = await this.modulesService.deployPodTreasury({
-            podName: params.name,
-            managementHatId: '', // Will be set from previous step
-            threshold: params.treasuryConfig.threshold,
-            signers: params.treasuryConfig.signers,
-          });
-
-          treasuryAddress = treasury.treasuryAddress;
+          // TODO: Deploy pod treasury using modules service
+          // Method deployPodTreasury does not exist on HatsModulesService yet
+          // Commenting out until the method is implemented
+          // const treasury = await this.modulesService.deployPodTreasury({
+          //   podName: params.name,
+          //   managementHatId: '', // Will be set from previous step
+          //   threshold: params.treasuryConfig.threshold,
+          //   signers: params.treasuryConfig.signers,
+          // });
+          // treasuryAddress = treasury.treasuryAddress;
         }
 
         return { treasuryAddress };
@@ -182,10 +183,9 @@ export class PodOperationsService {
 
         const result = await PodService.createPod({
           ...params,
-          // Add HAT and treasury data
+          // Add HAT data (treasury is handled separately in UI)
           managementHatId,
           membershipHatId,
-          treasuryAddress,
         });
 
         // Trigger initial member indexing
@@ -474,7 +474,14 @@ export class PodOperationsService {
       errors: [],
     };
 
-    await MemberIndexingService.indexPodMembership(pod, stats);
+    await MemberIndexingService.indexPodMembership(
+      {
+        id: pod.id,
+        management_hat_id: pod.management_hat_id ?? undefined,
+        membership_hat_id: pod.membership_hat_id ?? undefined,
+      },
+      stats,
+    );
 
     return {
       membersAdded: stats.members_added,

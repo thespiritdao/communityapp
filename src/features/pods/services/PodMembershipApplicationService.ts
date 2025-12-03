@@ -193,13 +193,13 @@ export class PodMembershipApplicationService {
       // 3. Notify all pod leaders about the new application
       const leaders = pod.pod_leads || [];
       const notifications = await Promise.all(
-        leaders.map((leaderAddress) =>
+        leaders.map((leaderAddress: string) =>
           unifiedNotificationService.createNotification({
             recipient_address: leaderAddress,
             sender_address: applicationData.applicantAddress,
             notification_type: 'user_mentioned',
             title: `Membership Application: ${pod.name}`,
-            message: `A new membership application requires your approval. ${this.getRequiredVotes()} vote(s) needed.`,
+            message: `A new membership application requires your approval. ${requiredVotes} vote(s) needed.`,
             context_type: 'governance',
             context_id: applicationData.podId,
             context_url: `/pods/${applicationData.podId}/applications/${applicationId}`, // New route for approvals
@@ -209,7 +209,7 @@ export class PodMembershipApplicationService {
               application_id: applicationId,
               applicant_address: applicationData.applicantAddress,
               pod_name: pod.name,
-              required_votes: this.getRequiredVotes(),
+              required_votes: requiredVotes,
             },
           }),
         ),
@@ -217,7 +217,7 @@ export class PodMembershipApplicationService {
 
       return {
         success: true,
-        message: `Application submitted! Requires ${this.getRequiredVotes()} leader approval(s).`,
+        message: `Application submitted! Requires ${requiredVotes} leader approval(s).`,
         applicationId,
       };
     } catch (error) {

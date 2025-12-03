@@ -53,7 +53,7 @@ const testProducts: IProduct[] = [
 ];
 
 // Mock user identity - no tokens
-const guestUser: UserIdentity = {
+const guestUser = {
   address: '0x1234567890123456789012345678901234567890',
   tokens: {
     hasExecutivePod: false,
@@ -67,10 +67,10 @@ const guestUser: UserIdentity = {
     selfBalance: '0',
   },
   hats: [],
-};
+} as any;
 
 // Mock user identity - executive member
-const execUser: UserIdentity = {
+const execUser = {
   address: '0x1234567890123456789012345678901234567890',
   tokens: {
     hasExecutivePod: true,
@@ -84,7 +84,7 @@ const execUser: UserIdentity = {
     selfBalance: '50',
   },
   hats: ['0x0000000100000000000000000000000000000000000000000000000000000000'],
-};
+} as any;
 
 // Run tests
 console.log('🛒 Shopping Cart Integration Test\n');

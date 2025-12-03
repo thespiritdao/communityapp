@@ -32,9 +32,11 @@ import {
   TransactionStatusLabel,
   TransactionStatusAction,
 } from '@coinbase/onchainkit/transaction';
-import BountyManagerABI from '@/abis/BountyManagerV2.json';
+import BountyManagerABIJson from '@/abis/BountyManagerV2.json';
 import { uploadBidToIPFS, type BidMetadata } from '../services/bidIpfsService';
-import type { TransactionReceipt } from 'viem';
+import type { Abi, TransactionReceipt } from 'viem';
+
+const BountyManagerABI = BountyManagerABIJson as Abi;
 
 interface Deliverable {
   id: string;
@@ -198,10 +200,11 @@ export const BidForm: React.FC<BidFormProps> = ({
             setHasCallbackFired(true);
 
             const mappedDeliverables = formData.deliverables.map((d) => ({
+              id: d.id,
               description: d.description,
-              due_date:
-                d.dueDate instanceof Date ? d.dueDate.toISOString() : d.dueDate,
-              payment_amount: d.paymentAmount,
+              dueDate:
+                d.dueDate instanceof Date ? d.dueDate : new Date(d.dueDate),
+              paymentAmount: d.paymentAmount,
             }));
 
             console.log('🚀 Fallback: Calling onBidPlaced callback');
@@ -896,8 +899,9 @@ export const BidForm: React.FC<BidFormProps> = ({
                   console.log('📊 Transaction status update:', {
                     statusName: status.statusName,
                     hasReceipts: !!(
-                      status.transactionReceipts ||
-                      status.statusData?.transactionReceipts
+                      status.statusData &&
+                      'transactionReceipts' in status.statusData &&
+                      status.statusData.transactionReceipts
                     ),
                     statusData: status.statusData,
                     timestamp: new Date().toISOString(),
@@ -921,8 +925,10 @@ export const BidForm: React.FC<BidFormProps> = ({
                     }
 
                     const receipts =
-                      status.transactionReceipts ||
-                      status.statusData?.transactionReceipts;
+                      status.statusData &&
+                      'transactionReceipts' in status.statusData
+                        ? status.statusData.transactionReceipts
+                        : undefined;
                     console.log('📜 Transaction receipts:', {
                       receiptsFound: !!receipts,
                       receiptsLength: receipts?.length || 0,
@@ -985,15 +991,16 @@ export const BidForm: React.FC<BidFormProps> = ({
                         // Mark callback as fired to prevent duplicates
                         setHasCallbackFired(true);
 
-                        // Map deliverables to correct format for Supabase
+                        // Map deliverables to correct format
                         const mappedDeliverables = formData.deliverables.map(
                           (d) => ({
+                            id: d.id,
                             description: d.description,
-                            due_date:
+                            dueDate:
                               d.dueDate instanceof Date
-                                ? d.dueDate.toISOString()
-                                : d.dueDate,
-                            payment_amount: d.paymentAmount,
+                                ? d.dueDate
+                                : new Date(d.dueDate),
+                            paymentAmount: d.paymentAmount,
                           }),
                         );
 
@@ -1044,7 +1051,6 @@ export const BidForm: React.FC<BidFormProps> = ({
                     console.error('❌ Transaction failed:', {
                       status,
                       statusData: status.statusData,
-                      error: status.error,
                     });
                     setUploadError('Transaction failed. Please try again.');
                     setIsProcessingTransaction(false);

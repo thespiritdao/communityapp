@@ -1,6 +1,8 @@
 // src/utils/tokenCheck.ts
 
-import { readContract } from '@wagmi/actions';
+import { createPublicClient, http } from 'viem';
+import { readContract } from 'viem/actions';
+import { base } from 'viem/chains';
 
 // Minimal ABIs for testing
 export const erc20Abi = [
@@ -60,31 +62,39 @@ export async function fetchTokenBalances(walletAddress: string): Promise<{
       };
     }
 
+    // Create public client for reading contracts
+    const rpcUrl = process.env.NEXT_PUBLIC_RPC_URL ||
+                   (process.env.NEXT_PUBLIC_CDP_API_CLIENT
+                     ? `https://api.developer.coinbase.com/rpc/v1/base/${process.env.NEXT_PUBLIC_CDP_API_CLIENT}`
+                     : undefined);
+
+    const publicClient = createPublicClient({
+      chain: base,
+      transport: http(rpcUrl),
+    });
+
     // Market admin call removed - this function now only handles basic tokens
     // Market management is checked via Hat tokens in the main fetchTokenBalances function
 
     const [proofOfCuriosity, systemBalance, selfBalance] = await Promise.all([
-      readContract({
+      readContract(publicClient, {
         address: PROOF_OF_CURIOSITY_CONTRACT,
         abi: erc721Abi, // Using ERC721 ABI for membership token
         functionName: 'balanceOf',
         args: [walletAddress],
-        chainId: NETWORK_CHAIN_ID,
-      }),
-      readContract({
+      }) as Promise<bigint>,
+      readContract(publicClient, {
         address: SYSTEM_TOKEN_CONTRACT,
         abi: erc20Abi,
         functionName: 'balanceOf',
         args: [walletAddress],
-        chainId: NETWORK_CHAIN_ID,
-      }),
-      readContract({
+      }) as Promise<bigint>,
+      readContract(publicClient, {
         address: SELF_TOKEN_CONTRACT,
         abi: erc20Abi,
         functionName: 'balanceOf',
         args: [walletAddress],
-        chainId: NETWORK_CHAIN_ID,
-      }),
+      }) as Promise<bigint>,
     ]);
 
     console.log('ProofOfCuriosity balance:', proofOfCuriosity.toString());

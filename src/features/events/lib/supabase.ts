@@ -398,36 +398,6 @@ export class EventService {
     return this.updateEvent(eventId, { status: 'completed' });
   }
 
-  // Event Tokens operations
-  static async createEventToken(tokenData: {
-    event_id: string;
-    user_address: string;
-    token_id: string;
-    transaction_hash: string;
-    metadata_uri: string;
-    minted_at: string;
-    token_type: string;
-  }): Promise<any> {
-    const { data, error } = await supabase
-      .from('event_tokens')
-      .insert(tokenData)
-      .select()
-      .single();
-
-    if (error) throw error;
-    return data;
-  }
-
-  static async getEventTokens(eventId: string): Promise<any[]> {
-    const { data, error } = await supabase
-      .from('event_tokens')
-      .select('*')
-      .eq('event_id', eventId);
-
-    if (error) throw error;
-    return data || [];
-  }
-
   // Event Registration operations
   static async registerForEvent(
     eventId: string,

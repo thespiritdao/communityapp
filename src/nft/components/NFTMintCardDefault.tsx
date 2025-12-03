@@ -1,5 +1,5 @@
 import type { NFTMintCardDefaultReact } from '../types';
-import { NFTMintCard } from './NFTMintCard';
+import { NFTMintCard } from '@coinbase/onchainkit/nft';
 import {
   NFTAssetCost,
   NFTCollectionTitle,

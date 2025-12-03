@@ -123,7 +123,7 @@ export async function debugHatsBalance(walletAddress: string) {
 
       results[name] = {
         hatId,
-        balance: balance.toString(),
+        balance: String(balance),
         hasHat: Number(balance) > 0,
       };
 
@@ -133,7 +133,7 @@ export async function debugHatsBalance(walletAddress: string) {
       console.log(`   ❌ Error: ${error}`);
       results[name] = {
         hatId,
-        error: error.toString(),
+        error: String(error),
       };
       console.log('');
     }

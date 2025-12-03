@@ -21,7 +21,7 @@ const debug = (...args: any[]) => {
 const normalizeAddress = (address: string) => address.toLowerCase();
 
 // Helper: Normalize token IDs for comparison
-const normalize = (value: string | null) => value?.trim().toLowerCase() || '';
+const normalize = (value: string | null | undefined) => value?.trim().toLowerCase() || '';
 
 // Helper: Determine required token for a category
 const getRequiredTokenForCategory = (categoryId: string) => {
@@ -501,7 +501,6 @@ export function useForum() {
             recipient_address: wallet.toLowerCase(),
             sender_address: profileData.wallet_address.toLowerCase(),
             notification_type: 'user_mentioned',
-            category: 'general',
             title: 'You were mentioned in a forum post',
             message:
               `${profileData.first_name || ''} ${profileData.last_name || ''}`.trim() +
@@ -605,7 +604,6 @@ export function useForum() {
             recipient_address: wallet.toLowerCase(),
             sender_address: userWalletAddress.toLowerCase(),
             notification_type: 'user_mentioned',
-            category: 'general',
             title: 'You were mentioned in a forum reply',
             message: 'Someone mentioned you in a forum reply',
             context_type: 'forum',
@@ -661,8 +659,7 @@ export function useForum() {
               await createNotification({
                 recipient_address: participantAddress,
                 sender_address: userWalletAddress.toLowerCase(),
-                notification_type: 'forum_participating_reply',
-                category: 'general',
+                notification_type: 'forum_reply',
                 title: 'New Reply in Thread',
                 message: `New reply in "${threadTitle}"`,
                 context_type: 'forum',

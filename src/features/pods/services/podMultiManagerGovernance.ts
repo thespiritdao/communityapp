@@ -227,7 +227,7 @@ export class PodMultiManagerGovernance {
       }
 
       // Execute based on proposal type
-      let executionResult = { success: false, error: 'Unknown proposal type' };
+      let executionResult: { success: boolean; error?: string } = { success: false, error: 'Unknown proposal type' };
 
       switch (proposal.proposal_type) {
         case 'status_change':

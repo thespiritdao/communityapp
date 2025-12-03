@@ -10,6 +10,7 @@ import { ReactionPicker } from './ReactionPicker';
 import { AttachmentDisplay } from './AttachmentDisplay';
 import { ProfileModal } from '@/features/identity/components/ProfileModal';
 import type { MediaAttachment } from '../services/MediaUploadService';
+import type { UserProfile } from '@/features/identity/types';
 
 interface Post {
   id: string;
@@ -17,17 +18,6 @@ interface Post {
   content: string;
   author_address: string;
   created_at: string;
-}
-
-interface UserProfile {
-  wallet_address: string;
-  profile_picture?: string | null;
-  first_name?: string | null;
-  last_name?: string | null;
-  bio?: string | null;
-  website?: string | null;
-  interests?: string[] | null;
-  seeking?: string[] | null;
 }
 
 interface PostCardProps {

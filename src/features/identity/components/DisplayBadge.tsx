@@ -13,10 +13,11 @@ export function DisplayBadge({ children, address }: DisplayBadgeReact) {
   const { chain } = useOnchainKit();
   const { address: contextAddress } = useIdentityContext();
 
-  // Update to no longer require schemaId
+  // schemaId is optional (can be null) - will return empty array if null
   const attestations = useAttestations({
     address: address ?? contextAddress,
     chain: chain,
+    schemaId: null,
   });
 
   if (attestations.length === 0) {

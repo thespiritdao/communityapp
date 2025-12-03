@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useAccount } from 'wagmi';
 import { EventService } from '../lib/supabase';
-import type { Pod, Event } from '../types/event';
+import type { Pod, Event, EventWithStats } from '../types/event';
 import { fetchTokenBalances } from '../../../utils/fetchTokenBalances';
 import { useTokenBalances } from '@/context/TokenBalancesContext';
 import { useHatPermissions } from '@/hooks/useHatPermissions';
@@ -246,9 +246,9 @@ export function useTokenGatedEvents(userAddress?: string) {
   const { userHats, isLoading: hatPermissionsLoading } = useHatPermissions();
   const effectiveAddress = userAddress || address;
 
-  const [visibleEvents, setVisibleEvents] = useState<Event[]>([]);
-  const [registrableEvents, setRegistrableEvents] = useState<Event[]>([]);
-  const [registeredEvents, setRegisteredEvents] = useState<Event[]>([]);
+  const [visibleEvents, setVisibleEvents] = useState<EventWithStats[]>([]);
+  const [registrableEvents, setRegistrableEvents] = useState<EventWithStats[]>([]);
+  const [registeredEvents, setRegisteredEvents] = useState<EventWithStats[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -291,9 +291,9 @@ export function useTokenGatedEvents(userAddress?: string) {
       );
 
       // Process accessible events
-      const visible: Event[] = [];
-      const registrable: Event[] = [];
-      const registered: Event[] = [];
+      const visible: EventWithStats[] = [];
+      const registrable: EventWithStats[] = [];
+      const registered: EventWithStats[] = [];
 
       // All events returned from RPC are accessible, so we just need to categorize them
       for (const event of accessibleEvents) {

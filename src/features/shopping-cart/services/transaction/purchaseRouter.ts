@@ -62,7 +62,7 @@ export function determineFundRouting(
   userAddress: string,
   useFallbackRouting: boolean,
 ): FundRoutingInfo {
-  const typeMap = {
+  const typeMap: Record<string, number> = {
     burn: 0,
     wallet: 1,
     pod_treasury: 2,
@@ -84,7 +84,7 @@ export function determineFundRouting(
       destinationAddress = firstProduct.creator_wallet || userAddress;
       podId = '';
     } else {
-      fundDestinationType = typeMap[firstProduct.fund_destination_type] ?? 0;
+      fundDestinationType = typeMap[(firstProduct.fund_destination_type || 'burn') as string] ?? 0;
 
       if (firstProduct.fund_destination_type === 'pod_treasury') {
         if (!firstProduct.destination_address || !firstProduct.pod_id) {

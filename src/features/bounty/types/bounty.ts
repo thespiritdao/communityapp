@@ -64,6 +64,8 @@ export interface FrontendBid {
   status: 'pending' | 'approved' | 'rejected' | 'archived' | 'legacy_pending';
   reviewerAddress?: string;
   finalApproverAddress?: string;
+  technical_reviewer?: string; // Human-readable name of technical reviewer
+  final_approver?: string; // Human-readable name of final approver
   submittedAt: Date;
   reviewedAt?: Date;
   reviewedBy?: string;

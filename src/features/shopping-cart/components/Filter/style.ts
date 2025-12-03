@@ -7,7 +7,7 @@ export const Container = styled.div`
   display: flex;
   align-items: center;
   padding: 10px;
-  background: ${({ theme }) => theme.colors.secondaryLight};
+  background: ${({ theme }: any) => theme.colors.secondaryLight};
   border-radius: 5px;
 `;
 
@@ -54,18 +54,18 @@ export const Checkbox = styled(CB)`
 
     /* On mouse-over, add a border with the primary color */
     &:hover input ~ .checkmark {
-      border: 1px solid ${({ theme }) => theme.colors.primary};
+      border: 1px solid ${({ theme }: any) => theme.colors.primary};
     }
 
     input:focus-visible ~ .checkmark {
       box-sizing: border-box;
       line-height: 30px;
-      border: 3px solid ${({ theme }) => theme.colors.secondary};
+      border: 3px solid ${({ theme }: any) => theme.colors.secondary};
     }
 
     /* When the checkbox is checked, add the primary color to background */
     & input:checked ~ .checkmark {
-      background-color: ${({ theme }) => theme.colors.primary};
+      background-color: ${({ theme }: any) => theme.colors.primary};
       color: #ececec;
     }
 
@@ -92,7 +92,7 @@ export const Checkbox = styled(CB)`
       box-sizing: border-box;
       line-height: 35px;
       text-align: center;
-      color: ${({ theme }) => theme.colors.primary};
+      color: ${({ theme }: any) => theme.colors.primary};
       background-color: #ececec;
       border: 1px solid transparent;
     }
@@ -105,14 +105,14 @@ export const Checkbox = styled(CB)`
 export const Title = styled.h4`
   margin-top: 2px;
   margin-bottom: 10px;
-  color: ${({ theme }) => theme.colors.primary};
+  color: ${({ theme }: any) => theme.colors.primary};
 `;
 
 /* 🛍 Style for Payment Filters */
 export const PaymentFilters = styled.div`
   margin-top: 10px;
   padding: 10px;
-  background: ${({ theme }) => theme.colors.secondaryLight};
+  background: ${({ theme }: any) => theme.colors.secondaryLight};
   border-radius: 5px;
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
 `;
@@ -120,13 +120,13 @@ export const PaymentFilters = styled.div`
 export const Label = styled.label`
   font-size: 16px;
   font-weight: bold;
-  color: ${({ theme }) => theme.colors.primary};
+  color: ${({ theme }: any) => theme.colors.primary};
 `;
 
 export const SortDropdown = styled.select`
   padding: 8px 12px;
   font-size: 16px;
-  border: 1px solid ${({ theme }) => theme.colors.primary};
+  border: 1px solid ${({ theme }: any) => theme.colors.primary};
   border-radius: 4px;
   background: #f0f0f0; /* Light grey background */
   color: #000;       /* Black text */
@@ -134,6 +134,6 @@ export const SortDropdown = styled.select`
   outline: none;
 
   &:focus {
-    border-color: ${({ theme }) => theme.colors.secondary};
+    border-color: ${({ theme }: any) => theme.colors.secondary};
   }
 `;

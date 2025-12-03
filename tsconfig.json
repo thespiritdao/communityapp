@@ -32,6 +32,14 @@
     "playground",
     "site",
     "safe-apps-sdk",
-    "scripts"
+    "scripts",
+    "**/*.test.ts",
+    "**/*.test.tsx",
+    "**/*.spec.ts",
+    "**/*.spec.tsx",
+    "**/setupTests.ts",
+    "**/__tests__/**",
+    "**/*.stories.ts",
+    "**/*.stories.tsx"
   ]
 }

@@ -1,4 +1,5 @@
 import type { PublicClient, WalletClient } from 'viem';
+import { base } from 'viem/chains';
 import type { Pod } from '../types';
 
 /**
@@ -341,6 +342,8 @@ export class PodProxyDeletionService {
         abi: HATS_PROTOCOL_ABI,
         functionName: 'setHatStatus',
         args: [BigInt(hatId), false], // false = deactivated
+        chain: base,
+        account: walletClient.account!,
       });
 
       console.log(
@@ -397,6 +400,8 @@ export class PodProxyDeletionService {
         abi: HATS_PROTOCOL_ABI,
         functionName: 'setHatStatus',
         args: [BigInt(hatId), false],
+        chain: base,
+        account: walletClient.account!,
       });
 
       console.log(`✅ Direct hat deactivation successful: ${hash}`);

@@ -762,9 +762,7 @@ export const BountyManagement: React.FC<BountyManagementProps> = ({
                                   const showBidButton =
                                     !canManageBounties && canBid;
                                   const isOwnBounty =
-                                    bounty.creator === address?.toLowerCase() ||
-                                    bounty.creator_address ===
-                                      address?.toLowerCase();
+                                    bounty.creator === address?.toLowerCase();
                                   const isApprovedBidder =
                                     existingBid?.status === 'approved';
                                   const matchingSupabaseBounty =
@@ -1178,13 +1176,6 @@ export const BountyManagement: React.FC<BountyManagementProps> = ({
 
             <TabsContent value="payments">
               <div className="space-y-4">
-                {console.log('🎯 PAYMENTS TAB RENDERING:', {
-                  activeTab,
-                  canManageBounties,
-                  loading,
-                  filteredBountiesCount: filteredBounties.length,
-                  totalBounties: bounties.length,
-                })}
                 {/* Assigned bounties ready for payment (work approved, awaiting payment) */}
                 {loading ? (
                   <Card>
@@ -1262,7 +1253,7 @@ export const BountyManagement: React.FC<BountyManagementProps> = ({
                       const approvedBid = userBids?.find(
                         (bid) =>
                           bid.bountyId === bounty.id &&
-                          bid.status === 'work_approved',
+                          bid.status === 'approved',
                       );
 
                       console.log(
@@ -1509,7 +1500,17 @@ export const BountyManagement: React.FC<BountyManagementProps> = ({
                       bountyId: selectedBountyForBid.id,
                       experience: bidData.experience,
                       planOfAction: bidData.planOfAction,
-                      deliverables: bidData.deliverables,
+                      deliverables: bidData.deliverables.map((d: any) => ({
+                        description: d.description,
+                        due_date:
+                          typeof d.dueDate === 'string'
+                            ? d.dueDate
+                            : d.due_date,
+                        payment_amount:
+                          d.paymentAmount !== undefined
+                            ? d.paymentAmount
+                            : d.payment_amount,
+                      })),
                       timeline: bidData.timeline,
                       proposedAmount: bidData.proposedAmount,
                       paymentOption: bidData.paymentOption,
@@ -1526,7 +1527,17 @@ export const BountyManagement: React.FC<BountyManagementProps> = ({
                       bountyId: selectedBountyForBid.id,
                       experience: bidData.experience,
                       planOfAction: bidData.planOfAction,
-                      deliverables: bidData.deliverables,
+                      deliverables: bidData.deliverables.map((d: any) => ({
+                        description: d.description,
+                        due_date:
+                          typeof d.dueDate === 'string'
+                            ? d.dueDate
+                            : d.due_date,
+                        payment_amount:
+                          d.paymentAmount !== undefined
+                            ? d.paymentAmount
+                            : d.payment_amount,
+                      })),
                       timeline: bidData.timeline,
                       proposedAmount: bidData.proposedAmount,
                       paymentOption: bidData.paymentOption,

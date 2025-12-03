@@ -1,7 +1,11 @@
 import { getCurrentSession } from '@/features/identity/utils/serverAuth';
 import { supabase } from '@/utils/supabaseClient';
+import type { NextApiRequest, NextApiResponse } from 'next';
 
-export default async function createPost(req, res) {
+export default async function createPost(
+  req: NextApiRequest,
+  res: NextApiResponse,
+) {
   try {
     console.log('✅ createPost API called');
 
@@ -89,6 +93,10 @@ export default async function createPost(req, res) {
     return res.status(200).json({ success: true });
   } catch (err) {
     console.error('❌ createPost error:', err);
-    return res.status(500).json({ error: err.message || 'Unknown error' });
+    return res
+      .status(500)
+      .json({
+        error: err instanceof Error ? err.message : 'Unknown error',
+      });
   }
 }

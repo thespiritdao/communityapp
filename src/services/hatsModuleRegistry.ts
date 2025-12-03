@@ -124,9 +124,14 @@ export class HatsModuleRegistry {
    * Get module by ID from registry
    */
   static async getModuleById(moduleId: string): Promise<any | null> {
+    if (!this.REGISTRY_ADDRESS) {
+      console.warn('Registry address not configured');
+      return null;
+    }
+
     try {
       const module = await this.publicClient.readContract({
-        address: this.REGISTRY_ADDRESS as `0x${string}`,
+        address: this.REGISTRY_ADDRESS as unknown as `0x${string}`,
         abi: this.REGISTRY_ABI,
         functionName: 'getModuleById',
         args: [moduleId as `0x${string}`],

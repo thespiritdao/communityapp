@@ -863,14 +863,20 @@ export const BountyFormV2: React.FC<BountyFormV2Props> = ({
             </Button>
           ) : transactionCalls ? (
             <Transaction
-              chainId={8453}
               calls={transactionCalls}
               isSponsored={true}
               onStatus={(status) => {
+                // Receipts are in status.statusData.transactionReceipts (OnchainKit v0.38+)
+                const receipts =
+                  status.statusData &&
+                  'transactionReceipts' in status.statusData
+                    ? status.statusData.transactionReceipts
+                    : undefined;
+
                 console.log('🔔 Bounty creation status:', {
                   statusName: status.statusName,
-                  hasReceipts: !!status.transactionReceipts,
-                  receiptsLength: status.transactionReceipts?.length,
+                  hasReceipts: !!receipts,
+                  receiptsLength: receipts?.length,
                   statusData: status.statusData,
                 });
 
@@ -878,11 +884,6 @@ export const BountyFormV2: React.FC<BountyFormV2Props> = ({
                   console.log(
                     '✅ Transaction succeeded! Checking for receipts...',
                   );
-
-                  // Receipts can be in status.transactionReceipts OR status.statusData.transactionReceipts
-                  const receipts =
-                    status.transactionReceipts ||
-                    status.statusData?.transactionReceipts;
                   console.log('transactionReceipts:', receipts);
 
                   if (receipts && receipts.length > 0) {

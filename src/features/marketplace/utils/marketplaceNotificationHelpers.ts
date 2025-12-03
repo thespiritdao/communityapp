@@ -167,7 +167,7 @@ async function getMarketManagers(): Promise<FulfillmentManager[]> {
     console.log(
       `✅ Found ${podData.pod_leads.length} market managers from pods.pod_leads`,
     );
-    return podData.pod_leads.map((wallet) => ({ wallet_address: wallet }));
+    return podData.pod_leads.map((wallet: string) => ({ wallet_address: wallet }));
   } catch (error) {
     console.error('❌ Error getting market managers:', error);
     return [];
@@ -232,7 +232,7 @@ async function getPodMembers(podId: string): Promise<FulfillmentManager[]> {
     console.log(
       `✅ Found ${podData.pod_leads.length} members in ${podId} pod from pods.pod_leads`,
     );
-    return podData.pod_leads.map((wallet) => ({ wallet_address: wallet }));
+    return podData.pod_leads.map((wallet: string) => ({ wallet_address: wallet }));
   } catch (error) {
     console.error(`❌ Error getting ${podId} pod members:`, error);
     return [];

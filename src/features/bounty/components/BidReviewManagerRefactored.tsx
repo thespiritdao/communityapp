@@ -110,7 +110,7 @@ export const BidReviewManager: React.FC<BidReviewManagerProps> = ({
   // Validate pod IDs for pending bounties
   useEffect(() => {
     if (activeTab === 'pending' && bounties.length > 0) {
-      const podIds = bounties.map((bounty) => bounty.podId).filter(Boolean);
+      const podIds = bounties.map((bounty) => bounty.pod_id).filter(Boolean);
       if (podIds.length > 0) {
         console.log('🔄 Pre-validating pod IDs for pending bounties:', podIds);
         validateMultiplePods(podIds);
@@ -189,7 +189,7 @@ export const BidReviewManager: React.FC<BidReviewManagerProps> = ({
       await unifiedNotificationService.createNotification({
         recipient_address: selectedBid.bidderAddress,
         sender_address: address,
-        notification_type: 'bounty_work_reviewed',
+        notification_type: 'bounty_update',
         title: 'Bid Update',
         message: `Your bid for "${getBountyTitle(selectedBid.bountyId)}" was not selected. Reason: ${rejectionReason}`,
         context_type: 'bounty',
@@ -363,7 +363,7 @@ export const BidReviewManager: React.FC<BidReviewManagerProps> = ({
               bounty={{
                 id: bounty.id,
                 title: bounty.title,
-                podId: bounty.podId,
+                podId: bounty.pod_id || '',
                 onchain_id: bounty.onchain_id, // Pass existing on-chain ID if it exists
                 value: bounty.value,
               }}

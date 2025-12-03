@@ -187,6 +187,7 @@ export class PodCoreService {
       } as any);
 
       if (result.error) throw new Error(result.error);
+      if (!result.data) throw new Error('Pod creation returned no data');
       console.log(`✅ Pod created: ${result.data.id}`);
 
       // Store accountability signatures if provided
@@ -494,17 +495,15 @@ export class PodCoreService {
       console.log('🔍 Mapping signature:', {
         input_address: sig.address,
         input_signature: sig.signature ? 'present' : 'missing',
-        input_signer_address: sig.signer_address,
-        input_signature_data: sig.signature_data ? 'present' : 'missing',
-        output_address: sig.address || sig.signer_address,
-        output_signature: sig.signature || sig.signature_data,
+        output_address: sig.address,
+        output_signature: sig.signature,
       });
       return {
-        address: sig.address || sig.signer_address,
-        signature: sig.signature || sig.signature_data,
-        timestamp: sig.timestamp || sig.signed_at,
-        statement: sig.statement || sig.accountability_statement,
-        isValid: sig.isValid || sig.is_valid,
+        address: sig.address,
+        signature: sig.signature,
+        timestamp: sig.timestamp,
+        statement: sig.statement,
+        isValid: sig.isValid,
       };
     });
 
@@ -524,10 +523,9 @@ export class PodCoreService {
 
     return (
       pod.created_by_address?.toLowerCase() === userAddress.toLowerCase() ||
-      (pod.pod_leads &&
-        pod.pod_leads.some(
-          (lead) => lead.toLowerCase() === userAddress.toLowerCase(),
-        ))
+      (pod.pod_leads?.some(
+        (lead) => lead.toLowerCase() === userAddress.toLowerCase(),
+      ) ?? false)
     );
   }
 
@@ -577,7 +575,7 @@ export class PodCoreService {
             is_member: true,
             membership_type: 'leader',
             joined_at: pod.created_at || new Date().toISOString(),
-            hat_id: pod.management_hat_id,
+            hat_id: pod.management_hat_id ?? undefined,
           };
         }
       }
@@ -609,19 +607,23 @@ export class PodCoreService {
     // Create leader role
     await PodRolePermissionsService.createRolePermission({
       pod_id: podId,
-      hat_id: managementHatId,
+      token_address: managementHatId,
       role_name: 'Pod Leader',
       permissions: {
         chatAccess: true,
+        chatModeration: true,
+        forumAccess: true,
+        forumModeration: false,
         governanceParticipation: true,
         eventCreation: true,
         treasuryViewing: true,
+        treasuryManagement: true,
         memberManagement: true,
         subPodCreation: true,
         roleAssignment: true,
-        forumModeration: false,
         bountyManagement: true,
         marketplaceAccess: true,
+        marketplaceManage: true,
       },
       eligibility_criteria: leaderCriteria || [],
       max_holders: 5,
@@ -631,19 +633,23 @@ export class PodCoreService {
     // Create member role
     await PodRolePermissionsService.createRolePermission({
       pod_id: podId,
-      hat_id: membershipHatId,
+      token_address: membershipHatId,
       role_name: 'Pod Member',
       permissions: {
         chatAccess: true,
+        chatModeration: false,
+        forumAccess: true,
+        forumModeration: false,
         governanceParticipation: true,
         eventCreation: false,
         treasuryViewing: false,
+        treasuryManagement: false,
         memberManagement: false,
         subPodCreation: false,
         roleAssignment: false,
-        forumModeration: false,
         bountyManagement: false,
         marketplaceAccess: true,
+        marketplaceManage: false,
       },
       eligibility_criteria: memberCriteria || [],
       max_holders: 100,

@@ -90,16 +90,14 @@ const EVENT_MANAGEMENT_HAT_ID = process.env.NEXT_PUBLIC_EVENT_MANAGEMENT;
 const ADVOCATE_TOKEN_CONTRACT = '0x592E560171D2a882474cdfc3BbeeDb21cEB4015d';
 
 // Create a Web3 provider and instance.
-const provider = new Web3.providers.HttpProvider(RPC_URL, {
-  chainId: NETWORK_CHAIN_ID,
-});
+const provider = new Web3.providers.HttpProvider(RPC_URL!);
 const web3 = new Web3(provider);
 
 // Add type for contract result
 type ContractResult = [bigint, string[]];
 
 // Add type for token balance
-interface TokenBalance {
+export interface TokenBalance {
   hasProofOfCuriosity: boolean;
   hasMarketAdmin: boolean; // Kept for backward compatibility - maps to hasMarketManagement
   hasMarketManagement: boolean;
@@ -204,7 +202,7 @@ const tokenBalancesCache: Record<string, CacheEntry> = {};
 const CACHE_TTL = 5 * 60 * 1000; // 5 minutes (increased from 30 seconds)
 
 // Add a pending requests cache to prevent duplicate concurrent requests
-const pendingRequests: Record<string, Promise<TokenBalance>> = {};
+const pendingRequests: Partial<Record<string, Promise<TokenBalance>>> = {};
 
 export async function fetchTokenBalances(
   walletAddress: string,

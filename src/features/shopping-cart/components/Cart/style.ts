@@ -10,6 +10,43 @@ export const Container = styled.div`
   z-index: 1000;
 `;
 
+// Header, Title, Close, and Content for CartContainer
+export const Header = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  border-bottom: 1px solid #e0e0e0;
+`;
+
+export const Title = styled.h2`
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: bold;
+`;
+
+export const Close = styled.button`
+  background: none;
+  border: none;
+  font-size: 2rem;
+  cursor: pointer;
+  color: #666;
+  padding: 0;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  &:hover {
+    color: #000;
+  }
+`;
+
+export const Content = styled.div`
+  padding: 1rem;
+`;
+
 // If you have a floating cart icon or button, keep this:
 export const CartButton = styled.button`
   background-color: #4bb6d1;

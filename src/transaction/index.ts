@@ -1,5 +1,5 @@
 // 🌲☀🌲
-export { Transaction } from './components/Transaction';
+export { default as Transaction } from './components/Transaction';
 export { TransactionButton } from './components/TransactionButton';
 export { TransactionDefault } from './components/TransactionDefault';
 export { TransactionSponsor } from './components/TransactionSponsor';

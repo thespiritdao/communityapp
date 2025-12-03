@@ -1,4 +1,4 @@
-import { Avatar, Identity, Name } from '../../../identity';
+import { Avatar, Identity, Name } from '../../../features/identity';
 import { cn, color, text } from '../../../styles/theme';
 import { useOnchainKit } from '../../../useOnchainKit';
 import { useNFTContext } from '../NFTProvider';
@@ -25,7 +25,7 @@ export function NFTMinters({ className }: NFTMintersReact) {
       )}
     >
       <div className="flex space-x-[-.8rem]">
-        {recentOwners.map((address) => (
+        {recentOwners.map((address: `0x${string}`) => (
           <Identity
             key={address}
             className="space-x-0 px-0 py-0 [&>div]:space-x-2"

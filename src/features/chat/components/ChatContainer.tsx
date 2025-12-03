@@ -235,7 +235,7 @@ export default function ChatContainer({ chatGroupId }: ChatContainerProps) {
 
           if (roleMatch) {
             console.log('Chat: Found matching role for', group.title, ':', {
-              roleName: role.roleName,
+              roleName: role.name,
               roleHatId: String(role.hatId).slice(0, 10) + '...',
               hasChatAccess: hasChatAccess,
               allPermissions: Object.keys(role.permissions || {}),
@@ -387,7 +387,6 @@ export default function ChatContainer({ chatGroupId }: ChatContainerProps) {
     console.log('📤 ChatContainer: Sending message with content:', content);
     console.log('📤 ChatContainer: Current user:', {
       wallet: currentUser.wallet_address,
-      userId: currentUser.user_id,
       profilePic: currentUser.profile_picture,
     });
     console.log('📤 ChatContainer: Selected chat group:', {
@@ -550,12 +549,7 @@ export default function ChatContainer({ chatGroupId }: ChatContainerProps) {
                   style={{ cursor: 'pointer' }}
                 >
                   <div className="chat-group-core">
-                    <img
-                      src={group.pod_image_url}
-                      alt=""
-                      className="pod-avatar pod-avatar--sm"
-                    />
-                    <span className="chat-group-name">{group.name}</span>
+                    <span className="chat-group-name">{group.title}</span>
                   </div>
                 </li>
               ))}
@@ -581,7 +575,7 @@ export default function ChatContainer({ chatGroupId }: ChatContainerProps) {
             Chat List
           </button>
           <h2>
-            <b>{selectedChatGroup.name}</b>
+            <b>{selectedChatGroup.title}</b>
           </h2>
         </header>
 
@@ -592,14 +586,7 @@ export default function ChatContainer({ chatGroupId }: ChatContainerProps) {
               currentUser={currentUser}
               users={users}
               loading={loading}
-              canModerate={
-                selectedChatGroup.pod_id
-                  ? hasPermissionInPod(
-                      selectedChatGroup.pod_id,
-                      'chatModeration',
-                    )
-                  : permissions?.chatModeration || false
-              }
+              canModerate={permissions?.chatModeration || false}
               chatGroupId={selectedChatGroup.id}
             />
           </section>

@@ -38,7 +38,7 @@ export const RegisterPodButton: React.FC<RegisterPodButtonProps> = ({
 
   const registerPodCall = {
     address: POD_BOUNTY_SERVICE,
-    abi: PodBountyServiceABI,
+    abi: PodBountyServiceABI as any,
     functionName: 'registerPod' as const,
     args: [
       pod.id, // podId (string - UUID)

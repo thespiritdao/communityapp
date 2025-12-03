@@ -9,6 +9,7 @@ import type {
   EventRegistration,
   EventWithStats,
   UserProfile,
+  CheckInProcessingResult,
 } from '../types/qr-types';
 
 export class QRCodeService {
@@ -31,9 +32,10 @@ export class QRCodeService {
       let resolvedUserProfile = userProfile;
       if (!resolvedUserProfile) {
         try {
-          resolvedUserProfile = await this.getUserProfile(
+          const profile = await this.getUserProfile(
             registration.user_address,
           );
+          resolvedUserProfile = profile || undefined;
         } catch (error) {
           console.warn(
             'Could not fetch user profile for QR generation:',
@@ -240,7 +242,7 @@ export class QRCodeService {
       return {
         isValid: true,
         registration,
-        userProfile,
+        userProfile: userProfile || undefined,
         canCheckIn,
         hasTokenAccess,
       };

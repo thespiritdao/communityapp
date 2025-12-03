@@ -32,8 +32,8 @@ export interface HatCreationResult {
 
 export class HatCreationService {
   private static readonly HATS_PROTOCOL_ADDRESS =
-    process.env.NEXT_PUBLIC_HATS_PROTOCOL_ADDRESS ||
-    '0x3bc1A0Ad72417f2d411118085256fC53CBdDd137';
+    (process.env.NEXT_PUBLIC_HATS_PROTOCOL_ADDRESS ||
+      '0x3bc1A0Ad72417f2d411118085256fC53CBdDd137') as `0x${string}`;
 
   /**
    * Creates a new hat using the Hats Protocol
@@ -94,7 +94,7 @@ export class HatCreationService {
         args: [adminValidation.hatIdBigInt],
       });
 
-      if (!adminHatDetails[8]) {
+      if (!adminHatDetails.active) {
         // active field
         return {
           success: false,
@@ -105,9 +105,9 @@ export class HatCreationService {
       // Create the hat using createHat function
       // CRITICAL FIX: Use creator address as toggle module
       // The toggle module must be an ADDRESS (20 bytes), not a hat ID (32 bytes)
-      const account = await this.walletClient
+      const account = await params.walletClient
         .getAddresses()
-        .then((addrs) => addrs[0]);
+        .then((addrs: string[]) => addrs[0]);
       const toggleModule = params.toggleModule || account;
 
       console.log('🎯 Hat creation parameters:', {
@@ -149,8 +149,8 @@ export class HatCreationService {
           adminValidation.hatIdBigInt,
           params.details,
           params.maxSupply,
-          params.eligibilityModule ||
-            '0x0000000000000000000000000000000000000000',
+          (params.eligibilityModule ||
+            '0x0000000000000000000000000000000000000000') as `0x${string}`,
           toggleModule as `0x${string}`,
           params.mutable,
           params.imageURI,
@@ -570,7 +570,7 @@ export class HatCreationService {
         args: [validation.hatIdBigInt!],
       });
 
-      return hatDetails[8]; // active field
+      return hatDetails.active; // active field
     } catch (error: any) {
       // Check if it's a "position out of bounds" error - indicates invalid HAT ID structure
       // The error might be in error.message or error.cause.message (for ContractFunctionExecutionError)
@@ -642,7 +642,7 @@ export class HatCreationService {
         args: [validation.hatIdBigInt!],
       });
 
-      return Number(hatDetails[2]); // supply field
+      return Number(hatDetails.supply); // supply field
     } catch (error) {
       console.error('❌ Failed to get hat supply:', error);
       return 0;

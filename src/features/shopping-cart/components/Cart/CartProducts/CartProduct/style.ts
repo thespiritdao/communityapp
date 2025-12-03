@@ -5,7 +5,7 @@ export const Container = styled.div`
   box-sizing: border-box;
   padding: 5%;
   border-radius: 8px;
-  background-color: ${({ theme }) => theme.colors.primary};
+  background-color: ${({ theme }: any) => theme.colors.primary};
   margin-bottom: 10px;
 
   transition: background-color 0.2s, opacity 0.2s;
@@ -27,7 +27,7 @@ export const PriceContainer = styled.div`
   display: flex;
   flex-direction: column;
   align-items: flex-end;
-  color: ${({ theme }) => theme.colors.secondary};
+  color: ${({ theme }: any) => theme.colors.secondary};
   text-align: right;
 `;
 
@@ -65,7 +65,7 @@ export const DeleteButton = styled.button`
   }
 
   &:focus-visible {
-    outline: 3px solid ${({ theme }) => theme.colors.secondary};
+    outline: 3px solid ${({ theme }: any) => theme.colors.secondary};
   }
 `;
 

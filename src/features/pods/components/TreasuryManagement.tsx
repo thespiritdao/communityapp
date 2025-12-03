@@ -135,9 +135,8 @@ export function TreasuryManagement({
     prepareEqualDistribution,
     prepareAddToken,
     prepareProxyDistribution,
-    prepareProxyDistributeSingle,
     prepareProxyEqualDistribution,
-  } = usePodTreasury(treasuryAddress, podId);
+  } = usePodTreasury(treasuryAddress ?? undefined, podId);
 
   // UI State management
   const [activeTab, setActiveTab] = useState<
@@ -340,40 +339,22 @@ export function TreasuryManagement({
             throw new Error('All recipient amounts must be greater than 0');
           }
 
-          // Single-recipient optimization for sponsorship
-          if (validRecipients.length === 1) {
-            console.log('🎯 Testing single-recipient proxy for sponsorship:', {
-              method: 'proxyDistributeSingle',
-              hasArrayArgs: false,
-              recipients: validRecipients.length,
-              complexity: 'LOW',
-            });
-
-            console.log(
-              '🎯 Using single-recipient optimization for sponsorship',
-            );
-            calls = [
-              prepareProxyDistributeSingle(
-                TREASURY_PROXY_ADDRESS,
-                podId,
-                selectedToken,
-                addresses[0],
-                amounts[0],
-                reason,
-              ),
-            ];
-          } else {
-            calls = [
-              prepareProxyDistribution(
-                TREASURY_PROXY_ADDRESS,
-                podId,
-                selectedToken,
-                addresses,
-                amounts,
-                reason,
-              ),
-            ];
-          }
+          // Use prepareProxyDistribution for both single and multiple recipients
+          console.log('🎯 Using proxy distribution:', {
+            method: 'prepareProxyDistribution',
+            recipients: validRecipients.length,
+            selectedToken,
+          });
+          calls = [
+            prepareProxyDistribution(
+              TREASURY_PROXY_ADDRESS,
+              podId,
+              selectedToken,
+              addresses,
+              amounts,
+              reason,
+            ),
+          ];
         }
       } else if (treasuryAddress) {
         // Fallback to direct treasury calls if proxy not available
@@ -1044,20 +1025,7 @@ export function TreasuryManagement({
                               <div onClick={handleDistribute}>
                                 <TransactionButton
                                   text={`Distribute ${distributionType === 'single' ? 'Funds' : distributionType === 'equal' ? 'Equal Amounts' : 'Batch Funds'}`}
-                                  className="w-full h-12 text-white font-semibold rounded-lg flex items-center justify-center gap-2"
-                                  style={{ backgroundColor: '#3F7A5A' }}
-                                  onMouseEnter={(
-                                    e: React.MouseEvent<HTMLButtonElement>,
-                                  ) =>
-                                    (e.currentTarget.style.backgroundColor =
-                                      '#2F5D50')
-                                  }
-                                  onMouseLeave={(
-                                    e: React.MouseEvent<HTMLButtonElement>,
-                                  ) =>
-                                    (e.currentTarget.style.backgroundColor =
-                                      '#3F7A5A')
-                                  }
+                                  className="w-full h-12 text-white font-semibold rounded-lg flex items-center justify-center gap-2 bg-[#3F7A5A] hover:bg-[#2F5D50]"
                                 />
                               </div>
                               <TransactionSponsor />
@@ -1089,7 +1057,7 @@ export function TreasuryManagement({
                               className="text-sm mb-4"
                               style={{ color: '#8B3A3A' }}
                             >
-                              {error.message}
+                              {(error as any)?.message || 'An error occurred during transaction preparation'}
                             </p>
                           </div>
                         );
@@ -1213,7 +1181,6 @@ export function TreasuryManagement({
                                         ? 'secondary'
                                         : 'outline'
                                   }
-                                  size="sm"
                                 >
                                   {tx.type}
                                 </Badge>
@@ -1478,7 +1445,6 @@ export function TreasuryManagement({
         <ProfileModal
           user={selectedUser}
           users={users}
-          isOpen={isOpen}
           onClose={closeProfileModal}
         />
       )}

@@ -1,7 +1,7 @@
 // 🌲☀🌲
 export { ConnectWallet } from './components/ConnectWallet';
 export { ConnectWalletText } from './components/ConnectWalletText';
-export { OnchainProviders } from './components/OnChainProviders';
+export { OnchainProviders } from './components/OnchainProviders';
 export { Wallet } from './components/Wallet';
 export { WalletDefault } from './components/WalletDefault';
 export { WalletDropdown } from './components/WalletDropdown';

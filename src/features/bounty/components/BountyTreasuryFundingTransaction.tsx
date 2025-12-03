@@ -11,7 +11,10 @@ import {
   TransactionStatusAction,
 } from '@coinbase/onchainkit/transaction';
 import type { LifecycleStatus } from '@coinbase/onchainkit/transaction';
-import BountyManagerABI from '@/abis/BountyManagerV2.json';
+import type { Abi } from 'viem';
+import BountyManagerABIJson from '@/abis/BountyManagerV2.json';
+
+const BountyManagerABI = BountyManagerABIJson as Abi;
 
 const BOUNTY_MANAGER_ADDRESS = process.env
   .NEXT_PUBLIC_BOUNTY_MANAGER_ADDRESS as `0x${string}`;
@@ -120,8 +123,6 @@ export const BountyTreasuryFundingTransaction: React.FC<
       </div>
 
       <Transaction
-        address={address.toLowerCase() as `0x${string}`}
-        chainId={8453}
         calls={[
           {
             address: BOUNTY_MANAGER_ADDRESS,
@@ -136,7 +137,6 @@ export const BountyTreasuryFundingTransaction: React.FC<
         <TransactionButton
           text="Set Treasury Funding"
           className="w-full font-semibold py-3"
-          style={{ backgroundColor: '#2F5D50', color: '#FFFFFF' }}
         />
         <TransactionSponsor />
         <TransactionStatus>

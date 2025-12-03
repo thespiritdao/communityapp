@@ -315,7 +315,7 @@ export class HatMetadataService {
       if (dbError) {
         console.error('❌ Database fallback also failed:', dbError);
         throw new Error(
-          `Failed to store metadata: IPFS error: ${error?.message || 'Unknown'}, Database error: ${dbError.message}`,
+          `Failed to store metadata: IPFS error: ${(error as Error)?.message || 'Unknown'}, Database error: ${(dbError as Error).message}`,
         );
       }
 
@@ -465,7 +465,7 @@ export class HatMetadataService {
       );
 
       const permissionInfo = await checkHatModificationPermission(
-        publicClient,
+        publicClient as any,
         HATS_PROTOCOL_ADDRESS as `0x${string}`,
         hatId,
         userAddress,
@@ -484,9 +484,16 @@ export class HatMetadataService {
         return false;
       }
 
+      // Fetch HAT details
+      const hatDetails = await safeViewHat(
+        publicClient as any,
+        HATS_PROTOCOL_ADDRESS as `0x${string}`,
+        hatId,
+      );
+
       // Check if user is wearing this hat
       const isWearer = await publicClient.readContract({
-        address: HATS_PROTOCOL_ADDRESS,
+        address: HATS_PROTOCOL_ADDRESS as `0x${string}`,
         abi: [
           {
             name: 'isWearerOfHat',
@@ -500,12 +507,12 @@ export class HatMetadataService {
           },
         ],
         functionName: 'isWearerOfHat',
-        args: [userAddress, hatIdBigInt],
+        args: [userAddress as `0x${string}`, hatIdBigInt],
       });
 
       // Check if this is a top hat (special case)
       const isTopHat = await publicClient.readContract({
-        address: HATS_PROTOCOL_ADDRESS,
+        address: HATS_PROTOCOL_ADDRESS as `0x${string}`,
         abi: [
           {
             name: 'isTopHat',
@@ -562,6 +569,12 @@ export class HatMetadataService {
     success: boolean;
     ipfsHash?: string;
     txHash?: string;
+    txCall?: {
+      to: string;
+      data: string;
+      value: bigint;
+    };
+    message?: string;
     error?: string;
   }> {
     try {
@@ -821,6 +834,9 @@ export class HatMetadataService {
       return {
         hasPermission: {
           chatAccess: false,
+          chatModeration: false,
+          forumAccess: false,
+          forumModeration: false,
           governanceParticipation: false,
           eventCreation: false,
           treasuryViewing: false,
@@ -828,7 +844,6 @@ export class HatMetadataService {
           memberManagement: false,
           subPodCreation: false,
           roleAssignment: false,
-          forumModeration: false,
           bountyManagement: false,
           marketplaceAccess: false,
           marketplaceManage: false,

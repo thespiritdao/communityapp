@@ -82,7 +82,7 @@ export class HatDiagnosticService {
       }
     } catch (error) {
       console.error('❌ Diagnostic failed:', error);
-      results.issues.push(`Diagnostic error: ${error.message}`);
+      results.issues.push(`Diagnostic error: ${(error as Error).message}`);
     }
 
     console.log('\n📊 === DIAGNOSIS COMPLETE ===');
@@ -236,8 +236,8 @@ export class HatDiagnosticService {
           console.log('❌ Controller HAT mismatch - this might be the issue!');
         }
       } catch (error) {
-        console.log('❌ Failed to read hatControllers:', error.message);
-        moduleInfo.functions.hatControllers = 'Error: ' + error.message;
+        console.log('❌ Failed to read hatControllers:', (error as Error).message);
+        moduleInfo.functions.hatControllers = 'Error: ' + (error as Error).message;
       }
 
       // Also try to check if there's a way to verify eligibility
@@ -269,14 +269,14 @@ export class HatDiagnosticService {
         moduleInfo.functions.getWearerStatus = 'Available';
         console.log('✅ getWearerStatus function is available');
       } catch (error) {
-        console.log('❌ getWearerStatus not available:', error.message);
+        console.log('❌ getWearerStatus not available:', (error as Error).message);
       }
 
       return moduleInfo;
     } catch (error) {
       return {
         exists: false,
-        error: error.message,
+        error: (error as Error).message,
       };
     }
   }
@@ -324,7 +324,7 @@ export class HatDiagnosticService {
             console.log(`✅ User owns HAT: ${hatId}`);
           }
         } catch (error) {
-          console.log(`❌ Failed to check HAT ${hatId}:`, error.message);
+          console.log(`❌ Failed to check HAT ${hatId}:`, (error as Error).message);
         }
       }
 
@@ -390,7 +390,7 @@ export class HatDiagnosticService {
     } catch (error) {
       console.log(
         '❌ Failed to read controller HAT from toggle module:',
-        error.message,
+        (error as Error).message,
       );
 
       // Fall back to admin HAT check

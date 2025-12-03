@@ -24,7 +24,6 @@ import { format } from 'date-fns';
 import { UserProfileDisplay } from '@/components/UserProfileDisplay';
 import MilestonePaymentTransaction from './MilestonePaymentTransaction';
 import { supabase } from '@/lib/supabase';
-import type { Database } from '@/lib/database.types';
 
 // ============================================================================
 // TYPE DEFINITIONS

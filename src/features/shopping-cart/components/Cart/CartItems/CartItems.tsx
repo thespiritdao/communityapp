@@ -3,34 +3,13 @@
 import { memo, useMemo } from 'react';
 import type { ICartProduct } from '../../../models';
 import CartItem from './CartItem';
-import { FixedSizeList as List } from 'react-window';
 
 interface CartItemsProps {
   products: ICartProduct[];
 }
 
-// Virtual list item renderer
-const ItemRenderer = memo(
-  ({
-    index,
-    style,
-    data,
-  }: {
-    index: number;
-    style: React.CSSProperties;
-    data: ICartProduct[];
-  }) => (
-    <div style={style}>
-      <CartItem product={data[index]} />
-    </div>
-  ),
-);
-
-ItemRenderer.displayName = 'CartItemRenderer';
-
 /**
  * CartItems - Optimized product list display
- * - Virtual scrolling for large carts
  * - Memoized item rendering
  * - Efficient updates
  */
@@ -61,26 +40,9 @@ const CartItems = memo(({ products }: CartItemsProps) => {
     );
   }
 
-  // Use virtual scrolling for large carts (>10 items)
-  if (memoizedProducts.length > 10) {
-    return (
-      <div style={{ height: '400px', width: '100%' }}>
-        <List
-          height={400}
-          itemCount={memoizedProducts.length}
-          itemSize={100}
-          itemData={memoizedProducts}
-          overscanCount={5}
-        >
-          {ItemRenderer}
-        </List>
-      </div>
-    );
-  }
-
-  // Regular rendering for small carts
+  // Scrollable container for all carts
   return (
-    <div style={{ padding: '0.5rem' }}>
+    <div style={{ padding: '0.5rem', maxHeight: '400px', overflowY: 'auto' }}>
       {memoizedProducts.map((product, index) => (
         <CartItem key={`${product.id}-${index}`} product={product} />
       ))}

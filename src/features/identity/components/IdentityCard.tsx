@@ -3,7 +3,6 @@ import { Address as AddressComponent } from './Address';
 import { Avatar } from './Avatar';
 import { Badge } from './Badge';
 import { Name } from './Name';
-import { Socials } from './Socials';
 
 import { background, border, cn, line } from '../../../styles/theme';
 
@@ -33,10 +32,9 @@ export function IdentityCard({
       <Avatar address={address} chain={chain} />
       <div className="flex flex-col ml-4">
         <Name address={address}>
-          <Badge schemaId={schemaId} />
+          <Badge />
         </Name>
-        <AddressComponent address={address} chain={chain} />
-        <Socials address={address} />
+        <AddressComponent address={address} />
       </div>
     </div>
   );

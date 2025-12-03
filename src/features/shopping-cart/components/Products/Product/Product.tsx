@@ -1,7 +1,7 @@
 // src/features/shopping-cart/components/Products/Product/Product.tsx
 'use client';
 import { useState } from 'react';
-import type { IProduct } from 'models';
+import type { IProduct } from '../../../models';
 import * as S from './style'; // See style file below.
 import { useCart } from '@/features/shopping-cart/contexts/cart-context';
 import SizeSelectionModal from '../../SizeSelectionModal';
@@ -30,6 +30,7 @@ const Product = ({ product, isAccessible }: ProductProps) => {
       const productWithSize = {
         ...product,
         selectedSize: availableSizes[0] || 'One Size',
+        quantity: 1,
       };
       addProduct(productWithSize);
     }
@@ -39,6 +40,7 @@ const Product = ({ product, isAccessible }: ProductProps) => {
     const productWithSize = {
       ...product,
       selectedSize,
+      quantity: 1,
     };
     addProduct(productWithSize);
     setShowSizeModal(false);

@@ -1,6 +1,6 @@
 'use client';
 import React, { useState, useEffect } from 'react';
-import { useContractReads } from 'wagmi';
+import { useReadContracts } from 'wagmi';
 import { erc721ABI } from '@/utils/erc721ABI';
 import { erc1155ABI } from '@/utils/erc1155ABI';
 import { erc20ABI } from '@/utils/erc20ABI';
@@ -104,7 +104,7 @@ export const DatabaseTokenGallery: React.FC<DatabaseTokenGalleryProps> =
             address: token.contract_address as `0x${string}`,
             abi: erc1155ABI,
             functionName: 'balanceOf',
-            args: [walletAddress, token.hat_id || '0x0'] as const,
+            args: [walletAddress, token.token_address || '0x0'] as const,
           };
         default:
           // For ERC721 tokens from tokens table, just check balanceOf
@@ -120,9 +120,11 @@ export const DatabaseTokenGallery: React.FC<DatabaseTokenGalleryProps> =
       data: ownershipData,
       isError: contractError,
       isLoading: isContractLoading,
-    } = useContractReads({
+    } = useReadContracts({
       contracts: contractReads as any[],
-      enabled: tokens.length > 0,
+      query: {
+        enabled: tokens.length > 0,
+      },
     });
 
     // Process ownership data
@@ -135,10 +137,22 @@ export const DatabaseTokenGallery: React.FC<DatabaseTokenGalleryProps> =
             const owned =
               typeof balance === 'bigint' ? balance > 0n : Number(balance) > 0;
 
+            // Convert balance to bigint safely
+            let balanceValue: bigint;
+            if (typeof balance === 'bigint') {
+              balanceValue = balance;
+            } else if (
+              typeof balance === 'number' ||
+              typeof balance === 'string'
+            ) {
+              balanceValue = BigInt(balance || 0);
+            } else {
+              balanceValue = 0n;
+            }
+
             return {
               ...token,
-              balance:
-                typeof balance === 'bigint' ? balance : BigInt(balance || 0),
+              balance: balanceValue,
               owned,
             };
           },

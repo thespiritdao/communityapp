@@ -1,6 +1,6 @@
 // utils/airdropService.ts
 
-import { GelatoRelayManager } from './gelatoSetup';
+import { GelatoRelayManager } from '@/app/api/utils/gelatoSetup';
 import { supabase } from './supabaseClient';
 
 export class AirdropService {
@@ -47,13 +47,13 @@ export class AirdropService {
   async checkAirdropStatus(taskId: string) {
     const status = await this.gelato.checkRelayStatus(taskId);
 
-    if (status.task?.taskState === 'ExecSuccess') {
+    if (status?.taskState === 'ExecSuccess') {
       // Update database with success status
       await supabase
         .from('relay_tasks')
         .update({
           status: 'completed',
-          transaction_hash: status.task.transactionHash,
+          transaction_hash: status?.transactionHash,
         })
         .eq('task_id', taskId);
     }

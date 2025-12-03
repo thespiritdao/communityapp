@@ -55,6 +55,7 @@ const abiChangeHatToggle = [
       { name: '_hatId', type: 'uint256' },
       { name: '_newToggle', type: 'address' },
     ],
+    outputs: [],
   },
 ] as const;
 
@@ -67,6 +68,7 @@ const abiChangeHatEligibility = [
       { name: '_hatId', type: 'uint256' },
       { name: '_newEligibility', type: 'address' },
     ],
+    outputs: [],
   },
 ] as const;
 
@@ -378,7 +380,7 @@ export class HatToggleService {
             { name: 'active', type: 'bool' },
           ],
         },
-      ];
+      ] as const;
 
       const hat = await publicClient.readContract({
         address: HATS_CONTRACT_ADDRESS,
@@ -692,12 +694,12 @@ export class HatToggleService {
       },
     ] as const;
 
-    const hat = (await publicClient.readContract({
+    const hat = await publicClient.readContract({
       address: HATS_CONTRACT_ADDRESS,
       abi: viewHatAbi,
       functionName: 'viewHat',
       args: [BigInt(EXEC_MEMBER_HAT)],
-    })) as any[];
+    });
 
     const toggle = hat[4] as `0x${string}`;
     const active = hat[8] as boolean;
@@ -751,73 +753,15 @@ export class HatToggleService {
   }
 
   /**
-   * Change the toggle module for Executive Pod Member HAT (admin only)
-   */
-  static async changeToggle(
-    walletClient: WalletClient,
-    newToggle: `0x${string}`,
-  ) {
-    const EXEC_MEMBER_HAT = process.env
-      .NEXT_PUBLIC_EXECUTIVE_POD_MEMBER as string;
-
-    return walletClient.writeContract({
-      address: HATS_CONTRACT_ADDRESS,
-      abi: [
-        {
-          name: 'changeHatToggle',
-          type: 'function',
-          stateMutability: 'nonpayable',
-          inputs: [
-            { name: '_hatId', type: 'uint256' },
-            { name: '_newToggle', type: 'address' },
-          ],
-        },
-      ],
-      functionName: 'changeHatToggle',
-      args: [BigInt(EXEC_MEMBER_HAT), newToggle],
-      chain: walletClient.chain,
-    });
-  }
-
-  /**
-   * Change the eligibility module for Executive Pod Member HAT (admin only)
-   */
-  static async changeEligibility(
-    walletClient: WalletClient,
-    newElig: `0x${string}`,
-  ) {
-    const EXEC_MEMBER_HAT = process.env
-      .NEXT_PUBLIC_EXECUTIVE_POD_MEMBER as string;
-
-    return walletClient.writeContract({
-      address: HATS_CONTRACT_ADDRESS,
-      abi: [
-        {
-          name: 'changeHatEligibility',
-          type: 'function',
-          stateMutability: 'nonpayable',
-          inputs: [
-            { name: '_hatId', type: 'uint256' },
-            { name: '_newEligibility', type: 'address' },
-          ],
-        },
-      ],
-      functionName: 'changeHatEligibility',
-      args: [BigInt(EXEC_MEMBER_HAT), newElig],
-      chain: walletClient.chain,
-    });
-  }
-
-  /**
    * Read hat configuration from on-chain
    */
   static async readHat(publicClient: PublicClient, hatId: string) {
-    const tuple = (await publicClient.readContract({
+    const tuple = await publicClient.readContract({
       address: HATS_CONTRACT_ADDRESS,
       abi: abiViewHat,
       functionName: 'viewHat',
       args: [BigInt(hatId)],
-    })) as any[];
+    });
 
     const eligibility = tuple[3] as `0x${string}`;
     const toggle = tuple[4] as `0x${string}`;
@@ -867,6 +811,7 @@ export class HatToggleService {
       functionName: 'changeHatToggle',
       args: [BigInt(hatId), newToggle],
       chain: walletClient.chain,
+      account: walletClient.account ?? null,
     });
   }
 
@@ -884,6 +829,7 @@ export class HatToggleService {
       functionName: 'changeHatEligibility',
       args: [BigInt(hatId), newElig],
       chain: walletClient.chain,
+      account: walletClient.account ?? null,
     });
   }
 
@@ -1124,7 +1070,8 @@ export class HatToggleService {
           newStatus: statusAfter,
         };
       } catch (error) {
-        console.log(`❌ ${func.name} failed:`, error.message);
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        console.log(`❌ ${func.name} failed:`, errorMessage);
         continue;
       }
     }
@@ -1285,7 +1232,6 @@ export class HatToggleService {
         codeLength: contractCode?.length,
         isUndefined: contractCode === undefined,
         isNull: contractCode === null,
-        isEmpty: contractCode === '',
         isZeroX: contractCode === '0x',
       });
 
@@ -1662,11 +1608,13 @@ export class HatToggleService {
             );
           }
         } catch (readError) {
-          console.log(`❌ Cannot read ${func.name}:`, readError.message);
+          const errorMessage = readError instanceof Error ? readError.message : 'Unknown error';
+          console.log(`❌ Cannot read ${func.name}:`, errorMessage);
         }
       }
     } catch (error) {
-      console.log('⚠️  Toggle module diagnosis failed:', error.message);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      console.log('⚠️  Toggle module diagnosis failed:', errorMessage);
       console.log(
         '💡 This is expected if the contract uses a different interface',
       );

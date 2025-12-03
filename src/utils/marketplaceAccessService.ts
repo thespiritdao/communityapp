@@ -20,7 +20,7 @@ const HATS_ABI = [
 
 interface PodPermission {
   pod_id: string;
-  hat_id: string;
+  token_address: string;
   role_name: string;
   permissions: {
     chatAccess?: boolean;
@@ -194,11 +194,11 @@ export const fetchPodTokensForMarketplace = async () => {
     // First get pod permissions
     const { data: permissions, error: permError } = await supabase
       .from('pod_permission_lookup')
-      .select('pod_id, hat_id, role_name')
+      .select('pod_id, token_address, role_name')
       .eq('is_active', true);
 
     if (permError) {
-      console.error('Error fetching pod permissions:', error);
+      console.error('Error fetching pod permissions:', permError);
       throw permError;
     }
 

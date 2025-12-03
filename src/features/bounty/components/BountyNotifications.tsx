@@ -57,18 +57,15 @@ export const BountyNotifications: React.FC<BountyNotificationsProps> = ({
         console.log('📋 Loading bounty notifications for:', address);
 
         // Get bounty-specific notifications from unified service
-        const result = await unifiedNotificationService.getNotifications({
-          userAddress: address,
-          category: 'general',
-          contextType: 'bounty',
-          limit: 50,
-          includeRead: false, // Only show unread notifications
-        });
+        const notifications =
+          await unifiedNotificationService.getAllNotificationsForUser(address, {
+            category: 'general',
+            limit: 50,
+            unreadOnly: true, // Only show unread notifications
+          });
 
-        console.log(
-          `✅ Loaded ${result.notifications.length} bounty notifications`,
-        );
-        setNotifications(result.notifications);
+        console.log(`✅ Loaded ${notifications.length} bounty notifications`);
+        setNotifications(notifications);
       } catch (error) {
         console.error('❌ Failed to load bounty notifications:', error);
         setError(
@@ -83,44 +80,17 @@ export const BountyNotifications: React.FC<BountyNotificationsProps> = ({
 
     loadNotifications();
 
-    // Subscribe to real-time bounty notifications
-    console.log('🔔 Subscribing to real-time bounty notifications');
+    // TODO: Re-implement real-time subscription when available in UnifiedNotificationService
+    // For now, notifications are loaded on component mount and can be refreshed manually
 
-    const subscription = unifiedNotificationService.subscribeToNotifications(
-      address,
-      (notification) => {
-        // Only process bounty notifications
-        if (notification.context_type === 'bounty') {
-          console.log(
-            '📨 New bounty notification received:',
-            notification.title,
-          );
-
-          // Add to list
-          setNotifications((prev) => [notification, ...prev]);
-
-          // Show toast notification
-          toast({
-            title: notification.title,
-            description: notification.message,
-            duration: 5000,
-          });
-        }
-      },
-    );
-
-    return () => {
-      console.log('🔕 Unsubscribing from bounty notifications');
-      subscription.unsubscribe();
-    };
-  }, [address, toast]);
+  }, [address]);
 
   const handleNotificationClick = async (notification: UnifiedNotification) => {
     try {
       console.log('👆 Notification clicked:', notification.id);
 
-      // Mark as read
-      await unifiedNotificationService.markAsRead([notification.id]);
+      // Mark as read (bounty notifications are in 'general' category)
+      await unifiedNotificationService.markAsRead(notification.id, 'general');
       console.log('✅ Notification marked as read');
 
       // Remove from unread list

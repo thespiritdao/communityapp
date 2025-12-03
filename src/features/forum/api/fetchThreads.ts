@@ -43,7 +43,7 @@ export const fetchThreads = async ({
     if (error) throw new Error(`Failed to fetch threads: ${error.message}`);
 
     // Normalize token IDs for comparison
-    const normalize = (value: string | null) =>
+    const normalize = (value: string | null | undefined) =>
       value?.trim().toLowerCase() || '';
     const pocToken = normalize(process.env.NEXT_PUBLIC_PROOF_OF_CURIOSITY);
     const execHatId = normalize(process.env.NEXT_PUBLIC_EXECUTIVE_POD_LEADER);
@@ -52,7 +52,9 @@ export const fetchThreads = async ({
     // Filter threads **before returning them to the client**
     const filteredThreads = data.filter((thread) => {
       const threadToken = normalize(thread.required_token);
-      const categoryToken = normalize(thread.forum_categories?.required_token);
+      const categoryToken = Array.isArray(thread.forum_categories)
+        ? normalize(thread.forum_categories[0]?.required_token)
+        : null;
       const requiredToken = threadToken || categoryToken;
 
       // If no required_token exists, the thread is publicly accessible

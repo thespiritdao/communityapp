@@ -165,7 +165,7 @@ export class PodBlockchainSyncService {
       console.log('🔄 Checking which pods need blockchain sync...');
 
       // Get all active pods from database
-      const pods = await PodCoreService.getAllPods({ filter: 'active' });
+      const pods = await PodCoreService.getAllPods();
       const registeredPodIds = await this.getRegisteredPods();
 
       console.log(`📊 Found ${pods.length} active pods in database`);

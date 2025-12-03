@@ -11,12 +11,12 @@ import {
 } from 'react';
 import {
   fetchTokenBalances,
-  type TokenBalances,
+  type TokenBalance,
 } from '@/utils/fetchTokenBalances';
 import { useAccount } from 'wagmi';
 
 interface TokenBalancesContextValue {
-  balances: TokenBalances | null;
+  balances: TokenBalance | null;
   refreshBalances: () => Promise<void>;
   isLoading: boolean;
   error: Error | null;
@@ -30,7 +30,7 @@ export const TokenBalancesProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
   const { address } = useAccount();
-  const [balances, setBalances] = useState<TokenBalances | null>(null);
+  const [balances, setBalances] = useState<TokenBalance | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
 

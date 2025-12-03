@@ -67,6 +67,7 @@ export const useBountyMultiSig = () => {
         const { required, signatures } = BountyApprovalService.requiresApproval(
           'creation',
           valueUSD,
+          { type: 'wallet' },
         );
 
         console.log(`🎯 Bounty creation analysis:`, {
@@ -85,8 +86,12 @@ export const useBountyMultiSig = () => {
             // First create the bounty in draft status
             draftBounty = await createBountySupabase({
               ...bountyData,
-              status: 'draft', // Mark as draft until approved
+              status: 'open', // Mark as open, pending approval
             });
+
+            if (!draftBounty) {
+              throw new Error('Failed to create bounty in database');
+            }
 
             // Create approval workflow - if this fails, we need to rollback
             const workflow = await BountyApprovalService.createApprovalWorkflow(
@@ -100,6 +105,7 @@ export const useBountyMultiSig = () => {
                 value: bountyData.value,
               },
               address,
+              { type: 'wallet' },
             );
 
             setApprovalWorkflowId(workflow.id);
@@ -147,7 +153,10 @@ export const useBountyMultiSig = () => {
         } else {
           // Low-value bounty - create directly
           console.log('✅ Creating bounty directly (below threshold)');
-          const bounty = await createBountySupabase(bountyData);
+          const bounty = await createBountySupabase({
+            ...bountyData,
+            status: 'open',
+          });
 
           toast({
             title: 'Bounty Created',
@@ -244,7 +253,9 @@ export const useBountyMultiSig = () => {
    * Check if a value requires multi-signature approval
    */
   const checkApprovalRequirement = useCallback((valueUSD: string) => {
-    return BountyApprovalService.requiresApproval('creation', valueUSD);
+    return BountyApprovalService.requiresApproval('creation', valueUSD, {
+      type: 'wallet',
+    });
   }, []);
 
   /**

@@ -1,6 +1,6 @@
 // src/features/shopping-cart/contexts/cart-context/useCartTotal.ts
 import { useCartContext } from './CartContextProvider';
-import type { ICartProduct } from 'models';
+import type { ICartProduct } from '../../models';
 
 const useCartTotal = () => {
   const { total, setTotal } = useCartContext();

@@ -112,6 +112,9 @@ export const HAT_ROLES: Record<string, HatRole> = {
     podId: 'executive-pod',
     permissions: {
       chatAccess: true,
+      chatModeration: true,
+      forumAccess: true,
+      forumModeration: true,
       governanceParticipation: true,
       eventCreation: true,
       treasuryViewing: true,
@@ -119,9 +122,9 @@ export const HAT_ROLES: Record<string, HatRole> = {
       memberManagement: true,
       subPodCreation: true,
       roleAssignment: true,
-      forumModeration: true,
       bountyManagement: true,
       marketplaceAccess: true,
+      marketplaceManage: true,
     },
   },
   EXECUTIVE_MEMBER: {
@@ -131,6 +134,9 @@ export const HAT_ROLES: Record<string, HatRole> = {
     podId: 'executive-pod',
     permissions: {
       chatAccess: true,
+      chatModeration: false,
+      forumAccess: true,
+      forumModeration: false,
       governanceParticipation: true,
       eventCreation: false,
       treasuryViewing: false,
@@ -138,9 +144,9 @@ export const HAT_ROLES: Record<string, HatRole> = {
       memberManagement: false,
       subPodCreation: false,
       roleAssignment: false,
-      forumModeration: false,
       bountyManagement: false,
       marketplaceAccess: true,
+      marketplaceManage: false,
     },
   },
   DEV_LEADER: {
@@ -150,6 +156,9 @@ export const HAT_ROLES: Record<string, HatRole> = {
     podId: 'dev-pod',
     permissions: {
       chatAccess: true,
+      chatModeration: true,
+      forumAccess: true,
+      forumModeration: false,
       governanceParticipation: true,
       eventCreation: true,
       treasuryViewing: true,
@@ -157,9 +166,9 @@ export const HAT_ROLES: Record<string, HatRole> = {
       memberManagement: true,
       subPodCreation: true,
       roleAssignment: true,
-      forumModeration: false,
       bountyManagement: true,
       marketplaceAccess: true,
+      marketplaceManage: true,
     },
   },
   DEV_MEMBER: {
@@ -169,6 +178,9 @@ export const HAT_ROLES: Record<string, HatRole> = {
     podId: 'dev-pod',
     permissions: {
       chatAccess: true,
+      chatModeration: false,
+      forumAccess: true,
+      forumModeration: false,
       governanceParticipation: true,
       eventCreation: false,
       treasuryViewing: false,
@@ -176,9 +188,9 @@ export const HAT_ROLES: Record<string, HatRole> = {
       memberManagement: false,
       subPodCreation: false,
       roleAssignment: false,
-      forumModeration: false,
       bountyManagement: false,
       marketplaceAccess: true,
+      marketplaceManage: false,
     },
   },
   // Legacy management roles (maintained for compatibility)
@@ -188,6 +200,9 @@ export const HAT_ROLES: Record<string, HatRole> = {
     isLeaderRole: false,
     permissions: {
       chatAccess: true,
+      chatModeration: false,
+      forumAccess: true,
+      forumModeration: false,
       governanceParticipation: false,
       eventCreation: false,
       treasuryViewing: false,
@@ -195,9 +210,9 @@ export const HAT_ROLES: Record<string, HatRole> = {
       memberManagement: false,
       subPodCreation: false,
       roleAssignment: false,
-      forumModeration: false,
       bountyManagement: false,
       marketplaceAccess: true,
+      marketplaceManage: true,
     },
   },
   BOUNTY_MANAGER: {
@@ -206,6 +221,9 @@ export const HAT_ROLES: Record<string, HatRole> = {
     isLeaderRole: false,
     permissions: {
       chatAccess: true,
+      chatModeration: false,
+      forumAccess: true,
+      forumModeration: false,
       governanceParticipation: false,
       eventCreation: false,
       treasuryViewing: false,
@@ -213,9 +231,9 @@ export const HAT_ROLES: Record<string, HatRole> = {
       memberManagement: false,
       subPodCreation: false,
       roleAssignment: false,
-      forumModeration: false,
       bountyManagement: true,
       marketplaceAccess: false,
+      marketplaceManage: false,
     },
   },
   FORUM_MANAGER: {
@@ -224,6 +242,9 @@ export const HAT_ROLES: Record<string, HatRole> = {
     isLeaderRole: false,
     permissions: {
       chatAccess: true,
+      chatModeration: false,
+      forumAccess: true,
+      forumModeration: true,
       governanceParticipation: false,
       eventCreation: false,
       treasuryViewing: false,
@@ -231,9 +252,9 @@ export const HAT_ROLES: Record<string, HatRole> = {
       memberManagement: false,
       subPodCreation: false,
       roleAssignment: false,
-      forumModeration: true,
       bountyManagement: false,
       marketplaceAccess: false,
+      marketplaceManage: false,
     },
   },
   CHAT_MANAGER: {
@@ -242,6 +263,9 @@ export const HAT_ROLES: Record<string, HatRole> = {
     isLeaderRole: false,
     permissions: {
       chatAccess: true,
+      chatModeration: true,
+      forumAccess: true,
+      forumModeration: false,
       governanceParticipation: false,
       eventCreation: false,
       treasuryViewing: false,
@@ -249,9 +273,9 @@ export const HAT_ROLES: Record<string, HatRole> = {
       memberManagement: false,
       subPodCreation: false,
       roleAssignment: false,
-      forumModeration: false,
       bountyManagement: false,
       marketplaceAccess: false,
+      marketplaceManage: false,
     },
   },
   EVENT_MANAGER: {
@@ -260,6 +284,9 @@ export const HAT_ROLES: Record<string, HatRole> = {
     isLeaderRole: false,
     permissions: {
       chatAccess: true,
+      chatModeration: false,
+      forumAccess: true,
+      forumModeration: false,
       governanceParticipation: false,
       eventCreation: true,
       treasuryViewing: false,
@@ -267,9 +294,9 @@ export const HAT_ROLES: Record<string, HatRole> = {
       memberManagement: false,
       subPodCreation: false,
       roleAssignment: false,
-      forumModeration: false,
       bountyManagement: false,
       marketplaceAccess: false,
+      marketplaceManage: false,
     },
   },
 };
@@ -389,6 +416,9 @@ export class HatPermissionsService {
     // Start with no permissions
     const permissions: HatPermissions = {
       chatAccess: false,
+      chatModeration: false,
+      forumAccess: false,
+      forumModeration: false,
       governanceParticipation: false,
       eventCreation: false,
       treasuryViewing: false,
@@ -396,9 +426,9 @@ export class HatPermissionsService {
       memberManagement: false,
       subPodCreation: false,
       roleAssignment: false,
-      forumModeration: false,
       bountyManagement: false,
       marketplaceAccess: false,
+      marketplaceManage: false,
     };
 
     // Combine permissions from all roles (OR operation)

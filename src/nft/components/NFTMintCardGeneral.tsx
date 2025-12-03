@@ -22,7 +22,7 @@ export interface NFTMintCardGeneralProps {
   title?: string;
   description?: string;
   costLabel?: string;
-  onSuccess?: (txHash: string) => void;
+  onSuccess?: (response: any) => void;
   onError?: (error: any) => void;
   className?: string;
 }
@@ -53,7 +53,7 @@ export function NFTMintCardGeneral({
     isConnected && isArgsValid
       ? [
           {
-            address: contractAddress,
+            to: contractAddress as `0x${string}`,
             abi,
             functionName: 'mint',
             args: mintArgs,
@@ -99,14 +99,10 @@ export function NFTMintCardGeneral({
       {isConnected ? (
         <Transaction
           isSponsored={isSponsored}
-          address={address}
           contracts={contracts}
           chainId={chainId}
           onSuccess={onSuccess}
           onError={onError}
-          onProgress={(step) =>
-            console.log('[NFTMintCardGeneral] step →', step)
-          }
         >
           <TransactionButton
             text="Mint NFT"

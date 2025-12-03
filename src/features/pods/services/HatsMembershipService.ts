@@ -51,7 +51,7 @@ export class HatsMembershipService {
             wallet: leader.toLowerCase(),
             membership_type: 'leader',
             joined_at: pod.created_at || new Date().toISOString(),
-            hat_id: pod.management_hat_id,
+            hat_id: pod.management_hat_id ?? undefined,
             is_active: true,
           });
         }
@@ -307,7 +307,13 @@ export class HatsMembershipService {
       }
 
       // Fallback to PodCoreService
-      return await PodCoreService.checkPodMembership(podId, walletAddress);
+      const result = await PodCoreService.checkPodMembership(podId, walletAddress);
+      return {
+        isMember: result.is_member,
+        membershipType: result.membership_type,
+        joinedAt: result.joined_at,
+        hatId: result.hat_id,
+      };
     } catch (error) {
       console.error(
         `Failed to check membership for ${walletAddress} in pod ${podId}:`,

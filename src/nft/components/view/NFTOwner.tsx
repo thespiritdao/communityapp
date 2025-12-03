@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { Avatar, Badge, Identity, Name } from '../../../identity';
+import { Avatar, Badge, Identity, Name } from '../../../features/identity';
 import { cn, color, text } from '../../../styles/theme';
 import { useOnchainKit } from '../../../useOnchainKit';
 import { useNFTContext } from '../NFTProvider';

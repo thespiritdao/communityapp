@@ -136,13 +136,17 @@ export const TokenApprovalFlow: React.FC<TokenApprovalFlowProps> = ({
 
   // Determine what approvals are needed
   const needsSystemApproval =
-    systemAmountWei > 0n && (systemAllowance || 0n) < systemAmountWei;
+    systemAmountWei > 0n &&
+    (systemAllowance ? (systemAllowance as bigint) : 0n) < systemAmountWei;
   const needsSelfApproval =
-    selfAmountWei > 0n && (selfAllowance || 0n) < selfAmountWei;
+    selfAmountWei > 0n &&
+    (selfAllowance ? (selfAllowance as bigint) : 0n) < selfAmountWei;
   const hasInsufficientSystemBalance =
-    systemAmountWei > 0n && (systemBalance || 0n) < systemAmountWei;
+    systemAmountWei > 0n &&
+    (systemBalance ? (systemBalance as bigint) : 0n) < systemAmountWei;
   const hasInsufficientSelfBalance =
-    selfAmountWei > 0n && (selfBalance || 0n) < selfAmountWei;
+    selfAmountWei > 0n &&
+    (selfBalance ? (selfBalance as bigint) : 0n) < selfAmountWei;
 
   // Set initial step based on what's needed
   useEffect(() => {
@@ -163,6 +167,7 @@ export const TokenApprovalFlow: React.FC<TokenApprovalFlowProps> = ({
       abi: ERC20_ABI,
       functionName: 'approve',
       args: [EVENT_MANAGER, systemAmountWei],
+      to: SYSTEM_TOKEN,
     },
   ];
 
@@ -172,6 +177,7 @@ export const TokenApprovalFlow: React.FC<TokenApprovalFlowProps> = ({
       abi: ERC20_ABI,
       functionName: 'approve',
       args: [EVENT_MANAGER, selfAmountWei],
+      to: SELF_TOKEN,
     },
   ];
 
@@ -193,7 +199,11 @@ export const TokenApprovalFlow: React.FC<TokenApprovalFlowProps> = ({
             <Alert variant="destructive">
               <AlertDescription>
                 You need {formatTokenAmount(systemAmountWei)} SYSTEM tokens but
-                only have {formatTokenAmount(systemBalance || 0n)}.
+                only have{' '}
+                {formatTokenAmount(
+                  systemBalance ? (systemBalance as bigint) : 0n,
+                )}
+                .
               </AlertDescription>
             </Alert>
           )}
@@ -201,7 +211,8 @@ export const TokenApprovalFlow: React.FC<TokenApprovalFlowProps> = ({
             <Alert variant="destructive">
               <AlertDescription>
                 You need {formatTokenAmount(selfAmountWei)} SELF tokens but only
-                have {formatTokenAmount(selfBalance || 0n)}.
+                have{' '}
+                {formatTokenAmount(selfBalance ? (selfBalance as bigint) : 0n)}.
               </AlertDescription>
             </Alert>
           )}
@@ -323,7 +334,6 @@ export const TokenApprovalFlow: React.FC<TokenApprovalFlowProps> = ({
               <TransactionButton
                 text="Approve SYSTEM Tokens"
                 className="w-full text-white hover:opacity-90"
-                style={{ backgroundColor: '#2F5D50' }}
               />
               <TransactionSponsor />
               <TransactionStatus>
@@ -359,7 +369,6 @@ export const TokenApprovalFlow: React.FC<TokenApprovalFlowProps> = ({
               <TransactionButton
                 text="Approve SELF Tokens"
                 className="w-full text-white hover:opacity-90"
-                style={{ backgroundColor: '#3F7A5A' }}
               />
               <TransactionSponsor />
               <TransactionStatus>

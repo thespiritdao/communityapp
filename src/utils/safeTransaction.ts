@@ -14,9 +14,10 @@ export async function sendSafeTransaction(to: string, amount: string) {
   try {
     console.log(`🔹 Creating Safe transaction to ${to} for ${amount} wei`);
 
+    // SafeApiKit no longer accepts ethAdapter in current SDK version
     const safeService = new SafeApiKit({
       txServiceUrl: SAFE_API_URL,
-      ethAdapter: provider,
+      chainId: 8453n, // Base network
     });
 
     const safeTransactionData = {

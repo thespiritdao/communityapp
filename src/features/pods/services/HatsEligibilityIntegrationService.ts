@@ -20,6 +20,8 @@ export class HatsEligibilityIntegrationService {
     leaderCriteria: EligibilityCriteria[] = [],
     memberCriteria: EligibilityCriteria[] = [],
     deployer: string,
+    walletClient: any,
+    publicClient: any,
   ): Promise<{
     leaderModule?: string;
     memberModule?: string;
@@ -38,13 +40,17 @@ export class HatsEligibilityIntegrationService {
       if (leaderCriteria.length > 0) {
         try {
           const leaderDeployment =
-            await HatsModuleDeploymentService.deployEligibilityModule({
-              hatId: leaderHatId,
-              podId,
-              criteria: leaderCriteria,
-              requireAllCriteria: true,
-              deployer,
-            });
+            await HatsModuleDeploymentService.deployEligibilityModule(
+              {
+                hatId: leaderHatId,
+                podId,
+                criteria: leaderCriteria,
+                requireAllCriteria: true,
+                deployer,
+              },
+              walletClient,
+              publicClient,
+            );
           results.leaderModule = leaderDeployment.module_address;
           console.log(
             '✅ Leader module deployed:',
@@ -60,13 +66,17 @@ export class HatsEligibilityIntegrationService {
       if (memberCriteria.length > 0) {
         try {
           const memberDeployment =
-            await HatsModuleDeploymentService.deployEligibilityModule({
-              hatId: memberHatId,
-              podId,
-              criteria: memberCriteria,
-              requireAllCriteria: true,
-              deployer,
-            });
+            await HatsModuleDeploymentService.deployEligibilityModule(
+              {
+                hatId: memberHatId,
+                podId,
+                criteria: memberCriteria,
+                requireAllCriteria: true,
+                deployer,
+              },
+              walletClient,
+              publicClient,
+            );
           results.memberModule = memberDeployment.module_address;
           console.log(
             '✅ Member module deployed:',
@@ -94,6 +104,8 @@ export class HatsEligibilityIntegrationService {
     newCriteria: EligibilityCriteria[],
     updatedBy: string,
     autoDeployModule = false,
+    walletClient?: any,
+    publicClient?: any,
   ): Promise<{
     success: boolean;
     moduleAddress?: string;
@@ -128,16 +140,25 @@ export class HatsEligibilityIntegrationService {
           validateOnchain: true,
         });
         moduleAddress = existingDeployment.module_address;
-      } else if (autoDeployModule && newCriteria.length > 0) {
+      } else if (
+        autoDeployModule &&
+        newCriteria.length > 0 &&
+        walletClient &&
+        publicClient
+      ) {
         // No module but criteria exist, deploy new one
         const deployment =
-          await HatsModuleDeploymentService.deployEligibilityModule({
-            hatId: updatedRole.token_address,
-            podId: updatedRole.pod_id,
-            criteria: newCriteria,
-            requireAllCriteria: true,
-            deployer: updatedBy,
-          });
+          await HatsModuleDeploymentService.deployEligibilityModule(
+            {
+              hatId: updatedRole.token_address,
+              podId: updatedRole.pod_id,
+              criteria: newCriteria,
+              requireAllCriteria: true,
+              deployer: updatedBy,
+            },
+            walletClient,
+            publicClient,
+          );
         moduleAddress = deployment.module_address;
       }
 
@@ -162,6 +183,7 @@ export class HatsEligibilityIntegrationService {
     userAddress: string,
     podId: string,
     roleId?: string,
+    publicClient?: any,
   ): Promise<{
     databaseEligible: boolean;
     onchainEligible?: boolean;
@@ -204,20 +226,23 @@ export class HatsEligibilityIntegrationService {
           if (deployment && deployment.module_address) {
             results.moduleAddress = deployment.module_address;
 
-            // Onchain eligibility check
-            const onchainResult =
-              await HatsModuleDeploymentService.checkOnchainEligibility(
-                deployment.module_address,
-                role.data.token_address,
-                userAddress,
-              );
-            results.onchainEligible = onchainResult.eligible;
+            // Onchain eligibility check (only if publicClient is provided)
+            if (publicClient) {
+              const onchainResult =
+                await HatsModuleDeploymentService.checkOnchainEligibility(
+                  deployment.module_address,
+                  role.data.token_address,
+                  userAddress,
+                  publicClient,
+                );
+              results.onchainEligible = onchainResult.eligible;
 
-            // Check for discrepancies
-            if (results.databaseEligible !== results.onchainEligible) {
-              results.discrepancies.push(
-                `Database shows ${results.databaseEligible ? 'eligible' : 'not eligible'} but onchain shows ${results.onchainEligible ? 'eligible' : 'not eligible'}`,
-              );
+              // Check for discrepancies
+              if (results.databaseEligible !== results.onchainEligible) {
+                results.discrepancies.push(
+                  `Database shows ${results.databaseEligible ? 'eligible' : 'not eligible'} but onchain shows ${results.onchainEligible ? 'eligible' : 'not eligible'}`,
+                );
+              }
             }
           }
         }
@@ -488,7 +513,7 @@ export class HatsEligibilityIntegrationService {
         })),
         modules: deployments.map((deployment) => ({
           id: deployment.id,
-          hatId: deployment.hat_id,
+          hatId: deployment.token_address,
           moduleAddress: deployment.module_address,
           syncStatus: deployment.sync_status,
           lastSynced: deployment.last_synced_at,

@@ -32,7 +32,7 @@ interface RoleCreationModalProps {
   transactionCalls?: any[];
   isTransactionReady?: boolean;
   roleData?: { name: string; description: string; maxSupply: number };
-  onTransactionSuccess?: () => void;
+  onTransactionSuccess?: (response: any) => void;
   onTransactionError?: (error: any) => void;
 }
 
@@ -213,9 +213,9 @@ export function RoleCreationModal({
                         error,
                       );
                       console.log('🚨 Error details:', {
-                        name: error?.name,
+                        name: (error as any)?.name,
                         message: error?.message,
-                        cause: error?.cause,
+                        cause: (error as any)?.cause,
                         code: error?.code,
                       });
                       onTransactionError?.(error);

@@ -97,7 +97,8 @@ export const PodDeletionManager: React.FC<PodDeletionManagerProps> = ({
   };
 
   // Handle successful hat deactivation
-  const handleHatDeactivationSuccess = async (txHash: string) => {
+  const handleHatDeactivationSuccess = async (response: any) => {
+    const txHash = response?.transactionReceipts?.[0]?.transactionHash || '';
     console.log('✅ Hat deactivation successful:', txHash);
     setDeletionStep('database');
 
@@ -132,7 +133,7 @@ export const PodDeletionManager: React.FC<PodDeletionManagerProps> = ({
   };
 
   // Handle hat deactivation error
-  const handleHatDeactivationError = (error: string) => {
+  const handleHatDeactivationError = (error: any) => {
     console.error('❌ Hat deactivation failed:', error);
     toast({
       title: 'Hat Deactivation Failed',
@@ -338,31 +339,17 @@ export const PodDeletionManager: React.FC<PodDeletionManagerProps> = ({
                     calls={async () => {
                       setIsDeleting(true);
                       setDeletionStep('hats');
-                      return await prepareHatDeactivationTransactions();
+                      const result = await prepareHatDeactivationTransactions();
+                      return result?.calls || [];
                     }}
                     onSuccess={handleHatDeactivationSuccess}
                     onError={handleHatDeactivationError}
                   >
                     <TransactionButton
-                      className="w-full"
+                      className="w-full bg-[#8B3A3A] hover:bg-[#5C1F1F]"
                       disabled={isDeleting}
-                      style={{ backgroundColor: '#8B3A3A' }}
-                      onMouseEnter={(
-                        e: React.MouseEvent<HTMLButtonElement>,
-                      ) => {
-                        e.currentTarget.style.backgroundColor = '#5C1F1F';
-                      }}
-                      onMouseLeave={(
-                        e: React.MouseEvent<HTMLButtonElement>,
-                      ) => {
-                        e.currentTarget.style.backgroundColor = '#8B3A3A';
-                      }}
-                    >
-                      <Trash2 className="h-4 w-4 mr-2" />
-                      {isDeleting
-                        ? getStatusText()
-                        : 'Delete Pod & Deactivate Hats'}
-                    </TransactionButton>
+                      text="Delete Pod & Deactivate Hats"
+                    />
                     <TransactionSponsor />
                     <TransactionStatus>
                       <TransactionStatusLabel />

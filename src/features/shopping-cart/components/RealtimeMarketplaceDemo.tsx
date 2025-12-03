@@ -74,7 +74,7 @@ export function RealtimeMarketplaceDemo({
         addLog(`📝 Product ${data.productId} updated`);
       }),
 
-      marketplace.onInventoryUpdated((data) => {
+      marketplace.onInventoryUpdated((data: any) => {
         addEvent({
           type: 'Inventory Updated',
           data: `Product ${data.productId}: ${data.oldQuantity} → ${data.newQuantity}`,

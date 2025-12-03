@@ -125,10 +125,10 @@ export const ProductManagement: React.FC<ProductManagementProps> = ({
         type: migratedType as 'wallet' | 'pod_treasury',
         label: getFundDestinationLabel(
           migratedType,
-          product.destination_address,
-          product.pod_id,
+          product.destination_address || undefined,
+          product.pod_id || undefined,
         ),
-        value: getFundDestinationValue(migratedType, product.pod_id),
+        value: getFundDestinationValue(migratedType, product.pod_id || undefined),
         podId: product.pod_id || undefined,
         treasuryAddress: product.destination_address || undefined,
         description: getFundDestinationDescription(migratedType),
@@ -326,6 +326,7 @@ export const ProductManagement: React.FC<ProductManagementProps> = ({
         await updateProduct(
           selectedProduct.id.toString(),
           sanitizedFormData,
+          address || '',
           fundDestination,
         );
         setSuccessMessage('Product updated successfully!');
@@ -519,7 +520,7 @@ export const ProductManagement: React.FC<ProductManagementProps> = ({
                     <S.ProductMeta>
                       ${product.price_system} • {product.units_available}{' '}
                       available
-                      <TokenDisplayBadge tokenId={product.required_token} />
+                      <TokenDisplayBadge tokenId={product.required_token || undefined} />
                     </S.ProductMeta>
                   </S.ProductDetails>
                   <S.ProductActions>
@@ -687,7 +688,7 @@ export const ProductManagement: React.FC<ProductManagementProps> = ({
                     ) : (
                       authorizedTokens.map((token) => (
                         <option key={token.id} value={token.id}>
-                          {token.displayName || token.name}{' '}
+                          {token.name}{' '}
                           {token.symbol ? `(${token.symbol})` : ''}
                         </option>
                       ))

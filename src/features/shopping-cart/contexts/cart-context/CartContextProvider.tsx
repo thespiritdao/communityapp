@@ -5,7 +5,7 @@ import {
   type PropsWithChildren,
   useState,
 } from 'react';
-import type { ICartProduct, ICartTotal } from 'models';
+import type { ICartProduct, ICartTotal } from '../../models';
 
 export interface ICartContext {
   isOpen: boolean;

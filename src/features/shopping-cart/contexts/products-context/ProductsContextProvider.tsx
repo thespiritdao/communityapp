@@ -7,7 +7,7 @@ import {
   type ReactNode,
   type FC,
 } from 'react';
-import type { IProduct } from 'models';
+import type { IProduct } from '../../models';
 
 export interface IProductsContext {
   isFetching: boolean;

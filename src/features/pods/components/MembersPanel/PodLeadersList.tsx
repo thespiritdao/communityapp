@@ -36,7 +36,6 @@ export const PodLeadersList = React.memo<PodLeadersListProps>(
       isLoading,
       getProfile,
       error: profilesError,
-      refetch,
     } = useProfiles(leaders, { staleTime: 5 * 60 * 1000 });
 
     // Add observability tracking - TEMPORARILY DISABLED
@@ -125,7 +124,7 @@ export const PodLeadersList = React.memo<PodLeadersListProps>(
           error={profilesError}
           onRetry={() => {
             trackMemberAction('retry_leader_load');
-            refetch();
+            // Profiles will be automatically refetched by the ProfilesProvider
           }}
         />
       );
