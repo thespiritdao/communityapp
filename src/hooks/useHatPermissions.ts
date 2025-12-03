@@ -129,7 +129,7 @@ export const useHatPermissions = (): UseHatPermissionsReturn => {
               .select('*')
               .eq('pod_id', podId)
               .eq('token_address', hatId)
-              .single();
+              .maybeSingle();
 
             if (roleError || !roleData) {
               console.warn(
@@ -141,8 +141,7 @@ export const useHatPermissions = (): UseHatPermissionsReturn => {
               // Add role with default permissions
               const dynamicRole: HatRole = {
                 hatId: hatId,
-                roleName: isLeader ? `${podName} Leader` : `${podName} Member`,
-                description: `${isLeader ? 'Leader' : 'Member'} of ${podName}`,
+                name: isLeader ? `${podName} Leader` : `${podName} Member`,
                 podId: podId,
                 isLeaderRole: isLeader,
                 permissions: {
@@ -169,17 +168,16 @@ export const useHatPermissions = (): UseHatPermissionsReturn => {
               // Use actual role permissions from database
               const dynamicRole: HatRole = {
                 hatId: hatId,
-                roleName:
+                name:
                   roleData.role_name ||
                   `${podName} ${isLeader ? 'Leader' : 'Member'}`,
-                description: `${isLeader ? 'Leader' : 'Member'} of ${podName}`,
                 podId: podId,
                 isLeaderRole: isLeader,
                 permissions: roleData.permissions || {},
               };
 
               console.log('✅ Loaded role for', podName, ':', {
-                roleName: dynamicRole.roleName,
+                roleName: dynamicRole.name,
                 hatId: hatId.slice(0, 10) + '...',
                 permissions: Object.keys(dynamicRole.permissions),
               });
@@ -225,7 +223,7 @@ export const useHatPermissions = (): UseHatPermissionsReturn => {
       console.log('✅ useHatPermissions: Final result:', {
         totalRoles: roles.length,
         totalHats: hats.length,
-        roleNames: roles.map((r) => r.roleName),
+        roleNames: roles.map((r) => r.name),
         hatIds: hats.map((h) => h.slice(0, 10) + '...'),
         permissions: consolidatedPermissions,
       });
@@ -344,7 +342,7 @@ export const useHatPermissions = (): UseHatPermissionsReturn => {
 
     console.log(`🎯 Getting permissions for pod ${podId}:`, {
       rolesCount: podRoles.length,
-      roleNames: podRoles.map((r) => r.roleName),
+      roleNames: podRoles.map((r) => r.name),
     });
 
     // Calculate consolidated permissions for THIS POD ONLY

@@ -1,6 +1,11 @@
 //src/components/UserTagging.tsx
 import { useEffect, useState } from 'react';
-import { MentionsInput, Mention } from 'react-mentions';
+import {
+  MentionsInput,
+  Mention,
+  type MentionItem,
+  type SuggestionDataItem,
+} from 'react-mentions';
 import { supabase } from '@/utils/supabaseClient';
 //import { useNotifications } from '@/context/NotificationContext';
 //import { useGovernanceNotifications } from '@/context/GovernanceNotificationContext';
@@ -8,14 +13,20 @@ import { useAccount } from 'wagmi';
 import { unifiedNotificationService } from '@/services/unifiedNotificationService';
 import styles from './styles/UserTagging.module.css';
 
+// Extended suggestion data with profile picture
+interface ExtendedSuggestionDataItem extends SuggestionDataItem {
+  profile_picture?: string;
+}
+
 interface UserTaggingProps {
   value: string;
   onChange?: (newValue: string) => void;
   placeholder?: string;
   className?: string;
+  style?: React.CSSProperties;
   onKeyDown?: (e: React.KeyboardEvent) => void;
   multiLine?: boolean;
-  contextType?: 'forum' | 'chat' | 'bounty' | 'governance' | 'proposal';
+  contextType?: 'forum' | 'chat' | 'bounty' | 'governance' | 'proposal' | 'events';
   contextId?: string;
   contextUrl?: string;
   proposalId?: string; // For governance mentions
@@ -28,6 +39,7 @@ export default function UserTagging({
   onChange,
   placeholder,
   className,
+  style,
   onKeyDown,
   multiLine = false,
   contextType,
@@ -37,7 +49,7 @@ export default function UserTagging({
   onMentionsChange,
   onNotificationSend,
 }: UserTaggingProps) {
-  const [users, setUsers] = useState<Array<any>>([]);
+  const [users, setUsers] = useState<ExtendedSuggestionDataItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [previousMentions, setPreviousMentions] = useState<
     Array<{ id: string; display: string }>
@@ -75,10 +87,10 @@ export default function UserTagging({
   }, []);
 
   const handleMentionsChange = (
-    event,
-    newValue,
-    newPlainTextValue,
-    mentions,
+    event: { target: { value: string } },
+    newValue: string,
+    newPlainTextValue: string,
+    mentions: MentionItem[],
   ) => {
     onChange?.(newValue);
     onMentionsChange?.(mentions);
@@ -108,8 +120,15 @@ export default function UserTagging({
       // Send notifications for each mention
       for (const mention of currentMentions) {
         try {
-          if (contextType === 'governance' && proposalId) {
-            // Use unified service for governance mentions
+          // Map 'proposal' to 'governance' for notification service
+          const notificationContextType =
+            contextType === 'proposal' ? 'governance' : contextType;
+
+          if (
+            (contextType === 'governance' || contextType === 'proposal') &&
+            proposalId
+          ) {
+            // Use unified service for governance/proposal mentions
             await unifiedNotificationService.createUserMentionNotification(
               mention.id,
               address,
@@ -126,7 +145,7 @@ export default function UserTagging({
             await unifiedNotificationService.createUserMentionNotification(
               mention.id,
               address,
-              contextType,
+              notificationContextType,
               contextId,
               contextUrl,
             );
@@ -153,7 +172,10 @@ export default function UserTagging({
     }
   }, [onNotificationSend, sendMentionNotifications]);
 
-  const fetchMentionSuggestions = (query, callback) => {
+  const fetchMentionSuggestions = (
+    query: string,
+    callback: (data: ExtendedSuggestionDataItem[]) => void,
+  ) => {
     console.log('Searching for:', query);
 
     if (loading) {
@@ -168,8 +190,9 @@ export default function UserTagging({
       return;
     }
 
-    const matchingUsers = users.filter((user) =>
-      user.display.toLowerCase().includes(query.toLowerCase()),
+    const matchingUsers = users.filter(
+      (user) =>
+        user.display && user.display.toLowerCase().includes(query.toLowerCase()),
     );
 
     console.log(`Found ${matchingUsers.length} matches for "${query}"`);
@@ -185,6 +208,7 @@ export default function UserTagging({
       minHeight: multiLine ? '40px' : 'auto',
       padding: '0',
       backgroundColor: 'transparent',
+      ...style,
     },
     suggestions: {
       list: {
@@ -230,11 +254,11 @@ export default function UserTagging({
           markup="@[__display__](__id__)"
           displayTransform={(id, display) => `@${display}`}
           renderSuggestion={(
-            suggestion,
-            search,
-            highlightedDisplay,
-            index,
-            focused,
+            suggestion: ExtendedSuggestionDataItem,
+            search: string,
+            highlightedDisplay: React.ReactNode,
+            index: number,
+            focused: boolean,
           ) => {
             return (
               <div
