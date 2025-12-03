@@ -3527,7 +3527,7 @@ Instructions:
 
       console.log('🔍 === FACTORY ADDRESS VERIFICATION ===');
       try {
-        const proxyStoredFactory = await publicClient.readContract({
+        const proxyStoredFactory = await publicClient!.readContract({
           address: extractedProxyAddress as `0x${string}`,
           abi: [
             {
