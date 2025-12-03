@@ -367,7 +367,7 @@ class UnifiedNotificationService {
             .update({ is_read: true })
             .eq('recipient_address', userAddress.toLowerCase())
             .eq('is_read', false) // Only update unread notifications
-            .select(), // Return updated records
+            .select() as unknown as Promise<any>, // Return updated records
           tableName: 'general_notifications',
           category: 'general',
         });
@@ -380,7 +380,7 @@ class UnifiedNotificationService {
             .update({ is_read: true })
             .eq('recipient_address', userAddress.toLowerCase())
             .eq('is_read', false) // Only update unread notifications
-            .select(), // Return updated records
+            .select() as unknown as Promise<any>, // Return updated records
           tableName: 'governance_notifications',
           category: 'governance',
         });
@@ -467,11 +467,11 @@ class UnifiedNotificationService {
   async createUserMentionNotification(
     recipientAddress: string,
     senderAddress: string,
-    contextType: 'forum' | 'chat' | 'bounty' | 'governance',
+    contextType: 'forum' | 'chat' | 'bounty' | 'governance' | 'events',
     contextId: string,
     contextUrl?: string,
     proposalId?: string,
-  ): Promise<UnifiedNotification> {
+  ): Promise<UnifiedNotification | null> {
     if (contextType === 'governance' && proposalId) {
       // Create governance mention notification
       return this.createNotification({
@@ -729,6 +729,15 @@ class UnifiedNotificationService {
   ): UnifiedNotification {
     return {
       ...notification,
+      notification_type: notification.notification_type as NotificationType,
+      context_type: notification.context_type as
+        | 'bounty'
+        | 'governance'
+        | 'chat'
+        | 'forum'
+        | 'marketplace'
+        | 'events'
+        | undefined,
       category: this.determineCategory(
         notification.notification_type as NotificationType,
       ),
@@ -744,6 +753,7 @@ class UnifiedNotificationService {
   ): UnifiedNotification {
     return {
       ...notification,
+      notification_type: notification.notification_type as NotificationType,
       category: 'governance',
       priority:
         notification.notification_type === 'voting_reminder'

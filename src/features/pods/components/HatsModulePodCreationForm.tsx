@@ -39,7 +39,7 @@ import {
 import { usePublicClient, useWalletClient } from 'wagmi';
 import { base } from 'viem/chains';
 import { decodeEventLog } from 'viem';
-import { EventService } from '../../events/lib/supabase';
+import { PodService } from '../services/PodService';
 import { supabase } from '@/lib/supabase';
 import { useHatPermissions } from '../hooks/useHatPermissions';
 import { PodGovernanceService } from '../services/podGovernanceService';
@@ -153,7 +153,7 @@ export const HatsModulePodCreationForm: React.FC<
       setLoadingExistingPod(true);
       console.log('📥 Loading existing pod data from database:', continuePodId);
 
-      EventService.getPodById(continuePodId)
+      PodService.getPodById(continuePodId)
         .then((pod) => {
           if (pod) {
             console.log('✅ Loaded existing pod:', pod);
@@ -209,8 +209,10 @@ export const HatsModulePodCreationForm: React.FC<
   const [checkingAdvocateToken, setCheckingAdvocateToken] = useState(true);
 
   // User's leadership permissions and pods
-  const { canManageMembers, hasExecutivePod, hasDevPod } = useHatPermissions();
   const [userPods, setUserPods] = useState<any[]>([]);
+  const { managedPods } = useHatPermissions(userPods);
+  const hasExecutivePod = false; // Admin feature not implemented for beta
+  const hasDevPod = false; // Admin feature not implemented for beta
   const [loadingUserPods, setLoadingUserPods] = useState(true);
 
   const [formData, setFormData] = useState<FormData>({
@@ -397,7 +399,7 @@ export const HatsModulePodCreationForm: React.FC<
       try {
         console.log('🔍 Checking Advocate token for address:', address);
 
-        const advocateBalance = await publicClient.readContract({
+        const advocateBalance = await publicClient!.readContract({
           address: process.env.NEXT_PUBLIC_ADVOCATE as `0x${string}`,
           abi: [
             {
@@ -409,7 +411,7 @@ export const HatsModulePodCreationForm: React.FC<
             },
           ],
           functionName: 'balanceOf',
-          args: [address],
+          args: [address!],
         });
 
         const hasToken = Number(advocateBalance) > 0;
@@ -478,7 +480,7 @@ export const HatsModulePodCreationForm: React.FC<
               console.log(
                 `🔍 Checking HAT leadership for ${pod.name} (Hat ID: ${pod.management_hat_id})`,
               );
-              const balance = await publicClient.readContract({
+              const balance = await publicClient!.readContract({
                 address: hatsContract,
                 abi: [
                   {
@@ -641,7 +643,7 @@ export const HatsModulePodCreationForm: React.FC<
       const hatsContractAddress =
         process.env.NEXT_PUBLIC_HATS_CONTRACT?.toLowerCase();
       const hatsLogs = receipt.logs?.filter(
-        (log) => log.address?.toLowerCase() === hatsContractAddress,
+        (log: any) => log.address?.toLowerCase() === hatsContractAddress,
       );
 
       console.log('🎩 Found', hatsLogs?.length || 0, 'logs from HATS contract');
@@ -706,7 +708,7 @@ export const HatsModulePodCreationForm: React.FC<
       const factoryAddress =
         process.env.NEXT_PUBLIC_POD_AUTH_FACTORY?.toLowerCase();
       const proxyLogs = receipt.logs?.filter(
-        (log) => log.address?.toLowerCase() === factoryAddress,
+        (log: any) => log.address?.toLowerCase() === factoryAddress,
       );
 
       console.log(
@@ -839,7 +841,7 @@ export const HatsModulePodCreationForm: React.FC<
         description: formData.description,
         parentHatId: validParentHatId,
         podLeaders: validation.validLeads,
-        eligibilityRules,
+        eligibilityRules: eligibilityRules as any,
         treasuryConfig: formData.enableTreasury
           ? {
               threshold: formData.treasuryThreshold,
@@ -865,7 +867,7 @@ export const HatsModulePodCreationForm: React.FC<
 
       // Check if HATS contract is deployed
       try {
-        const contractCode = await publicClient.getCode({
+        const contractCode = await publicClient!.getCode({
           address: contractAddress as `0x${string}`,
         });
         console.log('🏗️ Contract validation:', {
@@ -908,7 +910,7 @@ export const HatsModulePodCreationForm: React.FC<
 
       // 🔮 PREDICT PROXY ADDRESS using CREATE2
       console.log('🔮 Predicting proxy address with CREATE2...');
-      const predictedProxyAddress = (await publicClient.readContract({
+      const predictedProxyAddress = (await publicClient!.readContract({
         address: process.env.NEXT_PUBLIC_POD_AUTH_FACTORY as `0x${string}`,
         abi: (await import('@/abis/PodAuthorizationFactory.json')).default,
         functionName: 'predictProxyAddress',
@@ -1001,7 +1003,7 @@ export const HatsModulePodCreationForm: React.FC<
         // Use the correct HATS Protocol function: isValidHatId
         let isValidHatId = false;
         try {
-          const isValidHatIdCall = await publicClient.readContract({
+          const isValidHatIdCall = await publicClient!.readContract({
             address: process.env.NEXT_PUBLIC_HATS_CONTRACT as `0x${string}`,
             abi: [
               {
@@ -1043,7 +1045,7 @@ export const HatsModulePodCreationForm: React.FC<
         console.log('🔑 Checking admin permissions for HAT creation...');
         let hasAdminPermission = false;
         try {
-          const balanceOfResult = await publicClient.readContract({
+          const balanceOfResult = await publicClient!.readContract({
             address: process.env.NEXT_PUBLIC_HATS_CONTRACT as `0x${string}`,
             abi: [
               {
@@ -1058,7 +1060,7 @@ export const HatsModulePodCreationForm: React.FC<
               },
             ],
             functionName: 'balanceOf',
-            args: [address, parentHatBigInt],
+            args: [address!, parentHatBigInt],
           });
 
           hasAdminPermission = Number(balanceOfResult) > 0;
@@ -1322,17 +1324,17 @@ Instructions:
               arg0_target: hatCreationCall.args[0],
               arg1_details: hatCreationCall.args[1],
               arg1_details_type: HatsDetailsService.isValidIPFSHash(
-                hatCreationCall.args[1],
+                hatCreationCall.args[1] as string,
               )
                 ? 'IPFS_HASH'
                 : 'RAW_STRING',
               arg2_imageURI: hatCreationCall.args[2],
             }
           : {
-              arg0_admin: hatCreationCall.args[0].toString(),
+              arg0_admin: hatCreationCall.args[0]?.toString(),
               arg1_details: hatCreationCall.args[1],
               arg1_details_type: HatsDetailsService.isValidIPFSHash(
-                hatCreationCall.args[1],
+                hatCreationCall.args[1] as string,
               )
                 ? 'IPFS_HASH'
                 : 'RAW_STRING',
@@ -1389,7 +1391,7 @@ Instructions:
         '🧪 Pre-transaction validation: simulating createHat call...',
       );
       try {
-        await publicClient.simulateContract({
+        await publicClient!.simulateContract({
           address: hatCreationCall.to,
           abi: hatCreationCall.abi,
           functionName: hatCreationCall.functionName,
@@ -1631,6 +1633,7 @@ Instructions:
         // Extract HAT ID from transaction logs (first transaction)
         let newHatId = '';
         let proxyAddress = '';
+        let hatReceipt: any;
 
         try {
           console.log(
@@ -1645,7 +1648,7 @@ Instructions:
             response.transactionReceipts.length > 0
           ) {
             // Transaction 0: HAT creation
-            const hatReceipt = response.transactionReceipts[0];
+            hatReceipt = response.transactionReceipts[0];
             console.log(
               '🎩 Processing HAT creation receipt (tx 0) with',
               hatReceipt.logs?.length || 0,
@@ -1666,7 +1669,7 @@ Instructions:
               const factoryAddress =
                 process.env.NEXT_PUBLIC_POD_AUTH_FACTORY?.toLowerCase();
               const proxyLogs = proxyReceipt.logs?.filter(
-                (log) => log.address?.toLowerCase() === factoryAddress,
+                (log: any) => log.address?.toLowerCase() === factoryAddress,
               );
 
               console.log(
@@ -1705,7 +1708,7 @@ Instructions:
 
             if (receipt.logs && receipt.logs.length > 0) {
               // Log all contract addresses to debug
-              receipt.logs.forEach((log, index) => {
+              receipt.logs.forEach((log: any, index: number) => {
                 console.log(`🔍 Log ${index}:`, {
                   address: log.address?.toLowerCase(),
                   topics: log.topics?.length || 0,
@@ -1715,7 +1718,7 @@ Instructions:
 
               // Find logs from HATS contract
               const hatsLogs = receipt.logs.filter(
-                (log) => log.address?.toLowerCase() === hatsContractAddress,
+                (log: any) => log.address?.toLowerCase() === hatsContractAddress,
               );
 
               console.log(
@@ -1821,7 +1824,7 @@ Instructions:
                 );
                 console.warn(
                   '⚠️ HATS logs details:',
-                  hatsLogs.map((log) => ({
+                  hatsLogs.map((log: any) => ({
                     topics: log.topics?.length || 0,
                     dataLength: log.data?.length || 0,
                     firstTopic: log.topics?.[0],
@@ -2036,7 +2039,8 @@ Instructions:
             throw new Error(`Failed to update pod: ${error.message}`);
           }
 
-          podData = updatedPod;
+          // Transform Supabase result to match PodService format
+          podData = { podId: updatedPod.id };
           console.log('✅ Updated existing pod with blockchain data');
 
           toast({
@@ -2047,33 +2051,33 @@ Instructions:
         } else {
           // Create new pod
           console.log('📝 Creating new pod in database');
-          podData = await EventService.createPod({
+          podData = await PodService.createPod({
             name: formData.name,
             description: formData.description,
             parentPodId: formData.parentPodId,
             podLeads: validation.validLeads,
             image: podImageUrl,
             managementHatId: newHatId, // TIER 1 FIX: No placeholder - verified onchain above
-            membershipHatId: null, // Will be created on-demand when first member added
+            membershipHatId: undefined, // Will be created on-demand when first member added
             treasuryContractAddress: formData.enableTreasury
               ? 'pending'
               : undefined,
             proxyContractAddress: proxyAddress || undefined,
             blockchainPodId: blockchainPodId,
             status: 'active',
-          });
+          } as any);
 
           // ✅ RENAME IMAGE FILE: Now that we have the real pod ID, move the image file
           if (
             formData.podImage &&
-            podData?.id &&
+            podData?.podId &&
             podImageUrl.includes('temp-')
           ) {
             try {
               console.log('🔄 Renaming image file with real pod ID...');
               const tempPath = podImageUrl.split('/pod-images/')[1];
               const fileExt = formData.podImage.name.split('.').pop();
-              const newPath = `${podData.id}/banner.${fileExt}`;
+              const newPath = `${podData.podId}/banner.${fileExt}`;
 
               // Copy to new location
               const { error: moveError } = await supabase.storage
@@ -2090,7 +2094,7 @@ Instructions:
                 await supabase
                   .from('pods')
                   .update({ pod_image_url: newPublicUrl })
-                  .eq('id', podData.id);
+                  .eq('id', podData.podId);
 
                 console.log('✅ Image file renamed and URL updated');
               }
@@ -2103,7 +2107,7 @@ Instructions:
 
         // ✅ FIX #3: ALWAYS create leader role immediately after pod creation
         // This ensures permission system finds the role without race conditions
-        if (podData?.id && newHatId) {
+        if (podData?.podId && newHatId) {
           console.log('👥 === CREATING LEADER ROLE (ATOMIC) ===');
           console.log('📝 Creating pod_role_permissions record for leaders...');
 
@@ -2111,7 +2115,7 @@ Instructions:
             const { data: rolePermission, error: roleError } = await supabase
               .from('pod_role_permissions')
               .insert({
-                pod_id: podData.id,
+                pod_id: podData.podId,
                 role_name: 'leader',
                 token_address: newHatId,
                 eligibility_criteria:
@@ -2150,7 +2154,7 @@ Instructions:
               // Using actual schema: id, pod_id, wallet, membership_type, role, hat_id, is_active, joined_at, removed_at, created_at, updated_at
               const memberEntries = validation.validLeads.map(
                 (leaderAddress) => ({
-                  pod_id: podData.id,
+                  pod_id: podData.podId,
                   wallet: leaderAddress.toLowerCase(),
                   hat_id: newHatId,
                   membership_type: 'leader',
@@ -2372,11 +2376,11 @@ Instructions:
                 });
 
                 // Execute mint transaction using wallet client
-                const mintTxHash = await walletClient.sendTransaction({
+                const mintTxHash = await walletClient!.sendTransaction({
                   to: process.env.NEXT_PUBLIC_HATS_CONTRACT as `0x${string}`,
                   data: mintData,
                   value: 0n,
-                  account: walletClient.account,
+                  account: walletClient!.account,
                 });
 
                 console.log(
@@ -2385,7 +2389,7 @@ Instructions:
 
                 // Wait for confirmation
                 const mintReceipt =
-                  await publicClient.waitForTransactionReceipt({
+                  await publicClient!.waitForTransactionReceipt({
                     hash: mintTxHash,
                     confirmations: 1,
                   });
@@ -2476,10 +2480,10 @@ Instructions:
           });
 
           if (onSuccess) {
-            onSuccess({ podId: podData.id, ...response });
+            onSuccess({ podId: podData.podId, ...response });
           } else {
             // Redirect to pod management page
-            router.push(`/pods/${podData.id}/manage`);
+            router.push(`/pods/${podData.podId}/manage`);
           }
         }
       } catch (error) {
@@ -3507,6 +3511,16 @@ Instructions:
         return;
       }
 
+      if (!publicClient) {
+        console.error('❌ Public client not available!');
+        toast({
+          title: 'Connection Error',
+          description: 'Public client not available. Please check your connection.',
+          variant: 'destructive',
+        });
+        return;
+      }
+
       // CRITICAL DIAGNOSTIC: Check if proxy's stored factory matches current factory
       const factoryAddress = process.env
         .NEXT_PUBLIC_POD_AUTH_FACTORY as `0x${string}`;
@@ -3562,7 +3576,7 @@ Instructions:
       console.log('🔐 === USER AUTHORIZATION CHECK ===');
       try {
         // Check if user is in leaders array
-        const isUserLeader = await publicClient.readContract({
+        const isUserLeader = await publicClient!.readContract({
           address: extractedProxyAddress as `0x${string}`,
           abi: [
             {
@@ -3574,11 +3588,11 @@ Instructions:
             },
           ],
           functionName: 'checkIsLeader',
-          args: [address],
+          args: [address!],
         });
 
         // Check if proxy.canManage(user) returns true
-        const canUserManage = await publicClient.readContract({
+        const canUserManage = await publicClient!.readContract({
           address: extractedProxyAddress as `0x${string}`,
           abi: [
             {
@@ -3590,11 +3604,11 @@ Instructions:
             },
           ],
           functionName: 'canManage',
-          args: [address],
+          args: [address!],
         });
 
         // Check managementHatId status
-        const proxyManagementHatId = await publicClient.readContract({
+        const proxyManagementHatId = await publicClient!.readContract({
           address: extractedProxyAddress as `0x${string}`,
           abi: [
             {
@@ -4202,7 +4216,7 @@ Instructions:
             <PodImageUpload
               onImageSelect={(file) => updateFormData('podImage', file)}
               onImageUrlChange={(url) => updateFormData('podImageUrl', url)}
-              disabled={step === 'creating' || loading}
+              disabled={loading}
             />
 
             <div>
@@ -4229,11 +4243,11 @@ Instructions:
                   </option>
 
                   {/* User's Leadership Pods */}
-                  {availableParentPods.filter((p) => p.isUserPod).length >
+                  {availableParentPods.filter((p) => (p as any).isUserPod).length >
                     0 && (
                     <optgroup label="Your Leadership Pods">
                       {availableParentPods
-                        .filter((pod) => pod.isUserPod)
+                        .filter((pod) => (pod as any).isUserPod)
                         .map((pod) => (
                           <option key={pod.uniqueKey} value={pod.id}>
                             {pod.name}
@@ -4511,18 +4525,7 @@ Instructions:
                       onError={handleHatCreationError}
                     >
                       <TransactionButton
-                        className="w-full text-white font-medium py-3 px-6 rounded-lg transition-colors"
-                        style={{ backgroundColor: '#2F5D50' }}
-                        onMouseEnter={(
-                          e: React.MouseEvent<HTMLButtonElement>,
-                        ) => {
-                          e.currentTarget.style.backgroundColor = '#1F453A';
-                        }}
-                        onMouseLeave={(
-                          e: React.MouseEvent<HTMLButtonElement>,
-                        ) => {
-                          e.currentTarget.style.backgroundColor = '#2F5D50';
-                        }}
+                        className="w-full text-white font-medium py-3 px-6 rounded-lg bg-[#2F5D50] hover:bg-[#1F453A]"
                         text="Create Pod"
                       />
                       <TransactionSponsor />
@@ -4548,19 +4551,7 @@ Instructions:
                         onError={handleProxyDeploymentError}
                       >
                         <TransactionButton
-                          ref={proxyButtonRef}
-                          className="w-full text-white font-medium py-3 px-6 rounded-lg transition-colors"
-                          style={{ backgroundColor: '#2F5D50' }}
-                          onMouseEnter={(
-                            e: React.MouseEvent<HTMLButtonElement>,
-                          ) => {
-                            e.currentTarget.style.backgroundColor = '#1F453A';
-                          }}
-                          onMouseLeave={(
-                            e: React.MouseEvent<HTMLButtonElement>,
-                          ) => {
-                            e.currentTarget.style.backgroundColor = '#2F5D50';
-                          }}
+                          className="w-full text-white font-medium py-3 px-6 rounded-lg bg-[#2F5D50] hover:bg-[#1F453A]"
                           text="Deploy Proxy"
                         />
                         <TransactionSponsor />
@@ -4688,15 +4679,7 @@ Instructions:
                   onError={handleMintHatsError}
                 >
                   <TransactionButton
-                    ref={mintButtonRef}
-                    className="w-full text-white font-medium py-3 px-6 rounded-lg transition-colors"
-                    style={{ backgroundColor: '#3F7A5A' }}
-                    onMouseEnter={(e: React.MouseEvent<HTMLButtonElement>) => {
-                      e.currentTarget.style.backgroundColor = '#2F5D50';
-                    }}
-                    onMouseLeave={(e: React.MouseEvent<HTMLButtonElement>) => {
-                      e.currentTarget.style.backgroundColor = '#3F7A5A';
-                    }}
+                    className="w-full text-white font-medium py-3 px-6 rounded-lg bg-[#3F7A5A] hover:bg-[#2F5D50]"
                     text="Mint HATs"
                   />
                   <TransactionSponsor />
@@ -4804,15 +4787,7 @@ Instructions:
                   onError={handleSetHatIdsError}
                 >
                   <TransactionButton
-                    ref={setHatIdsButtonRef}
-                    className="w-full text-white font-medium py-3 px-6 rounded-lg transition-colors"
-                    style={{ backgroundColor: '#2F5D50' }}
-                    onMouseEnter={(e: React.MouseEvent<HTMLButtonElement>) => {
-                      e.currentTarget.style.backgroundColor = '#1F453A';
-                    }}
-                    onMouseLeave={(e: React.MouseEvent<HTMLButtonElement>) => {
-                      e.currentTarget.style.backgroundColor = '#2F5D50';
-                    }}
+                    className="w-full text-white font-medium py-3 px-6 rounded-lg bg-[#2F5D50] hover:bg-[#1F453A]"
                     text="Configure Proxy Authorization (Sponsored)"
                   />
                   <TransactionSponsor />
@@ -4910,15 +4885,7 @@ Instructions:
                   onError={handleAdminHatError}
                 >
                   <TransactionButton
-                    ref={adminHatButtonRef}
-                    className="w-full text-white font-medium py-3 px-6 rounded-lg transition-colors"
-                    style={{ backgroundColor: '#6A5F7A' }}
-                    onMouseEnter={(e: React.MouseEvent<HTMLButtonElement>) => {
-                      e.currentTarget.style.backgroundColor = '#4A3F5A';
-                    }}
-                    onMouseLeave={(e: React.MouseEvent<HTMLButtonElement>) => {
-                      e.currentTarget.style.backgroundColor = '#6A5F7A';
-                    }}
+                    className="w-full text-white font-medium py-3 px-6 rounded-lg bg-[#6A5F7A] hover:bg-[#4A3F5A]"
                     text="Create Admin Role"
                   />
                   <TransactionSponsor />
@@ -5001,7 +4968,6 @@ Instructions:
                   onError={handleMintAdminHatError}
                 >
                   <TransactionButton
-                    ref={mintAdminHatButtonRef}
                     className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-3 px-6 rounded-lg transition-colors"
                     text="Mint Admin HAT"
                   />
@@ -5085,7 +5051,6 @@ Instructions:
                   onError={handleConfigureProxyError}
                 >
                   <TransactionButton
-                    ref={configureProxyButtonRef}
                     className="w-full bg-teal-600 hover:bg-teal-700 text-white font-medium py-3 px-6 rounded-lg transition-colors"
                     text="Set Admin HAT"
                   />
@@ -5177,7 +5142,6 @@ Instructions:
                   onError={handleEligibilityAdminError}
                 >
                   <TransactionButton
-                    ref={eligibilityAdminButtonRef}
                     className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-medium py-3 px-6 rounded-lg transition-colors"
                     text="Set Eligibility Admin"
                   />
