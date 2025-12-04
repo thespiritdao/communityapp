@@ -4,9 +4,10 @@ import { type NextRequest, NextResponse } from 'next/server';
 import jwt from 'jsonwebtoken';
 import { supabaseAdmin } from '@/utils/supabaseAdminClient';
 
-// Use Edge runtime for 30s timeout (free tier) instead of 10s
-export const runtime = 'edge';
-export const maxDuration = 30;
+// IMPORTANT: Must use Node.js runtime (not Edge) because jsonwebtoken requires crypto module
+// Node.js runtime gives us 60s timeout on Vercel free tier (more than enough)
+export const runtime = 'nodejs';
+export const maxDuration = 60;
 
 /**
  * This route takes in a wallet address (already verified by OnchainKit).
