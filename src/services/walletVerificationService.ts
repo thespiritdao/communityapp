@@ -128,9 +128,6 @@ class WalletVerificationService {
       };
     }
 
-    let detected = false;
-    let detectedMethod = '';
-
     const isCoinbaseConnector =
       connector.name === 'Coinbase Wallet' ||
       connector.id === 'coinbaseWallet' ||
@@ -145,41 +142,55 @@ class WalletVerificationService {
       };
     }
 
-    // Get provider with deduplication
-    const provider = await this.getProviderWithDedup(connector, address);
-
-    if (provider) {
-      // Check 1: Contract code (highest authority)
-      const hasContractCode = await this.checkContractCode(provider, address);
-      if (hasContractCode) {
-        detected = true;
-        detectedMethod = 'Contract code on address';
-      } else {
-        // Check 2: Provider properties
-        const providerIndicates = this.checkProviderProperties(provider);
-        if (providerIndicates !== null) {
-          detected = providerIndicates;
-          detectedMethod = providerIndicates
-            ? 'Provider indicates Smart Wallet'
-            : 'Provider indicates NOT Smart Wallet';
-        }
-      }
-    }
-
-    // Check 3: Connector options (fallback)
-    if (!detected && !detectedMethod && connector.options) {
+    // PERFORMANCE OPTIMIZATION: Check connector options FIRST (instant, no RPC calls)
+    // Since we use preference: 'smartWalletOnly', this will always match
+    if (connector.options) {
       if (
         (connector.options as any).preference === 'smartWalletOnly' ||
         (connector.options as any).enableSmartWallet === true
       ) {
-        detected = true;
-        detectedMethod = 'Connector options indicate Smart Wallet';
+        return {
+          isSmartWallet: true,
+          detectedMethod: 'Connector configured as smartWalletOnly',
+          timestamp: Date.now(),
+          address,
+        };
+      }
+    }
+
+    // Fallback to slower checks only if connector options don't indicate Smart Wallet
+    // This code path should rarely execute given our smartWalletOnly config
+    const provider = await this.getProviderWithDedup(connector, address);
+
+    if (provider) {
+      // Check contract code (slower, but more reliable)
+      const hasContractCode = await this.checkContractCode(provider, address);
+      if (hasContractCode) {
+        return {
+          isSmartWallet: true,
+          detectedMethod: 'Contract code on address',
+          timestamp: Date.now(),
+          address,
+        };
+      }
+
+      // Check provider properties
+      const providerIndicates = this.checkProviderProperties(provider);
+      if (providerIndicates !== null) {
+        return {
+          isSmartWallet: providerIndicates,
+          detectedMethod: providerIndicates
+            ? 'Provider indicates Smart Wallet'
+            : 'Provider indicates NOT Smart Wallet',
+          timestamp: Date.now(),
+          address,
+        };
       }
     }
 
     return {
-      isSmartWallet: detected,
-      detectedMethod: detectedMethod || 'No detection method matched',
+      isSmartWallet: false,
+      detectedMethod: 'No detection method matched',
       timestamp: Date.now(),
       address,
     };
