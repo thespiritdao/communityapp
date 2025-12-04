@@ -48,6 +48,7 @@ function PageContent() {
   const verificationRef = useRef({ isComplete: false, isSmartWallet: false });
   // Also track client-side mounting to avoid SSR hydration issues.
   const [isClient, setIsClient] = useState(false);
+  const [isFirefox, setIsFirefox] = useState(false);
 
   // Invite code modal state
   const [showInviteModal, setShowInviteModal] = useState(false);
@@ -56,6 +57,13 @@ function PageContent() {
 
   useEffect(() => {
     setIsClient(true);
+    // Detect Firefox browser
+    const isFirefoxBrowser = navigator.userAgent.toLowerCase().includes('firefox');
+    setIsFirefox(isFirefoxBrowser);
+
+    if (isFirefoxBrowser) {
+      console.warn('Firefox detected - Coinbase Wallet SDK has limited support');
+    }
   }, []);
 
   // Use persistent wallet connection hook
@@ -330,6 +338,41 @@ function PageContent() {
   };
 
   if (!isClient) return null;
+
+  // Show Firefox warning if detected and not already connected
+  if (isFirefox && !address) {
+    return (
+      <div>
+        <img
+          src="/images/doyoudare.png"
+          alt="Background"
+          className="background-image"
+        />
+        <div className="wrapper">
+          <div className="button-container" style={{ maxWidth: '400px', padding: '20px' }}>
+            <div style={{
+              backgroundColor: 'rgba(255, 255, 255, 0.95)',
+              padding: '24px',
+              borderRadius: '12px',
+              textAlign: 'center',
+              color: '#333'
+            }}>
+              <h2 style={{ marginBottom: '16px', fontSize: '20px', fontWeight: 'bold' }}>
+                Browser Not Supported
+              </h2>
+              <p style={{ marginBottom: '16px', lineHeight: '1.5' }}>
+                Firefox is not currently supported for wallet authentication.
+                Please use <strong>Chrome</strong> or <strong>Safari</strong> to access SpiritDAO.
+              </p>
+              <p style={{ fontSize: '14px', color: '#666' }}>
+                This limitation is due to Coinbase Wallet SDK compatibility.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   // Show loading state during any processing
   const isLoading =
