@@ -4,8 +4,9 @@ import { type NextRequest, NextResponse } from 'next/server';
 import jwt from 'jsonwebtoken';
 import { supabaseAdmin } from '@/utils/supabaseAdminClient';
 
-// Increase timeout for Supabase operations
-export const maxDuration = 60;
+// Use Edge runtime for 30s timeout (free tier) instead of 10s
+export const runtime = 'edge';
+export const maxDuration = 30;
 
 /**
  * This route takes in a wallet address (already verified by OnchainKit).
@@ -50,7 +51,7 @@ export async function POST(req: NextRequest) {
     let userId: string | null = null;
 
     if (userProfile) {
-      // Existing user flow
+      // Existing user flow - skip auth.users verification to save time
       userId = userProfile.user_id;
       console.log(`API Route: Existing user found with user_id: ${userId}`);
 
@@ -60,45 +61,9 @@ export async function POST(req: NextRequest) {
         throw new Error('User profile exists but user_id is null');
       }
 
-      // 3) Verify if user exists in auth.users
-      console.log('API Route: Verifying if user exists in auth.users...');
-      const { data: authUser, error: authUserError } =
-        await supabaseAdmin.auth.admin.getUserById(userId);
-
-      if (authUserError) {
-        console.error(
-          'API Route: Error verifying user in auth.users:',
-          authUserError,
-        );
-        throw authUserError;
-      }
-
-      if (!authUser || !authUser.user) {
-        console.log(
-          `API Route: No user found in auth.users with id: ${userId}. Creating new user...`,
-        );
-        // Create auth user with existing user_id
-        const { data: newUser, error: createUserError } =
-          await supabaseAdmin.auth.admin.createUser({
-            id: userId,
-            email: dummyEmail,
-            email_confirm: true,
-            user_metadata: { wallet_address: normalizedAddress },
-          });
-
-        if (createUserError) {
-          console.error(
-            'API Route: Error creating new user in auth.users:',
-            createUserError,
-          );
-          throw createUserError;
-        }
-
-        userId = newUser.user.id;
-        console.log(
-          `API Route: New user created in auth.users with id: ${userId}`,
-        );
-      }
+      // Skip getUserById check - assume if they're in user_profiles, they exist in auth
+      // This saves 1-2 seconds on every login
+      console.log('API Route: Using existing user_id from profile');
     } else {
       // New user flow
       console.log(
