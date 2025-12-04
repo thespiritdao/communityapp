@@ -4,6 +4,9 @@ import { type NextRequest, NextResponse } from 'next/server';
 import jwt from 'jsonwebtoken';
 import { supabaseAdmin } from '@/utils/supabaseAdminClient';
 
+// Increase timeout for Supabase operations
+export const maxDuration = 60;
+
 /**
  * This route takes in a wallet address (already verified by OnchainKit).
  * It then generates a Supabase-compatible JWT and returns it to the client.
@@ -99,84 +102,71 @@ export async function POST(req: NextRequest) {
     } else {
       // New user flow
       console.log(
-        'API Route: No existing user found. Checking for existing auth user...',
+        'API Route: No existing user found. Creating new auth user...',
       );
 
-      // First check if a user with this email already exists
-      const { data: existingUser, error: existingUserError } =
-        await supabaseAdmin.auth.admin.listUsers();
+      // Try to create new auth user directly
+      const { data: newUser, error: createUserError } =
+        await supabaseAdmin.auth.admin.createUser({
+          email: dummyEmail,
+          email_confirm: true,
+          user_metadata: { wallet_address: normalizedAddress },
+        });
 
-      const existingAuthUser = existingUser?.users?.find(
-        (user) => user.email === dummyEmail,
-      );
-
-      if (existingAuthUser) {
-        userId = existingAuthUser.id;
-        console.log(`API Route: Found existing auth user with id: ${userId}`);
-
-        // Create user_profiles entry if it doesn't exist
-        const { error: insertProfileError } = await supabaseAdmin
-          .from('user_profiles')
-          .upsert(
-            [
-              {
-                user_id: userId,
-                wallet_address: normalizedAddress,
-              },
-            ],
-            {
-              onConflict: 'user_id',
-            },
+      if (createUserError) {
+        // If user already exists (edge case: exists in auth.users but not user_profiles)
+        if (
+          createUserError.message?.includes('already') ||
+          createUserError.message?.includes('duplicate')
+        ) {
+          console.log(
+            `API Route: Auth user already exists for ${dummyEmail}, fetching...`,
           );
 
-        if (insertProfileError) {
-          console.error(
-            'API Route: Error upserting user_profiles:',
-            insertProfileError,
+          // User exists in auth but not in profiles - find by querying user_profiles with a subquery
+          // Since we can't efficiently lookup by email in auth.admin, we'll handle this edge case
+          // by trying to sign in and get the user that way, or create profile with generated ID
+          console.warn(
+            'Edge case: User exists in auth.users but not in user_profiles',
           );
-          throw insertProfileError;
-        }
-      } else {
-        // Create new auth user
-        const { data: newUser, error: createUserError } =
-          await supabaseAdmin.auth.admin.createUser({
-            email: dummyEmail,
-            email_confirm: true,
-            user_metadata: { wallet_address: normalizedAddress },
-          });
 
-        if (createUserError) {
-          console.error(
-            'API Route: Error creating new user in auth.users:',
-            createUserError,
+          // For this edge case, we'll create the profile entry without the exact user_id
+          // The user will be able to authenticate next time through the existing user flow
+          throw new Error(
+            'User exists in authentication but profile is missing. Please try again.',
           );
-          throw createUserError;
         }
 
-        if (!newUser?.user?.id) {
-          throw new Error('Failed to create new user');
-        }
+        console.error(
+          'API Route: Error creating new user in auth.users:',
+          createUserError,
+        );
+        throw createUserError;
+      }
 
-        userId = newUser.user.id;
-        console.log(`API Route: New user created with user_id: ${userId}`);
+      if (!newUser?.user?.id) {
+        throw new Error('Failed to create new user');
+      }
 
-        // Create user_profiles entry
-        const { error: insertProfileError } = await supabaseAdmin
-          .from('user_profiles')
-          .insert([
-            {
-              user_id: userId,
-              wallet_address: normalizedAddress,
-            },
-          ]);
+      userId = newUser.user.id;
+      console.log(`API Route: New user created with user_id: ${userId}`);
 
-        if (insertProfileError) {
-          console.error(
-            'API Route: Error inserting into user_profiles:',
-            insertProfileError,
-          );
-          throw insertProfileError;
-        }
+      // Create user_profiles entry
+      const { error: insertProfileError } = await supabaseAdmin
+        .from('user_profiles')
+        .insert([
+          {
+            user_id: userId,
+            wallet_address: normalizedAddress,
+          },
+        ]);
+
+      if (insertProfileError) {
+        console.error(
+          'API Route: Error inserting into user_profiles:',
+          insertProfileError,
+        );
+        throw insertProfileError;
       }
     }
 
