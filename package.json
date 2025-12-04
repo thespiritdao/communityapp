@@ -112,7 +112,7 @@
     "jsonwebtoken": "^9.0.2",
     "jsqr": "^1.4.0",
     "lucide-react": "^0.468.0",
-    "next": "^15.1.4",
+    "next": "^15.4.8",
     "next-themes": "^0.4.4",
     "nodemailer": "^6.10.0",
     "npm": "^10.9.2",
