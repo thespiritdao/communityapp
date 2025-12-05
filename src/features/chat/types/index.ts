@@ -3,6 +3,7 @@ export interface ChatGroup {
   title: string;
   description: string;
   required_token?: string; // Added field to record the required token
+  pod_image_url?: string; // Pod avatar image URL
 }
 
 export interface UserProfile {
