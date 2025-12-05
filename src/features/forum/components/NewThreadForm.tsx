@@ -576,52 +576,77 @@ export function NewThreadForm({
           </>
         )}
 
-        {/* Poll Toggle */}
+        {/* Poll Toggle - Mobile-optimized button (not checkbox) */}
         <div style={{ marginTop: '20px', marginBottom: '15px' }}>
-          <label
+          <button
+            type="button"
+            onClick={() => setShowPollForm(!showPollForm)}
+            onTouchStart={(e) => {
+              // Prevent iOS double-tap zoom
+              e.preventDefault();
+            }}
+            onTouchEnd={(e) => {
+              e.preventDefault();
+              setShowPollForm(!showPollForm);
+            }}
             style={{
               display: 'flex',
               alignItems: 'center',
               gap: '12px',
               cursor: 'pointer',
-              padding: '12px',
-              borderRadius: '8px',
-              backgroundColor: showPollForm ? '#E8F1EE' : 'transparent',
+              padding: '14px 16px',
+              borderRadius: '12px',
+              backgroundColor: showPollForm ? '#E8F1EE' : '#FFFFFF',
               border: `2px solid ${showPollForm ? '#2F5D50' : '#D8D2C8'}`,
               transition: 'all 0.2s ease',
               userSelect: 'none',
               WebkitTapHighlightColor: 'transparent',
-              minHeight: '48px', // Minimum touch target size for mobile
-            }}
-            onClick={(e) => {
-              // Ensure click works on mobile - prevent double-firing
-              if (e.target === e.currentTarget || (e.target as HTMLElement).tagName === 'SPAN') {
-                e.preventDefault();
-                setShowPollForm(!showPollForm);
-              }
+              minHeight: '56px',
+              width: '100%',
+              textAlign: 'left',
+              fontSize: '1rem',
+              fontWeight: 500,
+              color: '#1F2D2A',
+              touchAction: 'manipulation', // Removes 300ms delay on mobile
             }}
           >
-            <input
-              type="checkbox"
-              checked={showPollForm}
-              onChange={(e) => {
-                e.stopPropagation();
-                setShowPollForm(e.target.checked);
-              }}
+            {/* Custom checkbox visual */}
+            <div
               style={{
-                width: '20px',
-                height: '20px',
-                minWidth: '20px',
-                minHeight: '20px',
-                cursor: 'pointer',
-                accentColor: '#2F5D50',
+                width: '24px',
+                height: '24px',
+                minWidth: '24px',
+                minHeight: '24px',
+                borderRadius: '6px',
+                border: `2px solid ${showPollForm ? '#2F5D50' : '#8FAAA1'}`,
+                backgroundColor: showPollForm ? '#2F5D50' : '#FFFFFF',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
                 flexShrink: 0,
+                transition: 'all 0.2s ease',
               }}
-            />
-            <span style={{ fontSize: '1rem', fontWeight: 500, color: '#1F2D2A' }}>
-              📊 Add a poll to this thread
-            </span>
-          </label>
+            >
+              {showPollForm && (
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 16 16"
+                  fill="none"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    d="M13.5 4L6 11.5L2.5 8"
+                    stroke="white"
+                    strokeWidth="2.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+              )}
+            </div>
+            <span>📊 Add a poll to this thread</span>
+          </button>
         </div>
 
         {/* Inline Poll Creation - shown when checkbox is checked */}
