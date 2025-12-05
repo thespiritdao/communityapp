@@ -1,12 +1,20 @@
 // src/utils/supabaseClient.ts
-import { createClient } from '@supabase/supabase-js';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+let supabaseInstance: SupabaseClient | null = null;
 
-// Only validate during runtime (not build time)
-// This prevents build failures when pre-rendering pages
-if (typeof window !== 'undefined' || process.env.NODE_ENV === 'production') {
+/**
+ * Get Supabase client instance (lazy initialization)
+ * This prevents build-time errors when env vars aren't available
+ */
+function getSupabase(): SupabaseClient {
+  if (supabaseInstance) {
+    return supabaseInstance;
+  }
+
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
   if (!supabaseUrl) {
     console.error(
       'Supabase URL is missing. Please check your environment variables.',
@@ -20,9 +28,14 @@ if (typeof window !== 'undefined' || process.env.NODE_ENV === 'production') {
     );
     throw new Error('Supabase Anon Key is missing.');
   }
+
+  supabaseInstance = createClient(supabaseUrl, supabaseAnonKey);
+  return supabaseInstance;
 }
 
-export const supabase = createClient(
-  supabaseUrl || '',
-  supabaseAnonKey || '',
-);
+// Export as a getter to maintain backwards compatibility
+export const supabase = new Proxy({} as SupabaseClient, {
+  get(target, prop) {
+    return getSupabase()[prop as keyof SupabaseClient];
+  },
+});
