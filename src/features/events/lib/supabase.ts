@@ -38,8 +38,7 @@ export class EventService {
       throw new Error('No wallet address found in user_profiles');
     }
 
-    // Insert event with user_id for RLS policies
-    // Use upsert to handle duplicate blockchain_event_id gracefully
+    // Check if event already exists (from previous failed attempt)
     const eventPayload = {
       ...event,
       creator_address: profileData.wallet_address,
@@ -49,12 +48,51 @@ export class EventService {
       status: 'draft',
     };
 
+    // First, try to find existing event by blockchain_event_id
+    if (event.blockchain_event_id) {
+      console.log('🔍 Checking for existing event:', {
+        blockchain_event_id: event.blockchain_event_id,
+        user_id: session.user.id,
+      });
+
+      const { data: existingEvent, error: selectError } = await supabase
+        .from('events')
+        .select('*')
+        .eq('blockchain_event_id', event.blockchain_event_id)
+        .eq('user_id', session.user.id) // Only find our own events
+        .maybeSingle(); // Use maybeSingle instead of single to avoid errors if not found
+
+      if (selectError) {
+        console.error('❌ Error checking for existing event:', selectError);
+      }
+
+      if (existingEvent) {
+        console.log(
+          '✅ Event already exists in database, returning existing event:',
+          {
+            blockchain_event_id: existingEvent.blockchain_event_id,
+            id: existingEvent.id,
+            title: existingEvent.title,
+          },
+        );
+        // Event already exists, return it instead of trying to insert again
+        return existingEvent;
+      } else {
+        console.log('📝 No existing event found, will insert new event');
+      }
+    }
+
+    // Event doesn't exist, insert it
+    console.log('📤 Inserting event into database:', {
+      blockchain_event_id: eventPayload.blockchain_event_id,
+      title: eventPayload.title,
+      user_id: eventPayload.user_id,
+      creator_address: eventPayload.creator_address,
+    });
+
     const { data: eventResult, error: eventError } = await supabase
       .from('events')
-      .upsert(eventPayload, {
-        onConflict: 'blockchain_event_id',
-        ignoreDuplicates: false, // Update if conflict
-      })
+      .insert(eventPayload)
       .select()
       .single();
 

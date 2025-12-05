@@ -110,7 +110,7 @@ export const SimplifiedEventCreationForm: React.FC<
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showEndDatePicker, setShowEndDatePicker] = useState(false);
   const [isTransactionPending, setIsTransactionPending] = useState(false);
-  const [eventId] = useState(
+  const [eventId, setEventId] = useState(
     () => `event-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
   );
   const [transactionCompleted, setTransactionCompleted] = useState(false);
@@ -1033,6 +1033,7 @@ export const SimplifiedEventCreationForm: React.FC<
                       if (status.statusName === 'buildingTransaction') {
                         setIsTransactionPending(true);
                         setDbError(''); // Clear any previous errors
+                        handlerCalledRef.current = false; // Reset for new transaction
                         console.log('🚀 Building transaction for event:', {
                           eventId,
                           blockchainEventId: eventId,
