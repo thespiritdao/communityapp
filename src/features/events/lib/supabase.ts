@@ -63,6 +63,20 @@ export class EventService {
       throw eventError;
     }
 
+    // Check if eventResult is null (RLS policy issue)
+    if (!eventResult) {
+      console.error('❌ Event insert succeeded but SELECT returned null:', {
+        possibleCause:
+          'RLS SELECT policy may be blocking read access to newly created event',
+        userId: session.user.id,
+        creatorAddress: profileData.wallet_address,
+        hint: 'Check that SELECT policy on events table allows user to read their own events',
+      });
+      throw new Error(
+        'Database insert succeeded but could not retrieve event data. This may be due to Row Level Security policies.',
+      );
+    }
+
     // Insert agendas if provided
     if (agendas && agendas.length > 0) {
       const agendasToInsert = agendas.map((agenda) => ({
