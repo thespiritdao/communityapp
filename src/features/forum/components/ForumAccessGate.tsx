@@ -42,7 +42,7 @@ export default function ForumAccessGate({
         <Loader2 className="w-12 h-12 animate-spin text-primary mb-4" />
         <h1 className="text-2xl font-bold">Checking Forum Access...</h1>
         <p className="text-muted-foreground mt-2">
-          Verifying your HATs, tokens, and pod permissions
+          Verifying your roles, tokens, and pod permissions
         </p>
       </div>
     );
@@ -98,7 +98,7 @@ export default function ForumAccessGate({
         <h1 className="text-2xl font-bold">Category Access Restricted</h1>
         <p className="text-muted-foreground mt-2 mb-6">
           {fallbackMessage ||
-            "You don't have the required HATs, tokens, or pod permissions to access this category."}
+            "You don't have the required roles, tokens, or pod permissions to access this category."}
         </p>
 
         <div className="bg-muted p-4 rounded-lg mb-6 max-w-md">
@@ -107,7 +107,7 @@ export default function ForumAccessGate({
             Accessible Categories: {permissions.accessibleCategories.length}
           </p>
           <p className="text-sm text-muted-foreground mb-2">
-            Active HATs: {permissions.userHats.length}
+            Active Roles: {permissions.userHats.length}
           </p>
           <p className="text-sm text-muted-foreground">
             Pod Roles: {permissions.podRoles.length}

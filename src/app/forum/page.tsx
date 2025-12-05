@@ -176,7 +176,7 @@ export default function ForumPage() {
   return (
     <ForumAccessGate
       allowPublic={false}
-      fallbackMessage="You need to hold a Proof of Curiosity token or have appropriate HAT permissions to access the forum."
+      fallbackMessage="You need to hold a Proof of Curiosity token or have appropriate role permissions to access the forum."
     >
       <ForumContainer>
         {/* Add bottom-nav-spacing to create space at the bottom so the bottom bar doesn't overlap the content */}
@@ -210,7 +210,7 @@ export default function ForumPage() {
             </div>
           )}
 
-          {/* Loading spinner - show loading while token gating, HAT permissions, or data loading */}
+          {/* Loading spinner - show loading while token gating, role permissions, or data loading */}
           {loadingData || tokenGateLoading || hatPermissionsLoading ? (
             <div className="flex justify-center py-8">
               <Loader2 className="w-8 h-8 animate-spin text-primary" />
@@ -218,7 +218,7 @@ export default function ForumPage() {
                 {tokenGateLoading
                   ? 'Checking token permissions...'
                   : hatPermissionsLoading
-                    ? 'Checking HAT permissions...'
+                    ? 'Checking role permissions...'
                     : 'Loading forum data...'}
               </div>
             </div>

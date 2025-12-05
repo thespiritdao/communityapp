@@ -28,69 +28,64 @@ export function MediaUpload({
   maxFiles = 5,
 }: MediaUploadProps) {
   const { address } = useAccount();
-  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [uploadedCount, setUploadedCount] = useState(0);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<string>('');
   const [error, setError] = useState<string | null>(null);
 
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
 
-    if (files.length + selectedFiles.length > maxFiles) {
+    if (files.length + uploadedCount > maxFiles) {
       setError(`You can only upload up to ${maxFiles} files`);
       return;
     }
 
-    setSelectedFiles([...selectedFiles, ...files]);
     setError(null);
-  };
 
-  const removeFile = (index: number) => {
-    setSelectedFiles(selectedFiles.filter((_, i) => i !== index));
-  };
+    // Auto-upload files immediately when selected
+    if (files.length > 0 && address) {
+      setIsUploading(true);
+      setUploadProgress('Uploading...');
 
-  const handleUpload = async () => {
-    if (!address || selectedFiles.length === 0) return;
-
-    setIsUploading(true);
-    setError(null);
-    setUploadProgress('Uploading...');
-
-    try {
-      const result = await uploadMultipleFiles(
-        selectedFiles,
-        address,
-        threadId,
-        postId,
-      );
-
-      if (result.success && result.attachments) {
-        setUploadProgress(`Uploaded ${result.attachments.length} files`);
-        console.log(
-          '[MediaUpload] Calling onUploadComplete with attachments:',
-          result.attachments,
+      try {
+        const result = await uploadMultipleFiles(
+          files,
+          address,
+          threadId,
+          postId,
         );
-        onUploadComplete?.(result.attachments);
-        setSelectedFiles([]);
 
-        // Clear success message after 2 seconds
-        setTimeout(() => setUploadProgress(''), 2000);
-      }
+        if (result.success && result.attachments) {
+          const attachments = result.attachments; // Extract to variable for TypeScript
+          setUploadedCount((prev) => prev + attachments.length);
+          setUploadProgress(`✅ Uploaded ${attachments.length} files successfully`);
+          console.log(
+            '[MediaUpload] Auto-upload complete, calling onUploadComplete with attachments:',
+            attachments,
+          );
+          onUploadComplete?.(attachments);
 
-      if (result.errors && result.errors.length > 0) {
-        setError(`Some files failed: ${result.errors.join(', ')}`);
+          // Clear success message after 3 seconds
+          setTimeout(() => setUploadProgress(''), 3000);
+        }
+
+        if (result.errors && result.errors.length > 0) {
+          setError(`Some files failed: ${result.errors.join(', ')}`);
+        }
+      } catch (err) {
+        console.error('Error uploading files:', err);
+        setError('Failed to upload files');
+      } finally {
+        setIsUploading(false);
       }
-    } catch (err) {
-      console.error('Error uploading files:', err);
-      setError('Failed to upload files');
-    } finally {
-      setIsUploading(false);
     }
   };
 
+
   return (
     <div className="space-y-3">
-      {/* File input */}
+      {/* File input - now auto-uploads when files are selected */}
       <div className="flex gap-2">
         <input
           type="file"
@@ -99,59 +94,22 @@ export function MediaUpload({
           accept="image/*,.pdf,.txt,.json"
           onChange={handleFileSelect}
           className="hidden"
+          disabled={isUploading}
         />
         <label htmlFor="file-upload">
-          <Button type="button" variant="outline" size="sm" asChild>
-            <span className="cursor-pointer">📎 Attach Files</span>
-          </Button>
-        </label>
-
-        {selectedFiles.length > 0 && (
           <Button
             type="button"
+            variant="outline"
             size="sm"
-            onClick={handleUpload}
-            disabled={isUploading || !address}
+            asChild
+            disabled={isUploading}
           >
-            {isUploading
-              ? 'Uploading...'
-              : `Upload ${selectedFiles.length} file${selectedFiles.length > 1 ? 's' : ''}`}
+            <span className={isUploading ? 'cursor-not-allowed' : 'cursor-pointer'}>
+              {isUploading ? '⏳ Uploading...' : '📎 Attach Files'}
+            </span>
           </Button>
-        )}
+        </label>
       </div>
-
-      {/* Selected files preview */}
-      {selectedFiles.length > 0 && (
-        <div className="space-y-2">
-          {selectedFiles.map((file, index) => (
-            <div
-              key={index}
-              className="flex items-center justify-between p-2 border rounded-lg"
-            >
-              <div className="flex items-center gap-2">
-                <span>{getFileIcon(file.type)}</span>
-                <div>
-                  <p className="text-sm font-medium truncate max-w-xs">
-                    {file.name}
-                  </p>
-                  <p className="text-xs text-gray-500">
-                    {formatFileSize(file.size)}
-                  </p>
-                </div>
-              </div>
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={() => removeFile(index)}
-                disabled={isUploading}
-              >
-                ✕
-              </Button>
-            </div>
-          ))}
-        </div>
-      )}
 
       {/* Progress/Error messages */}
       {uploadProgress && (
@@ -166,7 +124,14 @@ export function MediaUpload({
       )}
 
       <p className="text-xs text-gray-500">
+        {uploadedCount > 0 && (
+          <>
+            {uploadedCount}/{maxFiles} files uploaded.{' '}
+          </>
+        )}
         Max {maxFiles} files, 5MB each. Images, PDF, TXT, JSON allowed.
+        <br />
+        Files are uploaded immediately when selected.
       </p>
     </div>
   );

@@ -74,6 +74,7 @@ export async function createPoll(
       : null;
 
     // Create poll
+    console.log('[PollService] Creating poll for thread:', threadId);
     const { data: pollData, error: pollError } = await supabase
       .from('forum_polls')
       .insert({
@@ -86,7 +87,12 @@ export async function createPoll(
       .select()
       .single();
 
-    if (pollError) throw pollError;
+    if (pollError) {
+      console.error('[PollService] Error creating poll:', pollError);
+      throw pollError;
+    }
+
+    console.log('[PollService] Poll created with ID:', pollData.id);
 
     // Create poll options
     const pollOptions = options.map((optionText, index) => ({
@@ -95,12 +101,18 @@ export async function createPoll(
       option_order: index,
     }));
 
-    const { error: optionsError } = await supabase
+    console.log('[PollService] Creating', pollOptions.length, 'poll options');
+    const { data: optionsData, error: optionsError } = await supabase
       .from('forum_poll_options')
-      .insert(pollOptions);
+      .insert(pollOptions)
+      .select();
 
-    if (optionsError) throw optionsError;
+    if (optionsError) {
+      console.error('[PollService] Error creating poll options:', optionsError);
+      throw optionsError;
+    }
 
+    console.log('[PollService] Created', optionsData?.length || 0, 'poll options successfully');
     return { success: true, pollId: pollData.id };
   } catch (error: any) {
     console.error('Error creating poll:', error);
@@ -297,6 +309,8 @@ export async function getPollByThreadId(
   threadId: string,
 ): Promise<{ success: boolean; poll?: Poll; error?: string }> {
   try {
+    console.log('[PollService] Getting poll for thread:', threadId);
+
     const { data, error } = await supabase
       .from('forum_polls')
       .select(`
@@ -308,16 +322,19 @@ export async function getPollByThreadId(
 
     if (error && error.code !== 'PGRST116') {
       // PGRST116 = no rows returned
+      console.error('[PollService] Error fetching poll:', error);
       throw error;
     }
 
     if (!data) {
+      console.log('[PollService] No poll found for thread:', threadId);
       return { success: true, poll: undefined };
     }
 
+    console.log('[PollService] Poll found:', { pollId: data.id, optionsCount: data.forum_poll_options?.length });
     return { success: true, poll: data as Poll };
   } catch (error: any) {
-    console.error('Error getting poll by thread:', error);
+    console.error('[PollService] Error getting poll by thread:', error);
     return { success: false, error: error.message };
   }
 }

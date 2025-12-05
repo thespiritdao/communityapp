@@ -49,7 +49,8 @@ export function FeaturedContent({
   const loadFeatured = async () => {
     setIsLoading(true);
     try {
-      let query = supabase
+      // Build the query with proper nested filtering
+      const query = supabase
         .from('forum_featured_content')
         .select(`
           *,
@@ -59,20 +60,28 @@ export function FeaturedContent({
         .order('created_at', { ascending: false })
         .limit(limit);
 
-      // Filter by category if specified
-      if (categoryId) {
-        query = query.eq('forum_threads.category_id', categoryId);
-      }
-
       // Only show non-expired items
       const now = new Date().toISOString();
-      query = query.or(`expires_at.is.null,expires_at.gt.${now}`);
+      query.or(`expires_at.is.null,expires_at.gt.${now}`);
 
       const { data, error } = await query;
 
       if (error) throw error;
 
-      setFeatured((data || []) as any);
+      // Filter by category client-side (since nested filters don't work in PostgREST)
+      let filteredData = (data || []) as any;
+      if (categoryId) {
+        filteredData = filteredData.filter((item: any) => {
+          // Check if thread exists and matches category
+          if (item.thread_id && item.forum_threads) {
+            return item.forum_threads.category_id === categoryId;
+          }
+          // For posts, we'd need to join through thread, so skip for now
+          return false;
+        });
+      }
+
+      setFeatured(filteredData);
     } catch (error) {
       console.error('Error loading featured content:', error);
     } finally {

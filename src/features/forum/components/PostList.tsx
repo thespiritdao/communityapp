@@ -150,21 +150,46 @@ const PostList: React.FC<PostListProps> = ({ threadId }) => {
         setPosts(postsData || []);
 
         // Handle poll data
+        console.log('[PostList] Poll result:', pollResult);
         if (pollResult.success && pollResult.poll) {
+          console.log('[PostList] Setting poll ID:', pollResult.poll.id);
           setPollId(pollResult.poll.id);
+        } else {
+          console.log('[PostList] No poll found for thread:', threadId);
+          setPollId(null);
         }
 
         // Handle attachments - group by post_id for efficient lookup
         if (!attachmentsResult.error && attachmentsResult.data) {
+          console.log('[PostList] Fetched attachments:', {
+            count: attachmentsResult.data.length,
+            attachments: attachmentsResult.data,
+          });
+
           const attachmentMap: Record<string, MediaAttachment[]> = {};
           attachmentsResult.data.forEach((attachment) => {
             const key = attachment.post_id || 'thread';
+            console.log('[PostList] Grouping attachment:', {
+              attachmentId: attachment.id,
+              fileName: attachment.file_name,
+              postId: attachment.post_id,
+              threadId: attachment.thread_id,
+              key,
+            });
+
             if (!attachmentMap[key]) {
               attachmentMap[key] = [];
             }
             attachmentMap[key].push(attachment);
           });
+
+          console.log('[PostList] Attachment map:', attachmentMap);
+          console.log('[PostList] Thread-level attachments:', attachmentMap['thread']);
           setThreadAttachments(attachmentMap);
+        } else if (attachmentsResult.error) {
+          console.error('[PostList] Error fetching attachments:', attachmentsResult.error);
+        } else {
+          console.log('[PostList] No attachments found for thread');
         }
       } catch (err: any) {
         setError(err.message);
@@ -327,7 +352,24 @@ const PostList: React.FC<PostListProps> = ({ threadId }) => {
 
       {/* Poll Display */}
       {pollId && (
-        <div style={{ marginBottom: '20px' }}>
+        <div style={{
+          marginBottom: '20px',
+          marginTop: '20px',
+          position: 'relative',
+          zIndex: 100,
+          clear: 'both'
+        }}>
+          {/* DEBUG: Uncomment to see poll ID
+          <div style={{
+            padding: '10px',
+            background: '#f0f0f0',
+            marginBottom: '10px',
+            border: '2px solid red',
+            fontWeight: 'bold'
+          }}>
+            DEBUG: Rendering poll with ID: {pollId}
+          </div>
+          */}
           <PollDisplay pollId={pollId} />
         </div>
       )}
@@ -336,12 +378,23 @@ const PostList: React.FC<PostListProps> = ({ threadId }) => {
       {originalPost && (
         <div className={styles.postsContainer}>
           <h2>Original Post</h2>
-          <PostCard
-            post={originalPost}
-            authorProfile={profileMap?.[originalPost.author_address]}
-            attachments={threadAttachments['thread'] || []}
-            podId={threadInfo.pod_id}
-          />
+          {(() => {
+            const threadLevelAttachments = threadAttachments['thread'] || [];
+            console.log('[PostList] Rendering original post with attachments:', {
+              postId: originalPost.id,
+              attachmentCount: threadLevelAttachments.length,
+              attachments: threadLevelAttachments,
+              allThreadAttachments: threadAttachments,
+            });
+            return (
+              <PostCard
+                post={originalPost}
+                authorProfile={profileMap?.[originalPost.author_address]}
+                attachments={threadLevelAttachments}
+                podId={threadInfo.pod_id}
+              />
+            );
+          })()}
         </div>
       )}
 
