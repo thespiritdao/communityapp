@@ -777,8 +777,13 @@ img.pod-avatar--sm {
 
 /* optional: make the name a touch bolder */
 .chat-group-name {
-  font-size: 1.5rem;
+  font-size: clamp(1rem, 4vw, 1.5rem); /* Auto-resize to prevent wrapping */
   font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: calc(100% - 60px); /* Account for avatar + gap */
+  flex: 1; /* Allow flexible sizing within flex container */
 }
 
 /* === MOBILE RESPONSIVE STYLES === */

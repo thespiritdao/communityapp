@@ -549,6 +549,11 @@ export default function ChatContainer({ chatGroupId }: ChatContainerProps) {
                   style={{ cursor: 'pointer' }}
                 >
                   <div className="chat-group-core">
+                    <img
+                      src={group.pod_image_url || '/images/symbolobinfin.png'}
+                      alt={`${group.title} icon`}
+                      className="pod-avatar pod-avatar--sm"
+                    />
                     <span className="chat-group-name">{group.title}</span>
                   </div>
                 </li>
