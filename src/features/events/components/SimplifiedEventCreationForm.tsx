@@ -118,7 +118,6 @@ export const SimplifiedEventCreationForm: React.FC<
   // Debug helper to check current time vs form data
   useEffect(() => {
     const interval = setInterval(() => {
-      const { session, isAuthenticated, signIn } = useAuthContext();
       const now = new Date();
       const timeDiff = formData.event_date.getTime() - now.getTime();
       const endTimeDiff = formData.event_end_date.getTime() - now.getTime();
@@ -224,7 +223,11 @@ export const SimplifiedEventCreationForm: React.FC<
       const fundRecipientPod = pods.find(
         (pod) => pod.id === fundRecipientPodId,
       );
-      if (fundRecipientPod && fundRecipientPod.treasury_contract_address) {
+      if (
+        fundRecipientPod &&
+        fundRecipientPod.treasury_contract_address &&
+        fundRecipientPod.treasury_contract_address !== 'pending'
+      ) {
         // Use pod treasury address if available
         fundRecipient = fundRecipientPod.treasury_contract_address as `0x${string}`;
         console.log('💰 Event funds will go to pod treasury:', {
