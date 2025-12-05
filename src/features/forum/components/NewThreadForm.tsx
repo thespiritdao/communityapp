@@ -5,9 +5,9 @@ import { useForum } from '@/features/forum/hooks/useForum';
 import { useUnifiedForumAccess } from '@/features/forum/hooks/useUnifiedForumAccess';
 import { supabase } from '@/utils/supabaseClient';
 import UserTagging from '@/components/UserTagging';
-import { PollCreationForm } from './PollCreationForm';
 import { MediaUpload } from './MediaUpload';
 import { RichTextEditor } from './RichTextEditor';
+import { createPoll } from '../services/PollService';
 import {
   saveDraft,
   getDraft,
@@ -82,6 +82,12 @@ export function NewThreadForm({
   const [showPollForm, setShowPollForm] = useState(false);
   const [createdThreadId, setCreatedThreadId] = useState<string | null>(null);
   const [uploadedAttachments, setUploadedAttachments] = useState<any[]>([]);
+
+  // Poll data collected during thread creation
+  const [pollQuestion, setPollQuestion] = useState('');
+  const [pollOptions, setPollOptions] = useState<string[]>(['', '']);
+  const [pollAllowMultiple, setPollAllowMultiple] = useState(false);
+  const [pollExpiresInDays, setPollExpiresInDays] = useState<string>('7');
 
   // Initialize local state with the incoming prop
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(
@@ -284,9 +290,15 @@ export function NewThreadForm({
         try {
           // Update attachments to link them to the created thread
           const attachmentIds = uploadedAttachments.map((att) => att.id);
+          console.log('[NewThreadForm] Linking attachments to thread:', {
+            threadId,
+            attachmentIds,
+            attachmentCount: attachmentIds.length,
+          });
+
           const { error: attachmentError } = await supabase
             .from('forum_media_attachments')
-            .update({ thread_id: threadId })
+            .update({ thread_id: threadId, post_id: null })
             .in('id', attachmentIds);
 
           if (attachmentError) {
@@ -297,12 +309,14 @@ export function NewThreadForm({
             // Don't fail the whole operation, just log the error
           } else {
             console.log(
-              `Linked ${attachmentIds.length} attachments to thread ${threadId}`,
+              `✅ Successfully linked ${attachmentIds.length} attachments to thread ${threadId}`,
             );
           }
         } catch (err) {
           console.error('Error updating attachments:', err);
         }
+      } else {
+        console.log('[NewThreadForm] No attachments to link');
       }
 
       // Delete draft after successful submission
@@ -310,22 +324,46 @@ export function NewThreadForm({
         await deleteDraftByContext(address, selectedCategoryId);
       }
 
-      // Always redirect to the thread after creation
-      // If poll form was requested, the poll modal will handle that separately
+      // Create poll if requested
+      if (showPollForm && pollQuestion.trim()) {
+        console.log('[NewThreadForm] Creating poll for thread:', threadId);
+        try {
+          const validPollOptions = pollOptions.filter((opt) => opt.trim());
+          if (validPollOptions.length >= 2) {
+            // createPoll expects number of days, not ISO string
+            const expiresInDays = pollExpiresInDays
+              ? parseInt(pollExpiresInDays)
+              : undefined;
+
+            const pollResult = await createPoll(
+              threadId,
+              pollQuestion,
+              validPollOptions,
+              address!,
+              pollAllowMultiple,
+              expiresInDays,
+            );
+
+            if (pollResult.success) {
+              console.log('✅ Poll created successfully:', pollResult.pollId);
+            } else {
+              console.error('❌ Failed to create poll:', pollResult.error);
+            }
+          } else {
+            console.warn('⚠️ Not enough poll options (need at least 2)');
+          }
+        } catch (pollError) {
+          console.error('❌ Error creating poll:', pollError);
+          // Don't block thread redirect if poll creation fails
+        }
+      }
+
+      // Redirect to the newly created thread
       console.log(
         'Thread created successfully, redirecting to:',
         `/forum/thread/${threadId}`,
       );
-
-      if (showPollForm) {
-        setCreatedThreadId(threadId);
-        // Still redirect after a short delay to let poll creation happen
-        setTimeout(() => {
-          router.push(`/forum/thread/${threadId}`);
-        }, 100);
-      } else {
-        router.push(`/forum/thread/${threadId}`);
-      }
+      router.push(`/forum/thread/${threadId}`);
     } else {
       setError('Failed to create the thread.');
     }
@@ -544,18 +582,141 @@ export function NewThreadForm({
             style={{
               display: 'flex',
               alignItems: 'center',
-              gap: '8px',
+              gap: '12px',
               cursor: 'pointer',
+              padding: '12px',
+              borderRadius: '8px',
+              backgroundColor: showPollForm ? '#E8F1EE' : 'transparent',
+              border: `2px solid ${showPollForm ? '#2F5D50' : '#D8D2C8'}`,
+              transition: 'all 0.2s ease',
+              userSelect: 'none',
+              WebkitTapHighlightColor: 'transparent',
+              minHeight: '48px', // Minimum touch target size for mobile
+            }}
+            onClick={(e) => {
+              // Ensure click works on mobile - prevent double-firing
+              if (e.target === e.currentTarget || (e.target as HTMLElement).tagName === 'SPAN') {
+                e.preventDefault();
+                setShowPollForm(!showPollForm);
+              }
             }}
           >
             <input
               type="checkbox"
               checked={showPollForm}
-              onChange={(e) => setShowPollForm(e.target.checked)}
+              onChange={(e) => {
+                e.stopPropagation();
+                setShowPollForm(e.target.checked);
+              }}
+              style={{
+                width: '20px',
+                height: '20px',
+                minWidth: '20px',
+                minHeight: '20px',
+                cursor: 'pointer',
+                accentColor: '#2F5D50',
+                flexShrink: 0,
+              }}
             />
-            <span>📊 Add a poll to this thread</span>
+            <span style={{ fontSize: '1rem', fontWeight: 500, color: '#1F2D2A' }}>
+              📊 Add a poll to this thread
+            </span>
           </label>
         </div>
+
+        {/* Inline Poll Creation - shown when checkbox is checked */}
+        {showPollForm && (
+          <div style={{ marginBottom: '20px', padding: '16px', backgroundColor: '#f9f9f9', borderRadius: '8px', border: '1px solid #e0e0e0' }}>
+            <h3 style={{ marginBottom: '12px', fontSize: '1.1rem', fontWeight: 600 }}>Poll Details</h3>
+
+            {/* Poll Question */}
+            <div style={{ marginBottom: '16px' }}>
+              <label style={{ display: 'block', marginBottom: '6px', fontWeight: 500 }}>
+                Poll Question <span style={{ color: 'red' }}>*</span>
+              </label>
+              <input
+                type="text"
+                value={pollQuestion}
+                onChange={(e) => setPollQuestion(e.target.value)}
+                placeholder="What would you like to ask?"
+                className={styles.input}
+                style={{ width: '100%' }}
+              />
+            </div>
+
+            {/* Poll Options */}
+            <div style={{ marginBottom: '16px' }}>
+              <label style={{ display: 'block', marginBottom: '6px', fontWeight: 500 }}>
+                Options <span style={{ color: 'red' }}>*</span>
+              </label>
+              {pollOptions.map((option, index) => (
+                <div key={index} style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
+                  <input
+                    type="text"
+                    value={option}
+                    onChange={(e) => {
+                      const newOptions = [...pollOptions];
+                      newOptions[index] = e.target.value;
+                      setPollOptions(newOptions);
+                    }}
+                    placeholder={`Option ${index + 1}`}
+                    className={styles.input}
+                    style={{ flex: 1 }}
+                  />
+                  {pollOptions.length > 2 && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPollOptions(pollOptions.filter((_, i) => i !== index));
+                      }}
+                      style={{ padding: '6px 12px', backgroundColor: '#ef4444', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
+                    >
+                      Remove
+                    </button>
+                  )}
+                </div>
+              ))}
+              {pollOptions.length < 10 && (
+                <button
+                  type="button"
+                  onClick={() => setPollOptions([...pollOptions, ''])}
+                  style={{ padding: '6px 12px', backgroundColor: '#3b82f6', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', marginTop: '4px' }}
+                >
+                  + Add Option
+                </button>
+              )}
+            </div>
+
+            {/* Poll Settings */}
+            <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <input
+                  type="checkbox"
+                  checked={pollAllowMultiple}
+                  onChange={(e) => setPollAllowMultiple(e.target.checked)}
+                />
+                <span style={{ fontSize: '0.95rem' }}>Allow multiple selections</span>
+              </label>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <label style={{ fontSize: '0.95rem' }}>Expires in:</label>
+                <select
+                  value={pollExpiresInDays}
+                  onChange={(e) => setPollExpiresInDays(e.target.value)}
+                  className={styles.select}
+                  style={{ padding: '4px 8px' }}
+                >
+                  <option value="1">1 day</option>
+                  <option value="3">3 days</option>
+                  <option value="7">7 days</option>
+                  <option value="14">14 days</option>
+                  <option value="30">30 days</option>
+                  <option value="">Never</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Media Upload */}
         {!createdThreadId && (
@@ -582,22 +743,6 @@ export function NewThreadForm({
           {isLoading ? 'Creating...' : 'Create Thread'}
         </button>
       </form>
-
-      {/* Poll Creation Form - shown after thread is created */}
-      {createdThreadId && showPollForm && (
-        <div style={{ marginTop: '30px' }}>
-          <PollCreationForm
-            threadId={createdThreadId}
-            onPollCreated={(pollId) => {
-              console.log('Poll created:', pollId);
-              router.push(`/forum/thread/${createdThreadId}`);
-            }}
-            onCancel={() => {
-              router.push(`/forum/thread/${createdThreadId}`);
-            }}
-          />
-        </div>
-      )}
     </div>
   );
 }
