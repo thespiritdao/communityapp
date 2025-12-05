@@ -104,6 +104,33 @@ export class EventService {
         hint: eventError.hint,
         code: eventError.code,
       });
+
+      // Handle 409 Conflict - event was already inserted but we couldn't read it
+      if (eventError.code === '23505' || eventError.message?.includes('duplicate key') || eventError.message?.includes('409')) {
+        console.log('⚠️ 409 Conflict detected - event might already exist, retrying SELECT...');
+
+        // Try to fetch the existing event
+        const { data: retryEvent, error: retryError } = await supabase
+          .from('events')
+          .select('*')
+          .eq('blockchain_event_id', event.blockchain_event_id)
+          .eq('user_id', session.user.id)
+          .maybeSingle();
+
+        if (retryEvent) {
+          console.log('✅ Successfully retrieved existing event after 409:', {
+            id: retryEvent.id,
+            blockchain_event_id: retryEvent.blockchain_event_id,
+            title: retryEvent.title,
+          });
+          return retryEvent;
+        }
+
+        if (retryError) {
+          console.error('❌ Failed to retrieve event after 409:', retryError);
+        }
+      }
+
       throw eventError;
     }
 
@@ -116,6 +143,29 @@ export class EventService {
         creatorAddress: profileData.wallet_address,
         hint: 'Check that SELECT policy on events table allows user to read their own events',
       });
+
+      // Try one more time to fetch the event - it might have been inserted
+      console.log('🔄 Retrying SELECT after null result...');
+      const { data: retryEvent, error: retryError } = await supabase
+        .from('events')
+        .select('*')
+        .eq('blockchain_event_id', event.blockchain_event_id)
+        .eq('user_id', session.user.id)
+        .maybeSingle();
+
+      if (retryEvent) {
+        console.log('✅ Successfully retrieved event on retry:', {
+          id: retryEvent.id,
+          blockchain_event_id: retryEvent.blockchain_event_id,
+          title: retryEvent.title,
+        });
+        return retryEvent;
+      }
+
+      if (retryError) {
+        console.error('❌ Retry SELECT also failed:', retryError);
+      }
+
       throw new Error(
         'Database insert succeeded but could not retrieve event data. This may be due to Row Level Security policies.',
       );
