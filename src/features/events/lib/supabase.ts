@@ -90,11 +90,23 @@ export class EventService {
       creator_address: eventPayload.creator_address,
     });
 
-    const { data: eventResult, error: eventError } = await supabase
-      .from('events')
-      .insert(eventPayload)
-      .select()
-      .single();
+    let eventResult;
+    let eventError;
+
+    try {
+      const result = await supabase
+        .from('events')
+        .insert(eventPayload)
+        .select()
+        .single();
+
+      eventResult = result.data;
+      eventError = result.error;
+    } catch (thrownError: any) {
+      // Supabase might throw exceptions instead of returning errors
+      console.error('❌ Exception thrown during insert:', thrownError);
+      eventError = thrownError;
+    }
 
     if (eventError) {
       console.error('Event creation error details:', {
@@ -103,11 +115,21 @@ export class EventService {
         details: eventError.details,
         hint: eventError.hint,
         code: eventError.code,
+        status: eventError.status,
       });
 
       // Handle 409 Conflict - event was already inserted but we couldn't read it
-      if (eventError.code === '23505' || eventError.message?.includes('duplicate key') || eventError.message?.includes('409')) {
-        console.log('⚠️ 409 Conflict detected - event might already exist, retrying SELECT...');
+      const is409 =
+        eventError.code === '23505' ||
+        eventError.status === 409 ||
+        eventError.message?.includes('duplicate key') ||
+        eventError.message?.includes('409') ||
+        eventError.message?.includes('Conflict');
+
+      if (is409) {
+        console.log(
+          '⚠️ 409 Conflict detected - event might already exist, retrying SELECT...',
+        );
 
         // Try to fetch the existing event
         const { data: retryEvent, error: retryError } = await supabase
