@@ -114,6 +114,7 @@ export const SimplifiedEventCreationForm: React.FC<
     () => `event-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
   );
   const [transactionCompleted, setTransactionCompleted] = useState(false);
+  const [dbError, setDbError] = useState<string>('');
 
   // Debug helper to check current time vs form data
   useEffect(() => {
@@ -464,7 +465,7 @@ export const SimplifiedEventCreationForm: React.FC<
         }
       } catch (error) {
         console.error('❌ Failed to store event data:', error);
-        setCreateError(
+        setDbError(
           error instanceof Error
             ? error.message
             : 'Failed to save event to database. The blockchain transaction succeeded but event data was not stored.',
@@ -981,12 +982,13 @@ export const SimplifiedEventCreationForm: React.FC<
           </div>
 
           {/* Error Display */}
-          {createError && (
+          {(createError || dbError) && (
             <div
               className="p-4 border rounded-lg"
               style={{ backgroundColor: '#F5E6E6', borderColor: '#D9B3B3' }}
             >
-              <p style={{ color: '#8B3A3A' }}>{createError}</p>
+              {createError && <p style={{ color: '#8B3A3A' }}>{createError}</p>}
+              {dbError && <p style={{ color: '#8B3A3A' }}>{dbError}</p>}
             </div>
           )}
 
@@ -1019,6 +1021,7 @@ export const SimplifiedEventCreationForm: React.FC<
                       );
                       if (status.statusName === 'buildingTransaction') {
                         setIsTransactionPending(true);
+                        setDbError(''); // Clear any previous errors
                         console.log('🚀 Building transaction for event:', {
                           eventId,
                           blockchainEventId: eventId,
