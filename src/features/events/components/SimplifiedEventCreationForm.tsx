@@ -283,7 +283,7 @@ export const SimplifiedEventCreationForm: React.FC<
     async (response: any) => {
       console.log('✅ Event creation successful:', response);
       setIsTransactionPending(false);
-      setTransactionCompleted(true);
+      // DON'T set transactionCompleted yet - wait for database insert to succeed
 
       try {
         // Ensure user is authenticated with Supabase before storing event data
@@ -446,17 +446,33 @@ export const SimplifiedEventCreationForm: React.FC<
             // Continue anyway since the event was created successfully
           }
 
-          if (onSuccess) {
-            onSuccess(event.id);
-          } else {
-            router.push(`/events/manage/${event.id}`);
-          }
+          // NOW set transaction as completed - database insert succeeded
+          setTransactionCompleted(true);
+          console.log('✅ Event fully created - blockchain + database');
+
+          // Redirect after a short delay to show success state
+          setTimeout(() => {
+            if (onSuccess) {
+              onSuccess(event.id);
+            } else {
+              router.push('/events');
+            }
+          }, 1500);
+        } else {
+          // Database insert returned null/undefined - treat as failure
+          throw new Error('Database insert failed - no event returned');
         }
       } catch (error) {
-        console.error('Failed to store event data:', error);
+        console.error('❌ Failed to store event data:', error);
+        setCreateError(
+          error instanceof Error
+            ? error.message
+            : 'Failed to save event to database. The blockchain transaction succeeded but event data was not stored.',
+        );
+        setIsTransactionPending(false);
       }
     },
-    [formData, address, createEvent, onSuccess, router, pods],
+    [formData, address, createEvent, onSuccess, router, pods, authContext],
   );
 
   // Transaction error handler
@@ -984,97 +1000,6 @@ export const SimplifiedEventCreationForm: React.FC<
               Cancel
             </Button>
 
-            {/* Fund Recipient Debug Info */}
-            {validation.isValid && formData.price_token !== 'free' && (
-              <div
-                className="p-4 rounded-lg"
-                style={{
-                  backgroundColor: '#E8F1EE',
-                  border: '1px solid #B8D9CA',
-                }}
-              >
-                <h4 className="font-medium mb-2" style={{ color: '#2F5D50' }}>
-                  💰 Payment Flow Preview
-                </h4>
-                <div className="text-sm space-y-2" style={{ color: '#3F7A5A' }}>
-                  {(() => {
-                    const fundRecipientPodId =
-                      formData.fund_recipient_pod_id ||
-                      formData.organizing_pod_id;
-                    const fundRecipientPod = fundRecipientPodId
-                      ? pods.find((pod) => pod.id === fundRecipientPodId)
-                      : null;
-
-                    if (fundRecipientPod?.treasury_contract_address) {
-                      return (
-                        <>
-                          <p>
-                            <span className="font-medium">Event pricing:</span>{' '}
-                            {formData.price_token === 'SYSTEM'
-                              ? `${formData.price_system} SYSTEM tokens`
-                              : formData.price_token === 'SELF'
-                                ? `${formData.price_self} SELF tokens`
-                                : formData.price_token === 'both'
-                                  ? `${formData.price_system} SYSTEM + ${formData.price_self} SELF tokens`
-                                  : 'Free'}
-                          </p>
-                          <p>
-                            <span className="font-medium">
-                              Funds destination:
-                            </span>{' '}
-                            {fundRecipientPod.name} Treasury
-                          </p>
-                          <p className="font-mono text-xs break-all">
-                            Contract:{' '}
-                            {fundRecipientPod.treasury_contract_address}
-                          </p>
-                          <p style={{ color: '#3F7A5A' }}>
-                            ✅ Payments will go directly to pod treasury
-                          </p>
-                        </>
-                      );
-                    } else if (fundRecipientPod) {
-                      return (
-                        <>
-                          <p>
-                            <span className="font-medium">Event pricing:</span>{' '}
-                            {formData.price_token === 'SYSTEM'
-                              ? `${formData.price_system} SYSTEM tokens`
-                              : formData.price_token === 'SELF'
-                                ? `${formData.price_self} SELF tokens`
-                                : formData.price_token === 'both'
-                                  ? `${formData.price_system} SYSTEM + ${formData.price_self} SELF tokens`
-                                  : 'Free'}
-                          </p>
-                          <p>
-                            <span className="font-medium">
-                              Funds destination:
-                            </span>{' '}
-                            Your Wallet (fallback)
-                          </p>
-                          <p className="font-mono text-xs break-all">
-                            Address: {address}
-                          </p>
-                          <p style={{ color: '#C6933F' }}>
-                            ⚠️ Pod treasury not deployed - using fallback
-                          </p>
-                        </>
-                      );
-                    } else {
-                      return (
-                        <p>
-                          <span className="font-medium">
-                            Funds destination:
-                          </span>{' '}
-                          Your Wallet
-                        </p>
-                      );
-                    }
-                  })()}
-                </div>
-              </div>
-            )}
-
             {/* Clean Transaction Component */}
             {validation.isValid ? (
               isConnected ? (
@@ -1151,6 +1076,97 @@ export const SimplifiedEventCreationForm: React.FC<
               <Button disabled={true}>{validation.errors[0]}</Button>
             )}
           </div>
+
+          {/* Payment Flow Preview - Below Buttons */}
+          {validation.isValid && formData.price_token !== 'free' && (
+            <div
+              className="p-4 rounded-lg mt-4"
+              style={{
+                backgroundColor: '#E8F1EE',
+                border: '1px solid #B8D9CA',
+              }}
+            >
+              <h4 className="font-medium mb-2" style={{ color: '#2F5D50' }}>
+                💰 Payment Flow Preview
+              </h4>
+              <div className="text-sm space-y-2" style={{ color: '#3F7A5A' }}>
+                {(() => {
+                  const fundRecipientPodId =
+                    formData.fund_recipient_pod_id ||
+                    formData.organizing_pod_id;
+                  const fundRecipientPod = fundRecipientPodId
+                    ? pods.find((pod) => pod.id === fundRecipientPodId)
+                    : null;
+
+                  if (fundRecipientPod?.treasury_contract_address) {
+                    return (
+                      <>
+                        <p>
+                          <span className="font-medium">Event pricing:</span>{' '}
+                          {formData.price_token === 'SYSTEM'
+                            ? `${formData.price_system} SYSTEM tokens`
+                            : formData.price_token === 'SELF'
+                              ? `${formData.price_self} SELF tokens`
+                              : formData.price_token === 'both'
+                                ? `${formData.price_system} SYSTEM + ${formData.price_self} SELF tokens`
+                                : 'Free'}
+                        </p>
+                        <p>
+                          <span className="font-medium">
+                            Funds destination:
+                          </span>{' '}
+                          {fundRecipientPod.name} Treasury
+                        </p>
+                        <p className="font-mono text-xs break-all">
+                          Contract:{' '}
+                          {fundRecipientPod.treasury_contract_address}
+                        </p>
+                        <p style={{ color: '#3F7A5A' }}>
+                          ✅ Payments will go directly to pod treasury
+                        </p>
+                      </>
+                    );
+                  } else if (fundRecipientPod) {
+                    return (
+                      <>
+                        <p>
+                          <span className="font-medium">Event pricing:</span>{' '}
+                          {formData.price_token === 'SYSTEM'
+                            ? `${formData.price_system} SYSTEM tokens`
+                            : formData.price_token === 'SELF'
+                              ? `${formData.price_self} SELF tokens`
+                              : formData.price_token === 'both'
+                                ? `${formData.price_system} SYSTEM + ${formData.price_self} SELF tokens`
+                                : 'Free'}
+                        </p>
+                        <p>
+                          <span className="font-medium">
+                            Funds destination:
+                          </span>{' '}
+                          Your Wallet (fallback)
+                        </p>
+                        <p className="font-mono text-xs break-all">
+                          Address: {address}
+                        </p>
+                        <p style={{ color: '#C6933F' }}>
+                          ⚠️ Pod treasury not deployed - using fallback
+                        </p>
+                      </>
+                    );
+                  } else {
+                    return (
+                      <p>
+                        <span className="font-medium">
+                          Funds destination:
+                        </span>{' '}
+                        Your Wallet
+                      </p>
+                    );
+                  }
+                })()}
+              </div>
+            </div>
+          )}
         </div>
       </CardContent>
     </Card>
