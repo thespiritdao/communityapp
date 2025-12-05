@@ -22,25 +22,35 @@ console.log('🔗 Wagmi RPC Configuration:', {
 });
 
 // Create transports for each chain
+// IMPORTANT: Added explicit timeouts for Firefox compatibility
+// Firefox has stricter default timeouts (~90s) compared to Chrome (~300s)
+const transportConfig = {
+  timeout: 60_000, // 60 seconds - works for both Firefox and Chrome
+  retryCount: 3,   // Retry failed requests up to 3 times
+  retryDelay: 150, // 150ms delay between retries
+};
+
 const getBaseTransport = () => {
   if (process.env.NEXT_PUBLIC_CDP_API_CLIENT) {
     return http(
       `https://api.developer.coinbase.com/rpc/v1/base/${process.env.NEXT_PUBLIC_CDP_API_CLIENT}`,
+      transportConfig
     );
   }
   if (process.env.NEXT_PUBLIC_RPC_URL) {
-    return http(process.env.NEXT_PUBLIC_RPC_URL);
+    return http(process.env.NEXT_PUBLIC_RPC_URL, transportConfig);
   }
-  return http();
+  return http(undefined, transportConfig);
 };
 
 const getBaseSepoliaTransport = () => {
   if (process.env.NEXT_PUBLIC_CDP_API_CLIENT) {
     return http(
       `https://api.developer.coinbase.com/rpc/v1/base-sepolia/${process.env.NEXT_PUBLIC_CDP_API_CLIENT}`,
+      transportConfig
     );
   }
-  return http();
+  return http(undefined, transportConfig);
 };
 
 export const wagmiConfig = createConfig({
