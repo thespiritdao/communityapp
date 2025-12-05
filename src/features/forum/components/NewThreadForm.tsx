@@ -18,6 +18,10 @@ import styles from '../styles/Forum.module.css';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 
+// 🔍 VERSION MARKER - Check console to verify deployment
+const COMPONENT_VERSION = 'NewThreadForm_v3_MOBILE_POLL_CLEAR_DRAFT';
+console.log('🔍 [NewThreadForm] Version:', COMPONENT_VERSION, 'Loaded at:', new Date().toISOString());
+
 // Template and placeholder interfaces
 export interface ThreadTemplate {
   id: string;
@@ -384,7 +388,23 @@ export function NewThreadForm({
       className={styles.replyFormContainer}
       style={{ paddingBottom: '96px' }}
     >
-      <h2 className={styles.replyFormTitle}>Create New Thread</h2>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
+        <h2 className={styles.replyFormTitle} style={{ marginBottom: 0 }}>Create New Thread</h2>
+        <span
+          style={{
+            fontSize: '11px',
+            backgroundColor: '#2F5D50',
+            color: '#FFFFFF',
+            padding: '4px 8px',
+            borderRadius: '6px',
+            fontFamily: 'monospace',
+            fontWeight: 600,
+          }}
+          title="Component version - helps verify deployment"
+        >
+          v3
+        </span>
+      </div>
 
       {/* Select Forum Dropdown */}
       <div className={styles.field} style={{ marginBottom: '15px' }}>
@@ -596,7 +616,7 @@ export function NewThreadForm({
                   }}
                   title="Clear draft and start fresh"
                 >
-                  Clear Draft
+                  Clear
                 </button>
               )}
             </div>
