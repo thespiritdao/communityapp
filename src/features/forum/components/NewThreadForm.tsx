@@ -216,6 +216,7 @@ export function NewThreadForm({
     const loadDraft = async () => {
       const result = await getDraft(address, selectedCategoryId);
       if (result.draft) {
+        console.log('[NewThreadForm] Loading draft:', result.draft);
         setTitle(result.draft.title || '');
         setContent(result.draft.content);
       }
@@ -223,6 +224,15 @@ export function NewThreadForm({
 
     loadDraft();
   }, [address, selectedCategoryId]);
+
+  // Function to clear draft
+  const handleClearDraft = async () => {
+    if (!address || !selectedCategoryId) return;
+    await deleteDraftByContext(address, selectedCategoryId);
+    setTitle('');
+    setContent('');
+    console.log('[NewThreadForm] Draft cleared');
+  };
 
   // Setup autosave
   useEffect(() => {
@@ -560,13 +570,36 @@ export function NewThreadForm({
           </>
         ) : (
           <>
-            <input
-              type="text"
-              placeholder="Thread title"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              className={styles.threadTitleInput}
-            />
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '8px' }}>
+              <input
+                type="text"
+                placeholder="Thread title"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                className={styles.threadTitleInput}
+                style={{ flex: 1, marginBottom: 0 }}
+              />
+              {(title || content) && (
+                <button
+                  type="button"
+                  onClick={handleClearDraft}
+                  style={{
+                    padding: '8px 12px',
+                    backgroundColor: '#8B3A3A',
+                    color: '#FFFFFF',
+                    border: 'none',
+                    borderRadius: '8px',
+                    fontSize: '0.85rem',
+                    fontWeight: 500,
+                    cursor: 'pointer',
+                    whiteSpace: 'nowrap',
+                  }}
+                  title="Clear draft and start fresh"
+                >
+                  Clear Draft
+                </button>
+              )}
+            </div>
             <RichTextEditor
               value={content}
               onChange={(value) => setContent(value)}
@@ -580,13 +613,11 @@ export function NewThreadForm({
         <div style={{ marginTop: '20px', marginBottom: '15px' }}>
           <button
             type="button"
-            onClick={() => setShowPollForm(!showPollForm)}
-            onTouchStart={(e) => {
-              // Prevent iOS double-tap zoom
+            onPointerDown={(e) => {
+              // Use pointer events - works on both mouse and touch
               e.preventDefault();
-            }}
-            onTouchEnd={(e) => {
-              e.preventDefault();
+              e.stopPropagation();
+              console.log('[Poll Toggle] Button clicked, current state:', showPollForm);
               setShowPollForm(!showPollForm);
             }}
             style={{
@@ -607,7 +638,10 @@ export function NewThreadForm({
               fontSize: '1rem',
               fontWeight: 500,
               color: '#1F2D2A',
-              touchAction: 'manipulation', // Removes 300ms delay on mobile
+              touchAction: 'manipulation',
+              MozUserSelect: 'none',
+              WebkitUserSelect: 'none',
+              msUserSelect: 'none',
             }}
           >
             {/* Custom checkbox visual */}
