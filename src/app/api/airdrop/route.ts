@@ -5,6 +5,9 @@ import { supabase } from '@/utils/supabaseClient';
 import { airdropMembership, checkAirdropStatus } from '@/utils/airdrop';
 import { rateLimiters, rateLimitErrorResponse } from '@/lib/ratelimit';
 
+// Force dynamic rendering - don't pre-render this API route
+export const dynamic = 'force-dynamic';
+
 export async function POST(req: Request) {
   try {
     const { walletAddress } = await req.json();
