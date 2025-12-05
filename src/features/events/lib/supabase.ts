@@ -39,15 +39,21 @@ export class EventService {
     }
 
     // Insert event with user_id for RLS policies
+    // Use upsert to handle duplicate blockchain_event_id gracefully
+    const eventPayload = {
+      ...event,
+      creator_address: profileData.wallet_address,
+      user_id: session.user.id, // Add user_id for RLS
+      event_date: event.event_date.toISOString(),
+      event_end_date: event.event_end_date?.toISOString(),
+      status: 'draft',
+    };
+
     const { data: eventResult, error: eventError } = await supabase
       .from('events')
-      .insert({
-        ...event,
-        creator_address: profileData.wallet_address,
-        user_id: session.user.id, // Add user_id for RLS
-        event_date: event.event_date.toISOString(),
-        event_end_date: event.event_end_date?.toISOString(),
-        status: 'draft',
+      .upsert(eventPayload, {
+        onConflict: 'blockchain_event_id',
+        ignoreDuplicates: false, // Update if conflict
       })
       .select()
       .single();

@@ -2,7 +2,7 @@
 
 import { useAuthContext } from '@/features/identity';
 import type React from 'react';
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAccount, useConfig } from 'wagmi';
 import { Card, CardContent } from '@/components/ui/card';
@@ -115,6 +115,7 @@ export const SimplifiedEventCreationForm: React.FC<
   );
   const [transactionCompleted, setTransactionCompleted] = useState(false);
   const [dbError, setDbError] = useState<string>('');
+  const handlerCalledRef = useRef(false);
 
   // Debug helper to check current time vs form data
   useEffect(() => {
@@ -282,6 +283,15 @@ export const SimplifiedEventCreationForm: React.FC<
   // Transaction success handler
   const handleTransactionSuccess = useCallback(
     async (response: any) => {
+      // Prevent duplicate calls for the same transaction
+      if (handlerCalledRef.current) {
+        console.log(
+          '⚠️ handleTransactionSuccess already called, skipping duplicate',
+        );
+        return;
+      }
+      handlerCalledRef.current = true;
+
       console.log('✅ Event creation successful:', response);
       setIsTransactionPending(false);
       // DON'T set transactionCompleted yet - wait for database insert to succeed
@@ -465,6 +475,7 @@ export const SimplifiedEventCreationForm: React.FC<
         }
       } catch (error) {
         console.error('❌ Failed to store event data:', error);
+        handlerCalledRef.current = false; // Reset so user can retry
         setDbError(
           error instanceof Error
             ? error.message
