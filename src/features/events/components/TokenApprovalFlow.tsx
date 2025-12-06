@@ -141,12 +141,39 @@ export const TokenApprovalFlow: React.FC<TokenApprovalFlowProps> = ({
   const needsSelfApproval =
     selfAmountWei > 0n &&
     (selfAllowance ? (selfAllowance as bigint) : 0n) < selfAmountWei;
+
+  // Only show insufficient balance if we have loaded the balance data
+  // If balance is undefined, we're still loading - don't show error yet
   const hasInsufficientSystemBalance =
     systemAmountWei > 0n &&
-    (systemBalance ? (systemBalance as bigint) : 0n) < systemAmountWei;
+    systemBalance !== undefined &&
+    (systemBalance as bigint) < systemAmountWei;
   const hasInsufficientSelfBalance =
     selfAmountWei > 0n &&
-    (selfBalance ? (selfBalance as bigint) : 0n) < selfAmountWei;
+    selfBalance !== undefined &&
+    (selfBalance as bigint) < selfAmountWei;
+
+  // Log balance checks for debugging
+  useEffect(() => {
+    if (systemAmountWei > 0n) {
+      console.log('💰 SYSTEM Token Balance Check:', {
+        required: formatTokenAmount(systemAmountWei),
+        balance: systemBalance ? formatTokenAmount(systemBalance as bigint) : 'Loading...',
+        allowance: systemAllowance ? formatTokenAmount(systemAllowance as bigint) : 'Loading...',
+        needsApproval: needsSystemApproval,
+        insufficient: hasInsufficientSystemBalance,
+      });
+    }
+    if (selfAmountWei > 0n) {
+      console.log('💰 SELF Token Balance Check:', {
+        required: formatTokenAmount(selfAmountWei),
+        balance: selfBalance ? formatTokenAmount(selfBalance as bigint) : 'Loading...',
+        allowance: selfAllowance ? formatTokenAmount(selfAllowance as bigint) : 'Loading...',
+        needsApproval: needsSelfApproval,
+        insufficient: hasInsufficientSelfBalance,
+      });
+    }
+  }, [systemBalance, selfBalance, systemAllowance, selfAllowance]);
 
   // Set initial step based on what's needed
   useEffect(() => {

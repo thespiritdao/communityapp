@@ -1164,32 +1164,21 @@ export class EventService {
   static async getAllTokens(): Promise<
     { id: string; name: string; symbol?: string; contract_address?: string }[]
   > {
-    // First try with symbol, if it fails, fallback without symbol
+    // Query without symbol column since it doesn't exist in the tokens table
     try {
       const { data, error } = await supabase
         .from('tokens')
-        .select('id, name, symbol, contract_address')
+        .select('id, name, contract_address')
         .eq('is_active', true)
         .order('name', { ascending: true });
 
-      if (error && error.code === '42703') {
-        // Column doesn't exist, try without symbol
-        console.warn('Symbol column does not exist, querying without it');
-        const { data: fallbackData, error: fallbackError } = await supabase
-          .from('tokens')
-          .select('id, name, contract_address')
-          .eq('is_active', true)
-          .order('name', { ascending: true });
-
-        if (fallbackError) throw fallbackError;
-        return (fallbackData || []).map((token) => ({
-          ...token,
-          symbol: undefined,
-        }));
-      }
-
       if (error) throw error;
-      return data || [];
+
+      // Map to include symbol field (undefined for all tokens from this table)
+      return (data || []).map((token) => ({
+        ...token,
+        symbol: undefined,
+      }));
     } catch (err) {
       console.error('Error fetching tokens:', err);
       // Final fallback - try basic query
