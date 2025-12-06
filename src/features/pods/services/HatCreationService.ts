@@ -648,4 +648,49 @@ export class HatCreationService {
       return 0;
     }
   }
+
+  /**
+   * Check if an address owns/wears a specific hat
+   */
+  static async checkHatOwnership(
+    publicClient: any,
+    hatId: string,
+    address: string,
+  ): Promise<boolean> {
+    try {
+      console.log(`🔍 Checking hat ownership for ${address.slice(0, 10)}... on hat ${hatId}`);
+
+      // Validate and convert hat ID
+      const validation = validateAndConvertHatId(hatId);
+      if (!validation.isValid || !validation.hatIdBigInt) {
+        console.error('❌ Invalid hat ID for ownership check:', hatId);
+        return false;
+      }
+
+      // Use isWearerOfHat function from Hats Protocol
+      const isWearer = await publicClient.readContract({
+        address: this.HATS_PROTOCOL_ADDRESS,
+        abi: [
+          {
+            inputs: [
+              { name: '_user', type: 'address' },
+              { name: '_hatId', type: 'uint256' },
+            ],
+            name: 'isWearerOfHat',
+            outputs: [{ name: '', type: 'bool' }],
+            stateMutability: 'view',
+            type: 'function',
+          },
+        ],
+        functionName: 'isWearerOfHat',
+        args: [address as `0x${string}`, validation.hatIdBigInt],
+      });
+
+      console.log(`${isWearer ? '✅' : '❌'} Hat ownership check result: ${isWearer}`);
+      return isWearer as boolean;
+    } catch (error) {
+      console.error('❌ Failed to check hat ownership:', error);
+      return false;
+    }
+  }
 }
