@@ -388,49 +388,72 @@ export const HatsModulePodCreationForm: React.FC<
     loadTokens();
   }, [address, publicClient]);
 
-  // Check Advocate token ownership for permission to create pods
+  // Check Executive Pod membership (via Hat ownership) for permission to create pods
   useEffect(() => {
-    const checkAdvocateToken = async () => {
+    const checkExecutivePodMembership = async () => {
       if (!address || !publicClient) {
         setCheckingAdvocateToken(false);
         return;
       }
 
       try {
-        console.log('🔍 Checking Advocate token for address:', address);
+        console.log('🔍 Checking Executive Pod membership for address:', address);
 
-        const advocateBalance = await publicClient!.readContract({
-          address: process.env.NEXT_PUBLIC_ADVOCATE as `0x${string}`,
-          abi: [
-            {
-              name: 'balanceOf',
-              type: 'function',
-              inputs: [{ name: 'owner', type: 'address' }],
-              outputs: [{ name: '', type: 'uint256' }],
-              stateMutability: 'view',
-            },
-          ],
-          functionName: 'balanceOf',
-          args: [address!],
-        });
+        // Get Executive Pod from database
+        const { data: executivePod } = await supabase
+          .from('pods')
+          .select('membership_hat_id, pod_leads')
+          .eq('name', 'Executive Pod')
+          .single();
 
-        const hasToken = Number(advocateBalance) > 0;
-        console.log('🎫 Advocate token check:', {
-          address,
-          balance: advocateBalance,
-          hasToken,
-        });
+        if (!executivePod) {
+          console.error('❌ Executive Pod not found in database');
+          setHasAdvocateToken(false);
+          setCheckingAdvocateToken(false);
+          return;
+        }
 
-        setHasAdvocateToken(hasToken);
+        // Check if user is in pod_leads array
+        const isPodLead = executivePod.pod_leads?.some(
+          (lead: string) => lead.toLowerCase() === address.toLowerCase(),
+        );
+
+        if (isPodLead) {
+          console.log('✅ User is Executive Pod leader');
+          setHasAdvocateToken(true);
+          setCheckingAdvocateToken(false);
+          return;
+        }
+
+        // Check Hat ownership
+        if (executivePod.membership_hat_id) {
+          const { HatCreationService } = await import('../services/HatCreationService');
+          const hasHat = await HatCreationService.checkHatOwnership(
+            publicClient,
+            executivePod.membership_hat_id,
+            address,
+          );
+
+          console.log('🎫 Executive Pod Hat check:', {
+            address,
+            hatId: executivePod.membership_hat_id,
+            hasHat,
+          });
+
+          setHasAdvocateToken(hasHat);
+        } else {
+          console.warn('⚠️ Executive Pod has no membership_hat_id configured');
+          setHasAdvocateToken(false);
+        }
       } catch (error) {
-        console.error('❌ Failed to check Advocate token:', error);
+        console.error('❌ Failed to check Executive Pod membership:', error);
         setHasAdvocateToken(false);
       } finally {
         setCheckingAdvocateToken(false);
       }
     };
 
-    checkAdvocateToken();
+    checkExecutivePodMembership();
   }, [address, publicClient]);
 
   // Load user's pods for hierarchical creation (including HAT-based leadership)
@@ -560,9 +583,9 @@ export const HatsModulePodCreationForm: React.FC<
   const validation = useMemo(() => {
     const errors: string[] = [];
 
-    // Check Advocate token requirement (skip in testing mode)
+    // Check Executive Pod membership requirement (skip in testing mode)
     if (!testingMode && !hasAdvocateToken) {
-      errors.push('Advocate token required to create pods (proof of humanity)');
+      errors.push('Executive Pod membership required to create pods');
     }
 
     if (!formData.name.trim()) errors.push('Pod name is required');
@@ -4070,7 +4093,7 @@ Instructions:
                 : '#5C1F1F',
           }}
         >
-          Advocate Token Status {!testingMode && '(Required)'}
+          Executive Pod Membership {!testingMode && '(Required)'}
         </h4>
       </div>
 
@@ -4078,14 +4101,14 @@ Instructions:
         <div className="flex items-center gap-2">
           <Clock className="h-4 w-4 animate-spin" />
           <span className="text-gray-700 text-sm">
-            Checking token ownership...
+            Verifying Executive Pod membership...
           </span>
         </div>
       ) : hasAdvocateToken ? (
         <div className="flex items-center gap-2">
           <CheckCircle className="h-4 w-4" style={{ color: '#3F7A5A' }} />
           <span className="text-sm" style={{ color: '#2F5D50' }}>
-            ✅ Verified holder - you can create pods
+            ✅ Verified - You are an Executive Pod member
           </span>
         </div>
       ) : (
@@ -4093,8 +4116,8 @@ Instructions:
           <Shield className="h-4 w-4" style={{ color: '#8B3A3A' }} />
           <span className="text-sm" style={{ color: '#8B3A3A' }}>
             {testingMode
-              ? '⚠️ No Advocate token (bypassed in testing mode)'
-              : '❌ Advocate token required to create pods (proof of humanity)'}
+              ? '⚠️ Not an Executive Pod member (bypassed in testing mode)'
+              : '❌ Executive Pod membership required to create pods'}
           </span>
         </div>
       )}
