@@ -2,7 +2,7 @@
 
 import { useAuthContext } from '@/features/identity';
 import type React from 'react';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useAccount, useConfig } from 'wagmi';
 import { useRouter } from 'next/navigation';
 import { EventTokenDisplay } from './EventTokenDisplay';
@@ -100,6 +100,9 @@ export const EventRegistrationModal: React.FC<EventRegistrationModalProps> = ({
   const [systemTokenAmount, setSystemTokenAmount] = useState('0');
   const [selfTokenAmount, setSelfTokenAmount] = useState('0');
 
+  // Track if registration has been processed to prevent duplicate calls
+  const registrationProcessedRef = useRef(false);
+
   // Check if event exists on-chain using the blockchain event ID
   const blockchainEventId = event.blockchain_event_id;
   const {
@@ -121,6 +124,13 @@ export const EventRegistrationModal: React.FC<EventRegistrationModalProps> = ({
 
   // Get auth context at component level
   const authContext = useAuthContext();
+
+  // Reset registration processed flag when modal closes
+  useEffect(() => {
+    if (!isOpen) {
+      registrationProcessedRef.current = false;
+    }
+  }, [isOpen]);
 
   // Check eligibility when modal opens
   useEffect(() => {
@@ -361,6 +371,13 @@ export const EventRegistrationModal: React.FC<EventRegistrationModalProps> = ({
   };
 
   const handleRegistrationSuccess = async (response: any) => {
+    // Prevent duplicate processing if called multiple times (common with OnchainKit re-renders)
+    if (registrationProcessedRef.current) {
+      console.log('⏭️ Registration already processed, skipping duplicate call');
+      return;
+    }
+
+    registrationProcessedRef.current = true;
     console.log('✅ Registration successful:', response);
     setIsRegistering(false);
 
