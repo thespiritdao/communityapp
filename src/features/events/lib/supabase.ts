@@ -575,22 +575,8 @@ export class EventService {
     userAddress: string,
   ): Promise<EventRegistration | null> {
     try {
-      // Check if user session is valid for authenticated operations
-      const {
-        data: { session },
-        error: sessionError,
-      } = await supabase.auth.getSession();
-      if (sessionError) {
-        console.warn('Session error in getUserRegistration:', sessionError);
-        return null; // Return null instead of throwing
-      }
-
-      if (!session?.user?.id) {
-        console.warn(
-          'No authenticated session in getUserRegistration, returning null',
-        );
-        return null; // Return null instead of throwing
-      }
+      // No authentication required - checking registration status is a public operation
+      // RLS policies on event_registrations table will handle access control if needed
 
       // Use maybeSingle() to avoid errors when no record found
       const { data, error } = await supabase
