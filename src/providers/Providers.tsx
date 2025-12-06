@@ -45,7 +45,7 @@ export default function Providers({ children }: { children: ReactNode }) {
           config={{
             appearance: {
               name: 'SpiritDAO',
-              logo: '/spiritdaosymbol.png',
+              logo: '/images/symbolobinfin.png',
               mode: 'auto',
               theme: 'default',
             },

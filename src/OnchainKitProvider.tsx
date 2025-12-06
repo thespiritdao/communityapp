@@ -44,7 +44,7 @@ export function OnchainKitProvider({
       config: {
         appearance: {
           name: config?.appearance?.name ?? 'SpiritDAO',
-          logo: config?.appearance?.logo ?? '/spiritdaosymbol.png',
+          logo: config?.appearance?.logo ?? '/images/symbolobinfin.png',
           mode: config?.appearance?.mode ?? 'auto',
           theme: config?.appearance?.theme ?? 'default',
         },
