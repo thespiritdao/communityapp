@@ -253,6 +253,7 @@ export const EventRegistrationModal: React.FC<EventRegistrationModalProps> = ({
         }
 
         setRegistrationStatus('eligible');
+        console.log('✅ Registration status set to ELIGIBLE - ready to register');
       } catch (error) {
         console.error('Error checking eligibility:', error);
         setRegistrationStatus('ineligible');
@@ -305,7 +306,23 @@ export const EventRegistrationModal: React.FC<EventRegistrationModalProps> = ({
   };
 
   const prepareRegistration = () => {
-    if (!address || registrationStatus !== 'eligible') return null;
+    console.log('🎯 prepareRegistration called:', {
+      address,
+      registrationStatus,
+      canProceed: address && registrationStatus === 'eligible',
+    });
+
+    if (!address || registrationStatus !== 'eligible') {
+      console.warn('❌ Cannot prepare registration:', {
+        hasAddress: !!address,
+        registrationStatus,
+        reason:
+          !address
+            ? 'No wallet address'
+            : `Status is "${registrationStatus}", needs to be "eligible"`,
+      });
+      return null;
+    }
 
     const price = getEventPrice();
 
