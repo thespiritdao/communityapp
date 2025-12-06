@@ -306,20 +306,22 @@ export const EventRegistrationModal: React.FC<EventRegistrationModalProps> = ({
   };
 
   const prepareRegistration = () => {
+    const isValidStatus = registrationStatus === 'eligible' || registrationStatus === 'ready';
+
     console.log('🎯 prepareRegistration called:', {
       address,
       registrationStatus,
-      canProceed: address && registrationStatus === 'eligible',
+      canProceed: address && isValidStatus,
     });
 
-    if (!address || registrationStatus !== 'eligible') {
+    if (!address || !isValidStatus) {
       console.warn('❌ Cannot prepare registration:', {
         hasAddress: !!address,
         registrationStatus,
         reason:
           !address
             ? 'No wallet address'
-            : `Status is "${registrationStatus}", needs to be "eligible"`,
+            : `Status is "${registrationStatus}", needs to be "eligible" or "ready"`,
       });
       return null;
     }
