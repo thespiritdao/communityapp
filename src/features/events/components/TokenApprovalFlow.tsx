@@ -209,7 +209,7 @@ export const TokenApprovalFlow: React.FC<TokenApprovalFlowProps> = ({
   ];
 
   const formatTokenAmount = (amount: bigint) => {
-    return Number.parseFloat(formatUnits(amount, 18)).toFixed(2);
+    return Number.parseFloat(formatUnits(amount, 18)).toFixed(4);
   };
 
   if (hasInsufficientSystemBalance || hasInsufficientSelfBalance) {
