@@ -2,7 +2,7 @@ import type React from 'react';
 import { useState, useEffect } from 'react';
 import { useAccount } from 'wagmi';
 import type { UserProfile } from '@/features/identity/types';
-import { TokenGallery } from '@/features/identity/components/TokenGallery';
+import { DatabaseTokenGallery } from '@/features/identity/components/DatabaseTokenGallery';
 import { mapStoredValuesToLabels } from '@/features/identity/utils/formatProfileValues';
 import {
   interestsOptions,
@@ -258,13 +258,13 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
       {/* Section: Tokens */}
       <div className="profile-section token-gallery-modal">
         <h3>Memberships</h3>
-        <TokenGallery
+        <DatabaseTokenGallery
           walletAddress={user.wallet_address}
           category="membership"
         />
 
         <h3 style={{ marginTop: '20px' }}>Credentials</h3>
-        <TokenGallery
+        <DatabaseTokenGallery
           walletAddress={user.wallet_address}
           category="credential"
         />
