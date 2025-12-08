@@ -46,6 +46,7 @@ function PageContent() {
   const [isVerificationComplete, setIsVerificationComplete] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const verificationRef = useRef({ isComplete: false, isSmartWallet: false });
+  const authenticationAttemptedRef = useRef(false); // Track if auth was already attempted
   // Also track client-side mounting to avoid SSR hydration issues.
   const [isClient, setIsClient] = useState(false);
   const [isFirefox, setIsFirefox] = useState(false);
@@ -168,6 +169,7 @@ function PageContent() {
         setIsSmartWallet(false);
         setIsVerifyingWallet(false);
         setIsVerificationComplete(true);
+        setIsProcessing(false); // Clear processing state when no wallet
         verificationRef.current = { isComplete: true, isSmartWallet: false };
         return;
       }
@@ -199,6 +201,7 @@ function PageContent() {
           setIsSmartWallet(result.isSmartWallet);
           setIsVerifyingWallet(false);
           setIsVerificationComplete(true);
+          setIsProcessing(false); // Clear processing state after verification completes
         }
       } catch (error) {
         console.error('❌ Wallet verification failed:', error);
@@ -208,6 +211,7 @@ function PageContent() {
           setIsSmartWallet(false);
           setIsVerifyingWallet(false);
           setIsVerificationComplete(true);
+          setIsProcessing(false); // Clear processing state on error
         }
       }
     };
@@ -218,6 +222,13 @@ function PageContent() {
       cancelled = true;
     };
   }, [address, connector]);
+
+  // Reset authentication attempt flag when address changes or disconnects
+  useEffect(() => {
+    if (!address) {
+      authenticationAttemptedRef.current = false;
+    }
+  }, [address]);
 
   // Disconnect effect
   useEffect(() => {
@@ -250,17 +261,20 @@ function PageContent() {
         !isConnecting &&
         !isDisconnected &&
         !authLoading &&
-        (onboardingComplete || isFirstUserAccount)
+        (onboardingComplete || isFirstUserAccount) &&
+        !authenticationAttemptedRef.current // Prevent duplicate attempts
       ) {
         console.log(
           'Smart Wallet is connected and onboarding complete. Using centralized auth system...',
         );
+        authenticationAttemptedRef.current = true; // Mark as attempted
         setIsProcessing(true);
         try {
           await signIn(address);
           console.log('Centralized authentication successful');
         } catch (err) {
           console.error('Failed to authenticate with centralized system:', err);
+          authenticationAttemptedRef.current = false; // Reset on failure to allow retry
         } finally {
           setIsProcessing(false);
         }
@@ -268,6 +282,9 @@ function PageContent() {
     };
 
     initiateAuthentication();
+    // NOTE: Deliberately excluding `signIn` from dependencies to prevent re-triggering
+    // when auth state changes. The ref guard prevents duplicate calls.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     address,
     isSmartWallet,
@@ -275,7 +292,6 @@ function PageContent() {
     isConnecting,
     isDisconnected,
     authLoading,
-    signIn,
     onboardingComplete,
     isFirstUserAccount,
   ]);
