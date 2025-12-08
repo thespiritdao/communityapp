@@ -73,9 +73,19 @@ function PageContent() {
   // Check if user needs to complete onboarding (show invite modal)
   useEffect(() => {
     const checkOnboarding = async () => {
-      if (!address || !isSmartWallet) {
+      // Wait for address and verification to complete
+      if (!address || !isVerificationComplete) {
         return;
       }
+
+      // If verification says it's NOT a smart wallet, disconnect
+      if (isVerificationComplete && !isSmartWallet) {
+        console.log('❌ Not a smart wallet, disconnecting...');
+        disconnect();
+        return;
+      }
+
+      console.log('🔍 Checking onboarding status for:', address);
 
       // Check if first user
       const firstUser = isFirstUser(address);
@@ -85,14 +95,17 @@ function PageContent() {
       const completed = await hasCompletedOnboarding(address);
       setOnboardingComplete(completed);
 
-      // Show invite modal if not completed and not first user
+      // Show invite modal if not completed
       if (!completed) {
+        console.log('🔑 User needs onboarding - showing invite modal');
         setShowInviteModal(true);
+      } else {
+        console.log('✅ User already onboarded');
       }
     };
 
     checkOnboarding();
-  }, [address, isSmartWallet]);
+  }, [address, isSmartWallet, isVerificationComplete, disconnect]);
 
   // Invite code validation handler
   const handleInviteValidation = async (
@@ -166,6 +179,7 @@ function PageContent() {
 
     const checkSmartWallet = async () => {
       if (!address || !connector) {
+        console.log('⏭️ No address or connector, skipping verification');
         setIsSmartWallet(false);
         setIsVerifyingWallet(false);
         setIsVerificationComplete(true);
@@ -174,16 +188,17 @@ function PageContent() {
         return;
       }
 
+      console.log('🔍 Starting wallet verification...', {
+        address,
+        connectorId: connector.id,
+        connectorName: connector.name,
+      });
+
       setIsVerifyingWallet(true);
       setIsVerificationComplete(false);
       verificationRef.current = { isComplete: false, isSmartWallet: false };
 
       try {
-        console.log(
-          '🔍 Starting centralized wallet verification for:',
-          address,
-        );
-
         // Use the centralized wallet verification service
         const result = await walletVerificationService.verifyWallet(
           address,
@@ -191,7 +206,10 @@ function PageContent() {
         );
 
         if (!cancelled) {
-          console.log('✅ Wallet verification complete:', result);
+          console.log('✅ Wallet verification complete:', {
+            isSmartWallet: result.isSmartWallet,
+            method: result.method,
+          });
 
           // Update state with verification result
           verificationRef.current = {
@@ -207,6 +225,7 @@ function PageContent() {
         console.error('❌ Wallet verification failed:', error);
 
         if (!cancelled) {
+          console.log('⚠️ Marking wallet as non-smart due to verification error');
           verificationRef.current = { isComplete: true, isSmartWallet: false };
           setIsSmartWallet(false);
           setIsVerifyingWallet(false);
