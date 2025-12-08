@@ -4,7 +4,7 @@ import dynamic from 'next/dynamic';
 import { useAccount } from 'wagmi';
 import Link from 'next/link';
 import { useIdentityPage } from '@/features/identity/hooks/useIdentityPage';
-import { TokenGallery } from '@/features/identity/components/TokenGallery';
+import { DatabaseTokenGallery } from '@/features/identity/components/DatabaseTokenGallery';
 import { InviteCodeDisplay } from '@/features/identity/components/InviteCodeDisplay';
 import 'src/features/identity/styles/identityStyles.css';
 import 'src/features/identity/styles/TokenGallery.css';
@@ -136,15 +136,15 @@ function IdentityPageContent() {
         onCancel={handleCancel}
       />
 
-      {/* Memberships Section - Using Updated TokenGallery */}
+      {/* Memberships Section - Using Database TokenGallery */}
       <div className="profile-section token-gallery-section">
         <h3>
           <strong>Memberships</strong>
         </h3>
-        <TokenGallery walletAddress={address} category="membership" />
+        <DatabaseTokenGallery walletAddress={address} category="membership" />
       </div>
 
-      {/* Credentials Section - Using Updated TokenGallery */}
+      {/* Credentials Section - Using Database TokenGallery */}
       <div
         className="profile-section token-gallery-section"
         style={{ marginTop: '20px' }}
@@ -152,7 +152,7 @@ function IdentityPageContent() {
         <h3>
           <strong>Credentials</strong>
         </h3>
-        <TokenGallery walletAddress={address} category="credential" />
+        <DatabaseTokenGallery walletAddress={address} category="credential" />
       </div>
 
       {/* Invite Code Display - Only visible to account owner */}
