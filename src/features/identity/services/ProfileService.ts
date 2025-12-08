@@ -17,19 +17,17 @@ export class ProfileService {
         .from('user_profiles')
         .select('*') // Select all fields to match ProfileDisplay requirements
         .eq('wallet_address', walletAddress.toLowerCase())
-        .single();
+        .maybeSingle(); // Use maybeSingle() instead of single() to avoid 406 errors
 
       if (error) {
-        // Profile not found is expected/valid case
-        if (error.code === 'PGRST116') {
-          return null;
-        }
-
+        console.error('Error fetching profile for', walletAddress, ':', error);
         throw error;
       }
 
+      // maybeSingle() returns null if no rows found, which is expected
       return data;
     } catch (error) {
+      console.error('Profile fetch error for', walletAddress, error);
       throw error;
     }
   }
