@@ -73,6 +73,7 @@ export const PodDeletionApprovalFlow: React.FC<
   const [showApprovalSignature, setShowApprovalSignature] = useState(false);
   const [transactionCalls, setTransactionCalls] = useState<any[]>([]);
   const [showTransaction, setShowTransaction] = useState(false);
+  const [deletionExecuted, setDeletionExecuted] = useState(false);
 
   // Force refresh function for debugging
   const forceRefresh = async () => {
@@ -733,9 +734,17 @@ export const PodDeletionApprovalFlow: React.FC<
   const executeDatabaseDeletion = async () => {
     console.log(`🗑️ Executing database deletion for pod: ${pod.id}`);
 
-    if (!activeProposal || !address) return;
+    if (!activeProposal || !address || deletionExecuted) {
+      if (deletionExecuted) {
+        console.log('⚠️ Deletion already executed, skipping duplicate request');
+      }
+      return;
+    }
 
     try {
+      setDeletionExecuted(true);
+      setIsLoading(true);
+
       // Only delete from database (HATs already deactivated via OnchainKit)
       const result = await PodDeletionService.deletePodDatabase(
         pod.id,
@@ -822,6 +831,10 @@ export const PodDeletionApprovalFlow: React.FC<
         description: error instanceof Error ? error.message : 'Unknown error',
         variant: 'destructive',
       });
+      // Reset states on failure so user can retry if needed
+      setDeletionExecuted(false);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -970,12 +983,16 @@ export const PodDeletionApprovalFlow: React.FC<
               !showTransaction && (
                 <Button
                   onClick={prepareDeletionTransactions}
-                  disabled={isLoading || !walletClient}
+                  disabled={isLoading || !walletClient || deletionExecuted}
                   variant="destructive"
                   className="w-full"
                 >
                   <Trash2 className="h-4 w-4 mr-2" />
-                  {isLoading ? 'Preparing...' : 'Execute Deletion'}
+                  {isLoading
+                    ? 'Preparing...'
+                    : deletionExecuted
+                      ? 'Deletion in Progress...'
+                      : 'Execute Deletion'}
                 </Button>
               )}
 

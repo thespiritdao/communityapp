@@ -367,6 +367,20 @@ export class PodDeletionService {
         // TODO: Implement treasury cleanup/transfer logic
       }
 
+      // Remove member count cache first (before deleting members to avoid trigger issues)
+      console.log('📊 Removing member count cache...');
+      const { error: countsError } = await supabase
+        .from('pod_member_counts')
+        .delete()
+        .eq('pod_id', podId);
+
+      if (
+        countsError &&
+        !(countsError.message && countsError.message.includes('not found'))
+      ) {
+        console.warn('Failed to remove member counts (non-critical):', countsError);
+      }
+
       // Remove all member records
       console.log('👥 Removing member records...');
       const { error: memberError } = await supabase
