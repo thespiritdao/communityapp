@@ -315,19 +315,29 @@ export async function hasCompletedOnboarding(
   walletAddress: string,
 ): Promise<boolean> {
   try {
+    console.log('[hasCompletedOnboarding] Checking for wallet:', walletAddress);
+
     const { data, error } = await supabase
       .from('user_profiles')
       .select('onboarded_at')
       .eq('wallet_address', walletAddress.toLowerCase())
-      .single();
+      .maybeSingle(); // Use maybeSingle() to avoid 406 errors for new users
 
-    if (error || !data) {
+    if (error) {
+      console.error('[hasCompletedOnboarding] Error:', error);
       return false;
     }
 
-    return !!data.onboarded_at;
+    if (!data) {
+      console.log('[hasCompletedOnboarding] No profile found - new user');
+      return false;
+    }
+
+    const isOnboarded = !!data.onboarded_at;
+    console.log('[hasCompletedOnboarding] Profile found, onboarded?', isOnboarded, 'onboarded_at:', data.onboarded_at);
+    return isOnboarded;
   } catch (error) {
-    console.error('Error checking onboarding status:', error);
+    console.error('[hasCompletedOnboarding] Unexpected error:', error);
     return false;
   }
 }

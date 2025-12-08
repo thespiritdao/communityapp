@@ -72,30 +72,40 @@ function PageContent() {
   // Check if user needs to complete onboarding (show invite modal)
   useEffect(() => {
     const checkOnboarding = async () => {
+      console.log('🔍 [Onboarding Check] Starting...', {
+        address,
+        isVerificationComplete,
+        isSmartWallet,
+      });
+
       // Wait for wallet address and verification to complete
       if (!address || !isVerificationComplete) {
+        console.log('⏳ [Onboarding Check] Waiting for address or verification');
         return;
       }
 
       // Only proceed if it's a smart wallet (non-smart wallets get disconnected)
       if (!isSmartWallet) {
+        console.log('❌ [Onboarding Check] Not a smart wallet, skipping');
         return;
       }
 
       // Check if first user
       const firstUser = isFirstUser(address);
       setIsFirstUserAccount(firstUser);
+      console.log('👤 [Onboarding Check] Is first user?', firstUser);
 
       // Check if already onboarded
       const completed = await hasCompletedOnboarding(address);
       setOnboardingComplete(completed);
+      console.log('📋 [Onboarding Check] Already onboarded?', completed);
 
       // Show invite modal if not completed
       if (!completed) {
-        console.log('🔑 User needs onboarding - showing invite modal');
+        console.log('🔑 [Onboarding Check] User needs onboarding - showing invite modal');
         setShowInviteModal(true);
       } else {
-        console.log('✅ User already onboarded');
+        console.log('✅ [Onboarding Check] User already onboarded');
       }
     };
 
@@ -177,6 +187,7 @@ function PageContent() {
         setIsSmartWallet(false);
         setIsVerifyingWallet(false);
         setIsVerificationComplete(true);
+        setIsProcessing(false); // Clear processing state when no wallet
         verificationRef.current = { isComplete: true, isSmartWallet: false };
         return;
       }
@@ -208,6 +219,7 @@ function PageContent() {
           setIsSmartWallet(result.isSmartWallet);
           setIsVerifyingWallet(false);
           setIsVerificationComplete(true);
+          setIsProcessing(false); // Clear processing state after verification
         }
       } catch (error) {
         console.error('❌ Wallet verification failed:', error);
@@ -217,6 +229,7 @@ function PageContent() {
           setIsSmartWallet(false);
           setIsVerifyingWallet(false);
           setIsVerificationComplete(true);
+          setIsProcessing(false); // Clear processing state on error
         }
       }
     };
@@ -395,6 +408,36 @@ function PageContent() {
       !isAuthenticated &&
       (onboardingComplete || isFirstUserAccount)) ||
     (address && isSmartWallet && isAuthenticated && !hasRedirected);
+
+  // Debug logging for loading state
+  useEffect(() => {
+    if (address) {
+      console.log('🔄 [Loading State]', {
+        isLoading,
+        isConnecting,
+        isVerifyingWallet,
+        isProcessing,
+        authLoading,
+        isAuthenticated,
+        hasRedirected,
+        onboardingComplete,
+        isFirstUserAccount,
+        showInviteModal,
+      });
+    }
+  }, [
+    isLoading,
+    isConnecting,
+    isVerifyingWallet,
+    isProcessing,
+    authLoading,
+    isAuthenticated,
+    hasRedirected,
+    onboardingComplete,
+    isFirstUserAccount,
+    showInviteModal,
+    address,
+  ]);
 
   // If everything is ready and user should be redirected, show redirect message
   if (address && isSmartWallet && isAuthenticated && !hasRedirected) {
