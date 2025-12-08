@@ -9,6 +9,7 @@ import { ReportButton } from './ReportButton';
 import { ReactionPicker } from './ReactionPicker';
 import { AttachmentDisplay } from './AttachmentDisplay';
 import { ProfileModal } from '@/features/identity/components/ProfileModal';
+import { RichTextEditor } from './RichTextEditor';
 import type { MediaAttachment } from '../services/MediaUploadService';
 import type { UserProfile } from '@/features/identity/types';
 
@@ -188,11 +189,11 @@ const PostCard: React.FC<PostCardProps> = ({
       <div className={styles.postContent}>
         {isEditing ? (
           <div className={styles.editContainer}>
-            <textarea
-              className={styles.editTextarea}
+            <RichTextEditor
               value={editContent}
-              onChange={(e) => setEditContent(e.target.value)}
-              rows={5}
+              onChange={(value) => setEditContent(value)}
+              placeholder="Edit your post..."
+              minHeight="150px"
             />
 
             {error && <div className={styles.editError}>{error}</div>}
