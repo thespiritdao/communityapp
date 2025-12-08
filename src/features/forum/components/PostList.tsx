@@ -134,6 +134,7 @@ const PostList: React.FC<PostListProps> = ({ threadId }) => {
         });
 
         // Fetch posts separately (after thread is loaded)
+        // Filter out deleted posts
         const { data: postsData, error: postsError } = await supabase
           .from('forum_posts')
           .select(`
@@ -144,6 +145,7 @@ const PostList: React.FC<PostListProps> = ({ threadId }) => {
             created_at
           `)
           .eq('thread_id', threadId)
+          .or('is_deleted.is.null,is_deleted.eq.false')
           .order('created_at', { ascending: true });
 
         if (postsError) throw postsError;
@@ -263,7 +265,7 @@ const PostList: React.FC<PostListProps> = ({ threadId }) => {
       setReplyContent('');
       setReplyAttachments([]);
 
-      // Refresh posts
+      // Refresh posts (exclude deleted)
       const { data: updatedPosts, error: fetchError } = await supabase
         .from('forum_posts')
         .select(`
@@ -274,6 +276,7 @@ const PostList: React.FC<PostListProps> = ({ threadId }) => {
           created_at
         `)
         .eq('thread_id', threadId)
+        .or('is_deleted.is.null,is_deleted.eq.false')
         .order('created_at', { ascending: true });
 
       if (fetchError) throw fetchError;
