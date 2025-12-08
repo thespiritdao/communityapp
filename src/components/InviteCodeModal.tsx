@@ -120,23 +120,24 @@ export function InviteCodeModal({
         {/* Step 1: Sacred Invite Code Entry */}
         {currentStep === 'invite' && (
           <div className="relative w-full max-w-lg mx-auto">
-            {/* Keyscroll Background Container */}
+            {/* Styled Container - Sacred Minimalism */}
             <div
               className="relative"
               style={{
-                backgroundImage: 'url(/images/keyscroll.png)',
-                backgroundSize: 'contain',
-                backgroundPosition: 'center',
-                backgroundRepeat: 'no-repeat',
-                minHeight: '500px',
+                background: 'linear-gradient(135deg, #FFFBF5 0%, #F9F5F0 100%)',
+                borderRadius: '16px',
+                padding: '48px 40px',
+                boxShadow: '0 8px 32px rgba(47, 93, 80, 0.12), 0 2px 8px rgba(0, 0, 0, 0.05)',
+                border: '1px solid rgba(143, 170, 161, 0.2)',
+                minHeight: '420px',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
               }}
             >
-              {/* Content Overlay on Scroll */}
+              {/* Content Container */}
               <div
-                className="relative z-10 px-12 py-16"
+                className="relative z-10 w-full"
                 style={{
                   maxWidth: '400px',
                   textAlign: 'center',

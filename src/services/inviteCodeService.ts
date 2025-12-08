@@ -157,12 +157,20 @@ export async function validateInviteCode(
       .from('user_profiles')
       .select('wallet_address, referral_key')
       .eq('referral_key', normalizedCode)
-      .single();
+      .maybeSingle(); // Use maybeSingle() to avoid 406 errors when no results found
 
     if (profileError || !profile) {
       return {
         isValid: false,
         error: 'Invalid invite code. Please check and try again.',
+      };
+    }
+
+    // Prevent self-referral: Users cannot use their own invite code
+    if (profile.wallet_address.toLowerCase() === normalizedWallet) {
+      return {
+        isValid: false,
+        error: 'You cannot use your own invite code.',
       };
     }
 
