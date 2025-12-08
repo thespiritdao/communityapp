@@ -7,7 +7,7 @@ import { supabase } from '@/utils/supabaseClient';
 import PostCard from './PostCard';
 import { useRouter } from 'next/navigation';
 import styles from '../styles/Forum.module.css';
-import UserTagging from '@/components/UserTagging';
+import { RichTextEditor } from './RichTextEditor';
 import { useForum } from '@/features/forum/hooks/useForum';
 import { ModerationToolbar } from './ModerationToolbar';
 import { ThreadSummary } from './ThreadSummary';
@@ -437,15 +437,11 @@ const PostList: React.FC<PostListProps> = ({ threadId }) => {
         <div className={styles.replyFormContainer}>
           <h3 className={styles.replyFormTitle}>Post a Reply</h3>
           <form onSubmit={handleSubmitReply} className={styles.replyForm}>
-            <UserTagging
+            <RichTextEditor
               value={replyContent}
               onChange={setReplyContent}
-              placeholder="Write your reply here... Use @ to mention someone"
-              className={styles.replyTextarea}
-              multiLine={true}
-              contextType="forum"
-              contextId={threadId}
-              contextUrl={`/forum/thread/${threadId}`}
+              placeholder="Write your reply here... Use formatting tools above"
+              minHeight="150px"
             />
 
             {/* Media Upload for replies */}
