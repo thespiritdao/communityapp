@@ -72,17 +72,9 @@ function PageContent() {
   // Check if user needs to complete onboarding (show invite modal)
   useEffect(() => {
     const checkOnboarding = async () => {
-      // Wait for wallet address and verification to complete
-      if (!address || !isVerificationComplete) {
+      if (!address || !isSmartWallet) {
         return;
       }
-
-      // Only proceed if it's a smart wallet (non-smart wallets get disconnected)
-      if (!isSmartWallet) {
-        return;
-      }
-
-      console.log('🔍 Checking onboarding status for:', address);
 
       // Check if first user
       const firstUser = isFirstUser(address);
@@ -92,17 +84,14 @@ function PageContent() {
       const completed = await hasCompletedOnboarding(address);
       setOnboardingComplete(completed);
 
-      // Show invite modal if not completed
+      // Show invite modal if not completed and not first user
       if (!completed) {
-        console.log('🔑 Showing invite modal for new user');
         setShowInviteModal(true);
-      } else {
-        console.log('✅ User already onboarded');
       }
     };
 
     checkOnboarding();
-  }, [address, isSmartWallet, isVerificationComplete]);
+  }, [address, isSmartWallet]);
 
   // Invite code validation handler
   const handleInviteValidation = async (
@@ -179,7 +168,6 @@ function PageContent() {
         setIsSmartWallet(false);
         setIsVerifyingWallet(false);
         setIsVerificationComplete(true);
-        setIsProcessing(false); // Clear processing state when no wallet
         verificationRef.current = { isComplete: true, isSmartWallet: false };
         return;
       }
@@ -211,7 +199,6 @@ function PageContent() {
           setIsSmartWallet(result.isSmartWallet);
           setIsVerifyingWallet(false);
           setIsVerificationComplete(true);
-          setIsProcessing(false); // Clear processing state after verification
         }
       } catch (error) {
         console.error('❌ Wallet verification failed:', error);
@@ -221,7 +208,6 @@ function PageContent() {
           setIsSmartWallet(false);
           setIsVerifyingWallet(false);
           setIsVerificationComplete(true);
-          setIsProcessing(false); // Clear processing state on error
         }
       }
     };
@@ -389,16 +375,12 @@ function PageContent() {
   }
 
   // Show loading state during any processing
-  // BUT: Don't show loading if user needs onboarding (invite modal should show)
   const isLoading =
     isConnecting ||
     isVerifyingWallet ||
     isProcessing ||
     authLoading ||
-    (address &&
-      isSmartWallet &&
-      !isAuthenticated &&
-      (onboardingComplete || isFirstUserAccount)) ||
+    (address && isSmartWallet && !isAuthenticated) ||
     (address && isSmartWallet && isAuthenticated && !hasRedirected);
 
   // If everything is ready and user should be redirected, show redirect message
