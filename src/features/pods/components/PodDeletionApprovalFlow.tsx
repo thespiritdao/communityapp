@@ -88,7 +88,7 @@ export const PodDeletionApprovalFlow: React.FC<
         .in('status', ['pending', 'approved'])
         .order('created_at', { ascending: false })
         .limit(1)
-        .single();
+        .maybeSingle(); // Use maybeSingle() to avoid 406 when no proposals found
 
       if (data && !error) {
         console.log('🔄 Refreshed proposal data:', data);
@@ -200,7 +200,7 @@ export const PodDeletionApprovalFlow: React.FC<
         .in('status', ['pending', 'approved']) // CRITICAL FIX: Include approved proposals
         .order('created_at', { ascending: false })
         .limit(1)
-        .single();
+        .maybeSingle(); // Use maybeSingle() to avoid 406 when no proposals found
 
       console.log('🔍 Proposal query result:', { data, error });
 
@@ -349,7 +349,7 @@ export const PodDeletionApprovalFlow: React.FC<
             .from('pods')
             .select('pod_leads')
             .eq('name', 'Executive Pod')
-            .single();
+            .maybeSingle();
 
           if (executivePod?.pod_leads) {
             for (const execLead of executivePod.pod_leads) {
@@ -446,7 +446,7 @@ export const PodDeletionApprovalFlow: React.FC<
             .from('pod_deletion_proposals')
             .select('*')
             .eq('id', activeProposal.id)
-            .single();
+            .maybeSingle();
 
           if (latestProposal) {
             // Update local state to reflect database state
@@ -492,7 +492,7 @@ export const PodDeletionApprovalFlow: React.FC<
             .from('pod_deletion_proposals')
             .select('current_approvals, required_approvals')
             .eq('id', activeProposal.id)
-            .single();
+            .maybeSingle();
 
           if (
             latestProposal?.current_approvals?.includes(address.toLowerCase())
@@ -506,7 +506,7 @@ export const PodDeletionApprovalFlow: React.FC<
               .from('pod_deletion_proposals')
               .select('*')
               .eq('id', activeProposal.id)
-              .single();
+              .maybeSingle();
 
             if (fullProposal) {
               setActiveProposal(fullProposal);
@@ -563,7 +563,7 @@ export const PodDeletionApprovalFlow: React.FC<
         .from('pod_deletion_proposals')
         .select('*')
         .eq('id', activeProposal.id)
-        .single();
+        .maybeSingle();
 
       if (!finalProposal) {
         throw new Error('Failed to fetch updated proposal');
@@ -592,7 +592,7 @@ export const PodDeletionApprovalFlow: React.FC<
           .from('pod_deletion_proposals')
           .select('*')
           .eq('id', activeProposal.id)
-          .single();
+          .maybeSingle();
 
         if (updatedProposal) {
           // Update local state to show approved status immediately
