@@ -72,7 +72,13 @@ function PageContent() {
   // Check if user needs to complete onboarding (show invite modal)
   useEffect(() => {
     const checkOnboarding = async () => {
-      if (!address || !isSmartWallet) {
+      // Wait for wallet address and verification to complete
+      if (!address || !isVerificationComplete) {
+        return;
+      }
+
+      // Only proceed if it's a smart wallet (non-smart wallets get disconnected)
+      if (!isSmartWallet) {
         return;
       }
 
@@ -84,14 +90,17 @@ function PageContent() {
       const completed = await hasCompletedOnboarding(address);
       setOnboardingComplete(completed);
 
-      // Show invite modal if not completed and not first user
+      // Show invite modal if not completed
       if (!completed) {
+        console.log('🔑 User needs onboarding - showing invite modal');
         setShowInviteModal(true);
+      } else {
+        console.log('✅ User already onboarded');
       }
     };
 
     checkOnboarding();
-  }, [address, isSmartWallet]);
+  }, [address, isSmartWallet, isVerificationComplete]);
 
   // Invite code validation handler
   const handleInviteValidation = async (
@@ -375,12 +384,16 @@ function PageContent() {
   }
 
   // Show loading state during any processing
+  // BUT: Don't show loading if user needs onboarding (invite modal should show)
   const isLoading =
     isConnecting ||
     isVerifyingWallet ||
     isProcessing ||
     authLoading ||
-    (address && isSmartWallet && !isAuthenticated) ||
+    (address &&
+      isSmartWallet &&
+      !isAuthenticated &&
+      (onboardingComplete || isFirstUserAccount)) ||
     (address && isSmartWallet && isAuthenticated && !hasRedirected);
 
   // If everything is ready and user should be redirected, show redirect message
