@@ -2,7 +2,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { useAccount, useConnect, useDisconnect } from 'wagmi';
+import { useAccount, useDisconnect } from 'wagmi';
 import '@/styles/transactionStyles.css';
 import { useRouter } from 'next/navigation';
 import { useAuthContext } from '@/features/identity';
@@ -14,6 +14,8 @@ import {
   hasCompletedOnboarding,
   updateUserWithReferrer,
 } from '@/services/inviteCodeService';
+import { ConnectWallet } from '@/wallet/components/ConnectWallet';
+import { WalletProvider } from '@/wallet/components/WalletProvider';
 
 export default function Page() {
   const [isInitialized, setIsInitialized] = useState(false);
@@ -32,7 +34,6 @@ export default function Page() {
 function PageContent() {
   // useAccount returns the connected wallet address and connection state.
   const { address, isConnecting, isDisconnected, connector } = useAccount();
-  const { connect, connectors } = useConnect();
   const { disconnect } = useDisconnect();
   const router = useRouter();
 
@@ -442,82 +443,8 @@ function PageContent() {
     router,
   ]);
 
-  // Function to connect Smart Wallet only
-  const connectSmartWallet = async () => {
-    // Find the Coinbase Wallet connector
-    const coinbaseConnector = connectors.find(
-      (connector) =>
-        connector.name === 'Coinbase Wallet' ||
-        connector.id === 'coinbaseWallet' ||
-        connector.id === 'coinbaseWalletSDK',
-    );
-
-    if (coinbaseConnector) {
-      console.log('🔌 Connecting with Coinbase Smart Wallet:', {
-        name: coinbaseConnector.name,
-        id: coinbaseConnector.id,
-        userAgent: navigator.userAgent,
-        hasCoinbaseApp: navigator.userAgent.includes('CoinbaseWallet'),
-        timestamp: new Date().toISOString(),
-      });
-
-      setIsProcessing(true);
-
-      try {
-        console.log('🔐 Initiating Coinbase Smart Wallet authentication...');
-        const result = await connect({ connector: coinbaseConnector });
-        console.log('✅ Wallet connection initiated successfully:', result);
-      } catch (error: any) {
-        console.error('❌ Wallet connection error:', {
-          message: error?.message,
-          code: error?.code,
-          name: error?.name,
-          details: error,
-          timestamp: new Date().toISOString(),
-        });
-        setIsProcessing(false);
-
-        // Check if it's a timeout or user rejection
-        if (error?.message?.includes('timeout') || error?.message?.includes('timed out')) {
-          alert(
-            '⏱️ Connection timed out.\n\n' +
-            'This usually means:\n' +
-            '• The authentication modal didn\'t load\n' +
-            '• Network connection issue\n' +
-            '• You didn\'t complete authentication in time\n\n' +
-            'Please try again with a stable internet connection.'
-          );
-        } else if (error?.message?.includes('rejected') || error?.message?.includes('denied')) {
-          alert('❌ You cancelled the wallet creation. Please try again if this was a mistake.');
-        } else {
-          alert(
-            '❌ Failed to connect wallet.\n\n' +
-            'Possible causes:\n' +
-            '• Network connection issue\n' +
-            '• Browser compatibility\n' +
-            '• Temporary service issue\n\n' +
-            'Please try again or use Chrome browser for best results.'
-          );
-        }
-      }
-    } else {
-      console.error(
-        'Coinbase Wallet connector not found. Available connectors:',
-        connectors.map((c) => ({ name: c.name, id: c.id })),
-      );
-    }
-  };
-
-  // Function to handle Enter button click
-  const handleEnter = () => {
-    if (!address) {
-      // New user - trigger wallet connection
-      connectSmartWallet();
-    } else if (address && isSmartWallet && !isAuthenticated) {
-      // Existing wallet connected but not authenticated - this will be handled by useEffect
-      setIsProcessing(true);
-    }
-  };
+  // State to control if Connect button should be shown
+  const [showConnectButton, setShowConnectButton] = useState(false);
 
   if (!isClient) return null;
 
@@ -621,7 +548,7 @@ function PageContent() {
     );
   }
 
-  // Main display - single Enter button for all states
+  // Main display - OnchainKit Connect Wallet button
   return (
     <div>
       <img
@@ -631,13 +558,12 @@ function PageContent() {
       />
       <div className="wrapper">
         <div className="button-container">
-          <button
-            onClick={handleEnter}
-            className="button enter-button"
-            disabled={isLoading}
-          >
-            {isLoading ? 'Loading...' : 'Enter'}
-          </button>
+          <WalletProvider>
+            <ConnectWallet
+              className="button enter-button"
+              text={isLoading ? 'Loading...' : 'Enter'}
+            />
+          </WalletProvider>
         </div>
       </div>
 
