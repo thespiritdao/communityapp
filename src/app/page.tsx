@@ -48,6 +48,7 @@ function PageContent() {
   const [isProcessing, setIsProcessing] = useState(false);
   const verificationRef = useRef({ isComplete: false, isSmartWallet: false });
   const authenticationAttemptedRef = useRef(false); // Track if auth was already attempted
+  const connectionAttemptsRef = useRef(0); // Track connection attempts to detect loops
   // Also track client-side mounting to avoid SSR hydration issues.
   const [isClient, setIsClient] = useState(false);
   const [isFirefox, setIsFirefox] = useState(false);
@@ -67,6 +68,28 @@ function PageContent() {
       console.warn('Firefox detected - Coinbase Wallet SDK has limited support');
     }
   }, []);
+
+  // Monitor connection state changes to detect loops
+  useEffect(() => {
+    if (isConnecting) {
+      connectionAttemptsRef.current += 1;
+      console.log(`🔄 Connection attempt #${connectionAttemptsRef.current}`, {
+        isConnecting,
+        isDisconnected,
+        address,
+        timestamp: new Date().toISOString(),
+      });
+
+      // Detect infinite loop (more than 5 attempts in this session)
+      if (connectionAttemptsRef.current > 5) {
+        console.error('❌ Infinite connection loop detected! Stopping...');
+        setIsProcessing(false);
+        alert(
+          'Connection loop detected. This may happen if the Coinbase Wallet app is not installed. Please try using a browser with the Coinbase Wallet extension, or install the Coinbase Wallet mobile app.'
+        );
+      }
+    }
+  }, [isConnecting, isDisconnected, address]);
 
   // Use persistent wallet connection hook
   const persistentWallet = usePersistentWalletConnection();
@@ -343,7 +366,7 @@ function PageContent() {
   ]);
 
   // Function to connect Smart Wallet only
-  const connectSmartWallet = () => {
+  const connectSmartWallet = async () => {
     // Find the Coinbase Wallet connector
     const coinbaseConnector = connectors.find(
       (connector) =>
@@ -353,9 +376,33 @@ function PageContent() {
     );
 
     if (coinbaseConnector) {
-      console.log('Connecting with Coinbase Smart Wallet:', coinbaseConnector);
+      console.log('🔌 Connecting with Coinbase Smart Wallet:', {
+        name: coinbaseConnector.name,
+        id: coinbaseConnector.id,
+        userAgent: navigator.userAgent,
+        hasCoinbaseApp: navigator.userAgent.includes('CoinbaseWallet'),
+        timestamp: new Date().toISOString(),
+      });
       setIsProcessing(true);
-      connect({ connector: coinbaseConnector });
+
+      try {
+        const result = await connect({ connector: coinbaseConnector });
+        console.log('✅ Wallet connection initiated successfully:', result);
+      } catch (error: any) {
+        console.error('❌ Wallet connection error:', {
+          message: error?.message,
+          code: error?.code,
+          name: error?.name,
+          details: error,
+          timestamp: new Date().toISOString(),
+        });
+        setIsProcessing(false);
+
+        // Show user-friendly error
+        alert(
+          'Failed to connect wallet. Please ensure you have a stable internet connection and try again.'
+        );
+      }
     } else {
       console.error(
         'Coinbase Wallet connector not found. Available connectors:',
