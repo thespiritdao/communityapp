@@ -10,6 +10,9 @@ const coinbaseWalletConnector = coinbaseWallet({
   appLogoUrl: '/spiritdaosymbol.png',
   preference: 'smartWalletOnly', // forces Smart Wallet only
   version: '4',
+  // Force embedded modal instead of popup windows
+  headlessMode: false, // Use UI components
+  reloadOnDisconnect: false,
 });
 
 // Log RPC configuration for debugging

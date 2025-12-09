@@ -461,20 +461,10 @@ function PageContent() {
         timestamp: new Date().toISOString(),
       });
 
-      // Alert user about popup window
-      alert(
-        '⚠️ A Coinbase Wallet window will open for authentication.\n\n' +
-        'If you don\'t see it:\n' +
-        '1. Check if your browser blocked a popup\n' +
-        '2. Look for a new browser tab/window\n' +
-        '3. Check behind this window\n\n' +
-        'Tap OK to continue...'
-      );
-
       setIsProcessing(true);
 
       try {
-        console.log('📱 Opening Coinbase authentication window...');
+        console.log('🔐 Initiating Coinbase Smart Wallet authentication...');
         const result = await connect({ connector: coinbaseConnector });
         console.log('✅ Wallet connection initiated successfully:', result);
       } catch (error: any) {
@@ -492,21 +482,21 @@ function PageContent() {
           alert(
             '⏱️ Connection timed out.\n\n' +
             'This usually means:\n' +
-            '• The Coinbase popup was blocked\n' +
-            '• The popup opened behind your browser\n' +
-            '• You didn\'t approve in time\n\n' +
-            'Please allow popups and try again.'
+            '• The authentication modal didn\'t load\n' +
+            '• Network connection issue\n' +
+            '• You didn\'t complete authentication in time\n\n' +
+            'Please try again with a stable internet connection.'
           );
         } else if (error?.message?.includes('rejected') || error?.message?.includes('denied')) {
-          alert('You rejected the connection request. Please try again if this was a mistake.');
+          alert('❌ You cancelled the wallet creation. Please try again if this was a mistake.');
         } else {
           alert(
-            'Failed to connect wallet.\n\n' +
+            '❌ Failed to connect wallet.\n\n' +
             'Possible causes:\n' +
-            '• Popup blocker is enabled\n' +
             '• Network connection issue\n' +
-            '• Browser compatibility\n\n' +
-            'Try allowing popups or using Chrome browser.'
+            '• Browser compatibility\n' +
+            '• Temporary service issue\n\n' +
+            'Please try again or use Chrome browser for best results.'
           );
         }
       }
@@ -616,13 +606,13 @@ function PageContent() {
           <div className="button-container">
             <div style={{ textAlign: 'center', color: 'white' }}>
               <p style={{ fontSize: '18px', marginBottom: '12px', fontWeight: 'bold' }}>
-                Waiting for approval...
+                Creating your wallet...
               </p>
               <p style={{ fontSize: '14px', marginBottom: '8px' }}>
-                Check for a Coinbase Wallet popup window
+                Please complete the authentication in the modal
               </p>
               <p style={{ fontSize: '12px', opacity: 0.8 }}>
-                It may have opened in a new tab or behind this window
+                This may take a few moments
               </p>
             </div>
           </div>
