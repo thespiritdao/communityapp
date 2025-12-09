@@ -97,27 +97,52 @@ function PageContent() {
   // Check if user needs to complete onboarding (show invite modal)
   useEffect(() => {
     const checkOnboarding = async () => {
+      console.log('📋 Onboarding check triggered:', {
+        address,
+        isVerificationComplete,
+        isSmartWallet,
+        timestamp: new Date().toISOString(),
+      });
+
       // Wait for address, verification to complete, AND smart wallet confirmation
       if (!address || !isVerificationComplete || !isSmartWallet) {
+        console.log('⏭️ Skipping onboarding check - conditions not met:', {
+          hasAddress: !!address,
+          isVerificationComplete,
+          isSmartWallet,
+        });
         return;
       }
 
       console.log('🔍 Checking onboarding status for:', address);
 
-      // Check if first user
-      const firstUser = isFirstUser(address);
-      setIsFirstUserAccount(firstUser);
+      try {
+        // Check if first user
+        const firstUser = isFirstUser(address);
+        console.log('👤 First user check:', { address, isFirstUser: firstUser });
+        setIsFirstUserAccount(firstUser);
 
-      // Check if already onboarded
-      const completed = await hasCompletedOnboarding(address);
-      setOnboardingComplete(completed);
+        // Check if already onboarded
+        const completed = await hasCompletedOnboarding(address);
+        console.log('📊 Onboarding status retrieved:', {
+          address,
+          completed,
+          timestamp: new Date().toISOString(),
+        });
+        setOnboardingComplete(completed);
 
-      // Show invite modal if not completed
-      if (!completed) {
-        console.log('🔑 User needs onboarding - showing invite modal');
+        // Show invite modal if not completed
+        if (!completed) {
+          console.log('🔑 User needs onboarding - showing invite modal');
+          setShowInviteModal(true);
+        } else {
+          console.log('✅ User already onboarded');
+        }
+      } catch (error) {
+        console.error('❌ Error checking onboarding status:', error);
+        // On error, assume user needs onboarding
+        setOnboardingComplete(false);
         setShowInviteModal(true);
-      } else {
-        console.log('✅ User already onboarded');
       }
     };
 
@@ -274,27 +299,48 @@ function PageContent() {
 
   // Disconnect effect
   useEffect(() => {
+    console.log('🔌 Disconnect effect triggered:', {
+      address,
+      verificationComplete: verificationRef.current.isComplete,
+      verificationIsSmartWallet: verificationRef.current.isSmartWallet,
+      stateIsSmartWallet: isSmartWallet,
+      timestamp: new Date().toISOString(),
+    });
+
     if (address && verificationRef.current.isComplete) {
-      console.log('Verification complete, checking wallet status:', {
+      console.log('✅ Verification complete, checking wallet status:', {
         isSmartWallet: verificationRef.current.isSmartWallet,
         address,
         isVerificationComplete: verificationRef.current.isComplete,
       });
 
       if (verificationRef.current.isSmartWallet) {
-        console.log('Smart Wallet verified, proceeding with connection');
+        console.log('✅ Smart Wallet verified, proceeding with connection');
       } else {
         console.log(
-          'Non-Smart Wallet detected after complete verification. Disconnecting...',
+          '❌ Non-Smart Wallet detected after complete verification. Disconnecting...',
         );
         disconnect();
       }
     }
-  }, [address, isVerificationComplete, disconnect]);
+  }, [address, isVerificationComplete, disconnect, isSmartWallet]);
 
   // Use centralized auth system when Smart Wallet is connected AND onboarding is complete
   useEffect(() => {
     const initiateAuthentication = async () => {
+      console.log('🔐 Authentication check triggered:', {
+        address,
+        isSmartWallet,
+        isAuthenticated,
+        isConnecting,
+        isDisconnected,
+        authLoading,
+        onboardingComplete,
+        isFirstUserAccount,
+        authenticationAttempted: authenticationAttemptedRef.current,
+        timestamp: new Date().toISOString(),
+      });
+
       // Only authenticate after onboarding is complete (or first user)
       if (
         address &&
@@ -307,19 +353,21 @@ function PageContent() {
         !authenticationAttemptedRef.current // Prevent duplicate attempts
       ) {
         console.log(
-          'Smart Wallet is connected and onboarding complete. Using centralized auth system...',
+          '🔑 Smart Wallet is connected and onboarding complete. Using centralized auth system...',
         );
         authenticationAttemptedRef.current = true; // Mark as attempted
         setIsProcessing(true);
         try {
           await signIn(address);
-          console.log('Centralized authentication successful');
+          console.log('✅ Centralized authentication successful');
         } catch (err) {
-          console.error('Failed to authenticate with centralized system:', err);
+          console.error('❌ Failed to authenticate with centralized system:', err);
           authenticationAttemptedRef.current = false; // Reset on failure to allow retry
         } finally {
           setIsProcessing(false);
         }
+      } else {
+        console.log('⏭️ Skipping authentication - conditions not met');
       }
     };
 
