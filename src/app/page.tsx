@@ -75,7 +75,25 @@ function PageContent() {
         import('eruda').then((eruda) => {
           eruda.default.init();
           console.log('📱 Mobile debugging console enabled');
+
+          // Ensure eruda is above all other UI
+          const erudaContainer = document.querySelector('.eruda-container');
+          if (erudaContainer) {
+            (erudaContainer as HTMLElement).style.zIndex = '999999999';
+          }
         });
+      }
+
+      // Clear cached wallet state with ?clear=true
+      if (urlParams.get('clear') === 'true') {
+        console.log('🧹 Clearing cached wallet state...');
+        localStorage.removeItem('wallet_connection_state');
+        localStorage.removeItem('wagmi.store');
+        localStorage.removeItem('wagmi.cache');
+        localStorage.removeItem('wagmi.recentConnectorId');
+        console.log('✅ Wallet cache cleared. Reload the page.');
+        alert('Wallet cache cleared! The page will reload.');
+        window.location.href = window.location.pathname + '?debug=true';
       }
     }
   }, []);
