@@ -67,6 +67,17 @@ function PageContent() {
     if (isFirefoxBrowser) {
       console.warn('Firefox detected - Coinbase Wallet SDK has limited support');
     }
+
+    // Enable mobile debugging console with ?debug=true in URL
+    if (typeof window !== 'undefined') {
+      const urlParams = new URLSearchParams(window.location.search);
+      if (urlParams.get('debug') === 'true' || process.env.NODE_ENV === 'development') {
+        import('eruda').then((eruda) => {
+          eruda.default.init();
+          console.log('📱 Mobile debugging console enabled');
+        });
+      }
+    }
   }, []);
 
   // Monitor connection state changes to detect loops
