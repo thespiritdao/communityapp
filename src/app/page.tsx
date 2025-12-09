@@ -202,7 +202,7 @@ function PageContent() {
         if (!cancelled) {
           console.log('✅ Wallet verification complete:', {
             isSmartWallet: result.isSmartWallet,
-            method: result.method,
+            detectedMethod: result.detectedMethod,
           });
 
           // Update state with verification result
