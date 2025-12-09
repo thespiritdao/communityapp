@@ -460,9 +460,21 @@ function PageContent() {
         hasCoinbaseApp: navigator.userAgent.includes('CoinbaseWallet'),
         timestamp: new Date().toISOString(),
       });
+
+      // Alert user about popup window
+      alert(
+        '⚠️ A Coinbase Wallet window will open for authentication.\n\n' +
+        'If you don\'t see it:\n' +
+        '1. Check if your browser blocked a popup\n' +
+        '2. Look for a new browser tab/window\n' +
+        '3. Check behind this window\n\n' +
+        'Tap OK to continue...'
+      );
+
       setIsProcessing(true);
 
       try {
+        console.log('📱 Opening Coinbase authentication window...');
         const result = await connect({ connector: coinbaseConnector });
         console.log('✅ Wallet connection initiated successfully:', result);
       } catch (error: any) {
@@ -475,10 +487,28 @@ function PageContent() {
         });
         setIsProcessing(false);
 
-        // Show user-friendly error
-        alert(
-          'Failed to connect wallet. Please ensure you have a stable internet connection and try again.'
-        );
+        // Check if it's a timeout or user rejection
+        if (error?.message?.includes('timeout') || error?.message?.includes('timed out')) {
+          alert(
+            '⏱️ Connection timed out.\n\n' +
+            'This usually means:\n' +
+            '• The Coinbase popup was blocked\n' +
+            '• The popup opened behind your browser\n' +
+            '• You didn\'t approve in time\n\n' +
+            'Please allow popups and try again.'
+          );
+        } else if (error?.message?.includes('rejected') || error?.message?.includes('denied')) {
+          alert('You rejected the connection request. Please try again if this was a mistake.');
+        } else {
+          alert(
+            'Failed to connect wallet.\n\n' +
+            'Possible causes:\n' +
+            '• Popup blocker is enabled\n' +
+            '• Network connection issue\n' +
+            '• Browser compatibility\n\n' +
+            'Try allowing popups or using Chrome browser.'
+          );
+        }
       }
     } else {
       console.error(
@@ -545,6 +575,16 @@ function PageContent() {
     isRedirecting ||
     (address && isSmartWallet && !isAuthenticated);
 
+  // Show loading message based on state
+  const getLoadingMessage = () => {
+    if (isRedirecting) return 'Redirecting...';
+    if (isConnecting) return 'Waiting for approval...\nCheck for popup window!';
+    if (isVerifyingWallet) return 'Verifying wallet...';
+    if (authLoading) return 'Authenticating...';
+    if (address && isSmartWallet && !isAuthenticated) return 'Completing authentication...';
+    return 'Loading...';
+  };
+
   // If redirecting, show redirect message
   if (isRedirecting) {
     return (
@@ -557,6 +597,34 @@ function PageContent() {
         <div className="wrapper">
           <div className="button-container">
             <p className="text-center text-white">Redirecting...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Show waiting for approval screen when connecting
+  if (isConnecting) {
+    return (
+      <div>
+        <img
+          src="/images/doyoudare.png"
+          alt="Background"
+          className="background-image"
+        />
+        <div className="wrapper">
+          <div className="button-container">
+            <div style={{ textAlign: 'center', color: 'white' }}>
+              <p style={{ fontSize: '18px', marginBottom: '12px', fontWeight: 'bold' }}>
+                Waiting for approval...
+              </p>
+              <p style={{ fontSize: '14px', marginBottom: '8px' }}>
+                Check for a Coinbase Wallet popup window
+              </p>
+              <p style={{ fontSize: '12px', opacity: 0.8 }}>
+                It may have opened in a new tab or behind this window
+              </p>
+            </div>
           </div>
         </div>
       </div>
