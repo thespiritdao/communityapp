@@ -41,6 +41,7 @@ function PageContent() {
 
   // Local state: track wallet verification and redirect
   const [hasRedirected, setHasRedirected] = useState(false);
+  const [isRedirecting, setIsRedirecting] = useState(false);
   const [isSmartWallet, setIsSmartWallet] = useState(false);
   const [isVerifyingWallet, setIsVerifyingWallet] = useState(false);
   const [isVerificationComplete, setIsVerificationComplete] = useState(false);
@@ -321,11 +322,13 @@ function PageContent() {
       isSmartWallet &&
       isAuthenticated &&
       !hasRedirected &&
-      !authLoading
+      !authLoading &&
+      !isRedirecting
     ) {
       console.log(
         `User authenticated with Smart Wallet: ${address}. Redirecting...`,
       );
+      setIsRedirecting(true);
       setHasRedirected(true);
       router.push('/home');
     }
@@ -335,6 +338,7 @@ function PageContent() {
     isAuthenticated,
     hasRedirected,
     authLoading,
+    isRedirecting,
     router,
   ]);
 
@@ -414,11 +418,11 @@ function PageContent() {
     isVerifyingWallet ||
     isProcessing ||
     authLoading ||
-    (address && isSmartWallet && !isAuthenticated) ||
-    (address && isSmartWallet && isAuthenticated && !hasRedirected);
+    isRedirecting ||
+    (address && isSmartWallet && !isAuthenticated);
 
-  // If everything is ready and user should be redirected, show redirect message
-  if (address && isSmartWallet && isAuthenticated && !hasRedirected) {
+  // If redirecting, show redirect message
+  if (isRedirecting) {
     return (
       <div>
         <img
