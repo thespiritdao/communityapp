@@ -73,15 +73,8 @@ function PageContent() {
   // Check if user needs to complete onboarding (show invite modal)
   useEffect(() => {
     const checkOnboarding = async () => {
-      // Wait for address and verification to complete
-      if (!address || !isVerificationComplete) {
-        return;
-      }
-
-      // If verification says it's NOT a smart wallet, disconnect
-      if (isVerificationComplete && !isSmartWallet) {
-        console.log('❌ Not a smart wallet, disconnecting...');
-        disconnect();
+      // Wait for address, verification to complete, AND smart wallet confirmation
+      if (!address || !isVerificationComplete || !isSmartWallet) {
         return;
       }
 
@@ -105,7 +98,7 @@ function PageContent() {
     };
 
     checkOnboarding();
-  }, [address, isSmartWallet, isVerificationComplete, disconnect]);
+  }, [address, isSmartWallet, isVerificationComplete]);
 
   // Invite code validation handler
   const handleInviteValidation = async (
