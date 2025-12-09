@@ -235,10 +235,16 @@ function PageContent() {
     };
   }, [address, connector]);
 
-  // Reset authentication attempt flag when address changes or disconnects
+  // Reset authentication attempt flag only when address actually changes
+  const previousAddressRef = useRef<string | undefined>(undefined);
   useEffect(() => {
-    if (!address) {
-      authenticationAttemptedRef.current = false;
+    // Only reset if address changed to a different address (not just undefined)
+    if (previousAddressRef.current !== address) {
+      if (address) {
+        // New address connected - reset flag to allow authentication
+        authenticationAttemptedRef.current = false;
+      }
+      previousAddressRef.current = address;
     }
   }, [address]);
 
