@@ -191,14 +191,33 @@ function PageContent() {
 
       // Clear cached wallet state with ?clear=true
       if (urlParams.get('clear') === 'true') {
-        console.log('🧹 Clearing cached wallet state...');
+        console.log('🧹 Clearing ALL cached state (wallet + session)...');
+
+        // Clear wallet cache
         localStorage.removeItem('wallet_connection_state');
         localStorage.removeItem('wagmi.store');
         localStorage.removeItem('wagmi.cache');
         localStorage.removeItem('wagmi.recentConnectorId');
-        console.log('✅ Wallet cache cleared. Reload the page.');
-        alert('Wallet cache cleared! The page will reload.');
-        window.location.href = window.location.pathname + '?debug=true';
+
+        // Clear Supabase session
+        import('@/utils/supabaseClient').then(({ supabase }) => {
+          supabase.auth.signOut().then(() => {
+            console.log('✅ Session cleared');
+          });
+        });
+
+        // Clear all cookies
+        document.cookie.split(";").forEach((c) => {
+          document.cookie = c
+            .replace(/^ +/, "")
+            .replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
+        });
+
+        console.log('✅ All cache cleared. Reloading...');
+        alert('All cache cleared! You will now appear as a new user.');
+        setTimeout(() => {
+          window.location.href = window.location.pathname;
+        }, 500);
       }
     }
   }, []);
