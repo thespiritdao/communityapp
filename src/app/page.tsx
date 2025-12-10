@@ -54,6 +54,8 @@ function PageContent() {
   const [isClient, setIsClient] = useState(false);
   const [isFirefox, setIsFirefox] = useState(false);
   const [showPopupWarning, setShowPopupWarning] = useState(false);
+  const [hasCoinbaseWallet, setHasCoinbaseWallet] = useState<boolean | null>(null);
+  const [showInstallPrompt, setShowInstallPrompt] = useState(false);
 
   // Invite code modal state
   const [showInviteModal, setShowInviteModal] = useState(false);
@@ -69,6 +71,45 @@ function PageContent() {
     if (isFirefoxBrowser) {
       console.warn('Firefox detected - Coinbase Wallet SDK has limited support');
     }
+
+    // CRITICAL: Detect if Coinbase Wallet app is installed on mobile
+    const detectCoinbaseWallet = () => {
+      const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+
+      if (!isMobile) {
+        // Desktop - passkeys should work, allow connection
+        console.log('🖥️ Desktop detected - passkeys available');
+        setHasCoinbaseWallet(true);
+        return;
+      }
+
+      // Mobile detection - check for Coinbase Wallet deep link support
+      // The SDK sets window.coinbaseWalletExtension when app is installed
+      const hasCoinbaseExtension = !!(window as any).coinbaseWalletExtension;
+
+      // Also check for ethereum provider from Coinbase Wallet
+      const hasProvider = !!(window as any).ethereum?.isCoinbaseWallet;
+
+      const isInstalled = hasCoinbaseExtension || hasProvider;
+
+      console.log('📱 Mobile wallet detection:', {
+        hasCoinbaseExtension,
+        hasProvider,
+        isInstalled
+      });
+
+      setHasCoinbaseWallet(isInstalled);
+
+      // If not installed on mobile, show install prompt
+      if (!isInstalled) {
+        console.warn('⚠️ Coinbase Wallet app not detected on mobile device');
+        setShowInstallPrompt(true);
+      }
+    };
+
+    // Run detection after a brief delay to let SDK initialize
+    setTimeout(detectCoinbaseWallet, 500);
+  }, []);
 
     // Enable mobile debugging console with ?debug=true in URL
     if (typeof window !== 'undefined') {
@@ -462,6 +503,155 @@ function PageContent() {
   const [showConnectButton, setShowConnectButton] = useState(false);
 
   if (!isClient) return null;
+
+  // Show install prompt for mobile users without Coinbase Wallet app
+  if (showInstallPrompt && hasCoinbaseWallet === false && !address) {
+    const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+    const isAndroid = /Android/i.test(navigator.userAgent);
+
+    const appStoreUrl = isIOS
+      ? 'https://apps.apple.com/app/coinbase-wallet/id1278383455'
+      : isAndroid
+      ? 'https://play.google.com/store/apps/details?id=org.toshi'
+      : 'https://www.coinbase.com/wallet/downloads';
+
+    return (
+      <div>
+        <img
+          src="/images/doyoudare.png"
+          alt="Background"
+          className="background-image"
+        />
+        <div className="wrapper">
+          <div className="button-container" style={{ maxWidth: '400px', padding: '20px' }}>
+            <div style={{
+              backgroundColor: 'rgba(255, 255, 255, 0.95)',
+              padding: '32px 24px',
+              borderRadius: '16px',
+              textAlign: 'center',
+              border: '1px solid #D8D2C8',
+              boxShadow: '0 8px 24px rgba(47, 93, 80, 0.15)'
+            }}>
+              {/* App Icon */}
+              <div style={{ marginBottom: '20px' }}>
+                <svg width="64" height="64" viewBox="0 0 64 64" fill="none" style={{ margin: '0 auto' }}>
+                  <rect width="64" height="64" rx="12" fill="#0052FF"/>
+                  <path d="M32 16C23.163 16 16 23.163 16 32C16 40.837 23.163 48 32 48C40.837 48 48 40.837 48 32C48 23.163 40.837 16 32 16ZM32 42C26.477 42 22 37.523 22 32C22 26.477 26.477 22 32 22C37.523 22 42 26.477 42 32C42 37.523 37.523 42 32 42Z" fill="white"/>
+                </svg>
+              </div>
+
+              <h2 style={{
+                fontSize: '22px',
+                fontWeight: '600',
+                color: '#3A3A3A',
+                marginBottom: '12px',
+                letterSpacing: '0.02em'
+              }}>
+                Coinbase Wallet Required
+              </h2>
+
+              <p style={{
+                fontSize: '15px',
+                color: '#5F5A54',
+                marginBottom: '24px',
+                lineHeight: '1.6'
+              }}>
+                SpiritDAO uses Coinbase Smart Wallet for secure, gas-free access.
+                <br />
+                <strong>Install the app to continue.</strong>
+              </p>
+
+              {/* Install Button */}
+              <a
+                href={appStoreUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  display: 'block',
+                  width: '100%',
+                  background: '#0052FF',
+                  color: '#FFFFFF',
+                  border: 'none',
+                  borderRadius: '12px',
+                  padding: '14px 20px',
+                  fontSize: '16px',
+                  fontWeight: '600',
+                  textDecoration: 'none',
+                  marginBottom: '12px',
+                  cursor: 'pointer'
+                }}
+              >
+                {isIOS ? '📱 Install from App Store' :
+                 isAndroid ? '📱 Install from Play Store' :
+                 '📱 Download Coinbase Wallet'}
+              </a>
+
+              {/* Instructions */}
+              <div style={{
+                background: 'rgba(47, 93, 80, 0.05)',
+                borderRadius: '8px',
+                padding: '16px',
+                marginBottom: '16px'
+              }}>
+                <p style={{
+                  fontSize: '13px',
+                  color: '#2F5D50',
+                  marginBottom: '8px',
+                  fontWeight: '500'
+                }}>
+                  After installing:
+                </p>
+                <ol style={{
+                  fontSize: '12px',
+                  color: '#5F5A54',
+                  textAlign: 'left',
+                  lineHeight: '1.8',
+                  paddingLeft: '20px',
+                  margin: 0
+                }}>
+                  <li>Open the Coinbase Wallet app</li>
+                  <li>Complete the setup wizard</li>
+                  <li>Return here and tap "I've Installed the App"</li>
+                </ol>
+              </div>
+
+              {/* Bypass Button */}
+              <button
+                onClick={() => {
+                  console.log('⚠️ User bypassing Coinbase Wallet requirement');
+                  setShowInstallPrompt(false);
+                  setHasCoinbaseWallet(true); // Allow connection attempt
+                }}
+                style={{
+                  width: '100%',
+                  background: 'transparent',
+                  color: '#8FAAA1',
+                  border: '1px solid #D8D2C8',
+                  borderRadius: '12px',
+                  padding: '12px 20px',
+                  fontSize: '14px',
+                  fontWeight: '500',
+                  cursor: 'pointer',
+                  marginBottom: '8px'
+                }}
+              >
+                I've Installed the App
+              </button>
+
+              <p style={{
+                fontSize: '11px',
+                color: '#8FAAA1',
+                marginTop: '16px',
+                fontStyle: 'italic'
+              }}>
+                Desktop users can continue without the app
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   // Show Firefox warning if detected and not already connected
   if (isFirefox && !address) {
