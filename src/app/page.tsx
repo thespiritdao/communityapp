@@ -109,7 +109,6 @@ function PageContent() {
 
     // Run detection after a brief delay to let SDK initialize
     setTimeout(detectCoinbaseWallet, 500);
-  }, []);
 
     // Enable mobile debugging console with ?debug=true in URL
     if (typeof window !== 'undefined') {
