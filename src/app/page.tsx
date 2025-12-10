@@ -56,6 +56,7 @@ function PageContent() {
   const [showPopupWarning, setShowPopupWarning] = useState(false);
   const [hasCoinbaseWallet, setHasCoinbaseWallet] = useState<boolean | null>(null);
   const [showInstallPrompt, setShowInstallPrompt] = useState(false);
+  const [isPrivateBrowsing, setIsPrivateBrowsing] = useState(false);
 
   // Invite code modal state
   const [showInviteModal, setShowInviteModal] = useState(false);
@@ -72,9 +73,71 @@ function PageContent() {
       console.warn('Firefox detected - Coinbase Wallet SDK has limited support');
     }
 
-    // CRITICAL: Detect if Coinbase Wallet app is installed on mobile
-    const detectCoinbaseWallet = () => {
+    // CRITICAL: Detect private/incognito browsing mode
+    const detectPrivateBrowsing = async () => {
       const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+
+      if (!isMobile) {
+        // Desktop - private mode is OK (passkeys work)
+        return false;
+      }
+
+      // Mobile private browsing detection
+      let isPrivate = false;
+
+      // Method 1: Check localStorage
+      try {
+        localStorage.setItem('__test__', 'test');
+        localStorage.removeItem('__test__');
+      } catch (e) {
+        isPrivate = true; // Some browsers disable localStorage in private mode
+      }
+
+      // Method 2: Check IndexedDB (more reliable)
+      if (!isPrivate && 'indexedDB' in window) {
+        try {
+          const testDB = window.indexedDB.open('test');
+          testDB.onerror = () => {
+            isPrivate = true;
+          };
+        } catch (e) {
+          isPrivate = true;
+        }
+      }
+
+      // Method 3: Check for missing features that private mode disables
+      if (!isPrivate) {
+        // Safari private mode has limited quota
+        if ('storage' in navigator && 'estimate' in navigator.storage) {
+          try {
+            const estimate = await navigator.storage.estimate();
+            // Safari private mode quota is very low
+            if (estimate.quota && estimate.quota < 120000000) {
+              isPrivate = true;
+            }
+          } catch (e) {
+            // Estimation failed, might be private
+          }
+        }
+      }
+
+      console.log('🔒 Private browsing detection:', { isPrivate, isMobile });
+      return isPrivate;
+    };
+
+    // CRITICAL: Detect if Coinbase Wallet app is installed on mobile
+    const detectCoinbaseWallet = async () => {
+      const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+
+      // First check for private browsing on mobile
+      if (isMobile) {
+        const isPrivate = await detectPrivateBrowsing();
+        if (isPrivate) {
+          console.warn('⚠️ Private browsing detected on mobile - deep linking will not work');
+          setIsPrivateBrowsing(true);
+          return;
+        }
+      }
 
       if (!isMobile) {
         // Desktop - passkeys should work, allow connection
@@ -108,7 +171,7 @@ function PageContent() {
     };
 
     // Run detection after a brief delay to let SDK initialize
-    setTimeout(detectCoinbaseWallet, 500);
+    detectCoinbaseWallet();
 
     // Enable mobile debugging console with ?debug=true in URL
     if (typeof window !== 'undefined') {
@@ -502,6 +565,145 @@ function PageContent() {
   const [showConnectButton, setShowConnectButton] = useState(false);
 
   if (!isClient) return null;
+
+  // Show private browsing warning for mobile users
+  if (isPrivateBrowsing && !address) {
+    return (
+      <div>
+        <img
+          src="/images/doyoudare.png"
+          alt="Background"
+          className="background-image"
+        />
+        <div className="wrapper">
+          <div className="button-container" style={{ maxWidth: '400px', padding: '20px' }}>
+            <div style={{
+              backgroundColor: 'rgba(255, 255, 255, 0.95)',
+              padding: '32px 24px',
+              borderRadius: '16px',
+              textAlign: 'center',
+              border: '2px solid #F59E0B',
+              boxShadow: '0 8px 24px rgba(245, 158, 11, 0.2)'
+            }}>
+              {/* Warning Icon */}
+              <div style={{ marginBottom: '20px' }}>
+                <svg width="64" height="64" viewBox="0 0 64 64" fill="none" style={{ margin: '0 auto' }}>
+                  <circle cx="32" cy="32" r="28" fill="#FEF3C7"/>
+                  <path d="M32 20v16M32 44h.01" stroke="#F59E0B" strokeWidth="4" strokeLinecap="round"/>
+                </svg>
+              </div>
+
+              <h2 style={{
+                fontSize: '22px',
+                fontWeight: '600',
+                color: '#92400E',
+                marginBottom: '12px',
+                letterSpacing: '0.02em'
+              }}>
+                Private Browsing Detected
+              </h2>
+
+              <p style={{
+                fontSize: '15px',
+                color: '#78350F',
+                marginBottom: '20px',
+                lineHeight: '1.6'
+              }}>
+                SpiritDAO requires a <strong>regular browser session</strong> to connect with Coinbase Wallet.
+              </p>
+
+              <div style={{
+                background: 'rgba(245, 158, 11, 0.1)',
+                borderRadius: '8px',
+                padding: '16px',
+                marginBottom: '20px',
+                textAlign: 'left'
+              }}>
+                <p style={{
+                  fontSize: '13px',
+                  color: '#92400E',
+                  marginBottom: '12px',
+                  fontWeight: '500'
+                }}>
+                  Why this matters:
+                </p>
+                <ul style={{
+                  fontSize: '12px',
+                  color: '#78350F',
+                  lineHeight: '1.8',
+                  paddingLeft: '20px',
+                  margin: 0
+                }}>
+                  <li>Private mode blocks deep linking to apps</li>
+                  <li>Wallet authentication won't work properly</li>
+                  <li>You'll experience connection failures</li>
+                </ul>
+              </div>
+
+              <div style={{
+                background: 'rgba(47, 93, 80, 0.05)',
+                borderRadius: '8px',
+                padding: '16px',
+                marginBottom: '20px',
+                textAlign: 'left'
+              }}>
+                <p style={{
+                  fontSize: '13px',
+                  color: '#2F5D50',
+                  marginBottom: '8px',
+                  fontWeight: '500'
+                }}>
+                  How to fix:
+                </p>
+                <ol style={{
+                  fontSize: '12px',
+                  color: '#5F5A54',
+                  lineHeight: '1.8',
+                  paddingLeft: '20px',
+                  margin: 0
+                }}>
+                  <li><strong>Close this private tab</strong></li>
+                  <li><strong>Open a regular browser tab</strong></li>
+                  <li>Visit: <span style={{ fontFamily: 'monospace', background: '#F3F4F6', padding: '2px 6px', borderRadius: '4px' }}>app.spiritdao.org</span></li>
+                  <li>Connect with Coinbase Wallet</li>
+                </ol>
+              </div>
+
+              <p style={{
+                fontSize: '11px',
+                color: '#8FAAA1',
+                fontStyle: 'italic',
+                marginBottom: '16px'
+              }}>
+                Your privacy matters - we don't track you. Regular browsing is required only for wallet deep-linking.
+              </p>
+
+              {/* Bypass Button (for testing/debugging only) */}
+              <button
+                onClick={() => {
+                  console.log('⚠️ User bypassing private browsing check (not recommended)');
+                  setIsPrivateBrowsing(false);
+                }}
+                style={{
+                  width: '100%',
+                  background: 'transparent',
+                  color: '#9CA3AF',
+                  border: '1px solid #D1D5DB',
+                  borderRadius: '8px',
+                  padding: '10px 16px',
+                  fontSize: '12px',
+                  fontWeight: '400',
+                  cursor: 'pointer'
+                }}
+              >
+                Continue Anyway (Not Recommended)
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   // Show install prompt for mobile users without Coinbase Wallet app
   if (showInstallPrompt && hasCoinbaseWallet === false && !address) {
