@@ -12,7 +12,9 @@ import {
   validateInviteCode,
   recordInviteCodeUsage,
   updateUserWithReferrer,
+  isFirstUser,
 } from '@/services/inviteCodeService';
+import { supabaseAdmin } from '@/utils/supabaseAdminClient';
 
 export const runtime = 'edge';
 
@@ -60,24 +62,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validate invite code (unless first user)
-    const validationResult = await validateInviteCode(
-      inviteCode,
-      normalizedWallet,
-    );
+    // CRITICAL FIX: Validate invite code using ADMIN client to bypass RLS
+    // The client-side validateInviteCode uses regular supabase client which fails due to RLS
+    const normalizedCode = inviteCode?.toUpperCase().trim() || '';
 
-    if (!validationResult.isValid) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: validationResult.error || 'Invalid invite code',
-        },
-        { status: 400 },
-      );
-    }
-
-    // If first user, no need to record usage
-    if (validationResult.isFirstUser) {
+    // Exception: First user doesn't need invite code
+    if (isFirstUser(normalizedWallet)) {
       return NextResponse.json({
         success: true,
         isFirstUser: true,
@@ -85,25 +75,96 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // Record invite code usage for analytics
-    if (validationResult.referrerWallet && inviteCode) {
-      await recordInviteCodeUsage(
-        inviteCode,
-        normalizedWallet,
-        validationResult.referrerWallet,
-      );
-
-      // Update new user's profile with referrer info
-      await updateUserWithReferrer(
-        normalizedWallet,
-        validationResult.referrerWallet,
+    // Validate code format
+    if (!/^[A-Z0-9]{6}$/.test(normalizedCode)) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Invalid invite code format. Must be 6 characters.',
+        },
+        { status: 400 },
       );
     }
 
+    // Check if code exists in database (using ADMIN client to bypass RLS)
+    console.log(`🔍 Validating invite code: ${normalizedCode} for wallet: ${normalizedWallet}`);
+    const { data: profile, error: profileError } = await supabaseAdmin
+      .from('user_profiles')
+      .select('wallet_address, referral_key')
+      .eq('referral_key', normalizedCode)
+      .maybeSingle();
+
+    if (profileError) {
+      console.error('Database error validating invite code:', profileError);
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'An error occurred while validating your invite code.',
+        },
+        { status: 500 },
+      );
+    }
+
+    if (!profile) {
+      console.warn(`❌ Invite code not found: ${normalizedCode}`);
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Invalid invite code. Please check and try again.',
+        },
+        { status: 400 },
+      );
+    }
+
+    console.log(`✅ Found profile for invite code: ${normalizedCode} - ${profile.wallet_address}`);
+
+    // Prevent self-referral
+    if (profile.wallet_address.toLowerCase() === normalizedWallet) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'You cannot use your own invite code.',
+        },
+        { status: 400 },
+      );
+    }
+
+    // Check if code has already been used by this wallet
+    const { data: existingValidation } = await supabaseAdmin
+      .from('referral_validations')
+      .select('id')
+      .eq('invite_code', normalizedCode)
+      .eq('used_by_wallet', normalizedWallet)
+      .single();
+
+    if (existingValidation) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'You have already used this invite code.',
+        },
+        { status: 400 },
+      );
+    }
+
+    // Record invite code usage for analytics
+    await recordInviteCodeUsage(
+      normalizedCode,
+      normalizedWallet,
+      profile.wallet_address,
+    );
+
+    // Update new user's profile with referrer info
+    await updateUserWithReferrer(
+      normalizedWallet,
+      profile.wallet_address,
+    );
+
     // Return success
+    console.log(`✅ Invite code validation successful for ${normalizedWallet}`);
     return NextResponse.json({
       success: true,
-      referrerWallet: validationResult.referrerWallet,
+      referrerWallet: profile.wallet_address,
       message: 'Invite code validated successfully',
     });
   } catch (error) {

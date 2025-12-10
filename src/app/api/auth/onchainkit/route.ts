@@ -134,6 +134,17 @@ export async function POST(req: NextRequest) {
         );
         throw insertProfileError;
       }
+
+      // CRITICAL FIX: Assign invite code immediately for new users
+      // This prevents the race condition where users need codes before onboarding completes
+      try {
+        const { assignInviteCodeToUser } = await import('@/services/inviteCodeService');
+        const inviteCode = await assignInviteCodeToUser(normalizedAddress);
+        console.log(`API Route: Assigned invite code ${inviteCode} to new user ${normalizedAddress}`);
+      } catch (codeError) {
+        console.error('API Route: Failed to assign invite code (non-critical):', codeError);
+        // Non-critical - can be assigned later in onboarding
+      }
     }
 
     if (!userId) {

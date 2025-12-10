@@ -53,6 +53,7 @@ function PageContent() {
   // Also track client-side mounting to avoid SSR hydration issues.
   const [isClient, setIsClient] = useState(false);
   const [isFirefox, setIsFirefox] = useState(false);
+  const [showPopupWarning, setShowPopupWarning] = useState(false);
 
   // Invite code modal state
   const [showInviteModal, setShowInviteModal] = useState(false);
@@ -99,7 +100,7 @@ function PageContent() {
     }
   }, []);
 
-  // Monitor connection state changes to detect loops
+  // Monitor connection state changes to detect loops AND popup blockers
   useEffect(() => {
     if (isConnecting) {
       connectionAttemptsRef.current += 1;
@@ -110,14 +111,28 @@ function PageContent() {
         timestamp: new Date().toISOString(),
       });
 
+      // Show popup warning after 3 seconds of connecting (likely blocked)
+      const popupWarningTimer = setTimeout(() => {
+        if (isConnecting && !address) {
+          console.warn('⚠️ Connection taking longer than expected - possible popup blocker');
+          setShowPopupWarning(true);
+        }
+      }, 3000);
+
       // Detect infinite loop (more than 5 attempts in this session)
       if (connectionAttemptsRef.current > 5) {
         console.error('❌ Infinite connection loop detected! Stopping...');
         setIsProcessing(false);
+        setShowPopupWarning(false);
         alert(
           'Connection loop detected. This may happen if the Coinbase Wallet app is not installed. Please try using a browser with the Coinbase Wallet extension, or install the Coinbase Wallet mobile app.'
         );
       }
+
+      return () => clearTimeout(popupWarningTimer);
+    } else {
+      // Clear warning when not connecting
+      setShowPopupWarning(false);
     }
   }, [isConnecting, isDisconnected, address]);
 
@@ -495,7 +510,7 @@ function PageContent() {
   // Show loading message based on state
   const getLoadingMessage = () => {
     if (isRedirecting) return 'Redirecting...';
-    if (isConnecting) return 'Waiting for approval...\nCheck for popup window!';
+    if (isConnecting) return 'Creating your wallet...\nPlease complete authentication in the modal';
     if (isVerifyingWallet) return 'Verifying wallet...';
     if (authLoading) return 'Authenticating...';
     if (address && isSmartWallet && !isAuthenticated) return 'Completing authentication...';
@@ -538,9 +553,45 @@ function PageContent() {
               <p style={{ fontSize: '14px', marginBottom: '8px' }}>
                 Please complete the authentication in the modal
               </p>
-              <p style={{ fontSize: '12px', opacity: 0.8 }}>
+              <p style={{ fontSize: '12px', opacity: 0.8, marginBottom: '16px' }}>
                 This may take a few moments
               </p>
+
+              {/* Popup Blocker Warning */}
+              {showPopupWarning && (
+                <div style={{
+                  backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                  padding: '16px',
+                  borderRadius: '12px',
+                  marginTop: '16px',
+                  maxWidth: '400px',
+                  margin: '16px auto 0',
+                  border: '2px solid #F59E0B'
+                }}>
+                  <p style={{
+                    fontSize: '14px',
+                    fontWeight: 'bold',
+                    color: '#F59E0B',
+                    marginBottom: '8px'
+                  }}>
+                    ⚠️ Connection Taking Longer Than Expected
+                  </p>
+                  <p style={{ fontSize: '13px', color: '#3A3A3A', marginBottom: '12px', lineHeight: '1.4' }}>
+                    If a popup was blocked:
+                  </p>
+                  <ul style={{
+                    fontSize: '12px',
+                    color: '#5F5A54',
+                    textAlign: 'left',
+                    lineHeight: '1.6',
+                    paddingLeft: '20px'
+                  }}>
+                    <li>Look for a popup blocker icon in your browser's address bar</li>
+                    <li>Allow popups for this site</li>
+                    <li>Or install the Coinbase Wallet mobile app for seamless authentication</li>
+                  </ul>
+                </div>
+              )}
             </div>
           </div>
         </div>
