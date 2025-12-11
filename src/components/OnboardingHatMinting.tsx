@@ -2,15 +2,13 @@
  * Onboarding Hat Minting Component
  *
  * Mints Executive Pod Member hat to new users during testnet onboarding
- * Uses CDP embedded wallet provider directly (no wagmi required)
+ * Uses CDP embedded wallet hooks directly (no wagmi required)
  */
 
 'use client';
 
 import React, { useState } from 'react';
-import { useEvmWalletProvider } from '@coinbase/cdp-hooks';
-import { createWalletClient, custom, publicActions } from 'viem';
-import { base } from 'viem/chains';
+import { useSendEvmTransaction } from '@coinbase/cdp-hooks';
 import {
   createMintBetaTesterHatCall,
   createMintExecutiveLeaderHatCall,
@@ -29,21 +27,36 @@ export function OnboardingHatMinting({
   onSuccess,
   onError,
 }: OnboardingHatMintingProps) {
-  const cdpProvider = useEvmWalletProvider();
+  const { sendTransaction, isLoading, isSuccess, isError, error, data: txHash } = useSendEvmTransaction();
   const [txStatus, setTxStatus] = useState<'idle' | 'preparing' | 'pending' | 'success' | 'error'>('idle');
-  const [txHash, setTxHash] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  const handleMintHat = async () => {
-    if (!cdpProvider) {
-      const err = new Error('CDP wallet provider not available');
-      console.error('❌', err.message);
-      setErrorMessage(err.message);
-      setTxStatus('error');
-      onError(err);
-      return;
+  // Monitor CDP hook state changes
+  React.useEffect(() => {
+    if (isSuccess && txHash) {
+      console.log('✅ Transaction confirmed:', txHash);
+      setTxStatus('success');
+      onSuccess(txHash);
     }
+  }, [isSuccess, txHash, onSuccess]);
 
+  React.useEffect(() => {
+    if (isError && error) {
+      const errorMsg = error.message || 'Transaction failed';
+      console.error('❌ Hat minting failed:', errorMsg);
+      setErrorMessage(errorMsg);
+      setTxStatus('error');
+      onError(error);
+    }
+  }, [isError, error, onError]);
+
+  React.useEffect(() => {
+    if (isLoading) {
+      setTxStatus('pending');
+    }
+  }, [isLoading]);
+
+  const handleMintHat = async () => {
     try {
       setTxStatus('preparing');
       console.log('🎩 Preparing hat mint transaction...');
@@ -60,42 +73,17 @@ export function OnboardingHatMinting({
         contractAddress: hatCall.to,
       });
 
-      // Create wallet client using CDP provider
-      const walletClient = createWalletClient({
-        account: walletAddress,
-        chain: base,
-        transport: custom(cdpProvider),
-      }).extend(publicActions);
+      console.log('📤 Sending transaction via CDP...');
 
-      console.log('🔗 Wallet client created, sending transaction...');
-      setTxStatus('pending');
-
-      // Send the transaction
-      const hash = await walletClient.sendTransaction({
-        account: walletAddress,
-        to: hatCall.to,
-        data: hatCall.data,
-        value: hatCall.value,
-        chain: base,
+      // Send transaction using CDP hook
+      await sendTransaction({
+        to: hatCall.to as `0x${string}`,
+        data: hatCall.data as `0x${string}`,
+        value: hatCall.value?.toString() || '0',
       });
-
-      console.log('📤 Transaction sent:', hash);
-      setTxHash(hash);
-
-      // Wait for confirmation
-      console.log('⏳ Waiting for transaction confirmation...');
-      const receipt = await walletClient.waitForTransactionReceipt({
-        hash,
-        confirmations: 1,
-      });
-
-      console.log('✅ Transaction confirmed:', receipt);
-      setTxStatus('success');
-      onSuccess(hash);
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : 'Unknown error occurred';
       console.error('❌ Hat minting failed:', errorMsg);
-      console.error('Full error:', JSON.stringify(err, Object.getOwnPropertyNames(err)));
       setErrorMessage(errorMsg);
       setTxStatus('error');
       onError(err as Error);
@@ -135,7 +123,7 @@ export function OnboardingHatMinting({
               <p className="text-sm text-gray-600">Preparing transaction...</p>
             </div>
           )}
-          {txStatus === 'pending' && (
+          {(txStatus === 'pending' || isLoading) && (
             <div className="flex flex-col gap-2">
               <div className="flex items-center gap-2">
                 <div className="animate-spin h-4 w-4 border-2 border-gray-300 border-t-[#2F5D50] rounded-full"></div>
@@ -164,11 +152,11 @@ export function OnboardingHatMinting({
         {/* Action Button */}
         <button
           onClick={handleMintHat}
-          disabled={txStatus === 'preparing' || txStatus === 'pending'}
+          disabled={txStatus === 'preparing' || txStatus === 'pending' || isLoading}
           className="sacred-primary-button"
           style={{
             width: '100%',
-            background: txStatus === 'preparing' || txStatus === 'pending' ? '#8FAAA1' : '#2F5D50',
+            background: txStatus === 'preparing' || txStatus === 'pending' || isLoading ? '#8FAAA1' : '#2F5D50',
             color: '#FFFFFF',
             border: 'none',
             borderRadius: '12px',
@@ -176,8 +164,8 @@ export function OnboardingHatMinting({
             fontSize: '16px',
             fontWeight: '500',
             letterSpacing: '0.02em',
-            cursor: txStatus === 'preparing' || txStatus === 'pending' ? 'not-allowed' : 'pointer',
-            opacity: txStatus === 'preparing' || txStatus === 'pending' ? 0.6 : 1,
+            cursor: txStatus === 'preparing' || txStatus === 'pending' || isLoading ? 'not-allowed' : 'pointer',
+            opacity: txStatus === 'preparing' || txStatus === 'pending' || isLoading ? 0.6 : 1,
             transition: 'all 0.2s ease',
           }}
           onMouseEnter={(e) => {
@@ -192,7 +180,7 @@ export function OnboardingHatMinting({
           }}
         >
           {txStatus === 'preparing' && 'Preparing...'}
-          {txStatus === 'pending' && 'Confirming...'}
+          {(txStatus === 'pending' || isLoading) && 'Confirming...'}
           {(txStatus === 'idle' || txStatus === 'error') && 'Grant Access'}
         </button>
 
