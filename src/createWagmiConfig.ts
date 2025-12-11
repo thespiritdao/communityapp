@@ -16,9 +16,10 @@ export const createWagmiConfig = ({
     chains: [base, baseSepolia],
     connectors: [
       coinbaseWallet({
-        appName,
-        appLogoUrl,
-        preference: 'all',
+        appName: appName || 'SpiritDAO',
+        appLogoUrl: appLogoUrl || '/spiritdaosymbol.png',
+        preference: 'smartWalletOnly', // Changed from 'all' to match main config
+        headlessMode: false, // Required for SDK v4
       }),
     ],
     storage: createStorage({

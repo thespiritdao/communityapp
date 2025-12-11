@@ -184,7 +184,10 @@ const nextConfig = {
                 https://dweb.link
                 https://ui-avatars.com;
               style-src 'self' 'unsafe-inline';
-              frame-src 'self' https://*.coinbase.com https://spiritdao.pythonanywhere.com;
+              frame-src 'self'
+                https://*.coinbase.com
+                https://keys.coinbase.com
+                https://spiritdao.pythonanywhere.com;
             `
               .replace(/\s+/g, ' ')
               .trim(),

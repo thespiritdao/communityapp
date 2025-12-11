@@ -1,5 +1,5 @@
-// Centralized authentication hook for managing Supabase session
-// Prevents session conflicts and provides single source of truth
+// Centralized authentication hook for Embedded Wallets
+// Simplified - no signature signing needed since Coinbase manages the wallet
 
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { supabase } from '@/utils/supabaseClient';
@@ -121,6 +121,7 @@ export function useAuth(): UseAuthReturn {
     async (walletAddress: string) => {
       // Prevent concurrent authentication attempts
       if (isAuthenticating.current) {
+        console.log('🔐 Auth: Authentication already in progress');
         return;
       }
 
@@ -129,6 +130,7 @@ export function useAuth(): UseAuthReturn {
         authState.session?.user?.user_metadata?.wallet_address ===
         walletAddress.toLowerCase()
       ) {
+        console.log('✅ Auth: Already authenticated with this wallet');
         return;
       }
 
@@ -141,40 +143,30 @@ export function useAuth(): UseAuthReturn {
           error: null,
         });
 
-        // Try to get existing session first
-        const {
-          data: { session: existingSession },
-        } = await supabase.auth.getSession();
+        console.log('🔐 Auth: Authenticating embedded wallet...');
 
-        if (
-          existingSession?.user?.user_metadata?.wallet_address ===
-          walletAddress.toLowerCase()
-        ) {
-          // Already have valid session for this wallet
-          const newState = {
-            session: existingSession,
-            loading: false,
-            error: null,
-            isAuthenticated: true,
-          };
-
-          notifyAuthStateListeners(newState);
-          return;
-        }
-
-        // Create new session for wallet
+        // For embedded wallets, we trust the wallet address from Coinbase
+        // No signature verification needed - Coinbase manages the private keys
         const response = await fetch('/api/auth/onchainkit', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ address: walletAddress }),
+          body: JSON.stringify({
+            address: walletAddress,
+            // Embedded wallet - no signature needed
+            isEmbedded: true,
+          }),
         });
 
         if (!response.ok) {
-          throw new Error(`Authentication failed: ${response.statusText}`);
+          const errorData = await response.json();
+          throw new Error(errorData.error || `Authentication failed: ${response.statusText}`);
         }
 
         const { supabaseToken, supabaseRefreshToken } = await response.json();
 
+        console.log('✅ Auth: Received tokens, setting session...');
+
+        // Set Supabase session with JWT tokens
         const {
           data: { session },
           error,
@@ -192,8 +184,11 @@ export function useAuth(): UseAuthReturn {
           isAuthenticated: true,
         };
 
+        console.log('✅ Auth: Session created successfully');
         notifyAuthStateListeners(newState);
       } catch (error) {
+        console.error('❌ Auth: Authentication failed:', error);
+
         const newState = {
           session: null,
           loading: false,
@@ -202,6 +197,7 @@ export function useAuth(): UseAuthReturn {
         };
 
         notifyAuthStateListeners(newState);
+        throw error; // Re-throw so calling code can handle
       } finally {
         isAuthenticating.current = false;
       }
@@ -211,6 +207,7 @@ export function useAuth(): UseAuthReturn {
 
   const signOut = useCallback(async () => {
     try {
+      console.log('🚪 Auth: Signing out...');
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
 
@@ -221,8 +218,11 @@ export function useAuth(): UseAuthReturn {
         isAuthenticated: false,
       };
 
+      console.log('✅ Auth: Signed out successfully');
       notifyAuthStateListeners(newState);
     } catch (error) {
+      console.error('❌ Auth: Sign out failed:', error);
+
       const newState = {
         ...authState,
         error: error as Error,

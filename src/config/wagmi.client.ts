@@ -5,13 +5,14 @@ import { base, baseSepolia } from 'wagmi/chains';
 import { coinbaseWallet } from 'wagmi/connectors';
 
 // Configure Coinbase Wallet with Smart Wallet support
+// CRITICAL: Smart Wallet v4 uses embedded UI by default (no popups)
+// headlessMode: false is REQUIRED for SDK v4 (type enforced)
 const coinbaseWalletConnector = coinbaseWallet({
   appName: 'SpiritDAO',
   appLogoUrl: '/spiritdaosymbol.png',
-  preference: 'smartWalletOnly', // forces Smart Wallet only
+  preference: 'smartWalletOnly', // Only allow Smart Wallet (works without native app)
   version: '4',
-  // Use UI components for embedded modal instead of popup windows
-  headlessMode: false,
+  headlessMode: false, // Required for SDK v4 - provides embedded modal UI
 });
 
 // Log RPC configuration for debugging

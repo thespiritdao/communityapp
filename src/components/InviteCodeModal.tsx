@@ -22,9 +22,10 @@ interface InviteCodeModalProps {
   isOpen: boolean;
   onClose: () => void;
   onValidate: (code: string) => Promise<boolean>;
-  onHatMinted: (txHash: string) => Promise<void>;
-  walletAddress: string;
+  onHatMinted?: (txHash: string) => Promise<void>;
+  walletAddress?: string; // Optional - not needed for pre-auth validation
   isFirstUser?: boolean;
+  preAuthMode?: boolean; // If true, only validates code without minting
 }
 
 type OnboardingStep = 'invite' | 'minting' | 'complete';
@@ -36,18 +37,26 @@ export function InviteCodeModal({
   onHatMinted,
   walletAddress,
   isFirstUser = false,
+  preAuthMode = false,
 }: InviteCodeModalProps) {
   const [inviteCode, setInviteCode] = useState('');
   const [isValidating, setIsValidating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [currentStep, setCurrentStep] = useState<OnboardingStep>('invite');
 
-  // Auto-bypass for first user - go straight to minting
+  // Auto-bypass to minting in certain cases:
+  // 1. First user in post-auth mode
+  // 2. Post-auth mode with wallet address (invite already validated)
   useEffect(() => {
-    if (isFirstUser && isOpen && currentStep === 'invite') {
+    if (!isOpen || currentStep !== 'invite' || preAuthMode) return;
+
+    // If we have a wallet address in post-auth mode, invite was already validated
+    // Skip straight to minting
+    if (walletAddress || isFirstUser) {
+      console.log('🔑 Auto-bypassing invite step - going to minting');
       setCurrentStep('minting');
     }
-  }, [isFirstUser, isOpen, currentStep]);
+  }, [isOpen, currentStep, preAuthMode, walletAddress, isFirstUser]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     // Auto-uppercase and limit to 6 characters
@@ -73,8 +82,14 @@ export function InviteCodeModal({
       const isValid = await onValidate(inviteCode || '');
 
       if (isValid) {
-        // Move to minting step
-        setCurrentStep('minting');
+        // Pre-auth mode: Close modal and allow wallet creation
+        if (preAuthMode) {
+          console.log('✅ Pre-auth invite validated, proceeding to wallet creation');
+          onClose();
+        } else {
+          // Post-auth mode: Move to minting step
+          setCurrentStep('minting');
+        }
       } else {
         setError('Invalid invite code. Please check and try again.');
       }
@@ -89,8 +104,10 @@ export function InviteCodeModal({
     console.log('✅ Hat minted:', txHash);
     setCurrentStep('complete');
 
-    // Call completion callback
-    await onHatMinted(txHash);
+    // Call completion callback if provided
+    if (onHatMinted) {
+      await onHatMinted(txHash);
+    }
 
     // Auto-close after brief delay
     setTimeout(() => {
@@ -322,8 +339,8 @@ export function InviteCodeModal({
           </div>
         )}
 
-        {/* Step 2: Hat Minting - Sacred Transaction */}
-        {currentStep === 'minting' && (
+        {/* Step 2: Hat Minting - Sacred Transaction (only in post-auth mode) */}
+        {currentStep === 'minting' && walletAddress && (
           <div
             className="relative w-full max-w-md mx-auto"
             style={{

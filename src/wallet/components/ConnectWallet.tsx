@@ -105,6 +105,7 @@ export function ConnectWallet({
                 },
               },
             );
+            setHasClickedConnect(true);
           }}
           text={text}
         />

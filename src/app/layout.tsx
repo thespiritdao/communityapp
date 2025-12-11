@@ -6,7 +6,7 @@ import { usePathname } from 'next/navigation';
 import { CommunityProvider } from '@/context/CommunityContext';
 import { UnifiedNotificationProvider } from '@/context/UnifiedNotificationContext';
 import { TokenBalancesProvider } from '@/context/TokenBalancesContext';
-import { OnchainProviders } from '../wallet/components/OnchainProviders';
+import { CDPEmbeddedProvider } from '../wallet/components/CDPEmbeddedProvider';
 import { ProfilesProvider } from '@/features/identity/context/ProfilesProvider';
 import { AuthProvider } from '@/features/identity';
 import { ModuleErrorBoundary } from '@/components/ModuleErrorBoundary';
@@ -68,7 +68,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       <body className="min-h-screen bg-background text-foreground antialiased">
         <ModuleErrorBoundary>
           <ContractConfigProvider>
-            <OnchainProviders>
+            <CDPEmbeddedProvider>
               <TokenBalancesProvider>
                 <AuthProvider>
                   <ProfilesProvider>
@@ -84,7 +84,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
                   </ProfilesProvider>
                 </AuthProvider>
               </TokenBalancesProvider>
-            </OnchainProviders>
+            </CDPEmbeddedProvider>
           </ContractConfigProvider>
         </ModuleErrorBoundary>
       </body>
