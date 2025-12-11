@@ -2,21 +2,15 @@
  * Onboarding Hat Minting Component
  *
  * Mints Executive Pod Member hat to new users during testnet onboarding
- * Uses Coinbase OnchainKit Transaction with sponsored transactions
+ * Uses CDP embedded wallet provider directly (no wagmi required)
  */
 
 'use client';
 
-import React, { useEffect, useState } from 'react';
-import {
-  Transaction,
-  TransactionButton,
-  TransactionStatus,
-  TransactionStatusAction,
-  TransactionStatusLabel,
-} from '@coinbase/onchainkit/transaction';
-import { useAccount, useConnect } from 'wagmi';
-import { coinbaseWallet } from 'wagmi/connectors';
+import React, { useState } from 'react';
+import { useEvmWalletProvider } from '@coinbase/cdp-hooks';
+import { createWalletClient, custom, publicActions } from 'viem';
+import { base } from 'viem/chains';
 import {
   createMintBetaTesterHatCall,
   createMintExecutiveLeaderHatCall,
@@ -35,60 +29,26 @@ export function OnboardingHatMinting({
   onSuccess,
   onError,
 }: OnboardingHatMintingProps) {
-  const { address, isConnected } = useAccount();
-  const { connect, connectors } = useConnect();
-  const [contracts, setContracts] = useState<any[]>([]);
-  const [preparationError, setPreparationError] = useState<string | null>(null);
+  const cdpProvider = useEvmWalletProvider();
+  const [txStatus, setTxStatus] = useState<'idle' | 'preparing' | 'pending' | 'success' | 'error'>('idle');
+  const [txHash, setTxHash] = useState<string | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  // Auto-connect wagmi when CDP wallet exists but wagmi isn't connected
-  useEffect(() => {
-    if (walletAddress && !isConnected && connectors.length > 0) {
-      console.log('🔗 CDP wallet exists but wagmi not connected - auto-connecting...');
-      const coinbaseConnector = connectors.find((c) => c.id === 'coinbaseWalletSDK');
-      if (coinbaseConnector) {
-        console.log('🔗 Connecting wagmi to Coinbase Wallet...');
-        connect({ connector: coinbaseConnector });
-      }
-    }
-  }, [walletAddress, isConnected, connectors, connect]);
-
-  useEffect(() => {
-    console.log('🔍 OnboardingHatMinting - checking prerequisites:', {
-      wagmiAddress: address,
-      walletAddress,
-      isFirstUser,
-      hasWagmiAddress: !!address,
-      hasWalletAddress: !!walletAddress,
-      isWagmiConnected: isConnected,
-    });
-
-    // Use walletAddress from props - don't wait for wagmi address
-    // CDP embedded wallet may not sync with wagmi immediately
-    if (!walletAddress) {
-      console.log('⏳ Waiting for wallet address...');
+  const handleMintHat = async () => {
+    if (!cdpProvider) {
+      const err = new Error('CDP wallet provider not available');
+      console.error('❌', err.message);
+      setErrorMessage(err.message);
+      setTxStatus('error');
+      onError(err);
       return;
     }
-
-    // CRITICAL: Wait for wagmi to connect before preparing transaction
-    // OnchainKit Transaction component requires wagmi connection
-    if (!isConnected) {
-      console.log('⏳ Waiting for wagmi connection...');
-      return;
-    }
-
-    // Set timeout to show error if preparation takes too long
-    const timeoutId = setTimeout(() => {
-      if (contracts.length === 0) {
-        const errorMsg = 'Transaction preparation is taking longer than expected. This might be a connectivity issue.';
-        console.error('⏰', errorMsg);
-        setPreparationError(errorMsg);
-      }
-    }, 10000); // 10 seconds
 
     try {
-      console.log('🎩 Creating hat minting call for:', walletAddress);
+      setTxStatus('preparing');
+      console.log('🎩 Preparing hat mint transaction...');
 
-      // First user gets Executive Leader hat, others get Beta Tester hat
+      // Create the hat minting call
       const hatCall = isFirstUser
         ? createMintExecutiveLeaderHatCall(walletAddress)
         : createMintBetaTesterHatCall(walletAddress);
@@ -98,68 +58,57 @@ export function OnboardingHatMinting({
         hatType: isFirstUser ? 'Executive Leader' : 'Beta Tester',
         recipient: walletAddress,
         contractAddress: hatCall.to,
-        callData: hatCall.data?.substring(0, 20) + '...',
       });
 
-      setContracts([hatCall]);
-      clearTimeout(timeoutId); // Clear timeout if successful
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      console.error('❌ Error creating hat minting call:', errorMessage);
-      console.error('Full error object:', JSON.stringify(error, Object.getOwnPropertyNames(error)));
-      clearTimeout(timeoutId);
-      setPreparationError(errorMessage);
-      onError(error as Error);
+      // Create wallet client using CDP provider
+      const walletClient = createWalletClient({
+        account: walletAddress,
+        chain: base,
+        transport: custom(cdpProvider),
+      }).extend(publicActions);
+
+      console.log('🔗 Wallet client created, sending transaction...');
+      setTxStatus('pending');
+
+      // Send the transaction
+      const hash = await walletClient.sendTransaction({
+        account: walletAddress,
+        to: hatCall.to,
+        data: hatCall.data,
+        value: hatCall.value,
+        chain: base,
+      });
+
+      console.log('📤 Transaction sent:', hash);
+      setTxHash(hash);
+
+      // Wait for confirmation
+      console.log('⏳ Waiting for transaction confirmation...');
+      const receipt = await walletClient.waitForTransactionReceipt({
+        hash,
+        confirmations: 1,
+      });
+
+      console.log('✅ Transaction confirmed:', receipt);
+      setTxStatus('success');
+      onSuccess(hash);
+    } catch (err) {
+      const errorMsg = err instanceof Error ? err.message : 'Unknown error occurred';
+      console.error('❌ Hat minting failed:', errorMsg);
+      console.error('Full error:', JSON.stringify(err, Object.getOwnPropertyNames(err)));
+      setErrorMessage(errorMsg);
+      setTxStatus('error');
+      onError(err as Error);
     }
-
-    return () => clearTimeout(timeoutId);
-  }, [walletAddress, isFirstUser, isConnected]); // Wait for wagmi connection
-
-  const handleSuccess = (response: any) => {
-    console.log('✅ Hat minted successfully:', response);
-    const txHash =
-      response?.transactionReceipts?.[0]?.transactionHash ||
-      response?.hash ||
-      '';
-    onSuccess(txHash);
   };
 
-  const handleError = (error: any) => {
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    console.error('❌ Hat minting failed:', errorMessage);
-    console.error('Full error object:', JSON.stringify(error, Object.getOwnPropertyNames(error)));
-    onError(error);
-  };
-
-  if (contracts.length === 0) {
+  if (txStatus === 'success') {
     return (
       <div className="text-center p-4">
         <div className="flex flex-col items-center gap-3">
-          {!preparationError ? (
-            <>
-              <div className="animate-spin h-8 w-8 border-4 border-gray-300 border-t-[#2F5D50] rounded-full"></div>
-              <p className="text-sm text-gray-600">
-                {!isConnected ? 'Connecting wallet...' : 'Preparing transaction...'}
-              </p>
-              <p className="text-xs text-gray-400">
-                This may take a few moments
-              </p>
-            </>
-          ) : (
-            <>
-              <div className="text-red-500 text-4xl">⚠️</div>
-              <p className="text-sm text-red-600 font-medium">Transaction Preparation Failed</p>
-              <p className="text-xs text-gray-500 max-w-sm">
-                {preparationError}
-              </p>
-              <button
-                onClick={() => window.location.reload()}
-                className="mt-2 px-4 py-2 bg-[#2F5D50] text-white rounded-lg text-sm hover:bg-[#254A40]"
-              >
-                Retry
-              </button>
-            </>
-          )}
+          <div className="text-green-500 text-4xl">✅</div>
+          <p className="text-sm text-gray-600 font-medium">Access Granted!</p>
+          <p className="text-xs text-gray-400">Redirecting...</p>
         </div>
       </div>
     );
@@ -167,83 +116,105 @@ export function OnboardingHatMinting({
 
   return (
     <div className="w-full">
-      <Transaction
-        chainId={8453} // Base Mainnet
-        calls={contracts}
-        onSuccess={handleSuccess}
-        onError={handleError}
-      >
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          {/* Transaction Status */}
-          <div
-            style={{
-              background: 'rgba(143, 170, 161, 0.1)',
-              border: '1px solid #D8D2C8',
-              borderRadius: '8px',
-              padding: '16px',
-            }}
-          >
-            <TransactionStatus>
-              <div
-                style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}
-              >
-                <TransactionStatusLabel />
-                <TransactionStatusAction />
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+        {/* Status Display */}
+        <div
+          style={{
+            background: 'rgba(143, 170, 161, 0.1)',
+            border: '1px solid #D8D2C8',
+            borderRadius: '8px',
+            padding: '16px',
+          }}
+        >
+          {txStatus === 'idle' && (
+            <p className="text-sm text-gray-600">Ready to grant access</p>
+          )}
+          {txStatus === 'preparing' && (
+            <div className="flex items-center gap-2">
+              <div className="animate-spin h-4 w-4 border-2 border-gray-300 border-t-[#2F5D50] rounded-full"></div>
+              <p className="text-sm text-gray-600">Preparing transaction...</p>
+            </div>
+          )}
+          {txStatus === 'pending' && (
+            <div className="flex flex-col gap-2">
+              <div className="flex items-center gap-2">
+                <div className="animate-spin h-4 w-4 border-2 border-gray-300 border-t-[#2F5D50] rounded-full"></div>
+                <p className="text-sm text-gray-600">Transaction pending...</p>
               </div>
-            </TransactionStatus>
-          </div>
-
-          {/* Action Button - Sacred Primary Action Style */}
-          <TransactionButton
-            text="Grant Access"
-            className="sacred-primary-button"
-          />
-
-          <style jsx>{`
-            :global(.sacred-primary-button) {
-              width: 100% !important;
-              background: #2F5D50 !important;
-              color: #FFFFFF !important;
-              border: none !important;
-              border-radius: 12px !important;
-              padding: 12px 18px !important;
-              font-size: 16px !important;
-              font-weight: 500 !important;
-              letter-spacing: 0.02em !important;
-              cursor: pointer !important;
-              transition: all 0.2s ease !important;
-            }
-
-            :global(.sacred-primary-button:hover) {
-              background: #254A40 !important;
-            }
-
-            :global(.sacred-primary-button:disabled) {
-              opacity: 0.6 !important;
-              cursor: not-allowed !important;
-            }
-          `}</style>
-
-          {/* Info */}
-          <div
-            style={{
-              textAlign: 'center',
-              fontSize: '12px',
-              color: '#8FAAA1',
-            }}
-          >
-            <p style={{ marginBottom: '4px' }}>
-              ⛓️ Base Mainnet · Gas fees sponsored
-            </p>
-            {!isFirstUser && (
-              <p style={{ fontStyle: 'italic' }}>
-                This role grants you pod creation and management abilities for
-                30 days
-              </p>
-            )}
-          </div>
+              {txHash && (
+                <a
+                  href={`https://basescan.org/tx/${txHash}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-xs text-[#2F5D50] hover:underline"
+                >
+                  View on Basescan →
+                </a>
+              )}
+            </div>
+          )}
+          {txStatus === 'error' && (
+            <div className="text-red-600">
+              <p className="text-sm font-medium">Transaction failed</p>
+              <p className="text-xs mt-1">{errorMessage}</p>
+            </div>
+          )}
         </div>
-      </Transaction>
+
+        {/* Action Button */}
+        <button
+          onClick={handleMintHat}
+          disabled={txStatus === 'preparing' || txStatus === 'pending'}
+          className="sacred-primary-button"
+          style={{
+            width: '100%',
+            background: txStatus === 'preparing' || txStatus === 'pending' ? '#8FAAA1' : '#2F5D50',
+            color: '#FFFFFF',
+            border: 'none',
+            borderRadius: '12px',
+            padding: '12px 18px',
+            fontSize: '16px',
+            fontWeight: '500',
+            letterSpacing: '0.02em',
+            cursor: txStatus === 'preparing' || txStatus === 'pending' ? 'not-allowed' : 'pointer',
+            opacity: txStatus === 'preparing' || txStatus === 'pending' ? 0.6 : 1,
+            transition: 'all 0.2s ease',
+          }}
+          onMouseEnter={(e) => {
+            if (txStatus === 'idle' || txStatus === 'error') {
+              e.currentTarget.style.background = '#254A40';
+            }
+          }}
+          onMouseLeave={(e) => {
+            if (txStatus === 'idle' || txStatus === 'error') {
+              e.currentTarget.style.background = '#2F5D50';
+            }
+          }}
+        >
+          {txStatus === 'preparing' && 'Preparing...'}
+          {txStatus === 'pending' && 'Confirming...'}
+          {(txStatus === 'idle' || txStatus === 'error') && 'Grant Access'}
+        </button>
+
+        {/* Info */}
+        <div
+          style={{
+            textAlign: 'center',
+            fontSize: '12px',
+            color: '#8FAAA1',
+          }}
+        >
+          <p style={{ marginBottom: '4px' }}>
+            ⛓️ Base Mainnet · Gas fees sponsored
+          </p>
+          {!isFirstUser && (
+            <p style={{ fontStyle: 'italic' }}>
+              This role grants you pod creation and management abilities for
+              30 days
+            </p>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
