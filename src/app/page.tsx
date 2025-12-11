@@ -133,13 +133,15 @@ function PageContent() {
 
       console.log('📋 Wallet created - checking onboarding status:', {
         walletAddress,
-        hasInviteCode: !!validatedInviteCode
+        hasInviteCode: !!validatedInviteCode,
+        inviteCode: validatedInviteCode
       });
 
       try {
         // Check if first user
         const firstUser = isFirstUser(walletAddress);
         setIsFirstUserAccount(firstUser);
+        console.log(`👤 First user check: ${firstUser}`);
 
         // Check if already onboarded
         const completed = await hasCompletedOnboarding(walletAddress);
@@ -161,18 +163,22 @@ function PageContent() {
 
         // Validate invite code for non-first users
         if (!firstUser && validatedInviteCode && validatedInviteCode !== 'FIRST_USER') {
+          console.log('🔍 Validating invite code post-auth:', validatedInviteCode);
           const isValid = await handlePostAuthInviteValidation(validatedInviteCode);
           if (!isValid) {
             console.error('❌ Invite validation failed after wallet creation');
+            alert('Invite code validation failed. Please contact support.');
             return;
           }
+          console.log('✅ Invite code validated successfully post-auth');
         }
 
         // First user or validated user can proceed to hat minting
-        console.log('🎩 Proceeding to hat minting');
+        console.log('🎩 Proceeding to hat minting modal');
         setShowOnboardingModal(true);
       } catch (error) {
         console.error('❌ Error checking wallet onboarding:', error);
+        alert(`Error during onboarding: ${error instanceof Error ? error.message : 'Unknown error'}`);
       }
     };
 
@@ -247,7 +253,8 @@ function PageContent() {
 
   // Hat minting completion handler
   const handleHatMinted = async (txHash: string): Promise<void> => {
-    console.log('🎩 Hat minted, completing onboarding...', txHash);
+    console.log('🎩 Hat minted successfully! Transaction:', txHash);
+    console.log('📝 Completing onboarding for wallet:', walletAddress);
 
     try {
       const completeResponse = await fetch('/api/onboarding/complete', {
@@ -263,15 +270,19 @@ function PageContent() {
       });
 
       const completeResult = await completeResponse.json();
+      console.log('📋 Onboarding completion response:', completeResult);
 
       if (completeResult.success) {
-        console.log('✅ Onboarding completed successfully!');
+        console.log('✅ Onboarding completed successfully! Setting flag...');
         setOnboardingComplete(true);
+        console.log('🎉 User should now authenticate and redirect to /home');
       } else {
         console.error('❌ Onboarding completion failed:', completeResult.error);
+        alert(`Onboarding completion failed: ${completeResult.error}`);
       }
     } catch (error) {
-      console.error('Error completing onboarding:', error);
+      console.error('❌ Error completing onboarding:', error);
+      alert(`Error completing onboarding: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   };
 
@@ -406,7 +417,8 @@ function PageContent() {
       <div className="wrapper">
         <div className="button-container">
           {/* Only show wallet auth if invite code validated OR wallet already exists */}
-          {(validatedInviteCode || walletAddress) && (
+          {/* HIDE if onboarding modal is showing - user needs to complete hat minting first */}
+          {(validatedInviteCode || walletAddress) && !showOnboardingModal && (
             <EmbeddedWalletAuth
               isLoading={isLoading}
               onEmailCaptured={setCapturedEmail}
