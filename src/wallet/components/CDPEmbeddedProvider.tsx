@@ -4,10 +4,13 @@
 import type { ReactNode } from 'react';
 import { CDPReactProvider } from '@coinbase/cdp-react';
 import { WagmiProvider } from 'wagmi';
+import { OnchainKitProvider } from '@coinbase/onchainkit';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useEffect, useMemo } from 'react';
 import { validateContractAddresses } from '@/config/contracts';
 import { wagmiConfig } from '@/config/wagmi.client';
+import { base } from 'wagmi/chains';
+import { DEFAULT_PRIVACY_URL, DEFAULT_TERMS_URL } from '@/constants';
 
 // Create the QueryClient instance outside component
 const queryClient = new QueryClient();
@@ -91,12 +94,44 @@ export function CDPEmbeddedProvider({ children }: CDPEmbeddedProviderProps) {
     [projectId],
   );
 
+  // OnchainKit config
+  const paymasterEndpoint = process.env.NEXT_PUBLIC_PAYMASTER;
+  const onchainKitConfig = useMemo(
+    () => ({
+      appearance: {
+        name: 'SpiritDAO',
+        logo: '/spiritdaosymbol.png',
+        mode: 'auto' as const,
+        theme: 'minimal' as const,
+      },
+      wallet: {
+        display: 'modal' as const,
+        termsUrl: DEFAULT_TERMS_URL,
+        privacyUrl: DEFAULT_PRIVACY_URL,
+      },
+      paymaster: paymasterEndpoint,
+    }),
+    [paymasterEndpoint],
+  );
+
+  if (!paymasterEndpoint) {
+    console.warn(
+      '⚠️ Paymaster endpoint not configured. Transactions will not be sponsored.',
+    );
+  }
+
   return (
     <WagmiProvider config={wagmiConfig}>
       <QueryClientProvider client={queryClient}>
-        <CDPReactProvider config={cdpConfig}>
-          {children}
-        </CDPReactProvider>
+        <OnchainKitProvider
+          apiKey={process.env.NEXT_PUBLIC_CDP_API_CLIENT!}
+          chain={base}
+          config={onchainKitConfig}
+        >
+          <CDPReactProvider config={cdpConfig}>
+            {children}
+          </CDPReactProvider>
+        </OnchainKitProvider>
       </QueryClientProvider>
     </WagmiProvider>
   );
