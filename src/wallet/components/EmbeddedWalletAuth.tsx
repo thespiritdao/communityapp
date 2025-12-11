@@ -6,9 +6,10 @@ import { useSignInWithEmail, useVerifyEmailOTP, useSignInWithOAuth, useCurrentUs
 
 interface EmbeddedWalletAuthProps {
   isLoading?: boolean;
+  onEmailCaptured?: (email: string) => void;
 }
 
-export function EmbeddedWalletAuth({ isLoading }: EmbeddedWalletAuthProps) {
+export function EmbeddedWalletAuth({ isLoading, onEmailCaptured }: EmbeddedWalletAuthProps) {
   const { currentUser } = useCurrentUser();
   const { evmAddress } = useEvmAddress();
   const { signInWithEmail } = useSignInWithEmail();
@@ -78,6 +79,11 @@ export function EmbeddedWalletAuth({ isLoading }: EmbeddedWalletAuthProps) {
         user: result.user,
         isNewUser: result.isNewUser,
       });
+
+      // Capture email for database storage
+      if (onEmailCaptured && email) {
+        onEmailCaptured(email);
+      }
 
       // Wallet will be created automatically, currentUser will update
     } catch (err: any) {

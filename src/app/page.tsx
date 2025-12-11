@@ -53,6 +53,9 @@ function PageContent() {
   const [isFirstUserAccount, setIsFirstUserAccount] = useState(false);
   const [onboardingComplete, setOnboardingComplete] = useState(false);
 
+  // Email capture for database storage
+  const [capturedEmail, setCapturedEmail] = useState<string | undefined>(undefined);
+
   // Client-side mounting
   useEffect(() => {
     setIsClient(true);
@@ -304,13 +307,12 @@ function PageContent() {
         authenticationAttemptedRef.current = true;
         setIsProcessing(true);
         try {
-          // Extract email from CDP currentUser if available
-          const userEmail = currentUser?.email || undefined;
-          if (userEmail) {
-            console.log('📧 Using email from CDP:', userEmail);
+          // Use captured email from authentication flow
+          if (capturedEmail) {
+            console.log('📧 Using captured email:', capturedEmail);
           }
 
-          await signIn(walletAddress, userEmail);
+          await signIn(walletAddress, capturedEmail);
           console.log('✅ Authentication successful');
         } catch (err) {
           console.error('❌ Authentication failed:', err);
@@ -328,7 +330,7 @@ function PageContent() {
     authLoading,
     onboardingComplete,
     isFirstUserAccount,
-    currentUser,
+    capturedEmail,
     signIn,
   ]);
 
@@ -405,7 +407,10 @@ function PageContent() {
         <div className="button-container">
           {/* Only show wallet auth if invite code validated OR wallet already exists */}
           {(validatedInviteCode || walletAddress) && (
-            <EmbeddedWalletAuth isLoading={isLoading} />
+            <EmbeddedWalletAuth
+              isLoading={isLoading}
+              onEmailCaptured={setCapturedEmail}
+            />
           )}
 
           {/* Show waiting message if no wallet and no validated invite yet */}
