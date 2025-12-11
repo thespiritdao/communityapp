@@ -54,6 +54,7 @@ export function OnboardingHatMinting({
 
       // Send transaction using CDP hook
       const result = await sendEvmTransaction({
+        chainId: 8453, // Base Mainnet
         to: hatCall.to as `0x${string}`,
         data: hatCall.data as `0x${string}`,
         value: BigInt(hatCall.value || 0),
