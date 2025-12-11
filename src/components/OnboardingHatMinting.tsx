@@ -82,9 +82,11 @@ export function OnboardingHatMinting({
       setContracts([hatCall]);
       clearTimeout(timeoutId); // Clear timeout if successful
     } catch (error) {
-      console.error('❌ Error creating hat minting call:', error);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.error('❌ Error creating hat minting call:', errorMessage);
+      console.error('Full error object:', JSON.stringify(error, Object.getOwnPropertyNames(error)));
       clearTimeout(timeoutId);
-      setPreparationError(error instanceof Error ? error.message : 'Unknown error');
+      setPreparationError(errorMessage);
       onError(error as Error);
     }
 
@@ -101,7 +103,9 @@ export function OnboardingHatMinting({
   };
 
   const handleError = (error: any) => {
-    console.error('❌ Hat minting failed:', error);
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    console.error('❌ Hat minting failed:', errorMessage);
+    console.error('Full error object:', JSON.stringify(error, Object.getOwnPropertyNames(error)));
     onError(error);
   };
 
