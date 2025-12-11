@@ -15,7 +15,8 @@ import {
   TransactionStatusAction,
   TransactionStatusLabel,
 } from '@coinbase/onchainkit/transaction';
-import { useAccount } from 'wagmi';
+import { useAccount, useConnect } from 'wagmi';
+import { coinbaseWallet } from 'wagmi/connectors';
 import {
   createMintBetaTesterHatCall,
   createMintExecutiveLeaderHatCall,
@@ -34,9 +35,22 @@ export function OnboardingHatMinting({
   onSuccess,
   onError,
 }: OnboardingHatMintingProps) {
-  const { address } = useAccount();
+  const { address, isConnected } = useAccount();
+  const { connect, connectors } = useConnect();
   const [contracts, setContracts] = useState<any[]>([]);
   const [preparationError, setPreparationError] = useState<string | null>(null);
+
+  // Auto-connect wagmi when CDP wallet exists but wagmi isn't connected
+  useEffect(() => {
+    if (walletAddress && !isConnected && connectors.length > 0) {
+      console.log('🔗 CDP wallet exists but wagmi not connected - auto-connecting...');
+      const coinbaseConnector = connectors.find((c) => c.id === 'coinbaseWalletSDK');
+      if (coinbaseConnector) {
+        console.log('🔗 Connecting wagmi to Coinbase Wallet...');
+        connect({ connector: coinbaseConnector });
+      }
+    }
+  }, [walletAddress, isConnected, connectors, connect]);
 
   useEffect(() => {
     console.log('🔍 OnboardingHatMinting - checking prerequisites:', {
@@ -45,12 +59,20 @@ export function OnboardingHatMinting({
       isFirstUser,
       hasWagmiAddress: !!address,
       hasWalletAddress: !!walletAddress,
+      isWagmiConnected: isConnected,
     });
 
     // Use walletAddress from props - don't wait for wagmi address
     // CDP embedded wallet may not sync with wagmi immediately
     if (!walletAddress) {
       console.log('⏳ Waiting for wallet address...');
+      return;
+    }
+
+    // CRITICAL: Wait for wagmi to connect before preparing transaction
+    // OnchainKit Transaction component requires wagmi connection
+    if (!isConnected) {
+      console.log('⏳ Waiting for wagmi connection...');
       return;
     }
 
@@ -91,7 +113,7 @@ export function OnboardingHatMinting({
     }
 
     return () => clearTimeout(timeoutId);
-  }, [walletAddress, isFirstUser]); // Removed address dependency
+  }, [walletAddress, isFirstUser, isConnected]); // Wait for wagmi connection
 
   const handleSuccess = (response: any) => {
     console.log('✅ Hat minted successfully:', response);
@@ -116,7 +138,9 @@ export function OnboardingHatMinting({
           {!preparationError ? (
             <>
               <div className="animate-spin h-8 w-8 border-4 border-gray-300 border-t-[#2F5D50] rounded-full"></div>
-              <p className="text-sm text-gray-600">Preparing transaction...</p>
+              <p className="text-sm text-gray-600">
+                {!isConnected ? 'Connecting wallet...' : 'Preparing transaction...'}
+              </p>
               <p className="text-xs text-gray-400">
                 This may take a few moments
               </p>
