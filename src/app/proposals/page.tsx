@@ -11,15 +11,6 @@ import {
   type TransactionResponse,
   type TransactionError,
 } from '@coinbase/onchainkit/transaction';
-import {
-  ConnectWallet,
-  Wallet,
-  WalletDropdown,
-  WalletDropdownBasename,
-  WalletDropdownFundLink,
-  WalletDropdownLink,
-  WalletDropdownDisconnect,
-} from '@coinbase/onchainkit/wallet';
 import type { Address } from 'viem';
 import { base } from 'wagmi/chains';
 import { useProposal, ProposalProvider } from '@/context/ProposalContext';
@@ -259,23 +250,15 @@ function InnerProposalSubmissionPage() {
                 )}
               </div>
 
-              <Wallet>
-                <ConnectWallet>
-                  <WalletDropdown>
-                    <WalletDropdownBasename />
-                    <WalletDropdownLink
-                      icon="wallet"
-                      href="https://keys.coinbase.com"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      Wallet
-                    </WalletDropdownLink>
-                    <WalletDropdownFundLink />
-                    <WalletDropdownDisconnect />
-                  </WalletDropdown>
-                </ConnectWallet>
-              </Wallet>
+              {/* Wallet Address Display */}
+              {address && (
+                <div className="text-sm bg-white/10 px-3 py-2 rounded-lg">
+                  <span className="opacity-75 mr-2">Wallet:</span>
+                  <span className="font-mono font-semibold">
+                    {address.substring(0, 6)}...{address.substring(38)}
+                  </span>
+                </div>
+              )}
             </div>
           </div>
 

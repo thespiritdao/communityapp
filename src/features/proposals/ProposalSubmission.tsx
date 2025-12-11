@@ -10,15 +10,7 @@ import {
   TransactionStatusAction,
   TransactionStatusLabel,
 } from '@coinbase/onchainkit/transaction';
-import {
-  ConnectWallet,
-  Wallet,
-  WalletDropdown,
-  WalletDropdownBasename,
-  WalletDropdownFundLink,
-  WalletDropdownLink,
-  WalletDropdownDisconnect,
-} from '@coinbase/onchainkit/wallet';
+// Wallet components removed - using embedded wallet via wagmi hooks
 import { useAccount } from 'wagmi';
 import type { Address } from 'viem';
 import { base } from 'wagmi/chains';
@@ -250,14 +242,14 @@ export const ProposalSubmission: React.FC<ProposalSubmissionProps> = ({
               </TransactionStatus>
             </Transaction>
           ) : (
-            <ConnectWallet className="w-full">
-              <button
-                className="w-full text-white font-medium py-3 px-6 rounded-lg hover:bg-[#254A40]"
-                style={{ backgroundColor: '#2F5D50' }}
-              >
-                Connect Wallet to Submit
-              </button>
-            </ConnectWallet>
+            <div className="w-full text-center p-4 bg-gray-100 rounded-lg">
+              <p className="text-gray-600">
+                Please connect your wallet to submit a proposal
+              </p>
+              <p className="text-sm text-gray-500 mt-2">
+                You must be logged in with an embedded wallet
+              </p>
+            </div>
           )}
         </div>
       </div>
@@ -301,29 +293,16 @@ export const ProposalSubmission: React.FC<ProposalSubmissionProps> = ({
             )}
           </div>
 
-          <Wallet>
-            <ConnectWallet>
-              <WalletDropdown>
-                <WalletDropdownBasename />
-                <WalletDropdownLink
-                  icon="wallet"
-                  href="https://keys.coinbase.com"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  Wallet
-                </WalletDropdownLink>
-                <WalletDropdownFundLink />
-                <WalletDropdownDisconnect />
-              </WalletDropdown>
-            </ConnectWallet>
-          </Wallet>
+          {/* Wallet Address Display */}
+          {isConnected && address && (
+            <div className="text-sm bg-gray-100 px-3 py-2 rounded-lg">
+              <span className="text-gray-600 mr-2">Wallet:</span>
+              <span className="font-mono font-semibold text-gray-900">
+                {address.slice(0, 6)}...{address.slice(-4)}
+              </span>
+            </div>
+          )}
         </div>
-        {isConnected && address && (
-          <p className="text-xs text-gray-500 mt-1">
-            Connected: {address.slice(0, 6)}...{address.slice(-4)}
-          </p>
-        )}
       </div>
 
       {/* Validation Messages */}
