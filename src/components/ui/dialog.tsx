@@ -28,8 +28,11 @@ const DialogHeader: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => <div className="mb-4">{children}</div>;
 
-const DialogTitle: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-  <RadixDialog.Title className="text-lg font-semibold mb-2">
+const DialogTitle: React.FC<{
+  children: React.ReactNode;
+  className?: string;
+}> = ({ children, className }) => (
+  <RadixDialog.Title className={cn("text-lg font-semibold mb-2", className)}>
     {children}
   </RadixDialog.Title>
 );
