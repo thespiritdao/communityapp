@@ -7,7 +7,7 @@ interface AuthContextType {
   session: any;
   loading: boolean;
   isAuthenticated: boolean;
-  signIn: (address: string) => Promise<void>;
+  signIn: (address: string, email?: string) => Promise<void>;
   signOut: () => Promise<void>;
 }
 

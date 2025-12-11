@@ -13,7 +13,7 @@ interface AuthState {
 }
 
 interface UseAuthReturn extends AuthState {
-  signIn: (walletAddress: string) => Promise<void>;
+  signIn: (walletAddress: string, email?: string) => Promise<void>;
   signOut: () => Promise<void>;
   refreshSession: () => Promise<void>;
 }
@@ -118,7 +118,7 @@ export function useAuth(): UseAuthReturn {
   }, []);
 
   const signIn = useCallback(
-    async (walletAddress: string) => {
+    async (walletAddress: string, email?: string) => {
       // Prevent concurrent authentication attempts
       if (isAuthenticating.current) {
         console.log('🔐 Auth: Authentication already in progress');
@@ -152,6 +152,7 @@ export function useAuth(): UseAuthReturn {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             address: walletAddress,
+            email: email, // Pass email if available from CDP
             // Embedded wallet - no signature needed
             isEmbedded: true,
           }),

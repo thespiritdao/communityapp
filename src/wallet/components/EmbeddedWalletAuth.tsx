@@ -22,18 +22,19 @@ export function EmbeddedWalletAuth({ isLoading }: EmbeddedWalletAuthProps) {
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // If user is already signed in, show welcome message
-  if (currentUser && evmAddress) {
+  // If wallet exists but not yet fully authenticated, show loading state
+  // This allows the authentication flow to proceed without blocking
+  if (currentUser && evmAddress && !isLoading) {
     return (
-      <div className="button enter-button" style={{ cursor: 'default' }}>
-        <div style={{ textAlign: 'center' }}>
-          <p style={{ fontSize: '18px', marginBottom: '8px' }}>Welcome!</p>
-          <p style={{ fontSize: '14px', opacity: 0.8 }}>
-            {evmAddress.substring(0, 6)}...
-            {evmAddress.substring(38)}
-          </p>
-        </div>
-      </div>
+      <button className="button enter-button" disabled>
+        <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+          <svg className="animate-spin" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+            <circle cx="12" cy="12" r="10" opacity="0.25" />
+            <path d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" opacity="0.75" fill="currentColor" />
+          </svg>
+          Completing setup...
+        </span>
+      </button>
     );
   }
 
@@ -81,7 +82,45 @@ export function EmbeddedWalletAuth({ isLoading }: EmbeddedWalletAuthProps) {
       // Wallet will be created automatically, currentUser will update
     } catch (err: any) {
       console.error('❌ OTP verification failed:', err);
-      setError(err.message || 'Invalid OTP. Please try again.');
+
+      // Check if flow expired
+      const errorMessage = err.message || '';
+      if (errorMessage.includes('Flow not found') || errorMessage.includes('expired')) {
+        setError('Your verification code has expired. Please request a new one.');
+        // Auto-reset to email step after brief delay
+        setTimeout(() => {
+          setStep('email');
+          setOtp('');
+          setFlowId(null);
+          setError('');
+        }, 3000);
+      } else {
+        setError(errorMessage || 'Invalid OTP. Please try again.');
+      }
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleResendOTP = async () => {
+    setError('');
+    setIsSubmitting(true);
+
+    try {
+      console.log('📧 Resending OTP to email:', email);
+      const result = await signInWithEmail({ email });
+
+      if (result.flowId) {
+        console.log('✅ New OTP sent, flowId:', result.flowId);
+        setFlowId(result.flowId);
+        setOtp(''); // Clear old OTP
+        setError('');
+      } else {
+        throw new Error('No flowId returned');
+      }
+    } catch (err: any) {
+      console.error('❌ Failed to resend OTP:', err);
+      setError(err.message || 'Failed to resend OTP. Please try again.');
+    } finally {
       setIsSubmitting(false);
     }
   };
@@ -248,6 +287,24 @@ export function EmbeddedWalletAuth({ isLoading }: EmbeddedWalletAuthProps) {
               style={{ width: '100%', marginBottom: '8px' }}
             >
               {isSubmitting ? 'Verifying...' : 'Verify Code'}
+            </button>
+
+            <button
+              type="button"
+              onClick={handleResendOTP}
+              disabled={isSubmitting}
+              style={{
+                width: '100%',
+                padding: '8px 16px',
+                fontSize: '14px',
+                backgroundColor: 'transparent',
+                color: '#2F5D50',
+                border: 'none',
+                cursor: 'pointer',
+                marginBottom: '4px',
+              }}
+            >
+              Resend Code
             </button>
 
             <button

@@ -57,8 +57,14 @@ function PageContent() {
   useEffect(() => {
     setIsClient(true);
 
-    // Enable mobile debugging console with ?debug=true
+    // Restore validated invite code from sessionStorage
     if (typeof window !== 'undefined') {
+      const savedInviteCode = sessionStorage.getItem('validated_invite_code');
+      if (savedInviteCode) {
+        console.log('🔑 Restored validated invite code from session');
+        setValidatedInviteCode(savedInviteCode);
+      }
+
       const urlParams = new URLSearchParams(window.location.search);
       if (urlParams.get('debug') === 'true' || process.env.NODE_ENV === 'development') {
         import('eruda').then((eruda) => {
@@ -110,20 +116,21 @@ function PageContent() {
     if (!isClient) return;
 
     // If user doesn't have a wallet yet and hasn't validated invite code
-    if (!walletAddress && !validatedInviteCode && cdpInitialized) {
+    // Show modal immediately without waiting for CDP initialization
+    if (!walletAddress && !validatedInviteCode) {
       console.log('🔑 No wallet detected - showing pre-auth invite modal');
       setShowPreAuthInvite(true);
     }
-  }, [isClient, walletAddress, validatedInviteCode, cdpInitialized]);
+  }, [isClient, walletAddress, validatedInviteCode]);
 
-  // STEP 2: After wallet created, validate invite code with wallet address
+  // STEP 2: After wallet created, check onboarding status
   useEffect(() => {
-    const validateInviteWithWallet = async () => {
-      if (!walletAddress || !validatedInviteCode) return;
+    const checkWalletOnboarding = async () => {
+      if (!walletAddress) return;
 
-      console.log('📋 Wallet created - validating invite with wallet:', {
+      console.log('📋 Wallet created - checking onboarding status:', {
         walletAddress,
-        inviteCode: validatedInviteCode
+        hasInviteCode: !!validatedInviteCode
       });
 
       try {
@@ -135,30 +142,38 @@ function PageContent() {
         const completed = await hasCompletedOnboarding(walletAddress);
 
         if (completed) {
-          console.log('✅ User already onboarded');
+          console.log('✅ User already onboarded - skipping invite flow');
           setOnboardingComplete(true);
           return;
         }
 
-        // If not first user, validate the invite code with wallet address
-        if (!firstUser && validatedInviteCode !== 'FIRST_USER') {
+        console.log('🔑 New user detected - needs onboarding');
+
+        // NEW USERS need invite validation
+        if (!validatedInviteCode && !firstUser) {
+          console.log('⚠️ Missing invite code for new user - showing pre-auth modal');
+          setShowPreAuthInvite(true);
+          return;
+        }
+
+        // Validate invite code for non-first users
+        if (!firstUser && validatedInviteCode && validatedInviteCode !== 'FIRST_USER') {
           const isValid = await handlePostAuthInviteValidation(validatedInviteCode);
           if (!isValid) {
             console.error('❌ Invite validation failed after wallet creation');
-            // Don't show onboarding modal if validation failed
             return;
           }
         }
 
-        // Show onboarding modal for hat minting
-        console.log('🔑 Showing onboarding modal for hat minting');
+        // First user or validated user can proceed to hat minting
+        console.log('🎩 Proceeding to hat minting');
         setShowOnboardingModal(true);
       } catch (error) {
-        console.error('❌ Error in post-wallet invite validation:', error);
+        console.error('❌ Error checking wallet onboarding:', error);
       }
     };
 
-    validateInviteWithWallet();
+    checkWalletOnboarding();
   }, [walletAddress, validatedInviteCode]);
 
   // PRE-AUTH: Check if invite code exists (before wallet creation)
@@ -182,6 +197,12 @@ function PageContent() {
 
       console.log('✅ Invite code exists - storing for later');
       setValidatedInviteCode(inviteCode);
+
+      // Persist to sessionStorage so it survives page reloads
+      if (typeof window !== 'undefined') {
+        sessionStorage.setItem('validated_invite_code', inviteCode);
+      }
+
       return true;
     } catch (error) {
       console.error('Error checking invite code:', error);
@@ -283,7 +304,13 @@ function PageContent() {
         authenticationAttemptedRef.current = true;
         setIsProcessing(true);
         try {
-          await signIn(walletAddress);
+          // Extract email from CDP currentUser if available
+          const userEmail = currentUser?.email || undefined;
+          if (userEmail) {
+            console.log('📧 Using email from CDP:', userEmail);
+          }
+
+          await signIn(walletAddress, userEmail);
           console.log('✅ Authentication successful');
         } catch (err) {
           console.error('❌ Authentication failed:', err);
@@ -301,6 +328,8 @@ function PageContent() {
     authLoading,
     onboardingComplete,
     isFirstUserAccount,
+    currentUser,
+    signIn,
   ]);
 
   // Redirect to home when authenticated
@@ -393,11 +422,14 @@ function PageContent() {
           onClose={() => {
             // First user can bypass - set a placeholder validated code
             setValidatedInviteCode('FIRST_USER');
+            if (typeof window !== 'undefined') {
+              sessionStorage.setItem('validated_invite_code', 'FIRST_USER');
+            }
             setShowPreAuthInvite(false);
           }}
           onValidate={handlePreAuthInviteCheck}
           preAuthMode={true}
-          isFirstUser={false} // We'll check this after wallet is created
+          isFirstUser={true} // Allow first user bypass in pre-auth mode
         />
       )}
 

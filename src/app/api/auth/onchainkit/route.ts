@@ -26,7 +26,7 @@ export async function POST(req: NextRequest) {
     console.log('🔐 Auth API: Received embedded wallet auth request');
 
     const body = await req.json();
-    const { address, isEmbedded } = body || {};
+    const { address, email, isEmbedded } = body || {};
 
     // Validate the address
     if (!address) {
@@ -44,7 +44,9 @@ export async function POST(req: NextRequest) {
     // For embedded wallets, we trust the address from Coinbase SDK
     // No signature verification needed
 
-    const dummyEmail = `${normalizedAddress}@wallet.com`;
+    // Use real email if provided, otherwise use dummy email
+    const userEmail = email || `${normalizedAddress}@wallet.com`;
+    console.log(`📧 Auth API: Using email: ${userEmail}`);
 
     // Check if user exists in user_profiles
     console.log('🔍 Auth API: Checking for existing user...');
@@ -69,13 +71,26 @@ export async function POST(req: NextRequest) {
       if (!userId) {
         throw new Error('User profile exists but user_id is null');
       }
+
+      // Update profile with email if provided and not already set
+      if (email) {
+        const { error: updateError } = await supabaseAdmin
+          .from('user_profiles')
+          .update({ email })
+          .eq('wallet_address', normalizedAddress)
+          .is('email', null); // Only update if email is not set
+
+        if (!updateError) {
+          console.log(`✅ Auth API: Updated profile with email: ${email}`);
+        }
+      }
     } else {
       // New user - create auth entry and profile
       console.log('👤 Auth API: Creating new user...');
 
       const { data: newUser, error: createUserError } =
         await supabaseAdmin.auth.admin.createUser({
-          email: dummyEmail,
+          email: userEmail,
           email_confirm: true,
           user_metadata: { wallet_address: normalizedAddress },
         });
@@ -100,19 +115,24 @@ export async function POST(req: NextRequest) {
       userId = newUser.user.id;
       console.log(`✅ Auth API: Created new user: ${userId}`);
 
-      // Create user profile
+      // Create user profile with email
       const { error: insertProfileError } = await supabaseAdmin
         .from('user_profiles')
         .insert([
           {
             user_id: userId,
             wallet_address: normalizedAddress,
+            email: email || null, // Store real email if provided
           },
         ]);
 
       if (insertProfileError) {
         console.error('❌ Auth API: Failed to create profile:', insertProfileError);
         throw insertProfileError;
+      }
+
+      if (email) {
+        console.log(`✅ Auth API: Profile created with email: ${email}`);
       }
 
       // Assign invite code immediately for new users

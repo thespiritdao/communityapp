@@ -50,6 +50,70 @@ export default function HomePage() {
         </h1>
       </div>
 
+      {/* Profile Completion Reminder for First-Time Users */}
+      {!profile?.first_name && (
+        <div style={{
+          margin: '16px',
+          padding: '16px',
+          background: 'linear-gradient(135deg, #FFFBF5 0%, #F9F5F0 100%)',
+          borderRadius: '12px',
+          border: '1px solid rgba(143, 170, 161, 0.3)',
+          boxShadow: '0 2px 8px rgba(47, 93, 80, 0.08)',
+        }}>
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '12px',
+          }}>
+            <div style={{
+              fontSize: '24px',
+              flexShrink: 0,
+            }}>
+              ✨
+            </div>
+            <div style={{ flex: 1 }}>
+              <p style={{
+                fontSize: '15px',
+                fontWeight: '600',
+                color: '#3A3A3A',
+                marginBottom: '4px',
+              }}>
+                Complete your profile
+              </p>
+              <p style={{
+                fontSize: '13px',
+                color: '#5F5A54',
+                marginBottom: '12px',
+              }}>
+                Help the community get to know you better by adding your name and details.
+              </p>
+              <Link
+                href="/identity"
+                style={{
+                  display: 'inline-block',
+                  padding: '8px 16px',
+                  background: '#2F5D50',
+                  color: '#FFFFFF',
+                  borderRadius: '8px',
+                  fontSize: '14px',
+                  fontWeight: '500',
+                  textDecoration: 'none',
+                  transition: 'background 0.2s ease',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = '#254A40';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = '#2F5D50';
+                }}
+              >
+                Complete Profile →
+              </Link>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* USER MODULES */}
       <section className="home-section">
         <div className="home-module-list">
