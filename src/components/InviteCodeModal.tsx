@@ -15,7 +15,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { OnboardingHatMinting } from './OnboardingHatMinting';
 
 interface InviteCodeModalProps {
@@ -134,6 +134,13 @@ export function InviteCodeModal({
         onPointerDownOutside={(e) => e.preventDefault()}
         onInteractOutside={(e) => e.preventDefault()}
       >
+        {/* Accessible title for screen readers */}
+        <DialogTitle className="sr-only">
+          {currentStep === 'invite' && 'Enter Invite Code'}
+          {currentStep === 'minting' && (isFirstUser ? 'Founding Member Access' : 'Beta Tester Access')}
+          {currentStep === 'complete' && 'Access Granted'}
+        </DialogTitle>
+
         {/* Step 1: Sacred Invite Code Entry */}
         {currentStep === 'invite' && (
           <div className="relative w-full max-w-lg mx-auto">

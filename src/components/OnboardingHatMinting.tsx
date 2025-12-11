@@ -36,29 +36,60 @@ export function OnboardingHatMinting({
 }: OnboardingHatMintingProps) {
   const { address } = useAccount();
   const [contracts, setContracts] = useState<any[]>([]);
+  const [preparationError, setPreparationError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!address || !walletAddress) return;
+    console.log('🔍 OnboardingHatMinting - checking prerequisites:', {
+      wagmiAddress: address,
+      walletAddress,
+      isFirstUser,
+      hasWagmiAddress: !!address,
+      hasWalletAddress: !!walletAddress,
+    });
+
+    // Use walletAddress from props - don't wait for wagmi address
+    // CDP embedded wallet may not sync with wagmi immediately
+    if (!walletAddress) {
+      console.log('⏳ Waiting for wallet address...');
+      return;
+    }
+
+    // Set timeout to show error if preparation takes too long
+    const timeoutId = setTimeout(() => {
+      if (contracts.length === 0) {
+        const errorMsg = 'Transaction preparation is taking longer than expected. This might be a connectivity issue.';
+        console.error('⏰', errorMsg);
+        setPreparationError(errorMsg);
+      }
+    }, 10000); // 10 seconds
 
     try {
+      console.log('🎩 Creating hat minting call for:', walletAddress);
+
       // First user gets Executive Leader hat, others get Beta Tester hat
       const hatCall = isFirstUser
         ? createMintExecutiveLeaderHatCall(walletAddress)
         : createMintBetaTesterHatCall(walletAddress);
 
-      console.log('🎩 Hat minting call created:', {
+      console.log('✅ Hat minting call created:', {
         isFirstUser,
+        hatType: isFirstUser ? 'Executive Leader' : 'Beta Tester',
         recipient: walletAddress,
         contractAddress: hatCall.to,
-        callData: hatCall.data,
+        callData: hatCall.data?.substring(0, 20) + '...',
       });
 
       setContracts([hatCall]);
+      clearTimeout(timeoutId); // Clear timeout if successful
     } catch (error) {
       console.error('❌ Error creating hat minting call:', error);
+      clearTimeout(timeoutId);
+      setPreparationError(error instanceof Error ? error.message : 'Unknown error');
       onError(error as Error);
     }
-  }, [address, walletAddress, isFirstUser]);
+
+    return () => clearTimeout(timeoutId);
+  }, [walletAddress, isFirstUser]); // Removed address dependency
 
   const handleSuccess = (response: any) => {
     console.log('✅ Hat minted successfully:', response);
@@ -77,7 +108,31 @@ export function OnboardingHatMinting({
   if (contracts.length === 0) {
     return (
       <div className="text-center p-4">
-        <p className="text-sm text-gray-600">Preparing transaction...</p>
+        <div className="flex flex-col items-center gap-3">
+          {!preparationError ? (
+            <>
+              <div className="animate-spin h-8 w-8 border-4 border-gray-300 border-t-[#2F5D50] rounded-full"></div>
+              <p className="text-sm text-gray-600">Preparing transaction...</p>
+              <p className="text-xs text-gray-400">
+                This may take a few moments
+              </p>
+            </>
+          ) : (
+            <>
+              <div className="text-red-500 text-4xl">⚠️</div>
+              <p className="text-sm text-red-600 font-medium">Transaction Preparation Failed</p>
+              <p className="text-xs text-gray-500 max-w-sm">
+                {preparationError}
+              </p>
+              <button
+                onClick={() => window.location.reload()}
+                className="mt-2 px-4 py-2 bg-[#2F5D50] text-white rounded-lg text-sm hover:bg-[#254A40]"
+              >
+                Retry
+              </button>
+            </>
+          )}
+        </div>
       </div>
     );
   }
