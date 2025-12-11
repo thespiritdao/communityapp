@@ -91,6 +91,22 @@ function PageContent() {
         localStorage.removeItem('wagmi.cache');
         localStorage.removeItem('wagmi.recentConnectorId');
 
+        // Clear CDP/Coinbase auth storage (fixes 400 Bad Request errors)
+        Object.keys(localStorage).forEach((key) => {
+          if (
+            key.startsWith('cdp_') ||
+            key.startsWith('coinbase_') ||
+            key.startsWith('cbw_') ||
+            key.includes('embedded_wallet')
+          ) {
+            console.log('🧹 Removing CDP storage key:', key);
+            localStorage.removeItem(key);
+          }
+        });
+
+        // Clear sessionStorage
+        sessionStorage.clear();
+
         // Clear Supabase session
         import('@/utils/supabaseClient').then(({ supabase }) => {
           supabase.auth.signOut().then(() => {
@@ -104,6 +120,18 @@ function PageContent() {
             .replace(/^ +/, "")
             .replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
         });
+
+        // Clear IndexedDB (CDP auth data)
+        if (window.indexedDB) {
+          indexedDB.databases().then((dbs) => {
+            dbs.forEach((db) => {
+              if (db.name && (db.name.includes('coinbase') || db.name.includes('cdp'))) {
+                console.log('🧹 Deleting IndexedDB:', db.name);
+                indexedDB.deleteDatabase(db.name);
+              }
+            });
+          });
+        }
 
         console.log('✅ All cache cleared. Reloading...');
         alert('All cache cleared! You will now appear as a new user.');
