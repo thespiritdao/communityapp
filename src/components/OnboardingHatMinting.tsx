@@ -8,7 +8,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { useSendEvmTransaction } from '@coinbase/cdp-hooks';
+import { useSendEvmTransaction, useCurrentUser, useEvmAddress } from '@coinbase/cdp-hooks';
 import {
   createMintBetaTesterHatCall,
   createMintExecutiveLeaderHatCall,
@@ -28,9 +28,14 @@ export function OnboardingHatMinting({
   onError,
 }: OnboardingHatMintingProps) {
   const { sendEvmTransaction, data } = useSendEvmTransaction();
+  const { currentUser } = useCurrentUser();
+  const { evmAddress } = useEvmAddress();
   const [txStatus, setTxStatus] = useState<'idle' | 'preparing' | 'pending' | 'success' | 'error'>('idle');
   const [txHash, setTxHash] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  // Safety gate: Ensure CDP EVM context is fully ready
+  const walletReady = Boolean(currentUser && evmAddress);
 
   const handleMintHat = async () => {
     try {
@@ -155,11 +160,11 @@ export function OnboardingHatMinting({
         {/* Action Button */}
         <button
           onClick={handleMintHat}
-          disabled={txStatus === 'preparing' || txStatus === 'pending'}
+          disabled={!walletReady || txStatus === 'preparing' || txStatus === 'pending'}
           className="sacred-primary-button"
           style={{
             width: '100%',
-            background: txStatus === 'preparing' || txStatus === 'pending' ? '#8FAAA1' : '#2F5D50',
+            background: !walletReady || txStatus === 'preparing' || txStatus === 'pending' ? '#8FAAA1' : '#2F5D50',
             color: '#FFFFFF',
             border: 'none',
             borderRadius: '12px',
@@ -167,8 +172,8 @@ export function OnboardingHatMinting({
             fontSize: '16px',
             fontWeight: '500',
             letterSpacing: '0.02em',
-            cursor: txStatus === 'preparing' || txStatus === 'pending' ? 'not-allowed' : 'pointer',
-            opacity: txStatus === 'preparing' || txStatus === 'pending' ? 0.6 : 1,
+            cursor: !walletReady || txStatus === 'preparing' || txStatus === 'pending' ? 'not-allowed' : 'pointer',
+            opacity: !walletReady || txStatus === 'preparing' || txStatus === 'pending' ? 0.6 : 1,
             transition: 'all 0.2s ease',
           }}
           onMouseEnter={(e) => {

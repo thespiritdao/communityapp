@@ -2,8 +2,6 @@
 import { http, createConfig } from 'wagmi';
 import { createPublicClient } from 'viem';
 import { base, baseSepolia } from 'wagmi/chains';
-import { createCDPEmbeddedWalletConnector } from '@coinbase/cdp-wagmi';
-import type { Config } from '@coinbase/cdp-core';
 
 // Log RPC configuration for debugging
 console.log('🔗 Wagmi RPC Configuration:', {
@@ -46,38 +44,15 @@ const getBaseSepoliaTransport = () => {
   return http(undefined, transportConfig);
 };
 
-// CDP configuration for embedded wallet connector
-const cdpConfig: Config = {
-  projectId: process.env.NEXT_PUBLIC_CDP_PROJECT_ID!,
-  ethereum: {
-    createOnLogin: 'smart' as const, // Create Smart Wallet on login (embedded)
-    networks: [
-      {
-        chainId: parseInt(process.env.NEXT_PUBLIC_CHAIN_ID || '8453', 10),
-        rpcUrl: process.env.NEXT_PUBLIC_RPC_URL || 'https://mainnet.base.org',
-      },
-    ],
-  },
-  appName: 'SpiritDAO',
-  appLogoUrl: '/spiritdaosymbol.png',
-};
-
-// Create CDP Embedded Wallet connector for wagmi
-// This bridges CDP embedded wallets with wagmi hooks
-const cdpEmbeddedWalletConnector = createCDPEmbeddedWalletConnector({
-  cdpConfig: cdpConfig,
-  providerConfig: {
-    chains: [base, baseSepolia],
-    transports: {
-      [base.id]: getBaseTransport(),
-      [baseSepolia.id]: getBaseSepoliaTransport(),
-    },
-  },
-});
-
+// Wagmi config WITHOUT CDP connector
+// CDP wallet management is handled entirely by CDPReactProvider in CDPEmbeddedProvider.tsx
+// This wagmi instance is kept for:
+// 1. Non-CDP wallet connectors (if needed in future)
+// 2. Generic viem client usage
+// 3. OnchainKit compatibility
 export const wagmiConfig = createConfig({
   chains: [base, baseSepolia],
-  connectors: [cdpEmbeddedWalletConnector],
+  connectors: [], // Empty - CDP wallets managed by CDPReactProvider
   transports: {
     [base.id]: getBaseTransport(),
     [baseSepolia.id]: getBaseSepoliaTransport(),
