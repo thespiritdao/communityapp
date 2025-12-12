@@ -465,11 +465,9 @@ function PageContent() {
         <InviteCodeModal
           isOpen={showPreAuthInvite}
           onClose={() => {
-            // First user can bypass - set a placeholder validated code
-            setValidatedInviteCode('FIRST_USER');
-            if (typeof window !== 'undefined') {
-              sessionStorage.setItem('validated_invite_code', 'FIRST_USER');
-            }
+            // Don't override validated invite code - it's already set by handlePreAuthInviteCheck
+            // Just close the modal and let user proceed to wallet creation
+            console.log('📋 Closing pre-auth invite modal');
             setShowPreAuthInvite(false);
           }}
           onValidate={handlePreAuthInviteCheck}
