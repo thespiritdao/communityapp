@@ -56,12 +56,18 @@ export function OnboardingHatMinting({
       const chainId = parseInt(process.env.NEXT_PUBLIC_CHAIN_ID || '8453', 10);
       console.log('🔗 Using chain ID:', chainId);
 
-      // Send transaction using CDP hook
+      // Send transaction using CDP hook - CORRECT API FORMAT
+      // Docs: https://docs.cdp.coinbase.com/embedded-wallets/react-hooks
       const result = await sendEvmTransaction({
-        chainId,
-        to: hatCall.to as `0x${string}`,
-        data: hatCall.data as `0x${string}`,
-        value: BigInt(hatCall.value || 0),
+        transaction: {
+          to: hatCall.to,
+          data: hatCall.data,
+          value: BigInt(hatCall.value || 0),
+          chainId,
+          type: 'eip1559' as const,
+        },
+        evmAccount: walletAddress,
+        network: 'base', // Network name (not chainId)
       });
 
       console.log('📤 Transaction result:', result);
