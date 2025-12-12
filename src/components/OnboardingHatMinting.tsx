@@ -59,20 +59,17 @@ export function OnboardingHatMinting({
       console.log('📤 Sending transaction via CDP...');
       setTxStatus('pending');
 
-      // Get chain ID from environment
-      const chainId = parseInt(process.env.NEXT_PUBLIC_CHAIN_ID || '8453', 10);
-      console.log('🔗 Using chain ID:', chainId);
-
       // Send transaction using CDP hook
-      // NOTE: Do NOT pass evmAccount or network - hook uses currently signed-in account automatically
-      // Docs: https://docs.cdp.coinbase.com/embedded-wallets/react-hooks
+      // CDP automatically uses:
+      // - The currently signed-in user's EVM account
+      // - The network configured in CDPReactProvider
+      // - Proper gas settings and transaction type
+      // DO NOT pass: evmAccount, network, chainId, or type
       const result = await sendEvmTransaction({
         transaction: {
           to: hatCall.to,
           data: hatCall.data,
           value: BigInt(hatCall.value || 0),
-          chainId,
-          type: 'eip1559' as const,
         },
       });
 
