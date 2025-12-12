@@ -87,6 +87,12 @@ export function CDPEmbeddedProvider({ children }: CDPEmbeddedProviderProps) {
       projectId,
       ethereum: {
         createOnLogin: 'smart' as const, // Create Smart Wallet on login (embedded)
+        networks: [
+          {
+            chainId: parseInt(process.env.NEXT_PUBLIC_CHAIN_ID || '8453', 10),
+            rpcUrl: process.env.NEXT_PUBLIC_RPC_URL || 'https://mainnet.base.org',
+          },
+        ],
       },
       appName: 'SpiritDAO',
       appLogoUrl: '/spiritdaosymbol.png',
