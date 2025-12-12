@@ -37,6 +37,13 @@ export function OnboardingHatMinting({
       setTxStatus('preparing');
       console.log('🎩 Preparing hat mint transaction...');
 
+      // Verify wallet address exists
+      if (!walletAddress) {
+        throw new Error('No wallet address available');
+      }
+
+      console.log('🔑 Using wallet address:', walletAddress);
+
       // Create the hat minting call
       const hatCall = isFirstUser
         ? createMintExecutiveLeaderHatCall(walletAddress)
@@ -56,7 +63,8 @@ export function OnboardingHatMinting({
       const chainId = parseInt(process.env.NEXT_PUBLIC_CHAIN_ID || '8453', 10);
       console.log('🔗 Using chain ID:', chainId);
 
-      // Send transaction using CDP hook - CORRECT API FORMAT
+      // Send transaction using CDP hook
+      // NOTE: Do NOT pass evmAccount or network - hook uses currently signed-in account automatically
       // Docs: https://docs.cdp.coinbase.com/embedded-wallets/react-hooks
       const result = await sendEvmTransaction({
         transaction: {
@@ -66,8 +74,6 @@ export function OnboardingHatMinting({
           chainId,
           type: 'eip1559' as const,
         },
-        evmAccount: walletAddress,
-        network: 'base', // Network name (not chainId)
       });
 
       console.log('📤 Transaction result:', result);
