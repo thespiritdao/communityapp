@@ -1,7 +1,7 @@
 // src/config/wagmi.client.ts
 'use client';
 
-import { http, createConfig } from 'wagmi';
+import { http, createConfig, createPublicClient } from 'wagmi';
 import { base } from 'wagmi/chains';
 
 // Use standard Base RPC, NOT CDP endpoints
@@ -33,4 +33,13 @@ export const wagmiConfig = createConfig({
   },
   connectors: [], // CDP wallets managed separately via CDPReactProvider
   ssr: true,
+});
+
+/**
+ * Public client for read-only blockchain interactions
+ * Used by pods features and other services for contract reads
+ */
+export const publicClient = createPublicClient({
+  chain: base,
+  transport: http(RPC_URL),
 });

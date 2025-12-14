@@ -15,7 +15,6 @@ export default function HomePage() {
   // Debug logging
   console.log('🏠 Home Page - CDP Session Status:', {
     currentUser: currentUser ? 'Logged in' : 'Not logged in',
-    userId: currentUser?.id,
     address,
     hasAddress: !!address,
     profile,
