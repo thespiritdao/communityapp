@@ -8,11 +8,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { useSendEvmTransaction, useCurrentUser, useEvmAddress } from '@coinbase/cdp-hooks';
-import {
-  createMintBetaTesterHatCall,
-  createMintExecutiveLeaderHatCall,
-} from '@/services/executiveHatService';
+import { useCurrentUser, useEvmAddress } from '@coinbase/cdp-hooks';
 
 interface OnboardingHatMintingProps {
   walletAddress: `0x${string}`;
@@ -27,7 +23,6 @@ export function OnboardingHatMinting({
   onSuccess,
   onError,
 }: OnboardingHatMintingProps) {
-  const { sendEvmTransaction, data } = useSendEvmTransaction();
   const { currentUser } = useCurrentUser();
   const { evmAddress } = useEvmAddress();
   const [txStatus, setTxStatus] = useState<'idle' | 'preparing' | 'pending' | 'success' | 'error'>('idle');
@@ -40,54 +35,50 @@ export function OnboardingHatMinting({
   const handleMintHat = async () => {
     try {
       setTxStatus('preparing');
-      console.log('🎩 Preparing hat mint transaction...');
+      console.log('🎩 Preparing hat mint request...');
 
       // Verify wallet address exists
       if (!walletAddress) {
         throw new Error('No wallet address available');
       }
 
-      console.log('🔑 Using wallet address:', walletAddress);
+      console.log('🔑 Recipient wallet address:', walletAddress);
+      console.log('👤 User type:', isFirstUser ? 'First User (Executive Leader)' : 'Beta Tester');
 
-      // Create the hat minting call
-      const hatCall = isFirstUser
-        ? createMintExecutiveLeaderHatCall(walletAddress)
-        : createMintBetaTesterHatCall(walletAddress);
-
-      console.log('✅ Hat minting call created:', {
-        isFirstUser,
-        hatType: isFirstUser ? 'Executive Leader' : 'Beta Tester',
-        recipient: walletAddress,
-        contractAddress: hatCall.to,
-      });
-
-      console.log('📤 Sending transaction via CDP...');
+      console.log('📤 Requesting backend hat mint...');
       setTxStatus('pending');
 
-      // Send transaction using CDP hook
-      // CDP automatically uses:
-      // - The currently signed-in user's EVM account
-      // - The network configured in CDPReactProvider
-      // - Proper gas settings and transaction type
-      // DO NOT pass: evmAccount, network, chainId, or type
-      const result = await sendEvmTransaction({
-        transaction: {
-          to: hatCall.to,
-          data: hatCall.data,
-          value: BigInt(hatCall.value || 0),
-        },
+      // Call backend API to mint hat
+      // This uses the admin wallet (which wears Executive Pod Leader hat)
+      // Same secure pattern as testnet airdrop system
+      const response = await fetch('/api/onboarding/mint-hat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          walletAddress,
+          isFirstUser,
+        }),
       });
 
-      console.log('📤 Transaction result:', result);
+      const result = await response.json();
 
-      if (result.transactionHash) {
-        console.log('✅ Transaction confirmed:', result.transactionHash);
-        setTxHash(result.transactionHash);
-        setTxStatus('success');
-        onSuccess(result.transactionHash);
-      } else {
-        throw new Error('No transaction hash returned');
+      if (!result.success) {
+        throw new Error(result.error || 'Hat minting failed');
       }
+
+      console.log('✅ Hat minted successfully!');
+      console.log('   Transaction:', result.transactionHash);
+      console.log('   Hat:', result.hatName);
+      console.log('   Block:', result.blockNumber);
+
+      if (result.alreadyHadHat) {
+        console.log('ℹ️ User already had this hat');
+      }
+
+      setTxHash(result.transactionHash);
+      setTxStatus('success');
+      onSuccess(result.transactionHash);
+
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : 'Unknown error occurred';
       console.error('❌ Hat minting failed:', errorMsg);

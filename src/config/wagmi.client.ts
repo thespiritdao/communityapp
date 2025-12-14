@@ -1,7 +1,8 @@
 // src/config/wagmi.client.ts
 'use client';
 
-import { http, createConfig, createPublicClient } from 'wagmi';
+import { http, createConfig } from 'wagmi';
+import { createPublicClient } from 'viem';
 import { base } from 'wagmi/chains';
 
 // Use standard Base RPC, NOT CDP endpoints
