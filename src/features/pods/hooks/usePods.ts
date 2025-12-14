@@ -3,6 +3,8 @@ import { useEvmAddress } from '@coinbase/cdp-hooks';
 import { PodCoreService } from '../services/PodCoreService';
 import { HatsMigrationService } from '../services/hatsMigrationService';
 import type { Pod } from '../types';
+import { useHatPermissions } from '@/hooks/useHatPermissions';
+import { hasBetaTesterSuperuser } from '@/utils/betaTesterUtils';
 
 export interface UsePodsConfig {
   filter?: 'all' | 'active' | 'draft' | 'proposed' | 'inactive';
@@ -29,6 +31,7 @@ export interface UsePodsReturn {
  */
 export function usePods(config: UsePodsConfig = {}): UsePodsReturn {
   const { evmAddress: address } = useEvmAddress();
+  const { userHats } = useHatPermissions();
   const [pods, setPods] = useState<Pod[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -147,12 +150,27 @@ export function usePods(config: UsePodsConfig = {}): UsePodsReturn {
 
   /**
    * Check if user can manage specific pod
+   *
+   * BETA TESTING: Beta Tester hat holders have superuser access to all pods
    */
   const canUserManagePod = useCallback(
     (pod: Pod) => {
-      return address ? PodCoreService.canUserManagePod(pod, address) : false;
+      if (!address) return false;
+
+      // BETA TESTING: Check for Beta Tester superuser status
+      const isBetaTester = hasBetaTesterSuperuser(
+        userHats.map(hatId => ({ hatId, podId: '', permissions: {} }))
+      );
+
+      if (isBetaTester) {
+        console.log('👑 [Pods] Beta Tester can manage pod:', pod.name);
+        return true;
+      }
+
+      // Normal permission check
+      return PodCoreService.canUserManagePod(pod, address);
     },
-    [address],
+    [address, userHats],
   );
 
   /**

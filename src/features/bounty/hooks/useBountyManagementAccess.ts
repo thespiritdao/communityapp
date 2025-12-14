@@ -3,6 +3,7 @@ import { useEvmAddress } from '@coinbase/cdp-hooks';
 import { useHatPermissions } from '@/hooks/useHatPermissions';
 import { usePodModules } from '@/features/pods/hooks/usePodModules';
 import { supabase } from '@/lib/supabase';
+import { hasBetaTesterSuperuser } from '@/utils/betaTesterUtils';
 
 interface Pod {
   id: string;
@@ -60,7 +61,7 @@ export interface UseBountyManagementAccessReturn {
  */
 export function useBountyManagementAccess(): UseBountyManagementAccessReturn {
   const { evmAddress: address } = useEvmAddress();
-  const { userRoles, isLoading: hatPermissionsLoading } = useHatPermissions();
+  const { userRoles, userHats, isLoading: hatPermissionsLoading } = useHatPermissions();
   const { modules, loading: modulesLoading } = usePodModules();
 
   const [managedPods, setManagedPods] = useState<Pod[]>([]);
@@ -98,6 +99,29 @@ export function useBountyManagementAccess(): UseBountyManagementAccessReturn {
       console.log(
         `💰 [Bounties] Checking ${allPods.length} pods for bounty access...`,
       );
+
+      // BETA TESTING: Check if user has Beta Tester superuser access
+      const isBetaTester = hasBetaTesterSuperuser(
+        userHats.map(hatId => ({ hatId, podId: '', permissions: {} }))
+      );
+
+      if (isBetaTester) {
+        console.log('👑 [Bounties] Beta Tester detected - granting access to ALL pods');
+        // Filter out system pods but grant access to all real pods
+        const accessiblePods = allPods.filter((pod) => {
+          if (pod.name === 'Top Hat' || pod.name?.toLowerCase().includes('top hat')) {
+            return false;
+          }
+          if (pod.hat_id?.endsWith('000000000000000000000000')) {
+            return false;
+          }
+          return true;
+        });
+        setManagedPods(accessiblePods);
+        setIsLoading(false);
+        console.log(`👑 [Bounties] Beta Tester granted access to ${accessiblePods.length} pods`);
+        return;
+      }
 
       // Filter pods where user has both module enabled AND bounty management permission
       const podsWithPermission = allPods.filter((pod) => {

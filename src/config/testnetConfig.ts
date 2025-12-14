@@ -190,11 +190,19 @@ const MAINNET_CONFIG: AppConfig = {
   // Token Expiration - Production timeframe
   selfTokenExpiration: 86400 * 90, // 90 days
 
-  // Features - Production only
-  enableAutoAirdrop: false, // NO auto-airdrop on mainnet
+  // Features - Beta Testing Enabled
+  // BETA TESTING: Auto-airdrop enabled on mainnet for 30-day beta period
+  // TODO: Set to false before full production launch
+  enableAutoAirdrop: process.env.NEXT_PUBLIC_ENABLE_AUTO_AIRDROP === 'true',
   airdropAmounts: {
-    system: BigInt(0),
-    self: BigInt(0),
+    system: BigInt(
+      (Number(process.env.NEXT_PUBLIC_MAINNET_AIRDROP_AMOUNT_SYSTEM) || 100) *
+        1e18,
+    ),
+    self: BigInt(
+      (Number(process.env.NEXT_PUBLIC_MAINNET_AIRDROP_AMOUNT_SELF) || 100) *
+        1e18,
+    ),
   },
 
   // UI/UX - Production mode
