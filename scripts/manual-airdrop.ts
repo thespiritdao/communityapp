@@ -11,6 +11,7 @@
  *   npx tsx scripts/manual-airdrop.ts 0xaecf4d00f0e402fbeb0757f22be9062d89018106
  */
 
+import dotenv from 'dotenv';
 import {
   createWalletClient,
   createPublicClient,
@@ -21,6 +22,9 @@ import {
 import { base } from 'viem/chains';
 import { privateKeyToAccount } from 'viem/accounts';
 import { createClient } from '@supabase/supabase-js';
+
+// Load environment variables
+dotenv.config();
 
 // ============================================================
 // Configuration
