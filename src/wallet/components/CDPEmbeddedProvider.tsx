@@ -2,7 +2,7 @@
 'use client';
 
 import type { ReactNode } from 'react';
-import { CDPReactProvider } from '@coinbase/cdp-react';
+import { CDPHooksProvider } from '@coinbase/cdp-hooks';
 import { WagmiProvider } from 'wagmi';
 import { OnchainKitProvider } from '@coinbase/onchainkit';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -22,6 +22,9 @@ interface CDPEmbeddedProviderProps {
 /**
  * Wraps the app with Coinbase CDP Embedded Wallets provider + Wagmi for backwards compatibility.
  *
+ * CRITICAL: Uses CDPHooksProvider (not CDPReactProvider) to properly manage
+ * embedded wallet authentication state and prevent session loss during navigation.
+ *
  * This hybrid approach allows:
  * - New code to use embedded wallets (email/social login, no popups)
  * - Existing code using wagmi hooks to continue working
@@ -31,6 +34,9 @@ interface CDPEmbeddedProviderProps {
  * - Work entirely in-app (no OAuth popups)
  * - Are mobile-first by design
  * - Private keys managed by Coinbase infrastructure
+ * - Session persists across navigation via CDPHooksProvider
+ *
+ * @see https://docs.base.org/base-account/framework-integrations/cdp
  */
 export function CDPEmbeddedProvider({ children }: CDPEmbeddedProviderProps) {
   // Validate contract addresses on mount
@@ -79,9 +85,11 @@ export function CDPEmbeddedProvider({ children }: CDPEmbeddedProviderProps) {
     );
   }
 
-  console.log('🔐 CDP Embedded Wallets: Initializing with Project ID:', projectId.substring(0, 8) + '...');
+  console.log('🔐 CDP Embedded Wallets: Initializing with CDPHooksProvider for session persistence');
+  console.log('   Project ID:', projectId.substring(0, 8) + '...');
 
-  // CDP React Provider config
+  // CDP Hooks Provider config - Critical for session persistence!
+  // See: https://docs.base.org/base-account/framework-integrations/cdp
   const cdpConfig = useMemo(
     () => ({
       projectId,
@@ -134,9 +142,9 @@ export function CDPEmbeddedProvider({ children }: CDPEmbeddedProviderProps) {
           chain={base}
           config={onchainKitConfig}
         >
-          <CDPReactProvider config={cdpConfig}>
+          <CDPHooksProvider config={cdpConfig}>
             {children}
-          </CDPReactProvider>
+          </CDPHooksProvider>
         </OnchainKitProvider>
       </QueryClientProvider>
     </WagmiProvider>
