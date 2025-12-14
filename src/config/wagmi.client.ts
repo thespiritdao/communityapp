@@ -11,26 +11,26 @@ const RPC_URL = process.env.NEXT_PUBLIC_RPC_URL || 'https://mainnet.base.org';
 console.log('🔗 Wagmi RPC Configuration:', {
   hasApiKey: Boolean(process.env.NEXT_PUBLIC_CDP_API_CLIENT),
   hasCustomRPC: Boolean(process.env.NEXT_PUBLIC_RPC_URL),
-  usingCDP: false, // ✅ MUST be false - CDP is handled by CDPReactProvider
+  usingCDP: false, // CDP is separate from wagmi
   fallbackRPC: !Boolean(process.env.NEXT_PUBLIC_RPC_URL),
 });
 
 /**
- * Wagmi config WITHOUT any CDP integration
+ * Wagmi config for generic blockchain interactions
  *
- * CRITICAL: This config must NOT initialize CDP in any way.
- * CDP wallet management is handled entirely by CDPReactProvider in CDPEmbeddedProvider.tsx
+ * NOTE: CDP embedded wallets are NOT integrated with wagmi in this app.
+ * Use CDP hooks directly: useEvmAddress(), useCurrentUser(), etc.
  *
- * This wagmi instance is kept ONLY for:
- * 1. Non-CDP wallet connectors (if needed in future)
- * 2. Generic viem client usage
- * 3. OnchainKit compatibility (OnchainKit uses wagmi context but CDP handles wallets)
+ * Wagmi is kept for:
+ * 1. Generic viem client usage
+ * 2. OnchainKit compatibility (OnchainKit uses wagmi context internally)
+ * 3. Potential future external wallet support
  */
 export const wagmiConfig = createConfig({
   chains: [base],
   transports: {
-    [base.id]: http(RPC_URL), // ✅ Standard Base RPC, not CDP endpoints
+    [base.id]: http(RPC_URL),
   },
-  connectors: [], // ✅ Empty - CDP wallets managed by CDPReactProvider only
+  connectors: [], // CDP wallets managed separately via CDPReactProvider
   ssr: true,
 });

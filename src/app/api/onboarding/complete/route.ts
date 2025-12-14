@@ -84,22 +84,23 @@ export async function POST(request: NextRequest) {
     }
 
     // Step 2: Trigger testnet airdrop (100 SELF + 100 SYSTEM)
-    console.log('🚰 Triggering testnet airdrop...');
+    // Airdrop is OPTIONAL - only runs on testnet or when NEXT_PUBLIC_ENABLE_BETA_AIRDROP=true
+    console.log('🚰 Attempting airdrop...');
     const airdropResult = await airdropToUser(normalizedWallet);
 
-    if (!airdropResult.success && !airdropResult.alreadyReceived) {
-      console.error('❌ Airdrop failed:', airdropResult.error);
-      return NextResponse.json(
-        {
-          success: false,
-          error: airdropResult.error || 'Airdrop failed',
-        },
-        { status: 500 },
-      );
-    }
-
-    if (airdropResult.alreadyReceived) {
-      console.log('ℹ️ User already received airdrop');
+    // Only fail onboarding if airdrop was expected but had a technical error
+    // Skip airdrop gracefully if not available (mainnet) or already received
+    if (!airdropResult.success) {
+      if (airdropResult.error === 'Airdrop only available on testnet') {
+        console.log('ℹ️ Airdrop skipped (mainnet - no airdrop configured)');
+      } else if (airdropResult.error === 'Auto-airdrop not enabled') {
+        console.log('ℹ️ Airdrop skipped (not enabled in configuration)');
+      } else if (airdropResult.alreadyReceived) {
+        console.log('ℹ️ User already received airdrop');
+      } else {
+        // Real error - log but don't fail onboarding
+        console.warn('⚠️ Airdrop failed (non-critical):', airdropResult.error);
+      }
     } else {
       console.log('✅ Airdrop successful:', airdropResult.transactionHash);
     }
@@ -123,12 +124,18 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       message: 'Onboarding completed successfully',
-      airdrop: {
-        systemAmount: airdropResult.systemAmount?.toString(),
-        selfAmount: airdropResult.selfAmount?.toString(),
-        transactionHash: airdropResult.transactionHash,
-        alreadyReceived: airdropResult.alreadyReceived,
-      },
+      airdrop: airdropResult.success
+        ? {
+            systemAmount: airdropResult.systemAmount?.toString(),
+            selfAmount: airdropResult.selfAmount?.toString(),
+            transactionHash: airdropResult.transactionHash,
+            alreadyReceived: airdropResult.alreadyReceived,
+            skipped: false,
+          }
+        : {
+            skipped: true,
+            reason: airdropResult.error || 'Not available on this network',
+          },
       isFirstUser,
     });
   } catch (error) {

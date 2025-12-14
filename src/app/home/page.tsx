@@ -2,15 +2,30 @@
 'use client';
 import Link from 'next/link';
 import Image from 'next/image';
-import { useAccount } from 'wagmi';
+import { useEvmAddress, useCurrentUser } from '@coinbase/cdp-hooks';
 import { useUserProfile } from '@/features/identity/hooks/useUserProfile';
 import '../../features/home/styles/HomePage.css';
 
 export default function HomePage() {
-  const { address } = useAccount();
-  const { profile, loading } = useUserProfile(address);
+  // Use CDP hooks directly instead of wagmi for better embedded wallet support
+  const { evmAddress: address } = useEvmAddress();
+  const { currentUser } = useCurrentUser();
+  const { profile, loading } = useUserProfile(address || undefined);
+
+  // Debug logging
+  console.log('🏠 Home Page - CDP Session Status:', {
+    currentUser: currentUser ? 'Logged in' : 'Not logged in',
+    userId: currentUser?.id,
+    address,
+    hasAddress: !!address,
+    profile,
+    loading,
+  });
 
   if (!address) {
+    console.warn('⚠️ Home Page: No wallet address detected');
+    console.warn('   Current user:', currentUser ? 'Yes' : 'No');
+    console.warn('   This suggests CDP session is not persisting across navigation');
     return (
       <div className="home-container">
         <div className="flex justify-center items-center min-h-[200px]">

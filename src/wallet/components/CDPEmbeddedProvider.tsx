@@ -127,7 +127,7 @@ export function CDPEmbeddedProvider({ children }: CDPEmbeddedProviderProps) {
   }
 
   return (
-    <WagmiProvider config={wagmiConfig}>
+    <WagmiProvider config={wagmiConfig} reconnectOnMount={true}>
       <QueryClientProvider client={queryClient}>
         <OnchainKitProvider
           apiKey={process.env.NEXT_PUBLIC_CDP_API_CLIENT!}
