@@ -1,6 +1,6 @@
 'use client';
 import { useCallback } from 'react';
-import { useAccount } from 'wagmi';
+import { useEvmAddress } from '@coinbase/cdp-hooks';
 import {
   Transaction,
   TransactionButton,
@@ -89,7 +89,8 @@ export default function ProposalSubmissionPage() {
 
 // Inner page uses the context
 function InnerProposalSubmissionPage() {
-  const { address, isConnected } = useAccount();
+  const { evmAddress: address } = useEvmAddress();
+  const isConnected = !!address;
   const {
     formData,
     updateFormField,

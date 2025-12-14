@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useAccount } from 'wagmi';
+import { useEvmAddress } from '@coinbase/cdp-hooks';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Users, Plus, Shapes } from 'lucide-react';
@@ -15,7 +15,7 @@ import { usePods, useExecutivePodAccess } from '@/features/pods/hooks';
 
 export default function PodsPage() {
   const router = useRouter();
-  const { address } = useAccount();
+  const { evmAddress: address } = useEvmAddress();
   const [filter, setFilter] = useState<
     'all' | 'active' | 'draft' | 'proposed' | 'inactive'
   >('all');

@@ -38,7 +38,7 @@ import {
 import { useEventManagementAccess } from '@/features/events/hooks/useEventTokenGating';
 import { EventService } from '@/features/events/lib/supabase';
 import { unifiedNotificationService as notificationService } from '@/services/unifiedNotificationService';
-import { useAccount } from 'wagmi';
+import { useEvmAddress } from '@coinbase/cdp-hooks';
 import Link from 'next/link';
 
 interface EventManagePageProps {
@@ -50,7 +50,7 @@ interface EventManagePageProps {
 export default function EventManagePage({ params }: EventManagePageProps) {
   const resolvedParams = use(params);
   const router = useRouter();
-  const { address } = useAccount();
+  const { evmAddress: address } = useEvmAddress();
   const {
     event,
     loading: eventLoading,

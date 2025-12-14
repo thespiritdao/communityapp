@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import { useAccount, usePublicClient } from 'wagmi';
+import { useEvmAddress } from '@coinbase/cdp-hooks';
+import { usePublicClient } from 'wagmi';
 import { useTokenBalances } from '../context/TokenBalancesContext';
 import {
   type HatPermissions,
@@ -48,7 +49,7 @@ interface UseHatPermissionsReturn {
  * Replaces database-driven permission checking with on-chain verification
  */
 export const useHatPermissions = (): UseHatPermissionsReturn => {
-  const { address } = useAccount();
+  const { evmAddress: address } = useEvmAddress();
   const publicClient = usePublicClient();
   const {
     balances,

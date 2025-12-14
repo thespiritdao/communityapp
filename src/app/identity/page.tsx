@@ -1,7 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
 import dynamic from 'next/dynamic';
-import { useAccount } from 'wagmi';
+import { useEvmAddress, useCurrentUser } from '@coinbase/cdp-hooks';
 import Link from 'next/link';
 import { useIdentityPage } from '@/features/identity/hooks/useIdentityPage';
 import { DatabaseTokenGallery } from '@/features/identity/components/DatabaseTokenGallery';
@@ -71,7 +71,8 @@ export default function IdentityPage() {
 
 function IdentityPageContent() {
   const [isClient, setIsClient] = useState(false);
-  const { address } = useAccount();
+  const { evmAddress: address } = useEvmAddress();
+  const { currentUser } = useCurrentUser();
 
   const {
     isEditing,
@@ -82,7 +83,7 @@ function IdentityPageContent() {
     handleCancel,
     handleSave,
     handleLogout,
-  } = useIdentityPage(address);
+  } = useIdentityPage(address || undefined);
 
   useEffect(() => {
     setIsClient(true);

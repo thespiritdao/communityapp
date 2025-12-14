@@ -1,5 +1,5 @@
 import { useCallback } from 'react';
-import { useAccount } from 'wagmi';
+import { useEvmAddress } from '@coinbase/cdp-hooks';
 import { parseUnits } from 'viem';
 import { CONTRACT_ADDRESSES } from '@/config/contracts';
 
@@ -35,7 +35,7 @@ export interface MintCertificateParams {
 }
 
 export function useSimplifiedEventTransactions() {
-  const { address } = useAccount();
+  const { evmAddress: address } = useEvmAddress();
 
   // Create event call
   const getCreateEventCall = useCallback(

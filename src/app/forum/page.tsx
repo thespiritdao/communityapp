@@ -3,7 +3,7 @@
 
 import { useEffect, useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAccount } from 'wagmi';
+import { useEvmAddress } from '@coinbase/cdp-hooks';
 import ForumAccessGate from '@/features/forum/components/ForumAccessGate';
 import { supabase } from '@/utils/supabaseClient';
 import ForumContainer from '@/features/forum/components/ForumContainer';
@@ -44,7 +44,8 @@ interface Thread {
 
 export default function ForumPage() {
   const router = useRouter();
-  const { address, isConnected } = useAccount();
+  const { evmAddress: address } = useEvmAddress();
+  const isConnected = !!address;
   const { loadThreads } = useForum();
   const { tokenBalances, isLoading: tokenGateLoading } = useTokenGate();
   const { userHats, isLoading: hatPermissionsLoading } = useHatPermissions();

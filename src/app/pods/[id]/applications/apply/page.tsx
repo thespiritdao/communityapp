@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { useAccount, useSignMessage } from 'wagmi';
+import { useEvmAddress } from '@coinbase/cdp-hooks';
+import { useSignMessage } from 'wagmi';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -38,7 +39,7 @@ interface ExistingApplication {
 export default function ApplyToPodPage() {
   const { id: podId } = useParams();
   const router = useRouter();
-  const { address } = useAccount();
+  const { evmAddress: address } = useEvmAddress();
   const { toast } = useToast();
   const { signMessageAsync } = useSignMessage();
 

@@ -1,9 +1,9 @@
-import { useAccount } from 'wagmi';
+import { useEvmAddress } from '@coinbase/cdp-hooks';
 import { useEffect, useState, useCallback } from 'react';
 import { useProposals } from './useProposals';
 
 export function useGovernanceParticipation() {
-  const { address } = useAccount();
+  const { evmAddress: address } = useEvmAddress();
   const { data: proposals, isLoading: proposalsLoading } = useProposals();
   const [hasUnvotedProposals, setHasUnvotedProposals] = useState(false);
   const [loading, setLoading] = useState(true);

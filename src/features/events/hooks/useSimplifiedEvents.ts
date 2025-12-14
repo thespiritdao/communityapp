@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { useReadContract, useAccount } from 'wagmi';
+import { useReadContract } from 'wagmi';
+import { useEvmAddress } from '@coinbase/cdp-hooks';
 import { supabase } from '@/lib/supabase';
 import { CONTRACT_ADDRESSES } from '@/config/contracts';
 import EventManagerABI from '../../../abis/EventManager.json';
@@ -97,7 +98,7 @@ export function useSimplifiedEvents() {
 }
 
 export function useUserEvents(userAddress?: string) {
-  const { address } = useAccount();
+  const { evmAddress: address } = useEvmAddress();
   const targetAddress = userAddress || address;
 
   const { data: userEventIds, isLoading } = useReadContract({
@@ -158,7 +159,7 @@ export function useUserEvents(userAddress?: string) {
 }
 
 export function useEventRegistration(eventId: string, userAddress?: string) {
-  const { address } = useAccount();
+  const { evmAddress: address } = useEvmAddress();
   const targetAddress = userAddress || address;
 
   const { data: isRegistered } = useReadContract({

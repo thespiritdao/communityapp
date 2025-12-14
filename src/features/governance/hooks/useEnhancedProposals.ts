@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
-import { useAccount, usePublicClient } from 'wagmi';
+import { useEvmAddress } from '@coinbase/cdp-hooks';
+import { usePublicClient } from 'wagmi';
 import { useProposals } from './useProposals';
 import { PodGovernanceService } from '@/features/pods/services/podGovernanceService';
 import { GovernanceService } from '@/features/governance/services/governanceService';
@@ -54,7 +55,7 @@ const HATS_ABI = [
 ] as const;
 
 export const useEnhancedProposals = () => {
-  const { address } = useAccount();
+  const { evmAddress: address } = useEvmAddress();
   const publicClient = usePublicClient();
   const { data: onChainProposals = [], ...onChainQuery } = useProposals();
   const { canParticipateInGovernance, userRoles, hasPermission } =

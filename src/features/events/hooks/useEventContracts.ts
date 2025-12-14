@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
-import { useAccount, usePublicClient, useWalletClient } from 'wagmi';
+import { useEvmAddress } from '@coinbase/cdp-hooks';
+import { usePublicClient, useWalletClient } from 'wagmi';
 import { parseUnits } from 'viem';
 import EventEscrowABI from '@/abis/EventEscrowABI.json';
 import EventRegistrationNFTFactoryABI from '@/abis/EventRegistrationFactoryABI.json';
@@ -14,7 +15,7 @@ const EVENT_REGISTRATION_FACTORY =
 const EVENT_COMPLETION_FACTORY = CONTRACT_ADDRESSES.EVENT_COMPLETION_FACTORY;
 
 export function useEventContracts() {
-  const { address } = useAccount();
+  const { evmAddress: address } = useEvmAddress();
   const publicClient = usePublicClient();
   const { data: walletClient } = useWalletClient();
 

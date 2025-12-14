@@ -1,5 +1,5 @@
 import React, { useCallback } from 'react';
-import { useAccount } from 'wagmi';
+import { useEvmAddress } from '@coinbase/cdp-hooks';
 import { parseUnits } from 'viem';
 import EventSystemFactoryABI from '@/abis/EventSystemFactory.json';
 import EventEscrowABI from '@/abis/EventEscrowABI.json';
@@ -44,7 +44,7 @@ export interface MintCompletionParams {
 }
 
 export function useEventTransactions() {
-  const { address } = useAccount();
+  const { evmAddress: address } = useEvmAddress();
 
   // Validate environment variables on hook initialization
   React.useEffect(() => {

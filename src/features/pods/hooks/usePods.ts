@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useAccount } from 'wagmi';
+import { useEvmAddress } from '@coinbase/cdp-hooks';
 import { PodCoreService } from '../services/PodCoreService';
 import { HatsMigrationService } from '../services/hatsMigrationService';
 import type { Pod } from '../types';
@@ -28,7 +28,7 @@ export interface UsePodsReturn {
  * Consolidates logic from main pods page for better reusability
  */
 export function usePods(config: UsePodsConfig = {}): UsePodsReturn {
-  const { address } = useAccount();
+  const { evmAddress: address } = useEvmAddress();
   const [pods, setPods] = useState<Pod[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

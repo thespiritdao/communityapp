@@ -1,9 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useAccount } from 'wagmi';
+import { useEvmAddress } from '@coinbase/cdp-hooks';
 import { supabase } from '@/lib/supabase';
 
 export function useRegistrationStatus(eventId: string | null) {
-  const { address } = useAccount();
+  const { evmAddress: address } = useEvmAddress();
   const [isRegistered, setIsRegistered] = useState(false);
   const [registrationStatus, setRegistrationStatus] = useState<string | null>(
     null,

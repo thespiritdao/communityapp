@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/utils/supabaseClient';
-import { useAccount } from 'wagmi';
+import { useEvmAddress } from '@coinbase/cdp-hooks';
 import { useToast } from '@/components/ui/use-toast';
 import { useTokenGate } from '@/features/forum/hooks/useTokenGate';
 import { useAuthContext } from '@/features/identity/components/AuthProvider';
@@ -69,7 +69,7 @@ export function useForum() {
   const [userWalletAddress, setUserWalletAddress] = useState<string | null>(
     null,
   );
-  const { address: wagmiAddress } = useAccount();
+  const { evmAddress: wagmiAddress } = useEvmAddress();
   const { toast } = useToast();
   const { session, isAuthenticated, signIn } = useAuthContext();
 

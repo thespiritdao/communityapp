@@ -3,7 +3,7 @@
 
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { useAccount } from 'wagmi';
+import { useEvmAddress } from '@coinbase/cdp-hooks';
 import { supabase } from '@/lib/supabase';
 import { fetchTokenBalances } from '@/utils/fetchTokenBalances';
 import { createSupabaseSession } from '@/utils/createSupabaseSession';
@@ -265,7 +265,7 @@ const TransactionLink = styled.a`
 export default function OrderDetailPage() {
   const params = useParams();
   const router = useRouter();
-  const { address } = useAccount();
+  const { evmAddress: address } = useEvmAddress();
   const orderId = typeof params.id === 'string' ? params.id : '';
 
   const [order, setOrder] = useState<Order | null>(null);

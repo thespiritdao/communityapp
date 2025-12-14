@@ -18,7 +18,7 @@ import {
 import FundingModal from '@/components/FundingModal';
 import FundButton from '@/components/FundButton';
 import { useFundingModal } from '@/hooks/useFundingModal';
-import { useAccount } from 'wagmi';
+import { useEvmAddress } from '@coinbase/cdp-hooks';
 import { PodCoreService } from '@/features/pods/services/PodCoreService';
 import { useToast } from '@/components/ui/use-toast';
 import { useProfiles } from '@/features/identity/hooks/useProfiles';
@@ -59,7 +59,7 @@ export default function PodDetailPage() {
   const params = useParams();
   const id = typeof params.id === 'string' ? params.id : '';
   const router = useRouter();
-  const { address } = useAccount();
+  const { evmAddress: address } = useEvmAddress();
   const { toast } = useToast();
 
   // Pod loading state

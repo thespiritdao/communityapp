@@ -1,6 +1,6 @@
 'use client';
 import { useCallback, useState } from 'react';
-import { useAccount } from 'wagmi';
+import { useEvmAddress } from '@coinbase/cdp-hooks';
 import CreateProposalForm from '@/features/governance/components/CreateProposalForm';
 import VoteButton from '@/features/governance/components/VoteButton';
 import { EnhancedVoteButton } from '@/features/governance/components/EnhancedVoteButton';
@@ -11,7 +11,7 @@ import { Shield, FileText } from 'lucide-react';
 import { FeatureErrorBoundary } from '@/components/ErrorBoundary/FeatureErrorBoundary';
 
 export default function GovernancePage() {
-  const { address } = useAccount();
+  const { evmAddress: address } = useEvmAddress();
 
   // Enhanced proposals that include both on-chain and pod proposals with HAT-based filtering
   const {

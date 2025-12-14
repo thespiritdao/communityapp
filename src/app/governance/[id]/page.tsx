@@ -3,7 +3,8 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
-import { useAccount, usePublicClient } from 'wagmi';
+import { useEvmAddress } from '@coinbase/cdp-hooks';
+import { usePublicClient } from 'wagmi';
 import DAOGovernorABI from '@/abis/DAO_GovernorABI.json';
 import { decodeEventLog, type AbiEvent } from 'viem';
 import VoteButton from '@/features/governance/components/VoteButton';
@@ -35,7 +36,7 @@ interface ProposalDetail {
 export default function ProposalDetailPage() {
   const params = useParams();
   const id = typeof params.id === 'string' ? params.id : '';
-  const { address } = useAccount();
+  const { evmAddress: address } = useEvmAddress();
   const publicClient = usePublicClient();
 
   const [proposal, setProposal] = useState<ProposalDetail | null>(null);

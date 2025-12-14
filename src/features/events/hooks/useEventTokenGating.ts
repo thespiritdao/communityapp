@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { useAccount } from 'wagmi';
+import { useEvmAddress } from '@coinbase/cdp-hooks';
 import { EventService } from '../lib/supabase';
 import type { Pod, Event, EventWithStats } from '../types/event';
 import { fetchTokenBalances } from '../../../utils/fetchTokenBalances';
@@ -45,7 +45,7 @@ export function usePods() {
 }
 
 export function useEventAccess(event: Event | null) {
-  const { address } = useAccount();
+  const { evmAddress: address } = useEvmAddress();
   const { balances: tokenBalances, error: tokenBalancesError } =
     useTokenBalances();
   const { userHats, isLoading: hatPermissionsLoading } = useHatPermissions();
@@ -135,7 +135,7 @@ export function useEventAccess(event: Event | null) {
 }
 
 export function useEventManagementAccess() {
-  const { address } = useAccount();
+  const { evmAddress: address } = useEvmAddress();
   const { balances: tokenBalances } = useTokenBalances();
   const {
     userHats,
@@ -241,7 +241,7 @@ export function useEventManagementAccess() {
 }
 
 export function useTokenGatedEvents(userAddress?: string) {
-  const { address } = useAccount();
+  const { evmAddress: address } = useEvmAddress();
   const { balances: contextTokenBalances } = useTokenBalances();
   const { userHats, isLoading: hatPermissionsLoading } = useHatPermissions();
   const effectiveAddress = userAddress || address;
@@ -367,7 +367,7 @@ export function useTokenGatedEvents(userAddress?: string) {
 
 // Helper hook for checking specific token requirements
 export function useTokenRequirements(requiredTokens: string[]) {
-  const { address } = useAccount();
+  const { evmAddress: address } = useEvmAddress();
   const { balances: contextTokenBalances } = useTokenBalances();
   const [hasRequiredTokens, setHasRequiredTokens] = useState(false);
   const [userTokenBalances, setUserTokenBalances] = useState<

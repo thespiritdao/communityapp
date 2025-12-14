@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
-import { useAccount } from 'wagmi';
+import { useEvmAddress } from '@coinbase/cdp-hooks';
 import { Loader2, CheckCircle } from 'lucide-react';
 import { BountyFormV2 } from '@/features/bounty/components/BountyFormV2';
 import { BountyManagement } from '@/features/bounty/components/BountyManagement';
@@ -28,7 +28,7 @@ const defaultCategories = [
 ];
 
 export default function BountyPage() {
-  const { address } = useAccount();
+  const { evmAddress: address } = useEvmAddress();
   const { managedPods, isLoading: podsLoading } = useBountyManagementAccess();
   const [activeTab, setActiveTab] = useState('public');
   const [selectedPodId, setSelectedPodId] = useState<string>('');

@@ -37,6 +37,15 @@ function PageContent() {
   // Use centralized auth system
   const { isAuthenticated, signIn, loading: authLoading } = useAuthContext();
 
+  // Debug CDP initialization
+  useEffect(() => {
+    console.log('🔍 CDP Status:', {
+      cdpInitialized,
+      currentUser: !!currentUser,
+      walletAddress,
+    });
+  }, [cdpInitialized, currentUser, walletAddress]);
+
   // Local state
   const [hasRedirected, setHasRedirected] = useState(false);
   const [isRedirecting, setIsRedirecting] = useState(false);
@@ -157,13 +166,33 @@ function PageContent() {
   useEffect(() => {
     if (!isClient) return;
 
+    console.log('👀 Invite modal check:', {
+      walletAddress,
+      validatedInviteCode,
+      showPreAuthInvite,
+    });
+
     // If user doesn't have a wallet yet and hasn't validated invite code
     // Show modal immediately without waiting for CDP initialization
-    if (!walletAddress && !validatedInviteCode) {
+    if (!walletAddress && !validatedInviteCode && !showPreAuthInvite) {
       console.log('🔑 No wallet detected - showing pre-auth invite modal');
       setShowPreAuthInvite(true);
     }
-  }, [isClient, walletAddress, validatedInviteCode]);
+  }, [isClient, walletAddress, validatedInviteCode, showPreAuthInvite]);
+
+  // FAILSAFE: Force show invite modal after 2 seconds if nothing is happening
+  useEffect(() => {
+    if (!isClient) return;
+
+    const failsafeTimer = setTimeout(() => {
+      if (!walletAddress && !validatedInviteCode && !showPreAuthInvite) {
+        console.warn('⚠️ FAILSAFE: Forcing invite modal to show after 2s delay');
+        setShowPreAuthInvite(true);
+      }
+    }, 2000);
+
+    return () => clearTimeout(failsafeTimer);
+  }, [isClient, walletAddress, validatedInviteCode, showPreAuthInvite]);
 
   // STEP 2: After wallet created, check onboarding status
   useEffect(() => {
@@ -407,23 +436,6 @@ function PageContent() {
     router,
   ]);
 
-  if (!isClient || !cdpInitialized) {
-    return (
-      <div>
-        <img
-          src="/images/doyoudare.png"
-          alt="Background"
-          className="background-image"
-        />
-        <div className="wrapper">
-          <div className="button-container">
-            <p className="text-center text-white">Loading...</p>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   // Show loading state during processing
   const isLoading = isProcessing || authLoading || isRedirecting;
 
@@ -445,7 +457,8 @@ function PageContent() {
     );
   }
 
-  // Main display - Embedded Wallet Authentication
+  // Main display - Always show background and appropriate UI
+  // Don't wait for CDP initialization to show invite modal
   return (
     <div>
       <img
@@ -455,29 +468,35 @@ function PageContent() {
       />
       <div className="wrapper">
         <div className="button-container">
-          {/* Only show wallet auth if invite code validated OR wallet already exists */}
-          {/* HIDE if onboarding modal is showing - user needs to complete hat minting first */}
-          {(validatedInviteCode || walletAddress) && !showOnboardingModal && (
+          {/* Show wallet auth only if:
+              1. CDP is initialized
+              2. Invite code validated OR wallet already exists
+              3. Not showing onboarding modal */}
+          {isClient && cdpInitialized && (validatedInviteCode || walletAddress) && !showOnboardingModal && (
             <EmbeddedWalletAuth
               isLoading={isLoading}
               onEmailCaptured={setCapturedEmail}
             />
           )}
 
-          {/* Show waiting message if no wallet and no validated invite yet */}
-          {!walletAddress && !validatedInviteCode && !showPreAuthInvite && (
+          {/* Show loading while CDP initializes (only if we have validated invite code) */}
+          {isClient && !cdpInitialized && validatedInviteCode && (
+            <p className="text-center text-white">Initializing wallet system...</p>
+          )}
+
+          {/* Show preparing message if mounted but no invite code yet */}
+          {isClient && !validatedInviteCode && !showPreAuthInvite && (
             <p className="text-center text-white">Preparing...</p>
           )}
         </div>
       </div>
 
       {/* PRE-AUTH: Invite Code Modal (BEFORE wallet creation) */}
-      {showPreAuthInvite && !walletAddress && (
+      {/* Show immediately when mounted, no need to wait for CDP */}
+      {isClient && showPreAuthInvite && !walletAddress && (
         <InviteCodeModal
           isOpen={showPreAuthInvite}
           onClose={() => {
-            // Don't override validated invite code - it's already set by handlePreAuthInviteCheck
-            // Just close the modal and let user proceed to wallet creation
             console.log('📋 Closing pre-auth invite modal');
             setShowPreAuthInvite(false);
           }}
@@ -488,7 +507,7 @@ function PageContent() {
       )}
 
       {/* POST-AUTH: Onboarding Modal (AFTER wallet creation - just for hat minting) */}
-      {walletAddress && showOnboardingModal && (
+      {isClient && cdpInitialized && walletAddress && showOnboardingModal && (
         <InviteCodeModal
           isOpen={showOnboardingModal}
           onClose={() => {

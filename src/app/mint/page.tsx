@@ -1,6 +1,6 @@
 'use client';
 
-import { useAccount } from 'wagmi';
+import { useEvmAddress } from '@coinbase/cdp-hooks';
 import AdvocateMembershipABI from '@/abis/AdvocateMembershipABI.json';
 import { NFTMintCardGeneral } from '@/nft/components/NFTMintCardGeneral';
 import { useToast } from '@/components/ui/use-toast';
@@ -10,7 +10,7 @@ const DEFAULT_MEMBER_TYPE = 0; // e.g., STANDARD
 const DEFAULT_TOKEN_URI = 'https://gateway.pinata.cloud/ipfs/<YOUR_HASH>';
 
 export default function MintPage() {
-  const { address } = useAccount();
+  const { evmAddress: address } = useEvmAddress();
   const { toast } = useToast();
 
   return (

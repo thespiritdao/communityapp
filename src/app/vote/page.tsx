@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { useAccount } from 'wagmi';
+import { useEvmAddress } from '@coinbase/cdp-hooks';
 import { supabase } from '@/utils/supabaseClient';
 import { ProfileModal } from '@/features/identity/components/ProfileModal';
 import Link from 'next/link';
@@ -67,7 +67,8 @@ const PROPOSAL_STATES = [
 ];
 
 export default function VotePage() {
-  const { address, isConnected } = useAccount();
+  const { evmAddress: address } = useEvmAddress();
+  const isConnected = !!address;
   const { forceRefreshParticipation } = useGovernanceParticipation();
   const [proposals, setProposals] = useState<Proposal[]>([]);
   const [loading, setLoading] = useState(true);

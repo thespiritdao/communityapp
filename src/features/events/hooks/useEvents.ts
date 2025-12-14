@@ -1,6 +1,7 @@
 import { getCurrentSession } from '@/features/identity/utils/serverAuth';
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { useAccount, useConfig } from 'wagmi';
+import { useEvmAddress } from '@coinbase/cdp-hooks';
+import { useConfig } from 'wagmi';
 import { EventService } from '../lib/supabase';
 import { supabase } from '../../../utils/supabaseClient';
 import type {
@@ -86,7 +87,7 @@ export function useEvent(eventId: string | null) {
 }
 
 export function useCreateEvent() {
-  const { address } = useAccount();
+  const { evmAddress: address } = useEvmAddress();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -154,7 +155,7 @@ export function useEventRegistrations(eventId: string | null) {
 }
 
 export function useEventRegistration(eventId: string | null) {
-  const { address } = useAccount();
+  const { evmAddress: address } = useEvmAddress();
   const [registration, setRegistration] = useState<EventRegistration | null>(
     null,
   );
@@ -370,7 +371,7 @@ export function useEventAgendas(eventId: string | null) {
 }
 
 export function useUserEvents() {
-  const { address } = useAccount();
+  const { evmAddress: address } = useEvmAddress();
   const [events, setEvents] = useState<EventWithStats[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -405,7 +406,7 @@ export function useUserEvents() {
 }
 
 export function useEventActions(eventId: string | null) {
-  const { address } = useAccount();
+  const { evmAddress: address } = useEvmAddress();
   const config = useConfig();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
