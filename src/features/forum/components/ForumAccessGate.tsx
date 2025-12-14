@@ -2,7 +2,7 @@
 
 import type React from 'react';
 import { useRouter } from 'next/navigation';
-import { useAccount } from 'wagmi';
+import { useEvmAddress } from '@coinbase/cdp-hooks';
 import { useUnifiedForumAccess } from '../hooks/useUnifiedForumAccess';
 import { Button } from '@/components/ui/button';
 import { Loader2, Lock, AlertTriangle } from 'lucide-react';
@@ -25,7 +25,8 @@ export default function ForumAccessGate({
   fallbackMessage,
 }: ForumAccessGateProps) {
   const router = useRouter();
-  const { isConnected, address } = useAccount();
+  const { evmAddress: address } = useEvmAddress();
+  const isConnected = !!address;
   const { permissions, isLoading, error } = useUnifiedForumAccess();
 
   // Handle wallet connection

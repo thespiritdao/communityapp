@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Shield, Lock, AlertTriangle, Loader2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useAccount } from 'wagmi';
+import { useEvmAddress } from '@coinbase/cdp-hooks';
 
 interface PodAccessGateProps {
   children: ReactNode;
@@ -35,7 +35,7 @@ export const PodAccessGate: React.FC<PodAccessGateProps> = ({
   description,
 }) => {
   const router = useRouter();
-  const { address } = useAccount();
+  const { evmAddress: address } = useEvmAddress();
 
   const {
     hasAccess,
