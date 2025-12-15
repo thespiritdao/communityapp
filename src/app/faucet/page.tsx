@@ -2,9 +2,12 @@
 
 import { useState, useEffect } from 'react';
 import { useEvmAddress, useCurrentUser } from '@coinbase/cdp-hooks';
-import { useWriteContract, usePublicClient } from 'wagmi';
+import { usePublicClient } from 'wagmi';
+import { getWalletClient } from 'wagmi/actions';
+import { wagmiConfig } from '@/config/wagmi.client';
 import { formatEther } from 'viem';
 import { Droplets, Clock, CheckCircle, XCircle, Loader2 } from 'lucide-react';
+import { useToast } from '@/components/ui/use-toast';
 
 const FAUCET_ADDRESS = process.env.NEXT_PUBLIC_TOKEN_FAUCET as `0x${string}`;
 const SYSTEM_TOKEN = process.env.NEXT_PUBLIC_SYSTEM_TOKEN as `0x${string}`;
@@ -75,8 +78,8 @@ function formatTimeRemaining(seconds: number): string {
 export default function FaucetPage() {
   const { evmAddress } = useEvmAddress();
   const { currentUser } = useCurrentUser();
-  const { writeContractAsync } = useWriteContract();
   const publicClient = usePublicClient();
+  const { toast } = useToast();
 
   const [canClaim, setCanClaim] = useState(false);
   const [timeRemaining, setTimeRemaining] = useState(0);
@@ -168,18 +171,49 @@ export default function FaucetPage() {
   }, [timeRemaining]);
 
   const handleClaim = async () => {
-    if (!canClaim || !evmAddress) return;
+    if (!canClaim || !evmAddress || !publicClient) {
+      toast({
+        title: 'Error',
+        description: 'Wallet not connected',
+        variant: 'destructive',
+      });
+      return;
+    }
 
     setLoading(true);
     setError(null);
     setSuccess(false);
 
     try {
-      await writeContractAsync({
+      console.log('Simulating claim transaction...');
+
+      // Simulate transaction first
+      const { request } = await publicClient.simulateContract({
+        account: evmAddress,
         address: FAUCET_ADDRESS,
         abi: FAUCET_ABI,
         functionName: 'claimTokens',
         args: [],
+      });
+
+      console.log('Simulation successful, executing transaction...');
+
+      // Get wallet client and execute
+      const walletClient = await getWalletClient(wagmiConfig, {
+        account: evmAddress,
+      });
+
+      if (!walletClient) {
+        throw new Error('Could not get wallet client');
+      }
+
+      const hash = await walletClient.writeContract(request);
+
+      console.log(`Transaction submitted: ${hash}`);
+
+      toast({
+        title: 'Tokens claimed!',
+        description: `Transaction: ${hash.substring(0, 10)}...`,
       });
 
       setSuccess(true);
@@ -190,7 +224,13 @@ export default function FaucetPage() {
       setTimeout(fetchFaucetData, 2000);
     } catch (err: any) {
       console.error('Claim error:', err);
-      setError(err.message || 'Failed to claim tokens');
+      const errorMessage = err.message || 'Failed to claim tokens';
+      setError(errorMessage);
+      toast({
+        title: 'Claim failed',
+        description: errorMessage,
+        variant: 'destructive',
+      });
     } finally {
       setLoading(false);
     }
