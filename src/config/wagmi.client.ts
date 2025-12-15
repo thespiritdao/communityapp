@@ -4,43 +4,39 @@
 import { http, createConfig } from 'wagmi';
 import { createPublicClient } from 'viem';
 import { base } from 'wagmi/chains';
-import { cdpConnector } from '@coinbase/cdp-wagmi';
 
 // Use standard Base RPC, NOT CDP endpoints
-// CDP wallet functionality is handled entirely by CDPReactProvider
+// CDP wallet functionality is handled entirely by CDPHooksProvider
 const RPC_URL = process.env.NEXT_PUBLIC_RPC_URL || 'https://mainnet.base.org';
 
 console.log('🔗 Wagmi RPC Configuration:', {
   hasApiKey: Boolean(process.env.NEXT_PUBLIC_CDP_API_CLIENT),
   hasCustomRPC: Boolean(process.env.NEXT_PUBLIC_RPC_URL),
-  usingCDP: true, // CDP connector bridges embedded wallets to wagmi
+  usingCDP: true, // CDP managed by CDPHooksProvider, OnchainKit detects automatically
   fallbackRPC: !Boolean(process.env.NEXT_PUBLIC_RPC_URL),
 });
 
 /**
- * Wagmi config with CDP connector bridge
+ * Wagmi config for OnchainKit compatibility
  *
- * IMPORTANT: OnchainKit Transaction components use wagmi hooks internally (useAccount).
- * The cdpConnector bridges CDP embedded wallets to wagmi's account context.
+ * IMPORTANT: OnchainKit Transaction components detect CDP wallets automatically
+ * when wrapped in CDPHooksProvider. No connector needed.
  *
  * Architecture:
- * - CDPHooksProvider manages wallet auth (email/social login)
- * - cdpConnector exposes wallet to wagmi hooks
- * - OnchainKit Transaction components work seamlessly with CDP wallets
- * - CDP hooks (useEvmAddress, useCurrentUser) still work as primary API
+ * - CDPHooksProvider wraps app (in layout.tsx)
+ * - OnchainKit Transaction detects CDP wallet from context
+ * - Wagmi config provides chain/transport info only
+ * - CDP hooks (useEvmAddress, useCurrentUser) are primary wallet API
+ *
+ * Note: @coinbase/cdp-wagmi v0.0.73 exports createCDPEmbeddedWalletConnector
+ * but it requires complex config. OnchainKit works without it via CDPHooksProvider.
  */
 export const wagmiConfig = createConfig({
   chains: [base],
   transports: {
     [base.id]: http(RPC_URL),
   },
-  connectors: [
-    cdpConnector({
-      // CDP embedded wallets auto-detected via CDPHooksProvider
-      appName: 'SpiritDAO',
-      appLogoUrl: '/spiritdaosymbol.png',
-    }),
-  ],
+  connectors: [], // OnchainKit detects CDP wallets via CDPHooksProvider context
   ssr: true,
 });
 
