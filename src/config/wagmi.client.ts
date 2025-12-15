@@ -4,6 +4,7 @@
 import { http, createConfig } from 'wagmi';
 import { createPublicClient } from 'viem';
 import { base } from 'wagmi/chains';
+import { cdpConnector } from '@coinbase/cdp-wagmi';
 
 // Use standard Base RPC, NOT CDP endpoints
 // CDP wallet functionality is handled entirely by CDPReactProvider
@@ -12,27 +13,34 @@ const RPC_URL = process.env.NEXT_PUBLIC_RPC_URL || 'https://mainnet.base.org';
 console.log('🔗 Wagmi RPC Configuration:', {
   hasApiKey: Boolean(process.env.NEXT_PUBLIC_CDP_API_CLIENT),
   hasCustomRPC: Boolean(process.env.NEXT_PUBLIC_RPC_URL),
-  usingCDP: false, // CDP is separate from wagmi
+  usingCDP: true, // CDP connector bridges embedded wallets to wagmi
   fallbackRPC: !Boolean(process.env.NEXT_PUBLIC_RPC_URL),
 });
 
 /**
- * Wagmi config for generic blockchain interactions
+ * Wagmi config with CDP connector bridge
  *
- * NOTE: CDP embedded wallets are NOT integrated with wagmi in this app.
- * Use CDP hooks directly: useEvmAddress(), useCurrentUser(), etc.
+ * IMPORTANT: OnchainKit Transaction components use wagmi hooks internally (useAccount).
+ * The cdpConnector bridges CDP embedded wallets to wagmi's account context.
  *
- * Wagmi is kept for:
- * 1. Generic viem client usage
- * 2. OnchainKit compatibility (OnchainKit uses wagmi context internally)
- * 3. Potential future external wallet support
+ * Architecture:
+ * - CDPHooksProvider manages wallet auth (email/social login)
+ * - cdpConnector exposes wallet to wagmi hooks
+ * - OnchainKit Transaction components work seamlessly with CDP wallets
+ * - CDP hooks (useEvmAddress, useCurrentUser) still work as primary API
  */
 export const wagmiConfig = createConfig({
   chains: [base],
   transports: {
     [base.id]: http(RPC_URL),
   },
-  connectors: [], // CDP wallets managed separately via CDPReactProvider
+  connectors: [
+    cdpConnector({
+      // CDP embedded wallets auto-detected via CDPHooksProvider
+      appName: 'SpiritDAO',
+      appLogoUrl: '/spiritdaosymbol.png',
+    }),
+  ],
   ssr: true,
 });
 

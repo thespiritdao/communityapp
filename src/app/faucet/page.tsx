@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useEvmAddress, useCurrentUser } from '@coinbase/cdp-hooks';
-import { usePublicClient } from 'wagmi';
+import { usePublicClient, useAccount } from 'wagmi';
 import { formatEther } from 'viem';
 import { Droplets, Clock, CheckCircle, XCircle, Loader2 } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
@@ -85,8 +85,16 @@ const BASE_CHAIN_ID = 8453;
 export default function FaucetPage() {
   const { evmAddress } = useEvmAddress();
   const { currentUser } = useCurrentUser();
+  const { address: wagmiAddress } = useAccount(); // Bridge CDP wallet to wagmi (needed for OnchainKit Transaction)
   const publicClient = usePublicClient();
   const { toast } = useToast();
+
+  // Debug: Log wallet connection status
+  console.log('🔧 Faucet - Wallet Status:', {
+    cdpAddress: evmAddress,
+    wagmiAddress,
+    connected: !!(evmAddress || wagmiAddress),
+  });
 
   const [canClaim, setCanClaim] = useState(false);
   const [timeRemaining, setTimeRemaining] = useState(0);
@@ -215,7 +223,8 @@ export default function FaucetPage() {
     });
   };
 
-  const isConnected = !!evmAddress && !!currentUser;
+  // Connected if either CDP or wagmi detects wallet (cdpConnector bridges them)
+  const isConnected = !!(evmAddress || wagmiAddress) && !!currentUser;
 
   return (
     <div
