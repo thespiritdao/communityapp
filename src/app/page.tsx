@@ -220,6 +220,25 @@ function PageContent() {
           return;
         }
 
+        // CRITICAL FIX: Check if user already has a profile (returning user)
+        // If they have a profile, they already validated an invite code
+        // Don't ask them to validate again - just finish their incomplete onboarding
+        const { supabase } = await import('@/utils/supabaseClient');
+        const { data: existingProfile } = await supabase
+          .from('user_profiles')
+          .select('wallet_address, referral_key, onboarded_at')
+          .eq('wallet_address', walletAddress.toLowerCase())
+          .maybeSingle();
+
+        if (existingProfile && existingProfile.referral_key) {
+          console.log('✅ Returning user with existing profile - skipping invite validation');
+          console.log('   Profile has referral_key:', existingProfile.referral_key);
+          // User has a profile and referral key - they already validated an invite
+          // Skip invite validation and go straight to completing onboarding
+          setShowOnboardingModal(true);
+          return;
+        }
+
         console.log('🔑 New user detected - needs onboarding');
 
         // NEW USERS need invite validation
