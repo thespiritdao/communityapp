@@ -2,10 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { useEvmAddress, useCurrentUser } from '@coinbase/cdp-hooks';
-import { usePublicClient } from 'wagmi';
-import { getWalletClient } from 'wagmi/actions';
-import { wagmiConfig } from '@/config/wagmi.client';
-import { formatEther } from 'viem';
+import { usePublicClient, useSendTransaction, useWaitForTransactionReceipt } from 'wagmi';
+import { formatEther, encodeFunctionData } from 'viem';
 import { Droplets, Clock, CheckCircle, XCircle, Loader2 } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 
@@ -80,6 +78,10 @@ export default function FaucetPage() {
   const { currentUser } = useCurrentUser();
   const publicClient = usePublicClient();
   const { toast } = useToast();
+  const { sendTransaction, data: txHash, isPending: isTxPending } = useSendTransaction();
+  const { isSuccess: isTxSuccess } = useWaitForTransactionReceipt({
+    hash: txHash,
+  });
 
   const [canClaim, setCanClaim] = useState(false);
   const [timeRemaining, setTimeRemaining] = useState(0);
@@ -170,6 +172,33 @@ export default function FaucetPage() {
     return () => clearInterval(timer);
   }, [timeRemaining]);
 
+  // Handle transaction success
+  useEffect(() => {
+    if (isTxSuccess && txHash) {
+      console.log(`Transaction confirmed: ${txHash}`);
+
+      toast({
+        title: 'Tokens claimed!',
+        description: `Transaction: ${txHash.substring(0, 10)}...`,
+      });
+
+      setSuccess(true);
+      setCanClaim(false);
+      setTimeRemaining(86400); // 24 hours
+      setLoading(false);
+
+      // Refresh data after claim
+      setTimeout(fetchFaucetData, 2000);
+    }
+  }, [isTxSuccess, txHash, toast]);
+
+  // Update loading state when transaction is pending
+  useEffect(() => {
+    if (isTxPending) {
+      setLoading(true);
+    }
+  }, [isTxPending]);
+
   const handleClaim = async () => {
     if (!canClaim || !evmAddress || !publicClient) {
       toast({
@@ -185,43 +214,25 @@ export default function FaucetPage() {
     setSuccess(false);
 
     try {
-      console.log('Simulating claim transaction...');
+      console.log('Sending claim transaction...');
 
-      // Simulate transaction first
-      const { request } = await publicClient.simulateContract({
-        account: evmAddress,
-        address: FAUCET_ADDRESS,
+      // Encode the function call
+      const data = encodeFunctionData({
         abi: FAUCET_ABI,
         functionName: 'claimTokens',
         args: [],
       });
 
-      console.log('Simulation successful, executing transaction...');
-
-      // Get wallet client and execute
-      const walletClient = await getWalletClient(wagmiConfig, {
+      // Send transaction using wagmi (works with CDP wallets)
+      sendTransaction({
+        to: FAUCET_ADDRESS,
+        data,
         account: evmAddress,
       });
 
-      if (!walletClient) {
-        throw new Error('Could not get wallet client');
-      }
+      // Note: Success/loading state handling happens in useEffect watching isTxSuccess and isTxPending
+      console.log('Transaction sent, waiting for confirmation...');
 
-      const hash = await walletClient.writeContract(request);
-
-      console.log(`Transaction submitted: ${hash}`);
-
-      toast({
-        title: 'Tokens claimed!',
-        description: `Transaction: ${hash.substring(0, 10)}...`,
-      });
-
-      setSuccess(true);
-      setCanClaim(false);
-      setTimeRemaining(86400); // 24 hours
-
-      // Refresh data after claim
-      setTimeout(fetchFaucetData, 2000);
     } catch (err: any) {
       console.error('Claim error:', err);
       const errorMessage = err.message || 'Failed to claim tokens';
@@ -231,7 +242,6 @@ export default function FaucetPage() {
         description: errorMessage,
         variant: 'destructive',
       });
-    } finally {
       setLoading(false);
     }
   };
