@@ -7,7 +7,7 @@
  * See: BETA_TESTER_REMOVAL_GUIDE.md for reversal instructions.
  */
 
-import type { HatPermissionInfo } from '@/hooks/useHatPermissions';
+import type { HatRole } from '@/services/hatPermissionsService';
 
 // Beta Tester Hat ID from environment
 const BETA_TESTER_HAT_ID = process.env.NEXT_PUBLIC_BETA_TESTER_HAT as `0x${string}`;
@@ -15,10 +15,10 @@ const BETA_TESTER_HAT_ID = process.env.NEXT_PUBLIC_BETA_TESTER_HAT as `0x${strin
 /**
  * Check if user has Beta Tester hat
  *
- * @param userHats - Array of user's hat permissions
+ * @param userHats - Array of user's hat roles
  * @returns true if user has Beta Tester hat
  */
-export function isBetaTester(userHats: HatPermissionInfo[]): boolean {
+export function isBetaTester(userHats: HatRole[]): boolean {
   if (!BETA_TESTER_HAT_ID) {
     console.warn('⚠️ BETA_TESTER_HAT_ID not configured');
     return false;
@@ -57,10 +57,10 @@ export function isBetaTesterSuperuserEnabled(): boolean {
  * - Beta Tester superuser mode is enabled AND
  * - User has Beta Tester hat
  *
- * @param userHats - Array of user's hat permissions
+ * @param userHats - Array of user's hat roles
  * @returns true if user should have superuser access
  */
-export function hasBetaTesterSuperuser(userHats: HatPermissionInfo[]): boolean {
+export function hasBetaTesterSuperuser(userHats: HatRole[]): boolean {
   if (!isBetaTesterSuperuserEnabled()) {
     return false;
   }
@@ -87,7 +87,7 @@ export function getBetaTesterHatId(): string | null {
  * Log Beta Tester status for debugging
  */
 export function logBetaTesterStatus(
-  userHats: HatPermissionInfo[],
+  userHats: HatRole[],
   context: string,
 ): void {
   const isBeta = isBetaTester(userHats);

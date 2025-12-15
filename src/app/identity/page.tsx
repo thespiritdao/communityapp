@@ -83,7 +83,7 @@ function IdentityPageContent() {
     handleCancel,
     handleSave,
     handleLogout,
-  } = useIdentityPage(address || undefined);
+  } = useIdentityPage(address ?? undefined);
 
   useEffect(() => {
     setIsClient(true);

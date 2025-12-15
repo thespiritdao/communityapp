@@ -66,8 +66,8 @@ contract BountyManagerV2 is ReentrancyGuard, Pausable {
     address public podServiceContract; // Contract that validates pod permissions
     
     // Token addresses
-    address public constant SYSTEM_TOKEN = 0x1317Ae277266D38C4E492558f8693F14143a6A65;
-    address public constant SELF_TOKEN = 0xe9b4aB2eB9397fa41AC3223e96f9d988BeFF5D21;
+    address public constant SYSTEM_TOKEN = 0xd67e460ce56be18b573aB434b3DC962c657D8Bb5;
+    address public constant SELF_TOKEN = 0x1b8d424695E63ABca04E94bA46c03f1D83e14020;
 
     // Events
     event BountyCreated(uint256 indexed id, address indexed creator, string podId, string ipfsHash);

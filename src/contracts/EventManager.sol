@@ -134,6 +134,7 @@ contract EventManager is ERC721, ReentrancyGuard {
     
     /**
      * @dev Create a new event (simplified - no contract deployment)
+     * @notice Open to all users - permission checks handled at app level
      */
     function createEvent(
         string memory eventId,
@@ -143,7 +144,7 @@ contract EventManager is ERC721, ReentrancyGuard {
         uint256 priceSystem,
         uint256 priceSelf,
         uint256 maxAttendees
-    ) external onlyEventManager {
+    ) external {
         require(bytes(eventId).length > 0, "Event ID required");
         require(bytes(events[eventId].eventId).length == 0, "Event exists");
         require(bytes(title).length > 0, "Title required");
