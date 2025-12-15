@@ -31,7 +31,7 @@ export interface UsePodsReturn {
  */
 export function usePods(config: UsePodsConfig = {}): UsePodsReturn {
   const { evmAddress: address } = useEvmAddress();
-  const { userHats } = useHatPermissions();
+  const { userHats, userRoles } = useHatPermissions();
   const [pods, setPods] = useState<Pod[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -158,9 +158,7 @@ export function usePods(config: UsePodsConfig = {}): UsePodsReturn {
       if (!address) return false;
 
       // BETA TESTING: Check for Beta Tester superuser status
-      const isBetaTester = hasBetaTesterSuperuser(
-        userHats.map(hatId => ({ hatId, podId: '', permissions: {} }))
-      );
+      const isBetaTester = hasBetaTesterSuperuser(userRoles);
 
       if (isBetaTester) {
         console.log('👑 [Pods] Beta Tester can manage pod:', pod.name);
@@ -170,7 +168,7 @@ export function usePods(config: UsePodsConfig = {}): UsePodsReturn {
       // Normal permission check
       return PodCoreService.canUserManagePod(pod, address);
     },
-    [address, userHats],
+    [address, userRoles],
   );
 
   /**
