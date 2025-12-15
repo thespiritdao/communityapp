@@ -2,10 +2,17 @@
 
 import { useState, useEffect } from 'react';
 import { useEvmAddress, useCurrentUser } from '@coinbase/cdp-hooks';
-import { usePublicClient, useSendTransaction, useWaitForTransactionReceipt } from 'wagmi';
-import { formatEther, encodeFunctionData } from 'viem';
+import { usePublicClient } from 'wagmi';
+import { formatEther } from 'viem';
 import { Droplets, Clock, CheckCircle, XCircle, Loader2 } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
+import {
+  Transaction,
+  TransactionButton,
+  TransactionStatus,
+  TransactionStatusLabel,
+  TransactionStatusAction,
+} from '@coinbase/onchainkit/transaction';
 
 const FAUCET_ADDRESS = process.env.NEXT_PUBLIC_TOKEN_FAUCET as `0x${string}`;
 const SYSTEM_TOKEN = process.env.NEXT_PUBLIC_SYSTEM_TOKEN as `0x${string}`;
@@ -73,21 +80,18 @@ function formatTimeRemaining(seconds: number): string {
   }
 }
 
+const BASE_CHAIN_ID = 8453;
+
 export default function FaucetPage() {
   const { evmAddress } = useEvmAddress();
   const { currentUser } = useCurrentUser();
   const publicClient = usePublicClient();
   const { toast } = useToast();
-  const { sendTransaction, data: txHash, isPending: isTxPending } = useSendTransaction();
-  const { isSuccess: isTxSuccess } = useWaitForTransactionReceipt({
-    hash: txHash,
-  });
 
   const [canClaim, setCanClaim] = useState(false);
   const [timeRemaining, setTimeRemaining] = useState(0);
   const [faucetBalances, setFaucetBalances] = useState({ system: '0', self: '0' });
   const [claimAmounts, setClaimAmounts] = useState({ system: '10', self: '10' });
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
 
@@ -172,78 +176,43 @@ export default function FaucetPage() {
     return () => clearInterval(timer);
   }, [timeRemaining]);
 
-  // Handle transaction success
-  useEffect(() => {
-    if (isTxSuccess && txHash) {
-      console.log(`Transaction confirmed: ${txHash}`);
+  // Contract call for OnchainKit Transaction
+  const claimCall = [
+    {
+      address: FAUCET_ADDRESS,
+      abi: FAUCET_ABI,
+      functionName: 'claimTokens',
+      args: [],
+    },
+  ];
 
-      toast({
-        title: 'Tokens claimed!',
-        description: `Transaction: ${txHash.substring(0, 10)}...`,
-      });
+  const handleSuccess = (response: any) => {
+    const txHash = response?.transactionReceipts?.[0]?.transactionHash;
+    console.log('✅ Tokens claimed successfully:', txHash);
 
-      setSuccess(true);
-      setCanClaim(false);
-      setTimeRemaining(86400); // 24 hours
-      setLoading(false);
+    toast({
+      title: 'Tokens claimed!',
+      description: `Transaction: ${txHash?.substring(0, 10) || 'Success'}...`,
+    });
 
-      // Refresh data after claim
-      setTimeout(fetchFaucetData, 2000);
-    }
-  }, [isTxSuccess, txHash, toast]);
+    setSuccess(true);
+    setCanClaim(false);
+    setTimeRemaining(86400); // 24 hours
 
-  // Update loading state when transaction is pending
-  useEffect(() => {
-    if (isTxPending) {
-      setLoading(true);
-    }
-  }, [isTxPending]);
+    // Refresh data after claim
+    setTimeout(fetchFaucetData, 2000);
+  };
 
-  const handleClaim = async () => {
-    if (!canClaim || !evmAddress || !publicClient) {
-      toast({
-        title: 'Error',
-        description: 'Wallet not connected',
-        variant: 'destructive',
-      });
-      return;
-    }
+  const handleError = (error: any) => {
+    console.error('❌ Claim failed:', error);
+    const errorMessage = error?.shortMessage || error?.message || 'Failed to claim tokens';
+    setError(errorMessage);
 
-    setLoading(true);
-    setError(null);
-    setSuccess(false);
-
-    try {
-      console.log('Sending claim transaction...');
-
-      // Encode the function call
-      const data = encodeFunctionData({
-        abi: FAUCET_ABI,
-        functionName: 'claimTokens',
-        args: [],
-      });
-
-      // Send transaction using wagmi (works with CDP wallets)
-      sendTransaction({
-        to: FAUCET_ADDRESS,
-        data,
-        account: evmAddress,
-      });
-
-      // Note: Success/loading state handling happens in useEffect watching isTxSuccess and isTxPending
-      console.log('Transaction sent, waiting for confirmation...');
-
-    } catch (err: any) {
-      console.error('Claim error:', err);
-      const errorMessage = err.message || 'Failed to claim tokens';
-      setError(errorMessage);
-      toast({
-        title: 'Claim failed',
-        description: errorMessage,
-        variant: 'destructive',
-      });
-      setLoading(false);
-    }
+    toast({
+      title: 'Claim failed',
+      description: errorMessage,
+      variant: 'destructive',
+    });
   };
 
   const isConnected = !!evmAddress && !!currentUser;
@@ -559,53 +528,65 @@ export default function FaucetPage() {
             )}
 
             {/* Claim Button */}
-            <button
-              onClick={handleClaim}
-              disabled={!canClaim || loading}
-              style={{
-                width: '100%',
-                padding: '16px',
-                fontSize: '18px',
-                fontWeight: '600',
-                color: 'white',
-                background: canClaim && !loading ? '#2F5D50' : '#D8D2C8',
-                border: 'none',
-                borderRadius: '12px',
-                cursor: canClaim && !loading ? 'pointer' : 'not-allowed',
-                transition: 'all 0.2s ease',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '8px',
-              }}
-              onMouseEnter={(e) => {
-                if (canClaim && !loading) {
-                  e.currentTarget.style.background = '#254A40';
-                }
-              }}
-              onMouseLeave={(e) => {
-                if (canClaim && !loading) {
-                  e.currentTarget.style.background = '#2F5D50';
-                }
-              }}
-            >
-              {loading ? (
-                <>
-                  <Loader2 size={20} className="animate-spin" />
-                  Claiming...
-                </>
-              ) : canClaim ? (
-                <>
-                  <Droplets size={20} />
-                  Claim Tokens
-                </>
-              ) : (
-                <>
-                  <Clock size={20} />
-                  Cooldown Active
-                </>
-              )}
-            </button>
+            {canClaim ? (
+              <Transaction
+                chainId={BASE_CHAIN_ID}
+                contracts={claimCall}
+                onSuccess={handleSuccess}
+                onError={handleError}
+              >
+                <TransactionButton
+                  style={{
+                    width: '100%',
+                    padding: '16px',
+                    fontSize: '18px',
+                    fontWeight: '600',
+                    color: 'white',
+                    background: '#2F5D50',
+                    border: 'none',
+                    borderRadius: '12px',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '8px',
+                  }}
+                  text={
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <Droplets size={20} />
+                      Claim Tokens
+                    </span>
+                  }
+                />
+                <TransactionStatus>
+                  <TransactionStatusLabel />
+                  <TransactionStatusAction />
+                </TransactionStatus>
+              </Transaction>
+            ) : (
+              <button
+                disabled
+                style={{
+                  width: '100%',
+                  padding: '16px',
+                  fontSize: '18px',
+                  fontWeight: '600',
+                  color: 'white',
+                  background: '#D8D2C8',
+                  border: 'none',
+                  borderRadius: '12px',
+                  cursor: 'not-allowed',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px',
+                }}
+              >
+                <Clock size={20} />
+                Cooldown Active
+              </button>
+            )}
 
             {/* Instructions */}
             <div
