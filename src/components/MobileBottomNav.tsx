@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { Home, Vote, Bell } from 'lucide-react';
+import { Home, Vote, Bell, Droplets } from 'lucide-react';
 import { useUnifiedNotifications } from '@/context/UnifiedNotificationContext';
 
 type Item = {
@@ -19,6 +19,12 @@ const NAV_ITEMS: Item[] = [
     label: 'Home',
     match: 'startsWith',
     icon: <Home size={36} />,
+  },
+  {
+    href: '/faucet',
+    label: 'Faucet',
+    match: 'exact',
+    icon: <Droplets size={36} />,
   },
   {
     href: '/governance',
