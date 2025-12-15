@@ -1,18 +1,11 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useEvmAddress, useCurrentUser } from '@coinbase/cdp-hooks';
-import { usePublicClient, useAccount } from 'wagmi';
+import { useEvmAddress, useCurrentUser, useSendEvmTransaction } from '@coinbase/cdp-hooks';
+import { usePublicClient } from 'wagmi';
 import { formatEther } from 'viem';
 import { Droplets, Clock, CheckCircle, XCircle, Loader2 } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
-import {
-  Transaction,
-  TransactionButton,
-  TransactionStatus,
-  TransactionStatusLabel,
-  TransactionStatusAction,
-} from '@coinbase/onchainkit/transaction';
 
 const FAUCET_ADDRESS = process.env.NEXT_PUBLIC_TOKEN_FAUCET as `0x${string}`;
 const SYSTEM_TOKEN = process.env.NEXT_PUBLIC_SYSTEM_TOKEN as `0x${string}`;
@@ -80,20 +73,38 @@ function formatTimeRemaining(seconds: number): string {
   }
 }
 
-const BASE_CHAIN_ID = 8453;
-
 export default function FaucetPage() {
   const { evmAddress } = useEvmAddress();
   const { currentUser } = useCurrentUser();
-  const { address: wagmiAddress } = useAccount(); // Bridge CDP wallet to wagmi (needed for OnchainKit Transaction)
   const publicClient = usePublicClient();
   const { toast } = useToast();
+  const { sendTransaction, isPending } = useSendEvmTransaction({
+    onSuccess: (hash) => {
+      console.log('✅ Transaction successful:', hash);
+      toast({
+        title: 'Tokens claimed!',
+        description: `Transaction: ${hash.substring(0, 10)}...`,
+      });
+      setSuccess(true);
+      setCanClaim(false);
+      setTimeRemaining(86400); // 24 hours
+      setTimeout(fetchFaucetData, 2000);
+    },
+    onError: (error) => {
+      console.error('❌ Transaction failed:', error);
+      setError(error.message || 'Failed to claim tokens');
+      toast({
+        title: 'Claim failed',
+        description: error.message || 'Failed to claim tokens',
+        variant: 'destructive',
+      });
+    },
+  });
 
-  // Debug: Log wallet connection status
+  //Debug: Log wallet connection status
   console.log('🔧 Faucet - Wallet Status:', {
     cdpAddress: evmAddress,
-    wagmiAddress,
-    connected: !!(evmAddress || wagmiAddress),
+    connected: !!evmAddress && !!currentUser,
   });
 
   const [canClaim, setCanClaim] = useState(false);
@@ -184,47 +195,34 @@ export default function FaucetPage() {
     return () => clearInterval(timer);
   }, [timeRemaining]);
 
-  // Contract call for OnchainKit Transaction
-  const claimCall = [
-    {
-      address: FAUCET_ADDRESS,
-      abi: FAUCET_ABI,
-      functionName: 'claimTokens',
-      args: [],
-    },
-  ];
+  const handleClaim = async () => {
+    if (!canClaim || !evmAddress) {
+      toast({
+        title: 'Error',
+        description: 'Wallet not connected or cooldown active',
+        variant: 'destructive',
+      });
+      return;
+    }
 
-  const handleSuccess = (response: any) => {
-    const txHash = response?.transactionReceipts?.[0]?.transactionHash;
-    console.log('✅ Tokens claimed successfully:', txHash);
+    try {
+      console.log('🔄 Calling claimTokens...');
 
-    toast({
-      title: 'Tokens claimed!',
-      description: `Transaction: ${txHash?.substring(0, 10) || 'Success'}...`,
-    });
+      await sendTransaction({
+        to: FAUCET_ADDRESS,
+        abi: FAUCET_ABI,
+        functionName: 'claimTokens',
+        args: [],
+      });
 
-    setSuccess(true);
-    setCanClaim(false);
-    setTimeRemaining(86400); // 24 hours
-
-    // Refresh data after claim
-    setTimeout(fetchFaucetData, 2000);
+      // Success/error handled by useSendEvmTransaction callbacks
+    } catch (err: any) {
+      console.error('Transaction error:', err);
+      // Error handled by useSendEvmTransaction onError
+    }
   };
 
-  const handleError = (error: any) => {
-    console.error('❌ Claim failed:', error);
-    const errorMessage = error?.shortMessage || error?.message || 'Failed to claim tokens';
-    setError(errorMessage);
-
-    toast({
-      title: 'Claim failed',
-      description: errorMessage,
-      variant: 'destructive',
-    });
-  };
-
-  // Connected if either CDP or wagmi detects wallet (cdpConnector bridges them)
-  const isConnected = !!(evmAddress || wagmiAddress) && !!currentUser;
+  const isConnected = !!evmAddress && !!currentUser;
 
   return (
     <div
@@ -537,65 +535,53 @@ export default function FaucetPage() {
             )}
 
             {/* Claim Button */}
-            {canClaim ? (
-              <Transaction
-                chainId={BASE_CHAIN_ID}
-                contracts={claimCall}
-                onSuccess={handleSuccess}
-                onError={handleError}
-              >
-                <TransactionButton
-                  style={{
-                    width: '100%',
-                    padding: '16px',
-                    fontSize: '18px',
-                    fontWeight: '600',
-                    color: 'white',
-                    background: '#2F5D50',
-                    border: 'none',
-                    borderRadius: '12px',
-                    cursor: 'pointer',
-                    transition: 'all 0.2s ease',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '8px',
-                  }}
-                  text={
-                    <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <Droplets size={20} />
-                      Claim Tokens
-                    </span>
-                  }
-                />
-                <TransactionStatus>
-                  <TransactionStatusLabel />
-                  <TransactionStatusAction />
-                </TransactionStatus>
-              </Transaction>
-            ) : (
-              <button
-                disabled
-                style={{
-                  width: '100%',
-                  padding: '16px',
-                  fontSize: '18px',
-                  fontWeight: '600',
-                  color: 'white',
-                  background: '#D8D2C8',
-                  border: 'none',
-                  borderRadius: '12px',
-                  cursor: 'not-allowed',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '8px',
-                }}
-              >
-                <Clock size={20} />
-                Cooldown Active
-              </button>
-            )}
+            <button
+              onClick={handleClaim}
+              disabled={!canClaim || isPending}
+              style={{
+                width: '100%',
+                padding: '16px',
+                fontSize: '18px',
+                fontWeight: '600',
+                color: 'white',
+                background: canClaim && !isPending ? '#2F5D50' : '#D8D2C8',
+                border: 'none',
+                borderRadius: '12px',
+                cursor: canClaim && !isPending ? 'pointer' : 'not-allowed',
+                transition: 'all 0.2s ease',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px',
+              }}
+              onMouseEnter={(e) => {
+                if (canClaim && !isPending) {
+                  e.currentTarget.style.background = '#254A40';
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (canClaim && !isPending) {
+                  e.currentTarget.style.background = '#2F5D50';
+                }
+              }}
+            >
+              {isPending ? (
+                <>
+                  <Loader2 size={20} className="animate-spin" />
+                  Claiming...
+                </>
+              ) : canClaim ? (
+                <>
+                  <Droplets size={20} />
+                  Claim Tokens
+                </>
+              ) : (
+                <>
+                  <Clock size={20} />
+                  Cooldown Active
+                </>
+              )}
+            </button>
 
             {/* Instructions */}
             <div
