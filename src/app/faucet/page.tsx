@@ -78,28 +78,7 @@ export default function FaucetPage() {
   const { currentUser } = useCurrentUser();
   const publicClient = usePublicClient();
   const { toast } = useToast();
-  const { sendTransaction, isPending } = useSendEvmTransaction({
-    onSuccess: (hash) => {
-      console.log('✅ Transaction successful:', hash);
-      toast({
-        title: 'Tokens claimed!',
-        description: `Transaction: ${hash.substring(0, 10)}...`,
-      });
-      setSuccess(true);
-      setCanClaim(false);
-      setTimeRemaining(86400); // 24 hours
-      setTimeout(fetchFaucetData, 2000);
-    },
-    onError: (error) => {
-      console.error('❌ Transaction failed:', error);
-      setError(error.message || 'Failed to claim tokens');
-      toast({
-        title: 'Claim failed',
-        description: error.message || 'Failed to claim tokens',
-        variant: 'destructive',
-      });
-    },
-  });
+  const { sendEvmTransaction } = useSendEvmTransaction();
 
   //Debug: Log wallet connection status
   console.log('🔧 Faucet - Wallet Status:', {
@@ -113,6 +92,7 @@ export default function FaucetPage() {
   const [claimAmounts, setClaimAmounts] = useState({ system: '10', self: '10' });
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const [isClaiming, setIsClaiming] = useState(false);
 
   // Fetch faucet data
   const fetchFaucetData = async () => {
@@ -205,20 +185,43 @@ export default function FaucetPage() {
       return;
     }
 
+    setIsClaiming(true);
+    setError(null);
+
     try {
       console.log('🔄 Calling claimTokens...');
 
-      await sendTransaction({
+      const result = await sendEvmTransaction({
         to: FAUCET_ADDRESS,
         abi: FAUCET_ABI,
         functionName: 'claimTokens',
         args: [],
       });
 
-      // Success/error handled by useSendEvmTransaction callbacks
+      console.log('✅ Transaction successful:', result);
+
+      toast({
+        title: 'Tokens claimed!',
+        description: `Transaction hash: ${result.hash?.substring(0, 10) || 'Success'}...`,
+      });
+
+      setSuccess(true);
+      setCanClaim(false);
+      setTimeRemaining(86400); // 24 hours
+
+      // Refresh data after claim
+      setTimeout(fetchFaucetData, 2000);
     } catch (err: any) {
-      console.error('Transaction error:', err);
-      // Error handled by useSendEvmTransaction onError
+      console.error('❌ Transaction error:', err);
+      const errorMessage = err.message || 'Failed to claim tokens';
+      setError(errorMessage);
+      toast({
+        title: 'Claim failed',
+        description: errorMessage,
+        variant: 'destructive',
+      });
+    } finally {
+      setIsClaiming(false);
     }
   };
 
@@ -537,17 +540,17 @@ export default function FaucetPage() {
             {/* Claim Button */}
             <button
               onClick={handleClaim}
-              disabled={!canClaim || isPending}
+              disabled={!canClaim || isClaiming}
               style={{
                 width: '100%',
                 padding: '16px',
                 fontSize: '18px',
                 fontWeight: '600',
                 color: 'white',
-                background: canClaim && !isPending ? '#2F5D50' : '#D8D2C8',
+                background: canClaim && !isClaiming ? '#2F5D50' : '#D8D2C8',
                 border: 'none',
                 borderRadius: '12px',
-                cursor: canClaim && !isPending ? 'pointer' : 'not-allowed',
+                cursor: canClaim && !isClaiming ? 'pointer' : 'not-allowed',
                 transition: 'all 0.2s ease',
                 display: 'flex',
                 alignItems: 'center',
@@ -555,17 +558,17 @@ export default function FaucetPage() {
                 gap: '8px',
               }}
               onMouseEnter={(e) => {
-                if (canClaim && !isPending) {
+                if (canClaim && !isClaiming) {
                   e.currentTarget.style.background = '#254A40';
                 }
               }}
               onMouseLeave={(e) => {
-                if (canClaim && !isPending) {
+                if (canClaim && !isClaiming) {
                   e.currentTarget.style.background = '#2F5D50';
                 }
               }}
             >
-              {isPending ? (
+              {isClaiming ? (
                 <>
                   <Loader2 size={20} className="animate-spin" />
                   Claiming...
