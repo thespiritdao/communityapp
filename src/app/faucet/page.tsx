@@ -1,11 +1,9 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useEvmAddress } from '@/wallet/hooks/useEvmAddress';
-import { useCurrentUser } from '@/wallet/hooks/useCurrentUser';
-import { useSendEvmTransaction } from '@/wallet/hooks/useSendEvmTransaction';
-import { createPublicClient, http, formatEther } from 'viem';
-import { base } from 'viem/chains';
+import { useEvmAddress, useCurrentUser } from '@coinbase/cdp-hooks';
+import { useWriteContract, usePublicClient } from 'wagmi';
+import { formatEther } from 'viem';
 import { Droplets, Clock, CheckCircle, XCircle, Loader2 } from 'lucide-react';
 
 const FAUCET_ADDRESS = process.env.NEXT_PUBLIC_TOKEN_FAUCET as `0x${string}`;
@@ -75,9 +73,10 @@ function formatTimeRemaining(seconds: number): string {
 }
 
 export default function FaucetPage() {
-  const evmAddress = useEvmAddress();
-  const currentUser = useCurrentUser();
-  const { sendEvmTransaction } = useSendEvmTransaction();
+  const { evmAddress } = useEvmAddress();
+  const { currentUser } = useCurrentUser();
+  const { writeContractAsync } = useWriteContract();
+  const publicClient = usePublicClient();
 
   const [canClaim, setCanClaim] = useState(false);
   const [timeRemaining, setTimeRemaining] = useState(0);
@@ -87,14 +86,9 @@ export default function FaucetPage() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
 
-  const publicClient = createPublicClient({
-    chain: base,
-    transport: http(),
-  });
-
   // Fetch faucet data
   const fetchFaucetData = async () => {
-    if (!evmAddress || !FAUCET_ADDRESS) return;
+    if (!evmAddress || !FAUCET_ADDRESS || !publicClient) return;
 
     try {
       // Check if user can claim
@@ -181,8 +175,8 @@ export default function FaucetPage() {
     setSuccess(false);
 
     try {
-      await sendEvmTransaction({
-        to: FAUCET_ADDRESS,
+      await writeContractAsync({
+        address: FAUCET_ADDRESS,
         abi: FAUCET_ABI,
         functionName: 'claimTokens',
         args: [],
