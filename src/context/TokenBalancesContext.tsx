@@ -13,7 +13,7 @@ import {
   fetchTokenBalances,
   type TokenBalance,
 } from '@/utils/fetchTokenBalances';
-import { useAccount } from 'wagmi';
+import { useEvmAddress } from '@coinbase/cdp-hooks';
 
 interface TokenBalancesContextValue {
   balances: TokenBalance | null;
@@ -29,7 +29,7 @@ export const TokenBalancesContext = createContext<
 export const TokenBalancesProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
-  const { address } = useAccount();
+  const { evmAddress: address } = useEvmAddress();
   const [balances, setBalances] = useState<TokenBalance | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);

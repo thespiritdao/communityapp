@@ -524,12 +524,7 @@ export default function FaucetPage() {
                   onError={handleError}
                 >
                   <TransactionButton
-                    className="w-full font-semibold py-4 px-8 rounded-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-                    style={{
-                      background: '#2F5D50',
-                      color: 'white',
-                      fontSize: '18px',
-                    }}
+                    className="w-full font-semibold py-4 px-8 rounded-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed text-white text-lg bg-[#2F5D50] hover:bg-[#254A40]"
                     text="Claim Tokens"
                   />
                   <TransactionSponsor />

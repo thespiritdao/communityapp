@@ -4,39 +4,56 @@
 import { http, createConfig } from 'wagmi';
 import { createPublicClient } from 'viem';
 import { base } from 'wagmi/chains';
+import { createCDPEmbeddedWalletConnector } from '@coinbase/cdp-wagmi';
 
 // Use standard Base RPC, NOT CDP endpoints
-// CDP wallet functionality is handled entirely by CDPHooksProvider
 const RPC_URL = process.env.NEXT_PUBLIC_RPC_URL || 'https://mainnet.base.org';
 
 console.log('🔗 Wagmi RPC Configuration:', {
   hasApiKey: Boolean(process.env.NEXT_PUBLIC_CDP_API_CLIENT),
   hasCustomRPC: Boolean(process.env.NEXT_PUBLIC_RPC_URL),
-  usingCDP: true, // CDP managed by CDPHooksProvider, OnchainKit detects automatically
+  usingCDP: true,
   fallbackRPC: !Boolean(process.env.NEXT_PUBLIC_RPC_URL),
 });
 
 /**
- * Wagmi config for OnchainKit compatibility
+ * CRITICAL FIX: CDP-Wagmi Connector Bridge
  *
- * IMPORTANT: OnchainKit Transaction components detect CDP wallets automatically
- * when wrapped in CDPHooksProvider. No connector needed.
+ * This connector bridges CDP embedded wallets (OAuth login) to wagmi's ecosystem.
+ * Without this connector:
+ * - CDP hooks (useEvmAddress) can see the wallet ✅
+ * - Wagmi hooks (useAccount) cannot see the wallet ❌
+ * - OnchainKit Transaction (uses wagmi internally) fails ❌
+ *
+ * With this connector:
+ * - CDP wallet becomes visible to wagmi's useAccount()
+ * - OnchainKit Transaction components work
+ * - All wagmi-based functionality works
  *
  * Architecture:
- * - CDPHooksProvider wraps app (in layout.tsx)
- * - OnchainKit Transaction detects CDP wallet from context
- * - Wagmi config provides chain/transport info only
- * - CDP hooks (useEvmAddress, useCurrentUser) are primary wallet API
- *
- * Note: @coinbase/cdp-wagmi v0.0.73 exports createCDPEmbeddedWalletConnector
- * but it requires complex config. OnchainKit works without it via CDPHooksProvider.
+ * - User logs in via CDP (email/Google/social)
+ * - CDP creates embedded wallet
+ * - This connector makes that wallet available to wagmi
+ * - OnchainKit Transaction detects wallet via wagmi.useAccount()
  */
+const cdpConnector = createCDPEmbeddedWalletConnector({
+  cdpConfig: {
+    projectId: process.env.NEXT_PUBLIC_CDP_PROJECT_ID!,
+  },
+  providerConfig: {
+    chains: [base],
+    transports: {
+      [base.id]: http(RPC_URL),
+    },
+  },
+});
+
 export const wagmiConfig = createConfig({
   chains: [base],
   transports: {
     [base.id]: http(RPC_URL),
   },
-  connectors: [], // OnchainKit detects CDP wallets via CDPHooksProvider context
+  connectors: [cdpConnector], // ← CRITICAL: Bridges CDP wallet to wagmi
   ssr: true,
 });
 
