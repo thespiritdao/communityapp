@@ -90,6 +90,8 @@ export function CDPEmbeddedProvider({ children }: CDPEmbeddedProviderProps) {
 
   // CDP Hooks Provider config - Critical for session persistence!
   // See: https://docs.base.org/base-account/framework-integrations/cdp
+  const paymasterEndpoint = process.env.NEXT_PUBLIC_PAYMASTER;
+
   const cdpConfig = useMemo(
     () => ({
       projectId,
@@ -99,17 +101,17 @@ export function CDPEmbeddedProvider({ children }: CDPEmbeddedProviderProps) {
           {
             chainId: parseInt(process.env.NEXT_PUBLIC_CHAIN_ID || '8453', 10),
             rpcUrl: process.env.NEXT_PUBLIC_RPC_URL || 'https://mainnet.base.org',
+            ...(paymasterEndpoint && { paymasterServiceUrl: paymasterEndpoint }),
           },
         ],
       },
       appName: 'SpiritDAO',
       appLogoUrl: '/spiritdaosymbol.png',
     }),
-    [projectId],
+    [projectId, paymasterEndpoint],
   );
 
   // OnchainKit config
-  const paymasterEndpoint = process.env.NEXT_PUBLIC_PAYMASTER;
   const onchainKitConfig = useMemo(
     () => ({
       appearance: {

@@ -1,22 +1,11 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
-import { useEvmAddress, useCurrentUser } from '@coinbase/cdp-hooks';
+import { useState, useEffect } from 'react';
+import { useEvmAddress, useCurrentUser, useSendEvmTransaction } from '@coinbase/cdp-hooks';
 import { usePublicClient } from 'wagmi';
 import { formatEther } from 'viem';
-import { Droplets, Clock, CheckCircle, XCircle } from 'lucide-react';
+import { Droplets, Clock, CheckCircle, XCircle, Loader2 } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
-import {
-  Transaction,
-  TransactionButton,
-  TransactionSponsor,
-  TransactionStatus,
-  TransactionStatusAction,
-  TransactionStatusLabel,
-  type TransactionResponse,
-  type TransactionError,
-} from '@coinbase/onchainkit/transaction';
-import { base } from 'wagmi/chains';
 
 const FAUCET_ADDRESS = process.env.NEXT_PUBLIC_TOKEN_FAUCET as `0x${string}`;
 const SYSTEM_TOKEN = process.env.NEXT_PUBLIC_SYSTEM_TOKEN as `0x${string}`;
@@ -89,12 +78,14 @@ export default function FaucetPage() {
   const { currentUser } = useCurrentUser();
   const publicClient = usePublicClient();
   const { toast } = useToast();
+  const { sendEvmTransaction } = useSendEvmTransaction();
 
   const [canClaim, setCanClaim] = useState(false);
   const [timeRemaining, setTimeRemaining] = useState(0);
   const [faucetBalances, setFaucetBalances] = useState({ system: '0', self: '0' });
   const [claimAmounts, setClaimAmounts] = useState({ system: '10', self: '10' });
   const [success, setSuccess] = useState(false);
+  const [isClaiming, setIsClaiming] = useState(false);
 
   //Debug: Log wallet and claim status
   useEffect(() => {
@@ -188,24 +179,31 @@ export default function FaucetPage() {
     return () => clearInterval(timer);
   }, [timeRemaining]);
 
-  // Prepare transaction data
-  const prepareClaimTransaction = useCallback(() => {
-    if (!canClaim) return null;
+  const handleClaim = async () => {
+    if (!canClaim || !evmAddress) {
+      toast({
+        title: 'Error',
+        description: 'Wallet not connected or cooldown active',
+        variant: 'destructive',
+      });
+      return;
+    }
 
-    return {
-      address: FAUCET_ADDRESS,
-      abi: FAUCET_ABI,
-      functionName: 'claimTokens',
-      args: [],
-    };
-  }, [canClaim]);
+    setIsClaiming(true);
 
-  const handleSuccess = useCallback(
-    (txResult: TransactionResponse) => {
-      console.group('✅ Faucet Claim Success');
-      console.log('📋 Transaction Response:', txResult);
-      console.log('📋 Transaction Hash:', txResult?.transactionReceipts?.[0]?.transactionHash);
-      console.groupEnd();
+    try {
+      console.log('🔄 Calling claimTokens with CDP native transaction...');
+      console.log('📋 Wallet:', evmAddress);
+      console.log('📋 Faucet:', FAUCET_ADDRESS);
+
+      const result = await sendEvmTransaction({
+        to: FAUCET_ADDRESS,
+        abi: FAUCET_ABI,
+        functionName: 'claimTokens',
+        args: [],
+      });
+
+      console.log('✅ Transaction successful:', result);
 
       toast({
         title: 'Tokens claimed!',
@@ -218,28 +216,19 @@ export default function FaucetPage() {
 
       // Refresh data after claim
       setTimeout(fetchFaucetData, 2000);
-    },
-    [toast, claimAmounts, fetchFaucetData],
-  );
-
-  const handleError = useCallback(
-    (error: TransactionError) => {
-      console.group('❌ Faucet Claim Error');
-      console.error('📋 Error Details:', {
-        message: error.message,
-        code: error.code,
-        error: error.error,
-      });
-      console.groupEnd();
+    } catch (err: any) {
+      console.error('❌ Transaction error:', err);
+      const errorMessage = err.message || 'Failed to claim tokens';
 
       toast({
         title: 'Claim failed',
-        description: error.message || 'Failed to claim tokens',
+        description: errorMessage,
         variant: 'destructive',
       });
-    },
-    [toast],
-  );
+    } finally {
+      setIsClaiming(false);
+    }
+  };
 
   const isConnected = !!evmAddress && !!currentUser;
 
@@ -513,52 +502,54 @@ export default function FaucetPage() {
               </div>
             )}
 
-            {/* Claim Transaction Section */}
-            <div>
-              {canClaim ? (
-                <Transaction
-                  chainId={base.id}
-                  isSponsored={true}
-                  calls={prepareClaimTransaction() ? [prepareClaimTransaction()!] : []}
-                  onSuccess={handleSuccess}
-                  onError={handleError}
-                >
-                  <TransactionButton
-                    className="w-full font-semibold py-4 px-8 rounded-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed text-white text-lg bg-[#2F5D50] hover:bg-[#254A40]"
-                    text="Claim Tokens"
-                  />
-                  <TransactionSponsor />
-                  <div className="mt-4">
-                    <TransactionStatus>
-                      <TransactionStatusLabel />
-                      <TransactionStatusAction />
-                    </TransactionStatus>
-                  </div>
-                </Transaction>
+            {/* Claim Button - CDP Native Transaction */}
+            <button
+              onClick={handleClaim}
+              disabled={!canClaim || isClaiming}
+              style={{
+                width: '100%',
+                padding: '16px',
+                fontSize: '18px',
+                fontWeight: '600',
+                color: 'white',
+                background: canClaim && !isClaiming ? '#2F5D50' : '#D8D2C8',
+                border: 'none',
+                borderRadius: '12px',
+                cursor: canClaim && !isClaiming ? 'pointer' : 'not-allowed',
+                transition: 'all 0.2s ease',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px',
+              }}
+              onMouseEnter={(e) => {
+                if (canClaim && !isClaiming) {
+                  e.currentTarget.style.background = '#254A40';
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (canClaim && !isClaiming) {
+                  e.currentTarget.style.background = '#2F5D50';
+                }
+              }}
+            >
+              {isClaiming ? (
+                <>
+                  <Loader2 size={20} className="animate-spin" />
+                  Claiming...
+                </>
+              ) : canClaim ? (
+                <>
+                  <Droplets size={20} />
+                  Claim Tokens
+                </>
               ) : (
-                <button
-                  disabled={true}
-                  style={{
-                    width: '100%',
-                    padding: '16px',
-                    fontSize: '18px',
-                    fontWeight: '600',
-                    color: 'white',
-                    background: '#D8D2C8',
-                    border: 'none',
-                    borderRadius: '12px',
-                    cursor: 'not-allowed',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '8px',
-                  }}
-                >
+                <>
                   <Clock size={20} />
                   Cooldown Active
-                </button>
+                </>
               )}
-            </div>
+            </button>
 
             {/* Instructions */}
             <div
