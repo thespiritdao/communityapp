@@ -205,18 +205,17 @@ export default function FaucetPage() {
 
       console.log('📋 Encoded data:', data);
 
-      // Send transaction using CDP
+      // Send transaction using CDP (automatically uses current wallet)
+      const chainId = parseInt(process.env.NEXT_PUBLIC_CHAIN_ID || '8453', 10);
       const result = await sendEvmTransaction({
         transaction: {
           to: FAUCET_ADDRESS,
           data,
           value: 0n,
           gas: 300000n, // Estimated gas limit
-          chainId: parseInt(process.env.NEXT_PUBLIC_CHAIN_ID || '8453', 10),
+          chainId,
           type: 'eip1559',
         },
-        evmAccount: evmAddress,
-        network: 'base-sepolia', // CDP network identifier
       });
 
       console.log('✅ Transaction successful:', result);
