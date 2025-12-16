@@ -97,8 +97,8 @@ export function CDPEmbeddedProvider({ children }: CDPEmbeddedProviderProps) {
         createOnLogin: 'smart' as const, // Create Smart Wallet on login (embedded)
         networks: [
           {
-            chainId: parseInt(process.env.NEXT_PUBLIC_CHAIN_ID || '8453', 10),
-            rpcUrl: process.env.NEXT_PUBLIC_RPC_URL || 'https://mainnet.base.org',
+            chainId: base.id, // Base Mainnet (8453) - hardcoded for reliability
+            rpcUrl: process.env.NEXT_PUBLIC_RPC_URL || base.rpcUrls.default.http[0],
             // NOTE: Paymaster configured in OnchainKit, not here
           },
         ],

@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react';
 import { useEvmAddress, useCurrentUser, useSendEvmTransaction } from '@coinbase/cdp-hooks';
 import { usePublicClient } from 'wagmi';
 import { formatEther, encodeFunctionData } from 'viem';
-import { base } from 'wagmi/chains';
 import { Droplets, Clock, CheckCircle, XCircle, Loader2 } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 
@@ -206,14 +205,13 @@ export default function FaucetPage() {
 
       console.log('📋 Encoded data:', data);
 
-      // Send transaction using CDP (automatically uses current wallet)
+      // Send transaction using CDP (chain inferred from CDPHooksProvider config)
       const result = await sendEvmTransaction({
         transaction: {
           to: FAUCET_ADDRESS,
           data,
           value: 0n,
           gas: 300000n, // Estimated gas limit
-          chainId: base.id, // Base Mainnet (8453)
           type: 'eip1559',
         },
       });
