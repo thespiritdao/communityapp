@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useEvmAddress, useCurrentUser } from '@coinbase/cdp-hooks';
 import { usePublicClient } from 'wagmi';
 import { formatEther } from 'viem';
@@ -108,10 +108,19 @@ export default function FaucetPage() {
   }, [evmAddress, currentUser, canClaim, timeRemaining]);
 
   // Fetch faucet data
-  const fetchFaucetData = async () => {
-    if (!evmAddress || !FAUCET_ADDRESS || !publicClient) return;
+  const fetchFaucetData = useCallback(async () => {
+    if (!evmAddress || !FAUCET_ADDRESS || !publicClient) {
+      console.log('🔧 Faucet - Skipping fetch:', {
+        hasAddress: !!evmAddress,
+        hasFaucet: !!FAUCET_ADDRESS,
+        hasClient: !!publicClient,
+      });
+      return;
+    }
 
     try {
+      console.log('🔄 Faucet - Fetching contract data...');
+
       // Check if user can claim
       const canClaimResult = await publicClient.readContract({
         address: FAUCET_ADDRESS,
@@ -119,6 +128,8 @@ export default function FaucetPage() {
         functionName: 'canClaim',
         args: [evmAddress],
       });
+
+      console.log('✅ Faucet - Contract says canClaim:', canClaimResult);
       setCanClaim(canClaimResult);
 
       // Get time until next claim
@@ -129,7 +140,10 @@ export default function FaucetPage() {
           functionName: 'getTimeUntilNextClaim',
           args: [evmAddress],
         });
+        console.log('⏰ Faucet - Time until next claim:', Number(timeResult), 'seconds');
         setTimeRemaining(Number(timeResult));
+      } else {
+        setTimeRemaining(0);
       }
 
       // Get faucet balances
@@ -158,17 +172,19 @@ export default function FaucetPage() {
         system: formatEther(systemAmount),
         self: formatEther(selfAmount),
       });
+
+      console.log('✅ Faucet - Data fetch complete');
     } catch (err) {
-      console.error('Error fetching faucet data:', err);
+      console.error('❌ Faucet - Error fetching data:', err);
     }
-  };
+  }, [evmAddress, publicClient]);
 
   useEffect(() => {
     fetchFaucetData();
     // Refresh data every 10 seconds
     const interval = setInterval(fetchFaucetData, 10000);
     return () => clearInterval(interval);
-  }, [evmAddress]);
+  }, [fetchFaucetData]);
 
   // Countdown timer
   useEffect(() => {
@@ -188,16 +204,22 @@ export default function FaucetPage() {
     return () => clearInterval(timer);
   }, [timeRemaining]);
 
-  // Prepare transaction call for OnchainKit Transaction
-  const prepareClaimTransaction = useCallback(() => {
-    if (!canClaim || !FAUCET_ADDRESS) return null;
+  // Prepare transaction calls array for OnchainKit Transaction
+  const transactionCalls = useMemo(() => {
+    if (!canClaim || !FAUCET_ADDRESS) {
+      console.log('🔧 Faucet - Transaction disabled:', { canClaim, hasFaucet: !!FAUCET_ADDRESS });
+      return [];
+    }
 
-    return {
+    const call = {
       address: FAUCET_ADDRESS,
       abi: FAUCET_ABI,
       functionName: 'claimTokens',
       args: [],
     };
+
+    console.log('✅ Faucet - Transaction ready:', call);
+    return [call];
   }, [canClaim]);
 
   // Handle successful transaction
@@ -507,28 +529,35 @@ export default function FaucetPage() {
             )}
 
             {/* Claim Button - OnchainKit Transaction */}
-            <Transaction
-              chainId={BASE_CHAIN_ID}
-              calls={prepareClaimTransaction() ? [prepareClaimTransaction()!] : []}
-              isSponsored={true}
-              onSuccess={handleSuccess}
-              onError={handleError}
-            >
-              <TransactionButton
-                text={canClaim ? 'Claim Tokens' : 'Cooldown Active'}
-                disabled={!canClaim}
-                className={`w-full px-4 py-4 text-lg font-semibold text-white rounded-xl transition-all ${
-                  canClaim
-                    ? 'bg-[#2F5D50] hover:bg-[#254A40] cursor-pointer'
-                    : 'bg-[#D8D2C8] cursor-not-allowed'
-                }`}
-              />
-              <TransactionSponsor />
-              <TransactionStatus>
-                <TransactionStatusLabel />
-                <TransactionStatusAction />
-              </TransactionStatus>
-            </Transaction>
+            {transactionCalls.length > 0 ? (
+              <Transaction
+                chainId={BASE_CHAIN_ID}
+                calls={transactionCalls}
+                isSponsored={true}
+                onSuccess={handleSuccess}
+                onError={handleError}
+              >
+                <TransactionButton
+                  text="Claim Tokens"
+                  className="w-full px-4 py-4 text-lg font-semibold text-white bg-[#2F5D50] hover:bg-[#254A40] rounded-xl transition-all cursor-pointer"
+                />
+                <TransactionSponsor />
+                <TransactionStatus>
+                  <TransactionStatusLabel />
+                  <TransactionStatusAction />
+                </TransactionStatus>
+              </Transaction>
+            ) : (
+              <button
+                disabled
+                className="w-full px-4 py-4 text-lg font-semibold text-white bg-[#D8D2C8] rounded-xl cursor-not-allowed"
+              >
+                <div className="flex items-center justify-center gap-2">
+                  <Clock size={20} />
+                  Cooldown Active
+                </div>
+              </button>
+            )}
 
             {/* Instructions */}
             <div
