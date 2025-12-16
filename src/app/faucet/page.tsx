@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useEvmAddress, useCurrentUser, useSendEvmTransaction } from '@coinbase/cdp-hooks';
 import { usePublicClient } from 'wagmi';
-import { formatEther } from 'viem';
+import { formatEther, encodeFunctionData } from 'viem';
 import { Droplets, Clock, CheckCircle, XCircle, Loader2 } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 
@@ -196,11 +196,27 @@ export default function FaucetPage() {
       console.log('📋 Wallet:', evmAddress);
       console.log('📋 Faucet:', FAUCET_ADDRESS);
 
-      const result = await sendEvmTransaction({
-        to: FAUCET_ADDRESS,
+      // Encode the contract function call
+      const data = encodeFunctionData({
         abi: FAUCET_ABI,
         functionName: 'claimTokens',
         args: [],
+      });
+
+      console.log('📋 Encoded data:', data);
+
+      // Send transaction using CDP
+      const result = await sendEvmTransaction({
+        transaction: {
+          to: FAUCET_ADDRESS,
+          data,
+          value: 0n,
+          gas: 300000n, // Estimated gas limit
+          chainId: parseInt(process.env.NEXT_PUBLIC_CHAIN_ID || '8453', 10),
+          type: 'eip1559',
+        },
+        evmAccount: evmAddress,
+        network: 'base-sepolia', // CDP network identifier
       });
 
       console.log('✅ Transaction successful:', result);
