@@ -90,17 +90,22 @@ export default function FaucetPage() {
   const publicClient = usePublicClient();
   const { toast } = useToast();
 
-  //Debug: Log wallet connection status
-  console.log('🔧 Faucet - Wallet Status:', {
-    cdpAddress: evmAddress,
-    connected: !!evmAddress && !!currentUser,
-  });
-
   const [canClaim, setCanClaim] = useState(false);
   const [timeRemaining, setTimeRemaining] = useState(0);
   const [faucetBalances, setFaucetBalances] = useState({ system: '0', self: '0' });
   const [claimAmounts, setClaimAmounts] = useState({ system: '10', self: '10' });
   const [success, setSuccess] = useState(false);
+
+  //Debug: Log wallet and claim status
+  useEffect(() => {
+    console.log('🔧 Faucet - Status:', {
+      cdpAddress: evmAddress,
+      connected: !!evmAddress && !!currentUser,
+      canClaim,
+      timeRemaining,
+      faucetAddress: FAUCET_ADDRESS,
+    });
+  }, [evmAddress, currentUser, canClaim, timeRemaining]);
 
   // Fetch faucet data
   const fetchFaucetData = async () => {
