@@ -1,17 +1,9 @@
 'use client';
 
-import React, { useState } from 'react';
-import { useAccount } from 'wagmi';
-import type { Abi } from 'viem';
-import {
-  Transaction,
-  TransactionButton,
-  TransactionSponsor,
-  TransactionStatus,
-  TransactionStatusLabel,
-  TransactionStatusAction,
-} from '@coinbase/onchainkit/transaction';
-import type { LifecycleStatus } from '@coinbase/onchainkit/transaction';
+import React, { useState, useCallback } from 'react';
+import { useEvmAddress, useSendUserOperation, useCurrentUser } from '@coinbase/cdp-hooks';
+import { encodeFunctionData, type Abi } from 'viem';
+import { Loader2 } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -43,15 +35,20 @@ const BOUNTY_MANAGER_ADDRESS = process.env
 export const BountyCancellationDialog: React.FC<
   BountyCancellationDialogProps
 > = ({ bounty, open, onOpenChange, onSuccess }) => {
-  const { address } = useAccount();
+  // CDP Smart Account hooks - EXACT FAUCET PATTERN
+  const { evmAddress } = useEvmAddress();
+  const { sendUserOperation } = useSendUserOperation();
+  const { currentUser } = useCurrentUser();
+
   const [cancellationReason, setCancellationReason] = useState('');
   const [isSyncing, setIsSyncing] = useState(false);
+  const [isTransactionPending, setIsTransactionPending] = useState(false);
   const [error, setError] = useState<string>('');
   const [showTransaction, setShowTransaction] = useState(false);
 
   // Sync database AFTER successful on-chain cancellation
   const syncDatabaseAfterCancellation = async (transactionHash: string) => {
-    if (!address) return;
+    if (!evmAddress) return;
 
     try {
       setIsSyncing(true);
@@ -65,7 +62,7 @@ export const BountyCancellationDialog: React.FC<
         body: JSON.stringify({
           bountyId: bounty.id,
           onchainId: bounty.onchain_id,
-          cancelerAddress: address,
+          cancelerAddress: evmAddress,
           cancellationReason: cancellationReason.trim(),
           transactionHash,
         }),
@@ -92,16 +89,55 @@ export const BountyCancellationDialog: React.FC<
     }
   };
 
-  // Handle transaction status from OnChainKit
-  const handleTransactionStatus = async (status: LifecycleStatus) => {
-    console.log('🔄 Transaction status:', status);
+  // CDP Smart Account transaction handler - EXACT FAUCET PATTERN
+  const handleCancelBountyTransaction = useCallback(async () => {
+    // EXACT FAUCET PATTERN: Simple validation matching faucet
+    if (!evmAddress || !currentUser?.evmSmartAccounts?.[0]) {
+      console.error('❌ Missing requirements for bounty cancellation:', {
+        hasAddress: !!evmAddress,
+        hasSmartAccount: !!currentUser?.evmSmartAccounts?.[0],
+      });
+      setError('Smart Wallet not properly configured');
+      return;
+    }
 
-    if (status.statusName === 'success') {
-      console.log('✅ Cancellation transaction successful:', status.statusData);
+    const smartAccount = currentUser.evmSmartAccounts[0]; // EXACT FAUCET PATTERN
 
-      // Get transaction hash from status data
-      const txHash =
-        status.statusData?.transactionReceipts?.[0]?.transactionHash;
+    setIsTransactionPending(true); // EXACT FAUCET PATTERN
+    setError('');
+
+    try {
+      console.log('🚀 Building Smart Account User Operation for bounty cancellation...');
+      console.log('💼 Smart Account:', smartAccount);
+      console.log('🎯 Contract: BountyManager - cancelBounty');
+      console.log('⛽ Paymaster: ENABLED (gasless transaction)');
+
+      // EXACT FAUCET PATTERN: Encode call data
+      const callData = encodeFunctionData({
+        abi: BountyManagerABI,
+        functionName: 'cancelBounty',
+        args: [BigInt(bounty.onchain_id || 0)],
+      });
+
+      console.log('📝 Encoded call data for cancelBounty');
+
+      // EXACT FAUCET PATTERN: Send user operation
+      const result = await sendUserOperation({
+        evmSmartAccount: smartAccount,  // ← Smart Account directly!
+        network: 'base',                 // ← Base mainnet
+        calls: [{
+          to: BOUNTY_MANAGER_ADDRESS,
+          value: 0n,                     // ← Zero ETH (bigint)
+          data: callData,
+        }],
+        useCdpPaymaster: true,           // ← ENABLE GAS SPONSORSHIP!
+      });
+
+      console.log('✅ User operation sent successfully!', result);
+      console.log('✅ Bounty cancelled successfully:', bounty.onchain_id);
+
+      // Get transaction hash from result
+      const txHash = result?.receipt?.transactionHash;
 
       if (txHash) {
         // Sync database with blockchain state
@@ -116,22 +152,16 @@ export const BountyCancellationDialog: React.FC<
           }, 2000); // Give user time to see success message
         }
       } else {
-        console.warn(
-          '⚠️ Transaction succeeded but no hash found in status data',
-        );
-        setError(
-          'Transaction succeeded but could not sync database. Please refresh the page.',
-        );
+        console.warn('⚠️ Transaction succeeded but no hash found in result');
+        setError('Transaction succeeded but could not sync database. Please refresh the page.');
       }
+    } catch (err: any) {
+      console.error('❌ Bounty cancellation failed:', err);
+      setError(err.message || 'Transaction failed. You can try again - no changes were made to the database.');
+    } finally {
+      setIsTransactionPending(false); // EXACT FAUCET PATTERN
     }
-
-    if (status.statusName === 'error') {
-      console.error('❌ Cancellation transaction failed:', status.statusData);
-      setError(
-        'Transaction failed. You can try again - no changes were made to the database.',
-      );
-    }
-  };
+  }, [evmAddress, currentUser, sendUserOperation, bounty, cancellationReason, syncDatabaseAfterCancellation, onOpenChange, onSuccess]);
 
   const handleInitialSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -394,7 +424,8 @@ export const BountyCancellationDialog: React.FC<
                 </Alert>
               )}
 
-              {!BOUNTY_MANAGER_ADDRESS && (
+              {/* CDP Smart Account Transaction Button */}
+              {!BOUNTY_MANAGER_ADDRESS ? (
                 <Alert
                   className="mb-4"
                   style={{
@@ -410,33 +441,45 @@ export const BountyCancellationDialog: React.FC<
                     variables.
                   </AlertDescription>
                 </Alert>
-              )}
-
-              {BOUNTY_MANAGER_ADDRESS && address && (
-                <Transaction
-                  calls={[
-                    {
-                      address: BOUNTY_MANAGER_ADDRESS,
-                      abi: BountyManagerABI,
-                      functionName: 'cancelBounty',
-                      args: [BigInt(bounty.onchain_id || 0)],
-                    },
-                  ]}
-                  isSponsored={true}
-                  onStatus={handleTransactionStatus}
+              ) : evmAddress && currentUser?.evmSmartAccounts?.[0] ? (
+                <Button
+                  onClick={handleCancelBountyTransaction}
+                  disabled={isTransactionPending || isSyncing}
+                  className="w-full disabled:bg-gray-400 disabled:cursor-not-allowed font-semibold py-3 transition-colors hover:opacity-90"
+                  variant="destructive"
                 >
-                  <div className="space-y-4">
-                    <TransactionButton
-                      text="Execute Refund"
-                      className="w-full font-semibold py-3"
-                    />
-                    <TransactionSponsor />
-                    <TransactionStatus>
-                      <TransactionStatusLabel />
-                      <TransactionStatusAction />
-                    </TransactionStatus>
-                  </div>
-                </Transaction>
+                  {isTransactionPending ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin inline" />
+                      Cancelling Bounty...
+                    </>
+                  ) : isSyncing ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin inline" />
+                      Syncing to Database...
+                    </>
+                  ) : (
+                    'Execute Refund (Gasless)'
+                  )}
+                </Button>
+              ) : (
+                <Alert
+                  style={{
+                    backgroundColor: '#F5E6E6',
+                    borderWidth: '1px',
+                    borderStyle: 'solid',
+                    borderColor: '#D9B3B3',
+                  }}
+                >
+                  <AlertDescription style={{ color: '#5C1F1F' }}>
+                    <strong>Configuration Error:</strong> Missing wallet connection or
+                    Smart Account. Please check your connection.
+                    <div className="mt-2 text-xs" style={{ color: '#8B3A3A' }}>
+                      Address: {evmAddress ? '✓' : '✗'} | Smart Account:{' '}
+                      {currentUser?.evmSmartAccounts?.[0] ? '✓' : '✗'}
+                    </div>
+                  </AlertDescription>
+                </Alert>
               )}
 
               <div className="flex gap-2 pt-2">

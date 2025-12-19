@@ -23,12 +23,10 @@ import {
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
-import {
-  Transaction,
-  TransactionButton,
-} from '@coinbase/onchainkit/transaction';
+import { useEvmAddress, useSendUserOperation, useCurrentUser } from '@coinbase/cdp-hooks';
 import type { Abi } from 'viem';
-import { useAccount } from 'wagmi';
+import { encodeFunctionData } from 'viem';
+import { Loader2 } from 'lucide-react';
 import BountyManagerABIJson from '@/abis/BountyManagerV2.json';
 import {
   useBountyContractEnhanced,
@@ -68,12 +66,19 @@ export const MilestoneManager: React.FC<MilestoneManagerProps> = ({
   onMilestonesCreated,
   onMilestoneApproved,
 }) => {
-  const { address } = useAccount();
+  // CDP Smart Account hooks - EXACT FAUCET PATTERN
+  const { evmAddress } = useEvmAddress();
+  const { sendUserOperation } = useSendUserOperation();
+  const { currentUser } = useCurrentUser();
+
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [newMilestones, setNewMilestones] = useState<
     Omit<Milestone, 'id' | 'status'>[]
   >([]);
   const [showCalendar, setShowCalendar] = useState<string | null>(null);
+  const [isTransactionPending, setIsTransactionPending] = useState<{
+    [key: string]: boolean;
+  }>({});
 
   const { createMilestonesOnChain, approveMilestoneOnChain, PaymentStructure } =
     useBountyContractEnhanced();
@@ -185,6 +190,62 @@ export const MilestoneManager: React.FC<MilestoneManagerProps> = ({
   const isMilestoneAmountValid = () => {
     const total = calculateTotalMilestoneAmount();
     return Math.abs(total - Number.parseFloat(bounty.totalValue)) < 0.01; // Allow small rounding differences
+  };
+
+  // CDP Smart Account transaction handler - EXACT FAUCET PATTERN
+  const handleApproveMilestoneTransaction = async (milestoneId: string) => {
+    // EXACT FAUCET PATTERN: Simple validation matching faucet
+    if (!evmAddress || !currentUser?.evmSmartAccounts?.[0]) {
+      console.error('❌ Missing requirements for milestone approval:', {
+        hasAddress: !!evmAddress,
+        hasSmartAccount: !!currentUser?.evmSmartAccounts?.[0],
+      });
+      return;
+    }
+
+    const smartAccount = currentUser.evmSmartAccounts[0]; // EXACT FAUCET PATTERN
+
+    setIsTransactionPending({ ...isTransactionPending, [milestoneId]: true }); // EXACT FAUCET PATTERN
+
+    try {
+      console.log('🚀 Building Smart Account User Operation for milestone approval...');
+      console.log('💼 Smart Account:', smartAccount);
+      console.log('🎯 Contract: BountyManager - approveMilestone');
+      console.log('⛽ Paymaster: ENABLED (gasless transaction)');
+
+      const contractAddress = process.env.NEXT_PUBLIC_BOUNTY_MANAGER_ADDRESS as `0x${string}`;
+
+      // EXACT FAUCET PATTERN: Encode call data
+      const callData = encodeFunctionData({
+        abi: BountyManagerABI,
+        functionName: 'approveMilestone',
+        args: [Number.parseInt(bounty.id), Number.parseInt(milestoneId)],
+      });
+
+      console.log('📝 Encoded call data for approveMilestone');
+
+      // EXACT FAUCET PATTERN: Send user operation
+      const result = await sendUserOperation({
+        evmSmartAccount: smartAccount,  // ← Smart Account directly!
+        network: 'base',                 // ← Base mainnet
+        calls: [{
+          to: contractAddress,
+          value: 0n,                     // ← Zero ETH (bigint)
+          data: callData,
+        }],
+        useCdpPaymaster: true,           // ← ENABLE GAS SPONSORSHIP!
+      });
+
+      console.log('✅ User operation sent successfully!', result);
+      console.log('✅ Milestone approved successfully:', milestoneId);
+
+      // Call success handler
+      onMilestoneApproved?.(milestoneId);
+    } catch (err: any) {
+      console.error('❌ Milestone approval failed:', err);
+    } finally {
+      setIsTransactionPending({ ...isTransactionPending, [milestoneId]: false }); // EXACT FAUCET PATTERN
+    }
   };
 
   return (
@@ -380,27 +441,35 @@ export const MilestoneManager: React.FC<MilestoneManagerProps> = ({
                   </div>
 
                   {milestone.status === 'pending' && (
-                    <Transaction
-                      isSponsored={true}
-                      calls={[
-                        {
-                          address: process.env
-                            .NEXT_PUBLIC_BOUNTY_MANAGER_ADDRESS as `0x${string}`,
-                          abi: BountyManagerABI,
-                          functionName: 'approveMilestone',
-                          args: [
-                            Number.parseInt(bounty.id),
-                            Number.parseInt(milestone.id),
-                          ],
-                        },
-                      ]}
-                      onSuccess={() => onMilestoneApproved?.(milestone.id)}
-                    >
-                      <TransactionButton
-                        text="Approve Milestone"
-                        className="bounty-btn primary"
-                      />
-                    </Transaction>
+                    evmAddress && currentUser?.evmSmartAccounts?.[0] ? (
+                      <Button
+                        onClick={() => handleApproveMilestoneTransaction(milestone.id)}
+                        disabled={isTransactionPending[milestone.id]}
+                        className="bounty-btn primary disabled:bg-gray-400 disabled:cursor-not-allowed"
+                      >
+                        {isTransactionPending[milestone.id] ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin inline" />
+                            Approving...
+                          </>
+                        ) : (
+                          'Approve Milestone (Gasless)'
+                        )}
+                      </Button>
+                    ) : (
+                      <div
+                        className="px-4 py-2 rounded text-sm"
+                        style={{
+                          backgroundColor: '#F5E6E6',
+                          borderWidth: '1px',
+                          borderStyle: 'solid',
+                          borderColor: '#D9B3B3',
+                          color: '#5C1F1F',
+                        }}
+                      >
+                        Wallet not connected
+                      </div>
+                    )
                   )}
                 </div>
 

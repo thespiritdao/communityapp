@@ -1,17 +1,10 @@
 'use client';
 
 import { useState } from 'react';
-import {
-  Transaction,
-  TransactionButton,
-  TransactionStatus,
-  TransactionStatusLabel,
-} from '@coinbase/onchainkit/transaction';
-import type { LifecycleStatus } from '@coinbase/onchainkit/transaction';
+import { useEvmAddress, useSendUserOperation, useCurrentUser } from '@coinbase/cdp-hooks';
 import { encodeFunctionData } from 'viem';
-import { base } from 'viem/chains';
-import { useAccount } from 'wagmi';
 import { useToast } from '@/components/ui/use-toast';
+import { Button } from '@/components/ui/button';
 import { supabase } from '@/utils/supabaseClient';
 import { HATS_PROTOCOL_ADDRESS } from '@/constants/hatsProtocol';
 import { Trash2, AlertTriangle, Loader2 } from 'lucide-react';
@@ -46,7 +39,7 @@ interface RemoveMemberButtonProps {
  * ✅ ISSUE #7: On-Chain Member Removal Flow
  *
  * Implements HAT revocation by transferring HAT to zero address
- * Uses OnchainKit for sponsored transactions
+ * Uses CDP Smart Accounts for gasless transactions
  * Updates database after successful on-chain removal
  */
 export const RemoveMemberButton: React.FC<RemoveMemberButtonProps> = ({
@@ -59,9 +52,13 @@ export const RemoveMemberButton: React.FC<RemoveMemberButtonProps> = ({
   membershipType,
   onSuccess,
 }) => {
-  const { address } = useAccount();
+  // CDP Smart Account hooks - EXACT FAUCET PATTERN
+  const { evmAddress } = useEvmAddress();
+  const { sendUserOperation } = useSendUserOperation();
+  const { currentUser } = useCurrentUser();
   const { toast } = useToast();
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isTransactionPending, setIsTransactionPending] = useState(false);
   const [showConfirmation, setShowConfirmation] = useState(false);
 
   // Validate HAT ID format
@@ -96,119 +93,153 @@ export const RemoveMemberButton: React.FC<RemoveMemberButtonProps> = ({
   // ✅ Transfer HAT to zero address (burns it effectively)
   const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000';
 
-  const transferHatCallData = encodeFunctionData({
-    abi: HATS_TRANSFER_ABI,
-    functionName: 'transferHat',
-    args: [
-      BigInt(hatId),
-      memberAddress as `0x${string}`,
-      ZERO_ADDRESS as `0x${string}`,
-    ],
-  });
+  // CDP Smart Account transaction handler - EXACT FAUCET PATTERN
+  const handleRemoveMemberTransaction = async () => {
+    // EXACT FAUCET PATTERN: Simple validation matching faucet
+    if (!evmAddress || !currentUser?.evmSmartAccounts?.[0]) {
+      console.error('❌ Missing requirements for member removal:', {
+        hasAddress: !!evmAddress,
+        hasSmartAccount: !!currentUser?.evmSmartAccounts?.[0],
+      });
+      toast({
+        title: 'Wallet Not Connected',
+        description: 'Please connect your Smart Wallet to remove members.',
+        variant: 'destructive',
+      });
+      return;
+    }
 
-  const handleSuccess = async (response: { transactionReceipts: any[] }) => {
+    const smartAccount = currentUser.evmSmartAccounts[0]; // EXACT FAUCET PATTERN
+
+    setIsTransactionPending(true); // EXACT FAUCET PATTERN
+    setIsProcessing(true);
+
     try {
-      setIsProcessing(true);
+      console.log('🚀 Building Smart Account User Operation for member removal...');
+      console.log('💼 Smart Account:', smartAccount);
+      console.log('🎯 Contract: Hats Protocol - transferHat');
+      console.log('⛽ Paymaster: ENABLED (gasless transaction)');
 
-      const txHash = response.transactionReceipts?.[0]?.transactionHash;
-
-      console.log('✅ Member removed on-chain:', {
-        member: memberAddress,
-        hatId,
-        txHash,
+      // EXACT FAUCET PATTERN: Encode call data
+      const callData = encodeFunctionData({
+        abi: HATS_TRANSFER_ABI,
+        functionName: 'transferHat',
+        args: [
+          BigInt(hatId),
+          memberAddress as `0x${string}`,
+          ZERO_ADDRESS as `0x${string}`,
+        ],
       });
 
-      // Update pod_members table - mark as removed
-      await supabase
-        .from('pod_members')
-        .update({
-          is_active: false,
-          removed_at: new Date().toISOString(),
-        })
-        .eq('id', memberId);
+      // EXACT FAUCET PATTERN: Send user operation
+      const result = await sendUserOperation({
+        evmSmartAccount: smartAccount,  // ← Smart Account directly!
+        network: 'base',                 // ← Base mainnet
+        calls: [{
+          to: HATS_PROTOCOL_ADDRESS,
+          value: 0n,                     // ← Zero ETH (bigint)
+          data: callData,
+        }],
+        useCdpPaymaster: true,           // ← ENABLE GAS SPONSORSHIP!
+      });
 
-      // Remove from pod_leads array if leader
-      if (membershipType === 'leader') {
-        const { data: pod } = await supabase
-          .from('pods')
-          .select('pod_leads')
-          .eq('id', podId)
-          .single();
+      console.log('✅ User operation sent successfully!', result);
 
-        if (pod?.pod_leads) {
-          const updatedLeads = (pod.pod_leads as string[]).filter(
-            (lead) => lead.toLowerCase() !== memberAddress.toLowerCase(),
-          );
+      // Handle success with receipt
+      if (result?.receipt) {
+        const txHash = result.receipt.transactionHash;
 
-          await supabase
+        console.log('✅ Member removed on-chain:', {
+          member: memberAddress,
+          hatId,
+          txHash,
+        });
+
+        // Update pod_members table - mark as removed
+        await supabase
+          .from('pod_members')
+          .update({
+            is_active: false,
+            removed_at: new Date().toISOString(),
+          })
+          .eq('id', memberId);
+
+        // Remove from pod_leads array if leader
+        if (membershipType === 'leader') {
+          const { data: pod } = await supabase
             .from('pods')
-            .update({ pod_leads: updatedLeads })
-            .eq('id', podId);
+            .select('pod_leads')
+            .eq('id', podId)
+            .single();
 
-          console.log('✅ Removed from pod_leads array');
+          if (pod?.pod_leads) {
+            const updatedLeads = (pod.pod_leads as string[]).filter(
+              (lead) => lead.toLowerCase() !== memberAddress.toLowerCase(),
+            );
+
+            await supabase
+              .from('pods')
+              .update({ pod_leads: updatedLeads })
+              .eq('id', podId);
+
+            console.log('✅ Removed from pod_leads array');
+          }
         }
+
+        // Send notification to removed member
+        await supabase.from('general_notifications').insert({
+          recipient_address: memberAddress.toLowerCase(),
+          sender_address: evmAddress.toLowerCase(),
+          notification_type: 'pod_member_removed',
+          title: `Removed from ${podName}`,
+          message: `You have been removed from ${podName}. Your ${membershipType} role has been revoked.`,
+          context_type: 'governance',
+          context_id: podId,
+          context_url: `/pods/${podId}`,
+        });
+
+        toast({
+          title: 'Member Removed Successfully',
+          description: `${memberName} has been removed from ${podName}. Transaction: ${txHash?.slice(0, 10)}...`,
+          duration: 5000,
+        });
+
+        setShowConfirmation(false);
+        onSuccess?.();
+      } else {
+        console.warn('⚠️ No receipt found in result');
+        toast({
+          title: 'Transaction Completed',
+          description: 'Member removal completed but receipt not found. Please refresh.',
+          variant: 'destructive',
+        });
+      }
+    } catch (error: any) {
+      console.error('❌ Member removal failed:', error);
+
+      let errorMessage = error.message || 'Failed to remove member. Please try again.';
+
+      if (error.message?.includes('execution reverted')) {
+        errorMessage =
+          'Transaction would revert. You may not have permission to remove this member, or the HAT cannot be transferred.';
+      } else if (error.message?.includes('failed to estimate gas')) {
+        errorMessage =
+          'Failed to estimate gas. You may not be an admin of this HAT or the member is not currently wearing it.';
+      } else if (error.message?.includes('user rejected')) {
+        errorMessage = 'Transaction cancelled by user.';
       }
 
-      // Send notification to removed member
-      await supabase.from('general_notifications').insert({
-        recipient_address: memberAddress.toLowerCase(),
-        sender_address: address?.toLowerCase() || '',
-        notification_type: 'pod_member_removed',
-        title: `Removed from ${podName}`,
-        message: `You have been removed from ${podName}. Your ${membershipType} role has been revoked.`,
-        context_type: 'governance',
-        context_id: podId,
-        context_url: `/pods/${podId}`,
-      });
-
       toast({
-        title: 'Member Removed Successfully',
-        description: `${memberName} has been removed from ${podName}. Transaction: ${txHash?.slice(0, 10)}...`,
-        duration: 5000,
+        title: 'Removal Failed',
+        description: errorMessage,
+        variant: 'destructive',
       });
 
       setShowConfirmation(false);
-      onSuccess?.();
-    } catch (error) {
-      console.error('Error updating database after removal:', error);
-      toast({
-        title: 'Member Removed, Database Update Failed',
-        description:
-          'Member was removed on-chain but database update failed. Please refresh.',
-        variant: 'destructive',
-      });
     } finally {
+      setIsTransactionPending(false); // EXACT FAUCET PATTERN
       setIsProcessing(false);
     }
-  };
-
-  const handleError = (error: any) => {
-    console.error('❌ Member removal transaction error:', error);
-
-    let errorMessage =
-      error.message || 'Failed to remove member. Please try again.';
-
-    if (error.message?.includes('execution reverted')) {
-      errorMessage =
-        'Transaction would revert. You may not have permission to remove this member, or the HAT cannot be transferred.';
-    } else if (error.message?.includes('failed to estimate gas')) {
-      errorMessage =
-        'Failed to estimate gas. You may not be an admin of this HAT or the member is not currently wearing it.';
-    } else if (error.message?.includes('user rejected')) {
-      errorMessage = 'Transaction cancelled by user.';
-    }
-
-    toast({
-      title: 'Removal Failed',
-      description: errorMessage,
-      variant: 'destructive',
-    });
-
-    setShowConfirmation(false);
-  };
-
-  const handleStatusChange = (status: LifecycleStatus) => {
-    console.log('Removal transaction status:', status);
   };
 
   // Confirmation modal
@@ -216,7 +247,7 @@ export const RemoveMemberButton: React.FC<RemoveMemberButtonProps> = ({
     return (
       <button
         onClick={() => setShowConfirmation(true)}
-        disabled={isProcessing || !address}
+        disabled={isProcessing || !evmAddress}
         className="flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg border disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
         style={{ color: '#8B3A3A', borderColor: '#D9B3B3' }}
         onMouseEnter={(e) => {
@@ -281,49 +312,49 @@ export const RemoveMemberButton: React.FC<RemoveMemberButtonProps> = ({
         </div>
       </div>
 
-      {/* Transaction Buttons */}
-      <Transaction
-        chainId={base.id}
-        isSponsored={true}
-        calls={[
-          {
-            to: HATS_PROTOCOL_ADDRESS,
-            data: transferHatCallData,
-            value: BigInt(0),
-          },
-        ]}
-        onSuccess={handleSuccess}
-        onError={handleError}
-        onStatus={handleStatusChange}
-        capabilities={{
-          paymasterService: {
-            url: process.env.NEXT_PUBLIC_PAYMASTER || '',
-          },
-        }}
-      >
+      {/* CDP Smart Account Transaction Buttons */}
+      {evmAddress && currentUser?.evmSmartAccounts?.[0] ? (
         <div className="flex flex-col gap-3">
           <div className="flex gap-3">
-            <TransactionButton
-              text={`Confirm: Remove ${membershipType === 'leader' ? 'Leader' : 'Member'}`}
-              disabled={isProcessing || !address}
+            <Button
+              onClick={handleRemoveMemberTransaction}
+              disabled={isTransactionPending || isProcessing}
               className="flex-1 text-white px-6 py-3 rounded-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed bg-[#8B3A3A] hover:bg-[#5C1F1F]"
-            />
+            >
+              {isTransactionPending || isProcessing ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin inline" />
+                  {isTransactionPending ? 'Removing...' : 'Processing...'}
+                </>
+              ) : (
+                `Confirm: Remove ${membershipType === 'leader' ? 'Leader' : 'Member'} (Gasless)`
+              )}
+            </Button>
             <button
               onClick={() => setShowConfirmation(false)}
-              disabled={isProcessing}
+              disabled={isTransactionPending || isProcessing}
               className="px-6 py-3 border border-gray-300 text-gray-700 hover:bg-gray-50 rounded-lg font-medium disabled:opacity-50"
             >
               Cancel
             </button>
           </div>
-
-          <TransactionStatus>
-            <div className="flex flex-col gap-2 p-4 border rounded-lg bg-gray-50">
-              <TransactionStatusLabel />
-            </div>
-          </TransactionStatus>
         </div>
-      </Transaction>
+      ) : (
+        <div
+          className="p-4 border rounded-lg"
+          style={{
+            backgroundColor: '#F5E6E6',
+            borderColor: '#D9B3B3',
+          }}
+        >
+          <p className="text-sm font-medium" style={{ color: '#5C1F1F' }}>
+            Wallet Not Connected
+          </p>
+          <p className="text-xs mt-1" style={{ color: '#8B3A3A' }}>
+            Please connect your Smart Wallet to remove members.
+          </p>
+        </div>
+      )}
 
       <p className="text-xs text-gray-500 text-center">
         Member address: {memberAddress.slice(0, 8)}...{memberAddress.slice(-6)}

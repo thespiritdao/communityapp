@@ -1,8 +1,9 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useAccount } from 'wagmi';
-import { useOnchainKit } from '@coinbase/onchainkit';
+import { useEvmAddress, useSendUserOperation, useCurrentUser } from '@coinbase/cdp-hooks';
+import { usePublicClient } from 'wagmi';
+import { encodeFunctionData } from 'viem';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,14 +11,6 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/components/ui/use-toast';
-import {
-  Transaction,
-  TransactionButton,
-  TransactionSponsor,
-  TransactionStatus,
-  TransactionStatusLabel,
-  TransactionStatusAction,
-} from '@coinbase/onchainkit/transaction';
 import { usePodTreasury } from '../hooks/usePodTreasury';
 import { useProfileModal } from '@/features/identity/hooks/useProfileModal';
 import { ProfileModal } from '@/features/identity/components/ProfileModal';
@@ -38,6 +31,7 @@ import {
   Clock,
   Circle,
   User,
+  Loader2,
 } from 'lucide-react';
 import UserRecipientSelector from './UserRecipientSelector';
 import { getTreasuryAddress } from '../utils/treasuryAddressUtils';
@@ -75,11 +69,16 @@ export function TreasuryManagement({
   treasuryAddress: fallbackTreasuryAddress,
   podName,
 }: TreasuryManagementProps) {
-  const { address } = useAccount();
+  // CDP Smart Account hooks - EXACT FAUCET PATTERN
+  const { evmAddress } = useEvmAddress();
+  const { sendUserOperation } = useSendUserOperation();
+  const { currentUser } = useCurrentUser();
+  const publicClient = usePublicClient();
   const { toast } = useToast();
-  const { config } = useOnchainKit();
   const { selectedUser, users, isOpen, openProfileModal, closeProfileModal } =
     useProfileModal();
+
+  const [isTransactionPending, setIsTransactionPending] = useState(false);
 
   // Factory-first treasury address resolution
   const [resolvedTreasuryAddress, setResolvedTreasuryAddress] = useState<
@@ -254,7 +253,7 @@ export function TreasuryManagement({
         tokenInfo.decimals,
         totalTransactionAmount,
         `${totalTransactionAmount} ${tokenInfo.symbol}`,
-        address, // sender is current user
+        evmAddress, // sender is current user
         recipientAddresses.length === 1 ? recipientAddresses[0] : undefined, // single recipient
         reason || 'Treasury distribution',
         undefined, // sender name - could be fetched from user profile
@@ -313,7 +312,7 @@ export function TreasuryManagement({
         console.log('💰 Sponsorship Configuration:', {
           isSponsored: true,
           chainId: 8453,
-          account: address,
+          account: evmAddress,
         });
 
         if (distributionType === 'equal' && totalAmount) {
@@ -433,100 +432,156 @@ export function TreasuryManagement({
     }
   };
 
-  /**
-   * Handle successful distribution
-   */
-  const handleDistributionSuccess = async (response: any) => {
-    console.log('🏦 Distribution successful:', response);
-
-    // Update transaction status in Supabase
-    if (pendingTransactionId) {
-      try {
-        const { PodTreasuryService } = await import(
-          '../services/PodTreasuryService'
-        );
-        // Extract transaction hash from response if available
-        const txHash =
-          response?.transactionHash || response?.hash || response?.txHash;
-        await PodTreasuryService.updateTransactionStatus(
-          pendingTransactionId,
-          'completed',
-          txHash,
-        );
-        console.log('💾 Transaction status updated to completed');
-      } catch (error) {
-        console.error('💾 Failed to update transaction status:', error);
-      }
-    }
-
-    toast({
-      title: 'Distribution Successful!',
-      description: `Funds distributed to ${recipients.filter((r) => r.address).length} recipient(s)`,
-    });
-
-    // Reset form
-    setRecipients([{ address: '', name: '', amount: '' }]);
-    setTotalAmount('');
-    setReason('');
-    setSelectedToken('');
-    setPendingTransactionId(null);
-    setIsMetadataStored(false);
-
-    // Refresh treasury data
-    await refreshBalances();
-    await refreshTransactions();
-  };
 
   /**
-   * Handle distribution error
+   * CDP Smart Account transaction handler - Treasury Distribution
    */
-  const handleDistributionError = async (error: any) => {
-    console.error('🏦 Distribution failed:', error);
-    console.error('🏦 Full error details:', {
-      message: error?.message,
-      code: error?.code,
-      data: error?.data,
-      cause: error?.cause,
-      stack: error?.stack,
-    });
+  const handleDistributeViaCDP = async () => {
+    // EXACT FAUCET PATTERN: Simple validation matching faucet
+    if (!evmAddress || !currentUser?.evmSmartAccounts?.[0]) {
+      console.error('❌ Missing requirements for treasury distribution:', {
+        hasAddress: !!evmAddress,
+        hasSmartAccount: !!currentUser?.evmSmartAccounts?.[0],
+      });
+      toast({
+        title: 'Wallet Not Connected',
+        description: 'Please connect your Smart Wallet to distribute funds.',
+        variant: 'destructive',
+      });
+      return;
+    }
 
-    // Update transaction status in Supabase
-    if (pendingTransactionId) {
-      try {
-        const { PodTreasuryService } = await import(
-          '../services/PodTreasuryService'
-        );
-        await PodTreasuryService.updateTransactionStatus(
-          pendingTransactionId,
-          'failed',
-        );
-        console.log('💾 Transaction status updated to failed');
-      } catch (updateError) {
-        console.error('💾 Failed to update transaction status:', updateError);
+    const smartAccount = currentUser.evmSmartAccounts[0]; // EXACT FAUCET PATTERN
+
+    setIsTransactionPending(true); // EXACT FAUCET PATTERN
+
+    try {
+      // Step 1: Store transaction metadata
+      console.log('💾 Storing transaction metadata...');
+      const txId = await storeTransactionMetadata();
+
+      // Step 2: Prepare transaction calls
+      console.log('🚀 Building Smart Account User Operation for treasury distribution...');
+      console.log('💼 Smart Account:', smartAccount);
+      console.log('🏦 Treasury:', treasuryAddress);
+      console.log('🎯 Distribution type:', distributionType);
+      console.log('⛽ Paymaster: ENABLED (gasless transaction)');
+
+      const calls = prepareTransactionCalls();
+
+      // EXACT FAUCET PATTERN: Prepare calls for sendUserOperation
+      const callsFormatted = calls.map((call) => ({
+        to: call.address,
+        value: call.value || 0n,
+        data: call.data,
+      }));
+
+      console.log('📋 Formatted calls for User Operation:', callsFormatted.length);
+
+      // EXACT FAUCET PATTERN: Send user operation
+      const result = await sendUserOperation({
+        evmSmartAccount: smartAccount,  // ← Smart Account directly!
+        network: 'base',                 // ← Base mainnet
+        calls: callsFormatted,
+        useCdpPaymaster: true,           // ← ENABLE GAS SPONSORSHIP!
+      });
+
+      console.log('✅ User operation sent successfully!', result);
+
+      // Handle success with receipt
+      if (result?.receipt) {
+        console.log('🏦 Distribution successful:', result.receipt);
+
+        // Update transaction status in Supabase
+        if (pendingTransactionId) {
+          try {
+            const { PodTreasuryService } = await import(
+              '../services/PodTreasuryService'
+            );
+            await PodTreasuryService.updateTransactionStatus(
+              pendingTransactionId,
+              'completed',
+              result.receipt.transactionHash,
+            );
+            console.log('💾 Transaction status updated to completed');
+          } catch (error) {
+            console.error('💾 Failed to update transaction status:', error);
+          }
+        }
+
+        toast({
+          title: 'Distribution Successful!',
+          description: `Funds distributed to ${recipients.filter((r) => r.address).length} recipient(s)`,
+        });
+
+        // Reset form
+        setRecipients([{ address: '', name: '', amount: '' }]);
+        setTotalAmount('');
+        setReason('');
+        setSelectedToken('');
+        setPendingTransactionId(null);
+        setIsMetadataStored(false);
+
+        // Refresh treasury data
+        await refreshBalances();
+        await refreshTransactions();
+      } else {
+        console.warn('⚠️ No receipt found in result');
+        toast({
+          title: 'Transaction Completed',
+          description: 'Distribution completed but receipt not found. Please refresh.',
+          variant: 'destructive',
+        });
       }
+    } catch (error: any) {
+      console.error('❌ Treasury distribution failed:', error);
+      console.error('🏦 Full error details:', {
+        message: error?.message,
+        code: error?.code,
+        data: error?.data,
+        cause: error?.cause,
+      });
+
+      // Update transaction status in Supabase
+      if (pendingTransactionId) {
+        try {
+          const { PodTreasuryService } = await import(
+            '../services/PodTreasuryService'
+          );
+          await PodTreasuryService.updateTransactionStatus(
+            pendingTransactionId,
+            'failed',
+          );
+          console.log('💾 Transaction status updated to failed');
+        } catch (updateError) {
+          console.error('💾 Failed to update transaction status:', updateError);
+        }
+      }
+
+      // Extract specific error info
+      let errorMessage = 'Failed to distribute funds. Please try again.';
+      if (error?.message?.includes('Insufficient balance')) {
+        errorMessage =
+          'Treasury has insufficient token balance for this distribution.';
+      } else if (error?.message?.includes('execution reverted')) {
+        errorMessage =
+          'Transaction reverted. Check treasury contract permissions.';
+      } else if (error?.message?.includes('user rejected')) {
+        errorMessage = 'Transaction was rejected by user.';
+      }
+
+      toast({
+        title: 'Distribution Failed',
+        description: errorMessage,
+        variant: 'destructive',
+      });
+
+      // Reset pending transaction
+      setPendingTransactionId(null);
+      setIsMetadataStored(false);
+    } finally {
+      setIsTransactionPending(false); // EXACT FAUCET PATTERN
     }
-
-    // Try to extract more specific error info
-    let errorMessage = 'Failed to distribute funds. Please try again.';
-    if (error?.message?.includes('Insufficient balance')) {
-      errorMessage =
-        'Treasury has insufficient token balance for this distribution.';
-    } else if (error?.message?.includes('execution reverted')) {
-      errorMessage =
-        'Transaction reverted. Check treasury contract permissions.';
-    } else if (error?.code === 'ACTION_REJECTED') {
-      errorMessage = 'Transaction was rejected by user.';
-    }
-
-    toast({
-      title: 'Distribution Failed',
-      description: errorMessage,
-      variant: 'destructive',
-    });
-
-    // Reset pending transaction
-    setPendingTransactionId(null);
-    setIsMetadataStored(false);
   };
 
   /**
@@ -937,7 +992,7 @@ export function TreasuryManagement({
                   </div>
                 )}
                 <div className="bg-gray-50 p-4 rounded-lg">
-                  {address &&
+                  {evmAddress &&
                   treasuryAddress &&
                   selectedToken &&
                   reason &&
@@ -1015,25 +1070,31 @@ export function TreasuryManagement({
 
                         return (
                           <div>
-                            <Transaction
-                              chainId={8453} // Base mainnet
-                              calls={prepareTransactionCalls()}
-                              isSponsored={true}
-                              onSuccess={handleDistributionSuccess}
-                              onError={handleDistributionError}
-                            >
-                              <div onClick={handleDistribute}>
-                                <TransactionButton
-                                  text={`Distribute ${distributionType === 'single' ? 'Funds' : distributionType === 'equal' ? 'Equal Amounts' : 'Batch Funds'}`}
-                                  className="w-full h-12 text-white font-semibold rounded-lg flex items-center justify-center gap-2 bg-[#3F7A5A] hover:bg-[#2F5D50]"
-                                />
+                            {evmAddress && currentUser?.evmSmartAccounts?.[0] ? (
+                              <Button
+                                onClick={handleDistributeViaCDP}
+                                disabled={isTransactionPending}
+                                className="w-full h-12 text-white font-semibold rounded-lg flex items-center justify-center gap-2 bg-[#3F7A5A] hover:bg-[#2F5D50] disabled:opacity-50 disabled:cursor-not-allowed"
+                              >
+                                {isTransactionPending ? (
+                                  <>
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                    Distributing Funds...
+                                  </>
+                                ) : (
+                                  `Distribute ${distributionType === 'single' ? 'Funds' : distributionType === 'equal' ? 'Equal Amounts' : 'Batch Funds'}`
+                                )}
+                              </Button>
+                            ) : (
+                              <div className="p-4 border rounded-lg bg-red-50">
+                                <p className="text-sm font-medium text-red-900">
+                                  Wallet Not Connected
+                                </p>
+                                <p className="text-xs text-red-700 mt-1">
+                                  Please connect your Smart Wallet to distribute funds.
+                                </p>
                               </div>
-                              <TransactionSponsor />
-                              <TransactionStatus>
-                                <TransactionStatusLabel />
-                                <TransactionStatusAction />
-                              </TransactionStatus>
-                            </Transaction>
+                            )}
                           </div>
                         );
                       } catch (error) {
@@ -1383,7 +1444,7 @@ export function TreasuryManagement({
                     </p>
 
                     {/* Always show debug button if user has address */}
-                    {address && (
+                    {evmAddress && (
                       <div className="mt-3">
                         <Button
                           size="sm"
@@ -1392,7 +1453,7 @@ export function TreasuryManagement({
                             try {
                               console.log('🔍 Debugging HAT permissions...');
                               const result = await debugTreasuryHatMismatch(
-                                address,
+                                evmAddress,
                                 podId,
                               );
 

@@ -1,23 +1,17 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useAccount } from 'wagmi';
+import { useEvmAddress, useSendUserOperation, useCurrentUser } from '@coinbase/cdp-hooks';
+import { encodeFunctionData } from 'viem';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import {
-  Transaction,
-  TransactionButton,
-  TransactionSponsor,
-  TransactionStatus,
-  TransactionStatusLabel,
-  TransactionStatusAction,
-} from '@coinbase/onchainkit/transaction';
 import { TreasuryManagement } from './TreasuryManagement';
-import { Wallet, Plus, AlertTriangle, CheckCircle } from 'lucide-react';
+import { Wallet, Plus, AlertTriangle, CheckCircle, Loader2 } from 'lucide-react';
 
 // Contract addresses from environment
 const POD_TREASURY_FACTORY_ADDRESS = (process.env
@@ -68,9 +62,13 @@ export function PodSpecificTreasuryManager({
   pod,
   canManageTreasury,
 }: PodSpecificTreasuryManagerProps) {
-  const { address } = useAccount();
+  // CDP Smart Account hooks - EXACT FAUCET PATTERN
+  const { evmAddress } = useEvmAddress();
+  const { sendUserOperation } = useSendUserOperation();
+  const { currentUser } = useCurrentUser();
   const { toast } = useToast();
   const [localPod, setLocalPod] = useState(pod);
+  const [isTransactionPending, setIsTransactionPending] = useState(false);
 
   // Update local pod when prop changes
   useEffect(() => {
@@ -90,127 +88,165 @@ export function PodSpecificTreasuryManager({
     return BigInt(hatId);
   };
 
-  // Prepare treasury deployment transaction
-  const prepareDeploymentTransaction = () => {
-    return {
-      address: POD_TREASURY_FACTORY_ADDRESS,
-      abi: TREASURY_FACTORY_ABI,
-      functionName: 'deployTreasury',
-      args: [
-        localPod.id,
-        getManagementHatIdBigInt(localPod.management_hat_id),
-        DEFAULT_SUPPORTED_TOKENS,
-        PODS_TESTING_MODE,
-      ],
-    };
-  };
+  /**
+   * CDP Smart Account transaction handler - Treasury Deployment
+   */
+  const handleDeployViaCDP = async () => {
+    // EXACT FAUCET PATTERN: Simple validation
+    if (!evmAddress || !currentUser?.evmSmartAccounts?.[0]) {
+      console.error('❌ Missing requirements for treasury deployment:', {
+        hasAddress: !!evmAddress,
+        hasSmartAccount: !!currentUser?.evmSmartAccounts?.[0],
+      });
+      toast({
+        title: 'Wallet Not Connected',
+        description: 'Please connect your Smart Wallet to deploy treasury.',
+        variant: 'destructive',
+      });
+      return;
+    }
 
-  // Transaction calls for deployment
-  const calls = [prepareDeploymentTransaction()];
+    const smartAccount = currentUser.evmSmartAccounts[0]; // EXACT FAUCET PATTERN
 
-  // Handle successful deployment
-  const handleSuccess = async (response: any) => {
-    console.log('🏦 Treasury deployment response:', response);
+    setIsTransactionPending(true); // EXACT FAUCET PATTERN
 
     try {
-      // Extract treasury address from transaction logs
-      const txReceipt = response?.transactionReceipts?.[0];
+      console.log('🚀 Building Smart Account User Operation for treasury deployment...');
+      console.log('💼 Smart Account:', smartAccount);
+      console.log('🏦 Pod ID:', localPod.id);
+      console.log('⛽ Paymaster: ENABLED (gasless transaction)');
 
-      // TreasuryDeployed event signature: keccak256("TreasuryDeployed(string,address,uint256,address[],address)")
-      const TREASURY_DEPLOYED_EVENT =
-        '0x494cf03e4055d4033e848ad013abd5a12efdf3143ccf97cd8514778840b10d36';
+      // Prepare deployment call
+      const callData = encodeFunctionData({
+        abi: TREASURY_FACTORY_ABI,
+        functionName: 'deployTreasury',
+        args: [
+          localPod.id,
+          getManagementHatIdBigInt(localPod.management_hat_id),
+          DEFAULT_SUPPORTED_TOKENS,
+          PODS_TESTING_MODE,
+        ],
+      });
 
-      let treasuryAddress = '';
+      // EXACT FAUCET PATTERN: Send user operation
+      const result = await sendUserOperation({
+        evmSmartAccount: smartAccount,  // ← Smart Account directly!
+        network: 'base',                 // ← Base mainnet
+        calls: [{
+          to: POD_TREASURY_FACTORY_ADDRESS,
+          value: 0n,
+          data: callData,
+        }],
+        useCdpPaymaster: true,           // ← ENABLE GAS SPONSORSHIP!
+      });
 
-      if (txReceipt?.logs) {
-        // Find TreasuryDeployed event log
-        const deploymentLog = txReceipt.logs.find(
-          (log: any) => log.topics?.[0] === TREASURY_DEPLOYED_EVENT,
-        );
+      console.log('✅ User operation sent successfully!', result);
 
-        if (deploymentLog) {
-          // Treasury address is the second indexed parameter (topics[2])
-          // Remove '0x' and pad to get proper address format
-          const addressFromTopic = deploymentLog.topics?.[2];
-          if (addressFromTopic && addressFromTopic.length === 66) {
-            treasuryAddress = '0x' + addressFromTopic.slice(-40);
+      // Handle success with receipt
+      if (result?.receipt) {
+        console.log('🏦 Treasury deployment successful:', result.receipt);
+
+        // Extract treasury address from transaction logs
+        // TreasuryDeployed event signature: keccak256("TreasuryDeployed(string,address,uint256,address[],address)")
+        const TREASURY_DEPLOYED_EVENT =
+          '0x494cf03e4055d4033e848ad013abd5a12efdf3143ccf97cd8514778840b10d36';
+
+        let treasuryAddress = '';
+
+        if (result.receipt.logs) {
+          // Find TreasuryDeployed event log
+          const deploymentLog = result.receipt.logs.find(
+            (log: any) => log.topics?.[0] === TREASURY_DEPLOYED_EVENT,
+          );
+
+          if (deploymentLog) {
+            // Treasury address is the second indexed parameter (topics[2])
+            const addressFromTopic = deploymentLog.topics?.[2];
+            if (addressFromTopic && addressFromTopic.length === 66) {
+              treasuryAddress = '0x' + addressFromTopic.slice(-40);
+            }
           }
         }
 
-        // If topic parsing fails, try getting from receipt contractAddress
-        if (!treasuryAddress && txReceipt.contractAddress) {
-          treasuryAddress = txReceipt.contractAddress;
+        console.log('🏦 Extracted treasury address:', treasuryAddress);
+
+        // If we couldn't extract the address, show error
+        if (!treasuryAddress) {
+          console.error('Could not extract treasury address from logs');
+          toast({
+            title: 'Treasury Deployed!',
+            description: `Treasury deployed but address extraction failed. Check tx: ${result.receipt.transactionHash}`,
+          });
+          return;
         }
-      }
 
-      console.log('🏦 Extracted treasury address:', treasuryAddress);
-
-      // If we couldn't extract the address, show a message with the tx hash
-      if (!treasuryAddress) {
-        console.error('Could not extract treasury address from logs');
-        toast({
-          title: 'Treasury Deployed!',
-          description: `Treasury deployed but address extraction failed. Check tx: ${txReceipt?.transactionHash}`,
-        });
-        return;
-      }
-
-      // Update database with treasury address
-      console.log('📝 Updating pod with treasury address:', treasuryAddress);
-      const updateResponse = await fetch('/api/pods/activate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          podId: localPod.id,
-          treasuryAddress: treasuryAddress,
-          isActive: true,
-        }),
-      });
-
-      if (!updateResponse.ok) {
-        throw new Error('Failed to update pod with treasury address');
-      }
-
-      toast({
-        title: 'Treasury Deployed Successfully!',
-        description: `Treasury deployed at ${treasuryAddress.slice(0, 6)}...${treasuryAddress.slice(-4)}`,
-      });
-
-      // Update the local pod object to show the treasury
-      // This will trigger a re-render showing the treasury management UI
-      setLocalPod({
-        ...localPod,
-        treasury_contract_address: treasuryAddress,
-      });
-
-      // Force a small delay then trigger parent component refresh
-      setTimeout(() => {
-        // Trigger parent component refresh if needed
-        window.dispatchEvent(
-          new CustomEvent('treasury-deployed', {
-            detail: { podId: localPod.id, treasuryAddress },
+        // Update database with treasury address
+        console.log('📝 Updating pod with treasury address:', treasuryAddress);
+        const updateResponse = await fetch('/api/pods/activate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            podId: localPod.id,
+            treasuryAddress: treasuryAddress,
+            isActive: true,
           }),
-        );
-      }, 1000);
-    } catch (error) {
-      console.error('Failed to process treasury deployment:', error);
+        });
+
+        if (!updateResponse.ok) {
+          throw new Error('Failed to update pod with treasury address');
+        }
+
+        toast({
+          title: 'Treasury Deployed Successfully!',
+          description: `Treasury deployed at ${treasuryAddress.slice(0, 6)}...${treasuryAddress.slice(-4)}`,
+        });
+
+        // Update the local pod object to show the treasury
+        setLocalPod({
+          ...localPod,
+          treasury_contract_address: treasuryAddress,
+        });
+
+        // Trigger parent component refresh
+        setTimeout(() => {
+          window.dispatchEvent(
+            new CustomEvent('treasury-deployed', {
+              detail: { podId: localPod.id, treasuryAddress },
+            }),
+          );
+        }, 1000);
+      } else {
+        console.warn('⚠️ No receipt found in result');
+        toast({
+          title: 'Transaction Completed',
+          description: 'Deployment completed but receipt not found. Please refresh.',
+          variant: 'destructive',
+        });
+      }
+    } catch (error: any) {
+      console.error('❌ Treasury deployment failed:', error);
+      console.error('🏦 Full error details:', {
+        message: error?.message,
+        code: error?.code,
+        data: error?.data,
+      });
+
+      // Extract specific error info
+      let errorMessage = 'Treasury deployment encountered an error';
+      if (error?.message?.includes('user rejected')) {
+        errorMessage = 'Transaction was rejected by user.';
+      } else if (error?.message?.includes('execution reverted')) {
+        errorMessage = 'Transaction reverted. Check contract permissions.';
+      }
+
       toast({
-        title: 'Post-Deployment Error',
-        description:
-          'Treasury deployed but failed to update database. Please refresh the page.',
+        title: 'Deployment Failed',
+        description: errorMessage,
         variant: 'destructive',
       });
+    } finally {
+      setIsTransactionPending(false); // EXACT FAUCET PATTERN
     }
-  };
-
-  // Handle deployment error
-  const handleError = (error: any) => {
-    console.error('Treasury deployment failed:', error);
-    toast({
-      title: 'Deployment Failed',
-      description: error.message || 'Treasury deployment encountered an error',
-      variant: 'destructive',
-    });
   };
 
   // If pod has treasury, show regular treasury management
@@ -315,38 +351,33 @@ export function PodSpecificTreasuryManager({
           </div>
 
           {/* Deployment Transaction */}
-          {address && (
+          {evmAddress && currentUser?.evmSmartAccounts?.[0] ? (
             <div className="pt-4 border-t">
-              <Transaction
-                chainId={8453} // Base mainnet
-                calls={calls}
-                isSponsored={true}
-                onSuccess={handleSuccess}
-                onError={handleError}
+              <Button
+                onClick={handleDeployViaCDP}
+                disabled={isTransactionPending}
+                className="w-full h-12 text-white font-semibold rounded-lg bg-[#3F7A5A] hover:bg-[#2F5D50] disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                <TransactionButton
-                  text={`Deploy Treasury for ${localPod.name}`}
-                  className="w-full"
-                />
-                <TransactionSponsor />
-                <TransactionStatus>
-                  <TransactionStatusLabel />
-                  <TransactionStatusAction />
-                </TransactionStatus>
-              </Transaction>
+                {isTransactionPending ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Deploying Treasury...
+                  </>
+                ) : (
+                  `Deploy Treasury for ${localPod.name}`
+                )}
+              </Button>
             </div>
-          )}
-
-          {!address && (
+          ) : (
             <Alert>
               <AlertTriangle className="h-4 w-4" />
               <AlertDescription>
-                Please connect your wallet to deploy the treasury contract.
+                Please connect your Smart Wallet to deploy the treasury contract.
               </AlertDescription>
             </Alert>
           )}
 
-          {!canManageTreasury && address && (
+          {!canManageTreasury && evmAddress && (
             <Alert>
               <AlertTriangle className="h-4 w-4" />
               <AlertDescription>

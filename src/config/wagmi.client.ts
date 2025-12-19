@@ -16,29 +16,27 @@ console.log('🔗 Wagmi RPC Configuration:', {
 });
 
 /**
- * Wagmi config for read-only operations
+ * Wagmi config for READ-ONLY blockchain operations
  *
- * IMPORTANT: CDP embedded wallets are managed by CDPHooksProvider.
- * Transactions use CDP's useSendEvmTransaction, NOT wagmi.
+ * CRITICAL: CDP Embedded Wallets authenticate via CDPHooksProvider, NOT wagmi connectors.
+ * Using connectors creates a separate wallet system that conflicts with CDP authentication.
  *
- * Why no connector:
- * - createCDPEmbeddedWalletConnector creates a NEW wallet (different from login)
- * - CDP session wallet: 0xAECF4D00F0e402FbeB0757f22be9062d89018106
- * - Connector wallet: 0x5fe9c0e4B69f24857A2670b55FDE613F5dd139b7 (WRONG!)
- * - Transactions must use the SAME wallet as login
+ * For transactions with CDP wallets:
+ *   ✅ Use useSendEvmTransaction() from CDP hooks
+ *   ✅ Use custom paymaster integration for gas sponsorship
+ *   ❌ NOT OnchainKit <TransactionButton> (requires wagmi connector)
  *
- * Architecture:
- * - Login via CDPHooksProvider → creates wallet
- * - Transactions via useSendEvmTransaction → uses SAME wallet
- * - Paymaster configured in CDPEmbeddedProvider
- * - Wagmi only for read operations (publicClient)
+ * This wagmi config is ONLY for:
+ * - Contract reads (publicClient.readContract)
+ * - Chain data queries
+ * - NOT for wallet connection or transactions
  */
 export const wagmiConfig = createConfig({
   chains: [base],
   transports: {
     [base.id]: http(RPC_URL),
   },
-  connectors: [], // CDP wallet NOT compatible with wagmi connectors
+  connectors: [], // NO connectors - CDP wallet managed by CDPHooksProvider
   ssr: true,
 });
 

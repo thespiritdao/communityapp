@@ -19,17 +19,12 @@
 
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { useAccount, usePublicClient } from 'wagmi';
-import {
-  Transaction,
-  TransactionButton,
-  TransactionSponsor,
-  TransactionStatus,
-  TransactionStatusLabel,
-  TransactionStatusAction,
-} from '@coinbase/onchainkit/transaction';
-import type { Abi, TransactionReceipt } from 'viem';
+import React, { useState, useEffect, useCallback } from 'react';
+import { useEvmAddress, useSendUserOperation, useCurrentUser } from '@coinbase/cdp-hooks';
+import { usePublicClient } from 'wagmi';
+import { encodeFunctionData, type Abi, type TransactionReceipt } from 'viem';
+import { Loader2 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import BountyManagerABIJson from '@/abis/BountyManagerV2.json';
 
 const BountyManagerABI = BountyManagerABIJson as Abi;
@@ -108,12 +103,16 @@ export const BountyAssignmentTransaction: React.FC<
   onError,
   onComplete,
 }) => {
-  const { address } = useAccount();
+  // CDP Smart Account hooks - EXACT FAUCET PATTERN
+  const { evmAddress } = useEvmAddress();
+  const { sendUserOperation } = useSendUserOperation();
+  const { currentUser } = useCurrentUser();
   const publicClient = usePublicClient();
 
   const [isValidating, setIsValidating] = useState(true);
   const [validationError, setValidationError] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isTransactionPending, setIsTransactionPending] = useState(false); // CDP transaction loading state
   const [pollCleanup, setPollCleanup] = useState<(() => void) | null>(null);
 
   // ============================================================================
@@ -226,7 +225,7 @@ export const BountyAssignmentTransaction: React.FC<
         // Notify bidder
         unifiedNotificationService.createNotification({
           recipient_address: bidderAddress,
-          sender_address: address!,
+          sender_address: evmAddress!,
           notification_type: 'bounty_update',
           title: 'Bid Approved & Bounty Assigned!',
           message: `Your bid has been approved and the bounty has been assigned to you. Funds are now in escrow.`,
@@ -239,7 +238,7 @@ export const BountyAssignmentTransaction: React.FC<
         // Notify technical reviewer
         unifiedNotificationService.createNotification({
           recipient_address: reviewer,
-          sender_address: address!,
+          sender_address: evmAddress!,
           notification_type: 'bounty_update',
           title: 'Technical Reviewer Assignment',
           message: `You have been assigned as Technical Reviewer for a bounty.`,
@@ -252,7 +251,7 @@ export const BountyAssignmentTransaction: React.FC<
         // Notify final approver
         unifiedNotificationService.createNotification({
           recipient_address: approver,
-          sender_address: address!,
+          sender_address: evmAddress!,
           notification_type: 'bounty_update',
           title: 'Final Approver Assignment',
           message: `You have been assigned as Final Approver for a bounty.`,
@@ -290,7 +289,7 @@ export const BountyAssignmentTransaction: React.FC<
     setIsProcessing(true);
 
     try {
-      if (!address || !publicClient) {
+      if (!evmAddress || !publicClient) {
         onError(error);
         return;
       }
@@ -316,7 +315,7 @@ export const BountyAssignmentTransaction: React.FC<
         error,
         'Bounty Assignment',
         calls,
-        address,
+        evmAddress,
         publicClient,
       );
 
@@ -328,7 +327,77 @@ export const BountyAssignmentTransaction: React.FC<
   };
 
   // ============================================================================
-  // TRANSACTION STATUS HANDLER WITH POLLING FALLBACK
+  // CDP SMART ACCOUNT TRANSACTION HANDLER - EXACT FAUCET PATTERN
+  // ============================================================================
+
+  const handleAssignBountyTransaction = useCallback(async () => {
+    // EXACT FAUCET PATTERN: Simple validation matching faucet
+    if (!evmAddress || !currentUser?.evmSmartAccounts?.[0]) {
+      console.error('❌ Missing requirements for bounty assignment:', {
+        hasAddress: !!evmAddress,
+        hasSmartAccount: !!currentUser?.evmSmartAccounts?.[0],
+      });
+      onError(new Error('Smart Wallet not properly configured'));
+      return;
+    }
+
+    const smartAccount = currentUser.evmSmartAccounts[0]; // EXACT FAUCET PATTERN
+
+    setIsTransactionPending(true); // EXACT FAUCET PATTERN
+
+    try {
+      console.log('🚀 Building Smart Account User Operation for bounty assignment...');
+      console.log('💼 Smart Account:', smartAccount);
+      console.log('🎯 Contract: BountyManager - assignBounty');
+      console.log('⛽ Paymaster: ENABLED (gasless transaction)');
+
+      const contractAddress = process.env.NEXT_PUBLIC_BOUNTY_MANAGER_ADDRESS as `0x${string}`;
+
+      // EXACT FAUCET PATTERN: Encode call data
+      const callData = encodeFunctionData({
+        abi: BountyManagerABI,
+        functionName: 'assignBounty',
+        args: [
+          BigInt(onchainBountyId),
+          BigInt(onchainBidIndex),
+          reviewer,
+          approver,
+        ],
+      });
+
+      console.log('📝 Encoded call data for assignBounty');
+
+      // EXACT FAUCET PATTERN: Send user operation
+      const result = await sendUserOperation({
+        evmSmartAccount: smartAccount,  // ← Smart Account directly!
+        network: 'base',                 // ← Base mainnet
+        calls: [{
+          to: contractAddress,
+          value: 0n,                     // ← Zero ETH (bigint)
+          data: callData,
+        }],
+        useCdpPaymaster: true,           // ← ENABLE GAS SPONSORSHIP!
+      });
+
+      console.log('✅ User operation sent successfully!', result);
+
+      // Handle success with receipt
+      if (result?.receipt) {
+        await handleSuccess(result.receipt);
+      } else {
+        console.warn('⚠️ No receipt found in result');
+        onError(new Error('Transaction completed but no receipt found'));
+      }
+    } catch (err: any) {
+      console.error('❌ Bounty assignment failed:', err);
+      await handleError(err);
+    } finally {
+      setIsTransactionPending(false); // EXACT FAUCET PATTERN
+    }
+  }, [evmAddress, currentUser, sendUserOperation, onchainBountyId, onchainBidIndex, reviewer, approver, handleSuccess, handleError]);
+
+  // ============================================================================
+  // TRANSACTION STATUS HANDLER WITH POLLING FALLBACK (LEGACY - NOT USED)
   // ============================================================================
 
   const transactionStatusHandler = createTransactionStatusHandler(
@@ -480,35 +549,26 @@ export const BountyAssignmentTransaction: React.FC<
         </div>
       </div>
 
-      {/* Transaction Component */}
-      <Transaction
-        calls={[
-          {
-            address: contractAddress,
-            abi: BountyManagerABI,
-            functionName: 'assignBounty',
-            args: [
-              BigInt(onchainBountyId),
-              BigInt(onchainBidIndex),
-              reviewer,
-              approver,
-            ],
-          },
-        ]}
-        isSponsored={true}
-        onStatus={onStatusWithPolling}
+      {/* CDP Smart Account Transaction Button */}
+      <Button
+        onClick={handleAssignBountyTransaction}
+        disabled={isTransactionPending || isProcessing || !currentUser?.evmSmartAccounts?.[0]}
+        className="w-full disabled:bg-gray-400 disabled:cursor-not-allowed font-medium py-2 px-4 rounded transition-colors hover:opacity-90"
       >
-        <TransactionButton
-          text="Assign Bounty & Setup Escrow"
-          className="w-full"
-          disabled={isProcessing}
-        />
-        <TransactionSponsor />
-        <TransactionStatus>
-          <TransactionStatusLabel />
-          <TransactionStatusAction />
-        </TransactionStatus>
-      </Transaction>
+        {isTransactionPending ? (
+          <>
+            <Loader2 className="mr-2 h-4 w-4 animate-spin inline" />
+            Assigning Bounty...
+          </>
+        ) : isProcessing ? (
+          <>
+            <Loader2 className="mr-2 h-4 w-4 animate-spin inline" />
+            Processing...
+          </>
+        ) : (
+          'Assign Bounty & Setup Escrow (Gasless)'
+        )}
+      </Button>
 
       {/* Processing Indicator */}
       {isProcessing && (

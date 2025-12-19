@@ -2,17 +2,11 @@
 
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
-import { Crown, CheckCircle } from 'lucide-react';
-import { useAccount, usePublicClient } from 'wagmi';
+import { Crown, CheckCircle, Loader2 } from 'lucide-react';
+import { useEvmAddress, useSendUserOperation, useCurrentUser } from '@coinbase/cdp-hooks';
+import { usePublicClient } from 'wagmi';
 import { encodeFunctionData } from 'viem';
-import {
-  Transaction,
-  TransactionButton,
-  TransactionSponsor,
-  TransactionStatus,
-  TransactionStatusLabel,
-  TransactionStatusAction,
-} from '@coinbase/onchainkit/transaction';
+import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
 
 interface ClaimManagementHATButtonProps {
@@ -72,8 +66,6 @@ const HATS_ABI = [
  * Scenario: User signed the agreement (or met other eligibility requirements)
  * but hasn't minted the management HAT to themselves yet.
  */
-const BASE_CHAIN_ID = 8453; // Base mainnet
-
 export const ClaimManagementHATButton: React.FC<
   ClaimManagementHATButtonProps
 > = ({
@@ -90,14 +82,18 @@ export const ClaimManagementHATButton: React.FC<
   const [isHatActive, setIsHatActive] = useState<boolean | null>(null);
   const [eligibilityError, setEligibilityError] = useState<string | null>(null);
 
-  const { address } = useAccount();
+  // CDP Smart Account hooks - EXACT FAUCET PATTERN
+  const { evmAddress } = useEvmAddress();
+  const { sendUserOperation } = useSendUserOperation();
+  const { currentUser } = useCurrentUser();
   const publicClient = usePublicClient();
   const { toast } = useToast();
+  const [isTransactionPending, setIsTransactionPending] = useState(false);
 
   // Check if user already has the HAT and if they're a leader
   useEffect(() => {
     const checkHATStatus = async () => {
-      if (!address || !publicClient || !managementHatId) {
+      if (!evmAddress || !publicClient || !managementHatId) {
         setCheckingStatus(false);
         return;
       }
@@ -108,7 +104,7 @@ export const ClaimManagementHATButton: React.FC<
 
         // Check if user is in pod_leads array (case-insensitive)
         const userIsLeader = podLeads.some(
-          (lead) => lead.toLowerCase() === address.toLowerCase(),
+          (lead) => lead.toLowerCase() === evmAddress.toLowerCase(),
         );
         setIsLeader(userIsLeader);
 
@@ -117,7 +113,7 @@ export const ClaimManagementHATButton: React.FC<
           address: HATS_PROTOCOL_ADDRESS,
           abi: HATS_ABI,
           functionName: 'balanceOf',
-          args: [address, BigInt(managementHatId)],
+          args: [evmAddress, BigInt(managementHatId)],
         });
 
         const hasHat = (balance as bigint) > 0n;
@@ -137,12 +133,12 @@ export const ClaimManagementHATButton: React.FC<
           address: HATS_PROTOCOL_ADDRESS,
           abi: HATS_ABI,
           functionName: 'isEligible',
-          args: [address, BigInt(managementHatId)],
+          args: [evmAddress, BigInt(managementHatId)],
         });
         setIsEligible(eligible as boolean);
 
         console.log('🔍 HAT Status Check:', {
-          address,
+          address: evmAddress,
           managementHatId,
           balance: balance.toString(),
           hasHat,
@@ -171,55 +167,91 @@ export const ClaimManagementHATButton: React.FC<
     };
 
     checkHATStatus();
-  }, [address, publicClient, managementHatId, podLeads]);
+  }, [evmAddress, publicClient, managementHatId, podLeads]);
 
-  // Handle transaction status
-  const handleTransactionStatus = (status: any) => {
-    console.log('🔄 Transaction status:', status);
-
-    if (
-      status?.statusName === 'success' &&
-      status?.statusData?.transactionReceipts
-    ) {
-      console.log('✅ Management HAT claimed successfully!');
-
+  // CDP Smart Account transaction handler - EXACT FAUCET PATTERN
+  const handleClaimHATTransaction = async () => {
+    // EXACT FAUCET PATTERN: Simple validation matching faucet
+    if (!evmAddress || !currentUser?.evmSmartAccounts?.[0]) {
+      console.error('❌ Missing requirements for HAT claim:', {
+        hasAddress: !!evmAddress,
+        hasSmartAccount: !!currentUser?.evmSmartAccounts?.[0],
+      });
       toast({
-        title: 'Success! 👑',
-        description: `You now have management access to ${podName}. Refreshing...`,
-        duration: 3000,
+        title: 'Wallet Not Connected',
+        description: 'Please connect your Smart Wallet to claim your management HAT.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    const smartAccount = currentUser.evmSmartAccounts[0]; // EXACT FAUCET PATTERN
+
+    setIsTransactionPending(true); // EXACT FAUCET PATTERN
+
+    try {
+      console.log('🚀 Building Smart Account User Operation for HAT claim...');
+      console.log('💼 Smart Account:', smartAccount);
+      console.log('🎯 Contract: Hats Protocol - mintHat');
+      console.log('⛽ Paymaster: ENABLED (gasless transaction)');
+
+      // EXACT FAUCET PATTERN: Encode call data
+      const callData = encodeFunctionData({
+        abi: HATS_ABI,
+        functionName: 'mintHat',
+        args: [BigInt(managementHatId), evmAddress],
       });
 
-      setAlreadyHasHat(true);
+      // EXACT FAUCET PATTERN: Send user operation
+      const result = await sendUserOperation({
+        evmSmartAccount: smartAccount,  // ← Smart Account directly!
+        network: 'base',                 // ← Base mainnet
+        calls: [{
+          to: HATS_PROTOCOL_ADDRESS,
+          value: 0n,                     // ← Zero ETH (bigint)
+          data: callData,
+        }],
+        useCdpPaymaster: true,           // ← ENABLE GAS SPONSORSHIP!
+      });
 
-      // Reload page after short delay to refresh permissions
-      setTimeout(() => {
-        window.location.reload();
-      }, 2000);
-    } else if (status?.statusName === 'error') {
-      console.error('❌ Transaction failed:', status?.statusData);
+      console.log('✅ User operation sent successfully!', result);
 
+      // Handle success with receipt
+      if (result?.receipt) {
+        console.log('✅ Management HAT claimed successfully!');
+
+        toast({
+          title: 'Success! 👑',
+          description: `You now have management access to ${podName}. Refreshing...`,
+          duration: 3000,
+        });
+
+        setAlreadyHasHat(true);
+
+        // Reload page after short delay to refresh permissions
+        setTimeout(() => {
+          window.location.reload();
+        }, 2000);
+      } else {
+        console.warn('⚠️ No receipt found in result');
+        toast({
+          title: 'Transaction Completed',
+          description: 'HAT claim completed but receipt not found. Please refresh.',
+          variant: 'destructive',
+        });
+      }
+    } catch (error: any) {
+      console.error('❌ HAT claim failed:', error);
       toast({
         title: 'Claim Failed',
-        description: 'Failed to claim management HAT. Please try again.',
+        description: error.message || 'Failed to claim management HAT. Please try again.',
         variant: 'destructive',
         duration: 5000,
       });
+    } finally {
+      setIsTransactionPending(false); // EXACT FAUCET PATTERN
     }
   };
-
-  // Prepare transaction calls with encoded function data
-  const calls = address
-    ? [
-        {
-          to: HATS_PROTOCOL_ADDRESS,
-          data: encodeFunctionData({
-            abi: HATS_ABI,
-            functionName: 'mintHat',
-            args: [BigInt(managementHatId), address],
-          }),
-        },
-      ]
-    : [];
 
   // Don't show anything while checking
   if (checkingStatus) {
@@ -378,24 +410,37 @@ export const ClaimManagementHATButton: React.FC<
             </div>
           </div>
 
-          {/* OnchainKit Transaction Component */}
-          {address && (
-            <Transaction
-              chainId={BASE_CHAIN_ID}
-              calls={calls as any}
-              isSponsored={true}
-              onStatus={handleTransactionStatus}
+          {/* CDP Smart Account Transaction Button */}
+          {evmAddress && currentUser?.evmSmartAccounts?.[0] ? (
+            <Button
+              onClick={handleClaimHATTransaction}
+              disabled={isTransactionPending}
+              className="w-full text-white bg-[#C6933F] hover:bg-[#9B7F5F] disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <TransactionButton
-                text="Claim Management HAT (Sponsored)"
-                className="w-full text-white bg-[#C6933F] hover:bg-[#9B7F5F]"
-              />
-              <TransactionSponsor />
-              <TransactionStatus>
-                <TransactionStatusLabel />
-                <TransactionStatusAction />
-              </TransactionStatus>
-            </Transaction>
+              {isTransactionPending ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin inline" />
+                  Claiming HAT...
+                </>
+              ) : (
+                'Claim Management HAT (Gasless)'
+              )}
+            </Button>
+          ) : (
+            <div
+              className="p-3 border rounded-lg bg-gray-50"
+              style={{
+                backgroundColor: '#F5E6E6',
+                borderColor: '#D9B3B3',
+              }}
+            >
+              <p className="text-sm font-medium" style={{ color: '#5C1F1F' }}>
+                Wallet Not Connected
+              </p>
+              <p className="text-xs mt-1" style={{ color: '#8B3A3A' }}>
+                Please connect your Smart Wallet to claim your management HAT.
+              </p>
+            </div>
           )}
         </div>
       </CardContent>

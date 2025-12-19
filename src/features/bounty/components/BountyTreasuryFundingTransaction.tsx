@@ -1,17 +1,10 @@
 'use client';
 
-import React from 'react';
-import { useAccount } from 'wagmi';
-import {
-  Transaction,
-  TransactionButton,
-  TransactionSponsor,
-  TransactionStatus,
-  TransactionStatusLabel,
-  TransactionStatusAction,
-} from '@coinbase/onchainkit/transaction';
-import type { LifecycleStatus } from '@coinbase/onchainkit/transaction';
-import type { Abi } from 'viem';
+import React, { useState, useCallback } from 'react';
+import { useEvmAddress, useSendUserOperation, useCurrentUser } from '@coinbase/cdp-hooks';
+import { encodeFunctionData, type Abi } from 'viem';
+import { Loader2 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import BountyManagerABIJson from '@/abis/BountyManagerV2.json';
 
 const BountyManagerABI = BountyManagerABIJson as Abi;
@@ -38,24 +31,68 @@ interface BountyTreasuryFundingTransactionProps {
 export const BountyTreasuryFundingTransaction: React.FC<
   BountyTreasuryFundingTransactionProps
 > = ({ bountyId, podId, onSuccess, onError }) => {
-  const { address } = useAccount();
+  // CDP Smart Account hooks - EXACT FAUCET PATTERN
+  const { evmAddress } = useEvmAddress();
+  const { sendUserOperation } = useSendUserOperation();
+  const { currentUser } = useCurrentUser();
 
-  const handleTransactionStatus = (status: LifecycleStatus) => {
-    console.log('🏦 Treasury funding transaction status:', status);
+  const [isTransactionPending, setIsTransactionPending] = useState(false);
 
-    if (status.statusName === 'success') {
+  // CDP Smart Account transaction handler - EXACT FAUCET PATTERN
+  const handleSetTreasuryFunding = useCallback(async () => {
+    // EXACT FAUCET PATTERN: Simple validation matching faucet
+    if (!evmAddress || !currentUser?.evmSmartAccounts?.[0]) {
+      console.error('❌ Missing requirements for treasury funding:', {
+        hasAddress: !!evmAddress,
+        hasSmartAccount: !!currentUser?.evmSmartAccounts?.[0],
+      });
+      onError?.('Smart Wallet not properly configured');
+      return;
+    }
+
+    const smartAccount = currentUser.evmSmartAccounts[0]; // EXACT FAUCET PATTERN
+
+    setIsTransactionPending(true); // EXACT FAUCET PATTERN
+
+    try {
+      console.log('🚀 Building Smart Account User Operation for treasury funding...');
+      console.log('💼 Smart Account:', smartAccount);
+      console.log('🎯 Contract: BountyManager - setTreasuryFunding');
+      console.log('⛽ Paymaster: ENABLED (gasless transaction)');
+
+      // EXACT FAUCET PATTERN: Encode call data
+      const callData = encodeFunctionData({
+        abi: BountyManagerABI,
+        functionName: 'setTreasuryFunding',
+        args: [BigInt(bountyId), podId],
+      });
+
+      console.log('📝 Encoded call data for setTreasuryFunding');
+
+      // EXACT FAUCET PATTERN: Send user operation
+      const result = await sendUserOperation({
+        evmSmartAccount: smartAccount,  // ← Smart Account directly!
+        network: 'base',                 // ← Base mainnet
+        calls: [{
+          to: BOUNTY_MANAGER_ADDRESS,
+          value: 0n,                     // ← Zero ETH (bigint)
+          data: callData,
+        }],
+        useCdpPaymaster: true,           // ← ENABLE GAS SPONSORSHIP!
+      });
+
+      console.log('✅ User operation sent successfully!', result);
       console.log('✅ Treasury funding set successfully for bounty:', bountyId);
-      onSuccess?.();
-    }
 
-    if (status.statusName === 'error') {
-      console.error(
-        '❌ Treasury funding transaction failed:',
-        status.statusData,
-      );
+      // Call success handler
+      onSuccess?.();
+    } catch (err: any) {
+      console.error('❌ Treasury funding transaction failed:', err);
       onError?.('Failed to set treasury funding. Please try again.');
+    } finally {
+      setIsTransactionPending(false); // EXACT FAUCET PATTERN
     }
-  };
+  }, [evmAddress, currentUser, sendUserOperation, bountyId, podId, onSuccess, onError]);
 
   if (!BOUNTY_MANAGER_ADDRESS) {
     return (
@@ -75,7 +112,7 @@ export const BountyTreasuryFundingTransaction: React.FC<
     );
   }
 
-  if (!address) {
+  if (!evmAddress || !currentUser?.evmSmartAccounts?.[0]) {
     return (
       <div
         className="p-4 rounded-lg"
@@ -87,8 +124,12 @@ export const BountyTreasuryFundingTransaction: React.FC<
         }}
       >
         <p className="text-sm" style={{ color: '#8F6B2F' }}>
-          Please connect your wallet to continue.
+          Please connect your wallet and ensure Smart Account is configured.
         </p>
+        <div className="mt-2 text-xs" style={{ color: '#8F6B2F' }}>
+          Address: {evmAddress ? '✓' : '✗'} | Smart Account:{' '}
+          {currentUser?.evmSmartAccounts?.[0] ? '✓' : '✗'}
+        </div>
       </div>
     );
   }
@@ -122,28 +163,21 @@ export const BountyTreasuryFundingTransaction: React.FC<
         </div>
       </div>
 
-      <Transaction
-        calls={[
-          {
-            address: BOUNTY_MANAGER_ADDRESS,
-            abi: BountyManagerABI,
-            functionName: 'setTreasuryFunding',
-            args: [BigInt(bountyId), podId],
-          },
-        ]}
-        isSponsored={true}
-        onStatus={handleTransactionStatus}
+      {/* CDP Smart Account Transaction Button */}
+      <Button
+        onClick={handleSetTreasuryFunding}
+        disabled={isTransactionPending}
+        className="w-full font-semibold py-3 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors hover:opacity-90"
       >
-        <TransactionButton
-          text="Set Treasury Funding"
-          className="w-full font-semibold py-3"
-        />
-        <TransactionSponsor />
-        <TransactionStatus>
-          <TransactionStatusLabel />
-          <TransactionStatusAction />
-        </TransactionStatus>
-      </Transaction>
+        {isTransactionPending ? (
+          <>
+            <Loader2 className="mr-2 h-4 w-4 animate-spin inline" />
+            Setting Treasury Funding...
+          </>
+        ) : (
+          'Set Treasury Funding (Gasless)'
+        )}
+      </Button>
     </div>
   );
 };

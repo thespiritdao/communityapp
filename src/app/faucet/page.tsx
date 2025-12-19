@@ -1,10 +1,10 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { useEvmAddress, useCurrentUser, useSendEvmTransaction } from '@coinbase/cdp-hooks';
+import { useEvmAddress, useSendUserOperation, useCurrentUser } from '@coinbase/cdp-hooks';
 import { usePublicClient } from 'wagmi';
 import { formatEther, encodeFunctionData } from 'viem';
-import { Droplets, Clock, CheckCircle, XCircle, Loader2 } from 'lucide-react';
+import { Droplets, Clock, CheckCircle, XCircle } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 
 const FAUCET_ADDRESS = process.env.NEXT_PUBLIC_TOKEN_FAUCET as `0x${string}`;
@@ -75,28 +75,30 @@ function formatTimeRemaining(seconds: number): string {
 
 export default function FaucetPage() {
   const { evmAddress } = useEvmAddress();
+  const { sendUserOperation } = useSendUserOperation();
   const { currentUser } = useCurrentUser();
   const publicClient = usePublicClient();
   const { toast } = useToast();
-  const { sendEvmTransaction } = useSendEvmTransaction();
 
   const [canClaim, setCanClaim] = useState(false);
   const [timeRemaining, setTimeRemaining] = useState(0);
   const [faucetBalances, setFaucetBalances] = useState({ system: '0', self: '0' });
   const [claimAmounts, setClaimAmounts] = useState({ system: '10', self: '10' });
   const [success, setSuccess] = useState(false);
-  const [isClaiming, setIsClaiming] = useState(false);
+  const [claiming, setClaiming] = useState(false);
 
-  //Debug: Log wallet and claim status
+  const isConnected = !!evmAddress;
+
+  // Debug: Log wallet and claim status
   useEffect(() => {
     console.log('🔧 Faucet - Status:', {
       cdpAddress: evmAddress,
-      connected: !!evmAddress && !!currentUser,
+      isConnected,
       canClaim,
       timeRemaining,
       faucetAddress: FAUCET_ADDRESS,
     });
-  }, [evmAddress, currentUser, canClaim, timeRemaining]);
+  }, [evmAddress, isConnected, canClaim, timeRemaining]);
 
   // Fetch faucet data
   const fetchFaucetData = useCallback(async () => {
@@ -195,67 +197,75 @@ export default function FaucetPage() {
     return () => clearInterval(timer);
   }, [timeRemaining]);
 
-  // Handle claim with CDP native transaction
-  const handleClaim = async () => {
-    if (!canClaim || !evmAddress || !FAUCET_ADDRESS) {
-      console.log('❌ Faucet - Cannot claim:', { canClaim, evmAddress, FAUCET_ADDRESS });
+  // Handle claim transaction using Smart Account User Operations
+  const handleClaim = useCallback(async () => {
+    if (!evmAddress || !FAUCET_ADDRESS || !currentUser?.evmSmartAccounts?.[0]) {
+      console.error('❌ Missing requirements for claim:', {
+        hasAddress: !!evmAddress,
+        hasFaucet: !!FAUCET_ADDRESS,
+        hasSmartAccount: !!currentUser?.evmSmartAccounts?.[0],
+      });
+      toast({
+        title: 'Cannot claim',
+        description: 'Smart Wallet not properly configured',
+        variant: 'destructive',
+      });
       return;
     }
 
-    setIsClaiming(true);
+    const smartAccount = currentUser.evmSmartAccounts[0]; // Smart Account for execution
+
+    setClaiming(true);
 
     try {
-      console.log('🔄 Faucet - Encoding transaction data...');
+      console.log('🚀 Building Smart Account User Operation for faucet claim...');
+      console.log('💼 Smart Account:', smartAccount);
+      console.log('🎯 Target Contract:', FAUCET_ADDRESS);
+      console.log('⛽ Paymaster: ENABLED (gasless transaction)');
 
       // Encode the contract function call
-      const data = encodeFunctionData({
+      const callData = encodeFunctionData({
         abi: FAUCET_ABI,
         functionName: 'claimTokens',
         args: [],
       });
 
-      console.log('📤 Faucet - Sending transaction via CDP...');
-      console.log('   To:', FAUCET_ADDRESS);
-      console.log('   Data:', data);
+      console.log('📝 Encoded call data:', callData);
 
-      // Send transaction using CDP (automatically uses current user's wallet and network from CDPHooksProvider)
-      const result = await sendEvmTransaction({
-        transaction: {
+      // Send user operation (ERC-4337) with paymaster sponsorship
+      const result = await sendUserOperation({
+        evmSmartAccount: smartAccount,  // ← Smart Account directly!
+        network: 'base',                 // ← Base mainnet
+        calls: [{
           to: FAUCET_ADDRESS,
-          data,
-          value: 0n,
-          gas: 300000n,
-          type: 'eip1559',
-        },
+          value: 0n,                     // ← Zero ETH (bigint)
+          data: callData,
+        }],
+        useCdpPaymaster: true,           // ← ENABLE GAS SPONSORSHIP!
       });
 
-      console.log('✅ Faucet - Transaction successful:', result);
+      console.log('✅ User operation sent successfully!', result);
 
       toast({
-        title: 'Tokens claimed!',
-        description: `${claimAmounts.system} SYSTEM and ${claimAmounts.self} SELF tokens sent to your wallet`,
+        title: 'Tokens claimed! (Gasless)',
+        description: `You received ${claimAmounts.system} SYSTEM and ${claimAmounts.self} SELF tokens - no gas fees!`,
       });
 
       setSuccess(true);
       setCanClaim(false);
-      setTimeRemaining(86400); // 24 hours
-
-      // Refresh data after claim
+      setTimeRemaining(86400);
       setTimeout(fetchFaucetData, 2000);
     } catch (err: any) {
-      console.error('❌ Faucet - Transaction failed:', err);
-
+      console.error('❌ Claim failed:', err);
       toast({
         title: 'Claim failed',
         description: err.message || 'Failed to claim tokens',
         variant: 'destructive',
       });
     } finally {
-      setIsClaiming(false);
+      setClaiming(false);
     }
-  };
-
-  const isConnected = !!evmAddress && !!currentUser;
+  }, [evmAddress, currentUser, claimAmounts, fetchFaucetData, sendUserOperation, toast]);
 
   return (
     <div
@@ -527,46 +537,34 @@ export default function FaucetPage() {
               </div>
             )}
 
-            {/* Claim Button - CDP Native */}
+            {/* Claim Button - Native CDP Transaction */}
             <button
               onClick={handleClaim}
-              disabled={!canClaim || isClaiming}
+              disabled={!canClaim || claiming}
               style={{
                 width: '100%',
                 padding: '16px',
                 fontSize: '18px',
                 fontWeight: '600',
                 color: 'white',
-                background: canClaim && !isClaiming ? '#2F5D50' : '#D8D2C8',
+                background: canClaim && !claiming ? '#2F5D50' : '#D8D2C8',
                 border: 'none',
                 borderRadius: '12px',
-                cursor: canClaim && !isClaiming ? 'pointer' : 'not-allowed',
-                transition: 'all 0.2s ease',
+                cursor: canClaim && !claiming ? 'pointer' : 'not-allowed',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 gap: '8px',
-              }}
-              onMouseEnter={(e) => {
-                if (canClaim && !isClaiming) {
-                  e.currentTarget.style.background = '#254A40';
-                }
-              }}
-              onMouseLeave={(e) => {
-                if (canClaim && !isClaiming) {
-                  e.currentTarget.style.background = '#2F5D50';
-                }
+                marginBottom: '16px',
+                transition: 'background 0.2s',
               }}
             >
-              {isClaiming ? (
-                <>
-                  <Loader2 size={20} className="animate-spin" />
-                  Claiming...
-                </>
+              {claiming ? (
+                <>⏳ Claiming (Gasless)...</>
               ) : canClaim ? (
                 <>
                   <Droplets size={20} />
-                  Claim Tokens
+                  Claim Tokens (Gasless)
                 </>
               ) : (
                 <>

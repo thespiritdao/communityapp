@@ -34,8 +34,9 @@
 'use client';
 
 import React, { useState } from 'react';
-import { useAccount, usePublicClient } from 'wagmi';
-import { parseUnits } from 'viem';
+import { useEvmAddress, useSendUserOperation, useCurrentUser } from '@coinbase/cdp-hooks';
+import { usePublicClient } from 'wagmi';
+import { parseUnits, encodeFunctionData } from 'viem';
 import {
   Dialog,
   DialogContent,
@@ -43,14 +44,8 @@ import {
   DialogTitle,
   DialogDescription,
 } from '@/components/ui/dialog';
-import {
-  Transaction,
-  TransactionButton,
-  TransactionSponsor,
-  TransactionStatus,
-  TransactionStatusLabel,
-  TransactionStatusAction,
-} from '@coinbase/onchainkit/transaction';
+import { Button } from '@/components/ui/button';
+import { Loader2 } from 'lucide-react';
 import type { TransactionReceipt } from 'viem';
 import BountyManagerABI from '@/abis/BountyManagerV2.json';
 import BidApprovalDialog from './BidApprovalDialog';
@@ -265,7 +260,10 @@ export const BidApprovalFlow: React.FC<BidApprovalFlowProps> = ({
   onApprovalComplete,
   onApprovalError,
 }) => {
-  const { address } = useAccount();
+  // CDP Smart Account hooks - EXACT FAUCET PATTERN
+  const { evmAddress } = useEvmAddress();
+  const { sendUserOperation } = useSendUserOperation();
+  const { currentUser } = useCurrentUser();
   const publicClient = usePublicClient();
 
   // ============================================================================
@@ -281,6 +279,7 @@ export const BidApprovalFlow: React.FC<BidApprovalFlowProps> = ({
     technical: `0x${string}` | null;
     final: `0x${string}` | null;
   }>({ technical: null, final: null });
+  const [isTransactionPending, setIsTransactionPending] = useState(false);
 
   // ============================================================================
   // TRANSACTION CONSTRUCTION
@@ -476,7 +475,7 @@ export const BidApprovalFlow: React.FC<BidApprovalFlowProps> = ({
   const handleBountyCreationError = async (error: Error) => {
     console.error('❌ Bounty creation failed:', error);
 
-    if (!address || !publicClient) {
+    if (!evmAddress || !publicClient) {
       onApprovalError(error);
       setStage('review');
       return;
@@ -488,7 +487,7 @@ export const BidApprovalFlow: React.FC<BidApprovalFlowProps> = ({
       error,
       'Bounty Creation',
       calls,
-      address,
+      evmAddress,
       publicClient,
     );
 
@@ -574,6 +573,145 @@ export const BidApprovalFlow: React.FC<BidApprovalFlowProps> = ({
   };
 
   // ============================================================================
+  // CDP SMART ACCOUNT TRANSACTION HANDLER
+  // ============================================================================
+
+  const handleCreateBountyTransaction = async () => {
+    // EXACT FAUCET PATTERN: Simple validation matching faucet
+    if (!evmAddress || !currentUser?.evmSmartAccounts?.[0]) {
+      console.error('❌ Missing requirements for bounty creation:', {
+        hasAddress: !!evmAddress,
+        hasSmartAccount: !!currentUser?.evmSmartAccounts?.[0],
+      });
+      handleBountyCreationError(new Error('Smart Wallet not properly configured'));
+      return;
+    }
+
+    const smartAccount = currentUser.evmSmartAccounts[0]; // EXACT FAUCET PATTERN
+
+    setIsTransactionPending(true); // EXACT FAUCET PATTERN
+
+    try {
+      console.log('🚀 Building Smart Account User Operation for bounty creation...');
+      console.log('💼 Smart Account:', smartAccount);
+      console.log('🎯 Contract: BountyManager - createBounty (multi-call)');
+      console.log('⛽ Paymaster: ENABLED (gasless transaction)');
+
+      const contractAddress = process.env.NEXT_PUBLIC_BOUNTY_MANAGER_ADDRESS as `0x${string}`;
+      const tokenAddress =
+        bounty.value.token === 'SYSTEM'
+          ? (process.env.NEXT_PUBLIC_SYSTEM_TOKEN as `0x${string}`)
+          : (process.env.NEXT_PUBLIC_SELF_TOKEN as `0x${string}`);
+
+      const decimals = 18; // ERC20 standard
+      const amountWei = parseUnits(String(bid.proposedAmount), decimals);
+      const paymentType = getPaymentType(bid.paymentOption);
+      const ipfsHash = `bounty-${bounty.id}-${Date.now()}`;
+
+      // EXACT FAUCET PATTERN: Encode call data for multi-call
+      // Call 1: Approve token spending
+      const approveCallData = encodeFunctionData({
+        abi: [
+          {
+            name: 'approve',
+            type: 'function',
+            inputs: [
+              { name: 'spender', type: 'address' },
+              { name: 'amount', type: 'uint256' },
+            ],
+            outputs: [{ name: '', type: 'bool' }],
+          },
+        ],
+        functionName: 'approve',
+        args: [contractAddress, amountWei],
+      });
+
+      // Call 2: Create bounty
+      const createBountyCallData = encodeFunctionData({
+        abi: BountyManagerABI,
+        functionName: 'createBounty',
+        args: [
+          amountWei, // uint128 value
+          tokenAddress, // address token
+          paymentType, // uint8 paymentType
+          bounty.podId, // string podId
+          ipfsHash, // string ipfsHash
+        ],
+      });
+
+      console.log('📝 Encoded call data for approve + createBounty');
+
+      // EXACT FAUCET PATTERN: Send user operation (multi-call)
+      const result = await sendUserOperation({
+        evmSmartAccount: smartAccount,  // ← Smart Account directly!
+        network: 'base',                 // ← Base mainnet
+        calls: [
+          {
+            to: tokenAddress,
+            value: 0n,
+            data: approveCallData,
+          },
+          {
+            to: contractAddress,
+            value: 0n,
+            data: createBountyCallData,
+          },
+        ],
+        useCdpPaymaster: true,           // ← ENABLE GAS SPONSORSHIP!
+      });
+
+      console.log('✅ User operation sent successfully!', result);
+
+      // Handle success with receipt
+      if (result?.receipt) {
+        const receipt = result.receipt as TransactionReceipt;
+
+        // Extract bounty ID from logs
+        const onchainBountyId = extractBountyIdFromLogs(receipt.logs, contractAddress);
+
+        if (!onchainBountyId) {
+          handleBountyCreationError(
+            new Error('Failed to extract bounty ID from transaction logs')
+          );
+          return;
+        }
+
+        console.log('✅ Bounty created on-chain with ID:', onchainBountyId);
+        console.log('🔄 Preparing assignment transaction...');
+
+        // Validate bid index exists
+        if (bid.onchainBidIndex === undefined || bid.onchainBidIndex === null) {
+          handleBountyCreationError(
+            new Error('Bid is missing onchainBidIndex - cannot approve. Bid must be placed on-chain first.')
+          );
+          return;
+        }
+
+        // Prepare assignment data
+        const assignmentData: PendingAssignment = {
+          onchainBountyId,
+          onchainBidIndex: bid.onchainBidIndex,
+          reviewer: selectedReviewers.technical!,
+          approver: selectedReviewers.final!,
+        };
+
+        console.log('📋 Assignment details prepared:', assignmentData);
+
+        setPendingAssignment(assignmentData);
+        setStage('assigning');
+      } else {
+        console.warn('⚠️ No receipt found in result');
+        handleBountyCreationError(new Error('Transaction completed but no receipt found'));
+      }
+    } catch (err: any) {
+      console.error('❌ Bounty creation failed:', err);
+      await handleBountyCreationError(err);
+    } finally {
+      setIsTransactionPending(false); // EXACT FAUCET PATTERN
+    }
+  };
+
+  // ============================================================================
   // RENDER
   // ============================================================================
 
@@ -595,18 +733,6 @@ export const BidApprovalFlow: React.FC<BidApprovalFlowProps> = ({
 
   // Stage 2: Creating Bounty
   if (stage === 'creating') {
-    const calls = buildBountyCreationCalls();
-
-    // Validate transaction data
-    const transactionData = {
-      address: address?.toLowerCase() as `0x${string}`,
-      chainId: BASE_CHAIN_ID,
-      calls,
-      isSponsored: true,
-    };
-
-    const validation = validateTransactionData(transactionData);
-
     return (
       <Dialog
         open={true}
@@ -628,7 +754,22 @@ export const BidApprovalFlow: React.FC<BidApprovalFlowProps> = ({
               succeeds, the bounty will be assigned to the winning bidder.
             </p>
 
-            {!validation.isValid ? (
+            {evmAddress && currentUser?.evmSmartAccounts?.[0] ? (
+              <Button
+                onClick={handleCreateBountyTransaction}
+                disabled={isTransactionPending}
+                className="w-full disabled:bg-gray-400 disabled:cursor-not-allowed font-semibold py-3 transition-colors hover:opacity-90"
+              >
+                {isTransactionPending ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin inline" />
+                    Creating Bounty...
+                  </>
+                ) : (
+                  'Create Bounty (Gasless)'
+                )}
+              </Button>
+            ) : (
               <div
                 className="rounded-lg p-4"
                 style={{
@@ -638,34 +779,15 @@ export const BidApprovalFlow: React.FC<BidApprovalFlowProps> = ({
                   borderColor: '#D9B3B3',
                 }}
               >
-                <h4 className="font-semibold mb-2" style={{ color: '#5C1F1F' }}>
-                  Invalid Transaction Data
-                </h4>
-                <ul
-                  className="text-sm list-disc list-inside"
-                  style={{ color: '#8B3A3A' }}
-                >
-                  {validation.issues.map((issue, i) => (
-                    <li key={i}>{issue}</li>
-                  ))}
-                </ul>
+                <p className="text-sm" style={{ color: '#5C1F1F' }}>
+                  <strong>Configuration Error:</strong> Missing wallet connection or
+                  Smart Account. Please check your connection.
+                </p>
+                <div className="mt-2 text-xs" style={{ color: '#8B3A3A' }}>
+                  Address: {evmAddress ? '✓' : '✗'} | Smart Account:{' '}
+                  {currentUser?.evmSmartAccounts?.[0] ? '✓' : '✗'}
+                </div>
               </div>
-            ) : (
-              <Transaction
-                calls={calls}
-                isSponsored={true}
-                onStatus={onBountyCreationStatus}
-              >
-                <TransactionButton
-                  text="Create Bounty (Sponsored)"
-                  className="w-full"
-                />
-                <TransactionSponsor />
-                <TransactionStatus>
-                  <TransactionStatusLabel />
-                  <TransactionStatusAction />
-                </TransactionStatus>
-              </Transaction>
             )}
           </div>
         </DialogContent>

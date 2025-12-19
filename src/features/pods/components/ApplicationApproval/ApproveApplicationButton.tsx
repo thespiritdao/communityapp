@@ -1,14 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import {
-  Transaction,
-  TransactionButton,
-  TransactionStatus,
-  TransactionStatusLabel,
-  TransactionStatusAction,
-} from '@coinbase/onchainkit/transaction';
-import type { LifecycleStatus } from '@coinbase/onchainkit/transaction';
+import { useEvmAddress, useSendUserOperation, useCurrentUser } from '@coinbase/cdp-hooks';
 import {
   encodeFunctionData,
   createPublicClient,
@@ -16,9 +9,9 @@ import {
   createWalletClient,
   custom,
 } from 'viem';
-import { base } from 'viem/chains';
-import { useAccount, useWalletClient } from 'wagmi';
+import { useWalletClient, usePublicClient } from 'wagmi';
 import { useReadContract } from 'wagmi';
+import { Button } from '@/components/ui/button';
 import { HATS_PROTOCOL_ADDRESS } from '@/constants/hatsProtocol';
 import { useToast } from '@/components/ui/use-toast';
 import { supabase } from '@/utils/supabaseClient';
@@ -78,10 +71,15 @@ export const ApproveApplicationButton: React.FC<
   roleLabel,
   onSuccess,
 }) => {
-  const { address } = useAccount();
+  // CDP Smart Account hooks - EXACT FAUCET PATTERN
+  const { evmAddress } = useEvmAddress();
+  const { sendUserOperation } = useSendUserOperation();
+  const { currentUser } = useCurrentUser();
   const { data: walletClient } = useWalletClient();
+  const publicClient = usePublicClient();
   const { toast } = useToast();
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isTransactionPending, setIsTransactionPending] = useState(false);
   const [isAutoCreatingHat, setIsAutoCreatingHat] = useState(false);
   const [autoCreatedHatId, setAutoCreatedHatId] = useState<string | null>(null);
 
@@ -118,11 +116,11 @@ export const ApproveApplicationButton: React.FC<
       ],
       functionName: 'balanceOf',
       args:
-        address && managementHatId
-          ? [address as `0x${string}`, BigInt(managementHatId)]
+        evmAddress && managementHatId
+          ? [evmAddress as `0x${string}`, BigInt(managementHatId)]
           : undefined,
       query: {
-        enabled: !!address && !!managementHatId && roleLabel === 'member',
+        enabled: !!evmAddress && !!managementHatId && roleLabel === 'member',
       },
     });
 
@@ -293,7 +291,7 @@ export const ApproveApplicationButton: React.FC<
       });
 
       // Check if wallet client is available
-      if (!walletClient || !address) {
+      if (!walletClient || !evmAddress) {
         throw new Error('Please connect your wallet to continue');
       }
 
@@ -389,7 +387,7 @@ export const ApproveApplicationButton: React.FC<
         </p>
         <button
           onClick={handleAutoCreateMembershipHat}
-          disabled={isAutoCreatingHat || !address}
+          disabled={isAutoCreatingHat || !evmAddress}
           className="w-full text-white px-4 py-3 rounded-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
           style={{ backgroundColor: '#2F5D50' }}
           onMouseEnter={(e) =>
@@ -528,7 +526,7 @@ export const ApproveApplicationButton: React.FC<
         console.log('🔵 Application ID:', applicationId);
         console.log('🔵 Applicant Address:', applicantAddress);
         console.log('🔵 Pod ID:', podId);
-        console.log('🔵 Approver Address:', address);
+        console.log('🔵 Approver Address:', evmAddress);
 
         setIsProcessing(true);
 
@@ -685,7 +683,7 @@ export const ApproveApplicationButton: React.FC<
           .from('general_notifications')
           .insert({
             recipient_address: applicantAddress.toLowerCase(),
-            sender_address: address?.toLowerCase() || '',
+            sender_address: evmAddress?.toLowerCase() || '',
             notification_type: 'pod_application_status',
             title: `Leadership Application Approved!`,
             message: `Your application to ${pod?.name || 'the pod'} has been approved. Visit the pod page to claim your management role.`,
@@ -772,7 +770,7 @@ export const ApproveApplicationButton: React.FC<
 
         <button
           onClick={handleLeaderApproval}
-          disabled={isProcessing || !address}
+          disabled={isProcessing || !evmAddress}
           className="w-full text-white px-6 py-3 rounded-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
           style={{ backgroundColor: '#6A5F7A' }}
           onMouseEnter={(e) =>
@@ -877,7 +875,7 @@ export const ApproveApplicationButton: React.FC<
           </p>
           <button
             onClick={checkApplicantEligibility}
-            disabled={isCheckingEligibility || !address}
+            disabled={isCheckingEligibility || !evmAddress}
             className="w-full text-white px-4 py-3 rounded-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             style={{ backgroundColor: '#2F5D50' }}
             onMouseEnter={(e) =>
@@ -977,111 +975,143 @@ export const ApproveApplicationButton: React.FC<
   // ✅ If we reach here, eligibility check passed! Show success message and proceed with minting
   console.log('✅ Eligibility verified - proceeding to mint HAT');
 
-  // Encode the mintHat function call (safe now after validation)
-  // Use effectiveHatId which may be auto-created or original hatIdToMint
-  const mintHatCallData = encodeFunctionData({
-    abi: HATS_MINT_ABI,
-    functionName: 'mintHat',
-    args: [BigInt(effectiveHatId), applicantAddress as `0x${string}`],
-  });
+  // CDP Smart Account transaction handler - EXACT FAUCET PATTERN
+  const handleMintMemberHATTransaction = async () => {
+    // EXACT FAUCET PATTERN: Simple validation matching faucet
+    if (!evmAddress || !currentUser?.evmSmartAccounts?.[0]) {
+      console.error('❌ Missing requirements for member HAT minting:', {
+        hasAddress: !!evmAddress,
+        hasSmartAccount: !!currentUser?.evmSmartAccounts?.[0],
+      });
+      toast({
+        title: 'Wallet Not Connected',
+        description: 'Please connect your Smart Wallet to mint member roles.',
+        variant: 'destructive',
+      });
+      return;
+    }
 
-  const handleSuccess = async (response: { transactionReceipts: any[] }) => {
+    const smartAccount = currentUser.evmSmartAccounts[0]; // EXACT FAUCET PATTERN
+
+    setIsTransactionPending(true); // EXACT FAUCET PATTERN
+    setIsProcessing(true);
+
     try {
-      setIsProcessing(true);
+      console.log('🚀 Building Smart Account User Operation for member HAT minting...');
+      console.log('💼 Smart Account:', smartAccount);
+      console.log('🎯 Contract: Hats Protocol - mintHat');
+      console.log('⛽ Paymaster: ENABLED (gasless transaction)');
 
-      const txHash = response.transactionReceipts?.[0]?.transactionHash;
-
-      // Update application status
-      await supabase
-        .from('pod_membership_applications')
-        .update({
-          status: 'approved',
-          approved_at: new Date().toISOString(),
-        })
-        .eq('id', applicationId);
-
-      // Add to pod_members
-      await supabase.from('pod_members').insert({
-        pod_id: podId,
-        wallet: applicantAddress.toLowerCase(),
-        membership_type: roleLabel,
-        role: roleLabel,
-        hat_id: effectiveHatId, // Use effective HAT ID (may be auto-created)
-        is_active: true,
-        joined_at: new Date().toISOString(),
+      // EXACT FAUCET PATTERN: Encode call data
+      const callData = encodeFunctionData({
+        abi: HATS_MINT_ABI,
+        functionName: 'mintHat',
+        args: [BigInt(effectiveHatId), applicantAddress as `0x${string}`],
       });
 
-      // Get pod name for notification
-      const { data: pod } = await supabase
-        .from('pods')
-        .select('name')
-        .eq('id', podId)
-        .single();
-
-      // Send success notification to applicant
-      await supabase.from('general_notifications').insert({
-        recipient_address: applicantAddress.toLowerCase(),
-        sender_address: address?.toLowerCase() || '',
-        notification_type: 'pod_application_status',
-        title: `Welcome to ${pod?.name || 'the pod'}!`,
-        message: `Your application has been approved and your ${roleLabel} role has been minted.`,
-        context_type: 'governance',
-        context_id: podId,
-        context_url: `/pods/${podId}`,
+      // EXACT FAUCET PATTERN: Send user operation
+      const result = await sendUserOperation({
+        evmSmartAccount: smartAccount,  // ← Smart Account directly!
+        network: 'base',                 // ← Base mainnet
+        calls: [{
+          to: HATS_PROTOCOL_ADDRESS,
+          value: 0n,                     // ← Zero ETH (bigint)
+          data: callData,
+        }],
+        useCdpPaymaster: true,           // ← ENABLE GAS SPONSORSHIP!
       });
+
+      console.log('✅ User operation sent successfully!', result);
+
+      // Handle success with receipt
+      if (result?.receipt) {
+        const txHash = result.receipt.transactionHash;
+
+        // Update application status
+        await supabase
+          .from('pod_membership_applications')
+          .update({
+            status: 'approved',
+            approved_at: new Date().toISOString(),
+          })
+          .eq('id', applicationId);
+
+        // Add to pod_members
+        await supabase.from('pod_members').insert({
+          pod_id: podId,
+          wallet: applicantAddress.toLowerCase(),
+          membership_type: roleLabel,
+          role: roleLabel,
+          hat_id: effectiveHatId,
+          is_active: true,
+          joined_at: new Date().toISOString(),
+        });
+
+        // Get pod name for notification
+        const { data: pod } = await supabase
+          .from('pods')
+          .select('name')
+          .eq('id', podId)
+          .single();
+
+        // Send success notification to applicant
+        await supabase.from('general_notifications').insert({
+          recipient_address: applicantAddress.toLowerCase(),
+          sender_address: evmAddress.toLowerCase(),
+          notification_type: 'pod_application_status',
+          title: `Welcome to ${pod?.name || 'the pod'}!`,
+          message: `Your application has been approved and your ${roleLabel} role has been minted.`,
+          context_type: 'governance',
+          context_id: podId,
+          context_url: `/pods/${podId}`,
+        });
+
+        toast({
+          title: 'Application Approved!',
+          description: `${roleLabel} role minted successfully. Transaction: ${txHash?.slice(0, 10)}...`,
+          duration: 5000,
+        });
+
+        onSuccess?.();
+      } else {
+        console.warn('⚠️ No receipt found in result');
+        toast({
+          title: 'Transaction Completed',
+          description: 'Member HAT minting completed but receipt not found. Please refresh.',
+          variant: 'destructive',
+        });
+      }
+    } catch (error: any) {
+      console.error('❌ Member HAT minting failed:', error);
+      console.error('Error details:', {
+        message: error.message,
+        effectiveHatId,
+        applicantAddress,
+        currentUser: evmAddress,
+      });
+
+      // Parse common errors
+      let errorMessage = error.message || 'Failed to mint role. Please try again.';
+
+      if (error.message?.includes('execution reverted')) {
+        errorMessage =
+          "Transaction would revert. This usually means you don't have permission to mint this role, or the applicant is not eligible.";
+      } else if (error.message?.includes('failed to estimate gas')) {
+        errorMessage =
+          'Failed to estimate gas. The role minting call would fail. Check if you have permission to mint this role.';
+      } else if (error.message?.includes('user rejected')) {
+        errorMessage = 'Transaction cancelled by user.';
+      }
 
       toast({
-        title: 'Application Approved!',
-        description: `${roleLabel} role minted successfully. Transaction: ${txHash?.slice(0, 10)}...`,
-        duration: 5000,
-      });
-
-      onSuccess?.();
-    } catch (error) {
-      console.error('Error updating database after role mint:', error);
-      toast({
-        title: 'Role Minted, Database Update Failed',
-        description:
-          'Role was minted on-chain but database update failed. Please refresh.',
+        title: 'Transaction Failed',
+        description: errorMessage,
         variant: 'destructive',
       });
     } finally {
+      setIsTransactionPending(false); // EXACT FAUCET PATTERN
       setIsProcessing(false);
     }
-  };
-
-  const handleError = (error: any) => {
-    console.error('❌ HAT minting transaction error:', error);
-    console.error('Error details:', {
-      message: error.message,
-      effectiveHatId,
-      applicantAddress,
-      currentUser: address,
-    });
-
-    // Parse common errors
-    let errorMessage =
-      error.message || 'Failed to mint role. Please try again.';
-
-    if (error.message?.includes('execution reverted')) {
-      errorMessage =
-        "Transaction would revert. This usually means you don't have permission to mint this role, or the applicant is not eligible.";
-    } else if (error.message?.includes('failed to estimate gas')) {
-      errorMessage =
-        'Failed to estimate gas. The role minting call would fail. Check if you have permission to mint this role.';
-    } else if (error.message?.includes('user rejected')) {
-      errorMessage = 'Transaction cancelled by user.';
-    }
-
-    toast({
-      title: 'Transaction Failed',
-      description: errorMessage,
-      variant: 'destructive',
-    });
-  };
-
-  const handleStatusChange = (status: LifecycleStatus) => {
-    console.log('Transaction status:', status);
   };
 
   return (
@@ -1115,40 +1145,38 @@ export const ApproveApplicationButton: React.FC<
         </p>
       </div>
 
-      <Transaction
-        chainId={base.id}
-        isSponsored={true}
-        calls={[
-          {
-            to: HATS_PROTOCOL_ADDRESS,
-            data: mintHatCallData,
-            value: BigInt(0),
-          },
-        ]}
-        onSuccess={handleSuccess}
-        onError={handleError}
-        onStatus={handleStatusChange}
-        capabilities={{
-          paymasterService: {
-            url: process.env.NEXT_PUBLIC_PAYMASTER || '',
-          },
-        }}
-      >
-        <div className="flex flex-col gap-4">
-          <TransactionButton
-            text={`Approve & Mint ${roleLabel} Role`}
-            disabled={isProcessing || !address}
-            className="text-white px-6 py-3 rounded-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed bg-[#3F7A5A] hover:bg-[#2F5D50]"
-          />
-
-          <TransactionStatus>
-            <div className="flex flex-col gap-2 p-4 border rounded-lg bg-gray-50">
-              <TransactionStatusLabel />
-              <TransactionStatusAction />
-            </div>
-          </TransactionStatus>
+      {/* CDP Smart Account Transaction Button */}
+      {evmAddress && currentUser?.evmSmartAccounts?.[0] ? (
+        <Button
+          onClick={handleMintMemberHATTransaction}
+          disabled={isTransactionPending || isProcessing}
+          className="w-full text-white px-6 py-3 rounded-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed bg-[#3F7A5A] hover:bg-[#2F5D50]"
+        >
+          {isTransactionPending || isProcessing ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin inline" />
+              {isTransactionPending ? 'Minting Role...' : 'Processing...'}
+            </>
+          ) : (
+            `Approve & Mint ${roleLabel} Role (Gasless)`
+          )}
+        </Button>
+      ) : (
+        <div
+          className="p-4 border rounded-lg"
+          style={{
+            backgroundColor: '#F5E6E6',
+            borderColor: '#D9B3B3',
+          }}
+        >
+          <p className="text-sm font-medium" style={{ color: '#5C1F1F' }}>
+            Wallet Not Connected
+          </p>
+          <p className="text-xs mt-1" style={{ color: '#8B3A3A' }}>
+            Please connect your Smart Wallet to mint member roles.
+          </p>
         </div>
-      </Transaction>
+      )}
 
       {/* Profile Modal - Opens when clicking on applicant name */}
       {isProfileModalOpen && selectedUser && (

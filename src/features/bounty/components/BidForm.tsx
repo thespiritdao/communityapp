@@ -23,15 +23,10 @@ import {
 import { CalendarIcon, Plus, X } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
-import { useAccount, usePublicClient } from 'wagmi';
-import {
-  Transaction,
-  TransactionButton,
-  TransactionSponsor,
-  TransactionStatus,
-  TransactionStatusLabel,
-  TransactionStatusAction,
-} from '@coinbase/onchainkit/transaction';
+import { useEvmAddress, useSendUserOperation, useCurrentUser } from '@coinbase/cdp-hooks';
+import { usePublicClient } from 'wagmi';
+import { encodeFunctionData } from 'viem';
+import { Loader2 } from 'lucide-react';
 import BountyManagerABIJson from '@/abis/BountyManagerV2.json';
 import { uploadBidToIPFS, type BidMetadata } from '../services/bidIpfsService';
 import type { Abi, TransactionReceipt } from 'viem';
@@ -95,7 +90,10 @@ export const BidForm: React.FC<BidFormProps> = ({
   initialData,
   isEditing = false,
 }) => {
-  const { address } = useAccount();
+  // CDP Smart Account hooks - EXACT FAUCET PATTERN
+  const { evmAddress } = useEvmAddress();
+  const { sendUserOperation } = useSendUserOperation();
+  const { currentUser } = useCurrentUser();
   const publicClient = usePublicClient();
   const [formData, setFormData] = useState<BidFormData>({
     experience: initialData?.experience || '',
@@ -122,6 +120,7 @@ export const BidForm: React.FC<BidFormProps> = ({
   const [uploadError, setUploadError] = useState<string>('');
   const [transactionHash, setTransactionHash] = useState<string>('');
   const [isProcessingTransaction, setIsProcessingTransaction] = useState(false);
+  const [isTransactionPending, setIsTransactionPending] = useState(false);
   const [hasCallbackFired, setHasCallbackFired] = useState(false);
 
   // Debug logging for button state
@@ -130,13 +129,13 @@ export const BidForm: React.FC<BidFormProps> = ({
       bountyId: bounty.id,
       onchain_id: bounty.onchain_id,
       hasOnchainId: !!bounty.onchain_id,
-      walletAddress: address,
-      hasWallet: !!address,
+      walletAddress: evmAddress,
+      hasWallet: !!evmAddress,
       isUploading,
       ipfsHash,
-      buttonDisabled: isUploading || !bounty.onchain_id || !address,
+      buttonDisabled: isUploading || !bounty.onchain_id || !evmAddress,
     });
-  }, [bounty.onchain_id, address, isUploading, ipfsHash]);
+  }, [bounty.onchain_id, evmAddress, isUploading, ipfsHash]);
 
   // Fallback transaction monitoring - Poll for receipt if callback doesn't fire within 30 seconds
   React.useEffect(() => {
@@ -259,7 +258,7 @@ export const BidForm: React.FC<BidFormProps> = ({
     e.preventDefault();
     console.log('🔍 Prepare Bid button clicked');
 
-    if (!address) {
+    if (!evmAddress) {
       console.error('❌ No wallet connected');
       setUploadError('Please connect your wallet first');
       return;
@@ -340,14 +339,14 @@ export const BidForm: React.FC<BidFormProps> = ({
         paymentDetails: formData.paymentDetails,
         additionalNotes: formData.additionalNotes,
         answers: formData.answers,
-        bidder_address: address,
+        bidder_address: evmAddress,
         bounty_id: bounty.id,
         timestamp: Date.now(),
       };
 
       console.log('📤 Uploading bid to IPFS...', {
         bounty_id: bounty.id,
-        bidder: address,
+        bidder: evmAddress,
       });
       const hash = await uploadBidToIPFS(metadata);
       setIpfsHash(hash);
@@ -361,6 +360,146 @@ export const BidForm: React.FC<BidFormProps> = ({
       );
     } finally {
       setIsUploading(false);
+    }
+  };
+
+  // Step 2: Submit bid on-chain via CDP Smart Account
+  const handleSubmitBidTransaction = async () => {
+    // EXACT FAUCET PATTERN: Simple validation matching faucet
+    if (!evmAddress || !currentUser?.evmSmartAccounts?.[0]) {
+      console.error('❌ Missing requirements for bid submission:', {
+        hasAddress: !!evmAddress,
+        hasSmartAccount: !!currentUser?.evmSmartAccounts?.[0],
+      });
+      setUploadError('Smart Wallet not properly configured');
+      return;
+    }
+
+    if (!ipfsHash) {
+      setUploadError('Please prepare your bid first');
+      return;
+    }
+
+    if (!bounty.onchain_id) {
+      setUploadError('Bounty not yet on-chain');
+      return;
+    }
+
+    const smartAccount = currentUser.evmSmartAccounts[0]; // EXACT FAUCET PATTERN
+
+    setIsTransactionPending(true); // EXACT FAUCET PATTERN
+    setIsProcessingTransaction(true);
+    setUploadError('');
+
+    try {
+      console.log('🚀 Building Smart Account User Operation for bid submission...');
+      console.log('💼 Smart Account:', smartAccount);
+      console.log('🎯 Contract: BountyManager - placeBid');
+      console.log('⛽ Paymaster: ENABLED (gasless transaction)');
+
+      const contractAddress = (process.env.NEXT_PUBLIC_BOUNTY_MANAGER_ADDRESS ||
+        '0x29e653502083442B8B6C7c969557022F6a3CC64C') as `0x${string}`;
+
+      // EXACT FAUCET PATTERN: Encode call data
+      const callData = encodeFunctionData({
+        abi: BountyManagerABI,
+        functionName: 'placeBid',
+        args: [BigInt(bounty.onchain_id!), ipfsHash],
+      });
+
+      console.log('📝 Encoded call data for placeBid');
+
+      // EXACT FAUCET PATTERN: Send user operation
+      const result = await sendUserOperation({
+        evmSmartAccount: smartAccount,  // ← Smart Account directly!
+        network: 'base',                 // ← Base mainnet
+        calls: [{
+          to: contractAddress,
+          value: 0n,                     // ← Zero ETH (bigint)
+          data: callData,
+        }],
+        useCdpPaymaster: true,           // ← ENABLE GAS SPONSORSHIP!
+      });
+
+      console.log('✅ User operation sent successfully!', result);
+
+      // Handle success with receipt
+      if (result?.receipt) {
+        const receipt = result.receipt as TransactionReceipt;
+        setTransactionHash(receipt.transactionHash);
+
+        // Extract BidPlaced event
+        // Event: BidPlaced(uint256 indexed bountyId, address indexed bidder, uint256 bidIndex)
+        const bidPlacedLog = receipt.logs?.find(
+          (log) =>
+            log.topics &&
+            log.topics.length >= 3 &&
+            log.address?.toLowerCase() === contractAddress.toLowerCase(),
+        );
+
+        console.log('🔍 BidPlaced event search:', {
+          totalLogs: receipt.logs?.length || 0,
+          bidPlacedLogFound: !!bidPlacedLog,
+        });
+
+        if (bidPlacedLog) {
+          // bidIndex is NOT indexed, so it's in the data field
+          const bidIndex = parseInt(bidPlacedLog.data, 16);
+
+          console.log('✅ Bid placed on-chain:', {
+            bountyId: bounty.onchain_id,
+            bidIndex,
+            txHash: receipt.transactionHash,
+            ipfsHash,
+          });
+
+          // Mark callback as fired to prevent duplicates
+          setHasCallbackFired(true);
+
+          // Map deliverables to correct format
+          const mappedDeliverables = formData.deliverables.map((d) => ({
+            id: d.id,
+            description: d.description,
+            dueDate: d.dueDate instanceof Date ? d.dueDate : new Date(d.dueDate),
+            paymentAmount: d.paymentAmount,
+          }));
+
+          console.log('🚀 Calling onBidPlaced callback with data:', {
+            txHash: receipt.transactionHash,
+            bidIndex,
+            ipfsHash,
+            bountyId: bounty.id,
+          });
+
+          // Callback with bid placement details
+          onBidPlaced(
+            {
+              ...formData,
+              deliverables: mappedDeliverables,
+            },
+            ipfsHash,
+            receipt.transactionHash,
+            bidIndex,
+          );
+
+          setIsProcessingTransaction(false);
+        } else {
+          console.error('❌ Could not extract bid index from transaction logs');
+          console.error('Receipt logs:', receipt.logs);
+          setUploadError('Bid was placed but could not extract bid index. Please contact support.');
+          setIsProcessingTransaction(false);
+        }
+      } else {
+        console.warn('⚠️ No receipt found in result');
+        setUploadError('Transaction completed but no receipt found');
+      }
+    } catch (err: any) {
+      console.error('❌ Bid submission failed:', err);
+      setUploadError(err.message || 'Transaction failed. Please try again.');
+      setIsProcessingTransaction(false);
+      setHasCallbackFired(false);
+    } finally {
+      setIsTransactionPending(false); // EXACT FAUCET PATTERN
     }
   };
 
@@ -842,7 +981,7 @@ export const BidForm: React.FC<BidFormProps> = ({
           )}
 
           {/* Wallet not connected warning */}
-          {!address && (
+          {!evmAddress && (
             <div
               className="px-4 py-3 rounded"
               style={{
@@ -875,199 +1014,55 @@ export const BidForm: React.FC<BidFormProps> = ({
               /* Step 1: Prepare Bid (Upload to IPFS) */
               <Button
                 type="submit"
-                disabled={isUploading || !bounty.onchain_id || !address}
+                disabled={isUploading || !bounty.onchain_id || !evmAddress}
                 className="flex-1 bounty-btn primary"
                 style={{ backgroundColor: '#2F5D50', color: '#FFFFFF' }}
               >
                 {isUploading ? '📤 Preparing Bid...' : '📝 Prepare Bid'}
               </Button>
             ) : (
-              /* Step 2: Submit Bid On-Chain (Call placeBid) */
-              <Transaction
-                chainId={8453} // Base mainnet
-                calls={[
-                  {
-                    address: (process.env.NEXT_PUBLIC_BOUNTY_MANAGER_ADDRESS ||
-                      '0x29e653502083442B8B6C7c969557022F6a3CC64C') as `0x${string}`,
-                    abi: BountyManagerABI,
-                    functionName: 'placeBid',
-                    args: [BigInt(bounty.onchain_id!), ipfsHash],
-                  },
-                ]}
-                isSponsored={true}
-                onStatus={(status) => {
-                  console.log('📊 Transaction status update:', {
-                    statusName: status.statusName,
-                    hasReceipts: !!(
-                      status.statusData &&
-                      'transactionReceipts' in status.statusData &&
-                      status.statusData.transactionReceipts
-                    ),
-                    statusData: status.statusData,
-                    timestamp: new Date().toISOString(),
-                  });
-
-                  // Track transaction hash on init
-                  if (status.statusName === 'init') {
-                    setIsProcessingTransaction(true);
-                    console.log('🔄 Transaction initialized');
-                  }
-
-                  if (status.statusName === 'success') {
-                    console.log('✅ Transaction status: SUCCESS');
-
-                    // Prevent duplicate callback execution
-                    if (hasCallbackFired) {
-                      console.log(
-                        '⚠️ Callback already fired, skipping duplicate execution',
-                      );
-                      return;
-                    }
-
-                    const receipts =
-                      status.statusData &&
-                      'transactionReceipts' in status.statusData
-                        ? status.statusData.transactionReceipts
-                        : undefined;
-                    console.log('📜 Transaction receipts:', {
-                      receiptsFound: !!receipts,
-                      receiptsLength: receipts?.length || 0,
-                      receiptDetails: receipts?.[0]
-                        ? {
-                            transactionHash: receipts[0].transactionHash,
-                            status: receipts[0].status,
-                            logsCount: receipts[0].logs?.length || 0,
-                          }
-                        : null,
-                    });
-
-                    if (receipts && receipts.length > 0) {
-                      const receipt = receipts[0] as TransactionReceipt;
-                      setTransactionHash(receipt.transactionHash);
-
-                      // Extract BidPlaced event
-                      // Event: BidPlaced(uint256 indexed bountyId, address indexed bidder, uint256 bidIndex)
-                      const bidPlacedLog = receipt.logs?.find(
-                        (log) =>
-                          log.topics &&
-                          log.topics.length >= 3 &&
-                          log.address?.toLowerCase() ===
-                            (
-                              process.env.NEXT_PUBLIC_BOUNTY_MANAGER_ADDRESS ||
-                              '0x29e653502083442B8B6C7c969557022F6a3CC64C'
-                            ).toLowerCase(),
-                      );
-
-                      console.log('🔍 BidPlaced event search:', {
-                        totalLogs: receipt.logs?.length || 0,
-                        bidPlacedLogFound: !!bidPlacedLog,
-                        logDetails: bidPlacedLog
-                          ? {
-                              address: bidPlacedLog.address,
-                              topicsCount: bidPlacedLog.topics?.length || 0,
-                              data: bidPlacedLog.data,
-                            }
-                          : null,
-                      });
-
-                      if (bidPlacedLog) {
-                        // bidIndex is NOT indexed, so it's in the data field
-                        // Event: BidPlaced(uint256 indexed bountyId, address indexed bidder, uint256 bidIndex)
-                        // topics[0] = event signature
-                        // topics[1] = bountyId (indexed)
-                        // topics[2] = bidder address (indexed)
-                        // data = bidIndex (NOT indexed)
-                        const bidIndex = parseInt(bidPlacedLog.data, 16);
-
-                        console.log('✅ Bid placed on-chain:', {
-                          bountyId: bounty.onchain_id,
-                          bidIndex,
-                          bidIndexHex: bidPlacedLog.data,
-                          txHash: receipt.transactionHash,
-                          ipfsHash,
-                          callbackFiredBefore: hasCallbackFired,
-                        });
-
-                        // Mark callback as fired to prevent duplicates
-                        setHasCallbackFired(true);
-
-                        // Map deliverables to correct format
-                        const mappedDeliverables = formData.deliverables.map(
-                          (d) => ({
-                            id: d.id,
-                            description: d.description,
-                            dueDate:
-                              d.dueDate instanceof Date
-                                ? d.dueDate
-                                : new Date(d.dueDate),
-                            paymentAmount: d.paymentAmount,
-                          }),
-                        );
-
-                        console.log(
-                          '🚀 Calling onBidPlaced callback with data:',
-                          {
-                            txHash: receipt.transactionHash,
-                            bidIndex,
-                            ipfsHash,
-                            bountyId: bounty.id,
-                          },
-                        );
-
-                        // Callback with bid placement details
-                        onBidPlaced(
-                          {
-                            ...formData,
-                            deliverables: mappedDeliverables,
-                          },
-                          ipfsHash,
-                          receipt.transactionHash,
-                          bidIndex,
-                        );
-
-                        setIsProcessingTransaction(false);
-                      } else {
-                        console.error(
-                          '❌ Could not extract bid index from transaction logs',
-                        );
-                        console.error('Receipt logs:', receipt.logs);
-                        setUploadError(
-                          'Bid was placed but could not extract bid index. Please contact support.',
-                        );
-                        setIsProcessingTransaction(false);
-                      }
-                    } else {
-                      console.error(
-                        '❌ No transaction receipts found in success status',
-                      );
-                      setUploadError(
-                        'Transaction succeeded but no receipt found. Please refresh the page.',
-                      );
-                      setIsProcessingTransaction(false);
-                    }
-                  }
-
-                  if (status.statusName === 'error') {
-                    console.error('❌ Transaction failed:', {
-                      status,
-                      statusData: status.statusData,
-                    });
-                    setUploadError('Transaction failed. Please try again.');
-                    setIsProcessingTransaction(false);
-                    setHasCallbackFired(false);
-                  }
-                }}
-              >
-                <TransactionButton
-                  text="🚀 Submit Bid (Sponsored)"
-                  className="flex-1"
-                />
-                <TransactionSponsor />
-                <TransactionStatus>
-                  <TransactionStatusLabel />
-                  <TransactionStatusAction />
-                </TransactionStatus>
-              </Transaction>
+              /* Step 2: Submit Bid On-Chain via CDP Smart Account */
+              evmAddress && currentUser?.evmSmartAccounts?.[0] ? (
+                <Button
+                  onClick={handleSubmitBidTransaction}
+                  disabled={isTransactionPending || isProcessingTransaction}
+                  className="flex-1 disabled:bg-gray-400 disabled:cursor-not-allowed font-semibold transition-colors hover:opacity-90"
+                  style={{ backgroundColor: '#2F5D50', color: '#FFFFFF' }}
+                >
+                  {isTransactionPending ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin inline" />
+                      Submitting Bid...
+                    </>
+                  ) : isProcessingTransaction ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin inline" />
+                      Processing...
+                    </>
+                  ) : (
+                    '🚀 Submit Bid (Gasless)'
+                  )}
+                </Button>
+              ) : (
+                <div
+                  className="flex-1 px-4 py-3 rounded"
+                  style={{
+                    backgroundColor: '#F5E6E6',
+                    borderWidth: '1px',
+                    borderStyle: 'solid',
+                    borderColor: '#D9B3B3',
+                  }}
+                >
+                  <p className="text-sm" style={{ color: '#5C1F1F' }}>
+                    <strong>Configuration Error:</strong> Missing wallet connection or
+                    Smart Account. Please check your connection.
+                  </p>
+                  <div className="mt-2 text-xs" style={{ color: '#8B3A3A' }}>
+                    Address: {evmAddress ? '✓' : '✗'} | Smart Account:{' '}
+                    {currentUser?.evmSmartAccounts?.[0] ? '✓' : '✗'}
+                  </div>
+                </div>
+              )
             )}
           </div>
 

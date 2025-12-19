@@ -17,18 +17,12 @@
 
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { useAccount, usePublicClient } from 'wagmi';
-import {
-  Transaction,
-  TransactionButton,
-  TransactionSponsor,
-  TransactionStatus,
-  TransactionStatusLabel,
-  TransactionStatusAction,
-} from '@coinbase/onchainkit/transaction';
-import type { Abi, TransactionReceipt } from 'viem';
-import { parseEther } from 'viem';
+import React, { useState, useEffect, useCallback } from 'react';
+import { useEvmAddress, useSendUserOperation, useCurrentUser } from '@coinbase/cdp-hooks';
+import { usePublicClient } from 'wagmi';
+import { encodeFunctionData, parseEther, type Abi, type TransactionReceipt } from 'viem';
+import { Loader2 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import BountyManagerABIJson from '@/abis/BountyManagerV2.json';
 import { unifiedNotificationService } from '@/services/unifiedNotificationService';
 
@@ -106,10 +100,14 @@ export const BountyPaymentTransaction: React.FC<
   onComplete,
   onRefreshData,
 }) => {
-  const { address } = useAccount();
+  // CDP Smart Account hooks - EXACT FAUCET PATTERN
+  const { evmAddress } = useEvmAddress();
+  const { sendUserOperation } = useSendUserOperation();
+  const { currentUser } = useCurrentUser();
   const publicClient = usePublicClient();
 
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isTransactionPending, setIsTransactionPending] = useState(false); // CDP transaction loading state
   const [pollCleanup, setPollCleanup] = useState<(() => void) | null>(null);
   const [isCompleted, setIsCompleted] = useState(false);
 
@@ -172,7 +170,7 @@ export const BountyPaymentTransaction: React.FC<
         // Notify bidder (worker who completed the bounty)
         unifiedNotificationService.createNotification({
           recipient_address: bidderAddress,
-          sender_address: address!,
+          sender_address: evmAddress!,
           notification_type: 'bounty_update',
           title: 'Bounty Payment Released!',
           message: `Payment of ${paymentAmount} ${paymentToken} has been released for "${bountyTitle}". The bounty is now complete.`,
@@ -185,7 +183,7 @@ export const BountyPaymentTransaction: React.FC<
         // Notify creator
         unifiedNotificationService.createNotification({
           recipient_address: creatorAddress,
-          sender_address: address!,
+          sender_address: evmAddress!,
           notification_type: 'bounty_update',
           title: 'Bounty Completed',
           message: `Bounty "${bountyTitle}" has been completed and payment released.`,
@@ -229,7 +227,7 @@ export const BountyPaymentTransaction: React.FC<
     setIsProcessing(true);
 
     try {
-      if (!address || !publicClient) {
+      if (!evmAddress || !publicClient) {
         onError(error);
         return;
       }
@@ -250,7 +248,7 @@ export const BountyPaymentTransaction: React.FC<
         error,
         'Bounty Payment',
         calls,
-        address,
+        evmAddress,
         publicClient,
       );
 
@@ -262,7 +260,72 @@ export const BountyPaymentTransaction: React.FC<
   };
 
   // ============================================================================
-  // TRANSACTION STATUS HANDLER WITH POLLING FALLBACK
+  // CDP SMART ACCOUNT TRANSACTION HANDLER - EXACT FAUCET PATTERN
+  // ============================================================================
+
+  const handleReleasePaymentTransaction = useCallback(async () => {
+    // EXACT FAUCET PATTERN: Simple validation matching faucet
+    if (!evmAddress || !currentUser?.evmSmartAccounts?.[0]) {
+      console.error('❌ Missing requirements for payment release:', {
+        hasAddress: !!evmAddress,
+        hasSmartAccount: !!currentUser?.evmSmartAccounts?.[0],
+      });
+      onError(new Error('Smart Wallet not properly configured'));
+      return;
+    }
+
+    const smartAccount = currentUser.evmSmartAccounts[0]; // EXACT FAUCET PATTERN
+
+    setIsTransactionPending(true); // EXACT FAUCET PATTERN
+
+    try {
+      console.log('🚀 Building Smart Account User Operation for payment release...');
+      console.log('💼 Smart Account:', smartAccount);
+      console.log('🎯 Contract: BountyManager - releasePayment');
+      console.log('⛽ Paymaster: ENABLED (gasless transaction)');
+
+      const contractAddress = process.env.NEXT_PUBLIC_BOUNTY_MANAGER_ADDRESS as `0x${string}`;
+
+      // EXACT FAUCET PATTERN: Encode call data
+      const callData = encodeFunctionData({
+        abi: BountyManagerABI,
+        functionName: 'releasePayment',
+        args: [BigInt(onchainBountyId), parseEther(paymentAmount)],
+      });
+
+      console.log('📝 Encoded call data for releasePayment');
+
+      // EXACT FAUCET PATTERN: Send user operation
+      const result = await sendUserOperation({
+        evmSmartAccount: smartAccount,  // ← Smart Account directly!
+        network: 'base',                 // ← Base mainnet
+        calls: [{
+          to: contractAddress,
+          value: 0n,                     // ← Zero ETH (bigint)
+          data: callData,
+        }],
+        useCdpPaymaster: true,           // ← ENABLE GAS SPONSORSHIP!
+      });
+
+      console.log('✅ User operation sent successfully!', result);
+
+      // Handle success with receipt
+      if (result?.receipt) {
+        await handleSuccess(result.receipt);
+      } else {
+        console.warn('⚠️ No receipt found in result');
+        onError(new Error('Transaction completed but no receipt found'));
+      }
+    } catch (err: any) {
+      console.error('❌ Payment release failed:', err);
+      await handleError(err);
+    } finally {
+      setIsTransactionPending(false); // EXACT FAUCET PATTERN
+    }
+  }, [evmAddress, currentUser, sendUserOperation, onchainBountyId, paymentAmount, handleSuccess, handleError]);
+
+  // ============================================================================
+  // TRANSACTION STATUS HANDLER WITH POLLING FALLBACK (LEGACY - NOT USED)
   // ============================================================================
 
   const transactionStatusHandler = createTransactionStatusHandler(
@@ -362,31 +425,27 @@ export const BountyPaymentTransaction: React.FC<
         </p>
       </div>
 
-      {/* Transaction Component */}
-      {address && contractAddress ? (
-        <Transaction
-          calls={[
-            {
-              address: contractAddress,
-              abi: BountyManagerABI,
-              functionName: 'releasePayment',
-              args: [BigInt(onchainBountyId), parseEther(paymentAmount)],
-            },
-          ]}
-          isSponsored={true}
-          onStatus={onStatusWithPolling}
+      {/* CDP Smart Account Transaction Button */}
+      {evmAddress && currentUser?.evmSmartAccounts?.[0] ? (
+        <Button
+          onClick={handleReleasePaymentTransaction}
+          disabled={isTransactionPending || isProcessing}
+          className="w-full disabled:bg-gray-400 disabled:cursor-not-allowed font-medium py-2 px-4 rounded transition-colors hover:opacity-90"
         >
-          <TransactionButton
-            text="Release Payment"
-            className="w-full"
-            disabled={isProcessing}
-          />
-          <TransactionSponsor />
-          <TransactionStatus>
-            <TransactionStatusLabel />
-            <TransactionStatusAction />
-          </TransactionStatus>
-        </Transaction>
+          {isTransactionPending ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin inline" />
+              Releasing Payment...
+            </>
+          ) : isProcessing ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin inline" />
+              Processing...
+            </>
+          ) : (
+            'Release Payment (Gasless)'
+          )}
+        </Button>
       ) : (
         <div
           className="rounded-lg p-4"
@@ -399,12 +458,11 @@ export const BountyPaymentTransaction: React.FC<
         >
           <p className="text-sm" style={{ color: '#5C1F1F' }}>
             <strong>Configuration Error:</strong> Missing wallet connection or
-            contract address. Please check your connection and environment
-            configuration.
+            Smart Account. Please check your connection.
           </p>
           <div className="mt-2 text-xs" style={{ color: '#8B3A3A' }}>
-            Address: {address ? '✓' : '✗'} | Contract:{' '}
-            {contractAddress ? '✓' : '✗'}
+            Address: {evmAddress ? '✓' : '✗'} | Smart Account:{' '}
+            {currentUser?.evmSmartAccounts?.[0] ? '✓' : '✗'}
           </div>
         </div>
       )}

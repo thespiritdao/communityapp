@@ -14,7 +14,9 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
-import { useAccount } from 'wagmi';
+import { useEvmAddress, useSendUserOperation, useCurrentUser } from '@coinbase/cdp-hooks';
+import { usePublicClient } from 'wagmi';
+import { encodeFunctionData } from 'viem';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -22,14 +24,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/components/ui/use-toast';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import {
-  Transaction,
-  TransactionButton,
-  TransactionSponsor,
-  TransactionStatus,
-  TransactionStatusLabel,
-  TransactionStatusAction,
-} from '@coinbase/onchainkit/transaction';
+import { Loader2, CheckCircle, AlertTriangle } from 'lucide-react';
 
 // Contract addresses from environment
 const POD_TREASURY_FACTORY_ADDRESS = (process.env
@@ -138,7 +133,11 @@ const POD_BOUNTY_SERVICE_ABI = [
 ] as const;
 
 export default function ConsolidatedTreasuryDeployerV2() {
-  const { address } = useAccount();
+  // CDP Smart Account hooks - EXACT FAUCET PATTERN
+  const { evmAddress } = useEvmAddress();
+  const { sendUserOperation } = useSendUserOperation();
+  const { currentUser } = useCurrentUser();
+  const publicClient = usePublicClient();
   const { toast } = useToast();
 
   const [pods, setPods] = useState<Pod[]>([]);
@@ -152,6 +151,8 @@ export default function ConsolidatedTreasuryDeployerV2() {
     string | null
   >(null);
   const [showSyncStep, setShowSyncStep] = useState(false);
+  const [isDeployPending, setIsDeployPending] = useState(false);
+  const [isSyncPending, setIsSyncPending] = useState(false);
 
   // Load pods from database
   const loadPods = useCallback(async () => {
@@ -270,6 +271,212 @@ export default function ConsolidatedTreasuryDeployerV2() {
     });
 
     return transactions;
+  };
+
+  // CDP Smart Account transaction handler - Step 1: Deploy Treasury
+  const handleDeployTreasury = async () => {
+    if (!selectedPod) {
+      toast({
+        title: 'No Pod Selected',
+        description: 'Please select a pod to deploy treasury for.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    // EXACT FAUCET PATTERN: Simple validation matching faucet
+    if (!evmAddress || !currentUser?.evmSmartAccounts?.[0]) {
+      console.error('❌ Missing requirements for treasury deployment:', {
+        hasAddress: !!evmAddress,
+        hasSmartAccount: !!currentUser?.evmSmartAccounts?.[0],
+      });
+      toast({
+        title: 'Wallet Not Connected',
+        description: 'Please connect your Smart Wallet to deploy treasury.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    const smartAccount = currentUser.evmSmartAccounts[0]; // EXACT FAUCET PATTERN
+
+    setIsDeployPending(true); // EXACT FAUCET PATTERN
+
+    try {
+      console.log('🚀 STEP 1: Building Smart Account User Operation for treasury deployment...');
+      console.log('💼 Smart Account:', smartAccount);
+      console.log('🏦 Pod:', selectedPod.name);
+      console.log('🎯 Contract: TreasuryFactory - deployTreasury');
+      console.log('⛽ Paymaster: ENABLED (gasless transaction)');
+
+      // EXACT FAUCET PATTERN: Encode call data
+      const callData = encodeFunctionData({
+        abi: TREASURY_FACTORY_ABI,
+        functionName: 'deployTreasury',
+        args: [
+          selectedPod.id,
+          getManagementHatIdBigInt(selectedPod.management_hat_id),
+          DEFAULT_SUPPORTED_TOKENS,
+          PODS_TESTING_MODE,
+        ],
+      });
+
+      // EXACT FAUCET PATTERN: Send user operation
+      const result = await sendUserOperation({
+        evmSmartAccount: smartAccount,  // ← Smart Account directly!
+        network: 'base',                 // ← Base mainnet
+        calls: [{
+          to: POD_TREASURY_FACTORY_ADDRESS,
+          value: 0n,                     // ← Zero ETH (bigint)
+          data: callData,
+        }],
+        useCdpPaymaster: true,           // ← ENABLE GAS SPONSORSHIP!
+      });
+
+      console.log('✅ User operation sent successfully!', result);
+
+      // Handle success with receipt
+      if (result?.receipt) {
+        console.log('🏦 Treasury deployment successful:', result.receipt);
+
+        // Extract treasury address from transaction logs
+        const txReceipt = result.receipt;
+        const TREASURY_DEPLOYED_EVENT =
+          '0x494cf03e4055d4033e848ad013abd5a12efdf3143ccf97cd8514778840b10d36';
+
+        let treasuryAddress = 'EXTRACT_FROM_LOGS';
+
+        if (txReceipt?.logs) {
+          const deploymentLog = txReceipt.logs.find(
+            (log: any) => log.topics?.[0] === TREASURY_DEPLOYED_EVENT,
+          );
+
+          if (deploymentLog) {
+            const addressFromTopic = deploymentLog.topics?.[2];
+            if (addressFromTopic && addressFromTopic.length === 66) {
+              treasuryAddress = '0x' + addressFromTopic.slice(-40);
+            }
+          }
+
+          if (
+            treasuryAddress === 'EXTRACT_FROM_LOGS' &&
+            txReceipt.contractAddress
+          ) {
+            treasuryAddress = txReceipt.contractAddress;
+          }
+        }
+
+        console.log('🏦 Extracted treasury address:', treasuryAddress);
+
+        // Update database and proceed to Step 2
+        await handleTreasuryDeploymentSuccess(selectedPod, treasuryAddress);
+      } else {
+        console.warn('⚠️ No receipt found in result');
+        toast({
+          title: 'Transaction Completed',
+          description: 'Treasury deployment completed but receipt not found. Please refresh.',
+          variant: 'destructive',
+        });
+      }
+    } catch (error: any) {
+      console.error('❌ Treasury deployment failed:', error);
+      toast({
+        title: 'Treasury Deployment Failed',
+        description: error.message || 'Unknown error occurred',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsDeployPending(false); // EXACT FAUCET PATTERN
+    }
+  };
+
+  // CDP Smart Account transaction handler - Step 2: Sync to Authorization Contracts
+  const handleSyncContracts = async () => {
+    if (!selectedPod || !deployedTreasuryAddress) {
+      toast({
+        title: 'Missing Information',
+        description: 'Pod or treasury address not found.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    // EXACT FAUCET PATTERN: Simple validation matching faucet
+    if (!evmAddress || !currentUser?.evmSmartAccounts?.[0]) {
+      console.error('❌ Missing requirements for contract sync:', {
+        hasAddress: !!evmAddress,
+        hasSmartAccount: !!currentUser?.evmSmartAccounts?.[0],
+      });
+      toast({
+        title: 'Wallet Not Connected',
+        description: 'Please connect your Smart Wallet to sync contracts.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    const smartAccount = currentUser.evmSmartAccounts[0]; // EXACT FAUCET PATTERN
+
+    setIsSyncPending(true); // EXACT FAUCET PATTERN
+
+    try {
+      console.log('🚀 STEP 2: Building Smart Account User Operation for contract sync...');
+      console.log('💼 Smart Account:', smartAccount);
+      console.log('🏦 Pod:', selectedPod.name);
+      console.log('🏦 Treasury Address:', deployedTreasuryAddress);
+      console.log('🎯 Multi-call: Auth Factory + Bounty Service');
+      console.log('⛽ Paymaster: ENABLED (gasless transaction)');
+
+      // Get sync transactions
+      const syncTransactions = prepareSyncTransactions(selectedPod, deployedTreasuryAddress);
+
+      // EXACT FAUCET PATTERN: Prepare calls for sendUserOperation
+      const callsFormatted = syncTransactions.map((tx) => ({
+        to: tx.address,
+        value: 0n,
+        data: encodeFunctionData({
+          abi: tx.abi,
+          functionName: tx.functionName,
+          args: tx.args,
+        }),
+      }));
+
+      console.log('📋 Formatted calls for User Operation:', callsFormatted.length);
+
+      // EXACT FAUCET PATTERN: Send user operation (multi-call)
+      const result = await sendUserOperation({
+        evmSmartAccount: smartAccount,  // ← Smart Account directly!
+        network: 'base',                 // ← Base mainnet
+        calls: callsFormatted,           // ← Multiple calls (batched)
+        useCdpPaymaster: true,           // ← ENABLE GAS SPONSORSHIP!
+      });
+
+      console.log('✅ User operation sent successfully!', result);
+
+      // Handle success with receipt
+      if (result?.receipt) {
+        console.log('✅ Contract sync successful:', result.receipt);
+
+        // Finalize deployment
+        await handleSyncSuccess(selectedPod, deployedTreasuryAddress);
+      } else {
+        console.warn('⚠️ No receipt found in result');
+        toast({
+          title: 'Transaction Completed',
+          description: 'Sync completed but receipt not found. Please refresh.',
+          variant: 'destructive',
+        });
+      }
+    } catch (error: any) {
+      console.error('❌ Contract sync failed:', error);
+      toast({
+        title: 'Sync Failed',
+        description: error.message || 'Failed to sync contracts. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSyncPending(false); // EXACT FAUCET PATTERN
+    }
   };
 
   // Handle treasury deployment success
@@ -446,55 +653,38 @@ export default function ConsolidatedTreasuryDeployerV2() {
               </div>
             </div>
 
-            <Transaction
-              chainId={8453}
-              calls={[prepareDeployTreasuryTransaction(selectedPod)]}
-              isSponsored={true}
-              onSuccess={(response) => {
-                console.log(
-                  '🏦 Treasury deployment transaction successful:',
-                  response,
-                );
-                const txReceipt = response?.transactionReceipts?.[0];
-
-                // Extract treasury address from logs
-                const TREASURY_DEPLOYED_EVENT =
-                  '0x494cf03e4055d4033e848ad013abd5a12efdf3143ccf97cd8514778840b10d36';
-                let treasuryAddress = '';
-
-                if (txReceipt?.logs) {
-                  const deploymentLog = txReceipt.logs.find(
-                    (log: any) => log.topics?.[0] === TREASURY_DEPLOYED_EVENT,
-                  );
-
-                  if (deploymentLog?.topics?.[2]) {
-                    treasuryAddress = '0x' + deploymentLog.topics[2].slice(-40);
-                  }
-                }
-
-                if (!treasuryAddress && txReceipt?.contractAddress) {
-                  treasuryAddress = txReceipt.contractAddress;
-                }
-
-                console.log('🏦 Extracted treasury address:', treasuryAddress);
-                handleTreasuryDeploymentSuccess(selectedPod, treasuryAddress);
-              }}
-              onError={(error) => {
-                console.error('❌ Treasury deployment failed:', error);
-                toast({
-                  title: 'Deployment Failed',
-                  description: error.message || 'Unknown error occurred',
-                  variant: 'destructive',
-                });
-              }}
-            >
-              <TransactionButton text="Deploy Treasury (Step 1)" />
-              <TransactionSponsor />
-              <TransactionStatus>
-                <TransactionStatusLabel />
-                <TransactionStatusAction />
-              </TransactionStatus>
-            </Transaction>
+            {/* CDP Smart Account Transaction Button - Step 1 */}
+            {evmAddress && currentUser?.evmSmartAccounts?.[0] ? (
+              <Button
+                onClick={handleDeployTreasury}
+                disabled={isDeployPending}
+                className="w-full bg-primary hover:bg-primary/90 text-white font-medium py-3 px-6 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isDeployPending ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin inline" />
+                    Deploying Treasury...
+                  </>
+                ) : (
+                  'Deploy Treasury - Step 1 (Gasless)'
+                )}
+              </Button>
+            ) : (
+              <div
+                className="p-4 border rounded-lg"
+                style={{
+                  backgroundColor: '#F5E6E6',
+                  borderColor: '#D9B3B3',
+                }}
+              >
+                <p className="text-sm font-medium" style={{ color: '#5C1F1F' }}>
+                  Wallet Not Connected
+                </p>
+                <p className="text-xs mt-1" style={{ color: '#8B3A3A' }}>
+                  Please connect your Smart Wallet to deploy treasury.
+                </p>
+              </div>
+            )}
 
             <Button
               variant="outline"
@@ -541,34 +731,38 @@ export default function ConsolidatedTreasuryDeployerV2() {
               </ul>
             </div>
 
-            <Transaction
-              chainId={8453}
-              calls={prepareSyncTransactions(
-                selectedPod,
-                deployedTreasuryAddress,
-              )}
-              isSponsored={true}
-              onSuccess={() => {
-                console.log('✅ Sync transactions successful');
-                handleSyncSuccess(selectedPod, deployedTreasuryAddress);
-              }}
-              onError={(error) => {
-                console.error('❌ Sync failed:', error);
-                toast({
-                  title: 'Sync Failed',
-                  description:
-                    'Treasury deployed but sync failed. You may need to sync manually.',
-                  variant: 'destructive',
-                });
-              }}
-            >
-              <TransactionButton text="Sync to Authorization Contracts (Step 2)" />
-              <TransactionSponsor />
-              <TransactionStatus>
-                <TransactionStatusLabel />
-                <TransactionStatusAction />
-              </TransactionStatus>
-            </Transaction>
+            {/* CDP Smart Account Transaction Button - Step 2 */}
+            {evmAddress && currentUser?.evmSmartAccounts?.[0] ? (
+              <Button
+                onClick={handleSyncContracts}
+                disabled={isSyncPending}
+                className="w-full bg-primary hover:bg-primary/90 text-white font-medium py-3 px-6 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isSyncPending ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin inline" />
+                    Syncing Contracts...
+                  </>
+                ) : (
+                  'Sync to Authorization Contracts - Step 2 (Gasless)'
+                )}
+              </Button>
+            ) : (
+              <div
+                className="p-4 border rounded-lg"
+                style={{
+                  backgroundColor: '#F5E6E6',
+                  borderColor: '#D9B3B3',
+                }}
+              >
+                <p className="text-sm font-medium" style={{ color: '#5C1F1F' }}>
+                  Wallet Not Connected
+                </p>
+                <p className="text-xs mt-1" style={{ color: '#8B3A3A' }}>
+                  Please connect your Smart Wallet to sync contracts.
+                </p>
+              </div>
+            )}
 
             <Button
               variant="outline"

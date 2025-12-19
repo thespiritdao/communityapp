@@ -2,8 +2,9 @@
 
 import type React from 'react';
 import { useState, useEffect } from 'react';
-import { useAccount, useWalletClient } from 'wagmi';
-import { base } from 'viem/chains';
+import { useEvmAddress, useSendUserOperation, useCurrentUser } from '@coinbase/cdp-hooks';
+import { useWalletClient, usePublicClient } from 'wagmi';
+import { encodeFunctionData } from 'viem';
 import {
   Shield,
   RefreshCw,
@@ -23,22 +24,13 @@ import {
   Target,
   ArrowRightLeft,
   Store,
+  Loader2,
 } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/components/ui/use-toast';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-
-// Import OnchainKit Transaction components for proper Smart Wallet support
-import {
-  Transaction,
-  TransactionButton,
-  TransactionSponsor,
-  TransactionStatus,
-  TransactionStatusLabel,
-  TransactionStatusAction,
-} from '@coinbase/onchainkit/transaction';
 
 // Import existing components - preserve the UX exactly
 import { EligibilityCriteriaBuilder } from './EligibilityCriteriaBuilder';
@@ -64,11 +56,16 @@ export const UnifiedMembershipManager: React.FC<
   UnifiedMembershipManagerProps
 > = ({ podId, podName, roleId, roleName, roleType, hatId, onUpdate }) => {
   const { toast } = useToast();
-  const { address, isConnected } = useAccount();
+  // CDP Smart Account hooks - EXACT FAUCET PATTERN
+  const { evmAddress } = useEvmAddress();
+  const { sendUserOperation } = useSendUserOperation();
+  const { currentUser } = useCurrentUser();
   const { data: walletClient } = useWalletClient();
+  const publicClient = usePublicClient();
   const [loading, setLoading] = useState(false);
+  const [isTransactionPending, setIsTransactionPending] = useState(false);
 
-  // 🚀 NEW: State for OnchainKit Transaction integration
+  // 🚀 State for CDP Transaction integration
   const [syncCalls, setSyncCalls] = useState<any[]>([]);
   const [showSyncTransaction, setShowSyncTransaction] = useState(false);
   const [syncMetadata, setSyncMetadata] = useState<{
@@ -109,10 +106,10 @@ export const UnifiedMembershipManager: React.FC<
     console.log('🔄 USEEFFECT: syncCalls or showSyncTransaction changed:', {
       syncCallsLength: syncCalls.length,
       showSyncTransaction,
-      hasAddress: !!address,
-      shouldShowUI: showSyncTransaction && syncCalls.length > 0 && !!address,
+      hasAddress: !!evmAddress,
+      shouldShowUI: showSyncTransaction && syncCalls.length > 0 && !!evmAddress,
     });
-  }, [syncCalls, showSyncTransaction, address]);
+  }, [syncCalls, showSyncTransaction, evmAddress]);
 
   // Helper function to convert old permission format to new format
   const convertPermissionsFormat = (dbPermissions: any): HatPermissions => {
@@ -176,13 +173,13 @@ export const UnifiedMembershipManager: React.FC<
     }
   };
 
-  // 🚀 NEW: Save to database and build transaction calls for OnchainKit
+  // 🚀 Save to database and build transaction calls for CDP
   const handleSaveToDatabase = async () => {
     try {
       setLoading(true);
 
       // Check wallet connection
-      if (!isConnected || !address) {
+      if (!evmAddress) {
         toast({
           title: 'Wallet Required',
           description: 'Please connect your wallet to save configuration',
@@ -196,7 +193,7 @@ export const UnifiedMembershipManager: React.FC<
       await PodRolePermissionsService.updateRolePermission(roleId, {
         permissions,
         eligibility_criteria: eligibilityCriteria,
-        updated_by: address || 'unknown_user',
+        updated_by: evmAddress || 'unknown_user',
       });
 
       console.log('✅ Database updated successfully');
@@ -251,11 +248,11 @@ export const UnifiedMembershipManager: React.FC<
             const callsWithUserAddress = callResult.calls.map((call) => ({
               ...call,
               args: call.args.map((arg: any) =>
-                arg === '__USER_ADDRESS__' ? address : arg,
+                arg === '__USER_ADDRESS__' ? evmAddress : arg,
               ),
             }));
 
-            console.log('🔐 Injected user address into calls:', address);
+            console.log('🔐 Injected user address into calls:', evmAddress);
 
             if (callsWithUserAddress.length > 0) {
               console.log('🔍 TRACE: Final call after address injection:', {
@@ -349,48 +346,117 @@ export const UnifiedMembershipManager: React.FC<
     }
   };
 
-  // 🚀 NEW: Handle successful blockchain sync
-  const handleSyncSuccess = async (response: any) => {
-    console.log('✅ Blockchain sync transaction succeeded:', response);
+  // CDP Smart Account transaction handler - EXACT FAUCET PATTERN
+  const handleSyncToBlockchain = async () => {
+    // EXACT FAUCET PATTERN: Simple validation matching faucet
+    if (!evmAddress || !currentUser?.evmSmartAccounts?.[0]) {
+      console.error('❌ Missing requirements for blockchain sync:', {
+        hasAddress: !!evmAddress,
+        hasSmartAccount: !!currentUser?.evmSmartAccounts?.[0],
+      });
+      toast({
+        title: 'Wallet Not Connected',
+        description: 'Please connect your Smart Wallet to sync to blockchain.',
+        variant: 'destructive',
+      });
+      return;
+    }
 
-    // Update database sync status
-    await EligibilityService.updateSyncStatus(roleId, 'synced');
+    if (syncCalls.length === 0) {
+      console.error('❌ No sync calls to execute');
+      toast({
+        title: 'No Changes',
+        description: 'No eligibility criteria to sync.',
+        variant: 'destructive',
+      });
+      return;
+    }
 
-    toast({
-      title: 'Synced Successfully',
-      description: `${syncMetadata.criteriaCount} eligibility criteria now enforced on-chain!`,
-    });
+    const smartAccount = currentUser.evmSmartAccounts[0]; // EXACT FAUCET PATTERN
 
-    // Hide transaction UI
-    setShowSyncTransaction(false);
-    setSyncCalls([]);
+    setIsTransactionPending(true); // EXACT FAUCET PATTERN
 
-    onUpdate?.();
-  };
+    try {
+      console.log('🚀 Building Smart Account User Operation for eligibility sync...');
+      console.log('💼 Smart Account:', smartAccount);
+      console.log(`🎯 Syncing ${syncMetadata.criteriaCount} eligibility criteria`);
+      console.log(`⛽ Paymaster: ENABLED (gasless transaction)`);
+      console.log(`📝 ${syncCalls.length} contract calls to execute`);
 
-  // 🚀 NEW: Handle blockchain sync error
-  const handleSyncError = async (error: any) => {
-    console.error('❌ Blockchain sync transaction failed:', error);
+      // EXACT FAUCET PATTERN: Prepare calls for sendUserOperation
+      // syncCalls already have {address, abi, functionName, args} format
+      const callsFormatted = syncCalls.map((call) => ({
+        to: call.address,
+        value: 0n,
+        data: encodeFunctionData({
+          abi: call.abi,
+          functionName: call.functionName,
+          args: call.args,
+        }),
+      }));
 
-    // Update database sync status
-    await EligibilityService.updateSyncStatus(roleId, 'failed');
+      console.log('📋 Formatted calls for User Operation:', callsFormatted.length);
 
-    toast({
-      title: 'Sync Failed',
-      description:
-        error?.message ||
-        'Failed to sync criteria to blockchain. Try again or contact support.',
-      variant: 'destructive',
-    });
+      // EXACT FAUCET PATTERN: Send user operation
+      const result = await sendUserOperation({
+        evmSmartAccount: smartAccount,  // ← Smart Account directly!
+        network: 'base',                 // ← Base mainnet
+        calls: callsFormatted,           // ← Multiple calls (batched)
+        useCdpPaymaster: true,           // ← ENABLE GAS SPONSORSHIP!
+      });
+
+      console.log('✅ User operation sent successfully!', result);
+
+      // Handle success with receipt
+      if (result?.receipt) {
+        console.log('✅ Blockchain sync transaction succeeded:', result.receipt);
+
+        // Update database sync status
+        await EligibilityService.updateSyncStatus(roleId, 'synced');
+
+        toast({
+          title: 'Synced Successfully',
+          description: `${syncMetadata.criteriaCount} eligibility criteria now enforced on-chain!`,
+        });
+
+        // Hide transaction UI
+        setShowSyncTransaction(false);
+        setSyncCalls([]);
+
+        onUpdate?.();
+      } else {
+        console.warn('⚠️ No receipt found in result');
+        toast({
+          title: 'Transaction Completed',
+          description: 'Sync completed but receipt not found. Please refresh.',
+          variant: 'destructive',
+        });
+      }
+    } catch (error: any) {
+      console.error('❌ Blockchain sync transaction failed:', error);
+
+      // Update database sync status
+      await EligibilityService.updateSyncStatus(roleId, 'failed');
+
+      toast({
+        title: 'Sync Failed',
+        description:
+          error?.message ||
+          'Failed to sync criteria to blockchain. Try again or contact support.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsTransactionPending(false); // EXACT FAUCET PATTERN
+    }
   };
 
   // 🐛 DEBUG: Log every render
   console.log('🖼️ RENDERING UnifiedMembershipManager:', {
     showSyncTransaction,
     syncCallsLength: syncCalls.length,
-    hasAddress: !!address,
+    hasAddress: !!evmAddress,
     shouldShowTransactionUI:
-      showSyncTransaction && syncCalls.length > 0 && !!address,
+      showSyncTransaction && syncCalls.length > 0 && !!evmAddress,
     syncMetadata,
   });
 
@@ -621,8 +687,8 @@ export const UnifiedMembershipManager: React.FC<
           </Button>
         )}
 
-        {/* Step 2: OnchainKit Transaction Component for Blockchain Sync */}
-        {showSyncTransaction && syncCalls.length > 0 && address && (
+        {/* Step 2: CDP Smart Account Transaction for Blockchain Sync */}
+        {showSyncTransaction && syncCalls.length > 0 && evmAddress && (
           <Card className="w-full p-6 border-2 border-primary">
             <div className="space-y-4">
               <div className="flex items-center gap-3">
@@ -661,36 +727,44 @@ export const UnifiedMembershipManager: React.FC<
                       <li>
                         Eligibility checks will be trustless and transparent
                       </li>
-                      <li>This transaction is sponsored (free for you!)</li>
+                      <li>This transaction is gasless (no fees for you!)</li>
                     </ul>
                   </div>
                 </div>
               </div>
 
-              <Transaction
-                chainId={base.id}
-                calls={syncCalls}
-                isSponsored={true}
-                onStatus={(status) => {
-                  console.log('🔄 Sync transaction status:', status);
-                  if (status.statusName === 'success' && status.statusData) {
-                    handleSyncSuccess(status.statusData);
-                  }
-                }}
-                onError={handleSyncError}
-              >
-                <TransactionButton
-                  className="w-full bg-primary hover:bg-primary/90 text-white font-medium py-3 px-6 rounded-lg transition-colors"
-                  text="Sync to Blockchain"
-                />
-                <TransactionSponsor />
-                <div className="mt-4">
-                  <TransactionStatus>
-                    <TransactionStatusLabel />
-                    <TransactionStatusAction />
-                  </TransactionStatus>
+              {/* CDP Smart Account Transaction Button */}
+              {evmAddress && currentUser?.evmSmartAccounts?.[0] ? (
+                <Button
+                  onClick={handleSyncToBlockchain}
+                  disabled={isTransactionPending}
+                  className="w-full bg-primary hover:bg-primary/90 text-white font-medium py-3 px-6 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isTransactionPending ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin inline" />
+                      Syncing to Blockchain...
+                    </>
+                  ) : (
+                    `Sync to Blockchain (Gasless)`
+                  )}
+                </Button>
+              ) : (
+                <div
+                  className="p-4 border rounded-lg"
+                  style={{
+                    backgroundColor: '#F5E6E6',
+                    borderColor: '#D9B3B3',
+                  }}
+                >
+                  <p className="text-sm font-medium" style={{ color: '#5C1F1F' }}>
+                    Wallet Not Connected
+                  </p>
+                  <p className="text-xs mt-1" style={{ color: '#8B3A3A' }}>
+                    Please connect your Smart Wallet to sync to blockchain.
+                  </p>
                 </div>
-              </Transaction>
+              )}
 
               <Button
                 variant="outline"
@@ -698,6 +772,7 @@ export const UnifiedMembershipManager: React.FC<
                   setShowSyncTransaction(false);
                   setSyncCalls([]);
                 }}
+                disabled={isTransactionPending}
                 className="w-full"
               >
                 Cancel Sync

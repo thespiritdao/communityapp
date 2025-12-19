@@ -14,26 +14,19 @@ import {
 } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { useAccount, usePublicClient } from 'wagmi';
+import { useEvmAddress, useSendUserOperation, useCurrentUser } from '@coinbase/cdp-hooks';
+import { usePublicClient } from 'wagmi';
 import BountyManagerABIJson from '@/abis/BountyManagerV2.json';
 import type { Abi } from 'viem';
 
 const BountyManagerABI = BountyManagerABIJson as Abi;
 import { format, parseISO, isValid } from 'date-fns';
-import { CheckCircle } from 'lucide-react';
+import { CheckCircle, Loader2 } from 'lucide-react';
 import { useBountySupabase } from '../hooks/useBountySupabase';
 import type { FrontendBid, FrontendNotification } from '../types/bounty';
 import UserTagging from '@/components/UserTagging';
-import { isAddress, parseUnits } from 'viem';
+import { isAddress, parseUnits, encodeFunctionData } from 'viem';
 import { PaymentStructure } from '../hooks/useBountyContractEnhanced';
-import {
-  Transaction,
-  TransactionButton,
-  TransactionSponsor,
-  TransactionStatus,
-  TransactionStatusLabel,
-  TransactionStatusAction,
-} from '@coinbase/onchainkit/transaction';
 import { BaseError } from 'viem';
 import { unifiedNotificationService } from '@/services/unifiedNotificationService';
 import { PodValidationService } from '../services/PodValidationService';
@@ -472,7 +465,10 @@ export const BidReviewManager: React.FC<BidReviewManagerProps> = ({
   onBidStatusChange,
   onNotificationSent,
 }) => {
-  const { address } = useAccount();
+  // CDP Smart Account hooks - EXACT FAUCET PATTERN
+  const { evmAddress } = useEvmAddress();
+  const { sendUserOperation } = useSendUserOperation();
+  const { currentUser } = useCurrentUser();
   const publicClient = usePublicClient();
   const [activeTab, setActiveTab] = useState<
     'pending' | 'approved' | 'rejected'
@@ -484,6 +480,8 @@ export const BidReviewManager: React.FC<BidReviewManagerProps> = ({
   const [selectedReviewers, setSelectedReviewers] = useState<string[]>([]);
   const [pendingAssignment, setPendingAssignment] =
     useState<PendingAssignment | null>(null);
+  const [isCreationPending, setIsCreationPending] = useState(false);
+  const [isAssignmentPending, setIsAssignmentPending] = useState(false);
   const {
     bids,
     bounties,
@@ -541,7 +539,7 @@ export const BidReviewManager: React.FC<BidReviewManagerProps> = ({
   };
 
   const handleRejectBid = async () => {
-    if (!selectedBid || !rejectionReason) return;
+    if (!selectedBid || !rejectionReason || !evmAddress) return;
     try {
       console.log('🔍 Starting bid rejection for bid ID:', selectedBid.id);
 
@@ -554,7 +552,7 @@ export const BidReviewManager: React.FC<BidReviewManagerProps> = ({
       console.log('🔍 Creating bid review for bid ID:', selectedBid.id);
       await createBidReview({
         bidId: selectedBid.id,
-        reviewerAddress: address!,
+        reviewerAddress: evmAddress,
         reviewType: 'final',
         status: 'rejected',
         comments: rejectionReason,
@@ -564,7 +562,7 @@ export const BidReviewManager: React.FC<BidReviewManagerProps> = ({
       // Send notification using unified service
       await unifiedNotificationService.createNotification({
         recipient_address: selectedBid.bidderAddress,
-        sender_address: address!,
+        sender_address: evmAddress,
         notification_type: 'bounty_update',
         title: 'Bid Update',
         message: `Your bid for "${getBountyTitle(selectedBid.bountyId)}" was not selected. Reason: ${rejectionReason}`,
@@ -612,6 +610,195 @@ export const BidReviewManager: React.FC<BidReviewManagerProps> = ({
   };
 
   const filteredBids = bids.filter((bid) => bid.status === activeTab);
+
+  // ============================================================================
+  // CDP SMART ACCOUNT TRANSACTION HANDLERS
+  // ============================================================================
+
+  // Handler for bounty creation (approve + createBounty multi-call)
+  const handleCreateBountyTransaction = async (
+    bounty: any,
+    selectedBid: FrontendBid,
+    techReviewerAddress: `0x${string}`,
+    finalApproverAddress: `0x${string}`,
+    calls: any[]
+  ) => {
+    if (!evmAddress || !currentUser?.evmSmartAccounts?.[0]) {
+      console.error('❌ Missing requirements for bounty creation');
+      return;
+    }
+
+    const smartAccount = currentUser.evmSmartAccounts[0];
+    setIsCreationPending(true);
+
+    try {
+      console.log('🚀 Building Smart Account User Operation for bounty creation...');
+      console.log('💼 Smart Account:', smartAccount);
+      console.log('🎯 Contract: BountyManager - approve + createBounty (multi-call)');
+      console.log('⛽ Paymaster: ENABLED (gasless transaction)');
+
+      const contractAddress = process.env.NEXT_PUBLIC_BOUNTY_MANAGER_ADDRESS as `0x${string}`;
+
+      // Encode all call data
+      const encodedCalls = calls.map(call => ({
+        to: call.address,
+        value: 0n,
+        data: encodeFunctionData({
+          abi: call.abi,
+          functionName: call.functionName,
+          args: call.args,
+        }),
+      }));
+
+      console.log('📝 Encoded call data for multi-call transaction');
+
+      const result = await sendUserOperation({
+        evmSmartAccount: smartAccount,
+        network: 'base',
+        calls: encodedCalls,
+        useCdpPaymaster: true,
+      });
+
+      console.log('✅ User operation sent successfully!', result);
+
+      if (result?.receipt) {
+        const receipt = result.receipt;
+        const logs = receipt.logs;
+
+        // Extract bounty ID from logs
+        const onchainBountyId = extractBountyIdFromLogs(logs, contractAddress);
+
+        if (onchainBountyId) {
+          console.log('✅ Bounty created on-chain with ID:', onchainBountyId);
+
+          // Prepare assignment data
+          const assignmentData: PendingAssignment = {
+            onchainBountyId,
+            onchainBidIndex: selectedBid.onchainBidIndex || 0,
+            reviewer: techReviewerAddress,
+            approver: finalApproverAddress,
+            bidId: selectedBid.id,
+            bountyId: selectedBid.bountyId,
+            bidderAddress: selectedBid.bidderAddress,
+          };
+
+          console.log('📋 Assignment details prepared:', assignmentData);
+          setPendingAssignment(assignmentData);
+        } else {
+          console.error('❌ Could not extract bounty ID from transaction logs');
+          setReviewDialogOpen(false);
+        }
+      }
+    } catch (err: any) {
+      console.error('❌ Bounty creation failed:', err);
+      alert(`Failed to create bounty: ${err.message}`);
+    } finally {
+      setIsCreationPending(false);
+    }
+  };
+
+  // Handler for bounty assignment
+  const handleAssignBountyTransaction = async (assignment: PendingAssignment) => {
+    if (!evmAddress || !currentUser?.evmSmartAccounts?.[0]) {
+      console.error('❌ Missing requirements for assignment');
+      return;
+    }
+
+    const smartAccount = currentUser.evmSmartAccounts[0];
+    setIsAssignmentPending(true);
+
+    try {
+      console.log('🚀 Building Smart Account User Operation for bounty assignment...');
+      console.log('💼 Smart Account:', smartAccount);
+      console.log('🎯 Contract: BountyManager - assignBounty');
+      console.log('⛽ Paymaster: ENABLED (gasless transaction)');
+
+      const contractAddress = process.env.NEXT_PUBLIC_BOUNTY_MANAGER_ADDRESS as `0x${string}`;
+
+      const callData = encodeFunctionData({
+        abi: BountyManagerABI,
+        functionName: 'assignBounty',
+        args: [
+          BigInt(assignment.onchainBountyId),
+          BigInt(assignment.onchainBidIndex),
+          assignment.reviewer,
+          assignment.approver,
+        ],
+      });
+
+      console.log('📝 Encoded call data for assignBounty');
+
+      const result = await sendUserOperation({
+        evmSmartAccount: smartAccount,
+        network: 'base',
+        calls: [{
+          to: contractAddress,
+          value: 0n,
+          data: callData,
+        }],
+        useCdpPaymaster: true,
+      });
+
+      console.log('✅ Assignment successful!', result);
+
+      // Update bid status in database
+      await updateBidStatus(
+        assignment.bidId,
+        'approved',
+        assignment.reviewer,
+        assignment.approver,
+      );
+      onBidStatusChange?.();
+
+      // Send notifications
+      await Promise.all([
+        unifiedNotificationService.createNotification({
+          recipient_address: assignment.bidderAddress,
+          sender_address: evmAddress,
+          notification_type: 'bounty_update',
+          title: 'Bid Approved & Bounty Assigned!',
+          message: 'Your bid has been approved and the bounty has been assigned to you. Funds are now in escrow.',
+          context_type: 'bounty',
+          context_id: assignment.bountyId,
+          context_url: `/bounty/${assignment.bountyId}`,
+          priority: 'high',
+        }),
+        unifiedNotificationService.createNotification({
+          recipient_address: assignment.reviewer,
+          sender_address: evmAddress,
+          notification_type: 'bounty_update',
+          title: 'Technical Reviewer Assignment',
+          message: 'You have been assigned as Technical Reviewer for a bounty.',
+          context_type: 'bounty',
+          context_id: assignment.bountyId,
+          context_url: `/bounty/${assignment.bountyId}`,
+          priority: 'high',
+        }),
+        unifiedNotificationService.createNotification({
+          recipient_address: assignment.approver,
+          sender_address: evmAddress,
+          notification_type: 'bounty_update',
+          title: 'Final Approver Assignment',
+          message: 'You have been assigned as Final Approver for a bounty.',
+          context_type: 'bounty',
+          context_id: assignment.bountyId,
+          context_url: `/bounty/${assignment.bountyId}`,
+          priority: 'high',
+        }),
+      ]);
+
+      // Clear and reload
+      setPendingAssignment(null);
+      await loadAllBids();
+      console.log('✅ Bounty approval and assignment complete!');
+    } catch (err: any) {
+      console.error('❌ Assignment failed:', err);
+      alert(`Failed to assign bounty: ${err.message}\n\nThe bounty was created but not assigned. Please contact support.`);
+      setPendingAssignment(null);
+    } finally {
+      setIsAssignmentPending(false);
+    }
+  };
 
   // Debug logging to see what's happening with bid statuses
   useEffect(() => {
@@ -1136,207 +1323,41 @@ export const BidReviewManager: React.FC<BidReviewManagerProps> = ({
                     );
                   }
 
-                  // Dynamic sponsorship component
-                  const DynamicTransaction = () => {
-                    const [isLoading, setIsLoading] = useState(true);
-                    const [txConfig, setTxConfig] = useState<{
-                      isSponsored: boolean;
-                      hasFallback: boolean;
-                    } | null>(null);
-
-                    useEffect(() => {
-                      const loadTransactionConfig = async () => {
-                        try {
-                          if (address) {
-                            // Always use sponsored transactions when paymaster is configured
-                            const config = {
-                              isSponsored: true,
-                              hasFallback: false,
-                            };
-                            console.log('Transaction config loaded:', config);
-                            setTxConfig(config);
-                          }
-                        } catch (error) {
-                          console.error(
-                            'Error loading transaction config:',
-                            error,
-                          );
-                          setTxConfig(null);
-                        } finally {
-                          setIsLoading(false);
-                        }
-                      };
-
-                      loadTransactionConfig();
-                    }, [address, publicClient]);
-
-                    if (isLoading) {
-                      return (
-                        <Button
-                          disabled={true}
-                          style={{ backgroundColor: '#e8fcff', color: '#000' }}
-                        >
+                  // CDP Smart Account transaction button
+                  return evmAddress && currentUser?.evmSmartAccounts?.[0] ? (
+                    <Button
+                      onClick={() => handleCreateBountyTransaction(
+                        bounty,
+                        selectedBid,
+                        techReviewerAddress,
+                        finalApproverAddress,
+                        calls
+                      )}
+                      disabled={isCreationPending}
+                      className="flex-1 disabled:bg-gray-400 disabled:cursor-not-allowed font-semibold transition-colors hover:opacity-90"
+                      style={{ backgroundColor: '#8FAAA1', color: '#1F2D2A' }}
+                    >
+                      {isCreationPending ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin inline" />
+                          Creating Bounty...
+                        </>
+                      ) : (
+                        <>
                           <CheckCircle className="w-4 h-4 mr-1" />
-                          Loading transaction config...
-                        </Button>
-                      );
-                    }
-
-                    if (!txConfig) {
-                      return (
-                        <Button
-                          disabled={true}
-                          style={{ backgroundColor: '#e8fcff', color: '#000' }}
-                        >
-                          <CheckCircle className="w-4 h-4 mr-1" />
-                          Failed to load transaction config
-                        </Button>
-                      );
-                    }
-
-                    console.log('Using transaction config:', txConfig);
-
-                    return (
-                      <Transaction
-                        calls={calls as any}
-                        isSponsored={true}
-                        onStatus={async (status) => {
-                          console.log('🔔 Bounty creation status:', {
-                            statusName: status.statusName,
-                            hasReceipts: !!(
-                              status.statusData &&
-                              'transactionReceipts' in status.statusData &&
-                              status.statusData.transactionReceipts
-                            ),
-                            receiptsLength:
-                              status.statusData &&
-                              'transactionReceipts' in status.statusData
-                                ? status.statusData.transactionReceipts?.length
-                                : undefined,
-                          });
-
-                          if (status.statusName === 'success') {
-                            console.log(
-                              '✅ Transaction succeeded! Processing bounty creation...',
-                            );
-                            logTransactionLifecycle('Success', {
-                              type: 'bounty_creation',
-                              address: address?.toLowerCase(),
-                              chainId: BASE_CHAIN_ID,
-                              sponsorshipUsed: true,
-                            });
-
-                            // Extract receipts from status
-                            const receipts =
-                              status.statusData &&
-                              'transactionReceipts' in status.statusData
-                                ? status.statusData.transactionReceipts
-                                : undefined;
-
-                            if (receipts && receipts.length > 0) {
-                              // The createBounty transaction is the last call (after approve if wallet funding)
-                              const createBountyReceipt =
-                                receipts[receipts.length - 1];
-                              const logs = createBountyReceipt?.logs;
-
-                              // Extract bounty ID from logs
-                              const onchainBountyId = extractBountyIdFromLogs(
-                                logs,
-                                contractAddress,
-                              );
-
-                              if (onchainBountyId) {
-                                console.log(
-                                  '✅ Bounty created on-chain with ID:',
-                                  onchainBountyId,
-                                );
-
-                                // Prepare assignment data
-                                console.log(
-                                  '🔄 Preparing assignment transaction...',
-                                );
-                                const assignmentData: PendingAssignment = {
-                                  onchainBountyId,
-                                  onchainBidIndex:
-                                    selectedBid.onchainBidIndex || 0, // Use tracked bid index from placeBid
-                                  reviewer: techReviewerAddress,
-                                  approver: finalApproverAddress,
-                                  bidId: selectedBid.id,
-                                  bountyId: selectedBid.bountyId,
-                                  bidderAddress: selectedBid.bidderAddress,
-                                };
-
-                                console.log(
-                                  '📋 Assignment details prepared:',
-                                  assignmentData,
-                                );
-
-                                // Set pending assignment to trigger the assignment transaction
-                                setPendingAssignment(assignmentData);
-
-                                console.log(
-                                  '✅ Assignment will be executed automatically',
-                                );
-                              } else {
-                                console.error(
-                                  '❌ Could not extract bounty ID from transaction logs',
-                                );
-                                // If assignment can't proceed, still close the dialog
-                                setReviewDialogOpen(false);
-                                setSelectedBid(null);
-                                setSelectedReviewers([]);
-                              }
-                            } else {
-                              console.warn(
-                                '⚠️ Success status but no transaction receipts found',
-                              );
-                              setReviewDialogOpen(false);
-                            }
-                          }
-                        }}
-                        onError={async (error) => {
-                          console.error(
-                            'Bounty creation transaction failed:',
-                            error,
-                          );
-
-                          // Handle transaction error with fallback logic
-                          const errorResult = await handleTransactionError(
-                            error as unknown as Error,
-                            'bounty_creation',
-                            calls,
-                            address?.toLowerCase() || '',
-                            publicClient,
-                          );
-
-                          if (errorResult.shouldRetry) {
-                            console.log(
-                              'Retrying transaction with non-sponsored configuration...',
-                            );
-                            // Here we would implement the retry logic with the new config
-                            // For now, just show an error message
-                            alert(
-                              `Transaction failed but retry is available. Error: ${error.message}`,
-                            );
-                          } else {
-                            alert(`Failed to create bounty: ${error.message}`);
-                          }
-                        }}
-                      >
-                        <TransactionButton
-                          text="Approve & Create Bounty (Sponsored)"
-                          className="flex-1"
-                        />
-                        <TransactionSponsor />
-                        <TransactionStatus>
-                          <TransactionStatusLabel />
-                          <TransactionStatusAction />
-                        </TransactionStatus>
-                      </Transaction>
-                    );
-                  };
-
-                  return <DynamicTransaction />;
+                          Approve & Create Bounty (Gasless)
+                        </>
+                      )}
+                    </Button>
+                  ) : (
+                    <Button
+                      disabled={true}
+                      style={{ backgroundColor: '#D8D2C8', color: '#8F8A84', opacity: 0.6 }}
+                    >
+                      <CheckCircle className="w-4 h-4 mr-1" />
+                      Wallet not connected
+                    </Button>
+                  );
                 })()}
               </div>
             </div>
@@ -1458,120 +1479,43 @@ export const BidReviewManager: React.FC<BidReviewManagerProps> = ({
                 </p>
               </div>
 
-              {/* Assignment Transaction */}
-              <Transaction
-                calls={[
-                  // Assign the bounty using the tracked bid index
-                  // The bid was already placed on-chain when the bidder submitted it
-                  {
-                    address: process.env
-                      .NEXT_PUBLIC_BOUNTY_MANAGER_ADDRESS as `0x${string}`,
-                    abi: BountyManagerABI,
-                    functionName: 'assignBounty',
-                    args: [
-                      BigInt(pendingAssignment.onchainBountyId), // uint256 bountyId
-                      BigInt(pendingAssignment.onchainBidIndex), // uint256 bidIndex (tracked from placeBid)
-                      pendingAssignment.reviewer, // address reviewer
-                      pendingAssignment.approver, // address approver
-                    ],
-                  },
-                ]}
-                isSponsored={true}
-                onStatus={async (status) => {
-                  console.log('🔔 Assignment status:', {
-                    statusName: status.statusName,
-                    hasReceipts: !!(
-                      status.statusData &&
-                      'transactionReceipts' in status.statusData &&
-                      status.statusData.transactionReceipts
-                    ),
-                  });
-
-                  if (status.statusName === 'success') {
-                    console.log('✅ Assignment transaction succeeded!');
-                    logTransactionLifecycle('Assignment Success', {
-                      type: 'bounty_assignment',
-                      bountyId: pendingAssignment.onchainBountyId,
-                      bidder: pendingAssignment.bidderAddress,
-                      address: address?.toLowerCase(),
-                      chainId: BASE_CHAIN_ID,
-                    });
-
-                    // Update bid status in Supabase
-                    await updateBidStatus(
-                      pendingAssignment.bidId,
-                      'approved',
-                      pendingAssignment.reviewer,
-                      pendingAssignment.approver,
-                    );
-                    onBidStatusChange?.();
-
-                    // Send notifications
-                    await unifiedNotificationService.createNotification({
-                      recipient_address: pendingAssignment.bidderAddress,
-                      sender_address: address!,
-                      notification_type: 'bounty_update',
-                      title: 'Bid Approved & Bounty Assigned!',
-                      message: `Your bid has been approved and the bounty has been assigned to you. Funds are now in escrow.`,
-                      context_type: 'bounty',
-                      context_id: pendingAssignment.bountyId,
-                      context_url: `/bounty/${pendingAssignment.bountyId}`,
-                      priority: 'high',
-                    });
-
-                    await unifiedNotificationService.createNotification({
-                      recipient_address: pendingAssignment.reviewer,
-                      sender_address: address!,
-                      notification_type: 'bounty_update',
-                      title: 'Technical Reviewer Assignment',
-                      message: `You have been assigned as Technical Reviewer for a bounty.`,
-                      context_type: 'bounty',
-                      context_id: pendingAssignment.bountyId,
-                      context_url: `/bounty/${pendingAssignment.bountyId}`,
-                      priority: 'high',
-                    });
-
-                    await unifiedNotificationService.createNotification({
-                      recipient_address: pendingAssignment.approver,
-                      sender_address: address!,
-                      notification_type: 'bounty_update',
-                      title: 'Final Approver Assignment',
-                      message: `You have been assigned as Final Approver for a bounty.`,
-                      context_type: 'bounty',
-                      context_id: pendingAssignment.bountyId,
-                      context_url: `/bounty/${pendingAssignment.bountyId}`,
-                      priority: 'high',
-                    });
-
-                    // Clear pending assignment and reload
-                    setPendingAssignment(null);
-                    await loadAllBids();
-
-                    console.log('✅ Bounty approval and assignment complete!');
-                  }
-                }}
-                onError={async (error) => {
-                  console.error('❌ Assignment transaction failed:', error);
-                  await logError(error, 'Bounty Assignment');
-
-                  alert(
-                    `Failed to assign bounty: ${error.message}\n\nThe bounty was created but not assigned. Please contact support.`,
-                  );
-
-                  // Clear pending assignment even on error
-                  setPendingAssignment(null);
-                }}
-              >
-                <TransactionButton
-                  text="Assign Bounty & Setup Escrow"
-                  className="w-full"
-                />
-                <TransactionSponsor />
-                <TransactionStatus>
-                  <TransactionStatusLabel />
-                  <TransactionStatusAction />
-                </TransactionStatus>
-              </Transaction>
+              {/* CDP Smart Account Assignment Transaction */}
+              {evmAddress && currentUser?.evmSmartAccounts?.[0] ? (
+                <Button
+                  onClick={() => handleAssignBountyTransaction(pendingAssignment)}
+                  disabled={isAssignmentPending}
+                  className="w-full disabled:bg-gray-400 disabled:cursor-not-allowed font-semibold py-3 transition-colors hover:opacity-90"
+                  style={{ backgroundColor: '#8FAAA1', color: '#1F2D2A' }}
+                >
+                  {isAssignmentPending ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin inline" />
+                      Assigning Bounty...
+                    </>
+                  ) : (
+                    'Assign Bounty & Setup Escrow (Gasless)'
+                  )}
+                </Button>
+              ) : (
+                <div
+                  className="w-full rounded-lg p-4"
+                  style={{
+                    backgroundColor: '#F5E6E6',
+                    borderWidth: '1px',
+                    borderStyle: 'solid',
+                    borderColor: '#D9B3B3',
+                  }}
+                >
+                  <p className="text-sm" style={{ color: '#5C1F1F' }}>
+                    <strong>Configuration Error:</strong> Missing wallet connection or
+                    Smart Account. Please check your connection.
+                  </p>
+                  <div className="mt-2 text-xs" style={{ color: '#8B3A3A' }}>
+                    Address: {evmAddress ? '✓' : '✗'} | Smart Account:{' '}
+                    {currentUser?.evmSmartAccounts?.[0] ? '✓' : '✗'}
+                  </div>
+                </div>
+              )}
             </div>
           </DialogContent>
         </Dialog>
