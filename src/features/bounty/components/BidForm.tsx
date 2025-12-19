@@ -176,7 +176,7 @@ export const BidForm: React.FC<BidFormProps> = ({
 
           // Extract BidPlaced event
           const bidPlacedLog = receipt.logs?.find(
-            (log) =>
+            (log: any) =>
               log.topics &&
               log.topics.length >= 3 &&
               log.address?.toLowerCase() ===
@@ -433,7 +433,7 @@ export const BidForm: React.FC<BidFormProps> = ({
         // Extract BidPlaced event
         // Event: BidPlaced(uint256 indexed bountyId, address indexed bidder, uint256 bidIndex)
         const bidPlacedLog = receipt.logs?.find(
-          (log) =>
+          (log: any) =>
             log.topics &&
             log.topics.length >= 3 &&
             log.address?.toLowerCase() === contractAddress.toLowerCase(),

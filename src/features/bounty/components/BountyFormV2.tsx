@@ -301,7 +301,7 @@ export const BountyFormV2: React.FC<BountyFormV2Props> = ({
           '0x29e653502083442B8B6C7c969557022F6a3CC64C') as `0x${string}`;
 
         const bountyCreatedLog = logs?.find(
-          (log) =>
+          (log: any) =>
             log.topics &&
             log.topics.length >= 2 &&
             log.address?.toLowerCase() === BOUNTY_MANAGER.toLowerCase(),

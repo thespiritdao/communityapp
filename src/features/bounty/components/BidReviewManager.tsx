@@ -49,7 +49,7 @@ const extractBountyIdFromLogs = (
     // Event signature: BountyCreated(uint256 indexed id, address indexed creator, string podId, string ipfsHash)
     // The indexed bounty ID is in topics[1]
     const bountyCreatedLog = logs?.find(
-      (log) =>
+      (log: any) =>
         log.topics &&
         log.topics.length >= 2 &&
         log.address?.toLowerCase() === bountyManagerAddress.toLowerCase(),

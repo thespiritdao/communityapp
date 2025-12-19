@@ -119,7 +119,7 @@ const extractBountyIdFromLogs = (
   try {
     // Look for BountyCreated event from BountyManager contract
     const bountyCreatedLog = logs?.find(
-      (log) =>
+      (log: any) =>
         log.topics &&
         log.topics.length >= 2 &&
         log.address?.toLowerCase() === bountyManagerAddress.toLowerCase(),
