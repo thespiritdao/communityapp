@@ -468,6 +468,10 @@ export function TreasuryManagement({
 
       const calls = prepareTransactionCalls();
 
+      if (!calls || calls.length === 0) {
+        throw new Error('Failed to prepare transaction calls - treasury address may be missing');
+      }
+
       // EXACT FAUCET PATTERN: Prepare calls for sendUserOperation
       const callsFormatted = calls.map((call) => ({
         to: call.address,
