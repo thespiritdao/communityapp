@@ -253,7 +253,7 @@ export function TreasuryManagement({
         tokenInfo.decimals,
         totalTransactionAmount,
         `${totalTransactionAmount} ${tokenInfo.symbol}`,
-        evmAddress, // sender is current user
+        evmAddress ?? undefined, // sender is current user
         recipientAddresses.length === 1 ? recipientAddresses[0] : undefined, // single recipient
         reason || 'Treasury distribution',
         undefined, // sender name - could be fetched from user profile
