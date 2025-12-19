@@ -1302,7 +1302,7 @@ export const BidReviewManager: React.FC<BidReviewManagerProps> = ({
 
                   // Validate transaction data
                   const transactionData = {
-                    address: address?.toLowerCase() as `0x${string}`,
+                    address: evmAddress?.toLowerCase() as `0x${string}`,
                     chainId: BASE_CHAIN_ID,
                     calls,
                     isSponsored: true,
