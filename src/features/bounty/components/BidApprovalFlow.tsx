@@ -663,8 +663,10 @@ export const BidApprovalFlow: React.FC<BidApprovalFlowProps> = ({
       console.log('✅ User operation sent successfully!', result);
 
       // Handle success with receipt
-      if (result?.receipt) {
-        const receipt = result.receipt as TransactionReceipt;
+      // Type assertion needed due to incomplete CDP SDK types
+      const resultWithReceipt = result as any;
+      if (resultWithReceipt?.receipt) {
+        const receipt = resultWithReceipt.receipt as TransactionReceipt;
 
         // Extract bounty ID from logs
         const onchainBountyId = extractBountyIdFromLogs(receipt.logs, contractAddress);

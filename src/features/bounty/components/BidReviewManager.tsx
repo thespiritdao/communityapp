@@ -661,8 +661,10 @@ export const BidReviewManager: React.FC<BidReviewManagerProps> = ({
 
       console.log('✅ User operation sent successfully!', result);
 
-      if (result?.receipt) {
-        const receipt = result.receipt;
+      // Type assertion needed due to incomplete CDP SDK types
+      const resultWithReceipt = result as any;
+      if (resultWithReceipt?.receipt) {
+        const receipt = resultWithReceipt.receipt;
         const logs = receipt.logs;
 
         // Extract bounty ID from logs

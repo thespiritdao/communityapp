@@ -489,8 +489,10 @@ export function TreasuryManagement({
       console.log('✅ User operation sent successfully!', result);
 
       // Handle success with receipt
-      if (result?.receipt) {
-        console.log('🏦 Distribution successful:', result.receipt);
+      // Type assertion needed due to incomplete CDP SDK types
+      const resultWithReceipt = result as any;
+      if (resultWithReceipt?.receipt) {
+        console.log('🏦 Distribution successful:', resultWithReceipt.receipt);
 
         // Update transaction status in Supabase
         if (pendingTransactionId) {
@@ -501,7 +503,7 @@ export function TreasuryManagement({
             await PodTreasuryService.updateTransactionStatus(
               pendingTransactionId,
               'completed',
-              result.receipt.transactionHash,
+              resultWithReceipt.receipt.transactionHash,
             );
             console.log('💾 Transaction status updated to completed');
           } catch (error) {

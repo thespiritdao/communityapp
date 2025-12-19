@@ -236,11 +236,13 @@ export default function ConsolidatedTreasuryDeployer({
       console.log('✅ User operation sent successfully!', result);
 
       // Handle success with receipt
-      if (result?.receipt) {
-        console.log('🏦 Treasury deployment successful:', result.receipt);
+      // Type assertion needed due to incomplete CDP SDK types
+      const resultWithReceipt = result as any;
+      if (resultWithReceipt?.receipt) {
+        console.log('🏦 Treasury deployment successful:', resultWithReceipt.receipt);
 
         // Extract treasury address from transaction logs
-        const txReceipt = result.receipt;
+        const txReceipt = resultWithReceipt.receipt;
 
         // TreasuryDeployed event signature: keccak256("TreasuryDeployed(string,address,uint256,address[],address)")
         const TREASURY_DEPLOYED_EVENT =

@@ -424,8 +424,10 @@ export const BidForm: React.FC<BidFormProps> = ({
       console.log('✅ User operation sent successfully!', result);
 
       // Handle success with receipt
-      if (result?.receipt) {
-        const receipt = result.receipt as TransactionReceipt;
+      // Type assertion needed due to incomplete CDP SDK types
+      const resultWithReceipt = result as any;
+      if (resultWithReceipt?.receipt) {
+        const receipt = resultWithReceipt.receipt as TransactionReceipt;
         setTransactionHash(receipt.transactionHash);
 
         // Extract BidPlaced event

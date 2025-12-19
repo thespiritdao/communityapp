@@ -217,7 +217,9 @@ export const ClaimManagementHATButton: React.FC<
       console.log('✅ User operation sent successfully!', result);
 
       // Handle success with receipt
-      if (result?.receipt) {
+      // Type assertion needed due to incomplete CDP SDK types
+      const resultWithReceipt = result as any;
+      if (resultWithReceipt?.receipt) {
         console.log('✅ Management HAT claimed successfully!');
 
         toast({

@@ -282,8 +282,10 @@ export const BountyFormV2: React.FC<BountyFormV2Props> = ({
       console.log('✅ User operation sent successfully!', result);
 
       // Parse transaction receipt for bounty ID (same logic as before)
-      if (result?.receipt) {
-        const receipt = result.receipt;
+      // Type assertion needed due to incomplete CDP SDK types
+      const resultWithReceipt = result as any;
+      if (resultWithReceipt?.receipt) {
+        const receipt = resultWithReceipt.receipt;
 
         // Prevent duplicate saves
         if (savedTransactions.current.has(receipt.transactionHash)) {

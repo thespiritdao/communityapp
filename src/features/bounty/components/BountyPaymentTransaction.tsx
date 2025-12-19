@@ -310,8 +310,10 @@ export const BountyPaymentTransaction: React.FC<
       console.log('✅ User operation sent successfully!', result);
 
       // Handle success with receipt
-      if (result?.receipt) {
-        await handleSuccess(result.receipt);
+      // Type assertion needed due to incomplete CDP SDK types
+      const resultWithReceipt = result as any;
+      if (resultWithReceipt?.receipt) {
+        await handleSuccess(resultWithReceipt.receipt);
       } else {
         console.warn('⚠️ No receipt found in result');
         onError(new Error('Transaction completed but no receipt found'));

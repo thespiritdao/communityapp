@@ -408,8 +408,10 @@ export const UnifiedMembershipManager: React.FC<
       console.log('✅ User operation sent successfully!', result);
 
       // Handle success with receipt
-      if (result?.receipt) {
-        console.log('✅ Blockchain sync transaction succeeded:', result.receipt);
+      // Type assertion needed due to incomplete CDP SDK types
+      const resultWithReceipt = result as any;
+      if (resultWithReceipt?.receipt) {
+        console.log('✅ Blockchain sync transaction succeeded:', resultWithReceipt.receipt);
 
         // Update database sync status
         await EligibilityService.updateSyncStatus(roleId, 'synced');

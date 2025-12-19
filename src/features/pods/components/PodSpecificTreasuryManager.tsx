@@ -143,8 +143,10 @@ export function PodSpecificTreasuryManager({
       console.log('✅ User operation sent successfully!', result);
 
       // Handle success with receipt
-      if (result?.receipt) {
-        console.log('🏦 Treasury deployment successful:', result.receipt);
+      // Type assertion needed due to incomplete CDP SDK types
+      const resultWithReceipt = result as any;
+      if (resultWithReceipt?.receipt) {
+        console.log('🏦 Treasury deployment successful:', resultWithReceipt.receipt);
 
         // Extract treasury address from transaction logs
         // TreasuryDeployed event signature: keccak256("TreasuryDeployed(string,address,uint256,address[],address)")
@@ -153,9 +155,9 @@ export function PodSpecificTreasuryManager({
 
         let treasuryAddress = '';
 
-        if (result.receipt.logs) {
+        if (resultWithReceipt.receipt.logs) {
           // Find TreasuryDeployed event log
-          const deploymentLog = result.receipt.logs.find(
+          const deploymentLog = resultWithReceipt.receipt.logs.find(
             (log: any) => log.topics?.[0] === TREASURY_DEPLOYED_EVENT,
           );
 
@@ -175,7 +177,7 @@ export function PodSpecificTreasuryManager({
           console.error('Could not extract treasury address from logs');
           toast({
             title: 'Treasury Deployed!',
-            description: `Treasury deployed but address extraction failed. Check tx: ${result.receipt.transactionHash}`,
+            description: `Treasury deployed but address extraction failed. Check tx: ${resultWithReceipt.receipt.transactionHash}`,
           });
           return;
         }
