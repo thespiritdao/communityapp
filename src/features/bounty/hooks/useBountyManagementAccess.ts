@@ -13,6 +13,7 @@ interface Pod {
   created_by_address?: string;
   pod_leads?: string[];
   status?: string;
+  treasury_contract_address?: string;
 }
 
 interface BountyService {
