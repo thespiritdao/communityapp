@@ -146,8 +146,10 @@ export const RemoveMemberButton: React.FC<RemoveMemberButtonProps> = ({
       console.log('✅ User operation sent successfully!', result);
 
       // Handle success with receipt
-      if (result?.receipt) {
-        const txHash = result.receipt.transactionHash;
+      // Type assertion needed due to incomplete CDP SDK types
+      const resultWithReceipt = result as any;
+      if (resultWithReceipt?.receipt) {
+        const txHash = resultWithReceipt.receipt.transactionHash;
 
         console.log('✅ Member removed on-chain:', {
           member: memberAddress,

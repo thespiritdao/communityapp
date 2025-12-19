@@ -1024,8 +1024,10 @@ export const ApproveApplicationButton: React.FC<
       console.log('✅ User operation sent successfully!', result);
 
       // Handle success with receipt
-      if (result?.receipt) {
-        const txHash = result.receipt.transactionHash;
+      // Type assertion needed due to incomplete CDP SDK types
+      const resultWithReceipt = result as any;
+      if (resultWithReceipt?.receipt) {
+        const txHash = resultWithReceipt.receipt.transactionHash;
 
         // Update application status
         await supabase

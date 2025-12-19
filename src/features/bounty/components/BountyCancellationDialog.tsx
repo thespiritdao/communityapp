@@ -137,7 +137,9 @@ export const BountyCancellationDialog: React.FC<
       console.log('✅ Bounty cancelled successfully:', bounty.onchain_id);
 
       // Get transaction hash from result
-      const txHash = result?.receipt?.transactionHash;
+      // Type assertion needed due to incomplete CDP SDK types
+      const resultWithReceipt = result as any;
+      const txHash = resultWithReceipt?.receipt?.transactionHash;
 
       if (txHash) {
         // Sync database with blockchain state

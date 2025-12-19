@@ -83,9 +83,11 @@ export const VoteOnApplicationButton: React.FC<
       console.log('✅ User operation sent successfully!', result);
 
       // Handle success with receipt
-      if (result?.receipt) {
-        const txHash = result.receipt.transactionHash;
-        const blockNumber = result.receipt.blockNumber;
+      // Type assertion needed due to incomplete CDP SDK types
+      const resultWithReceipt = result as any;
+      if (resultWithReceipt?.receipt) {
+        const txHash = resultWithReceipt.receipt.transactionHash;
+        const blockNumber = resultWithReceipt.receipt.blockNumber;
 
         console.log('✅ Vote transaction successful:', txHash);
 
