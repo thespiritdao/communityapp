@@ -437,9 +437,9 @@ export default function ConsolidatedTreasuryDeployerV2() {
         to: tx.address,
         value: 0n,
         data: encodeFunctionData({
-          abi: tx.abi,
-          functionName: tx.functionName,
-          args: tx.args,
+          abi: tx.abi as any,
+          functionName: tx.functionName as any,
+          args: tx.args as any,
         }),
       }));
 
