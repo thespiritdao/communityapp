@@ -305,7 +305,6 @@ export function TreasuryManagement({
           treasuryAddress,
           podId,
           proxyFromEnv: process.env.NEXT_PUBLIC_TREASURY_PROXY,
-          paymasterUrl: config?.paymaster,
         });
 
         // Additional sponsorship debug
