@@ -1,21 +1,13 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
-  useAccount,
   useChainId,
   useReadContract,
   useBlockNumber,
   useWaitForTransactionReceipt,
 } from 'wagmi';
-import {
-  Transaction,
-  TransactionButton,
-  TransactionSponsor,
-  TransactionStatus,
-  TransactionStatusLabel,
-  TransactionStatusAction,
-} from '@coinbase/onchainkit/transaction';
+import { useSendUserOperation, useCurrentUser, useEvmAddress } from '@coinbase/cdp-hooks';
 import { useQueryClient } from '@tanstack/react-query';
 import { base } from 'viem/chains';
 import { encodeFunctionData, type Abi } from 'viem';
@@ -238,15 +230,27 @@ const validateTransactionData = (data: any) => {
 export function CreateProposalForm({
   onSuccess,
 }: CreateProposalFormProps): React.ReactElement {
-  const { address, isConnected, connector } = useAccount();
+  const { currentUser } = useCurrentUser();
+  const { sendUserOperation } = useSendUserOperation();
+  const { evmAddress: address } = useEvmAddress();
   const chainId = useChainId();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const { userHats } = useHatPermissions();
+  const { userHats, permissions: hatPermissions, userRoles } = useHatPermissions();
 
-  // ✅ NEW: Check governance participation permission
-  const { canParticipate: hasGovernancePermission, governanceRole } =
-    useGovernancePermission();
+  // Check wallet connection status
+  const isConnected = Boolean(currentUser && address);
+
+  // ✅ Check governance participation permission from consolidated HAT permissions
+  const hasGovernancePermission = hatPermissions?.governanceParticipation ?? false;
+
+  console.log('🏛️ Governance Permission Check:', {
+    address,
+    isConnected,
+    hasGovernancePermission,
+    hatPermissions,
+    userRolesCount: userRoles?.length || 0,
+  });
 
   const [formData, setFormData] = useState<ProposalFormData>({
     title: '',
@@ -456,30 +460,47 @@ export function CreateProposalForm({
     toast,
   ]); // ❌ Removed votingPowerQueryKey from dependencies
 
-  // Fetch user tokens on mount or address change
+  // ✅ Load user's pods with governance permission from database (not hardcoded)
   useEffect(() => {
-    async function fetchTokens() {
+    async function loadUserPodsWithGovernance() {
       if (!address) return;
+
       try {
-        const balances = await fetchTokenBalances(address);
+        console.log('🗳️ Loading pods where user has governanceParticipation permission...');
+
+        // Get user's pod roles with governance permission from database
         const tokens: { id: string; label: string }[] = [];
-        if (balances.hasProofOfCuriosity)
-          tokens.push({ id: 'poc', label: 'Proof of Curiosity' });
-        if (balances.hasExecutivePod)
-          tokens.push({ id: 'exec', label: 'Executive Pod' });
-        if (balances.hasDevPod) tokens.push({ id: 'dev', label: 'Dev Pod' });
-        if (balances.hasMarketAdmin)
-          tokens.push({ id: 'market', label: 'Market Admin' });
-        if (balances.hasBountyHat)
-          tokens.push({ id: 'bounty', label: 'Bounty Hat' });
+
+        for (const role of userRoles || []) {
+          // Check if this role has governanceParticipation permission
+          if (role.permissions?.governanceParticipation && role.podId) {
+            // Get pod name from database
+            const { data: pod } = await supabase
+              .from('pods')
+              .select('name')
+              .eq('id', role.podId)
+              .single();
+
+            if (pod) {
+              tokens.push({
+                id: role.podId,
+                label: pod.name,
+              });
+              console.log(`  ✅ Added pod with governance permission: ${pod.name}`);
+            }
+          }
+        }
+
+        console.log(`📋 Total pods with governance permission: ${tokens.length}`);
         setUserTokens(tokens);
       } catch (error) {
-        console.error('Error fetching user tokens:', error);
+        console.error('❌ Error loading user pods with governance permission:', error);
         setUserTokens([]);
       }
     }
-    fetchTokens();
-  }, [address]);
+
+    loadUserPodsWithGovernance();
+  }, [address, userRoles]);
 
   // Determine delegation needs with enhanced logic
   const needsDelegation = React.useMemo(() => {
@@ -555,6 +576,70 @@ export function CreateProposalForm({
     });
   };
 
+  // CDP transaction handler for delegation
+  const handleCDPDelegation = useCallback(async () => {
+    if (!currentUser?.evmSmartAccounts?.[0]) {
+      toast({
+        title: 'Error',
+        description: 'Smart Account not found',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (!address) {
+      toast({
+        title: 'Error',
+        description: 'No address to delegate to',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    handleDelegationStart();
+
+    try {
+      const smartAccount = currentUser.evmSmartAccounts[0];
+
+      const callData = encodeFunctionData({
+        abi: AdvocateMembershipABI,
+        functionName: 'delegate',
+        args: [address],
+      });
+
+      console.log('🚀 CDP Delegation:', {
+        smartAccount,
+        delegateTo: address,
+      });
+
+      const result = await sendUserOperation({
+        evmSmartAccount: smartAccount,
+        network: 'base',
+        calls: [{
+          to: ADVOCATE_ADDRESS,
+          value: 0n,
+          data: callData,
+        }],
+        useCdpPaymaster: true,
+      });
+
+      console.log('✅ Delegation submitted:', result);
+
+      // Use userOperationHash as transaction hash
+      if (result.userOperationHash) {
+        handleDelegationSuccess(result.userOperationHash as `0x${string}`);
+      }
+
+      toast({
+        title: 'Delegation Submitted',
+        description: 'Your voting power delegation is being processed (gasless).',
+        variant: 'success',
+      });
+    } catch (error: any) {
+      handleDelegationError(error);
+    }
+  }, [currentUser, address, sendUserOperation, toast]);
+
   // Handler for thread selection
   const handleThreadSelect = async (threadId: string) => {
     setFormData((prev) => ({ ...prev, forumThreadId: threadId }));
@@ -578,6 +663,14 @@ export function CreateProposalForm({
 
   // Check voting power separately so we can show specific error messages
   const hasVotingPower = React.useMemo(() => {
+    // ✅ BETA TESTING: If user has governance permission from HATs, bypass voting power check
+    // This allows Beta Testers to create proposals without Advocate NFTs
+    if (hasGovernancePermission) {
+      console.log('✅ Voting power check bypassed - user has governanceParticipation permission');
+      return true;
+    }
+
+    // Normal flow: Check Advocate NFT voting power
     if (votingPower === undefined || votingPower === null || proposalThreshold === undefined || proposalThreshold === null) {
       return false;
     }
@@ -590,11 +683,12 @@ export function CreateProposalForm({
       console.error('BigInt conversion error:', error);
       return false;
     }
-  }, [votingPower, proposalThreshold]);
+  }, [votingPower, proposalThreshold, hasGovernancePermission]);
 
   // Check if user can create proposals
   const canCreateProposal = React.useMemo(() => {
     // ✅ FIX: Must have BOTH governance permission AND voting power
+    // (Note: Beta Testers automatically pass voting power check via HAT permissions)
 
     // Check permission first
     if (!hasGovernancePermission) {
@@ -604,7 +698,7 @@ export function CreateProposalForm({
       return false;
     }
 
-    // Then check voting power
+    // Then check voting power (automatically true for users with governance permission)
     if (!hasVotingPower) {
       console.log('❌ Cannot create proposal: Insufficient voting power');
       return false;
@@ -706,7 +800,171 @@ export function CreateProposalForm({
     proposalArgs,
   ]);
 
-  // Early return for connection issues
+  // ❌ REMOVED EARLY RETURNS - they violated Rules of Hooks by returning after hooks were called
+  // Now we handle these cases in the JSX render instead
+
+  const proposeCall = {
+    address: GOVERNOR_ADDRESS,
+    abi: DAOGovernorABI,
+    functionName: 'proposeWithMetadata',
+    args: [...proposalArgs] as unknown as any[], // flatten tuple to array to avoid deep type recursion
+  };
+
+  // CDP transaction handler for proposal creation
+  const handleCDPProposalCreation = useCallback(async () => {
+    if (!currentUser?.evmSmartAccounts?.[0] || !proposalArgs) {
+      toast({
+        title: 'Error',
+        description: 'Cannot create proposal - missing required data',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    const smartAccount = currentUser.evmSmartAccounts[0];
+
+    try {
+      // Encode the proposal call
+      const callData = encodeFunctionData({
+        abi: DAOGovernorABI,
+        functionName: 'proposeWithMetadata',
+        args: proposalArgs,
+      });
+
+      console.log('🚀 CDP Proposal Creation:', {
+        smartAccount,
+        args: proposalArgs,
+      });
+
+      const result = await sendUserOperation({
+        evmSmartAccount: smartAccount,
+        network: 'base',
+        calls: [{
+          to: GOVERNOR_ADDRESS,
+          value: 0n,
+          data: callData,
+        }],
+        useCdpPaymaster: true,
+      });
+
+      console.log('✅ Proposal submitted:', result);
+
+      // Process success (extracted from OnchainKit onSuccess)
+      setHasInteracted(false);
+      const txHash = result.userOperationHash;
+
+      if (hasProcessedProposal === txHash) {
+        return;
+      }
+      setHasProcessedProposal(txHash || null);
+
+      toast({ title: '✅ Proposal Created!', description: 'Processing metadata...' });
+
+      // Reset form
+      setFormData({
+        title: '',
+        body: '',
+        forumThreadId: '',
+        selectedToken: '',
+      });
+
+      // Note: For CDP, we may not have immediate access to transaction logs
+      // We'll use a temporary ID based on the user operation hash
+      const realProposalId = txHash ? `temp_${txHash.slice(2, 10)}` : null;
+
+      if (realProposalId) {
+        try {
+          // Check if proposal metadata already exists
+          const { data: existingMetadata, error: checkError } = await supabase
+            .from('proposal_metadata')
+            .select('id')
+            .eq('onchain_proposal_id', realProposalId)
+            .maybeSingle();
+
+          // Only insert if no existing metadata found
+          if (!existingMetadata && !checkError) {
+            // Extract mentions from the proposal body
+            const mentionRegex = /@\[([^\]]+)\]\(([^)]+)\)/g;
+            const mentions: string[] = [];
+            let match;
+            while ((match = mentionRegex.exec(formData.body)) !== null) {
+              mentions.push(match[2]);
+            }
+
+            // Insert proposal metadata
+            const { error: metadataError } = await supabase
+              .from('proposal_metadata')
+              .insert([{
+                onchain_proposal_id: realProposalId,
+                title: formData.title,
+                description: formData.body,
+                proposer_address: address,
+                forum_thread_id: formData.forumThreadId,
+                token_id: formData.selectedToken,
+                created_at: new Date().toISOString(),
+                transaction_hash: txHash,
+                mentions: mentions,
+                status: 'active',
+              }]);
+
+            if (metadataError) {
+              console.error('❌ Error inserting proposal metadata:', metadataError);
+            }
+          }
+
+          // Create notifications for token holders
+          if (formData.selectedToken) {
+            try {
+              await votingReminderService.notifyTokenHoldersOfNewProposal(
+                realProposalId,
+                formData.title,
+                address!,
+              );
+              console.log('✅ Token holder notifications sent');
+            } catch (tokenNotificationError) {
+              console.error('❌ Error creating token holder notifications:', tokenNotificationError);
+            }
+          }
+
+          console.log('✅ Proposal creation completed with metadata and notifications');
+        } catch (error) {
+          console.error('❌ Error in post-transaction processing:', error);
+        }
+      }
+
+      // Refresh and reload
+      onSuccess?.();
+      setTimeout(() => {
+        refreshNotifications();
+        // Don't reload the page - it logs users out
+        // Just refresh the proposals list via onSuccess callback
+      }, 2000);
+
+    } catch (error: any) {
+      console.error('❌ Proposal Transaction Error:', error.message);
+      toast({
+        title: 'Proposal Failed',
+        description: error.message || 'Unknown error',
+        variant: 'destructive',
+      });
+    }
+  }, [currentUser, proposalArgs, sendUserOperation, formData, address, toast, hasProcessedProposal, onSuccess, refreshNotifications]);
+
+  // Validate transaction data before rendering Transaction
+  const transactionData = {
+    address: address?.toLowerCase() as `0x${string}`,
+    chainId: base.id, // Use base.id for Base
+    calls: [proposeCall],
+    isSponsored: true,
+  };
+  const validation = validateTransactionData(transactionData);
+  if (validation.isValid) {
+    // Transaction data validated successfully
+  } else {
+    console.error('Invalid transaction data:', validation.issues);
+  }
+
+  // ✅ Handle error states in render instead of early returns
   if (!isConnected || !address) {
     return (
       <div className="proposal-form p-6">
@@ -738,27 +996,6 @@ export function CreateProposalForm({
         </div>
       </div>
     );
-  }
-
-  const proposeCall = {
-    address: GOVERNOR_ADDRESS,
-    abi: DAOGovernorABI,
-    functionName: 'proposeWithMetadata',
-    args: [...proposalArgs] as unknown as any[], // flatten tuple to array to avoid deep type recursion
-  };
-
-  // Validate transaction data before rendering Transaction
-  const transactionData = {
-    address: address?.toLowerCase() as `0x${string}`,
-    chainId: base.id, // Use base.id for Base
-    calls: [proposeCall],
-    isSponsored: true,
-  };
-  const validation = validateTransactionData(transactionData);
-  if (validation.isValid) {
-    // Transaction data validated successfully
-  } else {
-    console.error('Invalid transaction data:', validation.issues);
   }
 
   return (
@@ -935,49 +1172,15 @@ export function CreateProposalForm({
                 )}
 
                 <div className="flex flex-col space-y-2">
-                  <Transaction
-                    isSponsored={true}
-                    chainId={base.id} // Use base.id for Base
-                    calls={[
-                      {
-                        address: ADVOCATE_ADDRESS,
-                        abi: AdvocateMembershipABI,
-                        functionName: 'delegate',
-                        args: [address as `0x${string}`], // Explicit type casting to ensure it's not undefined
-                      },
-                    ]}
-                    onStatus={(status) => {
-                      if (status.statusName === 'buildingTransaction') {
-                        handleDelegationStart();
-                      }
-                    }}
-                    onSuccess={async (response) => {
-                      if (response?.transactionReceipts?.[0]?.transactionHash) {
-                        handleDelegationSuccess(
-                          response.transactionReceipts[0]
-                            .transactionHash as `0x${string}`,
-                        );
-                      }
-                    }}
-                    onError={(error) => {
-                      handleDelegationError(error);
-                    }}
+                  <button
+                    onClick={handleCDPDelegation}
+                    disabled={isDelegating || !address}
+                    className="w-full disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-medium py-2 px-4 rounded transition-colors bg-[#C6933F] hover:bg-[#8F6B2F]"
                   >
-                    <TransactionButton
-                      text={
-                        isDelegating
-                          ? 'Delegating...'
-                          : 'Delegate Voting Power to Myself'
-                      }
-                      disabled={isDelegating || !address}
-                      className="w-full disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-medium py-2 px-4 rounded transition-colors bg-[#C6933F] hover:bg-[#8F6B2F]"
-                    />
-                    <TransactionSponsor />
-                    <TransactionStatus>
-                      <TransactionStatusLabel />
-                      <TransactionStatusAction />
-                    </TransactionStatus>
-                  </Transaction>
+                    {isDelegating
+                      ? 'Delegating...'
+                      : 'Delegate Voting Power to Myself (Gasless)'}
+                  </button>
                   <div className="text-xs" style={{ color: '#C6933F' }}>
                     This transaction will delegate your NFT voting power to
                     yourself, enabling you to vote and create proposals.
@@ -1019,49 +1222,21 @@ export function CreateProposalForm({
                   </p>
 
                   <div className="flex flex-col space-y-2">
-                    <Transaction
-                      isSponsored={true}
-                      chainId={base.id} // Use base.id for Base
-                      calls={[
-                        {
-                          address: ADVOCATE_ADDRESS,
-                          abi: AdvocateMembershipABI,
-                          functionName: 'delegate',
-                          args: [address as `0x${string}`],
-                        },
-                      ]}
-                      onSuccess={async (response) => {
-                        // Force delegation successful
-                        toast({
-                          title: 'Delegation Successful!',
-                          description:
-                            'Your voting power should now be active. Please refresh the page.',
-                        });
-                        // Force refetch after a delay
+                    <button
+                      onClick={async () => {
+                        await handleCDPDelegation();
+                        // Force refetch after delegation
                         setTimeout(() => {
                           refetchVotingPower();
                           refetchDelegate();
                           refetchBalance();
                         }, 3000);
                       }}
-                      onError={(error) => {
-                        toast({
-                          title: 'Delegation Failed',
-                          description: error.message || 'Unknown error',
-                          variant: 'destructive',
-                        });
-                      }}
+                      disabled={isDelegating || !address}
+                      className="w-full disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-medium py-2 px-4 rounded transition-colors bg-[#8B3A3A] hover:bg-[#5C1F1F]"
                     >
-                      <TransactionButton
-                        text="Force Delegate Voting Power"
-                        className="w-full text-white font-medium py-2 px-4 rounded transition-colors bg-[#8B3A3A] hover:bg-[#5C1F1F]"
-                      />
-                      <TransactionSponsor />
-                      <TransactionStatus>
-                        <TransactionStatusLabel />
-                        <TransactionStatusAction />
-                      </TransactionStatus>
-                    </Transaction>
+                      {isDelegating ? 'Delegating...' : 'Force Delegate Voting Power (Gasless)'}
+                    </button>
                     <div className="text-xs" style={{ color: '#8B3A3A' }}>
                       This will delegate your NFT voting power to yourself. This
                       is needed after contract redeployments.
@@ -1083,7 +1258,7 @@ export function CreateProposalForm({
               </summary>
               <div className="mt-2 p-3 bg-gray-100 rounded text-xs font-mono space-y-1">
                 <div>Address: {address || 'N/A'}</div>
-                <div>Connector: {connector?.name || 'N/A'}</div>
+                <div>Wallet: CDP Smart Account</div>
                 <div>NFT Balance: {nftBalance?.toString() || 'N/A'}</div>
                 <div>Voting Power: {votingPower?.toString() || 'N/A'}</div>
                 <div>
@@ -1341,234 +1516,13 @@ export function CreateProposalForm({
               )}
 
               {isConnected && canCreateProposal ? (
-                <Transaction
-                  chainId={base.id} // Use base.id for Base
-                  calls={[proposeCall]}
-                  isSponsored={true}
-                  onStatus={(status) => {
-                    if (status.statusName === 'buildingTransaction') {
-                      handleDelegationStart();
-                    }
-                  }}
-                  onSuccess={async (txResult) => {
-                    setHasInteracted(false);
-                    if (
-                      hasProcessedProposal ===
-                      txResult?.transactionReceipts?.[0]?.transactionHash
-                    ) {
-                      return;
-                    }
-                    setHasProcessedProposal(
-                      txResult?.transactionReceipts?.[0]?.transactionHash ||
-                        null,
-                    );
-                    toast({ title: '✅ Proposal Created!', description: '' });
-                    // --- Begin polling for proposal state ---
-                    const transactionHash =
-                      txResult?.transactionReceipts?.[0]?.transactionHash;
-                    const logs = txResult?.transactionReceipts?.[0]?.logs || [];
-                    let realProposalId: string | null = null;
-                    try {
-                      const eventAbi = parseAbiItem(
-                        'event ProposalCreatedWithMetadata(uint256 proposalId, address proposer, string title, string forumThreadId, uint256 createdAt)',
-                      );
-                      const parsedLogs = parseEventLogs({
-                        abi: [eventAbi],
-                        logs: logs,
-                      });
-                      for (const parsed of parsedLogs) {
-                        if (
-                          parsed.eventName === 'ProposalCreatedWithMetadata'
-                        ) {
-                          realProposalId = parsed.args.proposalId.toString();
-                          break;
-                        }
-                      }
-                      if (!realProposalId) {
-                        const fallbackEventAbi = parseAbiItem(
-                          'event ProposalCreated(uint256 proposalId, address proposer, address[] targets, uint256[] values, string[] signatures, bytes[] calldatas, uint256 startBlock, uint256 endBlock, string description)',
-                        );
-                        const fallbackParsedLogs = parseEventLogs({
-                          abi: [fallbackEventAbi],
-                          logs: logs,
-                        });
-                        for (const parsed of fallbackParsedLogs) {
-                          if (parsed.eventName === 'ProposalCreated') {
-                            realProposalId = parsed.args.proposalId.toString();
-                            break;
-                          }
-                        }
-                      }
-                    } catch (e) {
-                      console.error(
-                        'Error parsing logs for proposal events:',
-                        e,
-                      );
-                    }
-                    if (!realProposalId) {
-                      realProposalId = transactionHash
-                        ? `temp_${transactionHash.slice(2, 10)}`
-                        : null;
-                    }
-                    // --- Insert metadata and notifications immediately ---
-                    if (realProposalId) {
-                      try {
-                        // Check if proposal metadata already exists
-                        const { data: existingMetadata } = await supabase
-                          .from('proposal_metadata')
-                          .select('id')
-                          .eq('onchain_proposal_id', realProposalId)
-                          .single();
-
-                        if (!existingMetadata) {
-                          // Extract mentions from the proposal body
-                          const mentionRegex = /@\[([^\]]+)\]\(([^)]+)\)/g;
-                          const mentions: string[] = [];
-                          let match;
-                          while (
-                            (match = mentionRegex.exec(formData.body)) !== null
-                          ) {
-                            mentions.push(match[2]); // match[2] is the wallet address
-                          }
-                          // Insert proposal metadata with status: 'active'
-                          const { error: metadataError } = await supabase
-                            .from('proposal_metadata')
-                            .insert([
-                              {
-                                onchain_proposal_id: realProposalId,
-                                title: formData.title,
-                                description: formData.body,
-                                proposer_address: address,
-                                forum_thread_id: formData.forumThreadId,
-                                token_id: formData.selectedToken,
-                                created_at: new Date().toISOString(),
-                                transaction_hash: transactionHash,
-                                mentions: mentions, // Store the mentions array
-                                status: 'active', // Always set to active for new proposals
-                              },
-                            ]);
-                          if (metadataError) {
-                            console.error(
-                              '❌ Error inserting proposal metadata:',
-                              metadataError,
-                            );
-                          }
-                        }
-                        // Create notifications for token holders using voting reminder service
-                        if (formData.selectedToken) {
-                          try {
-                            await votingReminderService.notifyTokenHoldersOfNewProposal(
-                              realProposalId,
-                              formData.title,
-                              address!,
-                            );
-                            console.log(
-                              '✅ Token holder notifications sent via voting reminder service',
-                            );
-                          } catch (tokenNotificationError) {
-                            console.error(
-                              '❌ Error creating token holder notifications:',
-                              tokenNotificationError,
-                            );
-                          }
-                        }
-                        // Handle mentions in the proposal description
-                        const mentionRegex = /@\[([^\]]+)\]\(([^)]+)\)/g;
-                        const mentions: string[] = [];
-                        let match;
-                        while (
-                          (match = mentionRegex.exec(formData.body)) !== null
-                        ) {
-                          mentions.push(match[2]); // match[2] is the wallet address
-                        }
-                        // NOTE: Mention notifications are now handled automatically by UserTagging component
-                        // when the form is submitted with mentions in the description
-
-                        console.log(
-                          '✅ Proposal creation completed with metadata and notifications',
-                        );
-                        // --- End notification logic ---
-                      } catch (error) {
-                        console.error(
-                          '❌ Error in post-transaction processing:',
-                          error,
-                        );
-                      }
-                    }
-                    // --- Poll for proposal state ---
-                    if (realProposalId) {
-                      let attempts = 0;
-                      const maxAttempts = 15; // ~30 seconds
-                      const poll = async () => {
-                        try {
-                          const state = await publicClient.readContract({
-                            address: GOVERNOR_ADDRESS,
-                            abi: DAOGovernorABI,
-                            functionName: 'state',
-                            args: [BigInt(realProposalId)],
-                          });
-                          if (state === 1) {
-                            // Active
-                            onSuccess?.();
-                            setTimeout(() => {
-                              refreshNotifications();
-                              window.location.reload();
-                            }, 500);
-                            return;
-                          }
-                        } catch (err) {
-                          // Ignore errors, keep polling
-                        }
-                        attempts++;
-                        if (attempts < maxAttempts) {
-                          setTimeout(poll, 2000);
-                        } else {
-                          // Give up after maxAttempts, just refresh
-                          onSuccess?.();
-                          setTimeout(() => {
-                            refreshNotifications();
-                            window.location.reload();
-                          }, 500);
-                        }
-                      };
-                      poll();
-                    } else {
-                      // Could not get proposalId, fallback
-                      onSuccess?.();
-                      setTimeout(() => {
-                        refreshNotifications();
-                        window.location.reload();
-                      }, 500);
-                    }
-                    // --- End polling logic ---
-                  }}
-                  onError={(error) => {
-                    console.error(
-                      '❌ Proposal Transaction Error:',
-                      error.message,
-                    );
-                    toast({
-                      title: 'Proposal Failed',
-                      description: error.message || 'Unknown error',
-                      variant: 'destructive',
-                    });
-                  }}
+                <button
+                  onClick={handleCDPProposalCreation}
+                  disabled={!canSubmitProposal}
+                  className="w-full font-semibold py-4 px-8 rounded-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl !bg-[#d7f8fd] !text-black"
                 >
-                  <TransactionButton
-                    className="w-full font-semibold py-4 px-8 rounded-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl !bg-[#d7f8fd] !text-black"
-                    disabled={!canSubmitProposal}
-                    text={
-                      isDelegating ? 'Delegating...' : 'Submit Proposal to DAO'
-                    }
-                  />
-                  <TransactionSponsor />
-                  <div className="mt-4">
-                    <TransactionStatus>
-                      <TransactionStatusLabel />
-                      <TransactionStatusAction />
-                    </TransactionStatus>
-                  </div>
-                </Transaction>
+                  {isDelegating ? 'Delegating...' : 'Submit Proposal'}
+                </button>
               ) : (
                 <div className="text-center">
                   <button
