@@ -2,7 +2,7 @@
 
 import type React from 'react';
 import { useRouter } from 'next/navigation';
-import { useEvmAddress } from '@coinbase/cdp-hooks';
+import { useCDPStatus } from '@/hooks/useCDPStatus';
 import { useUnifiedForumAccess } from '../hooks/useUnifiedForumAccess';
 import { Button } from '@/components/ui/button';
 import { Loader2, Lock, AlertTriangle } from 'lucide-react';
@@ -25,8 +25,7 @@ export default function ForumAccessGate({
   fallbackMessage,
 }: ForumAccessGateProps) {
   const router = useRouter();
-  const { evmAddress: address } = useEvmAddress();
-  const isConnected = !!address;
+  const { address, isConnected, isInitializing } = useCDPStatus();
   const { permissions, isLoading, error } = useUnifiedForumAccess();
 
   // Handle wallet connection
@@ -36,7 +35,20 @@ export default function ForumAccessGate({
     );
   };
 
-  // Loading state
+  // CDP wallet still initializing
+  if (isInitializing) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen p-4">
+        <Loader2 className="w-12 h-12 animate-spin text-primary mb-4" />
+        <h1 className="text-2xl font-bold">Connecting Wallet...</h1>
+        <p className="text-muted-foreground mt-2">
+          Initializing your wallet connection
+        </p>
+      </div>
+    );
+  }
+
+  // Loading permissions
   if (isLoading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen p-4">

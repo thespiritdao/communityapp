@@ -74,8 +74,12 @@ export const DatabaseTokenGallery: React.FC<DatabaseTokenGalleryProps> =
         }
       };
 
+      // Only load tokens if walletAddress is provided
+      // Note: Parent component should handle CDP initialization timing
       if (walletAddress) {
         loadTokens();
+      } else {
+        setIsLoading(false); // Don't show loading if no wallet address
       }
     }, [walletAddress, category]);
 

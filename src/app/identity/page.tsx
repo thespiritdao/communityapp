@@ -1,7 +1,8 @@
 'use client';
 import { useState, useEffect } from 'react';
 import dynamic from 'next/dynamic';
-import { useEvmAddress, useCurrentUser } from '@coinbase/cdp-hooks';
+import { useCurrentUser } from '@coinbase/cdp-hooks';
+import { useCDPStatus } from '@/hooks/useCDPStatus';
 import Link from 'next/link';
 import { useIdentityPage } from '@/features/identity/hooks/useIdentityPage';
 import { DatabaseTokenGallery } from '@/features/identity/components/DatabaseTokenGallery';
@@ -71,7 +72,7 @@ export default function IdentityPage() {
 
 function IdentityPageContent() {
   const [isClient, setIsClient] = useState(false);
-  const { evmAddress: address } = useEvmAddress();
+  const { address, isInitializing } = useCDPStatus();
   const { currentUser } = useCurrentUser();
 
   const {
@@ -89,7 +90,7 @@ function IdentityPageContent() {
     setIsClient(true);
   }, []);
 
-  if (!isClient || loading) {
+  if (!isClient || loading || isInitializing) {
     return (
       <div className="identity-container bottom-nav-spacing">
         <div className="flex justify-center items-center min-h-[200px]">

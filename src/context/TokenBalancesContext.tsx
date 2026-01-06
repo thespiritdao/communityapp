@@ -13,7 +13,7 @@ import {
   fetchTokenBalances,
   type TokenBalance,
 } from '@/utils/fetchTokenBalances';
-import { useEvmAddress } from '@coinbase/cdp-hooks';
+import { useCDPStatus } from '@/hooks/useCDPStatus';
 
 interface TokenBalancesContextValue {
   balances: TokenBalance | null;
@@ -29,14 +29,20 @@ export const TokenBalancesContext = createContext<
 export const TokenBalancesProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
-  const { evmAddress: address } = useEvmAddress();
+  const { address, isInitializing } = useCDPStatus();
   const [balances, setBalances] = useState<TokenBalance | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
 
   const refreshBalances = useCallback(async () => {
+    // Don't fetch if CDP is still initializing
+    if (isInitializing) {
+      console.log('CDP still initializing, waiting...');
+      return;
+    }
+
     if (!address) {
-      console.log('No wallet address available, skipping balance fetch');
+      console.log('No wallet address available after initialization, skipping balance fetch');
       return;
     }
 
@@ -63,18 +69,21 @@ export const TokenBalancesProvider: React.FC<{ children: React.ReactNode }> = ({
     } finally {
       setIsLoading(false);
     }
-  }, [address]);
+  }, [address, isInitializing]);
 
-  // Fetch balances when the address is set (i.e. on load)
+  // Fetch balances when the address is set AND CDP is initialized
   useEffect(() => {
-    if (address) {
-      console.log('Address changed, refreshing balances');
-      refreshBalances();
-    } else {
-      console.log('No address available, clearing balances');
-      setBalances(null);
+    // Only fetch if CDP has finished initializing
+    if (!isInitializing) {
+      if (address) {
+        console.log('Address changed (CDP ready), refreshing balances');
+        refreshBalances();
+      } else {
+        console.log('No address available after CDP init, clearing balances');
+        setBalances(null);
+      }
     }
-  }, [address, refreshBalances]);
+  }, [address, isInitializing, refreshBalances]);
 
   return (
     <TokenBalancesContext.Provider

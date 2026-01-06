@@ -1,17 +1,17 @@
 'use client';
 import { useCallback, useState } from 'react';
-import { useEvmAddress } from '@coinbase/cdp-hooks';
+import { useCDPStatus } from '@/hooks/useCDPStatus';
 import CreateProposalForm from '@/features/governance/components/CreateProposalForm';
 import VoteButton from '@/features/governance/components/VoteButton';
 import { EnhancedVoteButton } from '@/features/governance/components/EnhancedVoteButton';
 import { useEnhancedProposals } from '@/features/governance/hooks/useEnhancedProposals';
 import { useGovernanceForumPosts } from '@/features/governance/hooks/useGovernanceForumPosts';
 import { Badge } from '@/components/ui/badge';
-import { Shield, FileText } from 'lucide-react';
+import { Shield, FileText, Loader2 } from 'lucide-react';
 import { FeatureErrorBoundary } from '@/components/ErrorBoundary/FeatureErrorBoundary';
 
 export default function GovernancePage() {
-  const { evmAddress: address } = useEvmAddress();
+  const { address, isInitializing } = useCDPStatus();
 
   // Enhanced proposals that include both on-chain and pod proposals with HAT-based filtering
   const {
@@ -45,6 +45,16 @@ export default function GovernancePage() {
 
   console.log('enhanced proposals:', enhancedProposals);
   console.log('governance forum posts:', posts);
+
+  // Show loading while CDP initializes
+  if (isInitializing) {
+    return (
+      <div className="flex justify-center items-center min-h-screen">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        <span className="ml-3 text-muted-foreground">Connecting wallet...</span>
+      </div>
+    );
+  }
 
   return (
     <FeatureErrorBoundary featureName="Governance & Voting">
