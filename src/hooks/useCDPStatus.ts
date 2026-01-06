@@ -6,7 +6,7 @@ import { useState, useEffect } from 'react';
 import { useEvmAddress } from '@coinbase/cdp-hooks';
 
 export interface CDPStatus {
-  address: string | undefined;
+  address: `0x${string}` | undefined;
   isConnected: boolean;
   isInitializing: boolean;
   isReady: boolean;
@@ -56,7 +56,7 @@ export function useCDPStatus(timeout: number = 3000): CDPStatus {
   }, [address, timeout]);
 
   return {
-    address,
+    address: address || undefined, // Convert null to undefined for type consistency
     isConnected: !!address,
     isInitializing,
     isReady: !isInitializing,

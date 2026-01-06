@@ -37,7 +37,7 @@ export default function Marketplace() {
   }
 
   // If not logged in, show the ConnectWallet component.
-  if (!isConnected) return <ConnectWallet />;
+  if (!isConnected || !address) return <ConnectWallet />;
 
   return (
     <S.Container>
