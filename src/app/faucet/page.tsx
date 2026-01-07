@@ -1,11 +1,13 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { useEvmAddress, useSendUserOperation, useCurrentUser } from '@coinbase/cdp-hooks';
+import { useSendUserOperation, useCurrentUser } from '@coinbase/cdp-hooks';
 import { usePublicClient } from 'wagmi';
 import { formatEther, encodeFunctionData } from 'viem';
-import { Droplets, Clock, CheckCircle, XCircle } from 'lucide-react';
+import { Droplets, Clock, CheckCircle, XCircle, Loader2 } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
+import { useCDPStatus } from '@/hooks/useCDPStatus';
+import { useTokenBalances } from '@/context/TokenBalancesContext';
 
 const FAUCET_ADDRESS = process.env.NEXT_PUBLIC_TOKEN_FAUCET as `0x${string}`;
 const SYSTEM_TOKEN = process.env.NEXT_PUBLIC_SYSTEM_TOKEN as `0x${string}`;
@@ -74,11 +76,12 @@ function formatTimeRemaining(seconds: number): string {
 }
 
 export default function FaucetPage() {
-  const { evmAddress } = useEvmAddress();
+  const { address: evmAddress, isInitializing } = useCDPStatus();
   const { sendUserOperation } = useSendUserOperation();
   const { currentUser } = useCurrentUser();
   const publicClient = usePublicClient();
   const { toast } = useToast();
+  const { refreshBalances } = useTokenBalances();
 
   const [canClaim, setCanClaim] = useState(false);
   const [timeRemaining, setTimeRemaining] = useState(0);
@@ -254,7 +257,10 @@ export default function FaucetPage() {
       setSuccess(true);
       setCanClaim(false);
       setTimeRemaining(86400);
-      setTimeout(fetchFaucetData, 2000);
+      setTimeout(() => {
+        fetchFaucetData();
+        refreshBalances(); // Update identity page token count
+      }, 2000);
     } catch (err: any) {
       console.error('❌ Claim failed:', err);
       toast({
@@ -266,6 +272,35 @@ export default function FaucetPage() {
       setClaiming(false);
     }
   }, [evmAddress, currentUser, claimAmounts, fetchFaucetData, sendUserOperation, toast]);
+
+  // Show loading while CDP initializes
+  if (isInitializing) {
+    return (
+      <div
+        style={{
+          minHeight: '100vh',
+          background: '#F5F4ED',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        <div style={{ textAlign: 'center' }}>
+          <Loader2
+            size={48}
+            color="#2F5D50"
+            style={{
+              animation: 'spin 1s linear infinite',
+              margin: '0 auto 16px',
+            }}
+          />
+          <p style={{ color: '#6B7280', fontSize: '16px' }}>
+            Connecting wallet...
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div
