@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useAccount } from 'wagmi';
+import { useCDPStatus } from '@/hooks/useCDPStatus';
 import { notificationPreferencesService } from '@/services/notificationPreferencesService';
 import type { NotificationPreferences } from '@/services/notificationPreferencesService';
 import { Card } from '@/components/ui/card';
@@ -21,10 +21,11 @@ import {
   MessageSquare,
   Calendar,
   ShoppingCart,
+  Loader2,
 } from 'lucide-react';
 
 export const NotificationPreferencesPage: React.FC = () => {
-  const { address } = useAccount();
+  const { address, isInitializing } = useCDPStatus();
   const { toast } = useToast();
   const [preferences, setPreferences] =
     useState<NotificationPreferences | null>(null);
@@ -117,6 +118,18 @@ export const NotificationPreferencesPage: React.FC = () => {
     setPreferences({ ...preferences, [key]: value });
   };
 
+  // Show loading while CDP initializes
+  if (isInitializing) {
+    return (
+      <div className="max-w-4xl mx-auto p-6">
+        <div className="flex items-center justify-center min-h-[300px]">
+          <Loader2 className="w-8 h-8 animate-spin text-primary mr-3" />
+          <p>Connecting wallet...</p>
+        </div>
+      </div>
+    );
+  }
+
   if (!address) {
     return (
       <div className="max-w-4xl mx-auto p-6">
@@ -134,6 +147,7 @@ export const NotificationPreferencesPage: React.FC = () => {
     return (
       <div className="max-w-4xl mx-auto p-6">
         <div className="flex items-center justify-center min-h-[300px]">
+          <Loader2 className="w-8 h-8 animate-spin text-primary mr-3" />
           <p>Loading preferences...</p>
         </div>
       </div>
