@@ -3,10 +3,10 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useEvmAddress } from '@coinbase/cdp-hooks';
+import { useCDPStatus } from '@/hooks/useCDPStatus';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Users, Plus, Shapes } from 'lucide-react';
+import { Users, Plus, Shapes, Loader2 } from 'lucide-react';
 import { useProfiles } from '@/features/identity/hooks/useProfiles';
 import { PodCardGrid } from '@/features/pods/components';
 
@@ -15,7 +15,7 @@ import { usePods, useExecutivePodAccess } from '@/features/pods/hooks';
 
 export default function PodsPage() {
   const router = useRouter();
-  const { evmAddress: address } = useEvmAddress();
+  const { address, isInitializing } = useCDPStatus();
   const [filter, setFilter] = useState<
     'all' | 'active' | 'draft' | 'proposed' | 'inactive'
   >('all');
@@ -41,12 +41,26 @@ export default function PodsPage() {
   const allLeadAddresses = pods.flatMap((pod) => pod.pod_leads || []);
   const { getProfile } = useProfiles(allLeadAddresses);
 
+  // Show loading while CDP initializes
+  if (isInitializing) {
+    return (
+      <div className="container mx-auto py-8 px-4">
+        <div className="flex justify-center items-center h-64">
+          <div className="flex flex-col items-center gap-4">
+            <Loader2 className="w-8 h-8 animate-spin text-primary" />
+            <p className="text-gray-600">Connecting wallet...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (loading) {
     return (
       <div className="container mx-auto py-8 px-4">
         <div className="flex justify-center items-center h-64">
           <div className="flex flex-col items-center gap-4">
-            <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+            <Loader2 className="w-8 h-8 animate-spin text-primary" />
             <p className="text-gray-600">Loading pods...</p>
           </div>
         </div>

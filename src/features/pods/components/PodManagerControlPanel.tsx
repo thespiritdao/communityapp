@@ -2,7 +2,8 @@
 
 import type React from 'react';
 import { useState, useEffect } from 'react';
-import { useAccount, usePublicClient, useWalletClient } from 'wagmi';
+import { useCDPStatus } from '@/hooks/useCDPStatus';
+import { usePublicClient, useWalletClient } from 'wagmi';
 import { encodeFunctionData } from 'viem';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -223,7 +224,7 @@ export const PodManagerControlPanel: React.FC<PodManagerControlPanelProps> = ({
   userHatId,
   canManageMembers = false,
 }) => {
-  const { address } = useAccount();
+  const { address } = useCDPStatus();
   const publicClient = usePublicClient();
   const { toast } = useToast();
   const { data: walletClient } = useWalletClient();
