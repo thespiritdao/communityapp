@@ -1,7 +1,27 @@
 import { useTokenBalances } from '@/context/TokenBalancesContext';
+import { useEffect } from 'react';
 
 export function Balances() {
-  const { balances } = useTokenBalances();
+  const { balances, isLoading } = useTokenBalances();
+
+  // Debug logging for mobile display issue
+  useEffect(() => {
+    console.log('💰 Balances Component Render:', {
+      hasBalances: !!balances,
+      selfBalance: balances?.selfBalance,
+      systemBalance: balances?.systemBalance,
+      isLoading,
+      timestamp: new Date().toISOString(),
+    });
+  }, [balances, isLoading]);
+
+  if (isLoading) {
+    return (
+      <div style={{ padding: '12px', textAlign: 'center', color: '#666' }}>
+        Loading balances...
+      </div>
+    );
+  }
 
   return (
     <div>
