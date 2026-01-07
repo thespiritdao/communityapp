@@ -1,11 +1,10 @@
 // src/features/forum/hooks/useUnifiedForumAccess.ts
 
 import { useState, useEffect, useCallback } from 'react';
-import { useAccount } from 'wagmi';
 import { supabase } from '@/utils/supabaseClient';
 import { fetchTokenBalances } from '@/utils/fetchTokenBalances';
-import { useReadContracts } from 'wagmi';
 import { parseAbiItem } from 'viem';
+import { useCDPStatus } from '@/hooks/useCDPStatus';
 
 /**
  * Unified Forum Access Hook
@@ -85,7 +84,7 @@ const HATS_CONTRACT_ADDRESS = process.env
   .NEXT_PUBLIC_HATS_CONTRACT as `0x${string}`;
 
 export function useUnifiedForumAccess(): UseUnifiedForumAccessReturn {
-  const { address, isConnected } = useAccount();
+  const { address, isConnected } = useCDPStatus();
   const [permissions, setPermissions] = useState<ForumPermissions | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -155,9 +154,38 @@ export function useUnifiedForumAccess(): UseUnifiedForumAccessReturn {
         })
         .filter((addr): addr is string => addr !== null);
 
+      // Add Beta Tester Hat and other hats from token balances to ownedHats
+      const detectedHats = Object.entries(tokenBalances)
+        .filter(([key, hasHat]) => {
+          // Filter for hat-related keys that are true
+          return (
+            hasHat &&
+            (key === 'hasBetaTesterHat' ||
+              key === 'hasExecutivePod' ||
+              key === 'hasDevPod')
+          );
+        })
+        .map(([key]) => {
+          // Map hat balance keys to hat addresses
+          if (key === 'hasBetaTesterHat')
+            return process.env.NEXT_PUBLIC_BETA_TESTER_HAT;
+          if (key === 'hasExecutivePod')
+            return process.env.NEXT_PUBLIC_EXECUTIVE_POD;
+          if (key === 'hasDevPod') return process.env.NEXT_PUBLIC_DEV_POD;
+          return null;
+        })
+        .filter((addr): addr is string => addr !== null);
+
+      // Combine pod role hats with detected hats from token balances
+      const allUserHats = [...new Set([...ownedHats, ...detectedHats])];
+      console.log(
+        `🎩 [ForumAccess] Combined hats (pod roles + token balances): ${allUserHats.length}`,
+        allUserHats,
+      );
+
       const accessibleCategories = await getAccessibleCategories(
         tokenAddresses,
-        ownedHats,
+        allUserHats,
       );
       console.log(
         `📂 [ForumAccess] User can access ${accessibleCategories.length} categories`,
@@ -198,7 +226,7 @@ export function useUnifiedForumAccess(): UseUnifiedForumAccessReturn {
         canParticipateGovernance,
         accessibleCategories: accessibleCategories.map((cat) => cat.id),
         accessibleCategoryObjects: accessibleCategories,
-        userHats: ownedHats,
+        userHats: allUserHats,
         userTokens: tokenAddresses,
         podRoles: userPodRoles,
       };
