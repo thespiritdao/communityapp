@@ -1,11 +1,12 @@
-// src/features/shopping-cart/components/Cart/Cart.tsx
+﻿// src/features/shopping-cart/components/Cart/Cart.tsx
 'use client';
 
-import { useEffect, useState, useMemo, useRef } from 'react';
+import { useEffect, useState, useMemo, useRef, useCallback } from 'react';
 import styled from 'styled-components';
-import { useAccount, usePublicClient, useWalletClient } from 'wagmi';
+import { usePublicClient } from 'wagmi';
 import { useRouter } from 'next/navigation';
-import { keccak256, toBytes, type Log } from 'viem';
+import { keccak256, toBytes, type Log, encodeFunctionData } from 'viem';
+import { useSendUserOperation, useCurrentUser } from '@coinbase/cdp-hooks';
 const purchaseBurnABI = require('src/abis/purchaseBurnABI.json');
 const purchaseRouterABI = require('src/abis/PurchaseRouter.json');
 const purchaseRouterDecentralizedABI = require('src/abis/PurchaseRouterDecentralized.json');
@@ -35,18 +36,10 @@ import { wagmiConfig } from '@/config/wagmi.client';
 import { supabase } from '@/lib/supabase';
 import { createSupabaseSession } from '@/utils/createSupabaseSession';
 
-// Import the full set of transaction components
-import {
-  Transaction,
-  TransactionButton,
-  TransactionSponsor,
-  TransactionStatus,
-  TransactionStatusLabel,
-  TransactionStatusAction,
-} from '@coinbase/onchainkit/transaction';
 import * as S from './style';
 
-const TransactionButtonStyled = styled(TransactionButton)`
+// CDP-native button styled component (replaces OnchainKit TransactionButton)
+const CDPTransactionButton = styled.button`
   background-color: #0070f3 !important;
   color: #fff !important;
   border-radius: 6px !important;
@@ -55,9 +48,16 @@ const TransactionButtonStyled = styled(TransactionButton)`
   font-size: 1rem !important;
   cursor: pointer !important;
   transition: background-color 0.2s ease !important;
+  width: 100%;
+  margin-top: 1rem;
 
-  &:hover {
+  &:hover:not(:disabled) {
     background-color: #005bb5 !important;
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
   }
 `;
 
@@ -452,23 +452,23 @@ const handleTransactionError = async (
 
 // Add comprehensive UserOperation debugging
 const debugUserOperation = (calls: any[], context: string) => {
-  console.group(`🔍 UserOperation Debug - ${context}`);
-  console.log('📋 Calls Array:', calls);
-  console.log('📋 Calls Array Length:', calls.length);
+  console.group(`ðŸ” UserOperation Debug - ${context}`);
+  console.log('ðŸ“‹ Calls Array:', calls);
+  console.log('ðŸ“‹ Calls Array Length:', calls.length);
   console.log(
-    '📋 Contract Addresses:',
+    'ðŸ“‹ Contract Addresses:',
     calls.map((call) => call.address),
   );
   console.log(
-    '📋 Function Names:',
+    'ðŸ“‹ Function Names:',
     calls.map((call) => call.functionName),
   );
   console.log(
-    '📋 Arguments:',
+    'ðŸ“‹ Arguments:',
     calls.map((call) => call.args),
   );
   console.log(
-    '📋 ABI Validation:',
+    'ðŸ“‹ ABI Validation:',
     calls.map((call) => ({
       address: call.address,
       hasABI: Boolean(call.abi),
@@ -481,7 +481,7 @@ const debugUserOperation = (calls: any[], context: string) => {
 
   // Add detailed ABI inspection
   calls.forEach((call, index) => {
-    console.log(`📋 Call ${index} Details:`, {
+    console.log(`ðŸ“‹ Call ${index} Details:`, {
       address: call.address,
       functionName: call.functionName,
       args: call.args,
@@ -492,14 +492,14 @@ const debugUserOperation = (calls: any[], context: string) => {
     });
   });
 
-  console.log('🔧 Environment Variables:', {
+  console.log('ðŸ”§ Environment Variables:', {
     purchaseRouter: process.env.NEXT_PUBLIC_PURCHASE_ROUTER,
     purchaseBurn: process.env.NEXT_PUBLIC_PURCHASE_BURN,
     systemToken: process.env.NEXT_PUBLIC_SYSTEM_TOKEN,
     selfToken: process.env.NEXT_PUBLIC_SELF_TOKEN,
     paymaster: process.env.NEXT_PUBLIC_PAYMASTER?.substring(0, 30) + '...',
   });
-  console.log('⏰ Timestamp:', new Date().toISOString());
+  console.log('â° Timestamp:', new Date().toISOString());
   console.groupEnd();
 };
 
@@ -538,21 +538,21 @@ const verifyContractEvents = async (
       hash: transactionHash as `0x${string}`,
     });
 
-    console.group('🔍 Contract Event Verification');
-    console.log('📋 Transaction Hash:', transactionHash);
-    console.log('📋 Contract Address:', contractAddress);
-    console.log('📋 Use Router:', useRouter);
-    console.log('📋 Total Logs:', receipt.logs.length);
+    console.group('ðŸ” Contract Event Verification');
+    console.log('ðŸ“‹ Transaction Hash:', transactionHash);
+    console.log('ðŸ“‹ Contract Address:', contractAddress);
+    console.log('ðŸ“‹ Use Router:', useRouter);
+    console.log('ðŸ“‹ Total Logs:', receipt.logs.length);
 
     // Filter logs for our contract
     const contractLogs = receipt.logs.filter(
       (log: Log) => log.address.toLowerCase() === contractAddress.toLowerCase(),
     );
 
-    console.log('📋 Contract Logs Found:', contractLogs.length);
+    console.log('ðŸ“‹ Contract Logs Found:', contractLogs.length);
 
     if (contractLogs.length > 0) {
-      console.log('📋 Contract Events:', contractLogs);
+      console.log('ðŸ“‹ Contract Events:', contractLogs);
 
       // Check for purchase events (different for router vs burn)
       const purchaseEvents = contractLogs.filter((log: Log) => {
@@ -565,10 +565,10 @@ const verifyContractEvents = async (
               'PurchaseCompleted(address,string,uint256,uint256,uint8,address,uint256)';
             const eventTopic = keccak256(toBytes(eventSignature));
             console.log(
-              '📋 Looking for PurchaseCompleted event topic:',
+              'ðŸ“‹ Looking for PurchaseCompleted event topic:',
               eventTopic,
             );
-            console.log('📋 Found event topic:', (log as any).topics[0]);
+            console.log('ðŸ“‹ Found event topic:', (log as any).topics[0]);
             return (log as any).topics[0] === eventTopic;
           } else {
             // PurchaseArtifact event signature from PurchaseBurn
@@ -576,10 +576,10 @@ const verifyContractEvents = async (
               'PurchaseArtifact(address,uint256,uint256,string,uint256)';
             const eventTopic = keccak256(toBytes(eventSignature));
             console.log(
-              '📋 Looking for PurchaseArtifact event topic:',
+              'ðŸ“‹ Looking for PurchaseArtifact event topic:',
               eventTopic,
             );
-            console.log('📋 Found event topic:', (log as any).topics[0]);
+            console.log('ðŸ“‹ Found event topic:', (log as any).topics[0]);
             return (log as any).topics[0] === eventTopic;
           }
         } catch (error) {
@@ -589,33 +589,27 @@ const verifyContractEvents = async (
       });
 
       const eventName = useRouter ? 'PurchaseCompleted' : 'PurchaseArtifact';
-      console.log(`📋 ${eventName} Events:`, purchaseEvents.length);
+      console.log(`ðŸ“‹ ${eventName} Events:`, purchaseEvents.length);
 
       if (purchaseEvents.length > 0) {
-        console.log(`✅ ${eventName} event found!`);
-        console.log('📋 Event Details:', purchaseEvents[0]);
+        console.log(`âœ… ${eventName} event found!`);
+        console.log('ðŸ“‹ Event Details:', purchaseEvents[0]);
       } else {
-        console.warn(`⚠️ No ${eventName} event found`);
+        console.warn(`âš ï¸ No ${eventName} event found`);
       }
     } else {
-      console.warn('⚠️ No logs found for purchase burn contract');
+      console.warn('âš ï¸ No logs found for purchase burn contract');
     }
 
     console.groupEnd();
     return contractLogs.length > 0;
   } catch (error) {
-    console.error('❌ Error verifying contract events:', error);
+    console.error('âŒ Error verifying contract events:', error);
     return false;
   }
 };
 
-function DebugTransaction(props: any) {
-  console.log(
-    'DebugTransaction received calls:',
-    JSON.stringify(props.calls, null, 2),
-  );
-  return <Transaction {...props} />;
-}
+// Removed DebugTransaction - no longer using OnchainKit Transaction component
 
 export default function Cart({
   tokenBalances,
@@ -623,10 +617,13 @@ export default function Cart({
   tokenBalances?: { systemBalance: string; selfBalance: string };
 } = {}) {
   const { products = [], total, isOpen, closeCart, clearCart } = useCart();
-  const { address } = useAccount();
+  const { currentUser } = useCurrentUser();
+  const { sendUserOperation } = useSendUserOperation();
   const publicClient = usePublicClient();
-  const { data: walletClient } = useWalletClient();
   const router = useRouter();
+
+  // Get address from CDP Smart Account (not EOA)
+  const address = currentUser?.evmSmartAccounts?.[0] as `0x${string}` | undefined;
 
   const [selectedToken, setSelectedToken] = useState<Token>(getDefaultToken());
   const [retryCount, setRetryCount] = useState(0);
@@ -635,6 +632,9 @@ export default function Cart({
   const [processedTransactions, setProcessedTransactions] = useState<
     Set<string>
   >(new Set());
+  const [isLoading, setIsLoading] = useState(false);
+  const [isSuccess, setIsSuccess] = useState(false);
+  const [isProcessingOrders, setIsProcessingOrders] = useState(false);
   const MAX_RETRIES = 3;
 
   // Add ref to prevent duplicate onSuccess callbacks during React re-renders
@@ -678,7 +678,7 @@ export default function Cart({
     if (products && products.length > 0) {
       setProcessedTransactions(new Set());
       console.log(
-        '🔄 Cleared processed transactions for new purchase session (products changed)',
+        'ðŸ”„ Cleared processed transactions for new purchase session (products changed)',
       );
     }
   }, [products]);
@@ -742,7 +742,7 @@ export default function Cart({
         const blockNumber = await publicClient.getBlockNumber();
         console.log('Debug:', {
           systemToken: process.env.NEXT_PUBLIC_SYSTEM_TOKEN,
-          chainId: walletClient?.chain?.id,
+          chainId: BASE_CHAIN_ID,
           blockNumber,
         });
       } catch (error) {
@@ -750,13 +750,13 @@ export default function Cart({
       }
     }
     debugContractState();
-  }, [address, publicClient, walletClient]);
+  }, [address, publicClient]);
 
   // Reset fallback routing when cart is opened
   useEffect(() => {
     if (isOpen && useFallbackRouting) {
       console.log(
-        '🔄 Cart opened - resetting fallback routing state for fresh transaction',
+        'ðŸ”„ Cart opened - resetting fallback routing state for fresh transaction',
       );
       setUseFallbackRouting(false);
     }
@@ -765,18 +765,18 @@ export default function Cart({
   // Debug sponsorship config
   useEffect(() => {
     console.log(
-      '✅ CART FIXED: Infinite console loop should be resolved - if you see this once, the fix worked!',
+      'âœ… CART FIXED: Infinite console loop should be resolved - if you see this once, the fix worked!',
     );
-    console.group('🚀 Cart Component Initialization');
-    console.log('📋 Component Mounted:', new Date().toISOString());
+    console.group('ðŸš€ Cart Component Initialization');
+    console.log('ðŸ“‹ Component Mounted:', new Date().toISOString());
 
     // Validate paymaster setup
     const paymasterConfig = validatePaymasterSetup();
-    console.log('📋 Paymaster Config:', paymasterConfig);
+    console.log('ðŸ“‹ Paymaster Config:', paymasterConfig);
 
     // Validate contract addresses
     const { contractAddress, useRouter } = validatePaymasterSetup();
-    console.log('📋 Contract Addresses:', {
+    console.log('ðŸ“‹ Contract Addresses:', {
       purchaseRouter: process.env.NEXT_PUBLIC_PURCHASE_ROUTER,
       purchaseBurn: process.env.NEXT_PUBLIC_PURCHASE_BURN,
       systemToken: process.env.NEXT_PUBLIC_SYSTEM_TOKEN,
@@ -786,7 +786,7 @@ export default function Cart({
     });
 
     // Validate ABI
-    console.log('📋 ABI Validation:', {
+    console.log('ðŸ“‹ ABI Validation:', {
       purchaseRouterABI: {
         length: purchaseRouterABI.length,
         hasPurchaseWithRouting: purchaseRouterABI.some(
@@ -808,7 +808,7 @@ export default function Cart({
     });
 
     // Validate user state
-    console.log('📋 User State:', {
+    console.log('ðŸ“‹ User State:', {
       address: address,
       chainId: BASE_CHAIN_ID,
       selectedToken: selectedToken?.symbol,
@@ -834,21 +834,22 @@ export default function Cart({
   }, []);
 
   useEffect(() => {
-    if (walletClient) {
-      console.log('Wallet State:', {
-        chainId: walletClient.chain?.id,
-        network: walletClient.chain?.name,
-        isConnected: Boolean(address),
+    if (address) {
+      console.log('CDP Wallet State:', {
+        smartAccount: address,
+        chainId: BASE_CHAIN_ID,
+        network: 'Base',
+        isConnected: Boolean(currentUser),
       });
     }
-  }, [walletClient, address]);
+  }, [currentUser, address]);
 
   const productId =
     products && products.length > 0 ? products.map((p) => p.id).join(',') : '';
 
   // Extract transaction data using the extracted service
   const transactionData = useMemo(() => {
-    console.log('🔄 TransactionData useMemo executing:', {
+    console.log('ðŸ”„ TransactionData useMemo executing:', {
       hasProducts: products && products.length > 0,
       productsLength: products?.length || 0,
       hasAddress: !!address,
@@ -861,7 +862,7 @@ export default function Cart({
 
     if (!products || products.length === 0 || !address) {
       console.log(
-        '⚠️ TransactionData returning empty due to missing requirements:',
+        'âš ï¸ TransactionData returning empty due to missing requirements:',
         {
           products: products
             ? products.length === 0
@@ -890,14 +891,14 @@ export default function Cart({
         products,
         useFallbackRouting,
       );
-      console.log('✅ TransactionData prepared successfully:', {
+      console.log('âœ… TransactionData prepared successfully:', {
         totalCallsLength: result.totalCalls.length,
         approveCallsLength: result.approveCalls.length,
         purchaseCallsLength: result.purchaseCalls.length,
       });
       return result;
     } catch (error) {
-      console.error('❌ TransactionData preparation failed:', error);
+      console.error('âŒ TransactionData preparation failed:', error);
       logError(error, 'prepareTransactionData');
       return {
         approveCalls: [],
@@ -917,16 +918,361 @@ export default function Cart({
     useFallbackRouting,
   ]);
 
-  // For purchase only (approve step skipped for this test)
-  // CACHE BUSTER: Force browser reload after fixing infinite console loops
-  // TODO: Remove render logs that cause infinite loops
-  // console.log('RENDER: selectedToken:', selectedToken);
-  // console.log('RENDER: totalSystemPrice:', totalSystemPrice, 'totalSelfPrice:', totalSelfPrice);
-  // console.log('RENDER: products:', products);
-  // console.log('RENDER: address:', address);
-
   // Extract calls from prepared transaction data
   const { approveCalls, purchaseCalls, totalCalls } = transactionData;
+
+  // CDP transaction handler (replaces OnchainKit Transaction component)
+  const handleCDPTransaction = useCallback(async () => {
+    if (!currentUser?.evmSmartAccounts?.[0]) {
+      console.error('âŒ No Smart Account found');
+      setIsLoading(false);
+      return;
+    }
+
+    if (!totalCalls || totalCalls.length === 0) {
+      console.error('âŒ No transaction calls to execute');
+      setIsLoading(false);
+      return;
+    }
+
+    setIsLoading(true);
+    setIsSuccess(false);
+
+    try {
+      const smartAccount = currentUser.evmSmartAccounts[0];
+
+      console.group('ðŸš€ CDP Transaction: Approve & Purchase');
+      console.log('ðŸ“‹ Smart Account:', smartAccount);
+      console.log('ðŸ“‹ Total Calls:', totalCalls.length);
+      console.log('ðŸ“‹ Calls to execute:', totalCalls);
+
+      // Encode all transaction calls
+      const cdpCalls = totalCalls.map((call: any) => {
+        const encodedData = encodeFunctionData({
+          abi: call.abi,
+          functionName: call.functionName,
+          args: call.args,
+        });
+
+        console.log('ðŸ“‹ Encoding call:', {
+          to: call.address,
+          functionName: call.functionName,
+          args: call.args,
+          encodedData,
+        });
+
+        return {
+          to: call.address as `0x${string}`,
+          value: 0n,
+          data: encodedData,
+        };
+      });
+
+      console.log('ðŸ“‹ CDP Calls prepared:', cdpCalls);
+      console.log('â›½ Paymaster: ENABLED (gasless transaction)');
+      console.groupEnd();
+
+      // Send user operation
+      const result = await sendUserOperation({
+        evmSmartAccount: smartAccount,
+        network: 'base',
+        calls: cdpCalls,
+        useCdpPaymaster: true,
+      });
+
+      console.log('âœ… User operation sent successfully!', result);
+
+      // Transaction successful - handle success
+      await handleTransactionSuccess(result);
+    } catch (error) {
+      console.error('âŒ Transaction failed:', error);
+      await handleTransactionFailure(error);
+    }
+  }, [currentUser, totalCalls, sendUserOperation, products, address, useFallbackRouting]);
+
+  // Success handler (extracted from OnchainKit onSuccess callback)
+  const handleTransactionSuccess = useCallback(async (response: any) => {
+    const txHash = response?.userOperationHash;
+    const transactionId = txHash || `fallback-${Date.now()}-${Math.random()}`;
+
+    // CRITICAL: Prevent duplicate onSuccess callbacks using ref
+    if (onSuccessCallbackRef.current.has(transactionId)) {
+      console.log('ðŸš« onSuccess callback already executed for transaction:', transactionId);
+      return;
+    }
+    onSuccessCallbackRef.current.add(transactionId);
+
+    console.log('ðŸŽ¯ Transaction success handler triggered:', {
+      transactionId,
+      userOperationHash: txHash,
+    });
+
+    // Reset fallback routing for fresh transactions
+    if (useFallbackRouting) {
+      console.log('ðŸ”„ Resetting fallback routing after successful transaction');
+      setUseFallbackRouting(false);
+    }
+
+    setIsLoading(false);
+    setIsSuccess(true);
+    setApproveTxSuccess(true);
+
+    console.group('âœ… Combined Transaction Success');
+    console.log('ðŸ“‹ UserOperation Hash:', txHash);
+    console.log('ðŸ“‹ Approval + Purchase executed together');
+    console.groupEnd();
+
+    // Close cart immediately after successful transaction (before order processing)
+    clearCart();
+    closeCart();
+    console.log('🛒 Cart cleared and closed after successful transaction');
+
+    // Get transaction receipt for order creation
+    // Note: For user operations, we may need to wait for the bundler transaction
+    // For now, we'll use the userOperationHash as the transaction identifier
+
+    const orderProcessingKey = `order-processing-${transactionId}`;
+
+    // Create order records and send notifications
+    try {
+      console.log('ðŸ” Transaction success handler called:', {
+        transactionId,
+        isProcessingOrders,
+        processedTransactions: Array.from(processedTransactions),
+        timestamp: new Date().toISOString(),
+      });
+
+      // CRITICAL: Early exit to prevent recursive loops
+      if (isProcessingOrders) {
+        console.log('â³ Order creation already in progress, EXITING to prevent duplicates');
+        return;
+      }
+
+      // Check if we've already processed this transaction
+      if (processedTransactions.has(transactionId)) {
+        console.log('â­ï¸ Transaction already processed, EXITING:', transactionId);
+        return;
+      }
+
+      // Mark this transaction as being processed IMMEDIATELY
+      setProcessedTransactions((prev) => {
+        const newSet = new Set(prev).add(transactionId);
+        console.log('ðŸ“ Added transaction to processed list. New set:', Array.from(newSet));
+        return newSet;
+      });
+      setIsProcessingOrders(true);
+
+      // CRITICAL: Add transaction-specific flag to prevent duplicate processing
+      if ((window as any)[orderProcessingKey]) {
+        console.log('âš ï¸ Orders already being processed for this transaction, skipping duplicate');
+        return;
+      }
+      (window as any)[orderProcessingKey] = true;
+
+      console.log('ðŸš€ STARTING ORDER CREATION AND NOTIFICATION PROCESS');
+      console.log('ðŸ›’ Processing', products.length, 'products');
+
+      // Ensure user is authenticated with Supabase before creating orders
+      console.log('ðŸ” Ensuring Supabase authentication for order creation...');
+      try {
+        const authResponse = await fetch('/api/auth/onchainkit', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            address: address!.toLowerCase(),
+          }),
+        });
+
+        if (!authResponse.ok) {
+          throw new Error(`Auth API failed: ${authResponse.status}`);
+        }
+
+        const authData = await authResponse.json();
+        console.log('âœ… Auth API response received:', {
+          hasToken: !!authData.supabaseToken,
+        });
+
+        await createSupabaseSession(
+          authData.supabaseToken,
+          authData.supabaseRefreshToken,
+        );
+        console.log('âœ… Supabase session established for order creation');
+      } catch (authError) {
+        console.error('âŒ Failed to establish Supabase session:', authError);
+        throw new Error(`Authentication failed: ${(authError as any).message}`);
+      }
+
+      const orderPromises = products.map(async (product) => {
+        console.log('ðŸ“¦ Creating order record for product:', {
+          productName: product.name || product.title,
+          productId: product.id.toString(),
+          requiredToken: product.required_token,
+          buyerAddress: address,
+          quantity: product.quantity || 1,
+        });
+
+        // Calculate the price paid for this specific product
+        const productSelfPrice =
+          selectedToken.symbol === '$SELF'
+            ? (product.price_self || 0) * (product.quantity || 1)
+            : 0;
+        const productSystemPrice =
+          selectedToken.symbol === '$SYSTEM'
+            ? (product.price_system || 0) * (product.quantity || 1)
+            : 0;
+
+        console.log('ðŸ’° Cart order price calculation:', {
+          token: selectedToken.symbol,
+          price_self: product.price_self,
+          price_system: product.price_system,
+          quantity: product.quantity || 1,
+          calculatedSelfPrice: productSelfPrice,
+          calculatedSystemPrice: productSystemPrice,
+        });
+
+        // Create order record in database
+        const { data: orderData, error: orderError } = await supabase
+          .from('marketplace_orders')
+          .insert({
+            buyer_address: address!.toLowerCase(),
+            product_id: product.id.toString(),
+            product_name: product.name || product.title,
+            quantity: product.quantity || 1,
+            price_paid_self: productSelfPrice,
+            price_paid_system: productSystemPrice,
+            transaction_hash: txHash, // Use userOperationHash
+            status: 'processing',
+          })
+          .select()
+          .single();
+
+        if (orderError) {
+          console.error('Failed to create order record:', orderError);
+          return null;
+        }
+
+        console.log('âœ… Order record created:', orderData);
+
+        // Send purchase notification
+        const notificationResponse = await fetch('/api/notifications', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            type: 'purchase_completed',
+            buyerAddress: address,
+            productName: product.name || product.title,
+            productId: product.id.toString(),
+            orderId: orderData.id,
+            requiredToken: product.required_token,
+            transactionHash: txHash,
+          }),
+        });
+
+        if (!notificationResponse.ok) {
+          console.error('Failed to create notification:', await notificationResponse.json());
+          return null;
+        }
+
+        return notificationResponse.json();
+      });
+
+      await Promise.all(orderPromises);
+      console.log('âœ… All orders created and notifications sent successfully - TransactionID:', transactionId);
+    } catch (orderError) {
+      console.error('âŒ Failed to create orders or send notifications:', orderError);
+    } finally {
+      setIsProcessingOrders(false);
+      if ((window as any)[orderProcessingKey]) {
+        delete (window as any)[orderProcessingKey];
+      }
+    }
+
+    // Cart already cleared and closed earlier (before order processing)
+
+    console.log('ðŸ” Purchase complete - page refresh disabled for debugging');
+  }, [
+    products,
+    address,
+    selectedToken,
+    isProcessingOrders,
+    processedTransactions,
+    useFallbackRouting,
+    clearCart,
+    closeCart,
+  ]);
+
+  // Error handler (extracted from OnchainKit onError callback)
+  const handleTransactionFailure = useCallback(async (error: any) => {
+    setIsLoading(false);
+    setIsSuccess(false);
+    setApproveTxSuccess(false);
+
+    console.group('âŒ Combined Transaction Error');
+    console.error('ðŸ“‹ Error Details:', {
+      name: error.name,
+      message: error.message,
+      stack: error.stack,
+    });
+
+    // Enhanced error analysis
+    if (error.message?.includes('Request denied') || error.message?.includes('User rejected')) {
+      console.warn('ðŸš« Transaction was denied by user or wallet');
+      console.log('ðŸ’¡ This could be due to:');
+      console.log('  - User manually rejected transaction');
+      console.log('  - Wallet automatically rejected due to security concerns');
+      console.log('  - Smart contract validation failed');
+      console.log('  - Pod treasury permission issue');
+
+      // Check if this might be a pod treasury permission issue
+      const hasActivePodRouting = products?.some(
+        (p) => p.fund_destination_type === 'pod_treasury' && !useFallbackRouting,
+      );
+
+      const isPermissionError =
+        error.message?.includes('No pod management permission') ||
+        error.message?.includes('permission') ||
+        error.message?.includes('unauthorized');
+
+      if (hasActivePodRouting && !useFallbackRouting && isPermissionError) {
+        console.warn('ðŸŽ¯ Detected specific pod treasury permission issue');
+        console.log('ðŸ”„ Will retry with fallback routing to creator wallet');
+        setUseFallbackRouting(true);
+
+        // Trigger a retry after a short delay
+        setTimeout(() => {
+          console.log('ðŸ”„ Retrying transaction with creator wallet routing...');
+        }, 1000);
+        console.groupEnd();
+        return;
+      } else if (useFallbackRouting) {
+        console.warn('âš ï¸ Fallback routing also failed. This might be a different issue.');
+        console.log('ðŸ”„ Resetting fallback routing state');
+        setUseFallbackRouting(false);
+      }
+    }
+
+    console.log('ðŸ“‹ Transaction Parameters:', {
+      needsApproval,
+      totalCalls: totalCalls.length,
+      approveCalls: approveCalls.length,
+      purchaseCalls: purchaseCalls.length,
+      account: address?.toLowerCase(),
+      chainId: BASE_CHAIN_ID,
+      isSponsored: true,
+    });
+
+    console.groupEnd();
+
+    await logError(error, 'Cart Transaction Error');
+  }, [
+    products,
+    address,
+    useFallbackRouting,
+    needsApproval,
+    totalCalls,
+    approveCalls,
+    purchaseCalls,
+  ]);
 
   // Hardcoded test call for approve flow
   const testApproveCall = [
@@ -954,10 +1300,6 @@ export default function Cart({
       ],
     },
   ];
-
-  const [isLoading, setIsLoading] = useState(false);
-  const [isSuccess, setIsSuccess] = useState(false);
-  const [isProcessingOrders, setIsProcessingOrders] = useState(false);
 
   // Transaction call generation has been moved to transactionService.ts
   // The transactionData variable now contains: { approveCalls, purchaseCalls, totalCalls, needsApproval }
@@ -997,591 +1339,32 @@ export default function Cart({
                 tokenOptions={DEFAULT_TOKEN_OPTIONS}
               />
 
-              {/* Combined approval + purchase transaction */}
+              {/* CDP-native transaction button (replaces OnchainKit Transaction) */}
               {totalCalls && totalCalls.length > 0 ? (
-                <Transaction
-                  chainId={BASE_CHAIN_ID}
-                  calls={totalCalls}
-                  isSponsored={true}
-                  onSuccess={async (response) => {
-                    // Use a more stable transaction ID to prevent duplicates
-                    const txHash =
-                      response?.transactionReceipts?.[0]?.transactionHash;
-                    const userOpHash = (response as any)?.userOpHash;
-                    const transactionId =
-                      txHash ||
-                      userOpHash ||
-                      `fallback-${Date.now()}-${Math.random()}`;
-
-                    // CRITICAL: Prevent duplicate onSuccess callbacks using ref (survives re-renders)
-                    if (onSuccessCallbackRef.current.has(transactionId)) {
-                      console.log(
-                        '🚫 onSuccess callback already executed for transaction:',
-                        transactionId,
-                      );
-                      return;
-                    }
-                    onSuccessCallbackRef.current.add(transactionId);
-
-                    console.log(
-                      '🎯 onSuccess callback triggered with transaction:',
-                      {
-                        transactionId,
-                        txHash,
-                        userOpHash,
-                        hasReceipts: !!response?.transactionReceipts?.[0],
-                        callbacksExecuted: Array.from(
-                          onSuccessCallbackRef.current,
-                        ),
-                      },
-                    );
-
-                    // Reset fallback routing for fresh transactions
-                    if (useFallbackRouting) {
-                      console.log(
-                        '🔄 Resetting fallback routing after successful transaction',
-                      );
-                      setUseFallbackRouting(false);
-                    }
-
-                    console.log(
-                      '🎯 Current isProcessingOrders state:',
-                      isProcessingOrders,
-                    );
-
-                    setIsLoading(false);
-                    setIsSuccess(true);
-                    setApproveTxSuccess(true);
-
-                    // NOTE: Allowance state is now automatically managed by useCartValidation hook
-                    // The hook will re-check allowances on the next render cycle
-
-                    console.group('✅ Combined Transaction Success');
-                    console.log('📋 Full Transaction Response:', response);
-                    console.log('📋 Approval + Purchase executed together');
-
-                    // Handle Account Abstraction (ERC-4337) transaction response
-                    if ((response as any)?.userOpHash) {
-                      console.log(
-                        '📋 UserOperation Hash:',
-                        (response as any).userOpHash,
-                      );
-                      console.log('📋 This is the AA transaction identifier');
-                    }
-
-                    if (response?.transactionReceipts?.[0]) {
-                      const receipt = response.transactionReceipts[0];
-                      console.log(
-                        '📋 Bundler Transaction Hash:',
-                        receipt.transactionHash,
-                      );
-                      console.log('📋 Block Number:', receipt.blockNumber);
-                      console.log('📋 Status:', receipt.status);
-                      console.log('📋 Gas Used:', receipt.gasUsed);
-                      console.log('📋 To Address:', receipt.to);
-                      console.log('📋 From Address:', receipt.from);
-                      console.log('📋 Logs Count:', receipt.logs?.length);
-
-                      // Check if our contract was called
-                      const logs = receipt.logs || [];
-                      const { contractAddress, useRouter } =
-                        validatePaymasterSetup();
-                      const contractLogs = logs.filter(
-                        (log: any) =>
-                          log.address?.toLowerCase() ===
-                          contractAddress?.toLowerCase(),
-                      );
-                      console.log('📋 Contract Logs:', contractLogs);
-                      console.log(
-                        '📋 Contract Called:',
-                        contractLogs.length > 0 ? '✅ Yes' : '❌ No',
-                      );
-
-                      if (contractLogs.length === 0) {
-                        console.warn(
-                          '⚠️ WARNING: Purchase contract was not called!',
-                        );
-                        console.warn(
-                          '⚠️ This indicates the UserOperation did not include the contract call',
-                        );
-                      }
-
-                      // Log the actual transaction hash that will appear on BaseScan
-                      console.log(
-                        '📋 BaseScan Transaction URL:',
-                        `https://basescan.org/tx/${receipt.transactionHash}`,
-                      );
-
-                      // Verify contract events
-                      if (contractAddress) {
-                        await verifyContractEvents(
-                          receipt.transactionHash,
-                          contractAddress,
-                          useRouter,
-                          publicClient,
-                        );
-                      }
-                    } else {
-                      console.warn(
-                        '⚠️ No transaction receipt found in response',
-                      );
-                      console.log(
-                        '📋 Response structure:',
-                        Object.keys(response || {}),
-                      );
-                    }
-                    console.groupEnd();
-
-                    console.log(
-                      'Combined approval + purchase transaction succeeded',
-                    );
-
-                    // Get transaction receipt for notifications
-                    const receipt = response?.transactionReceipts?.[0];
-
-                    // Define orderProcessingKey outside try block for access in finally
-                    const orderProcessingKey = `order-processing-${transactionId}`;
-
-                    // Create order records and send notifications
-                    try {
-                      // Enhanced deduplication logic
-                      console.log('🔍 Transaction success handler called:', {
-                        transactionId,
-                        isProcessingOrders,
-                        processedTransactions: Array.from(
-                          processedTransactions,
-                        ),
-                        timestamp: new Date().toISOString(),
-                      });
-
-                      // CRITICAL: Early exit to prevent recursive loops
-                      console.log(
-                        '🚨 RECURSION CHECK: If you see this message multiple times quickly, there is a recursion bug',
-                      );
-
-                      // Guard against duplicate processing - check immediately and return
-                      if (isProcessingOrders) {
-                        console.log(
-                          '⏳ Order creation already in progress, EXITING to prevent duplicates',
-                        );
-                        return;
-                      }
-
-                      // Check if we've already processed this transaction
-                      if (processedTransactions.has(transactionId)) {
-                        console.log(
-                          '⏭️ Transaction already processed, EXITING to prevent duplicates:',
-                          transactionId,
-                        );
-                        return;
-                      }
-
-                      // Also check database for existing orders with this transaction hash
-                      console.log(
-                        '🔍 Checking database for existing orders with transaction hash:',
-                        receipt?.transactionHash,
-                      );
-
-                      // CRITICAL: Check both transaction hash AND product IDs to prevent duplicates
-                      if (receipt?.transactionHash) {
-                        const { data: existingOrders, error: checkError } =
-                          await supabase
-                            .from('marketplace_orders')
-                            .select('id, transaction_hash, product_id')
-                            .eq('transaction_hash', receipt.transactionHash);
-
-                        if (checkError) {
-                          console.error(
-                            '❌ Error checking for existing orders:',
-                            checkError,
-                          );
-                        } else if (
-                          existingOrders &&
-                          existingOrders.length > 0
-                        ) {
-                          // Check if we have orders for these specific products
-                          const productIds = products.map((p) =>
-                            p.id.toString(),
-                          );
-                          const existingProductIds = existingOrders.map(
-                            (o) => o.product_id,
-                          );
-                          const hasAllProducts = productIds.every((pid) =>
-                            existingProductIds.includes(pid),
-                          );
-
-                          if (hasAllProducts) {
-                            console.log(
-                              '⚠️ All products already have orders for this transaction, EXITING to prevent duplicates:',
-                              {
-                                transactionHash: receipt.transactionHash,
-                                existingOrderIds: existingOrders.map(
-                                  (o) => o.id,
-                                ),
-                                existingProductIds,
-                                requestedProductIds: productIds,
-                              },
-                            );
-                            return;
-                          }
-                        }
-                      }
-
-                      // Mark this transaction as being processed IMMEDIATELY
-                      setProcessedTransactions((prev) => {
-                        const newSet = new Set(prev).add(transactionId);
-                        console.log(
-                          '📝 Added transaction to processed list. New set:',
-                          Array.from(newSet),
-                        );
-                        return newSet;
-                      });
-                      setIsProcessingOrders(true);
-
-                      // CRITICAL: Add transaction-specific flag to prevent duplicate processing
-                      if ((window as any)[orderProcessingKey]) {
-                        console.log(
-                          '⚠️ Orders already being processed for this transaction, skipping duplicate',
-                        );
-                        return;
-                      }
-                      (window as any)[orderProcessingKey] = true;
-
-                      console.log(
-                        '🚀 STARTING ORDER CREATION AND NOTIFICATION PROCESS',
-                      );
-                      console.log('🛒 Processing', products.length, 'products');
-
-                      // Ensure user is authenticated with Supabase before creating orders
-                      console.log(
-                        '🔐 Ensuring Supabase authentication for order creation...',
-                      );
-                      try {
-                        // Get or create auth tokens via API
-                        const authResponse = await fetch(
-                          '/api/auth/onchainkit',
-                          {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({
-                              address: address!.toLowerCase(),
-                            }),
-                          },
-                        );
-
-                        if (!authResponse.ok) {
-                          throw new Error(
-                            `Auth API failed: ${authResponse.status}`,
-                          );
-                        }
-
-                        const authData = await authResponse.json();
-                        console.log('✅ Auth API response received:', {
-                          hasToken: !!authData.supabaseToken,
-                        });
-
-                        // Create Supabase session
-                        await createSupabaseSession(
-                          authData.supabaseToken,
-                          authData.supabaseRefreshToken,
-                        );
-                        console.log(
-                          '✅ Supabase session established for order creation',
-                        );
-                      } catch (authError) {
-                        console.error(
-                          '❌ Failed to establish Supabase session:',
-                          authError,
-                        );
-                        throw new Error(
-                          `Authentication failed: ${(authError as any).message}`,
-                        );
-                      }
-
-                      const orderPromises = products.map(async (product) => {
-                        console.log('📦 Creating order record for product:', {
-                          productName: product.name || product.title,
-                          productId: product.id.toString(),
-                          requiredToken: product.required_token,
-                          buyerAddress: address,
-                          quantity: product.quantity || 1,
-                        });
-
-                        // Calculate the price paid for this specific product
-                        // FIX: Use correct property names with underscores (price_self, price_system)
-                        const productSelfPrice =
-                          selectedToken.symbol === '$SELF'
-                            ? (product.price_self || 0) *
-                              (product.quantity || 1)
-                            : 0;
-                        const productSystemPrice =
-                          selectedToken.symbol === '$SYSTEM'
-                            ? (product.price_system || 0) *
-                              (product.quantity || 1)
-                            : 0;
-
-                        console.log('💰 Cart order price calculation:', {
-                          token: selectedToken.symbol,
-                          price_self: product.price_self,
-                          price_system: product.price_system,
-                          quantity: product.quantity || 1,
-                          calculatedSelfPrice: productSelfPrice,
-                          calculatedSystemPrice: productSystemPrice,
-                        });
-
-                        // Create order record in database
-                        const { data: orderData, error: orderError } =
-                          await supabase
-                            .from('marketplace_orders')
-                            .insert({
-                              buyer_address: address!.toLowerCase(),
-                              product_id: product.id.toString(),
-                              product_name: product.name || product.title,
-                              quantity: product.quantity || 1,
-                              price_paid_self: productSelfPrice,
-                              price_paid_system: productSystemPrice,
-                              transaction_hash: receipt?.transactionHash,
-                              status: 'processing',
-                            })
-                            .select()
-                            .single();
-
-                        if (orderError) {
-                          console.error(
-                            'Failed to create order record:',
-                            orderError,
-                          );
-                          // Don't throw - just log and continue
-                          // throw new Error(`Order creation error: ${orderError.message}`);
-                          return null; // Return null for failed orders
-                        }
-
-                        console.log('✅ Order record created:', orderData);
-
-                        // Send purchase notification to fulfillment managers
-                        console.log('🔔 Creating notification for product:', {
-                          productName: product.name || product.title,
-                          productId: product.id.toString(),
-                          requiredToken: product.required_token,
-                          buyerAddress: address,
-                        });
-
-                        console.log(
-                          '🌐 Making API call to /api/notifications with data:',
-                          {
-                            type: 'purchase_completed',
-                            buyerAddress: address,
-                            productName: product.name || product.title,
-                            productId: product.id.toString(),
-                            orderId: orderData.id, // Link to the actual order ID for notifications
-                            requiredToken: product.required_token,
-                            transactionHash: receipt?.transactionHash,
-                          },
-                        );
-
-                        const response = await fetch('/api/notifications', {
-                          method: 'POST',
-                          headers: {
-                            'Content-Type': 'application/json',
-                          },
-                          body: JSON.stringify({
-                            type: 'purchase_completed',
-                            buyerAddress: address,
-                            productName: product.name || product.title,
-                            productId: product.id.toString(),
-                            orderId: orderData.id, // Link to the actual order ID for notifications
-                            requiredToken: product.required_token,
-                            transactionHash: receipt?.transactionHash,
-                          }),
-                        });
-
-                        console.log('🌐 API response status:', response.status);
-
-                        if (!response.ok) {
-                          const errorData = await response.json();
-                          console.error(
-                            'Failed to create notification:',
-                            errorData,
-                          );
-                          // Don't throw - just log and continue
-                          // throw new Error(`Notification API error: ${errorData.error}`);
-                          return null; // Return null for failed notifications
-                        }
-
-                        return response.json();
-                      });
-
-                      await Promise.all(orderPromises);
-                      console.log(
-                        '✅ All orders created and notifications sent successfully - TransactionID:',
-                        transactionId,
-                      );
-                    } catch (orderError) {
-                      console.error(
-                        '❌ Failed to create orders or send notifications:',
-                        orderError,
-                      );
-                      // Don't block the purchase flow if order creation fails
-                    } finally {
-                      setIsProcessingOrders(false);
-                      // Clean up the processing flag after completion
-                      if ((window as any)[orderProcessingKey]) {
-                        delete (window as any)[orderProcessingKey];
-                      }
-                    }
-
-                    // Clear the cart after successful purchase
-                    clearCart();
-                    closeCart();
-
-                    // TODO: Re-enable after debugging purchase notifications
-                    // Force a hard refresh to show updated balances
-                    // window.location.reload();
-                    console.log(
-                      '🔍 Purchase complete - page refresh disabled for debugging',
-                    );
-                  }}
-                  onError={(error) => {
-                    setIsLoading(false);
-                    setIsSuccess(false);
-                    setApproveTxSuccess(false);
-
-                    console.group('❌ Combined Transaction Error');
-                    console.error('📋 Error Details:', {
-                      name: (error as any).name,
-                      message: (error as any).message,
-                      stack: (error as any).stack,
-                    });
-                    console.error('📋 Error Type:', typeof error);
-                    console.error(
-                      '📋 Error Constructor:',
-                      error.constructor.name,
-                    );
-
-                    // Enhanced error analysis
-                    if (error.message?.includes('Request denied')) {
-                      console.warn(
-                        '🚫 Transaction was denied by user or wallet',
-                      );
-                      console.log('💡 This could be due to:');
-                      console.log('  - User manually rejected transaction');
-                      console.log(
-                        '  - Wallet automatically rejected due to security concerns',
-                      );
-                      console.log('  - Smart contract validation failed');
-                      console.log('  - Pod treasury permission issue');
-
-                      // Check if this might be a pod treasury permission issue
-                      // BUT only trigger fallback for explicit permission errors
-                      const hasActivePodRouting = products?.some(
-                        (p) =>
-                          p.fund_destination_type === 'pod_treasury' &&
-                          !useFallbackRouting,
-                      );
-
-                      const isPermissionError =
-                        error.message?.includes(
-                          'No pod management permission',
-                        ) ||
-                        error.message?.includes('permission') ||
-                        error.message?.includes('unauthorized');
-
-                      if (
-                        hasActivePodRouting &&
-                        !useFallbackRouting &&
-                        isPermissionError
-                      ) {
-                        console.warn(
-                          '🎯 Detected specific pod treasury permission issue',
-                        );
-                        console.log(
-                          '🔄 Will retry with fallback routing to creator wallet',
-                        );
-                        setUseFallbackRouting(true);
-
-                        // Trigger a retry after a short delay
-                        setTimeout(() => {
-                          console.log(
-                            '🔄 Retrying transaction with creator wallet routing...',
-                          );
-                          // The component will re-render with useFallbackRouting=true
-                          // which will change the purchase calls to use creator wallet
-                        }, 1000);
-                        return; // Don't proceed with normal error handling
-                      } else if (useFallbackRouting) {
-                        console.warn(
-                          '⚠️ Fallback routing also failed. This might be a different issue.',
-                        );
-                        console.log('🔄 Resetting fallback routing state');
-                        setUseFallbackRouting(false);
-                      }
-                    }
-
-                    // Log transaction parameters for debugging
-                    console.log('📋 Transaction Parameters:', {
-                      needsApproval,
-                      totalCalls: totalCalls.length,
-                      approveCalls: approveCalls.length,
-                      purchaseCalls: purchaseCalls.length,
-                      account: address?.toLowerCase(),
-                      chainId: BASE_CHAIN_ID,
-                      isSponsored: true,
-                    });
-
-                    console.groupEnd();
-
-                    console.error(
-                      'Transaction error (approval + purchase):',
-                      error,
-                    );
-                    handleTransactionError(
-                      error as unknown as Error,
-                      'approval + purchase',
-                      address?.toLowerCase(),
-                    ).then((paymasterResult) => {
-                      if (
-                        (paymasterResult as any).isInfrastructureError &&
-                        retryCount < MAX_RETRIES
-                      ) {
-                        console.log(
-                          `🔄 Retrying combined transaction (attempt ${retryCount + 1}/${MAX_RETRIES})`,
-                        );
-                        setRetryCount((prev) => prev + 1);
-                        setIsRetrying(true);
-
-                        // Wait before retry
-                        setTimeout(() => {
-                          setIsRetrying(false);
-                        }, (paymasterResult as any).retryDelay);
-                      } else {
-                        handleTransactionError(
-                          error as unknown as Error,
-                          'approval + purchase',
-                          address?.toLowerCase(),
-                        );
-                      }
-                    });
-                  }}
-                >
-                  <TransactionButton
-                    text={
-                      isLoading
-                        ? 'Processing...'
-                        : isSuccess
-                          ? 'Success!'
-                          : needsApproval
-                            ? 'Approve & Purchase'
-                            : 'Purchase'
-                    }
-                    className="text-white px-4 py-2 rounded bg-[#2F5D50] hover:bg-[#254A40]"
-                    disabled={isLoading || isSuccess}
-                  />
-                  <TransactionSponsor />
-                  <TransactionStatus>
-                    <TransactionStatusLabel />
-                    <TransactionStatusAction />
-                  </TransactionStatus>
-                </Transaction>
+                <div style={{ marginTop: '1rem' }}>
+                  <CDPTransactionButton
+                    onClick={handleCDPTransaction}
+                    disabled={isLoading || isSuccess || !currentUser?.evmSmartAccounts?.[0]}
+                  >
+                    {isLoading
+                      ? 'Processing...'
+                      : isSuccess
+                        ? 'Success!'
+                        : needsApproval
+                          ? 'Approve & Purchase (Gasless)'
+                          : 'Purchase (Gasless)'}
+                  </CDPTransactionButton>
+                  {isLoading && (
+                    <div style={{ textAlign: 'center', marginTop: '0.5rem', fontSize: '0.875rem', color: '#666' }}>
+                      Sending user operation...
+                    </div>
+                  )}
+                  {isSuccess && (
+                    <div style={{ textAlign: 'center', marginTop: '0.5rem', fontSize: '0.875rem', color: '#22c55e' }}>
+                      Transaction successful! Orders created.
+                    </div>
+                  )}
+                </div>
               ) : (
                 <div className="text-center py-4 text-gray-500">
                   Preparing transaction...
