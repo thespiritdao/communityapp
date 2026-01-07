@@ -140,6 +140,13 @@ const nextConfig = {
   async headers() {
     return [
       {
+        source: '/_next/static/css/:path*',
+        headers: [
+          { key: 'Content-Type', value: 'text/css; charset=utf-8' },
+          { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
+        ],
+      },
+      {
         source: '/manifest.json',
         headers: [
           { key: 'Access-Control-Allow-Origin', value: '*' },
