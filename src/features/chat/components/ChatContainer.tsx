@@ -238,8 +238,8 @@ export default function ChatContainer({ chatGroupId }: ChatContainerProps) {
           BETA_TESTER_HAT: BETA_TESTER_HAT,
           ADVOCATE_TOKEN: ADVOCATE_TOKEN,
           hasProofOfCuriosity: balances?.hasProofOfCuriosity ?? false,
-          hasBetaTesterHat: balances?.hasBetaTesterHat ?? false,
-          hasAdvocate: balances?.hasAdvocate ?? false,
+          hasBetaTesterHat: (balances as any)?.hasBetaTesterHat ?? false,
+          hasAdvocate: (balances as any)?.hasAdvocate ?? false,
           isBetaTesterChat: requiredToken === BETA_TESTER_HAT,
           isAdvocateChat: requiredToken === ADVOCATE_TOKEN,
           isGeneralChat: requiredToken === GENERAL_CHAT_TOKEN,
@@ -256,17 +256,17 @@ export default function ChatContainer({ chatGroupId }: ChatContainerProps) {
         // 2b) Explicit Beta Tester Hat via balances context
         // Beta Tester Hat grants access to this specific chat if it's the required token
         const hasBetaTesterHat =
-          requiredToken === BETA_TESTER_HAT && !!balances?.hasBetaTesterHat;
+          requiredToken === BETA_TESTER_HAT && !!(balances as any)?.hasBetaTesterHat;
 
         // 2c) Beta Tester access to General chat for testing
         // Beta testers can access General chat specifically (not all chats)
         const hasBetaTesterGeneralAccess =
-          requiredToken === GENERAL_CHAT_TOKEN && !!balances?.hasBetaTesterHat;
+          requiredToken === GENERAL_CHAT_TOKEN && !!(balances as any)?.hasBetaTesterHat;
 
         // 2d) Explicit Advocate Token via balances context
         // Advocate token grants access to Advocate-specific chat
         const hasAdvocateToken =
-          requiredToken === ADVOCATE_TOKEN && !!balances?.hasAdvocate;
+          requiredToken === ADVOCATE_TOKEN && !!(balances as any)?.hasAdvocate;
 
         // 3) Role-level permission with chatAccess
         const hasPermission = (userRoles || []).some((role) => {
