@@ -84,7 +84,7 @@ export function useEventAccess(event: Event | null) {
       logUserIdentity(identity, 'Event Access Check');
 
       // Check if user has access to this specific event
-      const hasAccess = await hasEventAccess(event.id, identity);
+      const hasAccess = await hasEventAccess(event.id, identity, address);
       console.log(`🎪 User has access to event "${event.title}": ${hasAccess}`);
 
       setCanView(hasAccess);

@@ -361,6 +361,7 @@ export const getAccessibleEvents = async (identity: UserIdentity) => {
 export const hasEventAccess = async (
   eventId: string,
   identity: UserIdentity,
+  userAddress?: string,
 ): Promise<boolean> => {
   try {
     // First, check if this is an unrestricted event (no token requirements)
@@ -382,7 +383,7 @@ export const hasEventAccess = async (
       }
 
       // If user is the creator, grant access
-      if (identity.userAddress && event.creator_address.toLowerCase() === identity.userAddress.toLowerCase()) {
+      if (userAddress && event.creator_address.toLowerCase() === userAddress.toLowerCase()) {
         console.log(`🎪 User is creator of event ${eventId} - granting access`);
         return true;
       }
