@@ -238,7 +238,11 @@ export const ApproveApplicationButton: React.FC<
 
       if (!role) {
         console.error('❌ No role found for eligibility check');
-        toast.error('Role configuration not found');
+        toast({
+          title: 'Error',
+          description: 'Role configuration not found',
+          variant: 'destructive',
+        });
         return;
       }
 
