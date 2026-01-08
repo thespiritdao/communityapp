@@ -236,7 +236,13 @@ export const ApproveApplicationButton: React.FC<
         );
       }
 
-      console.log('🔍 Role found:', role?.role_name || 'none');
+      if (!role) {
+        console.error('❌ No role found for eligibility check');
+        toast.error('Role configuration not found');
+        return;
+      }
+
+      console.log('🔍 Role found:', role.role_name);
       console.log(
         '🔍 Criteria count:',
         Array.isArray(role.eligibility_criteria)
