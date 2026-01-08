@@ -1,23 +1,15 @@
 // src/features/governance/components/VoteButton.tsx
 'use client';
 import type React from 'react';
-import { useState } from 'react';
-import { useAccount, usePublicClient } from 'wagmi';
+import { useState, useCallback } from 'react';
+import { usePublicClient } from 'wagmi';
 import type { Abi } from 'viem';
+import { encodeFunctionData } from 'viem';
 import { useToast } from '@/components/ui/use-toast';
-import { getWalletClient } from 'wagmi/actions';
-import { wagmiConfig } from '@/config/wagmi.client';
+import { useSendUserOperation, useCurrentUser } from '@coinbase/cdp-hooks';
 import DAOGovernorABIJson from '@/abis/DAO_GovernorABI.json';
 
 const DAOGovernorABI = DAOGovernorABIJson as Abi;
-import {
-  Transaction,
-  TransactionButton,
-  TransactionStatus,
-  TransactionSponsor,
-  TransactionStatusLabel,
-  TransactionStatusAction,
-} from '@coinbase/onchainkit/transaction';
 import { useGovernancePermission } from '@/hooks/useGovernancePermission';
 
 interface VoteButtonProps {
@@ -33,12 +25,17 @@ const VoteButton: React.FC<VoteButtonProps> = ({
   choice,
   approvingPodId,
 }) => {
-  const { address } = useAccount();
+  const { currentUser } = useCurrentUser();
+  const { sendUserOperation } = useSendUserOperation();
   const publicClient = usePublicClient();
   const { toast } = useToast();
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isSponsoredProcessing, setIsSponsoredProcessing] = useState(false);
   const GOVERNOR_ADDRESS = process.env
     .NEXT_PUBLIC_DAO_GOVERNOR as `0x${string}`;
+
+  // Get address from CDP Smart Account
+  const address = currentUser?.evmSmartAccounts?.[0] as `0x${string}` | undefined;
 
   // ✅ ARCHITECTURE FIX: Check governance permission for correct pod
   // On-chain governance proposals typically require Executive Pod permission
@@ -60,44 +57,58 @@ const VoteButton: React.FC<VoteButtonProps> = ({
     );
   }
 
-  // Handle direct transaction (no smart wallet)
-  const handleDirectVote = async () => {
-    if (!address || !publicClient) {
+  // CDP transaction handler (non-sponsored)
+  const handleVote = useCallback(async (usePaymaster: boolean) => {
+    if (!currentUser?.evmSmartAccounts?.[0]) {
       toast({
         title: 'Error',
-        description: 'Wallet not connected',
+        description: 'Smart Account not found',
         variant: 'destructive',
       });
       return;
     }
 
-    setIsProcessing(true);
+    const setLoading = usePaymaster ? setIsSponsoredProcessing : setIsProcessing;
+    setLoading(true);
 
     try {
       console.log(
-        `Attempting direct vote on proposal ${proposalId} with choice ${choice}`,
+        `Attempting CDP vote on proposal ${proposalId} with choice ${choice}, paymaster: ${usePaymaster}`,
       );
 
-      // Simulate first
-      const { request } = await publicClient.simulateContract({
-        account: address,
-        address: GOVERNOR_ADDRESS,
+      const smartAccount = currentUser.evmSmartAccounts[0];
+
+      // Encode the vote call
+      const callData = encodeFunctionData({
         abi: DAOGovernorABI,
         functionName: 'castVote',
         args: [BigInt(proposalId), Number(choice)],
       });
 
-      console.log('Simulation successful, executing transaction');
+      console.log('Sending user operation:', {
+        smartAccount,
+        functionName: 'castVote',
+        args: [proposalId, choice],
+        usePaymaster,
+      });
 
-      // Execute the transaction
-      const walletClient = await getWalletClient(wagmiConfig, { account: address });
-      const hash = await walletClient.writeContract(request);
+      // Send user operation
+      const result = await sendUserOperation({
+        evmSmartAccount: smartAccount,
+        network: 'base',
+        calls: [{
+          to: GOVERNOR_ADDRESS,
+          value: 0n,
+          data: callData,
+        }],
+        useCdpPaymaster: usePaymaster,
+      });
 
-      console.log(`Transaction submitted: ${hash}`);
+      console.log('✅ Vote submitted successfully:', result);
 
       toast({
         title: 'Vote submitted',
-        description: `Transaction sent: ${hash.substring(0, 8) ?? hash}`,
+        description: `Your vote was cast on-chain${usePaymaster ? ' (gasless)' : ''}!`,
         variant: 'success',
       });
     } catch (error: any) {
@@ -113,45 +124,18 @@ const VoteButton: React.FC<VoteButtonProps> = ({
         variant: 'destructive',
       });
     } finally {
-      setIsProcessing(false);
+      setLoading(false);
     }
-  };
-
-  const voteCall = [
-    {
-      address: GOVERNOR_ADDRESS,
-      abi: DAOGovernorABI,
-      functionName: 'castVote',
-      args: [BigInt(proposalId), Number(choice)],
-    },
-  ];
-
-  const handleSuccess = (txHash: string) => {
-    console.log('[VoteButton] Vote submitted successfully:', txHash);
-    toast({
-      title: 'Vote submitted',
-      description: `Your vote was cast on-chain (tx: ${txHash.substring(0, 10)}...).`,
-      variant: 'success',
-    });
-  };
-
-  const handleError = (error: any) => {
-    console.error('[VoteButton] Error during vote submission:', error);
-    toast({
-      title: 'Vote failed',
-      description: error?.shortMessage || error?.message || 'Unknown failure.',
-      variant: 'destructive',
-    });
-  };
+  }, [currentUser, proposalId, choice, sendUserOperation, GOVERNOR_ADDRESS, toast]);
 
   return (
     <div className="flex flex-col space-y-4">
       <div className="flex space-x-4">
-        {/* Direct transaction button */}
+        {/* CDP Non-Sponsored Vote Button */}
         <button
-          onClick={handleDirectVote}
+          onClick={() => handleVote(false)}
           disabled={isProcessing || !address}
-          className={`px-4 py-2 text-white rounded ${isProcessing ? 'opacity-50' : ''}`}
+          className={`px-4 py-2 text-white rounded ${isProcessing ? 'opacity-50' : ''} newProposalButton`}
           style={{ backgroundColor: '#2F5D50' }}
           onMouseEnter={(e) => {
             if (!isProcessing)
@@ -162,108 +146,34 @@ const VoteButton: React.FC<VoteButtonProps> = ({
               e.currentTarget.style.backgroundColor = '#2F5D50';
           }}
         >
-          {isProcessing ? 'Processing...' : 'Vote Directly (No Smart Wallet)'}
+          {isProcessing ? 'Processing...' : 'Vote (Pay Gas)'}
         </button>
 
-        {/* Smart wallet transaction button */}
-        <Transaction
-          isSponsored={false}
-          chainId={BASE_CHAIN_ID}
-          contracts={voteCall}
-          onSuccess={(response) => {
-            console.group('✅ Vote Transaction Success (Non-Sponsored)');
-            console.log('📋 Transaction Response:', response);
-            console.log(
-              '📋 Transaction Hash:',
-              response?.transactionReceipts?.[0]?.transactionHash,
-            );
-            console.log(
-              '📋 Block Number:',
-              response?.transactionReceipts?.[0]?.blockNumber,
-            );
-            console.log(
-              '📋 Status:',
-              response?.transactionReceipts?.[0]?.status,
-            );
-            console.groupEnd();
-            handleSuccess(
-              response?.transactionReceipts?.[0]?.transactionHash || '',
-            );
+        {/* CDP Sponsored (Gasless) Vote Button */}
+        <button
+          onClick={() => handleVote(true)}
+          disabled={isSponsoredProcessing || !address}
+          className={`px-4 py-2 text-white rounded ${isSponsoredProcessing ? 'opacity-50' : ''} newProposalButton`}
+          style={{ backgroundColor: '#2F5D50' }}
+          onMouseEnter={(e) => {
+            if (!isSponsoredProcessing)
+              e.currentTarget.style.backgroundColor = '#1F453A';
           }}
-          onError={(error) => {
-            console.group('❌ Vote Transaction Error (Non-Sponsored)');
-            console.error('📋 Error Details:', {
-              name: (error as any).name,
-              message: (error as any).message,
-              stack: (error as any).stack,
-            });
-            console.groupEnd();
-            handleError(error as any);
+          onMouseLeave={(e) => {
+            if (!isSponsoredProcessing)
+              e.currentTarget.style.backgroundColor = '#2F5D50';
           }}
         >
-          <TransactionButton
-            text="Vote with Smart Wallet (No Sponsorship)"
-            className="newProposalButton"
-            disabled={!address}
-          />
-          <TransactionStatus>
-            <TransactionStatusLabel />
-            <TransactionStatusAction />
-          </TransactionStatus>
-        </Transaction>
+          {isSponsoredProcessing ? 'Processing...' : 'Vote (Gasless)'}
+        </button>
       </div>
-
-      {/* Sponsored transaction button */}
-      <Transaction
-        isSponsored={true}
-        chainId={BASE_CHAIN_ID}
-        contracts={voteCall}
-        onSuccess={(response) => {
-          console.group('✅ Vote Transaction Success (Sponsored)');
-          console.log('📋 Transaction Response:', response);
-          console.log(
-            '📋 Transaction Hash:',
-            response?.transactionReceipts?.[0]?.transactionHash,
-          );
-          console.log(
-            '📋 Block Number:',
-            response?.transactionReceipts?.[0]?.blockNumber,
-          );
-          console.log('📋 Status:', response?.transactionReceipts?.[0]?.status);
-          console.groupEnd();
-          handleSuccess(
-            response?.transactionReceipts?.[0]?.transactionHash || '',
-          );
-        }}
-        onError={(error) => {
-          console.group('❌ Vote Transaction Error (Sponsored)');
-          console.error('📋 Error Details:', {
-            name: (error as any).name,
-            message: (error as any).message,
-            stack: (error as any).stack,
-          });
-          console.groupEnd();
-          handleError(error as any);
-        }}
-      >
-        <TransactionButton
-          text="Vote with Smart Wallet (Sponsored)"
-          className="newProposalButton"
-          disabled={!address}
-        />
-        <TransactionSponsor />
-        <TransactionStatus>
-          <TransactionStatusLabel />
-          <TransactionStatusAction />
-        </TransactionStatus>
-      </Transaction>
 
       {/* Debug information */}
       <div className="mt-4 p-4 bg-gray-100 rounded text-xs">
         <div>Debug Info:</div>
         <div>Proposal ID: {proposalId}</div>
         <div>Choice: {choice}</div>
-        <div>Wallet: {address || 'Not connected'}</div>
+        <div>Smart Account: {address || 'Not connected'}</div>
         <div>Governor: {GOVERNOR_ADDRESS || 'Not configured'}</div>
       </div>
     </div>

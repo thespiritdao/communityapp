@@ -2,7 +2,8 @@
 'use client';
 
 import { useState } from 'react';
-import { useAccount, useWriteContract, useWaitForTransactionReceipt, useReadContract } from 'wagmi';
+import { useEvmAddress } from '@coinbase/cdp-hooks';
+import { useWriteContract, useWaitForTransactionReceipt, useReadContract } from 'wagmi';
 import { parseAbi } from 'viem';
 
 const FACTORY_ADDRESS = process.env.NEXT_PUBLIC_POD_TREASURY_FACTORY as `0x${string}`;
@@ -22,7 +23,7 @@ interface TreasuryToRegister {
 }
 
 export function TreasuryRegistrationTool() {
-  const { address: userAddress } = useAccount();
+  const { evmAddress: userAddress } = useEvmAddress();
   const [selectedTreasury, setSelectedTreasury] = useState<TreasuryToRegister | null>(null);
 
   // Hardcoded treasury that needs registration

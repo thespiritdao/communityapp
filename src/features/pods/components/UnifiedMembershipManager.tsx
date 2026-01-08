@@ -35,6 +35,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 // Import existing components - preserve the UX exactly
 import { EligibilityCriteriaBuilder } from './EligibilityCriteriaBuilder';
 import { HatsModuleManager } from './HatsModuleManager';
+import { SetHatExpirationButton } from './SetHatExpirationButton';
 
 // Import services
 import { PodRolePermissionsService } from '../services/PodRolePermissionsService';
@@ -95,6 +96,10 @@ export const UnifiedMembershipManager: React.FC<
     EligibilityCriteria[]
   >([]);
   const [activeTab, setActiveTab] = useState('permissions');
+
+  // State for Beta Tester on-chain expiration
+  const [showBetaTesterExpiration, setShowBetaTesterExpiration] = useState(false);
+  const [betaTesterExpirationTimestamp, setBetaTesterExpirationTimestamp] = useState<number>(0);
 
   // Load existing role data
   useEffect(() => {
@@ -209,11 +214,29 @@ export const UnifiedMembershipManager: React.FC<
         );
         console.log('   Permissions granted via hat ownership only');
 
-        toast({
-          title: 'Beta Tester Permissions Updated',
-          description:
-            'Database saved! Beta testers receive permissions via hat ownership.',
-        });
+        // Extract expiration timestamp from time_based criteria
+        const timeCriteria = eligibilityCriteria.find(c => c.type === 'time_based');
+        if (timeCriteria && timeCriteria.valid_until) {
+          // Convert valid_until string to Unix timestamp in seconds
+          const expirationTimestamp = Math.floor(new Date(timeCriteria.valid_until).getTime() / 1000);
+          console.log('⏰ Found time_based expiration:', new Date(expirationTimestamp * 1000).toISOString());
+          console.log('📅 Unix timestamp:', expirationTimestamp);
+
+          setBetaTesterExpirationTimestamp(expirationTimestamp);
+          setShowBetaTesterExpiration(true);
+
+          toast({
+            title: 'Beta Tester Permissions Updated',
+            description:
+              'Database saved! Now commit the expiration to the on-chain token.',
+          });
+        } else {
+          toast({
+            title: 'Beta Tester Permissions Updated',
+            description:
+              'Database saved! Beta testers receive permissions via hat ownership.',
+          });
+        }
 
         return;
       }
@@ -669,7 +692,7 @@ export const UnifiedMembershipManager: React.FC<
       {/* Action buttons */}
       <div className="flex justify-center flex-col items-center gap-4">
         {/* Step 1: Save to Database Button */}
-        {!showSyncTransaction && (
+        {!showSyncTransaction && !showBetaTesterExpiration && (
           <Button
             onClick={handleSaveToDatabase}
             disabled={loading}
@@ -689,6 +712,69 @@ export const UnifiedMembershipManager: React.FC<
           </Button>
         )}
 
+        {/* Beta Tester On-Chain Expiration Button */}
+        {showBetaTesterExpiration && betaTesterExpirationTimestamp > 0 && (
+          <Card className="w-full p-6 border-2" style={{ borderColor: '#2F5D50' }}>
+            <div className="space-y-4">
+              <div className="flex items-center gap-3">
+                <Calendar className="h-6 w-6" style={{ color: '#2F5D50' }} />
+                <div>
+                  <h4 className="text-lg font-semibold">Commit Expiration to Blockchain</h4>
+                </div>
+              </div>
+
+              <div
+                className="rounded-lg p-4"
+                style={{
+                  backgroundColor: '#E8F1EE',
+                  border: '1px solid #B8D9CA',
+                }}
+              >
+                <div className="flex gap-2">
+                  <Info
+                    className="h-5 w-5 flex-shrink-0 mt-0.5"
+                    style={{ color: '#2F5D50' }}
+                  />
+                  <div className="text-sm" style={{ color: '#1F453A' }}>
+                    <p className="font-medium mb-1">Why commit to blockchain?</p>
+                    <ul className="list-disc ml-4 space-y-1">
+                      <li>
+                        Expiration will be enforced by the role token itself
+                      </li>
+                      <li>
+                        Role will automatically become inactive after expiration
+                      </li>
+                      <li>
+                        Prevents users from bypassing the time restriction
+                      </li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+
+              <SetHatExpirationButton
+                hatId={process.env.NEXT_PUBLIC_BETA_TESTER_HAT || ''}
+                expirationTimestamp={betaTesterExpirationTimestamp}
+                onSuccess={() => {
+                  setShowBetaTesterExpiration(false);
+                  toast({
+                    title: 'Success!',
+                    description: 'Beta Tester expiration committed to blockchain.',
+                  });
+                }}
+              />
+
+              <Button
+                onClick={() => setShowBetaTesterExpiration(false)}
+                variant="outline"
+                className="w-full"
+              >
+                Skip On-Chain Commit
+              </Button>
+            </div>
+          </Card>
+        )}
+
         {/* Step 2: CDP Smart Account Transaction for Blockchain Sync */}
         {showSyncTransaction && syncCalls.length > 0 && evmAddress && (
           <Card className="w-full p-6 border-2 border-primary">
@@ -702,7 +788,7 @@ export const UnifiedMembershipManager: React.FC<
                     {syncMetadata.criteriaCount === 1
                       ? 'criterion'
                       : 'criteria'}{' '}
-                    to Hats Protocol
+                    to token
                   </p>
                 </div>
               </div>
@@ -722,14 +808,15 @@ export const UnifiedMembershipManager: React.FC<
                   <div className="text-sm" style={{ color: '#1F453A' }}>
                     <p className="font-medium mb-1">Why sync to blockchain?</p>
                     <ul className="list-disc ml-4 space-y-1">
-                      <li>
-                        Criteria will be enforced by Hats Protocol smart
-                        contracts
+                    <li>
+                        Expiration will be enforced by the role token itself
                       </li>
                       <li>
-                        Eligibility checks will be trustless and transparent
+                        Role will automatically become inactive after expiration
                       </li>
-                      <li>This transaction is gasless (no fees for you!)</li>
+                      <li>
+                        Prevents users from bypassing the time restriction
+                      </li>
                     </ul>
                   </div>
                 </div>

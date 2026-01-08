@@ -86,6 +86,12 @@ export const getUserIdentity = async (
     if (tokenBalances.hasMarketAdmin || tokenBalances.hasMarketManagement) {
       userTokens.push(normalizeAddress(process.env.NEXT_PUBLIC_MARKET_ADMIN));
     }
+    // Add Beta Tester Hat if user has it
+    if (tokenBalances.hasBetaTesterHat) {
+      discoveredHats.push(
+        normalizeAddress(process.env.NEXT_PUBLIC_BETA_TESTER_HAT),
+      );
+    }
   }
 
   // Get all hat IDs the user actually holds by querying the pod permissions
@@ -254,12 +260,18 @@ export const canParticipateInGovernance = (
     normalizeAddress(process.env.NEXT_PUBLIC_DEV_POD_HAT_ID),
   ].filter(Boolean);
 
+  // Default governance HATs if none specified
+  const defaultGovHats = [
+    normalizeAddress(process.env.NEXT_PUBLIC_BETA_TESTER_HAT),
+  ].filter(Boolean);
+
   const tokensToCheck = requiredTokens
     ? normalizeAddresses(requiredTokens)
     : defaultGovTokens;
 
   return (
     tokensToCheck.some((token) => identity.userTokens.includes(token)) ||
+    defaultGovHats.some((hat) => identity.userHats.includes(hat)) ||
     identity.userHats.length > 0 // Any HAT grants governance participation
   );
 };
@@ -275,8 +287,14 @@ export const canAccessBounties = (identity: UserIdentity): boolean => {
     normalizeAddress(process.env.NEXT_PUBLIC_MARKET_ADMIN),
   ].filter(Boolean);
 
+  // Default bounty HATs
+  const bountyHats = [
+    normalizeAddress(process.env.NEXT_PUBLIC_BETA_TESTER_HAT),
+  ].filter(Boolean);
+
   return (
     bountyTokens.some((token) => identity.userTokens.includes(token)) ||
+    bountyHats.some((hat) => identity.userHats.includes(hat)) ||
     identity.userHats.length > 0 // Any HAT grants bounty access
   );
 };
@@ -345,6 +363,32 @@ export const hasEventAccess = async (
   identity: UserIdentity,
 ): Promise<boolean> => {
   try {
+    // First, check if this is an unrestricted event (no token requirements)
+    // or if user is the creator
+    const { data: event, error: eventError } = await supabase
+      .from('events')
+      .select('required_tokens, creator_address')
+      .eq('id', eventId)
+      .single();
+
+    if (eventError) {
+      console.error('Error fetching event details:', eventError);
+      // Fall through to RPC check
+    } else if (event) {
+      // If event has no required tokens, everyone can access
+      if (!event.required_tokens || event.required_tokens.length === 0) {
+        console.log(`🎪 Event ${eventId} has no token requirements - granting access`);
+        return true;
+      }
+
+      // If user is the creator, grant access
+      if (identity.userAddress && event.creator_address.toLowerCase() === identity.userAddress.toLowerCase()) {
+        console.log(`🎪 User is creator of event ${eventId} - granting access`);
+        return true;
+      }
+    }
+
+    // Fall back to RPC check for token-gated events
     const accessibleEvents = await getAccessibleEvents(identity);
     return accessibleEvents.some((event: any) => event.id === eventId);
   } catch (error) {

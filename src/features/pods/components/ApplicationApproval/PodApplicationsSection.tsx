@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useAccount } from 'wagmi';
+import { useEvmAddress } from '@coinbase/cdp-hooks';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -50,7 +50,7 @@ export const PodApplicationsSection: React.FC<PodApplicationsSectionProps> = ({
   isLeader,
   onApplicationSubmit,
 }) => {
-  const { address } = useAccount();
+  const { evmAddress: address } = useEvmAddress();
   const router = useRouter();
   const [applications, setApplications] = useState<Application[]>([]);
   const [userApplication, setUserApplication] = useState<Application | null>(

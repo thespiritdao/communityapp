@@ -2,7 +2,8 @@
 
 import type React from 'react';
 import { useState, useEffect } from 'react';
-import { useAccount, usePublicClient, useWalletClient } from 'wagmi';
+import { useEvmAddress } from '@coinbase/cdp-hooks';
+import { usePublicClient, useWalletClient } from 'wagmi';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -33,7 +34,7 @@ interface HatDeactivationControlsProps {
 export const HatDeactivationControls: React.FC<
   HatDeactivationControlsProps
 > = ({ hatId, hatType, podName, onHatStatusChanged }) => {
-  const { address } = useAccount();
+  const { evmAddress: address } = useEvmAddress();
   const publicClient = usePublicClient();
   const { data: walletClient } = useWalletClient();
   const { toast } = useToast();

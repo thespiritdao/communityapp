@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAccount } from 'wagmi';
+import { useEvmAddress } from '@coinbase/cdp-hooks';
 import { useForum } from '@/features/forum/hooks/useForum';
 import { useUnifiedForumAccess } from '@/features/forum/hooks/useUnifiedForumAccess';
 import { supabase } from '@/utils/supabaseClient';
@@ -59,7 +59,7 @@ export function NewThreadForm({
   customTemplates = [],
 }: NewThreadFormProps) {
   const router = useRouter();
-  const { address } = useAccount();
+  const { evmAddress: address } = useEvmAddress();
   const { submitThread, isLoading } = useForum();
   const { permissions } = useUnifiedForumAccess();
 

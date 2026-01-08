@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
-import { useAccount, useWalletClient, usePublicClient } from 'wagmi';
+import { useEvmAddress } from '@coinbase/cdp-hooks';
+import { useWalletClient, usePublicClient } from 'wagmi';
 import { BountyApprovalService } from '../services/BountyApprovalService';
 import { useBountySupabase } from './useBountySupabase';
 import { useToast } from '@/components/ui/use-toast';
@@ -16,7 +17,7 @@ import type { FrontendBounty } from '../types/bounty';
  */
 
 export const useBountyMultiSig = () => {
-  const { address } = useAccount();
+  const { evmAddress: address } = useEvmAddress();
   const { data: walletClient } = useWalletClient();
   const publicClient = usePublicClient();
   const { toast } = useToast();

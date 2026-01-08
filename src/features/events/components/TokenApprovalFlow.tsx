@@ -2,23 +2,15 @@
 
 import type React from 'react';
 import { useState, useEffect } from 'react';
-import { useAccount, useReadContract } from 'wagmi';
-import { parseUnits, formatUnits } from 'viem';
+import { useEvmAddress, useSendUserOperation, useCurrentUser } from '@coinbase/cdp-hooks';
+import { useReadContract } from 'wagmi';
+import { parseUnits, formatUnits, encodeFunctionData } from 'viem';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { CheckCircle, Clock, AlertCircle, Coins } from 'lucide-react';
-
-// Transaction components for sponsored transactions
-import {
-  Transaction,
-  TransactionButton,
-  TransactionSponsor,
-  TransactionStatus,
-  TransactionStatusLabel,
-  TransactionStatusAction,
-} from '@coinbase/onchainkit/transaction';
+import { useToast } from '@/components/ui/use-toast';
 
 // Import ABIs
 const ERC20_ABI = [
@@ -93,10 +85,14 @@ export const TokenApprovalFlow: React.FC<TokenApprovalFlowProps> = ({
   onApprovalComplete,
   onCancel,
 }) => {
-  const { address } = useAccount();
+  const { evmAddress: address } = useEvmAddress();
+  const { currentUser } = useCurrentUser();
+  const { sendUserOperation } = useSendUserOperation();
+  const { toast } = useToast();
   const [approvalStep, setApprovalStep] = useState<
     'checking' | 'system' | 'self' | 'complete'
   >('checking');
+  const [isApproving, setIsApproving] = useState(false);
   const [systemApproved, setSystemApproved] = useState(false);
   const [selfApproved, setSelfApproved] = useState(false);
 
@@ -187,26 +183,133 @@ export const TokenApprovalFlow: React.FC<TokenApprovalFlowProps> = ({
     }
   }, [needsSystemApproval, needsSelfApproval, onApprovalComplete]);
 
-  // Create approval transaction calls
-  const getSystemApprovalCall = () => [
-    {
-      address: SYSTEM_TOKEN,
-      abi: ERC20_ABI,
-      functionName: 'approve',
-      args: [EVENT_MANAGER, systemAmountWei],
-      to: SYSTEM_TOKEN,
-    },
-  ];
+  // CDP-based token approval handlers
+  const handleSystemApproval = async () => {
+    if (!currentUser?.evmSmartAccounts?.[0]) {
+      toast({
+        title: 'Error',
+        description: 'Smart Account not found',
+        variant: 'destructive',
+      });
+      return;
+    }
 
-  const getSelfApprovalCall = () => [
-    {
-      address: SELF_TOKEN,
-      abi: ERC20_ABI,
-      functionName: 'approve',
-      args: [EVENT_MANAGER, selfAmountWei],
-      to: SELF_TOKEN,
-    },
-  ];
+    setIsApproving(true);
+
+    try {
+      const smartAccount = currentUser.evmSmartAccounts[0];
+
+      console.log('🚀 Approving SYSTEM tokens via CDP:', {
+        token: SYSTEM_TOKEN,
+        spender: EVENT_MANAGER,
+        amount: systemAmountWei.toString(),
+      });
+
+      const callData = encodeFunctionData({
+        abi: ERC20_ABI,
+        functionName: 'approve',
+        args: [EVENT_MANAGER, systemAmountWei],
+      });
+
+      await sendUserOperation({
+        evmSmartAccount: smartAccount,
+        network: 'base',
+        calls: [{
+          to: SYSTEM_TOKEN,
+          value: 0n,
+          data: callData,
+        }],
+        useCdpPaymaster: true,
+      });
+
+      console.log('✅ SYSTEM token approved');
+      setSystemApproved(true);
+      setIsApproving(false);
+
+      if (needsSelfApproval) {
+        setApprovalStep('self');
+      } else {
+        setApprovalStep('complete');
+        onApprovalComplete();
+      }
+
+      toast({
+        title: 'Approval Successful',
+        description: 'SYSTEM tokens approved',
+        variant: 'success',
+      });
+    } catch (error: any) {
+      console.error('❌ SYSTEM token approval failed:', error);
+      setIsApproving(false);
+
+      toast({
+        title: 'Approval Failed',
+        description: error.shortMessage || error.message || 'Failed to approve SYSTEM tokens',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleSelfApproval = async () => {
+    if (!currentUser?.evmSmartAccounts?.[0]) {
+      toast({
+        title: 'Error',
+        description: 'Smart Account not found',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setIsApproving(true);
+
+    try {
+      const smartAccount = currentUser.evmSmartAccounts[0];
+
+      console.log('🚀 Approving SELF tokens via CDP:', {
+        token: SELF_TOKEN,
+        spender: EVENT_MANAGER,
+        amount: selfAmountWei.toString(),
+      });
+
+      const callData = encodeFunctionData({
+        abi: ERC20_ABI,
+        functionName: 'approve',
+        args: [EVENT_MANAGER, selfAmountWei],
+      });
+
+      await sendUserOperation({
+        evmSmartAccount: smartAccount,
+        network: 'base',
+        calls: [{
+          to: SELF_TOKEN,
+          value: 0n,
+          data: callData,
+        }],
+        useCdpPaymaster: true,
+      });
+
+      console.log('✅ SELF token approved');
+      setSelfApproved(true);
+      setIsApproving(false);
+      setApprovalStep('complete');
+      onApprovalComplete();
+
+      toast({
+        title: 'Approval Successful',
+        description: 'SELF tokens approved',
+        variant: 'success',
+      });
+    } catch (error: any) {
+      console.error('❌ SELF token approval failed:', error);
+      setIsApproving(false);
+
+      toast({
+        title: 'Approval Failed',
+        description: error.shortMessage || error.message || 'Failed to approve SELF tokens',
+        variant: 'destructive',
+      });
+    }
+  };
 
   const formatTokenAmount = (amount: bigint) => {
     return Number.parseFloat(formatUnits(amount, 18)).toFixed(4);
@@ -341,33 +444,14 @@ export const TokenApprovalFlow: React.FC<TokenApprovalFlowProps> = ({
               </AlertDescription>
             </Alert>
 
-            <Transaction
-              chainId={BASE_CHAIN_ID}
-              calls={getSystemApprovalCall()}
-              isSponsored={true}
-              onSuccess={() => {
-                setSystemApproved(true);
-                if (needsSelfApproval) {
-                  setApprovalStep('self');
-                } else {
-                  setApprovalStep('complete');
-                  onApprovalComplete();
-                }
-              }}
-              onError={(error) => {
-                console.error('SYSTEM token approval failed:', error);
-              }}
+            <Button
+              onClick={handleSystemApproval}
+              disabled={isApproving}
+              className="w-full text-white hover:opacity-90"
+              style={{ backgroundColor: '#2F5D50' }}
             >
-              <TransactionButton
-                text="Approve SYSTEM Tokens"
-                className="w-full text-white hover:opacity-90"
-              />
-              <TransactionSponsor />
-              <TransactionStatus>
-                <TransactionStatusLabel />
-                <TransactionStatusAction />
-              </TransactionStatus>
-            </Transaction>
+              {isApproving ? 'Approving...' : 'Approve SYSTEM Tokens'}
+            </Button>
           </div>
         )}
 
@@ -380,29 +464,14 @@ export const TokenApprovalFlow: React.FC<TokenApprovalFlowProps> = ({
               </AlertDescription>
             </Alert>
 
-            <Transaction
-              chainId={BASE_CHAIN_ID}
-              calls={getSelfApprovalCall()}
-              isSponsored={true}
-              onSuccess={() => {
-                setSelfApproved(true);
-                setApprovalStep('complete');
-                onApprovalComplete();
-              }}
-              onError={(error) => {
-                console.error('SELF token approval failed:', error);
-              }}
+            <Button
+              onClick={handleSelfApproval}
+              disabled={isApproving}
+              className="w-full text-white hover:opacity-90"
+              style={{ backgroundColor: '#2F5D50' }}
             >
-              <TransactionButton
-                text="Approve SELF Tokens"
-                className="w-full text-white hover:opacity-90"
-              />
-              <TransactionSponsor />
-              <TransactionStatus>
-                <TransactionStatusLabel />
-                <TransactionStatusAction />
-              </TransactionStatus>
-            </Transaction>
+              {isApproving ? 'Approving...' : 'Approve SELF Tokens'}
+            </Button>
           </div>
         )}
 

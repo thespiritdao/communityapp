@@ -1,7 +1,7 @@
 'use client';
 
 import { memo } from 'react';
-import { useAccount } from 'wagmi';
+import { useEvmAddress } from '@coinbase/cdp-hooks';
 import useCart from '@/features/shopping-cart/contexts/cart-context/useCart';
 import * as S from './style';
 
@@ -34,7 +34,7 @@ const CartContainer = memo(
     tokenBalances: { systemBalance: string; selfBalance: string };
   }) => {
     const { products = [], total, isOpen, closeCart } = useCart();
-    const { address } = useAccount();
+    const { evmAddress: address } = useEvmAddress();
 
     // Don't render if cart is closed
     if (!isOpen) return null;

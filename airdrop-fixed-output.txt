@@ -1,0 +1,352 @@
+🎖️ ================================
+🎖️  Advocate NFT Batch Airdrop
+🎖️ ================================
+
+🔑 Admin Wallet: 0xd481e0bbF2E1D05ad3A06Ae3345ED3d4294C533d
+🎖️  Advocate NFT: 0x592E560171D2a882474cdfc3BbeeDb21cEB4015d
+👥 Recipients: 10 Beta Testers
+
+
+[1/10] Processing: Jochen Weber
+   Address: 0x8a23bde6b8a1832cd7119daed4a794027d74e71e
+   📤 Minting 1 Advocate NFT...
+   ❌ Failed: The contract function "mint" reverted with the following signature:
+0x118cdaa7
+
+Unable to decode signature "0x118cdaa7" as it was not found on the provided ABI.
+Make sure you are using the correct ABI and that the error exists on it.
+You can look up the decoded signature here: https://openchain.xyz/signatures?query=0x118cdaa7.
+ 
+Contract Call:
+  address:   0x592E560171D2a882474cdfc3BbeeDb21cEB4015d
+  function:  mint(address to, uint8 memberType, string uri)
+  args:          (0x8a23bde6b8a1832cd7119daed4a794027d74e71e, 0, )
+  sender:    0xd481e0bbF2E1D05ad3A06Ae3345ED3d4294C533d
+
+Docs: https://viem.sh/docs/contract/decodeErrorResult
+Version: viem@2.43.5
+
+[2/10] Processing: Eric Miki
+   Address: 0x62421b696132bb635feba0e3cb2f305637cb7ead
+   📤 Minting 1 Advocate NFT...
+   ❌ Failed: The contract function "mint" reverted with the following signature:
+0x118cdaa7
+
+Unable to decode signature "0x118cdaa7" as it was not found on the provided ABI.
+Make sure you are using the correct ABI and that the error exists on it.
+You can look up the decoded signature here: https://openchain.xyz/signatures?query=0x118cdaa7.
+ 
+Contract Call:
+  address:   0x592E560171D2a882474cdfc3BbeeDb21cEB4015d
+  function:  mint(address to, uint8 memberType, string uri)
+  args:          (0x62421b696132bb635feba0e3cb2f305637cb7ead, 0, )
+  sender:    0xd481e0bbF2E1D05ad3A06Ae3345ED3d4294C533d
+
+Docs: https://viem.sh/docs/contract/decodeErrorResult
+Version: viem@2.43.5
+
+[3/10] Processing: Ryan Munn
+   Address: 0xdfb6614e9de3822e13de08c6b050a448d417b2d6
+   📤 Minting 1 Advocate NFT...
+   ❌ Failed: The contract function "mint" reverted with the following signature:
+0x118cdaa7
+
+Unable to decode signature "0x118cdaa7" as it was not found on the provided ABI.
+Make sure you are using the correct ABI and that the error exists on it.
+You can look up the decoded signature here: https://openchain.xyz/signatures?query=0x118cdaa7.
+ 
+Contract Call:
+  address:   0x592E560171D2a882474cdfc3BbeeDb21cEB4015d
+  function:  mint(address to, uint8 memberType, string uri)
+  args:          (0xdfb6614e9de3822e13de08c6b050a448d417b2d6, 0, )
+  sender:    0xd481e0bbF2E1D05ad3A06Ae3345ED3d4294C533d
+
+Docs: https://viem.sh/docs/contract/decodeErrorResult
+Version: viem@2.43.5
+
+[4/10] Processing: Mariah McKay
+   Address: 0xe3ddfd2b214d51316533181248a4106f83e4934c
+   📤 Minting 1 Advocate NFT...
+   ❌ Failed: The contract function "mint" reverted with the following signature:
+0x118cdaa7
+
+Unable to decode signature "0x118cdaa7" as it was not found on the provided ABI.
+Make sure you are using the correct ABI and that the error exists on it.
+You can look up the decoded signature here: https://openchain.xyz/signatures?query=0x118cdaa7.
+ 
+Contract Call:
+  address:   0x592E560171D2a882474cdfc3BbeeDb21cEB4015d
+  function:  mint(address to, uint8 memberType, string uri)
+  args:          (0xe3ddfd2b214d51316533181248a4106f83e4934c, 0, )
+  sender:    0xd481e0bbF2E1D05ad3A06Ae3345ED3d4294C533d
+
+Docs: https://viem.sh/docs/contract/decodeErrorResult
+Version: viem@2.43.5
+
+[5/10] Processing: Ron Rivers
+   Address: 0xcdf3cd4777286a5611b17869a509e8ecf1cc6f48
+   📤 Minting 1 Advocate NFT...
+   ❌ Failed: The contract function "mint" reverted with the following signature:
+0x118cdaa7
+
+Unable to decode signature "0x118cdaa7" as it was not found on the provided ABI.
+Make sure you are using the correct ABI and that the error exists on it.
+You can look up the decoded signature here: https://openchain.xyz/signatures?query=0x118cdaa7.
+ 
+Contract Call:
+  address:   0x592E560171D2a882474cdfc3BbeeDb21cEB4015d
+  function:  mint(address to, uint8 memberType, string uri)
+  args:          (0xcdf3cd4777286a5611b17869a509e8ecf1cc6f48, 0, )
+  sender:    0xd481e0bbF2E1D05ad3A06Ae3345ED3d4294C533d
+
+Docs: https://viem.sh/docs/contract/decodeErrorResult
+Version: viem@2.43.5
+
+[6/10] Processing: Tressa Rivers
+   Address: 0xaecf4d00f0e402fbeb0757f22be9062d89018106
+   📤 Minting 1 Advocate NFT...
+   ❌ Failed: The contract function "mint" reverted with the following signature:
+0x118cdaa7
+
+Unable to decode signature "0x118cdaa7" as it was not found on the provided ABI.
+Make sure you are using the correct ABI and that the error exists on it.
+You can look up the decoded signature here: https://openchain.xyz/signatures?query=0x118cdaa7.
+ 
+Contract Call:
+  address:   0x592E560171D2a882474cdfc3BbeeDb21cEB4015d
+  function:  mint(address to, uint8 memberType, string uri)
+  args:          (0xaecf4d00f0e402fbeb0757f22be9062d89018106, 0, )
+  sender:    0xd481e0bbF2E1D05ad3A06Ae3345ED3d4294C533d
+
+Docs: https://viem.sh/docs/contract/decodeErrorResult
+Version: viem@2.43.5
+
+[7/10] Processing: Scott Graves
+   Address: 0x21498071d1a52830fa398937a9a8f59c69d3fa7a
+   📤 Minting 1 Advocate NFT...
+   ❌ Failed: The contract function "mint" reverted with the following signature:
+0x118cdaa7
+
+Unable to decode signature "0x118cdaa7" as it was not found on the provided ABI.
+Make sure you are using the correct ABI and that the error exists on it.
+You can look up the decoded signature here: https://openchain.xyz/signatures?query=0x118cdaa7.
+ 
+Contract Call:
+  address:   0x592E560171D2a882474cdfc3BbeeDb21cEB4015d
+  function:  mint(address to, uint8 memberType, string uri)
+  args:          (0x21498071d1a52830fa398937a9a8f59c69d3fa7a, 0, )
+  sender:    0xd481e0bbF2E1D05ad3A06Ae3345ED3d4294C533d
+
+Docs: https://viem.sh/docs/contract/decodeErrorResult
+Version: viem@2.43.5
+
+[8/10] Processing: René Pinnell
+   Address: 0x0259c4b65866d8f9e596052dbcdfc142c28b6329
+   📤 Minting 1 Advocate NFT...
+   ❌ Failed: The contract function "mint" reverted with the following signature:
+0x118cdaa7
+
+Unable to decode signature "0x118cdaa7" as it was not found on the provided ABI.
+Make sure you are using the correct ABI and that the error exists on it.
+You can look up the decoded signature here: https://openchain.xyz/signatures?query=0x118cdaa7.
+ 
+Contract Call:
+  address:   0x592E560171D2a882474cdfc3BbeeDb21cEB4015d
+  function:  mint(address to, uint8 memberType, string uri)
+  args:          (0x0259c4b65866d8f9e596052dbcdfc142c28b6329, 0, )
+  sender:    0xd481e0bbF2E1D05ad3A06Ae3345ED3d4294C533d
+
+Docs: https://viem.sh/docs/contract/decodeErrorResult
+Version: viem@2.43.5
+
+[9/10] Processing: Unknown User
+   Address: 0xbe03115945680f518e53c4473e0e077ec7272923
+   📤 Minting 1 Advocate NFT...
+   ❌ Failed: The contract function "mint" reverted with the following signature:
+0x118cdaa7
+
+Unable to decode signature "0x118cdaa7" as it was not found on the provided ABI.
+Make sure you are using the correct ABI and that the error exists on it.
+You can look up the decoded signature here: https://openchain.xyz/signatures?query=0x118cdaa7.
+ 
+Contract Call:
+  address:   0x592E560171D2a882474cdfc3BbeeDb21cEB4015d
+  function:  mint(address to, uint8 memberType, string uri)
+  args:          (0xbe03115945680f518e53c4473e0e077ec7272923, 0, )
+  sender:    0xd481e0bbF2E1D05ad3A06Ae3345ED3d4294C533d
+
+Docs: https://viem.sh/docs/contract/decodeErrorResult
+Version: viem@2.43.5
+
+[10/10] Processing: Ron Rivers
+   Address: 0x12a0cf22d632c859b793f852af03b9d515580244
+   ℹ️  Already has 1 Advocate NFT(s) - Skipping
+
+
+🎖️ ================================
+🎖️  Airdrop Complete!
+🎖️ ================================
+
+✅ Successfully Airdropped: 0
+
+ℹ️  Already Had NFTs: 1
+   - Ron Rivers
+
+❌ Failed: 9
+   - Jochen Weber: The contract function "mint" reverted with the following signature:
+0x118cdaa7
+
+Unable to decode signature "0x118cdaa7" as it was not found on the provided ABI.
+Make sure you are using the correct ABI and that the error exists on it.
+You can look up the decoded signature here: https://openchain.xyz/signatures?query=0x118cdaa7.
+ 
+Contract Call:
+  address:   0x592E560171D2a882474cdfc3BbeeDb21cEB4015d
+  function:  mint(address to, uint8 memberType, string uri)
+  args:          (0x8a23bde6b8a1832cd7119daed4a794027d74e71e, 0, )
+  sender:    0xd481e0bbF2E1D05ad3A06Ae3345ED3d4294C533d
+
+Docs: https://viem.sh/docs/contract/decodeErrorResult
+Version: viem@2.43.5
+   - Eric Miki: The contract function "mint" reverted with the following signature:
+0x118cdaa7
+
+Unable to decode signature "0x118cdaa7" as it was not found on the provided ABI.
+Make sure you are using the correct ABI and that the error exists on it.
+You can look up the decoded signature here: https://openchain.xyz/signatures?query=0x118cdaa7.
+ 
+Contract Call:
+  address:   0x592E560171D2a882474cdfc3BbeeDb21cEB4015d
+  function:  mint(address to, uint8 memberType, string uri)
+  args:          (0x62421b696132bb635feba0e3cb2f305637cb7ead, 0, )
+  sender:    0xd481e0bbF2E1D05ad3A06Ae3345ED3d4294C533d
+
+Docs: https://viem.sh/docs/contract/decodeErrorResult
+Version: viem@2.43.5
+   - Ryan Munn: The contract function "mint" reverted with the following signature:
+0x118cdaa7
+
+Unable to decode signature "0x118cdaa7" as it was not found on the provided ABI.
+Make sure you are using the correct ABI and that the error exists on it.
+You can look up the decoded signature here: https://openchain.xyz/signatures?query=0x118cdaa7.
+ 
+Contract Call:
+  address:   0x592E560171D2a882474cdfc3BbeeDb21cEB4015d
+  function:  mint(address to, uint8 memberType, string uri)
+  args:          (0xdfb6614e9de3822e13de08c6b050a448d417b2d6, 0, )
+  sender:    0xd481e0bbF2E1D05ad3A06Ae3345ED3d4294C533d
+
+Docs: https://viem.sh/docs/contract/decodeErrorResult
+Version: viem@2.43.5
+   - Mariah McKay: The contract function "mint" reverted with the following signature:
+0x118cdaa7
+
+Unable to decode signature "0x118cdaa7" as it was not found on the provided ABI.
+Make sure you are using the correct ABI and that the error exists on it.
+You can look up the decoded signature here: https://openchain.xyz/signatures?query=0x118cdaa7.
+ 
+Contract Call:
+  address:   0x592E560171D2a882474cdfc3BbeeDb21cEB4015d
+  function:  mint(address to, uint8 memberType, string uri)
+  args:          (0xe3ddfd2b214d51316533181248a4106f83e4934c, 0, )
+  sender:    0xd481e0bbF2E1D05ad3A06Ae3345ED3d4294C533d
+
+Docs: https://viem.sh/docs/contract/decodeErrorResult
+Version: viem@2.43.5
+   - Ron Rivers: The contract function "mint" reverted with the following signature:
+0x118cdaa7
+
+Unable to decode signature "0x118cdaa7" as it was not found on the provided ABI.
+Make sure you are using the correct ABI and that the error exists on it.
+You can look up the decoded signature here: https://openchain.xyz/signatures?query=0x118cdaa7.
+ 
+Contract Call:
+  address:   0x592E560171D2a882474cdfc3BbeeDb21cEB4015d
+  function:  mint(address to, uint8 memberType, string uri)
+  args:          (0xcdf3cd4777286a5611b17869a509e8ecf1cc6f48, 0, )
+  sender:    0xd481e0bbF2E1D05ad3A06Ae3345ED3d4294C533d
+
+Docs: https://viem.sh/docs/contract/decodeErrorResult
+Version: viem@2.43.5
+   - Tressa Rivers: The contract function "mint" reverted with the following signature:
+0x118cdaa7
+
+Unable to decode signature "0x118cdaa7" as it was not found on the provided ABI.
+Make sure you are using the correct ABI and that the error exists on it.
+You can look up the decoded signature here: https://openchain.xyz/signatures?query=0x118cdaa7.
+ 
+Contract Call:
+  address:   0x592E560171D2a882474cdfc3BbeeDb21cEB4015d
+  function:  mint(address to, uint8 memberType, string uri)
+  args:          (0xaecf4d00f0e402fbeb0757f22be9062d89018106, 0, )
+  sender:    0xd481e0bbF2E1D05ad3A06Ae3345ED3d4294C533d
+
+Docs: https://viem.sh/docs/contract/decodeErrorResult
+Version: viem@2.43.5
+   - Scott Graves: The contract function "mint" reverted with the following signature:
+0x118cdaa7
+
+Unable to decode signature "0x118cdaa7" as it was not found on the provided ABI.
+Make sure you are using the correct ABI and that the error exists on it.
+You can look up the decoded signature here: https://openchain.xyz/signatures?query=0x118cdaa7.
+ 
+Contract Call:
+  address:   0x592E560171D2a882474cdfc3BbeeDb21cEB4015d
+  function:  mint(address to, uint8 memberType, string uri)
+  args:          (0x21498071d1a52830fa398937a9a8f59c69d3fa7a, 0, )
+  sender:    0xd481e0bbF2E1D05ad3A06Ae3345ED3d4294C533d
+
+Docs: https://viem.sh/docs/contract/decodeErrorResult
+Version: viem@2.43.5
+   - René Pinnell: The contract function "mint" reverted with the following signature:
+0x118cdaa7
+
+Unable to decode signature "0x118cdaa7" as it was not found on the provided ABI.
+Make sure you are using the correct ABI and that the error exists on it.
+You can look up the decoded signature here: https://openchain.xyz/signatures?query=0x118cdaa7.
+ 
+Contract Call:
+  address:   0x592E560171D2a882474cdfc3BbeeDb21cEB4015d
+  function:  mint(address to, uint8 memberType, string uri)
+  args:          (0x0259c4b65866d8f9e596052dbcdfc142c28b6329, 0, )
+  sender:    0xd481e0bbF2E1D05ad3A06Ae3345ED3d4294C533d
+
+Docs: https://viem.sh/docs/contract/decodeErrorResult
+Version: viem@2.43.5
+   - Unknown User: The contract function "mint" reverted with the following signature:
+0x118cdaa7
+
+Unable to decode signature "0x118cdaa7" as it was not found on the provided ABI.
+Make sure you are using the correct ABI and that the error exists on it.
+You can look up the decoded signature here: https://openchain.xyz/signatures?query=0x118cdaa7.
+ 
+Contract Call:
+  address:   0x592E560171D2a882474cdfc3BbeeDb21cEB4015d
+  function:  mint(address to, uint8 memberType, string uri)
+  args:          (0xbe03115945680f518e53c4473e0e077ec7272923, 0, )
+  sender:    0xd481e0bbF2E1D05ad3A06Ae3345ED3d4294C533d
+
+Docs: https://viem.sh/docs/contract/decodeErrorResult
+Version: viem@2.43.5
+
+
+📋 ================================
+📋  IMPORTANT: Next Steps
+📋 ================================
+
+⚠️  Beta Testers must DELEGATE their Advocate NFTs to activate voting power!
+
+Instructions for Beta Testers:
+1. Go to: https://spiritdao.org/governance
+2. Look for the "Delegate Voting Power" section
+3. Click "Delegate to Self" button
+4. Confirm the transaction (gasless via paymaster)
+5. Once delegated, you can create governance proposals!
+
+📧 You may want to send an email to Beta Testers with these instructions.
+
+OR: They will see the delegation prompt automatically when they
+try to create a proposal on the governance page.
+
+
+✅ Script completed successfully

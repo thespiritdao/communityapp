@@ -10,7 +10,8 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Loader2 } from 'lucide-react';
-import { useAccount, useSignMessage } from 'wagmi';
+import { useEvmAddress } from '@coinbase/cdp-hooks';
+import { useSignMessage } from 'wagmi';
 import { supabase } from '@/utils/supabaseClient';
 import { useToast } from '@/components/ui/use-toast';
 
@@ -33,7 +34,7 @@ export default function AgreementSigningModal({
   roleId,
   onSigningComplete,
 }: AgreementSigningModalProps) {
-  const { address } = useAccount();
+  const { evmAddress: address } = useEvmAddress();
   const { signMessageAsync } = useSignMessage();
   const { toast } = useToast();
   const [isSigning, setIsSigning] = useState(false);

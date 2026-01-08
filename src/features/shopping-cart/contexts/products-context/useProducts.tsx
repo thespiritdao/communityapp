@@ -5,7 +5,7 @@ import { useProductsContext } from './ProductsContextProvider';
 import type { IProduct } from '../../models';
 import { createClient } from '@supabase/supabase-js';
 import { useTokenBalances } from '@/context/TokenBalancesContext';
-import { useAccount } from 'wagmi';
+import { useEvmAddress } from '@coinbase/cdp-hooks';
 import {
   getAccessibleProductsForUser,
   sortProducts,
@@ -31,7 +31,7 @@ const useProducts = () => {
 
   // Use the centralized token balances context and account
   const { balances: userTokens } = useTokenBalances();
-  const { address } = useAccount();
+  const { evmAddress: address } = useEvmAddress();
 
   // Get user identity for access control
   const getUserAccessControl = useCallback(async () => {

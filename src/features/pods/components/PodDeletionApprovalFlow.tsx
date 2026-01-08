@@ -3,7 +3,8 @@
 import type React from 'react';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAccount, useWalletClient, usePublicClient } from 'wagmi';
+import { useEvmAddress } from '@coinbase/cdp-hooks';
+import { useWalletClient, usePublicClient } from 'wagmi';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -56,7 +57,7 @@ export const PodDeletionApprovalFlow: React.FC<
   PodDeletionApprovalFlowProps
 > = ({ pod, onProposalCreated, onDeletionComplete, className = '' }) => {
   const router = useRouter();
-  const { address } = useAccount();
+  const { evmAddress: address } = useEvmAddress();
   const { data: walletClient } = useWalletClient();
   const pubClient = usePublicClient();
   const { toast } = useToast();

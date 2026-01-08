@@ -2,14 +2,14 @@
 'use client';
 
 import { useState } from 'react';
-import { useAccount } from 'wagmi';
+import { useEvmAddress } from '@coinbase/cdp-hooks';
 import { useMarketplaceManagementAccess } from '@/features/marketplace/hooks/useMarketplaceManagementAccess';
 import { ProductManagement } from '../ProductManagement/ProductManagement';
 import { Settings } from 'lucide-react';
 import * as S from './ManageProductsButton.style';
 
 const ManageProductsButton = () => {
-  const { address } = useAccount();
+  const { evmAddress: address } = useEvmAddress();
   const { managedPods, isLoading } = useMarketplaceManagementAccess();
   const [isModalOpen, setIsModalOpen] = useState(false);
 

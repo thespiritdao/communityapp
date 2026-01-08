@@ -24,7 +24,7 @@ import {
 import { useToast } from '@/components/ui/use-toast';
 import { supabase } from '@/utils/supabaseClient';
 import { fetchTokenBalances } from '@/utils/fetchTokenBalances';
-import { useAccount } from 'wagmi';
+import { useEvmAddress } from '@coinbase/cdp-hooks';
 import type { EligibilityCriteria } from '../services/EligibilityService';
 import { UnifiedAgreementService } from '../services/UnifiedAgreementService';
 import { AgreementIPFSService } from '../services/AgreementIPFSService';
@@ -102,7 +102,7 @@ export const EligibilityCriteriaBuilder: React.FC<
   podId,
 }) => {
   const { toast } = useToast();
-  const { address } = useAccount(); // Get user's wallet address
+  const { evmAddress: address } = useEvmAddress(); // Get user's wallet address
   const [criteria, setCriteria] =
     useState<EligibilityCriteria[]>(initialCriteria);
   const [showAddForm, setShowAddForm] = useState(false);

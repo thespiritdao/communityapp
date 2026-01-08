@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useAccount } from 'wagmi';
+import { useEvmAddress } from '@coinbase/cdp-hooks';
 import {
   useMarketplaceRealtime,
   useProductRealtime,
@@ -20,7 +20,7 @@ export function RealtimeMarketplaceDemo({
   productId,
   className = '',
 }: RealtimeMarketplaceDemoProps) {
-  const { address } = useAccount();
+  const { evmAddress: address } = useEvmAddress();
   const [events, setEvents] = useState<any[]>([]);
   const [connectionLogs, setConnectionLogs] = useState<string[]>([]);
 

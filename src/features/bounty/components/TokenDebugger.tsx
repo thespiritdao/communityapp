@@ -2,14 +2,15 @@
 
 import type React from 'react';
 import { useState, useEffect } from 'react';
-import { useAccount } from 'wagmi';
+import { useEvmAddress } from '@coinbase/cdp-hooks';
 import { fetchTokenBalances } from '../../../utils/fetchTokenBalances';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 
 export const TokenDebugger: React.FC = () => {
-  const { address, isConnected } = useAccount();
+  const { evmAddress: address } = useEvmAddress();
+  const isConnected = !!address;
   const [tokenBalances, setTokenBalances] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);

@@ -2,7 +2,8 @@
 
 import type React from 'react';
 import { useState, useEffect } from 'react';
-import { useAccount, useWalletClient, usePublicClient } from 'wagmi';
+import { useEvmAddress } from '@coinbase/cdp-hooks';
+import { useWalletClient, usePublicClient } from 'wagmi';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -37,7 +38,7 @@ export const BountyApprovalFlow: React.FC<BountyApprovalFlowProps> = ({
   bountyValue,
   onApprovalComplete,
 }) => {
-  const { address } = useAccount();
+  const { evmAddress: address } = useEvmAddress();
   const { data: walletClient } = useWalletClient();
   const publicClient = usePublicClient();
   const { toast } = useToast();

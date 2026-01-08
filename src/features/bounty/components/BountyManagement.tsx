@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { useAccount } from 'wagmi';
+import { useEvmAddress } from '@coinbase/cdp-hooks';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -150,7 +150,7 @@ export const BountyManagement: React.FC<BountyManagementProps> = ({
   podId,
   canManageBounties,
 }) => {
-  const { address } = useAccount() || {}; // Add fallback for undefined during remount
+  const { evmAddress: address } = useEvmAddress();
   const [activeTab, setActiveTab] = useState('overview');
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('open');
@@ -752,7 +752,7 @@ export const BountyManagement: React.FC<BountyManagementProps> = ({
                                 {(() => {
                                   const canBid = canUserBid(
                                     bounty,
-                                    address,
+                                    address || undefined,
                                     tokenBalances,
                                     pods,
                                   );
@@ -980,7 +980,7 @@ export const BountyManagement: React.FC<BountyManagementProps> = ({
                                           {/* Manager can also place a bid */}
                                           {canUserBid(
                                             bounty,
-                                            address,
+                                            address || undefined,
                                             tokenBalances,
                                             pods,
                                           ) && (

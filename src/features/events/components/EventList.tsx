@@ -11,7 +11,7 @@ import { useEvents } from '../hooks/useEvents';
 import { useTokenGatedEvents } from '../hooks/useEventTokenGating';
 import { useBatchEventRegistrationStatus } from '../hooks/useEventRegistrationStatus';
 import type { EventWithStats, EventRegistration } from '../types/event';
-import { useAccount } from 'wagmi';
+import { useEvmAddress } from '@coinbase/cdp-hooks';
 
 interface EventListProps {
   showCreateButton?: boolean;
@@ -36,7 +36,7 @@ export const EventList: React.FC<EventListProps> = ({
   emptyMessage,
   limit,
 }) => {
-  const { address } = useAccount();
+  const { evmAddress: address } = useEvmAddress();
   const [showPastToggle, setShowPastToggle] = useState(showPastEvents);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedEvent, setSelectedEvent] = useState<EventWithStats | null>(

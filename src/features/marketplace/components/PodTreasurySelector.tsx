@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useAccount } from 'wagmi';
+import { useEvmAddress } from '@coinbase/cdp-hooks';
 import {
   Select,
   SelectContent,
@@ -37,7 +37,7 @@ export function PodTreasurySelector({
   onValueChange,
   className,
 }: PodTreasurySelectorProps) {
-  const { address } = useAccount();
+  const { evmAddress: address } = useEvmAddress();
   const [fundDestinations, setFundDestinations] = useState<FundDestination[]>(
     [],
   );

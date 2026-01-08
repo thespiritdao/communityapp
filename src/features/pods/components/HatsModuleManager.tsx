@@ -2,7 +2,8 @@
 
 import type React from 'react';
 import { useState, useEffect } from 'react';
-import { useAccount, usePublicClient } from 'wagmi';
+import { useEvmAddress } from '@coinbase/cdp-hooks';
+import { usePublicClient } from 'wagmi';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -38,7 +39,7 @@ export const HatsModuleManager: React.FC<HatsModuleManagerProps> = ({
   podName,
   onSyncComplete,
 }) => {
-  const { address } = useAccount();
+  const { evmAddress: address } = useEvmAddress();
   const publicClient = usePublicClient();
   const { toast } = useToast();
 

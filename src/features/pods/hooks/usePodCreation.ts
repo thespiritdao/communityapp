@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
-import { useAccount, useConfig } from 'wagmi';
+import { useEvmAddress } from '@coinbase/cdp-hooks';
+import { useConfig } from 'wagmi';
 import { useToast } from '@/components/ui/use-toast';
 import { EventService } from '../../events/lib/supabase';
 import {
@@ -37,7 +38,7 @@ export interface UsePodCreationOptions {
 }
 
 export function usePodCreation(options: UsePodCreationOptions = {}) {
-  const { address } = useAccount();
+  const { evmAddress: address } = useEvmAddress();
   const config = useConfig();
   const { toast } = useToast();
   const { createManagerHat } = useManagerHatCreation();

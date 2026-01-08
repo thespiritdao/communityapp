@@ -1,7 +1,8 @@
-import { useAccount, useSignMessage } from 'wagmi';
+import { useEvmAddress } from '@coinbase/cdp-hooks';
+import { useSignMessage } from 'wagmi';
 
 export const useSnapshotAuth = () => {
-  const { address } = useAccount();
+  const { evmAddress: address } = useEvmAddress();
   const { signMessageAsync } = useSignMessage();
 
   const signSnapshotMessage = async (message: string) => {

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { useAccount } from 'wagmi';
+import { useEvmAddress } from '@coinbase/cdp-hooks';
 import {
   Dialog,
   DialogContent,
@@ -38,7 +38,7 @@ export const DisputeFilingDialog: React.FC<DisputeFilingDialogProps> = ({
   onOpenChange,
   onSuccess,
 }) => {
-  const { address } = useAccount();
+  const { evmAddress: address } = useEvmAddress();
   const [disputeType, setDisputeType] = useState<string>('');
   const [disputeTitle, setDisputeTitle] = useState('');
   const [disputeDescription, setDisputeDescription] = useState('');

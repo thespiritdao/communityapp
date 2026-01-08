@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useAccount, usePublicClient, useWalletClient } from 'wagmi';
+import { useEvmAddress } from '@coinbase/cdp-hooks';
+import { usePublicClient, useWalletClient } from 'wagmi';
 import { HATS_CONFIG, POD_TO_LEADER_HAT } from '../utils/podLeaderHats';
 import { logHatTransaction, logHatError } from '../services/hatErrorService';
 import { getHatsCoreService } from '../../../services/hatsCoreService';
@@ -66,7 +67,7 @@ interface HatPermissions {
 }
 
 export function useHatPermissions(allPods: Pod[]): HatPermissions {
-  const { address } = useAccount();
+  const { evmAddress: address } = useEvmAddress();
   const publicClient = usePublicClient();
 
   const [permissions, setPermissions] = useState<{
@@ -347,7 +348,7 @@ export function useHatPermissions(allPods: Pod[]): HatPermissions {
  * Uses proper contract integration instead of prediction
  */
 export function useManagerHatCreation() {
-  const { address } = useAccount();
+  const { evmAddress: address } = useEvmAddress();
   const publicClient = usePublicClient();
   const { data: walletClient } = useWalletClient();
   const [pendingTransaction, setPendingTransaction] = useState<string | null>(

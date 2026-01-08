@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useAccount } from 'wagmi';
+import { useEvmAddress } from '@coinbase/cdp-hooks';
 import { Card } from '@/components/ui/card';
 import { supabase } from '@/utils/supabaseClient';
 import { ApplicationApprovalCard } from './ApplicationApprovalCard';
@@ -32,7 +32,7 @@ export const ApplicationsPanel: React.FC<ApplicationsPanelProps> = ({
   podId,
   canManageMembers,
 }) => {
-  const { address } = useAccount();
+  const { evmAddress: address } = useEvmAddress();
   const [applications, setApplications] = useState<Application[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<'pending' | 'approved' | 'all'>(

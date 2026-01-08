@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { useAccount } from 'wagmi';
+import { useEvmAddress } from '@coinbase/cdp-hooks';
 import {
   PodTreasuryService,
   type TokenBalance,
@@ -88,7 +88,7 @@ export function usePodTreasury(
   treasuryAddress: string | undefined,
   podId?: string,
 ): UsePodTreasuryResult {
-  const { address } = useAccount();
+  const { evmAddress: address } = useEvmAddress();
 
   // Data state
   const [balances, setBalances] = useState<TokenBalance[]>([]);

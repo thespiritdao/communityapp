@@ -15,7 +15,7 @@ import {
   XCircle,
   AlertCircle,
 } from 'lucide-react';
-import { useAccount } from 'wagmi';
+import { useEvmAddress } from '@coinbase/cdp-hooks';
 import { useToast } from '@/components/ui/use-toast';
 import {
   EligibilityService,
@@ -43,7 +43,7 @@ const CRITERION_ICONS = {
 export const EligibilityCriteriaDisplay: React.FC<
   EligibilityCriteriaDisplayProps
 > = ({ criteria, podId, roleId, showUserStatus = false, compact = false }) => {
-  const { address } = useAccount();
+  const { evmAddress: address } = useEvmAddress();
   const { toast } = useToast();
 
   const [evaluation, setEvaluation] = useState<EligibilityEvaluation | null>(

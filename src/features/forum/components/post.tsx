@@ -6,7 +6,7 @@ import type React from 'react';
 import { useEffect, useState } from 'react';
 import { useParams, useRouter, usePathname } from 'next/navigation';
 import { supabase } from '@/utils/supabaseClient';
-import { useAccount } from 'wagmi';
+import { useEvmAddress } from '@coinbase/cdp-hooks';
 import PostCard from '@/features/forum/components/PostCard';
 import { Button } from '@/components/ui/button';
 import { Loader2, Lock } from 'lucide-react';
@@ -28,7 +28,8 @@ const PostPage: React.FC = () => {
   const { session, isAuthenticated, signIn } = useAuthContext();
   const router = useRouter();
   const pathname = usePathname();
-  const { address, isConnected } = useAccount();
+  const { evmAddress: address } = useEvmAddress();
+  const isConnected = !!address;
 
   const [post, setPost] = useState<Post | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);

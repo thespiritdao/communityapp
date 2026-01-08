@@ -93,7 +93,7 @@ export const ProfileDisplay: React.FC<ProfileDisplayProps> = ({
       {/* Section: Basic Info */}
       <div className="profile-section">
         <div className="profile-info">
-          <h2>{`${profile?.first_name || ''} ${profile?.last_name || ''}`}</h2>
+          <h2 style={{ marginBottom: '12px' }}>{`${profile?.first_name || ''} ${profile?.last_name || ''}`}</h2>
 
           {profile?.website && (
             <a href={profile.website} target="_blank" rel="noopener noreferrer">
@@ -106,7 +106,7 @@ export const ProfileDisplay: React.FC<ProfileDisplayProps> = ({
           {/* Edit Profile Button */}
           <button
             className="btn"
-            style={{ marginTop: '16px' }}
+            style={{ marginTop: '16px', display: 'block' }}
             onClick={onEditClick}
           >
             Edit Profile

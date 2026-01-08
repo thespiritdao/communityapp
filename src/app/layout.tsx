@@ -7,6 +7,7 @@ import { CommunityProvider } from '@/context/CommunityContext';
 import { UnifiedNotificationProvider } from '@/context/UnifiedNotificationContext';
 import { TokenBalancesProvider } from '@/context/TokenBalancesContext';
 import { CDPEmbeddedProvider } from '../wallet/components/CDPEmbeddedProvider';
+import { WalletAuthSync } from '../wallet/components/WalletAuthSync';
 import { ProfilesProvider } from '@/features/identity/context/ProfilesProvider';
 import { AuthProvider } from '@/features/identity';
 import { ModuleErrorBoundary } from '@/components/ModuleErrorBoundary';
@@ -71,6 +72,8 @@ export default function RootLayout({ children }: { children: ReactNode }) {
             <CDPEmbeddedProvider>
               <TokenBalancesProvider>
                 <AuthProvider>
+                  {/* Automatic wallet authentication sync - ensures CDP wallet is always authenticated with Supabase */}
+                  <WalletAuthSync />
                   <ProfilesProvider>
                     <CommunityProvider>
                       <UnifiedNotificationProvider>

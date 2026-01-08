@@ -4,7 +4,7 @@
 import type { IProduct } from '../../models';
 import Product from './Product/Product'; // Ensure this file exports a default component.
 import { useEffect, useState } from 'react';
-import { useAccount } from 'wagmi';
+import { useEvmAddress } from '@coinbase/cdp-hooks';
 import { useTokenBalances } from '@/context/TokenBalancesContext';
 import { getUserIdentity, type UserIdentity } from '@/utils/accessControlUtils';
 import * as S from './style';
@@ -14,7 +14,7 @@ interface IProps {
 }
 
 const Products = ({ products }: IProps) => {
-  const { address } = useAccount();
+  const { evmAddress: address } = useEvmAddress();
   const { balances: tokenBalances, isLoading: tokenLoading } =
     useTokenBalances();
   const [userIdentity, setUserIdentity] = useState<UserIdentity | null>(null);

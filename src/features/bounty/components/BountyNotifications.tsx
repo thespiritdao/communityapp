@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { useAccount } from 'wagmi';
+import { useEvmAddress } from '@coinbase/cdp-hooks';
 import { useToast } from '@/components/ui/use-toast';
 import { unifiedNotificationService } from '@/services/unifiedNotificationService';
 import type { UnifiedNotification } from '@/services/unifiedNotificationService';
@@ -36,7 +36,7 @@ interface BountyNotificationsProps {
 export const BountyNotifications: React.FC<BountyNotificationsProps> = ({
   onNotificationClick,
 }) => {
-  const { address } = useAccount();
+  const { evmAddress: address } = useEvmAddress();
   const { toast } = useToast();
   const [notifications, setNotifications] = useState<UnifiedNotification[]>([]);
   const [isLoading, setIsLoading] = useState(true);

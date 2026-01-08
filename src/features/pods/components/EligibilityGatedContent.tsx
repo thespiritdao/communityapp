@@ -2,7 +2,7 @@
 
 import type React from 'react';
 import { useState, useEffect } from 'react';
-import { useAccount } from 'wagmi';
+import { useEvmAddress } from '@coinbase/cdp-hooks';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import {
@@ -40,7 +40,7 @@ export const EligibilityGatedContent: React.FC<
   contentType = 'content',
   onEligibilityChange,
 }) => {
-  const { address } = useAccount();
+  const { evmAddress: address } = useEvmAddress();
   const [eligibilityResult, setEligibilityResult] = useState<any>(null);
   const [hasAccess, setHasAccess] = useState(false);
   const [isChecking, setIsChecking] = useState(false);

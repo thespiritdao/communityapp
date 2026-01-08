@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
-import { useAccount } from 'wagmi';
+import { useEvmAddress } from '@coinbase/cdp-hooks';
 import { useBountyContractEnhanced } from './useBountyContractEnhanced';
 import {
   bountyApi,
@@ -20,7 +20,7 @@ import type {
 } from '../types/bounty';
 
 export const useBountySupabase = () => {
-  const { address } = useAccount();
+  const { evmAddress: address } = useEvmAddress();
   const { createBountyOnChain } = useBountyContractEnhanced();
 
   const [bounties, setBounties] = useState<FrontendBounty[]>([]);

@@ -6,7 +6,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/components/ui/use-toast';
 import { FileText, PenTool, X, Shield, AlertCircle } from 'lucide-react';
-import { useAccount, useSignMessage } from 'wagmi';
+import { useEvmAddress } from '@coinbase/cdp-hooks';
+import { useSignMessage } from 'wagmi';
 import { usePublicClient, useWalletClient } from 'wagmi';
 import { PodMembershipApplicationService } from '../services/PodMembershipApplicationService';
 import { useProfiles } from '@/features/identity/hooks/useProfiles';
@@ -57,7 +58,7 @@ export const MembershipAgreementModal: React.FC<
     'agreement',
   );
   const { toast } = useToast();
-  const { address } = useAccount();
+  const { evmAddress: address } = useEvmAddress();
   const { signMessageAsync } = useSignMessage();
   const publicClient = usePublicClient();
   const { data: walletClient } = useWalletClient();

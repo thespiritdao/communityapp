@@ -12,19 +12,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
-import { useAccount } from 'wagmi';
+import { useEvmAddress, useSendUserOperation, useCurrentUser } from '@coinbase/cdp-hooks';
 import { useBalance } from 'wagmi';
-import {
-  SafeOnchainKitWrapper,
-  SafeTransaction as Transaction,
-  SafeTransactionButton as TransactionButton,
-  SafeTransactionSponsor as TransactionSponsor,
-  SafeTransactionStatus as TransactionStatus,
-  SafeTransactionStatusLabel as TransactionStatusLabel,
-  SafeTransactionStatusAction as TransactionStatusAction,
-} from './SafeOnchainKit';
-import { parseUnits } from 'viem';
-import { DollarSign, User, Users, Wallet, AlertCircle } from 'lucide-react';
+import { parseUnits, encodeFunctionData } from 'viem';
+import { DollarSign, User, Users, Wallet, AlertCircle, Loader2 } from 'lucide-react';
 
 // Token addresses from environment
 const SYSTEM_TOKEN = process.env.NEXT_PUBLIC_SYSTEM_TOKEN as `0x${string}`;
@@ -93,10 +84,13 @@ export default function FundingModal({
   recipient,
   onSuccess,
 }: FundingModalProps) {
-  const { address } = useAccount();
+  const { evmAddress: address } = useEvmAddress();
+  const { currentUser } = useCurrentUser();
+  const { sendUserOperation } = useSendUserOperation();
   const [selectedToken, setSelectedToken] = useState<'SYSTEM' | null>('SYSTEM');
   const [amount, setAmount] = useState('');
   const [message, setMessage] = useState('');
+  const [isSending, setIsSending] = useState(false);
 
   // Early return if no recipient or recipientType (modal closed state)
   if (!recipient || !recipientType) {
@@ -105,7 +99,7 @@ export default function FundingModal({
 
   // Get token balances
   const { data: systemBalance, error: systemError } = useBalance({
-    address,
+    address: address || undefined,
     token: SYSTEM_TOKEN,
   });
 
@@ -114,87 +108,100 @@ export default function FundingModal({
   // Quick amount buttons
   const quickAmounts = ['10', '25', '50', '100'];
 
-  const handleSuccess = (response: any) => {
-    console.log('💰 Funding successful:', response);
-    onSuccess?.(amount, selectedToken || 'SYSTEM');
-
-    // Broadcast treasury update event for any listening treasury components
-    // Include both the recipient address and podId for treasury components to match
-    window.dispatchEvent(
-      new CustomEvent('treasuryUpdated', {
-        detail: {
-          recipientAddress: recipient.address,
-          podId: recipient.podId, // Include podId for treasury proxy transactions
-          isTreasury: recipient.isTreasury,
-          amount,
-          token: selectedToken || 'SYSTEM',
-        },
-      }),
-    );
-
-    // Reset form
-    setAmount('');
-    setMessage('');
-    setSelectedToken('SYSTEM');
-    onClose();
-  };
-
-  const handleError = (error: any) => {
-    console.error('💰 Funding failed:', error);
-  };
-
-  const prepareTransferTransaction = () => {
-    if (!selectedToken || !amount || !address) {
-      throw new Error('Missing required fields');
+  // CDP-based funding handler
+  const handleSendFunds = async () => {
+    if (!currentUser?.evmSmartAccounts?.[0] || !selectedToken || !amount || !address) {
+      console.error('Missing required fields');
+      return;
     }
 
-    const tokenAddress = selectedToken === 'SYSTEM' ? SYSTEM_TOKEN : SELF_TOKEN;
-    const amountWei = parseUnits(amount, 18);
+    setIsSending(true);
 
-    // If funding a treasury contract, use proxy for sponsored transactions
-    if (recipient.isTreasury && recipient.podId && TREASURY_PROXY_ADDRESS) {
-      console.log('💰 Preparing treasury proxy funding transaction:', {
-        proxyAddress: TREASURY_PROXY_ADDRESS,
-        podId: recipient.podId,
-        tokenAddress,
-        amount: amountWei.toString(),
-        method: 'proxyReceiveTokens',
-      });
+    try {
+      const smartAccount = currentUser.evmSmartAccounts[0];
+      const tokenAddress = selectedToken === 'SYSTEM' ? SYSTEM_TOKEN : SELF_TOKEN;
+      const amountWei = parseUnits(amount, 18);
 
-      return [
+      // If funding a treasury contract, use proxy for sponsored transactions
+      if (recipient.isTreasury && recipient.podId && TREASURY_PROXY_ADDRESS) {
+        console.log('💰 Funding treasury via CDP proxy:', {
+          proxyAddress: TREASURY_PROXY_ADDRESS,
+          podId: recipient.podId,
+          tokenAddress,
+          amount: amountWei.toString(),
+        });
+
         // Step 1: Approve proxy to spend tokens
-        {
-          address: tokenAddress,
+        const approveCallData = encodeFunctionData({
           abi: ERC20_ABI,
           functionName: 'approve',
           args: [TREASURY_PROXY_ADDRESS, amountWei],
-        },
+        });
+
         // Step 2: Call proxy's proxyReceiveTokens function
-        {
-          address: TREASURY_PROXY_ADDRESS,
+        const proxyCallData = encodeFunctionData({
           abi: TREASURY_PROXY_ABI,
           functionName: 'proxyReceiveTokens',
           args: [recipient.podId, tokenAddress as `0x${string}`, amountWei],
-        },
-      ];
+        });
+
+        await sendUserOperation({
+          evmSmartAccount: smartAccount,
+          network: 'base',
+          calls: [
+            { to: tokenAddress, value: 0n, data: approveCallData },
+            { to: TREASURY_PROXY_ADDRESS, value: 0n, data: proxyCallData },
+          ],
+          useCdpPaymaster: true,
+        });
+      } else {
+        // For regular member funding, use direct transfer
+        console.log('💰 Funding member via CDP:', {
+          recipientAddress: recipient.address,
+          tokenAddress,
+          amount: amountWei.toString(),
+        });
+
+        const transferCallData = encodeFunctionData({
+          abi: ERC20_ABI,
+          functionName: 'transfer',
+          args: [recipient.address as `0x${string}`, amountWei],
+        });
+
+        await sendUserOperation({
+          evmSmartAccount: smartAccount,
+          network: 'base',
+          calls: [{ to: tokenAddress, value: 0n, data: transferCallData }],
+          useCdpPaymaster: true,
+        });
+      }
+
+      console.log('✅ Funding successful');
+      onSuccess?.(amount, selectedToken || 'SYSTEM');
+
+      // Broadcast treasury update event for any listening treasury components
+      window.dispatchEvent(
+        new CustomEvent('treasuryUpdated', {
+          detail: {
+            recipientAddress: recipient.address,
+            podId: recipient.podId,
+            isTreasury: recipient.isTreasury,
+            amount,
+            token: selectedToken || 'SYSTEM',
+          },
+        }),
+      );
+
+      // Reset form
+      setAmount('');
+      setMessage('');
+      setSelectedToken('SYSTEM');
+      onClose();
+    } catch (error: any) {
+      console.error('❌ Funding failed:', error);
+    } finally {
+      setIsSending(false);
     }
-
-    // For regular member funding, use direct transfer
-    console.log('💰 Preparing member funding transaction:', {
-      recipientAddress: recipient.address,
-      tokenAddress,
-      amount: amountWei.toString(),
-      method: 'transfer',
-    });
-
-    return [
-      {
-        address: tokenAddress,
-        abi: ERC20_ABI,
-        functionName: 'transfer',
-        args: [recipient.address as `0x${string}`, amountWei],
-      },
-    ];
   };
 
   const getBalance = () => {
@@ -360,40 +367,20 @@ export default function FundingModal({
           {/* Transaction Section */}
           <div className="border-t pt-4">
             {address && selectedToken && amount && canTransfer() ? (
-              <SafeOnchainKitWrapper
-                fallback={
-                  <Button disabled={true} className="w-full h-12">
-                    Loading transaction...
-                  </Button>
-                }
-                errorFallback={
-                  <Button
-                    disabled={true}
-                    variant="outline"
-                    className="w-full h-12"
-                  >
-                    Transaction currently unavailable
-                  </Button>
-                }
+              <Button
+                onClick={handleSendFunds}
+                disabled={isSending}
+                className="w-full h-12 text-white font-semibold bg-[#2F5D50]"
               >
-                <Transaction
-                  chainId={8453} // Base mainnet
-                  calls={prepareTransferTransaction()}
-                  isSponsored={true}
-                  onSuccess={handleSuccess}
-                  onError={handleError}
-                >
-                  <TransactionButton
-                    text={`Send ${amount} ${selectedToken}`}
-                    className="w-full h-12 text-white font-semibold bg-[#2F5D50]"
-                  />
-                  <TransactionSponsor />
-                  <TransactionStatus>
-                    <TransactionStatusLabel />
-                    <TransactionStatusAction />
-                  </TransactionStatus>
-                </Transaction>
-              </SafeOnchainKitWrapper>
+                {isSending ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Sending...
+                  </>
+                ) : (
+                  `Send ${amount} ${selectedToken}`
+                )}
+              </Button>
             ) : (
               <div className="text-center py-4">
                 <Wallet className="h-8 w-8 mx-auto mb-2 text-gray-300" />

@@ -2,7 +2,8 @@
 
 import type React from 'react';
 import { useState, useEffect } from 'react';
-import { useAccount, usePublicClient, useWriteContract } from 'wagmi';
+import { useEvmAddress } from '@coinbase/cdp-hooks';
+import { usePublicClient, useWriteContract } from 'wagmi'; // TODO: Convert useWriteContract to CDP pattern
 import { parseAbiItem, type Abi } from 'viem';
 import DAOGovernorABIJson from '@/abis/DAOGovernorABI.json';
 
@@ -52,7 +53,7 @@ interface ProposalData {
 }
 
 export const ProposalsList = () => {
-  const { address } = useAccount();
+  const { evmAddress: address } = useEvmAddress();
   const publicClient = usePublicClient();
   const [proposals, setProposals] = useState<ProposalData[]>([]);
   const [isLoading, setIsLoading] = useState(true);

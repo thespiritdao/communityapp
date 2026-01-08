@@ -1,18 +1,24 @@
 'use client';
 
 import type { ReactNode } from 'react';
-import { useAccount } from 'wagmi';
-import type {
-  LifecycleStatus,
-  TransactionError,
-  TransactionResponse,
-} from '@coinbase/onchainkit/transaction';
+import { useCurrentUser } from '@coinbase/cdp-hooks';
+
+// CDP-native types (simplified from OnchainKit types)
+type CDPTransactionError = {
+  message: string;
+  name: string;
+  stack?: string;
+};
+
+type CDPTransactionResponse = {
+  userOperationHash?: string;
+  [key: string]: any;
+};
 
 type TransactionWrapperChildren = {
   address: string | undefined;
-  onError: (error: TransactionError) => void;
-  onSuccess: (response: TransactionResponse) => void;
-  onStatus: (status: LifecycleStatus) => void;
+  onError: (error: CDPTransactionError) => void;
+  onSuccess: (response: CDPTransactionResponse) => void;
 };
 
 type TransactionWrapperReact = {
@@ -22,18 +28,17 @@ type TransactionWrapperReact = {
 export default function TransactionWrapper({
   children,
 }: TransactionWrapperReact) {
-  const { address } = useAccount();
+  const { currentUser } = useCurrentUser();
 
-  function onError(error: TransactionError) {
+  // Get address from CDP Smart Account (not EOA)
+  const address = currentUser?.evmSmartAccounts?.[0] as `0x${string}` | undefined;
+
+  function onError(error: CDPTransactionError) {
     console.error('TransactionWrapper.onError:', error);
   }
 
-  function onSuccess(response: TransactionResponse) {
+  function onSuccess(response: CDPTransactionResponse) {
     console.log('TransactionWrapper.onSuccess', response);
-  }
-
-  function onStatus(status: LifecycleStatus) {
-    console.log('TransactionWrapper.onStatus', status);
   }
 
   return (
@@ -42,7 +47,6 @@ export default function TransactionWrapper({
         address,
         onError,
         onSuccess,
-        onStatus,
       })}
     </div>
   );

@@ -25,9 +25,83 @@ import {
 import { base } from 'viem/chains';
 import { privateKeyToAccount } from 'viem/accounts';
 import { CONTRACT_ADDRESSES, HAT_IDS } from '@/config/contracts';
+import { createClient } from '@supabase/supabase-js';
 
 export const runtime = 'nodejs';
 export const maxDuration = 60;
+
+// ============================================================
+// DATABASE SYNC HELPER
+// ============================================================
+
+/**
+ * Sync HAT mint to pod_members table for permission system
+ * CRITICAL: Without this, users have HAT on-chain but no permissions in app
+ */
+async function syncToPodMembers(
+  walletAddress: string,
+  isFirstUser: boolean
+): Promise<void> {
+  try {
+    console.log('📊 Syncing HAT mint to database...');
+
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+    if (!supabaseUrl || !supabaseServiceKey) {
+      console.warn('⚠️ Supabase credentials not configured - skipping database sync');
+      return;
+    }
+
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    // Executive Pod ID (hardcoded - matches Executive Pod in database)
+    const EXECUTIVE_POD_ID = 'e35c9e25-d29f-4988-b1e8-2902e960b94c';
+
+    const hatId = isFirstUser
+      ? HAT_IDS.EXECUTIVE_POD_LEADER
+      : HAT_IDS.BETA_TESTER_HAT;
+
+    if (!hatId) {
+      console.warn('⚠️ HAT ID not configured - skipping database sync');
+      return;
+    }
+
+    // For Beta Testers, we don't add them to Executive Pod
+    // They get their own pod or no pod membership (HAT-only access)
+    if (!isFirstUser) {
+      console.log('ℹ️ Beta Tester HAT minted - no pod membership needed');
+      return;
+    }
+
+    // For Executive Pod Leaders, add to pod_members table
+    const { error: syncError } = await supabase
+      .from('pod_members')
+      .upsert({
+        pod_id: EXECUTIVE_POD_ID,
+        wallet: walletAddress.toLowerCase(),
+        membership_type: 'leader',
+        role: 'leader',
+        hat_id: hatId,
+        is_active: true,
+        joined_at: new Date().toISOString(),
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      }, {
+        onConflict: 'pod_id,wallet'
+      });
+
+    if (syncError) {
+      console.error('❌ Failed to sync to pod_members:', syncError);
+      // Don't throw - HAT is minted on-chain, DB sync is supplementary
+    } else {
+      console.log('✅ Executive Pod Leader synced to database!');
+    }
+  } catch (error) {
+    console.error('❌ Database sync error:', error);
+    // Don't throw - HAT is minted on-chain, DB sync is supplementary
+  }
+}
 
 // ============================================================
 // CONTRACT MODE (PREFERRED - Gas Free via Paymaster)
@@ -190,6 +264,9 @@ export async function POST(request: NextRequest) {
             console.log(`   Transaction: ${hash}`);
             console.log(`   Block: ${receipt.blockNumber}`);
 
+            // CRITICAL FIX: Sync to pod_members table for permission system
+            await syncToPodMembers(walletAddress, isFirstUser);
+
             return NextResponse.json({
               success: true,
               transactionHash: hash,
@@ -344,6 +421,9 @@ export async function POST(request: NextRequest) {
     console.log(`   Transaction: ${hash}`);
     console.log(`   Block: ${receipt.blockNumber}`);
     console.log(`   Gas used: ${receipt.gasUsed}`);
+
+    // CRITICAL FIX: Sync to pod_members table for permission system
+    await syncToPodMembers(walletAddress, isFirstUser);
 
     return NextResponse.json({
       success: true,

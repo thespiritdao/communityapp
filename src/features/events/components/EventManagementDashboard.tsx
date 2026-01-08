@@ -34,18 +34,14 @@ import {
 } from '../hooks/useEvents';
 import { useEventManagementAccess } from '../hooks/useEventTokenGating';
 import { EventService } from '../lib/supabase';
-import { useAccount } from 'wagmi';
+import { useEvmAddress, useSendUserOperation, useCurrentUser } from '@coinbase/cdp-hooks';
 import Link from 'next/link';
 import { unifiedNotificationService as notificationService } from '@/services/unifiedNotificationService';
 import { useSimplifiedEventTransactions } from '../hooks/useSimplifiedEventTransactions';
-import {
-  Transaction,
-  TransactionButton,
-  TransactionSponsor,
-  TransactionStatus,
-  TransactionStatusLabel,
-  TransactionStatusAction,
-} from '@coinbase/onchainkit/transaction';
+import { encodeFunctionData } from 'viem';
+import { useToast } from '@/components/ui/use-toast';
+import EventManagerABI from '@/abis/EventManager.json';
+import { CONTRACT_ADDRESSES } from '@/config/contracts';
 
 interface EventManagementDashboardProps {
   eventId?: string;
@@ -54,7 +50,10 @@ interface EventManagementDashboardProps {
 export const EventManagementDashboard: React.FC<
   EventManagementDashboardProps
 > = ({ eventId }) => {
-  const { address } = useAccount();
+  const { evmAddress: address } = useEvmAddress();
+  const { currentUser } = useCurrentUser();
+  const { sendUserOperation } = useSendUserOperation();
+  const { toast } = useToast();
   const { canManageEvents, managedPods } = useEventManagementAccess();
   // Load all events - RLS policies will automatically filter to user's events
   const {
@@ -573,7 +572,10 @@ const EventManagementRow: React.FC<EventManagementRowProps> = ({
   const { publishEvent, cancelEvent, completeEvent, loading } = useEventActions(
     event.id,
   );
-  const { address } = useAccount();
+  const { evmAddress: address } = useEvmAddress();
+  const { currentUser } = useCurrentUser();
+  const { sendUserOperation } = useSendUserOperation();
+  const { toast } = useToast();
   const [showCancelDialog, setShowCancelDialog] = useState(false);
   const [cancellingEvent, setCancellingEvent] = useState(false);
   const [organizerProfile, setOrganizerProfile] = useState<{
@@ -599,6 +601,80 @@ const EventManagementRow: React.FC<EventManagementRowProps> = ({
 
   const { getCancelEventCall } = useSimplifiedEventTransactions();
   const [showSmartContractCancel, setShowSmartContractCancel] = useState(false);
+
+  // CDP-based blockchain event cancellation
+  const handleCdpCancelEvent = async (blockchainEventId: string) => {
+    if (!currentUser?.evmSmartAccounts?.[0]) {
+      toast({
+        title: 'Error',
+        description: 'Smart Account not found',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setCancellingEvent(true);
+
+    try {
+      const smartAccount = currentUser.evmSmartAccounts[0];
+      const EVENT_MANAGER_CONTRACT = CONTRACT_ADDRESSES.EVENT_MANAGER;
+
+      console.log('🚀 Cancelling event on blockchain via CDP:', {
+        eventId: blockchainEventId,
+        contract: EVENT_MANAGER_CONTRACT,
+      });
+
+      // Encode the cancelEvent call
+      const callData = encodeFunctionData({
+        abi: EventManagerABI,
+        functionName: 'cancelEvent',
+        args: [blockchainEventId],
+      });
+
+      // Send user operation with CDP paymaster (gasless)
+      const result = await sendUserOperation({
+        evmSmartAccount: smartAccount,
+        network: 'base',
+        calls: [{
+          to: EVENT_MANAGER_CONTRACT as `0x${string}`,
+          value: 0n,
+          data: callData,
+        }],
+        useCdpPaymaster: true,
+      });
+
+      console.log('✅ Event cancelled on blockchain:', result);
+
+      // Now cancel in database
+      const success = await cancelEvent();
+
+      setCancellingEvent(false);
+      setShowCancelDialog(false);
+      setShowSmartContractCancel(false);
+
+      if (success) {
+        toast({
+          title: 'Event Cancelled',
+          description: 'Event cancelled successfully. Refunds will be processed automatically.',
+          variant: 'success',
+        });
+      }
+    } catch (error: any) {
+      console.error('❌ Event cancellation failed:', error);
+
+      setCancellingEvent(false);
+
+      let errorMessage = 'Event cancellation failed';
+      if (error.shortMessage) errorMessage = error.shortMessage;
+      else if (error.message) errorMessage = error.message;
+
+      toast({
+        title: 'Cancellation Failed',
+        description: errorMessage,
+        variant: 'destructive',
+      });
+    }
+  };
 
   const handleEventCancellation = async (
     eventToCancel: EventWithStats,
@@ -828,37 +904,14 @@ const EventManagementRow: React.FC<EventManagementRowProps> = ({
                       Keep Event
                     </Button>
                     {showSmartContractCancel ? (
-                      <Transaction
-                        chainId={8453}
-                        calls={getCancelEventCall(
-                          event.blockchain_event_id || event.id,
-                        )}
-                        isSponsored={true}
-                        onSuccess={async (response) => {
-                          console.log(
-                            '✅ Event cancellation successful:',
-                            response,
-                          );
-                          await handleSmartContractCancellationSuccess(event);
-                        }}
-                        onError={(error) => {
-                          console.error('❌ Event cancellation failed:', error);
-                          setShowSmartContractCancel(false);
-                          alert(
-                            'Failed to cancel event on blockchain. Please try again.',
-                          );
-                        }}
+                      <Button
+                        variant="destructive"
+                        onClick={() => handleCdpCancelEvent(event.blockchain_event_id || event.id)}
+                        disabled={cancellingEvent}
+                        className="text-white"
                       >
-                        <TransactionButton
-                          text="Cancel Event on Blockchain"
-                          className="text-white"
-                        />
-                        <TransactionSponsor />
-                        <TransactionStatus>
-                          <TransactionStatusLabel />
-                          <TransactionStatusAction />
-                        </TransactionStatus>
-                      </Transaction>
+                        {cancellingEvent ? 'Cancelling...' : 'Cancel Event on Blockchain'}
+                      </Button>
                     ) : (
                       <Button
                         variant="destructive"
@@ -923,7 +976,7 @@ interface RegistrationManagementProps {
 const RegistrationManagement: React.FC<RegistrationManagementProps> = ({
   events,
 }) => {
-  const { address } = useAccount();
+  const { evmAddress: address } = useEvmAddress();
   const [selectedEventId, setSelectedEventId] = useState<string>('');
   const { registrations, loading } = useEventRegistrations(selectedEventId);
   const [showNotifyAllModal, setShowNotifyAllModal] = useState(false);
@@ -1097,7 +1150,7 @@ const RegistrationCard: React.FC<RegistrationCardProps> = ({
   selectedEvent,
   selectedEventId,
 }) => {
-  const { address } = useAccount();
+  const { evmAddress: address } = useEvmAddress();
   const [userProfile, setUserProfile] = useState<{
     first_name?: string;
     last_name?: string;

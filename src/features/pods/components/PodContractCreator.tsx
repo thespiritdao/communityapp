@@ -1,21 +1,15 @@
 'use client';
 
 import { useState } from 'react';
-import { useAccount } from 'wagmi';
-import {
-  Transaction,
-  TransactionButton,
-  TransactionSponsor,
-  TransactionStatus,
-  TransactionStatusLabel,
-  TransactionStatusAction,
-} from '@coinbase/onchainkit/transaction';
+import { useEvmAddress, useSendUserOperation, useCurrentUser } from '@coinbase/cdp-hooks';
+import { encodeFunctionData } from 'viem';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { debugTransactionCalls } from '../utils/transactionDebugger';
+import { Loader2 } from 'lucide-react';
 
 // PodCreationManager ABI for creating pods
 const POD_CREATION_MANAGER_ABI = [
@@ -50,7 +44,9 @@ interface PodContractCreatorProps {
 }
 
 export function PodContractCreator({ onPodCreated }: PodContractCreatorProps) {
-  const { address } = useAccount();
+  const { evmAddress: address } = useEvmAddress();
+  const { currentUser } = useCurrentUser();
+  const { sendUserOperation } = useSendUserOperation();
   const [step, setStep] = useState<'propose' | 'activate'>('propose');
   const [formData, setFormData] = useState({
     podId: 'executive-pod',
@@ -63,26 +59,43 @@ export function PodContractCreator({ onPodCreated }: PodContractCreatorProps) {
       '3666552746732487012074714051834669771614651641465517857430090993893376', // Executive Hat ID in decimal (0x0000008800000000...)
   });
   const [createdPodId, setCreatedPodId] = useState<string>('');
+  const [isProposing, setIsProposing] = useState(false);
+  const [isActivating, setIsActivating] = useState(false);
 
   const handleInputChange = (field: string, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
-  // Prepare createPodProposal transaction
-  const prepareCreatePodTransaction = () => {
-    const podLeadsArray = formData.podLeads
-      .split(',')
-      .map((addr) => addr.trim())
-      .filter((addr) => addr.length > 0)
-      .filter((addr) => /^0x[a-fA-F0-9]{40}$/.test(addr));
-
-    if (podLeadsArray.length === 0) {
-      podLeadsArray.push(address!); // Add current user as default pod lead
+  // CDP-based pod proposal handler
+  const handleCreateProposal = async () => {
+    if (!currentUser?.evmSmartAccounts?.[0]) {
+      console.error('Smart Account not found');
+      return;
     }
 
-    const calls = [
-      {
-        address: POD_CREATION_MANAGER_ADDRESS as `0x${string}`,
+    setIsProposing(true);
+
+    try {
+      const smartAccount = currentUser.evmSmartAccounts[0];
+
+      // Parse pod leads
+      const podLeadsArray = formData.podLeads
+        .split(',')
+        .map((addr) => addr.trim())
+        .filter((addr) => addr.length > 0)
+        .filter((addr) => /^0x[a-fA-F0-9]{40}$/.test(addr));
+
+      if (podLeadsArray.length === 0) {
+        podLeadsArray.push(address!); // Add current user as default pod lead
+      }
+
+      console.log('🏗️ Creating pod proposal via CDP:', {
+        podId: formData.podId,
+        name: formData.name,
+        podLeads: podLeadsArray,
+      });
+
+      const callData = encodeFunctionData({
         abi: POD_CREATION_MANAGER_ABI,
         functionName: 'createPodProposal',
         args: [
@@ -93,44 +106,71 @@ export function PodContractCreator({ onPodCreated }: PodContractCreatorProps) {
           podLeadsArray as `0x${string}`[],
           BigInt(formData.parentHatId),
         ],
-      },
-    ];
+      });
 
-    console.log('🏗️ Creating pod proposal transaction...');
-    debugTransactionCalls(calls as any, 'CreatePodProposal');
+      await sendUserOperation({
+        evmSmartAccount: smartAccount,
+        network: 'base',
+        calls: [{
+          to: POD_CREATION_MANAGER_ADDRESS as `0x${string}`,
+          value: 0n,
+          data: callData,
+        }],
+        useCdpPaymaster: true,
+      });
 
-    return calls;
+      console.log('✅ Pod proposal created successfully');
+      setCreatedPodId(formData.podId);
+      setStep('activate');
+      onPodCreated?.(formData.podId);
+    } catch (error: any) {
+      console.error('❌ Pod proposal creation failed:', error);
+    } finally {
+      setIsProposing(false);
+    }
   };
 
-  // Prepare activatePod transaction
-  const prepareActivatePodTransaction = () => {
-    const targetPodId = createdPodId || formData.podId;
+  // CDP-based pod activation handler
+  const handleActivatePod = async () => {
+    if (!currentUser?.evmSmartAccounts?.[0]) {
+      console.error('Smart Account not found');
+      return;
+    }
 
-    const calls = [
-      {
-        address: POD_CREATION_MANAGER_ADDRESS as `0x${string}`,
+    setIsActivating(true);
+
+    try {
+      const smartAccount = currentUser.evmSmartAccounts[0];
+      const targetPodId = createdPodId || formData.podId;
+
+      console.log('🏗️ Activating pod via CDP:', {
+        podId: targetPodId,
+      });
+
+      const callData = encodeFunctionData({
         abi: POD_CREATION_MANAGER_ABI,
         functionName: 'activatePod',
         args: [targetPodId],
-      },
-    ];
+      });
 
-    console.log('🏗️ Creating pod activation transaction...');
-    debugTransactionCalls(calls as any, 'ActivatePod');
+      await sendUserOperation({
+        evmSmartAccount: smartAccount,
+        network: 'base',
+        calls: [{
+          to: POD_CREATION_MANAGER_ADDRESS as `0x${string}`,
+          value: 0n,
+          data: callData,
+        }],
+        useCdpPaymaster: true,
+      });
 
-    return calls;
-  };
-
-  const handleProposeSuccess = () => {
-    console.log('✅ Pod proposal created successfully');
-    setCreatedPodId(formData.podId);
-    setStep('activate');
-    onPodCreated?.(formData.podId);
-  };
-
-  const handleActivateSuccess = () => {
-    console.log('✅ Pod activated successfully');
-    // Pod is now active with treasury deployed
+      console.log('✅ Pod activated successfully');
+      // Pod is now active with treasury deployed
+    } catch (error: any) {
+      console.error('❌ Pod activation failed:', error);
+    } finally {
+      setIsActivating(false);
+    }
   };
 
   if (!address) {
@@ -235,20 +275,20 @@ export function PodContractCreator({ onPodCreated }: PodContractCreatorProps) {
               </div>
 
               <div className="pt-4">
-                <Transaction
-                  calls={prepareCreatePodTransaction()}
-                  onSuccess={handleProposeSuccess}
+                <Button
+                  onClick={handleCreateProposal}
+                  disabled={isProposing}
+                  className="w-full"
                 >
-                  <TransactionButton
-                    className="w-full"
-                    text="Create Pod Proposal"
-                  />
-                  <TransactionSponsor />
-                  <TransactionStatus>
-                    <TransactionStatusLabel />
-                    <TransactionStatusAction />
-                  </TransactionStatus>
-                </Transaction>
+                  {isProposing ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Creating Proposal...
+                    </>
+                  ) : (
+                    'Create Pod Proposal'
+                  )}
+                </Button>
               </div>
             </>
           )}
@@ -283,20 +323,20 @@ export function PodContractCreator({ onPodCreated }: PodContractCreatorProps) {
                 </p>
               </div>
 
-              <Transaction
-                calls={prepareActivatePodTransaction()}
-                onSuccess={handleActivateSuccess}
+              <Button
+                onClick={handleActivatePod}
+                disabled={isActivating}
+                className="w-full"
               >
-                <TransactionButton
-                  className="w-full"
-                  text="Activate Pod & Deploy Treasury"
-                />
-                <TransactionSponsor />
-                <TransactionStatus>
-                  <TransactionStatusLabel />
-                  <TransactionStatusAction />
-                </TransactionStatus>
-              </Transaction>
+                {isActivating ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Activating Pod...
+                  </>
+                ) : (
+                  'Activate Pod & Deploy Treasury'
+                )}
+              </Button>
 
               <Button
                 variant="outline"

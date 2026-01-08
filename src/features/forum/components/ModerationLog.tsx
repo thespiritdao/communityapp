@@ -3,7 +3,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useAccount } from 'wagmi';
+import { useEvmAddress } from '@coinbase/cdp-hooks';
 import { useModerationPermissions } from '../hooks/useModerationPermissions';
 import {
   getModeratorActions,
@@ -14,7 +14,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 
 export function ModerationLog() {
-  const { address } = useAccount();
+  const { evmAddress: address } = useEvmAddress();
   const { canModerate } = useModerationPermissions();
   const [actions, setActions] = useState<ModerationAction[]>([]);
   const [stats, setStats] = useState({

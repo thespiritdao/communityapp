@@ -18,7 +18,7 @@ import {
 
 import type { EventWithStats } from '../types/event';
 import { useEventRegistration } from '../hooks/useEvents';
-import { useAccount } from 'wagmi';
+import { useEvmAddress } from '@coinbase/cdp-hooks';
 import QRCode from 'qrcode';
 
 interface AttendeeCheckInProps {
@@ -26,7 +26,7 @@ interface AttendeeCheckInProps {
 }
 
 export const AttendeeCheckIn: React.FC<AttendeeCheckInProps> = ({ event }) => {
-  const { address } = useAccount();
+  const { evmAddress: address } = useEvmAddress();
   const { registration, loading } = useEventRegistration(event.id);
 
   const [userQRCode, setUserQRCode] = useState<string>('');

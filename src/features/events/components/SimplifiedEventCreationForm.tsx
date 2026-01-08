@@ -4,7 +4,8 @@ import { useAuthContext } from '@/features/identity';
 import type React from 'react';
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAccount, useConfig } from 'wagmi';
+import { useEvmAddress, useSendUserOperation, useCurrentUser } from '@coinbase/cdp-hooks';
+import { useConfig } from 'wagmi';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -18,17 +19,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import { Calendar as CalendarIcon } from 'lucide-react';
-
-// Transaction components for sponsored transactions
-import {
-  Transaction,
-  TransactionButton,
-  TransactionSponsor,
-  TransactionStatus,
-  TransactionStatusLabel,
-  TransactionStatusAction,
-} from '@coinbase/onchainkit/transaction';
+import { Calendar as CalendarIcon, Loader2 } from 'lucide-react';
 
 import { useCreateEvent } from '../hooks/useEvents';
 import {
@@ -40,6 +31,7 @@ import { base } from 'viem/chains';
 import type { CreateEventForm } from '../types/event';
 import { supabase } from '@/lib/supabase';
 import { EventService } from '../lib/supabase';
+import { encodeFunctionData } from 'viem';
 
 // Use the same chain ID constant
 const BASE_CHAIN_ID = 8453;
@@ -68,7 +60,7 @@ export const SimplifiedEventCreationForm: React.FC<
   SimplifiedEventCreationFormProps
 > = ({ onSuccess, onCancel }) => {
   const router = useRouter();
-  const { address } = useAccount();
+  const { evmAddress: address } = useEvmAddress();
   const config = useConfig();
   const authContext = useAuthContext();
   const {
@@ -84,6 +76,10 @@ export const SimplifiedEventCreationForm: React.FC<
   } = useEventManagementAccess();
   const { getCreateEventCall, getTransactionConfig, isConnected } =
     useSimplifiedEventTransactions();
+
+  // CDP hooks for gas-sponsored Smart Account transactions
+  const { currentUser } = useCurrentUser();
+  const { sendUserOperation } = useSendUserOperation();
 
   // Form state with smart defaults for testing
   const [formData, setFormData] = useState<EventFormData>(() => {
@@ -177,6 +173,7 @@ export const SimplifiedEventCreationForm: React.FC<
     if (!formData.location) errors.push('Location Required');
     if (!formData.description) errors.push('Description Required');
     if (!address) errors.push('Wallet not connected');
+    if (!formData.organizing_pod_id) errors.push('Select an organizing pod');
 
     // Date validation
     if (formData.event_end_date <= formData.event_date) {
@@ -215,40 +212,80 @@ export const SimplifiedEventCreationForm: React.FC<
 
   // Memoized transaction parameters
   const transactionParams = useMemo(() => {
-    if (!validation.isValid || !address) return null;
+    if (!validation.isValid || !address) {
+      console.log('⚠️ Transaction params validation failed:', {
+        isValid: validation.isValid,
+        hasAddress: !!address,
+        errors: validation.errors,
+      });
+      return null;
+    }
 
     const fundRecipientPodId =
       formData.fund_recipient_pod_id || formData.organizing_pod_id;
     let fundRecipient = address;
 
+    console.log('💰 Determining fund recipient:', {
+      organizingPodId: formData.organizing_pod_id,
+      fundRecipientPodId: fundRecipientPodId,
+      totalPodsAvailable: pods.length,
+      userAddress: address,
+    });
+
     if (fundRecipientPodId) {
       const fundRecipientPod = pods.find(
         (pod) => pod.id === fundRecipientPodId,
       );
+
+      console.log('💰 Found pod for fund recipient:', {
+        podFound: !!fundRecipientPod,
+        podName: fundRecipientPod?.name,
+        hasTreasury: !!fundRecipientPod?.treasury_contract_address,
+        treasuryValue: fundRecipientPod?.treasury_contract_address,
+      });
+
       if (
         fundRecipientPod &&
         fundRecipientPod.treasury_contract_address &&
-        fundRecipientPod.treasury_contract_address !== 'pending'
+        fundRecipientPod.treasury_contract_address !== 'pending' &&
+        fundRecipientPod.treasury_contract_address !== '0x0000000000000000000000000000000000000000'
       ) {
-        // Use pod treasury address if available
+        // Use pod treasury address if available and deployed
         fundRecipient = fundRecipientPod.treasury_contract_address as `0x${string}`;
-        console.log('💰 Event funds will go to pod treasury:', {
+        console.log('✅ Event funds will go to pod treasury:', {
           podName: fundRecipientPod.name,
           podId: fundRecipientPodId,
           treasuryAddress: fundRecipient,
         });
       } else if (fundRecipientPod) {
         // Fallback to user address if treasury not deployed yet
+        fundRecipient = address;
         console.warn(
-          '⚠️ Pod treasury not deployed yet, using creator address as fallback:',
+          '⚠️ Pod has no treasury - using creator wallet as fallback:',
           {
             podName: fundRecipientPod.name,
+            podId: fundRecipientPodId,
+            treasuryStatus: fundRecipientPod.treasury_contract_address || 'not set',
+            fallbackAddress: address,
+            note: 'Event registration fees will go to creator wallet',
+          },
+        );
+      } else {
+        // Pod not found - use user address
+        fundRecipient = address;
+        console.warn(
+          '⚠️ Pod not found in available pods - using creator wallet:',
+          {
             podId: fundRecipientPodId,
             fallbackAddress: address,
           },
         );
-        fundRecipient = address;
       }
+    } else {
+      // No pod selected - use user address
+      console.log('💰 No organizing pod selected, using creator wallet:', {
+        userAddress: address,
+      });
     }
 
     let priceSystemAmount = '0';
@@ -263,7 +300,7 @@ export const SimplifiedEventCreationForm: React.FC<
       priceSelfAmount = formData.price_self;
     }
 
-    return {
+    const params = {
       eventId,
       title: formData.title,
       eventDate: formData.event_date,
@@ -272,12 +309,38 @@ export const SimplifiedEventCreationForm: React.FC<
       priceSelf: priceSelfAmount,
       maxAttendees: formData.max_attendees || 0,
     };
+
+    console.log('✅ Transaction params generated successfully:', {
+      eventId: params.eventId,
+      title: params.title,
+      fundRecipient: params.fundRecipient,
+      priceSystem: params.priceSystem,
+      priceSelf: params.priceSelf,
+      maxAttendees: params.maxAttendees,
+      note: 'These params will be used to create the blockchain transaction',
+    });
+
+    return params;
   }, [validation.isValid, address, formData, pods, eventId]);
 
   // Memoized transaction calls
   const transactionCalls = useMemo(() => {
-    if (!transactionParams) return null;
-    return getCreateEventCall(transactionParams);
+    if (!transactionParams) {
+      console.log('⚠️ Cannot generate transaction calls - no transaction params');
+      return null;
+    }
+
+    try {
+      const calls = getCreateEventCall(transactionParams);
+      console.log('✅ Transaction calls generated successfully:', {
+        callsCount: calls?.length,
+        hasValidCalls: !!calls,
+      });
+      return calls;
+    } catch (error) {
+      console.error('❌ Failed to generate transaction calls:', error);
+      return null;
+    }
   }, [transactionParams, getCreateEventCall]);
 
   // Transaction success handler
@@ -419,7 +482,7 @@ export const SimplifiedEventCreationForm: React.FC<
             formData.organizing_pod_id ||
             undefined,
           fund_recipient_type: 'pod',
-          manager_address: address, // Set creator as default manager
+          manager_address: address || undefined, // Set creator as default manager
           event_image_url: defaultEventImage, // Generate default image
           event_metadata: JSON.stringify(eventMetadata), // Store metadata as JSON
           registration_contract_address: process.env.NEXT_PUBLIC_EVENT_MANAGER, // Contract address
@@ -490,8 +553,81 @@ export const SimplifiedEventCreationForm: React.FC<
   // Transaction error handler
   const handleTransactionError = useCallback((error: any) => {
     console.error('❌ Event creation failed:', error);
+
+    // Provide helpful error messages based on error type
+    const errorMessage = error?.message || String(error);
+    let userMessage = 'Transaction failed. Please try again.';
+
+    if (errorMessage.includes('Service unavailable') || errorMessage.includes('503')) {
+      userMessage = '⚠️ Coinbase service temporarily unavailable. The transaction will retry automatically.';
+    } else if (errorMessage.includes('Internal server error') || errorMessage.includes('500')) {
+      userMessage = `⚠️ Transaction failed after retries. This usually means the EventManager contract (0x5e77aD7dD2C93E19aad6ab3c0a8829b729fEA3F9) is not whitelisted in your CDP Dashboard. Please check your CDP project's paymaster settings on Base mainnet (Chain ID 8453).`;
+    } else if (errorMessage.includes('not whitelisted') || errorMessage.includes('not allowed')) {
+      userMessage = `⚠️ Contract not whitelisted for gas sponsorship. Please add EventManager (0x5e77aD7dD2C93E19aad6ab3c0a8829b729fEA3F9) to your CDP Dashboard paymaster whitelist.`;
+    } else if (errorMessage.includes('Insufficient balance')) {
+      userMessage = '⚠️ Gas sponsorship failed. Ensure EventManager contract is whitelisted in CDP Dashboard.';
+    }
+
+    setDbError(userMessage);
     setIsTransactionPending(false);
   }, []);
+
+  // CDP Smart Account transaction handler - EXACT FAUCET PATTERN
+  const handleCreateEvent = useCallback(async () => {
+    // EXACT FAUCET PATTERN: Simple validation matching faucet line 202-214
+    if (!address || !transactionCalls || !currentUser?.evmSmartAccounts?.[0]) {
+      console.error('❌ Missing requirements for event creation:', {
+        hasAddress: !!address,
+        hasCalls: !!transactionCalls,
+        hasSmartAccount: !!currentUser?.evmSmartAccounts?.[0],
+      });
+      setDbError('Smart Wallet not properly configured');
+      return;
+    }
+
+    const smartAccount = currentUser.evmSmartAccounts[0]; // EXACT FAUCET PATTERN: line 216
+
+    setIsTransactionPending(true); // EXACT FAUCET PATTERN: line 218 (setClaiming)
+
+    try {
+      console.log('🚀 Building Smart Account User Operation for event creation...');
+      console.log('💼 Smart Account:', smartAccount);
+      console.log('🎯 Target Contract:', transactionCalls[0].address);
+      console.log('⛽ Paymaster: ENABLED (gasless transaction)');
+
+      // EXACT FAUCET PATTERN: Encode call data (lines 227-231)
+      const call = transactionCalls[0];
+      const callData = encodeFunctionData({
+        abi: call.abi,
+        functionName: call.functionName,
+        args: call.args,
+      });
+
+      console.log('📝 Encoded call data:', callData);
+
+      // EXACT FAUCET PATTERN: Send user operation (lines 236-245)
+      const result = await sendUserOperation({
+        evmSmartAccount: smartAccount,  // ← Smart Account directly!
+        network: 'base',                 // ← Base mainnet
+        calls: [{
+          to: call.address,
+          value: 0n,                     // ← Zero ETH (bigint)
+          data: callData,
+        }],
+        useCdpPaymaster: true,           // ← ENABLE GAS SPONSORSHIP!
+      });
+
+      console.log('✅ User operation sent successfully!', result);
+
+      // Call success handler
+      await handleTransactionSuccess(result);
+    } catch (err: any) {
+      console.error('❌ Event creation failed:', err);
+      handleTransactionError(err);
+    } finally {
+      setIsTransactionPending(false); // EXACT FAUCET PATTERN: line 266 (setClaiming)
+    }
+  }, [address, currentUser, transactionCalls, sendUserOperation, handleTransactionSuccess, handleTransactionError]);
 
   // Show loading state while checking access
   if (accessLoading) {
@@ -1013,83 +1149,70 @@ export const SimplifiedEventCreationForm: React.FC<
               Cancel
             </Button>
 
-            {/* Clean Transaction Component */}
-            {validation.isValid ? (
-              isConnected ? (
-                transactionCompleted ? (
-                  <Button disabled={true}>Event Created Successfully</Button>
-                ) : transactionCalls ? (
-                  <Transaction
-                    key={eventId} // Force re-mount with stable eventId
-                    chainId={base.id}
-                    calls={transactionCalls}
-                    isSponsored={true}
-                    onStatus={(status) => {
-                      console.log(
-                        '📋 Event Creation Status:',
-                        status.statusName,
-                        status,
-                      );
-                      if (status.statusName === 'buildingTransaction') {
-                        setIsTransactionPending(true);
-                        setDbError(''); // Clear any previous errors
-                        handlerCalledRef.current = false; // Reset for new transaction
-                        console.log('🚀 Building transaction for event:', {
-                          eventId,
-                          blockchainEventId: eventId,
-                          title: formData.title,
-                          contractAddress:
-                            process.env.NEXT_PUBLIC_EVENT_MANAGER,
-                        });
-                      }
-                      if (status.statusName === 'success') {
-                        console.log(
-                          '✅ Event creation transaction successful! Event should now exist on-chain:',
-                          {
-                            eventId,
-                            transactionHash:
-                              status.statusData.transactionReceipts?.[0]
-                                ?.transactionHash,
-                            note: 'Users should now be able to register for this event',
-                          },
-                        );
-                      }
-                      if (status.statusName === 'error') {
-                        console.error('❌ Event creation transaction failed:', {
-                          eventId,
-                          error: status.statusData,
-                          reason:
-                            'Event will not exist on blockchain - registrations will fail',
-                        });
-                      }
-                    }}
-                    onSuccess={handleTransactionSuccess}
-                    onError={handleTransactionError}
-                  >
-                    <TransactionButton
-                      text={
-                        isTransactionPending
-                          ? 'Creating Event...'
-                          : 'Create Event'
-                      }
-                      disabled={isTransactionPending || transactionCompleted}
-                      className="disabled:bg-gray-400 disabled:cursor-not-allowed font-medium py-2 px-4 rounded transition-colors hover:opacity-90"
-                    />
-                    <TransactionSponsor />
-                    <TransactionStatus>
-                      <TransactionStatusLabel />
-                      <TransactionStatusAction />
-                    </TransactionStatus>
-                  </Transaction>
-                ) : (
-                  <Button disabled={true}>Preparing Transaction...</Button>
-                )
-              ) : (
-                <Button disabled={true}>Connect Wallet to Create Event</Button>
-              )
-            ) : (
-              <Button disabled={true}>{validation.errors[0]}</Button>
-            )}
+            {/* OnchainKit Transaction with Callback Pattern */}
+            {(() => {
+              // Debug: Log which button is being rendered
+              if (!validation.isValid) {
+                console.log('🔴 Rendering DISABLED button - validation failed:', {
+                  errors: validation.errors,
+                  formData: {
+                    title: formData.title,
+                    location: formData.location,
+                    description: formData.description,
+                    organizing_pod_id: formData.organizing_pod_id,
+                  },
+                });
+                return <Button disabled={true}>{validation.errors[0]}</Button>;
+              }
+
+              if (!address) {
+                console.log('🔴 Rendering DISABLED button - no address');
+                return <Button disabled={true}>Connect Wallet to Create Event</Button>;
+              }
+
+              if (transactionCompleted) {
+                console.log('🟢 Rendering SUCCESS button - transaction completed');
+                return <Button disabled={true}>Event Created Successfully ✓</Button>;
+              }
+
+              if (!transactionCalls) {
+                console.log('🟡 Rendering DISABLED button - no transaction calls');
+                return <Button disabled={true}>Preparing Transaction...</Button>;
+              }
+
+              // This is the clickable button!
+              console.log('🟢 Rendering CLICKABLE button - all conditions met!', {
+                hasParams: !!transactionParams,
+                hasCalls: !!transactionCalls,
+                hasAddress: !!address,
+                hasCurrentUser: !!currentUser,
+                hasSmartAccount: !!currentUser?.evmSmartAccounts?.[0],
+                isTransactionPending,
+              });
+              return (
+                <Button
+                  onClick={(e) => {
+                    console.log('🖱️ BUTTON CLICK EVENT FIRED!', {
+                      event: e.type,
+                      target: e.currentTarget,
+                      isDisabled: isTransactionPending,
+                    });
+                    handleCreateEvent();
+                  }}
+                  disabled={isTransactionPending}
+                  className="disabled:bg-gray-400 disabled:cursor-not-allowed font-medium py-2 px-4 rounded transition-colors hover:opacity-90"
+                >
+                  {isTransactionPending ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin inline" />
+                      Creating Event...
+                    </>
+                  ) : (
+                    'Create Event'
+                  )}
+                </Button>
+              );
+            })()}
           </div>
 
           {/* Payment Flow Preview - Below Buttons */}

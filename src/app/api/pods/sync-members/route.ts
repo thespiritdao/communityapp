@@ -35,7 +35,8 @@ export async function POST(request: NextRequest) {
     });
 
     // Initialize service
-    const service = new PodOperationsService(publicClient as any);
+    // @ts-expect-error - viem version incompatibility between wagmi and local viem
+    const service = new PodOperationsService(publicClient);
 
     // Trigger indexing
     const result = await service.triggerMemberIndexing(podId);

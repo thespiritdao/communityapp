@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useAccount } from 'wagmi';
+import { useEvmAddress } from '@coinbase/cdp-hooks';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -29,7 +29,7 @@ export const WorkSubmissionReview: React.FC<WorkSubmissionReviewProps> = ({
   podId,
   onReviewComplete,
 }) => {
-  const { address } = useAccount();
+  const { evmAddress: address } = useEvmAddress();
   const [submissions, setSubmissions] = useState<FrontendWorkSubmission[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>('');

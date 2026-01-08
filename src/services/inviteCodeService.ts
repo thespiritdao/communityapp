@@ -229,25 +229,30 @@ export async function recordInviteCodeUsage(
 
 /**
  * Update user profile with referrer info
+ * NOTE: onboarded_at is set separately in /api/onboarding/complete
  */
 export async function updateUserWithReferrer(
   newUserWallet: string,
   referrerWallet: string,
 ): Promise<void> {
   try {
+    console.log(`📝 Updating user ${newUserWallet} with referrer ${referrerWallet}`);
+
     const { error } = await supabase
       .from('user_profiles')
       .update({
         invited_by: referrerWallet.toLowerCase(),
-        onboarded_at: new Date().toISOString(),
       })
       .eq('wallet_address', newUserWallet.toLowerCase());
 
     if (error) {
-      console.error('Error updating user with referrer:', error);
+      console.error('❌ Error updating user with referrer:', error);
+      console.error('Error details:', JSON.stringify(error, null, 2));
+    } else {
+      console.log(`✅ Successfully updated invited_by for ${newUserWallet}`);
     }
   } catch (error) {
-    console.error('Error updating user with referrer:', error);
+    console.error('❌ Exception updating user with referrer:', error);
   }
 }
 

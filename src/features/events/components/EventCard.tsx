@@ -25,7 +25,7 @@ import {
 } from 'lucide-react';
 import type { EventWithStats, EventRegistration } from '../types/event';
 import { useEventAccess } from '../hooks/useEventTokenGating';
-import { useAccount } from 'wagmi';
+import { useEvmAddress } from '@coinbase/cdp-hooks';
 import { EventService } from '../lib/supabase';
 
 interface EventCardProps {
@@ -53,7 +53,7 @@ export const EventCard: React.FC<EventCardProps> = ({
   registrationStatus,
 }) => {
   const { canView, canRegister, loading } = useEventAccess(event);
-  const { address } = useAccount();
+  const { evmAddress: address } = useEvmAddress();
 
   // Fetch tokens from Supabase and store in state
   const [tokens, setTokens] = useState<{ id: string; name: string }[]>([]);

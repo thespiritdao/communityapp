@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { FileText, CheckCircle2, AlertCircle, Users } from 'lucide-react';
 import { supabase } from '@/utils/supabaseClient';
-import { useAccount } from 'wagmi';
+import { useEvmAddress } from '@coinbase/cdp-hooks';
 import { useToast } from '@/components/ui/use-toast';
 import { useProfiles } from '@/features/identity/hooks/useProfiles';
 import { useProfileModal } from '@/features/identity/hooks/useProfileModal';
@@ -50,7 +50,7 @@ export function AgreementsPanel({
   podId,
   canManageMembers,
 }: AgreementsPanelProps) {
-  const { address } = useAccount();
+  const { evmAddress: address } = useEvmAddress();
   const { toast } = useToast();
 
   const [agreementCriteria, setAgreementCriteria] = useState<

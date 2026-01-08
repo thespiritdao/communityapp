@@ -2,7 +2,7 @@
 
 import type React from 'react';
 import { useState, useEffect } from 'react';
-import { useAccount } from 'wagmi';
+import { useEvmAddress } from '@coinbase/cdp-hooks';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -33,7 +33,7 @@ interface GovernanceProposalModalProps {
 export const GovernanceProposalModal: React.FC<
   GovernanceProposalModalProps
 > = ({ pod, proposalType, isOpen, onClose, onProposalCreated }) => {
-  const { address } = useAccount();
+  const { evmAddress: address } = useEvmAddress();
   const { toast } = useToast();
 
   const [formData, setFormData] = useState<any>({});

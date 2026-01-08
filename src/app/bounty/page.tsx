@@ -89,7 +89,7 @@ export default function BountyPage() {
         {!podsLoading && managedPods.length > 0 && (
           <div className="mb-6 p-4 bg-[#E8F1EE] border border-[#2F5D50] rounded-lg">
             <h3 className="font-medium text-[#2F5D50] mb-2">
-              Active Pod Context
+              Select Pod
             </h3>
             <select
               value={selectedPodId}

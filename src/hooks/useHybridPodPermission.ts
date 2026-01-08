@@ -1,7 +1,8 @@
 'use client';
 
 import { useMemo } from 'react';
-import { useAccount, useReadContract } from 'wagmi';
+import { useEvmAddress } from '@coinbase/cdp-hooks';
+import { useReadContract } from 'wagmi';
 import { usePodPermission } from './usePodPermission';
 import { useHatPermissions } from './useHatPermissions';
 import { usePodEligibilityAgreements } from '@/features/pods/hooks/usePodEligibilityAgreements';
@@ -38,7 +39,7 @@ export function useHybridPodPermission(
   podId: string | null | undefined,
   permissionKey: keyof HatPermissions,
 ): { hasPermission: boolean; isLoading: boolean; error: string | null } {
-  const { address } = useAccount();
+  const { evmAddress: address } = useEvmAddress();
 
   // Step 1: Get user's roles and HAT IDs from database
   const { userRoles, isLoading: rolesLoading } = useHatPermissions();
@@ -213,7 +214,7 @@ export function useHybridPodPermissions(
  * @returns Role object if user has valid HAT, null otherwise
  */
 export function useHybridPodRole(podId: string | null | undefined) {
-  const { address } = useAccount();
+  const { evmAddress: address } = useEvmAddress();
   const { userRoles } = useHatPermissions();
 
   const podRole = useMemo(() => {

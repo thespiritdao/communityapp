@@ -2,7 +2,7 @@
 
 import type React from 'react';
 import { useState, useEffect, useMemo } from 'react';
-import { useAccount } from 'wagmi';
+import { useEvmAddress } from '@coinbase/cdp-hooks';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -44,7 +44,7 @@ export const CommunityEventCalendar: React.FC<CommunityEventCalendarProps> = ({
   showCreateButton = false,
   onCreateEvent,
 }) => {
-  const { address } = useAccount();
+  const { evmAddress: address } = useEvmAddress();
   const { events, loading: eventsLoading, error: eventsError } = useEvents();
   const {
     visibleEvents,

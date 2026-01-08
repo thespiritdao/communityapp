@@ -1,14 +1,20 @@
 /**
  * Onboarding Hat Minting Component
  *
- * Mints Executive Pod Member hat to new users during testnet onboarding
+ * Mints Beta Tester HAT and Advocate NFT to new users during onboarding
  * Uses CDP embedded wallet hooks directly (no wagmi required)
+ *
+ * Flow:
+ * 1. Mint Beta Tester HAT (for permissions)
+ * 2. Mint 1 Advocate NFT (for governance voting power)
+ * 3. Auto-delegate NFT to user (activates voting power)
  */
 
 'use client';
 
 import React, { useState } from 'react';
-import { useCurrentUser, useEvmAddress } from '@coinbase/cdp-hooks';
+import { useCurrentUser, useEvmAddress, useSendUserOperation } from '@coinbase/cdp-hooks';
+import { encodeFunctionData, parseAbi } from 'viem';
 
 interface OnboardingHatMintingProps {
   walletAddress: `0x${string}`;
@@ -16,6 +22,12 @@ interface OnboardingHatMintingProps {
   onSuccess: (txHash: string) => void;
   onError: (error: Error) => void;
 }
+
+const ADVOCATE_ADDRESS = process.env.NEXT_PUBLIC_ADVOCATE as `0x${string}` | undefined;
+
+const ADVOCATE_ABI = parseAbi([
+  'function delegate(address delegatee) external',
+]);
 
 export function OnboardingHatMinting({
   walletAddress,
@@ -25,7 +37,10 @@ export function OnboardingHatMinting({
 }: OnboardingHatMintingProps) {
   const { currentUser } = useCurrentUser();
   const { evmAddress } = useEvmAddress();
-  const [txStatus, setTxStatus] = useState<'idle' | 'preparing' | 'pending' | 'success' | 'error'>('idle');
+  const { sendUserOperation } = useSendUserOperation();
+
+  const [txStatus, setTxStatus] = useState<'idle' | 'minting-hat' | 'minting-nft' | 'delegating' | 'success' | 'error'>('idle');
+  const [currentStep, setCurrentStep] = useState<string>('Ready to begin');
   const [txHash, setTxHash] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -34,24 +49,27 @@ export function OnboardingHatMinting({
 
   const handleMintHat = async () => {
     try {
-      setTxStatus('preparing');
-      console.log('🎩 Preparing hat mint request...');
-
       // Verify wallet address exists
       if (!walletAddress) {
         throw new Error('No wallet address available');
       }
 
+      if (!currentUser?.evmSmartAccounts?.[0]) {
+        throw new Error('Smart account not available');
+      }
+
+      console.log('🎩 Starting onboarding process...');
       console.log('🔑 Recipient wallet address:', walletAddress);
       console.log('👤 User type:', isFirstUser ? 'First User (Executive Leader)' : 'Beta Tester');
 
-      console.log('📤 Requesting backend hat mint...');
-      setTxStatus('pending');
+      // ========================================
+      // STEP 1: Mint Beta Tester HAT
+      // ========================================
+      setTxStatus('minting-hat');
+      setCurrentStep('Granting access permissions...');
+      console.log('📤 Step 1/3: Minting Beta Tester HAT...');
 
-      // Call backend API to mint hat
-      // This uses the admin wallet (which wears Executive Pod Leader hat)
-      // Same secure pattern as testnet airdrop system
-      const response = await fetch('/api/onboarding/mint-hat', {
+      const hatResponse = await fetch('/api/onboarding/mint-hat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -60,31 +78,94 @@ export function OnboardingHatMinting({
         }),
       });
 
-      const result = await response.json();
+      const hatResult = await hatResponse.json();
 
-      if (!result.success) {
-        throw new Error(result.error || 'Hat minting failed');
+      if (!hatResult.success) {
+        throw new Error(hatResult.error || 'HAT minting failed');
       }
 
-      console.log('✅ Hat minted successfully!');
-      console.log('   Transaction:', result.transactionHash);
-      console.log('   Hat:', result.hatName);
-      console.log('   Block:', result.blockNumber);
+      console.log('✅ HAT minted successfully!');
+      console.log('   Transaction:', hatResult.transactionHash);
+      console.log('   HAT:', hatResult.hatName);
 
-      if (result.alreadyHadHat) {
-        console.log('ℹ️ User already had this hat');
+      // ========================================
+      // STEP 2: Mint Advocate NFT
+      // ========================================
+      setTxStatus('minting-nft');
+      setCurrentStep('Granting governance voting power...');
+      console.log('📤 Step 2/3: Minting Advocate NFT...');
+
+      const nftResponse = await fetch('/api/onboarding/mint-advocate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          walletAddress,
+        }),
+      });
+
+      const nftResult = await nftResponse.json();
+
+      if (!nftResult.success) {
+        // Don't fail onboarding if Advocate minting fails - user can get it later
+        console.warn('⚠️ Advocate NFT minting failed:', nftResult.error);
+        console.warn('   User can create governance proposals after receiving Advocate NFT manually');
+      } else {
+        console.log('✅ Advocate NFT minted successfully!');
+        console.log('   Transaction:', nftResult.mintTransactionHash);
+
+        // ========================================
+        // STEP 3: Auto-delegate to self for voting power
+        // ========================================
+        if (nftResult.needsDelegation && ADVOCATE_ADDRESS) {
+          setTxStatus('delegating');
+          setCurrentStep('Activating voting power...');
+          console.log('📤 Step 3/3: Delegating NFT to user for voting power...');
+
+          try {
+            const smartAccount = currentUser.evmSmartAccounts[0];
+
+            const delegateCallData = encodeFunctionData({
+              abi: ADVOCATE_ABI,
+              functionName: 'delegate',
+              args: [walletAddress],
+            });
+
+            const delegateResult = await sendUserOperation({
+              evmSmartAccount: smartAccount,
+              network: 'base',
+              calls: [{
+                to: ADVOCATE_ADDRESS,
+                value: 0n,
+                data: delegateCallData,
+              }],
+              useCdpPaymaster: true,
+            });
+
+            console.log('✅ Delegation successful! User now has voting power');
+            console.log('   Operation:', delegateResult.userOperationHash);
+          } catch (delegateError) {
+            console.warn('⚠️ Auto-delegation failed:', delegateError);
+            console.warn('   User will need to delegate manually from governance page');
+            // Don't fail onboarding - delegation can be done later
+          }
+        }
       }
 
-      setTxHash(result.transactionHash);
+      // ========================================
+      // SUCCESS: All done!
+      // ========================================
+      setTxHash(hatResult.transactionHash);
       setTxStatus('success');
-      onSuccess(result.transactionHash);
+      setCurrentStep('Complete!');
+      onSuccess(hatResult.transactionHash);
 
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : 'Unknown error occurred';
-      console.error('❌ Hat minting failed:', errorMsg);
+      console.error('❌ Onboarding failed:', errorMsg);
       console.error('Full error:', err);
       setErrorMessage(errorMsg);
       setTxStatus('error');
+      setCurrentStep('Failed');
       onError(err as Error);
     }
   };
@@ -114,30 +195,19 @@ export function OnboardingHatMinting({
           }}
         >
           {txStatus === 'idle' && (
-            <p className="text-sm text-gray-600">Ready to grant access</p>
+            <p className="text-sm text-gray-600">{currentStep}</p>
           )}
-          {txStatus === 'preparing' && (
-            <div className="flex items-center gap-2">
-              <div className="animate-spin h-4 w-4 border-2 border-gray-300 border-t-[#2F5D50] rounded-full"></div>
-              <p className="text-sm text-gray-600">Preparing transaction...</p>
-            </div>
-          )}
-          {txStatus === 'pending' && (
+          {(txStatus === 'minting-hat' || txStatus === 'minting-nft' || txStatus === 'delegating') && (
             <div className="flex flex-col gap-2">
               <div className="flex items-center gap-2">
                 <div className="animate-spin h-4 w-4 border-2 border-gray-300 border-t-[#2F5D50] rounded-full"></div>
-                <p className="text-sm text-gray-600">Transaction pending...</p>
+                <p className="text-sm text-gray-600">{currentStep}</p>
               </div>
-              {txHash && (
-                <a
-                  href={`https://basescan.org/tx/${txHash}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-xs text-[#2F5D50] hover:underline"
-                >
-                  View on Basescan →
-                </a>
-              )}
+              <div className="text-xs text-gray-500">
+                {txStatus === 'minting-hat' && '📝 Step 1/3'}
+                {txStatus === 'minting-nft' && '🎖️ Step 2/3'}
+                {txStatus === 'delegating' && '🗳️ Step 3/3'}
+              </div>
             </div>
           )}
           {txStatus === 'error' && (
@@ -151,11 +221,11 @@ export function OnboardingHatMinting({
         {/* Action Button */}
         <button
           onClick={handleMintHat}
-          disabled={!walletReady || txStatus === 'preparing' || txStatus === 'pending'}
+          disabled={!walletReady || txStatus === 'minting-hat' || txStatus === 'minting-nft' || txStatus === 'delegating'}
           className="sacred-primary-button"
           style={{
             width: '100%',
-            background: !walletReady || txStatus === 'preparing' || txStatus === 'pending' ? '#8FAAA1' : '#2F5D50',
+            background: !walletReady || txStatus === 'minting-hat' || txStatus === 'minting-nft' || txStatus === 'delegating' ? '#8FAAA1' : '#2F5D50',
             color: '#FFFFFF',
             border: 'none',
             borderRadius: '12px',
@@ -163,8 +233,8 @@ export function OnboardingHatMinting({
             fontSize: '16px',
             fontWeight: '500',
             letterSpacing: '0.02em',
-            cursor: !walletReady || txStatus === 'preparing' || txStatus === 'pending' ? 'not-allowed' : 'pointer',
-            opacity: !walletReady || txStatus === 'preparing' || txStatus === 'pending' ? 0.6 : 1,
+            cursor: !walletReady || txStatus === 'minting-hat' || txStatus === 'minting-nft' || txStatus === 'delegating' ? 'not-allowed' : 'pointer',
+            opacity: !walletReady || txStatus === 'minting-hat' || txStatus === 'minting-nft' || txStatus === 'delegating' ? 0.6 : 1,
             transition: 'all 0.2s ease',
           }}
           onMouseEnter={(e) => {
@@ -178,8 +248,9 @@ export function OnboardingHatMinting({
             }
           }}
         >
-          {txStatus === 'preparing' && 'Preparing...'}
-          {txStatus === 'pending' && 'Confirming...'}
+          {txStatus === 'minting-hat' && 'Minting...'}
+          {txStatus === 'minting-nft' && 'Minting...'}
+          {txStatus === 'delegating' && 'Activating...'}
           {(txStatus === 'idle' || txStatus === 'error') && 'Grant Access'}
         </button>
 
@@ -196,8 +267,7 @@ export function OnboardingHatMinting({
           </p>
           {!isFirstUser && (
             <p style={{ fontStyle: 'italic' }}>
-              This role grants you pod creation and management abilities for
-              30 days
+              Grants pod management + governance voting power
             </p>
           )}
         </div>

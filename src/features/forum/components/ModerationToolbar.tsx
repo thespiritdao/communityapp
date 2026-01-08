@@ -3,7 +3,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useAccount } from 'wagmi';
+import { useEvmAddress } from '@coinbase/cdp-hooks';
 import { useModerationPermissions } from '../hooks/useModerationPermissions';
 import {
   pinThread,
@@ -38,7 +38,7 @@ export function ModerationToolbar({
   onActionComplete,
   podId,
 }: ModerationToolbarProps) {
-  const { address } = useAccount();
+  const { evmAddress: address } = useEvmAddress();
   const { canModerate, moderatorRoles } = useModerationPermissions(
     podId || undefined,
   );

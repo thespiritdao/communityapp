@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useAccount } from 'wagmi';
+import { useEvmAddress } from '@coinbase/cdp-hooks';
 import { Card } from '@/components/ui/card';
 import { supabase } from '@/utils/supabaseClient';
 import { ApproveApplicationButton } from './ApproveApplicationButton';
@@ -37,7 +37,7 @@ interface ApplicationApprovalCardProps {
 export const ApplicationApprovalCard: React.FC<
   ApplicationApprovalCardProps
 > = ({ applicationId, onApproved }) => {
-  const { address } = useAccount();
+  const { evmAddress: address } = useEvmAddress();
   const [application, setApplication] = useState<Application | null>(null);
   const [pod, setPod] = useState<Pod | null>(null);
   const [loading, setLoading] = useState(true);
@@ -220,6 +220,7 @@ export const ApplicationApprovalCard: React.FC<
                 currentVotes={application.current_votes}
                 requiredVotes={application.required_votes}
                 votingLeaders={application.voting_leaders || []}
+                podId={application.pod_id}
                 onSuccess={loadApplication}
               />
             )}

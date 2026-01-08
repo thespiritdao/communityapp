@@ -38,15 +38,12 @@ export type HatsDetailsMetadata = z.infer<typeof hatsDetailsSchema>;
  * Handles IPFS storage of structured metadata for Hats Protocol
  */
 export class HatsDetailsService {
-  private static client: HatsDetailsClient<typeof hatsDetailsSchema> | null =
-    null;
+  private static client: any | null = null;
 
   /**
    * Initialize the Hats Details Client
    */
-  private static initializeClient(): HatsDetailsClient<
-    typeof hatsDetailsSchema
-  > {
+  private static initializeClient(): any {
     if (!this.client) {
       const pinataJwt = process.env.NEXT_PUBLIC_PINATA_JWT;
 

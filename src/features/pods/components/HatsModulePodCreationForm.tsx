@@ -3,7 +3,7 @@
 import type React from 'react';
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAccount } from 'wagmi';
+import { useEvmAddress } from '@coinbase/cdp-hooks';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -121,7 +121,7 @@ export const HatsModulePodCreationForm: React.FC<
   HatsModulePodCreationFormProps
 > = ({ onSuccess, onCancel, testingMode = false }) => {
   const router = useRouter();
-  const { address } = useAccount();
+  const { evmAddress: address } = useEvmAddress();
   const { toast } = useToast();
   const publicClient = usePublicClient();
   const { data: walletClient } = useWalletClient();

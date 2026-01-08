@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { useAccount } from 'wagmi';
+import { useEvmAddress } from '@coinbase/cdp-hooks';
 import { supabase } from '@/lib/supabase';
 import { unifiedNotificationService } from '@/services/unifiedNotificationService';
 import { Send, X, Ban, Trash2 } from 'lucide-react';
@@ -29,7 +29,7 @@ export function DirectMessageModal({
   recipientImage,
   onClose,
 }: DirectMessageModalProps) {
-  const { address } = useAccount();
+  const { evmAddress: address } = useEvmAddress();
   const [messages, setMessages] = useState<DirectMessage[]>([]);
   const [newMessage, setNewMessage] = useState('');
   const [isLoading, setIsLoading] = useState(true);

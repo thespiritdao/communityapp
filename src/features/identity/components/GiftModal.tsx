@@ -1,19 +1,11 @@
 'use client';
 
 import { useState } from 'react';
-import { useAccount, useBalance } from 'wagmi';
-import { parseUnits } from 'viem';
+import { useEvmAddress, useSendUserOperation, useCurrentUser } from '@coinbase/cdp-hooks';
+import { useBalance } from 'wagmi';
+import { parseUnits, encodeFunctionData } from 'viem';
 import { supabase } from '@/lib/supabase';
 import { Gift, X, DollarSign, Loader2 } from 'lucide-react';
-import {
-  SafeOnchainKitWrapper,
-  SafeTransaction as Transaction,
-  SafeTransactionButton as TransactionButton,
-  SafeTransactionSponsor as TransactionSponsor,
-  SafeTransactionStatus as TransactionStatus,
-  SafeTransactionStatusLabel as TransactionStatusLabel,
-  SafeTransactionStatusAction as TransactionStatusAction,
-} from '@/components/SafeOnchainKit';
 
 interface GiftModalProps {
   recipientAddress: string;
@@ -46,21 +38,26 @@ export function GiftModal({
   recipientImage,
   onClose,
 }: GiftModalProps) {
-  const { address } = useAccount();
+  const { evmAddress: address } = useEvmAddress();
+  const { currentUser } = useCurrentUser();
+  const { sendUserOperation } = useSendUserOperation();
   const [selectedToken, setSelectedToken] = useState<'SYSTEM' | 'SELF'>(
     'SYSTEM',
   );
   const [amount, setAmount] = useState('');
   const [message, setMessage] = useState('');
+  const [isSending, setIsSending] = useState(false);
+  const [txStatus, setTxStatus] = useState<'idle' | 'pending' | 'success' | 'error'>('idle');
+  const [statusMessage, setStatusMessage] = useState('');
 
   // Get token balances
   const { data: systemBalance } = useBalance({
-    address,
+    address: address || undefined,
     token: SYSTEM_TOKEN,
   });
 
   const { data: selfBalance } = useBalance({
-    address,
+    address: address || undefined,
     token: SELF_TOKEN,
   });
 
@@ -87,66 +84,87 @@ export function GiftModal({
     return balance ? Number(balance.formatted).toFixed(4) : '0.0000';
   };
 
-  const prepareTransferTransaction = () => {
-    if (!selectedToken || !amount || !address) {
-      throw new Error('Missing required fields');
+  // CDP-based gift sending handler
+  const handleSendGift = async () => {
+    if (!currentUser?.evmSmartAccounts?.[0] || !selectedToken || !amount || !address) {
+      setStatusMessage('Missing required fields');
+      setTxStatus('error');
+      return;
     }
 
-    const tokenAddress = selectedToken === 'SYSTEM' ? SYSTEM_TOKEN : SELF_TOKEN;
-    const amountWei = parseUnits(amount, 18);
+    setIsSending(true);
+    setTxStatus('pending');
+    setStatusMessage('Sending gift...');
 
-    console.log('[GiftModal] Preparing gift transaction:', {
-      from: address,
-      to: recipientAddress,
-      token: selectedToken,
-      amount,
-      amountWei: amountWei.toString(),
-    });
+    try {
+      const smartAccount = currentUser.evmSmartAccounts[0];
+      const tokenAddress = selectedToken === 'SYSTEM' ? SYSTEM_TOKEN : SELF_TOKEN;
+      const amountWei = parseUnits(amount, 18);
 
-    return [
-      {
-        address: tokenAddress,
+      console.log('🎁 Sending gift via CDP:', {
+        from: address,
+        to: recipientAddress,
+        token: selectedToken,
+        amount,
+        amountWei: amountWei.toString(),
+      });
+
+      const callData = encodeFunctionData({
         abi: ERC20_ABI,
         functionName: 'transfer',
         args: [recipientAddress as `0x${string}`, amountWei],
-      },
-    ];
-  };
-
-  const handleSuccess = async (response: any) => {
-    console.log('🎁 Gift sent successfully:', response);
-
-    // Save gift to database
-    try {
-      const { error } = await supabase.from('gifts').insert({
-        sender_id: address,
-        recipient_id: recipientAddress,
-        token: selectedToken,
-        amount: amount,
-        message: message.trim() || null,
-        transaction_hash:
-          response?.transactionReceipts?.[0]?.transactionHash || null,
-        created_at: new Date().toISOString(),
       });
 
-      if (error) {
-        console.error('[GiftModal] Error saving gift to database:', error);
+      const result = await sendUserOperation({
+        evmSmartAccount: smartAccount,
+        network: 'base',
+        calls: [{
+          to: tokenAddress,
+          value: 0n,
+          data: callData,
+        }],
+        useCdpPaymaster: true,
+      });
+
+      console.log('✅ Gift sent successfully:', result);
+      setTxStatus('success');
+      setStatusMessage('Gift sent successfully!');
+
+      // Save gift to database
+      try {
+        const { error } = await supabase.from('gifts').insert({
+          sender_id: address,
+          recipient_id: recipientAddress,
+          token: selectedToken,
+          amount: amount,
+          message: message.trim() || null,
+          transaction_hash: (result as any)?.transactionHash || null,
+          created_at: new Date().toISOString(),
+        });
+
+        if (error) {
+          console.error('[GiftModal] Error saving gift to database:', error);
+        }
+      } catch (error) {
+        console.error('[GiftModal] Error in database save:', error);
       }
-    } catch (error) {
-      console.error('[GiftModal] Error in database save:', error);
+
+      // Reset form and close after delay
+      setTimeout(() => {
+        setAmount('');
+        setMessage('');
+        setSelectedToken('SYSTEM');
+        setTxStatus('idle');
+        setStatusMessage('');
+        onClose();
+      }, 2000);
+    } catch (error: any) {
+      console.error('❌ Gift failed:', error);
+      setTxStatus('error');
+      setStatusMessage(error.shortMessage || error.message || 'Failed to send gift');
+    } finally {
+      setIsSending(false);
     }
-
-    // Reset form and close
-    setTimeout(() => {
-      setAmount('');
-      setMessage('');
-      setSelectedToken('SYSTEM');
-      onClose();
-    }, 2000);
-  };
-
-  const handleError = (error: any) => {
-    console.error('🎁 Gift failed:', error);
   };
 
   return (
@@ -253,39 +271,40 @@ export function GiftModal({
           />
         </div>
 
-        {/* Transaction Section */}
+        {/* Transaction Status */}
+        {txStatus !== 'idle' && (
+          <div className={`gift-status gift-status-${txStatus}`}>
+            {txStatus === 'pending' && <Loader2 className="spin gift-status-icon" size={18} />}
+            {txStatus === 'success' && <Gift className="gift-status-icon" size={18} />}
+            {txStatus === 'error' && <X className="gift-status-icon" size={18} />}
+            <span>{statusMessage}</span>
+          </div>
+        )}
+
+        {/* Send Gift Button */}
         {address && selectedToken && amount && canTransfer() ? (
-          <SafeOnchainKitWrapper
-            fallback={
-              <button disabled className="gift-send-btn">
-                <Loader2 className="spin" size={18} />
-                <span>Loading transaction...</span>
-              </button>
-            }
-            errorFallback={
-              <button disabled className="gift-send-btn-disabled">
-                <span>Transaction currently unavailable</span>
-              </button>
-            }
+          <button
+            onClick={handleSendGift}
+            disabled={isSending || txStatus === 'success'}
+            className="gift-send-btn"
           >
-            <Transaction
-              chainId={8453} // Base mainnet
-              calls={prepareTransferTransaction()}
-              isSponsored={true}
-              onSuccess={handleSuccess}
-              onError={handleError}
-            >
-              <TransactionButton
-                text={`Send ${amount} ${selectedToken} Gift`}
-                className="gift-send-btn"
-              />
-              <TransactionSponsor />
-              <TransactionStatus>
-                <TransactionStatusLabel />
-                <TransactionStatusAction />
-              </TransactionStatus>
-            </Transaction>
-          </SafeOnchainKitWrapper>
+            {isSending ? (
+              <>
+                <Loader2 className="spin" size={18} />
+                <span>Sending Gift...</span>
+              </>
+            ) : txStatus === 'success' ? (
+              <>
+                <Gift size={18} />
+                <span>Gift Sent!</span>
+              </>
+            ) : (
+              <>
+                <Gift size={18} />
+                <span>Send {amount} {selectedToken} Gift</span>
+              </>
+            )}
+          </button>
         ) : (
           <button disabled className="gift-send-btn-disabled">
             <Gift size={18} />

@@ -5,7 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Lock, Shield } from 'lucide-react';
-import { useAccount } from 'wagmi';
+import { useEvmAddress } from '@coinbase/cdp-hooks';
 import { fetchTokenBalances } from '@/utils/fetchTokenBalances';
 import type { BountyTokenGating } from '../types/bounty';
 
@@ -36,7 +36,7 @@ export const BountyCard: React.FC<BountyCardProps> = ({
   token_gating,
   onBid,
 }) => {
-  const { address } = useAccount();
+  const { evmAddress: address } = useEvmAddress();
   const [hasAccess, setHasAccess] = useState<boolean | null>(null);
   const [isCheckingAccess, setIsCheckingAccess] = useState(false);
 

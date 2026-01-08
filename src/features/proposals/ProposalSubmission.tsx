@@ -2,19 +2,12 @@
 
 import type React from 'react';
 import { useCallback } from 'react';
-import {
-  Transaction,
-  TransactionButton,
-  TransactionSponsor,
-  TransactionStatus,
-  TransactionStatusAction,
-  TransactionStatusLabel,
-} from '@coinbase/onchainkit/transaction';
-// Wallet components removed - using embedded wallet via wagmi hooks
-import { useAccount } from 'wagmi';
+import { useEvmAddress, useSendUserOperation, useCurrentUser } from '@coinbase/cdp-hooks';
 import type { Address } from 'viem';
-import { base } from 'wagmi/chains';
+import { encodeFunctionData } from 'viem';
 import { useProposal } from '@/context/ProposalContext';
+import { useToast } from '@/components/ui/use-toast';
+import { Button } from '@/components/ui/button';
 import UserTagging from '@/components/UserTagging';
 import DAOGovernorABI from '@/abis/DAO_GovernorABI.json';
 
@@ -31,7 +24,11 @@ export const ProposalSubmission: React.FC<ProposalSubmissionProps> = ({
   onError,
   variant = 'full',
 }) => {
-  const { address, isConnected } = useAccount();
+  const { evmAddress: address } = useEvmAddress();
+  const { currentUser } = useCurrentUser();
+  const { sendUserOperation } = useSendUserOperation();
+  const { toast } = useToast();
+  const isConnected = !!address;
   const {
     formData,
     updateFormField,
@@ -45,19 +42,46 @@ export const ProposalSubmission: React.FC<ProposalSubmissionProps> = ({
     formErrors,
   } = useProposal();
 
-  // Prepare transaction data with correct structure
-  const prepareTransaction = useCallback(() => {
-    if (!isFormValid || !canPropose) return null;
+  // CDP-based proposal submission handler
+  const handleCdpSubmission = useCallback(async () => {
+    if (!currentUser?.evmSmartAccounts?.[0]) {
+      toast({
+        title: 'Error',
+        description: 'Smart Account not found. Please connect your wallet.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (!isFormValid || !canPropose) {
+      toast({
+        title: 'Cannot Submit',
+        description: validationMessage || 'Please complete all required fields.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setIsSubmitting(true);
+
     try {
-      // For simple governance proposals, use empty execution arrays
+      const smartAccount = currentUser.evmSmartAccounts[0];
+      const GOVERNOR_ADDRESS = process.env.NEXT_PUBLIC_DAO_GOVERNOR as Address;
+
+      // Prepare proposal parameters
       const targets: Address[] = [];
       const values: bigint[] = [];
       const calldatas: `0x${string}`[] = [];
-      // Format description with markdown
       const description = `# ${formData.title}\n\n${formData.body}`;
-      // Debug log
-      console.log('[ProposalSubmission] Transaction object:', {
-        address: process.env.NEXT_PUBLIC_DAO_GOVERNOR,
+
+      console.log('🚀 Submitting proposal via CDP:', {
+        governor: GOVERNOR_ADDRESS,
+        title: formData.title,
+        smartAccount,
+      });
+
+      // Encode the proposeWithMetadata call
+      const callData = encodeFunctionData({
         abi: DAOGovernorABI,
         functionName: 'proposeWithMetadata',
         args: [
@@ -69,46 +93,61 @@ export const ProposalSubmission: React.FC<ProposalSubmissionProps> = ({
           formData.forumThreadId || '',
         ],
       });
-      console.log('[ProposalSubmission] Env:', {
-        NEXT_PUBLIC_PAYMASTER: process.env.NEXT_PUBLIC_PAYMASTER,
-        NEXT_PUBLIC_DAO_GOVERNOR: process.env.NEXT_PUBLIC_DAO_GOVERNOR,
+
+      // Send user operation with CDP paymaster (gasless)
+      const result = await sendUserOperation({
+        evmSmartAccount: smartAccount,
+        network: 'base',
+        calls: [{
+          to: GOVERNOR_ADDRESS,
+          value: 0n,
+          data: callData,
+        }],
+        useCdpPaymaster: true,
       });
-      return {
-        address: process.env.NEXT_PUBLIC_DAO_GOVERNOR as Address,
-        abi: DAOGovernorABI,
-        functionName: 'proposeWithMetadata',
-        args: [
-          targets,
-          values,
-          calldatas,
-          description,
-          formData.title,
-          formData.forumThreadId || '',
-        ],
-      };
-    } catch (error) {
-      console.error('Error preparing transaction:', error);
-      return null;
-    }
-  }, [formData, isFormValid, canPropose]);
 
-  const handleTransactionSuccess = useCallback(() => {
-    setIsSubmitting(false);
-    resetForm();
-    console.log('Proposal submitted successfully!');
-    onSuccess?.();
-  }, [resetForm, setIsSubmitting, onSuccess]);
+      console.log('✅ Proposal submitted successfully:', result);
 
-  const handleTransactionError = useCallback(
-    (error: any) => {
       setIsSubmitting(false);
-      console.error('Transaction failed:', error);
-      onError?.(error);
-    },
-    [setIsSubmitting, onError],
-  );
+      resetForm();
 
-  const transactionData = prepareTransaction();
+      toast({
+        title: 'Proposal Submitted!',
+        description: 'Your proposal has been submitted to the DAO for voting.',
+        variant: 'success',
+      });
+
+      onSuccess?.();
+    } catch (error: any) {
+      console.error('❌ Proposal submission failed:', error);
+
+      setIsSubmitting(false);
+
+      let errorMessage = 'Proposal submission failed';
+      if (error.shortMessage) errorMessage = error.shortMessage;
+      else if (error.message) errorMessage = error.message;
+
+      toast({
+        title: 'Submission Failed',
+        description: errorMessage,
+        variant: 'destructive',
+      });
+
+      onError?.(error);
+    }
+  }, [
+    currentUser,
+    sendUserOperation,
+    isFormValid,
+    canPropose,
+    formData,
+    validationMessage,
+    setIsSubmitting,
+    resetForm,
+    toast,
+    onSuccess,
+    onError,
+  ]);
 
   // Render different variants
   if (variant === 'minimal') {
@@ -132,30 +171,13 @@ export const ProposalSubmission: React.FC<ProposalSubmissionProps> = ({
             disabled={isSubmitting}
           />
           {isConnected && canPropose ? (
-            <Transaction
-              chainId={base.id}
-              isSponsored={true}
-              contracts={transactionData ? ([transactionData] as any) : []}
-              onSuccess={handleTransactionSuccess}
-              onError={handleTransactionError}
+            <Button
+              onClick={handleCdpSubmission}
+              disabled={!isFormValid || isSubmitting}
+              className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold py-4 px-8 rounded-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl"
             >
-              <TransactionButton
-                className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold py-4 px-8 rounded-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl"
-                disabled={!isFormValid || isSubmitting}
-                text={
-                  isSubmitting
-                    ? 'Submitting Proposal...'
-                    : 'Submit Proposal to DAO'
-                }
-              />
-              <TransactionSponsor />
-              <div className="mt-4">
-                <TransactionStatus>
-                  <TransactionStatusLabel />
-                  <TransactionStatusAction />
-                </TransactionStatus>
-              </div>
-            </Transaction>
+              {isSubmitting ? 'Submitting Proposal...' : 'Submit Proposal to DAO'}
+            </Button>
           ) : (
             <button
               disabled={true}
@@ -223,24 +245,13 @@ export const ProposalSubmission: React.FC<ProposalSubmissionProps> = ({
           />
 
           {isConnected ? (
-            <Transaction
-              chainId={base.id}
-              isSponsored={true}
-              contracts={transactionData ? ([transactionData] as any) : []}
-              onSuccess={handleTransactionSuccess}
-              onError={handleTransactionError}
+            <Button
+              onClick={handleCdpSubmission}
+              disabled={!isFormValid || isSubmitting || !canPropose}
+              className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors disabled:opacity-50"
             >
-              <TransactionButton
-                className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors disabled:opacity-50"
-                disabled={!isFormValid || isSubmitting}
-                text={isSubmitting ? 'Submitting...' : 'Submit Proposal'}
-              />
-              <TransactionSponsor />
-              <TransactionStatus>
-                <TransactionStatusLabel />
-                <TransactionStatusAction />
-              </TransactionStatus>
-            </Transaction>
+              {isSubmitting ? 'Submitting...' : 'Submit Proposal'}
+            </Button>
           ) : (
             <div className="w-full text-center p-4 bg-gray-100 rounded-lg">
               <p className="text-gray-600">
@@ -419,30 +430,13 @@ export const ProposalSubmission: React.FC<ProposalSubmissionProps> = ({
         {/* Submit Transaction */}
         <div className="pt-4">
           {isConnected && canPropose ? (
-            <Transaction
-              chainId={base.id}
-              isSponsored={true}
-              contracts={transactionData ? ([transactionData] as any) : []}
-              onSuccess={handleTransactionSuccess}
-              onError={handleTransactionError}
+            <Button
+              onClick={handleCdpSubmission}
+              disabled={!isFormValid || isSubmitting}
+              className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold py-4 px-8 rounded-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl"
             >
-              <TransactionButton
-                className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold py-4 px-8 rounded-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl"
-                disabled={!isFormValid || isSubmitting}
-                text={
-                  isSubmitting
-                    ? 'Submitting Proposal...'
-                    : 'Submit Proposal to DAO'
-                }
-              />
-              <TransactionSponsor />
-              <div className="mt-4">
-                <TransactionStatus>
-                  <TransactionStatusLabel />
-                  <TransactionStatusAction />
-                </TransactionStatus>
-              </div>
-            </Transaction>
+              {isSubmitting ? 'Submitting Proposal...' : 'Submit Proposal to DAO'}
+            </Button>
           ) : (
             <div className="text-center">
               <button

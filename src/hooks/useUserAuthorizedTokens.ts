@@ -2,7 +2,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useAccount, usePublicClient } from 'wagmi';
+import { useEvmAddress } from '@coinbase/cdp-hooks';
+import { usePublicClient } from 'wagmi';
 import { fetchUserAuthorizedTokensForGating } from '@/utils/marketplaceAccessService';
 
 export interface AuthorizedToken {
@@ -20,7 +21,7 @@ export interface AuthorizedToken {
  * Only returns tokens for pods where the user has marketplace access
  */
 export const useUserAuthorizedTokens = () => {
-  const { address } = useAccount();
+  const { evmAddress: address } = useEvmAddress();
   const publicClient = usePublicClient();
   const [tokens, setTokens] = useState<AuthorizedToken[]>([]);
   const [isLoading, setIsLoading] = useState(false);

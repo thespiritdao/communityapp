@@ -2,7 +2,8 @@
 'use client';
 import type React from 'react';
 import { useEffect, useState } from 'react';
-import { useAccount, useChainId, useConnectors } from 'wagmi';
+import { useEvmAddress } from '@coinbase/cdp-hooks';
+import { useChainId, useConnectors } from 'wagmi';
 import {
   Transaction,
   TransactionButton,
@@ -11,7 +12,10 @@ import {
 import { base } from 'viem/chains';
 
 const PaymasterTest: React.FC = () => {
-  const { address, isConnected, connector, isConnecting } = useAccount();
+  const { evmAddress: address } = useEvmAddress();
+  const isConnected = !!address;
+  const isConnecting = false; // CDP hooks don't expose this, derive from address state if needed
+  const [connector, setConnector] = useState<any>(null);
   const connectors = useConnectors();
   const chainId = useChainId();
   const [isSmartWallet, setIsSmartWallet] = useState(false);

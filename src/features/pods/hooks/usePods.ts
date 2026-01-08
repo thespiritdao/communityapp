@@ -44,6 +44,31 @@ export function usePods(config: UsePodsConfig = {}): UsePodsReturn {
   const [processingPods, setProcessingPods] = useState<Set<string>>(new Set());
 
   /**
+   * Check if user has Executive Pod Leader access
+   */
+  const hasExecutivePodAccess = useCallback(() => {
+    if (!address) return false;
+
+    // Check if user is Executive Pod leader via HAT
+    const EXECUTIVE_POD_LEADER_HAT = process.env.NEXT_PUBLIC_EXECUTIVE_POD_LEADER;
+    const hasExecHat = userHats?.some(
+      (hat) => hat.toLowerCase() === EXECUTIVE_POD_LEADER_HAT?.toLowerCase()
+    );
+
+    if (hasExecHat) {
+      return true;
+    }
+
+    // Check via roles (Executive Pod membership)
+    const hasExecRole = userRoles?.some(
+      (role) => role.name === 'Executive Pod Leader' ||
+                role.name?.includes('Executive Pod')
+    );
+
+    return hasExecRole || false;
+  }, [address, userHats, userRoles]);
+
+  /**
    * Load pods with current configuration
    */
   const loadPods = useCallback(async () => {
@@ -68,6 +93,27 @@ export function usePods(config: UsePodsConfig = {}): UsePodsReturn {
         allPods = await PodCoreService.getAllPods(serviceConfig);
       }
 
+      // VISIBILITY FILTERING: Hide Community Pod and Top Hat from non-executive members
+      const isBetaTester = hasBetaTesterSuperuser(userRoles);
+      const isExecutiveMember = hasExecutivePodAccess();
+
+      // Only executive pod members (and not beta testers) should see Community Pod and Top Hat
+      if (!isExecutiveMember && !isBetaTester) {
+        allPods = allPods.filter(pod => {
+          const podName = pod.name?.toLowerCase() || '';
+          // Filter out Community Pod and Top Hat for non-exec members
+          return podName !== 'community pod' && podName !== 'top hat';
+        });
+        console.log('🔒 Filtered pods for non-executive member');
+      } else if (isBetaTester && !isExecutiveMember) {
+        // Beta testers should NOT see Community Pod or Top Hat
+        allPods = allPods.filter(pod => {
+          const podName = pod.name?.toLowerCase() || '';
+          return podName !== 'community pod' && podName !== 'top hat';
+        });
+        console.log('🧪 Filtered pods for beta tester (hiding Community Pod and Top Hat)');
+      }
+
       console.log('📋 Loaded pods:', allPods.length);
       setPods(allPods);
     } catch (err) {
@@ -81,6 +127,9 @@ export function usePods(config: UsePodsConfig = {}): UsePodsReturn {
     config.includeInactive,
     config.userLeadershipOnly,
     address,
+    userRoles,
+    userHats,
+    hasExecutivePodAccess,
   ]);
 
   /**
@@ -151,24 +200,44 @@ export function usePods(config: UsePodsConfig = {}): UsePodsReturn {
   /**
    * Check if user can manage specific pod
    *
-   * BETA TESTING: Beta Tester hat holders have superuser access to all pods
+   * BETA TESTING: Beta Testers have management access ONLY to Beta Testers Pod
+   * Executive Pod members have management access to all pods
    */
   const canUserManagePod = useCallback(
     (pod: Pod) => {
       if (!address) return false;
 
-      // BETA TESTING: Check for Beta Tester superuser status
-      const isBetaTester = hasBetaTesterSuperuser(userRoles);
+      // Use synchronous version to check if user is a pod leader
+      const isLeader = PodCoreService.canUserManagePodSync(pod, address);
 
+      // BETA TESTING: Beta Testers can ONLY manage Beta Testers Pod
+      const isBetaTester = hasBetaTesterSuperuser(userRoles);
       if (isBetaTester) {
-        console.log('👑 [Pods] Beta Tester can manage pod:', pod.name);
+        const isBetaTestersPod = pod.name?.toLowerCase() === 'beta testers pod';
+        if (isBetaTestersPod) {
+          console.log('👑 [Pods] Beta Tester can manage Beta Testers Pod');
+          return true;
+        }
+        // Beta testers cannot manage other pods (even if they're leaders)
+        console.log('🔒 [Pods] Beta Tester cannot manage non-beta pod:', pod.name);
+        return false;
+      }
+
+      // If user is a leader, grant management access
+      if (isLeader) {
         return true;
       }
 
-      // Normal permission check
-      return PodCoreService.canUserManagePod(pod, address);
+      // Executive Pod members can manage all pods (including Community Pod and Top Hat)
+      const isExecutiveMember = hasExecutivePodAccess();
+      if (isExecutiveMember) {
+        console.log('👑 [Pods] Executive Pod member can manage pod:', pod.name);
+        return true;
+      }
+
+      return false;
     },
-    [address, userRoles],
+    [address, userRoles, hasExecutivePodAccess],
   );
 
   /**

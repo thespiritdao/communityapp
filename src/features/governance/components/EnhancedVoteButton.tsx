@@ -2,7 +2,7 @@
 
 import type React from 'react';
 import { useState } from 'react';
-import { useAccount } from 'wagmi';
+import { useEvmAddress } from '@coinbase/cdp-hooks';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/components/ui/use-toast';
@@ -23,7 +23,7 @@ export const EnhancedVoteButton: React.FC<EnhancedVoteButtonProps> = ({
   choice,
   onVoteSuccess,
 }) => {
-  const { address } = useAccount();
+  const { evmAddress: address } = useEvmAddress();
   const { toast } = useToast();
   const [isVoting, setIsVoting] = useState(false);
 

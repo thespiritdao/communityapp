@@ -2,7 +2,8 @@
 
 import type React from 'react';
 import { useState } from 'react';
-import { useAccount, usePublicClient, useWalletClient } from 'wagmi';
+import { useEvmAddress } from '@coinbase/cdp-hooks';
+import { usePublicClient, useWalletClient } from 'wagmi';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -39,7 +40,7 @@ export const PodDeletionManager: React.FC<PodDeletionManagerProps> = ({
   onPodDeleted,
   className = '',
 }) => {
-  const { address } = useAccount();
+  const { evmAddress: address } = useEvmAddress();
   const publicClient = usePublicClient();
   const { data: walletClient } = useWalletClient();
   const { toast } = useToast();

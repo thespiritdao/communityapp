@@ -3,17 +3,11 @@
 'use client';
 
 import type React from 'react';
-import { useState, useEffect } from 'react';
-import { useAccount, useReadContract } from 'wagmi';
+import { useState, useEffect, useCallback } from 'react';
+import { useReadContract } from 'wagmi';
 import type { Abi } from 'viem';
-import {
-  Transaction,
-  TransactionButton,
-  TransactionSponsor,
-  TransactionStatus,
-  TransactionStatusLabel,
-  TransactionStatusAction,
-} from '@coinbase/onchainkit/transaction';
+import { encodeFunctionData } from 'viem';
+import { useSendUserOperation, useCurrentUser } from '@coinbase/cdp-hooks';
 import AdvocateMembershipABIJson from '@/abis/AdvocateMembershipABI.json';
 import DAOGovernorABIJson from '@/abis/DAO_GovernorABI.json';
 
@@ -58,12 +52,16 @@ export const ProposalVoteForm: React.FC<ProposalVoteFormProps> = ({
   hasVoted: hasVotedProp,
   onSuccess,
 }) => {
-  const { address } = useAccount();
+  const { currentUser } = useCurrentUser();
+  const { sendUserOperation } = useSendUserOperation();
   const { toast } = useToast();
   const { refreshNotifications } = useUnifiedNotifications();
   const [selectedVote, setSelectedVote] = useState<number | null>(null);
   const [hasVoted, setHasVoted] = useState(!!hasVotedProp);
   const [isLoading, setIsLoading] = useState(false);
+
+  // Get address from CDP Smart Account
+  const address = currentUser?.evmSmartAccounts?.[0] as `0x${string}` | undefined;
 
   useEffect(() => {
     setHasVoted(!!hasVotedProp);
@@ -143,15 +141,87 @@ export const ProposalVoteForm: React.FC<ProposalVoteFormProps> = ({
   const canVote =
     proposalState === 1 && votingPower && Number(votingPower) > 0 && !hasVoted;
 
-  // Only use OnChainKit's <Transaction> for voting
-  const voteCall = [
-    {
-      address: GOVERNOR_ADDRESS,
-      abi: DAOGovernorABI,
-      functionName: 'castVote',
-      args: [proposalId, selectedVote === null ? 0 : selectedVote],
-    },
-  ];
+  // CDP transaction handler for voting
+  const handleCDPVote = useCallback(async () => {
+    if (!currentUser?.evmSmartAccounts?.[0]) {
+      toast({
+        title: 'Error',
+        description: 'Smart Account not found',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (selectedVote === null) {
+      toast({
+        title: 'Error',
+        description: 'Please select a vote option',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      const smartAccount = currentUser.evmSmartAccounts[0];
+
+      const callData = encodeFunctionData({
+        abi: DAOGovernorABI,
+        functionName: 'castVote',
+        args: [proposalId, selectedVote],
+      });
+
+      console.log('🚀 CDP Vote:', {
+        smartAccount,
+        proposalId,
+        voteType: selectedVote,
+      });
+
+      const result = await sendUserOperation({
+        evmSmartAccount: smartAccount,
+        network: 'base',
+        calls: [{
+          to: GOVERNOR_ADDRESS,
+          value: 0n,
+          data: callData,
+        }],
+        useCdpPaymaster: true,
+      });
+
+      console.log('✅ Vote submitted:', result);
+
+      toast({
+        title: 'Vote cast successfully',
+        description: 'Your vote has been recorded (gasless).',
+        variant: 'success',
+      });
+
+      setHasVoted(true);
+
+      if (address && proposalId) {
+        try {
+          await refreshNotifications();
+        } catch (error) {
+          console.error('Error refreshing notifications:', error);
+        }
+      }
+
+      // Add a small delay to ensure API has time to update
+      setTimeout(() => {
+        onSuccess?.();
+      }, 1000);
+    } catch (error: any) {
+      console.error('Vote failed:', error);
+      toast({
+        title: 'Voting failed',
+        description: error.message || 'There was an error casting your vote.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  }, [currentUser, proposalId, selectedVote, sendUserOperation, toast, address, refreshNotifications, onSuccess]);
 
   if (!address) {
     return (
@@ -304,54 +374,13 @@ export const ProposalVoteForm: React.FC<ProposalVoteFormProps> = ({
                     Abstain
                   </button>
                 </div>
-                <Transaction
-                  isSponsored={true}
-                  chainId={Number(process.env.NEXT_PUBLIC_CHAIN_ID) || 8453}
-                  contracts={voteCall}
-                  onSuccess={async (txResult) => {
-                    toast({
-                      title: 'Vote cast successfully',
-                      description: 'Your vote has been recorded.',
-                      variant: 'success',
-                    });
-                    setHasVoted(true);
-                    if (address && proposalId) {
-                      try {
-                        await refreshNotifications();
-                      } catch (error) {
-                        console.error(
-                          'Error refreshing notifications:',
-                          error,
-                        );
-                      }
-                    }
-                    // Add a small delay to ensure API has time to update
-                    setTimeout(() => {
-                      // Call onSuccess after all async operations complete
-                      onSuccess?.();
-                    }, 1000);
-                  }}
-                  onError={(error) => {
-                    toast({
-                      title: 'Voting failed',
-                      description:
-                        error.message ||
-                        'There was an error casting your vote.',
-                      variant: 'destructive',
-                    });
-                  }}
+                <button
+                  onClick={handleCDPVote}
+                  disabled={!canVote || selectedVote === null || isLoading}
+                  className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  <TransactionButton
-                    text={isLoading ? 'Submitting Vote...' : 'Submit Vote'}
-                    className="w-full"
-                    disabled={!canVote || selectedVote === null || isLoading}
-                  />
-                  <TransactionSponsor />
-                  <TransactionStatus>
-                    <TransactionStatusLabel />
-                    <TransactionStatusAction />
-                  </TransactionStatus>
-                </Transaction>
+                  {isLoading ? 'Submitting Vote...' : 'Submit Vote (Gasless)'}
+                </button>
                 {!canVote &&
                   votingPower &&
                   BigInt(votingPower.toString()) === 0n && (

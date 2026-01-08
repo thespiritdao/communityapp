@@ -30,7 +30,7 @@ import {
 import { useEventAgendas } from '../hooks/useEvents';
 import { useEventAccess } from '../hooks/useEventTokenGating';
 import { useEventRegistrationStatus } from '../hooks/useEventRegistrationStatus';
-import { useAccount } from 'wagmi';
+import { useEvmAddress } from '@coinbase/cdp-hooks';
 import Link from 'next/link';
 import { useState as useStateForProfile, useEffect } from 'react';
 import { EventService } from '../lib/supabase';
@@ -44,7 +44,7 @@ interface EventDetailViewProps {
 export const EventDetailView: React.FC<EventDetailViewProps> = ({
   eventId,
 }) => {
-  const { address } = useAccount();
+  const { evmAddress: address } = useEvmAddress();
   const {
     event,
     loading: eventLoading,

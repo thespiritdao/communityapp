@@ -3,7 +3,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useAccount } from 'wagmi';
+import { useEvmAddress } from '@coinbase/cdp-hooks';
 import {
   getPollResults,
   votePoll,
@@ -20,7 +20,7 @@ interface PollDisplayProps {
 }
 
 export function PollDisplay({ pollId, onVoteComplete }: PollDisplayProps) {
-  const { address } = useAccount();
+  const { evmAddress: address } = useEvmAddress();
   const [results, setResults] = useState<PollResults | null>(null);
   const [selectedOptions, setSelectedOptions] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -36,7 +36,7 @@ export function PollDisplay({ pollId, onVoteComplete }: PollDisplayProps) {
     console.log('[PollDisplay] Loading results for poll:', pollId);
     setIsLoading(true);
     try {
-      const result = await getPollResults(pollId, address);
+      const result = await getPollResults(pollId, address || undefined);
       console.log('[PollDisplay] getPollResults returned:', result);
       if (result.success && result.results) {
         console.log('[PollDisplay] Setting results:', {

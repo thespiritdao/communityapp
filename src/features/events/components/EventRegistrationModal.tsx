@@ -3,7 +3,8 @@
 import { useAuthContext } from '@/features/identity';
 import type React from 'react';
 import { useState, useEffect, useRef } from 'react';
-import { useAccount, useConfig } from 'wagmi';
+import { useEvmAddress, useSendUserOperation, useCurrentUser } from '@coinbase/cdp-hooks';
+import { useConfig } from 'wagmi';
 import { useRouter } from 'next/navigation';
 import { EventTokenDisplay } from './EventTokenDisplay';
 import {
@@ -25,16 +26,8 @@ import {
   CheckCircle,
   Ticket,
 } from 'lucide-react';
-
-// Transaction components
-import {
-  Transaction,
-  TransactionButton,
-  TransactionSponsor,
-  TransactionStatus,
-  TransactionStatusLabel,
-  TransactionStatusAction,
-} from '@coinbase/onchainkit/transaction';
+import { encodeFunctionData } from 'viem';
+import { useToast } from '@/components/ui/use-toast';
 
 import { useSimplifiedEventTransactions } from '../hooks/useSimplifiedEventTransactions';
 import { useEventAccess } from '../hooks/useEventTokenGating';
@@ -74,11 +67,14 @@ export const EventRegistrationModal: React.FC<EventRegistrationModalProps> = ({
   onSuccess,
   currentRegistrationCount = 0,
 }) => {
-  const { address } = useAccount();
+  const { evmAddress: address } = useEvmAddress();
+  const { currentUser } = useCurrentUser();
+  const { sendUserOperation } = useSendUserOperation();
   const config = useConfig();
   const router = useRouter();
-  const { getRegisterEventCall, isConnected } =
-    useSimplifiedEventTransactions();
+  const { toast } = useToast();
+  const authContext = useAuthContext();
+  const { isConnected } = useSimplifiedEventTransactions();
   const {
     canRegister,
     canView,
@@ -121,9 +117,6 @@ export const EventRegistrationModal: React.FC<EventRegistrationModalProps> = ({
   });
 
   const onChainEvent = onChainEventData as OnChainEvent | undefined;
-
-  // Get auth context at component level
-  const authContext = useAuthContext();
 
   // Reset registration processed flag when modal closes
   useEffect(() => {
@@ -315,58 +308,88 @@ export const EventRegistrationModal: React.FC<EventRegistrationModalProps> = ({
     };
   };
 
-  const prepareRegistration = () => {
-    const isValidStatus = registrationStatus === 'eligible' || registrationStatus === 'ready';
-
-    console.log('🎯 prepareRegistration called:', {
-      address,
-      registrationStatus,
-      canProceed: address && isValidStatus,
-    });
-
-    if (!address || !isValidStatus) {
-      console.warn('❌ Cannot prepare registration:', {
-        hasAddress: !!address,
-        registrationStatus,
-        reason:
-          !address
-            ? 'No wallet address'
-            : `Status is "${registrationStatus}", needs to be "eligible" or "ready"`,
+  // CDP-based registration handler (matches pattern from SimplifiedEventCreationForm)
+  const handleCdpRegistration = async () => {
+    if (!currentUser?.evmSmartAccounts?.[0]) {
+      toast({
+        title: 'Error',
+        description: 'Smart Account not found. Please connect your wallet.',
+        variant: 'destructive',
       });
-      return null;
+      return;
     }
 
-    const price = getEventPrice();
+    if (!event.blockchain_event_id) {
+      toast({
+        title: 'Error',
+        description: 'Event not created on blockchain yet',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setIsRegistering(true);
 
     try {
-      // Use blockchain_event_id for registration
-      const blockchainEventId = event.blockchain_event_id;
-
-      if (!blockchainEventId) {
-        console.error('Event missing blockchain_event_id:', event);
-        return null;
-      }
-
-      console.log('🔧 Preparing Registration Transaction:', {
-        eventId: blockchainEventId,
+      console.log('🚀 Starting CDP event registration:', {
+        eventId: event.blockchain_event_id,
         eventTitle: event.title,
-        userAddress: address,
-        priceAmount: price.amount,
-        isFree: price.isFree,
-        eventStatus: event.status,
-        contractAddress: process.env.NEXT_PUBLIC_EVENT_MANAGER,
-        note: 'This will call registerForEvent() on the smart contract',
+        smartAccount: currentUser.evmSmartAccounts[0],
+        contractAddress: EVENT_MANAGER_CONTRACT,
       });
 
-      const calls = getRegisterEventCall({
-        eventId: blockchainEventId,
+      const smartAccount = currentUser.evmSmartAccounts[0];
+
+      // Encode the registerForEvent call
+      const callData = encodeFunctionData({
+        abi: EventManagerABI,
+        functionName: 'registerForEvent',
+        args: [event.blockchain_event_id],
       });
 
-      console.log('📋 Registration Transaction Calls:', calls);
-      return calls;
-    } catch (error) {
-      console.error('Error preparing registration:', error);
-      return null;
+      console.log('📝 Encoded registration call data:', {
+        function: 'registerForEvent',
+        eventId: event.blockchain_event_id,
+      });
+
+      // Send user operation with CDP paymaster (gasless)
+      const result = await sendUserOperation({
+        evmSmartAccount: smartAccount,
+        network: 'base',
+        calls: [{
+          to: EVENT_MANAGER_CONTRACT as `0x${string}`,
+          value: 0n,
+          data: callData,
+        }],
+        useCdpPaymaster: true,
+      });
+
+      console.log('✅ Registration transaction submitted:', result);
+
+      // Call the success handler with the result
+      await handleRegistrationSuccess(result);
+
+      toast({
+        title: 'Registration successful!',
+        description: `You're registered for ${event.title}`,
+        variant: 'success',
+      });
+    } catch (error: any) {
+      console.error('❌ Registration failed:', error);
+
+      setIsRegistering(false);
+
+      let errorMessage = 'Registration failed';
+      if (error.shortMessage) errorMessage = error.shortMessage;
+      else if (error.message) errorMessage = error.message;
+
+      setErrorMessage(errorMessage);
+
+      toast({
+        title: 'Registration failed',
+        description: errorMessage,
+        variant: 'destructive',
+      });
     }
   };
 
@@ -699,82 +722,18 @@ export const EventRegistrationModal: React.FC<EventRegistrationModalProps> = ({
                   }
 
                   // Ready to register (approvals complete or free event)
-                  const calls = prepareRegistration();
-
-                  if (!calls) {
-                    return <Button disabled={true}>Unable to Register</Button>;
-                  }
-
+                  // Use CDP sendUserOperation instead of OnchainKit Transaction
                   return (
-                    <Transaction
-                      chainId={BASE_CHAIN_ID}
-                      calls={calls}
-                      isSponsored={true}
-                      onStatus={(status) => {
-                        console.log('📋 Registration status:', status);
-                        if (status.statusName === 'buildingTransaction') {
-                          setIsRegistering(true);
-                        }
-                        // Log detailed transaction status
-                        if (status.statusName === 'init') {
-                          console.log('🔧 Registration Transaction Init:', {
-                            isSponsored: true,
-                            chainId: BASE_CHAIN_ID,
-                            eventId: blockchainEventId,
-                            paymasterConfig: process.env.NEXT_PUBLIC_PAYMASTER
-                              ? 'configured'
-                              : 'missing',
-                            contractAddress:
-                              process.env.NEXT_PUBLIC_EVENT_MANAGER,
-                          });
-                        }
-                        if (status.statusName === 'error') {
-                          console.error('❌ Registration Transaction Error:', {
-                            error: status.statusData,
-                            eventId: blockchainEventId,
-                            reason:
-                              'Possible causes: Event not created on-chain, insufficient approvals, or contract error',
-                          });
-                        }
-                      }}
-                      onSuccess={handleRegistrationSuccess}
-                      onError={(error) => {
-                        console.error('❌ Registration Transaction Failed:', {
-                          error,
-                          errorMessage: error?.message,
-                          errorCode: error?.code,
-                          eventId: blockchainEventId,
-                          eventTitle: event.title,
-                          userAddress: address,
-                          possibleCauses: [
-                            'Event not found on blockchain',
-                            'Insufficient token approvals',
-                            'Paymaster/sponsorship failure',
-                            'Contract execution error',
-                            'Network connectivity issue',
-                          ],
-                        });
-                        setIsRegistering(false);
-                        setErrorMessage(
-                          `Registration failed: ${error?.message || error}`,
-                        );
-                      }}
+                    <Button
+                      onClick={handleCdpRegistration}
+                      disabled={isRegistering || !event.blockchain_event_id}
+                      className="hover:opacity-90 disabled:opacity-50"
+                      style={{ backgroundColor: '#2F5D50', color: '#FFFFFF' }}
                     >
-                      <TransactionButton
-                        text={
-                          isRegistering
-                            ? 'Registering...'
-                            : `Register${needsTokens ? ` (${systemTokenAmount} SYSTEM + ${selfTokenAmount} SELF)` : ''}`
-                        }
-                        disabled={isRegistering}
-                        className="hover:opacity-90 disabled:bg-gray-400 disabled:text-gray-600"
-                      />
-                      <TransactionSponsor />
-                      <TransactionStatus>
-                        <TransactionStatusLabel />
-                        <TransactionStatusAction />
-                      </TransactionStatus>
-                    </Transaction>
+                      {isRegistering
+                        ? 'Registering...'
+                        : `Register${needsTokens ? ` (${systemTokenAmount} SYSTEM + ${selfTokenAmount} SELF)` : ''}`}
+                    </Button>
                   );
                 })()
               ) : (

@@ -6,7 +6,7 @@
  */
 
 import { useState, useCallback } from 'react';
-import { useAccount } from 'wagmi';
+import { useEvmAddress } from '@coinbase/cdp-hooks';
 import { CONTRACT_ADDRESSES } from '@/config/contracts';
 import { parseUnits } from 'viem';
 import TreasuryProxyABI from '@/abis/TreasuryProxy.json';
@@ -38,7 +38,7 @@ export interface CreateProposalParams {
  * Hook for managing treasury proposals with majority voting
  */
 export function useTreasuryProposals() {
-  const { address } = useAccount();
+  const { evmAddress: address } = useEvmAddress();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 

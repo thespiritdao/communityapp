@@ -8,7 +8,7 @@ import {
   type BountyApprovalWorkflow,
 } from '../services/BountyApprovalService';
 import { BountyApprovalFlow } from './BountyApprovalFlow';
-import { useAccount } from 'wagmi';
+import { useEvmAddress } from '@coinbase/cdp-hooks';
 import { useToast } from '@/components/ui/use-toast';
 import type { FrontendBounty } from '../types/bounty';
 import { MemberCard } from '@/features/pods/components/MembersPanel/MemberCard';
@@ -29,7 +29,7 @@ export const PendingApprovalsList: React.FC<PendingApprovalsListProps> = ({
   bounties,
   onApprovalComplete,
 }) => {
-  const { address } = useAccount();
+  const { evmAddress: address } = useEvmAddress();
   const { toast } = useToast();
 
   const [pendingApprovals, setPendingApprovals] = useState<

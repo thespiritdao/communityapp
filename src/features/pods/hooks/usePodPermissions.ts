@@ -1,7 +1,8 @@
-import { useMemo } from 'react';
-import { useAccount } from 'wagmi';
+import { useMemo, useState, useEffect } from 'react';
+import { useEvmAddress } from '@coinbase/cdp-hooks';
 import { PodCoreService } from '../services/PodCoreService';
 import type { Pod } from '../types';
+import { supabase } from '@/utils/supabaseClient';
 
 export interface UsePodPermissionsConfig {
   pod: Pod | null;
@@ -32,10 +33,64 @@ export function usePodPermissions({
   pod,
   userAddress,
 }: UsePodPermissionsConfig): UsePodPermissionsReturn {
-  const { address } = useAccount();
+  const { evmAddress: address } = useEvmAddress();
 
   // Use provided address or connected wallet address
   const effectiveAddress = userAddress || address;
+
+  // CRITICAL FIX: Check pod_members table for leader status
+  const [isLeaderInDB, setIsLeaderInDB] = useState<boolean | null>(null);
+  const [isExecutiveLeader, setIsExecutiveLeader] = useState<boolean>(false);
+
+  useEffect(() => {
+    const checkLeadershipInDatabase = async () => {
+      if (!pod || !effectiveAddress) {
+        setIsLeaderInDB(null);
+        setIsExecutiveLeader(false);
+        return;
+      }
+
+      try {
+        const normalizedAddress = effectiveAddress.toLowerCase();
+
+        // Check if user is leader in this pod's pod_members table
+        const { data: podMembership } = await supabase
+          .from('pod_members')
+          .select('membership_type, is_active')
+          .eq('pod_id', pod.id)
+          .eq('wallet', normalizedAddress)
+          .eq('is_active', true)
+          .maybeSingle();
+
+        setIsLeaderInDB(podMembership?.membership_type === 'leader');
+
+        // Check if user is Executive Pod leader (access to all pods)
+        const { data: execPod } = await supabase
+          .from('pods')
+          .select('id')
+          .eq('name', 'Executive Pod')
+          .maybeSingle();
+
+        if (execPod) {
+          const { data: execMembership } = await supabase
+            .from('pod_members')
+            .select('membership_type, is_active')
+            .eq('pod_id', execPod.id)
+            .eq('wallet', normalizedAddress)
+            .eq('is_active', true)
+            .maybeSingle();
+
+          setIsExecutiveLeader(execMembership?.membership_type === 'leader' || false);
+        }
+      } catch (error) {
+        console.error('❌ Error checking pod leadership:', error);
+        setIsLeaderInDB(null);
+        setIsExecutiveLeader(false);
+      }
+    };
+
+    checkLeadershipInDatabase();
+  }, [pod, effectiveAddress]);
 
   const permissions = useMemo(() => {
     if (!pod || !effectiveAddress) {
@@ -60,15 +115,18 @@ export function usePodPermissions({
     const isCreator =
       pod.created_by_address?.toLowerCase() === effectiveAddress.toLowerCase();
 
-    // Check if user is a pod leader
-    const isLeader = Boolean(
+    // CRITICAL FIX: Check pod_members table (source of truth) + pod_leads array (legacy)
+    const isInLeadsArray = Boolean(
       pod.pod_leads?.some(
         (lead) => lead.toLowerCase() === effectiveAddress.toLowerCase(),
       ),
     );
 
-    // Check if user can manage the pod (creator or leader)
-    const canManagePod = PodCoreService.canUserManagePod(pod, effectiveAddress);
+    // User is a leader if they're in the array OR in the database OR Executive Pod leader
+    const isLeader = isInLeadsArray || isLeaderInDB === true || isExecutiveLeader;
+
+    // User can manage if they're creator OR leader (from any source)
+    const canManagePod = isCreator || isLeader;
 
     // Check if user can sign accountability agreements
     const canSign = Boolean(
@@ -103,6 +161,15 @@ export function usePodPermissions({
       canViewTreasury: canManagePod || isMember,
     };
 
+    console.log('🔍 Pod permissions calculated:', {
+      podName: pod.name,
+      isInLeadsArray,
+      isLeaderInDB,
+      isExecutiveLeader,
+      canManagePod,
+      isLeader,
+    });
+
     return {
       canManagePod,
       canSign,
@@ -112,7 +179,7 @@ export function usePodPermissions({
       isCreator,
       permissions: detailedPermissions,
     };
-  }, [pod, effectiveAddress]);
+  }, [pod, effectiveAddress, isLeaderInDB, isExecutiveLeader]);
 
   return permissions;
 }

@@ -2,7 +2,7 @@ import type React from 'react';
 import { useState, useEffect } from 'react';
 import { useForumCategories } from '@/features/governance/hooks/useForumCategories';
 import { useForumThreadsByCategory } from '@/features/governance/hooks/useForumThreadsByCategory';
-import { useAccount } from 'wagmi';
+import { useEvmAddress } from '@coinbase/cdp-hooks';
 
 interface ProposalThreadSelectorProps {
   onThreadSelect: (threadId: string) => void;
@@ -13,7 +13,7 @@ export const ProposalThreadSelector: React.FC<ProposalThreadSelectorProps> = ({
   onThreadSelect,
   restrictToUser = false,
 }) => {
-  const { address } = useAccount();
+  const { evmAddress: address } = useEvmAddress();
   const {
     data: categories,
     isLoading: loadingCategories,

@@ -105,13 +105,14 @@ export function useTokenGate(options: TokenGateOptions = {}): TokenGateResult {
         const balances = await fetchTokenBalances(address);
         setTokenBalances(balances);
 
-        // Access is granted if user has Proof of Curiosity token
-        const access = balances.hasProofOfCuriosity;
+        // Access is granted if user has Proof of Curiosity token OR Beta Tester Hat
+        const access =
+          balances.hasProofOfCuriosity || balances.hasBetaTesterHat;
         setHasAccess(access);
         setIsLoading(false);
         console.log(
           access
-            ? '✅ Forum access granted via token balance'
+            ? `✅ Forum access granted via token balance (PoC: ${balances.hasProofOfCuriosity}, BetaTester: ${balances.hasBetaTesterHat})`
             : '❌ Forum access denied - no required tokens',
         );
         return access;

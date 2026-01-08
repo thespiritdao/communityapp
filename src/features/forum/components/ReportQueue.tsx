@@ -3,7 +3,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useAccount } from 'wagmi';
+import { useEvmAddress } from '@coinbase/cdp-hooks';
 import { useModerationPermissions } from '../hooks/useModerationPermissions';
 import {
   getPendingReports,
@@ -15,7 +15,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 
 export function ReportQueue() {
-  const { address } = useAccount();
+  const { evmAddress: address } = useEvmAddress();
   const { canReviewReports } = useModerationPermissions();
   const [reports, setReports] = useState<PostReport[]>([]);
   const [isLoading, setIsLoading] = useState(true);

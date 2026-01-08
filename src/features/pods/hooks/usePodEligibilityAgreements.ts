@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { useAccount, usePublicClient } from 'wagmi';
+import { useEvmAddress } from '@coinbase/cdp-hooks';
+import { usePublicClient } from 'wagmi';
 import {
   EligibilityService,
   type EligibilityCriteria,
@@ -40,7 +41,7 @@ export function usePodEligibilityAgreements(
   const [error, setError] = useState<string | null>(null);
   const [hasUnsignedAgreements, setHasUnsignedAgreements] = useState(false);
 
-  const { address } = useAccount();
+  const { evmAddress: address } = useEvmAddress();
   const publicClient = usePublicClient();
 
   const ELIGIBILITY_MODULE_ABI = [

@@ -1,6 +1,6 @@
 import type React from 'react';
 import { useState, useEffect } from 'react';
-import { useAccount } from 'wagmi';
+import { useEvmAddress } from '@coinbase/cdp-hooks';
 import type { UserProfile } from '@/features/identity/types';
 import { DatabaseTokenGallery } from '@/features/identity/components/DatabaseTokenGallery';
 import { mapStoredValuesToLabels } from '@/features/identity/utils/formatProfileValues';
@@ -87,7 +87,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
   users,
   onClose,
 }) => {
-  const { address } = useAccount();
+  const { evmAddress: address } = useEvmAddress();
   const { modalProps, openMemberFunding } = useFundingModal();
   const profilePictureUrl = getProfilePictureUrl(user.wallet_address, users);
   const [showDMModal, setShowDMModal] = useState(false);

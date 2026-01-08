@@ -3,7 +3,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useAccount } from 'wagmi';
+import { useEvmAddress } from '@coinbase/cdp-hooks';
 import { submitReport } from '../services/ModerationService';
 import { Button } from '@/components/ui/button';
 import {
@@ -34,7 +34,7 @@ export function ReportButton({
   targetId,
   threadId,
 }: ReportButtonProps) {
-  const { address } = useAccount();
+  const { evmAddress: address } = useEvmAddress();
   const [isOpen, setIsOpen] = useState(false);
   const [reportType, setReportType] = useState<
     'spam' | 'abuse' | 'off-topic' | 'harassment' | 'other'

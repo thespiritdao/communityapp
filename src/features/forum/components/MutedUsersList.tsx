@@ -3,7 +3,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useAccount } from 'wagmi';
+import { useEvmAddress } from '@coinbase/cdp-hooks';
 import { useModerationPermissions } from '../hooks/useModerationPermissions';
 import { supabase } from '@/utils/supabaseClient';
 import {
@@ -32,7 +32,7 @@ import {
 } from '@/components/ui/dialog';
 
 export function MutedUsersList() {
-  const { address } = useAccount();
+  const { evmAddress: address } = useEvmAddress();
   const { canBanUsers } = useModerationPermissions();
   const [mutes, setMutes] = useState<UserMute[]>([]);
   const [isLoading, setIsLoading] = useState(true);

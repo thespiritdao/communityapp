@@ -3,7 +3,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useAccount } from 'wagmi';
+import { useEvmAddress } from '@coinbase/cdp-hooks';
 import { createPoll } from '../services/PollService';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -28,7 +28,7 @@ export function PollCreationForm({
   onPollCreated,
   onCancel,
 }: PollCreationFormProps) {
-  const { address } = useAccount();
+  const { evmAddress: address } = useEvmAddress();
   const [question, setQuestion] = useState('');
   const [options, setOptions] = useState<string[]>(['', '']);
   const [allowMultiple, setAllowMultiple] = useState(false);

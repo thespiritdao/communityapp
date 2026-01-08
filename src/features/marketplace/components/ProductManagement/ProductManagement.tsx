@@ -3,7 +3,7 @@
 
 import type React from 'react';
 import { useState, useEffect } from 'react';
-import { useAccount } from 'wagmi';
+import { useCurrentUser } from '@coinbase/cdp-hooks';
 import {
   getUserManagedProducts,
   updateProduct,
@@ -35,8 +35,11 @@ export const ProductManagement: React.FC<ProductManagementProps> = ({
   onClose,
   productId,
 }) => {
-  const { address } = useAccount();
+  const { currentUser } = useCurrentUser();
   const { fetchProducts } = useProducts();
+
+  // Get address from CDP Smart Account
+  const address = currentUser?.evmSmartAccounts?.[0] as `0x${string}` | undefined;
   const [managedProducts, setManagedProducts] = useState<IProduct[]>([]);
   const [selectedProduct, setSelectedProduct] = useState<IProduct | null>(null);
   const [isEditing, setIsEditing] = useState(false);

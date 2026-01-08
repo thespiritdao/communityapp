@@ -2,7 +2,7 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import { useAccount } from 'wagmi';
+import { useEvmAddress } from '@coinbase/cdp-hooks';
 import { useHatPermissions } from '@/hooks/useHatPermissions';
 import { useTokenBalances } from '@/context/TokenBalancesContext';
 
@@ -28,7 +28,8 @@ interface ForumAccessOptions {
 export function useForumAccess(
   options: ForumAccessOptions = {},
 ): ForumAccessResult {
-  const { address, isConnected } = useAccount();
+  const { evmAddress: address } = useEvmAddress();
+  const isConnected = !!address;
   const { userHats, userRoles } = useHatPermissions();
   const { balances } = useTokenBalances();
 

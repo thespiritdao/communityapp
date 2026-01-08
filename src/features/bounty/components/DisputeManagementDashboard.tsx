@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useAccount } from 'wagmi';
+import { useEvmAddress } from '@coinbase/cdp-hooks';
 import {
   Card,
   CardContent,
@@ -42,7 +42,7 @@ interface DisputeManagementDashboardProps {
 export const DisputeManagementDashboard: React.FC<
   DisputeManagementDashboardProps
 > = ({ disputeId, onClose }) => {
-  const { address } = useAccount();
+  const { evmAddress: address } = useEvmAddress();
 
   // State
   const [dispute, setDispute] = useState<any>(null);

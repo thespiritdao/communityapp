@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useCallback } from 'react';
-import { useAccount, useReadContract } from 'wagmi';
+import { useEvmAddress } from '@coinbase/cdp-hooks';
+import { useReadContract } from 'wagmi';
 import { parseEther, formatEther } from 'viem';
 import type { BountyFormV2Data } from '../components/BountyFormV2';
 
@@ -79,7 +80,7 @@ export interface UseBountyV2Return {
 }
 
 export const useBountyV2 = (): UseBountyV2Return => {
-  const { address } = useAccount();
+  const { evmAddress: address } = useEvmAddress();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 

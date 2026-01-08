@@ -9,7 +9,8 @@
 
 import { useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { usePublicClient, useWalletClient, useAccount } from 'wagmi';
+import { useEvmAddress } from '@coinbase/cdp-hooks';
+import { usePublicClient, useWalletClient } from 'wagmi';
 import { PodOperationsService } from '../services/PodOperationsService';
 import { unifiedNotificationService } from '@/services/unifiedNotificationService';
 
@@ -37,7 +38,7 @@ export function usePodManagementHandlers({
   const router = useRouter();
   const publicClient = usePublicClient();
   const { data: walletClient } = useWalletClient();
-  const { address: currentUserAddress } = useAccount();
+  const { evmAddress: currentUserAddress } = useEvmAddress();
 
   // Memoized profile navigation handler
   const handleClickName = useCallback(

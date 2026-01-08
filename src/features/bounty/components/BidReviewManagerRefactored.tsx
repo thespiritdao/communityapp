@@ -33,7 +33,7 @@ import {
 } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { useAccount } from 'wagmi';
+import { useEvmAddress } from '@coinbase/cdp-hooks';
 import { format } from 'date-fns';
 import { useBountySupabase } from '../hooks/useBountySupabase';
 import type { FrontendBid, FrontendNotification } from '../types/bounty';
@@ -79,7 +79,7 @@ export const BidReviewManager: React.FC<BidReviewManagerProps> = ({
   onBidStatusChange,
   onNotificationSent,
 }) => {
-  const { address } = useAccount();
+  const { evmAddress: address } = useEvmAddress();
   const [activeTab, setActiveTab] = useState<
     'pending' | 'approved' | 'rejected'
   >('pending');

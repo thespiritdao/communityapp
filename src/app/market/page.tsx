@@ -1,4 +1,4 @@
-// src/app/cart/page.tsx
+// src/app/market/page.tsx
 
 'use client';
 
@@ -10,7 +10,7 @@ import { CartProvider } from '@/features/shopping-cart/contexts/cart-context';
 import { CartErrorBoundary } from '@/components/ErrorBoundary/CartErrorBoundary';
 import Marketplace from '@/features/shopping-cart/components/Marketplace/Marketplace';
 
-export default function CartPage() {
+export default function MarketPage() {
   return (
     <div className="bottom-nav-spacing">
       <ThemeProvider theme={theme}>

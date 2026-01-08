@@ -5,19 +5,40 @@ import { useEvmAddress, useSendUserOperation, useCurrentUser } from '@coinbase/c
 import { useToast } from '@/components/ui/use-toast';
 import { Button } from '@/components/ui/button';
 import { Loader2 } from 'lucide-react';
+import { encodeFunctionData } from 'viem';
 import { supabase } from '@/utils/supabaseClient';
+import PodApplicationVotingABI from '@/abis/PodApplicationVotingABI.json';
 
 interface VoteOnApplicationButtonProps {
   applicationId: string;
   currentVotes: number;
   requiredVotes: number;
   votingLeaders: string[];
+  podId: string; // Added to determine which pod's leader HAT to check
   onSuccess: () => void;
 }
 
+// Contract address (will be set after deployment)
+const POD_APPLICATION_VOTING_CONTRACT = process.env.NEXT_PUBLIC_POD_APPLICATION_VOTING as `0x${string}`;
+
+// Hats Protocol - Executive Pod Leader HAT (required to vote)
+const EXECUTIVE_POD_LEADER_HAT = process.env.NEXT_PUBLIC_EXECUTIVE_POD_LEADER as string;
+
 /**
- * Onchain voting button for intermediate application approvals
- * Records vote as blockchain transaction with passkey
+ * Convert UUID string to bytes32 for contract call
+ * UUIDs are 128-bit (16 bytes), we pad with zeros to get 32 bytes
+ */
+function uuidToBytes32(uuid: string): `0x${string}` {
+  // Remove hyphens from UUID
+  const hex = uuid.replace(/-/g, '');
+  // Pad to 64 characters (32 bytes)
+  const padded = hex.padStart(64, '0');
+  return `0x${padded}` as `0x${string}`;
+}
+
+/**
+ * Onchain voting button for pod membership application approvals
+ * Uses PodApplicationVoting contract for gasless, HAT-verified voting
  */
 export const VoteOnApplicationButton: React.FC<
   VoteOnApplicationButtonProps
@@ -26,6 +47,7 @@ export const VoteOnApplicationButton: React.FC<
   currentVotes,
   requiredVotes,
   votingLeaders,
+  podId,
   onSuccess,
 }) => {
   // CDP Smart Account hooks - EXACT FAUCET PATTERN
@@ -37,9 +59,9 @@ export const VoteOnApplicationButton: React.FC<
   const [isTransactionPending, setIsTransactionPending] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
 
-  // CDP Smart Account transaction handler - EXACT FAUCET PATTERN
-  const handleVoteTransaction = async () => {
-    // EXACT FAUCET PATTERN: Simple validation matching faucet
+  // CDP Smart Account transaction handler - Contract Call Pattern
+  const handleVoteTransaction = async (voteType: 'approve' | 'reject') => {
+    // Validation
     if (!evmAddress || !currentUser?.evmSmartAccounts?.[0]) {
       console.error('❌ Missing requirements for vote recording:', {
         hasAddress: !!evmAddress,
@@ -53,31 +75,65 @@ export const VoteOnApplicationButton: React.FC<
       return;
     }
 
-    const smartAccount = currentUser.evmSmartAccounts[0]; // EXACT FAUCET PATTERN
+    if (!POD_APPLICATION_VOTING_CONTRACT) {
+      toast({
+        title: 'Contract Not Configured',
+        description: 'PodApplicationVoting contract address not set. Please contact support.',
+        variant: 'destructive',
+      });
+      return;
+    }
 
-    setIsTransactionPending(true); // EXACT FAUCET PATTERN
+    if (!EXECUTIVE_POD_LEADER_HAT) {
+      toast({
+        title: 'HAT Not Configured',
+        description: 'Executive Pod Leader HAT ID not set. Please contact support.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    const smartAccount = currentUser.evmSmartAccounts[0];
+
+    setIsTransactionPending(true);
     setIsProcessing(true);
 
     try {
       console.log('🚀 Building Smart Account User Operation for vote recording...');
       console.log('💼 Smart Account:', smartAccount);
-      console.log('🎯 Transaction: Self-send with vote data');
+      console.log('🎯 Transaction: PodApplicationVoting.castVote()');
+      console.log(`📝 Vote Type: ${voteType}`);
+      console.log('🏠 Contract:', POD_APPLICATION_VOTING_CONTRACT);
+      console.log('🎩 Required HAT:', EXECUTIVE_POD_LEADER_HAT);
       console.log('⛽ Paymaster: ENABLED (gasless transaction)');
 
-      // Encode application ID in transaction data for onchain record
-      // This creates a unique transaction signature for this vote
-      const voteData = `0x${Buffer.from(`VOTE:${applicationId}:${evmAddress}`).toString('hex')}` as `0x${string}`;
+      // Convert UUID to bytes32 for contract
+      const applicationIdBytes32 = uuidToBytes32(applicationId);
+      console.log('📋 Application ID (bytes32):', applicationIdBytes32);
 
-      // EXACT FAUCET PATTERN: Send user operation (self-send with data)
+      // Encode the contract call: castVote(bytes32 applicationId, uint256 podLeaderHatId, bool approved)
+      const callData = encodeFunctionData({
+        abi: PodApplicationVotingABI,
+        functionName: 'castVote',
+        args: [
+          applicationIdBytes32,
+          BigInt(EXECUTIVE_POD_LEADER_HAT),
+          voteType === 'approve', // true for approve, false for reject
+        ],
+      });
+
+      console.log('📝 Encoded call data:', callData);
+
+      // Send user operation with paymaster sponsorship
       const result = await sendUserOperation({
-        evmSmartAccount: smartAccount,  // ← Smart Account directly!
-        network: 'base',                 // ← Base mainnet
+        evmSmartAccount: smartAccount,
+        network: 'base', // Base mainnet
         calls: [{
-          to: evmAddress,                // ← Self-send!
-          value: 0n,                     // ← Zero ETH (bigint)
-          data: voteData,                // ← Vote data
+          to: POD_APPLICATION_VOTING_CONTRACT,
+          value: 0n,
+          data: callData,
         }],
-        useCdpPaymaster: true,           // ← ENABLE GAS SPONSORSHIP!
+        useCdpPaymaster: true, // Gasless transaction!
       });
 
       console.log('✅ User operation sent successfully!', result);
@@ -89,34 +145,47 @@ export const VoteOnApplicationButton: React.FC<
         const txHash = resultWithReceipt.receipt.transactionHash;
         const blockNumber = resultWithReceipt.receipt.blockNumber;
 
-        console.log('✅ Vote transaction successful:', txHash);
+        console.log(`✅ ${voteType} vote transaction successful:`, txHash);
 
-        // Update application vote count
-        const newVoteCount = currentVotes + 1;
-        const newVotingLeaders = [...votingLeaders, evmAddress.toLowerCase()];
+        // For approve votes, increment vote count
+        // For reject votes, mark application as rejected
+        if (voteType === 'approve') {
+          const newVoteCount = currentVotes + 1;
+          const newVotingLeaders = [...votingLeaders, evmAddress.toLowerCase()];
 
-        await supabase
-          .from('pod_membership_applications')
-          .update({
-            current_votes: newVoteCount,
-            voting_leaders: newVotingLeaders,
-          })
-          .eq('id', applicationId);
+          await supabase
+            .from('pod_membership_applications')
+            .update({
+              current_votes: newVoteCount,
+              voting_leaders: newVotingLeaders,
+            })
+            .eq('id', applicationId);
+        } else {
+          // Rejection immediately changes status
+          await supabase
+            .from('pod_membership_applications')
+            .update({
+              status: 'rejected',
+            })
+            .eq('id', applicationId);
+        }
 
         // Record the vote with transaction hash
         await supabase.from('pod_application_votes').insert({
           application_id: applicationId,
           voter_address: evmAddress.toLowerCase(),
-          vote_type: 'approve',
+          vote_type: voteType,
           transaction_hash: txHash,
           block_number: blockNumber ? Number(blockNumber) : null,
         });
 
-        console.log(`📊 Vote recorded: ${newVoteCount}/${requiredVotes}`);
+        console.log(`📊 ${voteType} vote recorded successfully`);
 
         toast({
-          title: 'Vote Recorded Onchain!',
-          description: `Your approval vote has been recorded. ${requiredVotes - newVoteCount} more vote(s) needed.`,
+          title: voteType === 'approve' ? 'Approval Recorded!' : 'Rejection Recorded!',
+          description: voteType === 'approve'
+            ? `Your approval vote has been recorded. ${requiredVotes - currentVotes - 1} more vote(s) needed.`
+            : 'Application has been rejected.',
           duration: 5000,
         });
 
@@ -143,28 +212,75 @@ export const VoteOnApplicationButton: React.FC<
   };
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-3">
       <div className="text-sm text-gray-600">
-        This will record your approval vote onchain.{' '}
+        Cast your vote on-chain (gasless via smart contract).{' '}
         {requiredVotes - currentVotes - 1} more vote(s) needed after yours.
       </div>
 
-      {/* CDP Smart Account Transaction Button */}
+      {/* CDP Smart Account Transaction Buttons */}
       {evmAddress && currentUser?.evmSmartAccounts?.[0] ? (
-        <Button
-          onClick={handleVoteTransaction}
-          disabled={isTransactionPending || isProcessing}
-          className="w-full text-white px-6 py-3 rounded-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed bg-[#2F5D50] hover:bg-[#1F453A]"
-        >
-          {isTransactionPending || isProcessing ? (
-            <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin inline" />
-              Recording Vote...
-            </>
-          ) : (
-            'Record Approval Vote (Gasless)'
-          )}
-        </Button>
+        <div className="flex gap-3">
+          {/* Approve Button - PRIMARY Intent */}
+          <Button
+            onClick={() => handleVoteTransaction('approve')}
+            disabled={isTransactionPending || isProcessing}
+            className="flex-1 text-white px-6 py-3 rounded-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+            style={{
+              backgroundColor: '#2F5D50',
+              transition: 'background-color 0.2s',
+            }}
+            onMouseEnter={(e) => {
+              if (!isTransactionPending && !isProcessing) {
+                e.currentTarget.style.backgroundColor = '#1F453A';
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (!isTransactionPending && !isProcessing) {
+                e.currentTarget.style.backgroundColor = '#2F5D50';
+              }
+            }}
+          >
+            {isTransactionPending || isProcessing ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin inline" />
+                Recording...
+              </>
+            ) : (
+              'Approve'
+            )}
+          </Button>
+
+          {/* Reject Button - DESTRUCTIVE Intent */}
+          <Button
+            onClick={() => handleVoteTransaction('reject')}
+            disabled={isTransactionPending || isProcessing}
+            className="flex-1 text-white px-6 py-3 rounded-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+            style={{
+              backgroundColor: '#8B3A3A',
+              transition: 'background-color 0.2s',
+            }}
+            onMouseEnter={(e) => {
+              if (!isTransactionPending && !isProcessing) {
+                e.currentTarget.style.backgroundColor = '#6B2A2A';
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (!isTransactionPending && !isProcessing) {
+                e.currentTarget.style.backgroundColor = '#8B3A3A';
+              }
+            }}
+          >
+            {isTransactionPending || isProcessing ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin inline" />
+                Recording...
+              </>
+            ) : (
+              'Reject'
+            )}
+          </Button>
+        </div>
       ) : (
         <div className="p-3 border rounded-lg bg-gray-50 text-sm">
           <p className="text-red-600 font-medium">

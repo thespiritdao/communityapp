@@ -2,7 +2,7 @@
 
 import type React from 'react';
 import { useState } from 'react';
-import { useAccount } from 'wagmi';
+import { useEvmAddress } from '@coinbase/cdp-hooks';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/components/ui/use-toast';
 import {
@@ -49,7 +49,7 @@ interface PodForRegistration {
 }
 
 export const PodRegistrationManager: React.FC = () => {
-  const { address } = useAccount();
+  const { evmAddress: address } = useEvmAddress();
   const { toast } = useToast();
   const [selectedPodId, setSelectedPodId] = useState<string>('');
 

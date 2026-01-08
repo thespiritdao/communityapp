@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback } from 'react';
-import { useAccount } from 'wagmi';
+import { useEvmAddress } from '@coinbase/cdp-hooks';
 import { useToast } from '@/components/ui/use-toast';
 import { EligibilityApiClient } from '../services/EligibilityApiClient';
 import type {
@@ -21,7 +21,7 @@ interface UseEligibilityState {
 }
 
 export function useEligibility() {
-  const { address } = useAccount();
+  const { evmAddress: address } = useEvmAddress();
   const { toast } = useToast();
 
   const [state, setState] = useState<UseEligibilityState>({
@@ -161,7 +161,7 @@ export function useEligibility() {
       updateState({ loading: true, error: null });
 
       try {
-        const userAddress = includeUserStatus ? address : undefined;
+        const userAddress = includeUserStatus ? (address || undefined) : undefined;
         const result = await EligibilityApiClient.getRoleEligibility(
           roleId,
           userAddress,

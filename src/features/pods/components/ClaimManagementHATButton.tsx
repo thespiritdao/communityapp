@@ -222,6 +222,42 @@ export const ClaimManagementHATButton: React.FC<
       if (resultWithReceipt?.receipt) {
         console.log('✅ Management HAT claimed successfully!');
 
+        // CRITICAL FIX: Sync to pod_members table for permission system
+        console.log('📊 Syncing HAT claim to database...');
+        try {
+          const { createClient } = await import('@supabase/supabase-js');
+          const supabase = createClient(
+            process.env.NEXT_PUBLIC_SUPABASE_URL!,
+            process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+          );
+
+          const { error: syncError } = await supabase
+            .from('pod_members')
+            .upsert({
+              pod_id: podId,
+              wallet: evmAddress.toLowerCase(),
+              membership_type: 'leader',
+              role: 'leader',
+              hat_id: managementHatId,
+              is_active: true,
+              joined_at: new Date().toISOString(),
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString(),
+            }, {
+              onConflict: 'pod_id,wallet'
+            });
+
+          if (syncError) {
+            console.error('⚠️ Failed to sync to database:', syncError);
+            // Don't block the success flow - user has HAT on-chain
+          } else {
+            console.log('✅ Database synced successfully!');
+          }
+        } catch (dbError) {
+          console.error('⚠️ Database sync error:', dbError);
+          // Don't block the success flow
+        }
+
         toast({
           title: 'Success! 👑',
           description: `You now have management access to ${podName}. Refreshing...`,

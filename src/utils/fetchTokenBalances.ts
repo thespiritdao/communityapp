@@ -86,6 +86,9 @@ const MARKET_MANAGEMENT_HAT_ID = process.env.NEXT_PUBLIC_MARKET_MANAGEMENT;
 // Add event management hat ID
 const EVENT_MANAGEMENT_HAT_ID = process.env.NEXT_PUBLIC_EVENT_MANAGEMENT;
 
+// Add beta tester hat ID
+const BETA_TESTER_HAT_ID = process.env.NEXT_PUBLIC_BETA_TESTER_HAT;
+
 // Add Advocate NFT contract
 const ADVOCATE_TOKEN_CONTRACT = '0x592E560171D2a882474cdfc3BbeeDb21cEB4015d';
 
@@ -105,6 +108,7 @@ export interface TokenBalance {
   hasDevPod: boolean;
   hasBountyHat: boolean;
   hasEventManagement: boolean;
+  hasBetaTesterHat: boolean; // Beta tester hat for beta access
   hasAdvocate: boolean; // Advocate NFT for universal bounty access
   systemBalance: string;
   selfBalance: string;
@@ -536,6 +540,40 @@ export async function fetchTokenBalances(
         );
       }
 
+      // --- Beta Tester Hat Token (ERC1155) ---
+      let betaTesterHatIndex = -1;
+      if (isValidAddress(HATS_CONTRACT ?? '')) {
+        const betaTesterHatId = BETA_TESTER_HAT_ID ?? '0';
+        if (betaTesterHatId) {
+          try {
+            const hatsContract = new web3.eth.Contract(
+              erc1155Abi as any,
+              (HATS_CONTRACT ?? '') as string,
+            );
+            betaTesterHatIndex = calls.length;
+            calls.push({
+              target: (HATS_CONTRACT ?? '') as string,
+              callData: hatsContract.methods
+                .balanceOf(walletAddress, betaTesterHatId)
+                .encodeABI(),
+            });
+          } catch (error) {
+            console.error(
+              'Error setting up Beta Tester Hat Token call:',
+              error,
+            );
+          }
+        } else {
+          console.warn(
+            'Beta Tester Hat ID is not defined; defaulting to balance 0.',
+          );
+        }
+      } else {
+        console.warn(
+          'HATS_CONTRACT is not valid; cannot check Beta Tester Hat Token.',
+        );
+      }
+
       // Execute multicall with retry logic and proper typing
       const multicallContract = new web3.eth.Contract(
         multicallAbi as any,
@@ -561,6 +599,7 @@ export async function fetchTokenBalances(
         hasDevPod: false,
         hasBountyHat: false,
         hasEventManagement: false,
+        hasBetaTesterHat: false,
         hasAdvocate: false,
         systemBalance: '0',
         selfBalance: '0',
@@ -716,6 +755,23 @@ export async function fetchTokenBalances(
         console.error('Error processing Advocate NFT balance:', error);
       }
 
+      try {
+        if (betaTesterHatIndex >= 0 && returnData[betaTesterHatIndex]) {
+          const betaTesterHatBalance = web3.utils.hexToNumberString(
+            (returnData[betaTesterHatIndex] ?? '0') as string,
+          );
+          balances.hasBetaTesterHat = Number(betaTesterHatBalance) > 0;
+          console.log(
+            '  ✅ Beta Tester Hat balance:',
+            betaTesterHatBalance,
+            'hasBetaTesterHat:',
+            balances.hasBetaTesterHat,
+          );
+        }
+      } catch (error) {
+        console.error('Error processing Beta Tester Hat balance:', error);
+      }
+
       // Log final results
       console.log(
         '📊 Final Token Balances for',
@@ -729,6 +785,7 @@ export async function fetchTokenBalances(
       console.log('  hasMarketManagement:', balances.hasMarketManagement);
       console.log('  hasBountyHat:', balances.hasBountyHat);
       console.log('  hasEventManagement:', balances.hasEventManagement);
+      console.log('  hasBetaTesterHat:', balances.hasBetaTesterHat);
       console.log('  hasProofOfCuriosity:', balances.hasProofOfCuriosity);
       console.log('  hasAdvocate:', balances.hasAdvocate);
 
@@ -757,6 +814,7 @@ export async function fetchTokenBalances(
         hasDevPod: false,
         hasBountyHat: false,
         hasEventManagement: false,
+        hasBetaTesterHat: false,
         hasAdvocate: false,
         systemBalance: '0',
         selfBalance: '0',

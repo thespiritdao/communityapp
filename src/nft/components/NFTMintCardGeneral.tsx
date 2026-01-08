@@ -1,14 +1,8 @@
 // src/components/NFTMintCardGeneral.tsx
 'use client';
-import { useAccount } from 'wagmi';
-import {
-  Transaction,
-  TransactionButton,
-  TransactionSponsor,
-  TransactionStatus,
-  TransactionStatusLabel,
-  TransactionStatusAction,
-} from '@coinbase/onchainkit/transaction';
+import { useState, useCallback } from 'react';
+import { useSendUserOperation, useCurrentUser } from '@coinbase/cdp-hooks';
+import { encodeFunctionData } from 'viem';
 import { cn } from '@/lib/utils';
 
 export interface NFTMintCardGeneralProps {
@@ -42,24 +36,73 @@ export function NFTMintCardGeneral({
   onError,
   className,
 }: NFTMintCardGeneralProps) {
-  const { address, isConnected } = useAccount();
+  const { currentUser } = useCurrentUser();
+  const { sendUserOperation } = useSendUserOperation();
+  const [isMinting, setIsMinting] = useState(false);
+
+  // Get address from CDP Smart Account
+  const address = currentUser?.evmSmartAccounts?.[0] as `0x${string}` | undefined;
+  const isConnected = Boolean(currentUser);
 
   // Check for valid arguments
   const isArgsValid =
     Array.isArray(mintArgs) &&
     mintArgs.every((arg) => arg !== undefined && arg !== null);
 
-  const contracts =
-    isConnected && isArgsValid
-      ? [
-          {
-            to: contractAddress as `0x${string}`,
-            abi,
-            functionName: 'mint',
-            args: mintArgs,
-          },
-        ]
-      : [];
+  // CDP transaction handler for NFT minting
+  const handleCDPMint = useCallback(async () => {
+    if (!currentUser?.evmSmartAccounts?.[0]) {
+      console.error('Smart Account not found');
+      return;
+    }
+
+    if (!isArgsValid) {
+      console.error('Invalid mint arguments');
+      return;
+    }
+
+    setIsMinting(true);
+
+    try {
+      const smartAccount = currentUser.evmSmartAccounts[0];
+
+      const callData = encodeFunctionData({
+        abi,
+        functionName: 'mint',
+        args: mintArgs,
+      });
+
+      console.log('🚀 CDP NFT Mint:', {
+        smartAccount,
+        contractAddress,
+        args: mintArgs,
+      });
+
+      const result = await sendUserOperation({
+        evmSmartAccount: smartAccount,
+        network: 'base',
+        calls: [{
+          to: contractAddress as `0x${string}`,
+          value: 0n,
+          data: callData,
+        }],
+        useCdpPaymaster: isSponsored,
+      });
+
+      console.log('✅ NFT minted:', result);
+
+      if (onSuccess) {
+        onSuccess(result);
+      }
+    } catch (error: any) {
+      console.error('❌ NFT minting failed:', error);
+      if (onError) {
+        onError(error);
+      }
+    } finally {
+      setIsMinting(false);
+    }
+  }, [currentUser, isArgsValid, abi, mintArgs, contractAddress, isSponsored, sendUserOperation, onSuccess, onError]);
 
   return (
     <div
@@ -97,23 +140,13 @@ export function NFTMintCardGeneral({
 
       {/* Mint Button & Status */}
       {isConnected ? (
-        <Transaction
-          isSponsored={isSponsored}
-          contracts={contracts}
-          chainId={chainId}
-          onSuccess={onSuccess}
-          onError={onError}
+        <button
+          onClick={handleCDPMint}
+          disabled={isMinting || !isArgsValid}
+          className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded w-full disabled:opacity-50"
         >
-          <TransactionButton
-            text="Mint NFT"
-            className="px-4 py-2 bg-blue-600 text-white rounded w-full disabled:opacity-50"
-          />
-          <TransactionSponsor />
-          <TransactionStatus>
-            <TransactionStatusLabel />
-            <TransactionStatusAction />
-          </TransactionStatus>
-        </Transaction>
+          {isMinting ? 'Minting...' : isSponsored ? 'Mint NFT (Gasless)' : 'Mint NFT'}
+        </button>
       ) : (
         <button
           disabled={true}

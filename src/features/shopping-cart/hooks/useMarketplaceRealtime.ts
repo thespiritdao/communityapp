@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
-import { useAccount } from 'wagmi';
+import { useEvmAddress } from '@coinbase/cdp-hooks';
 
 export enum MarketplaceEventType {
   PRODUCT_CREATED = 'product_created',
@@ -43,7 +43,7 @@ interface RealtimeState {
 export function useMarketplaceRealtime(
   options: UseMarketplaceRealtimeOptions = {},
 ) {
-  const { address } = useAccount();
+  const { evmAddress: address } = useEvmAddress();
   const {
     channels = ['general'],
     autoReconnect = true,

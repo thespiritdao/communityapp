@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useAccount, useConfig } from 'wagmi';
+import { useEvmAddress } from '@coinbase/cdp-hooks';
+import { useConfig } from 'wagmi';
 import {
   PodCoreService,
   type AccountabilitySignature,
@@ -31,7 +32,7 @@ export function useAccountability({
   podId,
   podName,
 }: UseAccountabilityConfig): UseAccountabilityReturn {
-  const { address } = useAccount();
+  const { evmAddress: address } = useEvmAddress();
   const config = useConfig();
 
   const [signatures, setSignatures] = useState<AccountabilitySignature[]>([]);

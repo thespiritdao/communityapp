@@ -3,7 +3,7 @@
 
 import type React from 'react';
 import { useState, useEffect } from 'react';
-import { useAccount } from 'wagmi';
+import { useEvmAddress } from '@coinbase/cdp-hooks';
 import {
   createProduct,
   type ProductFormData,
@@ -31,7 +31,7 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
   isOpen,
   onClose,
 }) => {
-  const { address } = useAccount();
+  const { evmAddress: address } = useEvmAddress();
   const { fetchProducts } = useProducts();
   const { balances } = useTokenBalances();
   const {

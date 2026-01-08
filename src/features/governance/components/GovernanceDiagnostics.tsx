@@ -1,7 +1,7 @@
 // src/components/PaymasterTest.tsx
 'use client';
 import type React from 'react';
-import { useAccount } from 'wagmi';
+import { useEvmAddress } from '@coinbase/cdp-hooks';
 import type { Abi } from 'viem';
 import {
   Transaction,
@@ -10,7 +10,7 @@ import {
 } from '@coinbase/onchainkit/transaction';
 
 const PaymasterTest: React.FC = () => {
-  const { address } = useAccount();
+  const { evmAddress: address } = useEvmAddress();
 
   // Simple test contract call - using a basic ERC20 transfer or similar
   const testContract = {

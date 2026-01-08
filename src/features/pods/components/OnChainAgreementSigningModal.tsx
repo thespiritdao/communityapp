@@ -13,7 +13,8 @@ import {
   ExternalLink,
   CheckCircle,
 } from 'lucide-react';
-import { useAccount, useWalletClient, usePublicClient } from 'wagmi';
+import { useEvmAddress } from '@coinbase/cdp-hooks';
+import { useWalletClient, usePublicClient } from 'wagmi';
 import { AgreementIPFSService } from '../services/AgreementIPFSService';
 import { keccak256, toHex } from 'viem';
 
@@ -57,7 +58,7 @@ export const OnChainAgreementSigningModal: React.FC<
   const [checkingSignatureStatus, setCheckingSignatureStatus] = useState(false);
 
   const { toast } = useToast();
-  const { address } = useAccount();
+  const { evmAddress: address } = useEvmAddress();
   const { data: walletClient } = useWalletClient();
   const publicClient = usePublicClient();
 

@@ -3,7 +3,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useAccount } from 'wagmi';
+import { useEvmAddress } from '@coinbase/cdp-hooks';
 import {
   getReactionSummary,
   toggleReaction,
@@ -23,7 +23,7 @@ export function ReactionPicker({
   threadId,
   onReactionChange,
 }: ReactionPickerProps) {
-  const { address } = useAccount();
+  const { evmAddress: address } = useEvmAddress();
   const [reactions, setReactions] = useState<ReactionSummary[]>([]);
   const [showPicker, setShowPicker] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -35,7 +35,7 @@ export function ReactionPicker({
   const loadReactions = async () => {
     setIsLoading(true);
     try {
-      const result = await getReactionSummary(postId, threadId, address);
+      const result = await getReactionSummary(postId, threadId, address || undefined);
       if (result.success && result.reactions) {
         setReactions(result.reactions);
       }

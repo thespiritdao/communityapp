@@ -2,18 +2,25 @@
 // Mint Beta Tester HAT for Exec Pod holder who can't access pod management
 // Wallet: 0xcdf3cd4777286a5611b17869a509e8ecf1cc6f48
 
-import { createWalletClient, http, parseAbi } from 'viem';
+import { config } from 'dotenv';
+import { createWalletClient, createPublicClient, http, parseAbi } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
 import { base } from 'viem/chains';
+import * as path from 'path';
+
+// Load environment variables from .env
+config({ path: path.resolve(process.cwd(), '.env') });
 
 // Contract addresses
 const HATS_CONTRACT = '0x3bc1A0Ad72417f2d411118085256fC53CBdDd137'; // Hats Protocol on Base
 const BETA_TESTER_HAT_ID = '0x0000000200010001000000000000000000000000000000000000000000000000'; // From your config
 
 // Admin wallet (must have authority to mint Beta Tester HATs)
-const ADMIN_PRIVATE_KEY = process.env.ADMIN_PRIVATE_KEY;
+const ADMIN_PRIVATE_KEY = process.env.POD_ADMIN_PRIVATE_KEY || process.env.PRIVATE_KEY;
 if (!ADMIN_PRIVATE_KEY) {
-  throw new Error('ADMIN_PRIVATE_KEY not found in environment variables');
+  console.error('❌ Environment variables not found');
+  console.error('Available env vars:', Object.keys(process.env).filter(k => k.includes('KEY') || k.includes('PRIVATE')));
+  throw new Error('PRIVATE_KEY or POD_ADMIN_PRIVATE_KEY not found in .env');
 }
 
 // User to receive Beta Tester HAT
@@ -23,6 +30,11 @@ const account = privateKeyToAccount(`0x${ADMIN_PRIVATE_KEY.replace(/^0x/, '')}`)
 
 const walletClient = createWalletClient({
   account,
+  chain: base,
+  transport: http(),
+});
+
+const publicClient = createPublicClient({
   chain: base,
   transport: http(),
 });
@@ -45,7 +57,7 @@ async function main() {
   try {
     // 1. Check if user already has Beta Tester HAT
     console.log('1. Checking if user already has Beta Tester HAT...');
-    const balance = await walletClient.readContract({
+    const balance = await publicClient.readContract({
       address: HATS_CONTRACT,
       abi: HATS_ABI,
       functionName: 'balanceOf',
@@ -89,14 +101,14 @@ async function main() {
 
     // 3. Verify mint
     console.log('3. Verifying mint...');
-    const newBalance = await walletClient.readContract({
+    const newBalance = await publicClient.readContract({
       address: HATS_CONTRACT,
       abi: HATS_ABI,
       functionName: 'balanceOf',
       args: [RECIPIENT_ADDRESS, BigInt(BETA_TESTER_HAT_ID)],
     });
 
-    const isWearer = await walletClient.readContract({
+    const isWearer = await publicClient.readContract({
       address: HATS_CONTRACT,
       abi: HATS_ABI,
       functionName: 'isWearerOfHat',

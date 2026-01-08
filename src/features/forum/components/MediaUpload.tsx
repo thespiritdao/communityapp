@@ -3,7 +3,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useAccount } from 'wagmi';
+import { useEvmAddress } from '@coinbase/cdp-hooks';
 import {
   uploadFile,
   uploadMultipleFiles,
@@ -27,7 +27,7 @@ export function MediaUpload({
   onUploadComplete,
   maxFiles = 5,
 }: MediaUploadProps) {
-  const { address } = useAccount();
+  const { evmAddress: address } = useEvmAddress();
   const [uploadedCount, setUploadedCount] = useState(0);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<string>('');

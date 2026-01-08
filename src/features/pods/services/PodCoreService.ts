@@ -517,8 +517,67 @@ export class PodCoreService {
 
   /**
    * Check if user can manage pod
+   * CRITICAL FIX: Now checks pod_members table (source of truth for HAT-based permissions)
    */
-  static canUserManagePod(pod: Pod, userAddress: string): boolean {
+  static async canUserManagePod(pod: Pod, userAddress: string): Promise<boolean> {
+    if (!userAddress) return false;
+
+    const normalizedAddress = userAddress.toLowerCase();
+
+    // Check 1: Is user the pod creator?
+    if (pod.created_by_address?.toLowerCase() === normalizedAddress) {
+      return true;
+    }
+
+    // Check 2: Is user in pod_leads array? (backwards compatibility)
+    const isInLeadsArray = pod.pod_leads?.some(
+      (lead) => lead.toLowerCase() === normalizedAddress,
+    ) ?? false;
+
+    if (isInLeadsArray) {
+      return true;
+    }
+
+    // Check 3: CRITICAL FIX - Check pod_members table (HAT-based membership)
+    try {
+      const membership = await this.checkPodMembership(pod.id, normalizedAddress);
+
+      if (membership.is_member && membership.membership_type === 'leader') {
+        console.log(`✅ User ${normalizedAddress} is leader in pod_members table`);
+        return true;
+      }
+    } catch (dbError) {
+      console.error('❌ Error checking pod membership:', dbError);
+    }
+
+    // Check 4: Check for Executive Pod membership (full access to all pods)
+    try {
+      const { data: execPod } = await supabase
+        .from('pods')
+        .select('id')
+        .eq('name', 'Executive Pod')
+        .maybeSingle();
+
+      if (execPod) {
+        const execMembership = await this.checkPodMembership(execPod.id, normalizedAddress);
+
+        if (execMembership.is_member && execMembership.membership_type === 'leader') {
+          console.log(`✅ User ${normalizedAddress} is Executive Pod leader - has access to all pods`);
+          return true;
+        }
+      }
+    } catch (execError) {
+      console.error('❌ Error checking executive pod membership:', execError);
+    }
+
+    return false;
+  }
+
+  /**
+   * DEPRECATED: Synchronous version for backwards compatibility
+   * WARNING: Only checks pod_leads array, does NOT check pod_members table
+   */
+  static canUserManagePodSync(pod: Pod, userAddress: string): boolean {
     if (!userAddress) return false;
 
     return (

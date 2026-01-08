@@ -168,14 +168,35 @@ export const useHatPermissions = (): UseHatPermissionsReturn => {
             } else {
               // Use actual role permissions from database
               // CRITICAL FIX: Parse JSON string if permissions is stored as string
-              let parsedPermissions = {};
+              let parsedPermissions: HatPermissions = {
+                chatAccess: false,
+                chatModeration: false,
+                forumAccess: false,
+                governanceParticipation: false,
+                eventCreation: false,
+                treasuryViewing: false,
+                treasuryManagement: false,
+                memberManagement: false,
+                subPodCreation: false,
+                roleAssignment: false,
+                forumModeration: false,
+                bountyManagement: false,
+                marketplaceAccess: false,
+                marketplaceManage: false,
+              };
+
               try {
-                parsedPermissions = typeof roleData.permissions === 'string'
+                const rawPermissions = typeof roleData.permissions === 'string'
                   ? JSON.parse(roleData.permissions)
-                  : roleData.permissions || {};
+                  : roleData.permissions;
+
+                // Merge parsed permissions with defaults
+                if (rawPermissions && typeof rawPermissions === 'object') {
+                  parsedPermissions = { ...parsedPermissions, ...rawPermissions };
+                }
               } catch (parseError) {
                 console.error('❌ Failed to parse permissions for', podName, ':', parseError);
-                parsedPermissions = {};
+                // parsedPermissions already has safe defaults
               }
 
               const dynamicRole: HatRole = {

@@ -1,16 +1,9 @@
 'use client';
 
 import type React from 'react';
-import { useState } from 'react';
-import { useAccount } from 'wagmi';
-import {
-  Transaction,
-  TransactionButton,
-  TransactionSponsor,
-  TransactionStatus,
-  TransactionStatusLabel,
-  TransactionStatusAction,
-} from '@coinbase/onchainkit/transaction';
+import { useState, useCallback } from 'react';
+import { useSendUserOperation, useCurrentUser } from '@coinbase/cdp-hooks';
+import { encodeFunctionData } from 'viem';
 
 import { useSimplifiedEventTransactions } from '../hooks/useSimplifiedEventTransactions';
 import { TokenApprovalFlow } from './TokenApprovalFlow';
@@ -34,12 +27,17 @@ const BASE_CHAIN_ID = 8453;
 export const EventRegistrationButton: React.FC<
   EventRegistrationButtonProps
 > = ({ event, onSuccess, className }) => {
-  const { address, isConnected } = useAccount();
+  const { currentUser } = useCurrentUser();
+  const { sendUserOperation } = useSendUserOperation();
   const { getRegisterEventCall } = useSimplifiedEventTransactions();
 
   const [isTransactionPending, setIsTransactionPending] = useState(false);
   const [showApprovalDialog, setShowApprovalDialog] = useState(false);
   const [isApprovalComplete, setIsApprovalComplete] = useState(false);
+
+  // Get address from CDP Smart Account
+  const address = currentUser?.evmSmartAccounts?.[0] as `0x${string}` | undefined;
+  const isConnected = Boolean(currentUser);
 
   // Determine token amounts from event pricing
   const systemTokenAmount = (
@@ -105,6 +103,60 @@ export const EventRegistrationButton: React.FC<
     }
   };
 
+  // CDP transaction handler for event registration
+  const handleCDPRegistration = useCallback(async () => {
+    if (!currentUser?.evmSmartAccounts?.[0]) {
+      console.error('Smart Account not found');
+      return;
+    }
+
+    const calls = prepareRegistration();
+    if (!calls || calls.length === 0) {
+      console.error('Unable to prepare registration calls');
+      return;
+    }
+
+    setIsTransactionPending(true);
+
+    try {
+      const smartAccount = currentUser.evmSmartAccounts[0];
+
+      // Encode all calls
+      const cdpCalls = calls.map((call: any) => ({
+        to: call.address as `0x${string}`,
+        value: 0n,
+        data: encodeFunctionData({
+          abi: call.abi,
+          functionName: call.functionName,
+          args: call.args,
+        }),
+      }));
+
+      console.log('🚀 CDP Event Registration:', {
+        smartAccount,
+        eventId: blockchainEventId,
+        callsCount: cdpCalls.length,
+      });
+
+      const result = await sendUserOperation({
+        evmSmartAccount: smartAccount,
+        network: 'base',
+        calls: cdpCalls,
+        useCdpPaymaster: true,
+      });
+
+      console.log('✅ Event registration successful:', result);
+      setIsTransactionPending(false);
+
+      if (onSuccess) {
+        onSuccess();
+      }
+    } catch (error: any) {
+      console.error('❌ Event registration failed:', error);
+      setIsTransactionPending(false);
+    }
+  }, [currentUser, blockchainEventId, prepareRegistration, sendUserOperation, onSuccess]);
+
   return (
     <>
       {/* Approval Dialog */}
@@ -162,50 +214,31 @@ export const EventRegistrationButton: React.FC<
           }
 
           return (
-            <Transaction
-              chainId={BASE_CHAIN_ID}
-              calls={calls}
-              isSponsored={true} // ✅ Ensure sponsorship is enabled
-              onStatus={(status) => {
-                console.log('📋 Event registration status:', status);
-                if (status.statusName === 'buildingTransaction') {
-                  setIsTransactionPending(true);
-                }
+            <Button
+              onClick={handleCDPRegistration}
+              disabled={isTransactionPending}
+              className={
+                className ||
+                'font-medium py-2 px-4 rounded transition-colors hover:opacity-90'
+              }
+              style={{
+                backgroundColor: '#8FAAA1',
+                color: '#FFFFFF',
+                border: 'none',
               }}
-              onSuccess={async (response) => {
-                console.log('✅ Event registration successful:', response);
-                setIsTransactionPending(false);
-
-                if (onSuccess) {
-                  onSuccess();
-                }
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = '#6F8F86';
               }}
-              onError={(error) => {
-                console.error('❌ Event registration failed:', error);
-                setIsTransactionPending(false);
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = '#8FAAA1';
               }}
             >
-              <TransactionButton
-                text={
-                  isTransactionPending
-                    ? 'Registering...'
-                    : needsTokenApproval
-                      ? `Register (${systemTokenAmount !== '0' ? `${systemTokenAmount} SYSTEM` : ''}${systemTokenAmount !== '0' && selfTokenAmount !== '0' ? ' + ' : ''}${selfTokenAmount !== '0' ? `${selfTokenAmount} SELF` : ''})`
-                      : 'Register (Free)'
-                }
-                disabled={isTransactionPending}
-                className={
-                  className ||
-                  'font-medium py-2 px-4 rounded transition-colors hover:opacity-90'
-                }
-              />
-              <TransactionSponsor />{' '}
-              {/* ✅ This ensures sponsorship UI is shown */}
-              <TransactionStatus>
-                <TransactionStatusLabel />
-                <TransactionStatusAction />
-              </TransactionStatus>
-            </Transaction>
+              {isTransactionPending
+                ? 'Registering...'
+                : needsTokenApproval
+                  ? `Register (${systemTokenAmount !== '0' ? `${systemTokenAmount} SYSTEM` : ''}${systemTokenAmount !== '0' && selfTokenAmount !== '0' ? ' + ' : ''}${selfTokenAmount !== '0' ? `${selfTokenAmount} SELF` : ''}) - Gasless`
+                  : 'Register (Free, Gasless)'}
+            </Button>
           );
         })()
       )}

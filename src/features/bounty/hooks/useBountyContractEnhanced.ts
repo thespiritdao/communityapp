@@ -1,4 +1,5 @@
-import { useAccount, usePublicClient } from 'wagmi';
+import { useEvmAddress } from '@coinbase/cdp-hooks';
+import { usePublicClient } from 'wagmi';
 import { parseUnits, parseEther } from 'viem';
 import BountyManagerABI from '@/abis/BountyManagerV2.json';
 import { CreateBountyParams, PaymentStructure } from '@/types/bounty';
@@ -23,7 +24,7 @@ export enum MilestoneStatus {
 }
 
 export const useBountyContractEnhanced = () => {
-  const { address } = useAccount();
+  const { evmAddress: address } = useEvmAddress();
   const publicClient = usePublicClient();
 
   const preflightCheck = () => {

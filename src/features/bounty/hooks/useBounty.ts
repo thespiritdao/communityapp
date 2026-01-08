@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useAccount } from 'wagmi';
+import { useEvmAddress } from '@coinbase/cdp-hooks';
 import { fetchTokenBalances } from '../../../utils/fetchTokenBalances';
 import {
   getUserIdentity,
@@ -10,7 +10,7 @@ import { useHatPermissions } from '../../../hooks/useHatPermissions';
 import type { Bounty, BountyNotification } from '../components/BountyList';
 
 export const useBounty = () => {
-  const { address } = useAccount();
+  const { evmAddress: address } = useEvmAddress();
   const { userHats } = useHatPermissions();
   const [bounties, setBounties] = useState<Bounty[]>([]);
   const [notifications, setNotifications] = useState<BountyNotification[]>([]);

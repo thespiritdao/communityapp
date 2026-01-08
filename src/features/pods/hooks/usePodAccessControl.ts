@@ -1,7 +1,7 @@
 // src/features/pods/hooks/usePodAccessControl.ts
 
 import { useEffect, useState } from 'react';
-import { useAccount } from 'wagmi';
+import { useEvmAddress } from '@coinbase/cdp-hooks';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/utils/supabaseClient';
 import { HatCreationService } from '../services/HatCreationService';
@@ -29,7 +29,7 @@ interface AccessControlOptions {
 export function usePodAccessControl(
   options: AccessControlOptions = {},
 ): AccessControlResult {
-  const { address } = useAccount();
+  const { evmAddress: address } = useEvmAddress();
   const router = useRouter();
 
   const [accessState, setAccessState] = useState<AccessControlResult>({
@@ -88,18 +88,31 @@ export function usePodAccessControl(
         if (options.requireExecutive) {
           const { data: executivePod } = await supabase
             .from('pods')
-            .select('membership_hat_id, pod_leads')
+            .select('id, membership_hat_id, pod_leads')
             .eq('name', 'Executive Pod')
             .single();
 
           if (executivePod) {
-            // Check if user is a pod lead
-            isExecutiveMember =
-              executivePod.pod_leads?.some(
-                (lead: string) => lead.toLowerCase() === address.toLowerCase(),
-              ) || false;
+            // CRITICAL FIX: Check pod_members table first (source of truth)
+            const { data: execMembership } = await supabase
+              .from('pod_members')
+              .select('membership_type, is_active')
+              .eq('pod_id', executivePod.id)
+              .eq('wallet', address.toLowerCase())
+              .eq('is_active', true)
+              .maybeSingle();
 
-            // If not a lead, check Hat ownership
+            isExecutiveMember = execMembership?.membership_type === 'leader' || false;
+
+            // Fallback: Check if user is a pod lead in array (legacy)
+            if (!isExecutiveMember) {
+              isExecutiveMember =
+                executivePod.pod_leads?.some(
+                  (lead: string) => lead.toLowerCase() === address.toLowerCase(),
+                ) || false;
+            }
+
+            // Fallback: If not a lead, check Hat ownership on-chain
             if (!isExecutiveMember && executivePod.membership_hat_id) {
               try {
                 const hatBalance = await HatCreationService.checkHatOwnership(
@@ -132,13 +145,26 @@ export function usePodAccessControl(
             .single();
 
           if (pod) {
-            // Check if user is in pod_leads array
-            isPodLeader =
-              pod.pod_leads?.some(
-                (lead: string) => lead.toLowerCase() === address.toLowerCase(),
-              ) || false;
+            // CRITICAL FIX: Check pod_members table first (source of truth)
+            const { data: podMembership } = await supabase
+              .from('pod_members')
+              .select('membership_type, is_active')
+              .eq('pod_id', options.requirePodLeader)
+              .eq('wallet', address.toLowerCase())
+              .eq('is_active', true)
+              .maybeSingle();
 
-            // If not in leads array, check management Hat
+            isPodLeader = podMembership?.membership_type === 'leader' || false;
+
+            // Fallback: Check if user is in pod_leads array (legacy)
+            if (!isPodLeader) {
+              isPodLeader =
+                pod.pod_leads?.some(
+                  (lead: string) => lead.toLowerCase() === address.toLowerCase(),
+                ) || false;
+            }
+
+            // Fallback: If not in leads array, check management Hat on-chain
             if (!isPodLeader && pod.management_hat_id) {
               try {
                 const hatBalance = await HatCreationService.checkHatOwnership(

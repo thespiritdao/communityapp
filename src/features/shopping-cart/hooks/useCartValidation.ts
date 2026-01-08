@@ -1,6 +1,7 @@
 // src/features/shopping-cart/hooks/useCartValidation.ts
 import { useState, useEffect, useCallback } from 'react';
-import { useAccount, usePublicClient } from 'wagmi';
+import { useEvmAddress } from '@coinbase/cdp-hooks';
+import { usePublicClient } from 'wagmi';
 import type { Token } from './useCartCalculations';
 
 // ERC20 ABI for allowance checks
@@ -113,7 +114,7 @@ export const useCartValidation = (
   systemApprovalAmount: bigint,
   selfApprovalAmount: bigint,
 ): CartValidationState => {
-  const { address } = useAccount();
+  const { evmAddress: address } = useEvmAddress();
   const publicClient = usePublicClient();
 
   // Allowance state - matches Cart.tsx exactly
@@ -279,7 +280,7 @@ export const useCartValidation = (
  * CRITICAL: Must match the exact update logic from Cart.tsx
  */
 export const useUpdateAllowances = () => {
-  const { address } = useAccount();
+  const { evmAddress: address } = useEvmAddress();
   const publicClient = usePublicClient();
 
   const updateAllowancesAfterTransaction = useCallback(

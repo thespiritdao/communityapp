@@ -30,15 +30,8 @@ import { QRCodeService } from '../services/QRCodeService';
 import { EventManagerService } from '../services/EventManagerService';
 import { QRScanner } from './QRScanner';
 import { useSimplifiedEventTransactions } from '../hooks/useSimplifiedEventTransactions';
-import { useAccount, useWalletClient } from 'wagmi';
-import {
-  Transaction,
-  TransactionButton,
-  TransactionSponsor,
-  TransactionStatus,
-  TransactionStatusLabel,
-  TransactionStatusAction,
-} from '@coinbase/onchainkit/transaction';
+import { useSendUserOperation, useCurrentUser } from '@coinbase/cdp-hooks';
+import { encodeFunctionData } from 'viem';
 
 const BASE_CHAIN_ID = 8453;
 
@@ -49,11 +42,14 @@ interface EventCheckInSystemProps {
 export const EventCheckInSystem: React.FC<EventCheckInSystemProps> = ({
   event,
 }) => {
-  const { address } = useAccount();
-  const { data: walletClient } = useWalletClient();
+  const { currentUser } = useCurrentUser();
+  const { sendUserOperation } = useSendUserOperation();
   const { registrations, loading, refetch } = useEventRegistrations(event.id);
   const { getCompleteEventCall, getBatchMintCertificatesCall } =
     useSimplifiedEventTransactions();
+
+  // Get address from CDP Smart Account
+  const address = currentUser?.evmSmartAccounts?.[0] as `0x${string}` | undefined;
   const [selectedRegistration, setSelectedRegistration] =
     useState<EventRegistration | null>(null);
   const [showQRModal, setShowQRModal] = useState(false);
@@ -308,6 +304,64 @@ export const EventCheckInSystem: React.FC<EventCheckInSystemProps> = ({
     } catch (error) {
       console.log('❌ Error preparing NFT minting data:', error);
       alert('Error preparing NFT data. Please try again.');
+    }
+  };
+
+  // CDP transaction handler for NFT minting
+  const handleCDPNFTMinting = async () => {
+    if (!currentUser?.evmSmartAccounts?.[0]) {
+      console.error('Smart Account not found');
+      setMintingNFTs(false);
+      return;
+    }
+
+    const calls = prepareBatchMintCalls();
+    if (!calls || calls.length === 0) {
+      alert('Unable to prepare NFT minting transaction');
+      setMintingNFTs(false);
+      return;
+    }
+
+    setMintingNFTs(true);
+
+    try {
+      const smartAccount = currentUser.evmSmartAccounts[0];
+
+      // Encode all calls
+      const cdpCalls = calls.map((call: any) => ({
+        to: call.address as `0x${string}`,
+        value: 0n,
+        data: encodeFunctionData({
+          abi: call.abi,
+          functionName: call.functionName,
+          args: call.args,
+        }),
+      }));
+
+      console.log('🚀 CDP NFT Minting:', {
+        smartAccount,
+        callsCount: cdpCalls.length,
+      });
+
+      const result = await sendUserOperation({
+        evmSmartAccount: smartAccount,
+        network: 'base',
+        calls: cdpCalls,
+        useCdpPaymaster: true,
+      });
+
+      console.log('✅ NFT minting successful:', result);
+
+      // Call the success handler with a response-like object
+      await handleNFTMintingSuccess({
+        transactionReceipts: [{
+          transactionHash: result.userOperationHash,
+        }],
+      });
+    } catch (error: any) {
+      console.error('❌ NFT Minting Transaction Failed:', error);
+      setMintingNFTs(false);
+      alert(`NFT minting failed: ${error?.message || error}`);
     }
   };
 
@@ -824,41 +878,13 @@ export const EventCheckInSystem: React.FC<EventCheckInSystemProps> = ({
                     }
 
                     return (
-                      <Transaction
-                        chainId={BASE_CHAIN_ID}
-                        calls={calls}
-                        isSponsored={true}
-                        onStatus={(status) => {
-                          console.log('📋 NFT Minting status:', status);
-                          if (status.statusName === 'buildingTransaction') {
-                            setMintingNFTs(true);
-                          }
-                        }}
-                        onSuccess={handleNFTMintingSuccess}
-                        onError={(error) => {
-                          console.error(
-                            '❌ NFT Minting Transaction Failed:',
-                            error,
-                          );
-                          setMintingNFTs(false);
-                          alert(
-                            `NFT minting failed: ${error?.message || error}`,
-                          );
-                        }}
+                      <button
+                        onClick={handleCDPNFTMinting}
+                        disabled={mintingNFTs}
+                        className="flex-1 text-white disabled:bg-gray-400 bg-blue-600 hover:bg-blue-700 font-semibold py-2 px-4 rounded"
                       >
-                        <TransactionButton
-                          text={
-                            mintingNFTs ? 'Processing...' : 'Complete & Mint'
-                          }
-                          disabled={mintingNFTs}
-                          className="flex-1 text-white disabled:bg-gray-400"
-                        />
-                        <TransactionSponsor />
-                        <TransactionStatus>
-                          <TransactionStatusLabel />
-                          <TransactionStatusAction />
-                        </TransactionStatus>
-                      </Transaction>
+                        {mintingNFTs ? 'Processing...' : 'Complete & Mint (Gasless)'}
+                      </button>
                     );
                   })()}
                 </div>
