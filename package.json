@@ -81,7 +81,6 @@
     "@radix-ui/react-slot": "^1.2.3",
     "@radix-ui/react-tabs": "^1.1.12",
     "@rainbow-me/rainbowkit": "^2.2.3",
-    "@react-native-async-storage/async-storage": "^2.2.0",
     "@reduxjs/toolkit": "^2.5.0",
     "@safe-global/api-kit": "^2.5.8",
     "@safe-global/protocol-kit": "^5.2.1",
