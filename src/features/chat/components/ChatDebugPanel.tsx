@@ -9,8 +9,14 @@ import { useState } from 'react';
 export function ChatDebugPanel() {
   const [isOpen, setIsOpen] = useState(false);
   const { userHats, userRoles, permissions } = useHatPermissions();
-  const { balances } = useTokenBalances();
+  const { balances, refreshBalances, isLoading } = useTokenBalances();
   const { modules } = usePodModules();
+
+  const handleRefresh = async () => {
+    console.log('🔄 Manually refreshing balances...');
+    await refreshBalances();
+    console.log('✅ Balances refreshed');
+  };
 
   if (!isOpen) {
     return (
@@ -56,22 +62,39 @@ export function ChatDebugPanel() {
         fontSize: '12px',
       }}
     >
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '8px' }}>
         <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 'bold' }}>🐛 Chat Debug Info</h3>
-        <button
-          onClick={() => setIsOpen(false)}
-          style={{
-            background: '#ef4444',
-            color: 'white',
-            border: 'none',
-            borderRadius: '4px',
-            padding: '4px 8px',
-            cursor: 'pointer',
-            fontSize: '12px',
-          }}
-        >
-          Close
-        </button>
+        <div style={{ display: 'flex', gap: '8px' }}>
+          <button
+            onClick={handleRefresh}
+            disabled={isLoading}
+            style={{
+              background: isLoading ? '#9ca3af' : '#8FAAA1',
+              color: 'white',
+              border: 'none',
+              borderRadius: '4px',
+              padding: '4px 8px',
+              cursor: isLoading ? 'not-allowed' : 'pointer',
+              fontSize: '12px',
+            }}
+          >
+            {isLoading ? '...' : '🔄 Refresh'}
+          </button>
+          <button
+            onClick={() => setIsOpen(false)}
+            style={{
+              background: '#ef4444',
+              color: 'white',
+              border: 'none',
+              borderRadius: '4px',
+              padding: '4px 8px',
+              cursor: 'pointer',
+              fontSize: '12px',
+            }}
+          >
+            Close
+          </button>
+        </div>
       </div>
 
       <div style={{ marginBottom: '12px' }}>
