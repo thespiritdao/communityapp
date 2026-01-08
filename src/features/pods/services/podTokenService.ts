@@ -70,7 +70,7 @@ export class PodTokenService {
         const { data: dbTokens } = await supabase
           .from('tokens')
           .select('*')
-          .not('symbol', 'in', ['SELF', 'SYSTEM']) // Exclude system tokens we already added (fixed: use array instead of string)
+          .not('symbol', 'in', '(SELF,SYSTEM)') // Exclude system tokens we already added
           .eq('is_active', true)
           .order('name', { ascending: true });
 
