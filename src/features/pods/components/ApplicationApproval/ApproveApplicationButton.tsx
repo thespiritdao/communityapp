@@ -189,17 +189,18 @@ export const ApproveApplicationButton: React.FC<
       console.log('🔍 Role:', roleLabel);
 
       // Get the role ID from pod_role_permissions based on role type
-      const { data: role, error: roleError } = await supabase
+      // Note: Role names vary by pod (e.g., 'Pod Leader', 'Beta Tester ', 'Executive Pod Leader')
+      // For Beta Tester pod, the role is 'Beta Tester ' (which acts as both leader and member)
+      const { data: roles, error: roleError } = await supabase
         .from('pod_role_permissions')
         .select('id, eligibility_criteria, role_name')
         .eq('pod_id', podId)
-        .eq('role_name', roleLabel === 'leader' ? 'pod_leader' : 'pod_member')
-        .eq('is_active', true)
-        .single();
+        .eq('is_active', true);
 
-      if (roleError || !role) {
+      if (roleError || !roles || roles.length === 0) {
         console.warn(
-          '⚠️ No role found for eligibility check - allowing by default',
+          '⚠️ No roles found for pod - allowing by default',
+          roleError,
         );
         setEligibilityResult({
           eligible: true,
@@ -216,7 +217,26 @@ export const ApproveApplicationButton: React.FC<
         return;
       }
 
-      console.log('🔍 Role found:', role.role_name);
+      // Find the appropriate role based on roleLabel
+      // For leader: look for roles containing 'Leader' or use first role if only one exists
+      // For member: look for roles containing 'Member' or use first role if only one exists
+      let role;
+      if (roleLabel === 'leader') {
+        role = roles.find((r) => r.role_name.toLowerCase().includes('leader'));
+      } else {
+        role = roles.find((r) => r.role_name.toLowerCase().includes('member'));
+      }
+
+      // If no specific role found, use the first (and possibly only) role
+      // This handles cases like Beta Tester pod where there's only one role
+      if (!role && roles.length > 0) {
+        role = roles[0];
+        console.log(
+          `ℹ️ No ${roleLabel} role found, using default role: ${role.role_name}`,
+        );
+      }
+
+      console.log('🔍 Role found:', role?.role_name || 'none');
       console.log(
         '🔍 Criteria count:',
         Array.isArray(role.eligibility_criteria)
@@ -532,13 +552,18 @@ export const ApproveApplicationButton: React.FC<
 
         // ✅ ISSUE #5 FIX: Check eligibility before approving leader application
         console.log('🔍 Checking leader eligibility before approval...');
-        const { data: leaderRole, error: roleError } = await supabase
+
+        // Fetch all roles for the pod
+        const { data: allRoles, error: roleError } = await supabase
           .from('pod_role_permissions')
           .select('id, eligibility_criteria, role_name')
           .eq('pod_id', podId)
-          .eq('role_name', 'pod_leader')
-          .eq('is_active', true)
-          .single();
+          .eq('is_active', true);
+
+        // Find leader role (handles different naming conventions)
+        const leaderRole = allRoles?.find((r) =>
+          r.role_name.toLowerCase().includes('leader'),
+        ) || allRoles?.[0]; // Fallback to first role if no leader-specific role
 
         if (roleError) {
           console.warn('⚠️ No leader role found - skipping eligibility check');
