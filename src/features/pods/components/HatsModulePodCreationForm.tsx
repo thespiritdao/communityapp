@@ -388,73 +388,49 @@ export const HatsModulePodCreationForm: React.FC<
     loadTokens();
   }, [address, publicClient]);
 
-  // Check Executive Pod membership (via Hat ownership) for permission to create pods
+  // Check if user is a leader of ANY pod (permission to create pods)
   useEffect(() => {
-    const checkExecutivePodMembership = async () => {
-      if (!address || !publicClient) {
+    const checkPodLeaderStatus = async () => {
+      if (!address) {
         setCheckingAdvocateToken(false);
         return;
       }
 
       try {
-        console.log('🔍 Checking Executive Pod membership for address:', address);
+        console.log('🔍 Checking pod leader status for address:', address);
 
-        // Get Executive Pod from database
-        const { data: executivePod } = await supabase
-          .from('pods')
-          .select('membership_hat_id, pod_leads')
-          .eq('name', 'Executive Pod')
-          .single();
+        // Check if user has ANY leader role in active_pod_members
+        const { data: leaderRoles, error } = await supabase
+          .from('active_pod_members')
+          .select('membership_type, pod_name')
+          .eq('wallet', address.toLowerCase())
+          .eq('membership_type', 'leader')
+          .eq('is_active', true)
+          .limit(1);
 
-        if (!executivePod) {
-          console.error('❌ Executive Pod not found in database');
+        if (error) {
+          console.error('❌ Error checking leader status:', error);
           setHasAdvocateToken(false);
-          setCheckingAdvocateToken(false);
-          return;
-        }
-
-        // Check if user is in pod_leads array
-        const isPodLead = executivePod.pod_leads?.some(
-          (lead: string) => lead.toLowerCase() === address.toLowerCase(),
-        );
-
-        if (isPodLead) {
-          console.log('✅ User is Executive Pod leader');
-          setHasAdvocateToken(true);
-          setCheckingAdvocateToken(false);
-          return;
-        }
-
-        // Check Hat ownership
-        if (executivePod.membership_hat_id) {
-          const { HatCreationService } = await import('../services/HatCreationService');
-          const hasHat = await HatCreationService.checkHatOwnership(
-            publicClient,
-            executivePod.membership_hat_id,
-            address,
-          );
-
-          console.log('🎫 Executive Pod Hat check:', {
-            address,
-            hatId: executivePod.membership_hat_id,
-            hasHat,
-          });
-
-          setHasAdvocateToken(hasHat);
         } else {
-          console.warn('⚠️ Executive Pod has no membership_hat_id configured');
-          setHasAdvocateToken(false);
+          const isLeader = leaderRoles && leaderRoles.length > 0;
+          setHasAdvocateToken(isLeader);
+
+          if (isLeader) {
+            console.log('✅ User is a pod leader:', leaderRoles[0].pod_name);
+          } else {
+            console.log('❌ User is not a leader of any pod');
+          }
         }
       } catch (error) {
-        console.error('❌ Failed to check Executive Pod membership:', error);
+        console.error('❌ Failed to check pod leader status:', error);
         setHasAdvocateToken(false);
       } finally {
         setCheckingAdvocateToken(false);
       }
     };
 
-    checkExecutivePodMembership();
-  }, [address, publicClient]);
+    checkPodLeaderStatus();
+  }, [address]);
 
   // Load user's pods for hierarchical creation (including HAT-based leadership)
   useEffect(() => {
@@ -583,9 +559,9 @@ export const HatsModulePodCreationForm: React.FC<
   const validation = useMemo(() => {
     const errors: string[] = [];
 
-    // Check Executive Pod membership requirement (skip in testing mode)
+    // Check pod leader requirement (skip in testing mode)
     if (!testingMode && !hasAdvocateToken) {
-      errors.push('Executive Pod membership required to create pods');
+      errors.push('Pod leader access required to create pods');
     }
 
     if (!formData.name.trim()) errors.push('Pod name is required');
@@ -4093,7 +4069,7 @@ Instructions:
                 : '#5C1F1F',
           }}
         >
-          Executive Pod Membership {!testingMode && '(Required)'}
+          Pod Leader Access {!testingMode && '(Required)'}
         </h4>
       </div>
 
@@ -4101,14 +4077,14 @@ Instructions:
         <div className="flex items-center gap-2">
           <Clock className="h-4 w-4 animate-spin" />
           <span className="text-gray-700 text-sm">
-            Verifying Executive Pod membership...
+            Verifying pod leader status...
           </span>
         </div>
       ) : hasAdvocateToken ? (
         <div className="flex items-center gap-2">
           <CheckCircle className="h-4 w-4" style={{ color: '#3F7A5A' }} />
           <span className="text-sm" style={{ color: '#2F5D50' }}>
-            ✅ Verified - You are an Executive Pod member
+            ✅ Verified - You are a pod leader
           </span>
         </div>
       ) : (
@@ -4116,8 +4092,8 @@ Instructions:
           <Shield className="h-4 w-4" style={{ color: '#8B3A3A' }} />
           <span className="text-sm" style={{ color: '#8B3A3A' }}>
             {testingMode
-              ? '⚠️ Not an Executive Pod member (bypassed in testing mode)'
-              : '❌ Executive Pod membership required to create pods'}
+              ? '⚠️ Not a pod leader (bypassed in testing mode)'
+              : '❌ Pod leader access required to create pods'}
           </span>
         </div>
       )}
