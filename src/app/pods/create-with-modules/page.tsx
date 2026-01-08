@@ -1,7 +1,7 @@
 'use client';
 import dynamic from 'next/dynamic';
 import { PodPageLayout } from '@/features/pods/components/PodPageLayout';
-import { ExecutivePodGate } from '@/features/pods/components/PodAccessGate';
+import { AnyPodLeaderGate } from '@/features/pods/components/PodAccessGate';
 import { FeatureErrorBoundary } from '@/components/ErrorBoundary/FeatureErrorBoundary';
 
 // Load lazily to keep the route resilient during dev while UI libs reload
@@ -28,7 +28,7 @@ export default function CreatePodWithModulesPage() {
   );
 
   return (
-    <ExecutivePodGate>
+    <AnyPodLeaderGate>
       <FeatureErrorBoundary featureName="Pod Creation">
         <PodPageLayout
           title="Create Pod"
@@ -43,6 +43,6 @@ export default function CreatePodWithModulesPage() {
           <HatsModulePodCreationForm testingMode={testingMode} />
         </PodPageLayout>
       </FeatureErrorBoundary>
-    </ExecutivePodGate>
+    </AnyPodLeaderGate>
   );
 }
