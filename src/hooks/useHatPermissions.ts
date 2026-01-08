@@ -167,6 +167,17 @@ export const useHatPermissions = (): UseHatPermissionsReturn => {
               hats.push(hatId);
             } else {
               // Use actual role permissions from database
+              // CRITICAL FIX: Parse JSON string if permissions is stored as string
+              let parsedPermissions = {};
+              try {
+                parsedPermissions = typeof roleData.permissions === 'string'
+                  ? JSON.parse(roleData.permissions)
+                  : roleData.permissions || {};
+              } catch (parseError) {
+                console.error('❌ Failed to parse permissions for', podName, ':', parseError);
+                parsedPermissions = {};
+              }
+
               const dynamicRole: HatRole = {
                 hatId: hatId,
                 name:
@@ -174,7 +185,7 @@ export const useHatPermissions = (): UseHatPermissionsReturn => {
                   `${podName} ${isLeader ? 'Leader' : 'Member'}`,
                 podId: podId,
                 isLeaderRole: isLeader,
-                permissions: roleData.permissions || {},
+                permissions: parsedPermissions,
               };
 
               console.log('✅ Loaded role for', podName, ':', {
@@ -193,6 +204,25 @@ export const useHatPermissions = (): UseHatPermissionsReturn => {
       } catch (dbError) {
         console.error('❌ Error loading dynamic pod roles:', dbError);
         // Continue with just hardcoded roles
+      }
+
+      // 🆕 ADD NON-POD HATS (Beta Tester, Advocate) from balances
+      // These are not in active_pod_members because they're not pods
+      console.log('🎩 Checking for non-pod HATs from balances...');
+
+      const BETA_TESTER_HAT = process.env.NEXT_PUBLIC_BETA_TESTER_HAT;
+      const ADVOCATE_TOKEN = process.env.NEXT_PUBLIC_ADVOCATE;
+
+      if (balances?.hasBetaTesterHat && BETA_TESTER_HAT) {
+        console.log('✅ Adding Beta Tester HAT to userHats');
+        hats.push(BETA_TESTER_HAT);
+        // Beta Tester doesn't need a "role" - it's just a HAT for access control
+      }
+
+      if ((balances as any)?.hasAdvocate && ADVOCATE_TOKEN) {
+        console.log('✅ Adding Advocate token to userHats');
+        hats.push(ADVOCATE_TOKEN);
+        // Advocate doesn't need a "role" - it's just a token for access control
       }
 
       // Calculate consolidated permissions from ALL roles
