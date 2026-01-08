@@ -94,7 +94,8 @@ export function usePods(config: UsePodsConfig = {}): UsePodsReturn {
       }
 
       // VISIBILITY FILTERING: Hide Community Pod and Top Hat from non-executive members
-      const isBetaTester = hasBetaTesterSuperuser(userRoles);
+      // 🔧 FIX: Use userHats instead of userRoles - Beta Tester is a standalone HAT
+      const isBetaTester = hasBetaTesterSuperuser(userHats);
       const isExecutiveMember = hasExecutivePodAccess();
 
       // Only executive pod members (and not beta testers) should see Community Pod and Top Hat
@@ -211,7 +212,8 @@ export function usePods(config: UsePodsConfig = {}): UsePodsReturn {
       const isLeader = PodCoreService.canUserManagePodSync(pod, address);
 
       // BETA TESTING: Beta Testers can ONLY manage Beta Testers Pod
-      const isBetaTester = hasBetaTesterSuperuser(userRoles);
+      // 🔧 FIX: Use userHats instead of userRoles - Beta Tester is a standalone HAT, not a pod role
+      const isBetaTester = hasBetaTesterSuperuser(userHats);
       if (isBetaTester) {
         const isBetaTestersPod = pod.name?.toLowerCase() === 'beta testers pod';
         if (isBetaTestersPod) {
@@ -237,7 +239,7 @@ export function usePods(config: UsePodsConfig = {}): UsePodsReturn {
 
       return false;
     },
-    [address, userRoles, hasExecutivePodAccess],
+    [address, userHats, userRoles, hasExecutivePodAccess],
   );
 
   /**

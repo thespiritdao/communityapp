@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
     });
 
     // Initialize service
-    // @ts-expect-error - viem version incompatibility between wagmi and local viem
+    // @ts-ignore - viem version incompatibility between wagmi and local viem causing transaction type conflicts
     const service = new PodOperationsService(publicClient);
 
     // Trigger indexing

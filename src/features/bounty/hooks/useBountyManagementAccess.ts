@@ -102,7 +102,8 @@ export function useBountyManagementAccess(): UseBountyManagementAccessReturn {
       );
 
       // BETA TESTING: Check if user has Beta Tester superuser access
-      const isBetaTester = hasBetaTesterSuperuser(userRoles);
+      // 🔧 FIX: Use userHats instead of userRoles - Beta Tester is a standalone HAT
+      const isBetaTester = hasBetaTesterSuperuser(userHats);
 
       if (isBetaTester) {
         console.log('👑 [Bounties] Beta Tester detected - granting access to ALL pods');
