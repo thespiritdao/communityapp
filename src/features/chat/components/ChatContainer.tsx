@@ -8,6 +8,7 @@ import { supabase } from '@/utils/supabaseClient';
 import '@/features/chat/styles/Chat.css';
 import { useHatPermissions } from '@/hooks/useHatPermissions';
 import { useTokenBalances } from '@/context/TokenBalancesContext';
+import type { TokenBalance } from '@/utils/fetchTokenBalances';
 import { useUnifiedNotifications } from '@/context/UnifiedNotificationContext';
 import { usePodModules } from '@/features/pods/hooks/usePodModules';
 import type { ChatGroup, Message, UserProfile } from '../types';
@@ -236,9 +237,9 @@ export default function ChatContainer({ chatGroupId }: ChatContainerProps) {
           POC: POC,
           BETA_TESTER_HAT: BETA_TESTER_HAT,
           ADVOCATE_TOKEN: ADVOCATE_TOKEN,
-          hasProofOfCuriosity: balances?.hasProofOfCuriosity,
-          hasBetaTesterHat: balances?.hasBetaTesterHat,
-          hasAdvocate: balances?.hasAdvocate,
+          hasProofOfCuriosity: balances?.hasProofOfCuriosity ?? false,
+          hasBetaTesterHat: balances?.hasBetaTesterHat ?? false,
+          hasAdvocate: balances?.hasAdvocate ?? false,
           isBetaTesterChat: requiredToken === BETA_TESTER_HAT,
           isAdvocateChat: requiredToken === ADVOCATE_TOKEN,
           isGeneralChat: requiredToken === GENERAL_CHAT_TOKEN,
