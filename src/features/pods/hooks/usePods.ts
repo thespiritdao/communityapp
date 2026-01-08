@@ -201,15 +201,29 @@ export function usePods(config: UsePodsConfig = {}): UsePodsReturn {
   /**
    * Check if user can manage specific pod
    *
-   * BETA TESTING: Beta Testers have management access ONLY to Beta Testers Pod
-   * Executive Pod members have management access to all pods
+   * CRITICAL FIX: Now checks userRoles from useHatPermissions which loads from active_pod_members table
+   * This properly detects leaders even if they're not in pod_leads array
    */
   const canUserManagePod = useCallback(
     (pod: Pod) => {
       if (!address) return false;
 
-      // Use synchronous version to check if user is a pod leader
-      const isLeader = PodCoreService.canUserManagePodSync(pod, address);
+      // Check 1: Is user in pod_leads array? (backwards compatibility)
+      const isInLeadsArray = pod.pod_leads?.some(
+        (lead) => lead.toLowerCase() === address.toLowerCase()
+      ) ?? false;
+
+      // Check 2: Is user a leader of this pod via HAT-based membership?
+      // userRoles comes from useHatPermissions which loads from active_pod_members
+      const isLeaderViaHat = userRoles?.some(
+        (role) => role.podId === pod.id && role.isLeaderRole
+      ) ?? false;
+
+      const isLeader = isInLeadsArray || isLeaderViaHat;
+
+      if (isLeader) {
+        console.log('👑 [Pods] User is leader of pod:', pod.name);
+      }
 
       // BETA TESTING: Beta Testers can ONLY manage Beta Testers Pod
       // 🔧 FIX: Use userHats instead of userRoles - Beta Tester is a standalone HAT, not a pod role
