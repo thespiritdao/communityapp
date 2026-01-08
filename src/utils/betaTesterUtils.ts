@@ -15,18 +15,32 @@ const BETA_TESTER_HAT_ID = process.env.NEXT_PUBLIC_BETA_TESTER_HAT as `0x${strin
 /**
  * Check if user has Beta Tester hat
  *
- * @param userHats - Array of user's hat roles
+ * @param userHats - Array of user's hat IDs (string[]) or hat roles (HatRole[])
  * @returns true if user has Beta Tester hat
  */
-export function isBetaTester(userHats: HatRole[]): boolean {
+export function isBetaTester(userHats: string[] | HatRole[]): boolean {
   if (!BETA_TESTER_HAT_ID) {
     console.warn('⚠️ BETA_TESTER_HAT_ID not configured');
     return false;
   }
 
-  return userHats.some(
-    (hat) => hat.hatId.toLowerCase() === BETA_TESTER_HAT_ID.toLowerCase(),
-  );
+  // Handle both string[] and HatRole[] formats
+  if (userHats.length === 0) return false;
+
+  // Check if it's a string array or HatRole array
+  const isStringArray = typeof userHats[0] === 'string';
+
+  if (isStringArray) {
+    // userHats is string[] - compare directly
+    return (userHats as string[]).some(
+      (hatId) => hatId.toLowerCase() === BETA_TESTER_HAT_ID.toLowerCase(),
+    );
+  } else {
+    // userHats is HatRole[] - compare hatId property
+    return (userHats as HatRole[]).some(
+      (hat) => hat.hatId.toLowerCase() === BETA_TESTER_HAT_ID.toLowerCase(),
+    );
+  }
 }
 
 /**
@@ -57,10 +71,10 @@ export function isBetaTesterSuperuserEnabled(): boolean {
  * - Beta Tester superuser mode is enabled AND
  * - User has Beta Tester hat
  *
- * @param userHats - Array of user's hat roles
+ * @param userHats - Array of user's hat IDs (string[]) or hat roles (HatRole[])
  * @returns true if user should have superuser access
  */
-export function hasBetaTesterSuperuser(userHats: HatRole[]): boolean {
+export function hasBetaTesterSuperuser(userHats: string[] | HatRole[]): boolean {
   if (!isBetaTesterSuperuserEnabled()) {
     return false;
   }
@@ -87,7 +101,7 @@ export function getBetaTesterHatId(): string | null {
  * Log Beta Tester status for debugging
  */
 export function logBetaTesterStatus(
-  userHats: HatRole[],
+  userHats: string[] | HatRole[],
   context: string,
 ): void {
   const isBeta = isBetaTester(userHats);
