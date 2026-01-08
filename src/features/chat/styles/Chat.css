@@ -30,13 +30,18 @@ body {
 /* Chat container layout */
 .chat-container {
   background-color: #f5f4ed; /* Matches your desired background color */
-  height: 100vh; /* Full viewport height */
-  width: 100%;
+  height: calc(100vh - 60px); /* Full viewport height minus bottom nav */
+  width: 100vw; /* Full viewport width */
+  max-width: 100vw;
   display: flex;
   flex-direction: column;
   overflow: hidden; /* Prevent scrollbars from affecting layout */
-  position: relative;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
   z-index: 1; /* Ensure proper stacking below BottomNav */
+  box-sizing: border-box;
 }
 
 
@@ -55,9 +60,13 @@ body {
 .chat-main {
   flex: 1; /* Make it take up remaining space */
   overflow-y: auto; /* Allow scrolling for messages */
-  padding: 15px; /* Add padding for aesthetics */
-  padding-top: 75px; /* Space for absolute header (60px + 15px) */
+  overflow-x: hidden; /* Prevent horizontal scroll */
+  padding: 8px; /* Add padding for aesthetics */
+  padding-top: 68px; /* Space for absolute header (60px + 8px) */
   padding-bottom: 100px; /* Extra space for fixed input section */
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 /* Messages section */
@@ -70,7 +79,11 @@ body {
   background-position: center;
   background-attachment: fixed; /* Keeps it static */
   background-repeat: no-repeat;
-  padding: 20px;
+  padding: 12px;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow-x: hidden;
 }
 
 
@@ -586,19 +599,21 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 1rem;
+  padding: 0.75rem 1rem;
   background-color: #f5f4ed;
   position: absolute; /* Use absolute within container */
   top: 0;
   left: 0;
   right: 0;
-  /* Removed width: 100% - left + right already makes it full width */
+  width: 100%;
+  max-width: 100%;
   z-index: 50; /* Above messages */
   border-bottom: 1px solid rgba(0, 0, 0, 0.1);
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
   box-sizing: border-box;
   margin: 0;
   height: 60px; /* Fixed height for consistency */
+  overflow: hidden;
 }
 
 /* Chat Title styled similar to categoryTitle */
@@ -705,15 +720,18 @@ body {
 
 /* --- Chat Shell - Different styling for list vs chat view --- */
 .chat-shell {
-  width: 100%;
+  width: 100vw;
+  max-width: 100vw;
   height: 100vh;
   margin: 0;
+  padding: 0;
   background: #f5f4ed; /* Match body background */
   display: flex;
   flex-direction: column;
   position: relative;
   overflow: hidden;
-  
+  box-sizing: border-box;
+
   /* Default: no borders for chat view */
   border: none;
   border-radius: 0;
