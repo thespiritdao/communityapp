@@ -60,6 +60,24 @@ export default function ChatContainer({ chatGroupId }: ChatContainerProps) {
     [],
   );
 
+  // normalize Beta Tester Hat address
+  const BETA_TESTER_HAT = useMemo(
+    () => (process.env.NEXT_PUBLIC_BETA_TESTER_HAT || '').toLowerCase(),
+    [],
+  );
+
+  // normalize Advocate Token address
+  const ADVOCATE_TOKEN = useMemo(
+    () => (process.env.NEXT_PUBLIC_ADVOCATE || '').toLowerCase(),
+    [],
+  );
+
+  // General chat token - beta testers can access this for testing
+  const GENERAL_CHAT_TOKEN = useMemo(
+    () => '0x246Cf64b9aE5d63207242Dbd466F3628d14746FF'.toLowerCase(),
+    [],
+  );
+
   // Get current user profile
   useEffect(() => {
     const fetchUser = async () => {
@@ -216,7 +234,14 @@ export default function ChatContainer({ chatGroupId }: ChatContainerProps) {
             .slice(0, 3)
             .map((h) => String(h).slice(0, 10) + '...'),
           POC: POC,
+          BETA_TESTER_HAT: BETA_TESTER_HAT,
+          ADVOCATE_TOKEN: ADVOCATE_TOKEN,
           hasProofOfCuriosity: balances?.hasProofOfCuriosity,
+          hasBetaTesterHat: balances?.hasBetaTesterHat,
+          hasAdvocate: balances?.hasAdvocate,
+          isBetaTesterChat: requiredToken === BETA_TESTER_HAT,
+          isAdvocateChat: requiredToken === ADVOCATE_TOKEN,
+          isGeneralChat: requiredToken === GENERAL_CHAT_TOKEN,
         });
 
         // 1) Direct HAT ownership (userHats is a list of hat/token ids)
@@ -226,6 +251,21 @@ export default function ChatContainer({ chatGroupId }: ChatContainerProps) {
 
         // 2) Explicit PoC token via balances context
         const hasPoC = requiredToken === POC && !!balances?.hasProofOfCuriosity;
+
+        // 2b) Explicit Beta Tester Hat via balances context
+        // Beta Tester Hat grants access to this specific chat if it's the required token
+        const hasBetaTesterHat =
+          requiredToken === BETA_TESTER_HAT && !!balances?.hasBetaTesterHat;
+
+        // 2c) Beta Tester access to General chat for testing
+        // Beta testers can access General chat specifically (not all chats)
+        const hasBetaTesterGeneralAccess =
+          requiredToken === GENERAL_CHAT_TOKEN && !!balances?.hasBetaTesterHat;
+
+        // 2d) Explicit Advocate Token via balances context
+        // Advocate token grants access to Advocate-specific chat
+        const hasAdvocateToken =
+          requiredToken === ADVOCATE_TOKEN && !!balances?.hasAdvocate;
 
         // 3) Role-level permission with chatAccess
         const hasPermission = (userRoles || []).some((role) => {
@@ -247,16 +287,27 @@ export default function ChatContainer({ chatGroupId }: ChatContainerProps) {
 
         // ✅ FIX: For pod chats with permission system, ONLY check permission (not direct HAT ownership)
         // Direct HAT ownership is already factored into the role permissions loaded from database
-        // PoC is the exception - it grants direct access without permission checks
-        const eligible = hasPermission || hasPoC;
+        // PoC, Beta Tester Hat, and Advocate are exceptions - they grant direct access without permission checks
+        // Beta Tester Hat grants access to: 1) Beta Testers Chat, 2) General chat (for testing)
+        // Advocate grants access to: 1) Advocate Chat
+        const eligible =
+          hasPermission ||
+          hasPoC ||
+          hasBetaTesterHat ||
+          hasBetaTesterGeneralAccess ||
+          hasAdvocateToken;
 
         console.log('Chat: Eligibility result for', group.title, ':', {
           hasHatToken,
           hasPoC,
+          hasBetaTesterHat,
+          hasBetaTesterGeneralAccess,
+          hasAdvocateToken,
           hasPermission,
           eligible,
           willBeShown: eligible,
-          logic: 'Using permission system (not direct HAT ownership) + PoC',
+          logic:
+            'Using permission system + PoC + Beta Tester (Beta Chat + General) + Advocate (Advocate Chat)',
         });
 
         return eligible;
