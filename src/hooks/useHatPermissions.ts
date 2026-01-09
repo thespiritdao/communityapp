@@ -124,6 +124,39 @@ export const useHatPermissions = (): UseHatPermissionsReturn => {
               continue;
             }
 
+            // CRITICAL FIX: Executive Pod Leaders get full permissions without database query
+            const EXEC_POD_ID = 'e35c9e25-d29f-4988-b1e8-2902e960b94c';
+            if (podId === EXEC_POD_ID && isLeader) {
+              console.log('👑 Executive Pod Leader detected - granting full permissions');
+
+              const execRole: HatRole = {
+                hatId: hatId,
+                name: 'Executive Pod Leader',
+                podId: podId,
+                isLeaderRole: true,
+                permissions: {
+                  chatAccess: true,
+                  chatModeration: true,
+                  forumAccess: true,
+                  governanceParticipation: true,
+                  eventCreation: true,
+                  treasuryViewing: true,
+                  treasuryManagement: true,
+                  memberManagement: true,
+                  subPodCreation: true,
+                  roleAssignment: true,
+                  forumModeration: true,
+                  bountyManagement: true,
+                  marketplaceAccess: true,
+                  marketplaceManage: true,
+                },
+              };
+
+              roles.push(execRole);
+              hats.push(hatId);
+              continue; // Skip pod_role_permissions query for Executive Pod
+            }
+
             // Get role permissions from pod_role_permissions
             const { data: roleData, error: roleError } = await supabase
               .from('pod_role_permissions')
