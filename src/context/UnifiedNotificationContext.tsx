@@ -8,7 +8,7 @@ import {
   useEffect,
   useCallback,
 } from 'react';
-import { useAccount } from 'wagmi';
+import { useEvmAddress } from '@coinbase/cdp-hooks';
 import {
   unifiedNotificationService,
   type UnifiedNotification,
@@ -68,7 +68,7 @@ interface UnifiedNotificationProviderProps {
 export const UnifiedNotificationProvider: React.FC<
   UnifiedNotificationProviderProps
 > = ({ children }) => {
-  const { address } = useAccount();
+  const { evmAddress: address } = useEvmAddress();
 
   // State
   const [notifications, setNotifications] = useState<UnifiedNotification[]>([]);

@@ -3,7 +3,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useAccount } from 'wagmi';
+import { useEvmAddress } from '@coinbase/cdp-hooks';
 import { useUnifiedNotifications } from '@/context/UnifiedNotificationContext';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -263,7 +263,7 @@ function NotificationCard({
 }
 
 export default function UnifiedNotificationsPage() {
-  const { address } = useAccount();
+  const { evmAddress: address } = useEvmAddress();
   const {
     notifications,
     unreadCounts,
