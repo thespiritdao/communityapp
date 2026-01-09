@@ -4,6 +4,7 @@ import { PodCoreService } from '../services/PodCoreService';
 import { HatsMigrationService } from '../services/hatsMigrationService';
 import type { Pod } from '../types';
 import { useHatPermissions } from '@/hooks/useHatPermissions';
+import { useDatabaseFirstPermissions } from '@/hooks/useDatabaseFirstPermissions';
 import { hasBetaTesterSuperuser } from '@/utils/betaTesterUtils';
 
 export interface UsePodsConfig {
@@ -32,6 +33,11 @@ export interface UsePodsReturn {
 export function usePods(config: UsePodsConfig = {}): UsePodsReturn {
   const { evmAddress: address } = useEvmAddress();
   const { userHats, userRoles } = useHatPermissions();
+  const {
+    canManagePodSync,
+    isExecutiveLeader,
+    isPodLeader: isLeaderOfPod,
+  } = useDatabaseFirstPermissions();
   const [pods, setPods] = useState<Pod[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -201,61 +207,58 @@ export function usePods(config: UsePodsConfig = {}): UsePodsReturn {
   /**
    * Check if user can manage specific pod
    *
-   * CRITICAL FIX: Now checks userRoles from useHatPermissions which loads from active_pod_members table
-   * This properly detects leaders even if they're not in pod_leads array
+   * DATABASE-FIRST APPROACH:
+   * - Uses database as source of truth (FAST: 50-100ms)
+   * - No RPC calls blocking UI (blockchain verification happens async)
+   * - Resilient to rate limits and network issues
+   * - Still secure (async verification catches mismatches)
    */
   const canUserManagePod = useCallback(
     (pod: Pod) => {
       if (!address) return false;
 
-      // Check 1: Is user in pod_leads array? (backwards compatibility)
-      const isInLeadsArray = pod.pod_leads?.some(
-        (lead) => lead.toLowerCase() === address.toLowerCase()
-      ) ?? false;
+      // FAST database-first check
+      const canManage = canManagePodSync(pod.id);
 
-      // Check 2: Is user a leader of this pod via HAT-based membership?
-      // userRoles comes from useHatPermissions which loads from active_pod_members
-      const isLeaderViaHat = userRoles?.some(
-        (role) => role.podId === pod.id && role.isLeaderRole
-      ) ?? false;
-
-      const isLeader = isInLeadsArray || isLeaderViaHat;
-
-      if (isLeader) {
-        console.log('👑 [Pods] User is leader of pod:', pod.name);
-      }
-
-      // PRIORITY 1: Executive Pod members can manage ALL pods (highest privilege)
-      // This check MUST come first to override Beta Tester restrictions
-      const isExecutiveMember = hasExecutivePodAccess();
-      if (isExecutiveMember) {
-        console.log('👑 [Pods] Executive Pod member has full access to pod:', pod.name);
-        return true;
-      }
-
-      // PRIORITY 2: Pod leaders can manage their own pod (normal case)
-      if (isLeader) {
-        console.log('👑 [Pods] User is leader and can manage pod:', pod.name);
-        return true;
-      }
-
-      // PRIORITY 3: Beta Tester restrictions (lowest privilege - applies only if not Executive)
-      // Beta Testers can ONLY manage Beta Testers Pod
-      const isBetaTester = hasBetaTesterSuperuser(userHats);
-      if (isBetaTester) {
-        const isBetaTestersPod = pod.name?.toLowerCase() === 'beta testers pod';
-        if (isBetaTestersPod) {
-          console.log('👑 [Pods] Beta Tester can manage Beta Testers Pod');
-          return true;
+      if (canManage) {
+        // Determine WHY they can manage (for logging)
+        if (isExecutiveLeader) {
+          console.log(
+            '👑 [DB-First] Executive Pod Leader has access to:',
+            pod.name,
+          );
+        } else if (isLeaderOfPod(pod.id)) {
+          console.log('👑 [DB-First] Pod Leader has access to:', pod.name);
         }
-        // Beta testers cannot manage other pods (unless they're Executive, which was checked above)
-        console.log('🔒 [Pods] Beta Tester cannot manage non-beta pod:', pod.name);
-        return false;
+      } else {
+        // Check Beta Tester restrictions
+        const isBetaTester = hasBetaTesterSuperuser(userHats);
+        if (isBetaTester) {
+          const isBetaTestersPod =
+            pod.name?.toLowerCase() === 'beta testers pod';
+          if (isBetaTestersPod) {
+            console.log(
+              '👑 [DB-First] Beta Tester can manage Beta Testers Pod',
+            );
+            return true;
+          }
+          console.log(
+            '🔒 [DB-First] Beta Tester cannot manage non-beta pod:',
+            pod.name,
+          );
+          return false;
+        }
       }
 
-      return false;
+      return canManage;
     },
-    [address, userHats, userRoles, hasExecutivePodAccess],
+    [
+      address,
+      canManagePodSync,
+      isExecutiveLeader,
+      isLeaderOfPod,
+      userHats,
+    ],
   );
 
   /**
