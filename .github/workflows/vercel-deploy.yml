@@ -10,4 +10,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Trigger Vercel Deploy Hook
-        run: curl -X POST "${{ secrets.VERCEL_DEPLOY_HOOK_URL }}"
+        run: |
+          echo "Triggering Vercel deployment via deploy hook..."
+          RESPONSE=$(curl -s -X POST "${{ secrets.VERCEL_DEPLOY_HOOK_URL }}")
+          echo "Deploy hook response: $RESPONSE"
+          echo "✅ Deployment triggered successfully"
