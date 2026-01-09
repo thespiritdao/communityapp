@@ -225,8 +225,22 @@ export function usePods(config: UsePodsConfig = {}): UsePodsReturn {
         console.log('👑 [Pods] User is leader of pod:', pod.name);
       }
 
-      // BETA TESTING: Beta Testers can ONLY manage Beta Testers Pod
-      // 🔧 FIX: Use userHats instead of userRoles - Beta Tester is a standalone HAT, not a pod role
+      // PRIORITY 1: Executive Pod members can manage ALL pods (highest privilege)
+      // This check MUST come first to override Beta Tester restrictions
+      const isExecutiveMember = hasExecutivePodAccess();
+      if (isExecutiveMember) {
+        console.log('👑 [Pods] Executive Pod member has full access to pod:', pod.name);
+        return true;
+      }
+
+      // PRIORITY 2: Pod leaders can manage their own pod (normal case)
+      if (isLeader) {
+        console.log('👑 [Pods] User is leader and can manage pod:', pod.name);
+        return true;
+      }
+
+      // PRIORITY 3: Beta Tester restrictions (lowest privilege - applies only if not Executive)
+      // Beta Testers can ONLY manage Beta Testers Pod
       const isBetaTester = hasBetaTesterSuperuser(userHats);
       if (isBetaTester) {
         const isBetaTestersPod = pod.name?.toLowerCase() === 'beta testers pod';
@@ -234,21 +248,9 @@ export function usePods(config: UsePodsConfig = {}): UsePodsReturn {
           console.log('👑 [Pods] Beta Tester can manage Beta Testers Pod');
           return true;
         }
-        // Beta testers cannot manage other pods (even if they're leaders)
+        // Beta testers cannot manage other pods (unless they're Executive, which was checked above)
         console.log('🔒 [Pods] Beta Tester cannot manage non-beta pod:', pod.name);
         return false;
-      }
-
-      // If user is a leader, grant management access
-      if (isLeader) {
-        return true;
-      }
-
-      // Executive Pod members can manage all pods (including Community Pod and Top Hat)
-      const isExecutiveMember = hasExecutivePodAccess();
-      if (isExecutiveMember) {
-        console.log('👑 [Pods] Executive Pod member can manage pod:', pod.name);
-        return true;
       }
 
       return false;

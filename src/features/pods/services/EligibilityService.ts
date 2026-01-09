@@ -939,15 +939,35 @@ export class EligibilityService {
         podId,
       );
 
-      // Map role type to role name
-      const roleName = roleType === 'leader' ? 'leader' : 'member';
+      // CRITICAL FIX: Get pod's HAT IDs first, then query by token_address
+      // Cannot query by role_name - must use token_address (HAT ID)
+      const { data: pod, error: podError } = await supabase
+        .from('pods')
+        .select('management_hat_id, membership_hat_id')
+        .eq('id', podId)
+        .single();
 
-      // Fetch role data from pod_role_permissions
+      if (podError || !pod) {
+        console.warn(`⚠️ Pod ${podId} not found:`, podError);
+        return null;
+      }
+
+      // Determine which HAT ID to use based on roleType
+      const hatId = roleType === 'leader'
+        ? pod.management_hat_id
+        : pod.membership_hat_id;
+
+      if (!hatId) {
+        console.warn(`⚠️ No ${roleType} HAT ID found for pod ${podId}`);
+        return null;
+      }
+
+      // Fetch role data from pod_role_permissions using token_address
       const { data: role, error } = await supabase
         .from('pod_role_permissions')
         .select('*')
         .eq('pod_id', podId)
-        .eq('role_name', roleName)
+        .eq('token_address', hatId)
         .eq('is_active', true)
         .single();
 
