@@ -344,7 +344,7 @@ export const PodDeletionButton: React.FC<PodDeletionButtonProps> = ({
                 <ul className="text-sm text-red-600 mt-2 list-disc list-inside">
                   <li>
                     Deactivate all Hats Protocol tokens on-chain{' '}
-                    {walletClient
+                    {address
                       ? '(requires transaction approval)'
                       : '(manual deactivation required - wallet not connected)'}
                   </li>
