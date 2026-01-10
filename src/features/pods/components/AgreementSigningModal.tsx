@@ -54,7 +54,10 @@ export default function AgreementSigningModal({
       const message = `I agree to the following terms:\n\n${agreementText}\n\nSigned by: ${address}\nTimestamp: ${new Date().toISOString()}`;
 
       // Get wallet signature using CDP
-      const result = await signEvmMessage({ message });
+      const result = await signEvmMessage({
+        evmAccount: address,
+        message,
+      });
       const signature = result.signature;
 
       // Store signature in pod_accountability_signatures table
