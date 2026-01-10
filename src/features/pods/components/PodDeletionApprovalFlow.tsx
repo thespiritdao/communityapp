@@ -1036,7 +1036,15 @@ export const PodDeletionApprovalFlow: React.FC<
 
                       console.log('🚀 Executing HAT deactivation with CDP:', calls);
 
-                      const result = await sendUserOperation({ calls });
+                      if (!currentUser?.evmSmartAccounts?.[0]) {
+                        throw new Error('Smart account not available');
+                      }
+
+                      const result = await sendUserOperation({
+                        evmSmartAccount: currentUser.evmSmartAccounts[0] as `0x${string}`,
+                        network: 'base',
+                        calls,
+                      });
 
                       console.log(
                         '✅ HAT deactivation successful, proceeding with database cleanup',
