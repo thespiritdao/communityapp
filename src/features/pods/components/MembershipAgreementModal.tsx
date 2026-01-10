@@ -145,7 +145,7 @@ export const MembershipAgreementModal: React.FC<
       const messageToSign = JSON.stringify(signaturePayload, null, 2);
 
       // Check if EVM account is available
-      const evmAccount = currentUser?.evmAccounts?.[0]?.address;
+      const evmAccount = currentUser?.evmAccounts?.[0];
       if (!evmAccount) {
         toast({
           title: 'Account Not Ready',

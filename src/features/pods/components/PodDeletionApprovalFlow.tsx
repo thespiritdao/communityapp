@@ -401,7 +401,7 @@ export const PodDeletionApprovalFlow: React.FC<
     if (!address || !activeProposal || hasApproved) return;
 
     // Check for EVM account
-    const evmAccount = currentUser?.evmAccounts?.[0]?.address;
+    const evmAccount = currentUser?.evmAccounts?.[0];
     if (!evmAccount) {
       toast({
         title: 'Account Not Ready',

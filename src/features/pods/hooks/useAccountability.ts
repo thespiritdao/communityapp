@@ -76,7 +76,7 @@ export function useAccountability({
       setError(null);
 
       // Check if EVM account is available
-      const evmAccount = currentUser?.evmAccounts?.[0]?.address;
+      const evmAccount = currentUser?.evmAccounts?.[0];
       if (!evmAccount) {
         throw new Error('EVM account not available');
       }

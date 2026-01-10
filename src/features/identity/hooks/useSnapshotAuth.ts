@@ -10,7 +10,7 @@ export const useSnapshotAuth = () => {
       throw new Error('Wallet not connected');
     }
 
-    const evmAccount = currentUser?.evmAccounts?.[0]?.address;
+    const evmAccount = currentUser?.evmAccounts?.[0];
     if (!evmAccount) {
       throw new Error('EVM account not available');
     }

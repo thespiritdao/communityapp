@@ -418,7 +418,7 @@ export const EventRegistrationModal: React.FC<EventRegistrationModalProps> = ({
         const { nonce } = await nonceRes.json();
 
         // Check if EVM account is available
-        const evmAccount = currentUser?.evmAccounts?.[0]?.address;
+        const evmAccount = currentUser?.evmAccounts?.[0];
         if (!evmAccount) {
           throw new Error('EVM account not available');
         }
