@@ -1,7 +1,6 @@
 import { getCurrentSession } from '@/features/identity/utils/serverAuth';
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { useEvmAddress } from '@coinbase/cdp-hooks';
-import { useConfig } from 'wagmi';
+import { useEvmAddress, useSignEvmMessage, useCurrentUser } from '@coinbase/cdp-hooks';
 import { EventService } from '../lib/supabase';
 import { supabase } from '../../../utils/supabaseClient';
 import type {
@@ -407,7 +406,8 @@ export function useUserEvents() {
 
 export function useEventActions(eventId: string | null) {
   const { evmAddress: address } = useEvmAddress();
-  const config = useConfig();
+  const { currentUser } = useCurrentUser();
+  const { signEvmMessage } = useSignEvmMessage();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -424,9 +424,18 @@ export function useEventActions(eventId: string | null) {
         }
         const { nonce } = await nonceRes.json();
 
-        // Import signMessage dynamically to avoid SSR issues
-        const { signMessage } = await import('wagmi/actions');
-        const signature = await signMessage(config, { message: nonce });
+        // Check if EVM account is available
+        const evmAccount = currentUser?.evmAccounts?.[0]?.address;
+        if (!evmAccount) {
+          throw new Error('EVM account not available');
+        }
+
+        // Sign message with CDP
+        const result = await signEvmMessage({
+          evmAccount: evmAccount as `0x${string}`,
+          message: nonce,
+        });
+        const signature = result.signature;
 
         // Verify and get Supabase token
         const verifyRes = await fetch('/api/auth/verify', {

@@ -4,8 +4,7 @@ import { useAuthContext } from '@/features/identity';
 import type React from 'react';
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { useEvmAddress, useSendUserOperation, useCurrentUser } from '@coinbase/cdp-hooks';
-import { useConfig } from 'wagmi';
+import { useEvmAddress, useSendUserOperation, useCurrentUser, useSignEvmMessage } from '@coinbase/cdp-hooks';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -80,6 +79,7 @@ export const SimplifiedEventCreationForm: React.FC<
   // CDP hooks for gas-sponsored Smart Account transactions
   const { currentUser } = useCurrentUser();
   const { sendUserOperation } = useSendUserOperation();
+  const { signEvmMessage } = useSignEvmMessage();
 
   // Form state with smart defaults for testing
   const [formData, setFormData] = useState<EventFormData>(() => {
@@ -373,9 +373,18 @@ export const SimplifiedEventCreationForm: React.FC<
           }
           const { nonce } = await nonceRes.json();
 
-          // Import signMessage dynamically
-          const { signMessage } = await import('wagmi/actions');
-          const signature = await signMessage(config, { message: nonce });
+          // Check if EVM account is available
+          const evmAccount = currentUser?.evmAccounts?.[0]?.address;
+          if (!evmAccount) {
+            throw new Error('EVM account not available');
+          }
+
+          // Sign message with CDP
+          const result = await signEvmMessage({
+            evmAccount: evmAccount as `0x${string}`,
+            message: nonce,
+          });
+          const signature = result.signature;
 
           // Verify and get Supabase token
           const verifyRes = await fetch('/api/auth/verify', {

@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useEvmAddress } from '@coinbase/cdp-hooks';
-import { useConfig } from 'wagmi';
+import { useEvmAddress, useSignEvmMessage, useCurrentUser } from '@coinbase/cdp-hooks';
 import {
   PodCoreService,
   type AccountabilitySignature,
@@ -33,7 +32,8 @@ export function useAccountability({
   podName,
 }: UseAccountabilityConfig): UseAccountabilityReturn {
   const { evmAddress: address } = useEvmAddress();
-  const config = useConfig();
+  const { currentUser } = useCurrentUser();
+  const { signEvmMessage } = useSignEvmMessage();
 
   const [signatures, setSignatures] = useState<AccountabilitySignature[]>([]);
   const [loading, setLoading] = useState(true);
@@ -75,17 +75,21 @@ export function useAccountability({
       setSigning(true);
       setError(null);
 
-      // Import signMessage dynamically to avoid SSR issues
-      const { signMessage } = await import('wagmi/actions');
+      // Check if EVM account is available
+      const evmAccount = currentUser?.evmAccounts?.[0]?.address;
+      if (!evmAccount) {
+        throw new Error('EVM account not available');
+      }
 
       // Create accountability message
       const message = `SpiritDAO Pod Leadership Accountability Statement\n\nAddress: ${address}\nTimestamp: ${new Date().toISOString()}\n\n${agreementText}`;
 
-      // Sign the message
-      const signature = await signMessage(config, {
+      // Sign the message with CDP
+      const signResult = await signEvmMessage({
+        evmAccount: evmAccount as `0x${string}`,
         message,
-        account: address as `0x${string}`,
       });
+      const signature = signResult.signature;
 
       // Store signature using AccountabilitySignatureService
       const result = await AccountabilitySignatureService.createSignature({

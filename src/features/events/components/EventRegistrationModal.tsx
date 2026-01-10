@@ -3,8 +3,7 @@
 import { useAuthContext } from '@/features/identity';
 import type React from 'react';
 import { useState, useEffect, useRef } from 'react';
-import { useEvmAddress, useSendUserOperation, useCurrentUser } from '@coinbase/cdp-hooks';
-import { useConfig } from 'wagmi';
+import { useEvmAddress, useSendUserOperation, useCurrentUser, useSignEvmMessage } from '@coinbase/cdp-hooks';
 import { useRouter } from 'next/navigation';
 import { EventTokenDisplay } from './EventTokenDisplay';
 import {
@@ -70,7 +69,7 @@ export const EventRegistrationModal: React.FC<EventRegistrationModalProps> = ({
   const { evmAddress: address } = useEvmAddress();
   const { currentUser } = useCurrentUser();
   const { sendUserOperation } = useSendUserOperation();
-  const config = useConfig();
+  const { signEvmMessage } = useSignEvmMessage();
   const router = useRouter();
   const { toast } = useToast();
   const authContext = useAuthContext();
@@ -418,9 +417,18 @@ export const EventRegistrationModal: React.FC<EventRegistrationModalProps> = ({
         }
         const { nonce } = await nonceRes.json();
 
-        // Import signMessage dynamically
-        const { signMessage } = await import('wagmi/actions');
-        const signature = await signMessage(config, { message: nonce });
+        // Check if EVM account is available
+        const evmAccount = currentUser?.evmAccounts?.[0]?.address;
+        if (!evmAccount) {
+          throw new Error('EVM account not available');
+        }
+
+        // Sign message with CDP
+        const result = await signEvmMessage({
+          evmAccount: evmAccount as `0x${string}`,
+          message: nonce,
+        });
+        const signature = result.signature;
 
         // Verify and get Supabase token
         const verifyRes = await fetch('/api/auth/verify', {

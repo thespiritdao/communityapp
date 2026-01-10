@@ -1,6 +1,5 @@
 import { useState, useCallback } from 'react';
-import { useEvmAddress } from '@coinbase/cdp-hooks';
-import { useConfig } from 'wagmi';
+import { useEvmAddress, useSignEvmMessage, useCurrentUser } from '@coinbase/cdp-hooks';
 import { useToast } from '@/components/ui/use-toast';
 import { EventService } from '../../events/lib/supabase';
 import {
@@ -39,7 +38,8 @@ export interface UsePodCreationOptions {
 
 export function usePodCreation(options: UsePodCreationOptions = {}) {
   const { evmAddress: address } = useEvmAddress();
-  const config = useConfig();
+  const { currentUser } = useCurrentUser();
+  const { signEvmMessage } = useSignEvmMessage();
   const { toast } = useToast();
   const { createManagerHat } = useManagerHatCreation();
 
@@ -59,13 +59,20 @@ export function usePodCreation(options: UsePodCreationOptions = {}) {
           throw new Error('Wallet not connected');
         }
 
-        const { signMessage } = await import('wagmi/actions');
+        // Check if EVM account is available
+        const evmAccount = currentUser?.evmAccounts?.[0]?.address;
+        if (!evmAccount) {
+          throw new Error('EVM account not available');
+        }
+
         const message = `SpiritDAO Pod Leadership Accountability Statement\n\nAddress: ${signerAddress}\nTimestamp: ${new Date().toISOString()}\n\n${statement}`;
 
-        const signature = await signMessage(config, {
+        // Sign with CDP
+        const signResult = await signEvmMessage({
+          evmAccount: evmAccount as `0x${string}`,
           message,
-          account: signerAddress as `0x${string}`,
         });
+        const signature = signResult.signature;
 
         return {
           address: signerAddress,
