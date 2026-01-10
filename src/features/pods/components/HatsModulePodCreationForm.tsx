@@ -4759,7 +4759,15 @@ Instructions:
 
                       console.log('🚀 Executing Mint HATs with CDP:', { calls });
 
-                      const result = await sendUserOperation({ calls });
+                      if (!currentUser?.evmSmartAccounts?.[0]) {
+                        throw new Error('Smart account not available');
+                      }
+
+                      const result = await sendUserOperation({
+                        evmSmartAccount: currentUser.evmSmartAccounts[0] as `0x${string}`,
+                        network: 'base',
+                        calls,
+                      });
 
                       console.log('✅ Mint HATs successful:', result);
 
@@ -4879,7 +4887,15 @@ Instructions:
 
                       console.log('🚀 Executing Set HAT IDs with CDP:', { calls });
 
-                      const result = await sendUserOperation({ calls });
+                      if (!currentUser?.evmSmartAccounts?.[0]) {
+                        throw new Error('Smart account not available');
+                      }
+
+                      const result = await sendUserOperation({
+                        evmSmartAccount: currentUser.evmSmartAccounts[0] as `0x${string}`,
+                        network: 'base',
+                        calls,
+                      });
 
                       console.log('✅ Set HAT IDs successful:', result);
 
@@ -4988,7 +5004,15 @@ Instructions:
 
                       console.log('🚀 Executing Admin HAT Creation with CDP:', { calls });
 
-                      const result = await sendUserOperation({ calls });
+                      if (!currentUser?.evmSmartAccounts?.[0]) {
+                        throw new Error('Smart account not available');
+                      }
+
+                      const result = await sendUserOperation({
+                        evmSmartAccount: currentUser.evmSmartAccounts[0] as `0x${string}`,
+                        network: 'base',
+                        calls,
+                      });
 
                       console.log('✅ Admin HAT Creation successful:', result);
 
@@ -5088,7 +5112,15 @@ Instructions:
 
                       console.log('🚀 Executing Mint Admin HAT with CDP:', { calls });
 
-                      const result = await sendUserOperation({ calls });
+                      if (!currentUser?.evmSmartAccounts?.[0]) {
+                        throw new Error('Smart account not available');
+                      }
+
+                      const result = await sendUserOperation({
+                        evmSmartAccount: currentUser.evmSmartAccounts[0] as `0x${string}`,
+                        network: 'base',
+                        calls,
+                      });
 
                       console.log('✅ Mint Admin HAT successful:', result);
 
@@ -5188,7 +5220,15 @@ Instructions:
 
                       console.log('🚀 Executing Configure Proxy with CDP:', { calls });
 
-                      const result = await sendUserOperation({ calls });
+                      if (!currentUser?.evmSmartAccounts?.[0]) {
+                        throw new Error('Smart account not available');
+                      }
+
+                      const result = await sendUserOperation({
+                        evmSmartAccount: currentUser.evmSmartAccounts[0] as `0x${string}`,
+                        network: 'base',
+                        calls,
+                      });
 
                       console.log('✅ Configure Proxy successful:', result);
 
@@ -5296,7 +5336,15 @@ Instructions:
 
                       console.log('🚀 Executing Set Eligibility Admin with CDP:', { calls });
 
-                      const result = await sendUserOperation({ calls });
+                      if (!currentUser?.evmSmartAccounts?.[0]) {
+                        throw new Error('Smart account not available');
+                      }
+
+                      const result = await sendUserOperation({
+                        evmSmartAccount: currentUser.evmSmartAccounts[0] as `0x${string}`,
+                        network: 'base',
+                        calls,
+                      });
 
                       console.log('✅ Set Eligibility Admin successful:', result);
 
