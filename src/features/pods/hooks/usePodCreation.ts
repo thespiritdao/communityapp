@@ -86,7 +86,7 @@ export function usePodCreation(options: UsePodCreationOptions = {}) {
         throw error;
       }
     },
-    [address, config],
+    [address, currentUser, signEvmMessage],
   );
 
   /**
