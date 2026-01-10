@@ -162,11 +162,11 @@ export const MembershipAgreementModal: React.FC<
       });
 
       // Sign the agreement
-      const result = await signEvmMessage({
+      const signResult = await signEvmMessage({
         evmAccount: evmAccount as `0x${string}`,
         message: messageToSign,
       });
-      const signature = result.signature;
+      const signature = signResult.signature;
 
       console.log('✍️ Agreement signed:', signature);
 
