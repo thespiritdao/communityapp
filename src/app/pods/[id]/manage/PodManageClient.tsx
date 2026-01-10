@@ -47,7 +47,7 @@ export function PodManageClient({
     <div className="container mx-auto px-4 py-8 bottom-nav-spacing-large">
       <PodManagementContainer
         podId={podId}
-        userAddress={address}
+        userAddress={address ?? undefined}
         toast={toast}
         onClickName={handleClickName}
       />
