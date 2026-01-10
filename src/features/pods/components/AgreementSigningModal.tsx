@@ -10,7 +10,7 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Loader2 } from 'lucide-react';
-import { useEvmAddress, useSignEvmMessage } from '@coinbase/cdp-hooks';
+import { useEvmAddress, useSignEvmMessage, useCurrentUser } from '@coinbase/cdp-hooks';
 import { supabase } from '@/utils/supabaseClient';
 import { useToast } from '@/components/ui/use-toast';
 
@@ -34,6 +34,7 @@ export default function AgreementSigningModal({
   onSigningComplete,
 }: AgreementSigningModalProps) {
   const { evmAddress: address } = useEvmAddress();
+  const { currentUser } = useCurrentUser();
   const { signEvmMessage } = useSignEvmMessage();
   const { toast } = useToast();
   const [isSigning, setIsSigning] = useState(false);
@@ -48,6 +49,17 @@ export default function AgreementSigningModal({
       return;
     }
 
+    // Check if EVM account is available
+    const evmAccount = currentUser?.evmAccounts?.[0]?.address;
+    if (!evmAccount) {
+      toast({
+        title: 'Account Not Ready',
+        description: 'Your wallet account is still initializing. Please wait a moment and try again.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     setIsSigning(true);
     try {
       // Create message to sign
@@ -55,7 +67,7 @@ export default function AgreementSigningModal({
 
       // Get wallet signature using CDP
       const result = await signEvmMessage({
-        evmAccount: address,
+        evmAccount: evmAccount as `0x${string}`,
         message,
       });
       const signature = result.signature;
