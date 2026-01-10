@@ -383,7 +383,7 @@ export const PodDeletionButton: React.FC<PodDeletionButtonProps> = ({
                       )}
                   </ul>
                   <p className="text-xs text-[#3A3A3A] mt-2">
-                    {walletClient
+                    {address
                       ? '✅ Wallet connected - Hats will be deactivated on-chain'
                       : '⚠️ Connect wallet to enable automatic hat deactivation'}
                   </p>
