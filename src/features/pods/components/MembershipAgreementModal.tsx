@@ -111,7 +111,7 @@ export const MembershipAgreementModal: React.FC<
   };
 
   const handleSignAgreement = async () => {
-    if (!address || !publicClient || !walletClient) {
+    if (!address || !publicClient) {
       toast({
         title: 'Wallet Connection Required',
         description: 'Please connect your wallet to proceed.',
