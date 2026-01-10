@@ -1,11 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { useAccount } from 'wagmi';
-import {
-  Transaction,
-  TransactionButton,
-} from '@coinbase/onchainkit/transaction';
+import { useEvmAddress, useSendUserOperation, useCurrentUser } from '@coinbase/cdp-hooks';
+import { encodeFunctionData } from 'viem';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 
@@ -35,17 +32,42 @@ export function ProxyHatIdFixer({
   membershipHatId = '0',
   podName = 'this pod',
 }: ProxyHatIdFixerProps) {
-  const { address } = useAccount();
+  const { evmAddress: address } = useEvmAddress();
+  const { currentUser } = useCurrentUser();
+  const { sendUserOperation, status, error: txError } = useSendUserOperation();
   const [isFixed, setIsFixed] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  const calls = [
-    {
-      address: proxyAddress as `0x${string}`,
-      abi: PROXY_ABI,
-      functionName: 'setHatIds',
-      args: [BigInt(managementHatId), BigInt(membershipHatId)],
-    },
-  ];
+  const handleFixProxy = async () => {
+    if (!currentUser?.evmSmartAccounts?.[0]) {
+      setErrorMsg('Smart account not available');
+      return;
+    }
+
+    try {
+      setErrorMsg(null);
+
+      const data = encodeFunctionData({
+        abi: PROXY_ABI,
+        functionName: 'setHatIds',
+        args: [BigInt(managementHatId), BigInt(membershipHatId)],
+      });
+
+      const result = await sendUserOperation({
+        calls: [{
+          to: proxyAddress as `0x${string}`,
+          data,
+          value: 0n,
+        }],
+      });
+
+      console.log('✅ Proxy HAT IDs set successfully!', result);
+      setIsFixed(true);
+    } catch (err) {
+      console.error('❌ Failed to set proxy HAT IDs:', err);
+      setErrorMsg(err instanceof Error ? err.message : 'Transaction failed');
+    }
+  };
 
   return (
     <Card
@@ -74,21 +96,20 @@ export function ProxyHatIdFixer({
       </div>
 
       {!isFixed ? (
-        <Transaction
-          calls={calls}
-          onSuccess={(response) => {
-            console.log('✅ Proxy HAT IDs set successfully!', response);
-            setIsFixed(true);
-          }}
-          onError={(error) => {
-            console.error('❌ Failed to set proxy HAT IDs:', error);
-          }}
-        >
-          <TransactionButton
-            text="Fix Proxy Configuration"
+        <>
+          <Button
+            onClick={handleFixProxy}
+            disabled={status === 'pending' || !address}
             className="w-full bg-[#C6933F] hover:bg-[#A67E35]"
-          />
-        </Transaction>
+          >
+            {status === 'pending' ? '⏳ Fixing...' : 'Fix Proxy Configuration'}
+          </Button>
+          {(errorMsg || txError) && (
+            <div className="mt-2 p-3 bg-red-50 border border-red-200 rounded text-sm text-red-700">
+              ❌ {errorMsg || txError?.message}
+            </div>
+          )}
+        </>
       ) : (
         <div
           className="p-4 rounded border"
