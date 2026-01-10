@@ -3,7 +3,7 @@
 import type React from 'react';
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { useEvmAddress } from '@coinbase/cdp-hooks';
+import { useEvmAddress, useSendUserOperation, useCurrentUser } from '@coinbase/cdp-hooks';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -28,17 +28,9 @@ import type {
   EligibilityRule,
 } from '../../../services/hatsModulesService';
 import { PodTokenService, type PodToken } from '../services/podTokenService';
-import {
-  Transaction,
-  TransactionButton,
-  TransactionSponsor,
-  TransactionStatus,
-  TransactionStatusLabel,
-  TransactionStatusAction,
-} from '@coinbase/onchainkit/transaction';
 import { usePublicClient } from 'wagmi';
 import { base } from 'viem/chains';
-import { decodeEventLog } from 'viem';
+import { decodeEventLog, encodeFunctionData } from 'viem';
 import { PodService } from '../services/PodService';
 import { supabase } from '@/lib/supabase';
 import { useHatPermissions } from '../hooks/useHatPermissions';
@@ -122,9 +114,10 @@ export const HatsModulePodCreationForm: React.FC<
 > = ({ onSuccess, onCancel, testingMode = false }) => {
   const router = useRouter();
   const { evmAddress: address } = useEvmAddress();
+  const { currentUser } = useCurrentUser();
+  const { sendUserOperation, status: txStatus, error: txError } = useSendUserOperation();
   const { toast } = useToast();
   const publicClient = usePublicClient();
-  const { data: walletClient } = useWalletClient();
 
   // ===================================================================
   // CRITICAL FIX: Support continuing pod setup from database
@@ -4514,53 +4507,131 @@ Instructions:
 
               {showTransaction && transactionCalls.length > 0 && (
                 <>
-                  {/* Transaction 1: HAT Creation */}
+                  {/* Transaction 1: HAT Creation (CDP) */}
                   {!hatCreationComplete && !podCreated && (
-                    <Transaction
-                      chainId={base.id}
-                      calls={[transactionCalls[0]]}
-                      isSponsored={true}
-                      onStatus={handleHatCreationStatus}
-                      onError={handleHatCreationError}
-                    >
-                      <TransactionButton
+                    <div className="space-y-3">
+                      <Button
+                        onClick={async () => {
+                          if (!currentUser?.evmSmartAccounts?.[0]) {
+                            toast({
+                              title: 'Account Not Ready',
+                              description: 'Smart account not available',
+                              variant: 'destructive',
+                            });
+                            return;
+                          }
+
+                          try {
+                            // Encode the transaction call
+                            const call = transactionCalls[0];
+                            const data = encodeFunctionData({
+                              abi: call.abi,
+                              functionName: call.functionName,
+                              args: call.args,
+                            });
+
+                            console.log('🚀 Executing HAT Creation with CDP:', { call });
+
+                            const result = await sendUserOperation({
+                              calls: [{
+                                to: call.address as `0x${string}`,
+                                data,
+                                value: 0n,
+                              }],
+                            });
+
+                            console.log('✅ HAT Creation successful:', result);
+
+                            // Call the status handler with the result
+                            handleHatCreationStatus({ statusName: 'success', statusData: result });
+                          } catch (error) {
+                            console.error('❌ HAT Creation failed:', error);
+                            handleHatCreationError(error);
+                          }
+                        }}
+                        disabled={txStatus === 'pending'}
                         className="w-full text-white font-medium py-3 px-6 rounded-lg bg-[#2F5D50] hover:bg-[#1F453A]"
-                        text="Create Pod"
-                      />
-                      <TransactionSponsor />
-                      <div className="mt-4">
-                        <TransactionStatus>
-                          <TransactionStatusLabel />
-                          <TransactionStatusAction />
-                        </TransactionStatus>
-                      </div>
-                    </Transaction>
+                      >
+                        {txStatus === 'pending' ? '⏳ Creating Pod...' : 'Create Pod'}
+                      </Button>
+
+                      {txStatus === 'pending' && (
+                        <div className="mt-2 text-sm text-blue-600 text-center">
+                          🔄 Transaction in progress... (Sponsored - no gas fees!)
+                        </div>
+                      )}
+
+                      {txError && (
+                        <div className="mt-2 text-sm text-red-600 bg-red-50 p-2 rounded border border-red-200">
+                          ❌ {txError.message}
+                        </div>
+                      )}
+                    </div>
                   )}
 
-                  {/* Transaction 2: Proxy Deployment */}
+                  {/* Transaction 2: Proxy Deployment (CDP) */}
                   {hatCreationComplete &&
                     !proxyDeploymentComplete &&
                     !podCreated &&
                     transactionCalls.length > 1 && (
-                      <Transaction
-                        chainId={base.id}
-                        calls={[transactionCalls[1]]}
-                        isSponsored={true}
-                        onStatus={handleProxyDeploymentStatus}
-                        onError={handleProxyDeploymentError}
-                      >
-                        <TransactionButton
+                      <div className="space-y-3">
+                        <Button
+                          onClick={async () => {
+                            if (!currentUser?.evmSmartAccounts?.[0]) {
+                              toast({
+                                title: 'Account Not Ready',
+                                description: 'Smart account not available',
+                                variant: 'destructive',
+                              });
+                              return;
+                            }
+
+                            try {
+                              // Encode the transaction call
+                              const call = transactionCalls[1];
+                              const data = encodeFunctionData({
+                                abi: call.abi,
+                                functionName: call.functionName,
+                                args: call.args,
+                              });
+
+                              console.log('🚀 Executing Proxy Deployment with CDP:', { call });
+
+                              const result = await sendUserOperation({
+                                calls: [{
+                                  to: call.address as `0x${string}`,
+                                  data,
+                                  value: 0n,
+                                }],
+                              });
+
+                              console.log('✅ Proxy Deployment successful:', result);
+
+                              // Call the status handler with the result
+                              handleProxyDeploymentStatus({ statusName: 'success', statusData: result });
+                            } catch (error) {
+                              console.error('❌ Proxy Deployment failed:', error);
+                              handleProxyDeploymentError(error);
+                            }
+                          }}
+                          disabled={txStatus === 'pending'}
                           className="w-full text-white font-medium py-3 px-6 rounded-lg bg-[#2F5D50] hover:bg-[#1F453A]"
-                          text="Deploy Proxy"
-                        />
-                        <TransactionSponsor />
-                        <div className="mt-4">
-                          <TransactionStatus>
-                            <TransactionStatusLabel />
-                            <TransactionStatusAction />
-                          </TransactionStatus>
-                        </div>
-                      </Transaction>
+                        >
+                          {txStatus === 'pending' ? '⏳ Deploying Proxy...' : 'Deploy Proxy'}
+                        </Button>
+
+                        {txStatus === 'pending' && (
+                          <div className="mt-2 text-sm text-blue-600 text-center">
+                            🔄 Transaction in progress... (Sponsored - no gas fees!)
+                          </div>
+                        )}
+
+                        {txError && (
+                          <div className="mt-2 text-sm text-red-600 bg-red-50 p-2 rounded border border-red-200">
+                            ❌ {txError.message}
+                          </div>
+                        )}
+                      </div>
                     )}
                 </>
               )}
@@ -4647,49 +4718,61 @@ Instructions:
                 </div>
               </div>
 
-              {!showMintTransaction && (
-                <button
-                  onClick={() => {
-                    setShowMintTransaction(true);
-                    // Trigger button click after state update
-                    setTimeout(() => {
-                      mintButtonRef.current?.click();
-                    }, 100);
-                  }}
-                  className="w-full text-white font-medium py-3 px-6 rounded-lg transition-colors"
-                  style={{ backgroundColor: '#3F7A5A' }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.backgroundColor = '#2F5D50';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.backgroundColor = '#3F7A5A';
-                  }}
-                >
-                  Mint Tokens for Leaders
-                </button>
-              )}
+              <div className="space-y-3">
+                <Button
+                  onClick={async () => {
+                    if (!currentUser?.evmSmartAccounts?.[0]) {
+                      toast({
+                        title: 'Account Not Ready',
+                        description: 'Smart account not available',
+                        variant: 'destructive',
+                      });
+                      return;
+                    }
 
-              {showMintTransaction && (
-                <Transaction
-                  chainId={base.id}
-                  calls={mintHatCalls}
-                  isSponsored={true}
-                  onSuccess={handleMintHatsSuccess}
-                  onError={handleMintHatsError}
+                    try {
+                      // Encode all mint calls
+                      const calls = mintHatCalls.map((call: any) => ({
+                        to: call.address as `0x${string}`,
+                        data: encodeFunctionData({
+                          abi: call.abi,
+                          functionName: call.functionName,
+                          args: call.args,
+                        }),
+                        value: 0n,
+                      }));
+
+                      console.log('🚀 Executing Mint HATs with CDP:', { calls });
+
+                      const result = await sendUserOperation({ calls });
+
+                      console.log('✅ Mint HATs successful:', result);
+
+                      // Call success handler
+                      handleMintHatsSuccess(result);
+                    } catch (error) {
+                      console.error('❌ Mint HATs failed:', error);
+                      handleMintHatsError(error);
+                    }
+                  }}
+                  disabled={txStatus === 'pending'}
+                  className="w-full text-white font-medium py-3 px-6 rounded-lg bg-[#3F7A5A] hover:bg-[#2F5D50]"
                 >
-                  <TransactionButton
-                    className="w-full text-white font-medium py-3 px-6 rounded-lg bg-[#3F7A5A] hover:bg-[#2F5D50]"
-                    text="Mint HATs"
-                  />
-                  <TransactionSponsor />
-                  <div className="mt-4">
-                    <TransactionStatus>
-                      <TransactionStatusLabel />
-                      <TransactionStatusAction />
-                    </TransactionStatus>
+                  {txStatus === 'pending' ? '⏳ Minting Tokens...' : 'Mint Tokens for Leaders'}
+                </Button>
+
+                {txStatus === 'pending' && (
+                  <div className="mt-2 text-sm text-blue-600 text-center">
+                    🔄 Minting {mintHatCalls.length} tokens... (Sponsored - no gas fees!)
                   </div>
-                </Transaction>
-              )}
+                )}
+
+                {txError && (
+                  <div className="mt-2 text-sm text-red-600 bg-red-50 p-2 rounded border border-red-200">
+                    ❌ {txError.message}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         )}
@@ -4755,49 +4838,61 @@ Instructions:
                 </ul>
               </div>
 
-              {!showSetHatIdsTransaction && (
-                <button
-                  onClick={() => {
-                    setShowSetHatIdsTransaction(true);
-                    // Trigger button click after state update
-                    setTimeout(() => {
-                      setHatIdsButtonRef.current?.click();
-                    }, 100);
-                  }}
-                  className="w-full text-white font-medium py-3 px-6 rounded-lg transition-colors"
-                  style={{ backgroundColor: '#2F5D50' }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.backgroundColor = '#1F453A';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.backgroundColor = '#2F5D50';
-                  }}
-                >
-                  Configure Proxy Authorization
-                </button>
-              )}
+              <div className="space-y-3">
+                <Button
+                  onClick={async () => {
+                    if (!currentUser?.evmSmartAccounts?.[0]) {
+                      toast({
+                        title: 'Account Not Ready',
+                        description: 'Smart account not available',
+                        variant: 'destructive',
+                      });
+                      return;
+                    }
 
-              {showSetHatIdsTransaction && (
-                <Transaction
-                  chainId={base.id}
-                  calls={setHatIdsCalls}
-                  isSponsored={true}
-                  onSuccess={handleSetHatIdsSuccess}
-                  onError={handleSetHatIdsError}
+                    try {
+                      // Encode set HAT IDs calls
+                      const calls = setHatIdsCalls.map((call: any) => ({
+                        to: call.address as `0x${string}`,
+                        data: encodeFunctionData({
+                          abi: call.abi,
+                          functionName: call.functionName,
+                          args: call.args,
+                        }),
+                        value: 0n,
+                      }));
+
+                      console.log('🚀 Executing Set HAT IDs with CDP:', { calls });
+
+                      const result = await sendUserOperation({ calls });
+
+                      console.log('✅ Set HAT IDs successful:', result);
+
+                      // Call success handler
+                      handleSetHatIdsSuccess(result);
+                    } catch (error) {
+                      console.error('❌ Set HAT IDs failed:', error);
+                      handleSetHatIdsError(error);
+                    }
+                  }}
+                  disabled={txStatus === 'pending'}
+                  className="w-full text-white font-medium py-3 px-6 rounded-lg bg-[#2F5D50] hover:bg-[#1F453A]"
                 >
-                  <TransactionButton
-                    className="w-full text-white font-medium py-3 px-6 rounded-lg bg-[#2F5D50] hover:bg-[#1F453A]"
-                    text="Configure Proxy Authorization (Sponsored)"
-                  />
-                  <TransactionSponsor />
-                  <div className="mt-4">
-                    <TransactionStatus>
-                      <TransactionStatusLabel />
-                      <TransactionStatusAction />
-                    </TransactionStatus>
+                  {txStatus === 'pending' ? '⏳ Configuring...' : 'Configure Proxy Authorization'}
+                </Button>
+
+                {txStatus === 'pending' && (
+                  <div className="mt-2 text-sm text-blue-600 text-center">
+                    🔄 Configuring proxy... (Sponsored - no gas fees!)
                   </div>
-                </Transaction>
-              )}
+                )}
+
+                {txError && (
+                  <div className="mt-2 text-sm text-red-600 bg-red-50 p-2 rounded border border-red-200">
+                    ❌ {txError.message}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         )}
