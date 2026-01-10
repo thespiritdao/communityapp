@@ -60,7 +60,6 @@ export const SimplifiedEventCreationForm: React.FC<
 > = ({ onSuccess, onCancel }) => {
   const router = useRouter();
   const { evmAddress: address } = useEvmAddress();
-  const config = useConfig();
   const authContext = useAuthContext();
   const {
     createEvent,

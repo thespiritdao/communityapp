@@ -471,7 +471,7 @@ export function useEventActions(eventId: string | null) {
     }
 
     return !!session?.user?.id;
-  }, [address, config]);
+  }, [address, currentUser, signEvmMessage]);
 
   const publishEvent = useCallback(async (): Promise<boolean> => {
     if (!eventId) {
