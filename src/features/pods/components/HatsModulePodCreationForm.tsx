@@ -4948,49 +4948,59 @@ Instructions:
                 </ul>
               </div>
 
-              {!showAdminHatTransaction && (
-                <button
-                  onClick={() => {
-                    setShowAdminHatTransaction(true);
-                    // Trigger button click after state update
-                    setTimeout(() => {
-                      adminHatButtonRef.current?.click();
-                    }, 100);
-                  }}
-                  className="w-full text-white font-medium py-3 px-6 rounded-lg transition-colors"
-                  style={{ backgroundColor: '#6A5F7A' }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.backgroundColor = '#4A3F5A';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.backgroundColor = '#6A5F7A';
-                  }}
-                >
-                  Create Admin Role
-                </button>
-              )}
+              <div className="space-y-3">
+                <Button
+                  onClick={async () => {
+                    if (!currentUser?.evmSmartAccounts?.[0]) {
+                      toast({
+                        title: 'Account Not Ready',
+                        description: 'Smart account not available',
+                        variant: 'destructive',
+                      });
+                      return;
+                    }
 
-              {showAdminHatTransaction && (
-                <Transaction
-                  chainId={base.id}
-                  calls={adminHatCalls}
-                  isSponsored={true}
-                  onSuccess={handleAdminHatSuccess}
-                  onError={handleAdminHatError}
+                    try {
+                      const calls = adminHatCalls.map((call: any) => ({
+                        to: call.address as `0x${string}`,
+                        data: encodeFunctionData({
+                          abi: call.abi,
+                          functionName: call.functionName,
+                          args: call.args,
+                        }),
+                        value: 0n,
+                      }));
+
+                      console.log('🚀 Executing Admin HAT Creation with CDP:', { calls });
+
+                      const result = await sendUserOperation({ calls });
+
+                      console.log('✅ Admin HAT Creation successful:', result);
+
+                      handleAdminHatSuccess(result);
+                    } catch (error) {
+                      console.error('❌ Admin HAT Creation failed:', error);
+                      handleAdminHatError(error);
+                    }
+                  }}
+                  disabled={txStatus === 'pending'}
+                  className="w-full text-white font-medium py-3 px-6 rounded-lg bg-[#6A5F7A] hover:bg-[#4A3F5A]"
                 >
-                  <TransactionButton
-                    className="w-full text-white font-medium py-3 px-6 rounded-lg bg-[#6A5F7A] hover:bg-[#4A3F5A]"
-                    text="Create Admin Role"
-                  />
-                  <TransactionSponsor />
-                  <div className="mt-4">
-                    <TransactionStatus>
-                      <TransactionStatusLabel />
-                      <TransactionStatusAction />
-                    </TransactionStatus>
+                  {txStatus === 'pending' ? '⏳ Creating Admin Role...' : 'Create Admin Role'}
+                </Button>
+
+                {txStatus === 'pending' && (
+                  <div className="mt-2 text-sm text-blue-600 text-center">
+                    🔄 Creating admin role... (Sponsored - no gas fees!)
                   </div>
-                </Transaction>
-              )}
+                )}
+
+                {txError && (
+                  <div className="mt-2 text-sm text-red-600 bg-red-50 p-2 rounded border border-red-200">
+                    ❌ {txError.message}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         )}
@@ -5038,42 +5048,59 @@ Instructions:
                 </ul>
               </div>
 
-              {!showMintAdminHatTransaction && (
-                <button
-                  onClick={() => {
-                    setShowMintAdminHatTransaction(true);
-                    // Trigger button click after state update
-                    setTimeout(() => {
-                      mintAdminHatButtonRef.current?.click();
-                    }, 100);
-                  }}
-                  className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-3 px-6 rounded-lg transition-colors"
-                >
-                  Mint Admin HAT to Proxy
-                </button>
-              )}
+              <div className="space-y-3">
+                <Button
+                  onClick={async () => {
+                    if (!currentUser?.evmSmartAccounts?.[0]) {
+                      toast({
+                        title: 'Account Not Ready',
+                        description: 'Smart account not available',
+                        variant: 'destructive',
+                      });
+                      return;
+                    }
 
-              {showMintAdminHatTransaction && (
-                <Transaction
-                  chainId={base.id}
-                  calls={mintAdminHatCalls}
-                  isSponsored={true}
-                  onSuccess={handleMintAdminHatSuccess}
-                  onError={handleMintAdminHatError}
+                    try {
+                      const calls = mintAdminHatCalls.map((call: any) => ({
+                        to: call.address as `0x${string}`,
+                        data: encodeFunctionData({
+                          abi: call.abi,
+                          functionName: call.functionName,
+                          args: call.args,
+                        }),
+                        value: 0n,
+                      }));
+
+                      console.log('🚀 Executing Mint Admin HAT with CDP:', { calls });
+
+                      const result = await sendUserOperation({ calls });
+
+                      console.log('✅ Mint Admin HAT successful:', result);
+
+                      handleMintAdminHatSuccess(result);
+                    } catch (error) {
+                      console.error('❌ Mint Admin HAT failed:', error);
+                      handleMintAdminHatError(error);
+                    }
+                  }}
+                  disabled={txStatus === 'pending'}
+                  className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-3 px-6 rounded-lg"
                 >
-                  <TransactionButton
-                    className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-3 px-6 rounded-lg transition-colors"
-                    text="Mint Admin HAT"
-                  />
-                  <TransactionSponsor />
-                  <div className="mt-4">
-                    <TransactionStatus>
-                      <TransactionStatusLabel />
-                      <TransactionStatusAction />
-                    </TransactionStatus>
+                  {txStatus === 'pending' ? '⏳ Minting Admin HAT...' : 'Mint Admin HAT to Proxy'}
+                </Button>
+
+                {txStatus === 'pending' && (
+                  <div className="mt-2 text-sm text-blue-600 text-center">
+                    🔄 Minting admin HAT... (Sponsored - no gas fees!)
                   </div>
-                </Transaction>
-              )}
+                )}
+
+                {txError && (
+                  <div className="mt-2 text-sm text-red-600 bg-red-50 p-2 rounded border border-red-200">
+                    ❌ {txError.message}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         )}
@@ -5121,42 +5148,59 @@ Instructions:
                 </ul>
               </div>
 
-              {!showConfigureProxyTransaction && (
-                <button
-                  onClick={() => {
-                    setShowConfigureProxyTransaction(true);
-                    // Trigger button click after state update
-                    setTimeout(() => {
-                      configureProxyButtonRef.current?.click();
-                    }, 100);
-                  }}
-                  className="w-full bg-teal-600 hover:bg-teal-700 text-white font-medium py-3 px-6 rounded-lg transition-colors"
-                >
-                  Configure Proxy Contract
-                </button>
-              )}
+              <div className="space-y-3">
+                <Button
+                  onClick={async () => {
+                    if (!currentUser?.evmSmartAccounts?.[0]) {
+                      toast({
+                        title: 'Account Not Ready',
+                        description: 'Smart account not available',
+                        variant: 'destructive',
+                      });
+                      return;
+                    }
 
-              {showConfigureProxyTransaction && (
-                <Transaction
-                  chainId={base.id}
-                  calls={configureProxyCalls}
-                  isSponsored={true}
-                  onSuccess={handleConfigureProxySuccess}
-                  onError={handleConfigureProxyError}
+                    try {
+                      const calls = configureProxyCalls.map((call: any) => ({
+                        to: call.address as `0x${string}`,
+                        data: encodeFunctionData({
+                          abi: call.abi,
+                          functionName: call.functionName,
+                          args: call.args,
+                        }),
+                        value: 0n,
+                      }));
+
+                      console.log('🚀 Executing Configure Proxy with CDP:', { calls });
+
+                      const result = await sendUserOperation({ calls });
+
+                      console.log('✅ Configure Proxy successful:', result);
+
+                      handleConfigureProxySuccess(result);
+                    } catch (error) {
+                      console.error('❌ Configure Proxy failed:', error);
+                      handleConfigureProxyError(error);
+                    }
+                  }}
+                  disabled={txStatus === 'pending'}
+                  className="w-full bg-teal-600 hover:bg-teal-700 text-white font-medium py-3 px-6 rounded-lg"
                 >
-                  <TransactionButton
-                    className="w-full bg-teal-600 hover:bg-teal-700 text-white font-medium py-3 px-6 rounded-lg transition-colors"
-                    text="Set Admin HAT"
-                  />
-                  <TransactionSponsor />
-                  <div className="mt-4">
-                    <TransactionStatus>
-                      <TransactionStatusLabel />
-                      <TransactionStatusAction />
-                    </TransactionStatus>
+                  {txStatus === 'pending' ? '⏳ Configuring Proxy...' : 'Configure Proxy Contract'}
+                </Button>
+
+                {txStatus === 'pending' && (
+                  <div className="mt-2 text-sm text-blue-600 text-center">
+                    🔄 Configuring proxy contract... (Sponsored - no gas fees!)
                   </div>
-                </Transaction>
-              )}
+                )}
+
+                {txError && (
+                  <div className="mt-2 text-sm text-red-600 bg-red-50 p-2 rounded border border-red-200">
+                    ❌ {txError.message}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         )}
@@ -5212,42 +5256,59 @@ Instructions:
                 </ul>
               </div>
 
-              {!showEligibilityAdminTransaction && (
-                <button
-                  onClick={() => {
-                    setShowEligibilityAdminTransaction(true);
-                    // Trigger button click after state update
-                    setTimeout(() => {
-                      eligibilityAdminButtonRef.current?.click();
-                    }, 100);
-                  }}
-                  className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-medium py-3 px-6 rounded-lg transition-colors"
-                >
-                  Configure Eligibility Module
-                </button>
-              )}
+              <div className="space-y-3">
+                <Button
+                  onClick={async () => {
+                    if (!currentUser?.evmSmartAccounts?.[0]) {
+                      toast({
+                        title: 'Account Not Ready',
+                        description: 'Smart account not available',
+                        variant: 'destructive',
+                      });
+                      return;
+                    }
 
-              {showEligibilityAdminTransaction && (
-                <Transaction
-                  chainId={base.id}
-                  calls={eligibilityAdminCalls}
-                  isSponsored={true}
-                  onSuccess={handleEligibilityAdminSuccess}
-                  onError={handleEligibilityAdminError}
+                    try {
+                      const calls = eligibilityAdminCalls.map((call: any) => ({
+                        to: call.address as `0x${string}`,
+                        data: encodeFunctionData({
+                          abi: call.abi,
+                          functionName: call.functionName,
+                          args: call.args,
+                        }),
+                        value: 0n,
+                      }));
+
+                      console.log('🚀 Executing Set Eligibility Admin with CDP:', { calls });
+
+                      const result = await sendUserOperation({ calls });
+
+                      console.log('✅ Set Eligibility Admin successful:', result);
+
+                      handleEligibilityAdminSuccess(result);
+                    } catch (error) {
+                      console.error('❌ Set Eligibility Admin failed:', error);
+                      handleEligibilityAdminError(error);
+                    }
+                  }}
+                  disabled={txStatus === 'pending'}
+                  className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-medium py-3 px-6 rounded-lg"
                 >
-                  <TransactionButton
-                    className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-medium py-3 px-6 rounded-lg transition-colors"
-                    text="Set Eligibility Admin"
-                  />
-                  <TransactionSponsor />
-                  <div className="mt-4">
-                    <TransactionStatus>
-                      <TransactionStatusLabel />
-                      <TransactionStatusAction />
-                    </TransactionStatus>
+                  {txStatus === 'pending' ? '⏳ Configuring Eligibility...' : 'Configure Eligibility Module'}
+                </Button>
+
+                {txStatus === 'pending' && (
+                  <div className="mt-2 text-sm text-blue-600 text-center">
+                    🔄 Configuring eligibility module... (Sponsored - no gas fees!)
                   </div>
-                </Transaction>
-              )}
+                )}
+
+                {txError && (
+                  <div className="mt-2 text-sm text-red-600 bg-red-50 p-2 rounded border border-red-200">
+                    ❌ {txError.message}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         )}
