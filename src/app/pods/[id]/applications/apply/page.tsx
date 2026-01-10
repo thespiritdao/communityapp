@@ -2,8 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { useEvmAddress } from '@coinbase/cdp-hooks';
-import { useSignMessage } from 'wagmi';
+import { useEvmAddress, useSignEvmMessage, useCurrentUser } from '@coinbase/cdp-hooks';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -40,8 +39,9 @@ export default function ApplyToPodPage() {
   const { id: podId } = useParams();
   const router = useRouter();
   const { evmAddress: address } = useEvmAddress();
+  const { currentUser } = useCurrentUser();
+  const { signEvmMessage } = useSignEvmMessage();
   const { toast } = useToast();
-  const { signMessageAsync } = useSignMessage();
 
   const [pod, setPod] = useState<Pod | null>(null);
   const [loading, setLoading] = useState(true);
@@ -129,6 +129,17 @@ export default function ApplyToPodPage() {
 
       const messageToSign = JSON.stringify(signaturePayload, null, 2);
 
+      // Check if EVM account is available
+      const evmAccount = currentUser?.evmAccounts?.[0]?.address;
+      if (!evmAccount) {
+        toast({
+          title: 'Account Not Ready',
+          description: 'Your wallet account is still initializing. Please wait and try again.',
+          variant: 'destructive',
+        });
+        return;
+      }
+
       // Request signature
       toast({
         title: 'Please Sign',
@@ -136,9 +147,11 @@ export default function ApplyToPodPage() {
         duration: 3000,
       });
 
-      const signature = await signMessageAsync({
+      const result = await signEvmMessage({
+        evmAccount: evmAccount as `0x${string}`,
         message: messageToSign,
       });
+      const signature = result.signature;
 
       console.log('✍️ Application signed:', signature);
 

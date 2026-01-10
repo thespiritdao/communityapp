@@ -6,9 +6,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/components/ui/use-toast';
 import { FileText, PenTool, X, Shield, AlertCircle } from 'lucide-react';
-import { useEvmAddress } from '@coinbase/cdp-hooks';
-import { useSignMessage } from 'wagmi';
-import { usePublicClient, useWalletClient } from 'wagmi';
+import { useEvmAddress, useSignEvmMessage, useCurrentUser } from '@coinbase/cdp-hooks';
+import { usePublicClient } from 'wagmi';
 import { PodMembershipApplicationService } from '../services/PodMembershipApplicationService';
 import { useProfiles } from '@/features/identity/hooks/useProfiles';
 
@@ -59,9 +58,9 @@ export const MembershipAgreementModal: React.FC<
   );
   const { toast } = useToast();
   const { evmAddress: address } = useEvmAddress();
-  const { signMessageAsync } = useSignMessage();
+  const { currentUser } = useCurrentUser();
+  const { signEvmMessage } = useSignEvmMessage();
   const publicClient = usePublicClient();
-  const { data: walletClient } = useWalletClient();
 
   // Get user profile for display
   const { getProfile } = useProfiles([address || '']);
@@ -145,6 +144,17 @@ export const MembershipAgreementModal: React.FC<
 
       const messageToSign = JSON.stringify(signaturePayload, null, 2);
 
+      // Check if EVM account is available
+      const evmAccount = currentUser?.evmAccounts?.[0]?.address;
+      if (!evmAccount) {
+        toast({
+          title: 'Account Not Ready',
+          description: 'Your wallet account is still initializing. Please wait and try again.',
+          variant: 'destructive',
+        });
+        return;
+      }
+
       toast({
         title: 'Please Sign',
         description: 'Please sign the membership agreement in your wallet.',
@@ -152,9 +162,11 @@ export const MembershipAgreementModal: React.FC<
       });
 
       // Sign the agreement
-      const signature = await signMessageAsync({
+      const result = await signEvmMessage({
+        evmAccount: evmAccount as `0x${string}`,
         message: messageToSign,
       });
+      const signature = result.signature;
 
       console.log('✍️ Agreement signed:', signature);
 

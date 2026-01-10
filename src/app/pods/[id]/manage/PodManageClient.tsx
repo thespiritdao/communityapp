@@ -1,6 +1,6 @@
 'use client';
 
-import { useAccount } from 'wagmi';
+import { useEvmAddress } from '@coinbase/cdp-hooks';
 import { useToast } from '@/components/ui/use-toast';
 import { PodManagementContainer } from '@/features/pods/components';
 import { useProfileModal } from '@/features/identity/hooks/useProfileModal';
@@ -28,7 +28,7 @@ export function PodManageClient({
   initialLeaderProfiles,
   podId,
 }: PodManageClientProps) {
-  const { address } = useAccount();
+  const { evmAddress: address } = useEvmAddress();
   const { toast } = useToast();
   const { selectedUser, users, isOpen, openProfileModal, closeProfileModal } =
     useProfileModal();

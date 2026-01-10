@@ -3,7 +3,8 @@
 import type React from 'react';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAccount, useWalletClient, usePublicClient } from 'wagmi';
+import { useEvmAddress } from '@coinbase/cdp-hooks';
+import { usePublicClient } from 'wagmi';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -46,8 +47,7 @@ export const PodDeletionButton: React.FC<PodDeletionButtonProps> = ({
   onDeleteProposal,
 }) => {
   const router = useRouter();
-  const { address } = useAccount();
-  const { data: walletClient } = useWalletClient();
+  const { evmAddress: address } = useEvmAddress();
   const { toast } = useToast();
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleteConfirmText, setDeleteConfirmText] = useState('');
