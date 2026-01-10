@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useAccount, usePublicClient } from 'wagmi';
+import { useEvmAddress, useIsSignedIn } from '@coinbase/cdp-hooks';
+import { usePublicClient } from 'wagmi';
 import {
   Transaction,
   TransactionButton,
@@ -119,7 +120,8 @@ interface SyncStatus {
 }
 
 export default function PodTreasurySync() {
-  const { address, isConnected } = useAccount();
+  const { evmAddress: address } = useEvmAddress();
+  const { isSignedIn: isConnected } = useIsSignedIn();
   const publicClient = usePublicClient();
   const [pods, setPods] = useState<Pod[]>([]);
   const [selectedPod, setSelectedPod] = useState<Pod | null>(null);

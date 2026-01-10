@@ -2,7 +2,7 @@
 
 import type React from 'react';
 import { useState, useEffect } from 'react';
-import { useAccount } from 'wagmi';
+import { useEvmAddress } from '@coinbase/cdp-hooks';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -16,7 +16,7 @@ interface PodDeletionDebuggerProps {
 export const PodDeletionDebugger: React.FC<PodDeletionDebuggerProps> = ({
   pod,
 }) => {
-  const { address } = useAccount();
+  const { evmAddress: address } = useEvmAddress();
   const [authInfo, setAuthInfo] = useState<any>(null);
   const [testResults, setTestResults] = useState<any>({});
   const [isLoading, setIsLoading] = useState(false);

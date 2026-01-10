@@ -36,7 +36,7 @@ import {
   TransactionStatusLabel,
   TransactionStatusAction,
 } from '@coinbase/onchainkit/transaction';
-import { usePublicClient, useWalletClient } from 'wagmi';
+import { usePublicClient } from 'wagmi';
 import { base } from 'viem/chains';
 import { decodeEventLog } from 'viem';
 import { PodService } from '../services/PodService';

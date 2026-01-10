@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { useAccount } from 'wagmi';
+import { useEvmAddress } from '@coinbase/cdp-hooks';
 import {
   Transaction,
   TransactionButton,
@@ -21,7 +21,7 @@ interface PodFactorySyncProps {
 export const PodFactorySync: React.FC<PodFactorySyncProps> = ({
   onSyncComplete,
 }) => {
-  const { address } = useAccount();
+  const { evmAddress: address } = useEvmAddress();
   const [loading, setLoading] = useState(false);
   const [syncData, setSyncData] = useState<{
     toRegister: any[];
