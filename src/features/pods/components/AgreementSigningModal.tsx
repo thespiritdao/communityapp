@@ -10,8 +10,7 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Loader2 } from 'lucide-react';
-import { useEvmAddress } from '@coinbase/cdp-hooks';
-import { useSignMessage } from 'wagmi';
+import { useEvmAddress, useSignEvmMessage } from '@coinbase/cdp-hooks';
 import { supabase } from '@/utils/supabaseClient';
 import { useToast } from '@/components/ui/use-toast';
 
@@ -35,7 +34,7 @@ export default function AgreementSigningModal({
   onSigningComplete,
 }: AgreementSigningModalProps) {
   const { evmAddress: address } = useEvmAddress();
-  const { signMessageAsync } = useSignMessage();
+  const { signEvmMessage } = useSignEvmMessage();
   const { toast } = useToast();
   const [isSigning, setIsSigning] = useState(false);
 
@@ -54,8 +53,9 @@ export default function AgreementSigningModal({
       // Create message to sign
       const message = `I agree to the following terms:\n\n${agreementText}\n\nSigned by: ${address}\nTimestamp: ${new Date().toISOString()}`;
 
-      // Get wallet signature
-      const signature = await signMessageAsync({ message });
+      // Get wallet signature using CDP
+      const result = await signEvmMessage({ message });
+      const signature = result.signature;
 
       // Store signature in pod_accountability_signatures table
       const { error: signatureError } = await supabase
