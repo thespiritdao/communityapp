@@ -136,7 +136,8 @@ export function useAccountability({
     podId,
     podName,
     agreementText,
-    config,
+    currentUser,
+    signEvmMessage,
     signatures.length,
     loadSignatures,
   ]);
