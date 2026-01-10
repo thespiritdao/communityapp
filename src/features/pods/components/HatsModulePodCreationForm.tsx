@@ -752,8 +752,7 @@ export const HatsModulePodCreationForm: React.FC<
       validationValid: validation.isValid,
       modulesInitialized,
       publicClientExists: !!publicClient,
-      walletClientExists: !!walletClient,
-      address,
+      addressConnected: !!address,
       chainId: base.id,
     });
 
@@ -761,7 +760,7 @@ export const HatsModulePodCreationForm: React.FC<
       !validation.isValid ||
       !modulesInitialized ||
       !publicClient ||
-      !walletClient
+      !address
     ) {
       console.error('❌ Pre-flight check failed');
       return;
@@ -2367,13 +2366,16 @@ Instructions:
                   args: [BigInt(hatIdToMint), leaderAddress as `0x${string}`],
                 });
 
-                // Execute mint transaction using wallet client
-                const mintTxHash = await walletClient!.sendTransaction({
-                  to: process.env.NEXT_PUBLIC_HATS_CONTRACT as `0x${string}`,
-                  data: mintData,
-                  value: 0n,
-                  account: walletClient!.account,
+                // Execute mint transaction using CDP sendUserOperation
+                // NOTE: This code block is dead code (wrapped in if(false)) and never executes
+                const result = await sendUserOperation({
+                  calls: [{
+                    to: process.env.NEXT_PUBLIC_HATS_CONTRACT as `0x${string}`,
+                    data: mintData,
+                    value: 0n,
+                  }],
                 });
+                const mintTxHash = result.transactionHash;
 
                 console.log(
                   `✅ HAT mint transaction sent to ${leaderAddress}! Tx: ${mintTxHash}`,
@@ -2748,7 +2750,6 @@ Instructions:
       createdPodData?.id,
       createdPodData?.name,
       formData.name,
-      walletClient,
       publicClient,
     ],
   );
