@@ -2368,7 +2368,12 @@ Instructions:
 
                 // Execute mint transaction using CDP sendUserOperation
                 // NOTE: This code block is dead code (wrapped in if(false)) and never executes
+                const smartAccount = currentUser?.evmSmartAccounts?.[0];
+                if (!smartAccount) throw new Error('Smart account not available');
+
                 const result = await sendUserOperation({
+                  evmSmartAccount: smartAccount,
+                  network: 'base',
                   calls: [{
                     to: process.env.NEXT_PUBLIC_HATS_CONTRACT as `0x${string}`,
                     data: mintData,
