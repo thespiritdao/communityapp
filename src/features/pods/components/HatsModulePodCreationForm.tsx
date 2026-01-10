@@ -2372,7 +2372,7 @@ Instructions:
                 if (!smartAccount) throw new Error('Smart account not available');
 
                 const result = await sendUserOperation({
-                  evmSmartAccount: smartAccount,
+                  evmSmartAccount: smartAccount as `0x${string}`,
                   network: 'base',
                   calls: [{
                     to: process.env.NEXT_PUBLIC_HATS_CONTRACT as `0x${string}`,
