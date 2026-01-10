@@ -2,13 +2,8 @@
 'use client';
 import type React from 'react';
 import { useEffect, useState } from 'react';
-import { useEvmAddress } from '@coinbase/cdp-hooks';
+import { useEvmAddress, useSendUserOperation, useCurrentUser } from '@coinbase/cdp-hooks';
 import { useChainId, useConnectors } from 'wagmi';
-import {
-  Transaction,
-  TransactionButton,
-  TransactionSponsor,
-} from '@coinbase/onchainkit/transaction';
 import { base } from 'viem/chains';
 
 const PaymasterTest: React.FC = () => {

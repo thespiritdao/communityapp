@@ -3,8 +3,8 @@
 import type React from 'react';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useEvmAddress } from '@coinbase/cdp-hooks';
-import { useWalletClient, usePublicClient } from 'wagmi';
+import { useEvmAddress, useSendUserOperation, useCurrentUser, useSignEvmMessage } from '@coinbase/cdp-hooks';
+import { usePublicClient } from 'wagmi';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -16,13 +16,7 @@ import { supabase } from '@/utils/supabaseClient';
 import { PodDeletionDebugger } from './PodDeletionDebugger';
 import { MemberCard } from './MembersPanel/MemberCard';
 import { EventService } from '../../events/lib/supabase';
-import {
-  Transaction,
-  TransactionButton,
-  TransactionStatus,
-  TransactionStatusAction,
-  TransactionStatusLabel,
-} from '@coinbase/onchainkit/transaction';
+import { encodeFunctionData } from 'viem';
 import { publicClient } from '@/config/wagmi.client';
 import type { Pod } from '../types';
 import type { UserProfile } from '../../identity/types';
@@ -58,7 +52,9 @@ export const PodDeletionApprovalFlow: React.FC<
 > = ({ pod, onProposalCreated, onDeletionComplete, className = '' }) => {
   const router = useRouter();
   const { evmAddress: address } = useEvmAddress();
-  const { data: walletClient } = useWalletClient();
+  const { currentUser } = useCurrentUser();
+  const { signEvmMessage } = useSignEvmMessage();
+  const { sendUserOperation, status: txStatus, error: txError } = useSendUserOperation();
   const pubClient = usePublicClient();
   const { toast } = useToast();
 
@@ -402,7 +398,18 @@ export const PodDeletionApprovalFlow: React.FC<
 
   // Approve deletion proposal with signature
   const approveProposal = async () => {
-    if (!address || !activeProposal || hasApproved || !walletClient) return;
+    if (!address || !activeProposal || hasApproved) return;
+
+    // Check for EVM account
+    const evmAccount = currentUser?.evmAccounts?.[0]?.address;
+    if (!evmAccount) {
+      toast({
+        title: 'Account Not Ready',
+        description: 'Your EVM account is not available. Please ensure your wallet is connected.',
+        variant: 'destructive',
+      });
+      return;
+    }
 
     setIsLoading(true);
     try {
@@ -411,10 +418,12 @@ export const PodDeletionApprovalFlow: React.FC<
 
       console.log('🔏 Requesting signature for approval:', message);
 
-      // Request signature from user's wallet
-      const signature = await walletClient.signMessage({
+      // Request signature from CDP
+      const signResult = await signEvmMessage({
+        evmAccount: evmAccount as `0x${string}`,
         message,
       });
+      const signature = signResult.signature;
 
       console.log('✅ Signature obtained:', signature.substring(0, 20) + '...');
 
@@ -984,7 +993,7 @@ export const PodDeletionApprovalFlow: React.FC<
               !showTransaction && (
                 <Button
                   onClick={prepareDeletionTransactions}
-                  disabled={isLoading || !walletClient || deletionExecuted}
+                  disabled={isLoading || !currentUser?.evmSmartAccounts?.[0] || deletionExecuted}
                   variant="destructive"
                   className="w-full"
                 >
@@ -997,37 +1006,75 @@ export const PodDeletionApprovalFlow: React.FC<
                 </Button>
               )}
 
-            {/* OnchainKit Transaction for sponsored HAT deactivation */}
+            {/* CDP Transaction for sponsored HAT deactivation */}
             {showTransaction && transactionCalls.length > 0 && (
               <div className="space-y-3">
-                <Transaction
-                  calls={transactionCalls}
-                  isSponsored={true}
-                  onSuccess={async () => {
-                    console.log(
-                      '✅ HAT deactivation successful, proceeding with database cleanup',
-                    );
-                    setShowTransaction(false);
-                    await executeDatabaseDeletion();
+                <Button
+                  onClick={async () => {
+                    if (!currentUser?.evmSmartAccounts?.[0]) {
+                      toast({
+                        title: 'Account Not Ready',
+                        description: 'Smart account not available',
+                        variant: 'destructive',
+                      });
+                      return;
+                    }
+
+                    try {
+                      setIsLoading(true);
+
+                      // Prepare calls for CDP
+                      const calls = transactionCalls.map((call: any) => ({
+                        to: call.address as `0x${string}`,
+                        data: encodeFunctionData({
+                          abi: call.abi,
+                          functionName: call.functionName,
+                          args: call.args,
+                        }),
+                        value: 0n,
+                      }));
+
+                      console.log('🚀 Executing HAT deactivation with CDP:', calls);
+
+                      const result = await sendUserOperation({ calls });
+
+                      console.log(
+                        '✅ HAT deactivation successful, proceeding with database cleanup',
+                        result,
+                      );
+
+                      setShowTransaction(false);
+                      await executeDatabaseDeletion();
+                    } catch (error) {
+                      console.error('❌ HAT deactivation failed:', error);
+                      toast({
+                        title: 'HAT Deactivation Failed',
+                        description:
+                          error instanceof Error ? error.message : 'Failed to deactivate HATs. Please contact support.',
+                        variant: 'destructive',
+                      });
+                    } finally {
+                      setIsLoading(false);
+                    }
                   }}
-                  onError={(error) => {
-                    console.error('❌ HAT deactivation failed:', error);
-                    toast({
-                      title: 'HAT Deactivation Failed',
-                      description:
-                        'Failed to deactivate HATs. Please contact support.',
-                      variant: 'destructive',
-                    });
-                  }}
+                  disabled={txStatus === 'pending' || isLoading}
+                  variant="destructive"
+                  className="w-full bg-[#8B3A3A] hover:bg-[#5C1F1F]"
                 >
-                  <TransactionButton
-                    className="w-full bg-[#8B3A3A] hover:bg-[#5C1F1F]"
-                  />
-                  <TransactionStatus>
-                    <TransactionStatusAction />
-                    <TransactionStatusLabel />
-                  </TransactionStatus>
-                </Transaction>
+                  {txStatus === 'pending' || isLoading ? '⏳ Deactivating HATs...' : 'Deactivate HATs & Delete Pod'}
+                </Button>
+
+                {txStatus === 'pending' && (
+                  <div className="text-sm text-blue-600 text-center">
+                    🔄 Transaction in progress... (Sponsored)
+                  </div>
+                )}
+
+                {txError && (
+                  <div className="text-sm text-red-600 bg-red-50 p-2 rounded border border-red-200">
+                    ❌ {txError.message}
+                  </div>
+                )}
               </div>
             )}
           </div>
