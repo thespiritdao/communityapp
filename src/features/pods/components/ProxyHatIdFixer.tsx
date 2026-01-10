@@ -54,6 +54,8 @@ export function ProxyHatIdFixer({
       });
 
       const result = await sendUserOperation({
+        evmSmartAccount: currentUser.evmSmartAccounts[0] as `0x${string}`,
+        network: 'base',
         calls: [{
           to: proxyAddress as `0x${string}`,
           data,
