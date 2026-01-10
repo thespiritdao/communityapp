@@ -4535,7 +4535,13 @@ Instructions:
 
                             console.log('🚀 Executing HAT Creation with CDP:', { call });
 
+                            if (!currentUser?.evmSmartAccounts?.[0]) {
+                              throw new Error('Smart account not available');
+                            }
+
                             const result = await sendUserOperation({
+                              evmSmartAccount: currentUser.evmSmartAccounts[0] as `0x${string}`,
+                              network: 'base',
                               calls: [{
                                 to: call.address as `0x${string}`,
                                 data,
@@ -4600,7 +4606,13 @@ Instructions:
 
                               console.log('🚀 Executing Proxy Deployment with CDP:', { call });
 
+                              if (!currentUser?.evmSmartAccounts?.[0]) {
+                                throw new Error('Smart account not available');
+                              }
+
                               const result = await sendUserOperation({
+                                evmSmartAccount: currentUser.evmSmartAccounts[0] as `0x${string}`,
+                                network: 'base',
                                 calls: [{
                                   to: call.address as `0x${string}`,
                                   data,
