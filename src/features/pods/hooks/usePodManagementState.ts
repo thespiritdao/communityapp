@@ -74,10 +74,33 @@ export function usePodManagementState({
     refetchOnWindowFocus: false,
   });
 
-  // Leaders data from pod_leads array
+  // Fetch leader HAT holders from active_pod_members
+  const {
+    members: leaderHatHolders,
+    isLoading: isLoadingLeaderHats,
+  } = usePodMembers(podId, {
+    membershipType: 'leader',
+    enabled: !!podId,
+    staleTime: 2 * 60 * 1000,
+    currentUserAddress: userAddress,
+  });
+
+  // Leaders data - combine pod_leads array with leader HAT holders
   const leaders = useMemo(() => {
-    return pod?.pod_leads || [];
-  }, [pod?.pod_leads]);
+    const podLeads = pod?.pod_leads || [];
+    const leaderHats = leaderHatHolders || [];
+
+    // Combine and deduplicate
+    const combined = Array.from(new Set([...podLeads, ...leaderHats]));
+
+    console.log('👑 Leaders calculation:', {
+      podLeads,
+      leaderHatHolders: leaderHats,
+      combined,
+    });
+
+    return combined;
+  }, [pod?.pod_leads, leaderHatHolders]);
 
   // Members data using the optimized hook
   const {
@@ -152,7 +175,7 @@ export function usePodManagementState({
       leaders,
       members: memberAddresses,
       memberRefs, // ✅ ISSUE #7: Full member data for removal flow
-      isLoadingMembers,
+      isLoadingMembers: isLoadingMembers || isLoadingLeaderHats,
       membersError: membersError as Error | null,
 
       // User capabilities
@@ -176,6 +199,7 @@ export function usePodManagementState({
       memberAddresses,
       memberRefs, // ✅ ISSUE #7: Add to dependencies
       isLoadingMembers,
+      isLoadingLeaderHats,
       membersError,
       canManageMembers,
       canManageTreasury,
