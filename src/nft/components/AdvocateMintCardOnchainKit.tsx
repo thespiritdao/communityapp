@@ -50,6 +50,8 @@ export function AdvocateMintCardOnchainKit({
 
       // Send sponsored transaction
       const result = await sendUserOperation({
+        evmSmartAccount: currentUser.evmSmartAccounts[0] as `0x${string}`,
+        network: 'base',
         calls: [{
           to: contractAddress,
           data,
