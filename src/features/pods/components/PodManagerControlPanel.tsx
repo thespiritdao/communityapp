@@ -3,7 +3,7 @@
 import type React from 'react';
 import { useState, useEffect } from 'react';
 import { useCDPStatus } from '@/hooks/useCDPStatus';
-import { usePublicClient, useWalletClient } from 'wagmi';
+import { usePublicClient } from 'wagmi';
 import { encodeFunctionData } from 'viem';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -16,16 +16,10 @@ import {
   UserCheck,
   Plus,
   ToyBrick,
+  Loader2,
 } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
-import {
-  Transaction,
-  TransactionButton,
-  TransactionSponsor,
-  TransactionStatus,
-  TransactionStatusLabel,
-  TransactionStatusAction,
-} from '@coinbase/onchainkit/transaction';
+import { useSendUserOperation, useCurrentUser } from '@coinbase/cdp-hooks';
 import { base } from 'viem/chains';
 import {
   PodRolePermissionsService,
@@ -227,7 +221,18 @@ export const PodManagerControlPanel: React.FC<PodManagerControlPanelProps> = ({
   const { address } = useCDPStatus();
   const publicClient = usePublicClient();
   const { toast } = useToast();
-  const { data: walletClient } = useWalletClient();
+  const { sendUserOperation } = useSendUserOperation();
+  const { currentUser } = useCurrentUser();
+
+  // DEBUG: Log CDP transaction readiness
+  useEffect(() => {
+    console.log('🔍 PodManagerControlPanel - CDP Transaction Status:', {
+      hasAddress: !!address,
+      hasSmartAccount: !!currentUser?.evmSmartAccounts?.[0],
+      smartAccountAddress: currentUser?.evmSmartAccounts?.[0],
+      canTransact: !!address && !!currentUser?.evmSmartAccounts?.[0],
+    });
+  }, [address, currentUser]);
 
   const [activeTab, setActiveTab] = useState<
     'roles' | 'membership' | 'members'
@@ -252,26 +257,25 @@ export const PodManagerControlPanel: React.FC<PodManagerControlPanelProps> = ({
   const [isSaving, setIsSaving] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
 
-  // Transaction state for HAT toggle
-  const [transactionConfig, setTransactionConfig] = useState<{
-    transactionCalls: any[];
-    isSponsored: boolean;
+  // CDP Transaction states - simplified for direct execution
+  const [toggleTransactionPending, setToggleTransactionPending] = useState(false);
+  const [pendingToggleRole, setPendingToggleRole] = useState<{
     roleId: string;
     newStatus: boolean;
+    calls: any[];
   } | null>(null);
 
-  const [syncTransactionConfig, setSyncTransactionConfig] = useState<{
+  const [syncTransactionPending, setSyncTransactionPending] = useState(false);
+  const [pendingSyncConfig, setPendingSyncConfig] = useState<{
     calls: any[];
     roleId: string;
     roleName: string;
     moduleAddress?: string;
   } | null>(null);
 
-  // Toggle module configuration state
-  const [toggleModuleConfig, setToggleModuleConfig] = useState<{
+  const [moduleConfigPending, setModuleConfigPending] = useState(false);
+  const [pendingModuleConfig, setPendingModuleConfig] = useState<{
     transactionCall: any;
-    account: string;
-    isSponsored: boolean;
     roleId: string;
     roleName: string;
     targetToggleHat: string;
@@ -281,6 +285,9 @@ export const PodManagerControlPanel: React.FC<PodManagerControlPanelProps> = ({
     any[]
   >([]);
   const [configurationAuditDone, setConfigurationAuditDone] = useState(false);
+
+  // Store live holder counts from blockchain
+  const [liveHolderCounts, setLiveHolderCounts] = useState<Record<string, number>>({});
 
   // Check if user has Pod Manager permissions
   // Display transaction logging information on first render
@@ -415,6 +422,61 @@ export const PodManagerControlPanel: React.FC<PodManagerControlPanelProps> = ({
     loadPodRoles();
   }, [podId]);
 
+  // Fetch live holder counts from blockchain
+  const fetchLiveHolderCounts = async (roles: PodRole[]) => {
+    if (!publicClient) {
+      console.warn('⚠️ Cannot fetch live holder counts - missing publicClient');
+      return;
+    }
+
+    const counts: Record<string, number> = {};
+
+    for (const role of roles) {
+      if (!role.token_address) {
+        console.log(`⏭️ Skipping ${role.role_name} - no HAT ID`);
+        continue;
+      }
+
+      try {
+        console.log(`🔍 Fetching live supply for ${role.role_name} (${role.token_address})`);
+
+        const hatDetails = await publicClient.readContract({
+          address: '0x3bc1A0Ad72417f2d411118085256fC53CBdDd137' as `0x${string}`,
+          abi: [{
+            name: 'viewHat',
+            type: 'function',
+            stateMutability: 'view',
+            inputs: [{ name: '_hatId', type: 'uint256' }],
+            outputs: [
+              { name: 'details', type: 'string' },
+              { name: 'maxSupply', type: 'uint32' },
+              { name: 'supply', type: 'uint32' },
+              { name: 'eligibility', type: 'address' },
+              { name: 'toggle', type: 'address' },
+              { name: 'imageURI', type: 'string' },
+              { name: 'lastHatId', type: 'uint16' },
+              { name: 'mutable', type: 'bool' },
+              { name: 'active', type: 'bool' },
+            ],
+          }] as const,
+          functionName: 'viewHat',
+          args: [BigInt(role.token_address)],
+        });
+
+        const currentSupply = Number(hatDetails[2]); // supply is at index 2
+        counts[role.id] = currentSupply;
+
+        console.log(`✅ ${role.role_name}: ${currentSupply} holders (live from blockchain)`);
+      } catch (error) {
+        console.warn(`⚠️ Could not fetch supply for ${role.role_name}:`, error);
+        // Keep database value as fallback
+        counts[role.id] = role.current_holders || 0;
+      }
+    }
+
+    setLiveHolderCounts(counts);
+  };
+
   const loadPodRoles = async () => {
     try {
       setLoading(true);
@@ -465,6 +527,9 @@ export const PodManagerControlPanel: React.FC<PodManagerControlPanelProps> = ({
         }
 
         setPodRoles(roles);
+
+        // Fetch live holder counts from blockchain
+        await fetchLiveHolderCounts(roles);
 
         // Audit toggle module configuration
         if (publicClient && !configurationAuditDone) {
@@ -855,11 +920,16 @@ export const PodManagerControlPanel: React.FC<PodManagerControlPanelProps> = ({
         '🎯 CRITICAL: Ensure this has TWO calls (setHatStatus + checkHatStatus)',
       );
 
-      setTransactionConfig(transactionConfiguration);
+      // Store pending transaction for CDP execution
+      setPendingToggleRole({
+        roleId: role.id,
+        newStatus,
+        calls: transactionConfiguration.transactionCalls,
+      });
 
       toast({
         title: 'Transaction Ready',
-        description: `Ready to ${newStatus ? 'activate' : 'deactivate'} ${role.role_name}. Please confirm in the transaction dialog.`,
+        description: `Ready to ${newStatus ? 'activate' : 'deactivate'} ${role.role_name}. Click the button below to execute.`,
       });
     } catch (error) {
       console.error('❌ TOGGLE TRANSACTION PREPARATION FAILED:', error);
@@ -1053,6 +1123,79 @@ export const PodManagerControlPanel: React.FC<PodManagerControlPanelProps> = ({
     }
   };
 
+  // CDP Transaction Execution: HAT Toggle
+  const executeToggleTransaction = async () => {
+    if (!pendingToggleRole || !currentUser?.evmSmartAccounts?.[0]) {
+      console.error('❌ Missing CDP requirements for toggle transaction');
+      return;
+    }
+
+    setToggleTransactionPending(true);
+
+    try {
+      const role = podRoles.find((r) => r.id === pendingToggleRole.roleId);
+      if (!role) throw new Error('Role not found');
+
+      console.log('🚀 Executing HAT toggle via CDP Smart Account:', {
+        roleId: pendingToggleRole.roleId,
+        roleName: role.role_name,
+        newStatus: pendingToggleRole.newStatus,
+        callsCount: pendingToggleRole.calls.length,
+      });
+
+      // Execute via CDP
+      const response = await sendUserOperation({
+        calls: pendingToggleRole.calls.map((call: any) => ({
+          to: call.to || call.address,
+          data: call.data,
+          value: call.value || 0n,
+        })),
+      });
+
+      console.log('✅ CDP transaction submitted:', response.hash);
+
+      // Wait for confirmation
+      await response.wait();
+      console.log('✅ CDP transaction confirmed');
+
+      // Handle success
+      await handleToggleTransactionSuccess(response.hash, pendingToggleRole.roleId);
+
+      // Verify status
+      setTimeout(async () => {
+        if (publicClient && role.token_address) {
+          const currentStatus = await HatToggleService.getCurrentHatStatus(
+            publicClient,
+            role.token_address,
+          );
+          console.log('🔍 Post-transaction HAT status:', {
+            expected: pendingToggleRole.newStatus,
+            actual: currentStatus.isActive,
+            matches: currentStatus.isActive === pendingToggleRole.newStatus,
+          });
+        }
+        await loadPodRoles();
+      }, 2000);
+
+      setPendingToggleRole(null);
+
+      toast({
+        title: 'Role Updated',
+        description: `Successfully ${pendingToggleRole.newStatus ? 'activated' : 'deactivated'} ${role.role_name}`,
+      });
+
+    } catch (error) {
+      console.error('❌ CDP toggle transaction failed:', error);
+      toast({
+        title: 'Transaction Failed',
+        description: error instanceof Error ? error.message : 'Transaction failed',
+        variant: 'destructive',
+      });
+    } finally {
+      setToggleTransactionPending(false);
+    }
+  };
+
   // Handle toggle module configuration
   const handleConfigureToggleModule = async (roleId: string) => {
     try {
@@ -1116,8 +1259,8 @@ export const PodManagerControlPanel: React.FC<PodManagerControlPanelProps> = ({
         function: transactionConfig.transactionCall.functionName,
       });
 
-      // Set the transaction config for OnchainKit
-      setToggleModuleConfig({
+      // Set the transaction config for CDP
+      setPendingModuleConfig({
         ...transactionConfig,
         roleId,
         roleName: role.role_name,
@@ -1537,12 +1680,33 @@ export const PodManagerControlPanel: React.FC<PodManagerControlPanelProps> = ({
           try {
             let receipt = response?.transactionReceipts?.[0];
 
-            // If we don't have receipt, try to get it
-            if (!receipt && transactionHash && publicClient) {
-              receipt = await publicClient.waitForTransactionReceipt({
-                hash: transactionHash as `0x${string}`,
-                confirmations: 1,
-              });
+            // If we don't have receipt with logs, fetch it from blockchain
+            // CDP returns minimal receipt (just hash), need full receipt for event parsing
+            if ((!receipt || !receipt.logs) && transactionHash && publicClient) {
+              console.log('🔄 Fetching full transaction receipt from blockchain...');
+              console.log('📍 UserOperationHash/TxHash:', transactionHash);
+
+              try {
+                // Wait for transaction receipt (may take a few seconds for bundler to process)
+                receipt = await publicClient.waitForTransactionReceipt({
+                  hash: transactionHash as `0x${string}`,
+                  confirmations: 1,
+                  timeout: 30000, // 30 second timeout for bundler processing
+                });
+                console.log('✅ Full receipt fetched, logs:', receipt?.logs?.length || 0);
+              } catch (receiptError: any) {
+                console.error('❌ Failed to fetch transaction receipt:', receiptError);
+                console.log('💡 This may be because:');
+                console.log('   1. The bundler is still processing the UserOperation');
+                console.log('   2. The userOperationHash !== final transaction hash (ERC-4337)');
+                console.log('   3. Network connectivity issues');
+                console.log('🔗 UserOperationHash:', transactionHash);
+                console.log('🔍 Check Base block explorer: https://basescan.org/tx/' + transactionHash);
+
+                // Don't throw - let the user know the transaction was submitted
+                // The role will need to be synced later via blockchain sync
+                throw new Error(`Transaction submitted but receipt not available yet. UserOperationHash: ${transactionHash}`);
+              }
             }
 
             console.log(
@@ -1803,7 +1967,7 @@ export const PodManagerControlPanel: React.FC<PodManagerControlPanelProps> = ({
                         checked={role.is_active}
                         onCheckedChange={() => toggleRoleActive(role.id)}
                         className="permission-switch"
-                        disabled={transactionConfig !== null}
+                        disabled={pendingToggleRole !== null}
                       />
                       <span
                         className="text-xs"
@@ -1811,7 +1975,7 @@ export const PodManagerControlPanel: React.FC<PodManagerControlPanelProps> = ({
                           color: role.is_active ? '#3F7A5A' : '#9ca3af',
                         }}
                       >
-                        {transactionConfig?.roleId === role.id
+                        {pendingToggleRole?.roleId === role.id
                           ? 'Preparing...'
                           : role.is_active
                             ? 'Active'
@@ -1825,7 +1989,9 @@ export const PodManagerControlPanel: React.FC<PodManagerControlPanelProps> = ({
                     <div className="flex justify-between text-sm">
                       <span>Current Holders:</span>
                       <span>
-                        {role.current_holders}/{role.max_holders}
+                        {liveHolderCounts[role.id] !== undefined
+                          ? liveHolderCounts[role.id]
+                          : role.current_holders}/{role.max_holders}
                       </span>
                     </div>
                     <div className="text-xs text-gray-500">
@@ -1834,196 +2000,45 @@ export const PodManagerControlPanel: React.FC<PodManagerControlPanelProps> = ({
                       {Object.keys(role.permissions).length}
                     </div>
 
-                    {/* Inline HAT Toggle Transaction Component */}
-                    {transactionConfig &&
-                      transactionConfig.roleId === role.id && (
+                    {/* CDP Transaction Button */}
+                    {pendingToggleRole &&
+                      pendingToggleRole.roleId === role.id && (
                         <div
-                          className="my-3 p-3 rounded"
+                          className="my-3 p-3 rounded space-y-2"
                           style={{
                             backgroundColor: '#E8F1EE',
                             border: '1px solid #B8D9CA',
                           }}
                         >
-                          <Transaction
-                            chainId={base.id}
-                            calls={transactionConfig.transactionCalls}
-                            isSponsored={transactionConfig.isSponsored}
-                            onStatus={(status) => {
-                              console.log('🔄 Transaction status:', status);
-                              console.log(
-                                '🔍 Transaction props verification:',
-                                {
-                                  account: address,
-                                  chainId: base.id,
-                                  callsLength:
-                                    transactionConfig.transactionCalls.length,
-                                  isSponsored: transactionConfig.isSponsored,
-                                  calls: transactionConfig.transactionCalls.map(
-                                    (call) => call.functionName,
-                                  ),
-                                },
-                              );
-
-                              // SPONSORSHIP DEBUGGING
-                              console.log('🚨 SPONSORSHIP DEBUGGING 🚨');
-                              console.log(
-                                '📋 Contract addresses being called:',
-                                {
-                                  hatsCore:
-                                    process.env.NEXT_PUBLIC_HATS_CONTRACT,
-                                  toggleModule:
-                                    process.env
-                                      .NEXT_PUBLIC_EXEC_MEMBER_TOGGLE_MODULE,
-                                  actualCallAddresses:
-                                    transactionConfig.transactionCalls.map(
-                                      (call) => call.address,
-                                    ),
-                                },
-                              );
-                              console.log('💰 Working Cart.tsx calls:', {
-                                purchaseBurn:
-                                  process.env.NEXT_PUBLIC_PURCHASE_BURN,
-                                systemToken:
-                                  process.env.NEXT_PUBLIC_SYSTEM_TOKEN,
-                                selfToken: process.env.NEXT_PUBLIC_SELF_TOKEN,
-                              });
-                              console.log(
-                                '❓ HYPOTHESIS: Toggle module (0x50DA...5373) is NOT in Paymaster whitelist',
-                              );
-                              // OnchainKit will handle the UI states automatically
-                            }}
-                            onSuccess={async (response) => {
-                              console.log(
-                                '✅ HAT toggle transaction successful:',
-                                response,
-                              );
-
-                              // Handle successful transaction
-                              if (
-                                response?.transactionReceipts?.[0]
-                                  ?.transactionHash
-                              ) {
-                                await handleToggleTransactionSuccess(
-                                  response.transactionReceipts[0]
-                                    .transactionHash,
-                                  transactionConfig.roleId,
-                                );
-
-                                // Verify the toggle took effect by re-checking HAT status
-                                setTimeout(async () => {
-                                  console.log(
-                                    '🔍 Verifying HAT status change after transaction...',
-                                  );
-
-                                  // Check HAT status directly from blockchain
-                                  if (
-                                    publicClient &&
-                                    transactionConfig.roleId
-                                  ) {
-                                    try {
-                                      const role = podRoles.find(
-                                        (r) =>
-                                          r.id === transactionConfig.roleId,
-                                      );
-                                      if (role?.token_address) {
-                                        const currentStatus =
-                                          await HatToggleService.getCurrentHatStatus(
-                                            publicClient,
-                                            role.token_address,
-                                          );
-                                        console.log(
-                                          '🎯 Direct blockchain HAT status check:',
-                                          {
-                                            hatId: role.token_address,
-                                            expectedStatus:
-                                              transactionConfig.newStatus,
-                                            actualStatus:
-                                              currentStatus.isActive,
-                                            statusMatches:
-                                              currentStatus.isActive ===
-                                              transactionConfig.newStatus,
-                                            transactionHash:
-                                              response.transactionReceipts[0]
-                                                .transactionHash,
-                                          },
-                                        );
-
-                                        if (
-                                          currentStatus.isActive !==
-                                          transactionConfig.newStatus
-                                        ) {
-                                          console.log(
-                                            '⚠️ WARNING: HAT status did not change as expected!',
-                                          );
-                                          console.log(
-                                            '   This suggests the transaction succeeded but did not toggle the HAT status',
-                                          );
-                                        } else {
-                                          console.log(
-                                            '✅ CONFIRMED: HAT status changed correctly on blockchain',
-                                          );
-                                        }
-                                      }
-                                    } catch (statusError) {
-                                      console.error(
-                                        '❌ Failed to verify HAT status:',
-                                        statusError,
-                                      );
-                                    }
-                                  }
-
-                                  await loadPodRoles(); // Refresh the roles to show updated status
-                                }, 2000); // Wait 2 seconds for toggle to take effect
-                              }
-
-                              // Close transaction
-                              setTransactionConfig(null);
-
-                              toast({
-                                title: 'Role Updated',
-                                description: `Successfully ${transactionConfig.newStatus ? 'activated' : 'deactivated'} the role. Refreshing status...`,
-                              });
-                            }}
-                            onError={(error) => {
-                              console.error(
-                                '❌ HAT toggle transaction failed:',
-                                error,
-                              );
-
-                              const errorMessage =
-                                error instanceof Error
-                                  ? error.message
-                                  : 'Transaction failed. Please try again.';
-
-                              toast({
-                                title: 'Transaction Failed',
-                                description: errorMessage,
-                                variant: 'destructive',
-                              });
-
-                              // Close transaction
-                              setTransactionConfig(null);
-                            }}
+                          <p className="text-sm font-medium">
+                            Ready to {pendingToggleRole.newStatus ? 'activate' : 'deactivate'} this role
+                          </p>
+                          <Button
+                            onClick={executeToggleTransaction}
+                            disabled={toggleTransactionPending || !currentUser}
+                            className="w-full"
+                            size="sm"
                           >
-                            <TransactionButton
-                              text={`${transactionConfig.newStatus ? 'Activate' : 'Deactivate'} Role`}
-                              className="w-full"
-                            />
-                            <TransactionSponsor />
-                            <TransactionStatus>
-                              <TransactionStatusLabel />
-                              <TransactionStatusAction />
-                            </TransactionStatus>
-                          </Transaction>
-
+                            {toggleTransactionPending ? (
+                              <>
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                Processing...
+                              </>
+                            ) : (
+                              `${pendingToggleRole.newStatus ? 'Activate' : 'Deactivate'} Role`
+                            )}
+                          </Button>
                           <button
-                            onClick={() => setTransactionConfig(null)}
-                            className="text-gray-500 hover:text-gray-700 text-sm mt-2 w-full"
+                            onClick={() => setPendingToggleRole(null)}
+                            className="text-gray-500 hover:text-gray-700 text-sm w-full"
+                            disabled={toggleTransactionPending}
                           >
                             Cancel
                           </button>
                         </div>
                       )}
+
+                    {/* NOTE: OnchainKit Transaction component removed - migrated to CDP */}
 
                     <Button
                       size="sm"
@@ -2225,7 +2240,7 @@ export const PodManagerControlPanel: React.FC<PodManagerControlPanelProps> = ({
                 )}
 
                 {/* Toggle Module Configuration Transaction */}
-                {toggleModuleConfig && (
+                {pendingModuleConfig && (
                   <Card
                     style={{
                       borderColor: '#B8D9CA',
@@ -2234,36 +2249,40 @@ export const PodManagerControlPanel: React.FC<PodManagerControlPanelProps> = ({
                   >
                     <CardHeader>
                       <CardTitle style={{ color: '#1F453A' }}>
-                        Configuring Toggle Module: {toggleModuleConfig.roleName}
+                        Configuring Toggle Module: {pendingModuleConfig.roleName}
                       </CardTitle>
                     </CardHeader>
                     <CardContent>
                       <p className="mb-4" style={{ color: '#2F5D50' }}>
                         Setting toggle module to Executive Pod Leader HAT (
-                        {toggleModuleConfig.targetToggleHat})
+                        {pendingModuleConfig.targetToggleHat})
                       </p>
-                      <Transaction
-                        chainId={base.id}
-                        calls={[toggleModuleConfig.transactionCall]}
-                        isSponsored={toggleModuleConfig.isSponsored}
-                        onStatus={(status) => {
-                          console.log(
-                            '🔄 Toggle module configuration status:',
-                            status,
-                          );
-                        }}
-                        onSuccess={async (response) => {
-                          console.log(
-                            '✅ Toggle module configuration successful:',
-                            response,
-                          );
+                      <Button
+                        onClick={async () => {
+                          if (!currentUser) {
+                            console.error('❌ Wallet not connected');
+                            return;
+                          }
 
-                          if (
-                            response?.transactionReceipts?.[0]?.transactionHash
-                          ) {
+                          setToggleTransactionPending(true);
+                          try {
+                            console.log('🚀 Configuring toggle module via CDP Smart Account');
+
+                            const response = await sendUserOperation({
+                              calls: [{
+                                to: pendingModuleConfig.transactionCall.address,
+                                data: pendingModuleConfig.transactionCall.data,
+                                value: pendingModuleConfig.transactionCall.value || 0n,
+                              }],
+                            });
+
+                            console.log('✅ Toggle module configuration transaction submitted:', response.hash);
+                            await response.wait();
+                            console.log('✅ Toggle module configuration successful');
+
                             toast({
                               title: 'Configuration Successful',
-                              description: `Toggle module configured for ${toggleModuleConfig.roleName}. Role can now be toggled properly.`,
+                              description: `Toggle module configured for ${pendingModuleConfig.roleName}. Role can now be toggled properly.`,
                             });
 
                             // Refresh roles to update configuration status
@@ -2271,43 +2290,43 @@ export const PodManagerControlPanel: React.FC<PodManagerControlPanelProps> = ({
                               setConfigurationAuditDone(false); // Reset audit to re-check
                               loadPodRoles();
                             }, 2000);
+
+                            setPendingModuleConfig(null);
+
+                          } catch (error) {
+                            console.error('❌ Toggle module configuration failed:', error);
+
+                            const errorMessage =
+                              error instanceof Error
+                                ? error.message
+                                : 'Configuration failed. Please try again.';
+
+                            toast({
+                              title: 'Configuration Failed',
+                              description: errorMessage,
+                              variant: 'destructive',
+                            });
+
+                            setPendingModuleConfig(null);
+                          } finally {
+                            setToggleTransactionPending(false);
                           }
-
-                          setToggleModuleConfig(null);
                         }}
-                        onError={(error) => {
-                          console.error(
-                            '❌ Toggle module configuration failed:',
-                            error,
-                          );
-
-                          const errorMessage =
-                            error instanceof Error
-                              ? error.message
-                              : 'Configuration failed. Please try again.';
-
-                          toast({
-                            title: 'Configuration Failed',
-                            description: errorMessage,
-                            variant: 'destructive',
-                          });
-
-                          setToggleModuleConfig(null);
-                        }}
+                        disabled={toggleTransactionPending || !currentUser}
+                        className="w-full"
                       >
-                        <TransactionButton
-                          text="Configure Toggle Module"
-                          className="w-full"
-                        />
-                        <TransactionSponsor />
-                        <TransactionStatus>
-                          <TransactionStatusLabel />
-                          <TransactionStatusAction />
-                        </TransactionStatus>
-                      </Transaction>
+                        {toggleTransactionPending ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin inline" />
+                            Configuring...
+                          </>
+                        ) : (
+                          'Configure Toggle Module'
+                        )}
+                      </Button>
 
                       <button
-                        onClick={() => setToggleModuleConfig(null)}
+                        onClick={() => setPendingModuleConfig(null)}
                         className="text-gray-500 hover:text-gray-700 text-sm mt-2 w-full"
                       >
                         Cancel
@@ -2334,76 +2353,87 @@ export const PodManagerControlPanel: React.FC<PodManagerControlPanelProps> = ({
       )}
 
       {/* HATS Module Sync Transaction Modal */}
-      {syncTransactionConfig &&
-        syncTransactionConfig.calls &&
-        syncTransactionConfig.calls.length > 0 && (
+      {pendingSyncConfig &&
+        pendingSyncConfig.calls &&
+        pendingSyncConfig.calls.length > 0 && (
           <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-[60] p-4">
             <div className="bg-white rounded-lg p-6 max-w-md w-full">
               <h3 className="text-lg font-semibold mb-4">
                 Sync Eligibility to Blockchain
               </h3>
               <p className="text-sm text-gray-600 mb-4">
-                This will sync {syncTransactionConfig.calls.length} eligibility
-                criterion/criteria for "{syncTransactionConfig.roleName}" to the
+                This will sync {pendingSyncConfig.calls.length} eligibility
+                criterion/criteria for "{pendingSyncConfig.roleName}" to the
                 HATS module on the blockchain.
               </p>
 
-              <Transaction
-                chainId={base.id}
-                calls={syncTransactionConfig.calls}
-                isSponsored={true}
-                onSuccess={async (response) => {
-                  // Extract transaction hash for BaseScan verification
-                  const transactionHash =
-                    response?.transactionReceipts?.[0]?.transactionHash ||
-                    (response as any)?.hash ||
-                    (response as any)?.receipt?.transactionHash;
-                  const baseScanUrl = transactionHash
-                    ? `https://basescan.org/tx/${transactionHash}`
-                    : undefined;
+              <Button
+                onClick={async () => {
+                  if (!currentUser || !pendingSyncConfig) {
+                    console.error('❌ Missing CDP requirements for sync');
+                    return;
+                  }
 
-                  // Log transaction success with persistence
-                  TransactionLogger.log({
-                    type:
-                      syncTransactionConfig.moduleAddress === 'demo-hats'
-                        ? 'demo'
-                        : 'real',
-                    phase: 'success',
-                    transactionHash,
-                    baseScanUrl,
-                    roleDetails: {
-                      roleId: syncTransactionConfig.roleId,
-                      roleName: syncTransactionConfig.roleName,
-                      hatId: '',
-                      podId: '',
-                    },
-                    moduleDetails: {
-                      moduleAddress: syncTransactionConfig.moduleAddress || 'unknown',
-                      moduleType:
-                        syncTransactionConfig.moduleAddress === 'demo-hats'
-                          ? 'HATS Core Contract'
-                          : 'Eligibility Module',
-                    },
-                    calls: syncTransactionConfig.calls.map((call, index) => ({
-                      callIndex: index,
-                      contractAddress: call.address,
-                      functionName: call.functionName,
-                      args: call.args,
-                    })),
-                    metadata: {
-                      fullResponse: response,
-                      responseType: typeof response,
-                      hasTransactionHash: !!transactionHash,
-                    },
-                  });
-
-                  // Update sync status in database
+                  setSyncTransactionPending(true);
                   try {
-                    const { PodRolePermissionsService } = await import(
-                      '../services/PodRolePermissionsService'
-                    );
+                    console.log('🚀 Syncing eligibility via CDP Smart Account');
+
+                    const response = await sendUserOperation({
+                      calls: pendingSyncConfig.calls.map((call: any) => ({
+                        to: call.address,
+                        data: call.data,
+                        value: call.value || 0n,
+                      })),
+                    });
+
+                    console.log('✅ Sync transaction submitted:', response.hash);
+                    await response.wait();
+                    console.log('✅ Sync transaction confirmed');
+
+                    // Handle success
+                    const transactionHash = response.hash;
+                    const baseScanUrl = transactionHash
+                      ? `https://basescan.org/tx/${transactionHash}`
+                      : undefined;
+
+                    // Log transaction success with persistence
+                    TransactionLogger.log({
+                      type:
+                        pendingSyncConfig.moduleAddress === 'demo-hats'
+                          ? 'demo'
+                          : 'real',
+                      phase: 'success',
+                      transactionHash,
+                      baseScanUrl,
+                      roleDetails: {
+                        roleId: pendingSyncConfig.roleId,
+                        roleName: pendingSyncConfig.roleName,
+                        hatId: '',
+                        podId: '',
+                      },
+                      moduleDetails: {
+                        moduleAddress: pendingSyncConfig.moduleAddress || 'unknown',
+                        moduleType:
+                          pendingSyncConfig.moduleAddress === 'demo-hats'
+                            ? 'HATS Core Contract'
+                            : 'Eligibility Module',
+                      },
+                      calls: pendingSyncConfig.calls.map((call, index) => ({
+                        callIndex: index,
+                        contractAddress: call.address,
+                        functionName: call.functionName,
+                        args: call.args,
+                      })),
+                      metadata: {
+                        fullResponse: response,
+                        responseType: typeof response,
+                        hasTransactionHash: !!transactionHash,
+                      },
+                    });
+
+                    // Update sync status in database
                     await PodRolePermissionsService.updateSyncStatus(
-                      syncTransactionConfig.roleId,
+                      pendingSyncConfig.roleId,
                       'synced',
                       transactionHash,
                     );
@@ -2413,99 +2443,84 @@ export const PodManagerControlPanel: React.FC<PodManagerControlPanelProps> = ({
                     toast({
                       title: '🎉 Sync Complete!',
                       description: baseScanUrl
-                        ? `Successfully synced "${syncTransactionConfig.roleName}" to blockchain. Hash: ${transactionHash}. Persistent logs: TransactionLogger.getLogs()`
-                        : `Successfully synced "${syncTransactionConfig.roleName}" eligibility criteria to blockchain. Check TransactionLogger.getLogs() for details.`,
+                        ? `Successfully synced "${pendingSyncConfig.roleName}" to blockchain. Hash: ${transactionHash}`
+                        : `Successfully synced "${pendingSyncConfig.roleName}" eligibility criteria to blockchain.`,
                     });
+
+                    setPendingSyncConfig(null);
+
                   } catch (error) {
-                    console.error('❌ Failed to update sync status:', error);
-                    toast({
-                      title: 'Partial Success',
-                      description: `Transaction succeeded ${baseScanUrl ? `(${baseScanUrl})` : ''} but database update failed`,
-                      variant: 'destructive',
-                    });
-                  }
+                    console.error('❌ Sync transaction failed:', error);
 
-                  setSyncTransactionConfig(null);
-                }}
-                onError={(error) => {
-                  // Log transaction error with persistence
-                  TransactionLogger.log({
-                    type:
-                      syncTransactionConfig.moduleAddress === 'demo-hats'
-                        ? 'demo'
-                        : 'real',
-                    phase: 'error',
-                    roleDetails: {
-                      roleId: syncTransactionConfig.roleId,
-                      roleName: syncTransactionConfig.roleName,
-                      hatId: '',
-                      podId: '',
-                    },
-                    moduleDetails: {
-                      moduleAddress: syncTransactionConfig.moduleAddress || 'unknown',
-                      moduleType:
-                        syncTransactionConfig.moduleAddress === 'demo-hats'
-                          ? 'HATS Core Contract'
-                          : 'Eligibility Module',
-                    },
-                    calls: syncTransactionConfig.calls.map((call, index) => ({
-                      callIndex: index,
-                      contractAddress: call.address,
-                      functionName: call.functionName,
-                      args: call.args,
-                    })),
-                    error: {
-                      message: error?.message || 'Unknown error',
-                      code: error?.code || 'No code',
-                      stack: (error as any)?.stack,
-                    },
-                    metadata: {
-                      callCount: syncTransactionConfig.calls.length,
-                      errorType: error?.message?.includes('User rejected')
-                        ? 'user_rejection'
-                        : error?.message?.includes('execution reverted')
-                          ? 'execution_reverted'
-                          : error?.message?.includes('gas')
-                            ? 'gas_issue'
-                            : 'unknown',
-                      fullError: error,
-                    },
-                  });
-
-                  // Check if user rejected the transaction
-                  if (error.message?.includes('User rejected')) {
-                    toast({
-                      title: 'Transaction Cancelled',
-                      description:
-                        'You cancelled the blockchain sync transaction',
-                      variant: 'default',
+                    // Log transaction error with persistence
+                    TransactionLogger.log({
+                      type:
+                        pendingSyncConfig.moduleAddress === 'demo-hats'
+                          ? 'demo'
+                          : 'real',
+                      phase: 'error',
+                      roleDetails: {
+                        roleId: pendingSyncConfig.roleId,
+                        roleName: pendingSyncConfig.roleName,
+                        hatId: '',
+                        podId: '',
+                      },
+                      moduleDetails: {
+                        moduleAddress: pendingSyncConfig.moduleAddress || 'unknown',
+                        moduleType:
+                          pendingSyncConfig.moduleAddress === 'demo-hats'
+                            ? 'HATS Core Contract'
+                            : 'Eligibility Module',
+                      },
+                      calls: pendingSyncConfig.calls.map((call, index) => ({
+                        callIndex: index,
+                        contractAddress: call.address,
+                        functionName: call.functionName,
+                        args: call.args,
+                      })),
+                      error: {
+                        message: (error as any)?.message || 'Unknown error',
+                        code: (error as any)?.code || 'No code',
+                        stack: (error as any)?.stack,
+                      },
+                      metadata: {
+                        callCount: pendingSyncConfig.calls.length,
+                        errorType: (error as any)?.message?.includes('User rejected')
+                          ? 'user_rejection'
+                          : 'unknown',
+                        fullError: error,
+                      },
                     });
-                  } else {
+
                     toast({
                       title: 'Sync Failed',
-                      description: `${error instanceof Error ? error.message : 'Transaction failed'}. Check TransactionLogger.getLogs() for persistent details.`,
+                      description: error instanceof Error ? error.message : 'Transaction failed',
                       variant: 'destructive',
                     });
-                  }
 
-                  setSyncTransactionConfig(null);
+                    setPendingSyncConfig(null);
+                  } finally {
+                    setSyncTransactionPending(false);
+                  }
                 }}
+                disabled={syncTransactionPending || !currentUser}
+                className="w-full text-white font-medium py-2 px-4 rounded-lg transition-colors bg-[#2F5D50] hover:bg-[#1F453A] disabled:opacity-50"
               >
-                <TransactionButton
-                  className="w-full text-white font-medium py-2 px-4 rounded-lg transition-colors bg-[#2F5D50] hover:bg-[#1F453A]"
-                  text="Sync to Blockchain"
-                />
-                <TransactionSponsor />
-                <TransactionStatus>
-                  <TransactionStatusLabel />
-                  <TransactionStatusAction />
-                </TransactionStatus>
-              </Transaction>
+                {syncTransactionPending ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin inline" />
+                    Syncing...
+                  </>
+                ) : (
+                  'Sync to Blockchain'
+                )}
+              </Button>
 
               <Button
                 variant="outline"
                 className="w-full mt-3"
-                onClick={() => setSyncTransactionConfig(null)}
+                onClick={() => setPendingSyncConfig(null)}
+                disabled={syncTransactionPending}
               >
                 Cancel
               </Button>
