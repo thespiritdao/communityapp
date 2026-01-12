@@ -1,42 +1,13 @@
 'use client';
 
-import { memo, useState, useCallback, useEffect, lazy, Suspense } from 'react';
+import { memo, useState, useCallback, useEffect } from 'react';
 import { usePublicClient } from 'wagmi';
+import { useSendUserOperation, useCurrentUser, useEvmAddress } from '@coinbase/cdp-hooks';
+import { Loader2 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import styled from 'styled-components';
 import type { ICartProduct } from '../../../models';
 import type { Token } from './CartCheckout';
-
-// Lazy load OnchainKit transaction components
-const Transaction = lazy(() =>
-  import('@coinbase/onchainkit/transaction').then((m) => ({
-    default: m.Transaction,
-  })),
-);
-const TransactionButton = lazy(() =>
-  import('@coinbase/onchainkit/transaction').then((m) => ({
-    default: m.TransactionButton,
-  })),
-);
-const TransactionSponsor = lazy(() =>
-  import('@coinbase/onchainkit/transaction').then((m) => ({
-    default: m.TransactionSponsor,
-  })),
-);
-const TransactionStatus = lazy(() =>
-  import('@coinbase/onchainkit/transaction').then((m) => ({
-    default: m.TransactionStatus,
-  })),
-);
-const TransactionStatusLabel = lazy(() =>
-  import('@coinbase/onchainkit/transaction').then((m) => ({
-    default: m.TransactionStatusLabel,
-  })),
-);
-const TransactionStatusAction = lazy(() =>
-  import('@coinbase/onchainkit/transaction').then((m) => ({
-    default: m.TransactionStatusAction,
-  })),
-);
 
 // Import optimized transaction services
 import {
@@ -146,10 +117,10 @@ interface TransactionFlowProps {
 }
 
 /**
- * TransactionFlow - Optimized transaction processing
+ * TransactionFlow - Optimized transaction processing using CDP
  * - Uses modular transaction services
- * - Lazy loads heavy OnchainKit components
- * - Handles approval and purchase in sequence
+ * - CDP Smart Account integration for gasless transactions
+ * - Handles token approval and purchase in multi-call sequence
  */
 const TransactionFlow = memo(
   ({
@@ -161,6 +132,9 @@ const TransactionFlow = memo(
     onBack,
   }: TransactionFlowProps) => {
     const publicClient = usePublicClient();
+    const { evmAddress } = useEvmAddress();
+    const { sendUserOperation } = useSendUserOperation();
+    const { currentUser } = useCurrentUser();
 
     const [allowances, setAllowances] = useState<TokenAllowances>({
       systemAllowance: 0n,
@@ -171,6 +145,7 @@ const TransactionFlow = memo(
     const [transactionState, setTransactionState] = useState<
       'preparing' | 'ready' | 'processing' | 'success' | 'error'
     >('preparing');
+    const [isTransactionPending, setIsTransactionPending] = useState(false);
 
     // Calculate approval amounts
     const systemApprovalAmount =
@@ -264,39 +239,88 @@ const TransactionFlow = memo(
       userAddress,
     ]);
 
-    // Handle transaction success
-    const handleSuccess = useCallback(
-      async (response: any) => {
+    // Handle purchase transaction via CDP
+    const handlePurchaseTransaction = useCallback(async () => {
+      if (!evmAddress || !currentUser?.evmSmartAccounts?.[0]) {
+        console.error('❌ Missing CDP requirements:', {
+          hasEvmAddress: !!evmAddress,
+          hasCurrentUser: !!currentUser,
+          hasSmartAccount: !!currentUser?.evmSmartAccounts?.[0],
+          evmAddress,
+          smartAccount: currentUser?.evmSmartAccounts?.[0],
+        });
+        setTransactionState('error');
+        return;
+      }
+
+      const smartAccount = currentUser.evmSmartAccounts[0];
+
+      setIsTransactionPending(true);
+      setTransactionState('processing');
+
+      try {
+        console.log('🚀 Initiating shopping cart purchase via CDP Smart Account');
+
+        const calls = buildTransactionCalls();
+        if (calls.length === 0) {
+          throw new Error('Failed to build transaction calls');
+        }
+
+        console.log(`📦 Processing ${calls.length} transaction calls (approvals + purchase)`);
+
+        const response = await sendUserOperation({
+          evmSmartAccount: smartAccount,
+          network: 'base',
+          calls: calls.map((call: any) => ({
+            to: call.address,
+            data: call.data,
+            value: call.value || 0n,
+          })),
+          useCdpPaymaster: true,
+        });
+
+        console.log('✅ User operation sent successfully!', response);
+
+        // CDP SDK returns userOperationHash, not immediate receipt
+        const resultWithHash = response as any;
+        const txHash = resultWithHash?.userOperationHash;
+
+        if (!txHash) {
+          console.warn('⚠️ No userOperationHash found in result');
+          throw new Error('Transaction submitted but no hash found');
+        }
+
+        console.log('✅ Purchase transaction submitted, userOperationHash:', txHash);
         setTransactionState('success');
 
+        // Process orders in database
+        // Note: For CDP, we use userOperationHash as the transaction identifier
         try {
           await processAllOrders({
             products,
             address: userAddress,
             selectedToken,
-            transactionHash:
-              response?.transactionReceipts?.[0]?.transactionHash,
-            receipt: response?.transactionReceipts?.[0],
+            transactionHash: txHash,
+            receipt: null, // CDP doesn't provide immediate receipt
           });
 
           // Navigate or close cart after delay
           setTimeout(() => {
-            // This would typically clear cart and navigate
-            console.log('Order processing complete');
+            console.log('✅ Order processing complete');
           }, 2000);
         } catch (error) {
-          console.error('Error processing orders:', error);
+          console.error('❌ Error processing orders after transaction:', error);
+          // Transaction succeeded but order processing failed
         }
-      },
-      [products, userAddress, selectedToken],
-    );
 
-    // Handle transaction error
-    const handleError = useCallback((error: any) => {
-      console.error('Transaction error:', error);
-      logTransactionError(error);
-      setTransactionState('error');
-    }, []);
+      } catch (error) {
+        console.error('❌ Purchase transaction failed:', error);
+        logTransactionError(error);
+        setTransactionState('error');
+      } finally {
+        setIsTransactionPending(false);
+      }
+    }, [evmAddress, currentUser, sendUserOperation, buildTransactionCalls, products, userAddress, selectedToken]);
 
     if (isLoadingAllowances) {
       return <LoadingSkeleton />;
@@ -327,40 +351,51 @@ const TransactionFlow = memo(
           </AllowanceInfo>
         </TransactionStep>
 
-        <Suspense fallback={<LoadingSkeleton />}>
-          <Transaction
-            chainId={BASE_CHAIN_ID}
-            calls={calls}
-            isSponsored={true}
-            onSuccess={handleSuccess}
-            onError={handleError}
-          >
-            <TransactionButtonStyled
-              as={TransactionButton}
-              text={
-                transactionState === 'processing'
-                  ? 'Processing...'
-                  : transactionState === 'success'
-                    ? 'Success!'
-                    : transactionState === 'error'
-                      ? 'Transaction Failed'
-                      : needsApproval
-                        ? 'Approve & Purchase'
-                        : 'Purchase'
-              }
-              disabled={
-                transactionState === 'processing' ||
-                transactionState === 'success'
-              }
-            />
+        <Button
+          onClick={handlePurchaseTransaction}
+          disabled={
+            !evmAddress ||
+            !currentUser?.evmSmartAccounts?.[0] ||
+            isTransactionPending ||
+            transactionState === 'processing' ||
+            transactionState === 'success' ||
+            calls.length === 0
+          }
+          className="w-full bg-[#007bff] hover:bg-[#0056b3] text-white font-medium py-3 px-4 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {isTransactionPending || transactionState === 'processing' ? (
+            <>
+              <Loader2 className="mr-2 h-5 w-5 animate-spin inline" />
+              Processing...
+            </>
+          ) : transactionState === 'success' ? (
+            '✅ Success!'
+          ) : transactionState === 'error' ? (
+            '❌ Transaction Failed'
+          ) : needsApproval ? (
+            'Approve & Purchase'
+          ) : (
+            'Purchase'
+          )}
+        </Button>
 
-            <TransactionSponsor />
-            <TransactionStatus>
-              <TransactionStatusLabel />
-              <TransactionStatusAction />
-            </TransactionStatus>
-          </Transaction>
-        </Suspense>
+        {(!evmAddress || !currentUser?.evmSmartAccounts?.[0]) && (
+          <div className="mt-2 text-sm text-red-600">
+            Please ensure your CDP Smart Account is connected to complete the purchase
+          </div>
+        )}
+
+        {transactionState === 'success' && (
+          <div className="mt-2 text-sm text-green-600">
+            ✅ Purchase successful! Processing your order...
+          </div>
+        )}
+
+        {transactionState === 'error' && (
+          <div className="mt-2 text-sm text-red-600">
+            ❌ Transaction failed. Please try again.
+          </div>
+        )}
       </TransactionContainer>
     );
   },

@@ -11,15 +11,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Loader2 } from 'lucide-react';
-import {
-  Transaction,
-  TransactionButton,
-  TransactionSponsor,
-  TransactionStatus,
-  TransactionStatusLabel,
-  TransactionStatusAction,
-} from '@coinbase/onchainkit/transaction';
-import { base } from 'viem/chains';
+import { useSendUserOperation, useCurrentUser, useEvmAddress } from '@coinbase/cdp-hooks';
 
 interface RoleCreationModalProps {
   isOpen: boolean;
@@ -50,6 +42,12 @@ export function RoleCreationModal({
   const [roleDescription, setRoleDescription] = useState('');
   const [maxSupply, setMaxSupply] = useState('5');
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // CDP hooks for transaction execution
+  const { evmAddress } = useEvmAddress();
+  const { sendUserOperation } = useSendUserOperation();
+  const { currentUser } = useCurrentUser();
+  const [isCreating, setIsCreating] = useState(false);
 
   // Reset form when modal closes
   React.useEffect(() => {
@@ -166,68 +164,97 @@ export function RoleCreationModal({
                     className="mb-4 p-3 rounded-lg text-sm"
                     style={{ backgroundColor: '#E8F1EE' }}
                   >
-                    <strong>Debug Info:</strong>
+                    <strong>Transaction Ready:</strong>
                     <div>• Calls to process: {transactionCalls.length}</div>
                     <div>• Target contract: {transactionCalls[0]?.to}</div>
                     <div>
                       • Data length: {transactionCalls[0]?.data?.length || 0}{' '}
                       bytes
                     </div>
-                    <div>• Chain ID: {base.id}</div>
-                    <div>• Sponsored: Yes</div>
+                    <div>• Sponsored: Yes (CDP Smart Account)</div>
                   </div>
-                  <Transaction
-                    chainId={base.id}
-                    calls={transactionCalls}
-                    isSponsored={true}
-                    onSuccess={(response) => {
-                      console.log(
-                        '🎉 TRANSACTION SUCCESS - OnchainKit Response:',
-                        response,
-                      );
-                      console.log(
-                        '📋 Response keys:',
-                        Object.keys(response || {}),
-                      );
 
-                      if (response?.transactionReceipts) {
-                        console.log(
-                          '📄 Receipt count:',
-                          response.transactionReceipts.length,
-                        );
-                        response.transactionReceipts.forEach((receipt, i) => {
-                          console.log(`📄 Receipt ${i}:`, {
-                            hash: receipt.transactionHash,
-                            status: receipt.status,
-                            logCount: receipt.logs?.length || 0,
-                            gasUsed: receipt.gasUsed?.toString(),
-                          });
+                  <Button
+                    onClick={async () => {
+                      if (!transactionCalls || !evmAddress || !currentUser?.evmSmartAccounts?.[0]) {
+                        console.error('❌ Missing CDP requirements:', {
+                          hasTransactionCalls: !!transactionCalls,
+                          hasEvmAddress: !!evmAddress,
+                          hasCurrentUser: !!currentUser,
+                          hasSmartAccount: !!currentUser?.evmSmartAccounts?.[0],
+                          evmAddress,
+                          smartAccountAddress: currentUser?.evmSmartAccounts?.[0],
                         });
+                        return;
                       }
 
-                      onTransactionSuccess?.(response);
+                      const smartAccount = currentUser.evmSmartAccounts[0];
+
+                      setIsCreating(true);
+                      try {
+                        console.log('🚀 Creating role via CDP Smart Account:', {
+                          evmAddress,
+                          smartAccount,
+                          callsCount: transactionCalls.length,
+                        });
+
+                        const response = await sendUserOperation({
+                          evmSmartAccount: smartAccount,
+                          network: 'base',
+                          calls: transactionCalls.map((call: any) => ({
+                            to: call.to,
+                            data: call.data,
+                            value: call.value || 0n,
+                          })),
+                          useCdpPaymaster: true,
+                        });
+
+                        console.log('✅ User operation sent successfully!', response);
+
+                        // CDP SDK returns userOperationHash, not immediate receipt
+                        const resultWithHash = response as any;
+                        const txHash = resultWithHash?.userOperationHash;
+
+                        if (txHash) {
+                          console.log('✅ Role creation submitted, userOperationHash:', txHash);
+
+                          // Call success handler with userOperationHash as transaction hash
+                          const successResponse = {
+                            transactionReceipts: [{
+                              transactionHash: txHash,
+                            }],
+                          };
+                          onTransactionSuccess?.(successResponse);
+                        } else {
+                          console.warn('⚠️ No userOperationHash found in result');
+                          throw new Error('Transaction submitted but no hash found');
+                        }
+
+                      } catch (error) {
+                        console.error('❌ Role creation failed:', error);
+                        onTransactionError?.(error);
+                      } finally {
+                        setIsCreating(false);
+                      }
                     }}
-                    onError={(error) => {
-                      console.error(
-                        '❌ TRANSACTION ERROR - OnchainKit Error:',
-                        error,
-                      );
-                      console.log('🚨 Error details:', {
-                        name: (error as any)?.name,
-                        message: error?.message,
-                        cause: (error as any)?.cause,
-                        code: error?.code,
-                      });
-                      onTransactionError?.(error);
-                    }}
+                    disabled={isCreating || !evmAddress || !currentUser?.evmSmartAccounts?.[0]}
+                    className="w-full"
                   >
-                    <TransactionButton text="Create Role" />
-                    <TransactionSponsor />
-                    <TransactionStatus>
-                      <TransactionStatusLabel />
-                      <TransactionStatusAction />
-                    </TransactionStatus>
-                  </Transaction>
+                    {isCreating ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Creating Role...
+                      </>
+                    ) : (
+                      'Create Role'
+                    )}
+                  </Button>
+
+                  {(!evmAddress || !currentUser?.evmSmartAccounts?.[0]) && (
+                    <div className="mt-2 text-sm text-red-600">
+                      ⚠️ CDP Smart Account not ready. Please ensure your wallet is fully connected.
+                    </div>
+                  )}
                 </div>
               )}
             </div>
