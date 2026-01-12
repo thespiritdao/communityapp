@@ -264,7 +264,7 @@ export const RemoveMemberButton: React.FC<RemoveMemberButtonProps> = ({
         }}
       >
         <Trash2 className="w-4 h-4" />
-        Remove Member
+        Remove
       </button>
     );
   }
