@@ -1287,6 +1287,79 @@ export const PodManagerControlPanel: React.FC<PodManagerControlPanelProps> = ({
     }
   };
 
+  // Handler for manual blockchain sync
+  const [isSyncing, setIsSyncing] = useState(false);
+
+  const handleBlockchainSync = async () => {
+    if (!publicClient || !address) {
+      toast({
+        title: 'Cannot Sync',
+        description: 'Wallet not connected or blockchain client not available',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setIsSyncing(true);
+
+    try {
+      console.log('🔄 Manual blockchain sync initiated for pod:', podId);
+
+      // Import blockchain sync service
+      const { HatBlockchainSyncService } = await import('../services/HatBlockchainSyncService');
+
+      // Get management HAT ID for the pod
+      const { data: podData } = await supabase
+        .from('pods')
+        .select('management_hat_id')
+        .eq('id', podId)
+        .single();
+
+      if (!podData?.management_hat_id) {
+        throw new Error('Pod management HAT ID not found');
+      }
+
+      // Sync all roles from blockchain
+      const syncResult = await HatBlockchainSyncService.syncRolesFromBlockchain(
+        publicClient,
+        podId,
+        podData.management_hat_id,
+        address
+      );
+
+      if (syncResult.success) {
+        console.log('✅ Blockchain sync successful:', syncResult);
+
+        // Reload roles to show any new ones
+        await loadPodRoles();
+
+        if (syncResult.rolesCreated > 0) {
+          toast({
+            title: 'Sync Successful',
+            description: `Found and synced ${syncResult.rolesCreated} new role(s) from blockchain`,
+          });
+        } else {
+          toast({
+            title: 'Sync Complete',
+            description: 'All blockchain roles are already in database',
+          });
+        }
+      } else {
+        throw new Error(`Sync completed with ${syncResult.errors.length} errors`);
+      }
+
+    } catch (error) {
+      console.error('❌ Manual blockchain sync failed:', error);
+      toast({
+        title: 'Sync Failed',
+        description: error instanceof Error ? error.message : 'Failed to sync roles from blockchain',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
   const handleCreateRole = async (roleData: {
     name: string;
     description: string;
@@ -1719,23 +1792,66 @@ export const PodManagerControlPanel: React.FC<PodManagerControlPanelProps> = ({
                   console.error('❌ Fallback receipt fetch also failed:', fallbackError);
 
                   // Transaction succeeded on-chain but we can't get the receipt
-                  // Show user a message and trigger blockchain sync
-                  toast({
-                    title: 'Role Created (Syncing)',
-                    description: `Transaction submitted successfully. The role will appear after blockchain sync completes. Tx: ${transactionHash.slice(0, 10)}...`,
-                    variant: 'default',
-                  });
+                  // Use blockchain sync to fetch the role from Hats Protocol
+                  console.log('🔄 Initiating blockchain sync to fetch new role from Hats Protocol...');
 
-                  // Trigger blockchain sync in background to fetch the role
-                  console.log('🔄 Triggering blockchain sync to fetch new role...');
-                  setTimeout(() => {
-                    loadPodRoles();
-                  }, 5000);
+                  try {
+                    // Import blockchain sync service dynamically
+                    const { HatBlockchainSyncService } = await import('../services/HatBlockchainSyncService');
 
-                  // Reset state and close modal
-                  setRoleCreationTransaction(null);
-                  setIsProcessingTransaction(false);
-                  return; // Exit early - blockchain sync will handle it
+                    // Get management HAT ID for the pod
+                    const { data: podData } = await supabase
+                      .from('pods')
+                      .select('management_hat_id')
+                      .eq('id', podId)
+                      .single();
+
+                    if (!podData?.management_hat_id) {
+                      throw new Error('Pod management HAT ID not found');
+                    }
+
+                    // Sync all roles from blockchain
+                    const syncResult = await HatBlockchainSyncService.syncRolesFromBlockchain(
+                      publicClient,
+                      podId,
+                      podData.management_hat_id,
+                      address
+                    );
+
+                    if (syncResult.success && syncResult.rolesCreated > 0) {
+                      console.log(`✅ Blockchain sync successful! Created ${syncResult.rolesCreated} new roles`);
+
+                      // Reload roles to show the new one
+                      await loadPodRoles();
+
+                      toast({
+                        title: 'Role Created Successfully',
+                        description: `New role "${roleCreationTransaction?.roleData.name}" has been synced from blockchain`,
+                      });
+
+                      // Close modal and reset state
+                      setRoleCreationTransaction(null);
+                      setIsProcessingTransaction(false);
+                      return;
+                    } else {
+                      throw new Error('Blockchain sync did not find new roles');
+                    }
+
+                  } catch (syncError) {
+                    console.error('❌ Blockchain sync failed:', syncError);
+
+                    // Final fallback: Show user a message
+                    toast({
+                      title: 'Role Created (Pending Sync)',
+                      description: `Transaction submitted successfully. The role will appear after the next automatic sync. Tx: ${transactionHash.slice(0, 10)}...`,
+                      variant: 'default',
+                    });
+
+                    // Reset state and close modal
+                    setRoleCreationTransaction(null);
+                    setIsProcessingTransaction(false);
+                    return;
+                  }
                 }
               }
             }
@@ -1962,13 +2078,33 @@ export const PodManagerControlPanel: React.FC<PodManagerControlPanelProps> = ({
         <div className="space-y-4">
           <div className="flex justify-between items-center">
             <h3 className="text-lg font-semibold">Pod Roles</h3>
-            <Button
-              onClick={() => setIsCreatingRole(true)}
-              className="flex items-center gap-2"
-            >
-              <Plus className="h-4 w-4" />
-              Create Role
-            </Button>
+            <div className="flex gap-2">
+              <Button
+                onClick={handleBlockchainSync}
+                disabled={isSyncing}
+                variant="outline"
+                className="flex items-center gap-2"
+              >
+                {isSyncing ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Syncing...
+                  </>
+                ) : (
+                  <>
+                    <ToyBrick className="h-4 w-4" />
+                    Sync from Blockchain
+                  </>
+                )}
+              </Button>
+              <Button
+                onClick={() => setIsCreatingRole(true)}
+                className="flex items-center gap-2"
+              >
+                <Plus className="h-4 w-4" />
+                Create Role
+              </Button>
+            </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
