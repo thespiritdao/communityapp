@@ -278,15 +278,7 @@ export async function syncRolesFromBlockchain(
       try {
         const roleName = extractRoleName(hat.details, hat.hatId);
 
-        console.log(`💾 Creating database entry for new HAT:`, {
-          hatId: hat.hatId,
-          roleName,
-          maxSupply: hat.maxSupply,
-          supply: hat.supply,
-          active: hat.active,
-        });
-
-        await PodRolePermissionsService.createRolePermission({
+        const rolePermissionData = {
           pod_id: podId,
           token_address: hat.hatId,
           role_name: roleName,
@@ -312,14 +304,35 @@ export async function syncRolesFromBlockchain(
           current_holders: hat.supply,
           created_by: createdBy,
           is_active: hat.active,
+        };
+
+        console.log(`💾 Creating database entry for new HAT:`, {
+          hatId: hat.hatId,
+          roleName,
+          maxSupply: hat.maxSupply,
+          supply: hat.supply,
+          active: hat.active,
+          podId,
+          createdBy,
         });
+
+        console.log('📝 Full role permission data:', JSON.stringify(rolePermissionData, null, 2));
+
+        await PodRolePermissionsService.createRolePermission(rolePermissionData);
 
         result.rolesCreated++;
         console.log(`✅ Created database entry for HAT: ${hat.hatId}`);
 
       } catch (createError) {
-        const errorMsg = `Failed to create database entry for ${hat.hatId}: ${createError}`;
+        // Detailed error logging
+        const errorDetails = createError instanceof Error
+          ? `${createError.message}\nStack: ${createError.stack}`
+          : JSON.stringify(createError, null, 2);
+
+        const errorMsg = `Failed to create database entry for ${hat.hatId}: ${errorDetails}`;
         console.error(`❌ ${errorMsg}`);
+        console.error('Full error object:', createError);
+
         result.errors.push(errorMsg);
       }
     }
