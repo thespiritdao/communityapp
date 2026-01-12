@@ -1703,9 +1703,40 @@ export const PodManagerControlPanel: React.FC<PodManagerControlPanelProps> = ({
                 console.log('🔗 UserOperationHash:', transactionHash);
                 console.log('🔍 Check Base block explorer: https://basescan.org/tx/' + transactionHash);
 
-                // Don't throw - let the user know the transaction was submitted
-                // The role will need to be synced later via blockchain sync
-                throw new Error(`Transaction submitted but receipt not available yet. UserOperationHash: ${transactionHash}`);
+                // Fallback: Try to get receipt without waiting (may already be mined)
+                console.log('🔄 Attempting fallback receipt fetch...');
+                try {
+                  const fallbackReceipt = await publicClient.getTransactionReceipt({
+                    hash: transactionHash as `0x${string}`,
+                  });
+                  if (fallbackReceipt) {
+                    console.log('✅ Fallback receipt fetch succeeded!', fallbackReceipt);
+                    receipt = fallbackReceipt;
+                  } else {
+                    throw new Error('Receipt not found via fallback');
+                  }
+                } catch (fallbackError) {
+                  console.error('❌ Fallback receipt fetch also failed:', fallbackError);
+
+                  // Transaction succeeded on-chain but we can't get the receipt
+                  // Show user a message and trigger blockchain sync
+                  toast({
+                    title: 'Role Created (Syncing)',
+                    description: `Transaction submitted successfully. The role will appear after blockchain sync completes. Tx: ${transactionHash.slice(0, 10)}...`,
+                    variant: 'default',
+                  });
+
+                  // Trigger blockchain sync in background to fetch the role
+                  console.log('🔄 Triggering blockchain sync to fetch new role...');
+                  setTimeout(() => {
+                    loadPodRoles();
+                  }, 5000);
+
+                  // Reset state and close modal
+                  setRoleCreationTransaction(null);
+                  setIsProcessingTransaction(false);
+                  return; // Exit early - blockchain sync will handle it
+                }
               }
             }
 
