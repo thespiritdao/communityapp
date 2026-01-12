@@ -301,9 +301,8 @@ export async function syncRolesFromBlockchain(
           },
           eligibility_criteria: [],
           max_holders: hat.maxSupply,
-          current_holders: hat.supply,
           created_by: createdBy,
-          is_active: hat.active,
+          // Note: current_holders and is_active are NOT passed - they're set by database defaults
         };
 
         console.log(`💾 Creating database entry for new HAT:`, {
@@ -416,9 +415,8 @@ export async function quickSyncSingleHat(
       },
       eligibility_criteria: [],
       max_holders: hatDetails.maxSupply,
-      current_holders: hatDetails.supply,
       created_by: createdBy,
-      is_active: hatDetails.active,
+      // Note: current_holders and is_active are NOT passed - they're set by database defaults
     });
 
     console.log(`✅ Quick sync successful for HAT: ${hatId}`);
