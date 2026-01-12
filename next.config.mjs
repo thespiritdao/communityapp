@@ -26,9 +26,10 @@ const nextConfig = {
   compress: true,
   // Optimize chunks to prevent loading issues and improve HMR stability
   webpack: (config, { isServer, dev, webpack }) => {
-    // CRITICAL: Temporarily disable ALL minification to bypass cssnano CSS error
-    // This is a workaround for CSS syntax issue in a third-party library
-    // Will re-enable JS minification after successful deployment
+    // CRITICAL: Disable ALL minification to bypass cssnano CSS parsing errors
+    // Issue: cssnano fails with "Unexpected '/'" error on line 148 of generated CSS
+    // This is caused by styled-components or malformed CSS from a dependency
+    // Trade-off: Larger bundle size but functional deployment
     if (!dev && !isServer) {
       config.optimization.minimize = false;
     }
