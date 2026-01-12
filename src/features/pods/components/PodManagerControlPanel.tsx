@@ -1169,17 +1169,33 @@ export const PodManagerControlPanel: React.FC<PodManagerControlPanelProps> = ({
       }
 
       // Get the pod's management hat as the admin - fetch from database directly
+      console.log('🔍 Fetching pod management HAT ID for pod:', podId);
       const { data: podData, error: podError } = await supabase
         .from('pods')
-        .select('management_hat_id')
+        .select('management_hat_id, name')
         .eq('id', podId)
         .single();
 
-      if (podError || !podData?.management_hat_id) {
-        throw new Error('Pod leader hat not found');
+      console.log('📊 Pod query result:', {
+        podData,
+        podError,
+        hasManagementHat: !!podData?.management_hat_id,
+      });
+
+      if (podError) {
+        console.error('❌ Database error fetching pod:', podError);
+        throw new Error(`Failed to fetch pod: ${podError.message}`);
+      }
+
+      if (!podData?.management_hat_id) {
+        console.error('❌ Pod has no management_hat_id:', podData);
+        throw new Error(
+          `Pod "${podData?.name || podId}" does not have a management HAT ID configured. Please set up the pod's management HAT first.`,
+        );
       }
 
       const adminHatId = podData.management_hat_id;
+      console.log('✅ Using management HAT as admin:', adminHatId);
 
       console.log('🎩 Preparing role creation transaction:', roleData);
       console.log(
