@@ -187,7 +187,8 @@ const nextConfig = {
                 https://cloudflare-ipfs.com
                 https://dweb.link
                 https://ui-avatars.com;
-              style-src 'self' 'unsafe-inline';
+              style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
+              font-src 'self' https://fonts.gstatic.com;
               frame-src 'self'
                 https://*.coinbase.com
                 https://keys.coinbase.com
