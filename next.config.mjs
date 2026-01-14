@@ -28,10 +28,6 @@ const nextConfig = {
   compress: true,
   // Optimize chunks to prevent loading issues and improve HMR stability
   webpack: (config, { isServer, dev, webpack }) => {
-    // TEMPORARY: Disable minification to see actual CSS error
-    if (!dev && !isServer) {
-      config.optimization.minimize = false;
-    }
 
     if (!isServer) {
       config.resolve.fallback = {

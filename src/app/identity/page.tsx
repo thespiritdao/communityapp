@@ -7,9 +7,9 @@ import Link from 'next/link';
 import { useIdentityPage } from '@/features/identity/hooks/useIdentityPage';
 import { DatabaseTokenGallery } from '@/features/identity/components/DatabaseTokenGallery';
 import { InviteCodeDisplay } from '@/features/identity/components/InviteCodeDisplay';
-import 'src/features/identity/styles/identityStyles.css';
-import 'src/features/identity/styles/TokenGallery.css';
-import 'src/features/identity/styles/ProfileModal.css';
+import '@/features/identity/styles/identityStyles.css';
+import '@/features/identity/styles/TokenGallery.css';
+import '@/features/identity/styles/ProfileModal.css';
 
 // Lazy load heavy components with loading skeletons
 const BalancesSection = dynamic(
