@@ -143,7 +143,7 @@
   line-height: 1.5; /* Improve readability */
 }
 
-* Example style for a label + input grouping */
+/* Example style for a label + input grouping */
 .form-group {
   display: flex;
   flex-direction: column;
