@@ -16,7 +16,7 @@ import {
 } from '../services/DraftService';
 import styles from '../styles/Forum.module.css';
 import DatePicker from 'react-datepicker';
-import 'react-datepicker/dist/react-datepicker.css';
+// CSS imported globally in globals.css
 
 // Template and placeholder interfaces
 export interface ThreadTemplate {
