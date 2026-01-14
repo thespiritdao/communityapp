@@ -135,7 +135,7 @@ export const ApplicationApprovalCard: React.FC<
               Application from{' '}
               {applicantProfile?.first_name || applicantProfile?.last_name
                 ? `${applicantProfile.first_name || ''} ${applicantProfile.last_name || ''}`.trim()
-                : `${application.applicant_address.slice(0, 8)}...${application.applicant_address.slice(-6)}`}
+                : 'No Name'}
             </p>
           </div>
           <div

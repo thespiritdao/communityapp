@@ -869,9 +869,6 @@ export const ApproveApplicationButton: React.FC<
                   No Name
                 </span>
               )}
-              <p className="text-xs text-gray-400 truncate">
-                {applicantAddress.slice(0, 8)}...{applicantAddress.slice(-6)}
-              </p>
             </div>
           </div>
         </div>

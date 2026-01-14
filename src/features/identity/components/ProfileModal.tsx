@@ -93,6 +93,31 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
   const [showDMModal, setShowDMModal] = useState(false);
   const [showGiftModal, setShowGiftModal] = useState(false);
 
+  // 🔍 DIAGNOSTIC LOGGING: Profile data analysis
+  console.log('📊 [ProfileModal] Rendering with user data:', {
+    wallet_address: user.wallet_address,
+    name: `${user.first_name} ${user.last_name}`,
+    hasInterests: !!user.interests,
+    interestsType: typeof user.interests,
+    interestsValue: user.interests,
+    hasSeeking: !!user.seeking,
+    seekingType: typeof user.seeking,
+    seekingValue: user.seeking,
+    open_to_connect: user.open_to_connect,
+    allProfileKeys: Object.keys(user),
+  });
+
+  // 🔍 DIAGNOSTIC LOGGING: Mapped values analysis
+  const mappedInterests = mapStoredValuesToLabels(user.interests ?? null, interestsOptions);
+  const mappedSeeking = mapStoredValuesToLabels(user.seeking ?? null, seekingOptions);
+
+  console.log('🎯 [ProfileModal] Mapped results:', {
+    interestsCount: mappedInterests.length,
+    interestsLabels: mappedInterests,
+    seekingCount: mappedSeeking.length,
+    seekingLabels: mappedSeeking,
+  });
+
   const handleFundUser = () => {
     openMemberFunding({
       address: user.wallet_address,
@@ -192,16 +217,13 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
             </span>
             Interests
           </h3>
-          {mapStoredValuesToLabels(user.interests ?? null, interestsOptions).length >
-          0 ? (
+          {mappedInterests.length > 0 ? (
             <div className="interests-tags">
-              {mapStoredValuesToLabels(user.interests ?? null, interestsOptions).map(
-                (label, i) => (
-                  <span key={i} className="interest-tag">
-                    {label}
-                  </span>
-                ),
-              )}
+              {mappedInterests.map((label, i) => (
+                <span key={i} className="interest-tag">
+                  {label}
+                </span>
+              ))}
             </div>
           ) : (
             <p className="interests-empty">No interests specified</p>
@@ -215,15 +237,13 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
             </span>
             Seeking
           </h3>
-          {mapStoredValuesToLabels(user.seeking ?? null, seekingOptions).length > 0 ? (
+          {mappedSeeking.length > 0 ? (
             <div className="interests-tags">
-              {mapStoredValuesToLabels(user.seeking ?? null, seekingOptions).map(
-                (label, i) => (
-                  <span key={i} className="interest-tag seeking-tag">
-                    {label}
-                  </span>
-                ),
-              )}
+              {mappedSeeking.map((label, i) => (
+                <span key={i} className="interest-tag seeking-tag">
+                  {label}
+                </span>
+              ))}
             </div>
           ) : (
             <p className="interests-empty">

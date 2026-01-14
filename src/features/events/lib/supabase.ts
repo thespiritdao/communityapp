@@ -1221,15 +1221,30 @@ export class EventService {
 
   // User profile operations
   static async getUserProfileByWallet(walletAddress: string): Promise<{
+    user_id?: string;
+    wallet_address: string;
     first_name?: string;
     last_name?: string;
-    profile_picture?: string;
-    user_id: string;
-    wallet_address: string;
+    profile_picture?: string | null;
+    bio?: string | null;
+    website?: string | null;
+    twitter?: string | null;
+    discord?: string | null;
+    github?: string | null;
+    linkedin?: string | null;
+    email?: string | null;
+    tiktok?: string | null;
+    instagram?: string | null;
+    facebook?: string | null;
+    youtube?: string | null;
+    twitch?: string | null;
+    interests?: string | null;
+    seeking?: string | null;
+    open_to_connect?: string | null;
   } | null> {
     const { data, error } = await supabase
       .from('user_profiles')
-      .select('user_id, wallet_address, first_name, last_name, profile_picture')
+      .select('user_id, wallet_address, first_name, last_name, profile_picture, bio, website, twitter, discord, github, linkedin, email, tiktok, instagram, facebook, youtube, twitch, interests, seeking, open_to_connect')
       .eq('wallet_address', walletAddress.toLowerCase())
       .single();
 
