@@ -1,6 +1,8 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  reactStrictMode: true, // Enable for better performance and debugging
+  // Disable React Strict Mode in development for faster loading
+  // Strict Mode causes double-rendering which slows down auth flows
+  reactStrictMode: process.env.NODE_ENV === 'production',
   transpilePackages: ['@coinbase/onchainkit'],
   outputFileTracingRoot: process.cwd(),
   typescript: {
@@ -44,18 +46,18 @@ const nextConfig = {
 
       // Improve HMR stability in development
       if (dev) {
+        // Use native file watching instead of polling for better performance
         config.watchOptions = {
-          poll: 1000,
           aggregateTimeout: 300,
-          ignored: ['node_modules/**'],
+          ignored: ['**/node_modules/**', '**/.git/**', '**/.next/**'],
         };
 
-        // Prevent module resolution issues during HMR
-        config.resolve.cache = false;
-        config.module.unsafeCache = false;
-
-        // Add error resilience for dynamic imports
-        config.resolve.plugins = config.resolve.plugins || [];
+        // Enable caching for faster rebuilds (opposite of what was here)
+        // This significantly speeds up development server
+        config.cache = {
+          type: 'filesystem',
+          allowCollectingMemory: true,
+        };
       }
 
       // Optimize chunk splitting
@@ -145,17 +147,9 @@ const nextConfig = {
         pathname: '/api/**',
       },
     ],
-    domains: ['yqgqodofeliuurrmxlks.supabase.co'],
   },
   async headers() {
     return [
-      {
-        source: '/_next/static/css/:path*',
-        headers: [
-          { key: 'Content-Type', value: 'text/css; charset=utf-8' },
-          { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
-        ],
-      },
       {
         source: '/manifest.json',
         headers: [
