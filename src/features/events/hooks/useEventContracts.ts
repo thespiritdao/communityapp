@@ -1,3 +1,27 @@
+/**
+ * @deprecated This hook is DEPRECATED and NOT IN USE
+ *
+ * ⚠️ WARNING: This hook uses wagmi's useWalletClient which is incompatible with
+ * CDP Embedded Wallets (Coinbase Smart Wallets).
+ *
+ * All event system functionality has been migrated to use CDP hooks:
+ * - useSimplifiedEventTransactions (for event creation, registration, etc.)
+ * - useEventTransactions (for escrow, NFT minting)
+ *
+ * These hooks use CDP's useSendUserOperation for gas-sponsored transactions.
+ *
+ * DO NOT USE THIS HOOK IN NEW CODE.
+ * This file is retained only for historical reference and will be removed in a future cleanup.
+ *
+ * Migration Guide:
+ * - For event registration: Use EventRegistrationButton component
+ * - For event creation: Use SimplifiedEventCreationForm component
+ * - For check-ins: Use EventCheckInSystem component
+ * - For NFT minting: Use batch operations in EventCheckInSystem
+ *
+ * Last audited: 2026-01-13
+ */
+
 import { useState, useCallback } from 'react';
 import { useEvmAddress } from '@coinbase/cdp-hooks';
 import { usePublicClient, useWalletClient } from 'wagmi';
@@ -14,6 +38,9 @@ const EVENT_REGISTRATION_FACTORY =
   CONTRACT_ADDRESSES.EVENT_REGISTRATION_FACTORY;
 const EVENT_COMPLETION_FACTORY = CONTRACT_ADDRESSES.EVENT_COMPLETION_FACTORY;
 
+/**
+ * @deprecated - See file header for details
+ */
 export function useEventContracts() {
   const { evmAddress: address } = useEvmAddress();
   const publicClient = usePublicClient();
