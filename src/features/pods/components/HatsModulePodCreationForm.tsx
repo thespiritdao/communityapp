@@ -22,11 +22,6 @@ import {
   Settings,
 } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
-import { useHatsModules } from '../../../hooks/useHatsModules';
-import type {
-  PodCreationConfig,
-  EligibilityRule,
-} from '../../../services/hatsModulesService';
 import { PodTokenService, type PodToken } from '../services/podTokenService';
 import { usePublicClient } from 'wagmi';
 import { base } from 'viem/chains';
@@ -188,14 +183,6 @@ export const HatsModulePodCreationForm: React.FC<
         });
     }
   }, [continuePodId, existingPod, toast]);
-
-  const {
-    createModularPod,
-    isInitialized: modulesInitialized,
-    isInitializing,
-    availableModules,
-    error: modulesError,
-  } = useHatsModules();
 
   // Check Advocate token ownership for pod creation permission
   const [hasAdvocateToken, setHasAdvocateToken] = useState(false);
@@ -4281,44 +4268,6 @@ Instructions:
     </div>
   );
 
-  // Modules status indicator
-  const ModulesStatus = () => (
-    <div
-      className="mb-6 p-4 border rounded-lg"
-      style={{ backgroundColor: '#E8F1EE', borderColor: '#B8D9CA' }}
-    >
-      <div className="flex items-center gap-2 mb-2">
-        <Zap className="h-5 w-5" style={{ color: '#2F5D50' }} />
-        <h4 className="font-medium" style={{ color: '#1F453A' }}>
-          Module Integrations
-        </h4>
-      </div>
-
-      {isInitializing ? (
-        <div className="flex items-center gap-2">
-          <Clock className="h-4 w-4 animate-spin" />
-          <span className="text-sm" style={{ color: '#2F5D50' }}>
-            Initializing modules...
-          </span>
-        </div>
-      ) : modulesInitialized ? (
-        <div className="flex items-center gap-2">
-          <CheckCircle className="h-4 w-4" style={{ color: '#3F7A5A' }} />
-          <span className="text-sm" style={{ color: '#2F5D50' }}>
-            Ready - {availableModules.length} modules available
-          </span>
-        </div>
-      ) : (
-        <div className="flex items-center gap-2">
-          <Shield className="h-4 w-4" style={{ color: '#8B3A3A' }} />
-          <span className="text-sm" style={{ color: '#8B3A3A' }}>
-            Error: {modulesError || 'Failed to initialize'}
-          </span>
-        </div>
-      )}
-    </div>
-  );
-
   return (
     <Card className="max-w-4xl mx-auto">
       <CardHeader>
@@ -4368,7 +4317,6 @@ Instructions:
 
       <CardContent className="space-y-6">
         <AdvocateTokenStatus />
-        <ModulesStatus />
 
         {step === 'config' && (
           <div className="space-y-6">
