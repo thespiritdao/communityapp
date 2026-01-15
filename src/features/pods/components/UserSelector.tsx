@@ -162,9 +162,6 @@ export function UserSelector({
               <div className="text-sm font-medium">
                 {selectedUser.first_name} {selectedUser.last_name}
               </div>
-              <div className="text-xs text-gray-500 font-mono truncate">
-                {selectedUser.wallet_address}
-              </div>
             </div>
           </div>
           <button
@@ -210,9 +207,6 @@ export function UserSelector({
                   <div className="flex-1 min-w-0">
                     <div className="text-sm font-medium">
                       {user.first_name} {user.last_name}
-                    </div>
-                    <div className="text-xs text-gray-500 font-mono truncate">
-                      {user.wallet_address}
                     </div>
                   </div>
                 </button>
