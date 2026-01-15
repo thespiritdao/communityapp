@@ -274,7 +274,6 @@ export class PodDatabaseService {
         pod_metadata: podData.pod_metadata,
         status: 'draft',
         is_active: false,
-        token_type: 'HATS',
         management_hat_id: podData.management_hat_id,
         membership_hat_id: podData.membership_hat_id,
         treasury_contract_address: podData.treasury_contract_address,

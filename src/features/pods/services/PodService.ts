@@ -278,7 +278,6 @@ export class PodService {
           pod_image_url: podData.image,
           created_by_address: podData.createdByAddress,
           status: 'draft', // Pending governance approval
-          token_type: 'HATS',
           is_active: false,
           management_hat_id: podData.managementHatId || null,
           membership_hat_id: podData.membershipHatId || null,
