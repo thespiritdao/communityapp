@@ -2144,7 +2144,8 @@ Instructions:
           podData = await PodService.createPod({
             name: formData.name,
             description: formData.description,
-            parentPodId: formData.parentPodId,
+            parentPodId: formData.parentPodId, // UUID for FK
+            parentHatId: config.parentHatId, // HAT ID for child index queries
             podLeads: validation.validLeads,
             image: podImageUrl,
             managementHatId: newHatId, // TIER 1 FIX: No placeholder - verified onchain above

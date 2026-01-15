@@ -251,7 +251,8 @@ export class PodService {
   static async createPod(podData: {
     name: string;
     description: string;
-    parentPodId: string;
+    parentPodId: string; // UUID for database foreign key
+    parentHatId?: string; // HAT ID for child index queries (critical for HatChildIndexService)
     podLeads: string[];
     image?: string;
     createdByAddress: string;
@@ -273,7 +274,8 @@ export class PodService {
         .insert({
           name: podData.name,
           description: podData.description,
-          parent_pod_id: podData.parentPodId,
+          parent_pod_id: podData.parentPodId, // UUID for FK relationship
+          parent_hat_id: podData.parentHatId || null, // HAT ID for child counting
           pod_leads: podData.podLeads,
           pod_image_url: podData.image,
           created_by_address: podData.createdByAddress,
