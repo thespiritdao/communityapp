@@ -291,6 +291,10 @@ export const HatsModulePodCreationForm: React.FC<
   const [hatCreationReceipt, setHatCreationReceipt] = useState<any>(null);
   const [extractedHatId, setExtractedHatId] = useState<string>('');
   const [proxyDeploymentComplete, setProxyDeploymentComplete] = useState(false);
+
+  // Button processing states for immediate UI feedback
+  const [isCreatingPod, setIsCreatingPod] = useState(false);
+  const [isDeployingProxy, setIsDeployingProxy] = useState(false);
   const [extractedProxyAddress, setExtractedProxyAddress] =
     useState<string>('');
   const proxyButtonRef = useRef<HTMLButtonElement>(null);
@@ -4645,7 +4649,10 @@ Instructions:
                     <div className="space-y-3">
                       <Button
                         onClick={async () => {
+                          setIsCreatingPod(true);
+
                           if (!currentUser?.evmSmartAccounts?.[0]) {
+                            setIsCreatingPod(false);
                             toast({
                               title: 'Account Not Ready',
                               description: 'Smart account not available',
@@ -4687,17 +4694,21 @@ Instructions:
                           } catch (error) {
                             console.error('❌ HAT Creation failed:', error);
                             handleHatCreationError(error);
+                          } finally {
+                            setIsCreatingPod(false);
                           }
                         }}
-                        disabled={txStatus === 'pending'}
-                        className="w-full text-white font-medium py-3 px-6 rounded-lg bg-[#2F5D50] hover:bg-[#1F453A]"
+                        disabled={txStatus === 'pending' || isCreatingPod}
+                        className="w-full text-white font-medium py-3 px-6 rounded-lg bg-[#2F5D50] hover:bg-[#1F453A] disabled:opacity-50 disabled:cursor-not-allowed"
                       >
-                        {txStatus === 'pending' ? '⏳ Creating Pod...' : 'Create Pod'}
+                        {isCreatingPod || txStatus === 'pending' ? '⏳ Creating Pod...' : 'Create Pod'}
                       </Button>
 
-                      {txStatus === 'pending' && (
+                      {(isCreatingPod || txStatus === 'pending') && (
                         <div className="mt-2 text-sm text-blue-600 text-center">
-                          🔄 Transaction in progress... (Sponsored - no gas fees!)
+                          {isCreatingPod && txStatus !== 'pending'
+                            ? '🔄 Preparing transaction...'
+                            : '🔄 Transaction in progress... (Sponsored - no gas fees!)'}
                         </div>
                       )}
 
@@ -4717,7 +4728,10 @@ Instructions:
                       <div className="space-y-3">
                         <Button
                           onClick={async () => {
+                            setIsDeployingProxy(true);
+
                             if (!currentUser?.evmSmartAccounts?.[0]) {
+                              setIsDeployingProxy(false);
                               toast({
                                 title: 'Account Not Ready',
                                 description: 'Smart account not available',
@@ -4759,17 +4773,21 @@ Instructions:
                             } catch (error) {
                               console.error('❌ Proxy Deployment failed:', error);
                               handleProxyDeploymentError(error);
+                            } finally {
+                              setIsDeployingProxy(false);
                             }
                           }}
-                          disabled={txStatus === 'pending'}
-                          className="w-full text-white font-medium py-3 px-6 rounded-lg bg-[#2F5D50] hover:bg-[#1F453A]"
+                          disabled={txStatus === 'pending' || isDeployingProxy}
+                          className="w-full text-white font-medium py-3 px-6 rounded-lg bg-[#2F5D50] hover:bg-[#1F453A] disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                          {txStatus === 'pending' ? '⏳ Deploying Proxy...' : 'Deploy Proxy'}
+                          {isDeployingProxy || txStatus === 'pending' ? '⏳ Deploying Proxy...' : 'Deploy Proxy'}
                         </Button>
 
-                        {txStatus === 'pending' && (
+                        {(isDeployingProxy || txStatus === 'pending') && (
                           <div className="mt-2 text-sm text-blue-600 text-center">
-                            🔄 Transaction in progress... (Sponsored - no gas fees!)
+                            {isDeployingProxy && txStatus !== 'pending'
+                              ? '🔄 Preparing transaction...'
+                              : '🔄 Transaction in progress... (Sponsored - no gas fees!)'}
                           </div>
                         )}
 
