@@ -73,6 +73,12 @@ export class PodService {
    */
   static async getAllPods(config: PodServiceConfig = {}): Promise<Pod[]> {
     try {
+      // Check authentication for RLS policies
+      const session = await getCurrentSession();
+      if (!session?.user?.id) {
+        console.warn('⚠️ PodService.getAllPods: No authentication, RLS may block query');
+      }
+
       let query = supabase
         .from('pods')
         .select(`
@@ -255,6 +261,13 @@ export class PodService {
     try {
       console.log(`🏗️ Creating new pod: ${podData.name}`);
 
+      // Check authentication before database operation
+      const session = await getCurrentSession();
+      if (!session?.user?.id) {
+        throw new Error('Authentication required. Please log in again.');
+      }
+      console.log('✅ PodService: User authenticated for pod creation');
+
       const { data, error } = await supabase
         .from('pods')
         .insert({
@@ -322,6 +335,13 @@ export class PodService {
    */
   static async updatePod(podId: string, updates: Partial<Pod>): Promise<Pod> {
     try {
+      // Check authentication before database operation
+      const session = await getCurrentSession();
+      if (!session?.user?.id) {
+        throw new Error('Authentication required. Please log in again.');
+      }
+      console.log('✅ PodService: User authenticated for pod update');
+
       const { data, error } = await supabase
         .from('pods')
         .update({
