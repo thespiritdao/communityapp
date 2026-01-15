@@ -830,7 +830,6 @@ export const HatsModulePodCreationForm: React.FC<
 
     console.log('🔍 Pre-flight checks:', {
       validationValid: validation.isValid,
-      modulesInitialized,
       publicClientExists: !!publicClient,
       addressConnected: !!address,
       chainId: base.id,
