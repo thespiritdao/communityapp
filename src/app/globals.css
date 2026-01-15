@@ -5,10 +5,6 @@
 @import url("https://fonts.googleapis.com/css2?family=Oxanium:wght@200..800&display=swap");
 @import url("https://fonts.googleapis.com/css2?family=Noto+Sans+Mono:wght@100..900&display=swap");
 
-/* Third-party CSS imports - import at app level to prevent bundling issues */
-@import 'react-day-picker/dist/style.css';
-@import 'react-datepicker/dist/react-datepicker.css';
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;

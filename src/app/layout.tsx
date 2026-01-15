@@ -7,7 +7,6 @@ import { CommunityProvider } from '@/context/CommunityContext';
 import { UnifiedNotificationProvider } from '@/context/UnifiedNotificationContext';
 import { TokenBalancesProvider } from '@/context/TokenBalancesContext';
 import { CDPEmbeddedProvider } from '../wallet/components/CDPEmbeddedProvider';
-import { WalletAuthSync } from '../wallet/components/WalletAuthSync';
 import { ProfilesProvider } from '@/features/identity/context/ProfilesProvider';
 import { AuthProvider } from '@/features/identity';
 import { ModuleErrorBoundary } from '@/components/ModuleErrorBoundary';
@@ -15,6 +14,8 @@ import { ContractConfigProvider } from '@/providers/ContractConfigProvider';
 import MobileBottomNav from '@/components/MobileBottomNav';
 import './globals.css';
 import '@/styles/index.css';
+import 'react-day-picker/dist/style.css';
+import 'react-datepicker/dist/react-datepicker.css';
 
 // Hide navigation ONLY on loading screen (root page)
 const ConditionalBottomNav = React.memo(function ConditionalBottomNav() {
@@ -72,8 +73,8 @@ export default function RootLayout({ children }: { children: ReactNode }) {
             <CDPEmbeddedProvider>
               <TokenBalancesProvider>
                 <AuthProvider>
-                  {/* Automatic wallet authentication sync - ensures CDP wallet is always authenticated with Supabase */}
-                  <WalletAuthSync />
+                  {/* REMOVED: WalletAuthSync to prevent duplicate authentication attempts
+                      Authentication is now handled exclusively by page.tsx for better control */}
                   <ProfilesProvider>
                     <CommunityProvider>
                       <UnifiedNotificationProvider>
