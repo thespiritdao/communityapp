@@ -4097,9 +4097,18 @@ Instructions:
         if (!hatId && transactionCalls?.length > 0) {
           console.log('⚠️ No HAT ID from logs, using predicted HAT ID from transaction preparation');
 
-          // The Management HAT ID was already calculated and logged
-          // We can recalculate it using the same logic
-          const parentHatId = formData.parentPodId;
+          // Resolve the parent HAT ID (not UUID) from the selected parent pod
+          const selectedParentOption = availableParentPods.find(
+            (p) => p.id === formData.parentPodId,
+          );
+          const parentHatId = selectedParentOption?.hatId || formData.parentPodId;
+
+          console.log('🔍 Fallback HAT ID resolution:', {
+            parentPodUuid: formData.parentPodId,
+            selectedParentName: selectedParentOption?.name,
+            resolvedParentHatId: parentHatId,
+          });
+
           if (parentHatId && parentHatId !== 'TOP_LEVEL') {
             try {
               const { predictChildHatId } = await import('@/utils/hatIdPrediction');
