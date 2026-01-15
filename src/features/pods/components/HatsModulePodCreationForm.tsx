@@ -212,7 +212,7 @@ export const HatsModulePodCreationForm: React.FC<
   const [formData, setFormData] = useState<FormData>({
     name: '',
     description: '',
-    parentPodId: process.env.NEXT_PUBLIC_COMMUNITY_PODS_PARENT || '', // Default to Community Pods parent
+    parentPodId: '', // Will be set to Community Pods UUID once dropdown loads
     podLeaders: testingMode ? [address || ''] : [address || '', '', ''], // ✅ FIX: Default first leader to connected address (smart wallet)
     eligibilityRules: [], // ✅ Unified: All criteria managed via EligibilityCriteriaBuilder
     enableTreasury: true,
@@ -377,6 +377,25 @@ export const HatsModulePodCreationForm: React.FC<
 
     return options;
   }, [userPods, allPods, testingMode, hasExecutivePod, hasDevPod]);
+
+  // Set default parent pod to Community Pods UUID when dropdown options load
+  useEffect(() => {
+    if (!formData.parentPodId && availableParentPods.length > 0 && !continuePodId) {
+      // Find the Community Pods default option
+      const defaultOption = availableParentPods.find((opt) => opt.isDefault);
+      if (defaultOption) {
+        console.log('🔧 Setting default parent pod:', {
+          id: defaultOption.id,
+          name: defaultOption.name,
+          hatId: defaultOption.hatId,
+        });
+        setFormData((prev) => ({
+          ...prev,
+          parentPodId: defaultOption.id, // Use UUID, not HAT ID
+        }));
+      }
+    }
+  }, [availableParentPods, formData.parentPodId, continuePodId]);
 
   // Load available tokens including pod memberships
   useEffect(() => {
