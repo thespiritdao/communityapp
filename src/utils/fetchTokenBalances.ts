@@ -273,6 +273,11 @@ export async function fetchTokenBalances(
       }
 
       // --- System Token (ERC20) ---
+      console.error('[DEBUG] 💰 System Token Setup:');
+      console.error('  SYSTEM_TOKEN_CONTRACT:', SYSTEM_TOKEN_CONTRACT);
+      console.error('  isValidAddress check:', isValidAddress(SYSTEM_TOKEN_CONTRACT ?? ''));
+      console.error('  Wallet Address:', walletAddress);
+
       if (isValidAddress(SYSTEM_TOKEN_CONTRACT ?? '')) {
         try {
           const systemContract = new web3.eth.Contract(
@@ -280,22 +285,27 @@ export async function fetchTokenBalances(
             (SYSTEM_TOKEN_CONTRACT ?? '') as string,
           );
           systemIndex = calls.length;
+          const callData = systemContract.methods.balanceOf(walletAddress).encodeABI();
           calls.push({
             target: (SYSTEM_TOKEN_CONTRACT ?? '') as string,
-            callData: systemContract.methods
-              .balanceOf(walletAddress)
-              .encodeABI(),
+            callData: callData,
           });
+          console.error('[DEBUG] ✅ System Token call added at index:', systemIndex);
+          console.error('[DEBUG]   Target:', SYSTEM_TOKEN_CONTRACT);
+          console.error('[DEBUG]   CallData:', callData);
         } catch (error) {
-          console.error('Error setting up System Token call:', error);
+          console.error('[ERROR] ❌ Error setting up System Token call:', error);
         }
       } else {
-        console.warn(
-          'System Token contract address is a placeholder. Using balance 0.',
-        );
+        console.error('[DEBUG] ⚠️ System Token contract address is invalid/placeholder. Using balance 0.');
       }
 
       // --- Self Token (ERC20) ---
+      console.error('[DEBUG] 💰 Self Token Setup:');
+      console.error('  SELF_TOKEN_CONTRACT:', SELF_TOKEN_CONTRACT);
+      console.error('  isValidAddress check:', isValidAddress(SELF_TOKEN_CONTRACT ?? ''));
+      console.error('  Wallet Address:', walletAddress);
+
       if (isValidAddress(SELF_TOKEN_CONTRACT ?? '')) {
         try {
           const selfContract = new web3.eth.Contract(
@@ -303,17 +313,19 @@ export async function fetchTokenBalances(
             (SELF_TOKEN_CONTRACT ?? '') as string,
           );
           selfIndex = calls.length;
+          const callData = selfContract.methods.balanceOf(walletAddress).encodeABI();
           calls.push({
             target: (SELF_TOKEN_CONTRACT ?? '') as string,
-            callData: selfContract.methods.balanceOf(walletAddress).encodeABI(),
+            callData: callData,
           });
+          console.error('[DEBUG] ✅ Self Token call added at index:', selfIndex);
+          console.error('[DEBUG]   Target:', SELF_TOKEN_CONTRACT);
+          console.error('[DEBUG]   CallData:', callData);
         } catch (error) {
-          console.error('Error setting up Self Token call:', error);
+          console.error('[ERROR] ❌ Error setting up Self Token call:', error);
         }
       } else {
-        console.warn(
-          'Self Token contract address is a placeholder. Using balance 0.',
-        );
+        console.error('[DEBUG] ⚠️ Self Token contract address is invalid/placeholder. Using balance 0.');
       }
 
       // --- Advocate NFT (ERC721) ---
@@ -588,7 +600,9 @@ export async function fetchTokenBalances(
 
       const blockNumber = result.blockNumber;
       const returnData = result.returnData;
-      console.log(`Multicall successful at block ${blockNumber}`);
+      console.error(`[DEBUG] 📦 Multicall successful at block ${blockNumber}`);
+      console.error('[DEBUG] 📦 Total returnData entries:', returnData.length);
+      console.error('[DEBUG] 📦 Full returnData array:', JSON.stringify(returnData, null, 2));
 
       // Process results with error handling and proper typing
       const balances: TokenBalance = {
@@ -616,22 +630,40 @@ export async function fetchTokenBalances(
         console.error('Error processing Proof of Curiosity balance:', error);
       }
 
+      console.error('[DEBUG] 💰 Processing System Token balance:');
+      console.error('  systemIndex:', systemIndex);
+      console.error('  returnData.length:', returnData.length);
+      console.error('  returnData[systemIndex]:', systemIndex >= 0 ? returnData[systemIndex] : 'N/A');
+
       try {
         if (systemIndex >= 0 && returnData[systemIndex]) {
           const systemBalance = (returnData[systemIndex] ?? '0') as string;
+          console.error('[DEBUG]   Raw hex balance:', systemBalance);
           balances.systemBalance = web3.utils.fromWei(systemBalance, 'ether');
+          console.error('[DEBUG]   Converted balance:', balances.systemBalance);
+        } else {
+          console.error('[DEBUG] ⚠️ systemIndex invalid or no return data');
         }
       } catch (error) {
-        console.error('Error processing System Token balance:', error);
+        console.error('[ERROR] ❌ Error processing System Token balance:', error);
       }
+
+      console.error('[DEBUG] 💰 Processing Self Token balance:');
+      console.error('  selfIndex:', selfIndex);
+      console.error('  returnData.length:', returnData.length);
+      console.error('  returnData[selfIndex]:', selfIndex >= 0 ? returnData[selfIndex] : 'N/A');
 
       try {
         if (selfIndex >= 0 && returnData[selfIndex]) {
           const selfBalance = (returnData[selfIndex] ?? '0') as string;
+          console.error('[DEBUG]   Raw hex balance:', selfBalance);
           balances.selfBalance = web3.utils.fromWei(selfBalance, 'ether');
+          console.error('[DEBUG]   Converted balance:', balances.selfBalance);
+        } else {
+          console.error('[DEBUG] ⚠️ selfIndex invalid or no return data');
         }
       } catch (error) {
-        console.error('Error processing Self Token balance:', error);
+        console.error('[ERROR] ❌ Error processing Self Token balance:', error);
       }
 
       // Market Admin balance processing removed - replaced by Market Management Hat processing
