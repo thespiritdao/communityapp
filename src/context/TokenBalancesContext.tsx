@@ -37,12 +37,12 @@ export const TokenBalancesProvider: React.FC<{ children: React.ReactNode }> = ({
   const refreshBalances = useCallback(async () => {
     // Don't fetch if CDP is still initializing
     if (isInitializing) {
-      console.log('CDP still initializing, waiting...');
+      console.error('[DEBUG] CDP still initializing, waiting...');
       return;
     }
 
     if (!address) {
-      console.log('No wallet address available after initialization, skipping balance fetch');
+      console.error('[DEBUG] No wallet address available after initialization, skipping balance fetch');
       return;
     }
 
@@ -50,9 +50,9 @@ export const TokenBalancesProvider: React.FC<{ children: React.ReactNode }> = ({
     setError(null);
 
     try {
-      console.log('Fetching token balances for address:', address);
+      console.error('[DEBUG] Fetching token balances for address:', address);
       const tokenData = await fetchTokenBalances(address);
-      console.log('Successfully fetched token balances:', {
+      console.error('[DEBUG] Successfully fetched token balances:', {
         hasProofOfCuriosity: tokenData.hasProofOfCuriosity,
         hasMarketAdmin: tokenData.hasMarketAdmin,
         hasMarketManagement: tokenData.hasMarketManagement,
@@ -64,7 +64,7 @@ export const TokenBalancesProvider: React.FC<{ children: React.ReactNode }> = ({
       });
       setBalances(tokenData);
     } catch (error) {
-      console.error('Error fetching token balances:', error);
+      console.error('[ERROR] Error fetching token balances:', error);
       setError(error instanceof Error ? error : new Error(String(error)));
     } finally {
       setIsLoading(false);
@@ -76,12 +76,14 @@ export const TokenBalancesProvider: React.FC<{ children: React.ReactNode }> = ({
     // Only fetch if CDP has finished initializing
     if (!isInitializing) {
       if (address) {
-        console.log('Address changed (CDP ready), refreshing balances');
+        console.error('[DEBUG] Address changed (CDP ready), refreshing balances. Address:', address);
         refreshBalances();
       } else {
-        console.log('No address available after CDP init, clearing balances');
+        console.error('[DEBUG] No address available after CDP init, clearing balances');
         setBalances(null);
       }
+    } else {
+      console.error('[DEBUG] CDP still initializing, isInitializing:', isInitializing);
     }
   }, [address, isInitializing, refreshBalances]);
 
