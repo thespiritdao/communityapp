@@ -203,6 +203,7 @@ export const HatsModulePodCreationForm: React.FC<
 
   // User's leadership permissions and pods
   const [userPods, setUserPods] = useState<any[]>([]);
+  const [allPods, setAllPods] = useState<any[]>([]); // Store all pods to look up UUIDs by HAT ID
   const { managedPods } = useHatPermissions(userPods);
   const hasExecutivePod = false; // Admin feature not implemented for beta
   const hasDevPod = false; // Admin feature not implemented for beta
@@ -318,7 +319,8 @@ export const HatsModulePodCreationForm: React.FC<
         } else {
           seenPodIds.add(pod.id);
           options.push({
-            id: pod.management_hat_id || pod.id,
+            id: pod.id, // ✅ Use pod UUID for database operations
+            hatId: pod.management_hat_id, // Store HAT ID separately for blockchain operations
             uniqueKey: `user-pod-${pod.id}`,
             name: `👑 ${pod.name}`,
             description: `Create sub-pod under your ${pod.name} pod`,
@@ -330,18 +332,42 @@ export const HatsModulePodCreationForm: React.FC<
     }
 
     // Add Community Pods option (always available)
-    options.push({
-      id: process.env.NEXT_PUBLIC_COMMUNITY_PODS_PARENT || '',
-      uniqueKey: 'default-community',
-      name: '🏘️ Community Pods',
-      description: 'Default parent for community-created pods',
-      isDefault: true,
-    });
+    const communityPodsHatId = process.env.NEXT_PUBLIC_COMMUNITY_PODS_PARENT || '';
+    // Look up the Community Pods parent's UUID from the database
+    const communityPodParent = allPods.find(
+      (p) => p.management_hat_id === communityPodsHatId,
+    );
+
+    if (communityPodParent) {
+      options.push({
+        id: communityPodParent.id, // ✅ Use pod UUID for database operations
+        hatId: communityPodsHatId, // HAT ID for blockchain operations
+        uniqueKey: 'default-community',
+        name: '🏘️ Community Pods',
+        description: 'Default parent for community-created pods',
+        isDefault: true,
+      });
+    } else {
+      // Fallback if Community Pods parent not found in database
+      console.warn(
+        '⚠️ Community Pods parent not found in database. Using HAT ID as fallback:',
+        communityPodsHatId,
+      );
+      options.push({
+        id: communityPodsHatId, // Fallback to HAT ID (will fail in DB insert if used)
+        hatId: communityPodsHatId,
+        uniqueKey: 'default-community',
+        name: '🏘️ Community Pods',
+        description: 'Default parent for community-created pods',
+        isDefault: true,
+      });
+    }
 
     // Add Top-Level option only for admins or in testing mode
     if (testingMode || hasExecutivePod || hasDevPod) {
       options.push({
-        id: 'TOP_LEVEL',
+        id: 'TOP_LEVEL', // Special marker for top-level HAT creation
+        hatId: 'TOP_LEVEL', // Special marker for blockchain operations
         uniqueKey: 'top-level',
         name: '🔒 New Top-Level HAT',
         description: 'Creates independent HATS tree (admin only)',
@@ -350,7 +376,7 @@ export const HatsModulePodCreationForm: React.FC<
     }
 
     return options;
-  }, [userPods, testingMode, hasExecutivePod, hasDevPod]);
+  }, [userPods, allPods, testingMode, hasExecutivePod, hasDevPod]);
 
   // Load available tokens including pod memberships
   useEffect(() => {
@@ -440,7 +466,8 @@ export const HatsModulePodCreationForm: React.FC<
       try {
         setLoadingUserPods(true);
         // Get all pods and check for leadership (database or HAT-based)
-        const allPods = await PodGovernanceService.getPods();
+        const fetchedPods = await PodGovernanceService.getPods();
+        setAllPods(fetchedPods); // Store all pods for UUID lookup
         const hatsContract = process.env
           .NEXT_PUBLIC_HATS_CONTRACT as `0x${string}`;
         const leadershipPods = [];
@@ -448,7 +475,7 @@ export const HatsModulePodCreationForm: React.FC<
         // Check each pod for leadership access
         const seenPodIds = new Set(); // Track duplicates
 
-        for (const pod of allPods) {
+        for (const pod of fetchedPods) {
           let hasLeadership = false;
           let leadershipSource = '';
 
@@ -826,8 +853,17 @@ export const HatsModulePodCreationForm: React.FC<
 
       const eligibilityRules = buildEligibilityRules();
 
-      // Validate and sanitize parentHatId
-      let validParentHatId = formData.parentPodId;
+      // Look up the HAT ID for blockchain operations from the selected parent pod
+      const selectedParentOption = availableParentPods.find(
+        (p) => p.id === formData.parentPodId,
+      );
+      let validParentHatId = selectedParentOption?.hatId || formData.parentPodId;
+
+      console.log('🔍 Parent pod selection for transaction:', {
+        formDataParentPodId: formData.parentPodId, // This is the pod UUID
+        selectedParentOption: selectedParentOption?.name,
+        resolvedHatId: validParentHatId, // This is the HAT ID for blockchain
+      });
 
       // Check if parentHatId is a valid BigInt-convertible value or 'TOP_LEVEL'
       if (validParentHatId !== 'TOP_LEVEL' && validParentHatId !== '') {
