@@ -321,11 +321,22 @@ export const HatsModulePodCreationForm: React.FC<
     // Add Community Pods option (always available)
     const communityPodsHatId = process.env.NEXT_PUBLIC_COMMUNITY_PODS_PARENT || '';
     // Look up the Community Pods parent's UUID from the database
+    console.log('🔍 Looking up Community Pods parent in allPods:', {
+      communityPodsHatId,
+      allPodsCount: allPods.length,
+      allPodsManagementHatIds: allPods.map(p => p.management_hat_id),
+    });
+
     const communityPodParent = allPods.find(
       (p) => p.management_hat_id === communityPodsHatId,
     );
 
     if (communityPodParent) {
+      console.log('✅ Found Community Pods parent in database:', {
+        id: communityPodParent.id,
+        name: communityPodParent.name,
+        management_hat_id: communityPodParent.management_hat_id,
+      });
       options.push({
         id: communityPodParent.id, // ✅ Use pod UUID for database operations
         hatId: communityPodsHatId, // HAT ID for blockchain operations
@@ -338,7 +349,11 @@ export const HatsModulePodCreationForm: React.FC<
       // Fallback if Community Pods parent not found in database
       console.warn(
         '⚠️ Community Pods parent not found in database. Using HAT ID as fallback:',
-        communityPodsHatId,
+        {
+          communityPodsHatId,
+          allPodsCount: allPods.length,
+          note: 'This will cause DB insertion to fail - Community Pods must exist in database',
+        },
       );
       options.push({
         id: communityPodsHatId, // Fallback to HAT ID (will fail in DB insert if used)
@@ -367,14 +382,25 @@ export const HatsModulePodCreationForm: React.FC<
 
   // Set default parent pod to Community Pods UUID when dropdown options load
   useEffect(() => {
-    if (!formData.parentPodId && availableParentPods.length > 0 && !continuePodId) {
-      // Find the Community Pods default option
+    if (availableParentPods.length === 0 || continuePodId) {
+      return; // Wait for options to load, or skip if continuing existing pod
+    }
+
+    // Check if current parentPodId is valid (exists in dropdown options)
+    const currentOptionValid = availableParentPods.some(
+      (opt) => opt.id === formData.parentPodId,
+    );
+
+    // If no parent selected OR current selection is invalid (e.g., HAT ID when expecting UUID)
+    if (!formData.parentPodId || !currentOptionValid) {
       const defaultOption = availableParentPods.find((opt) => opt.isDefault);
       if (defaultOption) {
         console.log('🔧 Setting default parent pod:', {
           id: defaultOption.id,
           name: defaultOption.name,
           hatId: defaultOption.hatId,
+          reason: !formData.parentPodId ? 'no selection' : 'invalid selection (likely HAT ID)',
+          previousValue: formData.parentPodId,
         });
         setFormData((prev) => ({
           ...prev,
