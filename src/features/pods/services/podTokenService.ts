@@ -70,12 +70,16 @@ export class PodTokenService {
         const { data: dbTokens } = await supabase
           .from('tokens')
           .select('*')
-          .not('symbol', 'in', ['SELF', 'SYSTEM']) // Exclude system tokens we already added
           .eq('is_active', true)
           .order('name', { ascending: true });
 
         if (dbTokens && dbTokens.length > 0) {
-          const membershipTokens: PodToken[] = dbTokens.map((token) => ({
+          // Filter out SELF and SYSTEM tokens (already added as system tokens)
+          const filteredTokens = dbTokens.filter(
+            (token) => token.symbol !== 'SELF' && token.symbol !== 'SYSTEM'
+          );
+
+          const membershipTokens: PodToken[] = filteredTokens.map((token) => ({
             id: token.id,
             name: token.name,
             displayName: token.name,
