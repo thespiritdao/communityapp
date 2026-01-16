@@ -96,6 +96,85 @@ export function PodSpecificTreasuryManager({
   };
 
   /**
+   * Recover treasury address from a previous transaction hash
+   */
+  const handleRecoverTreasuryAddress = async (txHash: string) => {
+    try {
+      console.log('🔍 Fetching receipt for transaction:', txHash);
+
+      const receipt = await publicClient.getTransactionReceipt({
+        hash: txHash as `0x${string}`,
+      });
+
+      console.log('📦 Got receipt:', receipt);
+
+      // TreasuryDeployed event signature
+      const TREASURY_DEPLOYED_EVENT =
+        '0x494cf03e4055d4033e848ad013abd5a12efdf3143ccf97cd8514778840b10d36';
+
+      let treasuryAddress = '';
+
+      if (receipt.logs) {
+        const deploymentLog = receipt.logs.find(
+          (log: any) => log.topics?.[0] === TREASURY_DEPLOYED_EVENT,
+        );
+
+        if (deploymentLog) {
+          const addressFromTopic = deploymentLog.topics?.[2];
+          if (addressFromTopic && addressFromTopic.length === 66) {
+            treasuryAddress = '0x' + addressFromTopic.slice(-40);
+          }
+        }
+      }
+
+      if (!treasuryAddress) {
+        console.error('❌ Could not extract treasury address from logs');
+        toast({
+          title: 'Recovery Failed',
+          description: 'Could not find treasury address in transaction logs.',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      console.log('✅ Extracted treasury address:', treasuryAddress);
+
+      // Update database
+      const updateResponse = await fetch('/api/pods/activate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          podId: localPod.id,
+          treasuryAddress: treasuryAddress,
+          isActive: true,
+        }),
+      });
+
+      if (!updateResponse.ok) {
+        throw new Error('Failed to update pod with treasury address');
+      }
+
+      toast({
+        title: 'Treasury Recovered!',
+        description: `Treasury at ${treasuryAddress.slice(0, 6)}...${treasuryAddress.slice(-4)} saved to database.`,
+      });
+
+      // Update local state
+      setLocalPod({
+        ...localPod,
+        treasury_contract_address: treasuryAddress,
+      });
+    } catch (error: any) {
+      console.error('❌ Treasury recovery failed:', error);
+      toast({
+        title: 'Recovery Failed',
+        description: error.message || 'Could not recover treasury address.',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  /**
    * CDP Smart Account transaction handler - Treasury Deployment
    */
   const handleDeployViaCDP = async () => {
