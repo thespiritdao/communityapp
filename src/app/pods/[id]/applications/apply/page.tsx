@@ -175,12 +175,15 @@ export default function ApplyToPodPage() {
       if (error) throw error;
 
       toast({
-        title: 'Application Submitted!',
-        description: `Your ${selectedRole} application has been submitted. Pod leaders will review it soon.`,
+        title: '✅ Application Submitted!',
+        description: `Your ${selectedRole} application has been submitted successfully. Pod leaders will review it soon.`,
+        duration: 5000, // Show for 5 seconds
       });
 
-      // Navigate back to pod page
-      router.push(`/pods/${podId}`);
+      // Wait a moment before redirecting so user sees the success message
+      setTimeout(() => {
+        router.push(`/pods/${podId}`);
+      }, 1500); // 1.5 second delay
     } catch (error: any) {
       console.error('Error submitting application:', error);
       toast({

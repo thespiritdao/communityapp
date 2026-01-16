@@ -120,7 +120,7 @@ export const ApproveApplicationButton: React.FC<
           ? [evmAddress as `0x${string}`, BigInt(managementHatId)]
           : undefined,
       query: {
-        enabled: !!evmAddress && !!managementHatId && roleLabel === 'member',
+        enabled: !!evmAddress && !!managementHatId && roleLabel.toLowerCase() === 'member',
       },
     });
 
@@ -221,7 +221,7 @@ export const ApproveApplicationButton: React.FC<
       // For leader: look for roles containing 'Leader' or use first role if only one exists
       // For member: look for roles containing 'Member' or use first role if only one exists
       let role;
-      if (roleLabel === 'leader') {
+      if (roleLabel.toLowerCase() === 'leader') {
         role = roles.find((r) => r.role_name.toLowerCase().includes('leader'));
       } else {
         role = roles.find((r) => r.role_name.toLowerCase().includes('member'));
@@ -398,7 +398,7 @@ export const ApproveApplicationButton: React.FC<
   };
 
   // Show auto-create option for member role if HAT is missing
-  if (!isValidHatId && roleLabel === 'member' && !autoCreatedHatId) {
+  if (!isValidHatId && roleLabel.toLowerCase() === 'member' && !autoCreatedHatId) {
     return (
       <div
         className="p-4 rounded-lg"
@@ -509,7 +509,7 @@ export const ApproveApplicationButton: React.FC<
   }
 
   // 3. Check permission to mint (for member HATs)
-  if (roleLabel === 'member' && !isLoadingPermission && !hasManagementHat) {
+  if (roleLabel.toLowerCase() === 'member' && !isLoadingPermission && !hasManagementHat) {
     return (
       <div
         className="p-4 rounded-lg"
@@ -549,7 +549,7 @@ export const ApproveApplicationButton: React.FC<
   // - Users don't have permission to mint Management HATs to others
   // Solution: Approve application, then applicant claims/mints HAT themselves
 
-  if (roleLabel === 'leader') {
+  if (roleLabel.toLowerCase() === 'leader') {
     const handleLeaderApproval = async () => {
       try {
         console.log('🔵 === LEADER APPROVAL STARTED ===');
