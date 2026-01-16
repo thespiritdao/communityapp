@@ -1456,7 +1456,13 @@ export const PodManagerControlPanel: React.FC<PodManagerControlPanelProps> = ({
 
       // Calculate the expected new child HAT ID using the same logic as HatBlockchainSyncService
       const parentHatBigInt = BigInt(adminHatId);
-      const hatIdHex = adminHatId.replace('0x', '').padStart(64, '0');
+
+      // Convert to hex - adminHatId might be decimal string or hex string
+      const hatIdHex = parentHatBigInt.toString(16).padStart(64, '0');
+
+      console.log('🔢 Admin HAT ID conversion:');
+      console.log('  Input:', adminHatId);
+      console.log('  Hex:', '0x' + hatIdHex);
 
       // Split into 16-bit (4 hex char) segments to find the level
       const segments: number[] = [];
@@ -1473,13 +1479,31 @@ export const PodManagerControlPanel: React.FC<PodManagerControlPanelProps> = ({
         }
       }
 
+      console.log('📊 HAT structure analysis:');
+      console.log('  Segments:', segments.map(s => '0x' + s.toString(16).padStart(4, '0')).join(' '));
+      console.log('  Parent level:', level);
+      console.log('  Last child #:', lastHatId);
+      console.log('  New child #:', nextChildHatNumber);
+
       // Calculate child HAT ID by shifting to the correct level
-      const childOffset = BigInt(nextChildHatNumber) << BigInt((15 - level) * 16);
+      const shiftAmount = (15 - level) * 16;
+      const childOffset = BigInt(nextChildHatNumber) << BigInt(shiftAmount);
       const expectedHatIdBigInt = parentHatBigInt | childOffset;
       const expectedHatId = '0x' + expectedHatIdBigInt.toString(16).padStart(64, '0');
 
-      console.log('🎯 Expected new HAT ID:', expectedHatId);
-      console.log('📊 Parent level:', level, 'lastHatId:', lastHatId, '→ New child will be:', nextChildHatNumber);
+      console.log('🎯 Child HAT calculation:');
+      console.log('  Shift amount:', shiftAmount, 'bits');
+      console.log('  Child offset:', '0x' + childOffset.toString(16));
+      console.log('  Expected HAT ID:', expectedHatId);
+
+      // Verify the calculation is correct by checking it doesn't equal parent
+      if (expectedHatId.toLowerCase() === ('0x' + hatIdHex).toLowerCase()) {
+        console.error('❌ BUG: Expected HAT ID equals parent HAT ID! This will cause role replacement!');
+        console.error('  This means the child offset calculation failed.');
+        console.error('  Debug info: level=' + level + ', shift=' + shiftAmount + ', nextChild=' + nextChildHatNumber);
+      } else {
+        console.log('✅ Expected HAT ID is unique (different from parent)');
+      }
 
       // Prepare HAT details JSON
       const hatDetails = JSON.stringify({
