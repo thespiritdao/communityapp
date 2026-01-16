@@ -363,9 +363,14 @@ export async function quickSyncSingleHat(
   publicClient: PublicClient,
   podId: string,
   hatId: string,
-  createdBy: string
+  createdBy: string,
+  fallbackName?: string,
+  fallbackDescription?: string
 ): Promise<boolean> {
   console.log(`🔄 Quick sync for single HAT: ${hatId}`);
+  if (fallbackName) {
+    console.log(`📝 Fallback name provided: ${fallbackName}`);
+  }
 
   try {
     // Check if already in database
@@ -380,7 +385,14 @@ export async function quickSyncSingleHat(
       return false;
     }
 
-    const roleName = extractRoleName(hatDetails.details, hatDetails.hatId);
+    // Try to extract role name from blockchain
+    let roleName = extractRoleName(hatDetails.details, hatDetails.hatId);
+
+    // If extraction resulted in generic name but we have a fallback, use fallback
+    if (roleName.startsWith('Role 0') && fallbackName) {
+      console.log(`⚠️ Blockchain has invalid/missing details, using provided name: ${fallbackName}`);
+      roleName = fallbackName;
+    }
 
     // If role exists in database, update it with blockchain data
     if (existingRole) {

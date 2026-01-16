@@ -1867,11 +1867,11 @@ export const PodManagerControlPanel: React.FC<PodManagerControlPanelProps> = ({
                   console.log('ℹ️ Direct receipt fetch not available (normal for ERC-4337)');
                   console.log('✅ Transaction succeeded - using blockchain sync fallback');
 
-                  // Show immediate success feedback to user
+                  // Show immediate success feedback to user with longer duration
                   toast({
                     title: '✅ Role Created!',
-                    description: `Creating "${roleCreationTransaction?.roleData.name}" on blockchain. This may take a moment...`,
-                    duration: 5000,
+                    description: `Creating "${roleCreationTransaction?.roleData.name}" on blockchain. Syncing with database... (10-15 seconds)`,
+                    duration: 15000, // 15 seconds so user sees it during the whole process
                   });
 
                   // Transaction succeeded on-chain but we can't get the receipt
@@ -1898,11 +1898,14 @@ export const PodManagerControlPanel: React.FC<PodManagerControlPanelProps> = ({
                     console.log('🎯 Syncing specific HAT:', expectedHatId);
 
                     // Sync ONLY the specific HAT that was just created
+                    // Pass fallback name/description in case blockchain has invalid data
                     const success = await HatBlockchainSyncService.quickSyncSingleHat(
                       publicClient,
                       podId,
                       expectedHatId,
-                      address
+                      address,
+                      roleCreationTransaction?.roleData.name, // Fallback name
+                      roleCreationTransaction?.roleData.description // Fallback description
                     );
 
                     if (success) {
@@ -1914,7 +1917,7 @@ export const PodManagerControlPanel: React.FC<PodManagerControlPanelProps> = ({
                       toast({
                         title: '✅ Role Created Successfully!',
                         description: `"${roleCreationTransaction?.roleData.name}" is now active and ready to assign to members.`,
-                        duration: 6000,
+                        duration: 8000, // 8 seconds for clear success confirmation
                       });
 
                       // Close modal and reset state
