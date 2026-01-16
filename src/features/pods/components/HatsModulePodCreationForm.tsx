@@ -2160,6 +2160,7 @@ Instructions:
             parentHatId: parentHatId, // HAT ID for child index queries
             podLeads: validation.validLeads,
             image: podImageUrl,
+            createdByAddress: address || '', // Current user's address
             managementHatId: newHatId, // TIER 1 FIX: No placeholder - verified onchain above
             membershipHatId: undefined, // Will be created on-demand when first member added
             treasuryContractAddress: formData.enableTreasury
@@ -2167,8 +2168,7 @@ Instructions:
               : undefined,
             proxyContractAddress: proxyAddress || undefined,
             blockchainPodId: blockchainPodId,
-            status: 'active',
-          } as any);
+          });
 
           // ✅ RENAME IMAGE FILE: Now that we have the real pod ID, move the image file
           if (

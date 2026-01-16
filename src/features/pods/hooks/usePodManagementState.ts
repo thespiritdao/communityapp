@@ -90,8 +90,13 @@ export function usePodManagementState({
     const podLeads = pod?.pod_leads || [];
     const leaderHats = leaderHatHolders || [];
 
+    // Normalize addresses to lowercase for proper deduplication
+    // pod_leads stores checksummed addresses, pod_members stores lowercase
+    const normalizedPodLeads = podLeads.map((addr) => addr.toLowerCase());
+    const normalizedLeaderHats = leaderHats.map((addr) => addr.toLowerCase());
+
     // Combine and deduplicate
-    const combined = Array.from(new Set([...podLeads, ...leaderHats]));
+    const combined = Array.from(new Set([...normalizedPodLeads, ...normalizedLeaderHats]));
 
     console.log('👑 Leaders calculation:', {
       podLeads,

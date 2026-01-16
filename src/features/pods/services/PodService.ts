@@ -258,6 +258,9 @@ export class PodService {
     createdByAddress: string;
     managementHatId?: string; // Optional HAT ID if known at creation
     membershipHatId?: string; // Optional HAT ID if known at creation
+    treasuryContractAddress?: string; // Treasury contract address or 'pending'
+    proxyContractAddress?: string; // Proxy contract address
+    blockchainPodId?: string; // Blockchain pod ID
   }): Promise<{ podId: string; proposalId?: string }> {
     try {
       console.log(`🏗️ Creating new pod: ${podData.name}`);
@@ -283,6 +286,9 @@ export class PodService {
           is_active: false,
           management_hat_id: podData.managementHatId || null,
           membership_hat_id: podData.membershipHatId || null,
+          treasury_contract_address: podData.treasuryContractAddress || null,
+          proxy_contract_address: podData.proxyContractAddress || null,
+          blockchain_pod_id: podData.blockchainPodId || null,
         })
         .select()
         .single();
