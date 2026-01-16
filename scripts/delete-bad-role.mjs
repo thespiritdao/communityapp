@@ -7,16 +7,25 @@
 
 import { createClient } from '@supabase/supabase-js';
 import dotenv from 'dotenv';
+import { existsSync } from 'fs';
 
-// Load environment variables
-dotenv.config({ path: '.env.local' });
+// Load environment variables - try .env.local first, then .env
+if (existsSync('.env.local')) {
+  dotenv.config({ path: '.env.local' });
+} else if (existsSync('.env')) {
+  dotenv.config({ path: '.env' });
+} else {
+  console.error('❌ No .env or .env.local file found');
+  process.exit(1);
+}
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 if (!supabaseUrl || !supabaseServiceKey) {
-  console.error('❌ Missing Supabase credentials in .env.local');
+  console.error('❌ Missing Supabase credentials');
   console.error('   Required: NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY');
+  console.error('   Checked: .env.local and .env');
   process.exit(1);
 }
 
