@@ -22,7 +22,6 @@ import {
   AlertTriangle,
   Wallet,
   Shield,
-  Copy,
   ExternalLink,
   RefreshCw,
   ArrowDownCircle,
@@ -616,14 +615,6 @@ export function TreasuryManagement({
     });
   };
 
-  const copyAddress = (address: string) => {
-    navigator.clipboard.writeText(address);
-    toast({
-      title: 'Copied',
-      description: 'Address copied to clipboard',
-    });
-  };
-
   // Show loading state (include treasury address loading)
   if (isLoading || isLoadingPermissions || treasuryAddressLoading) {
     return (
@@ -742,53 +733,6 @@ export function TreasuryManagement({
 
   return (
     <div className="space-y-6 bottom-nav-spacing">
-      {/* Treasury Overview Header */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle>Treasury Overview</CardTitle>
-              <p className="text-sm text-gray-600 mt-1">
-                Manage pod funds and distribute tokens.
-              </p>
-            </div>
-            <div className="text-right">
-              <div className="text-2xl font-bold">
-                ${totalValueUSD.toFixed(2)}
-              </div>
-              <p className="text-sm text-gray-600">Total</p>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center gap-2 text-sm text-gray-600">
-            <span>Contract:</span>
-            <code className="bg-gray-100 px-2 py-1 rounded text-xs font-mono">
-              {treasuryAddress.slice(0, 8)}...{treasuryAddress.slice(-6)}
-            </code>
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={() => copyAddress(treasuryAddress)}
-            >
-              <Copy className="h-3 w-3" />
-            </Button>
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={() =>
-                window.open(
-                  `https://basescan.org/address/${treasuryAddress}`,
-                  '_blank',
-                )
-              }
-            >
-              <ExternalLink className="h-3 w-3" />
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-
       {/* Tab Navigation */}
       <Card>
         <CardHeader>
