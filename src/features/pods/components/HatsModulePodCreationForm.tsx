@@ -2784,9 +2784,9 @@ Instructions:
         });
         // Redirect anyway - pod is functional
         if (onSuccess) {
-          onSuccess({ podId: createdPodData?.id, hatsMinted: true });
+          onSuccess({ podId: createdPodData?.podId, hatsMinted: true });
         } else {
-          router.push(`/pods/${createdPodData?.id}/manage`);
+          router.push(`/pods/${createdPodData?.podId}/manage`);
         }
         return;
       }
@@ -2804,7 +2804,7 @@ Instructions:
         type: 'proxy_admin_hat',
         name: `${formData.name} - Proxy Admin`,
         description: `Administrative HAT for ${formData.name} pod's authorization proxy. This HAT grants the pod proxy admin rights over pod HATs, enabling pod leader autonomy.`,
-        podId: createdPodData?.id,
+        podId: createdPodData?.podId,
         proxyAddress: extractedProxyAddress,
         purpose: 'Grant proxy admin rights over pod HATs',
         version: 'v2-proxy-admin-pattern',
@@ -2864,7 +2864,7 @@ Instructions:
       mintHatCalls.length,
       extractedProxyAddress,
       createdHatId,
-      createdPodData?.id,
+      createdPodData?.podId,
       createdPodData?.name,
       formData.name,
       publicClient,
@@ -2884,12 +2884,12 @@ Instructions:
 
       // Still redirect to pod page - pod was created successfully
       if (onSuccess) {
-        onSuccess({ podId: createdPodData?.id, hatsMinted: false });
+        onSuccess({ podId: createdPodData?.podId, hatsMinted: false });
       } else {
-        router.push(`/pods/${createdPodData?.id}/manage`);
+        router.push(`/pods/${createdPodData?.podId}/manage`);
       }
     },
-    [createdPodData?.id, createdPodData?.name],
+    [createdPodData?.podId, createdPodData?.name],
   );
 
   // Handle successful Phase 3.5: Set HAT IDs on Proxy transaction
@@ -2949,14 +2949,14 @@ Instructions:
           // Mark creation as complete and redirect
           if (onSuccess) {
             onSuccess({
-              podId: createdPodData?.id,
+              podId: createdPodData?.podId,
               hatsMinted: true,
               proxyConfigured: true,
               adminHatPredictionUsed: true,
               skippedPhase4: true,
             });
           } else {
-            router.push(`/pods/${createdPodData?.id}/manage`);
+            router.push(`/pods/${createdPodData?.podId}/manage`);
           }
           return;
         }
@@ -3012,9 +3012,9 @@ Instructions:
         });
         // Redirect anyway - pod is functional
         if (onSuccess) {
-          onSuccess({ podId: createdPodData?.id, hatsMinted: true });
+          onSuccess({ podId: createdPodData?.podId, hatsMinted: true });
         } else {
-          router.push(`/pods/${createdPodData?.id}/manage`);
+          router.push(`/pods/${createdPodData?.podId}/manage`);
         }
         return;
       }
@@ -3032,7 +3032,7 @@ Instructions:
         type: 'proxy_admin_hat',
         name: `${formData.name} - Proxy Admin`,
         description: `Administrative HAT for ${formData.name} pod's authorization proxy. This HAT grants the pod proxy admin rights over pod HATs, enabling pod leader autonomy.`,
-        podId: createdPodData?.id,
+        podId: createdPodData?.podId,
         proxyAddress: extractedProxyAddress,
         purpose: 'Grant proxy admin rights over pod HATs',
         version: 'v2-proxy-admin-pattern',
@@ -3083,7 +3083,7 @@ Instructions:
       createdHatId,
       extractedProxyAddress,
       formData.name,
-      createdPodData?.id,
+      createdPodData?.podId,
       createdPodData?.name,
       predictedAdminHatId,
       onSuccess,
@@ -3139,14 +3139,14 @@ Instructions:
         // Mark creation as complete and redirect
         if (onSuccess) {
           onSuccess({
-            podId: createdPodData?.id,
+            podId: createdPodData?.podId,
             hatsMinted: true,
             proxyConfigured: false,
             adminHatPredictionUsed: true,
             skippedPhase4: true,
           });
         } else {
-          router.push(`/pods/${createdPodData?.id}/manage`);
+          router.push(`/pods/${createdPodData?.podId}/manage`);
         }
         return;
       }
@@ -3165,12 +3165,12 @@ Instructions:
         });
         if (onSuccess) {
           onSuccess({
-            podId: createdPodData?.id,
+            podId: createdPodData?.podId,
             hatsMinted: true,
             proxyConfigured: false,
           });
         } else {
-          router.push(`/pods/${createdPodData?.id}/manage`);
+          router.push(`/pods/${createdPodData?.podId}/manage`);
         }
         return;
       }
@@ -3187,7 +3187,7 @@ Instructions:
         type: 'proxy_admin_hat',
         name: `${formData.name} - Proxy Admin`,
         description: `Administrative HAT for ${formData.name} pod's authorization proxy.`,
-        podId: createdPodData?.id,
+        podId: createdPodData?.podId,
         proxyAddress: extractedProxyAddress,
         purpose: 'Grant proxy admin rights over pod HATs',
         version: 'v2-proxy-admin-pattern',
@@ -3234,7 +3234,7 @@ Instructions:
       createdHatId,
       extractedProxyAddress,
       formData.name,
-      createdPodData?.id,
+      createdPodData?.podId,
       predictedAdminHatId,
       onSuccess,
       router,
@@ -3392,9 +3392,9 @@ Instructions:
         });
         // Redirect anyway - pod is functional without admin HAT
         if (onSuccess) {
-          onSuccess({ podId: createdPodData?.id, adminHatSetup: false });
+          onSuccess({ podId: createdPodData?.podId, adminHatSetup: false });
         } else {
-          router.push(`/pods/${createdPodData?.id}/manage`);
+          router.push(`/pods/${createdPodData?.podId}/manage`);
         }
         return;
       }
@@ -3435,7 +3435,7 @@ Instructions:
       setMintAdminHatCalls([mintAdminHatCall]);
       setStep('mint-admin-hat');
     },
-    [extractedProxyAddress, createdPodData?.id, createdPodData?.name],
+    [extractedProxyAddress, createdPodData?.podId, createdPodData?.name],
   );
 
   // Handle failed Phase 4: Create Proxy Admin HAT transaction
@@ -3452,12 +3452,12 @@ Instructions:
 
       // Redirect anyway - pod is functional without admin HAT
       if (onSuccess) {
-        onSuccess({ podId: createdPodData?.id, adminHatSetup: false });
+        onSuccess({ podId: createdPodData?.podId, adminHatSetup: false });
       } else {
-        router.push(`/pods/${createdPodData?.id}/manage`);
+        router.push(`/pods/${createdPodData?.podId}/manage`);
       }
     },
-    [createdPodData?.id],
+    [createdPodData?.podId],
   );
 
   // Handle successful Phase 5: Mint Proxy Admin HAT transaction
@@ -3487,7 +3487,7 @@ Instructions:
           .update({
             proxy_admin_hat_id: createdAdminHatId,
           })
-          .eq('id', createdPodData?.id);
+          .eq('id', createdPodData?.podId);
 
         if (updateError) {
           console.error(
@@ -3555,13 +3555,13 @@ Instructions:
           setTimeout(() => {
             if (onSuccess) {
               onSuccess({
-                podId: createdPodData?.id,
+                podId: createdPodData?.podId,
                 phasesCompleted: 6,
                 phase6Skipped: true,
                 predictionSuccessful: true,
               });
             } else {
-              router.push(`/pods/${createdPodData?.id}/manage`);
+              router.push(`/pods/${createdPodData?.podId}/manage`);
             }
           }, 2000);
 
@@ -3812,7 +3812,7 @@ Instructions:
       createdAdminHatId,
       blockchainPodId,
       extractedProxyAddress,
-      createdPodData?.id,
+      createdPodData?.podId,
       createdPodData?.name,
     ],
   );
@@ -3855,12 +3855,12 @@ Instructions:
 
         if (onSuccess) {
           onSuccess({
-            podId: createdPodData?.id,
+            podId: createdPodData?.podId,
             adminHatSetup: true,
             eligibilityAdminSet: false,
           });
         } else {
-          router.push(`/pods/${createdPodData?.id}/manage`);
+          router.push(`/pods/${createdPodData?.podId}/manage`);
         }
         return;
       }
@@ -3877,9 +3877,9 @@ Instructions:
         });
         // Redirect anyway - pod is functional
         if (onSuccess) {
-          onSuccess({ podId: createdPodData?.id, eligibilityAdminSet: false });
+          onSuccess({ podId: createdPodData?.podId, eligibilityAdminSet: false });
         } else {
-          router.push(`/pods/${createdPodData?.id}/manage`);
+          router.push(`/pods/${createdPodData?.podId}/manage`);
         }
         return;
       }
@@ -3919,7 +3919,7 @@ Instructions:
     },
     [
       createdAdminHatId,
-      createdPodData?.id,
+      createdPodData?.podId,
       createdPodData?.name,
       extractedProxyAddress,
       toast,
@@ -3945,12 +3945,12 @@ Instructions:
 
       // Redirect anyway - pod is functional without admin HAT being minted
       if (onSuccess) {
-        onSuccess({ podId: createdPodData?.id, adminHatSetup: false });
+        onSuccess({ podId: createdPodData?.podId, adminHatSetup: false });
       } else {
-        router.push(`/pods/${createdPodData?.id}/manage`);
+        router.push(`/pods/${createdPodData?.podId}/manage`);
       }
     },
-    [createdPodData?.id, onSuccess, router, toast],
+    [createdPodData?.podId, onSuccess, router, toast],
   );
 
   // Handle failed Phase 6: Configure Proxy transaction
@@ -3967,12 +3967,12 @@ Instructions:
 
       // Redirect anyway - pod is functional without eligibility
       if (onSuccess) {
-        onSuccess({ podId: createdPodData?.id, eligibilityAdminSet: false });
+        onSuccess({ podId: createdPodData?.podId, eligibilityAdminSet: false });
       } else {
-        router.push(`/pods/${createdPodData?.id}/manage`);
+        router.push(`/pods/${createdPodData?.podId}/manage`);
       }
     },
-    [createdPodData?.id, onSuccess, router, toast],
+    [createdPodData?.podId, onSuccess, router, toast],
   );
 
   // Handle successful Phase 7: Set Eligibility Module Admin transaction
@@ -4024,16 +4024,16 @@ Instructions:
 
       if (onSuccess) {
         onSuccess({
-          podId: createdPodData?.id,
+          podId: createdPodData?.podId,
           adminHatSetup: true,
           eligibilityAdminSet: true,
         });
       } else {
-        router.push(`/pods/${createdPodData?.id}/manage`);
+        router.push(`/pods/${createdPodData?.podId}/manage`);
       }
     },
     [
-      createdPodData?.id,
+      createdPodData?.podId,
       createdPodData?.name,
       onSuccess,
       router,
@@ -4060,12 +4060,12 @@ Instructions:
 
       // Redirect anyway - pod is functional without eligibility admin
       if (onSuccess) {
-        onSuccess({ podId: createdPodData?.id, eligibilityAdminSet: false });
+        onSuccess({ podId: createdPodData?.podId, eligibilityAdminSet: false });
       } else {
-        router.push(`/pods/${createdPodData?.id}/manage`);
+        router.push(`/pods/${createdPodData?.podId}/manage`);
       }
     },
-    [createdPodData?.id, onSuccess, router, toast],
+    [createdPodData?.podId, onSuccess, router, toast],
   );
 
   // Handle Phase 1: HAT Creation status updates
