@@ -1867,7 +1867,18 @@ export const PodManagerControlPanel: React.FC<PodManagerControlPanelProps> = ({
                   console.log('ℹ️ Direct receipt fetch not available (normal for ERC-4337)');
                   console.log('✅ Transaction succeeded - using blockchain sync fallback');
 
+                  // Show immediate success feedback to user
+                  toast({
+                    title: '✅ Role Created!',
+                    description: `Creating "${roleCreationTransaction?.roleData.name}" on blockchain. This may take a moment...`,
+                    duration: 5000,
+                  });
+
                   // Transaction succeeded on-chain but we can't get the receipt
+                  // Wait a bit longer for bundler to process before syncing
+                  console.log('⏳ Waiting 5 seconds for bundler to mine transaction...');
+                  await new Promise(resolve => setTimeout(resolve, 5000));
+
                   // Use targeted sync to fetch ONLY the newly created role from Hats Protocol
                   console.log('🔄 Syncing new role from blockchain...');
 
@@ -1901,8 +1912,9 @@ export const PodManagerControlPanel: React.FC<PodManagerControlPanelProps> = ({
                       await loadPodRoles();
 
                       toast({
-                        title: 'Role Created Successfully',
-                        description: `New role "${roleCreationTransaction?.roleData.name}" has been synced from blockchain`,
+                        title: '✅ Role Created Successfully!',
+                        description: `"${roleCreationTransaction?.roleData.name}" is now active and ready to assign to members.`,
+                        duration: 6000,
                       });
 
                       // Close modal and reset state
@@ -1919,9 +1931,10 @@ export const PodManagerControlPanel: React.FC<PodManagerControlPanelProps> = ({
 
                     // Final fallback: Show user a message
                     toast({
-                      title: 'Role Created (Pending Sync)',
-                      description: `Transaction submitted successfully. The role will appear after the next automatic sync. Tx: ${transactionHash.slice(0, 10)}...`,
+                      title: '⏳ Role Creation In Progress',
+                      description: `Your role "${roleCreationTransaction?.roleData.name}" is being created on-chain. Refresh this page in 30 seconds to see it. Tx: ${transactionHash.slice(0, 10)}...`,
                       variant: 'default',
+                      duration: 8000,
                     });
 
                     // Reset state and close modal
