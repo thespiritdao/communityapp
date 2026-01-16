@@ -310,16 +310,10 @@ export const ClaimManagementHATButton: React.FC<
     );
   }
 
-  // Don't show if user is not a leader
-  if (!isLeader) {
-    console.log(
-      '🚫 User is not in pod_leads, hiding management HAT claim button',
-    );
-    return null;
-  }
-
-  // Don't show if user already has the HAT
+  // ✅ FIX: Check HAT balance FIRST (blockchain is source of truth)
+  // If user has the HAT on-chain, show success message regardless of pod_leads
   if (alreadyHasHat) {
+    console.log('✅ User has management HAT on-chain, showing active status');
     return (
       <Card style={{ backgroundColor: '#E8F1EE', border: '1px solid #B8D9CA' }}>
         <CardContent className="p-4">
@@ -337,6 +331,14 @@ export const ClaimManagementHATButton: React.FC<
         </CardContent>
       </Card>
     );
+  }
+
+  // Only show claim button if user is in pod_leads (database-designated leader)
+  if (!isLeader) {
+    console.log(
+      '🚫 User is not in pod_leads and does not have HAT, hiding claim button',
+    );
+    return null;
   }
 
   // Show error if HAT is inactive or user is not eligible

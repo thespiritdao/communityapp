@@ -1,16 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useEvmAddress, useIsSignedIn } from '@coinbase/cdp-hooks';
+import { useEvmAddress, useIsSignedIn, useSendUserOperation, useCurrentUser } from '@coinbase/cdp-hooks';
 import { usePublicClient } from 'wagmi';
-import {
-  Transaction,
-  TransactionButton,
-  TransactionStatus,
-  TransactionStatusLabel,
-  TransactionStatusAction,
-} from '@coinbase/onchainkit/transaction';
-import type { LifecycleStatus } from '@coinbase/onchainkit/transaction';
 import {
   Card,
   CardContent,
@@ -122,6 +114,8 @@ interface SyncStatus {
 export default function PodTreasurySync() {
   const { evmAddress: address } = useEvmAddress();
   const { isSignedIn: isConnected } = useIsSignedIn();
+  const { sendUserOperation } = useSendUserOperation();
+  const { currentUser } = useCurrentUser();
   const publicClient = usePublicClient();
   const [pods, setPods] = useState<Pod[]>([]);
   const [selectedPod, setSelectedPod] = useState<Pod | null>(null);
@@ -134,6 +128,8 @@ export default function PodTreasurySync() {
   const [currentStep, setCurrentStep] = useState<
     'idle' | 'auth-factory' | 'bounty-service' | 'complete'
   >('idle');
+  const [isExecutingAuthFactory, setIsExecutingAuthFactory] = useState(false);
+  const [isExecutingBountyService, setIsExecutingBountyService] = useState(false);
 
   // Fetch pods with treasuries
   useEffect(() => {
@@ -305,29 +301,75 @@ export default function PodTreasurySync() {
     ];
   };
 
-  const handleAuthFactoryStatus = (status: LifecycleStatus) => {
-    console.log('Auth Factory Transaction Status:', status);
+  const handleAuthFactorySync = async () => {
+    if (!currentUser || !selectedPod || !selectedPod.treasury_contract_address) {
+      console.error('❌ Missing requirements for Auth Factory sync');
+      return;
+    }
 
-    if (status.statusName === 'success') {
+    setIsExecutingAuthFactory(true);
+    try {
+      console.log('🚀 Syncing to PodAuthorizationFactory via CDP Smart Account');
+
+      const calls = prepareAuthFactoryTransaction();
+      const response = await sendUserOperation({
+        calls: calls.map((call: any) => ({
+          to: call.address,
+          data: call.data,
+          value: call.value || 0n,
+        })),
+      });
+
+      console.log('✅ Auth Factory sync transaction submitted:', response.hash);
+      await response.wait();
+      console.log('✅ Auth Factory sync successful');
+
       setSyncStatus((prev) => ({ ...prev, podAuthFactory: 'synced' }));
       setCurrentStep('complete');
-    } else if (status.statusName === 'error') {
+      setError(null);
+
+    } catch (error) {
+      console.error('❌ Auth Factory sync failed:', error);
       setSyncStatus((prev) => ({ ...prev, podAuthFactory: 'error' }));
       setError('Failed to sync to PodAuthorizationFactory');
+    } finally {
+      setIsExecutingAuthFactory(false);
     }
   };
 
-  const handleBountyServiceStatus = (status: LifecycleStatus) => {
-    console.log('Bounty Service Transaction Status:', status);
+  const handleBountyServiceSync = async () => {
+    if (!currentUser || !selectedPod || !selectedPod.treasury_contract_address) {
+      console.error('❌ Missing requirements for Bounty Service sync');
+      return;
+    }
 
-    if (status.statusName === 'success') {
+    setIsExecutingBountyService(true);
+    try {
+      console.log('🚀 Syncing to PodBountyService via CDP Smart Account');
+
+      const calls = prepareBountyServiceTransaction();
+      const response = await sendUserOperation({
+        calls: calls.map((call: any) => ({
+          to: call.address,
+          data: call.data,
+          value: call.value || 0n,
+        })),
+      });
+
+      console.log('✅ Bounty Service sync transaction submitted:', response.hash);
+      await response.wait();
+      console.log('✅ Bounty Service sync successful');
+
       setSyncStatus((prev) => ({ ...prev, podBountyService: 'synced' }));
       setCurrentStep('complete');
-    } else if (status.statusName === 'error') {
+      setError(null);
+
+    } catch (error) {
+      console.error('❌ Bounty Service sync failed:', error);
       setSyncStatus((prev) => ({ ...prev, podBountyService: 'error' }));
-      setError(
-        'Failed to sync to PodBountyService (it may already be registered)',
-      );
+      setError('Failed to sync to PodBountyService (it may already be registered)');
+    } finally {
+      setIsExecutingBountyService(false);
     }
   };
 
@@ -491,20 +533,20 @@ export default function PodTreasurySync() {
                           </AlertDescription>
                         </Alert>
 
-                        <Transaction
-                          chainId={8453} // Base mainnet
-                          calls={prepareAuthFactoryTransaction()}
-                          onStatus={handleAuthFactoryStatus}
+                        <Button
+                          onClick={handleAuthFactorySync}
+                          disabled={isExecutingAuthFactory || !currentUser}
+                          className="w-full"
                         >
-                          <TransactionButton
-                            className="w-full"
-                            text="Sync to PodAuthorizationFactory"
-                          />
-                          <TransactionStatus>
-                            <TransactionStatusLabel />
-                            <TransactionStatusAction />
-                          </TransactionStatus>
-                        </Transaction>
+                          {isExecutingAuthFactory ? (
+                            <>
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                              Syncing...
+                            </>
+                          ) : (
+                            'Sync to PodAuthorizationFactory'
+                          )}
+                        </Button>
                       </div>
                     )}
 
@@ -520,20 +562,20 @@ export default function PodTreasurySync() {
                           </AlertDescription>
                         </Alert>
 
-                        <Transaction
-                          chainId={8453}
-                          calls={prepareBountyServiceTransaction()}
-                          onStatus={handleBountyServiceStatus}
+                        <Button
+                          onClick={handleBountyServiceSync}
+                          disabled={isExecutingBountyService || !currentUser}
+                          className="w-full"
                         >
-                          <TransactionButton
-                            className="w-full"
-                            text="Register in PodBountyService"
-                          />
-                          <TransactionStatus>
-                            <TransactionStatusLabel />
-                            <TransactionStatusAction />
-                          </TransactionStatus>
-                        </Transaction>
+                          {isExecutingBountyService ? (
+                            <>
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                              Registering...
+                            </>
+                          ) : (
+                            'Register in PodBountyService'
+                          )}
+                        </Button>
                       </div>
                     )}
 

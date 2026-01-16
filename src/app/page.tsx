@@ -492,15 +492,25 @@ function PageContent() {
               2. Invite code validated OR wallet already exists
               3. Not showing onboarding modal */}
           {isClient && cdpInitialized && (validatedInviteCode || walletAddress) && !showOnboardingModal && (
-            <EmbeddedWalletAuth
-              isLoading={isLoading}
-              onEmailCaptured={setCapturedEmail}
-            />
+            <>
+              <EmbeddedWalletAuth
+                isLoading={isLoading}
+                onEmailCaptured={setCapturedEmail}
+              />
+              {isLoading && (
+                <p className="text-center text-white mt-4">
+                  {authLoading ? 'Authenticating...' : 'Processing...'}
+                </p>
+              )}
+            </>
           )}
 
           {/* Show loading while CDP initializes (only if we have validated invite code) */}
           {isClient && !cdpInitialized && validatedInviteCode && (
-            <p className="text-center text-white">Initializing wallet system...</p>
+            <div className="text-center">
+              <p className="text-white">Initializing wallet system...</p>
+              <p className="text-white text-sm mt-2 opacity-75">This may take a few moments</p>
+            </div>
           )}
 
           {/* Show preparing message if mounted but no invite code yet */}

@@ -11,15 +11,7 @@ import { Label } from '@/components/ui/label';
 import { useToast } from '@/components/ui/use-toast';
 import { Trash2, AlertTriangle, Loader2 } from 'lucide-react';
 import { PodDeletionService } from '@/features/pods/services/PodDeletionService';
-import {
-  Transaction,
-  TransactionButton,
-  TransactionSponsor,
-  TransactionStatus,
-  TransactionStatusLabel,
-  TransactionStatusAction,
-} from '@coinbase/onchainkit/transaction';
-import { base } from 'viem/chains';
+import { useSendUserOperation, useCurrentUser } from '@coinbase/cdp-hooks';
 
 interface ExtendedPod {
   id: string;
@@ -61,6 +53,9 @@ export const PodDeletionButton: React.FC<PodDeletionButtonProps> = ({
   const [processingHats, setProcessingHats] = useState(false);
   const [hatTransactionConfig, setHatTransactionConfig] = useState<any>(null);
   const publicClient = usePublicClient();
+  const { sendUserOperation } = useSendUserOperation();
+  const { currentUser } = useCurrentUser();
+  const [isExecutingTransaction, setIsExecutingTransaction] = useState(false);
 
   // Check if pod can be deleted when component mounts or pod changes
   useEffect(() => {
@@ -246,42 +241,66 @@ export const PodDeletionButton: React.FC<PodDeletionButtonProps> = ({
                 token(s) on the blockchain before deleting the pod.
               </p>
 
-              <Transaction
-                chainId={base.id}
-                calls={hatTransactionConfig.calls}
-                isSponsored={true}
-                onSuccess={async (response) => {
-                  console.log('✅ Hat deactivation successful:', response);
-                  await handleHatTransactionSuccess();
+              <Button
+                onClick={async () => {
+                  if (!currentUser) {
+                    toast({
+                      title: 'Error',
+                      description: 'Wallet not connected',
+                      variant: 'destructive',
+                    });
+                    return;
+                  }
+
+                  setIsExecutingTransaction(true);
+                  try {
+                    console.log('🚀 Deactivating HATs via CDP Smart Account');
+
+                    const response = await sendUserOperation({
+                      calls: hatTransactionConfig.calls.map((call: any) => ({
+                        to: call.to,
+                        data: call.data,
+                        value: call.value || 0n,
+                      })),
+                    });
+
+                    console.log('✅ Hat deactivation transaction submitted:', response.hash);
+                    await response.wait();
+                    console.log('✅ Hat deactivation successful');
+
+                    await handleHatTransactionSuccess();
+
+                  } catch (error) {
+                    console.error('❌ Hat deactivation failed:', error);
+                    toast({
+                      title: 'Hat Deactivation Failed',
+                      description:
+                        error instanceof Error
+                          ? error.message
+                          : 'Transaction failed',
+                      variant: 'destructive',
+                    });
+                    // Reset all state properly on error
+                    setProcessingHats(false);
+                    setDeleting(false);
+                    setHatTransactionConfig(null);
+                    setDeleteConfirmText('');
+                  } finally {
+                    setIsExecutingTransaction(false);
+                  }
                 }}
-                onError={(error) => {
-                  console.error('❌ Hat deactivation failed:', error);
-                  toast({
-                    title: 'Hat Deactivation Failed',
-                    description:
-                      error instanceof Error
-                        ? error.message
-                        : 'Transaction failed',
-                    variant: 'destructive',
-                  });
-                  // Reset all state properly on error
-                  setProcessingHats(false);
-                  setDeleting(false);
-                  setHatTransactionConfig(null);
-                  setDeleteConfirmText('');
-                  // Don't re-open delete modal automatically
-                }}
+                disabled={isExecutingTransaction || !currentUser}
+                className="w-full bg-red-600 text-white hover:bg-red-700 py-2 rounded"
               >
-                <TransactionButton
-                  text="Confirm Hat Deactivation"
-                  className="w-full bg-red-600 text-white hover:bg-red-700 py-2 rounded"
-                />
-                <TransactionSponsor />
-                <TransactionStatus>
-                  <TransactionStatusLabel />
-                  <TransactionStatusAction />
-                </TransactionStatus>
-              </Transaction>
+                {isExecutingTransaction ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Processing...
+                  </>
+                ) : (
+                  'Confirm Hat Deactivation'
+                )}
+              </Button>
 
               <button
                 onClick={() => {

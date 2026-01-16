@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { useEvmAddress, useSendUserOperation, useCurrentUser } from '@coinbase/cdp-hooks';
-import { encodeFunctionData } from 'viem';
+import { encodeFunctionData, createPublicClient, http } from 'viem';
+import { base } from 'viem/chains';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -24,6 +25,12 @@ const DEFAULT_SUPPORTED_TOKENS = [
   '0x1317Ae277266D38C4E492558f8693F14143a6A65', // $SPIRIT (SYSTEM_TOKEN)
   '0xe9b4aB2eB9397fa41AC3223e96f9d988BeFF5D21', // $SELF (SELF_TOKEN)
 ] as `0x${string}`[];
+
+// Public client for fetching transaction receipts
+const publicClient = createPublicClient({
+  chain: base,
+  transport: http(),
+});
 
 // Factory ABI for treasury deployment
 const TREASURY_FACTORY_ABI = [
@@ -142,89 +149,136 @@ export function PodSpecificTreasuryManager({
 
       console.log('✅ User operation sent successfully!', result);
 
-      // Handle success with receipt
-      // Type assertion needed due to incomplete CDP SDK types
-      const resultWithReceipt = result as any;
-      if (resultWithReceipt?.receipt) {
-        console.log('🏦 Treasury deployment successful:', resultWithReceipt.receipt);
+      // CDP UserOperations don't return receipt directly - need to fetch it
+      const resultWithHash = result as any;
+      const userOpHash = resultWithHash?.userOperationHash || resultWithHash?.hash;
 
-        // Extract treasury address from transaction logs
-        // TreasuryDeployed event signature: keccak256("TreasuryDeployed(string,address,uint256,address[],address)")
-        const TREASURY_DEPLOYED_EVENT =
-          '0x494cf03e4055d4033e848ad013abd5a12efdf3143ccf97cd8514778840b10d36';
-
-        let treasuryAddress = '';
-
-        if (resultWithReceipt.receipt.logs) {
-          // Find TreasuryDeployed event log
-          const deploymentLog = resultWithReceipt.receipt.logs.find(
-            (log: any) => log.topics?.[0] === TREASURY_DEPLOYED_EVENT,
-          );
-
-          if (deploymentLog) {
-            // Treasury address is the second indexed parameter (topics[2])
-            const addressFromTopic = deploymentLog.topics?.[2];
-            if (addressFromTopic && addressFromTopic.length === 66) {
-              treasuryAddress = '0x' + addressFromTopic.slice(-40);
-            }
-          }
-        }
-
-        console.log('🏦 Extracted treasury address:', treasuryAddress);
-
-        // If we couldn't extract the address, show error
-        if (!treasuryAddress) {
-          console.error('Could not extract treasury address from logs');
-          toast({
-            title: 'Treasury Deployed!',
-            description: `Treasury deployed but address extraction failed. Check tx: ${resultWithReceipt.receipt.transactionHash}`,
-          });
-          return;
-        }
-
-        // Update database with treasury address
-        console.log('📝 Updating pod with treasury address:', treasuryAddress);
-        const updateResponse = await fetch('/api/pods/activate', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            podId: localPod.id,
-            treasuryAddress: treasuryAddress,
-            isActive: true,
-          }),
-        });
-
-        if (!updateResponse.ok) {
-          throw new Error('Failed to update pod with treasury address');
-        }
-
+      if (!userOpHash) {
+        console.error('❌ No userOperationHash in result:', result);
         toast({
-          title: 'Treasury Deployed Successfully!',
-          description: `Treasury deployed at ${treasuryAddress.slice(0, 6)}...${treasuryAddress.slice(-4)}`,
-        });
-
-        // Update the local pod object to show the treasury
-        setLocalPod({
-          ...localPod,
-          treasury_contract_address: treasuryAddress,
-        });
-
-        // Trigger parent component refresh
-        setTimeout(() => {
-          window.dispatchEvent(
-            new CustomEvent('treasury-deployed', {
-              detail: { podId: localPod.id, treasuryAddress },
-            }),
-          );
-        }, 1000);
-      } else {
-        console.warn('⚠️ No receipt found in result');
-        toast({
-          title: 'Transaction Completed',
-          description: 'Deployment completed but receipt not found. Please refresh.',
+          title: 'Transaction Error',
+          description: 'Could not get transaction hash from result.',
           variant: 'destructive',
         });
+        return;
       }
+
+      console.log('⏳ Waiting for transaction receipt...', { userOpHash });
+
+      // Wait for the transaction to be confirmed and fetch the receipt
+      let receipt;
+      try {
+        // Try to wait for the receipt using the userOperationHash
+        // For CDP transactions, the userOperationHash IS the transaction hash
+        receipt = await publicClient.waitForTransactionReceipt({
+          hash: userOpHash as `0x${string}`,
+          timeout: 60_000, // 60 second timeout
+        });
+
+        console.log('✅ Got receipt!', receipt);
+      } catch (waitError: any) {
+        console.warn('⚠️ waitForTransactionReceipt failed:', waitError.message);
+
+        // Fallback: Try direct fetch (transaction might already be mined)
+        try {
+          console.log('🔄 Attempting fallback receipt fetch...');
+          const fallbackReceipt = await publicClient.getTransactionReceipt({
+            hash: userOpHash as `0x${string}`,
+          });
+
+          if (fallbackReceipt) {
+            console.log('✅ Fallback receipt fetch succeeded!', fallbackReceipt);
+            receipt = fallbackReceipt;
+          } else {
+            throw new Error('Receipt not found via fallback');
+          }
+        } catch (fallbackError) {
+          console.error('❌ Fallback receipt fetch also failed:', fallbackError);
+
+          // Transaction submitted but we can't get the receipt yet
+          toast({
+            title: 'Treasury Deploying',
+            description: 'Transaction submitted! The treasury will appear after it confirms. Tx: ' + userOpHash.slice(0, 10) + '...',
+            variant: 'default',
+          });
+
+          // Reset state
+          setIsTransactionPending(false);
+          return; // Exit early - let blockchain sync handle it
+        }
+      }
+
+      // Extract treasury address from transaction logs
+      console.log('🏦 Processing receipt:', receipt);
+
+      // TreasuryDeployed event signature: keccak256("TreasuryDeployed(string,address,uint256,address[],address)")
+      const TREASURY_DEPLOYED_EVENT =
+        '0x494cf03e4055d4033e848ad013abd5a12efdf3143ccf97cd8514778840b10d36';
+
+      let treasuryAddress = '';
+
+      if (receipt.logs) {
+        // Find TreasuryDeployed event log
+        const deploymentLog = receipt.logs.find(
+          (log: any) => log.topics?.[0] === TREASURY_DEPLOYED_EVENT,
+        );
+
+        if (deploymentLog) {
+          // Treasury address is the second indexed parameter (topics[2])
+          const addressFromTopic = deploymentLog.topics?.[2];
+          if (addressFromTopic && addressFromTopic.length === 66) {
+            treasuryAddress = '0x' + addressFromTopic.slice(-40);
+          }
+        }
+      }
+
+      console.log('🏦 Extracted treasury address:', treasuryAddress);
+
+      // If we couldn't extract the address, show error
+      if (!treasuryAddress) {
+        console.error('Could not extract treasury address from logs');
+        toast({
+          title: 'Treasury Deployed!',
+          description: `Treasury deployed but address extraction failed. Check tx: ${receipt.transactionHash}`,
+        });
+        return;
+      }
+
+      // Update database with treasury address
+      console.log('📝 Updating pod with treasury address:', treasuryAddress);
+      const updateResponse = await fetch('/api/pods/activate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          podId: localPod.id,
+          treasuryAddress: treasuryAddress,
+          isActive: true,
+        }),
+      });
+
+      if (!updateResponse.ok) {
+        throw new Error('Failed to update pod with treasury address');
+      }
+
+      toast({
+        title: 'Treasury Deployed Successfully!',
+        description: `Treasury deployed at ${treasuryAddress.slice(0, 6)}...${treasuryAddress.slice(-4)}`,
+      });
+
+      // Update the local pod object to show the treasury
+      setLocalPod({
+        ...localPod,
+        treasury_contract_address: treasuryAddress,
+      });
+
+      // Trigger parent component refresh
+      setTimeout(() => {
+        window.dispatchEvent(
+          new CustomEvent('treasury-deployed', {
+            detail: { podId: localPod.id, treasuryAddress },
+          }),
+        );
+      }, 1000);
     } catch (error: any) {
       console.error('❌ Treasury deployment failed:', error);
       console.error('🏦 Full error details:', {

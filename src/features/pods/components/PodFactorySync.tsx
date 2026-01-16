@@ -4,14 +4,8 @@ import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { useEvmAddress } from '@coinbase/cdp-hooks';
-import {
-  Transaction,
-  TransactionButton,
-  TransactionStatus,
-  TransactionStatusLabel,
-  TransactionStatusAction,
-} from '@coinbase/onchainkit/transaction';
+import { useEvmAddress, useSendUserOperation, useCurrentUser } from '@coinbase/cdp-hooks';
+import { Loader2 } from 'lucide-react';
 import { PodFactorySyncService } from '../services/PodFactorySyncService';
 
 interface PodFactorySyncProps {
@@ -22,6 +16,8 @@ export const PodFactorySync: React.FC<PodFactorySyncProps> = ({
   onSyncComplete,
 }) => {
   const { evmAddress: address } = useEvmAddress();
+  const { sendUserOperation } = useSendUserOperation();
+  const { currentUser } = useCurrentUser();
   const [loading, setLoading] = useState(false);
   const [syncData, setSyncData] = useState<{
     toRegister: any[];
@@ -31,6 +27,7 @@ export const PodFactorySync: React.FC<PodFactorySyncProps> = ({
     [],
   );
   const [showTransaction, setShowTransaction] = useState(false);
+  const [isExecutingTransaction, setIsExecutingTransaction] = useState(false);
 
   useEffect(() => {
     if (address) {
@@ -214,20 +211,49 @@ export const PodFactorySync: React.FC<PodFactorySyncProps> = ({
                   </AlertDescription>
                 </Alert>
 
-                <Transaction
-                  chainId={8453}
-                  calls={currentTransactionCalls}
-                  onSuccess={handleTransactionSuccess}
-                  isSponsored={true}
+                <Button
+                  onClick={async () => {
+                    if (!currentUser) {
+                      console.error('❌ Wallet not connected');
+                      return;
+                    }
+
+                    setIsExecutingTransaction(true);
+                    try {
+                      console.log('🚀 Syncing pods via CDP Smart Account');
+
+                      const response = await sendUserOperation({
+                        calls: currentTransactionCalls.map((call: any) => ({
+                          to: call.to,
+                          data: call.data,
+                          value: call.value || 0n,
+                        })),
+                      });
+
+                      console.log('✅ Pod sync transaction submitted:', response.hash);
+                      await response.wait();
+                      console.log('✅ Pod sync successful');
+
+                      handleTransactionSuccess();
+
+                    } catch (error) {
+                      console.error('❌ Pod sync failed:', error);
+                    } finally {
+                      setIsExecutingTransaction(false);
+                    }
+                  }}
+                  disabled={isExecutingTransaction || !currentUser}
+                  className="w-full"
                 >
-                  <TransactionButton
-                    text={`Sync ${totalPodsToSync} Pod${totalPodsToSync !== 1 ? 's' : ''} via Factory`}
-                  />
-                  <TransactionStatus>
-                    <TransactionStatusLabel />
-                    <TransactionStatusAction />
-                  </TransactionStatus>
-                </Transaction>
+                  {isExecutingTransaction ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Syncing...
+                    </>
+                  ) : (
+                    `Sync ${totalPodsToSync} Pod${totalPodsToSync !== 1 ? 's' : ''} via Factory`
+                  )}
+                </Button>
 
                 <Button
                   variant="outline"

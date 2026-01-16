@@ -1,7 +1,7 @@
 'use client';
 
 import type React from 'react';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useCDPStatus } from '@/hooks/useCDPStatus';
 import { usePublicClient } from 'wagmi';
 import { encodeFunctionData } from 'viem';
@@ -289,6 +289,9 @@ export const PodManagerControlPanel: React.FC<PodManagerControlPanelProps> = ({
   // Store live holder counts from blockchain
   const [liveHolderCounts, setLiveHolderCounts] = useState<Record<string, number>>({});
 
+  // Track if roles have been loaded to prevent infinite loops
+  const rolesLoadedRef = useRef(false);
+
   // Check if user has Pod Manager permissions
   // Display transaction logging information on first render
   useEffect(() => {
@@ -344,7 +347,7 @@ export const PodManagerControlPanel: React.FC<PodManagerControlPanelProps> = ({
   console.log('  Final isPodManager result:', isPodManager);
 
   // Helper function to initialize default roles if none exist
-  const initializeDefaultRoles = async () => {
+  const initializeDefaultRoles = useCallback(async () => {
     if (!address) {
       console.error('❌ Cannot initialize roles: No user address');
       throw new Error('User must be authenticated to initialize roles');
@@ -416,11 +419,7 @@ export const PodManagerControlPanel: React.FC<PodManagerControlPanelProps> = ({
       console.error('❌ Failed to initialize default roles:', error);
       throw error;
     }
-  };
-
-  useEffect(() => {
-    loadPodRoles();
-  }, [podId]);
+  }, [podId, address]); // Add dependencies for useCallback
 
   // Fetch live holder counts from blockchain
   const fetchLiveHolderCounts = async (roles: PodRole[]) => {
@@ -477,7 +476,7 @@ export const PodManagerControlPanel: React.FC<PodManagerControlPanelProps> = ({
     setLiveHolderCounts(counts);
   };
 
-  const loadPodRoles = async () => {
+  const loadPodRoles = useCallback(async () => {
     try {
       setLoading(true);
       setLoadError(null);
@@ -585,7 +584,19 @@ export const PodManagerControlPanel: React.FC<PodManagerControlPanelProps> = ({
     } finally {
       setLoading(false);
     }
-  };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [podId, publicClient, address, configurationAuditDone, toast]); // initializeDefaultRoles is stable from useCallback above
+
+  // Load pod roles when component mounts (only once to prevent recursive logging)
+  useEffect(() => {
+    // Prevent infinite loop by tracking if roles have been loaded
+    if (!rolesLoadedRef.current) {
+      console.log('🎬 Loading pod roles for the first time...');
+      rolesLoadedRef.current = true;
+      loadPodRoles();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Only run once on mount
 
   const updateRolePermissions = (
     roleId: string,
@@ -1413,6 +1424,71 @@ export const PodManagerControlPanel: React.FC<PodManagerControlPanelProps> = ({
       const adminHatId = podData.management_hat_id;
       console.log('✅ Using management HAT as admin:', adminHatId);
 
+      // Calculate the expected new HAT ID by fetching parent HAT's lastHatId
+      console.log('🔍 Fetching parent HAT details to calculate new HAT ID...');
+      const parentHatDetails = await publicClient.readContract({
+        address: process.env.NEXT_PUBLIC_HATS_CONTRACT as `0x${string}`,
+        abi: [
+          {
+            name: 'viewHat',
+            type: 'function',
+            stateMutability: 'view',
+            inputs: [{ name: '_hatId', type: 'uint256' }],
+            outputs: [
+              { name: 'details', type: 'string' },
+              { name: 'maxSupply', type: 'uint32' },
+              { name: 'supply', type: 'uint32' },
+              { name: 'eligibility', type: 'address' },
+              { name: 'toggle', type: 'address' },
+              { name: 'imageURI', type: 'string' },
+              { name: 'lastHatId', type: 'uint16' },
+              { name: 'mutable', type: 'bool' },
+              { name: 'active', type: 'bool' },
+            ],
+          },
+        ],
+        functionName: 'viewHat',
+        args: [BigInt(adminHatId)],
+      });
+
+      const lastHatId = parentHatDetails[6] as number; // lastHatId is index 6
+      const nextChildHatNumber = lastHatId + 1;
+
+      // Calculate the expected new child HAT ID using the same logic as HatBlockchainSyncService
+      const parentHatBigInt = BigInt(adminHatId);
+      const hatIdHex = adminHatId.replace('0x', '').padStart(64, '0');
+
+      // Split into 16-bit (4 hex char) segments to find the level
+      const segments: number[] = [];
+      for (let i = 0; i < 64; i += 4) {
+        const segment = hatIdHex.substring(i, i + 4);
+        segments.push(parseInt(segment, 16));
+      }
+
+      // Find the level (first zero segment after non-zero segments)
+      let level = 0;
+      for (let i = 0; i < segments.length; i++) {
+        if (segments[i] !== 0) {
+          level = i + 1;
+        }
+      }
+
+      // Calculate child HAT ID by shifting to the correct level
+      const childOffset = BigInt(nextChildHatNumber) << BigInt((15 - level) * 16);
+      const expectedHatIdBigInt = parentHatBigInt | childOffset;
+      const expectedHatId = '0x' + expectedHatIdBigInt.toString(16).padStart(64, '0');
+
+      console.log('🎯 Expected new HAT ID:', expectedHatId);
+      console.log('📊 Parent level:', level, 'lastHatId:', lastHatId, '→ New child will be:', nextChildHatNumber);
+
+      // Prepare HAT details JSON
+      const hatDetails = JSON.stringify({
+        type: 'role',
+        name: roleData.name,
+        description: roleData.description || '',
+      });
+      console.log('📝 HAT details JSON:', hatDetails);
+
       console.log('🎩 Preparing role creation transaction:', roleData);
       console.log(
         '📋 Contract being called:',
@@ -1450,7 +1526,7 @@ export const PodManagerControlPanel: React.FC<PodManagerControlPanelProps> = ({
           functionName: 'createHat',
           args: [
             BigInt(adminHatId),
-            roleData.description || roleData.name,
+            hatDetails, // HAT details as properly formatted JSON
             roleData.maxSupply,
             '0x0000000000000000000000000000000000000001' as `0x${string}`,
             address as `0x${string}`, // Creator becomes toggle controller
@@ -1505,6 +1581,7 @@ export const PodManagerControlPanel: React.FC<PodManagerControlPanelProps> = ({
       const transactionConfig = {
         calls: [hatCreationCall],
         roleData,
+        expectedHatId, // Store the expected HAT ID for fallback sync
       };
 
       console.log('🎯 Final transaction config for OnchainKit:', {
@@ -1768,58 +1845,57 @@ export const PodManagerControlPanel: React.FC<PodManagerControlPanelProps> = ({
                 });
                 console.log('✅ Full receipt fetched, logs:', receipt?.logs?.length || 0);
               } catch (receiptError: any) {
-                console.error('❌ Failed to fetch transaction receipt:', receiptError);
-                console.log('💡 This may be because:');
-                console.log('   1. The bundler is still processing the UserOperation');
-                console.log('   2. The userOperationHash !== final transaction hash (ERC-4337)');
-                console.log('   3. Network connectivity issues');
+                // This is EXPECTED with ERC-4337: userOperationHash !== final transaction hash
+                console.log('ℹ️ Receipt not available via UserOperation hash (expected with ERC-4337)');
                 console.log('🔗 UserOperationHash:', transactionHash);
-                console.log('🔍 Check Base block explorer: https://basescan.org/tx/' + transactionHash);
+                console.log('💡 The bundler created a different transaction hash on-chain');
 
                 // Fallback: Try to get receipt without waiting (may already be mined)
-                console.log('🔄 Attempting fallback receipt fetch...');
+                console.log('🔄 Attempting direct receipt fetch...');
                 try {
                   const fallbackReceipt = await publicClient.getTransactionReceipt({
                     hash: transactionHash as `0x${string}`,
                   });
                   if (fallbackReceipt) {
-                    console.log('✅ Fallback receipt fetch succeeded!', fallbackReceipt);
+                    console.log('✅ Direct receipt fetch succeeded!', fallbackReceipt);
                     receipt = fallbackReceipt;
                   } else {
-                    throw new Error('Receipt not found via fallback');
+                    throw new Error('Receipt not found via direct fetch');
                   }
                 } catch (fallbackError) {
-                  console.error('❌ Fallback receipt fetch also failed:', fallbackError);
+                  // This is normal for ERC-4337 - the userOperationHash is not the final tx hash
+                  console.log('ℹ️ Direct receipt fetch not available (normal for ERC-4337)');
+                  console.log('✅ Transaction succeeded - using blockchain sync fallback');
 
                   // Transaction succeeded on-chain but we can't get the receipt
-                  // Use blockchain sync to fetch the role from Hats Protocol
-                  console.log('🔄 Initiating blockchain sync to fetch new role from Hats Protocol...');
+                  // Use targeted sync to fetch ONLY the newly created role from Hats Protocol
+                  console.log('🔄 Syncing new role from blockchain...');
 
                   try {
                     // Import blockchain sync service dynamically
                     const { HatBlockchainSyncService } = await import('../services/HatBlockchainSyncService');
 
-                    // Get management HAT ID for the pod
-                    const { data: podData } = await supabase
-                      .from('pods')
-                      .select('management_hat_id')
-                      .eq('id', podId)
-                      .single();
+                    // Calculate the expected new HAT ID by looking at the transaction data
+                    // The new HAT ID should be stored in roleCreationTransaction if available
+                    const expectedHatId = roleCreationTransaction?.expectedHatId;
 
-                    if (!podData?.management_hat_id) {
-                      throw new Error('Pod management HAT ID not found');
+                    if (!expectedHatId) {
+                      console.error('❌ No expected HAT ID found in transaction data');
+                      throw new Error('Cannot determine which HAT was created - missing expected HAT ID');
                     }
 
-                    // Sync all roles from blockchain
-                    const syncResult = await HatBlockchainSyncService.syncRolesFromBlockchain(
+                    console.log('🎯 Syncing specific HAT:', expectedHatId);
+
+                    // Sync ONLY the specific HAT that was just created
+                    const success = await HatBlockchainSyncService.quickSyncSingleHat(
                       publicClient,
                       podId,
-                      podData.management_hat_id,
+                      expectedHatId,
                       address
                     );
 
-                    if (syncResult.success && syncResult.rolesCreated > 0) {
-                      console.log(`✅ Blockchain sync successful! Created ${syncResult.rolesCreated} new roles`);
+                    if (success) {
+                      console.log(`✅ Successfully synced new role from blockchain!`);
 
                       // Reload roles to show the new one
                       await loadPodRoles();
@@ -1830,6 +1906,7 @@ export const PodManagerControlPanel: React.FC<PodManagerControlPanelProps> = ({
                       });
 
                       // Close modal and reset state
+                      setIsCreatingRole(false);
                       setRoleCreationTransaction(null);
                       setIsProcessingTransaction(false);
                       return;
@@ -1848,6 +1925,7 @@ export const PodManagerControlPanel: React.FC<PodManagerControlPanelProps> = ({
                     });
 
                     // Reset state and close modal
+                    setIsCreatingRole(false);
                     setRoleCreationTransaction(null);
                     setIsProcessingTransaction(false);
                     return;
@@ -2079,24 +2157,6 @@ export const PodManagerControlPanel: React.FC<PodManagerControlPanelProps> = ({
           <div className="flex justify-between items-center">
             <h3 className="text-lg font-semibold">Pod Roles</h3>
             <div className="flex gap-2">
-              <Button
-                onClick={handleBlockchainSync}
-                disabled={isSyncing}
-                variant="outline"
-                className="flex items-center gap-2"
-              >
-                {isSyncing ? (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    Syncing...
-                  </>
-                ) : (
-                  <>
-                    <ToyBrick className="h-4 w-4" />
-                    Sync from Blockchain
-                  </>
-                )}
-              </Button>
               <Button
                 onClick={() => setIsCreatingRole(true)}
                 className="flex items-center gap-2"

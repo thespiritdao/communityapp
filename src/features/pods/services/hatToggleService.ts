@@ -128,15 +128,23 @@ export class HatToggleService {
     publicClient: PublicClient,
     hatId: string,
   ): Promise<{ isActive: boolean; error?: string }> {
-    console.log('📊 READING HAT STATUS FROM HATS CORE');
-    console.log('===================================');
-    console.log(`🎯 Target HAT ID: ${hatId}`);
-    console.log(`📍 HATS Contract: ${HATS_CONTRACT_ADDRESS}`);
-    console.log('💡 Using simplified approach: direct isActive() call only');
+    // SILENCED: Removed verbose logging to prevent console spam during role sync
+    // Enable DEBUG_HAT_SYNC=true in env to see detailed logs
+    const DEBUG = process.env.NEXT_PUBLIC_DEBUG_HAT_SYNC === 'true';
+
+    if (DEBUG) {
+      console.log('📊 READING HAT STATUS FROM HATS CORE');
+      console.log('===================================');
+      console.log(`🎯 Target HAT ID: ${hatId}`);
+      console.log(`📍 HATS Contract: ${HATS_CONTRACT_ADDRESS}`);
+      console.log('💡 Using simplified approach: direct isActive() call only');
+    }
 
     try {
-      console.log('\n1️⃣ CALLING HATS CORE isActive()');
-      console.log('-------------------------------');
+      if (DEBUG) {
+        console.log('\n1️⃣ CALLING HATS CORE isActive()');
+        console.log('-------------------------------');
+      }
 
       const isActive = await this.retryWithBackoff(async () => {
         return await publicClient.readContract({
@@ -155,15 +163,18 @@ export class HatToggleService {
         });
       });
 
-      console.log(`✅ HAT isActive() result: ${isActive}`);
-      console.log(
-        `🔍 This reflects the true HAT status controlled by toggle modules`,
-      );
+      if (DEBUG) {
+        console.log(`✅ HAT isActive() result: ${isActive}`);
+        console.log(
+          `🔍 This reflects the true HAT status controlled by toggle modules`,
+        );
+      }
 
       // Optional: Get additional HAT details for debugging
-      try {
-        console.log('\n2️⃣ GETTING ADDITIONAL HAT DETAILS (DEBUG INFO)');
-        console.log('----------------------------------------------');
+      if (DEBUG) {
+        try {
+          console.log('\n2️⃣ GETTING ADDITIONAL HAT DETAILS (DEBUG INFO)');
+          console.log('----------------------------------------------');
 
         const hatDetails = await this.retryWithBackoff(async () => {
           return await publicClient.readContract({
@@ -192,52 +203,53 @@ export class HatToggleService {
           });
         });
 
-        console.log(`📋 HAT Details (for context):`);
-        console.log(`   - Max Supply: ${hatDetails[1]}`);
-        console.log(`   - Current Supply: ${hatDetails[2]}`);
-        console.log(`   - Eligibility Module: ${hatDetails[3]}`);
-        console.log(`   - Toggle Module: ${hatDetails[4]}`);
-        console.log(`   - Mutable: ${hatDetails[7]}`);
-        console.log(`   - Active (from viewHat): ${hatDetails[8]}`);
+          console.log(`📋 HAT Details (for context):`);
+          console.log(`   - Max Supply: ${hatDetails[1]}`);
+          console.log(`   - Current Supply: ${hatDetails[2]}`);
+          console.log(`   - Eligibility Module: ${hatDetails[3]}`);
+          console.log(`   - Toggle Module: ${hatDetails[4]}`);
+          console.log(`   - Mutable: ${hatDetails[7]}`);
+          console.log(`   - Active (from viewHat): ${hatDetails[8]}`);
 
-        // Verify consistency between isActive() and viewHat.active
-        if (isActive !== hatDetails[8]) {
-          console.log('⚠️  INCONSISTENCY DETECTED!');
-          console.log(`   - isActive(): ${isActive}`);
-          console.log(`   - viewHat.active: ${hatDetails[8]}`);
+          // Verify consistency between isActive() and viewHat.active
+          if (isActive !== hatDetails[8]) {
+            console.log('⚠️  INCONSISTENCY DETECTED!');
+            console.log(`   - isActive(): ${isActive}`);
+            console.log(`   - viewHat.active: ${hatDetails[8]}`);
+            console.log(
+              '💡 This may indicate a race condition or toggle module issue',
+            );
+          } else {
+            console.log('✅ isActive() and viewHat.active are consistent');
+          }
+
+          // Analyze toggle module configuration
+          const toggleModule = hatDetails[4];
+          if (toggleModule === '0x0000000000000000000000000000000000000000') {
+            console.log(
+              '📝 No toggle module set - HAT uses default toggle behavior',
+            );
+          } else if (toggleModule.toLowerCase().startsWith('0x000000')) {
+            console.log('🎩 Toggle module appears to be HAT-based');
+            console.log(`   - Toggle HAT ID: ${toggleModule}`);
+          } else {
+            console.log('📄 Toggle module appears to be a contract');
+            console.log(`   - Toggle Contract: ${toggleModule}`);
+          }
+        } catch (detailsError) {
+          console.log('⚠️  Could not fetch additional HAT details for debugging');
           console.log(
-            '💡 This may indicate a race condition or toggle module issue',
+            `   Error: ${detailsError instanceof Error ? detailsError.message : String(detailsError)}`,
           );
-        } else {
-          console.log('✅ isActive() and viewHat.active are consistent');
         }
 
-        // Analyze toggle module configuration
-        const toggleModule = hatDetails[4];
-        if (toggleModule === '0x0000000000000000000000000000000000000000') {
-          console.log(
-            '📝 No toggle module set - HAT uses default toggle behavior',
-          );
-        } else if (toggleModule.toLowerCase().startsWith('0x000000')) {
-          console.log('🎩 Toggle module appears to be HAT-based');
-          console.log(`   - Toggle HAT ID: ${toggleModule}`);
-        } else {
-          console.log('📄 Toggle module appears to be a contract');
-          console.log(`   - Toggle Contract: ${toggleModule}`);
-        }
-      } catch (detailsError) {
-        console.log('⚠️  Could not fetch additional HAT details for debugging');
         console.log(
-          `   Error: ${detailsError instanceof Error ? detailsError.message : String(detailsError)}`,
+          `\n✅ FINAL RESULT: HAT ${hatId} is ${isActive ? 'ACTIVE' : 'INACTIVE'}`,
+        );
+        console.log(
+          '💡 This is the authoritative status from Hats Protocol core',
         );
       }
-
-      console.log(
-        `\n✅ FINAL RESULT: HAT ${hatId} is ${isActive ? 'ACTIVE' : 'INACTIVE'}`,
-      );
-      console.log(
-        '💡 This is the authoritative status from Hats Protocol core',
-      );
 
       return {
         isActive,
@@ -247,8 +259,11 @@ export class HatToggleService {
 
       // Provide detailed error analysis
       let errorMessage = 'Failed to get HAT status';
-      console.log('\n🚨 ERROR ANALYSIS');
-      console.log('----------------');
+
+      if (DEBUG) {
+        console.log('\n🚨 ERROR ANALYSIS');
+        console.log('----------------');
+      }
 
       if (error instanceof Error) {
         if (
@@ -256,32 +271,44 @@ export class HatToggleService {
           error.message.includes('rate limit')
         ) {
           errorMessage = 'Rate limited by RPC provider';
-          console.log('⏱️  Issue: Rate limit detected');
-          console.log(
-            '💡 Solution: Wait and retry, or use different RPC endpoint',
-          );
+          if (DEBUG) {
+            console.log('⏱️  Issue: Rate limit detected');
+            console.log(
+              '💡 Solution: Wait and retry, or use different RPC endpoint',
+            );
+          }
         } else if (error.message.includes('revert')) {
           errorMessage = 'Contract call reverted - HAT may not exist';
-          console.log('🚨 Issue: Contract call reverted');
-          console.log(
-            `💡 Possible causes: HAT ID ${hatId} may not exist or be invalid`,
-          );
+          if (DEBUG) {
+            console.log('🚨 Issue: Contract call reverted');
+            console.log(
+              `💡 Possible causes: HAT ID ${hatId} may not exist or be invalid`,
+            );
+          }
         } else if (error.message.includes('network')) {
           errorMessage = 'Network error - check connection';
-          console.log('🌐 Issue: Network connectivity problem');
-          console.log(
-            '💡 Solution: Check internet connection and RPC endpoint',
-          );
+          if (DEBUG) {
+            console.log('🌐 Issue: Network connectivity problem');
+            console.log(
+              '💡 Solution: Check internet connection and RPC endpoint',
+            );
+          }
         } else {
           errorMessage = error.message;
-          console.log(`🐛 Unexpected error: ${error.message}`);
+          if (DEBUG) {
+            console.log(`🐛 Unexpected error: ${error.message}`);
+          }
         }
       } else {
-        console.log(`❓ Unknown error type: ${String(error)}`);
+        if (DEBUG) {
+          console.log(`❓ Unknown error type: ${String(error)}`);
+        }
       }
 
-      console.log(`\n💔 RETURNING ERROR STATE: isActive = false`);
-      console.log(`📝 Error message: ${errorMessage}`);
+      if (DEBUG) {
+        console.log(`\n💔 RETURNING ERROR STATE: isActive = false`);
+        console.log(`📝 Error message: ${errorMessage}`);
+      }
 
       return {
         isActive: false,
@@ -1740,16 +1767,24 @@ export class HatToggleService {
     userAddress: string,
     hatId: string,
   ): Promise<{ canToggle: boolean; error?: string; details?: any }> {
-    console.log('🔐 VALIDATING TOGGLE PERMISSIONS');
-    console.log('================================');
-    console.log(`👤 User Address: ${userAddress}`);
-    console.log(`🎯 Target HAT ID: ${hatId}`);
-    console.log(`📍 HATS Contract: ${HATS_CONTRACT_ADDRESS}`);
+    // SILENCED: Removed verbose logging to prevent console spam during role sync
+    // Enable DEBUG_HAT_SYNC=true in env to see detailed logs
+    const DEBUG = process.env.NEXT_PUBLIC_DEBUG_HAT_SYNC === 'true';
+
+    if (DEBUG) {
+      console.log('🔐 VALIDATING TOGGLE PERMISSIONS');
+      console.log('================================');
+      console.log(`👤 User Address: ${userAddress}`);
+      console.log(`🎯 Target HAT ID: ${hatId}`);
+      console.log(`📍 HATS Contract: ${HATS_CONTRACT_ADDRESS}`);
+    }
 
     try {
       // Get full HAT details from Hats Protocol core
-      console.log('\n1️⃣ READING HAT DETAILS FROM CORE');
-      console.log('--------------------------------');
+      if (DEBUG) {
+        console.log('\n1️⃣ READING HAT DETAILS FROM CORE');
+        console.log('--------------------------------');
+      }
 
       const hatDetails = await this.retryWithBackoff(async () => {
         return await publicClient.readContract({
@@ -1778,23 +1813,29 @@ export class HatToggleService {
         });
       });
 
-      console.log(`📊 HAT Details Retrieved:`);
-      console.log(`   - Max Supply: ${hatDetails[1]}`);
-      console.log(`   - Current Supply: ${hatDetails[2]}`);
-      console.log(`   - Eligibility Module: ${hatDetails[3]}`);
-      console.log(`   - Toggle Module: ${hatDetails[4]}`);
-      console.log(`   - Mutable: ${hatDetails[7]}`);
-      console.log(`   - Active: ${hatDetails[8]}`);
+      if (DEBUG) {
+        console.log(`📊 HAT Details Retrieved:`);
+        console.log(`   - Max Supply: ${hatDetails[1]}`);
+        console.log(`   - Current Supply: ${hatDetails[2]}`);
+        console.log(`   - Eligibility Module: ${hatDetails[3]}`);
+        console.log(`   - Toggle Module: ${hatDetails[4]}`);
+        console.log(`   - Mutable: ${hatDetails[7]}`);
+        console.log(`   - Active: ${hatDetails[8]}`);
+      }
 
       const toggleModule = hatDetails[4];
-      console.log(`\n🔍 Toggle Module Analysis: ${toggleModule}`);
+      if (DEBUG) {
+        console.log(`\n🔍 Toggle Module Analysis: ${toggleModule}`);
+      }
 
       // Check if toggle module is set (not zero address)
       if (toggleModule === '0x0000000000000000000000000000000000000000') {
-        console.log('❌ NO TOGGLE MODULE SET');
-        console.log(
-          '💡 This HAT cannot be toggled - no toggle module assigned',
-        );
+        if (DEBUG) {
+          console.log('❌ NO TOGGLE MODULE SET');
+          console.log(
+            '💡 This HAT cannot be toggled - no toggle module assigned',
+          );
+        }
         return {
           canToggle: false,
           error: 'This role cannot be toggled - no toggle module assigned',
@@ -1807,8 +1848,10 @@ export class HatToggleService {
         };
       }
 
-      console.log('\n2️⃣ ANALYZING TOGGLE MODULE TYPE');
-      console.log('-------------------------------');
+      if (DEBUG) {
+        console.log('\n2️⃣ ANALYZING TOGGLE MODULE TYPE');
+        console.log('-------------------------------');
+      }
 
       // Check if toggle module is a special Hats Protocol address
       const isNullToggleModule =
@@ -1817,19 +1860,23 @@ export class HatToggleService {
       const isPassthroughModule =
         toggleModule.toLowerCase() === HATS_CONTRACT_ADDRESS.toLowerCase();
 
-      console.log(`🔍 Toggle Module Type Analysis:`);
-      console.log(`   - Is Null Toggle Module: ${isNullToggleModule}`);
-      console.log(`   - Is Passthrough Module: ${isPassthroughModule}`);
+      if (DEBUG) {
+        console.log(`🔍 Toggle Module Type Analysis:`);
+        console.log(`   - Is Null Toggle Module: ${isNullToggleModule}`);
+        console.log(`   - Is Passthrough Module: ${isPassthroughModule}`);
+      }
 
       if (isNullToggleModule || isPassthroughModule) {
-        console.log('🎯 DETECTED SPECIAL TOGGLE MODULE');
-        console.log(
-          '   For null/passthrough toggles, checking admin permissions instead',
-        );
+        if (DEBUG) {
+          console.log('🎯 DETECTED SPECIAL TOGGLE MODULE');
+          console.log(
+            '   For null/passthrough toggles, checking admin permissions instead',
+          );
 
-        // For null/passthrough toggle modules, check admin permissions
-        console.log('\n3️⃣ CHECKING ADMIN PERMISSIONS (NULL TOGGLE)');
-        console.log('-------------------------------------------');
+          // For null/passthrough toggle modules, check admin permissions
+          console.log('\n3️⃣ CHECKING ADMIN PERMISSIONS (NULL TOGGLE)');
+          console.log('-------------------------------------------');
+        }
 
         // Check both admin and wearer permissions for null toggle modules
         const [isAdminOfHat, isWearerOfHat] = await Promise.all([
@@ -1873,15 +1920,19 @@ export class HatToggleService {
           }),
         ]);
 
-        console.log(`🔑 User is admin of target HAT: ${isAdminOfHat}`);
-        console.log(`👑 User is wearer of target HAT: ${isWearerOfHat}`);
+        if (DEBUG) {
+          console.log(`🔑 User is admin of target HAT: ${isAdminOfHat}`);
+          console.log(`👑 User is wearer of target HAT: ${isWearerOfHat}`);
+        }
 
         // For null toggle modules, allow either admin OR wearer permissions
         if (!isAdminOfHat && !isWearerOfHat) {
-          console.log('❌ USER IS NEITHER ADMIN NOR WEARER OF TARGET HAT');
-          console.log(
-            '💡 Null toggle modules require either admin or wearer permissions',
-          );
+          if (DEBUG) {
+            console.log('❌ USER IS NEITHER ADMIN NOR WEARER OF TARGET HAT');
+            console.log(
+              '💡 Null toggle modules require either admin or wearer permissions',
+            );
+          }
           return {
             canToggle: false,
             error:
@@ -1899,9 +1950,11 @@ export class HatToggleService {
         }
 
         const permissionType = isAdminOfHat ? 'admin' : 'wearer';
-        console.log(
-          `✅ USER HAS ${permissionType.toUpperCase()} PERMISSIONS FOR NULL TOGGLE`,
-        );
+        if (DEBUG) {
+          console.log(
+            `✅ USER HAS ${permissionType.toUpperCase()} PERMISSIONS FOR NULL TOGGLE`,
+          );
+        }
         return {
           canToggle: true,
           details: {
@@ -1920,15 +1973,20 @@ export class HatToggleService {
       const isHatBasedToggle =
         toggleModule.toLowerCase().startsWith('0x000000') &&
         !isNullToggleModule;
-      console.log(`🎩 HAT-based Toggle: ${isHatBasedToggle}`);
+
+      if (DEBUG) {
+        console.log(`🎩 HAT-based Toggle: ${isHatBasedToggle}`);
+      }
 
       if (isHatBasedToggle) {
-        console.log('🔍 Toggle module appears to be a HAT-based toggle');
-        console.log(`🎯 Toggle HAT ID: ${toggleModule}`);
+        if (DEBUG) {
+          console.log('🔍 Toggle module appears to be a HAT-based toggle');
+          console.log(`🎯 Toggle HAT ID: ${toggleModule}`);
 
-        // Check if user wears the toggle HAT
-        console.log('\n3️⃣ CHECKING HAT WEARER STATUS');
-        console.log('-----------------------------');
+          // Check if user wears the toggle HAT
+          console.log('\n3️⃣ CHECKING HAT WEARER STATUS');
+          console.log('-----------------------------');
+        }
 
         const isWearerOfToggleHat = await this.retryWithBackoff(async () => {
           return await publicClient.readContract({
@@ -1950,13 +2008,17 @@ export class HatToggleService {
           });
         });
 
-        console.log(`👑 User wears toggle HAT: ${isWearerOfToggleHat}`);
+        if (DEBUG) {
+          console.log(`👑 User wears toggle HAT: ${isWearerOfToggleHat}`);
+        }
 
         if (!isWearerOfToggleHat) {
-          console.log('❌ USER DOES NOT WEAR REQUIRED TOGGLE HAT');
-          console.log(
-            `💡 User must wear HAT ${toggleModule} to toggle this role`,
-          );
+          if (DEBUG) {
+            console.log('❌ USER DOES NOT WEAR REQUIRED TOGGLE HAT');
+            console.log(
+              `💡 User must wear HAT ${toggleModule} to toggle this role`,
+            );
+          }
           return {
             canToggle: false,
             error: `You must wear the required HAT to toggle this role`,
@@ -1969,7 +2031,9 @@ export class HatToggleService {
           };
         }
 
-        console.log('✅ USER HAS HAT-BASED TOGGLE PERMISSIONS');
+        if (DEBUG) {
+          console.log('✅ USER HAS HAT-BASED TOGGLE PERMISSIONS');
+        }
         return {
           canToggle: true,
           details: {
@@ -1980,19 +2044,21 @@ export class HatToggleService {
           },
         };
       } else {
-        console.log('📄 Toggle module appears to be a contract address');
-        console.log(`🔧 Toggle Module Contract: ${toggleModule}`);
+        if (DEBUG) {
+          console.log('📄 Toggle module appears to be a contract address');
+          console.log(`🔧 Toggle Module Contract: ${toggleModule}`);
 
-        // For contract-based toggle modules, we need to check if user has permissions
-        // This is more complex and depends on the specific module implementation
-        console.log('\n3️⃣ CHECKING CONTRACT MODULE PERMISSIONS');
-        console.log('--------------------------------------');
-        console.log(
-          '⚠️  Contract-based toggle modules require specific implementation checks',
-        );
-        console.log(
-          "💡 For now, we'll check if user is admin of the target HAT",
-        );
+          // For contract-based toggle modules, we need to check if user has permissions
+          // This is more complex and depends on the specific module implementation
+          console.log('\n3️⃣ CHECKING CONTRACT MODULE PERMISSIONS');
+          console.log('--------------------------------------');
+          console.log(
+            '⚠️  Contract-based toggle modules require specific implementation checks',
+          );
+          console.log(
+            "💡 For now, we'll check if user is admin of the target HAT",
+          );
+        }
 
         // Check if user is admin of the target HAT (fallback permission check)
         const isAdminOfHat = await this.retryWithBackoff(async () => {
@@ -2015,13 +2081,17 @@ export class HatToggleService {
           });
         });
 
-        console.log(`🔑 User is admin of target HAT: ${isAdminOfHat}`);
+        if (DEBUG) {
+          console.log(`🔑 User is admin of target HAT: ${isAdminOfHat}`);
+        }
 
         if (!isAdminOfHat) {
-          console.log('❌ USER IS NOT ADMIN OF TARGET HAT');
-          console.log(
-            '💡 Contract-based toggle modules typically require admin permissions',
-          );
+          if (DEBUG) {
+            console.log('❌ USER IS NOT ADMIN OF TARGET HAT');
+            console.log(
+              '💡 Contract-based toggle modules typically require admin permissions',
+            );
+          }
           return {
             canToggle: false,
             error: 'You do not have admin permissions for this HAT',
@@ -2042,7 +2112,9 @@ export class HatToggleService {
         );
 
         if (implementsIHatsToggle) {
-          console.log('✅ MECHANISTIC TOGGLE: Module implements IHatsToggle');
+          if (DEBUG) {
+            console.log('✅ MECHANISTIC TOGGLE: Module implements IHatsToggle');
+          }
           return {
             canToggle: true,
             details: {
@@ -2054,12 +2126,14 @@ export class HatToggleService {
             },
           };
         } else {
-          console.log(
-            '❌ HUMANISTIC TOGGLE: Module does not implement IHatsToggle',
-          );
-          console.log(
-            '💡 This requires the toggle address to call setHatStatus directly',
-          );
+          if (DEBUG) {
+            console.log(
+              '❌ HUMANISTIC TOGGLE: Module does not implement IHatsToggle',
+            );
+            console.log(
+              '💡 This requires the toggle address to call setHatStatus directly',
+            );
+          }
 
           // For humanistic toggles, only the toggle address itself can call setHatStatus
           if (toggleModule.toLowerCase() === userAddress.toLowerCase()) {
@@ -2086,10 +2160,12 @@ export class HatToggleService {
           }
         }
 
-        console.log('⚠️  CONTRACT MODULE DETECTED - ADVANCED VALIDATION NEEDED');
-        console.log(
-          '💡 User has admin permissions, but contract module may have specific rules',
-        );
+        if (DEBUG) {
+          console.log('⚠️  CONTRACT MODULE DETECTED - ADVANCED VALIDATION NEEDED');
+          console.log(
+            '💡 User has admin permissions, but contract module may have specific rules',
+          );
+        }
         return {
           canToggle: false,
           error:
@@ -2113,13 +2189,19 @@ export class HatToggleService {
           error.message.includes('rate limit')
         ) {
           errorMessage = 'Rate limited by RPC provider - try again';
-          console.log('⏱️  Rate limit detected, user should retry');
+          if (DEBUG) {
+            console.log('⏱️  Rate limit detected, user should retry');
+          }
         } else if (error.message.includes('revert')) {
           errorMessage = 'Contract call failed - HAT may not exist';
-          console.log('🚨 Contract revert - HAT ID may be invalid');
+          if (DEBUG) {
+            console.log('🚨 Contract revert - HAT ID may be invalid');
+          }
         } else {
           errorMessage = error.message;
-          console.log(`🐛 Unexpected error: ${error.message}`);
+          if (DEBUG) {
+            console.log(`🐛 Unexpected error: ${error.message}`);
+          }
         }
       }
 

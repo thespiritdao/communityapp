@@ -49,6 +49,30 @@ export function RoleCreationModal({
   const { currentUser } = useCurrentUser();
   const [isCreating, setIsCreating] = useState(false);
 
+  // DEBUG: Log CDP wallet status to identify why button is disabled
+  React.useEffect(() => {
+    if (isTransactionReady) {
+      console.log('🔍 RoleCreationModal - CDP Wallet Status:', {
+        hasEvmAddress: !!evmAddress,
+        evmAddress,
+        hasCurrentUser: !!currentUser,
+        hasSmartAccount: !!currentUser?.evmSmartAccounts?.[0],
+        smartAccountAddress: currentUser?.evmSmartAccounts?.[0],
+        hasSendUserOperation: !!sendUserOperation,
+        isTransactionReady,
+        hasTransactionCalls: !!transactionCalls,
+        transactionCallsCount: transactionCalls?.length || 0,
+      });
+
+      // Show user-friendly message if wallet not ready
+      if (!evmAddress || !currentUser?.evmSmartAccounts?.[0]) {
+        console.warn('⚠️ Button disabled: Missing CDP wallet requirements');
+        console.warn('   - EVM Address:', evmAddress || 'MISSING');
+        console.warn('   - Smart Account:', currentUser?.evmSmartAccounts?.[0] || 'MISSING');
+      }
+    }
+  }, [isTransactionReady, evmAddress, currentUser, transactionCalls, sendUserOperation]);
+
   // Reset form when modal closes
   React.useEffect(() => {
     if (!isOpen) {
@@ -160,20 +184,6 @@ export function RoleCreationModal({
               </p>
               {transactionCalls && (
                 <div className="mb-8">
-                  <div
-                    className="mb-4 p-3 rounded-lg text-sm"
-                    style={{ backgroundColor: '#E8F1EE' }}
-                  >
-                    <strong>Transaction Ready:</strong>
-                    <div>• Calls to process: {transactionCalls.length}</div>
-                    <div>• Target contract: {transactionCalls[0]?.to}</div>
-                    <div>
-                      • Data length: {transactionCalls[0]?.data?.length || 0}{' '}
-                      bytes
-                    </div>
-                    <div>• Sponsored: Yes (CDP Smart Account)</div>
-                  </div>
-
                   <Button
                     onClick={async () => {
                       if (!transactionCalls || !evmAddress || !currentUser?.evmSmartAccounts?.[0]) {
@@ -249,6 +259,20 @@ export function RoleCreationModal({
                       'Create Role'
                     )}
                   </Button>
+
+                  {isCreating && (
+                    <div className="mt-4 p-3 bg-blue-50 rounded-lg text-sm text-blue-800">
+                      <div className="flex items-center gap-2">
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        <div>
+                          <p className="font-semibold">Transaction in Progress</p>
+                          <p className="text-xs mt-1">
+                            Creating role oonchain... This may take 10-30 seconds.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
 
                   {(!evmAddress || !currentUser?.evmSmartAccounts?.[0]) && (
                     <div className="mt-2 text-sm text-red-600">

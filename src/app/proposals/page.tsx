@@ -1,18 +1,9 @@
 'use client';
-import { useCallback } from 'react';
-import { useEvmAddress } from '@coinbase/cdp-hooks';
-import {
-  Transaction,
-  TransactionButton,
-  TransactionSponsor,
-  TransactionStatus,
-  TransactionStatusAction,
-  TransactionStatusLabel,
-  type TransactionResponse,
-  type TransactionError,
-} from '@coinbase/onchainkit/transaction';
+import { useCallback, useState } from 'react';
+import { useEvmAddress, useSendUserOperation, useCurrentUser } from '@coinbase/cdp-hooks';
 import type { Address } from 'viem';
 import { base } from 'wagmi/chains';
+import { Loader2 } from 'lucide-react';
 import { useProposal, ProposalProvider } from '@/context/ProposalContext';
 import UserTagging from '@/components/UserTagging';
 import { supabase } from '@/lib/supabase';
@@ -90,6 +81,8 @@ export default function ProposalSubmissionPage() {
 // Inner page uses the context
 function InnerProposalSubmissionPage() {
   const { evmAddress: address } = useEvmAddress();
+  const { sendUserOperation } = useSendUserOperation();
+  const { currentUser } = useCurrentUser();
   const isConnected = !!address;
   const {
     formData,
@@ -103,6 +96,7 @@ function InnerProposalSubmissionPage() {
     isFormValid,
     formErrors,
   } = useProposal();
+  const [isExecutingTransaction, setIsExecutingTransaction] = useState(false);
 
   // Prepare transaction data
   const prepareTransaction = useCallback(() => {
@@ -136,35 +130,42 @@ function InnerProposalSubmissionPage() {
     }
   }, [formData, isFormValid, canPropose]);
 
-  const handleSuccess = useCallback(
-    async (txResult: TransactionResponse) => {
+  const handleProposalSubmission = async () => {
+    if (!currentUser || !isFormValid || !canPropose) {
+      console.error('❌ Missing requirements for proposal submission');
+      return;
+    }
+
+    setIsSubmitting(true);
+    setIsExecutingTransaction(true);
+
+    try {
+      console.log('🚀 Submitting proposal via CDP Smart Account');
+
+      const transactionCall = prepareTransaction();
+      if (!transactionCall) {
+        throw new Error('Failed to prepare transaction');
+      }
+
+      const response = await sendUserOperation({
+        calls: [{
+          to: transactionCall.address,
+          data: transactionCall.data,
+          value: 0n,
+        }],
+      });
+
       console.group('✅ Proposal Transaction Success');
-      console.log('📋 Transaction Response:', txResult);
-      console.log(
-        '📋 Transaction Hash:',
-        txResult?.transactionReceipts?.[0]?.transactionHash,
-      );
-      console.log(
-        '📋 Block Number:',
-        txResult?.transactionReceipts?.[0]?.blockNumber,
-      );
-      console.log('📋 Status:', txResult?.transactionReceipts?.[0]?.status);
-      console.log('📋 Gas Used:', txResult?.transactionReceipts?.[0]?.gasUsed);
-      console.log('📋 To Address:', txResult?.transactionReceipts?.[0]?.to);
-      console.log('📋 From Address:', txResult?.transactionReceipts?.[0]?.from);
-      console.log(
-        '📋 Logs Count:',
-        txResult?.transactionReceipts?.[0]?.logs?.length,
-      );
+      console.log('📋 Transaction Hash:', response.hash);
       console.groupEnd();
 
-      setIsSubmitting(false);
-      resetForm();
-      // Extract on-chain proposal ID from txResult if available
-      const proposalId = txResult?.transactionReceipts?.[0]?.logs?.find(
-        (log) =>
-          log.topics && log.topics.length > 0 && log.topics?.[0]?.startsWith('0x'),
-      )?.topics?.[1];
+      await response.wait();
+      console.log('✅ Proposal transaction confirmed');
+
+      // Extract proposal ID from logs (simplified - may need adjustment)
+      const receipt = await response.wait();
+      const proposalId = receipt?.logs?.[0]?.topics?.[1];
+
       // Save metadata to Supabase
       if (proposalId) {
         await supabase.from('proposal_metadata').insert([
@@ -178,28 +179,20 @@ function InnerProposalSubmissionPage() {
           },
         ]);
       }
+
       console.log('Proposal submitted successfully!');
-    },
-    [resetForm, setIsSubmitting, formData, address],
-  );
+      resetForm();
 
-  const handleError = useCallback(
-    (error: TransactionError) => {
+    } catch (error) {
       console.group('❌ Proposal Transaction Error');
-      console.error('📋 Error Details:', {
-        message: error.message,
-        code: error.code,
-        error: error.error,
-      });
-      console.error('📋 Full Error:', error);
+      console.error('📋 Error:', error);
       console.groupEnd();
-
-      setIsSubmitting(false);
       console.error('Transaction failed:', error);
-      // You can add error notification here
-    },
-    [setIsSubmitting],
-  );
+    } finally {
+      setIsSubmitting(false);
+      setIsExecutingTransaction(false);
+    }
+  };
 
   const transactionData = prepareTransaction();
   const validation = validateTransactionData({
@@ -375,33 +368,20 @@ function InnerProposalSubmissionPage() {
             {/* Submit Section */}
             <div className="mt-8 pt-6 border-t border-gray-200">
               {isConnected && canPropose ? (
-                <Transaction
-                  chainId={base.id}
-                  isSponsored={true}
-                  calls={transactionData ? [transactionData] : []}
-                  onStatus={(status) => {
-                    console.log('Transaction lifecycle status:', status);
-                  }}
-                  onSuccess={handleSuccess}
-                  onError={handleError}
+                <button
+                  onClick={handleProposalSubmission}
+                  disabled={!isFormValid || isSubmitting || isExecutingTransaction || !currentUser}
+                  className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold py-4 px-8 rounded-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl flex items-center justify-center"
                 >
-                  <TransactionButton
-                    className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold py-4 px-8 rounded-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl"
-                    disabled={!isFormValid || isSubmitting}
-                    text={
-                      isSubmitting
-                        ? 'Submitting Proposal...'
-                        : 'Submit Proposal to DAO'
-                    }
-                  />
-                  <TransactionSponsor />
-                  <div className="mt-4">
-                    <TransactionStatus>
-                      <TransactionStatusLabel />
-                      <TransactionStatusAction />
-                    </TransactionStatus>
-                  </div>
-                </Transaction>
+                  {isExecutingTransaction ? (
+                    <>
+                      <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                      Submitting Proposal...
+                    </>
+                  ) : (
+                    'Submit Proposal to DAO'
+                  )}
+                </button>
               ) : (
                 <div className="text-center">
                   <button

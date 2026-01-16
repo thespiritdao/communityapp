@@ -4,16 +4,10 @@ import type React from 'react';
 import { useState } from 'react';
 import { useEvmAddress } from '@coinbase/cdp-hooks';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
-import {
-  Transaction,
-  TransactionButton,
-  TransactionSponsor,
-  TransactionStatus,
-  TransactionStatusLabel,
-  TransactionStatusAction,
-} from '@coinbase/onchainkit/transaction';
-import { base } from 'viem/chains';
+import { useSendUserOperation, useCurrentUser } from '@coinbase/cdp-hooks';
+import { Loader2 } from 'lucide-react';
 
 // Your deployed contract address
 const POD_CREATION_MANAGER_ADDRESS = (process.env
@@ -50,8 +44,11 @@ interface PodForRegistration {
 
 export const PodRegistrationManager: React.FC = () => {
   const { evmAddress: address } = useEvmAddress();
+  const { sendUserOperation } = useSendUserOperation();
+  const { currentUser } = useCurrentUser();
   const { toast } = useToast();
   const [selectedPodId, setSelectedPodId] = useState<string>('');
+  const [isExecuting, setIsExecuting] = useState(false);
 
   // Executive Pod data from the database - needs to be registered in smart contract
   const podsToRegister: PodForRegistration[] = [
@@ -246,25 +243,49 @@ export const PodRegistrationManager: React.FC = () => {
               </div>
 
               <div className="border-t pt-4">
-                <Transaction
-                  chainId={base.id}
-                  calls={prepareRegistrationCalls(pod.id)}
-                  isSponsored={true}
-                  onSuccess={(response) =>
-                    handleRegistrationSuccess(pod.id, response)
-                  }
-                  onError={handleRegistrationError}
+                <Button
+                  onClick={async () => {
+                    if (!currentUser) {
+                      toast({
+                        title: 'Error',
+                        description: 'Wallet not connected',
+                        variant: 'destructive',
+                      });
+                      return;
+                    }
+
+                    setIsExecuting(true);
+                    try {
+                      const calls = prepareRegistrationCalls(pod.id);
+                      const response = await sendUserOperation({
+                        calls: calls.map((call: any) => ({
+                          to: call.to,
+                          data: call.data,
+                          value: call.value || 0n,
+                        })),
+                      });
+
+                      await response.wait();
+                      handleRegistrationSuccess(pod.id, { transactionReceipts: [{ transactionHash: response.hash }] });
+
+                    } catch (error) {
+                      handleRegistrationError(error);
+                    } finally {
+                      setIsExecuting(false);
+                    }
+                  }}
+                  disabled={isExecuting || !currentUser}
+                  className="w-full bg-[#2F5D50] hover:bg-[#1F453A]"
                 >
-                  <TransactionButton
-                    text={`Register ${pod.name} in Smart Contract`}
-                    className="w-full bg-[#2F5D50] hover:bg-[#1F453A]"
-                  />
-                  <TransactionSponsor />
-                  <TransactionStatus>
-                    <TransactionStatusLabel />
-                    <TransactionStatusAction />
-                  </TransactionStatus>
-                </Transaction>
+                  {isExecuting ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Registering...
+                    </>
+                  ) : (
+                    `Register ${pod.name} in Smart Contract`
+                  )}
+                </Button>
               </div>
             </CardContent>
           </Card>

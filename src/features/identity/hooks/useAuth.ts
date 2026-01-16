@@ -119,12 +119,6 @@ export function useAuth(): UseAuthReturn {
 
   const signIn = useCallback(
     async (walletAddress: string, email?: string) => {
-      // Prevent concurrent authentication attempts
-      if (isAuthenticating.current) {
-        console.log('🔐 Auth: Authentication already in progress');
-        return;
-      }
-
       // If already authenticated with same wallet, skip
       if (
         authState.session?.user?.user_metadata?.wallet_address ===
@@ -132,6 +126,12 @@ export function useAuth(): UseAuthReturn {
       ) {
         console.log('✅ Auth: Already authenticated with this wallet');
         return;
+      }
+
+      // Prevent concurrent authentication attempts
+      if (isAuthenticating.current) {
+        console.warn('🔐 Auth: Authentication already in progress, skipping duplicate request');
+        return; // Simply return without waiting - UI will update when auth completes
       }
 
       isAuthenticating.current = true;

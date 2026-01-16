@@ -2,8 +2,8 @@
 
 import type React from 'react';
 import { useState } from 'react';
-import { useEvmAddress } from '@coinbase/cdp-hooks';
-import { usePublicClient, useWalletClient } from 'wagmi';
+import { useEvmAddress, useSendUserOperation, useCurrentUser } from '@coinbase/cdp-hooks';
+import { usePublicClient } from 'wagmi';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -16,16 +16,8 @@ import {
   CheckCircle,
   XCircle,
   Crown,
+  Loader2,
 } from 'lucide-react';
-import {
-  Transaction,
-  TransactionButton,
-  TransactionSponsor,
-  TransactionStatus,
-  TransactionStatusLabel,
-  TransactionStatusAction,
-} from '@coinbase/onchainkit/transaction';
-import { base } from 'viem/chains';
 import { PodDeletionService } from '../services/PodDeletionService';
 import type { Pod } from '../types';
 
@@ -42,7 +34,8 @@ export const PodDeletionManager: React.FC<PodDeletionManagerProps> = ({
 }) => {
   const { evmAddress: address } = useEvmAddress();
   const publicClient = usePublicClient();
-  const { data: walletClient } = useWalletClient();
+  const { sendUserOperation } = useSendUserOperation();
+  const { currentUser } = useCurrentUser();
   const { toast } = useToast();
 
   const [isChecking, setIsChecking] = useState(false);
@@ -56,6 +49,7 @@ export const PodDeletionManager: React.FC<PodDeletionManagerProps> = ({
   const [deletionStep, setDeletionStep] = useState<
     'checking' | 'preparing' | 'hats' | 'database' | 'complete'
   >('checking');
+  const [isExecutingTransaction, setIsExecutingTransaction] = useState(false);
 
   // Check deletion permissions
   const checkDeletionPermissions = async () => {
@@ -335,28 +329,70 @@ export const PodDeletionManager: React.FC<PodDeletionManagerProps> = ({
 
                 {/* Hat-based Deletion */}
                 {hasValidHats ? (
-                  <Transaction
-                    chainId={base.id}
-                    calls={async () => {
+                  <Button
+                    onClick={async () => {
+                      if (!currentUser) {
+                        toast({
+                          title: 'Error',
+                          description: 'Wallet not connected',
+                          variant: 'destructive',
+                        });
+                        return;
+                      }
+
                       setIsDeleting(true);
+                      setIsExecutingTransaction(true);
                       setDeletionStep('hats');
-                      const result = await prepareHatDeactivationTransactions();
-                      return result?.calls || [];
+
+                      try {
+                        console.log('🚀 Deactivating HATs and deleting pod via CDP Smart Account');
+
+                        const result = await prepareHatDeactivationTransactions();
+
+                        if (!result?.calls || result.calls.length === 0) {
+                          throw new Error('Failed to prepare Hat deactivation transactions');
+                        }
+
+                        const response = await sendUserOperation({
+                          calls: result.calls.map((call: any) => ({
+                            to: call.to,
+                            data: call.data,
+                            value: call.value || 0n,
+                          })),
+                        });
+
+                        console.log('✅ Hat deactivation transaction submitted:', response.hash);
+                        await response.wait();
+                        console.log('✅ Hat deactivation successful');
+
+                        await handleHatDeactivationSuccess({
+                          transactionReceipts: [{
+                            transactionHash: response.hash,
+                          }],
+                        });
+
+                      } catch (error) {
+                        console.error('❌ Hat deactivation failed:', error);
+                        handleHatDeactivationError(error);
+                      } finally {
+                        setIsExecutingTransaction(false);
+                      }
                     }}
-                    onSuccess={handleHatDeactivationSuccess}
-                    onError={handleHatDeactivationError}
+                    disabled={isDeleting || isExecutingTransaction || !currentUser}
+                    className="w-full bg-[#8B3A3A] hover:bg-[#5C1F1F]"
                   >
-                    <TransactionButton
-                      className="w-full bg-[#8B3A3A] hover:bg-[#5C1F1F]"
-                      disabled={isDeleting}
-                      text="Delete Pod & Deactivate Hats"
-                    />
-                    <TransactionSponsor />
-                    <TransactionStatus>
-                      <TransactionStatusLabel />
-                      <TransactionStatusAction />
-                    </TransactionStatus>
-                  </Transaction>
+                    {isExecutingTransaction ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        {getStatusText()}
+                      </>
+                    ) : (
+                      <>
+                        <Trash2 className="h-4 w-4 mr-2" />
+                        Delete Pod & Deactivate Hats
+                      </>
+                    )}
+                  </Button>
                 ) : (
                   /* Legacy Deletion */
                   <Button

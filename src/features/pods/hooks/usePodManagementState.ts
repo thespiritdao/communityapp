@@ -137,20 +137,20 @@ export function usePodManagementState({
     error: manageTreasuryError,
   } = useHybridPodPermission(podId, 'treasuryManagement');
 
-  // Treasury access requires BOTH permission AND deployed treasury contract
+  // Show treasury tab if user has treasuryManagement permission
+  // Users need to see the tab to CREATE a treasury (don't require it to exist first)
   const canManageTreasury = useMemo(() => {
     const hasTreasuryContract = !!pod?.treasury_contract_address;
-    const canManage = canManageTreasuryPermission && hasTreasuryContract;
 
     console.log('🏦 Treasury access check:', {
       canManageTreasuryPermission,
       hasTreasuryContract,
       treasury_contract_address: pod?.treasury_contract_address,
-      finalDecision: canManage,
+      finalDecision: canManageTreasuryPermission,
     });
 
-    return canManage;
-  }, [canManageTreasuryPermission, pod?.treasury_contract_address]);
+    return canManageTreasuryPermission;
+  }, [canManageTreasuryPermission]);
 
   // Edit pod = same as manage members (leaders can edit)
   const canEditPod = canManageMembers;
