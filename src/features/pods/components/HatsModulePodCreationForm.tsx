@@ -2140,11 +2140,24 @@ Instructions:
         } else {
           // Create new pod
           console.log('📝 Creating new pod in database');
+
+          // Resolve the parent HAT ID from the selected parent pod
+          const selectedParentOption = availableParentPods.find(
+            (p) => p.id === formData.parentPodId,
+          );
+          const parentHatId = selectedParentOption?.hatId || formData.parentPodId;
+
+          console.log('🔍 Parent HAT ID resolution for DB insert:', {
+            parentPodUuid: formData.parentPodId,
+            selectedParentName: selectedParentOption?.name,
+            resolvedParentHatId: parentHatId,
+          });
+
           podData = await PodService.createPod({
             name: formData.name,
             description: formData.description,
             parentPodId: formData.parentPodId, // UUID for FK
-            parentHatId: config.parentHatId, // HAT ID for child index queries
+            parentHatId: parentHatId, // HAT ID for child index queries
             podLeads: validation.validLeads,
             image: podImageUrl,
             managementHatId: newHatId, // TIER 1 FIX: No placeholder - verified onchain above
@@ -2611,6 +2624,7 @@ Instructions:
       blockchainPodId,
       extractedHatId,
       extractedProxyAddress,
+      availableParentPods,
     ],
   );
 
