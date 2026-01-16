@@ -200,7 +200,7 @@ const syncRolesWithOnChainStatus = async (
         }
       } catch (hatError) {
         console.warn(
-          `⚠️ Failed to check HAT status for ${role.role_name}:`,
+          `⚠️ Failed to check role status for ${role.role_name}:`,
           hatError,
         );
       }
@@ -2445,7 +2445,7 @@ export const PodManagerControlPanel: React.FC<PodManagerControlPanelProps> = ({
                     <CardContent>
                       <p className="mb-4" style={{ color: '#C6933F' }}>
                         Some roles have null toggle modules which prevent
-                        permission management. Configure hat-based toggle
+                        permission management. Configure role-based toggle
                         modules to enable proper role activation/deactivation.
                       </p>
                       <div className="space-y-3">
@@ -2497,7 +2497,7 @@ export const PodManagerControlPanel: React.FC<PodManagerControlPanelProps> = ({
                     </CardHeader>
                     <CardContent>
                       <p className="mb-4" style={{ color: '#2F5D50' }}>
-                        Setting toggle module to Executive Pod Leader HAT (
+                        Setting toggle module to Executive Pod Leader role (
                         {pendingModuleConfig.targetToggleHat})
                       </p>
                       <Button
@@ -2607,7 +2607,7 @@ export const PodManagerControlPanel: React.FC<PodManagerControlPanelProps> = ({
               <p className="text-sm text-gray-600 mb-4">
                 This will sync {pendingSyncConfig.calls.length} eligibility
                 criterion/criteria for "{pendingSyncConfig.roleName}" to the
-                HATS module on the blockchain.
+                role token on the blockchain.
               </p>
 
               <Button
