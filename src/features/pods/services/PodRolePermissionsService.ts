@@ -279,6 +279,50 @@ export class PodRolePermissionsService {
   }
 
   /**
+   * Update role from blockchain sync
+   * This method updates fields that should match blockchain state (role_name, max_holders, is_active)
+   */
+  static async updateRoleFromBlockchain(
+    tokenAddress: string,
+    updates: {
+      role_name?: string;
+      max_holders?: number;
+      is_active?: boolean;
+      updated_by: string;
+    },
+  ): Promise<PodRolePermission> {
+    try {
+      console.log(`🔄 Syncing role from blockchain (${tokenAddress}):`, updates);
+
+      const { data, error } = await supabase
+        .from('pod_role_permissions')
+        .update({
+          ...updates,
+          updated_at: new Date().toISOString(),
+          last_synced_at: new Date().toISOString(),
+          sync_status: 'synced',
+        })
+        .eq('token_address', tokenAddress)
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Failed to update role from blockchain:', error);
+        throw error;
+      }
+
+      console.log(`✅ Successfully synced role from blockchain: ${data.role_name}`);
+      return data;
+    } catch (error) {
+      console.error(
+        `Failed to update role from blockchain (${tokenAddress}):`,
+        error,
+      );
+      throw error;
+    }
+  }
+
+  /**
    * Update permission sync status
    */
   static async updateSyncStatus(
@@ -306,6 +350,54 @@ export class PodRolePermissionsService {
         `Failed to update sync status for permission ${id}:`,
         error,
       );
+      throw error;
+    }
+  }
+
+  /**
+   * Delete role permission by ID
+   */
+  static async deleteRolePermission(id: string): Promise<void> {
+    try {
+      console.log(`🗑️ Deleting role permission: ${id}`);
+
+      const { error } = await supabase
+        .from('pod_role_permissions')
+        .delete()
+        .eq('id', id);
+
+      if (error) {
+        console.error('Failed to delete role permission:', error);
+        throw error;
+      }
+
+      console.log(`✅ Successfully deleted role permission: ${id}`);
+    } catch (error) {
+      console.error(`Failed to delete role permission ${id}:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Delete role permission by token address
+   */
+  static async deleteRoleByTokenAddress(tokenAddress: string): Promise<void> {
+    try {
+      console.log(`🗑️ Deleting role by token address: ${tokenAddress}`);
+
+      const { error } = await supabase
+        .from('pod_role_permissions')
+        .delete()
+        .eq('token_address', tokenAddress);
+
+      if (error) {
+        console.error('Failed to delete role by token address:', error);
+        throw error;
+      }
+
+      console.log(`✅ Successfully deleted role: ${tokenAddress}`);
+    } catch (error) {
+      console.error(`Failed to delete role by token ${tokenAddress}:`, error);
       throw error;
     }
   }

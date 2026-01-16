@@ -370,14 +370,9 @@ export async function quickSyncSingleHat(
   try {
     // Check if already in database
     const existingRoles = await PodRolePermissionsService.getPodRolePermissions(podId);
-    const exists = existingRoles.some(role => role.token_address === hatId);
+    const existingRole = existingRoles.find(role => role.token_address === hatId);
 
-    if (exists) {
-      console.log(`✅ HAT already in database: ${hatId}`);
-      return true;
-    }
-
-    // Fetch from blockchain
+    // Fetch from blockchain (always fetch to get latest data)
     const hatDetails = await fetchHatDetails(publicClient, hatId);
 
     if (!hatDetails) {
@@ -387,6 +382,41 @@ export async function quickSyncSingleHat(
 
     const roleName = extractRoleName(hatDetails.details, hatDetails.hatId);
 
+    // If role exists in database, update it with blockchain data
+    if (existingRole) {
+      console.log(`🔄 HAT exists in database, checking if sync needed:`, {
+        hatId: hatDetails.hatId,
+        currentName: existingRole.role_name,
+        blockchainName: roleName,
+      });
+
+      // Update if name is different or if it's a generic fallback name
+      const needsUpdate =
+        existingRole.role_name !== roleName ||
+        existingRole.role_name.startsWith('Role 0') ||
+        existingRole.max_holders !== hatDetails.maxSupply ||
+        existingRole.is_active !== hatDetails.active;
+
+      if (needsUpdate) {
+        console.log(`🔄 Updating role from blockchain...`);
+        await PodRolePermissionsService.updateRoleFromBlockchain(
+          hatDetails.hatId,
+          {
+            role_name: roleName,
+            max_holders: hatDetails.maxSupply,
+            is_active: hatDetails.active,
+            updated_by: createdBy,
+          }
+        );
+        console.log(`✅ Role updated successfully: ${roleName}`);
+      } else {
+        console.log(`✅ Role already up to date: ${roleName}`);
+      }
+
+      return true;
+    }
+
+    // Create new role if it doesn't exist
     console.log(`💾 Creating database entry for HAT:`, {
       hatId: hatDetails.hatId,
       roleName,
