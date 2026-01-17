@@ -1031,8 +1031,48 @@ export const ApproveApplicationButton: React.FC<
     try {
       console.log('🚀 Building Smart Account User Operation for member HAT minting...');
       console.log('💼 Smart Account:', smartAccount);
+      console.log('📍 Smart Account Address:', smartAccount.address);
+      console.log('👤 Current User Address (evmAddress):', evmAddress);
+      console.log('🎩 Management HAT ID:', managementHatId);
+      console.log('🎯 HAT to mint:', effectiveHatId);
+      console.log('👥 Applicant Address:', applicantAddress);
+      console.log('✅ Has Management HAT (UI check):', hasManagementHat);
       console.log('🎯 Contract: Hats Protocol - mintHat');
       console.log('⛽ Paymaster: ENABLED (gasless transaction)');
+
+      // Verify smart account has management HAT on-chain
+      if (publicClient) {
+        const onChainBalance = await publicClient.readContract({
+          address: HATS_PROTOCOL_ADDRESS as `0x${string}`,
+          abi: [
+            {
+              name: 'balanceOf',
+              type: 'function',
+              inputs: [
+                { name: 'account', type: 'address' },
+                { name: 'hatId', type: 'uint256' },
+              ],
+              outputs: [{ name: '', type: 'uint256' }],
+              stateMutability: 'view',
+            },
+          ],
+          functionName: 'balanceOf',
+          args: [smartAccount.address as `0x${string}`, BigInt(managementHatId)],
+        });
+        console.log('🔍 Smart Account Management HAT balance on-chain:', Number(onChainBalance));
+
+        if (Number(onChainBalance) === 0) {
+          console.error('❌ CRITICAL: Smart account does NOT have management HAT on-chain!');
+          toast({
+            title: 'Permission Error',
+            description: 'Your account does not have the management role required to approve applications.',
+            variant: 'destructive',
+          });
+          setIsTransactionPending(false);
+          setIsProcessing(false);
+          return;
+        }
+      }
 
       // EXACT FAUCET PATTERN: Encode call data
       const callData = encodeFunctionData({
@@ -1192,7 +1232,7 @@ export const ApproveApplicationButton: React.FC<
               {isTransactionPending ? 'Minting Role...' : 'Processing...'}
             </>
           ) : (
-            `Approve & Mint ${roleLabel} Role (Gasless)`
+            `Approve`
           )}
         </Button>
       ) : (
