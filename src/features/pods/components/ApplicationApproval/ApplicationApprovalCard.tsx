@@ -34,12 +34,20 @@ interface ApplicationApprovalCardProps {
   onApproved?: () => void;
 }
 
+interface MemberRole {
+  id: string;
+  role_name: string;
+  token_address: string;
+  is_active: boolean;
+}
+
 export const ApplicationApprovalCard: React.FC<
   ApplicationApprovalCardProps
 > = ({ applicationId, onApproved }) => {
   const { evmAddress: address } = useEvmAddress();
   const [application, setApplication] = useState<Application | null>(null);
   const [pod, setPod] = useState<Pod | null>(null);
+  const [memberRoles, setMemberRoles] = useState<MemberRole[]>([]);
   const [loading, setLoading] = useState(true);
   const [hasVoted, setHasVoted] = useState(false);
 
@@ -87,6 +95,22 @@ export const ApplicationApprovalCard: React.FC<
       if (podError) throw podError;
 
       setPod(podData);
+
+      // Fetch member roles (non-leader roles) from pod_role_permissions
+      const { data: rolesData, error: rolesError } = await supabase
+        .from('pod_role_permissions')
+        .select('id, role_name, token_address, is_active')
+        .eq('pod_id', app.pod_id)
+        .eq('is_active', true)
+        .neq('token_address', podData.management_hat_id); // Exclude leader role
+
+      if (rolesError) {
+        console.error('Failed to load member roles:', rolesError);
+        setMemberRoles([]);
+      } else {
+        setMemberRoles(rolesData || []);
+        console.log(`📋 Loaded ${rolesData?.length || 0} member roles for pod`, rolesData);
+      }
     } catch (error) {
       console.error('Failed to load application:', error);
     } finally {
@@ -114,8 +138,22 @@ export const ApplicationApprovalCard: React.FC<
   }
 
   const intendedRole = application.intended_role || 'member';
-  const hatToMint =
-    intendedRole === 'leader' ? pod.management_hat_id : pod.membership_hat_id;
+
+  // For member applications, use the first available member role from pod_role_permissions
+  // For leader applications, use the management HAT ID
+  let hatToMint: string;
+  if (intendedRole === 'leader') {
+    hatToMint = pod.management_hat_id;
+  } else {
+    // Use first available member role, or fall back to membership_hat_id if no roles found
+    hatToMint = memberRoles[0]?.token_address || pod.membership_hat_id || '';
+    console.log(`🎯 Selected member role for application:`, {
+      roleName: memberRoles[0]?.role_name,
+      tokenAddress: memberRoles[0]?.token_address,
+      totalMemberRoles: memberRoles.length,
+    });
+  }
+
   const roleLabel = intendedRole === 'leader' ? 'Leader' : 'Member';
   const RoleIcon = intendedRole === 'leader' ? Crown : Users;
   const roleColor = intendedRole === 'leader' ? '#6A5F7A' : '#2F5D50';
