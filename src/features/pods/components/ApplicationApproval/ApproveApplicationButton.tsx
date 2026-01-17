@@ -1042,6 +1042,9 @@ export const ApproveApplicationButton: React.FC<
 
       // Verify smart account has management HAT on-chain
       if (publicClient) {
+        // smartAccount from CDP is already an address string, not an object
+        const smartAccountAddress = (typeof smartAccount === 'string' ? smartAccount : smartAccount.address) as `0x${string}`;
+
         const onChainBalance = await publicClient.readContract({
           address: HATS_PROTOCOL_ADDRESS as `0x${string}`,
           abi: [
@@ -1057,7 +1060,7 @@ export const ApproveApplicationButton: React.FC<
             },
           ],
           functionName: 'balanceOf',
-          args: [smartAccount.address as `0x${string}`, BigInt(managementHatId)],
+          args: [smartAccountAddress, BigInt(managementHatId)],
         });
         console.log('🔍 Smart Account Management HAT balance on-chain:', Number(onChainBalance));
 
