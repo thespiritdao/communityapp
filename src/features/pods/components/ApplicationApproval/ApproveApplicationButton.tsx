@@ -1025,6 +1025,19 @@ export const ApproveApplicationButton: React.FC<
 
     const smartAccount = currentUser.evmSmartAccounts[0]; // EXACT FAUCET PATTERN
 
+    // 🚨 CRITICAL FIX #1: Prevent self-approval
+    if (applicantAddress.toLowerCase() === evmAddress.toLowerCase()) {
+      console.error('❌ SELF-APPROVAL BLOCKED: Applicant and approver are the same address');
+      console.error('Applicant:', applicantAddress);
+      console.error('Approver (evmAddress):', evmAddress);
+      toast({
+        title: 'Self-Approval Not Allowed',
+        description: 'You cannot approve your own membership application. Another pod leader must approve it.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     setIsTransactionPending(true); // EXACT FAUCET PATTERN
     setIsProcessing(true);
 
@@ -1040,11 +1053,15 @@ export const ApproveApplicationButton: React.FC<
       console.log('🎯 Contract: Hats Protocol - mintHat');
       console.log('⛽ Paymaster: ENABLED (gasless transaction)');
 
-      // Verify smart account has management HAT on-chain
+      // Pre-flight checks for Hats Protocol mintHat requirements
       if (publicClient) {
         // smartAccount from CDP is already an address string, not an object
         const smartAccountAddress = (typeof smartAccount === 'string' ? smartAccount : smartAccount.address) as `0x${string}`;
 
+        console.log('\n📋 STARTING PRE-FLIGHT CHECKS...\n');
+
+        // ✅ CHECK #1: Verify smart account has management HAT on-chain
+        console.log('CHECK #1: Does smart account wear management HAT?');
         const onChainBalance = await publicClient.readContract({
           address: HATS_PROTOCOL_ADDRESS as `0x${string}`,
           abi: [
@@ -1062,10 +1079,10 @@ export const ApproveApplicationButton: React.FC<
           functionName: 'balanceOf',
           args: [smartAccountAddress, BigInt(managementHatId)],
         });
-        console.log('🔍 Smart Account Management HAT balance on-chain:', Number(onChainBalance));
+        console.log('🔍 Smart Account Management HAT balance:', Number(onChainBalance));
 
         if (Number(onChainBalance) === 0) {
-          console.error('❌ CRITICAL: Smart account does NOT have management HAT on-chain!');
+          console.error('❌ FAILED CHECK #1: Smart account does NOT have management HAT');
           toast({
             title: 'Permission Error',
             description: 'Your account does not have the management role required to approve applications.',
@@ -1075,6 +1092,167 @@ export const ApproveApplicationButton: React.FC<
           setIsProcessing(false);
           return;
         }
+        console.log('✅ PASSED CHECK #1: Smart account wears management HAT\n');
+
+        // ✅ CHECK #2: Verify target HAT exists on-chain
+        console.log('CHECK #2: Does target HAT exist on-chain?');
+        let hatDetails: any;
+        try {
+          hatDetails = await publicClient.readContract({
+            address: HATS_PROTOCOL_ADDRESS as `0x${string}`,
+            abi: [
+              {
+                name: 'viewHat',
+                type: 'function',
+                inputs: [{ name: '_hatId', type: 'uint256' }],
+                outputs: [
+                  { name: 'details', type: 'string' },
+                  { name: 'maxSupply', type: 'uint32' },
+                  { name: 'supply', type: 'uint32' },
+                  { name: 'eligibility', type: 'address' },
+                  { name: 'toggle', type: 'address' },
+                  { name: 'imageURI', type: 'string' },
+                  { name: 'lastHatId', type: 'uint16' },
+                  { name: 'mutable_', type: 'bool' },
+                  { name: 'active', type: 'bool' },
+                ],
+                stateMutability: 'view',
+              },
+            ],
+            functionName: 'viewHat',
+            args: [BigInt(effectiveHatId)],
+          });
+          console.log('🔍 HAT details from blockchain:', {
+            maxSupply: hatDetails[1],
+            currentSupply: hatDetails[2],
+            active: hatDetails[8],
+          });
+        } catch (viewHatError) {
+          console.error('❌ FAILED CHECK #2: HAT does not exist on-chain!', viewHatError);
+          toast({
+            title: 'Role Not Found',
+            description: 'This role does not exist on the blockchain. Please contact a pod administrator to create it first.',
+            variant: 'destructive',
+          });
+          setIsTransactionPending(false);
+          setIsProcessing(false);
+          return;
+        }
+        console.log('✅ PASSED CHECK #2: Target HAT exists on-chain\n');
+
+        // ✅ CHECK #3: Verify HAT is active
+        console.log('CHECK #3: Is target HAT active?');
+        const isActive = hatDetails[8]; // active is at index 8
+        if (!isActive) {
+          console.error('❌ FAILED CHECK #3: Target HAT is inactive');
+          toast({
+            title: 'Role Inactive',
+            description: 'This role is currently inactive and cannot be minted. Please contact a pod administrator.',
+            variant: 'destructive',
+          });
+          setIsTransactionPending(false);
+          setIsProcessing(false);
+          return;
+        }
+        console.log('✅ PASSED CHECK #3: Target HAT is active\n');
+
+        // ✅ CHECK #4: Verify max supply not reached
+        console.log('CHECK #4: Is there capacity for new wearers?');
+        const maxSupply = Number(hatDetails[1]);
+        const currentSupply = Number(hatDetails[2]);
+        console.log(`🔍 Supply: ${currentSupply} / ${maxSupply}`);
+        if (currentSupply >= maxSupply) {
+          console.error('❌ FAILED CHECK #4: HAT has reached max supply');
+          toast({
+            title: 'Role at Capacity',
+            description: `This role has reached its maximum capacity (${maxSupply}). Please contact a pod administrator to increase the limit.`,
+            variant: 'destructive',
+          });
+          setIsTransactionPending(false);
+          setIsProcessing(false);
+          return;
+        }
+        console.log('✅ PASSED CHECK #4: Capacity available for new wearer\n');
+
+        // ✅ CHECK #5: Verify applicant doesn't already wear the HAT
+        console.log('CHECK #5: Does applicant already wear this HAT?');
+        const applicantBalance = await publicClient.readContract({
+          address: HATS_PROTOCOL_ADDRESS as `0x${string}`,
+          abi: [
+            {
+              name: 'balanceOf',
+              type: 'function',
+              inputs: [
+                { name: 'account', type: 'address' },
+                { name: 'hatId', type: 'uint256' },
+              ],
+              outputs: [{ name: '', type: 'uint256' }],
+              stateMutability: 'view',
+            },
+          ],
+          functionName: 'balanceOf',
+          args: [applicantAddress as `0x${string}`, BigInt(effectiveHatId)],
+        });
+        console.log('🔍 Applicant HAT balance:', Number(applicantBalance));
+
+        if (Number(applicantBalance) > 0) {
+          console.error('❌ FAILED CHECK #5: Applicant already wears this HAT');
+          toast({
+            title: 'Already Has Role',
+            description: 'This applicant already has this role. No need to mint again.',
+            variant: 'destructive',
+          });
+          setIsTransactionPending(false);
+          setIsProcessing(false);
+          return;
+        }
+        console.log('✅ PASSED CHECK #5: Applicant does not wear this HAT\n');
+
+        // ✅ CHECK #6: CRITICAL - Verify smart account is admin of target HAT
+        console.log('CHECK #6: Is smart account an admin of the target HAT?');
+        const isAdmin = await publicClient.readContract({
+          address: HATS_PROTOCOL_ADDRESS as `0x${string}`,
+          abi: [
+            {
+              name: 'isAdminOfHat',
+              type: 'function',
+              inputs: [
+                { name: '_user', type: 'address' },
+                { name: '_hatId', type: 'uint256' },
+              ],
+              outputs: [{ name: '', type: 'bool' }],
+              stateMutability: 'view',
+            },
+          ],
+          functionName: 'isAdminOfHat',
+          args: [smartAccountAddress, BigInt(effectiveHatId)],
+        });
+        console.log('🔍 Is admin of target HAT:', isAdmin);
+
+        if (!isAdmin) {
+          console.error('❌ FAILED CHECK #6: Smart account is NOT admin of target HAT!');
+          console.error('This is the CRITICAL issue - according to Hats Protocol:');
+          console.error('"Only a hat\'s admin(s) can mint its token to a wearer"');
+          console.error('\nDebugging info:');
+          console.error('  Smart Account:', smartAccountAddress);
+          console.error('  Management HAT:', managementHatId, '(user wears this ✅)');
+          console.error('  Target HAT:', effectiveHatId, '(trying to mint this)');
+          console.error('\nPossible causes:');
+          console.error('  1. Target HAT has wrong admin set (not the management HAT)');
+          console.error('  2. HAT hierarchy is incorrect');
+          console.error('  3. HAT was created with a different admin');
+          toast({
+            title: 'Admin Permission Missing',
+            description: 'Your account is not an admin of this role. The role may have been created with incorrect admin settings. Please contact a pod administrator.',
+            variant: 'destructive',
+          });
+          setIsTransactionPending(false);
+          setIsProcessing(false);
+          return;
+        }
+        console.log('✅ PASSED CHECK #6: Smart account IS admin of target HAT\n');
+
+        console.log('🎉 ALL PRE-FLIGHT CHECKS PASSED! Proceeding with mint transaction...\n');
       }
 
       // EXACT FAUCET PATTERN: Encode call data
