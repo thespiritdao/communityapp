@@ -4,6 +4,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/utils/supabaseClient';
 import { useAuthContext } from '@/features/identity';
+import { useEvmAddress } from '@coinbase/cdp-hooks';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -37,6 +38,7 @@ export default function PodChatManager({
   isManager,
 }: PodChatManagerProps) {
   const { session } = useAuthContext();
+  const { evmAddress } = useEvmAddress();
   const [chatGroups, setChatGroups] = useState<ChatGroup[]>([]);
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
@@ -68,7 +70,7 @@ export default function PodChatManager({
   };
 
   const createChatGroup = async () => {
-    if (!newChatName.trim() || !isManager) return;
+    if (!newChatName.trim() || !isManager || !evmAddress) return;
 
     setCreating(true);
     try {
@@ -82,7 +84,7 @@ export default function PodChatManager({
         requiredToken = managementHatId;
       }
 
-      const { data, error } = await supabase
+      const { data, error} = await supabase
         .from('chat_groups')
         .insert({
           title: newChatName,
@@ -90,6 +92,7 @@ export default function PodChatManager({
           required_token: requiredToken,
           access_level: accessLevel,
           is_active: true,
+          created_by_address: evmAddress.toLowerCase(), // 🔧 FIX: Add creator's wallet address for RLS policy
         })
         .select()
         .single();
@@ -109,6 +112,7 @@ export default function PodChatManager({
             required_token: membershipHatId,
             access_level: 'members',
             is_active: true,
+            created_by_address: evmAddress.toLowerCase(), // 🔧 FIX: Add creator's wallet address for RLS policy
           })
           .select()
           .single();
