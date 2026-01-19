@@ -30,18 +30,18 @@ body {
 /* Chat container layout */
 .chat-container {
   background-color: #f5f4ed; /* Matches your desired background color */
-  height: calc(100vh - 60px); /* Full viewport height minus bottom nav */
-  width: 100vw; /* Full viewport width */
-  max-width: 100vw;
+  min-height: calc(100vh - 60px); /* Minimum height, allows content to expand */
+  height: 100%; /* Fill available space */
+  width: 100%;
+  max-width: 100%;
   display: flex;
   flex-direction: column;
-  overflow: hidden; /* Prevent scrollbars from affecting layout */
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  z-index: 1; /* Ensure proper stacking below BottomNav */
+  overflow: hidden;
+  position: relative;
+  z-index: 1;
   box-sizing: border-box;
+  margin: 0; /* Remove any default margins */
+  padding: 0; /* Remove any default padding */
 }
 
 
@@ -61,12 +61,15 @@ body {
   flex: 1; /* Make it take up remaining space */
   overflow-y: auto; /* Allow scrolling for messages */
   overflow-x: hidden; /* Prevent horizontal scroll */
-  padding: 8px; /* Add padding for aesthetics */
-  padding-top: 68px; /* Space for absolute header (60px + 8px) */
+  padding: 8px 0; /* Vertical padding only, no horizontal to keep flush */
   padding-bottom: 100px; /* Extra space for fixed input section */
   width: 100%;
   max-width: 100%;
   box-sizing: border-box;
+  margin: 0; /* Ensure no margins */
+  /* Smooth scrolling */
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
 }
 
 /* Messages section */
@@ -77,13 +80,17 @@ body {
   background-image: url('/images/chatbg.png'); /* Update path if needed */
   background-size: cover;
   background-position: center;
-  background-attachment: fixed; /* Keeps it static */
+  background-attachment: scroll; /* Changed from fixed to scroll for better mobile performance */
   background-repeat: no-repeat;
-  padding: 12px;
+  padding: 12px 8px; /* Minimal horizontal padding for flush look */
   width: 100%;
   max-width: 100%;
   box-sizing: border-box;
+  margin: 0; /* No margins */
   overflow-x: hidden;
+  /* Optimize rendering performance */
+  will-change: scroll-position;
+  transform: translateZ(0); /* Hardware acceleration */
 }
 
 
@@ -599,21 +606,22 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 0.75rem 1rem;
+  padding: 0.75rem 0.5rem; /* Reduced horizontal padding to minimize edge spacing */
   background-color: #f5f4ed;
-  position: absolute; /* Use absolute within container */
+  position: sticky;
   top: 0;
-  left: 0;
-  right: 0;
+  left: 0; /* Flush to left edge */
+  right: 0; /* Flush to right edge */
   width: 100%;
-  max-width: 100%;
-  z-index: 50; /* Above messages */
+  z-index: 50;
   border-bottom: 1px solid rgba(0, 0, 0, 0.1);
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
   box-sizing: border-box;
   margin: 0;
-  height: 60px; /* Fixed height for consistency */
+  height: 60px;
   overflow: hidden;
+  will-change: transform;
+  transform: translateZ(0);
 }
 
 /* Chat Title styled similar to categoryTitle */
@@ -728,7 +736,11 @@ body {
   background: #f5f4ed; /* Match body background */
   display: flex;
   flex-direction: column;
-  position: relative;
+  position: fixed; /* Changed to fixed to ensure full screen */
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
   overflow: hidden;
   box-sizing: border-box;
 
@@ -828,12 +840,19 @@ img.pod-avatar--sm {
     width: 100vw;
     margin: 0;
     padding: 0;
+    position: fixed; /* Ensure truly full screen on mobile */
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
   }
-  
+
   /* Chat container mobile adjustments */
   .chat-container {
     height: calc(100vh - 60px);
     width: 100%;
+    margin: 0;
+    padding: 0;
   }
   
   /* Chat input section - ensure full width on mobile */
@@ -867,14 +886,15 @@ img.pod-avatar--sm {
   
   /* Chat header mobile adjustments */
   .chat-header {
-    padding: 0.75rem 1rem;
+    padding: 0.75rem 0.5rem; /* Minimal horizontal padding for flush look */
     background-color: #f5f4ed;
+    left: 0;
+    right: 0;
   }
   
   /* Chat main area mobile adjustments */
   .chat-main {
-    padding: 8px;
-    padding-top: 68px; /* Space for header on mobile (60px + 8px) */
+    padding: 8px 0; /* Vertical only, flush to edges */
     padding-bottom: 110px; /* Extra space for fixed input */
   }
   

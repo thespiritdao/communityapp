@@ -53,32 +53,19 @@ const nextConfig = {
         };
       }
 
-      // Optimize chunk splitting - exclude CSS from JavaScript chunks
+      // Optimize chunk splitting for better loading performance
       config.optimization = {
         ...config.optimization,
         splitChunks: {
           chunks: 'all',
           cacheGroups: {
-            // Separate CSS into its own chunk
-            styles: {
-              name: 'styles',
-              type: 'css/mini-extract',
-              chunks: 'all',
-              enforce: true,
-            },
+            // REMOVED: Aggressive CSS chunk splitting that caused FOUC (Flash of Unstyled Content)
+            // CSS is now loaded inline with components for faster initial render
             vendor: {
               test: /[\\/]node_modules[\\/]/,
               name: 'vendors',
               chunks: 'all',
               maxSize: 244000, // Limit chunk size to prevent loading issues
-              // Explicitly exclude CSS files from vendor bundle
-              test(module) {
-                return (
-                  module.resource &&
-                  /node_modules/.test(module.resource) &&
-                  !/\.css$/.test(module.resource)
-                );
-              },
             },
           },
         },

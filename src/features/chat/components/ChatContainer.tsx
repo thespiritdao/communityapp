@@ -130,10 +130,15 @@ export default function ChatContainer({ chatGroupId }: ChatContainerProps) {
   // Load accessible chat groups
   useEffect(() => {
     const loadGroups = async () => {
-      // all groups
-      const { data: allGroups, error: cgErr } = await supabase
-        .from('chat_groups')
-        .select('*');
+      // Parallelize chat_groups and pods queries for faster loading
+      const [groupsResult, podsResult] = await Promise.all([
+        supabase.from('chat_groups').select('*'),
+        supabase.from('pods').select(
+          'id, pod_image_url, token_address, management_hat_id, membership_hat_id',
+        ),
+      ]);
+
+      const { data: allGroups, error: cgErr } = groupsResult;
       if (cgErr) {
         console.error('Error loading chat_groups:', cgErr);
         setChatGroups([]);
@@ -141,13 +146,7 @@ export default function ChatContainer({ chatGroupId }: ChatContainerProps) {
         return;
       }
 
-      // map token -> pod image
-      // --- Pods lookup: prefer pod_id, then any hat address ---
-      const { data: pods, error: podsErr } = await supabase
-        .from('pods')
-        .select(
-          'id, pod_image_url, token_address, management_hat_id, membership_hat_id',
-        );
+      const { data: pods, error: podsErr } = podsResult;
       if (podsErr) {
         console.error('Error loading pods:', podsErr);
       }
@@ -168,15 +167,6 @@ export default function ChatContainer({ chatGroupId }: ChatContainerProps) {
         ].filter(Boolean);
 
         keys.forEach((k) => hatToImage.set(k, img));
-
-        // Debug logging for pod image mapping
-        console.log('Chat: Pod mapping:', {
-          id: p.id,
-          image: img,
-          token_address: p.token_address,
-          management_hat_id: p.management_hat_id,
-          membership_hat_id: p.membership_hat_id,
-        });
       });
 
       // --- STEP 1: Filter by module permissions FIRST (more efficient) ---
