@@ -25,6 +25,7 @@ import { Label } from '@/components/ui/label';
 import { useToast } from '@/components/ui/use-toast';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Loader2, CheckCircle, AlertTriangle } from 'lucide-react';
+import { supabase } from '@/utils/supabaseClient';
 
 // Contract addresses from environment
 const POD_TREASURY_FACTORY_ADDRESS = (process.env
@@ -37,10 +38,15 @@ const POD_BOUNTY_SERVICE_ADDRESS = (process.env
   '0xeCdDB060cD38439E0aC8874f159E961eB856407D') as `0x${string}`;
 const PODS_TESTING_MODE = process.env.NEXT_PUBLIC_PODS_TESTING === 'true';
 
-// Default supported tokens (Your community currencies)
+// Default supported tokens from environment (Your community currencies)
+const SYSTEM_TOKEN_ADDRESS = (process.env.NEXT_PUBLIC_SYSTEM_TOKEN ||
+  '0x0000000000000000000000000000000000000000') as `0x${string}`;
+const SELF_TOKEN_ADDRESS = (process.env.NEXT_PUBLIC_SELF_TOKEN ||
+  '0x0000000000000000000000000000000000000000') as `0x${string}`;
+
 const DEFAULT_SUPPORTED_TOKENS = [
-  '0x1317Ae277266D38C4E492558f8693F14143a6A65', // $SPIRIT (SYSTEM_TOKEN)
-  '0xe9b4aB2eB9397fa41AC3223e96f9d988BeFF5D21', // $SELF (SELF_TOKEN)
+  SYSTEM_TOKEN_ADDRESS, // $SYSTEM from .env
+  SELF_TOKEN_ADDRESS,   // $SELF from .env
 ] as `0x${string}`[];
 
 interface Pod {
@@ -158,12 +164,17 @@ export default function ConsolidatedTreasuryDeployerV2() {
   const loadPods = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await fetch('/api/pods2?status=active&limit=100');
-      if (!response.ok) throw new Error('Failed to load pods');
 
-      const responseData = await response.json();
-      const podsData = responseData.pods || [];
-      const activePods = podsData.filter(
+      // 🔥 FIX: Use Supabase instead of non-existent /api/pods2
+      const { data: podsData, error } = await supabase
+        .from('pods')
+        .select('*')
+        .eq('status', 'active')
+        .limit(100);
+
+      if (error) throw new Error(`Failed to load pods: ${error.message}`);
+
+      const activePods = (podsData || []).filter(
         (pod: Pod) => pod.management_hat_id && !pod.treasury_contract_address,
       );
 

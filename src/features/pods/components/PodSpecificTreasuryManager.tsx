@@ -20,10 +20,15 @@ const POD_TREASURY_FACTORY_ADDRESS = (process.env
   '0x0000000000000000000000000000000000000000') as `0x${string}`;
 const PODS_TESTING_MODE = process.env.NEXT_PUBLIC_PODS_TESTING === 'true';
 
-// Default supported tokens (Your community currencies)
+// Default supported tokens from environment (Your community currencies)
+const SYSTEM_TOKEN_ADDRESS = (process.env.NEXT_PUBLIC_SYSTEM_TOKEN ||
+  '0x0000000000000000000000000000000000000000') as `0x${string}`;
+const SELF_TOKEN_ADDRESS = (process.env.NEXT_PUBLIC_SELF_TOKEN ||
+  '0x0000000000000000000000000000000000000000') as `0x${string}`;
+
 const DEFAULT_SUPPORTED_TOKENS = [
-  '0x1317Ae277266D38C4E492558f8693F14143a6A65', // $SPIRIT (SYSTEM_TOKEN)
-  '0xe9b4aB2eB9397fa41AC3223e96f9d988BeFF5D21', // $SELF (SELF_TOKEN)
+  SYSTEM_TOKEN_ADDRESS, // $SYSTEM from .env
+  SELF_TOKEN_ADDRESS,   // $SELF from .env
 ] as `0x${string}`[];
 
 // Public client for fetching transaction receipts
@@ -469,7 +474,9 @@ export function PodSpecificTreasuryManager({
                   />
                   <span className="font-medium">$SYSTEM</span>
                 </div>
-                <Badge variant="secondary">0x1317...6A65</Badge>
+                <Badge variant="secondary">
+                  {SYSTEM_TOKEN_ADDRESS.slice(0, 6)}...{SYSTEM_TOKEN_ADDRESS.slice(-4)}
+                </Badge>
               </div>
               <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                 <div className="flex items-center space-x-3">
@@ -480,7 +487,9 @@ export function PodSpecificTreasuryManager({
                   />
                   <span className="font-medium">$SELF</span>
                 </div>
-                <Badge variant="secondary">0xe9b4...5D21</Badge>
+                <Badge variant="secondary">
+                  {SELF_TOKEN_ADDRESS.slice(0, 6)}...{SELF_TOKEN_ADDRESS.slice(-4)}
+                </Badge>
               </div>
             </div>
           </div>
