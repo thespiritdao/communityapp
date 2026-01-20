@@ -202,7 +202,7 @@ export default function PodChatManager({
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <MessageCircle className="h-5 w-5" style={{ color: '#2F5D50' }} />
-          <h4 className="text-lg font-medium">Chat Channels</h4>
+          <h4 className="text-lg font-medium">Chats</h4>
         </div>
         {isManager && (
           <Button
@@ -211,7 +211,7 @@ export default function PodChatManager({
             onClick={() => setCreating(!creating)}
           >
             <Plus className="h-4 w-4 mr-1" />
-            Add Channel
+            Add
           </Button>
         )}
       </div>
@@ -225,7 +225,7 @@ export default function PodChatManager({
           <div className="space-y-3">
             <div>
               <Label htmlFor="chatName" className="text-sm font-medium">
-                Channel Name
+                 Name
               </Label>
               <Input
                 id="chatName"
@@ -258,7 +258,7 @@ export default function PodChatManager({
                 disabled={!newChatName.trim()}
                 size="sm"
               >
-                Create Channel
+                Create
               </Button>
               <Button
                 variant="outline"
@@ -282,7 +282,7 @@ export default function PodChatManager({
             <MessageCircle className="h-8 w-8 mx-auto mb-2 opacity-50" />
             <p className="text-sm">No chat channels created yet</p>
             {isManager && (
-              <p className="text-xs mt-1">Click "Add Channel" to create one</p>
+              <p className="text-xs mt-1">Click "Add" to create one</p>
             )}
           </div>
         ) : (

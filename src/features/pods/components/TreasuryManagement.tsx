@@ -663,8 +663,7 @@ export function TreasuryManagement({
           <CardHeader>
             <CardTitle>Deploy Treasury Contract</CardTitle>
             <p className="text-sm text-gray-600">
-              Deploy a smart contract treasury to manage {podName}'s funds
-              on-chain.
+              Deploy a smart contract treasury to manage {podName}'s funds.
             </p>
           </CardHeader>
           <CardContent>

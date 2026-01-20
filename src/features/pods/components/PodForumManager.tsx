@@ -218,7 +218,7 @@ export default function PodForumManager({
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <MessageSquare className="h-5 w-5" style={{ color: '#6A5F7A' }} />
-          <h4 className="text-lg font-medium">Forum Categories</h4>
+          <h4 className="text-lg font-medium">Forums</h4>
         </div>
         {isManager && (
           <Button
@@ -241,7 +241,7 @@ export default function PodForumManager({
           <div className="space-y-3">
             <div>
               <Label htmlFor="categoryName" className="text-sm font-medium">
-                Category Name
+                Name
               </Label>
               <Input
                 id="categoryName"
@@ -287,7 +287,7 @@ export default function PodForumManager({
                 disabled={!newCategoryName.trim()}
                 size="sm"
               >
-                Create Category
+                Create
               </Button>
               <Button
                 variant="outline"
