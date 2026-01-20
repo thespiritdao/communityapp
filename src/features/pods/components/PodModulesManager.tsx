@@ -24,6 +24,7 @@ import {
   Info,
 } from 'lucide-react';
 import PodChatManager from './PodChatManager';
+import PodForumManager from './PodForumManager';
 
 interface PodModulesManagerProps {
   podId: string;
@@ -65,7 +66,7 @@ const MODULE_INFO = [
     icon: Users,
     color: '#6A5F7A',
     bgColor: '#EDEAF0',
-    configComponent: null,
+    configComponent: 'forum',
   },
   {
     key: 'treasury_enabled',
@@ -242,9 +243,11 @@ export default function PodModulesManager({
         [moduleKey]: enabled,
       }));
 
-      // If enabling chat, expand it to show configuration
+      // If enabling chat or forum, expand it to show configuration
       if (moduleKey === 'chat_enabled' && enabled) {
         setExpandedModule('chat');
+      } else if (moduleKey === 'forum_enabled' && enabled) {
+        setExpandedModule('forum');
       }
 
       console.log('PodModulesManager: Module toggle completed successfully');
@@ -360,6 +363,21 @@ export default function PodModulesManager({
                   modules.chat_enabled && (
                     <Card className="mt-4 p-4 bg-gray-50">
                       <PodChatManager
+                        podId={podId}
+                        podName={podName}
+                        managementHatId={managementHatId || ''}
+                        membershipHatId={membershipHatId}
+                        isManager={isManager}
+                      />
+                    </Card>
+                  )}
+
+                {/* Forum configuration panel */}
+                {isExpanded &&
+                  module.configComponent === 'forum' &&
+                  modules.forum_enabled && (
+                    <Card className="mt-4 p-4 bg-gray-50">
+                      <PodForumManager
                         podId={podId}
                         podName={podName}
                         managementHatId={managementHatId || ''}

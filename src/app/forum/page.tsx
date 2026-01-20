@@ -30,6 +30,8 @@ interface Category {
   created_at: string;
   required_token?: string | null;
   thread_count: number;
+  pod_id?: string | null;
+  pod_name?: string | null;
 }
 
 interface Thread {
@@ -40,6 +42,7 @@ interface Thread {
   created_at: string;
   post_count: number;
   category_name: string;
+  pod_name?: string | null;
 }
 
 export default function ForumPage() {
@@ -105,7 +108,7 @@ export default function ForumPage() {
     }
   };
 
-  // NEW: Fetch forum data using the RPC function
+  // NEW: Fetch forum data using BOTH RPC function AND direct query
   const fetchForumData = async () => {
     if (!address || !tokenBalances) {
       console.warn(
@@ -118,11 +121,89 @@ export default function ForumPage() {
     setLoadError(null);
 
     try {
-      // 1) Get user's accessible forums using the new RPC system
+      // 1) Get user's accessible forums using the new RPC system (old link table method)
       const accessibleForums = await getUserAccessibleForums();
 
-      // 2) Fetch thread counts for ALL accessible forums in a SINGLE query (performance optimization)
-      const forumIds = accessibleForums.map((forum: any) => forum.id);
+      // 2) ALSO get pod-based forum categories using direct required_token check
+      // 🔒 SECURITY: Must check pod_modules.forum_enabled to respect toggle state
+      const identity = await getUserIdentity(address, tokenBalances, userHats);
+      console.log('🔑 User identity for forum query:', {
+        hatsCount: identity.userHats.length,
+        hats: identity.userHats,
+        tokensCount: identity.userTokens.length,
+      });
+
+      let podForums: any[] = [];
+
+      // Only query if user has HATs (otherwise query would fail)
+      if (identity.userHats.length > 0) {
+        const { data, error: podForumError } = await supabase
+          .from('forum_categories')
+          .select(`
+            *,
+            pods!inner(
+              id,
+              name
+            )
+          `)
+          .eq('is_active', true)
+          .not('pod_id', 'is', null)
+          .in('required_token', identity.userHats);
+
+        if (podForumError) {
+          console.warn('❌ Error fetching pod forums:', podForumError);
+        } else {
+          // 🔒 SECURITY: Filter by forum_enabled toggle
+          // We need to check pod_modules separately since we can't join it in the select
+          const forumsToCheck = data || [];
+
+          // Get pod_modules for all pods
+          const podIds = [...new Set(forumsToCheck.map((f: any) => f.pod_id))];
+          const { data: podModules, error: modulesError } = await supabase
+            .from('pod_modules')
+            .select('pod_id, forum_enabled')
+            .in('pod_id', podIds);
+
+          if (modulesError) {
+            console.warn('❌ Error fetching pod modules:', modulesError);
+          }
+
+          // Create a map of pod_id -> forum_enabled
+          const moduleMap = new Map(
+            (podModules || []).map((m: any) => [m.pod_id, m.forum_enabled])
+          );
+
+          // Filter forums to only include those where forum_enabled = true
+          podForums = forumsToCheck
+            .filter((forum: any) => {
+              const forumEnabled = moduleMap.get(forum.pod_id);
+              if (forumEnabled === false) {
+                console.log(
+                  `🔒 Blocking forum "${forum.name}" - pod forum module is disabled`
+                );
+                return false;
+              }
+              return true;
+            })
+            .map((forum: any) => ({
+              ...forum,
+              pod_name: forum.pods?.name || null,
+            }));
+
+          console.log('📊 Pod forums query returned (after toggle filter):', podForums);
+        }
+      }
+
+      console.log(`🔍 Found ${podForums.length} pod-based forum categories for user`);
+
+      // Combine both sets of forums, removing duplicates by ID
+      const allForumsMap = new Map();
+      accessibleForums.forEach((forum: any) => allForumsMap.set(forum.id, forum));
+      podForums.forEach((forum: any) => allForumsMap.set(forum.id, forum));
+      const combinedForums = Array.from(allForumsMap.values());
+
+      // 3) Fetch thread counts for ALL accessible forums in a SINGLE query (performance optimization)
+      const forumIds = combinedForums.map((forum: any) => forum.id);
       let threadCounts: Record<string, number> = {};
 
       if (forumIds.length > 0) {
@@ -145,23 +226,41 @@ export default function ForumPage() {
         }
       }
 
-      // 3) Attach counts to forums
-      const forumsWithCounts = accessibleForums.map((forum: any) => ({
+      // 4) Attach counts to forums
+      const forumsWithCounts = combinedForums.map((forum: any) => ({
         ...forum,
         thread_count: threadCounts[forum.id] || 0,
       }));
 
       console.log(
-        `✅ Successfully loaded ${forumsWithCounts.length} accessible forum categories`,
+        `✅ Successfully loaded ${forumsWithCounts.length} accessible forum categories (${accessibleForums.length} from RPC, ${podForums.length} from pods)`,
       );
       setCategories(forumsWithCounts);
 
       // 3) Fetch recent threads using loadThreads from useForum hook
-      const threadsResult = await loadThreads(undefined, 0, 5);
+      // Load more threads (20) to ensure we have enough after filtering by accessible categories
+      const threadsResult = await loadThreads(undefined, 0, 20);
       if (!threadsResult.success) {
         throw new Error('Failed to load threads');
       }
-      setRecentThreads(threadsResult.threads);
+
+      // Filter threads to only show those from accessible categories
+      const accessibleCategoryIds = new Set(forumIds);
+      const filteredThreads = threadsResult.threads.filter(
+        (thread: any) => accessibleCategoryIds.has(thread.category_id)
+      );
+
+      // Enrich threads with pod_name by mapping category_id to forum data
+      const categoryToPodMap = new Map(
+        combinedForums.map((forum: any) => [forum.id, forum.pod_name])
+      );
+      const enrichedThreads = filteredThreads.map((thread: any) => ({
+        ...thread,
+        pod_name: categoryToPodMap.get(thread.category_id) || null,
+      }));
+
+      // Take only the 6 most recent enriched threads
+      setRecentThreads(enrichedThreads.slice(0, 6));
 
       setLoadingData(false);
     } catch (err: any) {
