@@ -282,12 +282,29 @@ export function PodSpecificTreasuryManager({
         } catch (fallbackError) {
           console.error('❌ Fallback receipt fetch also failed:', fallbackError);
 
+          // 📖 NOTE: This is EXPECTED for CDP UserOperations
+          // The userOperationHash ≠ final transaction hash (ERC-4337)
+          // The transaction is submitted successfully, but we can't get the receipt
+          // until the bundler processes it and submits it on-chain.
+          // See: CDP_RECEIPT_FETCHING_FIX.md for details
+
           // Transaction submitted but we can't get the receipt yet
           toast({
-            title: 'Treasury Deploying',
-            description: 'Transaction submitted! The treasury will appear after it confirms. Tx: ' + userOpHash.slice(0, 10) + '...',
+            title: 'Treasury Deployment Submitted',
+            description:
+              'Your treasury is being deployed! It may take 30-60 seconds to confirm. The page will update automatically when ready. UserOp: ' +
+              userOpHash.slice(0, 10) +
+              '...',
             variant: 'default',
           });
+
+          console.log('💡 Treasury deployment submitted successfully!');
+          console.log('⏳ The transaction is being processed by the bundler.');
+          console.log('🔄 Blockchain sync will detect the deployed treasury shortly.');
+          console.log(
+            '🔍 Check Base block explorer (search for UserOperation hash):',
+            `https://basescan.org/tx/${userOpHash}`,
+          );
 
           // Reset state
           setIsTransactionPending(false);

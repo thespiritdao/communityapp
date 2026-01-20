@@ -120,6 +120,12 @@ export default function ConsolidatedTreasuryDeployer({
 
       if (error) throw new Error(`Failed to load pods: ${error.message}`);
 
+      console.log('🔍 Treasury Deployment Filter Debug:', {
+        totalPodsFromDB: podsData?.length || 0,
+        contextPodId,
+        contextPodName,
+      });
+
       // If contextPodId is provided, only show that specific pod
       let activePods = (podsData || []).filter((pod: Pod) => {
         const hasManagementHat = !!pod.management_hat_id;
@@ -132,15 +138,47 @@ export default function ConsolidatedTreasuryDeployer({
         const hideTopHat =
           isTopHat && (!contextPodId || pod.id !== contextPodId);
 
-        if (hideTopHat) return false;
+        const filterDebug = {
+          podName: pod.name,
+          podId: pod.id,
+          managementHatId: pod.management_hat_id,
+          treasuryAddress: pod.treasury_contract_address,
+          hasManagementHat,
+          noTreasury,
+          hideTopHat,
+        };
+
+        if (hideTopHat) {
+          console.log('❌ Filtered out (Top Hat):', filterDebug);
+          return false;
+        }
 
         // If contextPodId is provided, only show that pod
         if (contextPodId) {
-          return pod.id === contextPodId && hasManagementHat && noTreasury;
+          const matches = pod.id === contextPodId && hasManagementHat && noTreasury;
+          console.log(
+            matches ? '✅ Pod matches context filter:' : '❌ Pod rejected by context filter:',
+            {
+              ...filterDebug,
+              matchesId: pod.id === contextPodId,
+              reason: !matches
+                ? pod.id !== contextPodId
+                  ? 'ID mismatch'
+                  : !hasManagementHat
+                    ? 'No management HAT'
+                    : 'Has treasury'
+                : 'All checks passed',
+            },
+          );
+          return matches;
         }
 
         // Otherwise show all pods that meet criteria
-        return hasManagementHat && noTreasury;
+        const passes = hasManagementHat && noTreasury;
+        if (!passes) {
+          console.log('❌ Pod rejected by criteria:', filterDebug);
+        }
+        return passes;
       });
 
       setPods(activePods);
