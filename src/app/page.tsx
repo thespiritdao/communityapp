@@ -312,6 +312,12 @@ function PageContent() {
   ): Promise<boolean> => {
     if (!walletAddress) return false;
 
+    // TEMPORARY: Skip invite validation in development
+    if (process.env.NODE_ENV === 'development') {
+      console.log('⚠️ Skipping invite validation in development mode');
+      return true;
+    }
+
     try {
       console.log('📝 Validating invite code with wallet...');
       const validateResponse = await fetch('/api/invite/validate', {
