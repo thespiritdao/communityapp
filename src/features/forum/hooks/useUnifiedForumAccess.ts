@@ -426,6 +426,7 @@ async function checkUserHatOwnership(
 
 /**
  * Call RPC to get accessible forum categories
+ * 🆕 DUAL SYSTEM: Queries both RPC (link table) AND direct required_token column
  */
 async function getAccessibleCategories(
   userTokens: string[],
@@ -441,7 +442,8 @@ async function getAccessibleCategories(
       hats: hatsLower.length,
     });
 
-    const { data, error } = await supabase.rpc(
+    // Query 1: RPC function (link table system)
+    const { data: rpcData, error: rpcError } = await supabase.rpc(
       'forums_accessible_by_identity',
       {
         user_tokens: tokensLower,
@@ -449,14 +451,77 @@ async function getAccessibleCategories(
       },
     );
 
-    if (error) {
-      console.error('RPC Error:', error);
-      throw error;
+    if (rpcError) {
+      console.warn('⚠️ [ForumAccess] RPC error:', rpcError);
     }
 
-    return (data || []) as ForumCategory[];
+    const rpcCategories = (rpcData || []) as ForumCategory[];
+    console.log(`✅ [ForumAccess] RPC returned ${rpcCategories.length} categories`);
+
+    // Query 2: Direct required_token column (pod forum system)
+    // This is used by forums created via PodForumManager
+    const allHats = [...tokensLower, ...hatsLower];
+
+    if (allHats.length === 0) {
+      console.log('⚠️ [ForumAccess] No HATs to check for direct token access');
+      return rpcCategories;
+    }
+
+    const { data: directCategories, error: directError } = await supabase
+      .from('forum_categories')
+      .select('*')
+      .not('required_token', 'is', null)
+      .neq('required_token', '')
+      .in('required_token', allHats);
+
+    if (directError) {
+      console.warn('⚠️ [ForumAccess] Direct query error:', directError);
+    }
+
+    const podCategories = (directCategories || []) as ForumCategory[];
+    console.log(`✅ [ForumAccess] Direct query returned ${podCategories.length} pod categories`);
+
+    // 🔒 SECURITY: Check pod_modules.forum_enabled for pod categories
+    if (podCategories.length > 0) {
+      const podIds = [...new Set(podCategories.map((c: any) => c.pod_id).filter(Boolean))];
+
+      if (podIds.length > 0) {
+        const { data: modules } = await supabase
+          .from('pod_modules')
+          .select('pod_id, forum_enabled')
+          .in('pod_id', podIds);
+
+        const moduleMap = new Map(
+          (modules || []).map((m: any) => [m.pod_id, m.forum_enabled])
+        );
+
+        // Filter out categories from pods with forum module disabled
+        const enabledPodCategories = podCategories.filter((cat: any) => {
+          const forumEnabled = moduleMap.get(cat.pod_id);
+          if (forumEnabled === false) {
+            console.log(`🔒 [ForumAccess] Blocking category "${cat.name}" - pod forum module disabled`);
+            return false;
+          }
+          return true;
+        });
+
+        console.log(`✅ [ForumAccess] ${enabledPodCategories.length}/${podCategories.length} pod categories have module enabled`);
+
+        // Merge and deduplicate
+        const allCategories = [...rpcCategories, ...enabledPodCategories];
+        const uniqueCategories = Array.from(
+          new Map(allCategories.map((cat) => [cat.id, cat])).values()
+        );
+
+        console.log(`📂 [ForumAccess] Total accessible categories: ${uniqueCategories.length}`);
+        return uniqueCategories;
+      }
+    }
+
+    // No pod categories or no pod IDs, return RPC results
+    return rpcCategories;
   } catch (error) {
-    console.error('Failed to fetch accessible categories:', error);
+    console.error('❌ [ForumAccess] Failed to fetch accessible categories:', error);
 
     // Fallback: Get all public categories (no token requirements)
     console.log('⚠️ [ForumAccess] Falling back to public categories only');
