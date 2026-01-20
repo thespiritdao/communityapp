@@ -90,6 +90,7 @@ export function CDPEmbeddedProvider({ children }: CDPEmbeddedProviderProps) {
 
   // CDP Hooks Provider config - Critical for session persistence!
   // See: https://docs.base.org/base-account/framework-integrations/cdp
+  const paymasterEndpoint = process.env.NEXT_PUBLIC_PAYMASTER;
   const cdpConfig = useMemo(
     () => ({
       projectId,
@@ -99,18 +100,18 @@ export function CDPEmbeddedProvider({ children }: CDPEmbeddedProviderProps) {
           {
             chainId: base.id, // Base Mainnet (8453) - hardcoded for reliability
             rpcUrl: process.env.NEXT_PUBLIC_RPC_URL || base.rpcUrls.default.http[0],
-            // NOTE: Paymaster configured in OnchainKit, not here
+            // ✅ CRITICAL: Paymaster must be configured here for useSendUserOperation to sponsor gas
+            paymasterUrl: paymasterEndpoint,
           },
         ],
       },
       appName: 'SpiritDAO',
       appLogoUrl: '/spiritdaosymbol.png',
     }),
-    [projectId],
+    [projectId, paymasterEndpoint],
   );
 
-  // OnchainKit config - Paymaster for gasless transactions
-  const paymasterEndpoint = process.env.NEXT_PUBLIC_PAYMASTER;
+  // OnchainKit config - Paymaster for gasless transactions (using same endpoint as CDP)
   const onchainKitConfig = useMemo(
     () => ({
       appearance: {
@@ -131,8 +132,14 @@ export function CDPEmbeddedProvider({ children }: CDPEmbeddedProviderProps) {
 
   if (!paymasterEndpoint) {
     console.warn(
-      '⚠️ Paymaster endpoint not configured. Transactions will not be sponsored.',
+      '⚠️ PAYMASTER NOT CONFIGURED - Users will need to pay gas fees!',
     );
+    console.warn(
+      '   Set NEXT_PUBLIC_PAYMASTER in .env to enable sponsored transactions',
+    );
+  } else {
+    console.log('✅ Paymaster configured for gasless transactions');
+    console.log('   Endpoint:', paymasterEndpoint.substring(0, 50) + '...');
   }
 
   return (
