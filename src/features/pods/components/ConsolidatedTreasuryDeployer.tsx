@@ -336,6 +336,62 @@ export default function ConsolidatedTreasuryDeployer({
       }
     } catch (error: any) {
       console.error('❌ Treasury deployment failed:', error);
+
+      // 🔄 AUTOMATIC RECOVERY: If treasury already exists, fetch it from contract
+      if (error?.message?.includes('Treasury already exists')) {
+        console.log('🔄 Treasury already exists! Attempting automatic recovery...');
+
+        try {
+          // Query factory contract for existing treasury address
+          const FACTORY_ABI = [
+            {
+              name: 'podTreasuries',
+              type: 'function',
+              inputs: [{ name: 'podId', type: 'string' }],
+              outputs: [{ name: '', type: 'address' }],
+              stateMutability: 'view',
+            },
+          ] as const;
+
+          const existingTreasury = await publicClient.readContract({
+            address: POD_TREASURY_FACTORY_ADDRESS,
+            abi: FACTORY_ABI,
+            functionName: 'podTreasuries',
+            args: [selectedPod.id],
+          });
+
+          console.log('✅ Found existing treasury:', existingTreasury);
+
+          if (
+            existingTreasury &&
+            existingTreasury !== '0x0000000000000000000000000000000000000000'
+          ) {
+            // Update database with existing treasury
+            await handleTreasuryDeploymentSuccess(selectedPod, existingTreasury as string);
+
+            toast({
+              title: 'Treasury Recovered!',
+              description:
+                'Found and linked existing treasury: ' +
+                existingTreasury.slice(0, 6) +
+                '...' +
+                existingTreasury.slice(-4),
+            });
+
+            return; // Exit successfully
+          }
+        } catch (recoveryError) {
+          console.error('❌ Automatic recovery failed:', recoveryError);
+          toast({
+            title: 'Treasury Exists But Recovery Failed',
+            description:
+              'A treasury already exists on-chain. Please contact support to recover it.',
+            variant: 'destructive',
+          });
+          return;
+        }
+      }
+
       toast({
         title: 'Treasury Deployment Failed',
         description: error.message || 'Unknown error occurred',

@@ -391,7 +391,91 @@ export function PodSpecificTreasuryManager({
         data: error?.data,
       });
 
-      // Extract specific error info
+      // 🔄 AUTOMATIC RECOVERY: If treasury already exists, fetch it from contract
+      if (error?.message?.includes('Treasury already exists')) {
+        console.log('🔄 Treasury already exists! Attempting automatic recovery...');
+
+        try {
+          // Query factory contract for existing treasury address
+          const FACTORY_ABI = [
+            {
+              name: 'podTreasuries',
+              type: 'function',
+              inputs: [{ name: 'podId', type: 'string' }],
+              outputs: [{ name: '', type: 'address' }],
+              stateMutability: 'view',
+            },
+          ] as const;
+
+          const existingTreasury = await publicClient.readContract({
+            address: POD_TREASURY_FACTORY_ADDRESS,
+            abi: FACTORY_ABI,
+            functionName: 'podTreasuries',
+            args: [localPod.id],
+          });
+
+          console.log('✅ Found existing treasury:', existingTreasury);
+
+          if (
+            existingTreasury &&
+            existingTreasury !== '0x0000000000000000000000000000000000000000'
+          ) {
+            // Update database with existing treasury
+            const updateResponse = await fetch('/api/pods/activate', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                podId: localPod.id,
+                treasuryAddress: existingTreasury,
+                isActive: true,
+              }),
+            });
+
+            if (!updateResponse.ok) {
+              throw new Error('Failed to update database with existing treasury');
+            }
+
+            console.log('✅ Database updated with existing treasury');
+
+            toast({
+              title: 'Treasury Recovered!',
+              description:
+                'Found and linked your existing treasury: ' +
+                existingTreasury.slice(0, 6) +
+                '...' +
+                existingTreasury.slice(-4),
+            });
+
+            // Update local state
+            setLocalPod({
+              ...localPod,
+              treasury_contract_address: existingTreasury,
+            });
+
+            // Trigger parent refresh
+            setTimeout(() => {
+              window.dispatchEvent(
+                new CustomEvent('treasury-deployed', {
+                  detail: { podId: localPod.id, treasuryAddress: existingTreasury },
+                }),
+              );
+            }, 1000);
+
+            return; // Exit successfully
+          }
+        } catch (recoveryError) {
+          console.error('❌ Automatic recovery failed:', recoveryError);
+          toast({
+            title: 'Treasury Exists But Recovery Failed',
+            description:
+              'A treasury already exists on-chain. Please contact support to recover it.',
+            variant: 'destructive',
+          });
+          return;
+        }
+      }
+
+      // Extract specific error info for other errors
       let errorMessage = 'Treasury deployment encountered an error';
       if (error?.message?.includes('user rejected')) {
         errorMessage = 'Transaction was rejected by user.';
