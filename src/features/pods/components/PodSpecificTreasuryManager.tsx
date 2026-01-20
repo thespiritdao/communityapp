@@ -87,8 +87,11 @@ export function PodSpecificTreasuryManager({
     setLocalPod(pod);
   }, [pod]);
 
-  // Check if pod has an active treasury
-  const hasTreasury = !!localPod.treasury_contract_address;
+  // Check if pod has an active treasury (deployed, not 'pending')
+  const hasTreasury =
+    !!localPod.treasury_contract_address &&
+    localPod.treasury_contract_address !== 'pending' &&
+    localPod.treasury_contract_address !== '0x0000000000000000000000000000000000000000';
 
   // Convert management hat ID to BigInt for contract calls
   const getManagementHatIdBigInt = (hatId: string): bigint => {
@@ -398,10 +401,13 @@ export function PodSpecificTreasuryManager({
           <span className="font-medium" style={{ color: '#1F453A' }}>
             Treasury Active
           </span>
-          <Badge variant="secondary" className="ml-2">
-            {localPod.treasury_contract_address?.slice(0, 6)}...
-            {localPod.treasury_contract_address?.slice(-4)}
-          </Badge>
+          {localPod.treasury_contract_address &&
+            localPod.treasury_contract_address.startsWith('0x') && (
+              <Badge variant="secondary" className="ml-2">
+                {localPod.treasury_contract_address.slice(0, 6)}...
+                {localPod.treasury_contract_address.slice(-4)}
+              </Badge>
+            )}
         </div>
 
         <TreasuryManagement
