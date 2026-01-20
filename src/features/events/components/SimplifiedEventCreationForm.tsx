@@ -18,7 +18,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import { Calendar as CalendarIcon, Loader2 } from 'lucide-react';
+import { Calendar as CalendarIcon, Loader2, RefreshCw } from 'lucide-react';
 
 import { useCreateEvent } from '../hooks/useEvents';
 import {
@@ -71,6 +71,7 @@ export const SimplifiedEventCreationForm: React.FC<
     canManageEvents,
     managedPods,
     loading: accessLoading,
+    recheckAccess, // ✅ Add refresh function
   } = useEventManagementAccess();
   const { getCreateEventCall, getTransactionConfig, isConnected } =
     useSimplifiedEventTransactions();
@@ -991,7 +992,20 @@ export const SimplifiedEventCreationForm: React.FC<
           {/* Pod Management */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="organizing_pod">Organizing Pod</Label>
+              <div className="flex items-center justify-between mb-1">
+                <Label htmlFor="organizing_pod">Organizing Pod</Label>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={recheckAccess}
+                  disabled={accessLoading}
+                  className="h-7 px-2 text-xs"
+                  title="Refresh pod list"
+                >
+                  <RefreshCw className={`h-3 w-3 ${accessLoading ? 'animate-spin' : ''}`} />
+                </Button>
+              </div>
               <select
                 id="organizing_pod"
                 value={formData.organizing_pod_id}
@@ -1008,17 +1022,30 @@ export const SimplifiedEventCreationForm: React.FC<
                   </option>
                 ))}
               </select>
-              {managedPods.length === 0 && (
-                <p className="text-sm text-amber-600 mt-1">
-                  ⚠️ You don't have event creation permission in any pods.
-                  Contact a pod manager to request access.
-                </p>
-              )}
-              {managedPods.length > 0 && (
-                <p className="text-sm text-gray-500 mt-1">
-                  You can create events in {managedPods.length} pod
-                  {managedPods.length !== 1 ? 's' : ''}
-                </p>
+              {managedPods.length === 0 && !accessLoading && (
+                <div className="mt-2 p-3 rounded-lg" style={{ backgroundColor: '#FEF3C7', border: '1px solid #F59E0B' }}>
+                  <p className="text-sm font-medium" style={{ color: '#92400E' }}>
+                    ⚠️ No Pods Available for Event Creation
+                  </p>
+                  <p className="text-xs mt-1" style={{ color: '#78350F' }}>
+                    Each pod needs BOTH:
+                  </p>
+                  <ul className="text-xs mt-1 space-y-0.5 list-disc list-inside" style={{ color: '#78350F' }}>
+                    <li><strong>Events Module ON</strong> (pod-wide setting in Controls tab)</li>
+                    <li><strong>Event Creation Permission</strong> (granted to your role)</li>
+                  </ul>
+                  <p className="text-xs mt-2" style={{ color: '#78350F' }}>
+                    If you just enabled the module or were granted permissions, click the refresh button (🔄) above.
+                  </p>
+                  <details className="mt-2 text-xs" style={{ color: '#78350F' }}>
+                    <summary className="cursor-pointer font-medium">Show debugging info</summary>
+                    <div className="mt-1 space-y-1 font-mono text-[10px]">
+                      <p>Open browser console (F12) and look for:</p>
+                      <p className="pl-2">"[Events] Pod YourPodName: module=?, permission=?"</p>
+                      <p className="pl-2 mt-1">This shows exactly why each pod is blocked.</p>
+                    </div>
+                  </details>
+                </div>
               )}
             </div>
 
@@ -1123,13 +1150,11 @@ export const SimplifiedEventCreationForm: React.FC<
               style={{ '--tw-ring-color': '#2F5D50' } as React.CSSProperties}
             >
               <option value="">No token requirement</option>
-              {pods
-                .filter((pod) => pod.is_active)
-                .map((token) => (
-                  <option key={token.id} value={token.id}>
-                    {token.name}
-                  </option>
-                ))}
+              {managedPods.map((token) => (
+                <option key={token.id} value={token.id}>
+                  {token.name}
+                </option>
+              ))}
             </select>
             <p className="text-sm text-gray-500 mt-1">
               Select a token that attendees must hold to register for this event
