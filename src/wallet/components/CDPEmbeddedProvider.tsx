@@ -61,10 +61,15 @@ interface CDPEmbeddedProviderProps {
  *
  * @see https://docs.base.org/base-account/framework-integrations/cdp
  */
+// Global flag to ensure session check runs only once per page load
+let hasCheckedSession = false;
+
 export function CDPEmbeddedProvider({ children }: CDPEmbeddedProviderProps) {
   // CRITICAL: Check for and clear stale CDP sessions BEFORE initialization
-  // This runs synchronously before React renders children
-  if (typeof window !== 'undefined') {
+  // This runs synchronously before React renders children - BUT ONLY ONCE
+  if (typeof window !== 'undefined' && !hasCheckedSession) {
+    hasCheckedSession = true; // Set flag immediately to prevent re-runs
+
     try {
       const storageKeys = Object.keys(localStorage);
       const cdpAuthKeys = storageKeys.filter(key =>
@@ -79,15 +84,17 @@ export function CDPEmbeddedProvider({ children }: CDPEmbeddedProviderProps) {
         const lastRefresh = localStorage.getItem(lastRefreshKey);
         const now = Date.now();
 
-        if (!lastRefresh || (now - parseInt(lastRefresh)) > 24 * 60 * 60 * 1000) {
-          console.warn('⚠️ Detected potentially stale CDP session (>24h old), clearing...');
+        // ONLY clear if we have a timestamp AND it's stale
+        // If no timestamp, create one (assume fresh login)
+        if (lastRefresh && (now - parseInt(lastRefresh)) > 24 * 60 * 60 * 1000) {
+          console.warn('⚠️ Detected stale CDP session (>24h old), clearing...');
           cdpAuthKeys.forEach(key => {
             console.log(`🗑️ Removing stale CDP key: ${key}`);
             localStorage.removeItem(key);
           });
           localStorage.removeItem(lastRefreshKey);
         } else {
-          // Update last refresh timestamp
+          // Set or update timestamp for valid session
           localStorage.setItem(lastRefreshKey, now.toString());
         }
       }
