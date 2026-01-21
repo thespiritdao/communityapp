@@ -134,15 +134,15 @@ export const ProposalModal: React.FC<ProposalModalProps> = ({
 
           {/* Vote Counts (if available) */}
           {proposal.scores && proposal.scores.length > 0 && (
-            <div className="mt-6 pt-6 border-t border-gray-200 mb-8">
-              <h3 className="text-lg font-semibold text-gray-800 mb-3">
+            <div className="mt-6 pt-6 border-t border-gray-200 mb-12">
+              <h3 className="text-lg font-semibold text-gray-800 mb-4">
                 Current Vote Tally
               </h3>
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-3 gap-4 mb-4">
                 {proposal.choices.map((choice, idx) => (
                   <div
                     key={idx}
-                    className="text-center p-3 bg-gray-50 rounded-lg border border-gray-200"
+                    className="text-center p-4 bg-gray-50 rounded-lg border border-gray-200"
                   >
                     <div className="text-2xl font-bold text-gray-900">
                       {proposal.scores?.[idx] || 0}
@@ -157,7 +157,7 @@ export const ProposalModal: React.FC<ProposalModalProps> = ({
           )}
 
           {/* Extra bottom padding for scroll visibility */}
-          <div className="h-4"></div>
+          <div className="h-8"></div>
         </div>
 
         {/* Footer */}

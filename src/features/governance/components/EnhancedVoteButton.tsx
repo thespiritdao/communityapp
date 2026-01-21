@@ -246,7 +246,10 @@ export const EnhancedVoteButton: React.FC<EnhancedVoteButtonProps> = ({
         return;
       }
 
-      onVoteSuccess?.();
+      // Wait for database to process vote and update counts before refetching
+      setTimeout(() => {
+        onVoteSuccess?.();
+      }, 3000); // 3 second delay for database processing
     } catch (error) {
       console.error('Failed to submit vote:', error);
       toast({
