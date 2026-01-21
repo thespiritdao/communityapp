@@ -171,7 +171,7 @@ const VoteButton: React.FC<VoteButtonProps> = ({
   }
 
   // Map choice number to label
-  const choiceLabels = ['Against', 'For', 'Abstain'];
+  const choiceLabels = ['For', 'Against', 'Abstain'];
   const choiceLabel = choiceLabels[choice - 1] || `Choice ${choice}`;
 
   // ✅ If user has already voted, show message only once (for first button)

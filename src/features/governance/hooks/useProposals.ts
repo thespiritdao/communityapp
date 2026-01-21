@@ -275,10 +275,10 @@ const fetchProposalsOnChain = async (
       const body = parts[1] || '';
 
       // 6) Use on‑chain tallies for scores
-      const choices = ['Against', 'For', 'Abstain'];
+      const choices = ['For', 'Against', 'Abstain'];
       const scores = [
-        Number(core.againstVotes),
         Number(core.forVotes),
+        Number(core.againstVotes),
         Number(core.abstainVotes),
       ];
 
@@ -385,7 +385,7 @@ export const useProposals = () => {
           body: meta.description || '',
           start: 0, // Not yet on-chain
           end: 0,
-          choices: ['Against', 'For', 'Abstain'],
+          choices: ['For', 'Against', 'Abstain'],
           scores: [0, 0, 0], // No votes yet
           state: -1, // Pending state
           stateError: false,

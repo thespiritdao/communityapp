@@ -196,7 +196,7 @@ export const useEnhancedProposals = () => {
               title: pod.name,
               body: pod.description || 'No description provided.',
               type: 'pod_creation',
-              choices: ['Against', 'For', 'Abstain'],
+              choices: ['For', 'Against', 'Abstain'],
               status: podProposal.status,
               created_at: pod.created_at,
               created_by: podProposal.created_by_address,

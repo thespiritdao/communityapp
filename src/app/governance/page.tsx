@@ -306,19 +306,19 @@ export default function GovernancePage() {
                         <p className="text-sm text-gray-600 font-medium mb-2">Current Votes:</p>
                         <div className="grid grid-cols-4 gap-2">
                           {proposal.type === 'governance' ? (
-                            // Governance proposals use scores array: [against, for, abstain]
+                            // Governance proposals use scores array: [for, against, abstain]
                             <>
-                              <div className="text-center p-2 bg-red-50 border border-red-200 rounded">
-                                <p className="text-2xl font-bold text-red-700">
-                                  {proposal.scores?.[0] || 0}
-                                </p>
-                                <p className="text-xs text-red-600 font-medium">Against</p>
-                              </div>
                               <div className="text-center p-2 bg-green-50 border border-green-200 rounded">
                                 <p className="text-2xl font-bold text-green-700">
-                                  {proposal.scores?.[1] || 0}
+                                  {proposal.scores?.[0] || 0}
                                 </p>
                                 <p className="text-xs text-green-600 font-medium">For</p>
+                              </div>
+                              <div className="text-center p-2 bg-red-50 border border-red-200 rounded">
+                                <p className="text-2xl font-bold text-red-700">
+                                  {proposal.scores?.[1] || 0}
+                                </p>
+                                <p className="text-xs text-red-600 font-medium">Against</p>
                               </div>
                               <div className="text-center p-2 bg-gray-50 border border-gray-200 rounded">
                                 <p className="text-2xl font-bold text-gray-700">
@@ -336,17 +336,17 @@ export default function GovernancePage() {
                           ) : (
                             // Pod creation proposals use vote_counts object
                             <>
-                              <div className="text-center p-2 bg-red-50 border border-red-200 rounded">
-                                <p className="text-2xl font-bold text-red-700">
-                                  {(proposal as any).vote_counts?.against || 0}
-                                </p>
-                                <p className="text-xs text-red-600 font-medium">Against</p>
-                              </div>
                               <div className="text-center p-2 bg-green-50 border border-green-200 rounded">
                                 <p className="text-2xl font-bold text-green-700">
                                   {(proposal as any).vote_counts?.for || 0}
                                 </p>
                                 <p className="text-xs text-green-600 font-medium">For</p>
+                              </div>
+                              <div className="text-center p-2 bg-red-50 border border-red-200 rounded">
+                                <p className="text-2xl font-bold text-red-700">
+                                  {(proposal as any).vote_counts?.against || 0}
+                                </p>
+                                <p className="text-xs text-red-600 font-medium">Against</p>
                               </div>
                               <div className="text-center p-2 bg-gray-50 border border-gray-200 rounded">
                                 <p className="text-2xl font-bold text-gray-700">

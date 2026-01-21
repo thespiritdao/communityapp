@@ -11,6 +11,8 @@ import { GovernanceService } from '../services/governanceService';
 import { POD_LEADER_HATS } from '../../pods/utils/podLeaderHats';
 import type { EnhancedProposal } from '../hooks/useEnhancedProposals';
 import { useGovernancePermission } from '@/hooks/useGovernancePermission';
+import { supabase } from '@/utils/supabaseClient';
+import { createSupabaseSession } from '@/utils/createSupabaseSession';
 
 interface EnhancedVoteButtonProps {
   proposal: EnhancedProposal;
@@ -27,6 +29,9 @@ export const EnhancedVoteButton: React.FC<EnhancedVoteButtonProps> = ({
   const { toast } = useToast();
   const [isVoting, setIsVoting] = useState(false);
 
+  // DEBUG: Verify component is loaded with updated code
+  console.log('🔵 [COMPONENT LOADED] EnhancedVoteButton mounted with debugging enabled');
+
   // ✅ ARCHITECTURE FIX: Check governance permission for the CORRECT pod
   // Use the proposal's approving_pod_id to determine which pod to check
   const { canParticipate: hasGovernancePermission } = useGovernancePermission(
@@ -36,8 +41,8 @@ export const EnhancedVoteButton: React.FC<EnhancedVoteButtonProps> = ({
 
   const getChoiceText = (choiceNum: number) => {
     const choiceMap = {
-      1: 'Against',
-      2: 'For',
+      1: 'For',
+      2: 'Against',
       3: 'Abstain',
     };
     return choiceMap[choiceNum as keyof typeof choiceMap] || 'Unknown';
@@ -46,11 +51,11 @@ export const EnhancedVoteButton: React.FC<EnhancedVoteButtonProps> = ({
   const getChoiceIcon = (choiceNum: number) => {
     switch (choiceNum) {
       case 1:
-        return <XCircle className="h-4 w-4" />;
+        return <CheckCircle className="h-4 w-4" />; // For
       case 2:
-        return <CheckCircle className="h-4 w-4" />;
+        return <XCircle className="h-4 w-4" />; // Against
       case 3:
-        return <Clock className="h-4 w-4" />;
+        return <Clock className="h-4 w-4" />; // Abstain
       default:
         return null;
     }
@@ -59,9 +64,9 @@ export const EnhancedVoteButton: React.FC<EnhancedVoteButtonProps> = ({
   const getChoiceColor = (choiceNum: number) => {
     switch (choiceNum) {
       case 1:
-        return { bg: '#8B3A3A', hover: '#5C1F1F' }; // Against - DESTRUCTIVE
-      case 2:
         return { bg: '#3F7A5A', hover: '#2F5D50' }; // For - SUCCESS
+      case 2:
+        return { bg: '#8B3A3A', hover: '#5C1F1F' }; // Against - DESTRUCTIVE
       case 3:
         return { bg: '#6b7280', hover: '#4b5563' }; // Abstain - Gray
       default:
@@ -84,6 +89,8 @@ export const EnhancedVoteButton: React.FC<EnhancedVoteButtonProps> = ({
   }
 
   const handleVote = async () => {
+    console.log('🟢 [VOTE CLICKED] handleVote function called');
+
     if (!address) {
       toast({
         title: 'Wallet Required',
@@ -104,6 +111,78 @@ export const EnhancedVoteButton: React.FC<EnhancedVoteButtonProps> = ({
 
     try {
       setIsVoting(true);
+
+      // CRITICAL: Ensure Supabase session exists before voting
+      console.log('🔐 [VOTE DEBUG] Starting vote submission for proposal:', proposal.id);
+      console.log('🔐 [VOTE DEBUG] Wallet address:', address);
+      console.log('🔐 [VOTE DEBUG] Choice:', choice, '→', getChoiceText(choice).toLowerCase());
+
+      const { data: sessionData } = await supabase.auth.getSession();
+      console.error('🔐 [VOTE DEBUG] Session check result:', {
+        hasSession: !!sessionData?.session,
+        sessionUser: sessionData?.session?.user?.id,
+      });
+
+      if (!sessionData?.session) {
+        console.error('⚠️ [VOTE DEBUG] No Supabase session found. Creating one...');
+
+        // Authenticate with Supabase using wallet address
+        const authResponse = await fetch('/api/auth/onchainkit', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            address: address,
+            isEmbedded: true,
+          }),
+        });
+
+        console.log('🔐 [VOTE DEBUG] Auth API response status:', authResponse.status);
+
+        if (!authResponse.ok) {
+          const errorText = await authResponse.text();
+          console.error('❌ [VOTE DEBUG] Auth API failed:', errorText);
+          throw new Error('Failed to authenticate with Supabase');
+        }
+
+        const { supabaseToken, supabaseRefreshToken } = await authResponse.json();
+
+        if (!supabaseToken || !supabaseRefreshToken) {
+          console.error('❌ [VOTE DEBUG] No tokens received from auth API');
+          throw new Error('No authentication tokens received');
+        }
+
+        console.log('✅ [VOTE DEBUG] Received auth tokens, creating session...');
+
+        // Set Supabase session
+        await createSupabaseSession(supabaseToken, supabaseRefreshToken);
+
+        // Verify session was created
+        const { data: newSessionData } = await supabase.auth.getSession();
+        console.log('✅ [VOTE DEBUG] Session created:', {
+          hasSession: !!newSessionData?.session,
+          userId: newSessionData?.session?.user?.id,
+        });
+
+        // Log JWT claims for debugging
+        if (newSessionData?.session) {
+          console.error('🔐 [VOTE DEBUG] JWT claims:', {
+            sub: newSessionData.session.user.id,
+            wallet_address: (newSessionData.session.user as any).wallet_address,
+            userMetadata: newSessionData.session.user.user_metadata,
+            appMetadata: newSessionData.session.user.app_metadata,
+          });
+        }
+      } else {
+        console.error('✅ [VOTE DEBUG] Supabase session already exists');
+
+        // Log JWT claims for debugging
+        console.error('🔐 [VOTE DEBUG] Existing JWT claims:', {
+          sub: sessionData.session.user.id,
+          wallet_address: (sessionData.session.user as any).wallet_address,
+          userMetadata: sessionData.session.user.user_metadata,
+          appMetadata: sessionData.session.user.app_metadata,
+        });
+      }
 
       const voteValue = getChoiceText(choice).toLowerCase() as
         | 'against'
@@ -138,15 +217,21 @@ export const EnhancedVoteButton: React.FC<EnhancedVoteButtonProps> = ({
           signatureLength: signature.length,
         });
 
-        // Handle pod creation votes with signature
-        await GovernanceService.submitVote({
+        // Prepare vote data
+        // Normalize wallet address to lowercase for consistency
+        const voteData = {
           proposal_id: proposal.id,
-          voter_address: address,
+          voter_address: address.toLowerCase(),
           vote: voteValue,
           timestamp: voteMessage.timestamp,
           hat_id: voteMessage.hat_id,
           signature: signature,
-        });
+        };
+
+        console.error('📊 [VOTE DEBUG] Submitting vote with data:', voteData);
+
+        // Handle pod creation votes with signature
+        await GovernanceService.submitVote(voteData);
 
         toast({
           title: 'Vote Submitted',
