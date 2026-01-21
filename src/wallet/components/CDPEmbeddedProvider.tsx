@@ -62,6 +62,92 @@ interface CDPEmbeddedProviderProps {
  * @see https://docs.base.org/base-account/framework-integrations/cdp
  */
 export function CDPEmbeddedProvider({ children }: CDPEmbeddedProviderProps) {
+  // CRITICAL: Check for and clear stale CDP sessions BEFORE initialization
+  // This runs synchronously before React renders children
+  if (typeof window !== 'undefined') {
+    try {
+      const storageKeys = Object.keys(localStorage);
+      const cdpAuthKeys = storageKeys.filter(key =>
+        (key.includes('cdp') || key.includes('coinbase')) &&
+        (key.includes('token') || key.includes('refresh') || key.includes('session'))
+      );
+
+      // Check if any CDP auth keys exist
+      if (cdpAuthKeys.length > 0) {
+        // Check if the last session refresh was recent (within 24 hours)
+        const lastRefreshKey = 'cdp_last_refresh';
+        const lastRefresh = localStorage.getItem(lastRefreshKey);
+        const now = Date.now();
+
+        if (!lastRefresh || (now - parseInt(lastRefresh)) > 24 * 60 * 60 * 1000) {
+          console.warn('⚠️ Detected potentially stale CDP session (>24h old), clearing...');
+          cdpAuthKeys.forEach(key => {
+            console.log(`🗑️ Removing stale CDP key: ${key}`);
+            localStorage.removeItem(key);
+          });
+          localStorage.removeItem(lastRefreshKey);
+        } else {
+          // Update last refresh timestamp
+          localStorage.setItem(lastRefreshKey, now.toString());
+        }
+      }
+    } catch (error) {
+      console.error('Error checking CDP session age:', error);
+    }
+  }
+
+  // Handle CDP session refresh failures
+  useEffect(() => {
+    const handleCDPError = (event: ErrorEvent | PromiseRejectionEvent) => {
+      const error = 'reason' in event ? event.reason : event.error;
+      const errorMessage = error?.message || error?.toString() || '';
+
+      // Detect CDP refresh failures
+      if (
+        errorMessage.includes('auth/refresh') ||
+        errorMessage.includes('auth/logout') ||
+        (errorMessage.includes('400') && errorMessage.includes('cdp.coinbase.com'))
+      ) {
+        console.warn('⚠️ CDP session refresh failed, clearing stale session data...');
+
+        try {
+          // Clear CDP-related localStorage entries
+          const storageKeys = Object.keys(localStorage);
+          const cdpKeys = storageKeys.filter(key =>
+            key.toLowerCase().includes('cdp') ||
+            key.toLowerCase().includes('coinbase') ||
+            key.toLowerCase().includes('embedded') ||
+            key.toLowerCase().includes('wallet')
+          );
+
+          cdpKeys.forEach(key => {
+            console.log(`🗑️ Removing stale CDP key: ${key}`);
+            localStorage.removeItem(key);
+          });
+
+          // Don't reload immediately - let the app continue with a fresh session
+          console.log('✅ Stale CDP session cleared. Please reconnect your wallet.');
+        } catch (clearError) {
+          console.error('Failed to clear CDP session:', clearError);
+        }
+
+        // Prevent the error from propagating and causing a crash
+        if ('preventDefault' in event) {
+          event.preventDefault();
+        }
+      }
+    };
+
+    // Listen for both synchronous and async errors
+    window.addEventListener('error', handleCDPError);
+    window.addEventListener('unhandledrejection', handleCDPError);
+
+    return () => {
+      window.removeEventListener('error', handleCDPError);
+      window.removeEventListener('unhandledrejection', handleCDPError);
+    };
+  }, []);
+
   // Validate contract addresses on mount
   useEffect(() => {
     const validation = validateContractAddresses();
