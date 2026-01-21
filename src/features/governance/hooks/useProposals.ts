@@ -272,7 +272,7 @@ const fetchProposalsOnChain = async (
       // 5) Parse title/body from the markdown description
       const parts = description.split('\n\n');
       const title = parts[0].replace(/^#\s*/, '');
-      const body = parts[1] || '';
+      const body = parts.slice(1).join('\n\n'); // Capture ALL paragraphs after title
 
       // 6) Use on‑chain tallies for scores
       const choices = ['For', 'Against', 'Abstain'];
