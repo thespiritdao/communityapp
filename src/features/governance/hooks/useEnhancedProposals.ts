@@ -120,9 +120,8 @@ export const useEnhancedProposals = () => {
         // Filter for pods that need governance approval
         const pendingPods = pods.filter((pod) => {
           const status = (pod as any).status;
-          // Include draft, proposed, and active pods for governance voting
-          // Active pods are shown so users can see their votes and current tally
-          return status === 'proposed' || status === 'draft' || status === 'active';
+          // Include draft and proposed pods for governance voting
+          return status === 'proposed' || status === 'draft';
         });
 
         // Check which proposals the user can vote on based on permissions

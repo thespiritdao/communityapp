@@ -31,21 +31,72 @@ export class GovernanceService {
    */
   static async submitVote(vote: GovernanceVote): Promise<void> {
     try {
+      // CRITICAL: Verify session exists and has correct JWT structure
+      const { data: sessionCheck } = await supabase.auth.getSession();
+
+      if (!sessionCheck?.session) {
+        throw new Error('No active Supabase session. Please ensure you are authenticated.');
+      }
+
+      const session = sessionCheck.session;
+      const jwt = session.user;
+
+      // DEBUG: Log JWT structure
+      console.error('🔍 [VOTE DEBUG] JWT Structure Check:', {
+        sub: jwt.id,
+        role: jwt.role,
+        user_metadata: jwt.user_metadata,
+        wallet_in_metadata: jwt.user_metadata?.wallet_address,
+        app_metadata: jwt.app_metadata,
+      });
+
+      // CRITICAL: Verify wallet_address exists in user_metadata
+      const jwtWalletAddress = jwt.user_metadata?.wallet_address;
+      if (!jwtWalletAddress) {
+        console.error('❌ [VOTE DEBUG] JWT missing user_metadata.wallet_address!', {
+          available_metadata: jwt.user_metadata,
+        });
+        throw new Error('JWT does not contain wallet_address in user_metadata. Auth flow may be incomplete.');
+      }
+
+      // Verify the vote is from the authenticated wallet (case-insensitive)
+      const votingWallet = vote.voter_address.toLowerCase();
+      const jwtWallet = jwtWalletAddress.toLowerCase();
+
+      if (votingWallet !== jwtWallet) {
+        throw new Error(`Wallet mismatch: voting as ${votingWallet} but authenticated as ${jwtWallet}`);
+      }
+
+      const rowToInsert = {
+        proposal_id: vote.proposal_id,
+        voter_address: votingWallet, // Use lowercase for consistency
+        vote: vote.vote,
+        timestamp: vote.timestamp,
+        hat_id: vote.hat_id,
+        signature: vote.signature,
+      };
+
+      console.error('📊 [VOTE DEBUG] Inserting vote:', rowToInsert);
+      console.error('📊 [VOTE DEBUG] RLS will check: LOWER(voter_address) = LOWER(jwt.user_metadata.wallet_address)');
+      console.error(`📊 [VOTE DEBUG] Should match: "${votingWallet}" === "${jwtWallet}"`);
+
+      // Use the EXISTING supabase client that already has the session
       const { error } = await supabase.from('governance_votes').upsert(
-        {
-          proposal_id: vote.proposal_id,
-          voter_address: vote.voter_address,
-          vote: vote.vote,
-          timestamp: vote.timestamp,
-          hat_id: vote.hat_id,
-          signature: vote.signature,
-        },
+        rowToInsert,
         {
           onConflict: 'proposal_id,voter_address',
         },
       );
 
-      if (error) throw error;
+      if (error) {
+        console.error('❌ [VOTE DEBUG] Database error:', {
+          code: error.code,
+          message: error.message,
+          details: error.details,
+          hint: error.hint,
+        });
+        throw error;
+      }
 
       console.log('✅ Vote submitted successfully:', {
         proposal_id: vote.proposal_id,
@@ -176,20 +227,17 @@ export class GovernanceService {
         `📊 Proposal ${proposalId} vote count: ${approvalCount} for, ${rejectionCount} against, ${totalVotes} total`,
       );
 
-      // Determine new status based on votes
-      let newStatus = 'proposed'; // default
+      // ✅ FIX: Don't auto-change status after voting
+      // Keep proposals visible for continued voting
+      // Vote counts are tracked, but status remains 'proposed' until explicit action
 
-      // For initial deployment: 1 approval vote moves to active (simplified workflow)
-      // In production, you'd want more sophisticated thresholds
-      if (approvalCount >= 1 && approvalCount > rejectionCount) {
-        newStatus = 'active'; // Skip 'approved' state - go directly to active
-      } else if (rejectionCount > approvalCount && totalVotes >= 1) {
-        newStatus = 'rejected';
-      } else if (totalVotes === 0) {
-        // No votes yet, keep as draft/proposed
-        console.log('No votes yet, keeping current status');
-        return;
-      }
+      console.log(
+        `📊 Proposal ${proposalId}: ${approvalCount} for, ${rejectionCount} against, ${totalVotes} total votes`
+      );
+      console.log('✅ Vote counted successfully. Status remains "proposed" for continued voting.');
+
+      // Don't change status automatically - return early
+      return;
 
       // Validate the new status is allowed
       const allowedStatuses = [

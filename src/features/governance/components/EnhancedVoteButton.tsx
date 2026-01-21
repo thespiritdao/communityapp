@@ -237,6 +237,10 @@ export const EnhancedVoteButton: React.FC<EnhancedVoteButtonProps> = ({
           title: 'Vote Submitted',
           description: `Your ${voteValue} vote has been recorded and signed for pod creation proposal`,
         });
+
+        // Trigger immediate refetch to update button states
+        // Note: Vote counts may take a moment to update in database
+        onVoteSuccess?.();
       } else {
         // Handle governance votes - this would integrate with existing VoteButton logic
         toast({
@@ -245,11 +249,6 @@ export const EnhancedVoteButton: React.FC<EnhancedVoteButtonProps> = ({
         });
         return;
       }
-
-      // Wait for database to process vote and update counts before refetching
-      setTimeout(() => {
-        onVoteSuccess?.();
-      }, 3000); // 3 second delay for database processing
     } catch (error) {
       console.error('Failed to submit vote:', error);
       toast({
