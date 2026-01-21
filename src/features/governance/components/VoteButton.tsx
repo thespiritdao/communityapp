@@ -49,13 +49,14 @@ const VoteButton: React.FC<VoteButtonProps> = ({
     'dao-wide',
   );
 
-  // Use prop if provided, otherwise check via RPC (only when choice === 1 to avoid duplicate calls)
+  // Use prop if provided, otherwise check via RPC
   const hasVoted = hasVotedProp !== undefined ? hasVotedProp : hasVotedState;
 
-  // Check if user has already voted on this proposal (only for first button to avoid duplicate RPC calls)
+  // Check if user has already voted on this proposal
+  // All buttons need to check to ensure they all hide when user votes
   useEffect(() => {
-    // Skip if hasVoted was passed as prop OR if this is not the first button
-    if (hasVotedProp !== undefined || choice !== 1) return;
+    // Skip if hasVoted was passed as prop
+    if (hasVotedProp !== undefined) return;
 
     const checkIfVoted = async () => {
       if (!publicClient || !address || !proposalId) return;
@@ -75,7 +76,7 @@ const VoteButton: React.FC<VoteButtonProps> = ({
     };
 
     checkIfVoted();
-  }, [publicClient, address, proposalId, GOVERNOR_ADDRESS, hasVotedProp, choice]);
+  }, [publicClient, address, proposalId, GOVERNOR_ADDRESS, hasVotedProp]);
 
   // CDP transaction handler (non-sponsored)
   // ⚠️ IMPORTANT: Must be defined BEFORE any conditional returns to avoid React hooks error
@@ -127,19 +128,21 @@ const VoteButton: React.FC<VoteButtonProps> = ({
 
       console.log('✅ Vote submitted successfully:', result);
 
-      // Update local state
+      // Update local state optimistically
       setHasVotedState(true);
-
-      // Trigger refetch of proposals to update vote counts
-      if (onVoteSuccess) {
-        onVoteSuccess();
-      }
 
       toast({
         title: 'Vote submitted',
         description: `Your vote was cast on-chain${usePaymaster ? ' (gasless)' : ''}!`,
         variant: 'success',
       });
+
+      // Wait a moment for blockchain confirmation, then refetch to update vote counts and hasVoted state
+      setTimeout(() => {
+        if (onVoteSuccess) {
+          onVoteSuccess();
+        }
+      }, 2000); // 2 second delay to allow blockchain to process
     } catch (error: any) {
       console.error('Vote transaction failed:', error);
 
@@ -174,6 +177,38 @@ const VoteButton: React.FC<VoteButtonProps> = ({
   const choiceLabels = ['For', 'Against', 'Abstain'];
   const choiceLabel = choiceLabels[choice - 1] || `Choice ${choice}`;
 
+  // Get colors based on choice (matching SpiritDAO design system)
+  const getChoiceColors = (choiceNum: number) => {
+    switch (choiceNum) {
+      case 1: // For
+        return {
+          bg: '#3F7A5A', // Success Green
+          hover: '#2F5D50',
+          processing: '#6B7280'
+        };
+      case 2: // Against
+        return {
+          bg: '#8B3A3A', // Earthen Red
+          hover: '#5C1F1F',
+          processing: '#6B7280'
+        };
+      case 3: // Abstain
+        return {
+          bg: '#6b7280', // Gray
+          hover: '#4b5563',
+          processing: '#6B7280'
+        };
+      default:
+        return {
+          bg: '#2F5D50',
+          hover: '#1F453A',
+          processing: '#6B7280'
+        };
+    }
+  };
+
+  const colors = getChoiceColors(choice);
+
   // ✅ If user has already voted, show message only once (for first button)
   // and hide the other buttons
   if (hasVoted) {
@@ -195,15 +230,15 @@ const VoteButton: React.FC<VoteButtonProps> = ({
       disabled={isSponsoredProcessing || !address}
       className={`px-4 py-2 text-white rounded font-medium transition-all duration-200 ${isSponsoredProcessing ? 'opacity-50 cursor-not-allowed' : 'hover:shadow-lg'}`}
       style={{
-        backgroundColor: isSponsoredProcessing ? '#6B7280' : '#2F5D50',
+        backgroundColor: isSponsoredProcessing ? colors.processing : colors.bg,
       }}
       onMouseEnter={(e) => {
         if (!isSponsoredProcessing)
-          e.currentTarget.style.backgroundColor = '#1F453A';
+          e.currentTarget.style.backgroundColor = colors.hover;
       }}
       onMouseLeave={(e) => {
         if (!isSponsoredProcessing)
-          e.currentTarget.style.backgroundColor = '#2F5D50';
+          e.currentTarget.style.backgroundColor = colors.bg;
       }}
     >
       {isSponsoredProcessing ? 'Processing...' : choiceLabel}
