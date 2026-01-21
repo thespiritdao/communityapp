@@ -161,17 +161,35 @@ export const useEnhancedProposals = () => {
 
             let userVote = null;
             if (address && canVote) {
-              userVote = await GovernanceService.getUserVote(pod.id, address);
+              try {
+                userVote = await GovernanceService.getUserVote(pod.id, address);
+              } catch (error: any) {
+                // Silently handle getUserVote errors (406, etc) to prevent session disruption
+                console.log('Skipping vote check for pod:', pod.id, '- error:', error.code || error.message);
+                userVote = null;
+              }
             }
 
             // Get vote counts for this pod proposal
-            const votes = await GovernanceService.getProposalVotes(pod.id);
-            const voteCount = {
-              for: votes.filter((v) => v.vote === 'for').length,
-              against: votes.filter((v) => v.vote === 'against').length,
-              abstain: votes.filter((v) => v.vote === 'abstain').length,
-              total: votes.length,
+            let voteCount = {
+              for: 0,
+              against: 0,
+              abstain: 0,
+              total: 0,
             };
+
+            try {
+              const votes = await GovernanceService.getProposalVotes(pod.id);
+              voteCount = {
+                for: votes.filter((v) => v.vote === 'for').length,
+                against: votes.filter((v) => v.vote === 'against').length,
+                abstain: votes.filter((v) => v.vote === 'abstain').length,
+                total: votes.length,
+              };
+            } catch (error: any) {
+              // Silently handle vote count errors to prevent session disruption
+              console.log('Could not fetch votes for pod:', pod.id, '- using zeros');
+            }
 
             const proposal: EnhancedProposal = {
               id: pod.id,
