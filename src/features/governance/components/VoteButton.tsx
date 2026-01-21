@@ -137,12 +137,12 @@ const VoteButton: React.FC<VoteButtonProps> = ({
         variant: 'success',
       });
 
-      // Wait a moment for blockchain confirmation, then refetch to update vote counts and hasVoted state
+      // Wait for blockchain confirmation, then refetch to update vote counts and hasVoted state
       setTimeout(() => {
         if (onVoteSuccess) {
           onVoteSuccess();
         }
-      }, 2000); // 2 second delay to allow blockchain to process
+      }, 4000); // 4 second delay to ensure blockchain processes the transaction
     } catch (error: any) {
       console.error('Vote transaction failed:', error);
 
