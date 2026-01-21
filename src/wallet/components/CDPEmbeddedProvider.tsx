@@ -12,8 +12,31 @@ import { wagmiConfig } from '@/config/wagmi.client';
 import { base } from 'wagmi/chains';
 import { DEFAULT_PRIVACY_URL, DEFAULT_TERMS_URL } from '@/constants';
 
-// Create the QueryClient instance outside component
-const queryClient = new QueryClient();
+// Create the QueryClient instance outside component with conservative defaults
+// to prevent excessive RPC calls and rate limiting
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      // Increase stale time to reduce refetching
+      staleTime: 5 * 60 * 1000, // 5 minutes (up from default 0)
+      // Reduce automatic background refetching
+      refetchOnWindowFocus: false, // Don't refetch when window regains focus
+      refetchOnMount: false, // Don't refetch when component mounts if data exists
+      refetchOnReconnect: false, // Don't refetch when reconnecting
+      // Retry configuration for rate limits
+      retry: (failureCount, error: any) => {
+        // Don't retry on rate limit errors (429)
+        if (error?.status === 429 || error?.message?.includes('Too Many Requests')) {
+          console.warn('⚠️ Rate limit detected, not retrying');
+          return false;
+        }
+        // Retry other errors up to 2 times
+        return failureCount < 2;
+      },
+      retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
+    },
+  },
+});
 
 interface CDPEmbeddedProviderProps {
   children: ReactNode;

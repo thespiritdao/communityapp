@@ -277,6 +277,7 @@ export function CreateProposalForm({
   const [hasProcessedProposal, setHasProcessedProposal] = useState<
     string | null
   >(null);
+  const [submissionStatus, setSubmissionStatus] = useState<string>('');
 
   // Check governance access when wallet connects
   useEffect(() => {
@@ -468,25 +469,45 @@ export function CreateProposalForm({
       try {
         console.log('🗳️ Loading pods where user has governanceParticipation permission...');
 
-        // Get user's pod roles with governance permission from database
         const tokens: { id: string; label: string }[] = [];
+        const addedPodIds = new Set<string>(); // Track to avoid duplicates
 
+        // 1. Get pods from userRoles (synced memberships with governance permission)
         for (const role of userRoles || []) {
-          // Check if this role has governanceParticipation permission
           if (role.permissions?.governanceParticipation && role.podId) {
-            // Get pod name from database
             const { data: pod } = await supabase
               .from('pods')
               .select('name')
               .eq('id', role.podId)
               .single();
 
-            if (pod) {
+            if (pod && !addedPodIds.has(role.podId)) {
               tokens.push({
                 id: role.podId,
                 label: pod.name,
               });
+              addedPodIds.add(role.podId);
               console.log(`  ✅ Added pod with governance permission: ${pod.name}`);
+            }
+          }
+        }
+
+        // 2. ALSO include pods where user is explicitly a pod_lead (draft pods)
+        // This ensures draft pods where you're a leader show up even if membership isn't synced
+        const { data: ledPods, error: ledPodsError } = await supabase
+          .from('pods')
+          .select('id, name, pod_leads')
+          .contains('pod_leads', [address.toLowerCase()]);
+
+        if (!ledPodsError && ledPods) {
+          for (const pod of ledPods) {
+            if (!addedPodIds.has(pod.id)) {
+              tokens.push({
+                id: pod.id,
+                label: pod.name,
+              });
+              addedPodIds.add(pod.id);
+              console.log(`  ✅ Added pod where user is pod_lead: ${pod.name}`);
             }
           }
         }
@@ -810,6 +831,283 @@ export function CreateProposalForm({
     args: [...proposalArgs] as unknown as any[], // flatten tuple to array to avoid deep type recursion
   };
 
+  // Helper function to wait for receipt and extract real proposal ID
+  const waitForProposalConfirmation = async (
+    userOpHash: string,
+    tempProposalId: string,
+    proposalTitle: string,
+    proposalBody: string,
+    proposerAddress: string,
+    forumThreadId?: string,
+  ): Promise<string | null> => {
+    try {
+      console.log('\n========================================');
+      console.log('🔄 PROPOSAL CONFIRMATION DIAGNOSTICS');
+      console.log('========================================');
+      console.log('   UserOperationHash:', userOpHash);
+      console.log('   Temporary ID:', tempProposalId);
+      console.log('   Proposer Address:', proposerAddress);
+      console.log('   Title:', proposalTitle);
+      console.log('   Body (first 100 chars):', proposalBody.substring(0, 100));
+
+      // Create public client for Base
+      const publicClient = createPublicClient({
+        chain: base,
+        transport: http(),
+      });
+
+      const currentBlock = await publicClient.getBlockNumber();
+      console.log('   Current Block:', currentBlock);
+
+      // Try to check if the transaction exists at all
+      console.log('\n🔍 STEP 1: Checking if UserOperation transaction exists...');
+      try {
+        const tx = await publicClient.getTransaction({
+          hash: userOpHash as `0x${string}`,
+        });
+        if (tx) {
+          console.log('✅ Transaction found on-chain!');
+          console.log('   Block Number:', tx.blockNumber);
+          console.log('   From:', tx.from);
+          console.log('   To:', tx.to);
+          console.log('   Status:', tx.blockNumber ? 'Mined' : 'Pending');
+        }
+      } catch (txError: any) {
+        console.log('⚠️ Transaction not found by userOperationHash:', txError.message);
+        console.log('   This is expected for ERC-4337 transactions (hash mismatch)');
+      }
+
+      // APPROACH 1: Try to get receipt by userOperationHash (may work if hash matches)
+      console.log('\n🔍 STEP 2: Attempting direct receipt lookup (5s timeout)...');
+      let receipt;
+      try {
+        receipt = await publicClient.waitForTransactionReceipt({
+          hash: userOpHash as `0x${string}`,
+          timeout: 5_000, // Only wait 5 seconds instead of 30
+        });
+        console.log('✅ Receipt found! Block:', receipt.blockNumber);
+        console.log('   Transaction Hash:', receipt.transactionHash);
+        console.log('   Status:', receipt.status);
+
+        // Parse ProposalCreated event from logs
+        const proposalCreatedAbi = parseAbiItem(
+          'event ProposalCreated(uint256 proposalId, address proposer, address[] targets, uint256[] values, string[] signatures, bytes[] calldatas, uint256 startBlock, uint256 endBlock, string description)',
+        );
+
+        const logs = parseEventLogs({
+          abi: [proposalCreatedAbi],
+          logs: receipt.logs,
+        });
+
+        if (logs.length > 0) {
+          const realProposalId = logs[0].args.proposalId?.toString();
+          if (realProposalId) {
+            // Success via receipt lookup
+            await supabase
+              .from('proposal_metadata')
+              .update({
+                onchain_proposal_id: realProposalId,
+                transaction_hash: receipt.transactionHash,
+              })
+              .eq('onchain_proposal_id', tempProposalId);
+
+            console.log('✅ Proposal metadata updated successfully');
+            toast({
+              title: '✅ Proposal Confirmed!',
+              description: `Proposal #${realProposalId} is now live on-chain`,
+            });
+
+            return realProposalId;
+          }
+        }
+      } catch (waitError: any) {
+        console.warn('⚠️ Direct receipt lookup failed (expected for ERC-4337):', waitError.message);
+        console.log('🔄 Proceeding to event query method (the reliable approach)...');
+      }
+
+      // APPROACH 2: Query on-chain events directly (handles ERC-4337 hash mismatch)
+      console.log('\n🔍 STEP 3: Querying blockchain for ProposalCreated events...');
+      console.log('   Governor Contract:', GOVERNOR_ADDRESS);
+
+      // Wait 3 seconds for ERC-4337 bundler to process transaction
+      console.log('   ⏳ Waiting 3 seconds for bundler to process transaction...');
+      await new Promise(resolve => setTimeout(resolve, 3000));
+      console.log('   ✅ Wait complete, querying events...');
+
+      // Get latest block number (transactions may have been mined during the wait)
+      const latestBlock = await publicClient.getBlockNumber();
+      const fromBlock = latestBlock - 100n; // Look back ~5 minutes
+      console.log('   Latest Block:', latestBlock);
+      console.log('   Scanning blocks:', fromBlock, 'to', latestBlock, `(${100n} blocks)`);
+
+      const proposalCreatedAbi = parseAbiItem(
+        'event ProposalCreated(uint256 proposalId, address proposer, address[] targets, uint256[] values, string[] signatures, bytes[] calldatas, uint256 startBlock, uint256 endBlock, string description)',
+      );
+
+      console.log('   Event ABI:', proposalCreatedAbi.name);
+
+      let logs;
+      try {
+        logs = await publicClient.getLogs({
+          address: GOVERNOR_ADDRESS,
+          event: proposalCreatedAbi,
+          fromBlock,
+          toBlock: latestBlock,
+        });
+        console.log(`✅ Query successful! Found ${logs.length} recent ProposalCreated events`);
+      } catch (logError: any) {
+        console.error('❌ Failed to query logs:', logError.message);
+        console.error('   Full error:', logError);
+        return null;
+      }
+
+      if (logs.length === 0) {
+        console.log('⚠️ No ProposalCreated events found in the last 100 blocks');
+        console.log('   This suggests the proposal transaction may not have been executed yet');
+        console.log('   OR the transaction failed');
+        console.log('   OR we\'re looking at the wrong contract address');
+        return null;
+      }
+
+      // Build expected description format (MUST match the format used when creating the proposal)
+      const expectedDescription = `# ${proposalTitle}\n\n${proposalBody}${forumThreadId ? `\n\nForum: ${forumThreadId}` : ''}`;
+
+      console.log('   📋 Expected description includes forum ID:', !!forumThreadId);
+      if (forumThreadId) {
+        console.log('   📋 Forum Thread ID:', forumThreadId);
+      }
+
+      // Normalize function for comparison (handles whitespace differences)
+      const normalizeDescription = (desc: string) => {
+        return desc
+          .trim()
+          .replace(/\s+/g, ' ')  // Collapse multiple spaces
+          .replace(/\n\s+/g, '\n')  // Remove leading spaces from lines
+          .toLowerCase();
+      };
+
+      const normalizedExpected = normalizeDescription(expectedDescription);
+
+      console.log('\n🔍 STEP 4: Matching proposal by proposer + description...');
+      console.log('   Expected Proposer:', proposerAddress.toLowerCase());
+      console.log('   Expected Description Length:', expectedDescription.length);
+      console.log('   Expected Description (first 150 chars):');
+      console.log('   "' + expectedDescription.substring(0, 150).replace(/\n/g, '\\n') + '..."');
+      console.log('   Normalized Expected Length:', normalizedExpected.length);
+      console.log('   Normalized Expected (first 150 chars):');
+      console.log('   "' + normalizedExpected.substring(0, 150).replace(/\n/g, '\\n') + '..."');
+
+      // Find matching proposal
+      console.log(`\n📝 Checking ${logs.length} events for match...`);
+      for (let i = 0; i < logs.length; i++) {
+        const log = logs[i];
+        const parsed = parseEventLogs({
+          abi: [proposalCreatedAbi],
+          logs: [log],
+        })[0];
+
+        const logProposer = (parsed.args.proposer as string)?.toLowerCase();
+        const logDescription = parsed.args.description as string;
+        const proposalId = parsed.args.proposalId?.toString();
+
+        const normalizedLogDescription = normalizeDescription(logDescription || '');
+        const exactMatch = logDescription === expectedDescription;
+        const normalizedMatch = normalizedLogDescription === normalizedExpected;
+
+        const proposerMatches = logProposer === proposerAddress.toLowerCase();
+
+        console.log(`\n   ═══════════════════════════════════════`);
+        console.log(`   Event ${i + 1}/${logs.length}:`);
+        console.log('   ───────────────────────────────────────');
+        console.log('     Proposal ID:', proposalId);
+        console.log('     Block:', log.blockNumber);
+        console.log('     Transaction Hash:', log.transactionHash);
+        console.log('   ───────────────────────────────────────');
+        console.log('     Proposer:', logProposer);
+        console.log('     Proposer Match:', proposerMatches ? '✅ YES' : '❌ NO');
+        console.log('   ───────────────────────────────────────');
+        console.log('     Description Length:', logDescription?.length || 0);
+        console.log('     Description (first 150 chars):');
+        console.log('     "' + (logDescription?.substring(0, 150).replace(/\n/g, '\\n') || '') + '..."');
+        console.log('   ───────────────────────────────────────');
+        console.log('     Normalized Length:', normalizedLogDescription.length);
+        console.log('     Normalized (first 150 chars):');
+        console.log('     "' + normalizedLogDescription.substring(0, 150).replace(/\n/g, '\\n') + '..."');
+        console.log('   ───────────────────────────────────────');
+        console.log('     Exact Match:', exactMatch ? '✅ YES' : '❌ NO');
+        console.log('     Normalized Match:', normalizedMatch ? '✅ YES' : '❌ NO');
+
+        if (!exactMatch && !normalizedMatch && proposerMatches) {
+          console.log('   ───────────────────────────────────────');
+          console.log('     🔍 PROPOSER MATCHES BUT DESCRIPTION DIFFERS');
+          console.log('     Comparing character by character (first 200):');
+          const maxLen = Math.max(expectedDescription.length, (logDescription?.length || 0));
+          for (let j = 0; j < Math.min(maxLen, 200); j++) {
+            const expectedChar = expectedDescription[j] || '(end)';
+            const logChar = (logDescription || '')[j] || '(end)';
+            if (expectedChar !== logChar) {
+              console.log(`       Position ${j}: Expected "${expectedChar}" (code ${expectedChar.charCodeAt(0)}) vs Got "${logChar}" (code ${logChar.charCodeAt(0)})`);
+            }
+          }
+        }
+
+        if (logProposer === proposerAddress.toLowerCase() && (exactMatch || normalizedMatch)) {
+          const realProposalId = proposalId;
+
+          console.log('\n========================================');
+          console.log('✅ MATCH FOUND!');
+          console.log('========================================');
+          console.log('   Real Proposal ID:', realProposalId);
+          console.log('   Transaction Hash:', log.transactionHash);
+          console.log('   Block Number:', log.blockNumber);
+
+          // Update database
+          const { error: updateError } = await supabase
+            .from('proposal_metadata')
+            .update({
+              onchain_proposal_id: realProposalId,
+              transaction_hash: log.transactionHash,
+            })
+            .eq('onchain_proposal_id', tempProposalId);
+
+          if (updateError) {
+            console.error('❌ Failed to update database:', updateError);
+          } else {
+            console.log('✅ Proposal metadata updated successfully in database');
+          }
+
+          toast({
+            title: '✅ Proposal Confirmed!',
+            description: `Proposal #${realProposalId} is now live on-chain`,
+          });
+
+          return realProposalId;
+        }
+      }
+
+      console.log('\n========================================');
+      console.log('⏳ NO MATCH FOUND');
+      console.log('========================================');
+      console.log('   Checked', logs.length, 'events but none matched');
+      console.log('   Possible reasons:');
+      console.log('   1. Transaction still pending (not yet mined)');
+      console.log('   2. Transaction failed (check wallet/bundler)');
+      console.log('   3. Description format mismatch');
+      console.log('   4. Wrong contract address');
+      console.log('   Will retry automatically in background polling');
+      console.log('========================================\n');
+      return null;
+    } catch (error: any) {
+      console.error('\n========================================');
+      console.error('❌ ERROR IN CONFIRMATION PROCESS');
+      console.error('========================================');
+      console.error('Error message:', error.message);
+      console.error('Error stack:', error.stack);
+      console.error('========================================\n');
+      return null;
+    }
+  };
+
   // CDP transaction handler for proposal creation
   const handleCDPProposalCreation = useCallback(async () => {
     if (!currentUser?.evmSmartAccounts?.[0] || !proposalArgs) {
@@ -824,6 +1122,8 @@ export function CreateProposalForm({
     const smartAccount = currentUser.evmSmartAccounts[0];
 
     try {
+      setSubmissionStatus('🔄 Preparing transaction...');
+
       // Encode the proposal call
       const callData = encodeFunctionData({
         abi: DAOGovernorABI,
@@ -834,7 +1134,11 @@ export function CreateProposalForm({
       console.log('🚀 CDP Proposal Creation:', {
         smartAccount,
         args: proposalArgs,
+        callData,
+        targetContract: GOVERNOR_ADDRESS,
       });
+
+      setSubmissionStatus('📡 Submitting to blockchain...');
 
       const result = await sendUserOperation({
         evmSmartAccount: smartAccount,
@@ -848,6 +1152,8 @@ export function CreateProposalForm({
       });
 
       console.log('✅ Proposal submitted:', result);
+      console.log('🔑 UserOperation Hash:', result.userOperationHash);
+      console.log('📝 Smart Account:', smartAccount);
 
       // Process success (extracted from OnchainKit onSuccess)
       setHasInteracted(false);
@@ -858,7 +1164,18 @@ export function CreateProposalForm({
       }
       setHasProcessedProposal(txHash || null);
 
-      toast({ title: '✅ Proposal Created!', description: 'Processing metadata...' });
+      setSubmissionStatus('✅ Transaction submitted! Creating proposal metadata...');
+
+      toast({
+        title: '✅ Proposal Submitted!',
+        description: 'Waiting for blockchain confirmation...'
+      });
+
+      // Capture form data values before resetting (for use in async callbacks)
+      const proposalTitle = formData.title;
+      const proposalBody = formData.body;
+      const proposalTokenId = formData.selectedToken;
+      const proposalForumThreadId = formData.forumThreadId;
 
       // Reset form
       setFormData({
@@ -868,17 +1185,17 @@ export function CreateProposalForm({
         selectedToken: '',
       });
 
-      // Note: For CDP, we may not have immediate access to transaction logs
-      // We'll use a temporary ID based on the user operation hash
-      const realProposalId = txHash ? `temp_${txHash.slice(2, 10)}` : null;
+      // Use a temporary ID based on the user operation hash
+      const tempProposalId = txHash ? `temp_${txHash.slice(2, 10)}` : null;
+      console.log('🆔 Temporary Proposal ID:', tempProposalId);
 
-      if (realProposalId) {
+      if (tempProposalId && txHash) {
         try {
           // Check if proposal metadata already exists
           const { data: existingMetadata, error: checkError } = await supabase
             .from('proposal_metadata')
             .select('id')
-            .eq('onchain_proposal_id', realProposalId)
+            .eq('onchain_proposal_id', tempProposalId)
             .maybeSingle();
 
           // Only insert if no existing metadata found
@@ -887,20 +1204,20 @@ export function CreateProposalForm({
             const mentionRegex = /@\[([^\]]+)\]\(([^)]+)\)/g;
             const mentions: string[] = [];
             let match;
-            while ((match = mentionRegex.exec(formData.body)) !== null) {
+            while ((match = mentionRegex.exec(proposalBody)) !== null) {
               mentions.push(match[2]);
             }
 
-            // Insert proposal metadata
+            // Insert proposal metadata with temporary ID
             const { error: metadataError } = await supabase
               .from('proposal_metadata')
               .insert([{
-                onchain_proposal_id: realProposalId,
-                title: formData.title,
-                description: formData.body,
+                onchain_proposal_id: tempProposalId, // Temporary ID
+                title: proposalTitle,
+                description: proposalBody,
                 proposer_address: address,
-                forum_thread_id: formData.forumThreadId,
-                token_id: formData.selectedToken,
+                forum_thread_id: proposalForumThreadId,
+                token_id: proposalTokenId,
                 created_at: new Date().toISOString(),
                 transaction_hash: txHash,
                 mentions: mentions,
@@ -909,30 +1226,68 @@ export function CreateProposalForm({
 
             if (metadataError) {
               console.error('❌ Error inserting proposal metadata:', metadataError);
+            } else {
+              console.log('✅ Proposal metadata created with temporary ID:', tempProposalId);
             }
           }
 
-          // Create notifications for token holders
-          if (formData.selectedToken) {
-            try {
-              await votingReminderService.notifyTokenHoldersOfNewProposal(
-                realProposalId,
-                formData.title,
-                address!,
-              );
-              console.log('✅ Token holder notifications sent');
-            } catch (tokenNotificationError) {
-              console.error('❌ Error creating token holder notifications:', tokenNotificationError);
-            }
-          }
+          setSubmissionStatus('⏳ Waiting for blockchain confirmation (this may take 30-60 seconds)...');
 
-          console.log('✅ Proposal creation completed with metadata and notifications');
+          // Wait for on-chain confirmation and update with real ID
+          // This runs in the background - don't await it
+          waitForProposalConfirmation(
+            txHash,
+            tempProposalId,
+            proposalTitle,
+            proposalBody,
+            address!,
+            proposalForumThreadId, // Pass forum thread ID so we can match the exact description format
+          ).then((realProposalId) => {
+            if (realProposalId) {
+              setSubmissionStatus('✅ Proposal confirmed on-chain! Sending notifications...');
+
+              // Send token holder notifications with real ID
+              if (proposalTokenId) {
+                votingReminderService.notifyTokenHoldersOfNewProposal(
+                  realProposalId,
+                  proposalTitle,
+                  address!,
+                ).then(() => {
+                  console.log('✅ Token holder notifications sent');
+                  setSubmissionStatus('✅ Proposal created successfully!');
+                  setTimeout(() => setSubmissionStatus(''), 3000);
+                }).catch((err) => {
+                  console.error('❌ Error creating token holder notifications:', err);
+                  setSubmissionStatus('⚠️ Proposal created but notification failed');
+                  setTimeout(() => setSubmissionStatus(''), 5000);
+                });
+              } else {
+                setSubmissionStatus('✅ Proposal created successfully!');
+                setTimeout(() => setSubmissionStatus(''), 3000);
+              }
+
+              // Refresh proposals list to show confirmed proposal
+              onSuccess?.();
+            } else {
+              setSubmissionStatus('⏳ Proposal pending confirmation - will update automatically');
+              setTimeout(() => setSubmissionStatus(''), 5000);
+              console.log('⏳ Proposal remains in pending state - will be confirmed later');
+            }
+          }).catch((err) => {
+            console.error('❌ Error in confirmation process:', err);
+            setSubmissionStatus('⚠️ Confirmation check failed - proposal may still be processing');
+            setTimeout(() => setSubmissionStatus(''), 5000);
+          });
+
+          console.log('✅ Proposal submitted with temporary ID - confirmation in progress');
         } catch (error) {
           console.error('❌ Error in post-transaction processing:', error);
+          setSubmissionStatus('❌ Error processing proposal');
+          setTimeout(() => setSubmissionStatus(''), 5000);
         }
       }
 
-      // Refresh and reload
+      // Refresh and reload immediately (will show pending proposal)
       onSuccess?.();
       setTimeout(() => {
         refreshNotifications();
@@ -942,6 +1297,9 @@ export function CreateProposalForm({
 
     } catch (error: any) {
       console.error('❌ Proposal Transaction Error:', error.message);
+      console.error('Full error:', error);
+      setSubmissionStatus('❌ Transaction failed');
+      setTimeout(() => setSubmissionStatus(''), 5000);
       toast({
         title: 'Proposal Failed',
         description: error.message || 'Unknown error',
@@ -999,52 +1357,10 @@ export function CreateProposalForm({
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
+    <div className="py-8">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
 
-        <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-gray-900 mb-4">
-            Submit Proposal
-          </h1>
-          <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-            Create a new proposal for the SpiritDAO community to vote on.
-          </p>
-        </div>
-
         <div className="bg-white rounded-xl shadow-lg overflow-hidden">
-
-          <div
-            className="px-6 py-4"
-            style={{ backgroundColor: '#e9f9ec', color: '#000' }}
-          >
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-4">
-                <div className="flex items-center space-x-2">
-                  <div
-                    className="w-3 h-3 rounded-full"
-                    style={{
-                      backgroundColor: isConnected ? '#3F7A5A' : '#8B3A3A',
-                    }}
-                  />
-                  <span className="text-sm font-medium">
-                    {isConnected
-                      ? 'Identity Confirmed'
-                      : 'Identity Unconfirmed'}
-                  </span>
-                </div>
-                {isConnected && (
-                  <div className="text-sm">
-                    <span className="opacity-75">Advocate NFTs: </span>
-                    <span className="font-semibold">
-                      {nftBalance?.toString() || '0'}
-                    </span>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-
-
           <div className="p-8">
 
             {validationError ? (
@@ -1076,7 +1392,7 @@ export function CreateProposalForm({
               }}
             >
               <h4 className="font-semibold mb-3" style={{ color: '#1F453A' }}>
-                📋 Proposal Requirements
+                📋 Requirements
               </h4>
               <div
                 className="grid md:grid-cols-2 gap-4 text-sm"
@@ -1087,11 +1403,16 @@ export function CreateProposalForm({
                     <span
                       className="w-2 h-2 rounded-full mr-2"
                       style={{
-                        backgroundColor: isConnected ? '#3F7A5A' : '#8B3A3A',
+                        backgroundColor:
+                          nftBalance !== undefined && nftBalance !== null && BigInt(String(nftBalance)) > 0n
+                            ? '#3F7A5A'
+                            : '#8B3A3A',
                       }}
                     />
-                    Wallet connected
+                    Verified Member
                   </div>
+                </div>
+                <div className="space-y-2">
                   <div className="flex items-center">
                     <span
                       className="w-2 h-2 rounded-full mr-2"
@@ -1102,7 +1423,7 @@ export function CreateProposalForm({
                             : '#8B3A3A',
                       }}
                     />
-                    Hold at least 1 Advocate NFT
+                    Role w/ Governance Permissions
                   </div>
                 </div>
                 <div className="space-y-2">
@@ -1516,13 +1837,38 @@ export function CreateProposalForm({
               )}
 
               {isConnected && canCreateProposal ? (
-                <button
-                  onClick={handleCDPProposalCreation}
-                  disabled={!canSubmitProposal}
-                  className="w-full font-semibold py-4 px-8 rounded-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl !bg-[#d7f8fd] !text-black"
-                >
-                  {isDelegating ? 'Delegating...' : 'Submit Proposal'}
-                </button>
+                <>
+                  <button
+                    onClick={handleCDPProposalCreation}
+                    disabled={!canSubmitProposal || submissionStatus !== ''}
+                    className="w-full font-semibold py-4 px-8 rounded-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl"
+                    style={{
+                      backgroundColor: '#2F5D50',
+                      color: '#FFFFFF',
+                    }}
+                    onMouseEnter={(e) => {
+                      if (!e.currentTarget.disabled) {
+                        e.currentTarget.style.backgroundColor = '#1F453A';
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      if (!e.currentTarget.disabled) {
+                        e.currentTarget.style.backgroundColor = '#2F5D50';
+                      }
+                    }}
+                  >
+                    {isDelegating ? 'Delegating...' : 'Submit Proposal'}
+                  </button>
+
+                  {/* Submission Status Display */}
+                  {submissionStatus && (
+                    <div className="mt-4 p-3 rounded-lg bg-blue-50 border border-blue-200">
+                      <p className="text-sm text-blue-800 text-center font-medium">
+                        {submissionStatus}
+                      </p>
+                    </div>
+                  )}
+                </>
               ) : (
                 <div className="text-center">
                   <button

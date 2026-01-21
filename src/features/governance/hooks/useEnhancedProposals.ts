@@ -57,7 +57,7 @@ const HATS_ABI = [
 export const useEnhancedProposals = () => {
   const { evmAddress: address } = useEvmAddress();
   const publicClient = usePublicClient();
-  const { data: onChainProposals = [], ...onChainQuery } = useProposals();
+  const { data: onChainProposals = [], isLoading: proposalsLoading, ...onChainQuery } = useProposals();
   const { canParticipateInGovernance, userRoles, hasPermission } =
     useHatPermissions();
 
@@ -71,13 +71,27 @@ export const useEnhancedProposals = () => {
       address,
       hasDAOGovernancePermission,
       userRoles.length,
+      onChainProposals.length, // Add dependency on actual data
     ],
     queryFn: async (): Promise<EnhancedProposal[]> => {
+      console.log('🔄 useEnhancedProposals: Starting query function');
+      console.log(`📥 Received ${onChainProposals.length} proposals from useProposals`);
+      console.log(`⏳ useProposals loading: ${proposalsLoading}`);
+
       const allProposals: EnhancedProposal[] = [];
 
       // 1. Add on-chain governance proposals (DAO-wide, require Executive Pod permission)
       const execPodId = process.env.NEXT_PUBLIC_GOVERNANCE_POD_ID;
+      console.log(`🏛️ Executive Pod ID: ${execPodId}`);
+      console.log(`✅ User has DAO governance permission: ${hasDAOGovernancePermission}`);
+
       for (const proposal of onChainProposals) {
+        // Use metadata.created_at if available (for pending proposals), otherwise use current time
+        const createdAt = proposal.metadata?.created_at || new Date().toISOString();
+        const proposalStatus = proposal.isPending ? 'proposed' : undefined;
+
+        console.log(`📋 Processing proposal: ${proposal.title} (${proposal.id}, pending: ${!!proposal.isPending})`);
+
         allProposals.push({
           id: proposal.id,
           title: proposal.title,
@@ -88,13 +102,16 @@ export const useEnhancedProposals = () => {
           choices: proposal.choices,
           scores: proposal.scores,
           state: proposal.state,
-          created_at: new Date().toISOString(),
+          status: proposalStatus, // Mark pending proposals with status
+          created_at: createdAt,
           user_can_vote: hasDAOGovernancePermission, // ✅ Executive Pod governance
           user_vote: null,
           approving_pod_id: execPodId,
           governance_context: 'dao-wide',
         });
       }
+
+      console.log(`✅ Added ${onChainProposals.length} governance proposals to allProposals`);
 
       // 2. Add pod creation proposals
       try {
@@ -158,8 +175,8 @@ export const useEnhancedProposals = () => {
 
             const proposal: EnhancedProposal = {
               id: pod.id,
-              title: `Create Pod: ${pod.name}`,
-              body: `**Pod Creation Proposal**\n\n${pod.description}\n\n**Pod Leads:** ${podProposal.pod_leads?.length || 0} member(s)\n\n**Parent Pod:** ${podProposal.parent_pod_id || 'Root'}\n\n**Created by:** ${podProposal.created_by_address || 'Unknown'}`,
+              title: pod.name,
+              body: pod.description || 'No description provided.',
               type: 'pod_creation',
               choices: ['Against', 'For', 'Abstain'],
               status: podProposal.status,
@@ -191,13 +208,22 @@ export const useEnhancedProposals = () => {
       }
 
       // Sort by creation date, newest first
-      return allProposals.sort(
+      const sortedProposals = allProposals.sort(
         (a, b) =>
           new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
       );
+
+      console.log(`🎯 useEnhancedProposals: Returning ${sortedProposals.length} total proposals`);
+      console.log('📊 Proposal breakdown:', {
+        governance: sortedProposals.filter(p => p.type === 'governance').length,
+        podCreation: sortedProposals.filter(p => p.type === 'pod_creation').length,
+        pending: sortedProposals.filter(p => p.status === 'proposed').length,
+      });
+
+      return sortedProposals;
     },
-    enabled: !!address, // Only run when user is connected
-    staleTime: 30_000,
-    refetchInterval: 60_000,
+    enabled: !!address && !proposalsLoading, // Wait for useProposals to finish loading
+    staleTime: 60_000, // Increased from 30s to 60s
+    refetchInterval: 5 * 60_000, // Increased from 60s to 5min to reduce load
   });
 };
