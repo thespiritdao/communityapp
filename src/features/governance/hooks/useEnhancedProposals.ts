@@ -65,17 +65,24 @@ export const useEnhancedProposals = () => {
   const { canParticipate: hasDAOGovernancePermission } =
     useGovernancePermission(undefined, 'dao-wide');
 
+  // Create a permission hash to detect permission changes
+  const permissionHash = userRoles
+    .map(role => `${role.podId}:${role.permissions?.governanceParticipation}`)
+    .sort()
+    .join('|');
+
   return useQuery<EnhancedProposal[]>({
     queryKey: [
       'enhanced-proposals',
       address,
       hasDAOGovernancePermission,
-      userRoles.length,
-      onChainProposals.length, // Add dependency on actual data
+      permissionHash, // ✅ FIX: Track actual permission values, not just array length
+      onChainProposals.length,
     ],
     queryFn: async (): Promise<EnhancedProposal[]> => {
-      // console.log('🔄 useEnhancedProposals: Starting query function');
-      // console.log(`📥 Received ${onChainProposals.length} proposals from useProposals`);
+      console.log('🔄 [ENHANCED PROPOSALS] Starting query function');
+      console.log('🔑 [ENHANCED PROPOSALS] Permission hash:', permissionHash);
+      console.log('📥 [ENHANCED PROPOSALS] On-chain proposals:', onChainProposals.length);
 
       const allProposals: EnhancedProposal[] = [];
 
@@ -143,14 +150,13 @@ export const useEnhancedProposals = () => {
             const canVote =
               approverRole?.permissions?.governanceParticipation === true;
 
-            // console.log('🏛️ Pod Creation Vote Check:', {
-            //   podName: pod.name,
-            //   parentPodId,
-            //   isTopLevelPod,
-            //   approvingPodId,
-            //   canVote,
-            //   context: isTopLevelPod ? 'Executive Pod' : 'Parent Pod',
-            // });
+            console.log('🏛️ [POD VOTE CHECK]', {
+              podName: pod.name,
+              approvingPodId,
+              approverRole: approverRole ? `Found (${approverRole.role_name})` : 'Not found',
+              governancePermission: approverRole?.permissions?.governanceParticipation,
+              canVote,
+            });
 
             let userVote = null;
             if (address && canVote) {
@@ -208,12 +214,9 @@ export const useEnhancedProposals = () => {
           }),
         );
 
-        // Filter to only show proposals user can vote on OR has already voted on
-        const relevantPodProposals = userVotableProposals.filter(
-          (proposal) => proposal.user_can_vote || proposal.user_vote,
-        );
-
-        allProposals.push(...relevantPodProposals);
+        // ✅ TRANSPARENCY FIX: Show ALL pod proposals (filter happens at page level)
+        // The page-level filter toggle will handle "My Proposals" vs "All Proposals"
+        allProposals.push(...userVotableProposals);
       } catch (error) {
         console.error('Failed to load pod proposals:', error);
       }
@@ -234,7 +237,7 @@ export const useEnhancedProposals = () => {
       return sortedProposals;
     },
     enabled: !!address && !proposalsLoading, // Wait for useProposals to finish loading
-    staleTime: 60_000, // Increased from 30s to 60s
-    refetchInterval: 5 * 60_000, // Increased from 60s to 5min to reduce load
+    staleTime: 5_000, // 5 seconds - shorter to reflect permission changes quickly
+    refetchInterval: 30_000, // 30 seconds - balance between freshness and load
   });
 };
