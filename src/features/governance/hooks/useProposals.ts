@@ -184,16 +184,31 @@ const fetchProposalsOnChain = async (
     }),
   );
 
+  // OPTIMIZATION: Fetch ALL vote counts in a single batch query to avoid N+1 problem
+  const proposalIds = decoded.map(ev => (ev.args as any).proposalId.toString());
+  const { data: allVoteCounts } = await supabase
+    .from('governance_proposal_votes')
+    .select('proposal_id, for_votes, against_votes, abstain_votes')
+    .in('proposal_id', proposalIds);
+
+  // Create a Map for O(1) lookups
+  const voteCountsMap = new Map(
+    (allVoteCounts || []).map(v => [v.proposal_id, v])
+  );
+
+  console.log(`📊 Batch loaded vote counts for ${voteCountsMap.size}/${proposalIds.length} proposals`);
+
   const proposals: Proposal[] = [];
   for (const ev of decoded) {
     try {
       // Keep ID as BigInt to preserve precision (these IDs are too large for JavaScript Number)
       const proposalId = (ev.args as any).proposalId as bigint;
+      const proposalIdStr = proposalId.toString();
       const description = (ev.args as any).description as string;
 
       // Log each proposal being processed
       const titlePreview = description.split('\n\n')[0].replace(/^#\s*/, '').substring(0, 50);
-      // console.log(`📝 Processing on-chain proposal: ${titlePreview}... (ID: ${proposalId.toString()})`);
+      // console.log(`📝 Processing on-chain proposal: ${titlePreview}... (ID: ${proposalIdStr})`);
 
       // 3) Read on‑chain proposal data using OpenZeppelin Governor functions
       // OPTIMIZATION: Query vote counts from database instead of contract
@@ -219,17 +234,13 @@ const fetchProposalsOnChain = async (
           }) as Promise<bigint>,
         ]);
       } catch (contractError) {
-        console.error(`❌ Failed to read proposal data for ${proposalId.toString()}:`, contractError);
+        console.error(`❌ Failed to read proposal data for ${proposalIdStr}:`, contractError);
         startBlock = 0n;
         endBlock = 0n;
       }
 
-      // Query vote counts from database instead of blockchain
-      const { data: voteData } = await supabase
-        .from('governance_proposal_votes')
-        .select('for_votes, against_votes, abstain_votes')
-        .eq('proposal_id', proposalId.toString())
-        .maybeSingle();
+      // Lookup vote counts from batch-loaded data
+      const voteData = voteCountsMap.get(proposalIdStr);
 
       const core = {
         startBlock: startBlock || 0n,
@@ -238,14 +249,6 @@ const fetchProposalsOnChain = async (
         againstVotes: voteData ? BigInt(voteData.against_votes || 0) : 0n,
         abstainVotes: voteData ? BigInt(voteData.abstain_votes || 0) : 0n,
       };
-
-      // DEBUG: Log vote counts from database
-      console.log(`📊 [Proposal ${proposalId.toString().substring(0, 20)}...] Vote counts from DB:`, {
-        for: core.forVotes.toString(),
-        against: core.againstVotes.toString(),
-        abstain: core.abstainVotes.toString(),
-        hasData: !!voteData,
-      });
 
       // 4) Get proposal state with retry logic
       let state = -1; // Default to Unknown/Error state
