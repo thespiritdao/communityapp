@@ -231,6 +231,13 @@ const fetchProposalsOnChain = async (
         abstainVotes: votes.abstainVotes,
       };
 
+      // DEBUG: Log vote counts from blockchain
+      console.log(`📊 [Proposal ${proposalId.toString().substring(0, 20)}...] Vote counts from chain:`, {
+        for: votes.forVotes.toString(),
+        against: votes.againstVotes.toString(),
+        abstain: votes.abstainVotes.toString(),
+      });
+
       // 4) Get proposal state with retry logic
       let state = -1; // Default to Unknown/Error state
       let stateError = false;
