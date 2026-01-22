@@ -18,6 +18,7 @@ export default function GovernancePage() {
   const [activeTab, setActiveTab] = useState<'vote' | 'propose'>('vote');
   const [selectedProposal, setSelectedProposal] = useState<EnhancedProposal | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [proposalFilter, setProposalFilter] = useState<'all' | 'votable'>('votable');
 
   // Enhanced proposals that include both on-chain and pod proposals with HAT-based filtering
   const {
@@ -59,6 +60,11 @@ export default function GovernancePage() {
   const handleProposalCreated = useCallback(() => {
     refetchProposals();
   }, [refetchProposals]);
+
+  // Filter proposals based on selected filter
+  const filteredProposals = proposalFilter === 'all'
+    ? enhancedProposals
+    : enhancedProposals.filter(p => p.user_can_vote);
 
   // Fetch user profiles for proposal creators
   const [creatorProfiles, setCreatorProfiles] = useState<Map<string, any>>(new Map());
@@ -159,12 +165,40 @@ export default function GovernancePage() {
           {/* Active Proposals */}
           {activeTab === 'vote' && (
             <section aria-labelledby="active-proposals-heading">
-          <h2
-            id="active-proposals-heading"
-            className="text-2xl font-semibold mb-4 text-gray-800"
-          >
-            Active Proposals
-          </h2>
+          <div className="flex items-center justify-between mb-4">
+            <h2
+              id="active-proposals-heading"
+              className="text-2xl font-semibold text-gray-800"
+            >
+              Active Proposals
+            </h2>
+
+            {/* Filter Toggle */}
+            {address && (
+              <div className="flex items-center gap-2 bg-gray-100 rounded-lg p-1">
+                <button
+                  onClick={() => setProposalFilter('votable')}
+                  className="px-4 py-2 rounded-md text-sm font-medium transition-all duration-200"
+                  style={{
+                    backgroundColor: proposalFilter === 'votable' ? '#2F5D50' : 'transparent',
+                    color: proposalFilter === 'votable' ? '#FFFFFF' : '#2F5D50',
+                  }}
+                >
+                  My Proposals ({enhancedProposals.filter(p => p.user_can_vote).length})
+                </button>
+                <button
+                  onClick={() => setProposalFilter('all')}
+                  className="px-4 py-2 rounded-md text-sm font-medium transition-all duration-200"
+                  style={{
+                    backgroundColor: proposalFilter === 'all' ? '#2F5D50' : 'transparent',
+                    color: proposalFilter === 'all' ? '#FFFFFF' : '#2F5D50',
+                  }}
+                >
+                  All Proposals ({enhancedProposals.length})
+                </button>
+              </div>
+            )}
+          </div>
           {!address && (
             <div className="text-center p-8 bg-white rounded-lg shadow-lg">
               <Shield className="h-12 w-12 text-gray-400 mx-auto mb-4" />
@@ -190,22 +224,27 @@ export default function GovernancePage() {
           {address &&
             !proposalsLoading &&
             !proposalsError &&
-            enhancedProposals.length === 0 && (
+            filteredProposals.length === 0 && (
               <div className="text-center p-8 bg-white rounded-lg shadow-lg">
                 <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                <p className="text-gray-700">No proposals available for your current permissions</p>
+                <p className="text-gray-700">
+                  {proposalFilter === 'votable'
+                    ? 'No proposals available for you to vote on'
+                    : 'No proposals available'}
+                </p>
                 <p className="text-sm text-gray-500 mt-2">
-                  Proposals are filtered based on your pod memberships and HAT
-                  permissions
+                  {proposalFilter === 'votable'
+                    ? 'You can view all proposals using the "All Proposals" filter above.'
+                    : 'Check back later for new governance proposals.'}
                 </p>
               </div>
             )}
           {address &&
             !proposalsLoading &&
             !proposalsError &&
-            enhancedProposals.length > 0 && (
+            filteredProposals.length > 0 && (
               <ul className="space-y-6">
-                {enhancedProposals.map((proposal) => {
+                {filteredProposals.map((proposal) => {
                   const creatorProfile = proposal.created_by
                     ? creatorProfiles.get(proposal.created_by.toLowerCase())
                     : null;

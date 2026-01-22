@@ -77,14 +77,20 @@ export const EnhancedVoteButton: React.FC<EnhancedVoteButtonProps> = ({
   // ✅ FIX: Block voting if no permission
   if (!hasGovernancePermission) {
     return (
-      <Button
-        disabled
-        variant="outline"
-        size="sm"
-        title="You do not have governance participation permission in the required pod"
-      >
-        {getChoiceText(choice)} (No Permission)
-      </Button>
+      <div className="flex flex-col gap-1">
+        <Button
+          disabled
+          variant="outline"
+          size="sm"
+          title="You do not have governance participation permission in the required pod"
+          className="opacity-50"
+        >
+          {getChoiceText(choice)}
+        </Button>
+        <span className="text-xs text-gray-500 italic">
+          Insufficient permissions to vote
+        </span>
+      </div>
     );
   }
 
