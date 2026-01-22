@@ -37,19 +37,25 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// GET route to sync recent votes (last 100k blocks)
+// GET route to sync recent votes (last 50k blocks)
 export async function GET(request: NextRequest) {
   try {
     const { createPublicClient, http } = await import('viem');
     const { base } = await import('viem/chains');
 
+    const RPC_URL = process.env.NEXT_PUBLIC_RPC_URL ||
+                    process.env.NEXT_PUBLIC_BASE_RPC_URL ||
+                    'https://mainnet.base.org';
+
+    console.log(`🔗 Using RPC: ${RPC_URL.substring(0, 50)}...`);
+
     const publicClient = createPublicClient({
       chain: base,
-      transport: http(process.env.NEXT_PUBLIC_BASE_RPC_URL || 'https://mainnet.base.org'),
+      transport: http(RPC_URL),
     });
 
     const currentBlock = await publicClient.getBlockNumber();
-    const fromBlock = currentBlock - 100000n; // Last ~2.3 days
+    const fromBlock = currentBlock - 50000n; // Last ~1.15 days (reduced to avoid timeout)
 
     console.log(`📡 API: Auto-syncing votes from block ${fromBlock} to ${currentBlock}`);
 

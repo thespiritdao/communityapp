@@ -110,9 +110,13 @@ async function syncVoteCastEvent(
 export async function syncHistoricalVotes(fromBlock: bigint, toBlock: bigint) {
   console.log(`🔍 Syncing historical votes from block ${fromBlock} to ${toBlock}...`);
 
+  const RPC_URL = process.env.NEXT_PUBLIC_RPC_URL ||
+                  process.env.NEXT_PUBLIC_BASE_RPC_URL ||
+                  'https://mainnet.base.org';
+
   const publicClient = createPublicClient({
     chain: base,
-    transport: http(process.env.NEXT_PUBLIC_BASE_RPC_URL || 'https://mainnet.base.org'),
+    transport: http(RPC_URL),
   });
 
   const eventAbi = DAOGovernorABI.find(
@@ -161,9 +165,13 @@ export async function syncHistoricalVotes(fromBlock: bigint, toBlock: bigint) {
 export function watchVoteCastEvents() {
   console.log('👀 Starting VoteCast event watcher...');
 
+  const RPC_URL = process.env.NEXT_PUBLIC_RPC_URL ||
+                  process.env.NEXT_PUBLIC_BASE_RPC_URL ||
+                  'https://mainnet.base.org';
+
   const publicClient = createPublicClient({
     chain: base,
-    transport: http(process.env.NEXT_PUBLIC_BASE_RPC_URL || 'https://mainnet.base.org'),
+    transport: http(RPC_URL),
   });
 
   const unwatch = publicClient.watchEvent({
