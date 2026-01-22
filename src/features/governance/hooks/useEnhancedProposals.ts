@@ -15,7 +15,7 @@ export interface EnhancedProposal {
   id: string;
   title: string;
   body: string;
-  type: 'governance' | 'pod_creation';
+  type: 'governance' | 'pod_creation' | 'pod_level'; // ✅ NEW: pod-level proposals
   start?: number;
   end?: number;
   choices: string[];
@@ -35,8 +35,8 @@ export interface EnhancedProposal {
   user_can_vote: boolean;
   user_vote?: any;
   required_hat?: string;
-  // ✅ NEW: Track which pod should approve this proposal
-  approving_pod_id?: string; // Executive Pod for DAO-wide/top-level, Parent Pod for sub-pods
+  // ✅ Track which pod should approve this proposal
+  approving_pod_id?: string; // Specific pod for pod-level, Executive Pod for DAO-wide, Parent Pod for pod-creation
   governance_context?: 'dao-wide' | 'pod-level' | 'pod-creation';
 }
 

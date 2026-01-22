@@ -14,7 +14,7 @@ export interface GovernanceProposal {
   id: string;
   title: string;
   description: string;
-  proposal_type: 'pod_creation' | 'governance' | 'treasury' | 'other';
+  proposal_type: 'pod_creation' | 'governance' | 'pod_level' | 'treasury' | 'other'; // ✅ NEW: pod_level
   status: 'draft' | 'active' | 'approved' | 'rejected' | 'executed';
   created_by: string;
   created_at: string;
@@ -427,6 +427,125 @@ export class GovernanceService {
     } catch (error) {
       console.error('Failed to create governance proposal:', error);
       throw error;
+    }
+  }
+
+  /**
+   * ✅ NEW: Create a pod-level proposal
+   * These are governance proposals specific to a pod (not DAO-wide)
+   * Only members of the specified pod with governanceParticipation can vote
+   */
+  static async createPodLevelProposal(data: {
+    title: string;
+    description: string;
+    pod_id: string;
+    created_by: string;
+    metadata?: Record<string, any>;
+    onchain_proposal_id?: string;
+    transaction_hash?: string;
+  }): Promise<string> {
+    try {
+      const { data: proposal, error } = await supabase
+        .from('pod_level_proposals')
+        .insert({
+          title: data.title,
+          description: data.description,
+          pod_id: data.pod_id,
+          created_by: data.created_by.toLowerCase(),
+          status: 'proposed',
+          voting_deadline: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(), // 7 days
+          metadata: data.metadata || {},
+          onchain_proposal_id: data.onchain_proposal_id,
+          transaction_hash: data.transaction_hash,
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      console.log('✅ Pod-level proposal created:', proposal.id);
+      return proposal.id;
+    } catch (error) {
+      console.error('Failed to create pod-level proposal:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * ✅ NEW: Get all pod-level proposals with vote counts
+   * Optionally filter by pod_id
+   */
+  static async getPodLevelProposals(podId?: string): Promise<any[]> {
+    try {
+      let query = supabase
+        .from('pod_level_proposals')
+        .select('*, pods(name, description)')
+        .in('status', ['proposed', 'active', 'approved', 'rejected'])
+        .order('created_at', { ascending: false });
+
+      if (podId) {
+        query = query.eq('pod_id', podId);
+      }
+
+      const { data: proposals, error } = await query;
+
+      if (error) throw error;
+
+      // Get vote counts for each proposal
+      const proposalsWithVotes = await Promise.all(
+        (proposals || []).map(async (proposal) => {
+          const votes = await this.getProposalVotes(proposal.id);
+
+          const voteCount = {
+            for: votes.filter((v) => v.vote === 'for').length,
+            against: votes.filter((v) => v.vote === 'against').length,
+            abstain: votes.filter((v) => v.vote === 'abstain').length,
+            total: votes.length,
+          };
+
+          return {
+            ...proposal,
+            vote_counts: voteCount,
+          };
+        }),
+      );
+
+      return proposalsWithVotes;
+    } catch (error) {
+      console.error('Failed to get pod-level proposals:', error);
+      return [];
+    }
+  }
+
+  /**
+   * ✅ NEW: Get a single pod-level proposal by ID
+   */
+  static async getPodLevelProposal(proposalId: string): Promise<any | null> {
+    try {
+      const { data: proposal, error } = await supabase
+        .from('pod_level_proposals')
+        .select('*, pods(name, description)')
+        .eq('id', proposalId)
+        .single();
+
+      if (error) throw error;
+
+      // Get vote counts
+      const votes = await this.getProposalVotes(proposalId);
+      const voteCount = {
+        for: votes.filter((v) => v.vote === 'for').length,
+        against: votes.filter((v) => v.vote === 'against').length,
+        abstain: votes.filter((v) => v.vote === 'abstain').length,
+        total: votes.length,
+      };
+
+      return {
+        ...proposal,
+        vote_counts: voteCount,
+      };
+    } catch (error) {
+      console.error('Failed to get pod-level proposal:', error);
+      return null;
     }
   }
 }
