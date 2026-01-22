@@ -241,14 +241,22 @@ export function CreateProposalForm({
   // Check wallet connection status
   const isConnected = Boolean(currentUser && address);
 
-  // ✅ Check governance participation permission from consolidated HAT permissions
-  const hasGovernancePermission = hatPermissions?.governanceParticipation ?? false;
+  // ✅ FIXED: Check governance participation permission for SPECIFIC pods, not global
+  // Use pod-specific permissions instead of consolidated permissions to prevent bypass
+  const podsWithGovernancePermission = React.useMemo(() => {
+    return (userRoles || [])
+      .filter(role => role.permissions?.governanceParticipation === true && role.podId)
+      .map(role => role.podId);
+  }, [userRoles]);
+
+  // User can create proposals if they have governance permission in at least one pod
+  const hasGovernancePermission = podsWithGovernancePermission.length > 0;
 
   console.log('🏛️ Governance Permission Check:', {
     address,
     isConnected,
     hasGovernancePermission,
-    hatPermissions,
+    podsWithGovernance: podsWithGovernancePermission.length,
     userRolesCount: userRoles?.length || 0,
   });
 
@@ -472,7 +480,8 @@ export function CreateProposalForm({
         const tokens: { id: string; label: string }[] = [];
         const addedPodIds = new Set<string>(); // Track to avoid duplicates
 
-        // 1. Get pods from userRoles (synced memberships with governance permission)
+        // ✅ SECURITY FIX: Only load pods where user has governanceParticipation permission
+        // Removed pod_leads bypass that allowed proposal creation without permission check
         for (const role of userRoles || []) {
           if (role.permissions?.governanceParticipation && role.podId) {
             const { data: pod } = await supabase
@@ -489,25 +498,15 @@ export function CreateProposalForm({
               addedPodIds.add(role.podId);
               console.log(`  ✅ Added pod with governance permission: ${pod.name}`);
             }
-          }
-        }
-
-        // 2. ALSO include pods where user is explicitly a pod_lead (draft pods)
-        // This ensures draft pods where you're a leader show up even if membership isn't synced
-        const { data: ledPods, error: ledPodsError } = await supabase
-          .from('pods')
-          .select('id, name, pod_leads')
-          .contains('pod_leads', [address.toLowerCase()]);
-
-        if (!ledPodsError && ledPods) {
-          for (const pod of ledPods) {
-            if (!addedPodIds.has(pod.id)) {
-              tokens.push({
-                id: pod.id,
-                label: pod.name,
-              });
-              addedPodIds.add(pod.id);
-              console.log(`  ✅ Added pod where user is pod_lead: ${pod.name}`);
+          } else if (role.podId) {
+            // Log pods where user does NOT have governance permission
+            const { data: pod } = await supabase
+              .from('pods')
+              .select('name')
+              .eq('id', role.podId)
+              .single();
+            if (pod) {
+              console.log(`  ⚠️ Skipped pod (no governance permission): ${pod.name}`);
             }
           }
         }
@@ -1119,6 +1118,21 @@ export function CreateProposalForm({
       return;
     }
 
+    // ✅ SECURITY: Validate that user has governance permission in the selected pod
+    const selectedPodId = formData.selectedToken;
+    if (selectedPodId && !podsWithGovernancePermission.includes(selectedPodId)) {
+      console.error('❌ Authorization failed: User does not have governance permission in selected pod', {
+        selectedPod: selectedPodId,
+        allowedPods: podsWithGovernancePermission,
+      });
+      toast({
+        title: 'Authorization Error',
+        description: 'You do not have governance participation permission in the selected pod',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     const smartAccount = currentUser.evmSmartAccounts[0];
 
     try {
@@ -1306,7 +1320,7 @@ export function CreateProposalForm({
         variant: 'destructive',
       });
     }
-  }, [currentUser, proposalArgs, sendUserOperation, formData, address, toast, hasProcessedProposal, onSuccess, refreshNotifications]);
+  }, [currentUser, proposalArgs, sendUserOperation, formData, address, toast, hasProcessedProposal, onSuccess, refreshNotifications, podsWithGovernancePermission]);
 
   // Validate transaction data before rendering Transaction
   const transactionData = {
