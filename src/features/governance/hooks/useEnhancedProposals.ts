@@ -74,23 +74,18 @@ export const useEnhancedProposals = () => {
       onChainProposals.length, // Add dependency on actual data
     ],
     queryFn: async (): Promise<EnhancedProposal[]> => {
-      console.log('🔄 useEnhancedProposals: Starting query function');
-      console.log(`📥 Received ${onChainProposals.length} proposals from useProposals`);
-      console.log(`⏳ useProposals loading: ${proposalsLoading}`);
+      // console.log('🔄 useEnhancedProposals: Starting query function');
+      // console.log(`📥 Received ${onChainProposals.length} proposals from useProposals`);
 
       const allProposals: EnhancedProposal[] = [];
 
       // 1. Add on-chain governance proposals (DAO-wide, require Executive Pod permission)
       const execPodId = process.env.NEXT_PUBLIC_GOVERNANCE_POD_ID;
-      console.log(`🏛️ Executive Pod ID: ${execPodId}`);
-      console.log(`✅ User has DAO governance permission: ${hasDAOGovernancePermission}`);
 
       for (const proposal of onChainProposals) {
         // Use metadata.created_at if available (for pending proposals), otherwise use current time
         const createdAt = proposal.metadata?.created_at || new Date().toISOString();
         const proposalStatus = proposal.isPending ? 'proposed' : undefined;
-
-        console.log(`📋 Processing proposal: ${proposal.title} (${proposal.id}, pending: ${!!proposal.isPending})`);
 
         allProposals.push({
           id: proposal.id,
@@ -110,8 +105,6 @@ export const useEnhancedProposals = () => {
           governance_context: 'dao-wide',
         });
       }
-
-      console.log(`✅ Added ${onChainProposals.length} governance proposals to allProposals`);
 
       // 2. Add pod creation proposals
       try {
@@ -150,14 +143,14 @@ export const useEnhancedProposals = () => {
             const canVote =
               approverRole?.permissions?.governanceParticipation === true;
 
-            console.log('🏛️ Pod Creation Vote Check:', {
-              podName: pod.name,
-              parentPodId,
-              isTopLevelPod,
-              approvingPodId,
-              canVote,
-              context: isTopLevelPod ? 'Executive Pod' : 'Parent Pod',
-            });
+            // console.log('🏛️ Pod Creation Vote Check:', {
+            //   podName: pod.name,
+            //   parentPodId,
+            //   isTopLevelPod,
+            //   approvingPodId,
+            //   canVote,
+            //   context: isTopLevelPod ? 'Executive Pod' : 'Parent Pod',
+            // });
 
             let userVote = null;
             if (address && canVote) {
@@ -231,12 +224,12 @@ export const useEnhancedProposals = () => {
           new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
       );
 
-      console.log(`🎯 useEnhancedProposals: Returning ${sortedProposals.length} total proposals`);
-      console.log('📊 Proposal breakdown:', {
-        governance: sortedProposals.filter(p => p.type === 'governance').length,
-        podCreation: sortedProposals.filter(p => p.type === 'pod_creation').length,
-        pending: sortedProposals.filter(p => p.status === 'proposed').length,
-      });
+      // console.log(`🎯 useEnhancedProposals: Returning ${sortedProposals.length} total proposals`);
+      // console.log('📊 Proposal breakdown:', {
+      //   governance: sortedProposals.filter(p => p.type === 'governance').length,
+      //   podCreation: sortedProposals.filter(p => p.type === 'pod_creation').length,
+      //   pending: sortedProposals.filter(p => p.status === 'proposed').length,
+      // });
 
       return sortedProposals;
     },

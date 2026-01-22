@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
 
     const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
 
-    console.log(`📥 API: Syncing vote - Proposal ${proposalId.substring(0, 20)}..., Voter ${voter.substring(0, 10)}..., Choice ${choice}`);
+    // console.log(`📥 API: Syncing vote - Proposal ${proposalId.substring(0, 20)}..., Voter ${voter.substring(0, 10)}..., Choice ${choice}`);
 
     // 1. Insert or update individual vote
     const { error: voteError } = await supabaseAdmin
@@ -73,12 +73,12 @@ export async function POST(request: NextRequest) {
 
     const totalVotes = forVotes + againstVotes + abstainVotes;
 
-    console.log(`📊 API: Aggregated votes:`, {
-      for: forVotes.toString(),
-      against: againstVotes.toString(),
-      abstain: abstainVotes.toString(),
-      total: totalVotes.toString(),
-    });
+    // console.log(`📊 API: Aggregated votes:`, {
+    //   for: forVotes.toString(),
+    //   against: againstVotes.toString(),
+    //   abstain: abstainVotes.toString(),
+    //   total: totalVotes.toString(),
+    // });
 
     // 3. Update proposal vote counts
     const { error: updateError } = await supabaseAdmin

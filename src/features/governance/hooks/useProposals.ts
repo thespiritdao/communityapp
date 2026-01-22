@@ -357,11 +357,6 @@ export const useProposals = () => {
         console.error('❌ Error fetching proposal metadata:', metadataError);
       }
 
-      console.log(`📊 Found ${metadata?.length || 0} metadata records in database`);
-      if (metadata && metadata.length > 0) {
-        console.log(`📋 Metadata IDs:`, metadata.map(m => m.onchain_proposal_id.substring(0, 20) + '...'));
-      }
-
       // Only include on-chain proposals that have metadata in our database
       // This allows "deleting" proposals by removing their metadata
       const confirmedProposals = onChainProposals
@@ -378,8 +373,6 @@ export const useProposals = () => {
             metadata?.find((m) => m.onchain_proposal_id === proposal.id) || null,
         }));
 
-      console.log(`✅ After filtering: ${confirmedProposals.length} of ${onChainProposals.length} proposals have metadata`);
-
       // ALSO include pending proposals (temp_ IDs that haven't been confirmed on-chain)
       const { data: pendingMetadata, error: pendingError } = await supabase
         .from('proposal_metadata')
@@ -391,11 +384,8 @@ export const useProposals = () => {
         console.error('❌ Error fetching pending proposals:', pendingError);
       }
 
-      console.log(`🔍 Found ${pendingMetadata?.length || 0} pending proposals (temp_* IDs)`);
-
       // Convert pending metadata to proposal format
       const pendingProposals = (pendingMetadata || []).map((meta) => {
-        console.log(`📝 Pending proposal: ${meta.title} (${meta.onchain_proposal_id})`);
         return {
           id: meta.onchain_proposal_id,
           title: meta.title || 'Untitled Proposal',
@@ -421,11 +411,6 @@ export const useProposals = () => {
 
       // Store this info for use in refetchInterval
       (allProposals as any).__hasPending = hasPendingProposals;
-
-      console.log(`✅ useProposals queryFn returning ${allProposals.length} total proposals`);
-      if (allProposals.length > 0) {
-        console.log(`📋 Sample proposal IDs:`, allProposals.slice(0, 3).map(p => ({ id: p.id, title: p.title })));
-      }
 
       return allProposals;
     },
