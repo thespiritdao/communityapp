@@ -136,8 +136,9 @@ export default function GovernancePage() {
             </p>
           </header>
 
-          {/* Vote / Propose Toggle */}
-          <div className="mb-8 flex justify-center">
+          {/* Toggle Bar - Vote/Propose (PRIMARY) + Filter (SECONDARY) */}
+          <div className="mb-8 flex items-center justify-between">
+            {/* Vote / Propose Toggle - PRIMARY (Dark Ritual Green) */}
             <div className="inline-flex rounded-lg bg-white shadow-md p-1">
               <button
                 onClick={() => setActiveTab('vote')}
@@ -160,28 +161,16 @@ export default function GovernancePage() {
                 Propose
               </button>
             </div>
-          </div>
 
-          {/* Active Proposals */}
-          {activeTab === 'vote' && (
-            <section aria-labelledby="active-proposals-heading">
-          <div className="flex items-center justify-between mb-4">
-            <h2
-              id="active-proposals-heading"
-              className="text-2xl font-semibold text-gray-800"
-            >
-              Active Proposals
-            </h2>
-
-            {/* Filter Toggle */}
-            {address && (
-              <div className="flex items-center gap-2 bg-gray-100 rounded-lg p-1">
+            {/* Filter Toggle - SECONDARY (Muted Sage) - Only show on Vote tab */}
+            {activeTab === 'vote' && address && (
+              <div className="inline-flex rounded-lg p-1" style={{ backgroundColor: '#E8EDEB' }}>
                 <button
                   onClick={() => setProposalFilter('votable')}
                   className="px-4 py-2 rounded-md text-sm font-medium transition-all duration-200"
                   style={{
-                    backgroundColor: proposalFilter === 'votable' ? '#2F5D50' : 'transparent',
-                    color: proposalFilter === 'votable' ? '#FFFFFF' : '#2F5D50',
+                    backgroundColor: proposalFilter === 'votable' ? '#8FAAA1' : 'transparent',
+                    color: proposalFilter === 'votable' ? '#1F2D2A' : '#6F8F86',
                   }}
                 >
                   My Proposals ({enhancedProposals.filter(p => p.user_can_vote).length})
@@ -190,8 +179,8 @@ export default function GovernancePage() {
                   onClick={() => setProposalFilter('all')}
                   className="px-4 py-2 rounded-md text-sm font-medium transition-all duration-200"
                   style={{
-                    backgroundColor: proposalFilter === 'all' ? '#2F5D50' : 'transparent',
-                    color: proposalFilter === 'all' ? '#FFFFFF' : '#2F5D50',
+                    backgroundColor: proposalFilter === 'all' ? '#8FAAA1' : 'transparent',
+                    color: proposalFilter === 'all' ? '#1F2D2A' : '#6F8F86',
                   }}
                 >
                   All Proposals ({enhancedProposals.length})
@@ -199,6 +188,10 @@ export default function GovernancePage() {
               </div>
             )}
           </div>
+
+          {/* Proposals List */}
+          {activeTab === 'vote' && (
+            <section aria-label="Governance proposals">
           {!address && (
             <div className="text-center p-8 bg-white rounded-lg shadow-lg">
               <Shield className="h-12 w-12 text-gray-400 mx-auto mb-4" />
