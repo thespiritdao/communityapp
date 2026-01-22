@@ -28,6 +28,7 @@ import {
   logUserIdentity,
 } from '@/utils/accessControlUtils';
 import { useHatPermissions } from '@/hooks/useHatPermissions';
+import { GovernanceService } from '@/features/governance/services/governanceService';
 import { useGovernancePermission } from '@/hooks/useGovernancePermission';
 import UserTagging from '@/components/UserTagging';
 import { useUnifiedNotifications } from '@/context/UnifiedNotificationContext';
