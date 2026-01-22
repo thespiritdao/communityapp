@@ -136,9 +136,8 @@ export default function GovernancePage() {
             </p>
           </header>
 
-          {/* Toggle Bar - Vote/Propose (PRIMARY) + Filter (SECONDARY) */}
-          <div className="mb-8 flex items-center justify-between">
-            {/* Vote / Propose Toggle - PRIMARY (Dark Ritual Green) */}
+          {/* Vote / Propose Toggle - PRIMARY (Dark Ritual Green) */}
+          <div className="mb-4 flex justify-center">
             <div className="inline-flex rounded-lg bg-white shadow-md p-1">
               <button
                 onClick={() => setActiveTab('vote')}
@@ -161,16 +160,18 @@ export default function GovernancePage() {
                 Propose
               </button>
             </div>
+          </div>
 
-            {/* Filter Toggle - SECONDARY (Muted Sage) - Only show on Vote tab */}
-            {activeTab === 'vote' && address && (
-              <div className="inline-flex rounded-lg p-1" style={{ backgroundColor: '#E8EDEB' }}>
+          {/* Filter Toggle - Neutral Gray - Only show on Vote tab */}
+          {activeTab === 'vote' && address && (
+            <div className="mb-8 flex justify-center">
+              <div className="inline-flex rounded-lg p-1" style={{ backgroundColor: '#E8EBF0' }}>
                 <button
                   onClick={() => setProposalFilter('votable')}
                   className="px-4 py-2 rounded-md text-sm font-medium transition-all duration-200"
                   style={{
-                    backgroundColor: proposalFilter === 'votable' ? '#8FAAA1' : 'transparent',
-                    color: proposalFilter === 'votable' ? '#1F2D2A' : '#6F8F86',
+                    backgroundColor: proposalFilter === 'votable' ? '#5B6B7D' : 'transparent',
+                    color: proposalFilter === 'votable' ? '#FFFFFF' : '#7B8B9D',
                   }}
                 >
                   My Proposals ({enhancedProposals.filter(p => p.user_can_vote).length})
@@ -179,15 +180,15 @@ export default function GovernancePage() {
                   onClick={() => setProposalFilter('all')}
                   className="px-4 py-2 rounded-md text-sm font-medium transition-all duration-200"
                   style={{
-                    backgroundColor: proposalFilter === 'all' ? '#8FAAA1' : 'transparent',
-                    color: proposalFilter === 'all' ? '#1F2D2A' : '#6F8F86',
+                    backgroundColor: proposalFilter === 'all' ? '#5B6B7D' : 'transparent',
+                    color: proposalFilter === 'all' ? '#FFFFFF' : '#7B8B9D',
                   }}
                 >
                   All Proposals ({enhancedProposals.length})
                 </button>
               </div>
-            )}
-          </div>
+            </div>
+          )}
 
           {/* Proposals List */}
           {activeTab === 'vote' && (
