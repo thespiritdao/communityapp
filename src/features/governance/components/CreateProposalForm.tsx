@@ -1144,59 +1144,23 @@ export function CreateProposalForm({
       selectedPod: selectedPodId,
       execPodId: EXEC_POD_ID,
       isPodLevel: isPodLevelProposal,
-      type: isPodLevelProposal ? 'Pod-Level (off-chain)' : 'DAO-Wide (on-chain)',
+      type: isPodLevelProposal ? 'Pod-Level (on-chain, pod-specific voting)' : 'DAO-Wide (on-chain, Executive Pod voting)',
     });
 
     if (isPodLevelProposal) {
-      // ✅ CREATE POD-LEVEL PROPOSAL (off-chain, pod-specific voting)
-      try {
-        setSubmissionStatus('🔄 Creating pod-level proposal...');
+      // ✅ CREATE POD-LEVEL PROPOSAL
+      // Architecture:
+      // 1. Submit to blockchain (on-chain, permanent, gasless via CDP)
+      // 2. Store in pod_level_proposals table (with on-chain ID)
+      // 3. Voting is off-chain (database, pod-specific permissions)
 
-        const proposalId = await GovernanceService.createPodLevelProposal({
-          title: formData.title,
-          description: formData.body,
-          pod_id: selectedPodId,
-          created_by: address!,
-          metadata: {
-            forum_thread_id: formData.forumThreadId,
-            choices: ['For', 'Against', 'Abstain'],
-          },
-        });
+      // NOTE: Proposal will be submitted on-chain, but voting is controlled by our app
+      // The on-chain contract votes are ignored - we use governance_votes table instead
+      // This gives us permanence + transparency (blockchain) AND flexible permissions (app)
 
-        setSubmissionStatus('✅ Pod-level proposal created!');
-
-        toast({
-          title: '✅ Proposal Created!',
-          description: `Pod-level proposal created. Only ${userTokens.find(t => t.id === selectedPodId)?.label} members with governance permission can vote.`,
-        });
-
-        // Reset form
-        setFormData({
-          title: '',
-          body: '',
-          forumThreadId: '',
-          selectedToken: '',
-        });
-
-        setSubmissionStatus('');
-        setHasInteracted(false);
-
-        // Trigger refetch
-        if (onSuccess) {
-          onSuccess();
-        }
-
-        return; // Exit early - pod-level proposal complete
-      } catch (error: any) {
-        console.error('❌ Failed to create pod-level proposal:', error);
-        toast({
-          title: 'Proposal Creation Failed',
-          description: error.message || 'Failed to create pod-level proposal',
-          variant: 'destructive',
-        });
-        setSubmissionStatus('');
-        return;
-      }
+      // Fall through to standard on-chain proposal creation below
+      // After blockchain submission, we'll also save to pod_level_proposals table
+      console.log('🏛️ [POD-LEVEL] Will submit on-chain AND save to pod_level_proposals table');
     }
 
     // ✅ CREATE DAO-WIDE PROPOSAL (on-chain, Executive Pod voting)
@@ -1309,6 +1273,34 @@ export function CreateProposalForm({
               console.error('❌ Error inserting proposal metadata:', metadataError);
             } else {
               console.log('✅ Proposal metadata created with temporary ID:', tempProposalId);
+            }
+
+            // ✅ ALSO save to pod_level_proposals if this is a pod-level proposal
+            const EXEC_POD_ID = process.env.NEXT_PUBLIC_GOVERNANCE_POD_ID;
+            const isPodLevelProp = proposalTokenId && proposalTokenId !== EXEC_POD_ID;
+
+            if (isPodLevelProp) {
+              console.log('🏛️ [POD-LEVEL] Also saving to pod_level_proposals table');
+
+              try {
+                await GovernanceService.createPodLevelProposal({
+                  title: proposalTitle,
+                  description: proposalBody,
+                  pod_id: proposalTokenId,
+                  created_by: address!,
+                  metadata: {
+                    forum_thread_id: proposalForumThreadId,
+                    choices: ['For', 'Against', 'Abstain'],
+                  },
+                  onchain_proposal_id: tempProposalId, // Link to on-chain proposal
+                  transaction_hash: txHash,
+                });
+
+                console.log('✅ Pod-level proposal entry created (linked to on-chain)');
+              } catch (podError) {
+                console.error('❌ Error creating pod-level proposal entry:', podError);
+                // Don't fail the whole process - proposal is still on-chain
+              }
             }
           }
 
