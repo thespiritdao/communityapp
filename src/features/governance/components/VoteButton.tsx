@@ -96,22 +96,29 @@ const VoteButton: React.FC<VoteButtonProps> = ({
 
     try {
       console.log(
-        `Attempting CDP vote on proposal ${proposalId} with choice ${choice}, paymaster: ${usePaymaster}`,
+        `Attempting CDP vote on proposal ${proposalId} with UI choice ${choice} (Governor choice ${choice === 1 ? 1 : choice === 2 ? 0 : 2}), paymaster: ${usePaymaster}`,
       );
 
       const smartAccount = currentUser.evmSmartAccounts[0];
+
+      // Map UI choice to OpenZeppelin Governor values
+      // UI: 1=For, 2=Against, 3=Abstain
+      // Governor: 0=Against, 1=For, 2=Abstain
+      const governorChoice = choice === 1 ? 1 : choice === 2 ? 0 : 2;
 
       // Encode the vote call
       const callData = encodeFunctionData({
         abi: DAOGovernorABI,
         functionName: 'castVote',
-        args: [BigInt(proposalId), Number(choice)],
+        args: [BigInt(proposalId), governorChoice],
       });
 
       console.log('Sending user operation:', {
         smartAccount,
         functionName: 'castVote',
-        args: [proposalId, choice],
+        args: [proposalId, governorChoice],
+        uiChoice: choice,
+        governorChoice,
         usePaymaster,
       });
 
