@@ -76,22 +76,19 @@ export const EnhancedVoteButton: React.FC<EnhancedVoteButtonProps> = ({
 
   // ✅ FIX: Block voting if no permission
   if (!hasGovernancePermission) {
-    return (
-      <div className="flex flex-col gap-1">
-        <Button
-          disabled
-          variant="outline"
-          size="sm"
-          title="You do not have governance participation permission in the required pod"
-          className="opacity-50"
-        >
-          {getChoiceText(choice)}
-        </Button>
-        <span className="text-xs text-gray-500 italic">
-          Insufficient permissions to vote
-        </span>
-      </div>
-    );
+    // Only show message once (for the first choice), hide other buttons
+    if (choice === 1) {
+      return (
+        <div className="flex items-center gap-2 px-4 py-3 bg-gray-50 rounded-lg border border-gray-200">
+          <Shield className="h-4 w-4 text-gray-500" />
+          <span className="text-sm text-gray-600">
+            You do not have governance participation permission in this pod
+          </span>
+        </div>
+      );
+    }
+    // Hide other vote buttons (Against, Abstain)
+    return null;
   }
 
   const handleVote = async () => {
@@ -292,14 +289,21 @@ export const EnhancedVoteButton: React.FC<EnhancedVoteButtonProps> = ({
     );
   }
 
-  // Show access denied state if user can't vote
+  // Show access denied state if user can't vote (fallback check)
   if (!proposal.user_can_vote) {
-    return (
-      <Button disabled={true} variant="outline" className="opacity-50">
-        <Shield className="h-4 w-4 mr-1" />
-        {getChoiceText(choice)} (No Permission)
-      </Button>
-    );
+    // Only show message once (for the first choice), hide other buttons
+    if (choice === 1) {
+      return (
+        <div className="flex items-center gap-2 px-4 py-3 bg-gray-50 rounded-lg border border-gray-200">
+          <Shield className="h-4 w-4 text-gray-500" />
+          <span className="text-sm text-gray-600">
+            You do not have governance participation permission in this pod
+          </span>
+        </div>
+      );
+    }
+    // Hide other vote buttons
+    return null;
   }
 
   // Show voting button
