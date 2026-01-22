@@ -1133,6 +1133,72 @@ export function CreateProposalForm({
       return;
     }
 
+    // ✅ ARCHITECTURE FIX: Determine proposal type
+    // - Executive Pod → DAO-wide on-chain proposal (Executive Pod votes)
+    // - Other pods → Pod-level off-chain proposal (pod members vote)
+    const EXEC_POD_ID = process.env.NEXT_PUBLIC_GOVERNANCE_POD_ID;
+    const isPodLevelProposal = selectedPodId && selectedPodId !== EXEC_POD_ID;
+
+    console.log('🏛️ [PROPOSAL TYPE]', {
+      selectedPod: selectedPodId,
+      execPodId: EXEC_POD_ID,
+      isPodLevel: isPodLevelProposal,
+      type: isPodLevelProposal ? 'Pod-Level (off-chain)' : 'DAO-Wide (on-chain)',
+    });
+
+    if (isPodLevelProposal) {
+      // ✅ CREATE POD-LEVEL PROPOSAL (off-chain, pod-specific voting)
+      try {
+        setSubmissionStatus('🔄 Creating pod-level proposal...');
+
+        const proposalId = await GovernanceService.createPodLevelProposal({
+          title: formData.title,
+          description: formData.body,
+          pod_id: selectedPodId,
+          created_by: address!,
+          metadata: {
+            forum_thread_id: formData.forumThreadId,
+            choices: ['For', 'Against', 'Abstain'],
+          },
+        });
+
+        setSubmissionStatus('✅ Pod-level proposal created!');
+
+        toast({
+          title: '✅ Proposal Created!',
+          description: `Pod-level proposal created. Only ${userTokens.find(t => t.id === selectedPodId)?.label} members with governance permission can vote.`,
+        });
+
+        // Reset form
+        setFormData({
+          title: '',
+          body: '',
+          forumThreadId: '',
+          selectedToken: '',
+        });
+
+        setSubmissionStatus('');
+        setHasInteracted(false);
+
+        // Trigger refetch
+        if (onProposalCreated) {
+          onProposalCreated();
+        }
+
+        return; // Exit early - pod-level proposal complete
+      } catch (error: any) {
+        console.error('❌ Failed to create pod-level proposal:', error);
+        toast({
+          title: 'Proposal Creation Failed',
+          description: error.message || 'Failed to create pod-level proposal',
+          variant: 'destructive',
+        });
+        setSubmissionStatus('');
+        return;
+      }
+    }
+
+    // ✅ CREATE DAO-WIDE PROPOSAL (on-chain, Executive Pod voting)
     const smartAccount = currentUser.evmSmartAccounts[0];
 
     try {

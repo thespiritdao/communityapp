@@ -195,9 +195,9 @@ export const EnhancedVoteButton: React.FC<EnhancedVoteButtonProps> = ({
         | 'for'
         | 'abstain';
 
-      if (proposal.type === 'pod_creation') {
+      if (proposal.type === 'pod_creation' || proposal.type === 'pod_level') {
+        // ✅ Handle off-chain votes (pod creation and pod-level proposals)
         // Generate a cryptographic signature for the vote
-        // This creates a deterministic signature based on proposal, voter, vote, and timestamp
         const voteMessage = {
           proposal_id: proposal.id,
           voter: address,
@@ -217,14 +217,13 @@ export const EnhancedVoteButton: React.FC<EnhancedVoteButtonProps> = ({
           .join('');
         const signature = `0x${hashHex}`;
 
-        console.log('🔐 Generated signature:', {
+        console.log('🔐 [VOTE] Generated signature:', {
+          proposalType: proposal.type,
           message: messageString,
           signature: signature,
-          signatureLength: signature.length,
         });
 
         // Prepare vote data
-        // Normalize wallet address to lowercase for consistency
         const voteData = {
           proposal_id: proposal.id,
           voter_address: address.toLowerCase(),
@@ -234,18 +233,22 @@ export const EnhancedVoteButton: React.FC<EnhancedVoteButtonProps> = ({
           signature: signature,
         };
 
-        console.error('📊 [VOTE DEBUG] Submitting vote with data:', voteData);
+        console.log('📊 [VOTE] Submitting vote:', {
+          type: proposal.type,
+          proposalId: proposal.id,
+          vote: voteValue,
+        });
 
-        // Handle pod creation votes with signature
+        // Submit vote to database
         await GovernanceService.submitVote(voteData);
 
+        const proposalTypeLabel = proposal.type === 'pod_creation' ? 'pod creation' : 'pod-level';
         toast({
           title: 'Vote Submitted',
-          description: `Your ${voteValue} vote has been recorded and signed for pod creation proposal`,
+          description: `Your ${voteValue} vote has been recorded for ${proposalTypeLabel} proposal`,
         });
 
         // Trigger immediate refetch to update button states
-        // Note: Vote counts may take a moment to update in database
         onVoteSuccess?.();
       } else {
         // Handle governance votes - this would integrate with existing VoteButton logic

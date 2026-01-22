@@ -221,6 +221,64 @@ export const useEnhancedProposals = () => {
         console.error('Failed to load pod proposals:', error);
       }
 
+      // 3. Add pod-level proposals (pod-specific governance)
+      try {
+        const podLevelProposals = await GovernanceService.getPodLevelProposals();
+
+        for (const proposal of podLevelProposals) {
+          // Check if user has governance permission in this specific pod
+          const podRole = userRoles.find(
+            (role) => role.podId === proposal.pod_id,
+          );
+          const canVote =
+            podRole?.permissions?.governanceParticipation === true;
+
+          console.log('🏛️ [POD-LEVEL VOTE CHECK]', {
+            proposalTitle: proposal.title,
+            podId: proposal.pod_id,
+            podName: proposal.pods?.name,
+            userRole: podRole ? `Found (${podRole.role_name})` : 'Not found',
+            governancePermission: podRole?.permissions?.governanceParticipation,
+            canVote,
+          });
+
+          // Get user's vote if they can vote
+          let userVote = null;
+          if (address && canVote) {
+            try {
+              userVote = await GovernanceService.getUserVote(proposal.id, address);
+            } catch (error: any) {
+              console.log('Skipping vote check for pod-level proposal:', proposal.id, '- error:', error.code || error.message);
+              userVote = null;
+            }
+          }
+
+          const enhancedProposal: EnhancedProposal = {
+            id: proposal.id,
+            title: proposal.title,
+            body: proposal.description,
+            type: 'pod_level',
+            choices: proposal.metadata?.choices || ['For', 'Against', 'Abstain'],
+            status: proposal.status as any,
+            created_at: proposal.created_at,
+            created_by: proposal.created_by,
+            pod_id: proposal.pod_id,
+            pod_data: proposal.pods,
+            user_can_vote: canVote,
+            user_vote: userVote,
+            approving_pod_id: proposal.pod_id, // Same pod votes
+            governance_context: 'pod-level',
+            vote_counts: proposal.vote_counts,
+          } as EnhancedProposal & { vote_counts: typeof proposal.vote_counts };
+
+          allProposals.push(enhancedProposal);
+        }
+
+        console.log(`✅ Loaded ${podLevelProposals.length} pod-level proposals`);
+      } catch (error) {
+        console.error('Failed to load pod-level proposals:', error);
+      }
+
       // Sort by creation date, newest first
       const sortedProposals = allProposals.sort(
         (a, b) =>
