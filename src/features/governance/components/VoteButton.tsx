@@ -55,31 +55,32 @@ const VoteButton: React.FC<VoteButtonProps> = ({
   const hasVoted = hasVotedProp !== undefined ? hasVotedProp : hasVotedState;
 
   // Check if user has already voted on this proposal
-  // All buttons need to check to ensure they all hide when user votes
+  // OPTIMIZATION: Query database instead of blockchain to avoid RPC cache issues
   useEffect(() => {
     // Skip if hasVoted was passed as prop
     if (hasVotedProp !== undefined) return;
 
     const checkIfVoted = async () => {
-      if (!publicClient || !address || !proposalId) return;
+      if (!address || !proposalId) return;
 
       try {
-        const voted = await publicClient.readContract({
-          address: GOVERNOR_ADDRESS,
-          abi: DAOGovernorABI,
-          functionName: 'hasVoted',
-          args: [BigInt(proposalId), address],
-          blockTag: 'latest', // Force fresh data, bypass RPC cache
-        }) as boolean;
+        // Query database for user's vote on this proposal
+        const { supabase } = await import('@/utils/supabaseClient');
+        const { data } = await supabase
+          .from('governance_user_votes')
+          .select('id')
+          .eq('proposal_id', proposalId)
+          .eq('voter_address', address.toLowerCase())
+          .maybeSingle();
 
-        setHasVotedState(voted);
+        setHasVotedState(!!data);
       } catch (error) {
         console.error('Error checking if user has voted:', error);
       }
     };
 
     checkIfVoted();
-  }, [publicClient, address, proposalId, GOVERNOR_ADDRESS, hasVotedProp, voteCounts]);
+  }, [address, proposalId, hasVotedProp, voteCounts]);
 
   // CDP transaction handler (non-sponsored)
   // ⚠️ IMPORTANT: Must be defined BEFORE any conditional returns to avoid React hooks error
@@ -147,12 +148,37 @@ const VoteButton: React.FC<VoteButtonProps> = ({
         variant: 'success',
       });
 
+      // Sync vote to database immediately for instant UI updates
+      try {
+        console.log('🔄 Syncing vote to database...');
+        const syncResponse = await fetch('/api/governance/sync-vote', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            proposalId: proposalId,
+            voter: smartAccount,
+            choice: governorChoice,
+            votingPower: 1, // Default voting power
+            txHash: result.userOperationHash,
+          }),
+        });
+
+        if (syncResponse.ok) {
+          console.log('✅ Vote synced to database');
+        } else {
+          console.warn('⚠️ Failed to sync vote to database:', await syncResponse.text());
+        }
+      } catch (syncError) {
+        console.error('❌ Error syncing vote to database:', syncError);
+        // Continue anyway - vote is on-chain, sync will happen eventually
+      }
+
       // Wait for blockchain confirmation, then refetch to update vote counts and hasVoted state
       setTimeout(() => {
         if (onVoteSuccess) {
           onVoteSuccess();
         }
-      }, 4000); // 4 second delay to ensure blockchain processes the transaction
+      }, 2000); // Reduced to 2s since we're syncing immediately
     } catch (error: any) {
       console.error('Vote transaction failed:', error);
 

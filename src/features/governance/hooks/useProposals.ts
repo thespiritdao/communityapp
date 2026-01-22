@@ -196,63 +196,55 @@ const fetchProposalsOnChain = async (
       // console.log(`📝 Processing on-chain proposal: ${titlePreview}... (ID: ${proposalId.toString()})`);
 
       // 3) Read on‑chain proposal data using OpenZeppelin Governor functions
-      // OpenZeppelin Governor doesn't have a single "proposals" function,
-      // so we need to call individual functions
+      // OPTIMIZATION: Query vote counts from database instead of contract
+      // This eliminates RPC caching issues and improves performance
       let startBlock: bigint | undefined;
       let endBlock: bigint | undefined;
-      let votes: { againstVotes: bigint; forVotes: bigint; abstainVotes: bigint } | undefined;
 
       try {
-        [startBlock, endBlock, votes] = await Promise.all([
+        [startBlock, endBlock] = await Promise.all([
           publicClient.readContract({
             address: GOVERNOR_ADDRESS,
             abi: DAOGovernorABI,
             functionName: 'proposalSnapshot',
             args: [proposalId],
-            blockTag: 'latest', // Force fresh data, bypass RPC cache
+            blockTag: 'latest',
           }) as Promise<bigint>,
           publicClient.readContract({
             address: GOVERNOR_ADDRESS,
             abi: DAOGovernorABI,
             functionName: 'proposalDeadline',
             args: [proposalId],
-            blockTag: 'latest', // Force fresh data, bypass RPC cache
+            blockTag: 'latest',
           }) as Promise<bigint>,
-          publicClient.readContract({
-            address: GOVERNOR_ADDRESS,
-            abi: DAOGovernorABI,
-            functionName: 'proposalVotes',
-            args: [proposalId],
-            blockTag: 'latest', // CRITICAL: Force fresh data to get updated vote counts
-          }) as Promise<{
-            againstVotes: bigint;
-            forVotes: bigint;
-            abstainVotes: bigint;
-          }>,
         ]);
       } catch (contractError) {
         console.error(`❌ Failed to read proposal data for ${proposalId.toString()}:`, contractError);
-        // Set defaults so proposal still shows
         startBlock = 0n;
         endBlock = 0n;
-        votes = { forVotes: 0n, againstVotes: 0n, abstainVotes: 0n };
       }
 
-      // Defensive: Handle case where contract calls return undefined
+      // Query vote counts from database instead of blockchain
+      const { data: voteData } = await supabase
+        .from('governance_proposal_votes')
+        .select('for_votes, against_votes, abstain_votes')
+        .eq('proposal_id', proposalId.toString())
+        .maybeSingle();
+
       const core = {
         startBlock: startBlock || 0n,
         endBlock: endBlock || 0n,
-        forVotes: votes?.forVotes || 0n,
-        againstVotes: votes?.againstVotes || 0n,
-        abstainVotes: votes?.abstainVotes || 0n,
+        forVotes: voteData ? BigInt(voteData.for_votes || 0) : 0n,
+        againstVotes: voteData ? BigInt(voteData.against_votes || 0) : 0n,
+        abstainVotes: voteData ? BigInt(voteData.abstain_votes || 0) : 0n,
       };
 
-      // DEBUG: Log vote counts from blockchain
-      console.log(`📊 [Proposal ${proposalId.toString().substring(0, 20)}...] Vote counts from chain:`, {
-        for: (votes?.forVotes || 0n).toString(),
-        against: (votes?.againstVotes || 0n).toString(),
-        abstain: (votes?.abstainVotes || 0n).toString(),
-        hasVotes: !!votes,
+      // DEBUG: Log vote counts from database
+      console.log(`📊 [Proposal ${proposalId.toString().substring(0, 20)}...] Vote counts from DB:`, {
+        for: core.forVotes.toString(),
+        against: core.againstVotes.toString(),
+        abstain: core.abstainVotes.toString(),
+        hasData: !!voteData,
       });
 
       // 4) Get proposal state with retry logic
