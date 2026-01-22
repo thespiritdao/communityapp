@@ -209,18 +209,21 @@ const fetchProposalsOnChain = async (
             abi: DAOGovernorABI,
             functionName: 'proposalSnapshot',
             args: [proposalId],
+            blockTag: 'latest', // Force fresh data, bypass RPC cache
           }) as Promise<bigint>,
           publicClient.readContract({
             address: GOVERNOR_ADDRESS,
             abi: DAOGovernorABI,
             functionName: 'proposalDeadline',
             args: [proposalId],
+            blockTag: 'latest', // Force fresh data, bypass RPC cache
           }) as Promise<bigint>,
           publicClient.readContract({
             address: GOVERNOR_ADDRESS,
             abi: DAOGovernorABI,
             functionName: 'proposalVotes',
             args: [proposalId],
+            blockTag: 'latest', // CRITICAL: Force fresh data to get updated vote counts
           }) as Promise<{
             againstVotes: bigint;
             forVotes: bigint;
@@ -264,6 +267,7 @@ const fetchProposalsOnChain = async (
               abi: DAOGovernorABI,
               functionName: 'state',
               args: [proposalId],
+              blockTag: 'latest', // Force fresh data, bypass RPC cache
             }) as Promise<number>,
           {
             retries: 3,

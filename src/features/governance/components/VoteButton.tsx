@@ -67,6 +67,7 @@ const VoteButton: React.FC<VoteButtonProps> = ({
           abi: DAOGovernorABI,
           functionName: 'hasVoted',
           args: [BigInt(proposalId), address],
+          blockTag: 'latest', // Force fresh data, bypass RPC cache
         }) as boolean;
 
         setHasVotedState(voted);
