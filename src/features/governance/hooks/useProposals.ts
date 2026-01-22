@@ -193,7 +193,7 @@ const fetchProposalsOnChain = async (
 
       // Log each proposal being processed
       const titlePreview = description.split('\n\n')[0].replace(/^#\s*/, '').substring(0, 50);
-      console.log(`📝 Processing on-chain proposal: ${titlePreview}... (ID: ${proposalId.toString()})`);
+      // console.log(`📝 Processing on-chain proposal: ${titlePreview}... (ID: ${proposalId.toString()})`);
 
       // 3) Read on‑chain proposal data using OpenZeppelin Governor functions
       // OpenZeppelin Governor doesn't have a single "proposals" function,
@@ -281,7 +281,7 @@ const fetchProposalsOnChain = async (
           },
         );
 
-        console.log(`[Proposal ${proposalId.toString()}] State fetched successfully: ${state}`);
+        // console.log(`[Proposal ${proposalId.toString()}] State fetched successfully: ${state}`);
       } catch (error) {
         console.error(
           `[Proposal ${proposalId.toString()}] Failed to fetch state after 3 retries:`,
@@ -340,19 +340,19 @@ export const useProposals = () => {
       // First, check and update any pending proposals that may have been confirmed
       await checkAndUpdatePendingProposals(publicClient);
 
-      console.log('🚀 Fetching on-chain proposals...');
+      // console.log('🚀 Fetching on-chain proposals...');
       const onChainProposals = await fetchProposalsOnChain(publicClient);
-      console.log(`🎯 fetchProposalsOnChain returned ${onChainProposals.length} proposals`);
+      console.log(`✅ Fetched ${onChainProposals.length} on-chain proposals`);
 
-      if (onChainProposals.length > 0) {
-        console.log('📋 First proposal:', {
-          id: onChainProposals[0].id,
-          title: onChainProposals[0].title,
-        });
-      }
+      // if (onChainProposals.length > 0) {
+      //   console.log('📋 First proposal:', {
+      //     id: onChainProposals[0].id,
+      //     title: onChainProposals[0].title,
+      //   });
+      // }
 
       // Get metadata for confirmed on-chain proposals
-      console.log(`📥 Querying metadata for ${onChainProposals.length} on-chain proposals`);
+      // console.log(`📥 Querying metadata for ${onChainProposals.length} on-chain proposals`);
       const { data: metadata, error: metadataError } = await supabase
         .from('proposal_metadata')
         .select('*')
@@ -437,7 +437,8 @@ export const useProposals = () => {
 
       return allProposals;
     },
-    staleTime: 60_000,
+    staleTime: 0, // CRITICAL: Always treat data as stale to ensure fresh vote counts
+    refetchOnMount: 'always', // Always refetch when component mounts
     // Reduced refetch frequency to prevent session timeouts and recursive logs
     refetchInterval: (query) => {
       const data = query.state.data as any;

@@ -83,17 +83,17 @@ export const useHatPermissions = (): UseHatPermissionsReturn => {
       setIsLoading(true);
       setError(null);
 
-      console.log('🎩 Loading HAT permissions dynamically from database');
+      // console.log('🎩 Loading HAT permissions dynamically from database');
 
       // Initialize empty arrays - NO HARDCODED HATS
       const roles: HatRole[] = [];
       const hats: string[] = [];
 
       // ONLY DYNAMIC POD ROLES - Load ALL pods the user is a member/leader of
-      console.log(
-        '🔍 useHatPermissions: Loading dynamic pod roles for',
-        address,
-      );
+      // console.log(
+      //   '🔍 useHatPermissions: Loading dynamic pod roles for',
+      //   address,
+      // );
 
       try {
         const { data: userPodMemberships, error: membershipError } =
@@ -106,11 +106,11 @@ export const useHatPermissions = (): UseHatPermissionsReturn => {
         if (membershipError) {
           console.error('❌ Error loading pod memberships:', membershipError);
         } else if (userPodMemberships && userPodMemberships.length > 0) {
-          console.log(
-            '🎯 useHatPermissions: Found',
-            userPodMemberships.length,
-            'pod memberships',
-          );
+          // console.log(
+          //   '🎯 useHatPermissions: Found',
+          //   userPodMemberships.length,
+          //   'pod memberships',
+          // );
 
           // Load role details for each pod
           for (const membership of userPodMemberships) {
@@ -127,7 +127,7 @@ export const useHatPermissions = (): UseHatPermissionsReturn => {
             // CRITICAL FIX: Executive Pod Leaders get full permissions without database query
             const EXEC_POD_ID = 'e35c9e25-d29f-4988-b1e8-2902e960b94c';
             if (podId === EXEC_POD_ID && isLeader) {
-              console.log('👑 Executive Pod Leader detected - granting full permissions');
+              // console.log('👑 Executive Pod Leader detected - granting full permissions');
 
               const execRole: HatRole = {
                 hatId: hatId,
@@ -254,7 +254,7 @@ export const useHatPermissions = (): UseHatPermissionsReturn => {
             }
           }
         } else {
-          console.log('ℹ️ useHatPermissions: No dynamic pod memberships found');
+          // console.log('ℹ️ useHatPermissions: No dynamic pod memberships found');
         }
       } catch (dbError) {
         console.error('❌ Error loading dynamic pod roles:', dbError);
@@ -263,19 +263,19 @@ export const useHatPermissions = (): UseHatPermissionsReturn => {
 
       // 🆕 ADD NON-POD HATS (Beta Tester, Advocate) from balances
       // These are not in active_pod_members because they're not pods
-      console.log('🎩 Checking for non-pod HATs from balances...');
+      // console.log('🎩 Checking for non-pod HATs from balances...');
 
       const BETA_TESTER_HAT = process.env.NEXT_PUBLIC_BETA_TESTER_HAT;
       const ADVOCATE_TOKEN = process.env.NEXT_PUBLIC_ADVOCATE;
 
       if (balances?.hasBetaTesterHat && BETA_TESTER_HAT) {
-        console.log('✅ Adding Beta Tester HAT to userHats');
+        // console.log('✅ Adding Beta Tester HAT to userHats');
         hats.push(BETA_TESTER_HAT);
         // Beta Tester doesn't need a "role" - it's just a HAT for access control
       }
 
       if ((balances as any)?.hasAdvocate && ADVOCATE_TOKEN) {
-        console.log('✅ Adding Advocate token to userHats');
+        // console.log('✅ Adding Advocate token to userHats');
         hats.push(ADVOCATE_TOKEN);
         // Advocate doesn't need a "role" - it's just a token for access control
       }
@@ -306,13 +306,13 @@ export const useHatPermissions = (): UseHatPermissionsReturn => {
       setUserHats(hats);
       setPermissions(consolidatedPermissions);
 
-      console.log('✅ useHatPermissions: Final result:', {
-        totalRoles: roles.length,
-        totalHats: hats.length,
-        roleNames: roles.map((r) => r.name),
-        hatIds: hats.map((h) => h.slice(0, 10) + '...'),
-        permissions: consolidatedPermissions,
-      });
+      // console.log('✅ useHatPermissions: Final result:', {
+      //   totalRoles: roles.length,
+      //   totalHats: hats.length,
+      //   roleNames: roles.map((r) => r.name),
+      //   hatIds: hats.map((h) => h.slice(0, 10) + '...'),
+      //   permissions: consolidatedPermissions,
+      // });
     } catch (err) {
       console.error('❌ Failed to process HAT permissions:', err);
       setError(
@@ -332,9 +332,9 @@ export const useHatPermissions = (): UseHatPermissionsReturn => {
   useEffect(() => {
     if (!address) return;
 
-    console.log(
-      '🔄 Setting up realtime subscription for permission changes...',
-    );
+    // console.log(
+    //   '🔄 Setting up realtime subscription for permission changes...',
+    // );
 
     // Subscribe to pod_role_permissions changes
     const subscription = supabase
@@ -347,8 +347,8 @@ export const useHatPermissions = (): UseHatPermissionsReturn => {
           table: 'pod_role_permissions',
         },
         (payload) => {
-          console.log('🔔 Permission change detected:', payload);
-          console.log('🔄 Refreshing permissions...');
+          // console.log('🔔 Permission change detected:', payload);
+          // console.log('🔄 Refreshing permissions...');
           loadUserData(); // Refresh permissions when database changes
         },
       )
@@ -356,7 +356,7 @@ export const useHatPermissions = (): UseHatPermissionsReturn => {
 
     // Cleanup subscription on unmount
     return () => {
-      console.log('🧹 Cleaning up permission subscription');
+      // console.log('🧹 Cleaning up permission subscription');
       subscription.unsubscribe();
     };
   }, [address]);
@@ -422,14 +422,14 @@ export const useHatPermissions = (): UseHatPermissionsReturn => {
     const podRoles = userRoles.filter((role) => role.podId === podId);
 
     if (podRoles.length === 0) {
-      console.log(`⚠️ No roles found for pod ${podId}`);
+      // console.log(`⚠️ No roles found for pod ${podId}`);
       return null;
     }
 
-    console.log(`🎯 Getting permissions for pod ${podId}:`, {
-      rolesCount: podRoles.length,
-      roleNames: podRoles.map((r) => r.name),
-    });
+    // console.log(`🎯 Getting permissions for pod ${podId}:`, {
+    //   rolesCount: podRoles.length,
+    //   roleNames: podRoles.map((r) => r.name),
+    // });
 
     // Calculate consolidated permissions for THIS POD ONLY
     const podPermissions: HatPermissions = {
@@ -453,10 +453,10 @@ export const useHatPermissions = (): UseHatPermissionsReturn => {
       marketplaceManage: podRoles.some((r) => r.permissions?.marketplaceManage),
     };
 
-    console.log(`✅ Pod ${podId} permissions:`, {
-      chatModeration: podPermissions.chatModeration,
-      forumModeration: podPermissions.forumModeration,
-    });
+    // console.log(`✅ Pod ${podId} permissions:`, {
+    //   chatModeration: podPermissions.chatModeration,
+    //   forumModeration: podPermissions.forumModeration,
+    // });
 
     return podPermissions;
   };

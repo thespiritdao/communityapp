@@ -928,10 +928,6 @@ const AttendeeList: React.FC<AttendeeListProps> = ({ registrations }) => {
               <p className="font-medium text-sm">
                 {profile?.first_name || 'Anonymous'} {profile?.last_name || ''}
               </p>
-              <p className="text-xs text-gray-500">
-                {registration.user_address.slice(0, 6)}...
-                {registration.user_address.slice(-4)}
-              </p>
             </div>
             <div className="text-right">
               <p className="text-xs text-gray-400">

@@ -159,13 +159,16 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const userClaims = {
+    // CRITICAL: wallet_address MUST be in user_metadata to match RLS policy
+    // RLS checks: auth.jwt() -> 'user_metadata' ->> 'wallet_address'
+    const jwtPayload = {
+      sub: userId,
       aud: 'authenticated',
       role: 'authenticated',
-      wallet_address: normalizedAddress,
+      user_metadata: {
+        wallet_address: normalizedAddress,
+      },
     };
-
-    const jwtPayload = { sub: userId, ...userClaims };
 
     const supabaseToken = jwt.sign(jwtPayload, JWT_SECRET, {
       expiresIn: '30m',

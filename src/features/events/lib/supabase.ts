@@ -1,5 +1,6 @@
 import { getCurrentSession } from '@/features/identity/utils/serverAuth';
 import { supabase } from '@/utils/supabaseClient';
+import { unifiedNotificationService } from '@/services/unifiedNotificationService';
 import type {
   Event,
   EventRegistration,
@@ -265,6 +266,25 @@ export class EventService {
     */
   }
 
+  static async getEventsByIds(eventIds: string[]): Promise<EventWithStats[]> {
+    if (!eventIds || eventIds.length === 0) {
+      return [];
+    }
+
+    const { data, error } = await supabase
+      .from('events')
+      .select('*')
+      .in('id', eventIds)
+      .order('event_date', { ascending: true });
+
+    if (error) {
+      console.error('Error fetching events by IDs:', error);
+      throw error;
+    }
+
+    return data || [];
+  }
+
   static async getEventsFromTable(filters?: {
     status?: string;
     creator_address?: string;
@@ -521,7 +541,73 @@ export class EventService {
   }
 
   static async cancelEvent(eventId: string): Promise<Event> {
-    return this.updateEvent(eventId, { status: 'cancelled' });
+    try {
+      // 1. Get event details for notifications
+      const event = await this.getEvent(eventId);
+      if (!event) {
+        throw new Error('Event not found');
+      }
+
+      // 2. Get all registrations for the event
+      const registrations = await this.getEventRegistrations(eventId);
+
+      // 3. Update event status to cancelled
+      const cancelledEvent = await this.updateEvent(eventId, { status: 'cancelled' });
+
+      // 4. Process refunds for paid registrations
+      const refundPromises = registrations
+        .filter((reg) =>
+          reg.payment_status === 'completed' &&
+          reg.payment_amount !== '0' &&
+          reg.registration_status === 'registered'
+        )
+        .map(async (reg) => {
+          try {
+            // Update payment status to refunded
+            await supabase
+              .from('event_registrations')
+              .update({ payment_status: 'refunded' })
+              .eq('id', reg.id);
+
+            console.log(`✅ Refund processed for registration ${reg.id}`);
+          } catch (error) {
+            console.error(`❌ Failed to process refund for registration ${reg.id}:`, error);
+          }
+        });
+
+      await Promise.all(refundPromises);
+
+      // 5. Send cancellation notifications to all registered attendees
+      const notificationPromises = registrations
+        .filter((reg) => reg.registration_status === 'registered')
+        .map(async (reg) => {
+          try {
+            await unifiedNotificationService.createNotification({
+              recipient_address: reg.user_address,
+              sender_address: event.creator_address,
+              notification_type: 'event_cancellation',
+              title: 'Event Cancelled',
+              message: `The event "${event.title}" has been cancelled. ${reg.payment_amount !== '0' ? 'Your payment has been refunded automatically.' : ''}`,
+              context_type: 'events',
+              context_id: eventId,
+              context_url: `/events/${eventId}`,
+              priority: 'high',
+            });
+            console.log(`✅ Notification sent to ${reg.user_address}`);
+          } catch (error) {
+            console.error(`❌ Failed to send notification to ${reg.user_address}:`, error);
+          }
+        });
+
+      await Promise.all(notificationPromises);
+
+      console.log(`✅ Event ${eventId} cancelled successfully. ${refundPromises.length} refunds processed, ${notificationPromises.length} notifications sent.`);
+
+      return cancelledEvent;
+    } catch (error) {
+      console.error('❌ Error in cancelEvent:', error);
+      throw error;
+    }
   }
 
   static async completeEvent(eventId: string): Promise<Event> {

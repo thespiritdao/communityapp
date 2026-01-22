@@ -156,7 +156,7 @@ export const ProductActions = styled.div`
 `;
 
 export const ActionButton = styled.button`
-  background: #007bff;
+  background: #2F5D50;
   color: white;
   border: none;
   padding: 6px 12px;
@@ -165,11 +165,11 @@ export const ActionButton = styled.button`
   font-weight: 500;
   cursor: pointer;
   transition: background-color 0.2s ease;
-  
+
   &:hover:not(:disabled) {
-    background: #0056b3;
+    background: #254A40;
   }
-  
+
   &:disabled {
     background: #ccc;
     cursor: not-allowed;
@@ -177,7 +177,7 @@ export const ActionButton = styled.button`
 `;
 
 export const DeleteButton = styled.button`
-  background: #dc3545;
+  background: #8B3A3A;
   color: white;
   border: none;
   padding: 6px 12px;
@@ -186,11 +186,11 @@ export const DeleteButton = styled.button`
   font-weight: 500;
   cursor: pointer;
   transition: background-color 0.2s ease;
-  
+
   &:hover:not(:disabled) {
-    background: #c82333;
+    background: #6F2E2E;
   }
-  
+
   &:disabled {
     background: #ccc;
     cursor: not-allowed;
@@ -332,20 +332,20 @@ export const FormActions = styled.div`
 `;
 
 export const CancelButton = styled.button`
-  background: #6c757d;
-  color: white;
-  border: none;
+  background: #8FAAA1;
+  color: #1F2D2A;
+  border: 1px solid #6F8F86;
   padding: 10px 20px;
   border-radius: 4px;
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;
   transition: background-color 0.2s ease;
-  
+
   &:hover:not(:disabled) {
-    background: #545b62;
+    background: #6F8F86;
   }
-  
+
   &:disabled {
     background: #ccc;
     cursor: not-allowed;
@@ -353,7 +353,7 @@ export const CancelButton = styled.button`
 `;
 
 export const SaveButton = styled.button`
-  background: #28a745;
+  background: #2F5D50;
   color: white;
   border: none;
   padding: 10px 20px;
@@ -362,11 +362,11 @@ export const SaveButton = styled.button`
   font-weight: 500;
   cursor: pointer;
   transition: background-color 0.2s ease;
-  
+
   &:hover:not(:disabled) {
-    background: #218838;
+    background: #254A40;
   }
-  
+
   &:disabled {
     background: #ccc;
     cursor: not-allowed;

@@ -129,12 +129,22 @@ export async function POST(request: NextRequest) {
  * Determine notification category from type
  */
 function determineCategory(notificationType: string): string {
-  if (notificationType.startsWith('pod_')) return 'pod';
+  // Check governance-specific notifications FIRST (including pod-governance types)
   if (
     notificationType.startsWith('governance_') ||
-    notificationType === 'proposal_created'
+    notificationType === 'proposal_created' ||
+    notificationType === 'proposal_mentioned' ||
+    notificationType === 'proposal_voted' ||
+    notificationType === 'proposal_executed' ||
+    notificationType === 'proposal_cancelled' ||
+    notificationType === 'token_holder_notification' ||
+    notificationType === 'pod_approval_request' ||
+    notificationType === 'pod_approved' ||
+    notificationType === 'pod_rejected'
   )
     return 'governance';
+  // Then check other pod-related notifications
+  if (notificationType.startsWith('pod_')) return 'pod';
   if (notificationType.startsWith('bounty_')) return 'bounty';
   if (notificationType.startsWith('chat_')) return 'chat';
   if (notificationType.startsWith('forum_')) return 'forum';

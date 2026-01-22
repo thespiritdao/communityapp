@@ -214,8 +214,6 @@ export const createProduct = async (
         destination_address: fundRouting.destination_address,
         creator_wallet: fundRouting.creator_wallet,
         pod_id: fundRouting.pod_id,
-        // Pod context - NEW: Track which pod this product was created in
-        creating_pod_id: podId || null,
       })
       .select()
       .single();

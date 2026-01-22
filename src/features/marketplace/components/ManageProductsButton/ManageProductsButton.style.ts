@@ -5,16 +5,16 @@ export const ManageProductsButton = styled.button`
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 0.35rem;
+  gap: 0.25rem;
   background-color: #8FAAA1;
   color: #FFFFFF;
   border: none;
   border-radius: 3px;
-  padding: 0.35rem 0.5rem;
-  font-size: 0.9rem;
+  padding: 0.3rem 0.4rem;
+  font-size: 0.85rem;
   cursor: pointer;
   transition: background-color 0.15s ease;
-  margin-right: 0.75rem;
+  margin-right: 0.5rem;
   min-height: 20px;
   min-width: 20px;
 

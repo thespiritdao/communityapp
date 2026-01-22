@@ -55,29 +55,28 @@ export const EventCard: React.FC<EventCardProps> = ({
   const { canView, canRegister, loading } = useEventAccess(event);
   const { evmAddress: address } = useEvmAddress();
 
-  // Fetch tokens from Supabase and store in state
-  const [tokens, setTokens] = useState<{ id: string; name: string }[]>([]);
-  const [tokensLoading, setTokensLoading] = useState(true);
+  // Fetch pods from Supabase and store in state
+  const [pods, setPods] = useState<{ id: string; name: string; pod_image_url?: string }[]>([]);
+  const [podsLoading, setPodsLoading] = useState(true);
 
   useEffect(() => {
-    const fetchTokens = async () => {
-      setTokensLoading(true);
+    const fetchPods = async () => {
+      setPodsLoading(true);
       try {
-        const result = await EventService.getAllTokens(); // Should return [{id, name}, ...]
-        setTokens(result || []);
+        const result = await EventService.getPods();
+        setPods(result || []);
       } catch (e) {
-        console.error('Error loading tokens', e);
+        console.error('Error loading pods', e);
       } finally {
-        setTokensLoading(false);
+        setPodsLoading(false);
       }
     };
-    fetchTokens();
+    fetchPods();
   }, []);
 
-  // Lookup function to map id -> token name
-  const getTokenNameById = (id: string) => {
-    const token = tokens.find((t) => t.id === id);
-    return token ? token.name : id;
+  // Lookup function to map id -> pod data
+  const getPodById = (id: string) => {
+    return pods.find((p) => p.id === id);
   };
 
   const formatDate = (dateString: string) => {
@@ -258,24 +257,42 @@ export const EventCard: React.FC<EventCardProps> = ({
         {/* Requirements */}
         {event.required_tokens && event.required_tokens.length > 0 && (
           <div className="mt-4">
-            <div className="flex items-center text-sm text-gray-600">
-              <Lock className="w-4 h-4 mr-1" />
+            <div className="flex items-start text-sm text-gray-600 mb-2">
+              <Lock className="w-4 h-4 mr-1 mt-0.5" />
               <span className="font-medium">Requirements:</span>
-              {tokensLoading ? (
-                <span className="ml-2 text-xs text-gray-400">
-                  Loading requirements…
-                </span>
-              ) : (
-                <span className="text-gray-700 ml-1">
-                  {event.required_tokens.map((tokenId, index) => (
-                    <span key={tokenId}>
-                      {getTokenNameById(tokenId)}
-                      {index < event.required_tokens.length - 1 ? ', ' : ''}
-                    </span>
-                  ))}
-                </span>
-              )}
             </div>
+            {podsLoading ? (
+              <div className="ml-5 text-xs text-gray-400">
+                Loading requirements…
+              </div>
+            ) : (
+              <div className="ml-5 flex flex-wrap gap-2">
+                {event.required_tokens.map((tokenId) => {
+                  const pod = getPodById(tokenId);
+                  if (!pod) return null;
+
+                  return (
+                    <div
+                      key={tokenId}
+                      className="flex items-center space-x-2 bg-gray-50 rounded-lg px-3 py-2 border border-gray-200 hover:border-gray-300 transition-colors"
+                    >
+                      <img
+                        src={pod.pod_image_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(pod.name)}&size=32&background=8FAAA1&color=fff&bold=true`}
+                        alt={pod.name}
+                        className="w-6 h-6 rounded-full object-cover"
+                        onError={(e) => {
+                          const target = e.target as HTMLImageElement;
+                          target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(pod.name)}&size=32&background=8FAAA1&color=fff&bold=true`;
+                        }}
+                      />
+                      <span className="text-sm font-medium text-gray-700">
+                        {pod.name}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         )}
       </CardContent>

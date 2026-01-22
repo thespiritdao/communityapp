@@ -394,6 +394,11 @@ export default function GovernancePage() {
                                 proposalId={proposal.id}
                                 choice={idx + 1}
                                 onVoteSuccess={refetchProposals}
+                                voteCounts={{
+                                  for: proposal.scores?.[0] || 0,
+                                  against: proposal.scores?.[1] || 0,
+                                  abstain: proposal.scores?.[2] || 0,
+                                }}
                               />
                             ) : (
                               <EnhancedVoteButton

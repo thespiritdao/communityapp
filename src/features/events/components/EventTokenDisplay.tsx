@@ -2,7 +2,6 @@
 
 import type React from 'react';
 import { useState, useEffect } from 'react';
-import Image from 'next/image';
 import { EventService } from '../lib/supabase';
 
 interface Pod {
@@ -14,6 +13,7 @@ interface Pod {
   hat_id?: string | null;
   is_active: boolean;
   created_at: string;
+  pod_image_url?: string;
 }
 
 interface EventTokenDisplayProps {
@@ -58,7 +58,7 @@ export const EventTokenDisplay: React.FC<EventTokenDisplayProps> = ({
     return {
       name: pod?.name || tokenId,
       description: pod?.description || '',
-      imageUrl: '/images/symbolobinfin.png', // Default image - you can enhance this
+      imageUrl: pod?.pod_image_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(pod?.name || 'Pod')}&size=48&background=8FAAA1&color=fff&bold=true`,
     };
   };
 
@@ -94,26 +94,20 @@ export const EventTokenDisplay: React.FC<EventTokenDisplayProps> = ({
         return (
           <div
             key={tokenId}
-            className={`flex items-center gap-2 px-3 py-2 bg-gray-100 rounded-lg border ${
+            className={`flex items-center gap-2 px-3 py-2 bg-gray-50 rounded-lg border border-gray-200 hover:border-gray-300 transition-colors ${
               compact ? 'text-xs' : 'text-sm'
             }`}
           >
             {showImages && (
-              <div
-                className={`flex-shrink-0 ${compact ? 'w-4 h-4' : 'w-6 h-6'}`}
-              >
-                <Image
-                  src={tokenInfo.imageUrl}
-                  alt={tokenInfo.name}
-                  width={compact ? 16 : 24}
-                  height={compact ? 16 : 24}
-                  className="rounded-full object-cover"
-                  onError={(e) => {
-                    // Fallback to default image on error
-                    e.currentTarget.src = '/images/symbolobinfin.png';
-                  }}
-                />
-              </div>
+              <img
+                src={tokenInfo.imageUrl}
+                alt={tokenInfo.name}
+                className={`rounded-full object-cover ${compact ? 'w-4 h-4' : 'w-6 h-6'}`}
+                onError={(e) => {
+                  const target = e.target as HTMLImageElement;
+                  target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(tokenInfo.name)}&size=${compact ? 16 : 24}&background=8FAAA1&color=fff&bold=true`;
+                }}
+              />
             )}
             <span className="font-medium text-gray-700">{tokenInfo.name}</span>
           </div>

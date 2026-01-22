@@ -38,7 +38,8 @@ import { useEvmAddress, useSendUserOperation, useCurrentUser } from '@coinbase/c
 import Link from 'next/link';
 import { unifiedNotificationService as notificationService } from '@/services/unifiedNotificationService';
 import { useSimplifiedEventTransactions } from '../hooks/useSimplifiedEventTransactions';
-import { encodeFunctionData } from 'viem';
+import { encodeFunctionData, createPublicClient, http } from 'viem';
+import { base } from 'viem/chains';
 import { useToast } from '@/components/ui/use-toast';
 import EventManagerABI from '@/abis/EventManager.json';
 import { CONTRACT_ADDRESSES } from '@/config/contracts';
@@ -622,7 +623,70 @@ const EventManagementRow: React.FC<EventManagementRowProps> = ({
       console.log('🚀 Cancelling event on blockchain via CDP:', {
         eventId: blockchainEventId,
         contract: EVENT_MANAGER_CONTRACT,
+        smartAccount: smartAccount,
       });
+
+      // Create public client to read on-chain data
+      const publicClient = createPublicClient({
+        chain: base,
+        transport: http(),
+      });
+
+      // Check event status on-chain before attempting cancellation
+      const onChainEvent = await publicClient.readContract({
+        address: EVENT_MANAGER_CONTRACT as `0x${string}`,
+        abi: EventManagerABI,
+        functionName: 'getEvent',
+        args: [blockchainEventId],
+      }) as any;
+
+      const statusNames = ['Created', 'Active', 'Completed', 'Cancelled'];
+      const currentStatus = statusNames[onChainEvent.status] || 'Unknown';
+
+      console.log('📊 On-chain event status:', {
+        eventId: blockchainEventId,
+        databaseStatus: event.status,
+        onChainStatus: currentStatus,
+        statusCode: onChainEvent.status,
+        organizer: onChainEvent.organizer,
+        smartAccount: smartAccount,
+      });
+
+      // SYNC DETECTION: If already cancelled on-chain but database shows otherwise
+      if (onChainEvent.status === 3 && event.status !== 'cancelled') {
+        console.warn('⚠️ Database/blockchain sync issue detected. Event already cancelled on-chain but database shows:', event.status);
+
+        // Sync database to match blockchain
+        console.log('🔄 Syncing database status to "cancelled"...');
+        const success = await cancelEvent();
+
+        setCancellingEvent(false);
+        setShowCancelDialog(false);
+        setShowSmartContractCancel(false);
+
+        if (success) {
+          toast({
+            title: 'Event Status Synced',
+            description: 'Event was already cancelled on blockchain. Database has been updated.',
+            variant: 'default',
+          });
+        }
+
+        return; // Exit - no need to send blockchain transaction
+      }
+
+      // VALIDATION: Check if event can be cancelled
+      if (onChainEvent.status !== 0) { // EventStatus.Created = 0
+        setCancellingEvent(false);
+
+        toast({
+          title: 'Cannot Cancel Event',
+          description: `Event has status "${currentStatus}" on blockchain. Only events with "Created" status can be cancelled.`,
+          variant: 'destructive',
+        });
+
+        return;
+      }
 
       // Encode the cancelEvent call
       const callData = encodeFunctionData({

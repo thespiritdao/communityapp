@@ -290,18 +290,36 @@ export function useTokenGatedEvents(userAddress?: string) {
         userRegistrations.map((reg) => reg.event_id),
       );
 
+      // Fetch full details for registered events (bypassing token gating)
+      // This ensures "My Events" shows all registered events regardless of current token access
+      const registeredEventsData: EventWithStats[] = [];
+      if (registeredEventIds.size > 0) {
+        const registeredEventsFromDb = await EventService.getEventsByIds(
+          Array.from(registeredEventIds),
+        );
+        registeredEventsData.push(...registeredEventsFromDb);
+      }
+
+      // Also fetch events created by user
+      const createdEvents = await EventService.getEvents({
+        creator_address: effectiveAddress,
+      });
+
+      // Merge created events into registered events (avoid duplicates)
+      const registeredEventIdsSet = new Set(registeredEventsData.map(e => e.id));
+      for (const event of createdEvents) {
+        if (!registeredEventIdsSet.has(event.id)) {
+          registeredEventsData.push(event);
+          registeredEventIdsSet.add(event.id);
+        }
+      }
+
       // Process accessible events
       const visible: EventWithStats[] = [];
       const registrable: EventWithStats[] = [];
-      const registered: EventWithStats[] = [];
 
       // All events returned from RPC are accessible, so we just need to categorize them
       for (const event of accessibleEvents) {
-        // Check if user is registered for this event
-        if (registeredEventIds.has(event.id)) {
-          registered.push(event);
-        }
-
         // All events from RPC are visible
         visible.push(event);
 
@@ -331,7 +349,7 @@ export function useTokenGatedEvents(userAddress?: string) {
 
       setVisibleEvents(visible);
       setRegistrableEvents(registrable);
-      setRegisteredEvents(registered);
+      setRegisteredEvents(registeredEventsData);
     } catch (err) {
       console.error('Error in token gated events check:', err);
       setError(

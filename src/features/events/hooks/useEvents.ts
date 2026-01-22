@@ -1,6 +1,6 @@
 import { getCurrentSession } from '@/features/identity/utils/serverAuth';
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { useEvmAddress, useSignEvmMessage, useCurrentUser } from '@coinbase/cdp-hooks';
+import { useEvmAddress } from '@coinbase/cdp-hooks';
 import { EventService } from '../lib/supabase';
 import { supabase } from '../../../utils/supabaseClient';
 import type {
@@ -406,72 +406,21 @@ export function useUserEvents() {
 
 export function useEventActions(eventId: string | null) {
   const { evmAddress: address } = useEvmAddress();
-  const { currentUser } = useCurrentUser();
-  const { signEvmMessage } = useSignEvmMessage();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const ensureAuthenticated = useCallback(async (): Promise<boolean> => {
     const session = await getCurrentSession();
 
-    if (!session?.user?.id && address) {
-      // User has wallet connected but no Supabase session - try to authenticate
-      try {
-        // Get a nonce
-        const nonceRes = await fetch('/api/auth/nonce');
-        if (!nonceRes.ok) {
-          throw new Error('Failed to get nonce');
-        }
-        const { nonce } = await nonceRes.json();
-
-        // Check if EVM account is available
-        const evmAccount = currentUser?.evmAccounts?.[0];
-        if (!evmAccount) {
-          throw new Error('EVM account not available');
-        }
-
-        // Sign message with CDP
-        const result = await signEvmMessage({
-          evmAccount: evmAccount as `0x${string}`,
-          message: nonce,
-        });
-        const signature = result.signature;
-
-        // Verify and get Supabase token
-        const verifyRes = await fetch('/api/auth/verify', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ address, signature }),
-        });
-
-        if (!verifyRes.ok) {
-          throw new Error('Authentication failed');
-        }
-
-        const { supabaseToken } = await verifyRes.json();
-
-        if (supabaseToken) {
-          const { error } = await supabase.auth.setSession({
-            access_token: supabaseToken,
-            refresh_token: '',
-          });
-
-          if (!error) {
-            return true;
-          }
-        }
-
-        throw new Error('Failed to set session');
-      } catch (error) {
-        console.error('Auto-authentication failed:', error);
-        throw new Error(
-          'Please sign in with your wallet to perform this action',
-        );
-      }
+    if (!session?.user?.id) {
+      console.error('No active session found');
+      throw new Error(
+        'Please sign in with your wallet to perform this action',
+      );
     }
 
-    return !!session?.user?.id;
-  }, [address, currentUser, signEvmMessage]);
+    return true;
+  }, []);
 
   const publishEvent = useCallback(async (): Promise<boolean> => {
     if (!eventId) {

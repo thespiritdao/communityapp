@@ -39,20 +39,22 @@ import { createSupabaseSession } from '@/utils/createSupabaseSession';
 import * as S from './style';
 
 // CDP-native button styled component (replaces OnchainKit TransactionButton)
+// Using SpiritDAO PRIMARY color (#2F5D50 - Dark Ritual Green)
 const CDPTransactionButton = styled.button`
-  background-color: #0070f3 !important;
-  color: #fff !important;
+  background-color: #2F5D50 !important;
+  color: #FFFFFF !important;
   border-radius: 6px !important;
   border: none !important;
   padding: 0.75rem 1.5rem !important;
   font-size: 1rem !important;
+  font-weight: 500 !important;
   cursor: pointer !important;
   transition: background-color 0.2s ease !important;
   width: 100%;
   margin-top: 1rem;
 
   &:hover:not(:disabled) {
-    background-color: #005bb5 !important;
+    background-color: #254A40 !important;
   }
 
   &:disabled {

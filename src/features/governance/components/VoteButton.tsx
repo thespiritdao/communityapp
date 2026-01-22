@@ -18,6 +18,7 @@ interface VoteButtonProps {
   approvingPodId?: string; // Optional: which pod should approve (defaults to Executive Pod)
   onVoteSuccess?: () => void; // Callback to refetch proposals after voting
   hasVoted?: boolean; // Optional: pass from parent to avoid duplicate RPC calls
+  voteCounts?: { for: number; against: number; abstain: number }; // Optional: trigger re-check when counts change
 }
 
 const BASE_CHAIN_ID = 8453;
@@ -28,6 +29,7 @@ const VoteButton: React.FC<VoteButtonProps> = ({
   approvingPodId,
   onVoteSuccess,
   hasVoted: hasVotedProp,
+  voteCounts,
 }) => {
   const { currentUser } = useCurrentUser();
   const { sendUserOperation } = useSendUserOperation();
@@ -77,7 +79,7 @@ const VoteButton: React.FC<VoteButtonProps> = ({
     };
 
     checkIfVoted();
-  }, [publicClient, address, proposalId, GOVERNOR_ADDRESS, hasVotedProp]);
+  }, [publicClient, address, proposalId, GOVERNOR_ADDRESS, hasVotedProp, voteCounts]);
 
   // CDP transaction handler (non-sponsored)
   // ⚠️ IMPORTANT: Must be defined BEFORE any conditional returns to avoid React hooks error
