@@ -150,11 +150,11 @@ const fetchProposalsOnChain = async (
   )! as AbiEvent;
 
   // 2) Fetch ProposalCreated logs
-  // Note: Reduced block range to prevent rate limiting
+  // Note: Increased block range to capture all historical proposals
   const currentBlock = await publicClient.getBlockNumber();
-  const fromBlock = currentBlock - 5000n; // Look back ~7 hours on Base (2s block time)
+  const fromBlock = currentBlock - 100000n; // Look back ~2.3 days on Base (2s block time)
 
-  console.log(`🔍 Fetching proposals from block ${fromBlock} to ${currentBlock} (${5000n} blocks)`);
+  console.log(`🔍 Fetching proposals from block ${fromBlock} to ${currentBlock} (${100000n} blocks)`);
 
   let logs;
   try {
