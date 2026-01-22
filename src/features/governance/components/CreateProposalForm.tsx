@@ -1182,8 +1182,8 @@ export function CreateProposalForm({
         setHasInteracted(false);
 
         // Trigger refetch
-        if (onProposalCreated) {
-          onProposalCreated();
+        if (onSuccess) {
+          onSuccess();
         }
 
         return; // Exit early - pod-level proposal complete
