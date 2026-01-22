@@ -198,44 +198,58 @@ const fetchProposalsOnChain = async (
       // 3) Read on‑chain proposal data using OpenZeppelin Governor functions
       // OpenZeppelin Governor doesn't have a single "proposals" function,
       // so we need to call individual functions
-      const [startBlock, endBlock, votes] = await Promise.all([
-        publicClient.readContract({
-          address: GOVERNOR_ADDRESS,
-          abi: DAOGovernorABI,
-          functionName: 'proposalSnapshot',
-          args: [proposalId],
-        }) as Promise<bigint>,
-        publicClient.readContract({
-          address: GOVERNOR_ADDRESS,
-          abi: DAOGovernorABI,
-          functionName: 'proposalDeadline',
-          args: [proposalId],
-        }) as Promise<bigint>,
-        publicClient.readContract({
-          address: GOVERNOR_ADDRESS,
-          abi: DAOGovernorABI,
-          functionName: 'proposalVotes',
-          args: [proposalId],
-        }) as Promise<{
-          againstVotes: bigint;
-          forVotes: bigint;
-          abstainVotes: bigint;
-        }>,
-      ]);
+      let startBlock: bigint | undefined;
+      let endBlock: bigint | undefined;
+      let votes: { againstVotes: bigint; forVotes: bigint; abstainVotes: bigint } | undefined;
 
+      try {
+        [startBlock, endBlock, votes] = await Promise.all([
+          publicClient.readContract({
+            address: GOVERNOR_ADDRESS,
+            abi: DAOGovernorABI,
+            functionName: 'proposalSnapshot',
+            args: [proposalId],
+          }) as Promise<bigint>,
+          publicClient.readContract({
+            address: GOVERNOR_ADDRESS,
+            abi: DAOGovernorABI,
+            functionName: 'proposalDeadline',
+            args: [proposalId],
+          }) as Promise<bigint>,
+          publicClient.readContract({
+            address: GOVERNOR_ADDRESS,
+            abi: DAOGovernorABI,
+            functionName: 'proposalVotes',
+            args: [proposalId],
+          }) as Promise<{
+            againstVotes: bigint;
+            forVotes: bigint;
+            abstainVotes: bigint;
+          }>,
+        ]);
+      } catch (contractError) {
+        console.error(`❌ Failed to read proposal data for ${proposalId.toString()}:`, contractError);
+        // Set defaults so proposal still shows
+        startBlock = 0n;
+        endBlock = 0n;
+        votes = { forVotes: 0n, againstVotes: 0n, abstainVotes: 0n };
+      }
+
+      // Defensive: Handle case where contract calls return undefined
       const core = {
-        startBlock,
-        endBlock,
-        forVotes: votes.forVotes,
-        againstVotes: votes.againstVotes,
-        abstainVotes: votes.abstainVotes,
+        startBlock: startBlock || 0n,
+        endBlock: endBlock || 0n,
+        forVotes: votes?.forVotes || 0n,
+        againstVotes: votes?.againstVotes || 0n,
+        abstainVotes: votes?.abstainVotes || 0n,
       };
 
       // DEBUG: Log vote counts from blockchain
       console.log(`📊 [Proposal ${proposalId.toString().substring(0, 20)}...] Vote counts from chain:`, {
-        for: votes.forVotes.toString(),
-        against: votes.againstVotes.toString(),
-        abstain: votes.abstainVotes.toString(),
+        for: (votes?.forVotes || 0n).toString(),
+        against: (votes?.againstVotes || 0n).toString(),
+        abstain: (votes?.abstainVotes || 0n).toString(),
+        hasVotes: !!votes,
       });
 
       // 4) Get proposal state with retry logic
