@@ -1573,7 +1573,7 @@ export function CreateProposalForm({
                       {isDelegating ? 'Delegating...' : 'Force Delegate Voting Power (Gasless)'}
                     </button>
                     <div className="text-xs" style={{ color: '#8B3A3A' }}>
-                      This will delegate your NFT voting power to yourself. This
+                      This will delegate your voting power to yourself. This
                       is needed after contract redeployments.
                     </div>
                   </div>
