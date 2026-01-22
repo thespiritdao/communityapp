@@ -18,7 +18,6 @@ export default function GovernancePage() {
   const [activeTab, setActiveTab] = useState<'vote' | 'propose'>('vote');
   const [selectedProposal, setSelectedProposal] = useState<EnhancedProposal | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [refetchCounter, setRefetchCounter] = useState(0);
 
   // Enhanced proposals that include both on-chain and pod proposals with HAT-based filtering
   const {
@@ -56,15 +55,10 @@ export default function GovernancePage() {
     // …other forum categories
   ];
 
-  // Called after a new proposal is successfully created or after voting
-  const handleRefetch = useCallback(() => {
-    refetchProposals();
-    setRefetchCounter(prev => prev + 1); // Trigger VoteButton re-checks
-  }, [refetchProposals]);
-
+  // Called after a new proposal is successfully created
   const handleProposalCreated = useCallback(() => {
-    handleRefetch();
-  }, [handleRefetch]);
+    refetchProposals();
+  }, [refetchProposals]);
 
   // Fetch user profiles for proposal creators
   const [creatorProfiles, setCreatorProfiles] = useState<Map<string, any>>(new Map());
@@ -396,17 +390,17 @@ export default function GovernancePage() {
                           proposal.choices.map((choice, idx) =>
                             proposal.type === 'governance' ? (
                               <VoteButton
-                                key={`${proposal.id}-${idx}-${refetchCounter}`}
+                                key={`${proposal.id}-${idx}`}
                                 proposalId={proposal.id}
                                 choice={idx + 1}
-                                onVoteSuccess={handleRefetch}
+                                onVoteSuccess={refetchProposals}
                               />
                             ) : (
                               <EnhancedVoteButton
                                 key={`${proposal.id}-${idx}`}
                                 proposal={proposal}
                                 choice={idx + 1}
-                                onVoteSuccess={handleRefetch}
+                                onVoteSuccess={refetchProposals}
                               />
                             ),
                           )

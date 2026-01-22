@@ -242,11 +242,12 @@ export const useHatPermissions = (): UseHatPermissionsReturn => {
                 permissions: parsedPermissions,
               };
 
-              console.log('✅ Loaded role for', podName, ':', {
-                roleName: dynamicRole.name,
-                hatId: hatId.slice(0, 10) + '...',
-                permissions: Object.keys(dynamicRole.permissions),
-              });
+              // Reduced verbosity - only log in development if needed
+              // console.log('✅ Loaded role for', podName, ':', {
+              //   roleName: dynamicRole.name,
+              //   hatId: hatId.slice(0, 10) + '...',
+              //   permissions: Object.keys(dynamicRole.permissions),
+              // });
 
               roles.push(dynamicRole);
               hats.push(hatId);

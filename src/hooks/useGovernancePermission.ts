@@ -88,13 +88,14 @@ export function useGovernancePermission(
     const hasPermission =
       governanceRole.permissions?.governanceParticipation === true;
 
-    console.log('🏛️ Governance Permission Check:', {
-      context: context || 'default',
-      governancePodId: targetPodId,
-      roleName: governanceRole.name,
-      hasPermission,
-      allPermissions: Object.keys(governanceRole.permissions || {}),
-    });
+    // Reduced verbosity - comment out in production
+    // console.log('🏛️ Governance Permission Check:', {
+    //   context: context || 'default',
+    //   governancePodId: targetPodId,
+    //   roleName: governanceRole.name,
+    //   hasPermission,
+    //   allPermissions: Object.keys(governanceRole.permissions || {}),
+    // });
 
     return {
       canParticipate: hasPermission,
