@@ -25,6 +25,7 @@ export async function POST(request: NextRequest) {
       funding_source,
       requirements,
       questions,
+      status, // Accept status from request body
     } = body;
 
     console.log('📝 Saving bounty to database:', {
@@ -57,7 +58,7 @@ export async function POST(request: NextRequest) {
       value_token: valueToken,
       requirements: requirements || [],
       questions: questions || [],
-      status: 'open',
+      status: status || 'open', // Use status from request, default to 'open' for backwards compatibility
       creator_address: creator,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
