@@ -19,7 +19,8 @@ import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useBountyV2 } from '../hooks/useBountyV2';
-import { usePodFactoryPermissions } from '@/features/pods/hooks/usePodFactoryPermissions';
+// import { usePodFactoryPermissions } from '@/features/pods/hooks/usePodFactoryPermissions'; // OLD: On-chain factory check
+import { useBountyPermissions } from '@/features/bounty/hooks/useBountyPermissions'; // NEW: Database permission check
 import { useBountyManagementAccess } from '../hooks/useBountyManagementAccess';
 import { BountyTreasuryFundingTransaction } from './BountyTreasuryFundingTransaction';
 import { RegisterPodButton } from '@/features/pods/components/RegisterPodButton';
@@ -90,7 +91,8 @@ export const BountyFormV2: React.FC<BountyFormV2Props> = ({
   const savedTransactions = useRef(new Set<string>()); // Track saved transactions to prevent duplicates
 
   // Get permissions for selected pod (only when podId is valid)
-  const { canManageBounties, canUseTreasury } = usePodFactoryPermissions(
+  // FIXED: Use database permissions (respects pod manage page toggles) instead of on-chain factory
+  const { canManageBounties, canUseTreasury } = useBountyPermissions(
     formData.podId && formData.podId.trim() !== '' ? formData.podId : null,
   );
 
@@ -1103,11 +1105,15 @@ export const BountyFormV2: React.FC<BountyFormV2Props> = ({
             }}
           >
             <AlertDescription style={{ color: '#1F453A' }}>
-              <strong>Permissions for selected pod:</strong>
+              <strong>Database Permissions for selected pod:</strong>
               <br />• Bounty Management:{' '}
-              {canManageBounties ? '✅ Allowed' : '❌ Not allowed'}
-              <br />• Treasury Access:{' '}
-              {canUseTreasury ? '✅ Allowed' : '❌ Not allowed'}
+              {canManageBounties ? '✅ Enabled' : '❌ Disabled (enable in pod manage page)'}
+              <br />• Treasury Management:{' '}
+              {canUseTreasury ? '✅ Enabled' : '❌ Disabled (enable in pod manage page)'}
+              <br />
+              <span className="text-xs text-gray-600">
+                💡 Enable permissions in: Pods → {managablePods.find(p => p.id === formData.podId)?.name} → Manage → Controls → Permissions
+              </span>
             </AlertDescription>
           </Alert>
         )}
