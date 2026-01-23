@@ -18,7 +18,7 @@ async function searchRecentBounties() {
 
   try {
     const latestBlock = await publicClient.getBlockNumber();
-    const startBlock = latestBlock - 5000n; // Last ~2.5 hours
+    const startBlock = latestBlock - 10000n; // Last ~5 hours (longer search)
 
     console.log(`🔍 Searching blocks ${startBlock} to ${latestBlock}...`);
 

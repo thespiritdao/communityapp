@@ -197,8 +197,8 @@ async function checkTransaction(txHash) {
   }
 }
 
-// Check the earlier successful transaction
-checkTransaction('0x8fdc81eca6efdf5056a93a637f6d22ed12e6417ad5094ca3791a30bf5be5749a')
+// Check the latest bounty transaction
+checkTransaction('0xdbf22a85f2f52a9995d4883d91d06ddebf198801c88289bd822bcbfabf6c9cad')
   .then(() => {
     console.log('\n✅ Done!');
     process.exit(0);

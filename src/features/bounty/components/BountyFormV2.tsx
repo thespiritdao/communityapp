@@ -4,6 +4,7 @@ import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { useEvmAddress, useSendUserOperation, useCurrentUser } from '@coinbase/cdp-hooks';
 import { parseEther, encodeFunctionData, createPublicClient, http } from 'viem';
 import { base } from 'viem/chains';
+import { useRouter } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -57,6 +58,8 @@ export const BountyFormV2: React.FC<BountyFormV2Props> = ({
   onCancel,
   categories,
 }) => {
+  const router = useRouter();
+
   // CDP Smart Account hooks - EXACT FAUCET PATTERN
   const { evmAddress } = useEvmAddress();
   const { sendUserOperation } = useSendUserOperation();
@@ -303,6 +306,12 @@ export const BountyFormV2: React.FC<BountyFormV2Props> = ({
       console.log('⏳ Step 1/3: Submitting transaction to network...');
 
       // EXACT FAUCET PATTERN: Send user operation with multiple calls
+      console.log('📤 Submitting user operation to CDP bundler...');
+      console.log('   Smart Account:', smartAccount);
+      console.log('   Network: base');
+      console.log('   Calls:', encodedCalls.length);
+      console.log('   Paymaster: enabled');
+
       const result = await sendUserOperation({
         evmSmartAccount: smartAccount,  // ← Smart Account directly!
         network: 'base',                 // ← Base mainnet
@@ -311,6 +320,7 @@ export const BountyFormV2: React.FC<BountyFormV2Props> = ({
       });
 
       console.log('✅ User operation hash received:', result);
+      console.log('📝 Full result object:', JSON.stringify(result, null, 2));
       setTransactionStatus('Transaction submitted to bundler...');
 
       // CDP returns userOperationHash immediately
@@ -412,8 +422,8 @@ export const BountyFormV2: React.FC<BountyFormV2Props> = ({
                 console.log('✅ Bounty saved to database successfully:', saveData);
                 setTransactionStatus('✅ Bounty created successfully!');
                 setTimeout(() => {
-                  // Redirect to bounties page
-                  window.location.href = '/bounty';
+                  // Redirect to bounties page without losing CDP session
+                  router.push('/bounty');
                 }, 2000); // Brief delay to show success message
               }
             })
@@ -477,8 +487,8 @@ export const BountyFormV2: React.FC<BountyFormV2Props> = ({
               console.log('✅ Bounty saved to database with pending status:', saveData);
               setTransactionStatus('✅ Bounty submitted! It will appear once confirmed on-chain.');
               setTimeout(() => {
-                // Redirect to bounties page
-                window.location.href = '/bounty';
+                // Redirect to bounties page without losing CDP session
+                router.push('/bounty');
               }, 2000);
             }
           })
