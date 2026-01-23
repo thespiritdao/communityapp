@@ -77,11 +77,18 @@ export interface BidApprovalDialogProps {
 /**
  * Extracts Ethereum address from mention string
  * Format: "@[Name](0xAddress)" or just "0xAddress"
+ *
+ * Note: Normalizes address to lowercase before validation to avoid checksum issues
  */
 const extractAddress = (mention: string | undefined): `0x${string}` | null => {
   if (!mention) return null;
   const match = mention.match(/@\[.*?\]\((0x[a-fA-F0-9]{40})\)/);
-  const address = match ? match[1] : mention;
+  let address = match ? match[1] : mention;
+
+  // Normalize to lowercase to avoid checksum validation issues
+  // viem's isAddress() is very strict about checksums
+  address = address.toLowerCase();
+
   return isAddress(address) ? (address as `0x${string}`) : null;
 };
 
