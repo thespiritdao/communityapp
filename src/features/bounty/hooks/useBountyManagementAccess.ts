@@ -102,25 +102,13 @@ export function useBountyManagementAccess(): UseBountyManagementAccessReturn {
       );
 
       // BETA TESTING: Check if user has Beta Tester superuser access
-      // 🔧 FIX: Use userHats instead of userRoles - Beta Tester is a standalone HAT
+      // 🔧 FIX: Beta Testers should STILL respect bountyManagement permissions
+      // They can test micro communities, but not create bounties for OTHER communities
       const isBetaTester = hasBetaTesterSuperuser(userHats);
 
       if (isBetaTester) {
-        console.log('👑 [Bounties] Beta Tester detected - granting access to ALL pods');
-        // Filter out system pods but grant access to all real pods
-        const accessiblePods = allPods.filter((pod) => {
-          if (pod.name === 'Top Hat' || pod.name?.toLowerCase().includes('top hat')) {
-            return false;
-          }
-          if (pod.hat_id?.endsWith('000000000000000000000000')) {
-            return false;
-          }
-          return true;
-        });
-        setManagedPods(accessiblePods);
-        setIsLoading(false);
-        console.log(`👑 [Bounties] Beta Tester granted access to ${accessiblePods.length} pods`);
-        return;
+        console.log('👑 [Bounties] Beta Tester detected - will still check bounty permissions for each pod');
+        // Don't bypass permission checks - let normal flow continue
       }
 
       // Filter pods where user has both module enabled AND bounty management permission

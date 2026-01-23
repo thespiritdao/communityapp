@@ -512,23 +512,23 @@ export const UnifiedMembershipManager: React.FC<
           <Card className="p-6">
             <h4 className="text-lg font-semibold mb-4">Role Permissions</h4>
             <div className="space-y-4">
-              {/* Render permissions in logical order */}
+              {/* Render permissions in alphabetical order */}
               {(
                 [
+                  'bountyManagement',
                   'chatAccess',
                   'chatModeration',
+                  'eventCreation',
                   'forumAccess',
                   'forumModeration',
                   'governanceParticipation',
-                  'eventCreation',
-                  'bountyManagement',
-                  'treasuryViewing',
-                  'treasuryManagement',
+                  'marketplaceAccess',
+                  'marketplaceManage',
                   'memberManagement',
                   'roleAssignment',
                   'subPodCreation',
-                  'marketplaceAccess',
-                  'marketplaceManage',
+                  'treasuryManagement',
+                  'treasuryViewing',
                 ] as Array<keyof HatPermissions>
               ).map((permissionKey) => {
                 const value = permissions[permissionKey];
