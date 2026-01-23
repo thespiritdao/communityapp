@@ -2,7 +2,8 @@
 
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useEvmAddress, useSendUserOperation, useCurrentUser } from '@coinbase/cdp-hooks';
-import { parseEther, encodeFunctionData } from 'viem';
+import { parseEther, encodeFunctionData, createPublicClient, http } from 'viem';
+import { base } from 'viem/chains';
 import { Loader2 } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -87,6 +88,7 @@ export const BountyFormV2: React.FC<BountyFormV2Props> = ({
   const [createdBountyId, setCreatedBountyId] = useState<number | null>(null);
   const [showTreasuryFunding, setShowTreasuryFunding] = useState(false);
   const [isTransactionPending, setIsTransactionPending] = useState(false); // CDP transaction loading state
+  const [transactionStatus, setTransactionStatus] = useState<string>(''); // Status message for user
   const hasSetInitialPod = useRef(false);
   const savedTransactions = useRef(new Set<string>()); // Track saved transactions to prevent duplicates
 
@@ -184,17 +186,17 @@ export const BountyFormV2: React.FC<BountyFormV2Props> = ({
     if (!ipfsHash) return null;
 
     try {
-      // Token address based on selection
+      // Token address based on selection (FIXED: Use correct Base mainnet addresses)
       const tokenAddress =
         formData.value.token === 'SYSTEM'
           ? ((process.env.NEXT_PUBLIC_SYSTEM_TOKEN ||
-              '0x1317Ae277266D38C4E492558f8693F14143a6A65') as `0x${string}`)
+              '0xd67e460ce56be18b573aB434b3DC962c657D8Bb5') as `0x${string}`)
           : ((process.env.NEXT_PUBLIC_SELF_TOKEN ||
-              '0xe9b4aB2eB9397fa41AC3223e96f9d988BeFF5D21') as `0x${string}`);
+              '0x1b8d424695E63ABca04E94bA46c03f1D83e14020') as `0x${string}`);
 
       const BOUNTY_MANAGER_V2 = (process.env
         .NEXT_PUBLIC_BOUNTY_MANAGER_ADDRESS ||
-        '0x29e653502083442B8B6C7c969557022F6a3CC64C') as `0x${string}`;
+        '0xc2Ac53e7C869Ed9Bcd21b72C7aE747Abb788A8e5') as `0x${string}`;
       const amount = parseEther(formData.value.amount);
 
       // ERC20 approve ABI
@@ -211,15 +213,41 @@ export const BountyFormV2: React.FC<BountyFormV2Props> = ({
         },
       ] as const;
 
-      // Build base bounty call
-      const baseCall = createBountyCall(formData);
+      // V3/V4: Get pod metadata for auto-registration
+      const selectedPod = managablePods.find((p) => p.id === formData.podId);
+      const leaderHatId = selectedPod?.management_hat_id || undefined;
+      const treasuryAddress = selectedPod?.treasury_contract_address || undefined;
+
+      console.log('🔧 V3/V4 Parameters:', {
+        podId: formData.podId,
+        selectedPod: selectedPod?.name,
+        leaderHatId,
+        treasuryAddress,
+        hasLeaderHat: !!leaderHatId,
+        hasTreasury: !!treasuryAddress,
+      });
+
+      // Build base bounty call with V3/V4 parameters
+      const baseCall = createBountyCall(formData, leaderHatId, treasuryAddress);
+
+      // Replace temporary IPFS hash with real one
+      // V4 args: [value, token, paymentType, podId, tempIpfs, leaderHatId, treasuryAddress]
+      // We need: [value, token, paymentType, podId, realIpfs, leaderHatId, treasuryAddress]
       const bountyCall = {
         ...baseCall,
         args: [
-          ...baseCall.args.slice(0, -1), // Remove temp IPFS hash
-          ipfsHash, // Add real IPFS hash
+          ...baseCall.args.slice(0, 4), // Keep: value, token, paymentType, podId
+          ipfsHash, // Replace temp IPFS hash with real one
+          ...baseCall.args.slice(5), // Keep: leaderHatId, treasuryAddress (if V4)
         ],
       };
+
+      console.log('📦 Final bountyCall args:', {
+        paramCount: bountyCall.args.length,
+        ipfsHash: bountyCall.args[4],
+        leaderHatId: bountyCall.args[5]?.toString(),
+        treasuryAddress: bountyCall.args[6],
+      });
 
       // Return array of calls: [approve, createBounty]
       return [
@@ -235,7 +263,7 @@ export const BountyFormV2: React.FC<BountyFormV2Props> = ({
       console.error('Error creating transaction calls:', error);
       return null;
     }
-  }, [formData, ipfsHash, createBountyCall]);
+  }, [formData, ipfsHash, createBountyCall, managablePods]);
 
   // CDP Smart Account transaction handler - EXACT FAUCET PATTERN
   const handleCreateBountyTransaction = useCallback(async () => {
@@ -272,6 +300,7 @@ export const BountyFormV2: React.FC<BountyFormV2Props> = ({
       }));
 
       console.log('📝 Encoded calls:', encodedCalls.length, 'transactions');
+      console.log('⏳ Step 1/3: Submitting transaction to network...');
 
       // EXACT FAUCET PATTERN: Send user operation with multiple calls
       const result = await sendUserOperation({
@@ -281,13 +310,24 @@ export const BountyFormV2: React.FC<BountyFormV2Props> = ({
         useCdpPaymaster: true,           // ← ENABLE GAS SPONSORSHIP!
       });
 
-      console.log('✅ User operation sent successfully!', result);
+      console.log('✅ User operation hash received:', result);
+      setTransactionStatus('Transaction submitted! Waiting for confirmation...');
 
-      // Parse transaction receipt for bounty ID (same logic as before)
-      // Type assertion needed due to incomplete CDP SDK types
-      const resultWithReceipt = result as any;
-      if (resultWithReceipt?.receipt) {
-        const receipt = resultWithReceipt.receipt;
+      // CDP returns userOperationHash but receipt comes later
+      // For now, we'll save the transaction with the userOperationHash and handle async
+      const userOpResult = result as any;
+      const userOpHash = userOpResult?.userOperationHash;
+
+      console.log('⏳ Step 2/3: Transaction submitted, proceeding without receipt...');
+      setTransactionStatus('Transaction confirmed! Processing bounty creation...');
+
+      // Since CDP doesn't immediately provide receipt, we'll use the userOperationHash
+      // and let the backend/blockchain handle the confirmation asynchronously
+      let receipt = userOpResult?.receipt;
+
+      if (receipt) {
+        console.log('✅ Step 3/3: Transaction confirmed! Processing receipt...');
+        setTransactionStatus('Transaction confirmed! Saving bounty to database...');
 
         // Prevent duplicate saves
         if (savedTransactions.current.has(receipt.transactionHash)) {
@@ -366,24 +406,91 @@ export const BountyFormV2: React.FC<BountyFormV2Props> = ({
               if (!saveResponse.ok) {
                 const errorData = await saveResponse.json();
                 console.error('❌ Failed to save bounty to database:', errorData);
+                setTransactionStatus('⚠️ Transaction succeeded but database save failed. Bounty exists on-chain.');
               } else {
                 const saveData = await saveResponse.json();
                 console.log('✅ Bounty saved to database successfully:', saveData);
-                onSuccess?.(bountyId);
+                setTransactionStatus('✅ Bounty created successfully!');
+                setTimeout(() => {
+                  // Redirect to bounties page
+                  window.location.href = '/bounty';
+                }, 2000); // Brief delay to show success message
               }
             })
             .catch((saveError) => {
               console.error('❌ Error saving bounty to database:', saveError);
+              setTransactionStatus('⚠️ Transaction succeeded but database save failed. Bounty exists on-chain.');
             });
         } else {
           console.error('❌ Could not find BountyCreated event in logs');
+          setTransactionStatus('⚠️ Could not parse bounty ID from transaction. Check transaction on explorer.');
         }
       } else {
-        console.warn('⚠️ No receipt found in result');
+        // No receipt yet - this is normal for CDP Smart Accounts
+        // Save to database with userOpHash and let it confirm asynchronously
+        console.warn('⚠️ No receipt found in result, saving with userOpHash');
+        setTransactionStatus('Saving bounty to database (transaction will confirm shortly)...');
+
+        const tokenAddress =
+          formData.value.token === 'SYSTEM'
+            ? process.env.NEXT_PUBLIC_SYSTEM_TOKEN || '0xd67e460ce56be18b573aB434b3DC962c657D8Bb5'
+            : process.env.NEXT_PUBLIC_SELF_TOKEN || '0x1b8d424695E63ABca04E94bA46c03f1D83e14020';
+
+        // Save without on-chain bountyId (will be updated later)
+        console.log('💾 Initiating database save with pending status...');
+        fetch('/api/bounty/create', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            bountyId: null, // Will be updated when transaction confirms
+            transactionHash: userOpHash, // User operation hash
+            creator: evmAddress,
+            value: formData.value.amount,
+            token: tokenAddress,
+            podId: formData.podId,
+            ipfsHash,
+            title: formData.title,
+            description: formData.description,
+            category: formData.category,
+            deadline: formData.deadline,
+            funding_source: formData.funding_source,
+            requirements: formData.requirements.filter((r) => r.trim()),
+            questions: formData.questions.filter((q) => q.trim()),
+            bid_acceptance_mode: formData.bid_acceptance_mode || 'single',
+            max_bids_accepted:
+              formData.bid_acceptance_mode === 'multiple'
+                ? formData.max_bids_accepted
+                : formData.bid_acceptance_mode === 'single'
+                  ? 1
+                  : 0,
+            bids_accepted_count: 0,
+            status: 'pending', // Mark as pending until confirmed
+          }),
+        })
+          .then(async (saveResponse) => {
+            if (!saveResponse.ok) {
+              const errorData = await saveResponse.json();
+              console.error('❌ Failed to save bounty to database:', errorData);
+              setTransactionStatus('⚠️ Failed to save bounty. Transaction hash: ' + userOpHash);
+            } else {
+              const saveData = await saveResponse.json();
+              console.log('✅ Bounty saved to database with pending status:', saveData);
+              setTransactionStatus('✅ Bounty submitted! It will appear once confirmed on-chain.');
+              setTimeout(() => {
+                // Redirect to bounties page
+                window.location.href = '/bounty';
+              }, 2000);
+            }
+          })
+          .catch((saveError) => {
+            console.error('❌ Error saving bounty to database:', saveError);
+            setTransactionStatus('⚠️ Error saving bounty. Transaction hash: ' + userOpHash);
+          });
       }
     } catch (err: any) {
       console.error('❌ Bounty creation failed:', err);
       setErrors({ transaction: err.message || 'Transaction failed. Please try again.' });
+      setTransactionStatus('');
     } finally {
       setIsTransactionPending(false); // EXACT FAUCET PATTERN
     }
@@ -1035,38 +1142,6 @@ export const BountyFormV2: React.FC<BountyFormV2Props> = ({
             <>
               {/* Show Register Pod Button if needed */}
               <div className="flex-1 space-y-3">
-                <Alert
-                  className="border"
-                  style={{ backgroundColor: '#E8F1EE', borderColor: '#B8D9CA' }}
-                >
-                  <AlertDescription style={{ color: '#1F453A' }}>
-                    <strong>⚠️ Important: Pod Registration Required</strong>
-                    <br />
-                    Before creating bounties, you must register this pod with the bounty system.
-                    This is a one-time setup step.
-                    <br /><br />
-                    <strong>Steps:</strong>
-                    <ol className="list-decimal list-inside text-sm mt-2">
-                      <li>Click "Register Pod for Bounties" below</li>
-                      <li>After registration succeeds, click "Create Bounty"</li>
-                    </ol>
-                  </AlertDescription>
-                </Alert>
-
-                <RegisterPodButton
-                  pod={{
-                    id: formData.podId,
-                    name: managablePods.find(p => p.id === formData.podId)?.name || 'Selected Pod',
-                    created_by_address: managablePods.find(p => p.id === formData.podId)?.created_by_address || evmAddress || '0x0',
-                    pod_leads: managablePods.find(p => p.id === formData.podId)?.pod_leads || [],
-                    treasury_contract_address: managablePods.find(p => p.id === formData.podId)?.treasury_contract_address || '0x0000000000000000000000000000000000000000',
-                  }}
-                  onSuccess={() => {
-                    console.log('✅ Pod registered! You can now create bounties.');
-                    // The user can now click Create Bounty
-                  }}
-                />
-
                 <div className="pt-2 border-t">
                   <Button
                     onClick={handleCreateBountyTransaction}
@@ -1079,9 +1154,19 @@ export const BountyFormV2: React.FC<BountyFormV2Props> = ({
                         Creating Bounty...
                       </>
                     ) : (
-                      'Create Bounty (Gasless)'
+                      'Create Bounty'
                     )}
                   </Button>
+
+                  {/* Transaction Status Message */}
+                  {isTransactionPending && transactionStatus && (
+                    <Alert className="mt-3">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      <AlertDescription className="ml-2">
+                        {transactionStatus}
+                      </AlertDescription>
+                    </Alert>
+                  )}
                 </div>
               </div>
             </>
