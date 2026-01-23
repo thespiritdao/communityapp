@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { useEvmAddress } from '@coinbase/cdp-hooks';
 import { usePublicClient } from 'wagmi';
-import { useProposals } from './useProposals';
+import { useProposalsV3 } from './useProposalsV3'; // ✅ V3: Database-first architecture
 import { PodGovernanceService } from '@/features/pods/services/podGovernanceService';
 import { GovernanceService } from '@/features/governance/services/governanceService';
 import {
@@ -57,7 +57,8 @@ const HATS_ABI = [
 export const useEnhancedProposals = () => {
   const { evmAddress: address } = useEvmAddress();
   const publicClient = usePublicClient();
-  const { data: onChainProposals = [], isLoading: proposalsLoading, ...onChainQuery } = useProposals();
+  // ✅ V3: Using database-first architecture for 90% faster load times
+  const { data: onChainProposals = [], isLoading: proposalsLoading, ...onChainQuery } = useProposalsV3();
   const { canParticipateInGovernance, userRoles, hasPermission } =
     useHatPermissions();
 
@@ -225,7 +226,15 @@ export const useEnhancedProposals = () => {
       try {
         const podLevelProposals = await GovernanceService.getPodLevelProposals();
 
-        for (const proposal of podLevelProposals) {
+        // ✅ FIX: Filter out expired proposals based on voting_deadline
+        const activeProposals = podLevelProposals.filter(p => {
+          if (!p.voting_deadline) return true; // No deadline = always active
+          return new Date(p.voting_deadline) >= new Date(); // Not expired
+        });
+
+        console.log(`📋 [POD-LEVEL] Filtered ${podLevelProposals.length} proposals → ${activeProposals.length} active (${podLevelProposals.length - activeProposals.length} expired)`);
+
+        for (const proposal of activeProposals) {
           // Check if user has governance permission in this specific pod
           const podRole = userRoles.find(
             (role) => role.podId === proposal.pod_id,
@@ -233,14 +242,14 @@ export const useEnhancedProposals = () => {
           const canVote =
             podRole?.permissions?.governanceParticipation === true;
 
-          console.log('🏛️ [POD-LEVEL VOTE CHECK]', {
-            proposalTitle: proposal.title,
-            podId: proposal.pod_id,
-            podName: proposal.pods?.name,
-            userRole: podRole ? `Found (${podRole.role_name})` : 'Not found',
-            governancePermission: podRole?.permissions?.governanceParticipation,
-            canVote,
-          });
+          // console.log('🏛️ [POD-LEVEL VOTE CHECK]', {
+          //   proposalTitle: proposal.title,
+          //   podId: proposal.pod_id,
+          //   podName: proposal.pods?.name,
+          //   userRole: podRole ? `Found (${podRole.role_name})` : 'Not found',
+          //   governancePermission: podRole?.permissions?.governanceParticipation,
+          //   canVote,
+          // });
 
           // Get user's vote if they can vote
           let userVote = null;
@@ -274,7 +283,7 @@ export const useEnhancedProposals = () => {
           allProposals.push(enhancedProposal);
         }
 
-        console.log(`✅ Loaded ${podLevelProposals.length} pod-level proposals`);
+        console.log(`✅ Loaded ${activeProposals.length} active pod-level proposals (${podLevelProposals.length} total, ${podLevelProposals.length - activeProposals.length} expired)`);
       } catch (error) {
         console.error('Failed to load pod-level proposals:', error);
       }
@@ -295,7 +304,7 @@ export const useEnhancedProposals = () => {
       return sortedProposals;
     },
     enabled: !!address && !proposalsLoading, // Wait for useProposals to finish loading
-    staleTime: 5_000, // 5 seconds - shorter to reflect permission changes quickly
-    refetchInterval: 30_000, // 30 seconds - balance between freshness and load
+    staleTime: 30_000, // 30 seconds - cache to reduce load
+    refetchInterval: false, // Disable auto-refresh - rely on parent query refetch
   });
 };

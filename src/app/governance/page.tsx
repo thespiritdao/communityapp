@@ -102,8 +102,9 @@ export default function GovernancePage() {
     fetchCreatorProfiles();
   }, [enhancedProposals]);
 
-  console.log('enhanced proposals:', enhancedProposals);
-  console.log('governance forum posts:', posts);
+  // Debug logs removed - caused console spam with auto-refresh
+  // console.log('enhanced proposals:', enhancedProposals);
+  // console.log('governance forum posts:', posts);
 
   // Show loading while CDP initializes
   if (isInitializing) {

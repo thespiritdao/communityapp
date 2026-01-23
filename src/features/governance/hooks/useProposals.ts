@@ -417,15 +417,15 @@ export const useProposals = () => {
 
       return allProposals;
     },
-    staleTime: 0, // CRITICAL: Always treat data as stale to ensure fresh vote counts
+    staleTime: 60_000, // 1 minute - cache data to reduce RPC calls
     refetchOnMount: 'always', // Always refetch when component mounts
-    // Reduced refetch frequency to prevent session timeouts and recursive logs
+    // Only refetch when there are pending proposals awaiting confirmation
     refetchInterval: (query) => {
       const data = query.state.data as any;
       const hasPending = data?.__hasPending || false;
-      // If there are pending proposals, check every 30 seconds (reduced from 10s)
-      // Otherwise, check every 5 minutes (reduced from 2min)
-      return hasPending ? 30_000 : 5 * 60_000;
+      // If there are pending proposals, check every 60 seconds
+      // Otherwise, don't auto-refetch (user can manually refresh)
+      return hasPending ? 60_000 : false;
     },
   });
 };

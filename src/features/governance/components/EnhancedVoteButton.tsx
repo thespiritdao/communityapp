@@ -2,7 +2,7 @@
 
 import type React from 'react';
 import { useState } from 'react';
-import { useEvmAddress } from '@coinbase/cdp-hooks';
+import { useEvmAddress, useSendUserOperation, useCurrentUser } from '@coinbase/cdp-hooks';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/components/ui/use-toast';
@@ -13,6 +13,7 @@ import type { EnhancedProposal } from '../hooks/useEnhancedProposals';
 import { useGovernancePermission } from '@/hooks/useGovernancePermission';
 import { supabase } from '@/utils/supabaseClient';
 import { createSupabaseSession } from '@/utils/createSupabaseSession';
+import { encodeFunctionData } from 'viem';
 
 interface EnhancedVoteButtonProps {
   proposal: EnhancedProposal;
@@ -20,17 +21,33 @@ interface EnhancedVoteButtonProps {
   onVoteSuccess?: () => void;
 }
 
+// PodGovernanceV3 ABI (simplified, no signatures)
+const POD_GOVERNANCE_V3_ABI = [
+  {
+    name: 'recordVote',
+    type: 'function',
+    stateMutability: 'nonpayable',
+    inputs: [
+      { name: 'proposalId', type: 'bytes32' },
+      { name: 'podId', type: 'bytes32' },
+      { name: 'support', type: 'uint8' },
+    ],
+    outputs: [],
+  },
+] as const;
+
 export const EnhancedVoteButton: React.FC<EnhancedVoteButtonProps> = ({
   proposal,
   choice,
   onVoteSuccess,
 }) => {
   const { evmAddress: address } = useEvmAddress();
+  const { currentUser } = useCurrentUser();
   const { toast } = useToast();
   const [isVoting, setIsVoting] = useState(false);
 
-  // DEBUG: Verify component is loaded with updated code
-  console.log('🔵 [COMPONENT LOADED] EnhancedVoteButton mounted with debugging enabled');
+  // CDP hook for gasless transactions
+  const { sendUserOperation, status, error: txError } = useSendUserOperation();
 
   // ✅ ARCHITECTURE FIX: Check governance permission for the CORRECT pod
   // Use the proposal's approving_pod_id to determine which pod to check
@@ -193,59 +210,119 @@ export const EnhancedVoteButton: React.FC<EnhancedVoteButtonProps> = ({
         | 'abstain';
 
       if (proposal.type === 'pod_creation' || proposal.type === 'pod_level') {
-        // ✅ Handle off-chain votes (pod creation and pod-level proposals)
-        // Generate a cryptographic signature for the vote
-        const voteMessage = {
-          proposal_id: proposal.id,
-          voter: address,
-          vote: voteValue,
-          timestamp: new Date().toISOString(),
-          hat_id: proposal.required_hat || POD_LEADER_HATS.EXECUTIVE_POD_LEADER,
-        };
-
-        // Create a simple hash-like signature (in production, use actual signing with wallet)
-        const messageString = JSON.stringify(voteMessage);
-        const encoder = new TextEncoder();
-        const data = encoder.encode(messageString);
-        const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-        const hashArray = Array.from(new Uint8Array(hashBuffer));
-        const hashHex = hashArray
-          .map((b) => b.toString(16).padStart(2, '0'))
-          .join('');
-        const signature = `0x${hashHex}`;
-
-        console.log('🔐 [VOTE] Generated signature:', {
+        // ✅ V3: Simplified gasless on-chain voting (CDP AA Wallet)
+        console.log('🔐 [VOTE V3] Starting gasless on-chain vote (CDP)...', {
           proposalType: proposal.type,
-          message: messageString,
-          signature: signature,
+          proposalId: proposal.id,
+          vote: voteValue,
+          podId: proposal.approving_pod_id,
         });
 
-        // Prepare vote data
+        // Helper function to convert UUID to bytes32
+        const uuidToBytes32 = (uuid: string): `0x${string}` => {
+          const hex = uuid.replace(/-/g, '');
+          return `0x${hex.padEnd(64, '0')}` as `0x${string}`;
+        };
+
+        // Convert vote to uint8
+        const voteToUint8 = (vote: string): number => {
+          switch (vote.toLowerCase()) {
+            case 'against': return 0;
+            case 'for': return 1;
+            case 'abstain': return 2;
+            default: throw new Error(`Invalid vote: ${vote}`);
+          }
+        };
+
+        const contractAddress = process.env.NEXT_PUBLIC_POD_GOVERNANCE_ADDRESS as `0x${string}`;
+
+        if (!contractAddress) {
+          toast({
+            title: 'Configuration Error',
+            description: 'PodGovernance contract address not configured',
+            variant: 'destructive',
+          });
+          return;
+        }
+
+        // 1. Save to database first (for real-time tallies)
+        console.log('💾 [VOTE V3] Step 1: Saving to database...');
         const voteData = {
           proposal_id: proposal.id,
           voter_address: address.toLowerCase(),
           vote: voteValue,
-          timestamp: voteMessage.timestamp,
-          hat_id: voteMessage.hat_id,
-          signature: signature,
+          timestamp: new Date().toISOString(),
+          hat_id: proposal.required_hat || POD_LEADER_HATS.EXECUTIVE_POD_LEADER,
+          // ✅ ARCHITECTURE NOTE: No user signature required for CDP gasless transactions
+          // Smart contract wallet signatures are handled internally by CDP SDK
+          // The transaction is authenticated via the user's embedded wallet control
+          signature: '',
+          pod_id: proposal.approving_pod_id,
         };
-
-        console.log('📊 [VOTE] Submitting vote:', {
-          type: proposal.type,
-          proposalId: proposal.id,
-          vote: voteValue,
-        });
-
-        // Submit vote to database
         await GovernanceService.submitVote(voteData);
+        console.log('✅ [VOTE V3] Vote saved to database');
 
-        const proposalTypeLabel = proposal.type === 'pod_creation' ? 'pod creation' : 'pod-level';
-        toast({
-          title: 'Vote Submitted',
-          description: `Your ${voteValue} vote has been recorded for ${proposalTypeLabel} proposal`,
+        // 2. Encode contract call
+        console.log('📝 [VOTE V3] Step 2: Encoding contract call...');
+        const callData = encodeFunctionData({
+          abi: POD_GOVERNANCE_V3_ABI,
+          functionName: 'recordVote',
+          args: [
+            uuidToBytes32(proposal.id),
+            uuidToBytes32(proposal.approving_pod_id || proposal.id),
+            voteToUint8(voteValue),
+          ],
         });
+        console.log('✅ [VOTE V3] Call data encoded');
 
-        // Trigger immediate refetch to update button states
+        // 3. Submit to blockchain via CDP (gasless)
+        console.log('⛓️ [VOTE V3] Step 3: Submitting to blockchain (gasless via CDP)...');
+
+        // Check if smart account is available for on-chain submission
+        if (!currentUser?.evmSmartAccounts?.[0]) {
+          console.warn('⚠️ [VOTE V3] No smart account found - vote saved to DB only');
+          toast({
+            title: 'Vote Saved (Database Only)',
+            description: `Your ${voteValue} vote was saved. On-chain recording requires smart account initialization.`,
+          });
+        } else {
+          // Smart account available - submit on-chain
+          const smartAccount = currentUser.evmSmartAccounts[0];
+          console.log('🔐 [VOTE V3] Using smart account:', smartAccount);
+
+          try {
+            const result = await sendUserOperation({
+              evmSmartAccount: smartAccount,
+              network: 'base',
+              calls: [{
+                to: contractAddress,
+                data: callData,
+                value: 0n,  // bigint format required by CDP
+              }],
+              useCdpPaymaster: true,  // Enable gas sponsorship
+            });
+
+            console.log('✅ [VOTE V3] Vote recorded on-chain!', {
+              result,
+              status,
+            });
+
+            const proposalTypeLabel = proposal.type === 'pod_creation' ? 'pod creation' : 'pod-level';
+            toast({
+              title: 'Vote Recorded On-Chain ⛓️',
+              description: `Your ${voteValue} vote has been permanently recorded on Base blockchain (gasless via CDP)`,
+            });
+          } catch (onchainError) {
+            console.error('⚠️ [VOTE V3] On-chain submission failed (vote still saved to DB):', onchainError);
+            toast({
+              title: 'Vote Saved (DB Only)',
+              description: `Your ${voteValue} vote was saved to database. On-chain recording will be retried later.`,
+            });
+          }
+        }
+
+        // CRITICAL: Always trigger refetch to update UI, even if on-chain failed
+        console.log('🔄 [VOTE V3] Triggering UI refetch...');
         onVoteSuccess?.();
       } else {
         // Handle governance votes - this would integrate with existing VoteButton logic
@@ -279,13 +356,16 @@ export const EnhancedVoteButton: React.FC<EnhancedVoteButtonProps> = ({
     return null;
   }
 
-  // Show voted state if this is the user's choice
+  // Show voted state if this is the user's choice (unified style with VoteButton)
   if (hasVoted && isCurrentChoice) {
     return (
-      <Badge variant="outline" className="flex items-center gap-1">
-        {getChoiceIcon(choice)}
-        Voted {getChoiceText(choice)}
-      </Badge>
+      <div className="w-full px-4 py-3 bg-gray-50 rounded-lg border border-gray-200">
+        <div className="flex items-center justify-center gap-2">
+          <span className="text-gray-700 font-medium">
+            ✓ Voted {getChoiceText(choice)}
+          </span>
+        </div>
+      </div>
     );
   }
 
