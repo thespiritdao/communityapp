@@ -1,7 +1,7 @@
 {
   "crons": [
     {
-      "path": "/api/cron/update-pending-bounties",
+      "path": "/api/cron/update-pending-bounties-v2",
       "schedule": "*/5 * * * *"
     }
   ]

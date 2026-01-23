@@ -311,18 +311,18 @@ export const BountyFormV2: React.FC<BountyFormV2Props> = ({
       });
 
       console.log('✅ User operation hash received:', result);
-      setTransactionStatus('Transaction submitted! Waiting for confirmation...');
+      setTransactionStatus('Transaction submitted to bundler...');
 
-      // CDP returns userOperationHash but receipt comes later
-      // For now, we'll save the transaction with the userOperationHash and handle async
+      // CDP returns userOperationHash immediately
+      // The actual blockchain transaction will be created by the bundler in 30-60 seconds
       const userOpResult = result as any;
       const userOpHash = userOpResult?.userOperationHash;
 
-      console.log('⏳ Step 2/3: Transaction submitted, proceeding without receipt...');
-      setTransactionStatus('Transaction confirmed! Processing bounty creation...');
+      console.log('⏳ Step 2/3: User operation submitted, waiting for bundler...');
+      console.log(`📝 UserOperation Hash: ${userOpHash}`);
 
-      // Since CDP doesn't immediately provide receipt, we'll use the userOperationHash
-      // and let the backend/blockchain handle the confirmation asynchronously
+      // Since CDP paymaster transactions take time to bundle, we'll save immediately
+      // The cron job will update once the actual transaction is mined
       let receipt = userOpResult?.receipt;
 
       if (receipt) {
