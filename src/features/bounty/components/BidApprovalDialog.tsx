@@ -141,8 +141,18 @@ export const BidApprovalDialog: React.FC<BidApprovalDialogProps> = ({
   const techReviewerAddress = extractAddress(techReviewer);
   const finalApproverAddress = extractAddress(finalApprover);
 
+  // Check if bidder is trying to tag themselves as reviewer
+  const bidderAddressLower = bid.bidderAddress.toLowerCase();
+  const isSelfTaggedAsTechReviewer =
+    techReviewerAddress &&
+    techReviewerAddress.toLowerCase() === bidderAddressLower;
+  const isSelfTaggedAsFinalApprover =
+    finalApproverAddress &&
+    finalApproverAddress.toLowerCase() === bidderAddressLower;
+
   const hasBothReviewers = techReviewerAddress && finalApproverAddress;
-  const canApprove = hasBothReviewers && !isApproving && !readOnly;
+  const hasNoSelfTags = !isSelfTaggedAsTechReviewer && !isSelfTaggedAsFinalApprover;
+  const canApprove = hasBothReviewers && hasNoSelfTags && !isApproving && !readOnly;
 
   // ============================================================================
   // HANDLERS
@@ -289,7 +299,12 @@ export const BidApprovalDialog: React.FC<BidApprovalDialogProps> = ({
                   contextUrl={`/bounty/${bid.bountyId}`}
                 />
               )}
-              {!readOnly && techReviewer && !techReviewerAddress && (
+              {!readOnly && techReviewer && isSelfTaggedAsTechReviewer && (
+                <p className="text-sm mt-1" style={{ color: '#8B3A3A' }}>
+                  As the bidder, you cannot tag yourself as a reviewer of this bid.
+                </p>
+              )}
+              {!readOnly && techReviewer && !techReviewerAddress && !isSelfTaggedAsTechReviewer && (
                 <p className="text-sm mt-1" style={{ color: '#8B3A3A' }}>
                   Invalid Ethereum address
                 </p>
@@ -312,7 +327,12 @@ export const BidApprovalDialog: React.FC<BidApprovalDialogProps> = ({
                   contextUrl={`/bounty/${bid.bountyId}`}
                 />
               )}
-              {!readOnly && finalApprover && !finalApproverAddress && (
+              {!readOnly && finalApprover && isSelfTaggedAsFinalApprover && (
+                <p className="text-sm mt-1" style={{ color: '#8B3A3A' }}>
+                  As the bidder, you cannot tag yourself as a reviewer of this bid.
+                </p>
+              )}
+              {!readOnly && finalApprover && !finalApproverAddress && !isSelfTaggedAsFinalApprover && (
                 <p className="text-sm mt-1" style={{ color: '#8B3A3A' }}>
                   Invalid Ethereum address
                 </p>

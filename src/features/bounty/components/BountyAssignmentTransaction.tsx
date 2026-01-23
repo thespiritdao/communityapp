@@ -381,15 +381,94 @@ export const BountyAssignmentTransaction: React.FC<
 
       console.log('✅ User operation sent successfully!', result);
 
-      // Handle success with receipt
-      // Type assertion needed due to incomplete CDP SDK types
-      const resultWithReceipt = result as any;
-      if (resultWithReceipt?.receipt) {
-        await handleSuccess(resultWithReceipt.receipt);
-      } else {
-        console.warn('⚠️ No receipt found in result');
-        onError(new Error('Transaction completed but no receipt found'));
+      // CDP Smart Accounts return userOperationHash immediately
+      // The actual transaction is processed by the bundler asynchronously (2-3 minutes)
+      const resultWithHash = result as any;
+      const userOpHash = resultWithHash?.userOperationHash;
+
+      if (!userOpHash) {
+        console.error('❌ No userOperationHash in result:', result);
+        onError(new Error('Failed to submit transaction'));
+        return;
       }
+
+      console.log('⏳ Transaction submitted to bundler:', userOpHash);
+      console.log('📍 Bundler will process transaction in ~2-3 minutes');
+      console.log('💡 Verifying assignment by checking on-chain state...');
+
+      // Instead of waiting for receipt, verify the assignment succeeded by checking on-chain state
+      // The bundler will process the transaction, but we can verify it worked by querying the contract
+      const verifyAssignment = async (retryCount = 0): Promise<void> => {
+        const maxRetries = 12; // 2 minutes total (10 second intervals)
+
+        try {
+          await new Promise(resolve => setTimeout(resolve, 10000)); // Wait 10 seconds before first check
+
+          console.log(`🔍 Verification attempt ${retryCount + 1}/${maxRetries}...`);
+
+          if (!publicClient) {
+            throw new Error('Public client not available');
+          }
+
+          // Check if the bid is now assigned by reading the bounty state
+          const bountyData = await publicClient.readContract({
+            address: process.env.NEXT_PUBLIC_BOUNTY_MANAGER_ADDRESS as `0x${string}`,
+            abi: BountyManagerABI,
+            functionName: 'getBounty',
+            args: [BigInt(onchainBountyId)],
+          }) as any;
+
+          // Check if assignedBidder matches our bidder
+          if (bountyData && bountyData.assignedBidder?.toLowerCase() === bidderAddress.toLowerCase()) {
+            console.log('✅ Assignment verified on-chain!');
+
+            // Create a mock receipt for the success handler
+            // We don't have the actual receipt, but we know it succeeded
+            const mockReceipt = {
+              transactionHash: userOpHash as `0x${string}`,
+              blockNumber: BigInt(0),
+              blockHash: '0x' as `0x${string}`,
+              transactionIndex: 0,
+              from: evmAddress! as `0x${string}`,
+              to: process.env.NEXT_PUBLIC_BOUNTY_MANAGER_ADDRESS as `0x${string}`,
+              cumulativeGasUsed: BigInt(0),
+              gasUsed: BigInt(0),
+              logs: [],
+              logsBloom: '0x' as `0x${string}`,
+              status: 'success' as const,
+              effectiveGasPrice: BigInt(0),
+              type: 'eip1559' as const,
+            };
+
+            await handleSuccess(mockReceipt);
+            return;
+          }
+
+          // Not assigned yet, retry if we haven't exceeded max retries
+          if (retryCount < maxRetries - 1) {
+            console.log('⏳ Assignment not confirmed yet, will retry...');
+            await verifyAssignment(retryCount + 1);
+          } else {
+            console.error('❌ Assignment verification timeout');
+            onError(
+              new Error(
+                'Transaction submitted but assignment could not be verified. The transaction may still be processing. Please refresh the page in a few minutes to check the status.',
+              ),
+            );
+          }
+        } catch (error) {
+          console.error('❌ Error verifying assignment:', error);
+          if (retryCount < maxRetries - 1) {
+            console.log('⏳ Retrying verification...');
+            await verifyAssignment(retryCount + 1);
+          } else {
+            onError(error as Error);
+          }
+        }
+      };
+
+      // Start verification
+      verifyAssignment();
     } catch (err: any) {
       console.error('❌ Bounty assignment failed:', err);
       await handleError(err);
@@ -568,7 +647,7 @@ export const BountyAssignmentTransaction: React.FC<
             Processing...
           </>
         ) : (
-          'Assign Bounty & Setup Escrow (Gasless)'
+          'Assign Bounty & Setup Escrow'
         )}
       </Button>
 
