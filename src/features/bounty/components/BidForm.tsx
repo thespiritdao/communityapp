@@ -423,77 +423,47 @@ export const BidForm: React.FC<BidFormProps> = ({
 
       console.log('✅ User operation sent successfully!', result);
 
-      // Handle success with receipt
-      // Type assertion needed due to incomplete CDP SDK types
-      const resultWithReceipt = result as any;
-      if (resultWithReceipt?.receipt) {
-        const receipt = resultWithReceipt.receipt as TransactionReceipt;
-        setTransactionHash(receipt.transactionHash);
+      // CDP Smart Accounts return userOperationHash immediately, not receipt
+      // Receipt will be available 2-3 minutes later via bundler API
+      const userOpHash = (result as any)?.userOperationHash || (result as any)?.hash;
 
-        // Extract BidPlaced event
-        // Event: BidPlaced(uint256 indexed bountyId, address indexed bidder, uint256 bidIndex)
-        const bidPlacedLog = receipt.logs?.find(
-          (log: any) =>
-            log.topics &&
-            log.topics.length >= 3 &&
-            log.address?.toLowerCase() === contractAddress.toLowerCase(),
-        );
+      if (userOpHash) {
+        console.log('✅ UserOperation submitted to CDP bundler:', userOpHash);
+        console.log('⏳ Transaction will be confirmed in 2-3 minutes by background cron job');
 
-        console.log('🔍 BidPlaced event search:', {
-          totalLogs: receipt.logs?.length || 0,
-          bidPlacedLogFound: !!bidPlacedLog,
+        // Mark callback as fired to prevent duplicates
+        setHasCallbackFired(true);
+
+        // Map deliverables to correct format
+        const mappedDeliverables = formData.deliverables.map((d) => ({
+          id: d.id,
+          description: d.description,
+          dueDate: d.dueDate instanceof Date ? d.dueDate : new Date(d.dueDate),
+          paymentAmount: d.paymentAmount,
+        }));
+
+        console.log('💾 Saving bid with pending confirmation:', {
+          userOpHash,
+          ipfsHash,
+          bountyId: bounty.id,
         });
 
-        if (bidPlacedLog) {
-          // bidIndex is NOT indexed, so it's in the data field
-          const bidIndex = parseInt(bidPlacedLog.data, 16);
+        // Save bid with userOpHash - cron job will update with real txHash and bidIndex
+        onBidPlaced(
+          {
+            ...formData,
+            deliverables: mappedDeliverables,
+          },
+          ipfsHash,
+          userOpHash, // Store userOpHash temporarily
+          undefined,  // bidIndex will be filled by cron job
+        );
 
-          console.log('✅ Bid placed on-chain:', {
-            bountyId: bounty.onchain_id,
-            bidIndex,
-            txHash: receipt.transactionHash,
-            ipfsHash,
-          });
-
-          // Mark callback as fired to prevent duplicates
-          setHasCallbackFired(true);
-
-          // Map deliverables to correct format
-          const mappedDeliverables = formData.deliverables.map((d) => ({
-            id: d.id,
-            description: d.description,
-            dueDate: d.dueDate instanceof Date ? d.dueDate : new Date(d.dueDate),
-            paymentAmount: d.paymentAmount,
-          }));
-
-          console.log('🚀 Calling onBidPlaced callback with data:', {
-            txHash: receipt.transactionHash,
-            bidIndex,
-            ipfsHash,
-            bountyId: bounty.id,
-          });
-
-          // Callback with bid placement details
-          onBidPlaced(
-            {
-              ...formData,
-              deliverables: mappedDeliverables,
-            },
-            ipfsHash,
-            receipt.transactionHash,
-            bidIndex,
-          );
-
-          setIsProcessingTransaction(false);
-        } else {
-          console.error('❌ Could not extract bid index from transaction logs');
-          console.error('Receipt logs:', receipt.logs);
-          setUploadError('Bid was placed but could not extract bid index. Please contact support.');
-          setIsProcessingTransaction(false);
-        }
+        setIsProcessingTransaction(false);
+        setUploadError(''); // Clear any errors
       } else {
-        console.warn('⚠️ No receipt found in result');
-        setUploadError('Transaction completed but no receipt found');
+        console.error('❌ No userOperationHash in result:', result);
+        setUploadError('Transaction was submitted but no confirmation hash received. Please contact support.');
       }
     } catch (err: any) {
       console.error('❌ Bid submission failed:', err);
@@ -1042,7 +1012,7 @@ export const BidForm: React.FC<BidFormProps> = ({
                       Processing...
                     </>
                   ) : (
-                    '🚀 Submit Bid (Gasless)'
+                    'Submit Bid'
                   )}
                 </Button>
               ) : (
