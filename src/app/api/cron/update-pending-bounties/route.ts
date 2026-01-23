@@ -37,7 +37,7 @@ const BOUNTY_MANAGER_ADDRESS = (process.env.NEXT_PUBLIC_BOUNTY_MANAGER_ADDRESS |
  * When confirmed, it extracts the bountyId from the transaction logs and updates the database.
  *
  * Triggered by: Vercel Cron (see vercel.json)
- * Schedule: */5 * * * * (every 5 minutes)
+ * Schedule: Every 5 minutes
  *
  * Security: Should be protected by Vercel cron secret header in production
  */
