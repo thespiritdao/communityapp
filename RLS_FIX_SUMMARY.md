@@ -40,17 +40,16 @@ Error: No rows were updated. This might be a Row Level Security (RLS) policy iss
 The RLS policy on `pod_role_permissions` table was checking `auth.jwt() ->> 'wallet_address'`, but CDP wallets store the address in `auth.jwt() -> 'user_metadata' ->> 'wallet_address'`.
 
 **Fix Created:**
-Migration file: `supabase/migrations/20260122000003_fix_pod_role_permissions_rls_cdp.sql`
+Migration file: `supabase/migrations/20260122000003_fix_pod_role_permissions_rls_cdp_v2.sql` (V2 - fixed column reference error)
 
 **What It Fixes:**
 1. ✅ CDP wallet compatibility - checks `user_metadata.wallet_address`
 2. ✅ Multiple JWT field fallbacks with COALESCE
 3. ✅ Case-insensitive address comparison with LOWER()
-4. ✅ Checks 4 authorization sources:
+4. ✅ Checks 3 authorization sources:
    - Active pod members (leader role)
    - Pod leads array
    - Pod creator
-   - Members with `member_management` or `role_assignment` permission
 
 ---
 
@@ -59,10 +58,12 @@ Migration file: `supabase/migrations/20260122000003_fix_pod_role_permissions_rls
 ### Option A: Supabase SQL Editor (Recommended)
 
 1. Open Supabase Dashboard → SQL Editor
-2. Copy the contents of `supabase/migrations/20260122000003_fix_pod_role_permissions_rls_cdp.sql`
+2. Copy the contents of `supabase/migrations/20260122000003_fix_pod_role_permissions_rls_cdp_v2.sql`
 3. Paste into SQL Editor
 4. Click "Run"
 5. Verify success message
+
+**Status:** ✅ Applied successfully
 
 ### Option B: Supabase CLI
 
@@ -133,11 +134,6 @@ LOWER(COALESCE(
 3. **Pod Creator**
    - User's address matches `pods.created_by_address`
    - Original pod creator always has access
-
-4. **Authorized Member** (NEW)
-   - User has `member_management` permission OR
-   - User has `role_assignment` permission
-   - Allows delegated permission management
 
 ---
 
