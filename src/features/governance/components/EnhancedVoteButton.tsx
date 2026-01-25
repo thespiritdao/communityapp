@@ -310,7 +310,7 @@ export const EnhancedVoteButton: React.FC<EnhancedVoteButtonProps> = ({
             const proposalTypeLabel = proposal.type === 'pod_creation' ? 'pod creation' : 'pod-level';
             toast({
               title: 'Vote Recorded On-Chain ⛓️',
-              description: `Your ${voteValue} vote has been permanently recorded on Base blockchain (gasless via CDP)`,
+              description: `Your ${voteValue} vote has been permanently recorded on Base blockchain`,
             });
           } catch (onchainError) {
             console.error('⚠️ [VOTE V3] On-chain submission failed (vote still saved to DB):', onchainError);

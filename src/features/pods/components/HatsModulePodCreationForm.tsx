@@ -4018,7 +4018,7 @@ Instructions:
 
       toast({
         title: '🎉 Pod Creation Complete!',
-        description: `Pod "${createdPodData?.name}" is fully set up with eligibility module! (${totalPhases} phases completed${predictionSuccessful ? ', 100% gasless' : ''})`,
+        description: `Pod "${createdPodData?.name}" is fully set up with eligibility module! (${totalPhases} phases completed)`,
         variant: 'default',
       });
 

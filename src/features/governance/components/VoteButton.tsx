@@ -38,6 +38,7 @@ const VoteButton: React.FC<VoteButtonProps> = ({
   const [isProcessing, setIsProcessing] = useState(false);
   const [isSponsoredProcessing, setIsSponsoredProcessing] = useState(false);
   const [hasVotedState, setHasVotedState] = useState(false);
+  const [userVoteChoice, setUserVoteChoice] = useState<number | null>(null);
   const GOVERNOR_ADDRESS = process.env
     .NEXT_PUBLIC_DAO_GOVERNOR as `0x${string}`;
 
@@ -68,12 +69,18 @@ const VoteButton: React.FC<VoteButtonProps> = ({
         const { supabase } = await import('@/utils/supabaseClient');
         const { data } = await supabase
           .from('governance_user_votes')
-          .select('id')
+          .select('id, choice')
           .eq('proposal_id', proposalId)
           .eq('voter_address', address.toLowerCase())
           .maybeSingle();
 
         setHasVotedState(!!data);
+        // Store the vote choice (Governor format: 0=Against, 1=For, 2=Abstain)
+        // Convert to UI format (1=For, 2=Against, 3=Abstain)
+        if (data?.choice !== undefined) {
+          const uiChoice = data.choice === 1 ? 1 : data.choice === 0 ? 2 : 3;
+          setUserVoteChoice(uiChoice);
+        }
       } catch (error) {
         console.error('Error checking if user has voted:', error);
       }
@@ -144,7 +151,7 @@ const VoteButton: React.FC<VoteButtonProps> = ({
 
       toast({
         title: 'Vote submitted',
-        description: `Your vote was cast on-chain${usePaymaster ? ' (gasless)' : ''}!`,
+        description: 'Your vote was cast on-chain!',
         variant: 'success',
       });
 
@@ -245,14 +252,21 @@ const VoteButton: React.FC<VoteButtonProps> = ({
 
   const colors = getChoiceColors(choice);
 
-  // ✅ If user has already voted, show message only once (for first button)
-  // and hide the other buttons
+  // ✅ If user has already voted, show dynamic message with their vote choice
   if (hasVoted) {
     if (choice === 1) {
-      // Show message only for the first button
+      // Show message only for the first button - now with dynamic vote display
+      const voteLabel = userVoteChoice
+        ? choiceLabels[userVoteChoice - 1]
+        : 'on this proposal';
+
       return (
-        <div className="w-full px-4 py-2 bg-gray-100 text-gray-600 rounded font-medium border border-gray-300 text-center">
-          ✓ You have voted on this proposal
+        <div className="w-full px-4 py-3 bg-gray-50 rounded-lg border border-gray-200">
+          <div className="flex items-center justify-center gap-2">
+            <span className="text-gray-700 font-medium">
+              ✓ Voted {voteLabel}
+            </span>
+          </div>
         </div>
       );
     }

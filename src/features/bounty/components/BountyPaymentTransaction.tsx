@@ -279,18 +279,74 @@ export const BountyPaymentTransaction: React.FC<
     setIsTransactionPending(true); // EXACT FAUCET PATTERN
 
     try {
+      // PRE-FLIGHT CHECK: Verify bounty is assigned before attempting payment
+      console.log('🔍 Pre-flight check: Verifying bounty status...');
+
+      const contractAddress = process.env.NEXT_PUBLIC_BOUNTY_MANAGER_ADDRESS as `0x${string}`;
+
+      if (!publicClient) {
+        onError(new Error('Public client not available'));
+        return;
+      }
+
+      // getBounty returns: [creator, value, token, status]
+      const bountyData = await publicClient.readContract({
+        address: contractAddress,
+        abi: BountyManagerABI,
+        functionName: 'getBounty',
+        args: [BigInt(onchainBountyId)],
+      });
+
+      // CRITICAL FIX: getBounty returns an array, not an object
+      // Status is at index [3], not .status property
+      const [creator, value, token, status] = bountyData as any[];
+
+      const statusNames = ['Open', 'Assigned', 'Completed', 'Cancelled'];
+      const statusName = statusNames[status as number] || 'Unknown';
+
+      console.log('📊 Bounty status:', {
+        status,
+        statusName,
+        creator,
+        value: value?.toString(),
+        token,
+      });
+
+      // Check status
+      if (status === 2) {
+        // Bounty already completed
+        onError(new Error(`Bounty has already been completed and paid. No further payment needed.`));
+        return;
+      }
+
+      if (status !== 1) {
+        // Bounty not assigned (status 0 = Open, 3 = Cancelled)
+        onError(new Error(`Bounty must be assigned before releasing payment. Current status: ${statusName}. Please wait for the assignment transaction to complete.`));
+        return;
+      }
+
+      console.log('✅ Pre-flight check passed: Bounty is assigned');
       console.log('🚀 Building Smart Account User Operation for payment release...');
       console.log('💼 Smart Account:', smartAccount);
       console.log('🎯 Contract: BountyManager - releasePayment');
       console.log('⛽ Paymaster: ENABLED (gasless transaction)');
 
-      const contractAddress = process.env.NEXT_PUBLIC_BOUNTY_MANAGER_ADDRESS as `0x${string}`;
-
       // EXACT FAUCET PATTERN: Encode call data
+      // FIX: Contract expects uint128, not uint256. Convert amount properly.
+      // Use parseEther to convert decimal string to wei (BigInt)
+      const amountWei = parseEther(paymentAmount);
+
+      // Validate amount fits in uint128
+      const MAX_UINT128 = BigInt(2 ** 128 - 1);
+      if (amountWei > MAX_UINT128) {
+        onError(new Error(`Amount ${paymentAmount} exceeds uint128 maximum`));
+        return;
+      }
+
       const callData = encodeFunctionData({
         abi: BountyManagerABI,
         functionName: 'releasePayment',
-        args: [BigInt(onchainBountyId), parseEther(paymentAmount)],
+        args: [BigInt(onchainBountyId), amountWei],
       });
 
       console.log('📝 Encoded call data for releasePayment');
@@ -309,15 +365,100 @@ export const BountyPaymentTransaction: React.FC<
 
       console.log('✅ User operation sent successfully!', result);
 
-      // Handle success with receipt
-      // Type assertion needed due to incomplete CDP SDK types
-      const resultWithReceipt = result as any;
-      if (resultWithReceipt?.receipt) {
-        await handleSuccess(resultWithReceipt.receipt);
-      } else {
-        console.warn('⚠️ No receipt found in result');
-        onError(new Error('Transaction completed but no receipt found'));
+      // CDP Smart Account returns userOperationHash, not receipt immediately
+      // CRITICAL FIX: Don't call handleSuccess immediately - verify on-chain first
+      const resultWithHash = result as any;
+      const userOpHash = resultWithHash?.userOperationHash || resultWithHash?.hash;
+
+      if (!userOpHash) {
+        console.warn('⚠️ No hash found in result');
+        onError(new Error('Transaction sent but no confirmation hash received'));
+        return;
       }
+
+      console.log('📝 UserOperation hash:', userOpHash);
+      console.log('⏳ Starting verification loop (CDP Smart Account transactions take 2-3 minutes)...');
+
+      // VERIFICATION LOOP: Wait for on-chain confirmation (same pattern as BountyAssignmentTransaction)
+      const verifyPayment = async (retryCount = 0): Promise<void> => {
+        const maxRetries = 12; // 2 minutes total (10 second intervals)
+
+        try {
+          await new Promise(resolve => setTimeout(resolve, 10000)); // Wait 10 seconds before first check
+
+          console.log(`🔍 Payment verification attempt ${retryCount + 1}/${maxRetries}...`);
+
+          if (!publicClient) {
+            throw new Error('Public client not available');
+          }
+
+          // Check if payment was released by reading the assignment state
+          const assignmentData = await publicClient.readContract({
+            address: contractAddress,
+            abi: BountyManagerABI,
+            functionName: 'getAssignment',
+            args: [BigInt(onchainBountyId)],
+          }) as any;
+
+          // getAssignment returns: (bidder, reviewer, escrowAmount, paidAmount)
+          const paidAmount = assignmentData[3];
+          const expectedPaidWei = BigInt(paymentAmount) * BigInt(10 ** 18);
+
+          console.log('💰 Payment status:', {
+            paidAmount: paidAmount?.toString() || '0',
+            expectedAmount: expectedPaidWei.toString(),
+            isPaid: paidAmount >= expectedPaidWei,
+          });
+
+          if (paidAmount >= expectedPaidWei) {
+            console.log('✅ Payment verified on-chain!');
+
+            // Create a mock receipt for the success handler
+            const mockReceipt = {
+              transactionHash: userOpHash as `0x${string}`,
+              blockNumber: BigInt(0),
+              blockHash: '0x' as `0x${string}`,
+              transactionIndex: 0,
+              from: evmAddress! as `0x${string}`,
+              to: contractAddress,
+              cumulativeGasUsed: BigInt(0),
+              gasUsed: BigInt(0),
+              logs: [],
+              logsBloom: '0x' as `0x${string}`,
+              status: 'success' as const,
+              effectiveGasPrice: BigInt(0),
+              type: 'eip1559' as const,
+            };
+
+            await handleSuccess(mockReceipt);
+            return;
+          }
+
+          // Not paid yet, retry if we haven't exceeded max retries
+          if (retryCount < maxRetries - 1) {
+            console.log('⏳ Payment not confirmed yet, will retry...');
+            await verifyPayment(retryCount + 1);
+          } else {
+            console.error('❌ Payment verification timeout');
+            onError(
+              new Error(
+                'Transaction submitted but payment could not be verified. The transaction may still be processing. Please refresh the page in a few minutes to check the status.',
+              ),
+            );
+          }
+        } catch (error) {
+          console.error('❌ Error verifying payment:', error);
+          if (retryCount < maxRetries - 1) {
+            console.log('⏳ Retrying verification...');
+            await verifyPayment(retryCount + 1);
+          } else {
+            onError(error as Error);
+          }
+        }
+      };
+
+      // Start verification
+      verifyPayment();
     } catch (err: any) {
       console.error('❌ Payment release failed:', err);
       await handleError(err);
@@ -402,8 +543,8 @@ export const BountyPaymentTransaction: React.FC<
         <p>
           <strong>Amount:</strong> {paymentAmount} {paymentToken}
         </p>
-        <div className="flex items-center gap-2">
-          <strong>Recipient:</strong>
+        <div>
+          <p className="mb-2"><strong>Recipient:</strong></p>
           <UserProfileDisplay
             walletAddress={bidderAddress}
             size="md"
@@ -432,7 +573,21 @@ export const BountyPaymentTransaction: React.FC<
         <Button
           onClick={handleReleasePaymentTransaction}
           disabled={isTransactionPending || isProcessing}
-          className="w-full disabled:bg-gray-400 disabled:cursor-not-allowed font-medium py-2 px-4 rounded transition-colors hover:opacity-90"
+          className="w-full disabled:bg-gray-400 disabled:cursor-not-allowed font-medium py-2 px-4 rounded transition-colors"
+          style={{
+            backgroundColor: isTransactionPending || isProcessing ? undefined : '#2F5D50',
+            color: '#FFFFFF'
+          }}
+          onMouseEnter={(e) => {
+            if (!isTransactionPending && !isProcessing) {
+              e.currentTarget.style.backgroundColor = '#254A40';
+            }
+          }}
+          onMouseLeave={(e) => {
+            if (!isTransactionPending && !isProcessing) {
+              e.currentTarget.style.backgroundColor = '#2F5D50';
+            }
+          }}
         >
           {isTransactionPending ? (
             <>
@@ -445,7 +600,7 @@ export const BountyPaymentTransaction: React.FC<
               Processing...
             </>
           ) : (
-            'Release Payment (Gasless)'
+            'Release Payment'
           )}
         </Button>
       ) : (

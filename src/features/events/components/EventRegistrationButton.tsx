@@ -236,8 +236,8 @@ export const EventRegistrationButton: React.FC<
               {isTransactionPending
                 ? 'Registering...'
                 : needsTokenApproval
-                  ? `Register (${systemTokenAmount !== '0' ? `${systemTokenAmount} SYSTEM` : ''}${systemTokenAmount !== '0' && selfTokenAmount !== '0' ? ' + ' : ''}${selfTokenAmount !== '0' ? `${selfTokenAmount} SELF` : ''}) - Gasless`
-                  : 'Register (Free, Gasless)'}
+                  ? `Register (${systemTokenAmount !== '0' ? `${systemTokenAmount} SYSTEM` : ''}${systemTokenAmount !== '0' && selfTokenAmount !== '0' ? ' + ' : ''}${selfTokenAmount !== '0' ? `${selfTokenAmount} SELF` : ''})`
+                  : 'Register (Free)'}
             </Button>
           );
         })()

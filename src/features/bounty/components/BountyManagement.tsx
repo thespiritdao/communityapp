@@ -1123,8 +1123,8 @@ export const BountyManagement: React.FC<BountyManagementProps> = ({
                         );
                         return (
                           supabaseBounty?.payment_type === 'milestones' &&
-                          bounty.status === 1
-                        ); // assigned
+                          bounty.status === 'assigned'
+                        );
                       },
                     );
 
@@ -1207,9 +1207,24 @@ export const BountyManagement: React.FC<BountyManagementProps> = ({
                               : 'cancelled',
                     }));
 
+                    // FIXED: Filter out completed bounties (status 2) from Pay tab
+                    // Database might be out of sync with on-chain, so we need to check both
+                    const payableBounties = assignedBounties.filter((bounty) => {
+                      // Find approved bid for this bounty
+                      const approvedBid = userBids?.find(
+                        (bid) =>
+                          bid.bountyId === bounty.id &&
+                          bid.status === 'work_approved',
+                      );
+
+                      // Only show bounties that have approved work and are still assigned (not completed)
+                      return !!approvedBid;
+                    });
+
                     console.log('💰 Pay tab filtering:', {
                       totalFilteredBounties: filteredBounties.length,
                       assignedBounties: assignedBounties.length,
+                      payableBounties: payableBounties.length,
                       assignedBountyIds: assignedBounties.map((b) => ({
                         id: b.id,
                         title: b.title,
@@ -1223,7 +1238,7 @@ export const BountyManagement: React.FC<BountyManagementProps> = ({
                       bountyDetails,
                     );
 
-                    return assignedBounties.length === 0;
+                    return payableBounties.length === 0;
                   })() ? (
                   <Card>
                     <CardContent className="pt-6">
@@ -1253,7 +1268,7 @@ export const BountyManagement: React.FC<BountyManagementProps> = ({
                       const approvedBid = userBids?.find(
                         (bid) =>
                           bid.bountyId === bounty.id &&
-                          bid.status === 'approved',
+                          bid.status === 'work_approved',
                       );
 
                       console.log(

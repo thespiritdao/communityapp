@@ -391,6 +391,15 @@ export const BidApprovalFlow: React.FC<BidApprovalFlowProps> = ({
       );
       console.log('⏭️ Skipping bounty creation, going directly to assignment');
 
+      // Debug: Log bid object to verify onchainBidIndex field
+      console.log('🔍 Bid object before validation:', {
+        bidId: bid.id,
+        onchainBidIndex: bid.onchainBidIndex,
+        onchainBidIndexType: typeof bid.onchainBidIndex,
+        hasField: 'onchainBidIndex' in bid,
+        fullBidKeys: Object.keys(bid),
+      });
+
       // Validate bid index exists
       if (bid.onchainBidIndex === undefined || bid.onchainBidIndex === null) {
         const error = new Error(
@@ -768,7 +777,7 @@ export const BidApprovalFlow: React.FC<BidApprovalFlowProps> = ({
                     Creating Bounty...
                   </>
                 ) : (
-                  'Create Bounty (Gasless)'
+                  'Create Bounty'
                 )}
               </Button>
             ) : (

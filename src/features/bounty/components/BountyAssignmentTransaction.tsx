@@ -48,6 +48,8 @@ import {
   logValidationResult,
   formatValidationError,
 } from '../utils/bidIndexValidator';
+import { createMilestonesFromBid } from '../services/milestoneService';
+import { supabase } from '@/lib/supabase';
 
 // ============================================================================
 // TYPE DEFINITIONS
@@ -264,7 +266,77 @@ export const BountyAssignmentTransaction: React.FC<
 
       console.log('✅ All notifications sent successfully');
 
-      // Step 3: Call parent success handler
+      // Step 3: Create milestones if bid has deliverables
+      try {
+        console.log('🔍 Checking if bid has deliverables for milestone creation...');
+
+        // Fetch bid data to check for deliverables
+        const { data: bidData, error: bidError } = await supabase
+          .from('bids')
+          .select('deliverables, payment_option')
+          .eq('id', bidId)
+          .single();
+
+        if (bidError) {
+          console.error('❌ Failed to fetch bid data:', bidError);
+        } else if (bidData && bidData.deliverables) {
+          // Parse deliverables to check if there are any
+          const deliverables = typeof bidData.deliverables === 'string'
+            ? JSON.parse(bidData.deliverables)
+            : bidData.deliverables;
+
+          if (Array.isArray(deliverables) && deliverables.length > 0) {
+            console.log('📝 Bid has deliverables - creating milestones:', {
+              bidId,
+              bountyId,
+              deliverablesCount: deliverables.length,
+              paymentOption: bidData.payment_option,
+            });
+
+            const milestoneResult = await createMilestonesFromBid(
+              bidId,
+              bountyId,
+              bidData.deliverables
+            );
+
+            if (milestoneResult.error) {
+              console.error('❌ Failed to create milestones:', milestoneResult.error);
+              // Don't block assignment - milestones can be created manually
+            } else {
+              console.log('✅ Milestones created successfully:', {
+                count: milestoneResult.count,
+                milestones: milestoneResult.data?.map(m => ({
+                  id: m.id,
+                  description: m.deliverable_description,
+                  amount: m.payment_amount,
+                })),
+              });
+
+              // Update bounty payment_type to 'milestones' if it has milestones
+              if (milestoneResult.count > 0 && bidData.payment_option !== 'completion') {
+                console.log('🔄 Updating bounty payment_type to milestones...');
+                const { error: updateError } = await supabase
+                  .from('bounties')
+                  .update({ payment_type: 'milestones' })
+                  .eq('id', bountyId);
+
+                if (updateError) {
+                  console.error('⚠️ Failed to update bounty payment_type:', updateError);
+                } else {
+                  console.log('✅ Bounty payment_type updated to milestones');
+                }
+              }
+            }
+          } else {
+            console.log('ℹ️ Bid has no deliverables - skipping milestone creation');
+          }
+        }
+      } catch (milestoneError) {
+        console.error('❌ Error in milestone creation:', milestoneError);
+        // Don't throw - assignment was successful, milestones are optional
+      }
+
+      // Step 4: Call parent success handler
       onSuccess(receipt);
 
       logTransactionLifecycle('Assignment Complete', {
@@ -410,16 +482,17 @@ export const BountyAssignmentTransaction: React.FC<
             throw new Error('Public client not available');
           }
 
-          // Check if the bid is now assigned by reading the bounty state
-          const bountyData = await publicClient.readContract({
+          // Check if the bid is now assigned by reading the assignment state
+          const assignmentData = await publicClient.readContract({
             address: process.env.NEXT_PUBLIC_BOUNTY_MANAGER_ADDRESS as `0x${string}`,
             abi: BountyManagerABI,
-            functionName: 'getBounty',
+            functionName: 'getAssignment',
             args: [BigInt(onchainBountyId)],
           }) as any;
 
-          // Check if assignedBidder matches our bidder
-          if (bountyData && bountyData.assignedBidder?.toLowerCase() === bidderAddress.toLowerCase()) {
+          // Check if assigned bidder matches our bidder
+          // getAssignment returns: (bidder, reviewer, escrowAmount)
+          if (assignmentData && assignmentData[0]?.toLowerCase() === bidderAddress.toLowerCase()) {
             console.log('✅ Assignment verified on-chain!');
 
             // Create a mock receipt for the success handler

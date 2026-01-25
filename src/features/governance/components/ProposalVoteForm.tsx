@@ -379,7 +379,7 @@ export const ProposalVoteForm: React.FC<ProposalVoteFormProps> = ({
                   disabled={!canVote || selectedVote === null || isLoading}
                   className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {isLoading ? 'Submitting Vote...' : 'Submit Vote (Gasless)'}
+                  {isLoading ? 'Submitting Vote...' : 'Submit Vote'}
                 </button>
                 {!canVote &&
                   votingPower &&

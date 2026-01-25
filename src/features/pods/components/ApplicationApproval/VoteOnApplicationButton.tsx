@@ -214,7 +214,7 @@ export const VoteOnApplicationButton: React.FC<
   return (
     <div className="space-y-3">
       <div className="text-sm text-gray-600">
-        Cast your vote on-chain (gasless via smart contract).{' '}
+        Cast your vote on-chain.{' '}
         {requiredVotes - currentVotes - 1} more vote(s) needed after yours.
       </div>
 

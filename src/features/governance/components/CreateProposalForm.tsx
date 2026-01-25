@@ -653,7 +653,7 @@ export function CreateProposalForm({
 
       toast({
         title: 'Delegation Submitted',
-        description: 'Your voting power delegation is being processed (gasless).',
+        description: 'Your voting power delegation is being processed.',
         variant: 'success',
       });
     } catch (error: any) {
@@ -1573,7 +1573,7 @@ export function CreateProposalForm({
                   >
                     {isDelegating
                       ? 'Delegating...'
-                      : 'Delegate Voting Power to Myself (Gasless)'}
+                      : 'Delegate Voting Power to Myself'}
                   </button>
                   <div className="text-xs" style={{ color: '#C6933F' }}>
                     This transaction will delegate your NFT voting power to
@@ -1629,7 +1629,7 @@ export function CreateProposalForm({
                       disabled={isDelegating || !address}
                       className="w-full disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-medium py-2 px-4 rounded transition-colors bg-[#8B3A3A] hover:bg-[#5C1F1F]"
                     >
-                      {isDelegating ? 'Delegating...' : 'Force Delegate Voting Power (Gasless)'}
+                      {isDelegating ? 'Delegating...' : 'Force Delegate Voting Power'}
                     </button>
                     <div className="text-xs" style={{ color: '#8B3A3A' }}>
                       This will delegate your voting power to yourself. This

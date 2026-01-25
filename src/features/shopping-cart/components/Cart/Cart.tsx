@@ -1353,8 +1353,8 @@ export default function Cart({
                       : isSuccess
                         ? 'Success!'
                         : needsApproval
-                          ? 'Approve & Purchase (Gasless)'
-                          : 'Purchase (Gasless)'}
+                          ? 'Approve & Purchase'
+                          : 'Purchase'}
                   </CDPTransactionButton>
                   {isLoading && (
                     <div style={{ textAlign: 'center', marginTop: '0.5rem', fontSize: '0.875rem', color: '#666' }}>

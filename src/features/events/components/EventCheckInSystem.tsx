@@ -883,7 +883,7 @@ export const EventCheckInSystem: React.FC<EventCheckInSystemProps> = ({
                         disabled={mintingNFTs}
                         className="flex-1 text-white disabled:bg-gray-400 bg-blue-600 hover:bg-blue-700 font-semibold py-2 px-4 rounded"
                       >
-                        {mintingNFTs ? 'Processing...' : 'Complete & Mint (Gasless)'}
+                        {mintingNFTs ? 'Processing...' : 'Complete & Mint'}
                       </button>
                     );
                   })()}
