@@ -234,14 +234,28 @@ export function usePods(config: UsePodsConfig = {}): UsePodsReturn {
         // Check Beta Tester restrictions
         const isBetaTester = hasBetaTesterSuperuser(userHats);
         if (isBetaTester) {
-          const isBetaTestersPod =
-            pod.name?.toLowerCase() === 'beta testers pod';
+          // Beta Testers Pod ID (production)
+          const BETA_TESTERS_POD_ID = 'af4cc4d1-e4e1-4ae3-b70e-19f89a07e0cb';
+
+          // Check if this is the Beta Testers Pod itself OR a sub-pod of it
+          const isBetaTestersPod = pod.id === BETA_TESTERS_POD_ID;
+          const isSubPodOfBetaTesters = pod.parent_pod_id === BETA_TESTERS_POD_ID;
+
           if (isBetaTestersPod) {
             console.log(
               '👑 [DB-First] Beta Tester can manage Beta Testers Pod',
             );
             return true;
           }
+
+          if (isSubPodOfBetaTesters) {
+            console.log(
+              '👑 [DB-First] Beta Tester can manage sub-pod of Beta Testers Pod:',
+              pod.name,
+            );
+            return true;
+          }
+
           console.log(
             '🔒 [DB-First] Beta Tester cannot manage non-beta pod:',
             pod.name,
