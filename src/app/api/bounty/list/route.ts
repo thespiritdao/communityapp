@@ -32,11 +32,12 @@ export async function GET(request: NextRequest) {
     }
 
     // Transform to V2 format
+    const SYSTEM_TOKEN = process.env.NEXT_PUBLIC_SYSTEM_TOKEN as string;
     const bountiesV2 = (bounties || []).map((bounty) => ({
       id: bounty.id.toString(),
       creator: bounty.creator || '',
       value: bounty.value?.toString() || '0',
-      token: bounty.token || '0x1317Ae277266D38C4E492558f8693F14143a6A65',
+      token: bounty.token || SYSTEM_TOKEN || '',
       status: bounty.status || 0,
       podId: bounty.pod_id || '',
       category: bounty.category || '',

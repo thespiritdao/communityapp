@@ -37,8 +37,9 @@ export async function POST(request: NextRequest) {
     });
 
     // Determine token name for value_token field
+    const SYSTEM_TOKEN = process.env.NEXT_PUBLIC_SYSTEM_TOKEN as string;
     const valueToken =
-      token === '0x1317Ae277266D38C4E492558f8693F14143a6A65'
+      token.toLowerCase() === SYSTEM_TOKEN?.toLowerCase()
         ? 'SYSTEM'
         : 'SELF';
 

@@ -382,8 +382,14 @@ export const BountyFormV2: React.FC<BountyFormV2Props> = ({
           // Save to database
           const tokenAddress =
             formData.value.token === 'SYSTEM'
-              ? process.env.NEXT_PUBLIC_SYSTEM_TOKEN || '0x1317Ae277266D38C4E492558f8693F14143a6A65'
-              : process.env.NEXT_PUBLIC_SELF_TOKEN || '0xe9b4aB2eB9397fa41AC3223e96f9d988BeFF5D21';
+              ? process.env.NEXT_PUBLIC_SYSTEM_TOKEN
+              : process.env.NEXT_PUBLIC_SELF_TOKEN;
+
+          if (!tokenAddress) {
+            throw new Error(
+              `Token address not configured for ${formData.value.token}. Please check NEXT_PUBLIC_SYSTEM_TOKEN and NEXT_PUBLIC_SELF_TOKEN environment variables.`
+            );
+          }
 
           console.log('💾 Initiating database save...');
           fetch('/api/bounty/create', {
@@ -1082,10 +1088,14 @@ export const BountyFormV2: React.FC<BountyFormV2Props> = ({
                   // Now save to database with correct funding source
                   const tokenAddress =
                     formData.value.token === 'SYSTEM'
-                      ? process.env.NEXT_PUBLIC_SYSTEM_TOKEN ||
-                        '0x1317Ae277266D38C4E492558f8693F14143a6A65'
-                      : process.env.NEXT_PUBLIC_SELF_TOKEN ||
-                        '0xe9b4aB2eB9397fa41AC3223e96f9d988BeFF5D21';
+                      ? process.env.NEXT_PUBLIC_SYSTEM_TOKEN
+                      : process.env.NEXT_PUBLIC_SELF_TOKEN;
+
+                  if (!tokenAddress) {
+                    throw new Error(
+                      `Token address not configured for ${formData.value.token}. Please check NEXT_PUBLIC_SYSTEM_TOKEN and NEXT_PUBLIC_SELF_TOKEN environment variables.`
+                    );
+                  }
 
                   try {
                     const response = await fetch('/api/bounty/create', {
