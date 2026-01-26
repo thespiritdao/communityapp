@@ -4,7 +4,8 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { FileText, CheckCircle2, AlertCircle, Users } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { FileText, CheckCircle2, AlertCircle, Users, Eye } from 'lucide-react';
 import { supabase } from '@/utils/supabaseClient';
 import { useEvmAddress } from '@coinbase/cdp-hooks';
 import { useToast } from '@/components/ui/use-toast';
@@ -59,6 +60,9 @@ export function AgreementsPanel({
   const [signatures, setSignatures] = useState<AgreementSignature[]>([]);
   const [loading, setLoading] = useState(true);
   const [signingAgreement, setSigningAgreement] = useState<
+    (EligibilityCriterion & { roleId: string }) | null
+  >(null);
+  const [viewingAgreement, setViewingAgreement] = useState<
     (EligibilityCriterion & { roleId: string }) | null
   >(null);
 
@@ -282,15 +286,24 @@ export function AgreementsPanel({
                     </div>
                   </div>
 
-                  {!userHasSigned && address && (
+                  <div className="flex gap-2 ml-4">
                     <Button
-                      onClick={() => setSigningAgreement(criterion)}
+                      onClick={() => setViewingAgreement(criterion)}
                       size="sm"
-                      className="ml-4"
+                      variant="outline"
                     >
-                      Sign
+                      <Eye className="h-4 w-4 mr-2" />
+                      View
                     </Button>
-                  )}
+                    {!userHasSigned && address && (
+                      <Button
+                        onClick={() => setSigningAgreement(criterion)}
+                        size="sm"
+                      >
+                        Sign
+                      </Button>
+                    )}
+                  </div>
                 </div>
               </CardHeader>
 
@@ -372,6 +385,60 @@ export function AgreementsPanel({
           agreementId={signingAgreement.name}
           onSigningComplete={handleAgreementSigned}
         />
+      )}
+
+      {/* View Agreement Modal */}
+      {viewingAgreement && (
+        <Dialog open={true} onOpenChange={() => setViewingAgreement(null)}>
+          <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <FileText className="h-5 w-5" style={{ color: '#2F5D50' }} />
+                {viewingAgreement.name}
+              </DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              {/* Badge showing required role */}
+              <Badge variant="outline" className="w-fit">
+                Required for: {viewingAgreement.required_for_role}
+              </Badge>
+
+              {/* Agreement content */}
+              <div className="p-6 bg-gray-50 rounded-lg border border-gray-200">
+                <div className="whitespace-pre-wrap text-sm leading-relaxed text-gray-800">
+                  {viewingAgreement.description || viewingAgreement.name}
+                </div>
+              </div>
+
+              {/* Info note */}
+              <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                <p className="text-sm text-blue-800">
+                  <strong>Note:</strong> You must sign this agreement to fulfill the eligibility requirements for the <strong>{viewingAgreement.required_for_role}</strong> role in this pod.
+                </p>
+              </div>
+
+              {/* Action buttons */}
+              <div className="flex justify-end gap-2 pt-4 border-t">
+                <Button
+                  onClick={() => setViewingAgreement(null)}
+                  variant="outline"
+                >
+                  Close
+                </Button>
+                {!hasUserSigned(viewingAgreement.name) && address && (
+                  <Button
+                    onClick={() => {
+                      setViewingAgreement(null);
+                      setSigningAgreement(viewingAgreement);
+                    }}
+                  >
+                    Sign Agreement
+                  </Button>
+                )}
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
       )}
 
       {/* Profile Modal */}

@@ -37,6 +37,7 @@ export interface BountyFormV2Data {
   };
   deadline?: string;
   requirements: string[];
+  tasks: string[];
   questions: string[];
   work_requirements: string[];
   funding_source: 'wallet' | 'pod_treasury';
@@ -76,6 +77,7 @@ export const BountyFormV2: React.FC<BountyFormV2Props> = ({
     value: { amount: '', token: 'SYSTEM' },
     deadline: '',
     requirements: [''],
+    tasks: [''],
     questions: [''],
     work_requirements: [''],
     funding_source: 'wallet',
@@ -851,22 +853,22 @@ export const BountyFormV2: React.FC<BountyFormV2Props> = ({
           </TabsContent>
 
           <TabsContent value="work" className="space-y-2">
-            <Label>Work Requirements</Label>
-            {formData.work_requirements.map((work, index) => (
+            <Label>Tasks</Label>
+            {formData.tasks.map((task, index) => (
               <div key={index} className="flex gap-2">
                 <Input
-                  value={work}
+                  value={task}
                   onChange={(e) =>
-                    updateArrayField('work_requirements', index, e.target.value)
+                    updateArrayField('tasks', index, e.target.value)
                   }
-                  placeholder="Enter required task"
+                  placeholder="Enter specific task"
                 />
                 <Button
                   type="button"
                   variant="outline"
                   size="sm"
-                  onClick={() => removeArrayField('work_requirements', index)}
-                  disabled={formData.work_requirements.length === 1}
+                  onClick={() => removeArrayField('tasks', index)}
+                  disabled={formData.tasks.length === 1}
                 >
                   Remove
                 </Button>
@@ -876,7 +878,7 @@ export const BountyFormV2: React.FC<BountyFormV2Props> = ({
               type="button"
               variant="outline"
               size="sm"
-              onClick={() => addArrayField('work_requirements')}
+              onClick={() => addArrayField('tasks')}
             >
               Add Task
             </Button>

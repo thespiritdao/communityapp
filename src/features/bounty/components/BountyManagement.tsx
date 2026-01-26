@@ -667,13 +667,36 @@ export const BountyManagement: React.FC<BountyManagementProps> = ({
                                 View Details
                               </Button>
                             </DialogTrigger>
-                            <DialogContent className="max-w-2xl">
+                            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
                               <DialogHeader>
                                 <DialogTitle>
                                   {bounty.title || `Bounty #${bounty.id}`}
                                 </DialogTitle>
                               </DialogHeader>
                               <div className="space-y-4">
+                                {/* Description Section */}
+                                {(() => {
+                                  const matchingSupabaseBounty =
+                                    supabaseBounties.find(
+                                      (b) => b.id === bounty.id,
+                                    );
+                                  if (
+                                    matchingSupabaseBounty?.description
+                                  ) {
+                                    return (
+                                      <div className="p-4 bg-gray-50 rounded-lg">
+                                        <h4 className="font-semibold mb-2">
+                                          Description
+                                        </h4>
+                                        <p className="text-sm text-gray-700 whitespace-pre-wrap">
+                                          {matchingSupabaseBounty.description}
+                                        </p>
+                                      </div>
+                                    );
+                                  }
+                                  return null;
+                                })()}
+
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                   <div className="space-y-2">
                                     <div>
@@ -747,6 +770,83 @@ export const BountyManagement: React.FC<BountyManagementProps> = ({
                                     </div>
                                   </div>
                                 </div>
+
+                                {/* Requirements Section */}
+                                {(() => {
+                                  const matchingSupabaseBounty =
+                                    supabaseBounties.find(
+                                      (b) => b.id === bounty.id,
+                                    );
+                                  const requirements = matchingSupabaseBounty?.requirements;
+
+                                  if (requirements && Array.isArray(requirements) && requirements.length > 0) {
+                                    return (
+                                      <div className="p-4 bg-blue-50 rounded-lg">
+                                        <h4 className="font-semibold mb-2">Requirements</h4>
+                                        <ul className="list-disc list-inside space-y-1">
+                                          {requirements.map((req: string, idx: number) => (
+                                            <li key={idx} className="text-sm text-gray-700">
+                                              {req}
+                                            </li>
+                                          ))}
+                                        </ul>
+                                      </div>
+                                    );
+                                  }
+                                  return null;
+                                })()}
+
+                                {/* Tasks Section */}
+                                {(() => {
+                                  const matchingSupabaseBounty =
+                                    supabaseBounties.find(
+                                      (b) => b.id === bounty.id,
+                                    );
+                                  const tasks = matchingSupabaseBounty?.tasks;
+
+                                  if (tasks && Array.isArray(tasks) && tasks.length > 0) {
+                                    return (
+                                      <div className="p-4 bg-purple-50 rounded-lg">
+                                        <h4 className="font-semibold mb-2">Tasks</h4>
+                                        <ul className="list-disc list-inside space-y-1">
+                                          {tasks.map((task: string, idx: number) => (
+                                            <li key={idx} className="text-sm text-gray-700">
+                                              {task}
+                                            </li>
+                                          ))}
+                                        </ul>
+                                      </div>
+                                    );
+                                  }
+                                  return null;
+                                })()}
+
+                                {/* Questions Section */}
+                                {(() => {
+                                  const matchingSupabaseBounty =
+                                    supabaseBounties.find(
+                                      (b) => b.id === bounty.id,
+                                    );
+                                  const questions = matchingSupabaseBounty?.questions;
+
+                                  if (questions && Array.isArray(questions) && questions.length > 0) {
+                                    return (
+                                      <div className="p-4 bg-green-50 rounded-lg">
+                                        <h4 className="font-semibold mb-2">
+                                          Questions to Answer When Bidding
+                                        </h4>
+                                        <ul className="list-decimal list-inside space-y-1">
+                                          {questions.map((question: string, idx: number) => (
+                                            <li key={idx} className="text-sm text-gray-700">
+                                              {question}
+                                            </li>
+                                          ))}
+                                        </ul>
+                                      </div>
+                                    );
+                                  }
+                                  return null;
+                                })()}
 
                                 {/* Bid Action for eligible users */}
                                 {(() => {

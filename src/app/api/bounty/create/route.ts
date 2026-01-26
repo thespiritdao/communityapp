@@ -24,6 +24,7 @@ export async function POST(request: NextRequest) {
       deadline,
       funding_source,
       requirements,
+      tasks,
       questions,
       status, // Accept status from request body
     } = body;
@@ -57,6 +58,7 @@ export async function POST(request: NextRequest) {
       value_amount: value,
       value_token: valueToken,
       requirements: requirements || [],
+      tasks: tasks || [],
       questions: questions || [],
       status: status || 'open', // Use status from request, default to 'open' for backwards compatibility
       creator_address: creator,

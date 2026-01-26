@@ -29,6 +29,7 @@ export interface FrontendBounty {
     token: 'SYSTEM' | 'SELF';
   };
   requirements?: string[];
+  tasks?: string[];
   questions?: string[];
   token_gating?: BountyTokenGating;
   work_requirements?: string[]; // Separated from role requirements
