@@ -409,6 +409,7 @@ export const BountyFormV2: React.FC<BountyFormV2Props> = ({
               deadline: formData.deadline,
               funding_source: formData.funding_source,
               requirements: formData.requirements.filter((r) => r.trim()),
+              tasks: formData.tasks.filter((t) => t.trim()),
               questions: formData.questions.filter((q) => q.trim()),
               bid_acceptance_mode: formData.bid_acceptance_mode || 'single',
               max_bids_accepted:
@@ -473,6 +474,7 @@ export const BountyFormV2: React.FC<BountyFormV2Props> = ({
             deadline: formData.deadline,
             funding_source: formData.funding_source,
             requirements: formData.requirements.filter((r) => r.trim()),
+            tasks: formData.tasks.filter((t) => t.trim()),
             questions: formData.questions.filter((q) => q.trim()),
             bid_acceptance_mode: formData.bid_acceptance_mode || 'single',
             max_bids_accepted:
@@ -1117,6 +1119,7 @@ export const BountyFormV2: React.FC<BountyFormV2Props> = ({
                         requirements: formData.requirements.filter((r) =>
                           r.trim(),
                         ),
+                        tasks: formData.tasks.filter((t) => t.trim()),
                         questions: formData.questions.filter((q) => q.trim()),
                         bid_acceptance_mode:
                           formData.bid_acceptance_mode || 'single',
