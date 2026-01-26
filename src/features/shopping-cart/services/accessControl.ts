@@ -156,7 +156,40 @@ export const canUserAccessProductAsync = async (
   if (requiredToken.startsWith('pod_')) {
     console.log(`🛒 Async checking pod role gating: ${requiredToken}`);
 
-    // Resolve the pod role ID to actual hat ID
+    // Extract pod ID from required token format: pod_${podId}_${roleName}
+    const parts = requiredToken.split('_');
+    if (parts.length >= 2) {
+      const podId = parts[1];
+
+      // Fetch all roles for this pod
+      const { data: podRoles, error } = await supabase
+        .from('pod_permission_lookup')
+        .select('hat_id, role_name')
+        .eq('pod_id', podId)
+        .eq('is_active', true);
+
+      if (!error && podRoles && podRoles.length > 0) {
+        // Check if user has ANY role in this pod (leader or member)
+        // Pod leaders should see all products gated to their pod
+        const hasAnyPodRole = podRoles.some((role) =>
+          userIdentity.userHats.includes(role.hat_id.toLowerCase())
+        );
+
+        if (hasAnyPodRole) {
+          console.log(
+            `🛒 User has access to pod ${podId} (member or leader)`,
+          );
+          return true;
+        }
+
+        console.log(
+          `🛒 User does not have any role in pod ${podId}`,
+        );
+        return false;
+      }
+    }
+
+    // Fallback: Resolve the pod role ID to actual hat ID (exact match)
     const hatId = await resolvePodRoleToHatId(requiredToken);
     if (!hatId) {
       console.log(`🛒 Could not resolve pod role ${requiredToken}`);
