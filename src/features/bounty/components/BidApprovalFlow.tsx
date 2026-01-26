@@ -397,18 +397,40 @@ export const BidApprovalFlow: React.FC<BidApprovalFlowProps> = ({
         onchainBidIndex: bid.onchainBidIndex,
         onchainBidIndexType: typeof bid.onchainBidIndex,
         hasField: 'onchainBidIndex' in bid,
-        fullBidKeys: Object.keys(bid),
+        placementTxHash: bid.placementTxHash,
+        submittedAt: bid.submittedAt,
       });
 
-      // Validate bid index exists
+      // Validate bid index exists (note: 0 is a valid index!)
       if (bid.onchainBidIndex === undefined || bid.onchainBidIndex === null) {
-        const error = new Error(
-          'Bid is missing onchainBidIndex - cannot approve. Bid must be placed on-chain first.',
-        );
+        const timeSinceSubmission = bid.submittedAt
+          ? Date.now() - new Date(bid.submittedAt).getTime()
+          : 0;
+        const minutesSinceSubmission = Math.floor(timeSinceSubmission / 1000 / 60);
+
+        let errorMessage = 'Bid is missing onchainBidIndex - cannot approve.';
+
+        if (bid.placementTxHash && minutesSinceSubmission < 10) {
+          errorMessage += ` The bid was submitted ${minutesSinceSubmission} minute(s) ago. The system syncs on-chain data every 5 minutes. Please wait a moment and try refreshing the page.`;
+        } else if (bid.placementTxHash) {
+          errorMessage += ` The bid has a placement transaction (${bid.placementTxHash.substring(0, 10)}...) but the on-chain index hasn't been synced yet. Try refreshing the page to load the latest data.`;
+        } else {
+          errorMessage += ' The bid must be placed on-chain first.';
+        }
+
+        const error = new Error(errorMessage);
         console.error('❌', error.message);
+        console.error('💡 Bid details:', {
+          id: bid.id,
+          hasPlacementTx: !!bid.placementTxHash,
+          minutesSinceSubmission,
+          onchainBidIndex: bid.onchainBidIndex,
+        });
         onApprovalError(error);
         return;
       }
+
+      console.log('✅ Bid validation passed - onchainBidIndex:', bid.onchainBidIndex);
 
       // Prepare assignment data using existing bounty ID
       const assignmentData: PendingAssignment = {
