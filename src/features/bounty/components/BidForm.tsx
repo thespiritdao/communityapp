@@ -51,6 +51,7 @@ interface BountyDetails {
     token: 'SYSTEM' | 'SELF';
   };
   requirements?: string[];
+  tasks?: string[];
   questions?: string[];
 }
 
@@ -597,6 +598,17 @@ export const BidForm: React.FC<BidFormProps> = ({
                 </ul>
               </div>
             )}
+            {bounty.tasks && bounty.tasks.length > 0 && (
+              <div className="mt-2">
+                <h4 className="font-medium text-sm">Tasks:</h4>
+                <ul className="list-disc list-inside text-sm text-gray-600">
+                  {Array.isArray(bounty.tasks) &&
+                    bounty.tasks.map((task, index) => (
+                      <li key={index}>{task}</li>
+                    ))}
+                </ul>
+              </div>
+            )}
           </div>
 
           {/* Experience */}
@@ -990,7 +1002,7 @@ export const BidForm: React.FC<BidFormProps> = ({
                 className="flex-1 bounty-btn primary"
                 style={{ backgroundColor: '#2F5D50', color: '#FFFFFF' }}
               >
-                {isUploading ? '📤 Preparing Bid...' : '📝 Prepare Bid'}
+                {isUploading ? 'Preparing Bid...' : '📝 Prepare Bid'}
               </Button>
             ) : (
               /* Step 2: Submit Bid On-Chain via CDP Smart Account */
@@ -1052,8 +1064,8 @@ export const BidForm: React.FC<BidFormProps> = ({
             >
               <p className="font-medium">✅ Bid Prepared Successfully!</p>
               <p className="text-sm mt-1">
-                Your bid has been uploaded to IPFS. Click "Submit Bid" above to
-                place it on-chain.
+                Bid information uploaded, click "Submit Bid" to 
+                finalize.
               </p>
               <p className="text-xs mt-1 text-gray-600 break-all">
                 IPFS Hash: {ipfsHash}

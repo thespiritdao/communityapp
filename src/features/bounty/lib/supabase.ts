@@ -9,6 +9,7 @@ export interface Bounty {
   value_amount: string;
   value_token: 'SYSTEM' | 'SELF';
   requirements: string[];
+  tasks: string[]; // Task list for the bounty
   questions: string[];
   status: 'open' | 'in-progress' | 'completed' | 'cancelled' | 'draft';
   creator_address: string;
@@ -659,6 +660,7 @@ export const convertBountyToDb = (
     value_amount: bounty.value.amount,
     value_token: bounty.value.token,
     requirements: bounty.requirements || [],
+    tasks: bounty.tasks || [],
     questions: bounty.questions || [],
     status: bounty.status || 'open',
     creator_address: bounty.creator_address,
@@ -679,6 +681,7 @@ export const convertBountyFromDb = (bounty: Bounty): any => {
       token: bounty.value_token,
     },
     requirements: bounty.requirements,
+    tasks: bounty.tasks || [],
     questions: bounty.questions,
     status: bounty.status,
     createdAt: new Date(bounty.created_at),

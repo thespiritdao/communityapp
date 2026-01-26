@@ -746,7 +746,9 @@ export const BountyManagement: React.FC<BountyManagementProps> = ({
                                       <span className="font-medium">
                                         Funding Source:
                                       </span>{' '}
-                                      {bounty.fundingSource || 'Wallet'}
+                                      {bounty.fundingSource === 'pod_treasury'
+                                        ? 'Pod Treasury'
+                                        : 'Creator Wallet'}
                                     </div>
                                     <div>
                                       <span className="font-medium">

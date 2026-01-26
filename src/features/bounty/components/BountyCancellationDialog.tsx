@@ -368,7 +368,7 @@ export const BountyCancellationDialog: React.FC<
                       >
                         {bounty.funding_source === 'pod_treasury'
                           ? 'Pod Treasury'
-                          : 'Personal Wallet'}
+                          : 'Creator Wallet'}
                       </span>
                     </p>
                   </div>
