@@ -179,24 +179,24 @@ export class PodTreasuryService {
     try {
       console.log('🏦 Loading token balances for treasury:', treasuryAddress);
 
-      // Get supported tokens from treasury contract
-      const treasuryContract = getContract({
-        address: treasuryAddress as `0x${string}`,
-        abi: POD_TREASURY_ABI,
-        client: publicClient,
-      });
+      // Use standard tokens from environment (CDP-compatible approach)
+      // This replaces the old getSupportedTokens() pattern from Wagmi
+      const SYSTEM_TOKEN = process.env.NEXT_PUBLIC_SYSTEM_TOKEN as string;
+      const SELF_TOKEN = process.env.NEXT_PUBLIC_SELF_TOKEN as string;
 
-      const supportedTokens =
-        (await treasuryContract.read.getSupportedTokens()) as string[];
-      console.log('🏦 Supported tokens:', supportedTokens);
+      const standardTokens = [SYSTEM_TOKEN, SELF_TOKEN].filter(
+        (addr) => addr && addr !== '0x0000000000000000000000000000000000000000',
+      );
 
-      if (supportedTokens.length === 0) {
-        console.log('🏦 No supported tokens found');
+      console.log('🏦 Standard tokens to check:', standardTokens);
+
+      if (standardTokens.length === 0) {
+        console.log('🏦 No standard tokens configured');
         return [];
       }
 
       // Query all token details and balances in parallel
-      const tokenPromises = supportedTokens.map(
+      const tokenPromises = standardTokens.map(
         async (tokenAddress: string) => {
           try {
             const tokenContract = getContract({
@@ -225,6 +225,12 @@ export class PodTreasuryService {
             // Also check the treasury's internal accounting
             let internalBalance;
             try {
+              const treasuryContract = getContract({
+                address: treasuryAddress as `0x${string}`,
+                abi: POD_TREASURY_ABI,
+                client: publicClient,
+              });
+
               internalBalance = (await treasuryContract.read.getBalance([
                 tokenAddress as `0x${string}`,
               ])) as bigint;

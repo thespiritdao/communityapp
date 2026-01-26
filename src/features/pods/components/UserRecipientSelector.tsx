@@ -290,9 +290,6 @@ export default function UserRecipientSelector({
                           <div className="font-medium text-gray-900">
                             {user.first_name} {user.last_name}
                           </div>
-                          <div className="text-xs text-gray-500 font-mono truncate">
-                            {user.wallet_address}
-                          </div>
                         </div>
                       </button>
                     ))}
