@@ -199,10 +199,23 @@ export const BountyFormV2: React.FC<BountyFormV2Props> = ({
           : ((process.env.NEXT_PUBLIC_SELF_TOKEN ||
               '0x1b8d424695E63ABca04E94bA46c03f1D83e14020') as `0x${string}`);
 
+      // Use V3 address if available, otherwise V2
+      const BOUNTY_MANAGER_V3 = process.env.NEXT_PUBLIC_BOUNTY_MANAGER_V3_ADDRESS as `0x${string}` | undefined;
       const BOUNTY_MANAGER_V2 = (process.env
         .NEXT_PUBLIC_BOUNTY_MANAGER_ADDRESS ||
         '0xc2Ac53e7C869Ed9Bcd21b72C7aE747Abb788A8e5') as `0x${string}`;
+
+      // Determine which contract to approve (must match the contract we're calling)
+      const BOUNTY_MANAGER_ADDRESS = BOUNTY_MANAGER_V3 || BOUNTY_MANAGER_V2;
+
       const amount = parseEther(formData.value.amount);
+
+      console.log('💰 Token Approval Setup:', {
+        tokenAddress,
+        spender: BOUNTY_MANAGER_ADDRESS,
+        amount: formData.value.amount,
+        usingV3: !!BOUNTY_MANAGER_V3,
+      });
 
       // ERC20 approve ABI
       const ERC20_APPROVE_ABI = [
@@ -260,7 +273,7 @@ export const BountyFormV2: React.FC<BountyFormV2Props> = ({
           address: tokenAddress,
           abi: ERC20_APPROVE_ABI,
           functionName: 'approve' as const,
-          args: [BOUNTY_MANAGER_V2, amount],
+          args: [BOUNTY_MANAGER_ADDRESS, amount], // FIXED: Use correct contract address
         },
         bountyCall,
       ];
