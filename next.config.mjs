@@ -191,6 +191,7 @@ const nextConfig = {
                 https://ui-avatars.com;
               style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
               font-src 'self' https://fonts.gstatic.com;
+              media-src 'self' https://files.spiritdao.org;
               frame-src 'self'
                 https://*.coinbase.com
                 https://keys.coinbase.com

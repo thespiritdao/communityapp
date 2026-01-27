@@ -19,11 +19,43 @@ const BOUNTY_MANAGER_ADDRESS = (process.env.NEXT_PUBLIC_BOUNTY_MANAGER_ADDRESS |
 
 const BOUNTY_CREATED_TOPIC = '0x53902e1474335a04152927f2e2b4e98a09b6a6f269fbab584d6ec3b22176995c';
 
+// CDP Bundler URL for querying userOperation status
+const BUNDLER_URL = process.env.NEXT_PUBLIC_PAYMASTER ||
+  'https://api.developer.coinbase.com/rpc/v1/base/[REDACTED]';
+
 /**
- * IMPROVED Cron job that finds bounties by creator address (not userOperationHash)
+ * Query CDP bundler for userOperation receipt
+ */
+async function getUserOpReceipt(userOpHash: string) {
+  try {
+    const response = await fetch(BUNDLER_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        jsonrpc: '2.0',
+        id: 1,
+        method: 'eth_getUserOperationReceipt',
+        params: [userOpHash],
+      }),
+    });
+
+    const data = await response.json();
+    return data.result || null;
+  } catch (error) {
+    console.error(`❌ [Cron] Error querying bundler for ${userOpHash}:`, error);
+    return null;
+  }
+}
+
+/**
+ * IMPROVED Cron job that queries CDP bundler for userOperation status
  *
- * CDP Paymaster transactions don't have a transaction hash immediately - only after bundler processes them.
- * This version searches blockchain for BountyCreated events and matches by creator address + timestamp.
+ * CDP Paymaster transactions return a userOperationHash immediately, but the actual
+ * blockchain transaction is created later by the bundler. This cron job:
+ * 1. Fetches pending bounties
+ * 2. Queries CDP bundler for each userOperationHash
+ * 3. Extracts the real transaction hash and bounty ID
+ * 4. Updates the database
  */
 export async function GET(request: NextRequest) {
   try {

@@ -25,6 +25,8 @@ import {
   ArrowRightLeft,
   Store,
   Loader2,
+  BookOpen,
+  BookMarked,
 } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -88,6 +90,8 @@ export const UnifiedMembershipManager: React.FC<
     roleAssignment: false,
     forumModeration: false,
     bountyManagement: false,
+    knowledgeBaseAccess: false,
+    knowledgeBaseManage: false,
     marketplaceAccess: false,
     marketplaceManage: false,
   });
@@ -522,6 +526,8 @@ export const UnifiedMembershipManager: React.FC<
                   'forumAccess',
                   'forumModeration',
                   'governanceParticipation',
+                  'knowledgeBaseAccess',
+                  'knowledgeBaseManage',
                   'marketplaceAccess',
                   'marketplaceManage',
                   'memberManagement',
@@ -610,6 +616,18 @@ export const UnifiedMembershipManager: React.FC<
                           style={{ color: '#6A5F7A' }}
                         />
                       )}
+                      {permissionKey === 'knowledgeBaseAccess' && (
+                        <BookOpen
+                          className="h-5 w-5"
+                          style={{ color: '#2F5D50' }}
+                        />
+                      )}
+                      {permissionKey === 'knowledgeBaseManage' && (
+                        <BookMarked
+                          className="h-5 w-5"
+                          style={{ color: '#6A5F7A' }}
+                        />
+                      )}
                       {permissionKey === 'marketplaceAccess' && (
                         <ArrowRightLeft
                           className="h-5 w-5"
@@ -653,6 +671,10 @@ export const UnifiedMembershipManager: React.FC<
                             'Moderate forum posts and discussions'}
                           {permissionKey === 'bountyManagement' &&
                             'Create and manage bounties'}
+                          {permissionKey === 'knowledgeBaseAccess' &&
+                            'View pod knowledge base content'}
+                          {permissionKey === 'knowledgeBaseManage' &&
+                            'Create and manage knowledge base content'}
                           {permissionKey === 'marketplaceAccess' &&
                             'View and purchase marketplace products'}
                           {permissionKey === 'marketplaceManage' &&

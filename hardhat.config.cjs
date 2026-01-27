@@ -1,10 +1,15 @@
 // commapp/hardhat.config.cjs
 
-// enable on‑the‑fly TS compilation for scripts
-require('ts-node/register');
+// Commented out ts-node due to ESM/CommonJS incompatibility
+// Use plain JS for Hardhat scripts instead
+// require('ts-node/register');
 
 // load the Hardhat Toolbox (includes ethers, waffle, chai, etc.)
-require('@nomicfoundation/hardhat-toolbox');
+// Temporarily commented to avoid chai ESM issues
+// require('@nomicfoundation/hardhat-toolbox');
+
+// Minimal hardhat config for contract compilation
+require('@nomicfoundation/hardhat-ethers');
 
 module.exports = {
   defaultNetwork: 'hardhat',
@@ -18,6 +23,18 @@ module.exports = {
       url: 'http://127.0.0.1:8545',
       chainId: 8453,
     },
+    // Base mainnet
+    base: {
+      url: 'https://mainnet.base.org',
+      chainId: 8453,
+      accounts: process.env.DEPLOYER_PRIVATE_KEY ? [process.env.DEPLOYER_PRIVATE_KEY] : [],
+    },
+    // Base Sepolia testnet
+    'base-sepolia': {
+      url: 'https://sepolia.base.org',
+      chainId: 84532,
+      accounts: process.env.DEPLOYER_PRIVATE_KEY ? [process.env.DEPLOYER_PRIVATE_KEY] : [],
+    },
   },
   solidity: {
     version: '0.8.26',
@@ -26,6 +43,8 @@ module.exports = {
         enabled: true,
         runs: 200,
       },
+      // viaIR disabled temporarily - causes stack too deep in other contracts
+      // viaIR: true,
       evmVersion: 'cancun',
     },
   },

@@ -74,29 +74,57 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if there's already a pending submission for this bid
-    const { data: existingSubmission, error: existingError } = await supabase
+    // Allow resubmission if status is 'revision_requested', but not if 'pending', 'approved', or 'rejected'
+    const { data: existingSubmissions, error: existingError } = await supabase
       .from('work_submissions')
       .select('id, status')
       .eq('bid_id', bidId)
-      .eq('status', 'pending')
-      .maybeSingle();
+      .order('created_at', { ascending: false })
+      .limit(1);
 
     if (existingError) {
       console.error('❌ Error checking existing submissions:', existingError);
+      return NextResponse.json(
+        {
+          error: 'Failed to check for existing submissions',
+          details: existingError.message,
+        },
+        { status: 500 },
+      );
     }
 
-    if (existingSubmission) {
+    const latestSubmission = existingSubmissions && existingSubmissions.length > 0 ? existingSubmissions[0] : null;
+
+    // Block submission if latest submission is pending (under review)
+    if (latestSubmission && latestSubmission.status === 'pending') {
       return NextResponse.json(
         {
           error:
-            'You already have a pending work submission. Please wait for review or edit the existing submission.',
+            'You already have a pending work submission. Please wait for review before submitting again.',
         },
         { status: 409 },
       );
     }
 
+    // Block submission if already approved
+    if (latestSubmission && latestSubmission.status === 'approved') {
+      return NextResponse.json(
+        {
+          error:
+            'Your work submission has already been approved. No further submissions needed.',
+        },
+        { status: 409 },
+      );
+    }
+
+    // Allow submission if:
+    // - No previous submission exists
+    // - Previous submission was rejected
+    // - Previous submission requires revision
+    console.log('✅ Submission allowed:', latestSubmission ? `Previous status: ${latestSubmission.status}` : 'No previous submission');
+
     // Get the latest revision number for this bid
-    const { data: latestSubmission } = await supabase
+    const { data: revisionData } = await supabase
       .from('work_submissions')
       .select('revision_number')
       .eq('bid_id', bidId)
@@ -104,8 +132,8 @@ export async function POST(request: NextRequest) {
       .limit(1)
       .maybeSingle();
 
-    const revisionNumber = latestSubmission
-      ? latestSubmission.revision_number + 1
+    const revisionNumber = revisionData
+      ? revisionData.revision_number + 1
       : 1;
 
     // Insert work submission
@@ -151,21 +179,26 @@ export async function POST(request: NextRequest) {
       .eq('id', bountyId)
       .single();
 
-    // Send notification to bounty creator
+    // Send notification to bounty creator (non-blocking)
     if (bounty?.creator_address) {
-      await unifiedNotificationService.createNotification({
-        recipient_address: bounty.creator_address.toLowerCase(),
-        sender_address: submitterAddress.toLowerCase(),
-        notification_type: 'bounty_update',
-        title: 'Work Submitted',
-        message: `Work has been submitted for your bounty "${bounty.title}". Please review the submission.`,
-        context_type: 'bounty',
-        context_id: bountyId,
-        context_url: `/bounty/${bountyId}/submissions`,
-        priority: 'high',
-      });
+      try {
+        await unifiedNotificationService.createNotification({
+          recipient_address: bounty.creator_address.toLowerCase(),
+          sender_address: submitterAddress.toLowerCase(),
+          notification_type: 'bounty_update',
+          title: 'Work Submitted',
+          message: `Work has been submitted for your bounty "${bounty.title}". Please review the submission.`,
+          context_type: 'bounty',
+          context_id: bountyId,
+          context_url: `/bounty/${bountyId}/submissions`,
+          priority: 'high',
+        });
 
-      console.log('✅ Notification sent to bounty creator');
+        console.log('✅ Notification sent to bounty creator');
+      } catch (notifError) {
+        // Don't fail the whole request if notification fails
+        console.error('⚠️  Failed to send notification:', notifError);
+      }
     }
 
     return NextResponse.json({

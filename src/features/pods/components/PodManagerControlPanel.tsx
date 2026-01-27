@@ -60,6 +60,8 @@ const snakeToCamelPermissions = (
     bountyManagement: snakePermissions.bounty_management || false,
     marketplaceAccess: snakePermissions.marketplace_access || false,
     marketplaceManage: snakePermissions.marketplace_manage || false,
+    knowledgeBaseAccess: snakePermissions.knowledge_base_access || false,
+    knowledgeBaseManage: snakePermissions.knowledge_base_manage || false,
   };
 };
 
@@ -82,6 +84,8 @@ const camelToSnakePermissions = (
     bounty_management: camelPermissions.bountyManagement,
     marketplace_access: camelPermissions.marketplaceAccess,
     marketplace_manage: camelPermissions.marketplaceManage,
+    knowledge_base_access: camelPermissions.knowledgeBaseAccess,
+    knowledge_base_manage: camelPermissions.knowledgeBaseManage,
   };
 };
 

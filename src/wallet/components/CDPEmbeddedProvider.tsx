@@ -61,91 +61,37 @@ interface CDPEmbeddedProviderProps {
  *
  * @see https://docs.base.org/base-account/framework-integrations/cdp
  */
-// Global flag to ensure session check runs only once per page load
-let hasCheckedSession = false;
+// REMOVED: Stale session checking was interfering with CDP's session restoration
+// The CDP SDK handles session persistence internally via localStorage
+// Hard refreshes work fine as long as we don't clear/modify localStorage
 
 export function CDPEmbeddedProvider({ children }: CDPEmbeddedProviderProps) {
-  // CRITICAL: Check for and clear stale CDP sessions BEFORE initialization
-  // This runs synchronously before React renders children - BUT ONLY ONCE
-  if (typeof window !== 'undefined' && !hasCheckedSession) {
-    hasCheckedSession = true; // Set flag immediately to prevent re-runs
+  // No session checking - let CDP SDK handle its own persistence
 
-    try {
-      const storageKeys = Object.keys(localStorage);
-      const cdpAuthKeys = storageKeys.filter(key =>
-        (key.includes('cdp') || key.includes('coinbase')) &&
-        (key.includes('token') || key.includes('refresh') || key.includes('session'))
-      );
-
-      // Check if any CDP auth keys exist
-      if (cdpAuthKeys.length > 0) {
-        // Check if the last session refresh was recent (within 24 hours)
-        const lastRefreshKey = 'cdp_last_refresh';
-        const lastRefresh = localStorage.getItem(lastRefreshKey);
-        const now = Date.now();
-
-        // ONLY clear if we have a timestamp AND it's stale
-        // If no timestamp, create one (assume fresh login)
-        if (lastRefresh && (now - parseInt(lastRefresh)) > 24 * 60 * 60 * 1000) {
-          console.warn('⚠️ Detected stale CDP session (>24h old), clearing...');
-          cdpAuthKeys.forEach(key => {
-            console.log(`🗑️ Removing stale CDP key: ${key}`);
-            localStorage.removeItem(key);
-          });
-          localStorage.removeItem(lastRefreshKey);
-        } else {
-          // Set or update timestamp for valid session
-          localStorage.setItem(lastRefreshKey, now.toString());
-        }
-      }
-    } catch (error) {
-      console.error('Error checking CDP session age:', error);
-    }
-  }
-
-  // Handle CDP session refresh failures
+  // DISABLED: This error handler was logging users out
+  // The CDP SDK 400 errors are cosmetic - clearing localStorage breaks sessions
+  // Leaving this commented for reference - DO NOT RE-ENABLE
+  /*
   useEffect(() => {
     const handleCDPError = (event: ErrorEvent | PromiseRejectionEvent) => {
       const error = 'reason' in event ? event.reason : event.error;
       const errorMessage = error?.message || error?.toString() || '';
 
-      // Detect CDP refresh failures
       if (
         errorMessage.includes('auth/refresh') ||
         errorMessage.includes('auth/logout') ||
         (errorMessage.includes('400') && errorMessage.includes('cdp.coinbase.com'))
       ) {
-        console.warn('⚠️ CDP session refresh failed, clearing stale session data...');
+        // ❌ DO NOT CLEAR LOCALSTORAGE - THIS LOGS USERS OUT
+        // The CDP SDK handles retries internally
+        console.warn('⚠️ CDP auth error detected (cosmetic - not clearing session)');
 
-        try {
-          // Clear CDP-related localStorage entries
-          const storageKeys = Object.keys(localStorage);
-          const cdpKeys = storageKeys.filter(key =>
-            key.toLowerCase().includes('cdp') ||
-            key.toLowerCase().includes('coinbase') ||
-            key.toLowerCase().includes('embedded') ||
-            key.toLowerCase().includes('wallet')
-          );
-
-          cdpKeys.forEach(key => {
-            console.log(`🗑️ Removing stale CDP key: ${key}`);
-            localStorage.removeItem(key);
-          });
-
-          // Don't reload immediately - let the app continue with a fresh session
-          console.log('✅ Stale CDP session cleared. Please reconnect your wallet.');
-        } catch (clearError) {
-          console.error('Failed to clear CDP session:', clearError);
-        }
-
-        // Prevent the error from propagating and causing a crash
         if ('preventDefault' in event) {
           event.preventDefault();
         }
       }
     };
 
-    // Listen for both synchronous and async errors
     window.addEventListener('error', handleCDPError);
     window.addEventListener('unhandledrejection', handleCDPError);
 
@@ -154,6 +100,7 @@ export function CDPEmbeddedProvider({ children }: CDPEmbeddedProviderProps) {
       window.removeEventListener('unhandledrejection', handleCDPError);
     };
   }, []);
+  */
 
   // Validate contract addresses on mount
   useEffect(() => {

@@ -24,31 +24,47 @@ if (!supabaseUrl || !supabaseKey) {
 
 const supabase = createClient(supabaseUrl, supabaseKey);
 
-// Beta Tester module ID from your data
-const BETA_TESTER_MODULE_ID = '64d5d229-b3ea-4f6a-a3bc-9a6315248daa';
-
 // New expiration date: February 28, 2026 at 23:59
 const NEW_EXPIRATION = '2026-02-28T23:59';
 
 async function updateBetaTesterExpiration() {
-  console.log('🔍 Finding Beta Tester module...\n');
+  console.log('🔍 Searching for Beta Tester module...\n');
 
-  // 1. Fetch current module data
-  const { data: currentModule, error: fetchError } = await supabase
+  // 1. Search for Beta Tester module by role name
+  const { data: modules, error: searchError } = await supabase
     .from('pod_modules')
     .select('*')
-    .eq('id', BETA_TESTER_MODULE_ID)
-    .single();
+    .ilike('role_name', '%beta%tester%');
 
-  if (fetchError) {
-    console.error('❌ Error fetching module:', fetchError);
+  if (searchError) {
+    console.error('❌ Error searching for modules:', searchError);
     process.exit(1);
   }
 
-  if (!currentModule) {
-    console.error('❌ Beta Tester module not found');
+  if (!modules || modules.length === 0) {
+    console.error('❌ No Beta Tester modules found');
+    console.log('\n💡 Tip: Searching for modules with "beta" and "tester" in the name');
+    console.log('   If your role has a different name, update the search in this script.\n');
     process.exit(1);
   }
+
+  // If multiple found, show them and let user choose
+  if (modules.length > 1) {
+    console.log('🔍 Found multiple Beta Tester modules:\n');
+    modules.forEach((mod, idx) => {
+      console.log(`${idx + 1}. ${mod.role_name} (ID: ${mod.id})`);
+      console.log(`   Pod ID: ${mod.pod_id}`);
+      console.log(`   Token: ${mod.token_address}`);
+      console.log(`   Max Holders: ${mod.max_holders}, Current: ${mod.current_holders}`);
+      console.log('');
+    });
+    console.log('⚠️  Multiple modules found. Please edit the script to specify the correct ID.\n');
+    process.exit(1);
+  }
+
+  const currentModule = modules[0];
+  console.log(`✅ Found module: "${currentModule.role_name}"`);
+  console.log(`   ID: ${currentModule.id}\n`);
 
   console.log('✅ Found Beta Tester module:');
   console.log('   Role Name:', currentModule.role_name);

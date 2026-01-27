@@ -135,7 +135,6 @@ export async function POST(request: NextRequest) {
         .from('bids')
         .update({
           status: 'work_approved', // New status: work approved, awaiting payment
-          updated_at: new Date().toISOString(),
         })
         .eq('id', submission.bid_id);
 
@@ -143,53 +142,62 @@ export async function POST(request: NextRequest) {
         '✅ Work approved - bounty remains "assigned" until payment released',
       );
 
-      // Send notification to bidder
+      // Send notification to bidder (non-blocking)
       const bid = submission.bids;
-      await unifiedNotificationService.createNotification({
-        recipient_address: bid.bidder_address.toLowerCase(),
-        sender_address: reviewerAddress.toLowerCase(),
-        notification_type: 'bounty_update',
-        title: 'Work Approved!',
-        message: `Your work submission for "${bounty.title}" has been approved! ${reviewComments ? `Feedback: ${reviewComments}` : ''}`,
-        context_type: 'bounty',
-        context_id: submission.bounty_id,
-        context_url: `/bounty/${submission.bounty_id}`,
-        priority: 'high',
-      });
-
-      console.log('✅ Approval notification sent to bidder');
+      try {
+        await unifiedNotificationService.createNotification({
+          recipient_address: bid.bidder_address.toLowerCase(),
+          sender_address: reviewerAddress.toLowerCase(),
+          notification_type: 'bounty_update',
+          title: 'Work Approved!',
+          message: `Your work submission for "${bounty.title}" has been approved! ${reviewComments ? `Feedback: ${reviewComments}` : ''}`,
+          context_type: 'bounty',
+          context_id: submission.bounty_id,
+          context_url: `/bounty/${submission.bounty_id}`,
+          priority: 'high',
+        });
+        console.log('✅ Approval notification sent to bidder');
+      } catch (notifError) {
+        console.error('⚠️  Failed to send approval notification:', notifError);
+      }
     } else if (status === 'rejected') {
-      // Send rejection notification
+      // Send rejection notification (non-blocking)
       const bid = submission.bids;
-      await unifiedNotificationService.createNotification({
-        recipient_address: bid.bidder_address.toLowerCase(),
-        sender_address: reviewerAddress.toLowerCase(),
-        notification_type: 'bounty_update',
-        title: 'Work Submission Rejected',
-        message: `Your work submission for "${bounty.title}" was not accepted. ${reviewComments ? `Reason: ${reviewComments}` : 'Please contact the bounty creator for details.'}`,
-        context_type: 'bounty',
-        context_id: submission.bounty_id,
-        context_url: `/bounty/${submission.bounty_id}`,
-        priority: 'high',
-      });
-
-      console.log('✅ Rejection notification sent to bidder');
+      try {
+        await unifiedNotificationService.createNotification({
+          recipient_address: bid.bidder_address.toLowerCase(),
+          sender_address: reviewerAddress.toLowerCase(),
+          notification_type: 'bounty_update',
+          title: 'Work Submission Rejected',
+          message: `Your work submission for "${bounty.title}" was not accepted. ${reviewComments ? `Reason: ${reviewComments}` : 'Please contact the bounty creator for details.'}`,
+          context_type: 'bounty',
+          context_id: submission.bounty_id,
+          context_url: `/bounty/${submission.bounty_id}`,
+          priority: 'high',
+        });
+        console.log('✅ Rejection notification sent to bidder');
+      } catch (notifError) {
+        console.error('⚠️  Failed to send rejection notification:', notifError);
+      }
     } else if (status === 'revision_requested') {
-      // Send revision request notification
+      // Send revision request notification (non-blocking)
       const bid = submission.bids;
-      await unifiedNotificationService.createNotification({
-        recipient_address: bid.bidder_address.toLowerCase(),
-        sender_address: reviewerAddress.toLowerCase(),
-        notification_type: 'bounty_update',
-        title: 'Revision Requested',
-        message: `Please revise your work submission for "${bounty.title}". ${reviewComments || 'See review comments for details.'}`,
-        context_type: 'bounty',
-        context_id: submission.bounty_id,
-        context_url: `/bounty/${submission.bounty_id}/submissions`,
-        priority: 'high',
-      });
-
-      console.log('✅ Revision request notification sent to bidder');
+      try {
+        await unifiedNotificationService.createNotification({
+          recipient_address: bid.bidder_address.toLowerCase(),
+          sender_address: reviewerAddress.toLowerCase(),
+          notification_type: 'bounty_update',
+          title: 'Revision Requested',
+          message: `Please revise your work submission for "${bounty.title}". ${reviewComments || 'See review comments for details.'}`,
+          context_type: 'bounty',
+          context_id: submission.bounty_id,
+          context_url: `/bounty/${submission.bounty_id}/submissions`,
+          priority: 'high',
+        });
+        console.log('✅ Revision request notification sent to bidder');
+      } catch (notifError) {
+        console.error('⚠️  Failed to send revision request notification:', notifError);
+      }
     }
 
     return NextResponse.json({

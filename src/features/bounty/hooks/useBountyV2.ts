@@ -152,10 +152,15 @@ export const useBountyV2 = (): UseBountyV2Return => {
 
       // V3/V4 requires additional parameters for auto-registration
       if (USE_V3 && BOUNTY_MANAGER_V3_ADDRESS) {
+        // V4 contract REQUIRES a valid treasury address (cannot be zero address)
+        if (!treasuryAddress || treasuryAddress === '0x0000000000000000000000000000000000000000') {
+          throw new Error('Treasury address is required for V4 bounty creation. Please deploy a treasury first.');
+        }
+
         const v4Args = [
           ...baseArgs,
           BigInt(leaderHatId || '0'), // leaderHatId (0 if pod already registered)
-          treasuryAddress || '0x0000000000000000000000000000000000000000', // treasuryAddress
+          treasuryAddress as `0x${string}`, // treasuryAddress (REQUIRED, cannot be zero)
         ];
 
         console.log('🎯 V4 createBounty args (7 params):', {

@@ -6,21 +6,30 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/utils/Pausable.sol";
 
-// Pod permission interface - must be defined outside the contract
-interface IPodService {
-    function canManageBounties(address user, string calldata podId) external view returns (bool);
-    function canUsePodTreasury(address user, string calldata podId) external view returns (bool);
-    function getPodTreasuryAddress(string calldata podId) external view returns (address);
-    function isValidPod(string calldata podId) external view returns (bool);
+/**
+ * @title BountyManagerV3
+ * @notice Decentralized bounty management system using HATs Protocol directly
+ * @dev NO DEPENDENCY on centralized pod registry - permissionless pod registration
+ */
+
+interface IHats {
+    function balanceOf(address wearer, uint256 hatId) external view returns (uint256);
+    function isWearerOfHat(address wearer, uint256 hatId) external view returns (bool);
 }
 
-/**
- * @title BountyManagerV2
- * @notice Pod-integrated bounty management system for SpiritDAO
- * @dev Integrates with pod role permissions and treasury funding
- */
-contract BountyManagerV2 is ReentrancyGuard, Pausable {
+contract BountyManagerV3 is ReentrancyGuard, Pausable {
     using SafeERC20 for IERC20;
+
+    // HATs Protocol reference
+    IHats public immutable hatsProtocol;
+
+    // Pod metadata (minimal storage - only what's needed for bounties)
+    struct PodMetadata {
+        uint256 leaderHatId;      // HAT ID for pod leaders
+        address treasuryAddress;  // Pod treasury contract
+        bool isRegistered;        // Has pod been registered for bounties?
+        uint256 registeredAt;     // When pod was registered
+    }
 
     // Core bounty data structure
     struct Bounty {
@@ -33,7 +42,7 @@ contract BountyManagerV2 is ReentrancyGuard, Pausable {
         uint8 status; // 0=Open, 1=Assigned, 2=Completed, 3=Cancelled
         uint8 paymentType; // 0=Completion, 1=Milestones, 2=Split
         bool isEscrowed;
-        string podId; // Associated pod ID for permissions
+        string podId; // Associated pod ID
         string category;
     }
 
@@ -54,83 +63,130 @@ contract BountyManagerV2 is ReentrancyGuard, Pausable {
     }
 
     // State variables
+    mapping(string => PodMetadata) public podMetadata;
     mapping(uint256 => Bounty) public bounties;
     mapping(uint256 => Assignment) public assignments;
     mapping(uint256 => string) public bountyMetadata; // IPFS hashes
     mapping(uint256 => Bid[]) public bids;
     mapping(uint256 => address[]) public bidders;
-    
+
     uint256 public nextBountyId = 1;
     uint256 public platformFeeRate = 250; // 2.5%
     address public feeRecipient;
-    address public podServiceContract; // Contract that validates pod permissions
-    
-    // Token addresses
+
+    // Token addresses (Base mainnet - CORRECT ADDRESSES)
     address public constant SYSTEM_TOKEN = 0xd67e460ce56be18b573aB434b3DC962c657D8Bb5;
     address public constant SELF_TOKEN = 0x1b8d424695E63ABca04E94bA46c03f1D83e14020;
 
     // Events
+    event PodMetadataRegistered(string indexed podId, uint256 leaderHatId, address treasury, address registrar);
     event BountyCreated(uint256 indexed id, address indexed creator, string podId, string ipfsHash);
     event BidPlaced(uint256 indexed bountyId, address indexed bidder, uint256 bidIndex);
     event BountyAssigned(uint256 indexed bountyId, address indexed bidder);
     event PaymentReleased(uint256 indexed bountyId, address indexed to, uint256 amount);
     event BountyCancelled(uint256 indexed bountyId);
-    event PodServiceUpdated(address indexed newPodService);
 
-    constructor(address _podServiceContract) {
+    constructor(address _hatsProtocol) {
+        require(_hatsProtocol != address(0), "Invalid Hats address");
+        hatsProtocol = IHats(_hatsProtocol);
         feeRecipient = msg.sender;
-        podServiceContract = _podServiceContract;
-    }
-
-    modifier onlyPodManager(string calldata podId) {
-        require(
-            IPodService(podServiceContract).canManageBounties(msg.sender, podId),
-            "No bounty management permission for this pod"
-        );
-        _;
-    }
-
-    modifier validPod(string calldata podId) {
-        require(
-            IPodService(podServiceContract).isValidPod(podId),
-            "Invalid pod ID"
-        );
-        _;
     }
 
     /**
-     * @notice Create a new bounty with pod integration
+     * @notice Register pod metadata (PERMISSIONLESS - anyone with leader HAT can register)
+     * @param podId Pod identifier (from database)
+     * @param leaderHatId HAT ID for pod leaders
+     * @param treasuryAddress Pod treasury contract address
+     */
+    function registerPodMetadata(
+        string calldata podId,
+        uint256 leaderHatId,
+        address treasuryAddress
+    ) external {
+        require(bytes(podId).length > 0, "Pod ID required");
+        require(!podMetadata[podId].isRegistered, "Pod already registered");
+
+        // Verify caller has the leader HAT
+        require(
+            hatsProtocol.balanceOf(msg.sender, leaderHatId) > 0,
+            "Must have leader HAT to register pod"
+        );
+
+        podMetadata[podId] = PodMetadata({
+            leaderHatId: leaderHatId,
+            treasuryAddress: treasuryAddress,
+            isRegistered: true,
+            registeredAt: block.timestamp
+        });
+
+        emit PodMetadataRegistered(podId, leaderHatId, treasuryAddress, msg.sender);
+    }
+
+    /**
+     * @notice Create a new bounty with automatic pod registration
+     * @dev If pod not registered yet, caller must provide leaderHatId and treasuryAddress
      * @param value Bounty value in tokens
-     * @param token Token address (SYSTEM or SELF)  
+     * @param token Token address (SYSTEM or SELF)
      * @param paymentType 0=Completion, 1=Milestones, 2=Split
-     * @param podId Associated pod ID for permissions
+     * @param podId Associated pod ID
      * @param ipfsHash IPFS hash containing full metadata
+     * @param leaderHatId HAT ID for pod leaders (only needed if pod not registered)
+     * @param treasuryAddress Treasury address (only needed if pod not registered)
      */
     function createBounty(
         uint128 value,
         address token,
         uint8 paymentType,
         string calldata podId,
-        string calldata ipfsHash
-    ) 
-        external 
-        validPod(podId)
-        onlyPodManager(podId)
-        nonReentrant 
-        returns (uint256) 
+        string calldata ipfsHash,
+        uint256 leaderHatId,
+        address treasuryAddress
+    )
+        external
+        nonReentrant
+        returns (uint256)
     {
         require(value > 0, "Invalid value");
         require(token == SYSTEM_TOKEN || token == SELF_TOKEN, "Invalid token");
         require(bytes(ipfsHash).length > 0, "IPFS hash required");
+        require(bytes(podId).length > 0, "Pod ID required");
+
+        // Auto-register pod metadata if not done yet (PERMISSIONLESS!)
+        if (!podMetadata[podId].isRegistered) {
+            require(leaderHatId != 0, "Leader HAT ID required for new pod");
+            require(treasuryAddress != address(0), "Treasury address required for new pod");
+
+            // Verify caller has the leader HAT
+            require(
+                hatsProtocol.balanceOf(msg.sender, leaderHatId) > 0,
+                "Must have leader HAT"
+            );
+
+            podMetadata[podId] = PodMetadata({
+                leaderHatId: leaderHatId,
+                treasuryAddress: treasuryAddress,
+                isRegistered: true,
+                registeredAt: block.timestamp
+            });
+
+            emit PodMetadataRegistered(podId, leaderHatId, treasuryAddress, msg.sender);
+        } else {
+            // Pod already registered - verify caller has leader HAT
+            PodMetadata memory pod = podMetadata[podId];
+            require(
+                hatsProtocol.balanceOf(msg.sender, pod.leaderHatId) > 0,
+                "Must have leader HAT for this pod"
+            );
+        }
 
         uint256 bountyId = nextBountyId++;
-        
+
         // Handle funding via internal function
         _handleBountyFunding(bountyId, value, token, podId);
-        
+
         // Create bounty via internal function
         _createBountyStruct(bountyId, value, token, paymentType, podId);
-        
+
         bountyMetadata[bountyId] = ipfsHash;
         emit BountyCreated(bountyId, msg.sender, podId, ipfsHash);
         return bountyId;
@@ -145,7 +201,7 @@ contract BountyManagerV2 is ReentrancyGuard, Pausable {
         address token,
         string calldata /* podId */
     ) internal {
-        // Default to wallet funding for now
+        // Default to wallet funding
         // Treasury funding can be added via separate function
         IERC20(token).safeTransferFrom(msg.sender, address(this), value);
     }
@@ -160,7 +216,6 @@ contract BountyManagerV2 is ReentrancyGuard, Pausable {
         uint8 paymentType,
         string calldata podId
     ) internal {
-        // Create bounty in storage directly to avoid stack variables
         Bounty storage newBounty = bounties[bountyId];
         newBounty.creator = msg.sender;
         newBounty.value = value;
@@ -178,24 +233,26 @@ contract BountyManagerV2 is ReentrancyGuard, Pausable {
     /**
      * @notice Set treasury funding for a bounty (separate function to avoid stack depth)
      */
-    function setTreasuryFunding(uint256 bountyId, string calldata podId) 
-        external 
-        onlyPodManager(podId) 
-        nonReentrant 
+    function setTreasuryFunding(uint256 bountyId, string calldata podId)
+        external
+        nonReentrant
     {
         require(bounties[bountyId].creator == msg.sender, "Not creator");
         require(bounties[bountyId].status == 0, "Bounty not open");
-        
+
+        PodMetadata memory pod = podMetadata[podId];
+        require(pod.isRegistered, "Pod not registered");
+
+        // Verify caller has leader HAT (for treasury access)
         require(
-            IPodService(podServiceContract).canUsePodTreasury(msg.sender, podId),
-            "No treasury access"
+            hatsProtocol.balanceOf(msg.sender, pod.leaderHatId) > 0,
+            "Must have leader HAT for treasury access"
         );
-        
-        address treasuryAddr = IPodService(podServiceContract).getPodTreasuryAddress(podId);
-        require(treasuryAddr != address(0), "Treasury not found");
-        
+
+        require(pod.treasuryAddress != address(0), "Treasury not found");
+
         // Update funding source
-        bounties[bountyId].fundingSource = treasuryAddr;
+        bounties[bountyId].fundingSource = pod.treasuryAddress;
     }
 
     /**
@@ -209,48 +266,42 @@ contract BountyManagerV2 is ReentrancyGuard, Pausable {
         require(bounties[bountyId].creator == msg.sender, "Not creator");
         require(bounties[bountyId].status == 0, "Bounty not open");
         require(deadline == 0 || deadline > block.timestamp, "Invalid deadline");
-        
+
         bounties[bountyId].deadline = deadline;
         bounties[bountyId].category = category;
     }
 
     /**
      * @notice Place a bid on a bounty
-     * @param bountyId ID of the bounty
-     * @param proposalIpfsHash IPFS hash of bid proposal
      */
-    function placeBid(uint256 bountyId, string calldata proposalIpfsHash) 
-        external 
-        nonReentrant 
+    function placeBid(uint256 bountyId, string calldata proposalIpfsHash)
+        external
+        nonReentrant
     {
         require(bounties[bountyId].status == 0, "Bounty not open");
         require(_canPlaceBid(bountyId), "Cannot place bid");
-        
-        // Add bid
+
         bids[bountyId].push(Bid({
             bidder: msg.sender,
             proposal: proposalIpfsHash,
             submittedAt: uint64(block.timestamp),
-            status: 0 // Pending
+            status: 0
         }));
-        
+
         bidders[bountyId].push(msg.sender);
         emit BidPlaced(bountyId, msg.sender, bids[bountyId].length - 1);
     }
 
     /**
-     * @notice Internal function to check if user can place bid (optimized)
+     * @notice Internal function to check if user can place bid
      */
     function _canPlaceBid(uint256 bountyId) internal view returns (bool) {
-        // Use storage reference to avoid stack copy
         Bounty storage bounty = bounties[bountyId];
-        
-        // Check deadline
+
         if (bounty.deadline != 0 && block.timestamp > bounty.deadline) {
             return false;
         }
-        
-        // Check if user already bid (use storage reference)
+
         address[] storage _bidders = bidders[bountyId];
         uint256 bidderCount = _bidders.length;
         for (uint i = 0; i < bidderCount; i++) {
@@ -258,45 +309,41 @@ contract BountyManagerV2 is ReentrancyGuard, Pausable {
                 return false;
             }
         }
-        
+
         return true;
     }
 
     /**
-     * @notice Assign bounty to a bidder
-     * @param bountyId ID of the bounty
-     * @param bidIndex Index of the winning bid
-     * @param reviewer Address of technical reviewer
-     * @param approver Address of final approver
+     * @notice Assign bounty to a bidder (HATs-based permission check)
      */
     function assignBounty(
         uint256 bountyId,
         uint256 bidIndex,
         address reviewer,
         address approver
-    ) 
-        external 
-        nonReentrant 
+    )
+        external
+        nonReentrant
     {
         Bounty storage bounty = bounties[bountyId];
         require(bounty.status == 0, "Bounty not open");
+
+        // Check if caller has leader HAT for this pod
+        PodMetadata memory pod = podMetadata[bounty.podId];
+        require(pod.isRegistered, "Pod not registered");
         require(
-            IPodService(podServiceContract).canManageBounties(msg.sender, bounty.podId),
-            "No management permission"
+            hatsProtocol.balanceOf(msg.sender, pod.leaderHatId) > 0,
+            "Must have leader HAT to assign bounty"
         );
-        
+
         require(bidIndex < bids[bountyId].length, "Invalid bid index");
-        
+
         Bid storage winningBid = bids[bountyId][bidIndex];
         require(winningBid.status == 0, "Bid not pending");
-        
-        // Update bounty status
+
         bounty.status = 1; // Assigned
-        
-        // Mark winning bid as accepted
         winningBid.status = 1;
-        
-        // Create assignment
+
         assignments[bountyId] = Assignment({
             bidder: winningBid.bidder,
             reviewer: reviewer,
@@ -310,24 +357,28 @@ contract BountyManagerV2 is ReentrancyGuard, Pausable {
     }
 
     /**
-     * @notice Release payment (supports partial payments)
-     * @param bountyId ID of the bounty
-     * @param amount Amount to release
+     * @notice Release payment (HATs-based permission check)
      */
-    function releasePayment(uint256 bountyId, uint128 amount) 
-        external 
-        nonReentrant 
+    function releasePayment(uint256 bountyId, uint128 amount)
+        external
+        nonReentrant
     {
         Bounty storage bounty = bounties[bountyId];
         Assignment storage assignment = assignments[bountyId];
-        
+
         require(bounty.status == 1, "Bounty not assigned");
-        require(
-            msg.sender == assignment.reviewer || 
-            msg.sender == assignment.approver ||
-            IPodService(podServiceContract).canManageBounties(msg.sender, bounty.podId),
-            "Not authorized"
-        );
+
+        // Check authorization: reviewer, approver, or pod leader
+        bool isAuthorized = msg.sender == assignment.reviewer ||
+                           msg.sender == assignment.approver;
+
+        if (!isAuthorized) {
+            PodMetadata memory pod = podMetadata[bounty.podId];
+            require(pod.isRegistered, "Pod not registered");
+            isAuthorized = hatsProtocol.balanceOf(msg.sender, pod.leaderHatId) > 0;
+        }
+
+        require(isAuthorized, "Not authorized to release payment");
         require(amount <= assignment.escrowAmount - assignment.paidAmount, "Exceeds available");
 
         // Calculate platform fee
@@ -341,7 +392,7 @@ contract BountyManagerV2 is ReentrancyGuard, Pausable {
         }
 
         assignment.paidAmount += amount;
-        
+
         // Mark complete if fully paid
         if (assignment.paidAmount >= bounty.value) {
             bounty.status = 2; // Completed
@@ -351,25 +402,30 @@ contract BountyManagerV2 is ReentrancyGuard, Pausable {
     }
 
     /**
-     * @notice Cancel bounty and refund
-     * @param bountyId ID of the bounty
+     * @notice Cancel bounty and refund (HATs-based permission check)
      */
     function cancelBounty(uint256 bountyId) external nonReentrant {
         Bounty storage bounty = bounties[bountyId];
-        require(
-            msg.sender == bounty.creator || 
-            IPodService(podServiceContract).canManageBounties(msg.sender, bounty.podId),
-            "Not authorized"
-        );
+
+        // Check authorization: creator or pod leader
+        bool isAuthorized = msg.sender == bounty.creator;
+
+        if (!isAuthorized) {
+            PodMetadata memory pod = podMetadata[bounty.podId];
+            require(pod.isRegistered, "Pod not registered");
+            isAuthorized = hatsProtocol.balanceOf(msg.sender, pod.leaderHatId) > 0;
+        }
+
+        require(isAuthorized, "Not authorized to cancel");
         require(bounty.status < 2, "Cannot cancel completed bounty");
 
         bounty.status = 3; // Cancelled
-        
+
         // Refund remaining escrow to original funding source
         if (bounty.isEscrowed) {
             Assignment memory assignment = assignments[bountyId];
             uint128 refundAmount = bounty.value - assignment.paidAmount;
-            
+
             if (refundAmount > 0) {
                 IERC20(bounty.token).safeTransfer(bounty.fundingSource, refundAmount);
             }
@@ -380,19 +436,19 @@ contract BountyManagerV2 is ReentrancyGuard, Pausable {
     }
 
     /**
-     * @notice Get bounty core data (simplified to avoid stack depth)
+     * @notice Get bounty core data
      */
-    function getBounty(uint256 bountyId) 
-        external 
-        view 
+    function getBounty(uint256 bountyId)
+        external
+        view
         returns (
             address creator,
             uint128 value,
             address token,
             uint8 status
-        ) 
+        )
     {
-        Bounty storage bounty = bounties[bountyId]; // Use storage reference
+        Bounty storage bounty = bounties[bountyId];
         return (
             bounty.creator,
             bounty.value,
@@ -402,16 +458,16 @@ contract BountyManagerV2 is ReentrancyGuard, Pausable {
     }
 
     /**
-     * @notice Get bounty metadata (separate function)
+     * @notice Get bounty metadata
      */
-    function getBountyMetadata(uint256 bountyId) 
-        external 
-        view 
+    function getBountyMetadata(uint256 bountyId)
+        external
+        view
         returns (
             string memory podId,
             string memory category,
             string memory ipfsHash
-        ) 
+        )
     {
         Bounty storage bounty = bounties[bountyId];
         return (
@@ -422,16 +478,16 @@ contract BountyManagerV2 is ReentrancyGuard, Pausable {
     }
 
     /**
-     * @notice Get bounty timing info (separate function)
+     * @notice Get bounty timing info
      */
-    function getBountyTiming(uint256 bountyId) 
-        external 
-        view 
+    function getBountyTiming(uint256 bountyId)
+        external
+        view
         returns (
             uint64 createdAt,
             uint64 deadline,
             address fundingSource
-        ) 
+        )
     {
         Bounty storage bounty = bounties[bountyId];
         return (
@@ -461,10 +517,10 @@ contract BountyManagerV2 is ReentrancyGuard, Pausable {
     /**
      * @notice Get bids for a bounty
      */
-    function getBids(uint256 bountyId) 
-        external 
-        view 
-        returns (Bid[] memory) 
+    function getBids(uint256 bountyId)
+        external
+        view
+        returns (Bid[] memory)
     {
         return bids[bountyId];
     }
@@ -472,21 +528,47 @@ contract BountyManagerV2 is ReentrancyGuard, Pausable {
     /**
      * @notice Get bidders for a bounty
      */
-    function getBidders(uint256 bountyId) 
-        external 
-        view 
-        returns (address[] memory) 
+    function getBidders(uint256 bountyId)
+        external
+        view
+        returns (address[] memory)
     {
         return bidders[bountyId];
     }
 
-    // Admin functions
-    function updatePodService(address _newPodService) external {
-        require(msg.sender == feeRecipient, "Only admin");
-        podServiceContract = _newPodService;
-        emit PodServiceUpdated(_newPodService);
+    /**
+     * @notice Check if pod is registered
+     */
+    function isValidPod(string calldata podId) external view returns (bool) {
+        return podMetadata[podId].isRegistered;
     }
 
+    /**
+     * @notice Check if user can manage bounties for a pod (via HATs)
+     */
+    function canManageBounties(address user, string calldata podId)
+        external
+        view
+        returns (bool)
+    {
+        PodMetadata memory pod = podMetadata[podId];
+        if (!pod.isRegistered) return false;
+
+        return hatsProtocol.balanceOf(user, pod.leaderHatId) > 0;
+    }
+
+    /**
+     * @notice Get pod treasury address
+     */
+    function getPodTreasuryAddress(string calldata podId)
+        external
+        view
+        returns (address)
+    {
+        return podMetadata[podId].treasuryAddress;
+    }
+
+    // Admin functions
     function updatePlatformFee(uint256 _newFee) external {
         require(msg.sender == feeRecipient, "Only admin");
         require(_newFee <= 1000, "Max 10%");

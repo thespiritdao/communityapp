@@ -156,7 +156,7 @@ export class GovernanceService {
         .from('governance_votes')
         .select('*')
         .eq('proposal_id', proposalId)
-        .eq('voter_address', userAddress)
+        .eq('voter_address', userAddress.toLowerCase())  // ✅ Match lowercase storage
         .single();
 
       if (error) {

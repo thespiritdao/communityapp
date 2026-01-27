@@ -70,22 +70,35 @@ export const BountyFormV2: React.FC<BountyFormV2Props> = ({
   const { managedPods: managablePods, isLoading: podsLoading } =
     useBountyManagementAccess();
 
-  const [formData, setFormData] = useState<BountyFormV2Data>({
-    title: '',
-    description: '',
-    category: '',
-    value: { amount: '', token: 'SYSTEM' },
-    deadline: '',
-    requirements: [''],
-    tasks: [''],
-    questions: [''],
-    work_requirements: [''],
-    funding_source: 'wallet',
-    podId: '',
-    // Bid limit defaults
-    bid_acceptance_mode: 'single',
-    max_bids_accepted: 1,
-    bids_accepted_count: 0,
+  const [formData, setFormData] = useState<BountyFormV2Data>(() => {
+    // Restore form data from sessionStorage (survives HMR in development)
+    if (typeof window !== 'undefined') {
+      const savedFormData = sessionStorage.getItem('bounty_form_data');
+      if (savedFormData) {
+        try {
+          return JSON.parse(savedFormData);
+        } catch (e) {
+          console.error('Failed to parse saved form data:', e);
+        }
+      }
+    }
+    return {
+      title: '',
+      description: '',
+      category: '',
+      value: { amount: '', token: 'SYSTEM' },
+      deadline: '',
+      requirements: [''],
+      tasks: [''],
+      questions: [''],
+      work_requirements: [''],
+      funding_source: 'wallet',
+      podId: '',
+      // Bid limit defaults
+      bid_acceptance_mode: 'single',
+      max_bids_accepted: 1,
+      bids_accepted_count: 0,
+    };
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -166,6 +179,7 @@ export const BountyFormV2: React.FC<BountyFormV2Props> = ({
       // Save to sessionStorage to survive HMR in development
       if (typeof window !== 'undefined') {
         sessionStorage.setItem('bounty_ipfs_hash', hash);
+        sessionStorage.setItem('bounty_form_data', JSON.stringify(formData));
       }
       console.log('✅ Metadata uploaded to IPFS:', hash);
     } catch (error) {
@@ -250,12 +264,28 @@ export const BountyFormV2: React.FC<BountyFormV2Props> = ({
 
       // V3/V4: Get pod metadata for auto-registration
       const selectedPod = managablePods.find((p) => p.id === formData.podId);
-      const leaderHatId = selectedPod?.management_hat_id || undefined;
-      const treasuryAddress = selectedPod?.treasury_contract_address || undefined;
+
+      // CRITICAL: Validate pod data exists before proceeding
+      if (!selectedPod) {
+        console.error('❌ Selected pod not found in managablePods:', {
+          podId: formData.podId,
+          availablePods: managablePods.map(p => p.id),
+        });
+        throw new Error('Selected pod data not available. Please refresh and try again.');
+      }
+
+      const leaderHatId = selectedPod.management_hat_id || undefined;
+      const treasuryAddress = selectedPod.treasury_contract_address || undefined;
+
+      // CRITICAL: V4 contract REQUIRES treasury address (cannot use zero address)
+      if (!treasuryAddress || treasuryAddress === '0x0000000000000000000000000000000000000000') {
+        console.error('❌ Treasury address not found for pod:', selectedPod.name);
+        throw new Error(`${selectedPod.name} does not have a treasury deployed. Please deploy a treasury first.`);
+      }
 
       console.log('🔧 V3/V4 Parameters:', {
         podId: formData.podId,
-        selectedPod: selectedPod?.name,
+        selectedPod: selectedPod.name,
         leaderHatId,
         treasuryAddress,
         hasLeaderHat: !!leaderHatId,
@@ -463,6 +493,7 @@ export const BountyFormV2: React.FC<BountyFormV2Props> = ({
                 // Clear sessionStorage
                 if (typeof window !== 'undefined') {
                   sessionStorage.removeItem('bounty_ipfs_hash');
+                  sessionStorage.removeItem('bounty_form_data');
                 }
                 setTimeout(() => {
                   // Redirect to bounties page without losing CDP session
@@ -533,6 +564,7 @@ export const BountyFormV2: React.FC<BountyFormV2Props> = ({
               // Clear sessionStorage
               if (typeof window !== 'undefined') {
                 sessionStorage.removeItem('bounty_ipfs_hash');
+                sessionStorage.removeItem('bounty_form_data');
               }
               setTimeout(() => {
                 // Redirect to bounties page without losing CDP session

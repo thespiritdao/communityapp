@@ -2,7 +2,7 @@ import dotenv from 'dotenv';
 
 dotenv.config({ path: '.env' });
 
-const USER_OP_HASH = '0x6df85ec87e60812ea2e29bad5c67d2e346ab81fdcd70956ac3434b4ddc6af53d';
+const USER_OP_HASH = '0xb2ffc5e0a7428d3a176f42123cd4539460526eff7536d6cc5498a7bfe5f201dd';
 const BUNDLER_URL = 'https://api.developer.coinbase.com/rpc/v1/base/[REDACTED]';
 
 async function checkUserOpStatus() {
