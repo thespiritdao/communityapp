@@ -202,6 +202,17 @@ export const BountyFormV2: React.FC<BountyFormV2Props> = ({
 
   // Validate form
   const validateForm = (): boolean => {
+    console.log('🔍 Starting form validation...', {
+      hasTitle: !!formData.title?.trim(),
+      hasDescription: !!formData.description?.trim(),
+      hasCategory: !!formData.category,
+      hasAmount: !!formData.value.amount,
+      hasPodId: !!formData.podId,
+      fundingSource: formData.funding_source,
+      canUseTreasury,
+      managablePodsCount: managablePods.length,
+    });
+
     const newErrors: Record<string, string> = {};
 
     if (!formData.title.trim()) newErrors.title = 'Title is required';
@@ -220,10 +231,22 @@ export const BountyFormV2: React.FC<BountyFormV2Props> = ({
 
     // Check if selected pod has a treasury deployed (required for V4 contract)
     const selectedPod = managablePods.find((p) => p.id === formData.podId);
+    console.log('🏦 Treasury validation:', {
+      selectedPodId: formData.podId,
+      foundPod: !!selectedPod,
+      podName: selectedPod?.name,
+      treasuryAddress: selectedPod?.treasury_contract_address,
+    });
+
     if (selectedPod && !selectedPod.treasury_contract_address) {
       newErrors.treasury =
         `${selectedPod.name} does not have a treasury deployed. Please deploy a treasury before creating bounties.`;
     }
+
+    console.log('✅ Validation result:', {
+      isValid: Object.keys(newErrors).length === 0,
+      errors: newErrors,
+    });
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -1245,8 +1268,17 @@ export const BountyFormV2: React.FC<BountyFormV2Props> = ({
           ) : !ipfsHash ? (
             <Button
               onClick={() => {
+                console.log('🔘 Prepare Bounty button clicked', {
+                  isFormValid,
+                  evmAddress,
+                  currentUserExists: !!currentUser,
+                  managablePodsCount: managablePods.length,
+                });
                 if (validateForm()) {
+                  console.log('✅ Validation passed, calling handleCreateBounty...');
                   handleCreateBounty();
+                } else {
+                  console.error('❌ Validation failed, bounty creation blocked');
                 }
               }}
               disabled={!isFormValid}
@@ -1260,7 +1292,16 @@ export const BountyFormV2: React.FC<BountyFormV2Props> = ({
               <div className="flex-1 space-y-3">
                 <div className="pt-2 border-t">
                   <Button
-                    onClick={handleCreateBountyTransaction}
+                    onClick={() => {
+                      console.log('🚀 Create Bounty button clicked', {
+                        hasEvmAddress: !!evmAddress,
+                        hasTransactionCalls: !!transactionCalls,
+                        hasSmartAccount: !!currentUser?.evmSmartAccounts?.[0],
+                        isTransactionPending,
+                        smartAccountAddress: currentUser?.evmSmartAccounts?.[0],
+                      });
+                      handleCreateBountyTransaction();
+                    }}
                     disabled={isTransactionPending || !currentUser?.evmSmartAccounts?.[0]}
                     className="w-full disabled:bg-gray-400 disabled:cursor-not-allowed font-medium py-2 px-4 rounded transition-colors hover:opacity-90"
                   >
