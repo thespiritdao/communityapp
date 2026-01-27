@@ -6,20 +6,44 @@ import { useReadContract } from 'wagmi';
 import { parseEther, formatEther } from 'viem';
 import type { BountyFormV2Data } from '../components/BountyFormV2';
 
-// Import the new contract ABIs (you'll need to generate these)
-import BountyManagerV2ABI from '@/abis/BountyManagerV2.json';
+// Import the contract ABIs
+import BountyManagerV2ABI from '@/abis/BountyManagerV2.json'; // Raw ABI array
+import BountyManagerV3Artifact from '@/abis/BountyManagerV3.json'; // Hardhat artifact (V3)
+import BountyManagerV4Artifact from '@/abis/BountyManagerV4.json'; // Hardhat artifact (V4)
 import PodBountyServiceABI from '@/abis/PodBountyService.json';
 
+// Extract ABI arrays from Hardhat artifacts (V2 is already an array)
+const BountyManagerV3ABI = BountyManagerV3Artifact.abi;
+const BountyManagerV4ABI = BountyManagerV4Artifact.abi;
+
+// AUTO-DETECT: Use V3/V4 if deployed, otherwise fallback to V2
+const BOUNTY_MANAGER_V3_ADDRESS = process.env.NEXT_PUBLIC_BOUNTY_MANAGER_V3_ADDRESS as `0x${string}` | undefined;
 const BOUNTY_MANAGER_V2_ADDRESS = (process.env
   .NEXT_PUBLIC_BOUNTY_MANAGER_ADDRESS ||
-  '0x29e653502083442B8B6C7c969557022F6a3CC64C') as `0x${string}`;
-const POD_BOUNTY_SERVICE_ADDRESS = (process.env
-  .NEXT_PUBLIC_POD_BOUNTY_SERVICE ||
-  '0xbccee13f13Ca4f97758c79C8FF05ff7EB9290396') as `0x${string}`;
+  '0xc2Ac53e7C869Ed9Bcd21b72C7aE747Abb788A8e5') as `0x${string}`;
+
+// V3/V4 is preferred (decentralized, Hats-integrated)
+const USE_V3 = !!BOUNTY_MANAGER_V3_ADDRESS &&
+  process.env.NEXT_PUBLIC_USE_BOUNTY_V3 !== 'false';
+
 const SYSTEM_TOKEN_ADDRESS = (process.env.NEXT_PUBLIC_SYSTEM_TOKEN ||
-  '0x1317Ae277266D38C4E492558f8693F14143a6A65') as `0x${string}`;
+  '0xd67e460ce56be18b573aB434b3DC962c657D8Bb5') as `0x${string}`;
 const SELF_TOKEN_ADDRESS = (process.env.NEXT_PUBLIC_SELF_TOKEN ||
-  '0xe9b4aB2eB9397fa41AC3223e96f9d988BeFF5D21') as `0x${string}`;
+  '0x1b8d424695E63ABca04E94bA46c03f1D83e14020') as `0x${string}`;
+const HATS_PROTOCOL_ADDRESS = (process.env.NEXT_PUBLIC_HATS_CONTRACT ||
+  '0x3bc1a0ad72417f2d411118085256fc53cbddd137') as `0x${string}`;
+
+// Determine which contract to use
+const BOUNTY_MANAGER_ADDRESS = USE_V3 && BOUNTY_MANAGER_V3_ADDRESS
+  ? BOUNTY_MANAGER_V3_ADDRESS
+  : BOUNTY_MANAGER_V2_ADDRESS;
+
+// Use V4 ABI if V3/V4 is enabled (V4 has same functions as V3, just configurable tokens)
+const BOUNTY_MANAGER_ABI = USE_V3 && BOUNTY_MANAGER_V3_ADDRESS
+  ? BountyManagerV4ABI  // Using V4 ABI (deployed contract)
+  : BountyManagerV2ABI;
+
+console.log(`🎯 Bounty System: Using ${USE_V3 ? 'V4 (Configurable Tokens)' : 'V2 (Legacy)'} at ${BOUNTY_MANAGER_ADDRESS}`);
 
 export interface BountyV2 {
   id: string;
@@ -102,26 +126,63 @@ export const useBountyV2 = (): UseBountyV2Return => {
 
   /**
    * Generate createBounty transaction call for OnchainKit
+   * @param data Bounty form data
+   * @param leaderHatId Optional leader HAT ID (required for V3 if pod not registered)
+   * @param treasuryAddress Optional treasury address (required for V3 if pod not registered)
    */
   const createBountyCall = useCallback(
-    (data: BountyFormV2Data) => {
-      if (!BOUNTY_MANAGER_V2_ADDRESS) {
-        throw new Error('Bounty Manager V2 address not configured');
+    (
+      data: BountyFormV2Data,
+      leaderHatId?: string,
+      treasuryAddress?: string
+    ) => {
+      if (!BOUNTY_MANAGER_ADDRESS) {
+        throw new Error('Bounty Manager address not configured');
       }
 
+      const baseArgs = [
+        parseEther(data.value.amount), // value (uint128)
+        data.value.token === 'SYSTEM'
+          ? SYSTEM_TOKEN_ADDRESS
+          : SELF_TOKEN_ADDRESS, // token
+        0, // paymentType (0=Completion)
+        data.podId, // podId
+        `temp_${Date.now()}`, // ipfsHash (temporary, will be updated)
+      ];
+
+      // V3/V4 requires additional parameters for auto-registration
+      if (USE_V3 && BOUNTY_MANAGER_V3_ADDRESS) {
+        const v4Args = [
+          ...baseArgs,
+          BigInt(leaderHatId || '0'), // leaderHatId (0 if pod already registered)
+          treasuryAddress || '0x0000000000000000000000000000000000000000', // treasuryAddress
+        ];
+
+        console.log('🎯 V4 createBounty args (7 params):', {
+          value: v4Args[0].toString(),
+          token: v4Args[1],
+          paymentType: v4Args[2],
+          podId: v4Args[3],
+          ipfsHash: v4Args[4],
+          leaderHatId: v4Args[5].toString(),
+          treasuryAddress: v4Args[6],
+        });
+
+        return {
+          address: BOUNTY_MANAGER_ADDRESS,
+          abi: BOUNTY_MANAGER_ABI,
+          functionName: 'createBounty' as const,
+          args: v4Args,
+        };
+      }
+
+      // V2 original format
+      console.log('📦 V2 createBounty args (5 params):', baseArgs);
       return {
-        address: BOUNTY_MANAGER_V2_ADDRESS,
-        abi: BountyManagerV2ABI,
+        address: BOUNTY_MANAGER_ADDRESS,
+        abi: BOUNTY_MANAGER_ABI,
         functionName: 'createBounty' as const,
-        args: [
-          parseEther(data.value.amount), // value (uint128)
-          data.value.token === 'SYSTEM'
-            ? SYSTEM_TOKEN_ADDRESS
-            : SELF_TOKEN_ADDRESS, // token
-          0, // paymentType (0=Completion)
-          data.podId, // podId
-          `temp_${Date.now()}`, // ipfsHash (temporary, will be updated)
-        ],
+        args: baseArgs,
       };
     },
     [address],
@@ -132,13 +193,13 @@ export const useBountyV2 = (): UseBountyV2Return => {
    */
   const placeBidCall = useCallback(
     (bountyId: string, proposalIpfsHash: string) => {
-      if (!BOUNTY_MANAGER_V2_ADDRESS) {
-        throw new Error('Bounty Manager V2 address not configured');
+      if (!BOUNTY_MANAGER_ADDRESS) {
+        throw new Error('Bounty Manager address not configured');
       }
 
       return {
-        address: BOUNTY_MANAGER_V2_ADDRESS,
-        abi: BountyManagerV2ABI,
+        address: BOUNTY_MANAGER_ADDRESS,
+        abi: BOUNTY_MANAGER_ABI,
         functionName: 'placeBid' as const,
         args: [BigInt(bountyId), proposalIpfsHash],
       };
@@ -156,13 +217,13 @@ export const useBountyV2 = (): UseBountyV2Return => {
       reviewer: string,
       approver: string,
     ) => {
-      if (!BOUNTY_MANAGER_V2_ADDRESS) {
-        throw new Error('Bounty Manager V2 address not configured');
+      if (!BOUNTY_MANAGER_ADDRESS) {
+        throw new Error('Bounty Manager address not configured');
       }
 
       return {
-        address: BOUNTY_MANAGER_V2_ADDRESS,
-        abi: BountyManagerV2ABI,
+        address: BOUNTY_MANAGER_ADDRESS,
+        abi: BOUNTY_MANAGER_ABI,
         functionName: 'assignBounty' as const,
         args: [
           BigInt(bountyId),
@@ -179,13 +240,13 @@ export const useBountyV2 = (): UseBountyV2Return => {
    * Generate releasePayment transaction call for OnchainKit
    */
   const releasePaymentCall = useCallback((bountyId: string, amount: string) => {
-    if (!BOUNTY_MANAGER_V2_ADDRESS) {
-      throw new Error('Bounty Manager V2 address not configured');
+    if (!BOUNTY_MANAGER_ADDRESS) {
+      throw new Error('Bounty Manager address not configured');
     }
 
     return {
-      address: BOUNTY_MANAGER_V2_ADDRESS,
-      abi: BountyManagerV2ABI,
+      address: BOUNTY_MANAGER_ADDRESS,
+      abi: BOUNTY_MANAGER_ABI,
       functionName: 'releasePayment' as const,
       args: [BigInt(bountyId), parseEther(amount)],
     };
@@ -195,13 +256,13 @@ export const useBountyV2 = (): UseBountyV2Return => {
    * Generate cancelBounty transaction call for OnchainKit
    */
   const cancelBountyCall = useCallback((bountyId: string) => {
-    if (!BOUNTY_MANAGER_V2_ADDRESS) {
-      throw new Error('Bounty Manager V2 address not configured');
+    if (!BOUNTY_MANAGER_ADDRESS) {
+      throw new Error('Bounty Manager address not configured');
     }
 
     return {
-      address: BOUNTY_MANAGER_V2_ADDRESS,
-      abi: BountyManagerV2ABI,
+      address: BOUNTY_MANAGER_ADDRESS,
+      abi: BOUNTY_MANAGER_ABI,
       functionName: 'cancelBounty' as const,
       args: [BigInt(bountyId)],
     };
@@ -330,20 +391,31 @@ export const useBountyV2 = (): UseBountyV2Return => {
 
   /**
    * Check if user can manage bounties for a pod
+   * V3: Reads directly from BountyManagerV3 (Hats-based)
+   * V2: Falls back to API call
    */
   const canManageBounties = useCallback(
     async (podId: string): Promise<boolean> => {
-      if (!address || !POD_BOUNTY_SERVICE_ADDRESS) return false;
+      if (!address) return false;
 
       try {
-        // This would use useReadContract in a real implementation
-        const response = await fetch(
-          `/api/pod/permissions?user=${address}&pod=${podId}&action=manage_bounties`,
-        );
-        if (!response.ok) return false;
-
-        const { canManage } = await response.json();
-        return canManage;
+        if (USE_V3 && BOUNTY_MANAGER_V3_ADDRESS) {
+          // V3: Direct contract read (decentralized)
+          const response = await fetch(
+            `/api/bounty/permissions?user=${address}&pod=${podId}&action=manage`,
+          );
+          if (!response.ok) return false;
+          const { canManage } = await response.json();
+          return canManage;
+        } else {
+          // V2: Legacy API call
+          const response = await fetch(
+            `/api/pod/permissions?user=${address}&pod=${podId}&action=manage_bounties`,
+          );
+          if (!response.ok) return false;
+          const { canManage } = await response.json();
+          return canManage;
+        }
       } catch (err) {
         console.error('Error checking bounty management permission:', err);
         return false;
@@ -354,25 +426,32 @@ export const useBountyV2 = (): UseBountyV2Return => {
 
   /**
    * Check if user can use pod treasury
+   * V3: Reads from pod metadata via BountyManagerV3
+   * V2: Falls back to API call
    */
   const canUsePodTreasury = useCallback(
     async (podId: string): Promise<boolean> => {
-      if (!address || !POD_BOUNTY_SERVICE_ADDRESS) return false;
+      if (!address) return false;
 
       try {
-        const response = await fetch(
-          `/api/pod/permissions?user=${address}&pod=${podId}&action=use_treasury`,
-        );
-        if (!response.ok) return false;
-
-        const { canUse } = await response.json();
-        return canUse;
+        if (USE_V3 && BOUNTY_MANAGER_V3_ADDRESS) {
+          // V3: Same as manage (leader HAT holders control both)
+          return canManageBounties(podId);
+        } else {
+          // V2: Legacy API call
+          const response = await fetch(
+            `/api/pod/permissions?user=${address}&pod=${podId}&action=use_treasury`,
+          );
+          if (!response.ok) return false;
+          const { canUse } = await response.json();
+          return canUse;
+        }
       } catch (err) {
         console.error('Error checking treasury permission:', err);
         return false;
       }
     },
-    [address],
+    [address, canManageBounties],
   );
 
   return {

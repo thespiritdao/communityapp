@@ -23,6 +23,7 @@ import { usePublicClient } from 'wagmi';
 import { encodeFunctionData, parseEther, type Abi, type TransactionReceipt } from 'viem';
 import { Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { useToast } from '@/components/ui/use-toast';
 import BountyManagerABIJson from '@/abis/BountyManagerV2.json';
 import { unifiedNotificationService } from '@/services/unifiedNotificationService';
 
@@ -105,6 +106,7 @@ export const BountyPaymentTransaction: React.FC<
   const { sendUserOperation } = useSendUserOperation();
   const { currentUser } = useCurrentUser();
   const publicClient = usePublicClient();
+  const { toast } = useToast();
 
   const [isProcessing, setIsProcessing] = useState(false);
   const [isTransactionPending, setIsTransactionPending] = useState(false); // CDP transaction loading state
@@ -161,6 +163,13 @@ export const BountyPaymentTransaction: React.FC<
         console.log('⚠️ State already synchronized (duplicate callback)');
       } else {
         console.log('✅ Payment state synchronized successfully');
+
+        // Show success message to user
+        toast({
+          title: 'Payment Released Successfully!',
+          description: `${paymentAmount} ${paymentToken} has been released for "${bountyTitle}". The bounty is now complete.`,
+          variant: 'default',
+        });
       }
 
       // Step 2: Send notifications
@@ -251,6 +260,13 @@ export const BountyPaymentTransaction: React.FC<
         evmAddress,
         publicClient,
       );
+
+      // Show error message to user
+      toast({
+        title: 'Payment Release Failed',
+        description: error.message || 'Failed to release payment. Please try again.',
+        variant: 'destructive',
+      });
 
       onError(error);
     } finally {
@@ -379,6 +395,13 @@ export const BountyPaymentTransaction: React.FC<
       console.log('📝 UserOperation hash:', userOpHash);
       console.log('⏳ Starting verification loop (CDP Smart Account transactions take 2-3 minutes)...');
 
+      // Show processing message to user
+      toast({
+        title: 'Payment Transaction Submitted',
+        description: 'Verifying payment on-chain. This may take 2-3 minutes...',
+        variant: 'default',
+      });
+
       // VERIFICATION LOOP: Wait for on-chain confirmation (same pattern as BountyAssignmentTransaction)
       const verifyPayment = async (retryCount = 0): Promise<void> => {
         const maxRetries = 12; // 2 minutes total (10 second intervals)
@@ -402,7 +425,8 @@ export const BountyPaymentTransaction: React.FC<
 
           // getAssignment returns: (bidder, reviewer, escrowAmount, paidAmount)
           const paidAmount = assignmentData[3];
-          const expectedPaidWei = BigInt(paymentAmount) * BigInt(10 ** 18);
+          // Convert decimal string to wei using parseEther (e.g., "0.0009" -> BigInt wei)
+          const expectedPaidWei = parseEther(paymentAmount);
 
           console.log('💰 Payment status:', {
             paidAmount: paidAmount?.toString() || '0',
@@ -440,6 +464,14 @@ export const BountyPaymentTransaction: React.FC<
             await verifyPayment(retryCount + 1);
           } else {
             console.error('❌ Payment verification timeout');
+
+            // Show timeout warning to user
+            toast({
+              title: 'Payment Verification Timeout',
+              description: 'Transaction submitted but could not be verified yet. The transaction may still be processing. Please refresh the page in a few minutes to check the status.',
+              variant: 'destructive',
+            });
+
             onError(
               new Error(
                 'Transaction submitted but payment could not be verified. The transaction may still be processing. Please refresh the page in a few minutes to check the status.',

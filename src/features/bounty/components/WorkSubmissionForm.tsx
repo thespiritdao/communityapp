@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useEvmAddress } from '@coinbase/cdp-hooks';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -8,7 +8,9 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Plus, X, ExternalLink } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Plus, X, ExternalLink, AlertCircle } from 'lucide-react';
+import { format } from 'date-fns';
 import type {
   FrontendBid,
   FrontendBounty,
@@ -31,6 +33,8 @@ export const WorkSubmissionForm: React.FC<WorkSubmissionFormProps> = ({
   const { evmAddress: address } = useEvmAddress();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string>('');
+  const [existingSubmission, setExistingSubmission] = useState<any>(null);
+  const [loadingExisting, setLoadingExisting] = useState(true);
 
   const [formData, setFormData] = useState({
     submissionTitle: '',
@@ -39,6 +43,36 @@ export const WorkSubmissionForm: React.FC<WorkSubmissionFormProps> = ({
     attachmentUrls: [''],
     completedDeliverables: [] as string[],
   });
+
+  // Fetch existing submission on mount to check for review feedback
+  useEffect(() => {
+    const fetchExistingSubmission = async () => {
+      if (!bid.id) {
+        setLoadingExisting(false);
+        return;
+      }
+
+      try {
+        const response = await fetch(`/api/bounty/work/submit?bidId=${bid.id}`);
+        const data = await response.json();
+
+        if (response.ok && data.submissions && data.submissions.length > 0) {
+          // Get the most recent submission
+          const latest = data.submissions[0];
+          setExistingSubmission(latest);
+
+          // If submission needs revision, user can edit and resubmit
+          console.log('📋 Found existing submission:', latest);
+        }
+      } catch (err) {
+        console.error('Error fetching existing submission:', err);
+      } finally {
+        setLoadingExisting(false);
+      }
+    };
+
+    fetchExistingSubmission();
+  }, [bid.id]);
 
   // Add deliverable URL field
   const addDeliverableUrl = () => {
@@ -185,6 +219,135 @@ export const WorkSubmissionForm: React.FC<WorkSubmissionFormProps> = ({
     <Card>
       <CardContent className="pt-6">
         <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Loading Indicator */}
+          {loadingExisting && (
+            <div className="flex items-center justify-center p-4">
+              <div
+                className="animate-spin rounded-full h-6 w-6"
+                style={{
+                  borderBottomWidth: '2px',
+                  borderBottomStyle: 'solid',
+                  borderBottomColor: '#2F5D50',
+                }}
+              ></div>
+              <span className="ml-2 text-sm text-gray-600">
+                Checking for previous submissions...
+              </span>
+            </div>
+          )}
+
+          {/* Existing Submission Status - Pending */}
+          {!loadingExisting && existingSubmission && existingSubmission.status === 'pending' && (
+            <Alert
+              style={{
+                backgroundColor: '#FFF9E6',
+                borderWidth: '1px',
+                borderStyle: 'solid',
+                borderColor: '#E6D89F',
+              }}
+            >
+              <AlertCircle className="h-4 w-4" style={{ color: '#8F6B2F' }} />
+              <AlertDescription style={{ color: '#5C4A1F' }}>
+                <strong>Submission Under Review</strong>
+                <p className="mt-1">
+                  Your work submission is currently being reviewed by the bounty creator.
+                  You'll be notified once they provide feedback.
+                </p>
+                <p className="text-xs mt-2">
+                  Submitted on {format(new Date(existingSubmission.created_at), 'MMM dd, yyyy HH:mm')}
+                </p>
+              </AlertDescription>
+            </Alert>
+          )}
+
+          {/* Existing Submission Status - Revision Requested */}
+          {!loadingExisting && existingSubmission && existingSubmission.status === 'revision_requested' && (
+            <Alert
+              style={{
+                backgroundColor: '#FFF4E6',
+                borderWidth: '1px',
+                borderStyle: 'solid',
+                borderColor: '#FFD9A3',
+              }}
+            >
+              <AlertCircle className="h-4 w-4" style={{ color: '#D97706' }} />
+              <AlertDescription style={{ color: '#92400E' }}>
+                <strong>Revision Requested</strong>
+                <div className="mt-2 p-3 bg-white rounded border border-orange-200">
+                  <h4 className="font-medium text-sm mb-1">Review Feedback:</h4>
+                  <p className="text-sm whitespace-pre-wrap">
+                    {existingSubmission.review_comments || 'No specific feedback provided.'}
+                  </p>
+                  {existingSubmission.reviewed_at && (
+                    <p className="text-xs text-gray-500 mt-2">
+                      Reviewed on {format(new Date(existingSubmission.reviewed_at), 'MMM dd, yyyy HH:mm')}
+                    </p>
+                  )}
+                </div>
+                <p className="mt-3 text-sm">
+                  Please address the feedback above and resubmit your work using the form below.
+                </p>
+              </AlertDescription>
+            </Alert>
+          )}
+
+          {/* Existing Submission Status - Approved */}
+          {!loadingExisting && existingSubmission && existingSubmission.status === 'approved' && (
+            <Alert
+              style={{
+                backgroundColor: '#D1E6DC',
+                borderWidth: '1px',
+                borderStyle: 'solid',
+                borderColor: '#A8D5BA',
+              }}
+            >
+              <AlertDescription style={{ color: '#1F453A' }}>
+                <strong>Work Approved!</strong>
+                <p className="mt-1">
+                  Your work submission has been approved. Payment is being processed.
+                </p>
+                {existingSubmission.review_comments && (
+                  <div className="mt-2 p-3 bg-white rounded border border-green-200">
+                    <h4 className="font-medium text-sm mb-1">Feedback:</h4>
+                    <p className="text-sm whitespace-pre-wrap">
+                      {existingSubmission.review_comments}
+                    </p>
+                  </div>
+                )}
+                <p className="text-xs mt-2">
+                  Approved on {format(new Date(existingSubmission.reviewed_at || existingSubmission.created_at), 'MMM dd, yyyy HH:mm')}
+                </p>
+              </AlertDescription>
+            </Alert>
+          )}
+
+          {/* Existing Submission Status - Rejected */}
+          {!loadingExisting && existingSubmission && existingSubmission.status === 'rejected' && (
+            <Alert
+              style={{
+                backgroundColor: '#F5E6E6',
+                borderWidth: '1px',
+                borderStyle: 'solid',
+                borderColor: '#D9B3B3',
+              }}
+            >
+              <AlertDescription style={{ color: '#5C1F1F' }}>
+                <strong>Submission Rejected</strong>
+                <div className="mt-2 p-3 bg-white rounded border border-red-200">
+                  <h4 className="font-medium text-sm mb-1">Reason:</h4>
+                  <p className="text-sm whitespace-pre-wrap">
+                    {existingSubmission.review_comments || 'No reason provided.'}
+                  </p>
+                  {existingSubmission.reviewed_at && (
+                    <p className="text-xs text-gray-500 mt-2">
+                      Rejected on {format(new Date(existingSubmission.reviewed_at), 'MMM dd, yyyy HH:mm')}
+                    </p>
+                  )}
+                </div>
+              </AlertDescription>
+            </Alert>
+          )}
+
           {/* Submission Title */}
           <div className="space-y-2">
             <Label htmlFor="submissionTitle">Submission Title *</Label>

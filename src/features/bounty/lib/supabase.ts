@@ -756,6 +756,12 @@ export const convertBidFromDb = (
     }
   }
 
+  // Ensure all deliverables have a due_date field (for backward compatibility)
+  parsedDeliverables = parsedDeliverables.map((d) => ({
+    ...d,
+    due_date: d.due_date || new Date().toISOString().split('T')[0],
+  }));
+
   // Parse payment details and ensure all numeric values are strings
   let parsedPaymentDetails: any = {};
   if (bid.payment_details) {

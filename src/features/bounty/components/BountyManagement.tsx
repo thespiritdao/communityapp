@@ -245,6 +245,14 @@ export const BountyManagement: React.FC<BountyManagementProps> = ({
     }
   }, [activeTab, canManageBounties, loadAllBids]);
 
+  // Reload bids when switching to Bids tab to ensure fresh data (includes cron job updates)
+  useEffect(() => {
+    if (activeTab === 'bids' && canManageBounties) {
+      console.log('📋 Bids tab activated, reloading bids to get latest on-chain data...');
+      loadAllBids();
+    }
+  }, [activeTab, canManageBounties, loadAllBids]);
+
   // Helper function to check if user has already bid on a bounty
   const getUserBidForBounty = (bountyId: string) => {
     if (!address || !userBids) return null;
@@ -485,51 +493,59 @@ export const BountyManagement: React.FC<BountyManagementProps> = ({
 
   return (
     <div className="space-y-6">
-      {/* Header with Stats - 2x2 Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-4xl mx-auto">
+      {/* Condensed Stats Banner - SpiritDAO Minimal Design */}
+      <div
+        className="flex flex-wrap items-center gap-6 px-4 py-3 rounded-lg"
+        style={{
+          backgroundColor: '#FAFAF8',
+          border: '1px solid #E8E4DC',
+        }}
+      >
         {/* Total Bounties */}
-        <Card className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-3xl font-bold">{stats.total}</p>
-                <p className="text-sm opacity-90">Total Bounties</p>
-              </div>
-              <Target className="h-10 w-10 opacity-80" />
-            </div>
-            <div className="mt-4 flex gap-4 text-sm">
-              <span>Open: {stats.open}</span>
-              <span>In Progress: {stats.assigned}</span>
-              <span>Completed: {stats.completed}</span>
-            </div>
-          </CardContent>
-        </Card>
+        <div className="flex items-center gap-2">
+          <Target className="h-5 w-5" style={{ color: '#5F5A54' }} />
+          <span className="text-sm" style={{ color: '#8F8A84', letterSpacing: '0.02em' }}>
+            Total Bounties:
+          </span>
+          <span className="text-lg font-semibold" style={{ color: '#2F5D50' }}>
+            {stats.total}
+          </span>
+        </div>
+
+        {/* Status Breakdown */}
+        <div className="flex items-center gap-4 text-sm">
+          <div>
+            <span style={{ color: '#8F8A84' }}>Open: </span>
+            <span style={{ color: '#3F7A5A', fontWeight: '500' }}>{stats.open}</span>
+          </div>
+          <div>
+            <span style={{ color: '#8F8A84' }}>In Progress: </span>
+            <span style={{ color: '#C6933F', fontWeight: '500' }}>{stats.assigned}</span>
+          </div>
+          <div>
+            <span style={{ color: '#8F8A84' }}>Completed: </span>
+            <span style={{ color: '#2F5D50', fontWeight: '500' }}>{stats.completed}</span>
+          </div>
+        </div>
 
         {/* Token Values */}
-        <Card className="bg-gradient-to-r from-green-500 to-green-600 text-white">
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between mb-2">
-              <div>
-                <p className="text-sm opacity-90">Total Value</p>
-              </div>
-              <DollarSign className="h-10 w-10 opacity-80" />
+        <div className="flex items-center gap-3">
+          <DollarSign className="h-5 w-5" style={{ color: '#5F5A54' }} />
+          <div className="flex items-center gap-4 text-sm">
+            <div>
+              <span style={{ color: '#8F8A84' }}>$SYSTEM: </span>
+              <span style={{ color: '#2F5D50', fontWeight: '600', fontSize: '15px' }}>
+                {formatCryptoValue(stats.systemTotal)}
+              </span>
             </div>
-            <div className="space-y-2">
-              <div className="flex justify-between items-center">
-                <span className="text-lg font-semibold">$SYSTEM:</span>
-                <span className="text-2xl font-bold">
-                  {formatCryptoValue(stats.systemTotal)}
-                </span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-lg font-semibold">$SELF:</span>
-                <span className="text-2xl font-bold">
-                  {formatCryptoValue(stats.selfTotal)}
-                </span>
-              </div>
+            <div>
+              <span style={{ color: '#8F8A84' }}>$SELF: </span>
+              <span style={{ color: '#2F5D50', fontWeight: '600', fontSize: '15px' }}>
+                {formatCryptoValue(stats.selfTotal)}
+              </span>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       </div>
 
       {/* Search and Filter Controls */}
@@ -1620,9 +1636,11 @@ export const BountyManagement: React.FC<BountyManagementProps> = ({
                       deliverables: bidData.deliverables.map((d: any) => ({
                         description: d.description,
                         due_date:
-                          typeof d.dueDate === 'string'
-                            ? d.dueDate
-                            : d.due_date,
+                          d.dueDate instanceof Date
+                            ? d.dueDate.toISOString().split('T')[0]
+                            : typeof d.dueDate === 'string'
+                              ? d.dueDate
+                              : d.due_date || new Date().toISOString().split('T')[0],
                         payment_amount:
                           d.paymentAmount !== undefined
                             ? d.paymentAmount
@@ -1647,9 +1665,11 @@ export const BountyManagement: React.FC<BountyManagementProps> = ({
                       deliverables: bidData.deliverables.map((d: any) => ({
                         description: d.description,
                         due_date:
-                          typeof d.dueDate === 'string'
-                            ? d.dueDate
-                            : d.due_date,
+                          d.dueDate instanceof Date
+                            ? d.dueDate.toISOString().split('T')[0]
+                            : typeof d.dueDate === 'string'
+                              ? d.dueDate
+                              : d.due_date || new Date().toISOString().split('T')[0],
                         payment_amount:
                           d.paymentAmount !== undefined
                             ? d.paymentAmount

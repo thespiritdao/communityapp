@@ -221,7 +221,7 @@ export const WorkSubmissionReview: React.FC<WorkSubmissionReviewProps> = ({
                   {submission.submissionTitle}
                 </CardTitle>
                 <div className="text-sm text-gray-600 mt-1 flex items-center gap-2">
-                  <span>Submitted by:</span>
+                  <span>Submitted by</span>
                   <UserProfileDisplay
                     walletAddress={submission.submitterAddress}
                     size="sm"
