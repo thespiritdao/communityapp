@@ -40,6 +40,8 @@ export { AdvancedHATSettings } from './AdvancedHATSettings';
 // HAT image management
 export { HatImageViewer } from './HatImageViewer';
 export { HatImageUpload } from './HatImageUpload';
+export { PodImageUpload } from './PodImageUpload';
+export { PodSettingsPanel } from './PodSettingsPanel';
 
 // ==========================================
 // MEMBERSHIP & GOVERNANCE COMPONENTS

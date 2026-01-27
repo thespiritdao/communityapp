@@ -19,6 +19,7 @@ import {
   Trash2,
   FileText,
   ClipboardList,
+  Image as ImageIcon,
 } from 'lucide-react';
 import { MembersPanel } from './MembersPanel/MembersPanel';
 import { PodManagerControlPanel } from './PodManagerControlPanel';
@@ -28,6 +29,7 @@ import { AgreementsPanel } from './AgreementsPanel';
 import { ApplicationsPanel } from './ApplicationApproval';
 import { PodDeletionButtonV2 } from '@/app/pods/[id]/manage/components/PodDeletionButtonV2';
 import { ClaimManagementHATButton } from './ClaimManagementHATButton';
+import { PodSettingsPanel } from './PodSettingsPanel';
 import { usePodManagementState } from '../hooks/usePodManagementState';
 import { usePodManagementHandlers } from '../hooks/usePodManagementHandlers';
 import '../styles/tab-navigation.css';
@@ -148,6 +150,18 @@ const TabContent = React.memo<{
           </div>
         );
 
+      case 'pod_settings':
+        return (
+          <div className="p-6">
+            <PodSettingsPanel
+              podId={podId}
+              podName={pod?.name || 'Unknown Pod'}
+              currentImageUrl={pod?.pod_image_url}
+              canManage={canManageMembers}
+            />
+          </div>
+        );
+
       default:
         return null;
     }
@@ -224,6 +238,14 @@ const TabNavigation = React.memo<{
           icon: DollarSign,
           badge: null,
           enabled: canManageTreasury, // Only show if user has treasury management access
+        },
+        {
+          id: 'pod_settings',
+          label: 'Pod Settings',
+          mobileLabel: 'Settings',
+          icon: ImageIcon,
+          badge: null,
+          enabled: canManageMembers, // Only pod leaders can edit settings
         },
         {
           id: 'deletion',

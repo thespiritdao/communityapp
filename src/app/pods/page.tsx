@@ -9,9 +9,10 @@ import { Button } from '@/components/ui/button';
 import { Users, Plus, Shapes, Loader2 } from 'lucide-react';
 import { useProfiles } from '@/features/identity/hooks/useProfiles';
 import { PodCardGrid } from '@/features/pods/components';
+import { useHatPermissions } from '@/features/pods/hooks/useHatPermissions';
 
 // Use optimized hooks
-import { usePods, useExecutivePodAccess } from '@/features/pods/hooks';
+import { usePods } from '@/features/pods/hooks';
 
 export default function PodsPage() {
   const router = useRouter();
@@ -20,9 +21,9 @@ export default function PodsPage() {
     'all' | 'active' | 'draft' | 'proposed' | 'inactive'
   >('all');
 
-  // Check Executive Pod access for Create Pod button
-  const { isExecutiveMember, isLoading: checkingAccess } =
-    useExecutivePodAccess();
+  // Check pod creation permission
+  const { hasPermission, isLoading: checkingPermissions } = useHatPermissions(address);
+  const canCreatePod = hasPermission('subPodCreation');
 
   // Use optimized pods hook
   const {
@@ -80,8 +81,8 @@ export default function PodsPage() {
         </div>
 
         <div className="flex flex-col sm:flex-row gap-2 sm:space-x-2">
-          {/* Create Pod Button - Only visible for Executive Pod members */}
-          {isExecutiveMember && (
+          {/* Create Pod Button - Only visible for users with subPodCreation permission */}
+          {canCreatePod && (
             <Link href="/pods/create-with-modules">
               <Button
                 className="w-full sm:w-auto"
@@ -94,7 +95,7 @@ export default function PodsPage() {
           )}
 
           {/* Show login prompt if not connected */}
-          {!address && !checkingAccess && (
+          {!address && !checkingPermissions && (
             <div className="text-sm text-gray-600 px-2 py-2">
               Connect wallet to create pods
             </div>
