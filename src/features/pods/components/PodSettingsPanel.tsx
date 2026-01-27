@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
 import { Image as ImageIcon, Loader2 } from 'lucide-react';
 import { PodImageUpload } from './PodImageUpload';
-import { podImageUploadService } from '../services/podImageUploadService';
+import { uploadPodImage, deletePodImage } from '../services/podImageUploadService';
 import { supabase } from '@/utils/supabaseClient';
 
 interface PodSettingsPanelProps {
@@ -51,18 +51,19 @@ export const PodSettingsPanel: React.FC<PodSettingsPanelProps> = ({
       console.log('🖼️ Uploading pod image...');
 
       // Upload image using the service
-      const imageUrl = await podImageUploadService.uploadPodImage(
-        podId,
-        selectedFile,
-      );
+      const result = await uploadPodImage(selectedFile, podId);
 
-      console.log('✅ Image uploaded:', imageUrl);
+      if (!result.success || !result.url) {
+        throw new Error(result.error || 'Failed to upload image');
+      }
+
+      console.log('✅ Image uploaded:', result.url);
 
       // Update pod in database
       const { error: updateError } = await supabase
         .from('pods')
         .update({
-          pod_image_url: imageUrl,
+          pod_image_url: result.url,
           updated_at: new Date().toISOString(),
         })
         .eq('id', podId);
@@ -78,7 +79,7 @@ export const PodSettingsPanel: React.FC<PodSettingsPanelProps> = ({
 
       // Clear selection
       setSelectedFile(null);
-      setPreviewUrl(imageUrl);
+      setPreviewUrl(result.url);
 
       // Reload page to show new image everywhere
       setTimeout(() => {
@@ -121,10 +122,7 @@ export const PodSettingsPanel: React.FC<PodSettingsPanelProps> = ({
 
       // Try to delete from storage (don't fail if this doesn't work)
       try {
-        const fileName = currentImageUrl.split('/').pop();
-        if (fileName) {
-          await podImageUploadService.deletePodImage(podId, fileName);
-        }
+        await deletePodImage(currentImageUrl);
       } catch (storageError) {
         console.warn('⚠️ Could not delete from storage:', storageError);
       }
