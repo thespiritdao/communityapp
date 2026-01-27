@@ -384,15 +384,150 @@
 }
 
 .contentText {
-  line-height: 1.5;
+  line-height: 1.6;
   word-break: break-word;
+}
+
+/* Rich Text HTML Element Styling */
+.contentText p {
+  margin: 0 0 1rem 0;
+}
+
+.contentText p:last-child {
+  margin-bottom: 0;
+}
+
+.contentText h1,
+.contentText h2,
+.contentText h3,
+.contentText h4,
+.contentText h5,
+.contentText h6 {
+  margin: 1.5rem 0 1rem 0;
+  font-weight: 600;
+  line-height: 1.3;
+  color: #2F5D50;
+}
+
+.contentText h1:first-child,
+.contentText h2:first-child,
+.contentText h3:first-child {
+  margin-top: 0;
+}
+
+.contentText h1 {
+  font-size: 1.875rem;
+}
+
+.contentText h2 {
+  font-size: 1.5rem;
+}
+
+.contentText h3 {
+  font-size: 1.25rem;
+}
+
+.contentText h4 {
+  font-size: 1.125rem;
+}
+
+.contentText ul,
+.contentText ol {
+  margin: 1rem 0;
+  padding-left: 2rem;
+}
+
+.contentText ul {
+  list-style-type: disc;
+}
+
+.contentText ol {
+  list-style-type: decimal;
+}
+
+.contentText li {
+  margin: 0.5rem 0;
+  line-height: 1.6;
+}
+
+.contentText ul ul,
+.contentText ol ul {
+  list-style-type: circle;
+  margin: 0.5rem 0;
+}
+
+.contentText ul ol,
+.contentText ol ol {
+  list-style-type: lower-alpha;
+  margin: 0.5rem 0;
+}
+
+.contentText br {
+  display: block;
+  content: "";
+  margin: 0.5rem 0;
+}
+
+.contentText strong,
+.contentText b {
+  font-weight: 600;
+}
+
+.contentText em,
+.contentText i {
+  font-style: italic;
+}
+
+.contentText a {
+  color: #2F5D50;
+  text-decoration: underline;
+}
+
+.contentText a:hover {
+  color: #1d3a2f;
+}
+
+.contentText blockquote {
+  margin: 1rem 0;
+  padding: 0.75rem 1rem;
+  border-left: 4px solid #B8D9CA;
+  background-color: #F5FAF8;
+  font-style: italic;
+  color: #555;
 }
 
 .contentText code {
   background-color: rgba(0, 0, 0, 0.05);
   padding: 0.125rem 0.25rem;
   border-radius: 0.25rem;
-  font-family: monospace;
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 0.9em;
+}
+
+.contentText pre {
+  background-color: rgba(0, 0, 0, 0.05);
+  padding: 1rem;
+  border-radius: 0.5rem;
+  overflow-x: auto;
+  margin: 1rem 0;
+}
+
+.contentText pre code {
+  background-color: transparent;
+  padding: 0;
+}
+
+.contentText hr {
+  border: none;
+  border-top: 1px solid #ddd;
+  margin: 1.5rem 0;
+}
+
+.contentText img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 0.5rem;
+  margin: 1rem 0;
 }
 
 /* NEW: Updated Edit Button style */
