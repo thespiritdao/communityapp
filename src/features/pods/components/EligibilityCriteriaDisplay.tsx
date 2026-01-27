@@ -51,6 +51,9 @@ export const EligibilityCriteriaDisplay: React.FC<
   );
   const [loading, setLoading] = useState(false);
 
+  // Ensure criteria is always an array
+  const safeCriteria = Array.isArray(criteria) ? criteria : [];
+
   const checkEligibility = async () => {
     if (!showUserStatus || !address) return;
 
@@ -60,7 +63,7 @@ export const EligibilityCriteriaDisplay: React.FC<
         userAddress: address,
         podId,
         roleId,
-        criteria,
+        criteria: safeCriteria,
       });
 
       setEvaluation(result);
@@ -83,10 +86,10 @@ export const EligibilityCriteriaDisplay: React.FC<
 
   // Auto-check on mount if user status is enabled
   useEffect(() => {
-    if (showUserStatus && address && criteria.length > 0) {
+    if (showUserStatus && address && safeCriteria.length > 0) {
       checkEligibility();
     }
-  }, [showUserStatus, address, criteria.length]);
+  }, [showUserStatus, address, safeCriteria.length]);
 
   const getCriterionIcon = (type: EligibilityCriteria['type']) => {
     return CRITERION_ICONS[type as keyof typeof CRITERION_ICONS] || AlertCircle;
@@ -251,7 +254,7 @@ export const EligibilityCriteriaDisplay: React.FC<
     }
   };
 
-  if (criteria.length === 0) {
+  if (safeCriteria.length === 0) {
     return (
       <Card className="border-dashed border-gray-300">
         <CardContent className="flex flex-col items-center justify-center py-8">
@@ -271,7 +274,7 @@ export const EligibilityCriteriaDisplay: React.FC<
     return (
       <div className="space-y-2">
         <div className="space-y-1">
-          {criteria.map((criterion, index) => {
+          {safeCriteria.map((criterion, index) => {
             const Icon = getCriterionIcon(criterion.type);
             return (
               <div
@@ -371,7 +374,7 @@ export const EligibilityCriteriaDisplay: React.FC<
 
       {/* Individual criteria */}
       <div className="grid gap-4">
-        {criteria.map((criterion, index) => {
+        {safeCriteria.map((criterion, index) => {
           const Icon = getCriterionIcon(criterion.type);
 
           return (

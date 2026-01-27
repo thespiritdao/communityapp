@@ -60,12 +60,25 @@ export class PodRolePermissionsService {
       // Enhance eligibility criteria with token names from database
       const enhancedData = await Promise.all(
         data.map(async (rolePermission) => {
-          if (
-            rolePermission.eligibility_criteria &&
-            Array.isArray(rolePermission.eligibility_criteria)
-          ) {
+          // Parse eligibility_criteria if it's a string
+          let parsedCriteria = rolePermission.eligibility_criteria;
+          if (typeof parsedCriteria === 'string') {
+            try {
+              parsedCriteria = JSON.parse(parsedCriteria);
+            } catch (e) {
+              console.error('Failed to parse eligibility_criteria:', e);
+              parsedCriteria = [];
+            }
+          }
+
+          // Ensure it's an array
+          if (!Array.isArray(parsedCriteria)) {
+            parsedCriteria = [];
+          }
+
+          if (parsedCriteria && parsedCriteria.length > 0) {
             const enhancedCriteria = await Promise.all(
-              rolePermission.eligibility_criteria.map(
+              parsedCriteria.map(
                 async (criterion: any) => {
                   // If criterion has contract_address but no token_name, look it up
                   if (criterion.contract_address && !criterion.token_name) {
