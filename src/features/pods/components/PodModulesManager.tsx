@@ -22,9 +22,11 @@ import {
   ShoppingBag,
   Settings,
   Info,
+  BookOpen,
 } from 'lucide-react';
 import PodChatManager from './PodChatManager';
 import PodForumManager from './PodForumManager';
+import PodKnowledgeManager from './PodKnowledgeManager';
 
 interface PodModulesManagerProps {
   podId: string;
@@ -41,12 +43,14 @@ interface PodModules {
   events_enabled: boolean;
   bounties_enabled: boolean;
   marketplace_enabled: boolean;
+  knowledge_base_enabled: boolean;
   chat_config?: any;
   forum_config?: any;
   treasury_config?: any;
   events_config?: any;
   bounties_config?: any;
   marketplace_config?: any;
+  knowledge_base_config?: any;
 }
 
 const MODULE_INFO = [
@@ -104,6 +108,15 @@ const MODULE_INFO = [
     bgColor: '#EDEAF0',
     configComponent: null,
   },
+  {
+    key: 'knowledge_base_enabled',
+    label: 'Knowledge Base',
+    description: 'Create a library of instructional videos and documents',
+    icon: BookOpen,
+    color: '#2F5D50',
+    bgColor: '#E8F1EE',
+    configComponent: 'knowledge',
+  },
 ];
 
 export default function PodModulesManager({
@@ -120,6 +133,7 @@ export default function PodModulesManager({
     events_enabled: false,
     bounties_enabled: false,
     marketplace_enabled: false,
+    knowledge_base_enabled: false,
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -155,6 +169,7 @@ export default function PodModulesManager({
             events_enabled: false,
             bounties_enabled: false,
             marketplace_enabled: false,
+            knowledge_base_enabled: false,
           })
           .select()
           .single();
@@ -182,12 +197,14 @@ export default function PodModulesManager({
           events_enabled: data.events_enabled ?? false,
           bounties_enabled: data.bounties_enabled ?? false,
           marketplace_enabled: data.marketplace_enabled ?? false,
+          knowledge_base_enabled: data.knowledge_base_enabled ?? false,
           chat_config: data.chat_config,
           forum_config: data.forum_config,
           treasury_config: data.treasury_config,
           events_config: data.events_config,
           bounties_config: data.bounties_config,
           marketplace_config: data.marketplace_config,
+          knowledge_base_config: data.knowledge_base_config,
         });
       } else {
         console.warn('PodModulesManager: No data received, using defaults');
@@ -198,6 +215,7 @@ export default function PodModulesManager({
           events_enabled: false,
           bounties_enabled: false,
           marketplace_enabled: false,
+          knowledge_base_enabled: false,
         });
       }
     } catch (error) {
@@ -243,11 +261,13 @@ export default function PodModulesManager({
         [moduleKey]: enabled,
       }));
 
-      // If enabling chat or forum, expand it to show configuration
+      // If enabling chat, forum, or knowledge base, expand it to show configuration
       if (moduleKey === 'chat_enabled' && enabled) {
         setExpandedModule('chat');
       } else if (moduleKey === 'forum_enabled' && enabled) {
         setExpandedModule('forum');
+      } else if (moduleKey === 'knowledge_base_enabled' && enabled) {
+        setExpandedModule('knowledge');
       }
 
       console.log('PodModulesManager: Module toggle completed successfully');
@@ -385,6 +405,21 @@ export default function PodModulesManager({
                         isManager={isManager}
                       />
                     </Card>
+                  )}
+
+                {/* Knowledge Base configuration panel */}
+                {isExpanded &&
+                  module.configComponent === 'knowledge' &&
+                  modules.knowledge_base_enabled && (
+                    <div className="mt-4">
+                      <PodKnowledgeManager
+                        podId={podId}
+                        podName={podName}
+                        managementHatId={managementHatId || ''}
+                        membershipHatId={membershipHatId}
+                        isManager={isManager}
+                      />
+                    </div>
                   )}
               </div>
             );
