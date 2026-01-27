@@ -156,6 +156,42 @@ export const BountyFormV2: React.FC<BountyFormV2Props> = ({
     }
   }, [managablePods]);
 
+  // Clear stale sessionStorage if pods have loaded but selected pod is invalid
+  useEffect(() => {
+    if (managablePods.length > 0 && formData.podId) {
+      const selectedPodStillExists = managablePods.find(p => p.id === formData.podId);
+      if (!selectedPodStillExists) {
+        console.warn('⚠️ Selected pod no longer in managable pods list, clearing stale session data', {
+          stalePodId: formData.podId,
+          availablePods: managablePods.map(p => ({ id: p.id, name: p.name })),
+        });
+        // Clear stale data
+        if (typeof window !== 'undefined') {
+          sessionStorage.removeItem('bounty_ipfs_hash');
+          sessionStorage.removeItem('bounty_form_data');
+        }
+        // Reset form to default state
+        setIpfsHash('');
+        setFormData({
+          title: '',
+          description: '',
+          category: '',
+          value: { amount: '', token: 'SYSTEM' },
+          deadline: '',
+          requirements: [''],
+          tasks: [''],
+          questions: [''],
+          work_requirements: [''],
+          funding_source: 'wallet',
+          podId: managablePods[0]?.id || '',
+          bid_acceptance_mode: 'single',
+          max_bids_accepted: 1,
+          bids_accepted_count: 0,
+        });
+      }
+    }
+  }, [managablePods, formData.podId]);
+
   // Upload metadata to IPFS before transaction
   const handleCreateBounty = async () => {
     try {
@@ -255,6 +291,13 @@ export const BountyFormV2: React.FC<BountyFormV2Props> = ({
   // Generate transaction calls with IPFS hash (approval + createBounty)
   const transactionCalls = React.useMemo(() => {
     if (!ipfsHash) return null;
+
+    // CRITICAL: Wait for managablePods to load before building transaction calls
+    // This prevents race condition on fresh login or page refresh
+    if (managablePods.length === 0) {
+      console.log('⏳ Waiting for managablePods to load before building transaction calls...');
+      return null;
+    }
 
     try {
       // Token address based on selection (FIXED: Use correct Base mainnet addresses)
