@@ -4,6 +4,7 @@ import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Placeholder from '@tiptap/extension-placeholder';
 import Link from '@tiptap/extension-link';
+import Image from '@tiptap/extension-image';
 import { useEffect } from 'react';
 import styles from '../styles/RichTextEditor.module.css';
 
@@ -37,6 +38,14 @@ export function RichTextEditor({
         HTMLAttributes: {
           class: 'underline',
           style: 'color: #2F5D50',
+        },
+      }),
+      Image.configure({
+        inline: true,
+        allowBase64: true,
+        HTMLAttributes: {
+          class: 'editor-image',
+          style: 'max-width: 100%; height: auto; border-radius: 8px; margin: 8px 0;',
         },
       }),
     ],
@@ -194,6 +203,21 @@ export function RichTextEditor({
           title="Remove Link"
         >
           🔗✕
+        </button>
+
+        <div className={styles.divider} />
+
+        <button
+          type="button"
+          onClick={() => {
+            const url = window.prompt('Enter image URL:');
+            if (url) {
+              editor.chain().focus().setImage({ src: url }).run();
+            }
+          }}
+          title="Add Image"
+        >
+          🖼️
         </button>
 
         <div className={styles.divider} />
