@@ -115,6 +115,12 @@ export const BountyFormV2: React.FC<BountyFormV2Props> = ({
   const [transactionStatus, setTransactionStatus] = useState<string>(''); // Status message for user
   const hasSetInitialPod = useRef(false);
   const savedTransactions = useRef(new Set<string>()); // Track saved transactions to prevent duplicates
+  const formDataRef = useRef(formData); // Store latest formData in ref to prevent callback recreation
+
+  // Keep formDataRef in sync with formData
+  useEffect(() => {
+    formDataRef.current = formData;
+  }, [formData]);
 
   // Get permissions for selected pod (only when podId is valid)
   // FIXED: Use database permissions (respects pod manage page toggles) instead of on-chain factory
@@ -433,21 +439,22 @@ export const BountyFormV2: React.FC<BountyFormV2Props> = ({
           setCreatedBountyId(parseInt(bountyId));
 
           // If pod treasury funding, show Step 2 and DON'T save to database yet
-          if (formData.funding_source === 'pod_treasury') {
+          if (formDataRef.current.funding_source === 'pod_treasury') {
             console.log('🏦 Pod treasury funding detected - showing Step 2');
             setShowTreasuryFunding(true);
             return; // Don't save to database until treasury funding is set
           }
 
-          // Save to database
+          // Save to database (use formDataRef to access latest values)
+          const currentFormData = formDataRef.current;
           const tokenAddress =
-            formData.value.token === 'SYSTEM'
+            currentFormData.value.token === 'SYSTEM'
               ? process.env.NEXT_PUBLIC_SYSTEM_TOKEN
               : process.env.NEXT_PUBLIC_SELF_TOKEN;
 
           if (!tokenAddress) {
             throw new Error(
-              `Token address not configured for ${formData.value.token}. Please check NEXT_PUBLIC_SYSTEM_TOKEN and NEXT_PUBLIC_SELF_TOKEN environment variables.`
+              `Token address not configured for ${currentFormData.value.token}. Please check NEXT_PUBLIC_SYSTEM_TOKEN and NEXT_PUBLIC_SELF_TOKEN environment variables.`
             );
           }
 
@@ -459,23 +466,23 @@ export const BountyFormV2: React.FC<BountyFormV2Props> = ({
               bountyId,
               transactionHash: receipt.transactionHash,
               creator: evmAddress,
-              value: formData.value.amount,
+              value: currentFormData.value.amount,
               token: tokenAddress,
-              podId: formData.podId,
+              podId: currentFormData.podId,
               ipfsHash,
-              title: formData.title,
-              description: formData.description,
-              category: formData.category,
-              deadline: formData.deadline,
-              funding_source: formData.funding_source,
-              requirements: formData.requirements.filter((r) => r.trim()),
-              tasks: formData.tasks.filter((t) => t.trim()),
-              questions: formData.questions.filter((q) => q.trim()),
-              bid_acceptance_mode: formData.bid_acceptance_mode || 'single',
+              title: currentFormData.title,
+              description: currentFormData.description,
+              category: currentFormData.category,
+              deadline: currentFormData.deadline,
+              funding_source: currentFormData.funding_source,
+              requirements: currentFormData.requirements.filter((r) => r.trim()),
+              tasks: currentFormData.tasks.filter((t) => t.trim()),
+              questions: currentFormData.questions.filter((q) => q.trim()),
+              bid_acceptance_mode: currentFormData.bid_acceptance_mode || 'single',
               max_bids_accepted:
-                formData.bid_acceptance_mode === 'multiple'
-                  ? formData.max_bids_accepted
-                  : formData.bid_acceptance_mode === 'single'
+                currentFormData.bid_acceptance_mode === 'multiple'
+                  ? currentFormData.max_bids_accepted
+                  : currentFormData.bid_acceptance_mode === 'single'
                     ? 1
                     : 0,
               bids_accepted_count: 0,
@@ -515,8 +522,10 @@ export const BountyFormV2: React.FC<BountyFormV2Props> = ({
         console.warn('⚠️ No receipt found in result, saving with userOpHash');
         setTransactionStatus('Saving bounty to database (transaction will confirm shortly)...');
 
+        // Use formDataRef to access latest values
+        const currentFormData = formDataRef.current;
         const tokenAddress =
-          formData.value.token === 'SYSTEM'
+          currentFormData.value.token === 'SYSTEM'
             ? process.env.NEXT_PUBLIC_SYSTEM_TOKEN || '0xd67e460ce56be18b573aB434b3DC962c657D8Bb5'
             : process.env.NEXT_PUBLIC_SELF_TOKEN || '0x1b8d424695E63ABca04E94bA46c03f1D83e14020';
 
@@ -529,23 +538,23 @@ export const BountyFormV2: React.FC<BountyFormV2Props> = ({
             bountyId: null, // Will be updated when transaction confirms
             transactionHash: userOpHash, // User operation hash
             creator: evmAddress,
-            value: formData.value.amount,
+            value: currentFormData.value.amount,
             token: tokenAddress,
-            podId: formData.podId,
+            podId: currentFormData.podId,
             ipfsHash,
-            title: formData.title,
-            description: formData.description,
-            category: formData.category,
-            deadline: formData.deadline,
-            funding_source: formData.funding_source,
-            requirements: formData.requirements.filter((r) => r.trim()),
-            tasks: formData.tasks.filter((t) => t.trim()),
-            questions: formData.questions.filter((q) => q.trim()),
-            bid_acceptance_mode: formData.bid_acceptance_mode || 'single',
+            title: currentFormData.title,
+            description: currentFormData.description,
+            category: currentFormData.category,
+            deadline: currentFormData.deadline,
+            funding_source: currentFormData.funding_source,
+            requirements: currentFormData.requirements.filter((r) => r.trim()),
+            tasks: currentFormData.tasks.filter((t) => t.trim()),
+            questions: currentFormData.questions.filter((q) => q.trim()),
+            bid_acceptance_mode: currentFormData.bid_acceptance_mode || 'single',
             max_bids_accepted:
-              formData.bid_acceptance_mode === 'multiple'
-                ? formData.max_bids_accepted
-                : formData.bid_acceptance_mode === 'single'
+              currentFormData.bid_acceptance_mode === 'multiple'
+                ? currentFormData.max_bids_accepted
+                : currentFormData.bid_acceptance_mode === 'single'
                   ? 1
                   : 0,
             bids_accepted_count: 0,
@@ -584,7 +593,7 @@ export const BountyFormV2: React.FC<BountyFormV2Props> = ({
     } finally {
       setIsTransactionPending(false); // EXACT FAUCET PATTERN
     }
-  }, [evmAddress, currentUser, transactionCalls, sendUserOperation, formData, ipfsHash, onSuccess]);
+  }, [evmAddress, currentUser, transactionCalls, sendUserOperation, ipfsHash, router, managablePods]);
 
   // Update array fields
   const updateArrayField = (
