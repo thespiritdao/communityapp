@@ -89,7 +89,13 @@ export const BountyFormV2: React.FC<BountyFormV2Props> = ({
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [ipfsHash, setIpfsHash] = useState<string>('');
+  const [ipfsHash, setIpfsHash] = useState<string>(() => {
+    // Restore IPFS hash from sessionStorage (survives HMR in development)
+    if (typeof window !== 'undefined') {
+      return sessionStorage.getItem('bounty_ipfs_hash') || '';
+    }
+    return '';
+  });
   const [createdBountyId, setCreatedBountyId] = useState<number | null>(null);
   const [showTreasuryFunding, setShowTreasuryFunding] = useState(false);
   const [isTransactionPending, setIsTransactionPending] = useState(false); // CDP transaction loading state
@@ -157,6 +163,10 @@ export const BountyFormV2: React.FC<BountyFormV2Props> = ({
 
       const { ipfsHash: hash } = await response.json();
       setIpfsHash(hash);
+      // Save to sessionStorage to survive HMR in development
+      if (typeof window !== 'undefined') {
+        sessionStorage.setItem('bounty_ipfs_hash', hash);
+      }
       console.log('✅ Metadata uploaded to IPFS:', hash);
     } catch (error) {
       console.error('Error uploading to IPFS:', error);
@@ -450,6 +460,10 @@ export const BountyFormV2: React.FC<BountyFormV2Props> = ({
                 const saveData = await saveResponse.json();
                 console.log('✅ Bounty saved to database successfully:', saveData);
                 setTransactionStatus('✅ Bounty created successfully!');
+                // Clear sessionStorage
+                if (typeof window !== 'undefined') {
+                  sessionStorage.removeItem('bounty_ipfs_hash');
+                }
                 setTimeout(() => {
                   // Redirect to bounties page without losing CDP session
                   router.push('/bounty');
@@ -516,6 +530,10 @@ export const BountyFormV2: React.FC<BountyFormV2Props> = ({
               const saveData = await saveResponse.json();
               console.log('✅ Bounty saved to database with pending status:', saveData);
               setTransactionStatus('✅ Bounty submitted! It will appear once confirmed on-chain.');
+              // Clear sessionStorage
+              if (typeof window !== 'undefined') {
+                sessionStorage.removeItem('bounty_ipfs_hash');
+              }
               setTimeout(() => {
                 // Redirect to bounties page without losing CDP session
                 router.push('/bounty');
