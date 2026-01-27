@@ -76,10 +76,13 @@ html, body {
   display: grid;
   grid-template-columns: repeat(3, 1fr); /* 3 equal-width columns */
   gap: 16px;
-  place-items: center; /* centers each item horizontally (and vertically if needed) */
+  justify-items: center; /* centers each item horizontally within its cell */
+  max-width: 500px; /* Constrain grid width for better centering */
+  margin: 0 auto; /* Center the grid itself */
+  width: 100%;
 }
 
-/* Each “module card” or icon area */
+/* Each "module card" or icon area */
 .home-module-card {
   display: flex;
   flex-direction: column;
@@ -90,6 +93,8 @@ html, body {
   padding: 10px;
   border-radius: 8px;
   transition: transform 0.2s ease-in-out;
+  width: 100%; /* Fill the grid cell */
+  max-width: 140px; /* Constrain card width */
 }
 
 
@@ -99,8 +104,8 @@ html, body {
 }
 
 .home-module-icon {
-  width: 50px;
-  height: 50px;
+  width: 55px;
+  height: 55px;
   border-radius: 50%;
   object-fit: cover;
 }
@@ -143,4 +148,28 @@ html, body {
 
 .home-footer-button:hover {
   background-color: #254A40; /* SpiritDAO primary green hover */
+}
+
+/* -------------------------------------------------------------------------
+   4) Mobile Adjustments - Keep 3 columns but scale down
+   ------------------------------------------------------------------------- */
+
+/* On smaller screens, reduce gaps and padding to maintain 3 columns */
+@media (max-width: 520px) {
+  .home-module-list {
+    gap: 8px; /* Reduce gap on mobile */
+  }
+
+  .home-module-card {
+    padding: 5px; /* Reduce card padding on mobile */
+  }
+
+  .home-module-icon {
+    width: 44px; /* Smaller icons on mobile (10% increase from 40px) */
+    height: 44px;
+  }
+
+  .home-module-title {
+    font-size: 12px; /* Smaller text on mobile */
+  }
 }
