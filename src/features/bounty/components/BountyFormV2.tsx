@@ -182,6 +182,13 @@ export const BountyFormV2: React.FC<BountyFormV2Props> = ({
         "You do not have permission to use this pod's treasury";
     }
 
+    // Check if selected pod has a treasury deployed (required for V4 contract)
+    const selectedPod = managablePods.find((p) => p.id === formData.podId);
+    if (selectedPod && !selectedPod.treasury_contract_address) {
+      newErrors.treasury =
+        `${selectedPod.name} does not have a treasury deployed. Please deploy a treasury before creating bounties.`;
+    }
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -646,6 +653,12 @@ export const BountyFormV2: React.FC<BountyFormV2Props> = ({
             <p className="text-sm" style={{ color: '#8B3A3A' }}>
               {errors.podId}
             </p>
+          )}
+          {errors.treasury && (
+            <div className="flex items-start gap-2 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
+              <span className="text-yellow-600 text-sm font-semibold">⚠️</span>
+              <p className="text-sm text-yellow-800">{errors.treasury}</p>
+            </div>
           )}
         </div>
 

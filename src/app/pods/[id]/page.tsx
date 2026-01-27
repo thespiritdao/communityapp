@@ -378,22 +378,29 @@ export default function PodDetailPage() {
             {/* Action Buttons */}
             <div className="flex items-center gap-2 flex-wrap">
               {/* Fund Pod Button */}
-              <FundButton
-                recipientType="pod"
-                variant="default"
-                onClick={() =>
-                  openPodFunding({
-                    address:
-                      treasuryAddress ||
-                      '0x85e4e4C68C72Cb7ae3203C72E6bbb14C55866a11',
-                    name: pod.name,
-                    description: `Support ${pod.name} with funding to help achieve their mission`,
-                    isTreasury: !!treasuryAddress,
-                    podId: pod.id,
-                  })
-                }
-                disabled={!address || treasuryLoading}
-              />
+              {treasuryAddress ? (
+                <FundButton
+                  recipientType="pod"
+                  variant="default"
+                  onClick={() =>
+                    openPodFunding({
+                      address: treasuryAddress,
+                      name: pod.name,
+                      description: `Support ${pod.name} with funding to help achieve their mission`,
+                      isTreasury: true,
+                      podId: pod.id,
+                    })
+                  }
+                  disabled={!address || treasuryLoading}
+                />
+              ) : (
+                <div className="flex items-center gap-2 px-3 py-2 bg-yellow-50 border border-yellow-200 rounded-md">
+                  <AlertCircle className="h-4 w-4 text-yellow-600" />
+                  <span className="text-sm text-yellow-800">
+                    Treasury not deployed - donations unavailable
+                  </span>
+                </div>
+              )}
               {treasuryLoading && (
                 <div className="text-xs text-gray-500">Loading treasury...</div>
               )}

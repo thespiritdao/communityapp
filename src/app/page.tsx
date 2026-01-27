@@ -65,6 +65,9 @@ function PageContent() {
   // Email capture for database storage
   const [capturedEmail, setCapturedEmail] = useState<string | undefined>(undefined);
 
+  // Ref to prevent multiple onboarding checks
+  const onboardingCheckRunRef = useRef(false);
+
   // Client-side mounting
   useEffect(() => {
     setIsClient(true);
@@ -197,7 +200,8 @@ function PageContent() {
   // STEP 2: After wallet created, check onboarding status
   useEffect(() => {
     const checkWalletOnboarding = async () => {
-      if (!walletAddress) return;
+      if (!walletAddress || onboardingCheckRunRef.current) return;
+      onboardingCheckRunRef.current = true; // Mark as running to prevent re-runs
 
       console.log('📋 Wallet created - checking onboarding status:', {
         walletAddress,

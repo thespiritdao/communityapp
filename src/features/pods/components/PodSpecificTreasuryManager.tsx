@@ -51,6 +51,13 @@ const TREASURY_FACTORY_ABI = [
     outputs: [{ name: '', type: 'address' }],
     stateMutability: 'nonpayable',
   },
+  {
+    name: 'getTreasuryForPod',
+    type: 'function',
+    inputs: [{ name: 'podId', type: 'string' }],
+    outputs: [{ name: '', type: 'address' }],
+    stateMutability: 'view',
+  },
 ] as const;
 
 interface Pod {
@@ -289,26 +296,100 @@ export function PodSpecificTreasuryManager({
           // See: CDP_RECEIPT_FETCHING_FIX.md for details
 
           // Transaction submitted but we can't get the receipt yet
-          toast({
-            title: 'Treasury Deployment Submitted',
-            description:
-              'Your treasury is being deployed! It may take 30-60 seconds to confirm. The page will update automatically when ready. UserOp: ' +
-              userOpHash.slice(0, 10) +
-              '...',
-            variant: 'default',
-          });
-
+          // Poll the factory contract to see if treasury was deployed
           console.log('💡 Treasury deployment submitted successfully!');
           console.log('⏳ The transaction is being processed by the bundler.');
-          console.log('🔄 Blockchain sync will detect the deployed treasury shortly.');
+          console.log('🔄 Polling factory contract for treasury address...');
           console.log(
             '🔍 Check Base block explorer (search for UserOperation hash):',
             `https://basescan.org/tx/${userOpHash}`,
           );
 
-          // Reset state
-          setIsTransactionPending(false);
-          return; // Exit early - let blockchain sync handle it
+          toast({
+            title: 'Treasury Deployment Submitted',
+            description:
+              'Waiting for deployment to confirm... This may take 30-60 seconds.',
+            variant: 'default',
+          });
+
+          // Poll the factory contract every 5 seconds for up to 2 minutes
+          let pollAttempts = 0;
+          const maxPollAttempts = 24; // 24 * 5s = 2 minutes
+
+          const pollInterval = setInterval(async () => {
+            pollAttempts++;
+            console.log(`🔄 Poll attempt ${pollAttempts}/${maxPollAttempts}...`);
+
+            try {
+              // Query factory contract for treasury address
+              const treasuryAddress = await publicClient.readContract({
+                address: POD_TREASURY_FACTORY_ADDRESS,
+                abi: TREASURY_FACTORY_ABI,
+                functionName: 'getTreasuryForPod',
+                args: [localPod.id],
+              });
+
+              if (treasuryAddress && treasuryAddress !== '0x0000000000000000000000000000000000000000') {
+                clearInterval(pollInterval);
+                console.log('✅ Treasury deployed at:', treasuryAddress);
+
+                // Update database
+                const updateResponse = await fetch('/api/pods/activate', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    podId: localPod.id,
+                    treasuryAddress: treasuryAddress,
+                    isActive: true,
+                  }),
+                });
+
+                if (!updateResponse.ok) {
+                  throw new Error('Failed to update pod with treasury address');
+                }
+
+                toast({
+                  title: 'Treasury Deployed Successfully!',
+                  description: `Treasury deployed at ${treasuryAddress.slice(0, 6)}...${treasuryAddress.slice(-4)}`,
+                });
+
+                // Update local state
+                setLocalPod({
+                  ...localPod,
+                  treasury_contract_address: treasuryAddress,
+                });
+
+                setIsTransactionPending(false);
+
+                // Trigger refresh
+                setTimeout(() => {
+                  window.dispatchEvent(
+                    new CustomEvent('treasury-deployed', {
+                      detail: { podId: localPod.id, treasuryAddress },
+                    }),
+                  );
+                }, 1000);
+              } else if (pollAttempts >= maxPollAttempts) {
+                // Timeout after 2 minutes
+                clearInterval(pollInterval);
+                console.error('⏱️ Treasury deployment polling timed out');
+                toast({
+                  title: 'Deployment Timeout',
+                  description: 'Treasury deployment is taking longer than expected. Please refresh the page in a minute.',
+                  variant: 'destructive',
+                });
+                setIsTransactionPending(false);
+              }
+            } catch (pollError) {
+              console.error('❌ Error polling for treasury:', pollError);
+              if (pollAttempts >= maxPollAttempts) {
+                clearInterval(pollInterval);
+                setIsTransactionPending(false);
+              }
+            }
+          }, 5000); // Poll every 5 seconds
+
+          return; // Exit early - polling will handle database update
         }
       }
 
