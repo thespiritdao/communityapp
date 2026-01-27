@@ -159,6 +159,13 @@ export const BountyFormV2: React.FC<BountyFormV2Props> = ({
   // Upload metadata to IPFS before transaction
   const handleCreateBounty = async () => {
     try {
+      // CRITICAL: Save form data to sessionStorage FIRST, before any async operations
+      // This ensures it survives HMR that may trigger during IPFS upload
+      if (typeof window !== 'undefined') {
+        sessionStorage.setItem('bounty_form_data', JSON.stringify(formData));
+        console.log('💾 Form data saved to sessionStorage before IPFS upload');
+      }
+
       const metadata = {
         title: formData.title,
         description: formData.description,
@@ -182,10 +189,9 @@ export const BountyFormV2: React.FC<BountyFormV2Props> = ({
 
       const { ipfsHash: hash } = await response.json();
       setIpfsHash(hash);
-      // Save to sessionStorage to survive HMR in development
+      // Save IPFS hash to sessionStorage
       if (typeof window !== 'undefined') {
         sessionStorage.setItem('bounty_ipfs_hash', hash);
-        sessionStorage.setItem('bounty_form_data', JSON.stringify(formData));
       }
       console.log('✅ Metadata uploaded to IPFS:', hash);
     } catch (error) {
