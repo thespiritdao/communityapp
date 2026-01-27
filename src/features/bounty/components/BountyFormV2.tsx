@@ -432,6 +432,16 @@ export const BountyFormV2: React.FC<BountyFormV2Props> = ({
       console.log('⛽ Paymaster: ENABLED (gasless transaction)');
 
       // EXACT FAUCET PATTERN: Encode call data for BOTH transactions
+      console.log('🔧 DETAILED TRANSACTION DEBUG:', {
+        transactionCallsCount: transactionCalls.length,
+        call0_address: transactionCalls[0]?.address,
+        call0_function: transactionCalls[0]?.functionName,
+        call0_args: transactionCalls[0]?.args,
+        call1_address: transactionCalls[1]?.address,
+        call1_function: transactionCalls[1]?.functionName,
+        call1_args: transactionCalls[1]?.args,
+      });
+
       const encodedCalls = transactionCalls.map((call) => ({
         to: call.address as `0x${string}`,
         value: 0n,
@@ -443,6 +453,12 @@ export const BountyFormV2: React.FC<BountyFormV2Props> = ({
       }));
 
       console.log('📝 Encoded calls:', encodedCalls.length, 'transactions');
+      console.log('🔍 Encoded call details:', {
+        call0_to: encodedCalls[0]?.to,
+        call0_data_length: encodedCalls[0]?.data?.length,
+        call1_to: encodedCalls[1]?.to,
+        call1_data_length: encodedCalls[1]?.data?.length,
+      });
       console.log('⏳ Step 1/3: Submitting transaction to network...');
 
       // EXACT FAUCET PATTERN: Send user operation with multiple calls
@@ -660,6 +676,19 @@ export const BountyFormV2: React.FC<BountyFormV2Props> = ({
       }
     } catch (err: any) {
       console.error('❌ Bounty creation failed:', err);
+      console.error('❌ Error details:', {
+        message: err.message,
+        name: err.name,
+        stack: err.stack,
+        fullError: JSON.stringify(err, null, 2),
+      });
+
+      // Log the transaction calls that failed
+      console.error('❌ Failed transaction calls:', {
+        transactionCallsCount: transactionCalls?.length,
+        calls: transactionCalls,
+      });
+
       setErrors({ transaction: err.message || 'Transaction failed. Please try again.' });
       setTransactionStatus('');
     } finally {
