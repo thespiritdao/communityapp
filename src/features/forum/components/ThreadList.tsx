@@ -1,33 +1,8 @@
 // src/app/features/forum/components/ThreadList.tsx
 import type React from 'react';
 import Link from 'next/link';
-
-// Defensive CSS import with fallback
-let styles: any = {};
-try {
-  styles = require('../styles/Forum.module.css');
-} catch (error) {
-  console.warn('Failed to load Forum.module.css, using fallback styles');
-  styles = {
-    threadList: 'thread-list-fallback',
-    threadItem: 'thread-item-fallback',
-    loading: 'loading-fallback',
-  };
-}
-
-// Defensive component import
-let ThreadCard: React.ComponentType<any>;
-try {
-  ThreadCard = require('./ThreadCard').default;
-} catch (error) {
-  console.warn('Failed to load ThreadCard, using fallback');
-  ThreadCard = ({ thread }: any) => (
-    <div style={{ padding: '8px', border: '1px solid #ccc' }}>
-      <h3>{thread.title}</h3>
-      <p>Loading error - please refresh</p>
-    </div>
-  );
-}
+import ThreadCard from './ThreadCard';
+import styles from '../styles/Forum.module.css';
 
 interface Thread {
   id: string;
