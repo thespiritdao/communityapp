@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useCDPStatus } from '@/hooks/useCDPStatus';
@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Users, Plus, Shapes, Loader2 } from 'lucide-react';
 import { useProfiles } from '@/features/identity/hooks/useProfiles';
 import { PodCardGrid } from '@/features/pods/components';
-import { useHatPermissions } from '@/features/pods/hooks/useHatPermissions';
+import { HatPermissionsService } from '@/services/hatPermissionsService';
 
 // Use optimized hooks
 import { usePods } from '@/features/pods/hooks';
@@ -22,8 +22,32 @@ export default function PodsPage() {
   >('all');
 
   // Check pod creation permission
-  const { hasPermission, isLoading: checkingPermissions } = useHatPermissions(address);
-  const canCreatePod = hasPermission('subPodCreation');
+  const [canCreatePod, setCanCreatePod] = useState(false);
+  const [checkingPermissions, setCheckingPermissions] = useState(true);
+
+  useEffect(() => {
+    const checkPermissions = async () => {
+      if (!address) {
+        setCanCreatePod(false);
+        setCheckingPermissions(false);
+        return;
+      }
+
+      setCheckingPermissions(true);
+      try {
+        const permissionService = new HatPermissionsService();
+        const hasPermission = await permissionService.canCreateSubPods(address);
+        setCanCreatePod(hasPermission);
+      } catch (error) {
+        console.error('Failed to check pod creation permission:', error);
+        setCanCreatePod(false);
+      } finally {
+        setCheckingPermissions(false);
+      }
+    };
+
+    checkPermissions();
+  }, [address]);
 
   // Use optimized pods hook
   const {
