@@ -1,7 +1,7 @@
 // src/wallet/components/EmbeddedWalletAuth.tsx
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useSignInWithEmail, useVerifyEmailOTP, useSignInWithOAuth, useCurrentUser, useEvmAddress } from '@coinbase/cdp-hooks';
 
 interface EmbeddedWalletAuthProps {
@@ -22,20 +22,58 @@ export function EmbeddedWalletAuth({ isLoading, onEmailCaptured }: EmbeddedWalle
   const [step, setStep] = useState<'email' | 'otp'>('email');
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showManualBypass, setShowManualBypass] = useState(false);
 
-  // If wallet exists but not yet fully authenticated, show loading state
-  // This allows the authentication flow to proceed without blocking
+  // Set timeout to show bypass button after 10 seconds of "Completing setup..."
+  useEffect(() => {
+    if (currentUser && evmAddress && !isLoading) {
+      const timeoutId = setTimeout(() => {
+        console.warn('⚠️ Authentication stuck - showing manual bypass');
+        setShowManualBypass(true);
+      }, 10000);
+
+      return () => clearTimeout(timeoutId);
+    } else {
+      // Reset bypass button if conditions change
+      setShowManualBypass(false);
+    }
+  }, [currentUser, evmAddress, isLoading]);
+
+  // If wallet exists but not yet fully authenticated, show loading state with timeout
   if (currentUser && evmAddress && !isLoading) {
     return (
-      <button className="button enter-button" disabled>
-        <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
-          <svg className="animate-spin" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
-            <circle cx="12" cy="12" r="10" opacity="0.25" />
-            <path d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" opacity="0.75" fill="currentColor" />
-          </svg>
-          Completing setup...
-        </span>
-      </button>
+      <div style={{ textAlign: 'center', width: '100%' }}>
+        <button className="button enter-button" disabled style={{ marginBottom: '12px' }}>
+          <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+            <svg className="animate-spin" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+              <circle cx="12" cy="12" r="10" opacity="0.25" />
+              <path d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" opacity="0.75" fill="currentColor" />
+            </svg>
+            Completing setup...
+          </span>
+        </button>
+        {showManualBypass && (
+          <>
+            <p style={{ color: 'white', fontSize: '14px', marginBottom: '8px' }}>
+              Taking longer than expected...
+            </p>
+            <button
+              onClick={() => {
+                console.log('🔓 Manual bypass - redirecting to /home');
+                window.location.href = '/home';
+              }}
+              className="button"
+              style={{
+                backgroundColor: '#8FAAA1',
+                padding: '8px 16px',
+                fontSize: '14px',
+              }}
+            >
+              Continue to App →
+            </button>
+          </>
+        )}
+      </div>
     );
   }
 
