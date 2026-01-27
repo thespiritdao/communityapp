@@ -93,6 +93,8 @@ export interface HatPermissions {
   bountyManagement: boolean;
   marketplaceAccess: boolean;
   marketplaceManage: boolean;
+  knowledgeBaseAccess: boolean; // 🆕 View knowledge base items
+  knowledgeBaseManage: boolean; // 🆕 Create/edit categories and upload content
 }
 
 export interface HatRole {

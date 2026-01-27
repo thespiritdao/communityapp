@@ -89,6 +89,9 @@ storybook-static/
 
 # Deployment artifacts
 .vercel
-.netlify 
+.netlify
 nul
 src/nul
+
+# Knowledge base video files (hosted externally at files.spiritdao.org)
+src/guides/Instructional/

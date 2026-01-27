@@ -247,6 +247,18 @@ export default function HomePage() {
             />
             <div className="home-module-title">Bounties</div>
           </Link>
+
+          <Link href="/knowledge" className="home-module-card" prefetch={true}>
+            <Image
+              src="/images/icons/knowledgebaseicon.png"
+              alt="Knowledge Base"
+              className="home-module-icon"
+              width={64}
+              height={64}
+              loading="lazy"
+            />
+            <div className="home-module-title">Knowledge</div>
+          </Link>
         </div>
       </section>
 
