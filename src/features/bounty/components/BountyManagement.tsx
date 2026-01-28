@@ -604,19 +604,15 @@ export const BountyManagement: React.FC<BountyManagementProps> = ({
 
       {/* Management Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList>
-          <TabsTrigger value="overview">
-            {canManageBounties ? 'Overview' : 'All Bounties'}
-          </TabsTrigger>
-          {canManageBounties && (
-            <>
-              <TabsTrigger value="bids">Bids</TabsTrigger>
-              <TabsTrigger value="work">Work</TabsTrigger>
-              <TabsTrigger value="milestones">Goals</TabsTrigger>
-              <TabsTrigger value="payments">Pay</TabsTrigger>
-            </>
-          )}
-        </TabsList>
+        {canManageBounties && (
+          <TabsList>
+            <TabsTrigger value="overview">Overview</TabsTrigger>
+            <TabsTrigger value="bids">Bids</TabsTrigger>
+            <TabsTrigger value="work">Work</TabsTrigger>
+            <TabsTrigger value="milestones">Goals</TabsTrigger>
+            <TabsTrigger value="payments">Pay</TabsTrigger>
+          </TabsList>
+        )}
 
         <TabsContent value="overview" className="space-y-4">
           {filteredBounties.length === 0 ? (
