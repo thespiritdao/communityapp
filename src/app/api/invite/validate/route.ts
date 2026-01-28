@@ -129,7 +129,27 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check if code has already been used by this wallet
+    // CRITICAL FIX: Check if wallet already has a profile from this invite code
+    // If they do, they're a returning user who needs to complete onboarding
+    const { data: existingProfile } = await supabaseAdmin
+      .from('user_profiles')
+      .select('wallet_address, invited_by, onboarded_at')
+      .eq('wallet_address', normalizedWallet)
+      .maybeSingle();
+
+    if (existingProfile && existingProfile.invited_by) {
+      console.log('✅ Returning user with existing invite relationship');
+      // User already has a profile with invite relationship - let them continue
+      // They might be completing an incomplete onboarding
+      return NextResponse.json({
+        success: true,
+        referrerWallet: existingProfile.invited_by,
+        message: 'Welcome back! Continuing your onboarding.',
+        isReturningUser: true,
+      });
+    }
+
+    // Check if code has already been used by this wallet (only for truly new users)
     const { data: existingValidation } = await supabaseAdmin
       .from('referral_validations')
       .select('id')
