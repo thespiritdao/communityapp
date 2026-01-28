@@ -52,6 +52,7 @@ export type NotificationType =
   | 'pod_leadership_invitation'
   | 'pod_member_joined'
   | 'pod_application_status'
+  | 'new_account_created'
   // Governance notifications
   | 'proposal_mentioned'
   | 'proposal_created'

@@ -155,3 +155,76 @@ export async function notifyPodLeadersOfNewMember({
     console.error('❌ Error in notifyPodLeadersOfNewMember:', error);
   }
 }
+
+export interface NotifyNewAccountParams {
+  newUserAddress: string;
+  newUserEmail?: string;
+}
+
+/**
+ * Notify exec pod members when a new account is created
+ */
+export async function notifyExecPodOfNewAccount({
+  newUserAddress,
+  newUserEmail,
+}: NotifyNewAccountParams): Promise<void> {
+  try {
+    console.log('📨 Notifying exec pod of new account:', { newUserAddress, newUserEmail });
+
+    // Find the "Exec" pod
+    const { data: execPod, error: execPodError } = await supabase
+      .from('pods')
+      .select('id, name, pod_leads')
+      .ilike('name', '%exec%')
+      .maybeSingle();
+
+    if (execPodError) {
+      console.error('Error finding exec pod:', execPodError);
+      return;
+    }
+
+    if (!execPod) {
+      console.log('⚠️ Exec pod not found, skipping notification');
+      return;
+    }
+
+    console.log('✅ Found exec pod:', execPod.name, 'with leads:', execPod.pod_leads);
+
+    // Get all exec pod members (pod_leads)
+    const execMembers = execPod.pod_leads || [];
+
+    if (execMembers.length === 0) {
+      console.log('⚠️ No exec pod members found');
+      return;
+    }
+
+    // Create notifications for each exec member
+    const notifications = execMembers.map((memberAddress: string) => ({
+      recipient_address: memberAddress.toLowerCase(),
+      sender_address: newUserAddress.toLowerCase(),
+      notification_type: 'new_account_created',
+      title: 'New member account created',
+      message: newUserEmail
+        ? `${newUserEmail} has created a new account.`
+        : `A new member (${newUserAddress.slice(0, 6)}...${newUserAddress.slice(-4)}) has created an account.`,
+      context_type: 'governance',
+      context_id: execPod.id,
+      context_url: `/profile/${newUserAddress}`,
+      priority: 'low',
+    }));
+
+    // Insert all notifications
+    const { data, error } = await supabase
+      .from('general_notifications')
+      .insert(notifications)
+      .select();
+
+    if (error) {
+      console.error('❌ Error creating new account notifications:', error);
+    } else {
+      console.log(`✅ Created ${data?.length || 0} notifications for exec pod members`);
+    }
+  } catch (error) {
+    console.error('❌ Error in notifyExecPodOfNewAccount:', error);
+  }
+}

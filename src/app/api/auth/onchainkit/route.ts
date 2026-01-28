@@ -143,6 +143,18 @@ export async function POST(req: NextRequest) {
       } catch (codeError) {
         console.error('⚠️ Auth API: Failed to assign invite code (non-critical):', codeError);
       }
+
+      // Notify exec pod members of new account creation
+      try {
+        const { notifyExecPodOfNewAccount } = await import('@/features/pods/services/PodMembershipNotificationService');
+        await notifyExecPodOfNewAccount({
+          newUserAddress: normalizedAddress,
+          newUserEmail: email,
+        });
+        console.log(`✅ Auth API: Sent new account notifications to exec pod`);
+      } catch (notificationError) {
+        console.error('⚠️ Auth API: Failed to send new account notifications (non-critical):', notificationError);
+      }
     }
 
     if (!userId) {
