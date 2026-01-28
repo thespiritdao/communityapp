@@ -50,6 +50,8 @@ export type NotificationType =
   // Pod notifications
   | 'pod_member_removed'
   | 'pod_leadership_invitation'
+  | 'pod_member_joined'
+  | 'pod_application_status'
   // Governance notifications
   | 'proposal_mentioned'
   | 'proposal_created'

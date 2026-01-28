@@ -31,6 +31,7 @@ import {
 import { useProfileModal } from '@/features/identity/hooks/useProfileModal';
 import { ProfileModal } from '@/features/identity';
 import type { UserProfile } from '@/features/identity/types';
+import { notifyExecPodOfNewMember, notifyPodLeadersOfNewMember } from '@/features/pods/services/PodMembershipNotificationService';
 
 // Minimal Hats Protocol ABI for mintHat function
 const HATS_MINT_ABI = [
@@ -1319,6 +1320,28 @@ export const ApproveApplicationButton: React.FC<
           context_type: 'governance',
           context_id: podId,
           context_url: `/pods/${podId}`,
+        });
+
+        // Notify exec pod members of new member
+        await notifyExecPodOfNewMember({
+          newMemberAddress: applicantAddress,
+          newMemberName: applicantProfile?.first_name && applicantProfile?.last_name
+            ? `${applicantProfile.first_name} ${applicantProfile.last_name}`
+            : applicantProfile?.first_name || undefined,
+          podId,
+          podName: pod?.name || 'Unknown Pod',
+          roleLabel,
+        });
+
+        // Notify pod leaders of new member
+        await notifyPodLeadersOfNewMember({
+          newMemberAddress: applicantAddress,
+          newMemberName: applicantProfile?.first_name && applicantProfile?.last_name
+            ? `${applicantProfile.first_name} ${applicantProfile.last_name}`
+            : applicantProfile?.first_name || undefined,
+          podId,
+          podName: pod?.name || 'Unknown Pod',
+          roleLabel,
         });
 
         toast({
