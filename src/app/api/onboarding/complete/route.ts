@@ -4,11 +4,10 @@
  * POST /api/onboarding/complete
  *
  * Called after successful invite validation and NFT/hat minting
- * Triggers airdrop and marks user as onboarded
+ * Marks user as onboarded (tokens available via faucet at /faucet)
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { airdropToUser } from '@/utils/testnetAirdrop';
 import { assignInviteCodeToUser } from '@/services/inviteCodeService';
 import { supabase } from '@/lib/supabase';
 
@@ -116,29 +115,7 @@ export async function POST(request: NextRequest) {
       // Non-critical - continue onboarding
     }
 
-    // Step 3: Trigger testnet airdrop (100 SELF + 100 SYSTEM)
-    // Airdrop is OPTIONAL - only runs on testnet or when NEXT_PUBLIC_ENABLE_BETA_AIRDROP=true
-    console.log('🚰 Attempting airdrop...');
-    const airdropResult = await airdropToUser(normalizedWallet);
-
-    // Only fail onboarding if airdrop was expected but had a technical error
-    // Skip airdrop gracefully if not available (mainnet) or already received
-    if (!airdropResult.success) {
-      if (airdropResult.error === 'Airdrop only available on testnet') {
-        console.log('ℹ️ Airdrop skipped (mainnet - no airdrop configured)');
-      } else if (airdropResult.error === 'Auto-airdrop not enabled') {
-        console.log('ℹ️ Airdrop skipped (not enabled in configuration)');
-      } else if (airdropResult.alreadyReceived) {
-        console.log('ℹ️ User already received airdrop');
-      } else {
-        // Real error - log but don't fail onboarding
-        console.warn('⚠️ Airdrop failed (non-critical):', airdropResult.error);
-      }
-    } else {
-      console.log('✅ Airdrop successful:', airdropResult.transactionHash);
-    }
-
-    // Step 4: Mark user as onboarded
+    // Step 3: Mark user as onboarded
     console.log('✅ Marking user as onboarded...');
     const { error: updateError } = await supabase
       .from('user_profiles')
@@ -154,22 +131,13 @@ export async function POST(request: NextRequest) {
 
     // Success response
     console.log(`🎉 Onboarding complete for ${normalizedWallet}`);
+    console.log('💰 User can claim tokens from faucet at /faucet');
     return NextResponse.json({
       success: true,
       message: 'Onboarding completed successfully',
-      airdrop: airdropResult.success
-        ? {
-            systemAmount: airdropResult.systemAmount?.toString(),
-            selfAmount: airdropResult.selfAmount?.toString(),
-            transactionHash: airdropResult.transactionHash,
-            alreadyReceived: airdropResult.alreadyReceived,
-            skipped: false,
-          }
-        : {
-            skipped: true,
-            reason: airdropResult.error || 'Not available on this network',
-          },
       isFirstUser,
+      faucetAvailable: true,
+      faucetUrl: '/faucet',
     });
   } catch (error) {
     console.error('❌ Error completing onboarding:', error);
