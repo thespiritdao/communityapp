@@ -266,6 +266,71 @@ export const BountyAssignmentTransaction: React.FC<
 
       console.log('✅ All notifications sent successfully');
 
+      // Step 2b: Notify rejected bidders (those whose bids weren't selected)
+      try {
+        console.log('🔍 Fetching other pending bids to notify rejected bidders...');
+
+        const { data: otherBids, error: bidsError } = await supabase
+          .from('bids')
+          .select('id, bidder_address')
+          .eq('bounty_id', bountyId)
+          .eq('status', 'pending')
+          .neq('id', bidId); // Exclude the accepted bid
+
+        if (bidsError) {
+          console.error('❌ Failed to fetch other bids:', bidsError);
+        } else if (otherBids && otherBids.length > 0) {
+          console.log(`📧 Notifying ${otherBids.length} rejected bidder(s)...`);
+
+          // Get bounty title for notification message
+          const { data: bountyData } = await supabase
+            .from('bounties')
+            .select('title')
+            .eq('id', bountyId)
+            .single();
+
+          const bountyTitle = bountyData?.title || 'the bounty';
+
+          // Notify all rejected bidders
+          await Promise.all(
+            otherBids.map((rejectedBid) =>
+              unifiedNotificationService.createNotification({
+                recipient_address: rejectedBid.bidder_address,
+                sender_address: evmAddress!,
+                notification_type: 'bounty_update',
+                title: 'Bid Not Selected',
+                message: `Your bid on "${bountyTitle}" was not selected. Another applicant has been chosen. Thank you for your interest!`,
+                context_type: 'bounty',
+                context_id: bountyId,
+                context_url: `/bounty`,
+                priority: 'medium',
+              })
+            )
+          );
+
+          console.log('✅ Rejected bidder notifications sent successfully');
+
+          // Auto-update rejected bids to 'rejected' status
+          const { error: updateError } = await supabase
+            .from('bids')
+            .update({ status: 'rejected' })
+            .eq('bounty_id', bountyId)
+            .eq('status', 'pending')
+            .neq('id', bidId);
+
+          if (updateError) {
+            console.error('⚠️ Failed to update rejected bid statuses:', updateError);
+          } else {
+            console.log('✅ Rejected bid statuses updated');
+          }
+        } else {
+          console.log('ℹ️ No other pending bids found - no rejected bidders to notify');
+        }
+      } catch (notifyRejectedError) {
+        console.error('⚠️ Failed to notify rejected bidders:', notifyRejectedError);
+        // Don't throw - assignment was successful
+      }
+
       // Step 3: Create milestones if bid has deliverables
       try {
         console.log('🔍 Checking if bid has deliverables for milestone creation...');

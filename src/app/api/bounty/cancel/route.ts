@@ -168,31 +168,74 @@ export async function POST(request: NextRequest) {
       console.log('✅ Pending bids archived');
     }
 
-    // Send notifications to all bidders
+    // Send notifications to all bidders and pod members
+    const notificationPromises = [];
+
+    // 1. Notify all bidders
     const { data: allBids } = await supabase
       .from('bids')
       .select('bidder_address, status')
       .eq('bounty_id', bountyId);
 
     if (allBids && allBids.length > 0) {
-      const notificationPromises = allBids.map((bid) =>
-        unifiedNotificationService.createNotification({
-          recipient_address: bid.bidder_address.toLowerCase(),
-          sender_address: cancelerAddress.toLowerCase(),
-          notification_type: 'bounty_update',
-          title: 'Bounty Cancelled',
-          message: `The bounty "${bounty.title}" has been cancelled. ${cancellationReason ? `Reason: ${cancellationReason}` : ''}`,
-          context_type: 'bounty',
-          context_id: bountyId,
-          context_url: `/bounty/${bountyId}`,
-          priority: 'high',
-        }),
-      );
+      allBids.forEach((bid) => {
+        notificationPromises.push(
+          unifiedNotificationService.createNotification({
+            recipient_address: bid.bidder_address.toLowerCase(),
+            sender_address: cancelerAddress.toLowerCase(),
+            notification_type: 'bounty_update',
+            title: 'Bounty Cancelled',
+            message: `The bounty "${bounty.title}" has been cancelled. ${cancellationReason ? `Reason: ${cancellationReason}` : ''}`,
+            context_type: 'bounty',
+            context_id: bountyId,
+            context_url: `/bounty/${bountyId}`,
+            priority: 'high',
+          })
+        );
+      });
+    }
 
+    // 2. Notify pod members if this is a pod bounty
+    if (bounty.pod_id) {
+      const { data: podData } = await supabase
+        .from('pods')
+        .select('pod_members, pod_leads')
+        .eq('id', bounty.pod_id)
+        .single();
+
+      if (podData) {
+        const allMembers = [
+          ...(podData.pod_members || []),
+          ...(podData.pod_leads || []),
+        ];
+
+        // Notify pod members (excluding canceler)
+        for (const member of allMembers) {
+          if (member.toLowerCase() !== cancelerAddress.toLowerCase()) {
+            notificationPromises.push(
+              unifiedNotificationService.createNotification({
+                recipient_address: member,
+                sender_address: cancelerAddress.toLowerCase(),
+                notification_type: 'bounty_update',
+                title: 'Pod Bounty Cancelled',
+                message: `A bounty in your pod ("${bounty.title}") has been cancelled. ${cancellationReason ? `Reason: ${cancellationReason}` : ''}`,
+                context_type: 'bounty',
+                context_id: bountyId,
+                context_url: `/bounty/${bountyId}`,
+                priority: 'medium',
+              })
+            );
+          }
+        }
+      }
+    }
+
+    // Send all notifications
+    if (notificationPromises.length > 0) {
       try {
         await Promise.all(notificationPromises);
         console.log(
-          `✅ Cancellation notifications sent to ${allBids.length} bidders`,
+          `✅ Cancellation notifications sent to ${notificationPromises.length} recipients`,
         );
       } catch (notifError) {
         console.error('⚠️ Error sending notifications:', notifError);

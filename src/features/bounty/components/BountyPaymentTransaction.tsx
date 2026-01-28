@@ -175,18 +175,18 @@ export const BountyPaymentTransaction: React.FC<
       // Step 2: Send notifications
       console.log('📧 Sending payment completion notifications...');
 
-      await Promise.all([
+      const notificationPromises = [
         // Notify bidder (worker who completed the bounty)
         unifiedNotificationService.createNotification({
           recipient_address: bidderAddress,
           sender_address: evmAddress!,
           notification_type: 'bounty_update',
-          title: 'Bounty Payment Released!',
-          message: `Payment of ${paymentAmount} ${paymentToken} has been released for "${bountyTitle}". The bounty is now complete.`,
+          title: 'Payment Released!',
+          message: `Payment of ${paymentAmount} ${paymentToken} has been released for "${bountyTitle}". The bounty is complete. 🎉`,
           context_type: 'bounty',
           context_id: bountyId,
           context_url: `/bounty/${bountyId}`,
-          priority: 'high',
+          priority: 'urgent',
         }),
 
         // Notify creator
@@ -195,13 +195,111 @@ export const BountyPaymentTransaction: React.FC<
           sender_address: evmAddress!,
           notification_type: 'bounty_update',
           title: 'Bounty Completed',
-          message: `Bounty "${bountyTitle}" has been completed and payment released.`,
+          message: `Bounty "${bountyTitle}" has been completed and payment of ${paymentAmount} ${paymentToken} has been released.`,
           context_type: 'bounty',
           context_id: bountyId,
           context_url: `/bounty/${bountyId}`,
           priority: 'high',
         }),
-      ]);
+      ];
+
+      // Notify technical reviewer and final approver if they exist
+      try {
+        const { data: bidData } = await (await import('@/lib/supabase')).supabase
+          .from('bids')
+          .select('reviewer_address, final_approver_address')
+          .eq('id', bidId)
+          .single();
+
+        if (bidData?.reviewer_address && bidData.reviewer_address !== creatorAddress) {
+          notificationPromises.push(
+            unifiedNotificationService.createNotification({
+              recipient_address: bidData.reviewer_address,
+              sender_address: evmAddress!,
+              notification_type: 'bounty_update',
+              title: 'Bounty Completed',
+              message: `A bounty you reviewed ("${bountyTitle}") has been completed and payment released.`,
+              context_type: 'bounty',
+              context_id: bountyId,
+              context_url: `/bounty/${bountyId}`,
+              priority: 'medium',
+            })
+          );
+        }
+
+        if (bidData?.final_approver_address && bidData.final_approver_address !== creatorAddress && bidData.final_approver_address !== bidData.reviewer_address) {
+          notificationPromises.push(
+            unifiedNotificationService.createNotification({
+              recipient_address: bidData.final_approver_address,
+              sender_address: evmAddress!,
+              notification_type: 'bounty_update',
+              title: 'Bounty Completed',
+              message: `A bounty you approved ("${bountyTitle}") has been completed and payment released.`,
+              context_type: 'bounty',
+              context_id: bountyId,
+              context_url: `/bounty/${bountyId}`,
+              priority: 'medium',
+            })
+          );
+        }
+      } catch (reviewerError) {
+        console.error('⚠️ Failed to fetch reviewer addresses:', reviewerError);
+        // Don't block payment completion
+      }
+
+      // Notify pod members if this is a pod bounty
+      try {
+        const { data: bountyData } = await (await import('@/lib/supabase')).supabase
+          .from('bounties')
+          .select('pod_id')
+          .eq('id', bountyId)
+          .single();
+
+        if (bountyData?.pod_id) {
+          const { data: podData } = await (await import('@/lib/supabase')).supabase
+            .from('pods')
+            .select('pod_members, pod_leads')
+            .eq('id', bountyData.pod_id)
+            .single();
+
+          if (podData) {
+            const allMembers = [
+              ...(podData.pod_members || []),
+              ...(podData.pod_leads || []),
+            ];
+
+            // Notify pod members (excluding creator, bidder, and reviewers)
+            const excludeAddresses = new Set([
+              creatorAddress.toLowerCase(),
+              bidderAddress.toLowerCase(),
+              evmAddress?.toLowerCase(),
+            ]);
+
+            for (const member of allMembers) {
+              if (!excludeAddresses.has(member.toLowerCase())) {
+                notificationPromises.push(
+                  unifiedNotificationService.createNotification({
+                    recipient_address: member,
+                    sender_address: evmAddress!,
+                    notification_type: 'bounty_update',
+                    title: 'Pod Bounty Completed',
+                    message: `A bounty in your pod ("${bountyTitle}") has been completed.`,
+                    context_type: 'bounty',
+                    context_id: bountyId,
+                    context_url: `/bounty/${bountyId}`,
+                    priority: 'low',
+                  })
+                );
+              }
+            }
+          }
+        }
+      } catch (podError) {
+        console.error('⚠️ Failed to notify pod members:', podError);
+        // Don't block payment completion
+      }
+
+      await Promise.all(notificationPromises);
 
       console.log('✅ All notifications sent successfully');
 

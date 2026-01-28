@@ -129,6 +129,76 @@ export const useBountySupabase = () => {
         });
 
         const newDbBid = await bidApi.submitBid(dbBidData);
+
+        // PHASE 1: Notify bounty creator of new bid
+        try {
+          // Get bounty details for notification
+          const { data: bounty } = await supabase
+            .from('bounties')
+            .select('id, title, creator_address, pod_id')
+            .eq('id', bidData.bountyId)
+            .single();
+
+          if (bounty) {
+            // Notify bounty creator
+            await fetch('/api/notifications/send', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                recipient_address: bounty.creator_address,
+                sender_address: normalizedAddress,
+                notification_type: 'bounty_update',
+                title: 'New Bid Received',
+                message: `A new bid has been placed on your bounty "${bounty.title}"`,
+                context_type: 'bounty',
+                context_id: bounty.id,
+                context_url: `/bounty?id=${bounty.id}`,
+                priority: 'high',
+                category: 'general',
+              }),
+            });
+
+            console.log('✅ Bid notification sent to creator');
+
+            // If pod bounty, notify pod leaders
+            if (bounty.pod_id) {
+              const { data: pod } = await supabase
+                .from('pods')
+                .select('pod_leads')
+                .eq('id', bounty.pod_id)
+                .single();
+
+              if (pod?.pod_leads) {
+                for (const leader of pod.pod_leads) {
+                  // Don't notify if leader is also the creator
+                  if (leader.toLowerCase() !== bounty.creator_address.toLowerCase()) {
+                    await fetch('/api/notifications/send', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({
+                        recipient_address: leader,
+                        sender_address: normalizedAddress,
+                        notification_type: 'bounty_update',
+                        title: 'New Bid on Pod Bounty',
+                        message: `A bid was placed on "${bounty.title}"`,
+                        context_type: 'bounty',
+                        context_id: bounty.id,
+                        context_url: `/bounty?id=${bounty.id}`,
+                        priority: 'medium',
+                        category: 'general',
+                      }),
+                    });
+                  }
+                }
+                console.log('✅ Bid notifications sent to pod leaders');
+              }
+            }
+          }
+        } catch (notifError) {
+          console.error('⚠️ Failed to send bid notification:', notifError);
+          // Don't fail bid submission if notification fails
+        }
+
         // You may want to update local state here if you are displaying bids
         return convertBidFromDb(newDbBid);
       } catch (err) {
