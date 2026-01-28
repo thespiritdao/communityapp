@@ -10,8 +10,10 @@ interface Pod {
   name: string;
   description: string;
   contract_address?: string | null;
-  token_type: string;
-  hat_id?: string | null;
+  token_type?: string;
+  parent_hat_id?: string | null;
+  management_hat_id?: string | null;
+  membership_hat_id?: string | null;
   is_active: boolean;
   created_at: string;
   pod_image_url?: string;
@@ -80,12 +82,14 @@ export const EventTokenDisplay: React.FC<EventTokenDisplayProps> = ({
   }, []);
 
   const getTokenInfo = (tokenId: string) => {
-    // First, try to find a pod by id, contract_address, or hat_id
+    // First, try to find a pod by id, contract_address, or any hat_id fields
     const pod = pods.find(
       (p) =>
         p.id === tokenId ||
         p.contract_address === tokenId ||
-        p.hat_id === tokenId,
+        p.parent_hat_id === tokenId ||
+        p.management_hat_id === tokenId ||
+        p.membership_hat_id === tokenId,
     );
 
     if (pod) {
@@ -176,13 +180,15 @@ export const EventTokenDisplay: React.FC<EventTokenDisplayProps> = ({
 // Utility function to get token name from ID (with fallback to static data if needed)
 export const getTokenName = async (tokenId: string): Promise<string> => {
   try {
-    // Check pods first
+    // Check pods first - check all hat_id fields
     const pods = await EventService.getPods();
     const pod = pods.find(
-      (p) =>
+      (p: any) =>
         p.id === tokenId ||
         p.contract_address === tokenId ||
-        p.hat_id === tokenId,
+        p.parent_hat_id === tokenId ||
+        p.management_hat_id === tokenId ||
+        p.membership_hat_id === tokenId,
     );
 
     if (pod) {
