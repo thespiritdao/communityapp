@@ -21,6 +21,7 @@ const defaultCategories = [
   'Development',
   'Education',
   'Events',
+  'Governance',
   'Marketing',
   'Operations',
   'Partnerships',

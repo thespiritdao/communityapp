@@ -154,6 +154,7 @@ export const BountyManagement: React.FC<BountyManagementProps> = ({
   const [activeTab, setActiveTab] = useState('overview');
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('open');
+  const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const [selectedBounty, setSelectedBounty] = useState<BountyV2 | null>(null);
   const [showBidForm, setShowBidForm] = useState(false);
   const [selectedBountyForBid, setSelectedBountyForBid] =
@@ -386,6 +387,10 @@ export const BountyManagement: React.FC<BountyManagementProps> = ({
         (effectiveStatusFilter === 'completed' && bounty.status === 2) ||
         (effectiveStatusFilter === 'cancelled' && bounty.status === 3);
 
+      // Filter by category
+      const matchesCategory =
+        categoryFilter === 'all' || bounty.category === categoryFilter;
+
       // Filter by pod if specified (and not 'all')
       const matchesPod = podId === 'all' || !podId || bounty.podId === podId;
 
@@ -408,12 +413,13 @@ export const BountyManagement: React.FC<BountyManagementProps> = ({
           effectiveStatusFilter,
           matchesSearch,
           matchesStatus,
+          matchesCategory,
           matchesPod,
-          willBeIncluded: matchesSearch && matchesStatus && matchesPod,
+          willBeIncluded: matchesSearch && matchesStatus && matchesCategory && matchesPod,
         });
       }
 
-      return matchesSearch && matchesStatus && matchesPod;
+      return matchesSearch && matchesStatus && matchesCategory && matchesPod;
     });
 
     console.log('🔍 FILTERING RESULT:', {
@@ -422,7 +428,7 @@ export const BountyManagement: React.FC<BountyManagementProps> = ({
     });
 
     return filtered;
-  }, [bounties, searchTerm, statusFilter, activeTab, podId]);
+  }, [bounties, searchTerm, statusFilter, categoryFilter, activeTab, podId]);
 
   // Get status display
   const getStatusDisplay = (status: number) => {
@@ -570,6 +576,28 @@ export const BountyManagement: React.FC<BountyManagementProps> = ({
             <SelectItem value="assigned">Assigned</SelectItem>
             <SelectItem value="completed">Completed</SelectItem>
             <SelectItem value="cancelled">Cancelled</SelectItem>
+          </SelectContent>
+        </Select>
+
+        <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+          <SelectTrigger className="w-full sm:w-[200px]">
+            <Filter className="h-4 w-4 mr-2" />
+            <SelectValue placeholder="Filter by category" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Categories</SelectItem>
+            <SelectItem value="Art / Media">Art / Media</SelectItem>
+            <SelectItem value="Community">Community</SelectItem>
+            <SelectItem value="Content">Content</SelectItem>
+            <SelectItem value="Design">Design</SelectItem>
+            <SelectItem value="Development">Development</SelectItem>
+            <SelectItem value="Education">Education</SelectItem>
+            <SelectItem value="Events">Events</SelectItem>
+            <SelectItem value="Governance">Governance</SelectItem>
+            <SelectItem value="Marketing">Marketing</SelectItem>
+            <SelectItem value="Operations">Operations</SelectItem>
+            <SelectItem value="Partnerships">Partnerships</SelectItem>
+            <SelectItem value="Research">Research</SelectItem>
           </SelectContent>
         </Select>
       </div>
