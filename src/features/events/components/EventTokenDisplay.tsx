@@ -3,6 +3,7 @@
 import type React from 'react';
 import { useState, useEffect } from 'react';
 import { EventService } from '../lib/supabase';
+import { supabase } from '@/lib/supabase';
 
 interface Pod {
   id: string;
@@ -14,6 +15,17 @@ interface Pod {
   is_active: boolean;
   created_at: string;
   pod_image_url?: string;
+}
+
+interface PodRole {
+  id: string;
+  pod_id: string;
+  role_name: string;
+  role_hat_id: string;
+  pods?: {
+    name: string;
+    pod_image_url?: string;
+  };
 }
 
 interface EventTokenDisplayProps {
@@ -30,24 +42,45 @@ export const EventTokenDisplay: React.FC<EventTokenDisplayProps> = ({
   className = '',
 }) => {
   const [pods, setPods] = useState<Pod[]>([]);
+  const [roles, setRoles] = useState<PodRole[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchPods = async () => {
+    const fetchTokenData = async () => {
       try {
+        // Fetch pods
         const podsData = await EventService.getPods();
         setPods(podsData);
+
+        // Fetch pod roles with pod information
+        const { data: rolesData, error: rolesError } = await supabase
+          .from('pod_role_permissions')
+          .select(`
+            id,
+            pod_id,
+            role_name,
+            role_hat_id,
+            pods (
+              name,
+              pod_image_url
+            )
+          `);
+
+        if (!rolesError && rolesData) {
+          setRoles(rolesData);
+        }
       } catch (error) {
-        console.error('Error fetching pods:', error);
+        console.error('Error fetching token data:', error);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchPods();
+    fetchTokenData();
   }, []);
 
   const getTokenInfo = (tokenId: string) => {
+    // First, try to find a pod by id, contract_address, or hat_id
     const pod = pods.find(
       (p) =>
         p.id === tokenId ||
@@ -55,10 +88,33 @@ export const EventTokenDisplay: React.FC<EventTokenDisplayProps> = ({
         p.hat_id === tokenId,
     );
 
+    if (pod) {
+      return {
+        name: pod.name,
+        description: pod.description,
+        imageUrl: pod.pod_image_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(pod.name)}&size=48&background=8FAAA1&color=fff&bold=true`,
+      };
+    }
+
+    // If not found in pods, check pod_role_permissions for role hat IDs
+    const role = roles.find((r) => r.role_hat_id === tokenId);
+
+    if (role) {
+      const podName = role.pods?.name || 'Pod';
+      const displayName = `${podName} - ${role.role_name}`;
+      return {
+        name: displayName,
+        description: `Role: ${role.role_name}`,
+        imageUrl: role.pods?.pod_image_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&size=48&background=8FAAA1&color=fff&bold=true`,
+      };
+    }
+
+    // Fallback to displaying the token ID (shortened)
+    const shortId = tokenId.length > 10 ? `${tokenId.slice(0, 6)}...${tokenId.slice(-4)}` : tokenId;
     return {
-      name: pod?.name || tokenId,
-      description: pod?.description || '',
-      imageUrl: pod?.pod_image_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(pod?.name || 'Pod')}&size=48&background=8FAAA1&color=fff&bold=true`,
+      name: shortId,
+      description: '',
+      imageUrl: `https://ui-avatars.com/api/?name=${encodeURIComponent(shortId)}&size=48&background=8FAAA1&color=fff&bold=true`,
     };
   };
 
@@ -120,6 +176,7 @@ export const EventTokenDisplay: React.FC<EventTokenDisplayProps> = ({
 // Utility function to get token name from ID (with fallback to static data if needed)
 export const getTokenName = async (tokenId: string): Promise<string> => {
   try {
+    // Check pods first
     const pods = await EventService.getPods();
     const pod = pods.find(
       (p) =>
@@ -128,7 +185,32 @@ export const getTokenName = async (tokenId: string): Promise<string> => {
         p.hat_id === tokenId,
     );
 
-    return pod?.name || tokenId;
+    if (pod) {
+      return pod.name;
+    }
+
+    // Check pod_role_permissions for role hat IDs
+    const { data: rolesData, error: rolesError } = await supabase
+      .from('pod_role_permissions')
+      .select(`
+        id,
+        pod_id,
+        role_name,
+        role_hat_id,
+        pods (
+          name
+        )
+      `)
+      .eq('role_hat_id', tokenId)
+      .maybeSingle();
+
+    if (!rolesError && rolesData) {
+      const podName = rolesData.pods?.name || 'Pod';
+      return `${podName} - ${rolesData.role_name}`;
+    }
+
+    // Fallback to shortened token ID
+    return tokenId.length > 10 ? `${tokenId.slice(0, 6)}...${tokenId.slice(-4)}` : tokenId;
   } catch (error) {
     console.error('Error fetching token name:', error);
     return tokenId;
