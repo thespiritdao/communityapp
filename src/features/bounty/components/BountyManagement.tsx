@@ -614,16 +614,16 @@ export const BountyManagement: React.FC<BountyManagementProps> = ({
                 return (
                   <Card
                     key={bounty.id}
-                    className="cursor-pointer transition-colors hover:bg-gray-50"
+                    className="cursor-pointer transition-colors hover:bg-gray-50 overflow-hidden"
                   >
                     <CardContent className="p-4">
                       <div className="space-y-3">
                         {/* Header with title and badges */}
-                        <div className="flex flex-col sm:flex-row sm:items-center gap-2">
-                          <h3 className="font-medium text-lg flex-1 min-w-0 truncate">
+                        <div className="flex flex-col sm:flex-row sm:items-start gap-2">
+                          <h3 className="font-medium text-lg flex-1 min-w-0 line-clamp-2 break-words">
                             {bounty.title || `Bounty #${bounty.id}`}
                           </h3>
-                          <div className="flex gap-2 flex-wrap">
+                          <div className="flex gap-2 flex-wrap flex-shrink-0">
                             <Badge className={status.color}>
                               {status.label}
                             </Badge>
