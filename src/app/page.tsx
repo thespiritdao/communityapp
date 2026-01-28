@@ -218,15 +218,8 @@ function PageContent() {
         // Check if already onboarded
         const completed = await hasCompletedOnboarding(walletAddress);
 
-        if (completed) {
-          console.log('✅ User already onboarded - skipping invite flow');
-          setOnboardingComplete(true);
-          return;
-        }
-
         // CRITICAL FIX: Check if user already has a profile (returning user)
-        // If they have a profile, they already validated an invite code
-        // Don't ask them to validate again - just finish their incomplete onboarding
+        // Must check BEFORE the completed check to get full profile data
         const { supabase } = await import('@/utils/supabaseClient');
         const { data: existingProfile } = await supabase
           .from('user_profiles')
@@ -234,10 +227,27 @@ function PageContent() {
           .eq('wallet_address', walletAddress.toLowerCase())
           .maybeSingle();
 
+        if (completed) {
+          console.log('✅ User already onboarded - proceeding to authentication');
+          // RETURNING USER FIX: Don't show onboarding modal, just authenticate
+          // They already have everything set up, just need to log back in
+          setOnboardingComplete(true);
+          return;
+        }
+
         if (existingProfile && existingProfile.referral_key) {
           console.log('✅ Returning user with existing profile - skipping invite validation');
           console.log('   Profile has referral_key:', existingProfile.referral_key);
-          // User has a profile and referral key - they already validated an invite
+          console.log('   Onboarded at:', existingProfile.onboarded_at);
+
+          // Check if they completed onboarding but flag wasn't set properly
+          if (existingProfile.onboarded_at) {
+            console.log('✅ User has onboarded_at timestamp - treating as fully onboarded');
+            setOnboardingComplete(true);
+            return;
+          }
+
+          // User has a profile and referral key but incomplete onboarding
           // Skip invite validation and go straight to completing onboarding
           setShowOnboardingModal(true);
           return;
