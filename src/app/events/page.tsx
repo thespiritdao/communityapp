@@ -24,7 +24,7 @@ export default function EventsPage() {
   >('my-events');
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4 bottom-nav-spacing">
+    <div className="min-h-screen p-4 bottom-nav-spacing" style={{ backgroundImage: 'url(/images/chatbg.png)', backgroundColor: '#f5f4ed' }}>
       <div className="max-w-7xl mx-auto">
         {/* Hero Section */}
         <div className="mb-8">
