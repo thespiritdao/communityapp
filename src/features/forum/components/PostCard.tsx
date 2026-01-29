@@ -50,8 +50,8 @@ const PostCard: React.FC<PostCardProps> = ({
   useEffect(() => {
     const checkCurrentUser = async () => {
       const session = await getCurrentSession();
-      if (session) {
-        setCurrentUserWallet(session.user.id);
+      if (session?.user?.user_metadata?.wallet_address) {
+        setCurrentUserWallet(session.user.user_metadata.wallet_address);
       }
     };
     checkCurrentUser();

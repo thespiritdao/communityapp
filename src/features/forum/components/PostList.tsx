@@ -440,7 +440,7 @@ const PostList: React.FC<PostListProps> = ({ threadId }) => {
             <RichTextEditor
               value={replyContent}
               onChange={setReplyContent}
-              placeholder="Write your reply here... Use formatting tools above"
+              placeholder="Write your reply here... Use formatting tools above. Type @username to mention someone"
               minHeight="150px"
             />
 

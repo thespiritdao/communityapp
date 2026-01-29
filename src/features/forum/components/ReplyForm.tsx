@@ -120,7 +120,7 @@ export function ReplyForm({ threadId, onReplySuccess }: ReplyFormProps) {
         <RichTextEditor
           value={content}
           onChange={(value) => setContent(value)}
-          placeholder="Write your reply here... Use formatting tools above"
+          placeholder="Write your reply here... Use formatting tools above. Type @username to mention someone"
           minHeight="150px"
         />
         {error && <div className={styles.submitError}>{error}</div>}
