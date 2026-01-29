@@ -151,7 +151,14 @@ export async function toggleReaction(
       query.eq('thread_id', threadId);
     }
 
-    const { data: existing } = await query.single();
+    // Use maybeSingle() instead of single() to avoid errors when no row exists
+    const { data: existing, error: queryError } = await query.maybeSingle();
+
+    // If there's a real error (not just "no rows"), handle it
+    if (queryError) {
+      console.error('Error checking existing reaction:', queryError);
+      return { success: false, error: queryError.message };
+    }
 
     if (existing) {
       // Remove reaction
