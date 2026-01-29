@@ -57,7 +57,7 @@ const PostCard: React.FC<PostCardProps> = ({
     checkCurrentUser();
   }, []);
 
-  const isAuthor = currentUserWallet === post.author_address;
+  const isAuthor = currentUserWallet?.toLowerCase() === post.author_address?.toLowerCase();
 
   const formatDate = (dateString: string) => {
     try {

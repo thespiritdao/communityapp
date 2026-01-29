@@ -129,7 +129,6 @@ export function useForum() {
 		category_id,
 		author_address,
 		created_at,
-		forum_posts(count),
 		forum_categories(name, required_token)
 	  `)
         .order('created_at', { ascending: false })
@@ -153,6 +152,25 @@ export function useForum() {
 
       debug('Raw thread data from Supabase:', data);
 
+      // Get post counts for all threads in a single query (performance optimization)
+      const threadIds = data?.map((t: any) => t.id) || [];
+      const postCounts: Record<string, number> = {};
+
+      if (threadIds.length > 0) {
+        const { data: postsData, error: postsError } = await supabase
+          .from('forum_posts')
+          .select('thread_id')
+          .in('thread_id', threadIds)
+          .or('is_deleted.is.null,is_deleted.eq.false'); // Only count non-deleted posts
+
+        if (!postsError && postsData) {
+          // Count posts per thread
+          postsData.forEach((post: any) => {
+            postCounts[post.thread_id] = (postCounts[post.thread_id] || 0) + 1;
+          });
+        }
+      }
+
       // Note: Token-gating is now handled by ForumAccessGate at the route level
       // using the unified access control system (useUnifiedForumAccess hook)
       // We no longer filter threads client-side based on tokenBalances
@@ -164,9 +182,7 @@ export function useForum() {
         data?.map((thread: any) => ({
           ...thread,
           author_wallet: thread.author_address,
-          post_count: Array.isArray(thread.forum_posts)
-            ? thread.forum_posts.length
-            : 0,
+          post_count: postCounts[thread.id] || 0, // Use counted non-deleted posts
           category_name: thread.forum_categories?.name || null,
         })) || [];
 
