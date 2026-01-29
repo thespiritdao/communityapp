@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useForum } from '@/features/forum/hooks/useForum';
 import { supabase } from '@/utils/supabaseClient';
-import { RichTextEditor } from './RichTextEditor';
+import { ForumTextInput } from './ForumTextInput';
 import styles from '../styles/Forum.module.css';
 
 type ReplyFormProps = {
@@ -117,10 +117,11 @@ export function ReplyForm({ threadId, onReplySuccess }: ReplyFormProps) {
         </div>
       )}
       <form className={styles.replyForm} onSubmit={handleSubmit}>
-        <RichTextEditor
+        <ForumTextInput
           value={content}
           onChange={(value) => setContent(value)}
-          placeholder="Write your reply here... Use formatting tools above. Type @username to mention someone"
+          placeholder="Write your reply... Type @ to mention someone"
+          threadId={threadId}
           minHeight="150px"
         />
         {error && <div className={styles.submitError}>{error}</div>}

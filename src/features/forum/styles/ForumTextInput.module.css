@@ -1,0 +1,40 @@
+/* src/features/forum/styles/ForumTextInput.module.css */
+
+.forumTextInputContainer {
+  width: 100%;
+  margin-bottom: 1rem;
+}
+
+.inputWrapper {
+  position: relative;
+  width: 100%;
+}
+
+.userTaggingInput {
+  font-family: inherit;
+  width: 100%;
+}
+
+/* Override UserTagging styles for forum context */
+.userTaggingInput :global(.mentions__input) {
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 12px;
+  font-size: 14px;
+  line-height: 1.5;
+  resize: vertical;
+  min-height: 150px;
+}
+
+.userTaggingInput :global(.mentions__input:focus) {
+  outline: none;
+  border-color: #2F5D50;
+  box-shadow: 0 0 0 3px rgba(47, 93, 80, 0.1);
+}
+
+.mentionHint {
+  font-size: 12px;
+  color: #666;
+  margin-top: 4px;
+  padding-left: 4px;
+}
