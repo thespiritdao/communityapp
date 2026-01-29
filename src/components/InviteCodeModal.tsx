@@ -117,7 +117,11 @@ export function InviteCodeModal({
 
   const handleHatMintError = (error: Error) => {
     console.error('❌ Hat minting failed:', error);
-    setError('Failed to grant access. Please try again.');
+    console.error('Error details:', error.message);
+
+    // Show the actual error message for debugging
+    const errorMessage = error.message || 'Unknown error';
+    setError(`Failed to grant access: ${errorMessage}. Please contact support with this error.`);
     setCurrentStep('invite');
   };
 
