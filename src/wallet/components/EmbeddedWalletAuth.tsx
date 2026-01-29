@@ -175,10 +175,18 @@ export function EmbeddedWalletAuth({ isLoading, onEmailCaptured }: EmbeddedWalle
 
     try {
       console.log('🔐 Signing in with Google...');
-      await signInWithOAuth('google');
+      const result = await signInWithOAuth('google');
+      console.log('✅ Google sign-in successful!', result);
+
+      // Note: Wallet creation happens automatically in the background
+      // The currentUser and evmAddress hooks will update when ready
     } catch (err: any) {
       console.error('❌ Google sign-in failed:', err);
-      setError(err.message || 'Failed to sign in with Google');
+      console.error('Error details:', JSON.stringify(err, null, 2));
+
+      // Show detailed error for debugging
+      const errorMessage = err.message || err.toString() || 'Failed to sign in with Google';
+      setError(`Google sign-in error: ${errorMessage}. Please try again or use email instead.`);
       setIsSubmitting(false);
     }
   };

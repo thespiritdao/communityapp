@@ -265,13 +265,19 @@ function PageContent() {
         // Validate invite code for non-first users
         if (!firstUser && validatedInviteCode && validatedInviteCode !== 'FIRST_USER') {
           console.log('🔍 Validating invite code post-auth:', validatedInviteCode);
-          const isValid = await handlePostAuthInviteValidation(validatedInviteCode);
-          if (!isValid) {
-            console.error('❌ Invite validation failed after wallet creation');
-            alert('Invite code validation failed. Please contact support.');
+          try {
+            const isValid = await handlePostAuthInviteValidation(validatedInviteCode);
+            if (!isValid) {
+              console.error('❌ Invite validation failed after wallet creation');
+              alert('Invite code validation failed. Please contact support with error code: INVITE_POST_AUTH_FAIL');
+              return;
+            }
+            console.log('✅ Invite code validated successfully post-auth');
+          } catch (validationError) {
+            console.error('❌ Exception during post-auth invite validation:', validationError);
+            alert(`Error validating invite code: ${validationError instanceof Error ? validationError.message : 'Unknown error'}. Please contact support.`);
             return;
           }
-          console.log('✅ Invite code validated successfully post-auth');
         }
 
         // First user or validated user can proceed to hat minting
@@ -334,6 +340,9 @@ function PageContent() {
 
     try {
       console.log('📝 Validating invite code with wallet...');
+      console.log('   Invite code:', inviteCode);
+      console.log('   Wallet:', walletAddress);
+
       const validateResponse = await fetch('/api/invite/validate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -343,17 +352,25 @@ function PageContent() {
         }),
       });
 
+      console.log('📋 Validation API response status:', validateResponse.status);
+
       const validateResult = await validateResponse.json();
+      console.log('📋 Validation API result:', validateResult);
 
       if (!validateResult.success) {
         console.error('❌ Invite validation failed:', validateResult.error);
+        console.error('   Full result:', JSON.stringify(validateResult, null, 2));
         return false;
       }
 
       console.log('✅ Invite code validated successfully');
+      if (validateResult.isReturningUser) {
+        console.log('   (Returning user - allowed to proceed)');
+      }
       return true;
     } catch (error) {
-      console.error('Error validating invite code:', error);
+      console.error('❌ Exception validating invite code:', error);
+      console.error('   Error details:', error instanceof Error ? error.message : String(error));
       return false;
     }
   };
