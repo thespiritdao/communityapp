@@ -4,7 +4,11 @@ import { useState, useEffect } from 'react';
 import { useForum } from '@/features/forum/hooks/useForum';
 import { supabase } from '@/utils/supabaseClient';
 import { ForumTextInput } from './ForumTextInput';
+import { RichTextEditor } from './RichTextEditor';
 import styles from '../styles/Forum.module.css';
+
+// Toggle between simple (with @mentions autocomplete) and rich (with formatting)
+const USE_RICH_EDITOR = false; // Set to true to enable formatting, false for @mention autocomplete
 
 type ReplyFormProps = {
   threadId: string;
@@ -117,13 +121,22 @@ export function ReplyForm({ threadId, onReplySuccess }: ReplyFormProps) {
         </div>
       )}
       <form className={styles.replyForm} onSubmit={handleSubmit}>
-        <ForumTextInput
-          value={content}
-          onChange={(value) => setContent(value)}
-          placeholder="Write your reply... Type @ to mention someone"
-          threadId={threadId}
-          minHeight="150px"
-        />
+        {USE_RICH_EDITOR ? (
+          <RichTextEditor
+            value={content}
+            onChange={(value) => setContent(value)}
+            placeholder="Write your reply... Use formatting toolbar. Type @name to mention (e.g., @John)"
+            minHeight="150px"
+          />
+        ) : (
+          <ForumTextInput
+            value={content}
+            onChange={(value) => setContent(value)}
+            placeholder="Write your reply... Type @ to mention someone"
+            threadId={threadId}
+            minHeight="150px"
+          />
+        )}
         {error && <div className={styles.submitError}>{error}</div>}
         <button
           type="submit"
