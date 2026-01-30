@@ -12,6 +12,7 @@ import { ProfilesProvider } from '@/features/identity/context/ProfilesProvider';
 import { AuthProvider } from '@/features/identity';
 import { ContractConfigProvider } from '@/providers/ContractConfigProvider';
 import MobileBottomNav from '@/components/MobileBottomNav';
+import { InstallPrompt } from '@/components/InstallPrompt';
 
 // Hide navigation ONLY on loading screen (root page)
 const ConditionalBottomNav = React.memo(function ConditionalBottomNav() {
@@ -62,6 +63,8 @@ export function Providers({ children }: ProvidersProps) {
                   </main>
                   {/* Navigation inside providers so it can access notification context */}
                   <ConditionalBottomNav />
+                  {/* PWA Install Prompt */}
+                  <InstallPrompt />
                 </UnifiedNotificationProvider>
               </CommunityProvider>
             </ProfilesProvider>

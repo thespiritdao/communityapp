@@ -10,6 +10,7 @@ import { ReactionPicker } from './ReactionPicker';
 import { AttachmentDisplay } from './AttachmentDisplay';
 import { ProfileModal } from '@/features/identity/components/ProfileModal';
 import { RichTextEditor } from './RichTextEditor';
+import { MentionRenderer } from './MentionRenderer';
 import type { MediaAttachment } from '../services/MediaUploadService';
 import type { UserProfile } from '@/features/identity/types';
 
@@ -217,10 +218,10 @@ const PostCard: React.FC<PostCardProps> = ({
           </div>
         ) : (
           <>
-            {/* Render content as HTML */}
-            <div
+            {/* Render content with parsed mentions */}
+            <MentionRenderer
+              content={post.content}
               className={styles.contentText}
-              dangerouslySetInnerHTML={{ __html: post.content }}
             />
 
             {/* Display attachments - use provided attachments if available, otherwise fetch */}

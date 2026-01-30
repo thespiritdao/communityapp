@@ -41,7 +41,8 @@
     "deploy:testnet": "node scripts/deploy-testnet.mjs",
     "dev:testnet": "cross-env NODE_ENV=development DOTENV_CONFIG_PATH=.env.testnet next dev",
     "build:testnet": "cross-env DOTENV_CONFIG_PATH=.env.testnet next build",
-    "start:testnet": "cross-env DOTENV_CONFIG_PATH=.env.testnet next start"
+    "start:testnet": "cross-env DOTENV_CONFIG_PATH=.env.testnet next start",
+    "pwa:icons": "node scripts/generate-pwa-icons.mjs"
   },
   "peerDependencies": {
     "@types/react": "^18",
