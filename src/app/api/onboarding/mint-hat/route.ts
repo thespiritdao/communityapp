@@ -345,11 +345,26 @@ export async function POST(request: NextRequest) {
 
     // Verify admin wallet has Executive Pod Leader hat
     console.log('🔍 Mint Hat API: Verifying admin wallet permissions...');
+
+    // CRITICAL: Validate EXECUTIVE_POD_LEADER hat ID exists before BigInt conversion
+    if (!HAT_IDS.EXECUTIVE_POD_LEADER) {
+      console.error('❌ Mint Hat API: EXECUTIVE_POD_LEADER hat ID not configured');
+      console.error('   Set NEXT_PUBLIC_EXECUTIVE_POD_LEADER in environment variables');
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Server configuration error - Executive Pod Leader hat not configured',
+          details: 'NEXT_PUBLIC_EXECUTIVE_POD_LEADER environment variable is missing',
+        },
+        { status: 500 },
+      );
+    }
+
     const isAdminWearer = await publicClient.readContract({
       address: CONTRACT_ADDRESSES.HATS_PROTOCOL,
       abi: HATS_MINT_ABI,
       functionName: 'isWearerOfHat',
-      args: [adminAccount.address, BigInt(HAT_IDS.EXECUTIVE_POD_LEADER!)],
+      args: [adminAccount.address, BigInt(HAT_IDS.EXECUTIVE_POD_LEADER)],
     });
 
     if (!isAdminWearer) {
@@ -370,6 +385,21 @@ export async function POST(request: NextRequest) {
 
     // Check if user already has the hat
     console.log('🔍 Mint Hat API: Checking if user already has hat...');
+
+    // CRITICAL: Validate hatId exists before BigInt conversion
+    if (!hatId) {
+      console.error(`❌ Mint Hat API: ${hatName} hat ID is undefined`);
+      console.error('   This indicates a configuration error in HAT_IDS');
+      return NextResponse.json(
+        {
+          success: false,
+          error: `Server configuration error - ${hatName} hat not configured`,
+          details: `Hat ID for ${hatName} is undefined. Check environment variables.`,
+        },
+        { status: 500 },
+      );
+    }
+
     const alreadyHasHat = await publicClient.readContract({
       address: CONTRACT_ADDRESSES.HATS_PROTOCOL,
       abi: HATS_MINT_ABI,
