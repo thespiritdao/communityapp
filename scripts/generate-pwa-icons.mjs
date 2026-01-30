@@ -10,7 +10,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const rootDir = join(__dirname, '..');
 
-const SOURCE_IMAGE = join(rootDir, 'public', 'observableinfinities.png');
+const SOURCE_IMAGE = join(rootDir, 'public', 'spiritdaosymbol.png');
 const OUTPUT_DIR = join(rootDir, 'public', 'icons');
 
 // PWA icon sizes required
