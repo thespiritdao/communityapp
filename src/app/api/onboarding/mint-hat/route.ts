@@ -55,8 +55,9 @@ async function syncToPodMembers(
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Executive Pod ID (hardcoded - matches Executive Pod in database)
+    // Pod IDs (hardcoded - matches pods in database)
     const EXECUTIVE_POD_ID = 'e35c9e25-d29f-4988-b1e8-2902e960b94c';
+    const BETA_TESTERS_POD_ID = 'af4cc4d1-e4e1-4ae3-b70e-19f89a07e0cb';
 
     const hatId = isFirstUser
       ? HAT_IDS.EXECUTIVE_POD_LEADER
@@ -67,21 +68,19 @@ async function syncToPodMembers(
       return;
     }
 
-    // For Beta Testers, we don't add them to Executive Pod
-    // They get their own pod or no pod membership (HAT-only access)
-    if (!isFirstUser) {
-      console.log('ℹ️ Beta Tester HAT minted - no pod membership needed');
-      return;
-    }
+    // Determine pod and membership details based on user type
+    const podId = isFirstUser ? EXECUTIVE_POD_ID : BETA_TESTERS_POD_ID;
+    const membershipType = isFirstUser ? 'leader' : 'member';
+    const role = isFirstUser ? 'leader' : 'member';
 
-    // For Executive Pod Leaders, add to pod_members table
+    // Add user to appropriate pod_members table
     const { error: syncError } = await supabase
       .from('pod_members')
       .upsert({
-        pod_id: EXECUTIVE_POD_ID,
+        pod_id: podId,
         wallet: walletAddress.toLowerCase(),
-        membership_type: 'leader',
-        role: 'leader',
+        membership_type: membershipType,
+        role: role,
         hat_id: hatId,
         is_active: true,
         joined_at: new Date().toISOString(),
@@ -92,10 +91,10 @@ async function syncToPodMembers(
       });
 
     if (syncError) {
-      console.error('❌ Failed to sync to pod_members:', syncError);
+      console.error(`❌ Failed to sync to pod_members (${isFirstUser ? 'Executive Pod' : 'Beta Testers Pod'}):`, syncError);
       // Don't throw - HAT is minted on-chain, DB sync is supplementary
     } else {
-      console.log('✅ Executive Pod Leader synced to database!');
+      console.log(`✅ ${isFirstUser ? 'Executive Pod Leader' : 'Beta Tester'} synced to database!`);
     }
   } catch (error) {
     console.error('❌ Database sync error:', error);
