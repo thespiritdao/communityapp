@@ -317,17 +317,8 @@ export async function POST(request: NextRequest) {
 
     const hatName = isFirstUser ? 'Executive Pod Leader' : 'Beta Tester';
 
-    if (!hatId) {
-      console.error(`❌ Mint Hat API: ${hatName} hat ID not configured`);
-      console.error('   Check NEXT_PUBLIC_EXECUTIVE_POD_LEADER or NEXT_PUBLIC_BETA_TESTER_HAT in .env');
-      return NextResponse.json(
-        { success: false, error: `${hatName} hat not configured` },
-        { status: 500 },
-      );
-    }
-
     console.log(`   Hat to mint: ${hatName}`);
-    console.log(`   Hat ID: ${hatId}`);
+    console.log(`   Hat ID: ${hatId || 'NOT CONFIGURED'}`);
 
     // Create clients
     const RPC_URL = process.env.NEXT_PUBLIC_RPC_URL || 'https://mainnet.base.org';
@@ -346,55 +337,73 @@ export async function POST(request: NextRequest) {
     // Verify admin wallet has Executive Pod Leader hat
     console.log('🔍 Mint Hat API: Verifying admin wallet permissions...');
 
-    // CRITICAL: Validate EXECUTIVE_POD_LEADER hat ID exists before BigInt conversion
-    if (!HAT_IDS.EXECUTIVE_POD_LEADER) {
-      console.error('❌ Mint Hat API: EXECUTIVE_POD_LEADER hat ID not configured');
-      console.error('   Set NEXT_PUBLIC_EXECUTIVE_POD_LEADER in environment variables');
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'Server configuration error - Executive Pod Leader hat not configured',
-          details: 'NEXT_PUBLIC_EXECUTIVE_POD_LEADER environment variable is missing',
-        },
-        { status: 500 },
-      );
+    // CRITICAL: Only validate EXECUTIVE_POD_LEADER if we're minting it (first user scenario)
+    // For beta testers, we don't need admin wallet to have exec pod leader hat
+    if (isFirstUser) {
+      if (!HAT_IDS.EXECUTIVE_POD_LEADER) {
+        console.error('❌ Mint Hat API: EXECUTIVE_POD_LEADER hat ID not configured');
+        console.error('   Set NEXT_PUBLIC_EXECUTIVE_POD_LEADER in environment variables');
+        return NextResponse.json(
+          {
+            success: false,
+            error: 'Server configuration error - Executive Pod Leader hat not configured',
+            details: 'NEXT_PUBLIC_EXECUTIVE_POD_LEADER environment variable is missing',
+          },
+          { status: 500 },
+        );
+      }
+
+      const isAdminWearer = await publicClient.readContract({
+        address: CONTRACT_ADDRESSES.HATS_PROTOCOL,
+        abi: HATS_MINT_ABI,
+        functionName: 'isWearerOfHat',
+        args: [adminAccount.address, BigInt(HAT_IDS.EXECUTIVE_POD_LEADER)],
+      });
+
+      if (!isAdminWearer) {
+        console.error('❌ Mint Hat API: Admin wallet does NOT wear Executive Pod Leader hat');
+        console.error(`   Admin wallet: ${adminAccount.address}`);
+        console.error(`   Required hat: ${HAT_IDS.EXECUTIVE_POD_LEADER}`);
+        return NextResponse.json(
+          {
+            success: false,
+            error: 'Admin wallet lacks required permissions',
+            details: 'Admin wallet must wear Executive Pod Leader hat',
+          },
+          { status: 500 },
+        );
+      }
+
+      console.log('✅ Mint Hat API: Admin wallet verified - has Executive Pod Leader hat');
+    } else {
+      // For beta testers, just verify BETA_TESTER_HAT is configured
+      if (!HAT_IDS.BETA_TESTER_HAT) {
+        console.error('❌ Mint Hat API: BETA_TESTER_HAT hat ID not configured');
+        console.error('   Set NEXT_PUBLIC_BETA_TESTER_HAT in environment variables');
+        return NextResponse.json(
+          {
+            success: false,
+            error: 'Server configuration error - Beta Tester hat not configured',
+            details: 'NEXT_PUBLIC_BETA_TESTER_HAT environment variable is missing',
+          },
+          { status: 500 },
+        );
+      }
+      console.log('✅ Mint Hat API: Beta Tester hat configured');
     }
-
-    const isAdminWearer = await publicClient.readContract({
-      address: CONTRACT_ADDRESSES.HATS_PROTOCOL,
-      abi: HATS_MINT_ABI,
-      functionName: 'isWearerOfHat',
-      args: [adminAccount.address, BigInt(HAT_IDS.EXECUTIVE_POD_LEADER)],
-    });
-
-    if (!isAdminWearer) {
-      console.error('❌ Mint Hat API: Admin wallet does NOT wear Executive Pod Leader hat');
-      console.error(`   Admin wallet: ${adminAccount.address}`);
-      console.error(`   Required hat: ${HAT_IDS.EXECUTIVE_POD_LEADER}`);
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'Admin wallet lacks required permissions',
-          details: 'Admin wallet must wear Executive Pod Leader hat',
-        },
-        { status: 500 },
-      );
-    }
-
-    console.log('✅ Mint Hat API: Admin wallet verified - has Executive Pod Leader hat');
 
     // Check if user already has the hat
     console.log('🔍 Mint Hat API: Checking if user already has hat...');
 
-    // CRITICAL: Validate hatId exists before BigInt conversion
+    // Defensive check: This should never happen due to earlier validation, but checking anyway
     if (!hatId) {
-      console.error(`❌ Mint Hat API: ${hatName} hat ID is undefined`);
-      console.error('   This indicates a configuration error in HAT_IDS');
+      console.error(`❌ Mint Hat API: ${hatName} hat ID is undefined (unexpected)`);
+      console.error('   This should have been caught earlier - indicates a logic error');
       return NextResponse.json(
         {
           success: false,
           error: `Server configuration error - ${hatName} hat not configured`,
-          details: `Hat ID for ${hatName} is undefined. Check environment variables.`,
+          details: `Hat ID for ${hatName} is undefined. This is unexpected - check configuration logic.`,
         },
         { status: 500 },
       );
