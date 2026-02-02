@@ -442,12 +442,16 @@ function PageContent() {
         authenticationAttemptedRef.current = true;
         setIsProcessing(true);
         try {
-          // Use captured email from authentication flow
-          if (capturedEmail) {
-            console.log('📧 Using captured email:', capturedEmail);
-          }
+          // Get email from capturedEmail state OR from CDP currentUser as fallback
+          const emailToUse = capturedEmail || (currentUser as any)?.email || undefined;
 
-          await signIn(walletAddress, capturedEmail);
+          console.log('📧 Email sources:', {
+            capturedEmail,
+            cdpUserEmail: (currentUser as any)?.email,
+            emailToUse,
+          });
+
+          await signIn(walletAddress, emailToUse);
           console.log('✅ Authentication successful');
         } catch (err) {
           console.error('❌ Authentication failed:', err);
@@ -466,6 +470,7 @@ function PageContent() {
     onboardingComplete,
     isFirstUserAccount,
     capturedEmail,
+    currentUser,
     signIn,
   ]);
 
