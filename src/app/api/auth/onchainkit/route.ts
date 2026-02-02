@@ -68,7 +68,11 @@ export async function POST(req: NextRequest) {
       }, { status: 400 });
     }
 
-    const userEmail = email || existingUserProfile?.email || undefined;
+    // LEGACY FALLBACK: For users who signed in before we stored emails
+    // Use @wallet.com fallback ONLY if user exists but has no email stored
+    const userEmail = email || existingUserProfile?.email ||
+      (existingUserProfile ? `${normalizedAddress}@wallet.com` : undefined);
+
     console.log(`📧 Auth API: Using ${existingUserProfile ? 'existing' : 'verified'} email: ${userEmail}`);
 
     let userId: string | null = null;
