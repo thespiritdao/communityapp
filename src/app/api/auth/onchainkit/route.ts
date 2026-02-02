@@ -44,9 +44,18 @@ export async function POST(req: NextRequest) {
     // For embedded wallets, we trust the address from Coinbase SDK
     // No signature verification needed
 
-    // Use real email if provided, otherwise use dummy email
-    const userEmail = email || `${normalizedAddress}@wallet.com`;
-    console.log(`📧 Auth API: Using email: ${userEmail}`);
+    // SECURITY: Require verified email from CDP - no fallback allowed
+    if (!email) {
+      console.warn('❌ Auth API: No verified email provided');
+      return NextResponse.json({
+        error: 'Email verification required',
+        code: 'EMAIL_REQUIRED',
+        message: 'Please complete email verification to continue',
+      }, { status: 400 });
+    }
+
+    const userEmail = email;
+    console.log(`📧 Auth API: Using verified email: ${userEmail}`);
 
     // Check if user exists in user_profiles
     console.log('🔍 Auth API: Checking for existing user...');
