@@ -145,22 +145,50 @@ export function useAuth(): UseAuthReturn {
 
         console.log('🔐 Auth: Authenticating embedded wallet...');
 
-        // For embedded wallets, we trust the wallet address from Coinbase
-        // No signature verification needed - Coinbase manages the private keys
-        const response = await fetch('/api/auth/onchainkit', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            address: walletAddress,
-            email: email, // Pass email if available from CDP
-            // Embedded wallet - no signature needed
-            isEmbedded: true,
-          }),
-        });
+        // Retry logic with exponential backoff (3 attempts: 1s, 2s, 4s delays)
+        const maxRetries = 3;
+        let lastError: Error | null = null;
+        let response: Response | null = null;
 
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.error || `Authentication failed: ${response.statusText}`);
+        for (let attempt = 0; attempt < maxRetries; attempt++) {
+          try {
+            // For embedded wallets, we trust the wallet address from Coinbase
+            // No signature verification needed - Coinbase manages the private keys
+            response = await fetch('/api/auth/onchainkit', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                address: walletAddress,
+                email: email, // Pass email if available from CDP
+                // Embedded wallet - no signature needed
+                isEmbedded: true,
+              }),
+            });
+
+            if (!response.ok) {
+              const errorData = await response.json();
+              throw new Error(errorData.error || `Authentication failed: ${response.statusText}`);
+            }
+
+            // Success! Break out of retry loop
+            break;
+          } catch (error) {
+            lastError = error as Error;
+
+            // If this is the last attempt, don't wait
+            if (attempt < maxRetries - 1) {
+              const delay = 1000 * Math.pow(2, attempt); // 1s, 2s, 4s
+              console.log(`🔄 Auth: Retry ${attempt + 1}/${maxRetries} after ${delay}ms`);
+              await new Promise((resolve) => setTimeout(resolve, delay));
+            } else {
+              console.error(`❌ Auth: All ${maxRetries} attempts failed`);
+            }
+          }
+        }
+
+        // If all retries failed, throw the last error
+        if (!response || !response.ok) {
+          throw lastError || new Error('Authentication failed after retries');
         }
 
         const { supabaseToken, supabaseRefreshToken } = await response.json();

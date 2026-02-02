@@ -470,7 +470,8 @@ function PageContent() {
     onboardingComplete,
     isFirstUserAccount,
     capturedEmail,
-    currentUser,
+    // Note: currentUser is intentionally NOT in deps to prevent flickering
+    // We read it inside the effect when needed, not as a dependency
     signIn,
   ]);
 
