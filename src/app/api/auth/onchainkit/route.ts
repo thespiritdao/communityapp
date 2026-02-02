@@ -44,9 +44,23 @@ export async function POST(req: NextRequest) {
     // For embedded wallets, we trust the address from Coinbase SDK
     // No signature verification needed
 
-    // SECURITY: Require verified email from CDP - no fallback allowed
-    if (!email) {
-      console.warn('❌ Auth API: No verified email provided');
+    // Check if user exists in user_profiles FIRST
+    console.log('🔍 Auth API: Checking for existing user...');
+    const { data: existingUserProfile, error: profileCheckError } = await supabaseAdmin
+      .from('user_profiles')
+      .select('user_id, email')
+      .eq('wallet_address', normalizedAddress)
+      .single();
+
+    if (profileCheckError && profileCheckError.code !== 'PGRST116') {
+      console.error('❌ Auth API: Database error:', profileCheckError);
+      throw profileCheckError;
+    }
+
+    // SECURITY: Require verified email from CDP for NEW users only
+    // Existing users can re-authenticate without email (they already have one in DB)
+    if (!email && !existingUserProfile) {
+      console.warn('❌ Auth API: No verified email provided for new user');
       return NextResponse.json({
         error: 'Email verification required',
         code: 'EMAIL_REQUIRED',
@@ -54,27 +68,14 @@ export async function POST(req: NextRequest) {
       }, { status: 400 });
     }
 
-    const userEmail = email;
-    console.log(`📧 Auth API: Using verified email: ${userEmail}`);
-
-    // Check if user exists in user_profiles
-    console.log('🔍 Auth API: Checking for existing user...');
-    const { data: userProfile, error } = await supabaseAdmin
-      .from('user_profiles')
-      .select('user_id')
-      .eq('wallet_address', normalizedAddress)
-      .single();
-
-    if (error && error.code !== 'PGRST116') {
-      console.error('❌ Auth API: Database error:', error);
-      throw error;
-    }
+    const userEmail = email || existingUserProfile?.email || undefined;
+    console.log(`📧 Auth API: Using ${existingUserProfile ? 'existing' : 'verified'} email: ${userEmail}`);
 
     let userId: string | null = null;
 
-    if (userProfile) {
+    if (existingUserProfile) {
       // Existing user
-      userId = userProfile.user_id;
+      userId = existingUserProfile.user_id;
       console.log(`✅ Auth API: Found existing user: ${userId}`);
 
       if (!userId) {
