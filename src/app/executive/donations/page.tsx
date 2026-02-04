@@ -17,7 +17,7 @@ interface Donation {
   status: string;
   created_at: string;
   settled_at: string | null;
-  approvals?: { executive_wallet: string; approved_at: string }[];
+  approvals?: { approver_wallet: string; approved_at: string }[];
   currentApprovals?: number;
   requiredApprovals?: number;
 }
@@ -126,7 +126,7 @@ export default function ExecutiveDonationsDashboard() {
   const checkIfUserApproved = (donation: Donation) => {
     if (!walletAddress || !donation.approvals) return false;
     return donation.approvals.some(
-      approval => approval.executive_wallet.toLowerCase() === walletAddress.toLowerCase()
+      approval => approval.approver_wallet.toLowerCase() === walletAddress.toLowerCase()
     );
   };
 

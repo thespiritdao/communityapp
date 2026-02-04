@@ -180,7 +180,7 @@ export async function POST(request: NextRequest) {
       .from('donation_approvals')
       .select('*')
       .eq('donation_id', donationId)
-      .eq('executive_wallet', normalizedWallet)
+      .eq('approver_wallet', normalizedWallet)
       .single();
 
     if (existingApproval) {
@@ -201,7 +201,8 @@ export async function POST(request: NextRequest) {
       .from('donation_approvals')
       .insert({
         donation_id: donationId,
-        executive_wallet: normalizedWallet,
+        approver_wallet: normalizedWallet,
+        approver_hat_id: EXECUTIVE_POD_LEADER_HAT_ID,
         approved_at: new Date().toISOString()
       })
       .select()
@@ -288,7 +289,7 @@ export async function POST(request: NextRequest) {
     // Threshold not yet met
     const { data: currentApprovals } = await supabase
       .from('donation_approvals')
-      .select('executive_wallet, approved_at')
+      .select('approver_wallet, approved_at')
       .eq('donation_id', donationId);
 
     return NextResponse.json({
@@ -348,7 +349,7 @@ export async function GET(request: NextRequest) {
     // Get approvals
     const { data: approvals } = await supabase
       .from('donation_approvals')
-      .select('executive_wallet, approved_at')
+      .select('approver_wallet, approved_at')
       .eq('donation_id', donationId)
       .order('approved_at', { ascending: true });
 
