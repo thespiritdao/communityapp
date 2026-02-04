@@ -62,7 +62,7 @@ export async function GET(request: NextRequest) {
 
     const { data: approvals, error: approvalsError } = await supabase
       .from('donation_approvals')
-      .select('donation_id, executive_wallet, approved_at')
+      .select('donation_id, approver_wallet, approved_at')
       .in('donation_id', donationIds);
 
     if (approvalsError) {
