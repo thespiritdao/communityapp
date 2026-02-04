@@ -44,10 +44,16 @@ const SYSTEM_TOKEN_ABI = [
  */
 function initializeCoinbaseSDK() {
   const apiKeyName = process.env.CDP_API_KEY;
-  const privateKey = process.env.EXECUTIVE_MINTING_PRIVATE_KEY;
+  let privateKey = process.env.EXECUTIVE_MINTING_PRIVATE_KEY;
 
   if (!apiKeyName || !privateKey) {
     throw new Error('CDP_API_KEY and EXECUTIVE_MINTING_PRIVATE_KEY required');
+  }
+
+  // Handle escaped newlines from environment variables
+  // Vercel/env files may have literal \n instead of actual newlines
+  if (privateKey.includes('\\n')) {
+    privateKey = privateKey.replace(/\\n/g, '\n');
   }
 
   return Coinbase.configure({
