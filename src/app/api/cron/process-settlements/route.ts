@@ -34,10 +34,11 @@ async function notifyExecutivePod(donations: any[]) {
  *
  * Schedule: Every 5 minutes
  * vercel.json configuration:
+ * @example
  * {
  *   "crons": [{
  *     "path": "/api/cron/process-settlements",
- *     "schedule": "*/5 * * * *"
+ *     "schedule": "every 5 minutes"
  *   }]
  * }
  *

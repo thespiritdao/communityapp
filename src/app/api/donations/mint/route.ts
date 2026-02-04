@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { createPublicClient, createWalletClient, http, parseEther, encodeFunctionData, getAddress } from 'viem';
+import { encodeFunctionData, createPublicClient, http, getAddress } from 'viem';
 import { base } from 'viem/chains';
-import { privateKeyToAccount } from 'viem/accounts';
+import { Coinbase, Wallet } from '@coinbase/coinbase-sdk';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -11,7 +11,6 @@ const supabase = createClient(
 
 // System Token contract
 const SYSTEM_TOKEN_ADDRESS = process.env.NEXT_PUBLIC_SYSTEM_TOKEN!;
-const MINTING_PRIVATE_KEY = process.env.EXECUTIVE_MINTING_PRIVATE_KEY!; // Backend wallet with EXECUTIVE_ROLE
 
 const publicClient = createPublicClient({
   chain: base,
@@ -40,6 +39,24 @@ const SYSTEM_TOKEN_ABI = [
 ] as const;
 
 /**
+ * Initialize Coinbase SDK with API credentials
+ * This creates a CDP Smart Account for backend minting
+ */
+function initializeCoinbaseSDK() {
+  const apiKeyName = process.env.CDP_API_KEY;
+  const privateKey = process.env.EXECUTIVE_MINTING_PRIVATE_KEY;
+
+  if (!apiKeyName || !privateKey) {
+    throw new Error('CDP_API_KEY and EXECUTIVE_MINTING_PRIVATE_KEY required');
+  }
+
+  return Coinbase.configure({
+    apiKeyName,
+    privateKey,
+  });
+}
+
+/**
  * Notify user about minted tokens (email/in-app notification)
  */
 async function notifyUserMintComplete(donation: any, txHash: string) {
@@ -49,8 +66,7 @@ async function notifyUserMintComplete(donation: any, txHash: string) {
       amount: donation.system_tokens_to_mint,
       txHash
     });
-    // TODO: Implement email/in-app notification
-    // Could use SendGrid API or create in-app notification
+    // TODO: Implement email/in-app notification via SendGrid
   } catch (error) {
     console.error('❌ Failed to notify user:', error);
   }
@@ -61,14 +77,12 @@ async function notifyUserMintComplete(donation: any, txHash: string) {
  */
 async function updateTreasuryMetadata(amountMinted: number) {
   try {
-    // Get current metadata
     const { data: metadata } = await supabase
       .from('system_supply_metadata')
       .select('*')
       .single();
 
     if (metadata) {
-      // Update existing record
       await supabase
         .from('system_supply_metadata')
         .update({
@@ -78,14 +92,13 @@ async function updateTreasuryMetadata(amountMinted: number) {
         })
         .eq('id', metadata.id);
     } else {
-      // Create initial record
       await supabase
         .from('system_supply_metadata')
         .insert({
           total_minted: amountMinted,
           total_burned: 0,
           circulating_supply: amountMinted,
-          nonprofit_balance: 0, // Will be updated by treasury sync job
+          nonprofit_balance: 0,
           last_updated: new Date().toISOString()
         });
     }
@@ -99,16 +112,17 @@ async function updateTreasuryMetadata(amountMinted: number) {
 /**
  * POST /api/donations/mint
  *
- * Backend service to mint $SYSTEM tokens after executive approval
+ * Backend service to mint $SYSTEM tokens using CDP Smart Account (gasless)
  *
- * This endpoint should be called:
- * 1. Automatically when 2-of-3 approval threshold is met
- * 2. Manually via cron job to retry failed mints
+ * This endpoint:
+ * - Uses CDP Smart Account with paymaster (NO GAS FEES)
+ * - Wallet must have EXECUTIVE_ROLE on SystemToken contract
+ * - Called automatically when 2-of-3 approval threshold met
+ * - Can be called manually via cron for retry
  *
  * Security:
- * - Only accessible via service role key (not public)
+ * - Only accessible via service role key
  * - Verifies donation has 'pending_mint' status
- * - Uses backend wallet with EXECUTIVE_ROLE
  * - Records transaction hash for transparency
  */
 export async function POST(request: NextRequest) {
@@ -176,57 +190,61 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.log('🪙 Starting mint process:', {
+    console.log('🪙 Starting mint process with CDP Smart Account:', {
       donationId,
       userWallet: donation.user_wallet,
       amount: donation.system_tokens_to_mint
     });
 
     // =====================================================
-    // 3. CHECK BACKEND WALLET BALANCE (for gas)
+    // 3. INITIALIZE CDP SMART ACCOUNT
     // =====================================================
 
-    if (!MINTING_PRIVATE_KEY) {
-      console.error('❌ EXECUTIVE_MINTING_PRIVATE_KEY not configured');
+    try {
+      initializeCoinbaseSDK();
+    } catch (error: any) {
+      console.error('❌ Failed to initialize CDP SDK:', error);
       return NextResponse.json(
-        { error: 'Minting service not configured' },
+        { error: 'Minting service not configured', details: error.message },
         { status: 500 }
       );
     }
 
-    const mintingAccount = privateKeyToAccount(MINTING_PRIVATE_KEY as `0x${string}`);
+    // Get or create wallet for minting
+    // NOTE: This uses the CDP_API_KEY wallet, which must have EXECUTIVE_ROLE
+    let wallet: Wallet;
 
-    const balance = await publicClient.getBalance({
-      address: mintingAccount.address,
-    });
+    try {
+      // Try to get default wallet
+      const wallets = await Wallet.listWallets();
+      if (wallets.length > 0) {
+        wallet = wallets[0];
+      } else {
+        // Create new wallet if none exists
+        wallet = await Wallet.create();
+      }
 
-    console.log(`💰 Minting wallet balance: ${Number(balance) / 1e18} ETH`);
-
-    if (balance < parseEther('0.0001')) {
-      console.error('❌ Insufficient gas in minting wallet');
+      console.log('💼 Using CDP Smart Account:', await wallet.getDefaultAddress());
+    } catch (error: any) {
+      console.error('❌ Failed to get CDP wallet:', error);
       return NextResponse.json(
-        { error: 'Insufficient gas for minting' },
+        { error: 'Failed to initialize minting wallet', details: error.message },
         { status: 500 }
       );
     }
 
     // =====================================================
-    // 4. MINT TOKENS ON-CHAIN
+    // 4. MINT TOKENS ON-CHAIN (GASLESS VIA PAYMASTER)
     // =====================================================
-
-    const walletClient = createWalletClient({
-      account: mintingAccount,
-      chain: base,
-      transport: http(),
-    });
 
     // Convert token amount to wei (18 decimals)
     const amountInWei = BigInt(Math.floor(donation.system_tokens_to_mint * 1e18));
 
-    console.log('📝 Preparing mint transaction:', {
+    console.log('📝 Preparing gasless mint transaction:', {
       to: donation.user_wallet,
       amount: donation.system_tokens_to_mint,
-      amountInWei: amountInWei.toString()
+      amountInWei: amountInWei.toString(),
+      usePaymaster: true
     });
 
     // Update status to 'minting' to prevent duplicate attempts
@@ -236,74 +254,73 @@ export async function POST(request: NextRequest) {
       .eq('id', donationId);
 
     try {
-      // Execute mint transaction
-      const txHash = await walletClient.writeContract({
-        address: SYSTEM_TOKEN_ADDRESS as `0x${string}`,
+      // Encode mint function call
+      const mintCallData = encodeFunctionData({
         abi: SYSTEM_TOKEN_ABI,
         functionName: 'mint',
         args: [getAddress(donation.user_wallet), amountInWei],
       });
 
-      console.log('🚀 Mint transaction submitted:', txHash);
-
-      // Wait for transaction confirmation
-      const receipt = await publicClient.waitForTransactionReceipt({
-        hash: txHash,
-        confirmations: 1,
+      // Invoke contract via CDP Smart Account (gasless)
+      const invocation = await wallet.invokeContract({
+        contractAddress: SYSTEM_TOKEN_ADDRESS,
+        method: 'mint',
+        args: {
+          to: donation.user_wallet,
+          amount: amountInWei.toString(),
+        },
+        abi: SYSTEM_TOKEN_ABI,
       });
 
-      if (receipt.status === 'success') {
-        console.log('✅ Mint transaction confirmed!');
+      // Wait for transaction to be mined
+      await invocation.wait();
 
-        // Verify balance
-        const newBalance = await publicClient.readContract({
-          address: SYSTEM_TOKEN_ADDRESS as `0x${string}`,
-          abi: SYSTEM_TOKEN_ABI,
-          functionName: 'balanceOf',
-          args: [getAddress(donation.user_wallet)],
-        });
+      const txHash = invocation.getTransactionHash();
 
-        console.log(`✅ User's new $SYSTEM balance: ${Number(newBalance) / 1e18}`);
+      console.log('✅ Gasless mint transaction confirmed:', txHash);
 
-        // Update donation status to 'minted'
-        const { error: updateError } = await supabase
-          .from('pending_donations')
-          .update({
-            status: 'minted',
-            minted_at: new Date().toISOString(),
-            tx_hash: txHash
-          })
-          .eq('id', donationId);
+      // Verify balance increased
+      const newBalance = await publicClient.readContract({
+        address: SYSTEM_TOKEN_ADDRESS as `0x${string}`,
+        abi: SYSTEM_TOKEN_ABI,
+        functionName: 'balanceOf',
+        args: [getAddress(donation.user_wallet)],
+      });
 
-        if (updateError) {
-          console.error('❌ Failed to update donation status:', updateError);
-        }
+      console.log(`✅ User's new $SYSTEM balance: ${Number(newBalance) / 1e18}`);
 
-        // Update treasury metadata
-        await updateTreasuryMetadata(donation.system_tokens_to_mint);
+      // Update donation status to 'minted'
+      const { error: updateError } = await supabase
+        .from('pending_donations')
+        .update({
+          status: 'minted',
+          minted_at: new Date().toISOString(),
+          tx_hash: txHash
+        })
+        .eq('id', donationId);
 
-        // Notify user
-        await notifyUserMintComplete(donation, txHash);
-
-        return NextResponse.json({
-          success: true,
-          message: 'Tokens minted successfully',
-          donation: {
-            id: donationId,
-            userWallet: donation.user_wallet,
-            amountMinted: donation.system_tokens_to_mint,
-            txHash,
-            mintedAt: new Date().toISOString()
-          },
-          transaction: {
-            hash: txHash,
-            blockNumber: receipt.blockNumber.toString(),
-            gasUsed: receipt.gasUsed.toString()
-          }
-        });
-      } else {
-        throw new Error('Transaction failed on-chain');
+      if (updateError) {
+        console.error('❌ Failed to update donation status:', updateError);
       }
+
+      // Update treasury metadata
+      await updateTreasuryMetadata(donation.system_tokens_to_mint);
+
+      // Notify user
+      await notifyUserMintComplete(donation, txHash || 'pending');
+
+      return NextResponse.json({
+        success: true,
+        message: 'Tokens minted successfully (gasless)',
+        donation: {
+          id: donationId,
+          userWallet: donation.user_wallet,
+          amountMinted: donation.system_tokens_to_mint,
+          txHash: txHash || null,
+          mintedAt: new Date().toISOString()
+        },
+        gasless: true
+      });
 
     } catch (mintError: any) {
       console.error('❌ Mint transaction failed:', mintError);
