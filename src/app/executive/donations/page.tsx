@@ -1,9 +1,10 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useAccount } from 'wagmi';
+import { useEvmAddress } from '@coinbase/cdp-hooks';
 import { toast } from 'react-hot-toast';
 import { formatDistanceToNow } from 'date-fns';
+import { useCDPStatus } from '@/hooks/useCDPStatus';
 
 interface Donation {
   id: string;
@@ -22,7 +23,9 @@ interface Donation {
 }
 
 export default function ExecutiveDonationsDashboard() {
-  const { address: walletAddress, isConnected } = useAccount();
+  const evmAddress = useEvmAddress();
+  const { address: walletAddress, isInitializing } = useCDPStatus();
+  const isConnected = !!walletAddress && !isInitializing;
   const [donations, setDonations] = useState<Donation[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isApproving, setIsApproving] = useState<string | null>(null);

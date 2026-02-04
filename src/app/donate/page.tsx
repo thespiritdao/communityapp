@@ -8,8 +8,9 @@ import {
   useStripe,
   useElements,
 } from '@stripe/react-stripe-js';
-import { useAccount } from 'wagmi';
+import { useEvmAddress } from '@coinbase/cdp-hooks';
 import { toast } from 'react-hot-toast';
+import { useCDPStatus } from '@/hooks/useCDPStatus';
 
 // Load Stripe publishable key
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!);
@@ -142,7 +143,9 @@ function DonationCheckoutForm({
  * Main Donation Page
  */
 export default function DonatePage() {
-  const { address: walletAddress, isConnected } = useAccount();
+  const evmAddress = useEvmAddress();
+  const { address: walletAddress, isInitializing } = useCDPStatus();
+  const isConnected = !!walletAddress && !isInitializing;
   const [donationAmount, setDonationAmount] = useState<string>('');
   const [donorEmail, setDonorEmail] = useState<string>('');
   const [clientSecret, setClientSecret] = useState<string | null>(null);
