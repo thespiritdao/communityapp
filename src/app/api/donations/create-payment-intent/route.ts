@@ -98,7 +98,7 @@ export async function POST(request: NextRequest) {
       },
       description: `SpiritDAO Donation - ${userWallet.slice(0, 10)}...`,
       receipt_email: donorEmail || undefined,
-      statement_descriptor: 'SPIRITDAO DONATE'
+      statement_descriptor_suffix: 'SPIRITDAO' // Max 22 chars, shows on bank statement
     });
 
     console.log('✅ Stripe PaymentIntent created:', paymentIntent.id);
