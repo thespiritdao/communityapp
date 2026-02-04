@@ -221,13 +221,20 @@ export async function POST(request: NextRequest) {
     let wallet: Wallet;
 
     try {
-      // Try to get default wallet
+      // Try to get default wallet on Base mainnet
       const wallets = await Wallet.listWallets();
-      if (wallets.length > 0) {
-        wallet = wallets[0];
+
+      // Filter for Base mainnet wallets only
+      const baseMainnetWallets = wallets.filter(w => {
+        const addr = w.getDefaultAddress();
+        return addr.toString().includes('base-mainnet') || addr.toString().includes('base');
+      });
+
+      if (baseMainnetWallets.length > 0) {
+        wallet = baseMainnetWallets[0];
       } else {
-        // Create new wallet if none exists
-        wallet = await Wallet.create();
+        // Create new wallet on Base mainnet if none exists
+        wallet = await Wallet.create({ networkId: 'base-mainnet' });
       }
 
       const walletAddress = await wallet.getDefaultAddress();
@@ -272,7 +279,7 @@ export async function POST(request: NextRequest) {
         args: [getAddress(donation.user_wallet), amountInWei],
       });
 
-      // Invoke contract via CDP Smart Account (gasless)
+      // Invoke contract via CDP Smart Account (gasless via paymaster)
       const invocation = await wallet.invokeContract({
         contractAddress: SYSTEM_TOKEN_ADDRESS,
         method: 'mint',
@@ -281,6 +288,7 @@ export async function POST(request: NextRequest) {
           amount: amountInWei.toString(),
         },
         abi: SYSTEM_TOKEN_ABI,
+        gasless: true, // Enable paymaster sponsorship
       });
 
       // Wait for transaction to be mined
