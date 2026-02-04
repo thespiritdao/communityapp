@@ -231,8 +231,8 @@ export async function POST(request: NextRequest) {
       const { error: statusUpdateError } = await supabase
         .from('pending_donations')
         .update({
-          status: 'pending_mint',
-          approved_at: new Date().toISOString()
+          status: 'pending_mint'
+          // Note: approved_at tracking handled via donation_approvals table
         })
         .eq('id', donationId);
 

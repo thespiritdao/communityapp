@@ -38,8 +38,8 @@ console.log('🔄 Updating status to pending_mint...');
 const { error: updateError } = await supabase
   .from('pending_donations')
   .update({
-    status: 'pending_mint',
-    approved_at: new Date().toISOString()
+    status: 'pending_mint'
+    // Note: approved_at column will be added in future migration
   })
   .eq('id', donationId);
 
