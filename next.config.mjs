@@ -164,7 +164,7 @@ const nextConfig = {
             key: 'Content-Security-Policy',
             value: `
               default-src 'self';
-              script-src 'self' 'unsafe-eval' 'unsafe-inline' https://keys.coinbase.com;
+              script-src 'self' 'unsafe-eval' 'unsafe-inline' https://keys.coinbase.com https://js.stripe.com;
               connect-src 'self'
                 https://*.coinbase.com
                 https://*.wallet.coinbase.com
@@ -182,7 +182,8 @@ const nextConfig = {
                 https://api.pinata.cloud
                 https://uploads.pinata.cloud
                 https://gateway.pinata.cloud
-                https://ipfs.io;
+                https://ipfs.io
+                https://api.stripe.com;
               img-src 'self' data: https:
                 https://ipfs.io
                 https://gateway.pinata.cloud
@@ -195,7 +196,9 @@ const nextConfig = {
               frame-src 'self'
                 https://*.coinbase.com
                 https://keys.coinbase.com
-                https://spiritdao.pythonanywhere.com;
+                https://spiritdao.pythonanywhere.com
+                https://js.stripe.com
+                https://hooks.stripe.com;
             `
               .replace(/\s+/g, ' ')
               .trim(),
