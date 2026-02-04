@@ -241,6 +241,7 @@ export async function POST(request: NextRequest) {
 
       // Trigger backend minting service
       try {
+        console.log('🔄 Calling minting service for donation:', donationId);
         const mintResponse = await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/donations/mint`, {
           method: 'POST',
           headers: {
@@ -252,14 +253,21 @@ export async function POST(request: NextRequest) {
 
         if (!mintResponse.ok) {
           const errorData = await mintResponse.json();
-          console.error('❌ Minting service failed:', errorData);
+          console.error('❌ Minting service returned error:', {
+            status: mintResponse.status,
+            statusText: mintResponse.statusText,
+            errorData
+          });
           // Don't fail the approval - minting can be retried via cron
         } else {
           const mintData = await mintResponse.json();
-          console.log('✅ Minting triggered successfully:', mintData.transaction?.hash);
+          console.log('✅ Minting triggered successfully:', mintData);
         }
-      } catch (mintError) {
-        console.error('❌ Failed to trigger minting service:', mintError);
+      } catch (mintError: any) {
+        console.error('❌ Failed to trigger minting service:', {
+          message: mintError.message,
+          stack: mintError.stack
+        });
         // Don't fail the approval - minting can be retried via cron
       }
 
