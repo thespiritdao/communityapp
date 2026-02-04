@@ -1,5 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import Stripe from 'stripe';
+
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
+  apiVersion: '2024-12-18.acacia',
+});
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -7,35 +12,37 @@ const supabase = createClient(
 );
 
 /**
- * POST /api/donations/create-payment
+ * POST /api/donations/create-payment-intent
  *
- * Creates a Mercury payment intent for fiat donations
- * Supports both ACH (bank account) and credit card payments
+ * Creates a Stripe PaymentIntent for fiat donations
+ * Supports both credit cards and ACH bank accounts
  *
  * Flow:
  * 1. Validate donation amount (min $10)
- * 2. Calculate fees and $SYSTEM tokens to mint
- * 3. Create Mercury payment intent
+ * 2. Calculate fees and $SYSTEM tokens
+ * 3. Create Stripe PaymentIntent
  * 4. Store pending donation in database
- * 5. Return payment details to frontend
+ * 5. Return client_secret for frontend
  */
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const {
       amount,
-      donorEmail,
       userWallet,
-      paymentMethod // 'ach' or 'card'
+      donorEmail,
+      paymentMethodTypes = ['card', 'us_bank_account'] // Support both by default
     } = body;
 
     // =====================================================
     // 1. VALIDATION
     // =====================================================
 
-    if (!amount || amount < 10) {
+    const minAmount = Number(process.env.DONATION_MIN_AMOUNT) || 10;
+
+    if (!amount || amount < minAmount) {
       return NextResponse.json(
-        { error: 'Minimum donation is $10' },
+        { error: `Minimum donation is $${minAmount}` },
         { status: 400 }
       );
     }
@@ -47,85 +54,54 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!['ach', 'card'].includes(paymentMethod)) {
-      return NextResponse.json(
-        { error: 'Invalid payment method. Use "ach" or "card"' },
-        { status: 400 }
-      );
-    }
-
     // =====================================================
     // 2. CALCULATE FEES AND TOKENS
     // =====================================================
 
     const fiatAmount = Number(amount);
+    const platformFeePercentage = Number(process.env.DONATION_PLATFORM_FEE_PERCENTAGE) || 7.5;
+    const platformFee = fiatAmount * (platformFeePercentage / 100);
 
-    // Mercury fees
-    const mercuryFeePercentage = paymentMethod === 'ach' ? 0.008 : 0.029; // 0.8% ACH, 2.9% card
-    const mercuryFeeFixed = paymentMethod === 'ach' ? 0 : 0.30; // $0.30 for cards
-    const mercuryFee = (fiatAmount * mercuryFeePercentage) + mercuryFeeFixed;
+    // Stripe fees (estimated, actual calculated after payment)
+    // Card: 2.9% + $0.30
+    // ACH: 0.8% (no fixed fee)
+    const estimatedStripeFeeCard = (fiatAmount * 0.029) + 0.30;
+    const estimatedStripeFeeACH = fiatAmount * 0.008;
 
-    // Platform fee (7.5% of original amount)
-    const platformFee = fiatAmount * 0.075;
+    // Use card fees as conservative estimate
+    const estimatedStripeFee = estimatedStripeFeeCard;
 
-    // User receives remaining amount in $SYSTEM tokens
-    const systemTokensToMint = fiatAmount - mercuryFee - platformFee;
-
-    // Settlement period
-    const settlementDays = paymentMethod === 'ach' ? 0 : 5; // ACH instant, card 5-day hold
-    const settlementDate = settlementDays > 0
-      ? new Date(Date.now() + settlementDays * 24 * 60 * 60 * 1000)
-      : new Date();
+    // User receives after both fees
+    const systemTokensToMint = fiatAmount - estimatedStripeFee - platformFee;
 
     console.log('💰 Donation calculation:', {
       fiatAmount,
-      mercuryFee: mercuryFee.toFixed(2),
+      estimatedStripeFee: estimatedStripeFee.toFixed(2),
       platformFee: platformFee.toFixed(2),
-      systemTokensToMint: systemTokensToMint.toFixed(2),
-      settlementDays,
-      paymentMethod
+      systemTokensToMint: systemTokensToMint.toFixed(2)
     });
 
     // =====================================================
-    // 3. CREATE MERCURY PAYMENT INTENT
+    // 3. CREATE STRIPE PAYMENT INTENT
     // =====================================================
 
-    const mercuryResponse = await fetch('https://api.mercury.com/api/v1/payments/create', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${process.env.MERCURY_API_KEY}`,
-        'Content-Type': 'application/json'
+    const paymentIntent = await stripe.paymentIntents.create({
+      amount: Math.round(fiatAmount * 100), // Convert to cents
+      currency: 'usd',
+      payment_method_types: paymentMethodTypes,
+      metadata: {
+        userWallet,
+        systemTokenAmount: systemTokensToMint.toFixed(8),
+        platformFee: platformFee.toFixed(2),
+        donorEmail: donorEmail || 'anonymous',
+        donationType: 'crypto_token_reward'
       },
-      body: JSON.stringify({
-        amount: Math.round(fiatAmount * 100), // Convert to cents
-        currency: 'usd',
-        payment_method: paymentMethod,
-        description: `SpiritDAO Donation - ${userWallet.slice(0, 10)}...`,
-        metadata: {
-          userWallet,
-          systemTokenAmount: systemTokensToMint.toFixed(8),
-          platformFee: platformFee.toFixed(2),
-          donorEmail: donorEmail || 'anonymous'
-        }
-      })
+      description: `SpiritDAO Donation - ${userWallet.slice(0, 10)}...`,
+      receipt_email: donorEmail || undefined,
+      statement_descriptor: 'SPIRITDAO DONATE'
     });
 
-    if (!mercuryResponse.ok) {
-      const errorData = await mercuryResponse.json();
-      console.error('❌ Mercury payment creation failed:', errorData);
-      return NextResponse.json(
-        { error: 'Payment processor error', details: errorData.message },
-        { status: 500 }
-      );
-    }
-
-    const payment = await mercuryResponse.json();
-
-    console.log('✅ Mercury payment created:', {
-      paymentId: payment.id,
-      amount: fiatAmount,
-      method: paymentMethod
-    });
+    console.log('✅ Stripe PaymentIntent created:', paymentIntent.id);
 
     // =====================================================
     // 4. STORE PENDING DONATION IN DATABASE
@@ -134,17 +110,17 @@ export async function POST(request: NextRequest) {
     const { data: donation, error: dbError } = await supabase
       .from('pending_donations')
       .insert({
-        mercury_payment_id: payment.id,
-        payment_method: paymentMethod,
+        mercury_payment_id: paymentIntent.id, // Reusing column for Stripe payment intent ID
+        payment_method: 'card', // Will update after payment confirms actual method
         user_wallet: userWallet,
         donor_email: donorEmail || null,
         fiat_amount: fiatAmount,
         system_tokens_to_mint: systemTokensToMint,
         org_fee: platformFee,
-        mercury_fee: mercuryFee,
-        settlement_days: settlementDays,
-        settlement_date: settlementDate,
-        is_reversible: paymentMethod === 'card',
+        mercury_fee: estimatedStripeFee, // Reusing column for Stripe fee
+        settlement_days: 0, // Will calculate after payment
+        settlement_date: null,
+        is_reversible: true, // Cards can chargeback
         status: 'payment_pending'
       })
       .select()
@@ -161,33 +137,26 @@ export async function POST(request: NextRequest) {
     console.log('✅ Donation stored in database:', donation.id);
 
     // =====================================================
-    // 5. RETURN PAYMENT DETAILS TO FRONTEND
+    // 5. RETURN CLIENT SECRET TO FRONTEND
     // =====================================================
 
     return NextResponse.json({
       success: true,
+      clientSecret: paymentIntent.client_secret,
       donation: {
         id: donation.id,
-        mercuryPaymentId: payment.id,
+        paymentIntentId: paymentIntent.id,
         amount: fiatAmount,
         systemTokens: systemTokensToMint.toFixed(2),
         platformFee: platformFee.toFixed(2),
-        mercuryFee: mercuryFee.toFixed(2),
-        settlementDays,
-        settlementDate: settlementDate.toISOString(),
-        paymentMethod,
-        isReversible: paymentMethod === 'card'
-      },
-      // Frontend needs these to complete payment flow
-      paymentIntent: {
-        clientSecret: payment.client_secret, // For card payments
-        confirmationUrl: payment.confirmation_url, // For ACH bank connection
-        redirectUrl: payment.hosted_url // Alternative Mercury-hosted payment page
+        estimatedStripeFee: estimatedStripeFee.toFixed(2),
+        minAmount,
+        supportedMethods: paymentMethodTypes
       }
     });
 
   } catch (error: any) {
-    console.error('❌ Donation creation error:', error);
+    console.error('❌ Payment intent creation error:', error);
     return NextResponse.json(
       { error: 'Internal server error', details: error.message },
       { status: 500 }
@@ -196,7 +165,7 @@ export async function POST(request: NextRequest) {
 }
 
 /**
- * GET /api/donations/create-payment?donationId=xxx
+ * GET /api/donations/create-payment-intent?donationId=xxx
  *
  * Check status of a pending donation
  */
@@ -233,7 +202,8 @@ export async function GET(request: NextRequest) {
         systemTokens: donation.system_tokens_to_mint,
         settlementDate: donation.settlement_date,
         createdAt: donation.created_at,
-        mintedAt: donation.minted_at
+        mintedAt: donation.minted_at,
+        paymentMethod: donation.payment_method
       }
     });
 
