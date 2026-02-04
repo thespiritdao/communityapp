@@ -157,8 +157,21 @@ export async function POST(request: NextRequest) {
 
   } catch (error: any) {
     console.error('❌ Payment intent creation error:', error);
+    console.error('Error stack:', error.stack);
+    console.error('Error details:', {
+      message: error.message,
+      type: error.type,
+      code: error.code,
+      statusCode: error.statusCode,
+    });
+
     return NextResponse.json(
-      { error: 'Internal server error', details: error.message },
+      {
+        error: 'Internal server error',
+        details: error.message,
+        errorType: error.type || error.constructor?.name,
+        errorCode: error.code,
+      },
       { status: 500 }
     );
   }
