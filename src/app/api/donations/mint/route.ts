@@ -224,7 +224,12 @@ export async function POST(request: NextRequest) {
         wallet = await Wallet.create();
       }
 
-      console.log('💼 Using CDP Smart Account:', await wallet.getDefaultAddress());
+      const walletAddress = await wallet.getDefaultAddress();
+      console.log('═══════════════════════════════════════════════════════════════');
+      console.log('💼 MINTING WALLET ADDRESS (Grant EXECUTIVE_ROLE to this address)');
+      console.log('═══════════════════════════════════════════════════════════════');
+      console.log(`   ${walletAddress}`);
+      console.log('═══════════════════════════════════════════════════════════════');
     } catch (error: any) {
       console.error('❌ Failed to get CDP wallet:', error);
       return NextResponse.json(
