@@ -222,18 +222,33 @@ export async function POST(request: NextRequest) {
 
     try {
       // Try to get default wallet on Base mainnet
-      const wallets = await Wallet.listWallets();
+      const walletsResult = await Wallet.listWallets();
 
-      // Filter for Base mainnet wallets only
-      const baseMainnetWallets = wallets.filter(w => {
-        const addr = w.getDefaultAddress();
-        return addr.toString().includes('base-mainnet') || addr.toString().includes('base');
-      });
+      // Convert to array if it's not already
+      const wallets = Array.isArray(walletsResult) ? walletsResult : [];
 
-      if (baseMainnetWallets.length > 0) {
-        wallet = baseMainnetWallets[0];
-      } else {
+      // Look for existing wallet on Base mainnet
+      let foundBaseWallet = false;
+      for (const w of wallets) {
+        try {
+          const addr = await w.getDefaultAddress();
+          const addrStr = addr.toString();
+
+          // Check if wallet is on base-mainnet
+          if (addrStr.includes('base-mainnet') || (addrStr.includes('base') && !addrStr.includes('sepolia'))) {
+            wallet = w;
+            foundBaseWallet = true;
+            break;
+          }
+        } catch (e) {
+          // Skip wallets we can't access
+          continue;
+        }
+      }
+
+      if (!foundBaseWallet) {
         // Create new wallet on Base mainnet if none exists
+        console.log('Creating new wallet on base-mainnet...');
         wallet = await Wallet.create({ networkId: 'base-mainnet' });
       }
 
