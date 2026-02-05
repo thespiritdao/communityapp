@@ -1,6 +1,8 @@
 // src/app/api/chat-messages/route.ts
 import { NextResponse } from 'next/server';
 import { supabase } from '@/utils/supabaseClient';
+import { everyoneTagService } from '@/services/everyoneTagService';
+import { everyoneNotificationService } from '@/services/everyoneNotificationService';
 
 // Proof of Curiosity token for special access (same as ChatContainer.tsx)
 const POC =
@@ -153,6 +155,35 @@ export async function POST(request: Request) {
       '✅ Chat message POST: Permission validated, inserting message',
     );
 
+    // ✅ SECURITY: Step 5 - Check for @everyone tag and validate permission
+    let isEveryoneTag = false;
+    if (everyoneTagService.detectEveryoneTag(content)) {
+      console.log('🔔 Chat message POST: @everyone tag detected, checking permission...');
+
+      const everyoneValidation = await everyoneTagService.validateAndExtractEveryone(
+        content,
+        {
+          userWallet: sender_wallet_id,
+          chatGroupId: chat_group_id,
+          podId: pod_id,
+          contextType: 'chat',
+        },
+      );
+
+      if (!everyoneValidation.isValid) {
+        console.error('❌ Chat message POST: @everyone permission denied');
+        return NextResponse.json(
+          {
+            error: everyoneValidation.reason || 'You do not have permission to use @everyone in this chat',
+          },
+          { status: 403 },
+        );
+      }
+
+      isEveryoneTag = everyoneValidation.shouldNotify;
+      console.log('✅ Chat message POST: @everyone permission validated');
+    }
+
     // Insert the new message with its associated chat_group_id and inherited required_token
     const { data, error } = await supabase
       .from('messages')
@@ -163,14 +194,43 @@ export async function POST(request: Request) {
           sender_wallet_id,
           chat_group_id,
           required_token,
+          is_everyone_tag: isEveryoneTag,
           created_at: new Date().toISOString(),
         },
       ])
+      .select()
       .single();
 
     if (error) {
       console.error('❌ Chat message POST: Insert failed:', error);
       return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+
+    // ✅ NOTIFICATION: Send @everyone notifications if applicable
+    if (isEveryoneTag && data && pod_id) {
+      console.log('🔔 Chat message POST: Triggering @everyone notifications...');
+
+      // Get sender name and pod name for better notification context
+      const senderName = await everyoneNotificationService.getSenderName(sender_wallet_id);
+      const podName = await everyoneNotificationService.getPodName(pod_id);
+      const messagePreview = everyoneNotificationService.createMessagePreview(content);
+
+      // Send notifications asynchronously (don't block response)
+      everyoneNotificationService.sendEveryoneNotifications({
+        senderAddress: sender_wallet_id,
+        senderName,
+        messageContent: content,
+        messagePreview,
+        contextType: 'chat',
+        contextId: chat_group_id,
+        contextUrl: `/chat/${chat_group_id}`,
+        podId: pod_id,
+        podName,
+      }).then((result) => {
+        console.log(`✅ Chat message POST: @everyone notifications sent: ${result.sent} sent, ${result.failed} failed, ${result.skipped} skipped`);
+      }).catch((error) => {
+        console.error('❌ Chat message POST: @everyone notification error:', error);
+      });
     }
 
     console.log('✅ Chat message POST: Message sent successfully');

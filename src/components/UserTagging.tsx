@@ -184,19 +184,33 @@ export default function UserTagging({
       return;
     }
 
+    // Special handling for @everyone
+    const everyoneOption: ExtendedSuggestionDataItem = {
+      id: 'everyone',
+      display: 'everyone (notify all members)',
+    };
+
     if (query === '') {
-      console.log('Empty query, returning all users');
-      callback(users);
+      console.log('Empty query, returning all users + @everyone');
+      callback([everyoneOption, ...users]);
       return;
     }
 
+    // Check if query matches "everyone"
+    const everyoneMatch = 'everyone'.toLowerCase().includes(query.toLowerCase());
     const matchingUsers = users.filter(
       (user) =>
         user.display && user.display.toLowerCase().includes(query.toLowerCase()),
     );
 
-    console.log(`Found ${matchingUsers.length} matches for "${query}"`);
-    callback(matchingUsers);
+    console.log(`Found ${matchingUsers.length} user matches for "${query}"`);
+
+    // Return @everyone first if it matches, then regular users
+    const results = everyoneMatch
+      ? [everyoneOption, ...matchingUsers]
+      : matchingUsers;
+
+    callback(results);
   };
 
   const mentionsInputStyle = {
