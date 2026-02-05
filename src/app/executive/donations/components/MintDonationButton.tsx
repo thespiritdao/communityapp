@@ -52,11 +52,17 @@ export const MintDonationButton: React.FC<MintDonationButtonProps> = ({
     setIsMinting(true);
 
     try {
-      console.log('🪙 Minting $SYSTEM tokens (gasless):', {
-        recipient: recipientAddress,
-        amount,
-        donationId,
-      });
+      console.log('═══════════════════════════════════════════════════════════════');
+      console.log('🪙 MINTING $SYSTEM TOKENS (GASLESS)');
+      console.log('═══════════════════════════════════════════════════════════════');
+      console.log('Smart Wallet Address:', smartAccount);
+      console.log('Recipient:', recipientAddress);
+      console.log('Amount:', amount, '$SYSTEM');
+      console.log('Donation ID:', donationId);
+      console.log('═══════════════════════════════════════════════════════════════\n');
+      console.log('⚠️  IF THIS FAILS: Grant EXECUTIVE_ROLE to Smart Wallet above!');
+      console.log('   EXECUTIVE_ROLE = 0xe4eefbff6f5adc6b3fe0d11f14a3859decb3df1f4c82933fc6c1f8b498cc4a7d');
+      console.log('   Use Remix to call: grantRole(EXECUTIVE_ROLE, SMART_WALLET_ADDRESS)\n');
 
       // Convert amount to wei (18 decimals)
       const amountInWei = BigInt(Math.floor(amount * 1e18));

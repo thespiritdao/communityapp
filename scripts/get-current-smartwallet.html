@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Get Your Smart Wallet Address</title>
+  <style>
+    body {
+      font-family: monospace;
+      padding: 40px;
+      max-width: 800px;
+      margin: 0 auto;
+    }
+    .result {
+      background: #f5f5f5;
+      padding: 20px;
+      margin: 20px 0;
+      border-radius: 8px;
+    }
+    .address {
+      font-size: 16px;
+      font-weight: bold;
+      color: #2F5D50;
+      word-break: break-all;
+    }
+  </style>
+</head>
+<body>
+  <h1>🔍 Check Your Smart Wallet Address</h1>
+  <p>Go to https://app.spiritdao.org and open the browser console (F12)</p>
+  <p>Then paste this code:</p>
+
+  <div class="result">
+    <code>
+// Get your Smart Wallet address<br>
+const checkSmartWallet = async () => {<br>
+&nbsp;&nbsp;// Try to get from CDP hooks context<br>
+&nbsp;&nbsp;const user = window.__CDP_CURRENT_USER__; // May be exposed by CDP hooks<br>
+&nbsp;&nbsp;<br>
+&nbsp;&nbsp;if (user?.evmSmartAccounts?.[0]) {<br>
+&nbsp;&nbsp;&nbsp;&nbsp;console.log('✅ Smart Wallet:', user.evmSmartAccounts[0]);<br>
+&nbsp;&nbsp;&nbsp;&nbsp;return user.evmSmartAccounts[0];<br>
+&nbsp;&nbsp;}<br>
+&nbsp;&nbsp;<br>
+&nbsp;&nbsp;// Fallback: check localStorage<br>
+&nbsp;&nbsp;const keys = Object.keys(localStorage);<br>
+&nbsp;&nbsp;console.log('📦 LocalStorage keys:', keys);<br>
+&nbsp;&nbsp;<br>
+&nbsp;&nbsp;// Look for CDP-related keys<br>
+&nbsp;&nbsp;const cdpKeys = keys.filter(k => k.includes('cdp') || k.includes('coinbase') || k.includes('wallet'));<br>
+&nbsp;&nbsp;console.log('🔑 CDP-related keys:', cdpKeys);<br>
+&nbsp;&nbsp;<br>
+&nbsp;&nbsp;cdpKeys.forEach(key => {<br>
+&nbsp;&nbsp;&nbsp;&nbsp;try {<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;const value = localStorage.getItem(key);<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;console.log(`${key}:`, value);<br>
+&nbsp;&nbsp;&nbsp;&nbsp;} catch(e) {}<br>
+&nbsp;&nbsp;});<br>
+};<br>
+<br>
+checkSmartWallet();<br>
+    </code>
+  </div>
+
+  <h2>Or check wallet in app UI:</h2>
+  <ol>
+    <li>Go to https://app.spiritdao.org/executive/donations</li>
+    <li>Open browser console (F12)</li>
+    <li>Click "Mint $SYSTEM Tokens" button</li>
+    <li>The error will show which address is being used</li>
+  </ol>
+
+  <h2>Once you have your Smart Wallet address:</h2>
+  <p>Grant EXECUTIVE_ROLE using Remix:</p>
+  <pre>
+1. Go to Remix with SystemToken contract
+2. Call: grantRole(EXECUTIVE_ROLE, YOUR_SMART_WALLET_ADDRESS)
+3. EXECUTIVE_ROLE = 0xe4eefbff6f5adc6b3fe0d11f14a3859decb3df1f4c82933fc6c1f8b498cc4a7d
+  </pre>
+</body>
+</html>
