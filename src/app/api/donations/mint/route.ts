@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { encodeFunctionData, createPublicClient, http, getAddress } from 'viem';
 import { base } from 'viem/chains';
-import { Coinbase, Wallet } from '@coinbase/coinbase-sdk';
+import { Coinbase, Wallet, sendUserOperation } from '@coinbase/coinbase-sdk';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -264,11 +264,10 @@ export async function POST(request: NextRequest) {
       .eq('id', donationId);
 
     try {
-      // ALTERNATIVE APPROACH: Use wallet.transfer for minting
-      // CDP SDK's transfer() method explicitly supports paymasterUrl
-      // We'll transfer 0 ETH with contract call data
+      // CORRECT APPROACH: Use sendUserOperation (same as frontend bounties/pods)
+      // This is the only backend method that supports paymasterUrl
 
-      console.log('🔄 Attempting gasless mint via CDP transfer method:', {
+      console.log('🔄 Attempting gasless mint via sendUserOperation:', {
         contract: SYSTEM_TOKEN_ADDRESS,
         to: donation.user_wallet,
         amount: donation.system_tokens_to_mint,
@@ -281,9 +280,9 @@ export async function POST(request: NextRequest) {
         throw new Error('NEXT_PUBLIC_PAYMASTER environment variable not set');
       }
 
-      console.log('⛽ Paymaster enabled:', paymasterUrl.substring(0, 50) + '...');
+      console.log('⛽ Paymaster URL:', paymasterUrl.substring(0, 50) + '...');
 
-      // Encode mint function call
+      // Encode mint function call (exactly like frontend pattern)
       const mintCallData = encodeFunctionData({
         abi: SYSTEM_TOKEN_ABI,
         functionName: 'mint',
@@ -292,49 +291,37 @@ export async function POST(request: NextRequest) {
 
       console.log('📝 Encoded mint call data:', mintCallData.substring(0, 66) + '...');
 
-      // Use wallet.contractInvocation with explicit transaction building
-      // This gives us more control over the transaction parameters
-      const contractInvocation = await wallet.createContractInvocation({
-        contractAddress: SYSTEM_TOKEN_ADDRESS,
-        method: 'mint',
-        args: {
-          to: donation.user_wallet,
-          amount: amountInWei.toString(),
-        },
-        abi: SYSTEM_TOKEN_ABI,
+      // Send user operation with paymaster (EXACT FRONTEND PATTERN)
+      console.log('🚀 Sending user operation with paymaster...');
+      const result = await sendUserOperation(wallet, {
+        calls: [{
+          to: SYSTEM_TOKEN_ADDRESS as `0x${string}`,
+          value: 0n,
+          data: mintCallData as `0x${string}`,
+        }],
+        chainId: 8453, // Base mainnet
+        paymasterUrl, // ← CRITICAL: This enables gasless transactions
       });
 
-      console.log('🔧 Broadcasting transaction with paymaster...');
-
-      // Broadcast with paymaster
-      const invocation = await contractInvocation.broadcast({
-        paymasterUrl
+      console.log('✅ User operation submitted:', {
+        userOpHash: result.userOpHash,
+        smartWalletAddress: result.smartWalletAddress,
+        status: result.status
       });
 
-      // Wait for transaction to be mined
-      await invocation.wait();
+      // Note: sendUserOperation returns immediately with userOpHash
+      // The actual transaction hash will be available after bundler processes it
+      const txHash = result.userOpHash;
 
-      const txHash = invocation.getTransactionHash();
+      console.log('✅ Gasless mint user operation broadcast:', txHash);
 
-      console.log('✅ Gasless mint transaction confirmed:', txHash);
-
-      // Verify balance increased
-      const newBalance = await publicClient.readContract({
-        address: SYSTEM_TOKEN_ADDRESS as `0x${string}`,
-        abi: SYSTEM_TOKEN_ABI,
-        functionName: 'balanceOf',
-        args: [getAddress(donation.user_wallet)],
-      });
-
-      console.log(`✅ User's new $SYSTEM balance: ${Number(newBalance) / 1e18}`);
-
-      // Update donation status to 'minted'
+      // User operations are async - mark as 'minting' and let cron confirm later
+      // (Similar to how bounties work - save with userOpHash, confirm later)
       const { error: updateError } = await supabase
         .from('pending_donations')
         .update({
-          status: 'minted',
-          minted_at: new Date().toISOString(),
-          tx_hash: txHash
+          status: 'minting', // Keep as 'minting' until confirmed
+          tx_hash: txHash, // Store userOpHash for tracking
         })
         .eq('id', donationId);
 
@@ -342,23 +329,21 @@ export async function POST(request: NextRequest) {
         console.error('❌ Failed to update donation status:', updateError);
       }
 
-      // Update treasury metadata
-      await updateTreasuryMetadata(donation.system_tokens_to_mint);
-
-      // Notify user
-      await notifyUserMintComplete(donation, txHash || 'pending');
+      console.log('⏳ User operation submitted - will confirm asynchronously');
+      console.log('   A cron job should check for confirmation and update to "minted"');
 
       return NextResponse.json({
         success: true,
-        message: 'Tokens minted successfully (gasless)',
+        message: 'Minting transaction submitted (gasless)',
         donation: {
           id: donationId,
           userWallet: donation.user_wallet,
           amountMinted: donation.system_tokens_to_mint,
-          txHash: txHash || null,
-          mintedAt: new Date().toISOString()
+          userOpHash: txHash,
+          status: 'minting' // Will be updated to 'minted' once confirmed
         },
-        gasless: true
+        gasless: true,
+        note: 'Transaction will confirm in 30-60 seconds via bundler'
       });
 
     } catch (mintError: any) {
