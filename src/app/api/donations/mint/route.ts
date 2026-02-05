@@ -216,58 +216,25 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Get or create wallet for minting
-    // NOTE: This uses the CDP_API_KEY wallet, which must have EXECUTIVE_ROLE
+    // Import persistent wallet for minting
+    // NOTE: This wallet has EXECUTIVE_ROLE on SystemToken contract
     let wallet: Wallet;
 
     try {
-      // Try to get default wallet on Base mainnet
-      const walletsResult = await Wallet.listWallets();
+      // Import wallet from environment variable (set in Vercel)
+      const walletData = process.env.MINTING_WALLET_DATA;
 
-      // Convert to array if it's not already
-      const wallets = Array.isArray(walletsResult) ? walletsResult : [];
-
-      // Look for existing wallet on Base mainnet
-      let foundBaseWallet = false;
-      for (const w of wallets) {
-        try {
-          const addr = await w.getDefaultAddress();
-          const addrStr = addr.toString();
-
-          // Check if wallet is on base-mainnet
-          if (addrStr.includes('base-mainnet') || (addrStr.includes('base') && !addrStr.includes('sepolia'))) {
-            wallet = w;
-            foundBaseWallet = true;
-            break;
-          }
-        } catch (e) {
-          // Skip wallets we can't access
-          continue;
-        }
+      if (!walletData) {
+        throw new Error('MINTING_WALLET_DATA environment variable not set');
       }
 
-      if (!foundBaseWallet) {
-        // Create new wallet on Base mainnet if none exists
-        console.log('Creating new wallet on base-mainnet...');
-        wallet = await Wallet.create({ networkId: 'base-mainnet' });
-      }
+      const walletConfig = JSON.parse(walletData);
+      wallet = await Wallet.import(walletConfig);
 
       const walletAddress = await wallet.getDefaultAddress();
-      const walletAddressStr = walletAddress.toString();
+      const walletAddressStr = walletAddress.getId();
 
-      console.log('═══════════════════════════════════════════════════════════════');
-      console.log('💼 MINTING WALLET ADDRESS (Grant EXECUTIVE_ROLE to this address)');
-      console.log('═══════════════════════════════════════════════════════════════');
-      console.log(`   ${walletAddressStr}`);
-      console.log('═══════════════════════════════════════════════════════════════');
-
-      // Store wallet address in database for reference
-      await supabase
-        .from('pending_donations')
-        .update({
-          failure_reason: `Minting wallet: ${walletAddressStr}`
-        })
-        .eq('id', donationId);
+      console.log('💼 Using minting wallet:', walletAddressStr);
     } catch (error: any) {
       console.error('❌ Failed to get CDP wallet:', error);
       return NextResponse.json(

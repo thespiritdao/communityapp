@@ -99,3 +99,4 @@ src/guides/Instructional/
 # Error logs and debugging files
 **/errors.txt
 **/errors*.txt
+.wallet-data.json
