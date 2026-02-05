@@ -295,15 +295,22 @@ export async function POST(request: NextRequest) {
       });
 
       // Invoke contract via CDP Smart Account (gasless via paymaster)
+      console.log('🔄 Invoking mint contract:', {
+        contract: SYSTEM_TOKEN_ADDRESS,
+        to: donation.user_wallet,
+        amount: amountInWei.toString(),
+        network: 'base-mainnet'
+      });
+
+      // Args should be a JSON string with the parameters
       const invocation = await wallet.invokeContract({
         contractAddress: SYSTEM_TOKEN_ADDRESS,
         method: 'mint',
-        args: {
+        args: JSON.stringify({
           to: donation.user_wallet,
           amount: amountInWei.toString(),
-        },
+        }),
         abi: SYSTEM_TOKEN_ABI,
-        gasless: true, // Enable paymaster sponsorship
       });
 
       // Wait for transaction to be mined
