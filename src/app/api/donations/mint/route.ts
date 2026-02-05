@@ -281,6 +281,14 @@ export async function POST(request: NextRequest) {
 
       // Invoke contract with proper args format
       // CDP SDK expects args as a mapping object (not stringified)
+      // CRITICAL: Paymaster URL enables gasless transactions
+      const paymasterUrl = process.env.NEXT_PUBLIC_PAYMASTER;
+
+      console.log('⛽ Paymaster configuration:', {
+        hasPaymaster: !!paymasterUrl,
+        paymasterUrl: paymasterUrl ? `${paymasterUrl.substring(0, 50)}...` : 'not set'
+      });
+
       const invocation = await wallet.invokeContract({
         contractAddress: SYSTEM_TOKEN_ADDRESS,
         method: 'mint',
@@ -289,6 +297,7 @@ export async function POST(request: NextRequest) {
           amount: amountInWei.toString(),
         },
         abi: SYSTEM_TOKEN_ABI,
+        ...(paymasterUrl && { paymasterUrl }), // Add paymaster if available
       });
 
       // Wait for transaction to be mined
