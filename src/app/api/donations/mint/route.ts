@@ -264,6 +264,25 @@ export async function POST(request: NextRequest) {
       .eq('id', donationId);
 
     try {
+      // ALTERNATIVE APPROACH: Use wallet.transfer for minting
+      // CDP SDK's transfer() method explicitly supports paymasterUrl
+      // We'll transfer 0 ETH with contract call data
+
+      console.log('🔄 Attempting gasless mint via CDP transfer method:', {
+        contract: SYSTEM_TOKEN_ADDRESS,
+        to: donation.user_wallet,
+        amount: donation.system_tokens_to_mint,
+        network: 'base-mainnet'
+      });
+
+      const paymasterUrl = process.env.NEXT_PUBLIC_PAYMASTER;
+
+      if (!paymasterUrl) {
+        throw new Error('NEXT_PUBLIC_PAYMASTER environment variable not set');
+      }
+
+      console.log('⛽ Paymaster enabled:', paymasterUrl.substring(0, 50) + '...');
+
       // Encode mint function call
       const mintCallData = encodeFunctionData({
         abi: SYSTEM_TOKEN_ABI,
@@ -271,25 +290,11 @@ export async function POST(request: NextRequest) {
         args: [getAddress(donation.user_wallet), amountInWei],
       });
 
-      // Invoke contract via CDP Smart Account (gasless via paymaster)
-      console.log('🔄 Invoking mint contract:', {
-        contract: SYSTEM_TOKEN_ADDRESS,
-        to: donation.user_wallet,
-        amount: amountInWei.toString(),
-        network: 'base-mainnet'
-      });
+      console.log('📝 Encoded mint call data:', mintCallData.substring(0, 66) + '...');
 
-      // Invoke contract with proper args format
-      // CDP SDK expects args as a mapping object (not stringified)
-      // CRITICAL: Paymaster URL enables gasless transactions
-      const paymasterUrl = process.env.NEXT_PUBLIC_PAYMASTER;
-
-      console.log('⛽ Paymaster configuration:', {
-        hasPaymaster: !!paymasterUrl,
-        paymasterUrl: paymasterUrl ? `${paymasterUrl.substring(0, 50)}...` : 'not set'
-      });
-
-      const invocation = await wallet.invokeContract({
+      // Use wallet.contractInvocation with explicit transaction building
+      // This gives us more control over the transaction parameters
+      const contractInvocation = await wallet.createContractInvocation({
         contractAddress: SYSTEM_TOKEN_ADDRESS,
         method: 'mint',
         args: {
@@ -297,7 +302,13 @@ export async function POST(request: NextRequest) {
           amount: amountInWei.toString(),
         },
         abi: SYSTEM_TOKEN_ABI,
-        ...(paymasterUrl && { paymasterUrl }), // Add paymaster if available
+      });
+
+      console.log('🔧 Broadcasting transaction with paymaster...');
+
+      // Broadcast with paymaster
+      const invocation = await contractInvocation.broadcast({
+        paymasterUrl
       });
 
       // Wait for transaction to be mined
