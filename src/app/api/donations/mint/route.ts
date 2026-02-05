@@ -279,14 +279,15 @@ export async function POST(request: NextRequest) {
         network: 'base-mainnet'
       });
 
-      // Args should be a JSON string with the parameters
+      // Invoke contract with proper args format
+      // CDP SDK expects args as a mapping object (not stringified)
       const invocation = await wallet.invokeContract({
         contractAddress: SYSTEM_TOKEN_ADDRESS,
         method: 'mint',
-        args: JSON.stringify({
+        args: {
           to: donation.user_wallet,
           amount: amountInWei.toString(),
-        }),
+        },
         abi: SYSTEM_TOKEN_ABI,
       });
 
