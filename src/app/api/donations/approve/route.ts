@@ -240,37 +240,10 @@ export async function POST(request: NextRequest) {
         console.error('❌ Failed to update donation status:', statusUpdateError);
       }
 
-      // Trigger backend minting service
-      try {
-        console.log('🔄 Calling minting service for donation:', donationId);
-        const mintResponse = await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/donations/mint`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY}`
-          },
-          body: JSON.stringify({ donationId })
-        });
-
-        if (!mintResponse.ok) {
-          const errorData = await mintResponse.json();
-          console.error('❌ Minting service returned error:', {
-            status: mintResponse.status,
-            statusText: mintResponse.statusText,
-            errorData
-          });
-          // Don't fail the approval - minting can be retried via cron
-        } else {
-          const mintData = await mintResponse.json();
-          console.log('✅ Minting triggered successfully:', mintData);
-        }
-      } catch (mintError: any) {
-        console.error('❌ Failed to trigger minting service:', {
-          message: mintError.message,
-          stack: mintError.stack
-        });
-        // Don't fail the approval - minting can be retried via cron
-      }
+      // MINTING NOW HAPPENS ON FRONTEND (not backend)
+      // Executive will see "Mint $SYSTEM Tokens" button on dashboard
+      // When clicked, their Smart Wallet will execute gasless mint transaction
+      console.log('✅ Donation approved! Executive can now mint tokens via frontend dashboard.');
 
       return NextResponse.json({
         success: true,
