@@ -253,11 +253,21 @@ export async function POST(request: NextRequest) {
       }
 
       const walletAddress = await wallet.getDefaultAddress();
+      const walletAddressStr = walletAddress.toString();
+
       console.log('═══════════════════════════════════════════════════════════════');
       console.log('💼 MINTING WALLET ADDRESS (Grant EXECUTIVE_ROLE to this address)');
       console.log('═══════════════════════════════════════════════════════════════');
-      console.log(`   ${walletAddress}`);
+      console.log(`   ${walletAddressStr}`);
       console.log('═══════════════════════════════════════════════════════════════');
+
+      // Store wallet address in database for reference
+      await supabase
+        .from('pending_donations')
+        .update({
+          failure_reason: `Minting wallet: ${walletAddressStr}`
+        })
+        .eq('id', donationId);
     } catch (error: any) {
       console.error('❌ Failed to get CDP wallet:', error);
       return NextResponse.json(
