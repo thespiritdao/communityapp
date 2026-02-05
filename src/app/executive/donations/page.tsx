@@ -5,6 +5,7 @@ import { useEvmAddress } from '@coinbase/cdp-hooks';
 import { toast } from 'react-hot-toast';
 import { formatDistanceToNow } from 'date-fns';
 import { useCDPStatus } from '@/hooks/useCDPStatus';
+import { MintDonationButton } from './components/MintDonationButton';
 
 interface Donation {
   id: string;
@@ -298,8 +299,27 @@ export default function ExecutiveDonationsDashboard() {
                         </div>
                       )}
                       {donation.status === 'pending_mint' && (
-                        <div className="text-center text-sm text-green-600 dark:text-green-400 font-semibold">
-                          ✓ Approved - Minting Soon
+                        <div className="space-y-2">
+                          <MintDonationButton
+                            donationId={donation.id}
+                            recipientAddress={donation.user_wallet}
+                            amount={donation.system_tokens_to_mint}
+                            onSuccess={() => {
+                              toast.success('Minting transaction submitted!');
+                              fetchDonations(); // Refresh list
+                            }}
+                            onError={(error) => {
+                              toast.error(`Minting failed: ${error}`);
+                            }}
+                          />
+                          <p className="text-xs text-center text-gray-600 dark:text-gray-400">
+                            Click to mint tokens (gasless)
+                          </p>
+                        </div>
+                      )}
+                      {donation.status === 'minting' && (
+                        <div className="text-center text-sm text-blue-600 dark:text-blue-400 font-semibold">
+                          ⏳ Minting in progress...
                         </div>
                       )}
                       {donation.status === 'minted' && (
