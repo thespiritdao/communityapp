@@ -21,33 +21,49 @@ export async function POST(request: Request) {
   }
 
   try {
-    // Create server-side Supabase client with cookie access
-    const cookieStore = await cookies();
+    // For embedded wallet apps, session is stored in localStorage, not cookies
+    // Get the access token from Authorization header
+    const authHeader = request.headers.get('Authorization');
+    const accessToken = authHeader?.replace('Bearer ', '');
+
+    console.log('🔐 Chat API: Auth header present:', !!authHeader);
+    console.log('🔐 Chat API: Access token present:', !!accessToken);
+
+    if (!accessToken) {
+      console.error('❌ Chat API: No access token in Authorization header');
+      return NextResponse.json(
+        { error: 'Unauthorized - No access token provided' },
+        { status: 401 },
+      );
+    }
+
+    // Create Supabase client with the provided access token
     const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
       {
-        auth: {
-          storage: {
-            getItem: (key: string) => {
-              const cookie = cookieStore.get(key);
-              return cookie?.value || null;
-            },
-            setItem: () => {},
-            removeItem: () => {},
+        global: {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
           },
         },
       }
     );
 
-    // ✅ SECURITY: Step 1 - Verify authenticated session
-    const { data: sessionData, error: sessionError } =
-      await supabase.auth.getSession();
+    // ✅ SECURITY: Step 1 - Verify authenticated session by getting user
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
 
-    if (sessionError || !sessionData?.session) {
-      console.error('❌ Chat message POST: No authenticated session');
+    console.log('🔐 Chat API: User check:', {
+      hasUser: !!user,
+      userId: user?.id,
+      hasError: !!userError,
+      error: userError?.message,
+    });
+
+    if (userError || !user) {
+      console.error('❌ Chat message POST: Invalid or expired token');
       return NextResponse.json(
-        { error: 'Unauthorized - Please sign in' },
+        { error: 'Unauthorized - Invalid or expired session' },
         { status: 401 },
       );
     }
@@ -56,7 +72,7 @@ export async function POST(request: Request) {
     const { data: userProfile } = await supabase
       .from('user_profiles')
       .select('wallet_address')
-      .eq('user_id', sessionData.session.user.id)
+      .eq('user_id', user.id)
       .single();
 
     if (

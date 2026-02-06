@@ -455,11 +455,19 @@ export default function ChatContainer({ chatGroupId }: ChatContainerProps) {
         messageData,
       );
 
+      // Get current session token to send to API
+      const { data: { session: currentSession } } = await supabase.auth.getSession();
+      const accessToken = currentSession?.access_token;
+
+      console.log('📤 ChatContainer: Has access token:', !!accessToken);
+
       // Send message via API route (handles @everyone validation and notifications)
       const response = await fetch('/api/chat-messages', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          // Send authorization header with session token
+          ...(accessToken && { 'Authorization': `Bearer ${accessToken}` }),
         },
         credentials: 'include', // ✅ Send session cookies for authentication
         body: JSON.stringify(messageData),
