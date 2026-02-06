@@ -132,7 +132,7 @@ function NotificationCard({
       case 'medium':
         return 'border-l-blue-500 bg-blue-50';
       case 'low':
-        return 'border-l-gray-500 bg-gray-50';
+        return 'border-l-gray-500 bg-white';
       default:
         return 'border-l-blue-500 bg-white';
     }
@@ -280,7 +280,7 @@ export default function UnifiedNotificationsPage() {
 
   if (!address) {
     return (
-      <div className="min-h-screen bg-gray-50 p-4">
+      <div className="min-h-screen p-4">
         <div className="max-w-4xl mx-auto">
           <h1 className="text-2xl font-bold mb-4">Notifications</h1>
           <p className="text-gray-600">
@@ -293,7 +293,7 @@ export default function UnifiedNotificationsPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 p-4">
+      <div className="min-h-screen p-4">
         <div className="max-w-4xl mx-auto">
           <div className="animate-pulse">
             <div className="h-8 bg-gray-200 rounded w-1/3 mb-6"></div>
@@ -310,7 +310,7 @@ export default function UnifiedNotificationsPage() {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gray-50 p-4">
+      <div className="min-h-screen p-4">
         <div className="max-w-4xl mx-auto">
           <h1 className="text-2xl font-bold mb-4">Notifications</h1>
           <div className="bg-red-50 border border-red-200 rounded-lg p-4">
@@ -338,7 +338,7 @@ export default function UnifiedNotificationsPage() {
   });
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4 bottom-nav-spacing">
+    <div className="min-h-screen p-4 bottom-nav-spacing">
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <div className="flex justify-between items-center mb-6">

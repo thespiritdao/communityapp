@@ -187,7 +187,7 @@ export default function UserTagging({
     // Special handling for @everyone
     const everyoneOption: ExtendedSuggestionDataItem = {
       id: 'everyone',
-      display: 'everyone (notify all members)',
+      display: 'everyone',
     };
 
     if (query === '') {

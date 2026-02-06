@@ -198,6 +198,13 @@ self.addEventListener('push', (event) => {
       tag: notificationData.tag,
       requireInteraction: notificationData.requireInteraction,
       actions: notificationData.actions,
+    }).then(() => {
+      // Update app icon badge when push notification received
+      if ('setAppBadge' in navigator) {
+        // Increment badge count (you can track actual count in IndexedDB if needed)
+        navigator.setAppBadge();
+        console.log('[SW] App icon badge updated');
+      }
     })
   );
 });
@@ -213,6 +220,12 @@ self.addEventListener('notificationclick', (event) => {
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true })
       .then((clientList) => {
+        // Clear app badge when user interacts with notification
+        if ('clearAppBadge' in navigator) {
+          navigator.clearAppBadge();
+          console.log('[SW] App icon badge cleared');
+        }
+
         // Check if app is already open
         for (const client of clientList) {
           if (client.url === urlToOpen && 'focus' in client) {

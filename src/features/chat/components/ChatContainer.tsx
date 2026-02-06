@@ -451,29 +451,36 @@ export default function ChatContainer({ chatGroupId }: ChatContainerProps) {
       };
 
       console.log(
-        '📤 ChatContainer: Attempting to insert message:',
+        '📤 ChatContainer: Attempting to send message via API:',
         messageData,
       );
 
-      // Insert the message
-      const { data, error } = await supabase
-        .from(TABLE_NAME)
-        .insert(messageData)
-        .select();
+      // Send message via API route (handles @everyone validation and notifications)
+      const response = await fetch('/api/chat-messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(messageData),
+      });
 
-      if (error) {
+      if (!response.ok) {
+        const errorData = await response.json();
         console.error('❌ ChatContainer: Error sending message:', {
-          error,
-          errorCode: error.code,
-          errorMessage: error.message,
-          errorDetails: error.details,
-          errorHint: error.hint,
+          status: response.status,
+          error: errorData.error,
           messageData,
         });
+
+        // Show permission error to user if @everyone was denied
+        if (response.status === 403 && errorData.error?.includes('@everyone')) {
+          alert(errorData.error);
+        }
         return;
       }
 
-      console.log('✅ ChatContainer: Message inserted successfully:', data);
+      const { message: data } = await response.json();
+      console.log('✅ ChatContainer: Message sent successfully via API:', data);
 
       // Process mentions from UserTagging component (not extracted from text)
       if (mentions && mentions.length > 0) {
@@ -481,6 +488,12 @@ export default function ChatContainer({ chatGroupId }: ChatContainerProps) {
 
         // Create notifications for each mentioned user
         for (const mention of mentions) {
+          // Skip @everyone - it's handled by the API route
+          if (mention.id === 'everyone') {
+            console.log('ChatContainer: Skipping @everyone (handled by API)');
+            continue;
+          }
+
           console.log('ChatContainer: Processing mention:', {
             mentionId: mention.id,
             mentionIdLower: mention.id.toLowerCase(),
