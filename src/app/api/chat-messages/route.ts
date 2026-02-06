@@ -1,6 +1,7 @@
 // src/app/api/chat-messages/route.ts
 import { NextResponse } from 'next/server';
-import { supabase } from '@/utils/supabaseClient';
+import { createClient } from '@supabase/supabase-js';
+import { cookies } from 'next/headers';
 import { everyoneTagService } from '@/services/everyoneTagService';
 import { everyoneNotificationService } from '@/services/everyoneNotificationService';
 
@@ -20,6 +21,25 @@ export async function POST(request: Request) {
   }
 
   try {
+    // Create server-side Supabase client with cookie access
+    const cookieStore = await cookies();
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        auth: {
+          storage: {
+            getItem: (key: string) => {
+              const cookie = cookieStore.get(key);
+              return cookie?.value || null;
+            },
+            setItem: () => {},
+            removeItem: () => {},
+          },
+        },
+      }
+    );
+
     // ✅ SECURITY: Step 1 - Verify authenticated session
     const { data: sessionData, error: sessionError } =
       await supabase.auth.getSession();
