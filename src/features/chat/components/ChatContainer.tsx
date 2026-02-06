@@ -461,6 +461,7 @@ export default function ChatContainer({ chatGroupId }: ChatContainerProps) {
         headers: {
           'Content-Type': 'application/json',
         },
+        credentials: 'include', // ✅ Send session cookies for authentication
         body: JSON.stringify(messageData),
       });
 
