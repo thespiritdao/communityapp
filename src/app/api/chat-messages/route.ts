@@ -12,7 +12,6 @@ const BETA_TESTER_HAT =
   process.env.NEXT_PUBLIC_BETA_TESTER_HAT?.toLowerCase() || '';
 const ADVOCATE_TOKEN =
   process.env.NEXT_PUBLIC_ADVOCATE?.toLowerCase() || '';
-const GENERAL_CHAT_TOKEN = '0x246Cf64b9aE5d63207242Dbd466F3628d14746FF'.toLowerCase();
 
 export async function POST(request: Request) {
   const body = await request.json();
@@ -42,7 +41,7 @@ export async function POST(request: Request) {
       );
     }
 
-    // Create Supabase client with the provided access token
+    // Create Supabase client with the provided access token (for user auth)
     const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -51,6 +50,18 @@ export async function POST(request: Request) {
           headers: {
             Authorization: `Bearer ${accessToken}`,
           },
+        },
+      }
+    );
+
+    // Create service role client for permission checks (bypasses RLS)
+    const supabaseAdmin = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!,
+      {
+        auth: {
+          autoRefreshToken: false,
+          persistSession: false,
         },
       }
     );
@@ -97,10 +108,10 @@ export async function POST(request: Request) {
 
     console.log('✅ Chat message POST: User authenticated:', sender_wallet_id);
 
-    // Fetch the chat group's required token and pod_id
-    const { data: groupData, error: groupError } = await supabase
+    // Fetch the chat group's required token, pod_id, and access_level (using admin to bypass RLS)
+    const { data: groupData, error: groupError } = await supabaseAdmin
       .from('chat_groups')
-      .select('required_token, pod_id, title')
+      .select('required_token, pod_id, title, access_level')
       .eq('id', chat_group_id)
       .single();
 
@@ -113,14 +124,22 @@ export async function POST(request: Request) {
 
     const required_token = groupData.required_token?.toLowerCase() || '';
     const pod_id = groupData.pod_id;
+    const access_level = groupData.access_level;
 
     console.log('📋 Chat message POST: Validating access to', groupData.title, {
       required_token: required_token.slice(0, 10) + '...',
       pod_id: pod_id,
+      access_level: access_level,
     });
 
     // ✅ SECURITY: Step 3 - Check if user has permission to send messages
     let hasPermission = false;
+
+    // ✅ Check access_level from database - "both" means open to all authenticated users
+    if (access_level === 'both' || access_level === 'public') {
+      console.log('✅ Chat message POST: Chat has open access_level:', access_level);
+      hasPermission = true;
+    }
 
     console.log('🔐 Chat message POST: Starting permission checks:', {
       required_token: required_token.slice(0, 10) + '...',
@@ -133,7 +152,7 @@ export async function POST(request: Request) {
     // Special case: Proof of Curiosity token grants direct access
     if (required_token === POC) {
       console.log('🔍 Chat message POST: Checking PoC token balance...');
-      const { data: balanceData, error: balanceError } = await supabase
+      const { data: balanceData, error: balanceError } = await supabaseAdmin
         .from('token_balances')
         .select('balance')
         .eq('wallet_address', sender_wallet_id.toLowerCase())
@@ -156,7 +175,7 @@ export async function POST(request: Request) {
     // Special case: Beta Tester Hat grants access to Beta Tester chat
     if (!hasPermission && required_token === BETA_TESTER_HAT) {
       console.log('🔍 Chat message POST: Checking Beta Tester Hat balance...');
-      const { data: balanceData, error: balanceError } = await supabase
+      const { data: balanceData, error: balanceError } = await supabaseAdmin
         .from('token_balances')
         .select('balance')
         .eq('wallet_address', sender_wallet_id.toLowerCase())
@@ -176,32 +195,11 @@ export async function POST(request: Request) {
       }
     }
 
-    // Special case: Beta Tester Hat also grants access to General chat (for testing)
-    if (!hasPermission && required_token === GENERAL_CHAT_TOKEN) {
-      console.log('🔍 Chat message POST: Checking Beta Tester access for General chat...');
-      const { data: balanceData, error: balanceError } = await supabase
-        .from('token_balances')
-        .select('balance')
-        .eq('wallet_address', sender_wallet_id.toLowerCase())
-        .eq('contract_address', BETA_TESTER_HAT)
-        .gt('balance', 0)
-        .single();
-
-      console.log('🔍 Chat message POST: Beta Tester for General chat query result:', {
-        hasBalance: !!balanceData,
-        error: balanceError?.message,
-      });
-
-      if (balanceData) {
-        hasPermission = true;
-        console.log('✅ Chat message POST: User has Beta Tester Hat (General chat access)');
-      }
-    }
 
     // Special case: Advocate token grants access to Advocate chat
     if (!hasPermission && required_token === ADVOCATE_TOKEN) {
       console.log('🔍 Chat message POST: Checking Advocate token balance...');
-      const { data: balanceData, error: balanceError } = await supabase
+      const { data: balanceData, error: balanceError } = await supabaseAdmin
         .from('token_balances')
         .select('balance')
         .eq('wallet_address', sender_wallet_id.toLowerCase())
@@ -224,8 +222,8 @@ export async function POST(request: Request) {
     // Check pod-based permissions via active_pod_members and role permissions
     if (!hasPermission && pod_id) {
       console.log('🔍 Chat message POST: Checking pod membership...');
-      // Get user's membership in this pod
-      const { data: membership, error: membershipError } = await supabase
+      // Get user's membership in this pod (using admin to bypass RLS)
+      const { data: membership, error: membershipError } = await supabaseAdmin
         .from('active_pod_members')
         .select('hat_id, membership_type')
         .eq('pod_id', pod_id)
@@ -246,36 +244,53 @@ export async function POST(request: Request) {
           type: membership.membership_type,
         });
 
-        // Get role permissions for this HAT
-        const { data: rolePermissions, error: roleError } = await supabase
+        // ✅ FIX: Get ALL role permissions for this pod, then check if user's hat has chatAccess
+        // This handles hierarchical roles (e.g., leadership hat vs membership hat)
+        // Using admin client to bypass RLS
+        const { data: allRolePermissions, error: roleError } = await supabaseAdmin
           .from('pod_role_permissions')
-          .select('permissions, role_name')
-          .eq('pod_id', pod_id)
-          .eq('token_address', membership.hat_id)
-          .single();
+          .select('permissions, role_name, token_address')
+          .eq('pod_id', pod_id);
 
-        console.log('🔍 Chat message POST: Role permissions query result:', {
-          hasRole: !!rolePermissions,
-          role_name: rolePermissions?.role_name,
-          error: roleError?.message,
-        });
+        console.log('🔍 Chat message POST: Found', allRolePermissions?.length || 0, 'roles in pod');
 
-        if (rolePermissions) {
-          const permissions =
-            typeof rolePermissions.permissions === 'string'
-              ? JSON.parse(rolePermissions.permissions)
-              : rolePermissions.permissions;
+        if (allRolePermissions && allRolePermissions.length > 0) {
+          // Find the role matching user's hat_id
+          const userRole = allRolePermissions.find(
+            role => role.token_address?.toLowerCase() === membership.hat_id?.toLowerCase()
+          );
 
-          hasPermission = permissions.chatAccess === true;
-
-          console.log('🔐 Chat message POST: Permission check:', {
-            role: rolePermissions.role_name,
-            chatAccess: permissions.chatAccess,
-            allPermissions: Object.keys(permissions),
-            hasPermission,
+          console.log('🔍 Chat message POST: User role lookup:', {
+            userHatId: membership.hat_id?.slice(0, 10) + '...',
+            foundRole: !!userRole,
+            roleName: userRole?.role_name,
+            availableRoles: allRolePermissions.map(r => ({
+              name: r.role_name,
+              token: r.token_address?.slice(0, 10) + '...'
+            })),
           });
+
+          if (userRole) {
+            const permissions =
+              typeof userRole.permissions === 'string'
+                ? JSON.parse(userRole.permissions)
+                : userRole.permissions;
+
+            hasPermission = permissions.chatAccess === true;
+
+            console.log('🔐 Chat message POST: Permission check:', {
+              role: userRole.role_name,
+              chatAccess: permissions.chatAccess,
+              allPermissions: Object.keys(permissions),
+              hasPermission,
+            });
+          } else {
+            console.log('⚠️ Chat message POST: User hat not found in pod role permissions');
+            console.log('🔍 Chat message POST: Chat required_token:', required_token.slice(0, 10) + '...');
+            console.log('🔍 Chat message POST: User hat_id:', membership.hat_id?.slice(0, 10) + '...');
+          }
         } else {
-          console.log('⚠️ Chat message POST: No role permissions found for hat_id:', membership.hat_id);
+          console.log('⚠️ Chat message POST: No role permissions found for pod');
         }
       } else {
         console.log('⚠️ Chat message POST: No pod membership found');
@@ -287,10 +302,26 @@ export async function POST(request: Request) {
     // ✅ SECURITY: Step 4 - Reject if no permission
     if (!hasPermission) {
       console.error('❌ Chat message POST: User lacks chatAccess permission');
+      console.error('❌ Permission denied summary:', {
+        chatTitle: groupData.title,
+        requiredToken: required_token,
+        accessLevel: access_level,
+        podId: pod_id,
+        userWallet: sender_wallet_id,
+        checkedPoC: required_token === POC,
+        checkedBetaTester: required_token === BETA_TESTER_HAT,
+        checkedAdvocate: required_token === ADVOCATE_TOKEN,
+        checkedPodMembership: !!pod_id,
+      });
       return NextResponse.json(
         {
           error:
             'Forbidden - You do not have permission to send messages in this chat',
+          debug: {
+            chatTitle: groupData.title,
+            requiredToken: required_token.slice(0, 10) + '...',
+            hasPodId: !!pod_id,
+          }
         },
         { status: 403 },
       );
@@ -331,15 +362,14 @@ export async function POST(request: Request) {
 
     // Insert the new message with its associated chat_group_id and inherited required_token
     const { data, error } = await supabase
-      .from('messages')
+      .from('chat_messages')
       .insert([
         {
           content,
-          attachments: attachments || [],
           sender_wallet_id,
           chat_group_id,
           required_token,
-          is_everyone_tag: isEveryoneTag,
+          attachments: JSON.stringify(attachments || []),
           created_at: new Date().toISOString(),
         },
       ])
