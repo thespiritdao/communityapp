@@ -3,7 +3,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useSendUserOperation, useCurrentUser } from '@coinbase/cdp-hooks';
 import { usePublicClient } from 'wagmi';
-import { useRouter } from 'next/navigation';
 import { formatEther, encodeFunctionData } from 'viem';
 import { Droplets, Clock, CheckCircle, XCircle, Loader2 } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
@@ -83,7 +82,6 @@ export default function FaucetPage() {
   const publicClient = usePublicClient();
   const { toast } = useToast();
   const { refreshBalances } = useTokenBalances();
-  const router = useRouter();
 
   const [canClaim, setCanClaim] = useState(false);
   const [timeRemaining, setTimeRemaining] = useState(0);
@@ -260,9 +258,8 @@ export default function FaucetPage() {
       setCanClaim(false);
       setTimeRemaining(86400);
       setTimeout(() => {
-        fetchFaucetData();
         refreshBalances(); // Update identity page token count
-        router.refresh(); // Refresh the page to show updated UI
+        window.location.reload(); // Reload page to show updated balances
       }, 2000);
     } catch (err: any) {
       console.error('❌ Claim failed:', err);

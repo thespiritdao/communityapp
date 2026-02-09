@@ -1,6 +1,5 @@
 import { useState, useCallback } from 'react';
 import { useDisconnect } from 'wagmi';
-import { useRouter } from 'next/navigation';
 import { useAuth } from './useAuth';
 import { useUserProfile } from './useUserProfile';
 import { updateProfile } from '../utils/updateProfile';
@@ -10,7 +9,6 @@ export function useIdentityPage(address: string | undefined) {
   const { session, signOut } = useAuth();
   const { profile, loading, refetch } = useUserProfile(address);
   const { disconnect } = useDisconnect();
-  const router = useRouter();
 
   const handleEditClick = useCallback(() => {
     setIsEditing(!isEditing);
@@ -26,11 +24,10 @@ export function useIdentityPage(address: string | undefined) {
 
       await updateProfile(address, data);
       setIsEditing(false);
-      await refetch();
-      // Refresh the page to show updated profile data
-      router.refresh();
+      // Reload the page to show updated profile data immediately
+      window.location.reload();
     },
-    [address, refetch, router],
+    [address],
   );
 
   const handleLogout = useCallback(async () => {
