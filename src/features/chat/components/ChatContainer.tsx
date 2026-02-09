@@ -386,7 +386,15 @@ export default function ChatContainer({ chatGroupId }: ChatContainerProps) {
         console.error('Error loading user_profiles:', usersErr);
       }
 
-      setMessages(messagesData || []);
+      // Parse attachments from JSON string to array
+      const parsedMessages = (messagesData || []).map(msg => ({
+        ...msg,
+        attachments: typeof msg.attachments === 'string'
+          ? JSON.parse(msg.attachments || '[]')
+          : msg.attachments || []
+      }));
+
+      setMessages(parsedMessages);
       setUsers(usersData || []);
       setLoading(false);
     };
@@ -404,7 +412,17 @@ export default function ChatContainer({ chatGroupId }: ChatContainerProps) {
           table: TABLE_NAME,
           filter: `chat_group_id=eq.${selectedChatGroup.id}`,
         },
-        (payload) => setMessages((prev) => [...prev, payload.new as Message]),
+        (payload) => {
+          const newMsg = payload.new as Message;
+          // Parse attachments from JSON string to array
+          const parsedMsg = {
+            ...newMsg,
+            attachments: typeof newMsg.attachments === 'string'
+              ? JSON.parse(newMsg.attachments || '[]')
+              : newMsg.attachments || []
+          };
+          setMessages((prev) => [...prev, parsedMsg]);
+        },
       )
       .subscribe();
 
@@ -460,6 +478,12 @@ export default function ChatContainer({ chatGroupId }: ChatContainerProps) {
       const accessToken = currentSession?.access_token;
 
       console.log('📤 ChatContainer: Has access token:', !!accessToken);
+      console.log('📤 ChatContainer: Chat details:', {
+        chatGroupId: selectedChatGroup.id,
+        chatTitle: selectedChatGroup.title,
+        requiredToken: selectedChatGroup.required_token,
+        podId: selectedChatGroup.pod_id,
+      });
 
       // Send message via API route (handles @everyone validation and notifications)
       const response = await fetch('/api/chat-messages', {
