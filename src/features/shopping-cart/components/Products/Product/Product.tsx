@@ -22,7 +22,7 @@ const Product = ({ product, isAccessible }: ProductProps) => {
     availableSizes.length > 1 ||
     (availableSizes.length === 1 && !availableSizes.includes('One Size'));
 
-  const handleAddToCart = () => {
+  const handleAddToCart = async () => {
     if (hasMultipleSizes) {
       setShowSizeModal(true);
     } else {
@@ -32,17 +32,17 @@ const Product = ({ product, isAccessible }: ProductProps) => {
         selectedSize: availableSizes[0] || 'One Size',
         quantity: 1,
       };
-      addProduct(productWithSize);
+      await addProduct(productWithSize);
     }
   };
 
-  const handleSizeSelect = (selectedSize: string) => {
+  const handleSizeSelect = async (selectedSize: string) => {
     const productWithSize = {
       ...product,
       selectedSize,
       quantity: 1,
     };
-    addProduct(productWithSize);
+    await addProduct(productWithSize);
     setShowSizeModal(false);
   };
 
