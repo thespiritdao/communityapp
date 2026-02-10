@@ -188,15 +188,15 @@ export const EventRegistrationButton: React.FC<
             'font-medium py-2 px-4 rounded transition-colors hover:opacity-90'
           }
           style={{
-            backgroundColor: '#8FAAA1',
+            backgroundColor: '#2F5D50',
             color: '#FFFFFF',
             border: 'none',
           }}
           onMouseEnter={(e) => {
-            e.currentTarget.style.backgroundColor = '#6F8F86';
+            e.currentTarget.style.backgroundColor = '#1F453A';
           }}
           onMouseLeave={(e) => {
-            e.currentTarget.style.backgroundColor = '#8FAAA1';
+            e.currentTarget.style.backgroundColor = '#2F5D50';
           }}
         >
           Approve Tokens & Register
@@ -222,15 +222,15 @@ export const EventRegistrationButton: React.FC<
                 'font-medium py-2 px-4 rounded transition-colors hover:opacity-90'
               }
               style={{
-                backgroundColor: '#8FAAA1',
+                backgroundColor: '#2F5D50',
                 color: '#FFFFFF',
                 border: 'none',
               }}
               onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = '#6F8F86';
+                e.currentTarget.style.backgroundColor = '#1F453A';
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = '#8FAAA1';
+                e.currentTarget.style.backgroundColor = '#2F5D50';
               }}
             >
               {isTransactionPending
