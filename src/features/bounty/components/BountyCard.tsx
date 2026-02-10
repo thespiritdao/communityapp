@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Lock, Shield } from 'lucide-react';
 import { useEvmAddress } from '@coinbase/cdp-hooks';
-import { fetchTokenBalances } from '@/utils/fetchTokenBalances';
+import { checkPodFeatureAccess } from '@/utils/podFeatureAccess';
 import type { BountyTokenGating } from '../types/bounty';
 
 interface BountyCardProps {
@@ -22,6 +22,7 @@ interface BountyCardProps {
   createdAt: Date;
   funding_source?: 'wallet' | 'pod_treasury';
   token_gating?: BountyTokenGating;
+  pod_id?: string; // Pod this bounty belongs to
   onBid?: () => void;
 }
 
@@ -34,20 +35,12 @@ export const BountyCard: React.FC<BountyCardProps> = ({
   status,
   funding_source,
   token_gating,
+  pod_id,
   onBid,
 }) => {
   const { evmAddress: address } = useEvmAddress();
   const [hasAccess, setHasAccess] = useState<boolean | null>(null);
   const [isCheckingAccess, setIsCheckingAccess] = useState(false);
-
-  // Map token symbols to balance properties
-  const TOKEN_SYMBOL_MAP = {
-    EXEC: 'hasExecutivePod',
-    DEV: 'hasDevPod',
-    MARKET: 'hasMarketManagement',
-    BOUNTY: 'hasBountyHat',
-    EVENT: 'hasEventManagement',
-  } as const;
 
   useEffect(() => {
     const checkAccess = async () => {
@@ -67,29 +60,33 @@ export const BountyCard: React.FC<BountyCardProps> = ({
         return;
       }
 
+      // If no pod_id, fall back to public access
+      if (!pod_id) {
+        console.warn('Bounty has token gating but no pod_id. Allowing access.');
+        setHasAccess(true);
+        return;
+      }
+
       setIsCheckingAccess(true);
       try {
-        const balances = await fetchTokenBalances(address);
-
-        // Check if user has any of the required tokens
-        const hasRequiredTokens = token_gating.required_tokens.some(
-          (requiredToken) => {
-            const balanceKey =
-              TOKEN_SYMBOL_MAP[
-                requiredToken.token_id as keyof typeof TOKEN_SYMBOL_MAP
-              ];
-            if (balanceKey && balances[balanceKey]) {
-              // For now, we just check if they have the token (balance > 0)
-              // In the future, we could implement minimum balance checking
-              return true;
-            }
-            return false;
-          },
+        // Use database-first permission check via podFeatureAccess
+        // This checks:
+        // 1. Module toggle - Is bounties enabled for this pod?
+        // 2. Token gating - Does user have required HAT (membership)?
+        // 3. Role permission - Does user's role have bountyManagement permission?
+        const accessResult = await checkPodFeatureAccess(
+          'bounties',
+          address,
+          pod_id,
         );
 
-        setHasAccess(hasRequiredTokens);
+        setHasAccess(accessResult.allowed);
+
+        if (!accessResult.allowed) {
+          console.log('❌ Bounty access denied:', accessResult.reason);
+        }
       } catch (error) {
-        console.error('Error checking token access:', error);
+        console.error('Error checking bounty access:', error);
         setHasAccess(false);
       } finally {
         setIsCheckingAccess(false);
@@ -97,7 +94,7 @@ export const BountyCard: React.FC<BountyCardProps> = ({
     };
 
     checkAccess();
-  }, [address, token_gating]);
+  }, [address, token_gating, pod_id]);
 
   // Show access denied state for token-gated bounties
   if (

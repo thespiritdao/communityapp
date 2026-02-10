@@ -9,7 +9,8 @@ import { Button } from '@/components/ui/button';
 import { Users, Plus, Shapes, Loader2 } from 'lucide-react';
 import { useProfiles } from '@/features/identity/hooks/useProfiles';
 import { PodCardGrid } from '@/features/pods/components';
-import { HatPermissionsService } from '@/services/hatPermissionsService';
+import { useDatabaseFirstPermissions } from '@/hooks/useDatabaseFirstPermissions';
+import { PodRolePermissionsService } from '@/features/pods/services/PodRolePermissionsService';
 
 // Use optimized hooks
 import { usePods } from '@/features/pods/hooks';
@@ -21,33 +22,42 @@ export default function PodsPage() {
     'all' | 'active' | 'draft' | 'proposed' | 'inactive'
   >('all');
 
-  // Check pod creation permission
+  // Check pod creation permission using database-first approach
   const [canCreatePod, setCanCreatePod] = useState(false);
-  const [checkingPermissions, setCheckingPermissions] = useState(true);
+  const { memberships, isLoading: permissionsLoading } = useDatabaseFirstPermissions();
 
   useEffect(() => {
-    const checkPermissions = async () => {
-      if (!address) {
+    const checkSubPodPermission = async () => {
+      if (!address || memberships.length === 0) {
         setCanCreatePod(false);
-        setCheckingPermissions(false);
         return;
       }
 
-      setCheckingPermissions(true);
       try {
-        const permissionService = new HatPermissionsService();
-        const hasPermission = await permissionService.canCreateSubPods(address);
-        setCanCreatePod(hasPermission);
+        // Check if user has subPodCreation permission in ANY pod they're a member of
+        const hasPermission = await Promise.all(
+          memberships.map(async (membership) => {
+            const rolePerms = await PodRolePermissionsService.getPodRolePermissions(membership.podId);
+
+            // Find role permission matching this user's hat
+            const userRolePerm = rolePerms.find(
+              (rolePerm) => rolePerm.token_address === membership.hatId
+            );
+
+            return userRolePerm?.permissions?.subPodCreation === true;
+          })
+        );
+
+        // User can create pods if they have the permission in any pod
+        setCanCreatePod(hasPermission.some((hasPerm) => hasPerm === true));
       } catch (error) {
         console.error('Failed to check pod creation permission:', error);
         setCanCreatePod(false);
-      } finally {
-        setCheckingPermissions(false);
       }
     };
 
-    checkPermissions();
-  }, [address]);
+    checkSubPodPermission();
+  }, [address, memberships]);
 
   // Use optimized pods hook
   const {
@@ -119,7 +129,7 @@ export default function PodsPage() {
           )}
 
           {/* Show login prompt if not connected */}
-          {!address && !checkingPermissions && (
+          {!address && !permissionsLoading && (
             <div className="text-sm text-gray-600 px-2 py-2">
               Connect wallet to create pods
             </div>
