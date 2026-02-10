@@ -138,15 +138,29 @@ export const EnhancedEventCheckInSystem: React.FC<
 
   // Download CSV export
   const downloadCSV = () => {
-    const csv = QRCodeService.generateCSVExport(exportData);
-    const blob = new Blob([csv], { type: 'text/csv' });
-    const url = window.URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `${event.title}-attendees-${new Date().toISOString().split('T')[0]}.csv`;
-    link.click();
-    window.URL.revokeObjectURL(url);
-    toast.success('CSV downloaded successfully');
+    try {
+      const csv = QRCodeService.generateCSVExport(exportData);
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${event.title}-attendees-${new Date().toISOString().split('T')[0]}.csv`;
+
+      // ✅ FIX: Append to DOM before clicking (required for some browsers/desktop)
+      document.body.appendChild(link);
+      link.click();
+
+      // ✅ FIX: Clean up after a delay (immediate cleanup can prevent download)
+      setTimeout(() => {
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(url);
+      }, 100);
+
+      toast.success('CSV downloaded successfully');
+    } catch (error) {
+      console.error('Error downloading CSV:', error);
+      toast.error('Failed to download CSV. Please try again.');
+    }
   };
 
   // Complete event and process NFTs
