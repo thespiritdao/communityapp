@@ -13,6 +13,7 @@ import { AuthProvider } from '@/features/identity';
 import { ContractConfigProvider } from '@/providers/ContractConfigProvider';
 import MobileBottomNav from '@/components/MobileBottomNav';
 import { InstallPrompt } from '@/components/InstallPrompt';
+import { SessionCacheManager } from '@/components/SessionCacheManager';
 
 // Hide navigation ONLY on loading screen (root page)
 const ConditionalBottomNav = React.memo(function ConditionalBottomNav() {
@@ -58,6 +59,8 @@ export function Providers({ children }: ProvidersProps) {
             <ProfilesProvider>
               <CommunityProvider>
                 <UnifiedNotificationProvider>
+                  {/* Session cache manager - clears stale cache on expired sessions */}
+                  <SessionCacheManager />
                   <main id="page-root" className="min-h-screen">
                     {children}
                   </main>
