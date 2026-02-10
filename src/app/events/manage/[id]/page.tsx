@@ -341,11 +341,30 @@ export default function EventManagePage({ params }: EventManagePageProps) {
               new Date(event.event_date) > new Date() && (
                 <Button
                   variant="destructive"
-                  onClick={() => cancelEvent()}
+                  onClick={async () => {
+                    const confirmed = window.confirm(
+                      `Are you sure you want to cancel "${event.title}"?\n\n` +
+                      `This will:\n` +
+                      `• Notify all ${event.registration_count} registered attendees\n` +
+                      `• Process automatic refunds for paid registrations\n` +
+                      `• Update the event status to "cancelled"\n\n` +
+                      `This action cannot be undone.`
+                    );
+
+                    if (!confirmed) return;
+
+                    const success = await cancelEvent();
+                    if (success) {
+                      alert('✅ Event cancelled successfully!\n\nAttendees have been notified and refunds will be processed automatically.');
+                      router.push('/events/manage');
+                    } else {
+                      alert('❌ Failed to cancel event. Please check the console for errors and try again.');
+                    }
+                  }}
                   disabled={actionLoading}
                 >
                   <XCircle className="w-4 h-4 mr-2" />
-                  Cancel
+                  {actionLoading ? 'Cancelling...' : 'Cancel Event'}
                 </Button>
               )}
           </div>
