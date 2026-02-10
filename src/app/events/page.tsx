@@ -182,33 +182,6 @@ export default function EventsPage() {
             />
           )}
         </div>
-
-        {/* Call to Action for Event Management */}
-        {canManageEvents && (
-          <Card className="mt-8 bg-gradient-to-r from-blue-50 to-purple-50 border-blue-200">
-            <CardContent className="p-8 text-center">
-              <h3 className="text-xl font-semibold mb-4">
-                Ready to Create an Event?
-              </h3>
-              <p className="text-gray-600 mb-6 max-w-2xl mx-auto">
-                As an event manager, you can create and organize events for the
-                community. Set up token gating, manage registrations, and
-                distribute funds to the right pods.
-              </p>
-              <div className="flex flex-col sm:flex-row justify-center space-y-2 sm:space-y-0 sm:space-x-4">
-                <Button asChild={true}>
-                  <Link href="/events/create">
-                    <Plus className="w-4 h-4 mr-2" />
-                    Create New Event
-                  </Link>
-                </Button>
-                <Button variant="outline" asChild={true}>
-                  <Link href="/events/manage">Manage My Events</Link>
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        )}
       </div>
     </div>
   );
