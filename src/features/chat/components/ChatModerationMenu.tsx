@@ -55,12 +55,26 @@ export const ChatModerationMenu: React.FC<ChatModerationMenuProps> = ({
 
     setIsLoading(true);
     try {
-      const { error } = await supabase
-        .from('chat_messages')
-        .delete()
-        .eq('id', message.id);
+      // Get access token for API authentication
+      const { data: { session } } = await supabase.auth.getSession();
+      const accessToken = session?.access_token;
 
-      if (error) throw error;
+      if (!accessToken) {
+        throw new Error('No authentication token available');
+      }
+
+      // Call API route to delete message (bypasses RLS)
+      const response = await fetch(`/api/chat-messages/${message.id}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+        },
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to delete message');
+      }
 
       toast({
         title: 'Message deleted',
@@ -69,11 +83,11 @@ export const ChatModerationMenu: React.FC<ChatModerationMenuProps> = ({
 
       onMessageDeleted?.(message.id);
       setIsOpen(false);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error deleting message:', error);
       toast({
         title: 'Error',
-        description: 'Failed to delete message. Please try again.',
+        description: error.message || 'Failed to delete message. Please try again.',
         variant: 'destructive',
       });
     } finally {

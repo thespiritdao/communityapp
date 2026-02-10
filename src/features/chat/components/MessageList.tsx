@@ -63,13 +63,22 @@ const markMessagesAsRead = async (receiver_wallet_id: string) => {
   }
 };
 
-// Utility to format message with mentions
+// Utility to format message with mentions and hyperlinks
 function formatMessageWithMentions(message: string): string {
-  // Replace @[Name](wallet) with <span class="mention">@Name</span>
-  return message.replace(
+  // First, replace @[Name](wallet) with <span class="mention">@Name</span>
+  let formatted = message.replace(
     /@\[([^\]]+)\]\([^\)]+\)/g,
     '<span class="mention">@$1</span>',
   );
+
+  // Then, convert URLs to clickable links with data attribute for confirmation
+  // Match http:// or https:// URLs
+  formatted = formatted.replace(
+    /(https?:\/\/[^\s<]+)/g,
+    '<a href="$1" class="message-link" data-external-link="true" target="_blank" rel="noopener noreferrer">$1</a>',
+  );
+
+  return formatted;
 }
 
 export default function MessageList({
@@ -84,6 +93,10 @@ export default function MessageList({
     Record<string, string>
   >({});
   const [localMessages, setLocalMessages] = useState<Message[]>(messages);
+  const [linkConfirmModal, setLinkConfirmModal] = useState<{
+    show: boolean;
+    url: string;
+  }>({ show: false, url: '' });
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -129,6 +142,23 @@ export default function MessageList({
   useEffect(() => {
     setLocalMessages(messages);
   }, [messages]);
+
+  // Handle external link clicks with confirmation modal
+  useEffect(() => {
+    const handleLinkClick = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (target.tagName === 'A' && target.getAttribute('data-external-link') === 'true') {
+        e.preventDefault();
+        const url = target.getAttribute('href');
+        if (url) {
+          setLinkConfirmModal({ show: true, url });
+        }
+      }
+    };
+
+    document.addEventListener('click', handleLinkClick);
+    return () => document.removeEventListener('click', handleLinkClick);
+  }, []);
 
   // Handle message deleted
   const handleMessageDeleted = (messageId: string) => {
@@ -249,8 +279,60 @@ export default function MessageList({
         : !pinnedMessages.length && <div>No messages to display.</div>}
 
       <div ref={messagesEndRef} />
+
       {selectedUser && (
         <ProfileModal user={selectedUser} users={users} onClose={closeModal} />
+      )}
+
+      {/* External Link Confirmation Modal */}
+      {linkConfirmModal.show && (
+        <div className="modal-overlay" onClick={() => setLinkConfirmModal({ show: false, url: '' })}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <h3>Leave SpiritDAO?</h3>
+            <p>You're about to visit an external link:</p>
+            <p style={{ wordBreak: 'break-all', color: '#2F5D50', fontWeight: 'bold' }}>
+              {linkConfirmModal.url}
+            </p>
+            <p style={{ fontSize: '14px', color: '#6B7280' }}>
+              Please verify the URL before continuing.
+            </p>
+            <div style={{ display: 'flex', gap: '12px', marginTop: '20px' }}>
+              <button
+                onClick={() => {
+                  window.open(linkConfirmModal.url, '_blank', 'noopener,noreferrer');
+                  setLinkConfirmModal({ show: false, url: '' });
+                }}
+                style={{
+                  flex: 1,
+                  padding: '12px',
+                  background: '#2F5D50',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '8px',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                }}
+              >
+                Continue
+              </button>
+              <button
+                onClick={() => setLinkConfirmModal({ show: false, url: '' })}
+                style={{
+                  flex: 1,
+                  padding: '12px',
+                  background: '#E5E7EB',
+                  color: '#374151',
+                  border: 'none',
+                  borderRadius: '8px',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                }}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
