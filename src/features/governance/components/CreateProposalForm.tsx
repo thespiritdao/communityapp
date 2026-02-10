@@ -1169,6 +1169,33 @@ export function CreateProposalForm({
     try {
       setSubmissionStatus('🔄 Preparing transaction...');
 
+      // ✅ VALIDATE: Ensure all addresses are properly formatted before encoding
+      const targets = proposalArgs[0];
+      const values = proposalArgs[1];
+      const calldatas = proposalArgs[2];
+
+      console.log('🔍 Pre-encoding validation:');
+      console.log('  Targets:', targets);
+      console.log('  Target lengths:', targets.map((t: string) => t.length));
+      console.log('  Values:', values.map((v: bigint) => v.toString()));
+      console.log('  Calldatas length:', calldatas.length);
+
+      // Validate address format
+      for (let i = 0; i < targets.length; i++) {
+        const addr = targets[i];
+        if (typeof addr !== 'string') {
+          throw new Error(`Target[${i}] is not a string: ${typeof addr}`);
+        }
+        if (!addr.startsWith('0x')) {
+          throw new Error(`Target[${i}] doesn't start with 0x: ${addr}`);
+        }
+        if (addr.length !== 42) {
+          throw new Error(`Target[${i}] has invalid length ${addr.length} (expected 42): ${addr}`);
+        }
+      }
+
+      console.log('✅ All addresses validated successfully');
+
       // Encode the proposal call
       const callData = encodeFunctionData({
         abi: DAOGovernorABI,
@@ -1179,11 +1206,23 @@ export function CreateProposalForm({
       console.log('🚀 CDP Proposal Creation:', {
         smartAccount,
         args: proposalArgs,
-        callData,
+        callData: callData.substring(0, 100) + '...',
+        callDataLength: callData.length,
         targetContract: GOVERNOR_ADDRESS,
+        governorAddressLength: GOVERNOR_ADDRESS.length,
       });
 
       setSubmissionStatus('📡 Submitting to blockchain...');
+
+      // ✅ VALIDATE: Governor address before sending transaction
+      if (!GOVERNOR_ADDRESS || GOVERNOR_ADDRESS.length !== 42) {
+        throw new Error(`Invalid GOVERNOR_ADDRESS: ${GOVERNOR_ADDRESS} (length: ${GOVERNOR_ADDRESS?.length})`);
+      }
+
+      console.log('🔍 Transaction call validation:');
+      console.log('  To:', GOVERNOR_ADDRESS);
+      console.log('  To length:', GOVERNOR_ADDRESS.length);
+      console.log('  Data:', callData.substring(0, 50) + '...');
 
       const result = await sendUserOperation({
         evmSmartAccount: smartAccount,
