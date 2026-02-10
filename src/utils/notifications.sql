@@ -10,7 +10,7 @@ CREATE TABLE IF NOT EXISTS general_notifications (
     recipient_address TEXT NOT NULL,
     sender_address TEXT NOT NULL,
     notification_type TEXT NOT NULL CHECK (notification_type IN (
-        'user_mentioned', 'forum_reply', 'chat_message', 'bounty_update', 'proposal_executed', 'purchase_completed'
+        'user_mentioned', 'forum_reply', 'chat_message', 'bounty_update', 'proposal_executed', 'purchase_completed', 'event_cancellation', 'event_update', 'event_reminder'
     )),
     title TEXT NOT NULL,
     message TEXT NOT NULL,
