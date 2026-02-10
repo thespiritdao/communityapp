@@ -863,11 +863,11 @@ const AttendeeList: React.FC<AttendeeListProps> = ({ registrations }) => {
                 `Failed to fetch profile for ${registration.user_address}:`,
                 error,
               );
-              // Set a default profile with wallet address
+              // Set a default profile without showing wallet address
               profileMap.set(registration.user_address, {
                 wallet_address: registration.user_address,
-                first_name: registration.user_address.slice(0, 6) + '...',
-                last_name: '',
+                first_name: 'Anonymous',
+                last_name: 'User',
                 profile_picture: null,
               });
             }

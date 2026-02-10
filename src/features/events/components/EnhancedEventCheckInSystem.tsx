@@ -59,6 +59,52 @@ export const EnhancedEventCheckInSystem: React.FC<
   const [recentCheckIns, setRecentCheckIns] = useState<
     CheckInProcessingResult[]
   >([]);
+  const [userProfiles, setUserProfiles] = useState<Map<string, any>>(new Map());
+  const [loadingProfiles, setLoadingProfiles] = useState(false);
+
+  // Fetch user profiles for all registrations
+  useEffect(() => {
+    const fetchProfiles = async () => {
+      if (registrations.length === 0) return;
+
+      setLoadingProfiles(true);
+      const profileMap = new Map();
+
+      try {
+        await Promise.all(
+          registrations.map(async (registration) => {
+            try {
+              const profile = await EventService.getUserProfileByWallet(
+                registration.user_address,
+              );
+              if (profile) {
+                profileMap.set(registration.user_address, profile);
+              }
+            } catch (error) {
+              console.warn(
+                `Failed to fetch profile for ${registration.user_address}:`,
+                error,
+              );
+              // Set a default profile without showing wallet address
+              profileMap.set(registration.user_address, {
+                wallet_address: registration.user_address,
+                first_name: '',
+                last_name: '',
+                profile_picture: null,
+              });
+            }
+          }),
+        );
+        setUserProfiles(profileMap);
+      } catch (error) {
+        console.error('Error fetching attendee profiles:', error);
+      } finally {
+        setLoadingProfiles(false);
+      }
+    };
+
+    fetchProfiles();
+  }, [registrations]);
 
   // Generate enhanced event QR code
   useEffect(() => {
@@ -428,25 +474,46 @@ export const EnhancedEventCheckInSystem: React.FC<
                 </div>
               ) : (
                 <div className="space-y-3 max-h-96 overflow-y-auto">
-                  {registrations.map((registration) => (
-                    <div
-                      key={registration.id}
-                      className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50"
-                    >
-                      <div className="flex-1">
-                        <div className="font-medium">
-                          {formatUserAddress(registration.user_address)}
+                  {registrations.map((registration) => {
+                    const profile = userProfiles.get(registration.user_address);
+                    const displayName = profile?.first_name && profile?.last_name
+                      ? `${profile.first_name} ${profile.last_name}`
+                      : profile?.first_name
+                        ? profile.first_name
+                        : 'Attendee';
+
+                    return (
+                      <div
+                        key={registration.id}
+                        className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50"
+                      >
+                        <div className="flex items-center space-x-3 flex-1">
+                          <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center overflow-hidden flex-shrink-0">
+                            {profile?.profile_picture ? (
+                              <img
+                                src={profile.profile_picture}
+                                alt={displayName}
+                                className="w-full h-full object-cover"
+                              />
+                            ) : (
+                              <User className="w-6 h-6 text-gray-400" />
+                            )}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="font-medium truncate">
+                              {displayName}
+                            </div>
+                            <div className="text-sm text-gray-600">
+                              Registered: {formatTime(registration.registered_at)}
+                              {registration.checked_in_at && (
+                                <span className="ml-2">
+                                  • Checked in:{' '}
+                                  {formatTime(registration.checked_in_at)}
+                                </span>
+                              )}
+                            </div>
+                          </div>
                         </div>
-                        <div className="text-sm text-gray-600">
-                          Registered: {formatTime(registration.registered_at)}
-                          {registration.checked_in_at && (
-                            <span className="ml-2">
-                              • Checked in:{' '}
-                              {formatTime(registration.checked_in_at)}
-                            </span>
-                          )}
-                        </div>
-                      </div>
 
                       <div className="flex items-center space-x-2">
                         <Badge
@@ -483,7 +550,8 @@ export const EnhancedEventCheckInSystem: React.FC<
                         )}
                       </div>
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </CardContent>
@@ -511,7 +579,14 @@ export const EnhancedEventCheckInSystem: React.FC<
               <>
                 <p className="text-sm text-gray-600">
                   QR Code for{' '}
-                  {formatUserAddress(selectedRegistration.user_address)}
+                  {(() => {
+                    const profile = userProfiles.get(selectedRegistration.user_address);
+                    return profile?.first_name && profile?.last_name
+                      ? `${profile.first_name} ${profile.last_name}`
+                      : profile?.first_name
+                        ? profile.first_name
+                        : 'Attendee';
+                  })()}
                 </p>
                 {qrCodeData && (
                   <img
@@ -551,7 +626,6 @@ export const EnhancedEventCheckInSystem: React.FC<
               <table className="w-full text-sm">
                 <thead className="bg-gray-50 sticky top-0">
                   <tr>
-                    <th className="p-2 text-left">Address</th>
                     <th className="p-2 text-left">Name</th>
                     <th className="p-2 text-left">Email</th>
                     <th className="p-2 text-left">Status</th>
@@ -561,9 +635,6 @@ export const EnhancedEventCheckInSystem: React.FC<
                 <tbody>
                   {exportData.map((attendee) => (
                     <tr key={attendee.registrationId} className="border-t">
-                      <td className="p-2 font-mono text-xs">
-                        {formatUserAddress(attendee.walletAddress)}
-                      </td>
                       <td className="p-2">
                         {attendee.firstName} {attendee.lastName}
                       </td>
