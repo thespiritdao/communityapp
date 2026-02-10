@@ -35,6 +35,14 @@ import { getPublicClient } from '@wagmi/core';
 import { wagmiConfig } from '@/config/wagmi.client';
 import { supabase } from '@/lib/supabase';
 import { createSupabaseSession } from '@/utils/createSupabaseSession';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { CheckCircle2 } from 'lucide-react';
 
 import * as S from './style';
 
@@ -637,6 +645,12 @@ export default function Cart({
   const [isLoading, setIsLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [isProcessingOrders, setIsProcessingOrders] = useState(false);
+  const [showPurchaseConfirmation, setShowPurchaseConfirmation] = useState(false);
+  const [purchaseDetails, setPurchaseDetails] = useState<{
+    itemCount: number;
+    totalAmount: string;
+    token: string;
+  } | null>(null);
   const MAX_RETRIES = 3;
 
   // Add ref to prevent duplicate onSuccess callbacks during React re-renders
@@ -1020,14 +1034,24 @@ export default function Cart({
     setApproveTxSuccess(true);
 
     console.group('âœ… Combined Transaction Success');
-    console.log('ðŸ“‹ UserOperation Hash:', txHash);
-    console.log('ðŸ“‹ Approval + Purchase executed together');
+    console.log('ðŸ"‹ UserOperation Hash:', txHash);
+    console.log('ðŸ"‹ Approval + Purchase executed together');
     console.groupEnd();
 
-    // Close cart immediately after successful transaction (before order processing)
-    clearCart();
-    closeCart();
-    console.log('🛒 Cart cleared and closed after successful transaction');
+    // ✅ FEATURE: Show purchase confirmation modal
+    setPurchaseDetails({
+      itemCount: products.length,
+      totalAmount: formatPrice(calculations.totalAmount, selectedToken.symbol),
+      token: selectedToken.symbol,
+    });
+    setShowPurchaseConfirmation(true);
+
+    // Close cart and clear after short delay (allow user to see confirmation)
+    setTimeout(() => {
+      clearCart();
+      closeCart();
+      console.log('🛒 Cart cleared and closed after purchase confirmation');
+    }, 500);
 
     // Get transaction receipt for order creation
     // Note: For user operations, we may need to wait for the bundler transaction
@@ -1378,6 +1402,52 @@ export default function Cart({
           )}
         </S.CartFooter>
       </S.CartContent>
+
+      {/* Purchase Confirmation Modal */}
+      <Dialog open={showPurchaseConfirmation} onOpenChange={setShowPurchaseConfirmation}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <div className="flex items-center justify-center mb-4">
+              <div className="rounded-full bg-green-100 p-3">
+                <CheckCircle2 className="h-10 w-10 text-green-600" />
+              </div>
+            </div>
+            <DialogTitle className="text-center text-2xl">Purchase Complete!</DialogTitle>
+            <DialogDescription className="text-center">
+              Your order has been successfully processed.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="bg-gray-50 rounded-lg p-4 space-y-2">
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-600">Items:</span>
+                <span className="font-medium">{purchaseDetails?.itemCount || 0}</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-600">Total Amount:</span>
+                <span className="font-medium">{purchaseDetails?.totalAmount || '0'}</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-600">Payment Method:</span>
+                <span className="font-medium">{purchaseDetails?.token || ''}</span>
+              </div>
+            </div>
+            <p className="text-sm text-center text-gray-600">
+              You will receive notifications about your order status and tracking information.
+            </p>
+          </div>
+          <div className="flex justify-center">
+            <CDPTransactionButton
+              onClick={() => {
+                setShowPurchaseConfirmation(false);
+                router.push('/marketplace/my-orders');
+              }}
+            >
+              View My Orders
+            </CDPTransactionButton>
+          </div>
+        </DialogContent>
+      </Dialog>
     </S.CartOverlay>
   );
 }
