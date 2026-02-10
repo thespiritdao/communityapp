@@ -213,6 +213,31 @@ export class EventService {
       if (agendasError) throw agendasError;
     }
 
+    // ✅ AUTO-REGISTER: Automatically register the event creator
+    try {
+      console.log('🎫 Auto-registering event creator:', {
+        eventId: eventResult.id,
+        creatorAddress: profileData.wallet_address,
+      });
+
+      await this.registerForEvent(
+        eventResult.id,
+        profileData.wallet_address,
+        '0', // Free registration for creator
+        'free',
+      );
+
+      console.log('✅ Event creator auto-registered successfully');
+    } catch (regError: any) {
+      // Don't fail event creation if registration fails
+      // But log the error for debugging
+      console.error('⚠️ Failed to auto-register event creator:', regError);
+      // Check if error is due to duplicate registration (which is fine)
+      if (!regError.message?.includes('duplicate') && !regError.message?.includes('already registered')) {
+        console.error('❌ Unexpected auto-registration error:', regError);
+      }
+    }
+
     return eventResult;
   }
 
