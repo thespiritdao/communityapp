@@ -201,7 +201,7 @@ export default function EventManagePage({ params }: EventManagePageProps) {
   // Loading state
   if (eventLoading) {
     return (
-      <div className="min-h-screen bg-gray-50 p-4">
+      <div className="min-h-screen p-4" style={{ backgroundImage: 'url(/images/chatbg.png)', backgroundColor: '#f5f4ed' }}>
         <div className="max-w-7xl mx-auto">
           <div className="animate-pulse space-y-6">
             <div className="h-8 bg-gray-200 rounded w-1/3"></div>
@@ -220,7 +220,7 @@ export default function EventManagePage({ params }: EventManagePageProps) {
   // Error state
   if (eventError || !event) {
     return (
-      <div className="min-h-screen bg-gray-50 p-4">
+      <div className="min-h-screen p-4" style={{ backgroundImage: 'url(/images/chatbg.png)', backgroundColor: '#f5f4ed' }}>
         <div className="max-w-7xl mx-auto">
           <Card className="max-w-2xl mx-auto">
             <CardContent className="p-8 text-center">
@@ -243,7 +243,7 @@ export default function EventManagePage({ params }: EventManagePageProps) {
   // Access control
   if (!canManageEvents || !canUserManageEvent()) {
     return (
-      <div className="min-h-screen bg-gray-50 p-4">
+      <div className="min-h-screen p-4" style={{ backgroundImage: 'url(/images/chatbg.png)', backgroundColor: '#f5f4ed' }}>
         <div className="max-w-7xl mx-auto">
           <Card className="max-w-2xl mx-auto">
             <CardContent className="p-8 text-center">
@@ -273,7 +273,7 @@ export default function EventManagePage({ params }: EventManagePageProps) {
 
   // Main component render
   return (
-    <div className="min-h-screen bg-gray-50 p-4 pb-20">
+    <div className="min-h-screen p-4 pb-20" style={{ backgroundImage: 'url(/images/chatbg.png)', backgroundColor: '#f5f4ed' }}>
       <div className="max-w-7xl mx-auto space-y-6">
         {/* Header */}
         <div className="space-y-4">

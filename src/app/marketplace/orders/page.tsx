@@ -250,7 +250,7 @@ export default function OrderManagementPage() {
 
   if (!address) {
     return (
-      <div className="min-h-screen bg-gray-50 p-4 bottom-nav-spacing">
+      <div className="min-h-screen p-4 bottom-nav-spacing" style={{ backgroundImage: 'url(/images/chatbg.png)', backgroundColor: '#f5f4ed' }}>
         <div className="max-w-7xl mx-auto">
           <div className="text-center py-12">
             <h1 className="text-2xl font-bold text-gray-900 mb-4">
@@ -267,7 +267,7 @@ export default function OrderManagementPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gray-50 p-4 bottom-nav-spacing">
+      <div className="min-h-screen p-4 bottom-nav-spacing" style={{ backgroundImage: 'url(/images/chatbg.png)', backgroundColor: '#f5f4ed' }}>
         <div className="max-w-7xl mx-auto">
           <div className="text-center py-12">
             <div className="animate-pulse">
@@ -282,7 +282,7 @@ export default function OrderManagementPage() {
 
   if (error || !canManageOrders) {
     return (
-      <div className="min-h-screen bg-gray-50 p-4 bottom-nav-spacing">
+      <div className="min-h-screen p-4 bottom-nav-spacing" style={{ backgroundImage: 'url(/images/chatbg.png)', backgroundColor: '#f5f4ed' }}>
         <div className="max-w-7xl mx-auto">
           <div className="mb-6">
             <Button
@@ -312,7 +312,7 @@ export default function OrderManagementPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4 bottom-nav-spacing">
+    <div className="min-h-screen p-4 bottom-nav-spacing" style={{ backgroundImage: 'url(/images/chatbg.png)', backgroundColor: '#f5f4ed' }}>
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-8">

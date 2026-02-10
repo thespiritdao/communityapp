@@ -338,7 +338,7 @@ export default function UnifiedNotificationsPage() {
   });
 
   return (
-    <div className="min-h-screen p-4 bottom-nav-spacing">
+    <div className="min-h-screen p-4 bottom-nav-spacing" style={{ backgroundImage: 'url(/images/chatbg.png)', backgroundColor: '#f5f4ed' }}>
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <div className="flex justify-between items-center mb-6">

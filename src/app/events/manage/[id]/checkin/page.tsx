@@ -27,7 +27,7 @@ export default function ManageCheckInPage({ params }: ManageCheckInPageProps) {
 
   if (eventLoading || accessLoading) {
     return (
-      <div className="min-h-screen bg-gray-50 p-4">
+      <div className="min-h-screen p-4" style={{ backgroundImage: 'url(/images/chatbg.png)', backgroundColor: '#f5f4ed' }}>
         <div className="max-w-7xl mx-auto">
           <div className="animate-pulse space-y-6">
             <div className="flex items-center space-x-4 mb-6">
@@ -52,7 +52,7 @@ export default function ManageCheckInPage({ params }: ManageCheckInPageProps) {
 
   if (eventError || !event) {
     return (
-      <div className="min-h-screen bg-gray-50 p-4">
+      <div className="min-h-screen p-4" style={{ backgroundImage: 'url(/images/chatbg.png)', backgroundColor: '#f5f4ed' }}>
         <div className="max-w-2xl mx-auto">
           <Card>
             <CardContent className="p-8 text-center">
@@ -71,7 +71,7 @@ export default function ManageCheckInPage({ params }: ManageCheckInPageProps) {
 
   if (!canManage) {
     return (
-      <div className="min-h-screen bg-gray-50 p-4">
+      <div className="min-h-screen p-4" style={{ backgroundImage: 'url(/images/chatbg.png)', backgroundColor: '#f5f4ed' }}>
         <div className="max-w-2xl mx-auto">
           <Card>
             <CardContent className="p-8 text-center">
@@ -96,7 +96,7 @@ export default function ManageCheckInPage({ params }: ManageCheckInPageProps) {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4 pb-20">
+    <div className="min-h-screen p-4 pb-20" style={{ backgroundImage: 'url(/images/chatbg.png)', backgroundColor: '#f5f4ed' }}>
       <div className="max-w-7xl mx-auto">
         <div className="flex items-center space-x-4 mb-6">
           <Button variant="outline" onClick={() => router.back()}>

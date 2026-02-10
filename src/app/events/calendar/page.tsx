@@ -3,7 +3,7 @@ import { CommunityEventCalendar } from '@/features/events/components/CommunityEv
 
 export default function EventCalendarPage() {
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen" style={{ backgroundImage: 'url(/images/chatbg.png)', backgroundColor: '#f5f4ed' }}>
       <div className="max-w-7xl mx-auto p-4">
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">
