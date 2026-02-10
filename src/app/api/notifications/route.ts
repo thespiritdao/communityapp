@@ -41,6 +41,8 @@ export async function POST(request: NextRequest) {
           orderId,
           requiredToken,
           transactionHash,
+          creatorWallet,
+          podId,
         } = notificationData;
 
         // Validate required fields
@@ -61,27 +63,74 @@ export async function POST(request: NextRequest) {
           orderId,
           requiredToken,
           transactionHash,
+          creatorWallet,
+          podId,
         });
+
+        // Get buyer profile for notification message
+        const buyerProfile = await getUserProfile(buyerAddress);
+        const buyerName = formatUserDisplayName(buyerAddress, buyerProfile);
+
+        let notificationsSent = 0;
+
+        // ✅ FIX: Always notify product creator first (if exists)
+        if (creatorWallet) {
+          try {
+            await unifiedNotificationService.createNotification({
+              recipient_address: creatorWallet,
+              sender_address: buyerAddress,
+              notification_type: 'purchase_completed',
+              title: 'Your Product Was Purchased!',
+              message: `${buyerName} has purchased your product "${productName}". Please check the order details to begin fulfillment.`,
+              context_url: `/marketplace/orders/${orderId}`,
+              context_type: 'marketplace',
+              context_id: orderId,
+              priority: 'high',
+              metadata: {
+                product_id: productId,
+                product_name: productName,
+                transaction_hash: transactionHash,
+              },
+            });
+
+            console.log(`✅ Notified product creator: ${creatorWallet}`);
+            notificationsSent++;
+          } catch (notifError) {
+            console.error(`❌ Failed to notify product creator ${creatorWallet}:`, notifError);
+          }
+        }
 
         // Get fulfillment managers using HATS-based membership
         const managers = await getFulfillmentManagers(requiredToken);
 
         if (managers.length === 0) {
           console.warn('⚠️ No fulfillment managers found for this product');
+
+          // If we notified the creator, that's sufficient
+          if (creatorWallet) {
+            return NextResponse.json({
+              success: true,
+              notifications_sent: notificationsSent,
+              warning: 'No additional fulfillment managers found',
+            });
+          }
+
           return NextResponse.json({
             success: true,
-            warning: 'No fulfillment managers found',
+            warning: 'No fulfillment managers found and no product creator specified',
           });
         }
 
         console.log(`📨 Notifying ${managers.length} fulfillment managers`);
 
-        // Get buyer profile for notification message
-        const buyerProfile = await getUserProfile(buyerAddress);
-        const buyerName = formatUserDisplayName(buyerAddress, buyerProfile);
-
-        // Create marketplace notifications for each manager
+        // Create marketplace notifications for each manager (excluding creator if already notified)
         for (const manager of managers) {
+          // Skip if this manager is the product creator (already notified)
+          if (creatorWallet && manager.wallet_address.toLowerCase() === creatorWallet.toLowerCase()) {
+            console.log(`⏭️ Skipping duplicate notification for creator ${manager.wallet_address}`);
+            continue;
+          }
+
           try {
             await unifiedNotificationService.createNotification({
               recipient_address: manager.wallet_address,
@@ -104,6 +153,7 @@ export async function POST(request: NextRequest) {
             console.log(
               `✅ Notified fulfillment manager: ${manager.wallet_address}`,
             );
+            notificationsSent++;
           } catch (notifError) {
             console.error(
               `❌ Failed to notify ${manager.wallet_address}:`,
@@ -115,7 +165,7 @@ export async function POST(request: NextRequest) {
 
         return NextResponse.json({
           success: true,
-          managers_notified: managers.length,
+          notifications_sent: notificationsSent,
         });
       }
 

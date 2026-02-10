@@ -79,10 +79,29 @@ export async function getFulfillmentManagers(
     }
 
     // Step 3: Get pod-specific members
-    const podId = POD_ID_MAP[requiredToken];
+    // Handle two formats:
+    // 1. Legacy format: 'exec', 'dev', 'bounty' (uses POD_ID_MAP)
+    // 2. Dynamic format: 'pod_{uuid}_{role}' (extract UUID)
+    let podId: string | undefined;
+
+    if (requiredToken.startsWith('pod_')) {
+      // Dynamic format: pod_f2bc166d-33d5-47dc-8409-ea8d445d3fc0_leader
+      // Extract the UUID (everything between 'pod_' and the last '_')
+      const parts = requiredToken.split('_');
+      if (parts.length >= 2) {
+        // Remove 'pod_' prefix and role suffix to get UUID
+        // Format: ['pod', '{uuid parts}', 'leader'] -> join uuid parts
+        podId = parts.slice(1, -1).join('_'); // Re-join in case UUID has underscores
+        console.log(`🔍 Parsed dynamic pod ID: ${podId} from ${requiredToken}`);
+      }
+    } else {
+      // Legacy format: use POD_ID_MAP
+      podId = POD_ID_MAP[requiredToken];
+    }
+
     if (!podId) {
       console.warn(
-        `⚠️ Unknown required token: ${requiredToken}, defaulting to market managers only`,
+        `⚠️ Could not parse pod ID from required token: ${requiredToken}, defaulting to market managers only`,
       );
       return marketManagers;
     }

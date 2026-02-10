@@ -1167,6 +1167,8 @@ export default function Cart({
             orderId: orderData.id,
             requiredToken: product.required_token,
             transactionHash: txHash,
+            creatorWallet: product.creator_wallet, // ✅ Added: Notify product creator
+            podId: product.pod_id, // ✅ Added: For pod-specific fulfillment
           }),
         });
 
