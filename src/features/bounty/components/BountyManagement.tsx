@@ -636,77 +636,67 @@ export const BountyManagement: React.FC<BountyManagementProps> = ({
               {filteredBounties.map((bounty) => {
                 const status = getStatusDisplay(bounty.status);
                 return (
-                  <Card
+                  <Dialog
                     key={bounty.id}
-                    className="cursor-pointer transition-colors hover:bg-gray-50 overflow-hidden"
+                    open={openBountyDetailId === bounty.id}
+                    onOpenChange={(open) => {
+                      if (!open) {
+                        setOpenBountyDetailId(null);
+                        setShowBidForm(false); // Also close bid form if open
+                      }
+                    }}
                   >
-                    <CardContent className="p-4">
-                      <div className="space-y-3">
-                        {/* Header with title and badges */}
-                        <div className="flex flex-col sm:flex-row sm:items-start gap-2">
-                          <h3 className="font-medium text-lg flex-1 min-w-0 line-clamp-2 break-words">
-                            {bounty.title || `Bounty #${bounty.id}`}
-                          </h3>
-                          <div className="flex gap-2 flex-wrap flex-shrink-0">
-                            <Badge className={status.color}>
-                              {status.label}
-                            </Badge>
-                            {bounty.category && (
-                              <Badge variant="outline">{bounty.category}</Badge>
-                            )}
+                    <Card
+                      className="cursor-pointer transition-colors hover:bg-gray-50 overflow-hidden"
+                      onClick={() => setOpenBountyDetailId(bounty.id)}
+                    >
+                      <CardContent className="p-4">
+                        <div className="space-y-3">
+                          {/* Header with title and badges */}
+                          <div className="flex flex-col sm:flex-row sm:items-start gap-2">
+                            <h3 className="font-medium text-lg flex-1 min-w-0 line-clamp-2 break-words">
+                              {bounty.title || `Bounty #${bounty.id}`}
+                            </h3>
+                            <div className="flex gap-2 flex-wrap flex-shrink-0">
+                              <Badge className={status.color}>
+                                {status.label}
+                              </Badge>
+                              {bounty.category && (
+                                <Badge variant="outline">{bounty.category}</Badge>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Details */}
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm text-gray-600">
+                            <p>
+                              Value: {formatCryptoValue(bounty.value || '0')} $
+                              {bounty.token}
+                            </p>
+                            <div className="flex items-center gap-2">
+                              <span>Creator:</span>
+                              {bounty.creator ? (
+                                <UserProfileDisplay
+                                  walletAddress={bounty.creator}
+                                  size="sm"
+                                  showModal={true}
+                                />
+                              ) : (
+                                <span>Unknown</span>
+                              )}
+                            </div>
+                            <p>
+                              Created:{' '}
+                              {bounty.createdAt
+                                ? new Date(
+                                    bounty.createdAt * 1000,
+                                  ).toLocaleDateString()
+                                : 'Unknown'}
+                            </p>
                           </div>
                         </div>
-
-                        {/* Details */}
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm text-gray-600">
-                          <p>
-                            Value: {formatCryptoValue(bounty.value || '0')} $
-                            {bounty.token}
-                          </p>
-                          <div className="flex items-center gap-2">
-                            <span>Creator:</span>
-                            {bounty.creator ? (
-                              <UserProfileDisplay
-                                walletAddress={bounty.creator}
-                                size="sm"
-                                showModal={true}
-                              />
-                            ) : (
-                              <span>Unknown</span>
-                            )}
-                          </div>
-                          <p>
-                            Created:{' '}
-                            {bounty.createdAt
-                              ? new Date(
-                                  bounty.createdAt * 1000,
-                                ).toLocaleDateString()
-                              : 'Unknown'}
-                          </p>
-                        </div>
-
-                        {/* Action button */}
-                        <div className="flex justify-end pt-2">
-                          <Dialog
-                            open={openBountyDetailId === bounty.id}
-                            onOpenChange={(open) => {
-                              if (!open) {
-                                setOpenBountyDetailId(null);
-                                setShowBidForm(false); // Also close bid form if open
-                              }
-                            }}
-                          >
-                            <DialogTrigger asChild>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                className="w-full sm:w-auto"
-                                onClick={() => setOpenBountyDetailId(bounty.id)}
-                              >
-                                <Eye className="h-4 w-4 mr-1" />
-                                View Details
-                              </Button>
-                            </DialogTrigger>
+                      </CardContent>
+                    </Card>
                             <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
                               <DialogHeader>
                                 <DialogTitle>
@@ -1198,11 +1188,7 @@ export const BountyManagement: React.FC<BountyManagementProps> = ({
                                 )}
                               </div>
                             </DialogContent>
-                          </Dialog>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
+                  </Dialog>
                 );
               })}
             </div>
