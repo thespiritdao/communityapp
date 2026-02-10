@@ -7,7 +7,7 @@ import { useEventManagementAccess } from '@/features/events/hooks/useEventTokenG
 import { useEventStats } from '@/features/events/hooks/useEventStats';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Calendar, Plus, Users, Trophy, CalendarDays } from 'lucide-react';
+import { Calendar, Plus, Users, Trophy, CalendarDays, Settings } from 'lucide-react';
 import Link from 'next/link';
 
 export default function EventsPage() {
@@ -130,12 +130,20 @@ export default function EventsPage() {
             </div>
 
             {canManageEvents && (
-              <Button asChild={true}>
-                <Link href="/events/create">
-                  <Plus className="w-4 h-4 mr-2" />
-                  Create Event
-                </Link>
-              </Button>
+              <div className="flex space-x-2">
+                <Button asChild={true}>
+                  <Link href="/events/create">
+                    <Plus className="w-4 h-4 mr-2" />
+                    Create Event
+                  </Link>
+                </Button>
+                <Button variant="outline" asChild={true}>
+                  <Link href="/events/manage">
+                    <Settings className="w-4 h-4 mr-2" />
+                    Manage Events
+                  </Link>
+                </Button>
+              </div>
             )}
           </div>
         </div>
