@@ -1070,13 +1070,8 @@ export default function Cart({
       productOwner: productOwnerInfo,
     });
 
-    // ✅ FIX: Close cart immediately so modal appears on top
-    closeCart();
-
-    // Show modal after cart closes
-    setTimeout(() => {
-      setShowPurchaseConfirmation(true);
-    }, 100);
+    // ✅ Show modal immediately - it's rendered outside CartOverlay so it will appear on top
+    setShowPurchaseConfirmation(true);
 
     // Get transaction receipt for order creation
     // Note: For user operations, we may need to wait for the bundler transaction
@@ -1521,7 +1516,7 @@ export default function Cart({
               onClick={() => {
                 setShowPurchaseConfirmation(false);
                 clearCart();
-                // Cart is already closed, just dismiss modal
+                closeCart();
               }}
               className="flex-1"
             >
@@ -1531,6 +1526,7 @@ export default function Cart({
               onClick={() => {
                 setShowPurchaseConfirmation(false);
                 clearCart();
+                closeCart();
                 router.push('/marketplace/my-orders');
               }}
               className="flex-1 bg-green-600 hover:bg-green-700"
