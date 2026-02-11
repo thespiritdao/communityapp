@@ -26,6 +26,11 @@ export interface CartCalculations {
  * CRITICAL: This function must match the exact logic from Cart.tsx
  */
 function formatTokenAmount(amount: number): bigint {
+  // ✅ FIX: Handle undefined/null values gracefully
+  if (amount === undefined || amount === null) {
+    console.warn('formatTokenAmount received undefined/null, defaulting to 0');
+    return BigInt(0);
+  }
   if (isNaN(amount) || amount < 0) {
     throw new Error('Invalid amount: must be a non-negative number');
   }

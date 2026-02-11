@@ -3,8 +3,15 @@
 import { memo, useState, useCallback, useEffect } from 'react';
 import { usePublicClient } from 'wagmi';
 import { useSendUserOperation, useCurrentUser, useEvmAddress } from '@coinbase/cdp-hooks';
-import { Loader2 } from 'lucide-react';
+import { Loader2, CheckCircle2, ShoppingBag } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import styled from 'styled-components';
 import type { ICartProduct } from '../../../models';
 import type { Token } from './CartCheckout';
@@ -146,14 +153,16 @@ const TransactionFlow = memo(
       'preparing' | 'ready' | 'processing' | 'success' | 'error'
     >('preparing');
     const [isTransactionPending, setIsTransactionPending] = useState(false);
+    const [showSuccessModal, setShowSuccessModal] = useState(false);
 
     // Calculate approval amounts
+    // ✅ FIX: Ensure we never pass undefined to formatTokenAmount
     const systemApprovalAmount =
       selectedToken.symbol === '$SYSTEM'
-        ? formatTokenAmount(totalSystemPrice)
+        ? formatTokenAmount(totalSystemPrice ?? 0)
         : 0n;
     const selfApprovalAmount =
-      selectedToken.symbol === '$SELF' ? formatTokenAmount(totalSelfPrice) : 0n;
+      selectedToken.symbol === '$SELF' ? formatTokenAmount(totalSelfPrice ?? 0) : 0n;
 
     // Check allowances on mount
     useEffect(() => {
@@ -293,6 +302,9 @@ const TransactionFlow = memo(
         console.log('✅ Purchase transaction submitted, userOperationHash:', txHash);
         setTransactionState('success');
 
+        // ✅ Show success modal
+        setShowSuccessModal(true);
+
         // Process orders in database
         // Note: For CDP, we use userOperationHash as the transaction identifier
         try {
@@ -304,10 +316,7 @@ const TransactionFlow = memo(
             receipt: null, // CDP doesn't provide immediate receipt
           });
 
-          // Navigate or close cart after delay
-          setTimeout(() => {
-            console.log('✅ Order processing complete');
-          }, 2000);
+          console.log('✅ Order processing complete - notifications sent to product owners');
         } catch (error) {
           console.error('❌ Error processing orders after transaction:', error);
           // Transaction succeeded but order processing failed
@@ -396,6 +405,52 @@ const TransactionFlow = memo(
             ❌ Transaction failed. Please try again.
           </div>
         )}
+
+        {/* ✅ Success Modal */}
+        <Dialog open={showSuccessModal} onOpenChange={setShowSuccessModal}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <div className="flex justify-center mb-4">
+                <div className="rounded-full bg-green-100 p-3">
+                  <CheckCircle2 className="h-12 w-12 text-green-600" />
+                </div>
+              </div>
+              <DialogTitle className="text-center text-2xl">
+                Purchase Successful!
+              </DialogTitle>
+              <DialogDescription className="text-center space-y-3 pt-2">
+                <p className="text-base">
+                  Your order has been confirmed and is being processed.
+                </p>
+                <div className="bg-gray-50 rounded-lg p-4 space-y-2">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="font-medium">Items Purchased:</span>
+                    <span>{products.length} item{products.length > 1 ? 's' : ''}</span>
+                  </div>
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="font-medium">Payment Method:</span>
+                    <span>{selectedToken.symbol}</span>
+                  </div>
+                </div>
+                <p className="text-sm text-gray-600">
+                  Product creators have been notified of your purchase.
+                </p>
+              </DialogDescription>
+            </DialogHeader>
+            <div className="flex gap-2 mt-4">
+              <Button
+                onClick={() => {
+                  setShowSuccessModal(false);
+                  window.location.reload(); // Refresh to clear cart
+                }}
+                className="flex-1 bg-green-600 hover:bg-green-700"
+              >
+                <ShoppingBag className="mr-2 h-4 w-4" />
+                Continue Shopping
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
       </TransactionContainer>
     );
   },
