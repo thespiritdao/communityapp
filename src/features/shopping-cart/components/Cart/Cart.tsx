@@ -1180,6 +1180,13 @@ export default function Cart({
         console.log('âœ… Order record created:', orderData);
 
         // Send purchase notification
+        console.log('📧 [CART] Sending notification for product:', {
+          productName: product.name || product.title,
+          creatorWallet: product.creator_wallet,
+          buyerAddress: address,
+          orderId: orderData.id,
+        });
+
         const notificationResponse = await fetch('/api/notifications', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -1196,12 +1203,17 @@ export default function Cart({
           }),
         });
 
+        console.log('📧 [CART] Notification response status:', notificationResponse.status);
+
         if (!notificationResponse.ok) {
-          console.error('Failed to create notification:', await notificationResponse.json());
+          const errorData = await notificationResponse.json();
+          console.error('❌ [CART] Failed to create notification:', errorData);
           return null;
         }
 
-        return notificationResponse.json();
+        const notificationResult = await notificationResponse.json();
+        console.log('✅ [CART] Notification result:', notificationResult);
+        return notificationResult;
       });
 
       await Promise.all(orderPromises);

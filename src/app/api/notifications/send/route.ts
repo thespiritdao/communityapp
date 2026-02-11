@@ -13,6 +13,13 @@ export async function POST(request: NextRequest) {
   try {
     const data = await request.json();
 
+    console.log('📨 [/api/notifications/send] Received request:', {
+      notification_type: data.notification_type,
+      recipient: data.recipient_address,
+      sender: data.sender_address,
+      title: data.title,
+    });
+
     const {
       recipient_address,
       sender_address,
@@ -68,6 +75,7 @@ export async function POST(request: NextRequest) {
     // Create notification using admin client
     let notification;
     if (notificationCategory === 'governance') {
+      console.log('📋 [/api/notifications/send] Creating governance notification');
       const { data: govNotification, error } = await supabaseAdmin
         .from('governance_notifications')
         .insert([
@@ -87,9 +95,25 @@ export async function POST(request: NextRequest) {
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('❌ [/api/notifications/send] Governance insert error:', error);
+        throw error;
+      }
       notification = govNotification;
+      console.log('✅ [/api/notifications/send] Governance notification created:', govNotification.id);
     } else {
+      console.log('📋 [/api/notifications/send] Creating general notification to table:', 'general_notifications');
+      console.log('📋 [/api/notifications/send] Insert data:', {
+        recipient_address: recipient_address.toLowerCase(),
+        sender_address: sender_address.toLowerCase(),
+        notification_type,
+        title,
+        message,
+        context_url,
+        context_type,
+        context_id,
+      });
+
       const { data: generalNotification, error } = await supabaseAdmin
         .from('general_notifications')
         .insert([
@@ -107,11 +131,16 @@ export async function POST(request: NextRequest) {
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('❌ [/api/notifications/send] General insert error:', error);
+        console.error('❌ [/api/notifications/send] Error details:', JSON.stringify(error, null, 2));
+        throw error;
+      }
       notification = generalNotification;
+      console.log('✅ [/api/notifications/send] General notification created:', generalNotification?.id);
     }
 
-    console.log(`[API] Notification sent successfully to ${recipient_address}`);
+    console.log(`✅ [/api/notifications/send] Notification sent successfully to ${recipient_address}`);
     return NextResponse.json({
       success: true,
       notification,
