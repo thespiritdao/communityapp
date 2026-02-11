@@ -36,10 +36,9 @@ import { votingReminderService } from '@/services/votingReminderService';
 import { parseAbiItem, parseEventLogs } from 'viem';
 
 const GOVERNOR_ADDRESS = process.env.NEXT_PUBLIC_DAO_GOVERNOR as `0x${string}`;
-const ADVOCATE_ADDRESS = process.env.NEXT_PUBLIC_ADVOCATE as `0x${string}`;
 
-if (!GOVERNOR_ADDRESS || !ADVOCATE_ADDRESS) {
-  throw new Error('Missing contract addresses');
+if (!GOVERNOR_ADDRESS) {
+  throw new Error('Missing DAO Governor contract address');
 }
 
 interface ProposalFormData {
@@ -261,6 +260,57 @@ export function CreateProposalForm({
     userRolesCount: userRoles?.length || 0,
   });
 
+  // Fetch Advocate token address from database instead of hardcoding
+  const [advocateAddress, setAdvocateAddress] = useState<`0x${string}` | null>(null);
+  const [advocateAddressLoading, setAdvocateAddressLoading] = useState(true);
+
+  React.useEffect(() => {
+    const fetchAdvocateAddress = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('tokens')
+          .select('contract_address')
+          .eq('id', 'advocate')
+          .eq('is_active', true)
+          .single();
+
+        if (error) {
+          console.error('❌ Failed to fetch Advocate token address:', error);
+          toast({
+            title: 'Configuration Error',
+            description: 'Failed to load governance token address',
+            variant: 'destructive',
+          });
+          return;
+        }
+
+        if (!data?.contract_address) {
+          console.error('❌ Advocate token has no contract address');
+          toast({
+            title: 'Configuration Error',
+            description: 'Governance token address not configured',
+            variant: 'destructive',
+          });
+          return;
+        }
+
+        console.log('✅ Loaded Advocate token address from database:', data.contract_address);
+        setAdvocateAddress(data.contract_address as `0x${string}`);
+      } catch (err) {
+        console.error('❌ Error fetching Advocate address:', err);
+        toast({
+          title: 'Configuration Error',
+          description: 'Failed to load governance token address',
+          variant: 'destructive',
+        });
+      } finally {
+        setAdvocateAddressLoading(false);
+      }
+    };
+
+    fetchAdvocateAddress();
+  }, [toast]);
+
   const [formData, setFormData] = useState<ProposalFormData>({
     title: '',
     body: '',
@@ -339,12 +389,12 @@ export function CreateProposalForm({
     refetch: refetchBalance,
     error: balanceError,
   } = useReadContract({
-    address: ADVOCATE_ADDRESS,
+    address: advocateAddress || undefined,
     abi: AdvocateMembershipABI,
     functionName: 'balanceOf',
     args: address ? [address] : undefined,
     query: {
-      enabled: !!address && !!ADVOCATE_ADDRESS && isConnected,
+      enabled: !!address && !!advocateAddress && isConnected,
       staleTime: 60000, // ✅ 1 minute
       gcTime: 120000, // ✅ 2 minutes
       retry: (failureCount, error) => {
@@ -367,12 +417,12 @@ export function CreateProposalForm({
     isLoading: isLoadingVotingPower,
     error: votingPowerError,
   } = useReadContract({
-    address: ADVOCATE_ADDRESS,
+    address: advocateAddress || undefined,
     abi: AdvocateMembershipABI,
     functionName: 'getVotes',
     args: address ? [address] : undefined,
     query: {
-      enabled: !!address && !!ADVOCATE_ADDRESS && isConnected,
+      enabled: !!address && !!advocateAddress && isConnected,
       refetchInterval: false, // ✅ Disable automatic refetching to reduce calls
       staleTime: 60000, // ✅ 1 minute - data stays fresh longer
       gcTime: 120000, // ✅ 2 minutes - keep in cache longer
@@ -396,12 +446,12 @@ export function CreateProposalForm({
     refetch: refetchDelegate,
     error: delegateError,
   } = useReadContract({
-    address: ADVOCATE_ADDRESS,
+    address: advocateAddress || undefined,
     abi: AdvocateMembershipABI,
     functionName: 'delegates',
     args: address ? [address] : undefined,
     query: {
-      enabled: !!address && !!ADVOCATE_ADDRESS && isConnected,
+      enabled: !!address && !!advocateAddress && isConnected,
       staleTime: 60000, // ✅ 1 minute
       gcTime: 120000, // ✅ 2 minutes
       retry: (failureCount, error) => {
@@ -480,6 +530,7 @@ export function CreateProposalForm({
 
         const tokens: { id: string; label: string }[] = [];
         const addedPodIds = new Set<string>(); // Track to avoid duplicates
+        const EXEC_POD_ID = process.env.NEXT_PUBLIC_GOVERNANCE_POD_ID;
 
         // ✅ SECURITY FIX: Only load pods where user has governanceParticipation permission
         // Removed pod_leads bypass that allowed proposal creation without permission check
@@ -492,6 +543,16 @@ export function CreateProposalForm({
               .single();
 
             if (pod && !addedPodIds.has(role.podId)) {
+              // ✅ If this is Executive Pod, add "SpiritDAO (All)" option for DAO-wide proposals
+              if (role.podId === EXEC_POD_ID) {
+                tokens.push({
+                  id: 'dao-wide',
+                  label: 'SpiritDAO (All Members)',
+                });
+                console.log(`  ✅ Added DAO-wide proposal option (Executive Pod member)`);
+              }
+
+              // Add the pod itself for pod-level proposals
               tokens.push({
                 id: role.podId,
                 label: pod.name,
@@ -512,7 +573,7 @@ export function CreateProposalForm({
           }
         }
 
-        console.log(`📋 Total pods with governance permission: ${tokens.length}`);
+        console.log(`📋 Total options available: ${tokens.length}`);
         setUserTokens(tokens);
       } catch (error) {
         console.error('❌ Error loading user pods with governance permission:', error);
@@ -637,7 +698,7 @@ export function CreateProposalForm({
         evmSmartAccount: smartAccount,
         network: 'base',
         calls: [{
-          to: ADVOCATE_ADDRESS,
+          to: advocateAddress!,
           value: 0n,
           data: callData,
         }],
@@ -731,7 +792,19 @@ export function CreateProposalForm({
 
   // ENHANCED: Memoized proposal arguments with comprehensive validation and logging
   const proposalArgs = React.useMemo(() => {
-    const targets = [ADVOCATE_ADDRESS];
+    // Wait for advocate address to load from database
+    if (!advocateAddress) {
+      return [
+        [] as `0x${string}`[],
+        [] as bigint[],
+        [] as `0x${string}`[],
+        '',
+        '',
+        '',
+      ] as const;
+    }
+
+    const targets = [advocateAddress];
     const values = [0n];
     const calldatas = [
       encodeFunctionData({
@@ -791,7 +864,7 @@ export function CreateProposalForm({
         formData.forumThreadId || '',
       ] as const;
     }
-  }, [formData, ADVOCATE_ADDRESS, AdvocateMembershipABI, hasInteracted]);
+  }, [formData, advocateAddress, AdvocateMembershipABI, hasInteracted]);
 
   // Enhanced validation for submit button
   const canSubmitProposal = React.useMemo(() => {
@@ -1061,7 +1134,7 @@ export function CreateProposalForm({
           console.log('   Transaction Hash:', log.transactionHash);
           console.log('   Block Number:', log.blockNumber);
 
-          // Update database
+          // Update database - BOTH tables
           const { error: updateError } = await supabase
             .from('proposal_metadata')
             .update({
@@ -1071,9 +1144,24 @@ export function CreateProposalForm({
             .eq('onchain_proposal_id', tempProposalId);
 
           if (updateError) {
-            console.error('❌ Failed to update database:', updateError);
+            console.error('❌ Failed to update proposal_metadata:', updateError);
           } else {
             console.log('✅ Proposal metadata updated successfully in database');
+          }
+
+          // ✅ ALSO update pod_level_proposals if it exists
+          const { error: podUpdateError } = await supabase
+            .from('pod_level_proposals')
+            .update({
+              onchain_proposal_id: realProposalId,
+              transaction_hash: log.transactionHash,
+            })
+            .eq('onchain_proposal_id', tempProposalId);
+
+          if (podUpdateError) {
+            console.log('ℹ️ No pod-level proposal to update (this is OK for DAO-wide proposals)');
+          } else {
+            console.log('✅ Pod-level proposal also updated with real ID');
           }
 
           toast({
@@ -1314,12 +1402,12 @@ export function CreateProposalForm({
               console.log('✅ Proposal metadata created with temporary ID:', tempProposalId);
             }
 
-            // ✅ ALSO save to pod_level_proposals if this is a pod-level proposal
-            const EXEC_POD_ID = process.env.NEXT_PUBLIC_GOVERNANCE_POD_ID;
-            const isPodLevelProp = proposalTokenId && proposalTokenId !== EXEC_POD_ID;
+            // ✅ Save to pod_level_proposals ONLY if user selected a specific pod (not "dao-wide")
+            const isDAOWide = proposalTokenId === 'dao-wide';
+            const isPodLevelProp = proposalTokenId && !isDAOWide;
 
             if (isPodLevelProp) {
-              console.log('🏛️ [POD-LEVEL] Also saving to pod_level_proposals table');
+              console.log('🏛️ [POD-LEVEL] Saving to pod_level_proposals table (pod-specific governance)');
 
               try {
                 await GovernanceService.createPodLevelProposal({
@@ -1335,11 +1423,13 @@ export function CreateProposalForm({
                   transaction_hash: txHash,
                 });
 
-                console.log('✅ Pod-level proposal entry created (linked to on-chain)');
+                console.log('✅ Pod-level proposal entry created');
               } catch (podError) {
                 console.error('❌ Error creating pod-level proposal entry:', podError);
                 // Don't fail the whole process - proposal is still on-chain
               }
+            } else if (isDAOWide) {
+              console.log('🌍 [DAO-WIDE] Proposal created for all SpiritDAO members - no pod_level entry needed');
             }
           }
 
@@ -1457,12 +1547,31 @@ export function CreateProposalForm({
     );
   }
 
-  if (!GOVERNOR_ADDRESS || !ADVOCATE_ADDRESS) {
+  // Show loading state while fetching Advocate address from database
+  if (advocateAddressLoading) {
+    return (
+      <div className="proposal-form p-6">
+        <h2 className="text-2xl font-bold mb-4">Create a New Proposal</h2>
+        <div className="mb-4 flex items-center">
+          <div
+            className="w-6 h-6 rounded-full animate-spin mr-3"
+            style={{
+              border: '3px solid #2F5D50',
+              borderTopColor: 'transparent',
+            }}
+          ></div>
+          <span>Loading governance configuration...</span>
+        </div>
+      </div>
+    );
+  }
+
+  if (!GOVERNOR_ADDRESS || !advocateAddress) {
     return (
       <div className="proposal-form p-6">
         <h2 className="text-2xl font-bold mb-4">Create a New Proposal</h2>
         <div className="mb-4" style={{ color: '#8B3A3A' }}>
-          Missing contract addresses in environment variables.
+          Missing contract addresses. Please check the governance token configuration.
         </div>
       </div>
     );

@@ -601,7 +601,6 @@ const EventManagementRow: React.FC<EventManagementRowProps> = ({
   }, [event?.creator_address]);
 
   const { getCancelEventCall } = useSimplifiedEventTransactions();
-  const [showSmartContractCancel, setShowSmartContractCancel] = useState(false);
 
   // CDP-based blockchain event cancellation
   const handleCdpCancelEvent = async (blockchainEventId: string) => {
@@ -714,7 +713,6 @@ const EventManagementRow: React.FC<EventManagementRowProps> = ({
 
       setCancellingEvent(false);
       setShowCancelDialog(false);
-      setShowSmartContractCancel(false);
 
       if (success) {
         toast({
@@ -722,6 +720,12 @@ const EventManagementRow: React.FC<EventManagementRowProps> = ({
           description: 'Event cancelled successfully. Refunds will be processed automatically.',
           variant: 'success',
         });
+
+        // Send notifications to all attendees
+        await sendCancellationNotifications(event);
+
+        // Refresh page to show updated status
+        window.location.reload();
       }
     } catch (error: any) {
       console.error('❌ Event cancellation failed:', error);
@@ -740,27 +744,13 @@ const EventManagementRow: React.FC<EventManagementRowProps> = ({
     }
   };
 
-  const handleEventCancellation = async (
-    eventToCancel: EventWithStats,
-  ): Promise<boolean> => {
+  // Helper to send cancellation notifications
+  const sendCancellationNotifications = async (eventToCancel: EventWithStats) => {
     try {
-      // 1. Get all registrations for the event
       const registrations = await EventService.getEventRegistrations(
         eventToCancel.id,
       );
 
-      // 2. If event has blockchain_event_id, cancel on smart contract first
-      if (eventToCancel.blockchain_event_id) {
-        // Show smart contract cancellation interface
-        setShowSmartContractCancel(true);
-        return false; // Prevent modal from closing - smart contract transaction will handle completion
-      }
-
-      // 3. Cancel the event in Supabase (for legacy events without blockchain ID)
-      const success = await cancelEvent();
-      if (!success) return false;
-
-      // 4. Send notifications to all registered attendees
       const organizerName =
         organizerProfile?.first_name && organizerProfile?.last_name
           ? `${organizerProfile.first_name} ${organizerProfile.last_name}`
@@ -780,58 +770,60 @@ const EventManagementRow: React.FC<EventManagementRowProps> = ({
           });
         }
       }
-
-      return true;
     } catch (error) {
-      console.error('Error in handleEventCancellation:', error);
-      return false;
+      console.error('Error sending cancellation notifications:', error);
     }
   };
 
-  const handleSmartContractCancellationSuccess = async (
+  const handleEventCancellation = async (
     eventToCancel: EventWithStats,
-  ) => {
+  ): Promise<void> => {
+    setCancellingEvent(true);
+
     try {
-      // 1. Update Supabase status
-      await EventService.cancelEvent(eventToCancel.id);
-
-      // 2. Send notifications
-      const registrations = await EventService.getEventRegistrations(
-        eventToCancel.id,
-      );
-      const organizerName =
-        organizerProfile?.first_name && organizerProfile?.last_name
-          ? `${organizerProfile.first_name} ${organizerProfile.last_name}`
-          : `${event.creator_address.substring(0, 6)}...${event.creator_address.substring(38)}`;
-
-      for (const registration of registrations) {
-        if (registration.registration_status === 'registered') {
-          await notificationService.createNotification({
-            recipient_address: registration.user_address,
-            sender_address: event.creator_address,
-            notification_type: 'bounty_update',
-            title: 'Event Cancelled',
-            message: `The event "${eventToCancel.title}" has been cancelled by ${organizerName}. Refunds have been processed automatically.`,
-            context_type: 'marketplace',
-            context_id: eventToCancel.id,
-            context_url: `/events/${eventToCancel.id}`,
-          });
-        }
+      // If event has blockchain_event_id, cancel on blockchain first
+      if (eventToCancel.blockchain_event_id) {
+        await handleCdpCancelEvent(eventToCancel.blockchain_event_id);
+        return; // handleCdpCancelEvent handles notifications and page refresh
       }
 
-      setShowSmartContractCancel(false);
+      // For legacy events without blockchain ID, cancel directly in database
+      const success = await cancelEvent();
+      if (!success) {
+        toast({
+          title: 'Cancellation Failed',
+          description: 'Failed to cancel event. Please try again.',
+          variant: 'destructive',
+        });
+        setCancellingEvent(false);
+        return;
+      }
+
+      // Send notifications
+      await sendCancellationNotifications(eventToCancel);
+
+      // Close dialog and refresh
       setShowCancelDialog(false);
-      alert(
-        'Event cancelled successfully. Attendees have been notified and refunds processed.',
-      );
+      setCancellingEvent(false);
+
+      toast({
+        title: 'Event Cancelled',
+        description: 'Event cancelled successfully. Attendees have been notified.',
+        variant: 'default',
+      });
+
       window.location.reload();
     } catch (error) {
-      console.error('Error in post-cancellation cleanup:', error);
-      alert(
-        'Event was cancelled on blockchain but some cleanup failed. Please refresh the page.',
-      );
+      console.error('Error in handleEventCancellation:', error);
+      toast({
+        title: 'Cancellation Failed',
+        description: 'An error occurred while cancelling the event.',
+        variant: 'destructive',
+      });
+      setCancellingEvent(false);
     }
   };
+
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
@@ -964,51 +956,18 @@ const EventManagementRow: React.FC<EventManagementRowProps> = ({
                     <Button
                       variant="outline"
                       onClick={() => setShowCancelDialog(false)}
+                      disabled={cancellingEvent}
                     >
                       Keep Event
                     </Button>
-                    {showSmartContractCancel ? (
-                      <Button
-                        variant="destructive"
-                        onClick={() => handleCdpCancelEvent(event.blockchain_event_id || event.id)}
-                        disabled={cancellingEvent}
-                        className="text-white"
-                      >
-                        {cancellingEvent ? 'Cancelling...' : 'Cancel Event on Blockchain'}
-                      </Button>
-                    ) : (
-                      <Button
-                        variant="destructive"
-                        onClick={async () => {
-                          setCancellingEvent(true);
-                          try {
-                            const success =
-                              await handleEventCancellation(event);
-                            if (success) {
-                              setShowCancelDialog(false);
-                              alert(
-                                'Event cancelled successfully. Attendees have been notified.',
-                              );
-                              window.location.reload();
-                            } else if (!showSmartContractCancel) {
-                              alert(
-                                'Failed to cancel event. Please try again.',
-                              );
-                            }
-                          } catch (error) {
-                            console.error('Error cancelling event:', error);
-                            alert(
-                              'An error occurred while cancelling the event.',
-                            );
-                          } finally {
-                            setCancellingEvent(false);
-                          }
-                        }}
-                        disabled={cancellingEvent}
-                      >
-                        {cancellingEvent ? 'Cancelling...' : 'Cancel Event'}
-                      </Button>
-                    )}
+                    <Button
+                      variant="destructive"
+                      onClick={() => handleEventCancellation(event)}
+                      disabled={cancellingEvent}
+                      className="text-white"
+                    >
+                      {cancellingEvent ? 'Cancelling...' : 'Cancel Event'}
+                    </Button>
                   </div>
                 </div>
               </DialogContent>

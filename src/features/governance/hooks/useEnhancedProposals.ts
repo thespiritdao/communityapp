@@ -62,10 +62,6 @@ export const useEnhancedProposals = () => {
   const { canParticipateInGovernance, userRoles, hasPermission } =
     useHatPermissions();
 
-  // ✅ ARCHITECTURE FIX: Check DAO-wide governance (Executive Pod) for on-chain proposals
-  const { canParticipate: hasDAOGovernancePermission } =
-    useGovernancePermission(undefined, 'dao-wide');
-
   // Create a permission hash to detect permission changes
   const permissionHash = userRoles
     .map(role => `${role.podId}:${role.permissions?.governanceParticipation}`)
@@ -76,7 +72,6 @@ export const useEnhancedProposals = () => {
     queryKey: [
       'enhanced-proposals',
       address,
-      hasDAOGovernancePermission,
       permissionHash, // ✅ FIX: Track actual permission values, not just array length
       onChainProposals.length,
     ],
@@ -87,15 +82,17 @@ export const useEnhancedProposals = () => {
 
       const allProposals: EnhancedProposal[] = [];
 
-      // 1. Add on-chain governance proposals (DAO-wide, require Executive Pod permission)
+      // 1. Add on-chain governance proposals (DAO-wide, open to ALL members)
+      // Note: We'll filter these later to remove duplicates after loading pod-level proposals
       const execPodId = process.env.NEXT_PUBLIC_GOVERNANCE_POD_ID;
+      const onChainProposalsToAdd: EnhancedProposal[] = [];
 
       for (const proposal of onChainProposals) {
         // Use metadata.created_at if available (for pending proposals), otherwise use current time
         const createdAt = proposal.metadata?.created_at || new Date().toISOString();
         const proposalStatus = proposal.isPending ? 'proposed' : undefined;
 
-        allProposals.push({
+        onChainProposalsToAdd.push({
           id: proposal.id,
           title: proposal.title,
           body: proposal.body,
@@ -107,7 +104,7 @@ export const useEnhancedProposals = () => {
           state: proposal.state,
           status: proposalStatus, // Mark pending proposals with status
           created_at: createdAt,
-          user_can_vote: hasDAOGovernancePermission, // ✅ Executive Pod governance
+          user_can_vote: true, // ✅ DAO-wide proposals: ALL members can vote
           user_vote: null,
           approving_pod_id: execPodId,
           governance_context: 'dao-wide',
@@ -234,6 +231,25 @@ export const useEnhancedProposals = () => {
 
         console.log(`📋 [POD-LEVEL] Filtered ${podLevelProposals.length} proposals → ${activeProposals.length} active (${podLevelProposals.length - activeProposals.length} expired)`);
 
+        // ✅ DEBUG: Check what onchain_proposal_id values we have
+        console.log(`🔍 [DEBUG] Pod-level proposals with onchain IDs:`, activeProposals.map(p => ({
+          title: p.title,
+          onchain_proposal_id: p.onchain_proposal_id,
+          hasId: !!p.onchain_proposal_id,
+          isTemp: p.onchain_proposal_id?.startsWith('temp_')
+        })));
+
+        // ✅ DEDUPLICATION: Collect onchain_proposal_ids from pod-level proposals
+        // so we can filter them out from the on-chain list later
+        const podLevelOnchainIds = new Set(
+          activeProposals
+            .map(p => p.onchain_proposal_id)
+            .filter(id => id && !id.startsWith('temp_')) // Exclude temporary IDs
+        );
+
+        console.log(`🔍 [DEDUP] Pod-level onchain IDs to filter:`, Array.from(podLevelOnchainIds));
+        console.log(`🔍 [DEDUP] On-chain proposals before filtering:`, onChainProposalsToAdd.map(p => ({ id: p.id, title: p.title })));
+
         for (const proposal of activeProposals) {
           // Check if user has governance permission in this specific pod
           const podRole = userRoles.find(
@@ -284,8 +300,22 @@ export const useEnhancedProposals = () => {
         }
 
         console.log(`✅ Loaded ${activeProposals.length} active pod-level proposals (${podLevelProposals.length} total, ${podLevelProposals.length - activeProposals.length} expired)`);
+
+        // ✅ DEDUPLICATION: Now filter out on-chain proposals that are already in pod-level
+        const filteredOnChainProposals = onChainProposalsToAdd.filter(proposal => {
+          const isDuplicate = podLevelOnchainIds.has(proposal.id);
+          if (isDuplicate) {
+            console.log(`🔍 [DEDUP] Filtered out duplicate on-chain proposal: ${proposal.title} (ID: ${proposal.id})`);
+          }
+          return !isDuplicate;
+        });
+
+        allProposals.push(...filteredOnChainProposals);
+        console.log(`✅ Added ${filteredOnChainProposals.length} DAO-wide proposals (${onChainProposalsToAdd.length - filteredOnChainProposals.length} duplicates removed)`);
       } catch (error) {
         console.error('Failed to load pod-level proposals:', error);
+        // If pod-level load failed, add all on-chain proposals anyway
+        allProposals.push(...onChainProposalsToAdd);
       }
 
       // Sort by creation date, newest first
