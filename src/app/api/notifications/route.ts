@@ -1,5 +1,5 @@
 import { type NextRequest, NextResponse } from 'next/server';
-import { unifiedNotificationService } from '@/services/unifiedNotificationService';
+import { supabaseAdmin } from '@/utils/supabaseAdminClient';
 import {
   getFulfillmentManagers,
   getUserProfile,
@@ -83,24 +83,31 @@ export async function POST(request: NextRequest) {
           });
 
           try {
-            await unifiedNotificationService.createNotification({
-              recipient_address: creatorWallet,
-              sender_address: buyerAddress,
-              notification_type: 'purchase_completed',
-              title: 'Your Product Was Purchased!',
-              message: `${buyerName} has purchased your product "${productName}". Please check the order details to begin fulfillment.`,
-              context_url: `/marketplace/orders/${orderId}`,
-              context_type: 'marketplace',
-              context_id: orderId,
-              priority: 'high',
-              metadata: {
-                product_id: productId,
-                product_name: productName,
-                transaction_hash: transactionHash,
-              },
-            });
+            // ✅ FIX: Call database directly instead of going through unifiedNotificationService
+            // (which tries to make another HTTP fetch call and fails server-side)
+            const { data: notification, error } = await supabaseAdmin
+              .from('general_notifications')
+              .insert([
+                {
+                  recipient_address: creatorWallet.toLowerCase(),
+                  sender_address: buyerAddress.toLowerCase(),
+                  notification_type: 'purchase_completed',
+                  title: 'Your Product Was Purchased!',
+                  message: `${buyerName} has purchased your product "${productName}". Please check the order details to begin fulfillment.`,
+                  context_url: `/marketplace/orders/${orderId}`,
+                  context_type: 'marketplace',
+                  context_id: orderId,
+                },
+              ])
+              .select()
+              .single();
 
-            console.log(`✅ [SUCCESS] Notified product creator: ${creatorWallet}`);
+            if (error) {
+              console.error(`❌ [FAILED] Database error:`, error);
+              throw error;
+            }
+
+            console.log(`✅ [SUCCESS] Notified product creator: ${creatorWallet} (notification ID: ${notification.id})`);
             notificationsSent++;
           } catch (notifError) {
             console.error(`❌ [FAILED] Failed to notify product creator ${creatorWallet}:`, notifError);
@@ -145,26 +152,31 @@ export async function POST(request: NextRequest) {
           }
 
           try {
-            await unifiedNotificationService.createNotification({
-              recipient_address: manager.wallet_address,
-              sender_address: buyerAddress,
-              notification_type: 'purchase_completed',
-              title: 'Product Purchase Requires Fulfillment',
-              message: `${buyerName} has purchased "${productName}". Please begin the process of facilitating the delivery of the item.`,
-              context_url: `/marketplace/orders/${orderId}`,
-              context_type: 'marketplace',
-              context_id: orderId,
-              priority: 'high',
-              metadata: {
-                product_id: productId,
-                product_name: productName,
-                required_token: requiredToken,
-                transaction_hash: transactionHash,
-              },
-            });
+            // ✅ FIX: Call database directly instead of going through unifiedNotificationService
+            const { data: notification, error } = await supabaseAdmin
+              .from('general_notifications')
+              .insert([
+                {
+                  recipient_address: manager.wallet_address.toLowerCase(),
+                  sender_address: buyerAddress.toLowerCase(),
+                  notification_type: 'purchase_completed',
+                  title: 'Product Purchase Requires Fulfillment',
+                  message: `${buyerName} has purchased "${productName}". Please begin the process of facilitating the delivery of the item.`,
+                  context_url: `/marketplace/orders/${orderId}`,
+                  context_type: 'marketplace',
+                  context_id: orderId,
+                },
+              ])
+              .select()
+              .single();
+
+            if (error) {
+              console.error(`❌ Database error for manager ${manager.wallet_address}:`, error);
+              throw error;
+            }
 
             console.log(
-              `✅ Notified fulfillment manager: ${manager.wallet_address}`,
+              `✅ Notified fulfillment manager: ${manager.wallet_address} (notification ID: ${notification.id})`,
             );
             notificationsSent++;
           } catch (notifError) {
