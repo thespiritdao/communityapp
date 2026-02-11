@@ -1069,10 +1069,14 @@ export default function Cart({
       token: selectedToken.symbol,
       productOwner: productOwnerInfo,
     });
-    setShowPurchaseConfirmation(true);
 
-    // ✅ FIX: Don't auto-close - let user dismiss modal manually
-    // User will close modal by clicking "Continue Shopping" button
+    // ✅ FIX: Close cart immediately so modal appears on top
+    closeCart();
+
+    // Show modal after cart closes
+    setTimeout(() => {
+      setShowPurchaseConfirmation(true);
+    }, 100);
 
     // Get transaction receipt for order creation
     // Note: For user operations, we may need to wait for the bundler transaction
@@ -1366,6 +1370,7 @@ export default function Cart({
   // The transactionData variable now contains: { approveCalls, purchaseCalls, totalCalls, needsApproval }
 
   return (
+    <>
     <S.CartOverlay onClick={closeCart}>
       <S.CartContent onClick={(e) => e.stopPropagation()}>
         <S.CartContentHeader>
@@ -1435,10 +1440,15 @@ export default function Cart({
           )}
         </S.CartFooter>
       </S.CartContent>
+    </S.CartOverlay>
 
-      {/* Purchase Confirmation Modal */}
-      <Dialog open={showPurchaseConfirmation} onOpenChange={setShowPurchaseConfirmation}>
-        <DialogContent className="sm:max-w-md">
+      {/* Purchase Confirmation Modal - Outside cart overlay for proper z-index */}
+      <Dialog
+        open={showPurchaseConfirmation}
+        onOpenChange={setShowPurchaseConfirmation}
+        modal={true}
+      >
+        <DialogContent className="sm:max-w-md z-[9999]">
           <DialogHeader>
             <div className="flex items-center justify-center mb-4">
               <div className="text-6xl">🎉</div>
@@ -1511,7 +1521,7 @@ export default function Cart({
               onClick={() => {
                 setShowPurchaseConfirmation(false);
                 clearCart();
-                closeCart();
+                // Cart is already closed, just dismiss modal
               }}
               className="flex-1"
             >
@@ -1520,6 +1530,7 @@ export default function Cart({
             <CDPTransactionButton
               onClick={() => {
                 setShowPurchaseConfirmation(false);
+                clearCart();
                 router.push('/marketplace/my-orders');
               }}
               className="flex-1 bg-green-600 hover:bg-green-700"
@@ -1529,6 +1540,6 @@ export default function Cart({
           </div>
         </DialogContent>
       </Dialog>
-    </S.CartOverlay>
+    </>
   );
 }
