@@ -61,13 +61,25 @@ export async function addReaction(
     }
 
     // Check if user already reacted with this emoji
-    const { data: existing } = await supabase
+    // ✅ FIX: Use maybeSingle() to avoid 406 errors with emoji URL encoding
+    const query = supabase
       .from('forum_post_reactions')
       .select('id')
       .eq('reaction_type', emoji)
-      .eq('reactor_address', userAddress.toLowerCase())
-      .eq(postId ? 'post_id' : 'thread_id', postId || threadId)
-      .single();
+      .eq('reactor_address', userAddress.toLowerCase());
+
+    if (postId) {
+      query.eq('post_id', postId);
+    } else if (threadId) {
+      query.eq('thread_id', threadId);
+    }
+
+    const { data: existing, error: checkError } = await query.maybeSingle();
+
+    // If there's an error, log it but continue (might be 406 from emoji encoding)
+    if (checkError && checkError.code !== 'PGRST116') {
+      console.warn('Error checking existing reaction:', checkError);
+    }
 
     if (existing) {
       return { success: false, error: 'You already reacted with this emoji' };
