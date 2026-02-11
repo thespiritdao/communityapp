@@ -1041,7 +1041,7 @@ export default function Cart({
     // ✅ FEATURE: Show purchase confirmation modal
     setPurchaseDetails({
       itemCount: products.length,
-      totalAmount: formatPrice(calculations.totalAmount, selectedToken.symbol),
+      totalAmount: formatPrice(calculations.selectedTokenPrice, selectedToken.symbol),
       token: selectedToken.symbol,
     });
     setShowPurchaseConfirmation(true);
