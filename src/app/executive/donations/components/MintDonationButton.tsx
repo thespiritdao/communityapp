@@ -3,7 +3,6 @@
 import React, { useState } from 'react';
 import { useEvmAddress, useSendUserOperation, useCurrentUser } from '@coinbase/cdp-hooks';
 import { encodeFunctionData, getAddress } from 'viem';
-import { Button } from '@/components/ui/button';
 import { Loader2 } from 'lucide-react';
 
 const SYSTEM_TOKEN_ADDRESS = process.env.NEXT_PUBLIC_SYSTEM_TOKEN!;
@@ -117,19 +116,32 @@ export const MintDonationButton: React.FC<MintDonationButtonProps> = ({
   };
 
   return (
-    <Button
+    <button
       onClick={handleMint}
       disabled={isMinting || !currentUser?.evmSmartAccounts?.[0]}
-      className="w-full lg:w-auto bg-green-600 hover:bg-green-700 disabled:bg-gray-400"
+      style={{
+        backgroundColor: (isMinting || !currentUser?.evmSmartAccounts?.[0]) ? '#D8D2C8' : '#3F7A5A',
+        color: '#FFFFFF',
+        fontWeight: 500,
+        padding: '0.75rem 1.5rem',
+        borderRadius: '0.75rem',
+        width: '100%',
+        transition: 'all 0.2s',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: '0.5rem'
+      }}
+      className="lg:w-auto"
     >
       {isMinting ? (
         <>
-          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          <Loader2 className="h-4 w-4 animate-spin" />
           Minting...
         </>
       ) : (
-        'Mint $SYSTEM Tokens'
+        'Mint $SYSTEM'
       )}
-    </Button>
+    </button>
   );
 };

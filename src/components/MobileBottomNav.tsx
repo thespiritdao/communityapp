@@ -22,7 +22,7 @@ const NAV_ITEMS: Item[] = [
   },
   {
     href: '/faucet',
-    label: 'Faucet',
+    label: 'Tokens',
     match: 'exact',
     icon: <Droplets size={36} />,
   },

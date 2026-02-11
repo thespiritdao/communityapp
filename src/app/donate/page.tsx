@@ -75,7 +75,12 @@ function DonationCheckoutForm({
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       {/* Donation Summary */}
-      <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg space-y-2">
+      <div style={{
+        backgroundColor: '#E8F1EE',
+        border: '1px solid #B8D9CA',
+        padding: '1rem',
+        borderRadius: '0.75rem'
+      }} className="space-y-2">
         <div className="flex justify-between text-sm">
           <span className="text-gray-600 dark:text-gray-400">Donation Amount:</span>
           <span className="font-semibold">${donationData.amount.toFixed(2)}</span>
@@ -88,10 +93,10 @@ function DonationCheckoutForm({
           <span className="text-gray-600 dark:text-gray-400">Processing Fee (est):</span>
           <span className="text-gray-600 dark:text-gray-400">-${donationData.estimatedStripeFee}</span>
         </div>
-        <div className="border-t border-gray-300 dark:border-gray-600 pt-2 mt-2">
+        <div className="border-t pt-2 mt-2" style={{ borderColor: '#B8D9CA' }}>
           <div className="flex justify-between">
             <span className="font-bold">You'll Receive:</span>
-            <span className="font-bold text-green-600 dark:text-green-400">
+            <span className="font-bold" style={{ color: '#3F7A5A' }}>
               {donationData.systemTokens} $SYSTEM
             </span>
           </div>
@@ -99,9 +104,14 @@ function DonationCheckoutForm({
       </div>
 
       {/* Payment Methods Info */}
-      <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg text-sm space-y-2">
-        <p className="font-semibold text-blue-900 dark:text-blue-200">💳 Payment Options:</p>
-        <ul className="text-blue-800 dark:text-blue-300 space-y-1 ml-4">
+      <div style={{
+        backgroundColor: '#E8F1EE',
+        border: '1px solid #B8D9CA',
+        padding: '1rem',
+        borderRadius: '0.75rem'
+      }} className="text-sm space-y-2">
+        <p className="font-semibold text-gray-900 dark:text-white">💳 Payment Options:</p>
+        <ul className="text-gray-700 dark:text-gray-300 space-y-1 ml-4">
           <li>• <strong>Credit Card:</strong> 2.9% + $0.30 fee, 3-7 day hold</li>
           <li>• <strong>Bank Transfer (ACH):</strong> 0.8% fee, instant approval</li>
         </ul>
@@ -120,8 +130,13 @@ function DonationCheckoutForm({
       )}
 
       {/* No Refund Policy */}
-      <div className="bg-yellow-50 dark:bg-yellow-900/20 p-3 rounded-lg text-xs">
-        <p className="text-yellow-800 dark:text-yellow-300">
+      <div style={{
+        backgroundColor: '#FAF4EC',
+        border: '1px solid #E8D7B8',
+        padding: '0.75rem',
+        borderRadius: '0.75rem'
+      }} className="text-xs">
+        <p style={{ color: '#6B5A3E' }}>
           ⚠️ <strong>No Refund Policy:</strong> All donations are final and non-refundable.
           Tokens will be minted after settlement period (3-7 days for cards, instant for ACH).
         </p>
@@ -131,7 +146,15 @@ function DonationCheckoutForm({
       <button
         type="submit"
         disabled={!stripe || isProcessing}
-        className="w-full bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white font-semibold py-3 px-6 rounded-lg transition-colors"
+        style={{
+          backgroundColor: (!stripe || isProcessing) ? '#D8D2C8' : '#2F5D50',
+          color: '#FFFFFF',
+          fontWeight: 500,
+          padding: '0.75rem 1.5rem',
+          borderRadius: '0.75rem',
+          width: '100%',
+          transition: 'all 0.2s'
+        }}
       >
         {isProcessing ? 'Processing...' : `Donate $${donationData.amount.toFixed(2)}`}
       </button>
@@ -244,7 +267,14 @@ export default function DonatePage() {
           </p>
           <button
             onClick={handleNewDonation}
-            className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-6 rounded-lg transition-colors"
+            style={{
+              backgroundColor: '#2F5D50',
+              color: '#FFFFFF',
+              fontWeight: 500,
+              padding: '0.5rem 1.5rem',
+              borderRadius: '0.75rem',
+              transition: 'all 0.2s'
+            }}
           >
             Make Another Donation
           </button>
@@ -254,7 +284,7 @@ export default function DonatePage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-12 px-4">
+    <div className="min-h-screen py-12 px-4">
       <div className="max-w-2xl mx-auto">
         {/* Header */}
         <div className="text-center mb-8">
@@ -272,21 +302,14 @@ export default function DonatePage() {
             <div className="space-y-6">
               {/* Wallet Connection Status */}
               {!isConnected && (
-                <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-300 dark:border-yellow-600 p-4 rounded-lg">
-                  <p className="text-yellow-800 dark:text-yellow-300 text-sm">
+                <div style={{
+                  backgroundColor: '#FAF4EC',
+                  border: '1px solid #E8D7B8',
+                  padding: '1rem',
+                  borderRadius: '0.75rem'
+                }}>
+                  <p className="text-sm" style={{ color: '#6B5A3E' }}>
                     ⚠️ Please connect your wallet to receive $SYSTEM tokens
-                  </p>
-                </div>
-              )}
-
-              {/* Connected Wallet Display */}
-              {isConnected && walletAddress && (
-                <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg">
-                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">
-                    Tokens will be sent to:
-                  </p>
-                  <p className="font-mono text-sm text-gray-900 dark:text-white break-all">
-                    {walletAddress}
                   </p>
                 </div>
               )}
@@ -302,11 +325,16 @@ export default function DonatePage() {
                       key={amount}
                       type="button"
                       onClick={() => setDonationAmount(amount.toString())}
-                      className={`py-3 px-4 rounded-lg font-semibold transition-colors ${
-                        donationAmount === amount.toString()
-                          ? 'bg-blue-600 text-white'
-                          : 'bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white hover:bg-gray-200 dark:hover:bg-gray-600'
-                      }`}
+                      style={{
+                        backgroundColor: donationAmount === amount.toString() ? '#2F5D50' : 'transparent',
+                        color: donationAmount === amount.toString() ? '#FFFFFF' : undefined,
+                        border: donationAmount === amount.toString() ? 'none' : '1px solid #6F8F86',
+                        padding: '0.75rem 1rem',
+                        borderRadius: '0.75rem',
+                        fontWeight: 500,
+                        transition: 'all 0.2s'
+                      }}
+                      className={donationAmount === amount.toString() ? '' : 'text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700'}
                     >
                       ${amount}
                     </button>
@@ -361,7 +389,15 @@ export default function DonatePage() {
               <button
                 onClick={handleCreatePaymentIntent}
                 disabled={!isConnected || isCreatingIntent || !donationAmount || !donorEmail}
-                className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white font-semibold py-3 px-6 rounded-lg transition-colors"
+                style={{
+                  backgroundColor: (!isConnected || isCreatingIntent || !donationAmount || !donorEmail) ? '#D8D2C8' : '#2F5D50',
+                  color: '#FFFFFF',
+                  fontWeight: 500,
+                  padding: '0.75rem 1.5rem',
+                  borderRadius: '0.75rem',
+                  width: '100%',
+                  transition: 'all 0.2s'
+                }}
               >
                 {isCreatingIntent ? 'Preparing...' : 'Continue to Payment'}
               </button>

@@ -26,8 +26,10 @@ import {
   FileText,
   Loader2,
   HelpCircle,
+  Users,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import Link from 'next/link';
 
 export default function ExecutiveDashboard() {
   const [brainDump, setBrainDump] = useState('');
@@ -44,6 +46,12 @@ export default function ExecutiveDashboard() {
             <p className="text-muted-foreground">Executive Operating System</p>
           </div>
           <div className="flex items-center gap-3">
+            <Link href="/executive/squad">
+              <Button variant="outline" size="sm">
+                <Users className="h-4 w-4 mr-2" />
+                Agent Squad
+              </Button>
+            </Link>
             <Dialog>
               <DialogTrigger asChild>
                 <Button variant="outline" size="sm">
