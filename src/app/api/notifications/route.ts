@@ -75,6 +75,13 @@ export async function POST(request: NextRequest) {
 
         // ✅ FIX: Always notify product creator first (if exists)
         if (creatorWallet) {
+          console.log(`📧 [DEBUG] Attempting to notify product creator:`, {
+            creatorWallet,
+            buyerAddress,
+            productName,
+            orderId,
+          });
+
           try {
             await unifiedNotificationService.createNotification({
               recipient_address: creatorWallet,
@@ -93,11 +100,17 @@ export async function POST(request: NextRequest) {
               },
             });
 
-            console.log(`✅ Notified product creator: ${creatorWallet}`);
+            console.log(`✅ [SUCCESS] Notified product creator: ${creatorWallet}`);
             notificationsSent++;
           } catch (notifError) {
-            console.error(`❌ Failed to notify product creator ${creatorWallet}:`, notifError);
+            console.error(`❌ [FAILED] Failed to notify product creator ${creatorWallet}:`, notifError);
+            console.error(`❌ [FAILED] Error details:`, {
+              error: notifError,
+              stack: (notifError as Error).stack,
+            });
           }
+        } else {
+          console.warn(`⚠️ [MISSING] No creatorWallet provided for product "${productName}"`);
         }
 
         // Get fulfillment managers using HATS-based membership
