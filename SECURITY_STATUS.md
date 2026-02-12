@@ -1,6 +1,6 @@
 # Security Audit Status
 **Last Updated:** 2026-02-12
-**Commit:** 421e87cd
+**Commit:** 1d4781f2 (vite revert for Vercel deployment)
 
 ---
 
@@ -9,10 +9,10 @@
 ### Progress
 - **Started with:** 102 vulnerabilities (37 low, 25 moderate, 40 high)
 - **Phase 1 Fixed:** 25 vulnerabilities using `npm audit fix`
-- **Phase 2 Fixed:** 2 vulnerabilities using breaking changes
-- **Total Fixed:** 27 vulnerabilities
-- **Remaining:** 75 vulnerabilities (38 low, 22 moderate, 15 high)
-- **Reduction:** 26% decrease in total vulnerabilities
+- **Phase 2 Fixed:** 1 vulnerability using breaking changes (vite reverted)
+- **Total Fixed:** 26 vulnerabilities
+- **Remaining:** 76 vulnerabilities (38 low, 23 moderate, 15 high)
+- **Reduction:** 25% decrease in total vulnerabilities
 
 ### Status: ✅ **Phase 1 & 2 Complete**
 All fixable security updates have been applied and tested successfully.
@@ -73,7 +73,7 @@ All fixable security updates have been applied and tested successfully.
 
 ---
 
-## ⚠️ Remaining Vulnerabilities (75)
+## ⚠️ Remaining Vulnerabilities (76)
 
 ### Breaking Changes - COMPLETED ✅
 
@@ -83,9 +83,11 @@ All recommended breaking changes have been successfully applied:
 - **Fixed:** Email domain interpretation, DoS via recursive calls
 - **Status:** Updated and tested, build successful
 
-#### 2. **vite/esbuild** (6.1.6 → 7.3.1) ✅
-- **Fixed:** Dev server request vulnerability
-- **Status:** Updated and tested, dev server working
+#### 2. **vite/esbuild** (6.1.6 → 6.4.1) ⚠️ REVERTED
+- **Status:** Initially updated to v7.3.1, reverted to v6.4.1
+- **Reason:** Storybook 8.x peer dependency conflict broke Vercel deployment
+- **Note:** esbuild vulnerability remains (moderate, dev-only)
+- **Plan:** Update when storybook v10 stable is released
 
 #### 3. **@snapshot-labs/snapshot.js** ✅
 - **Fixed:** lodash.set prototype pollution
@@ -182,9 +184,10 @@ All recommended breaking changes have been successfully applied:
 - Tooling vulnerabilities require local access
 
 ### Overall Status: **GOOD**
-- 75% of fixable vulnerabilities resolved
+- 25% of total vulnerabilities resolved (26 out of 102)
+- All critical production vulnerabilities patched
 - Remaining issues documented with mitigation strategies
-- Clear path forward for breaking changes
+- Clear path forward when upstream fixes become available
 
 ---
 
@@ -198,7 +201,7 @@ All recommended breaking changes have been successfully applied:
 ### Short-Term (Completed ✅)
 4. **Test breaking changes individually:**
    - ✅ Updated nodemailer (6.10.1 → 8.0.1)
-   - ✅ Updated vite (6.1.6 → 7.3.1)
+   - ⚠️ Updated vite (6.1.6 → 6.4.1) - v7 reverted for deployment compatibility
    - ✅ Verified react-mentions at latest
    - ✅ Updated @snapshot-labs/snapshot.js
    - ✅ Updated @anthropic-ai/claude-code (2.1.6 → 2.1.39)
