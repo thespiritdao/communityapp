@@ -181,6 +181,8 @@ body {
 .message-text {
   font-size: .9rem;
   line-height: 1.5;
+  white-space: pre-wrap; /* Preserve line breaks and wrap text */
+  word-wrap: break-word; /* Break long words if needed */
 }
 
 /* Timestamp and read receipt container */
