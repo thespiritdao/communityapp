@@ -1,0 +1,550 @@
+# npm audit report
+
+@anthropic-ai/claude-code  <=2.1.6
+Severity: high
+Claude Code can execute commands prior to the startup trust dialog  - https://github.com/advisories/GHSA-4fgq-fpq9-mr3g
+Claude Code permission deny bypass through symlink - https://github.com/advisories/GHSA-66m2-gx93-v996
+@anthropic-ai/claude-code has Sed Command Validation Bypass that Allows Arbitrary File Writes - https://github.com/advisories/GHSA-7mv8-j34q-vp7q
+Claude Code Leaks Data via Malicious Environment Configuration Before Trust Confirmation - https://github.com/advisories/GHSA-jh7p-qr78-84p7
+Claude Code has a Command Injection in find Command Bypasses User Approval Prompt - https://github.com/advisories/GHSA-qgqw-h4xq-7w8w
+Claude Code has a Domain Validation Bypass which Allows Automatic Requests to Attacker-Controlled Domains - https://github.com/advisories/GHSA-vhw5-3g5m-8ggf
+Claude Code has a Path Restriction Bypass via ZSH Clobber which Allows Arbitrary File Writes - https://github.com/advisories/GHSA-q728-gf8j-w49r
+Claude Code has Permission Deny Bypass Through Symbolic Links - https://github.com/advisories/GHSA-4q92-rfm6-2cqx
+Claude Code Vulnerable to Command Injection via Piped sed Command Bypasses File Write Restrictions - https://github.com/advisories/GHSA-mhg7-666j-cqg4
+Claude Code Vulnerable to Command Injection via Directory Change Bypasses Write Protection - https://github.com/advisories/GHSA-66q4-vfjg-2qhh
+Claude Code has Sandbox Escape via Persistent Configuration Injection in settings.json - https://github.com/advisories/GHSA-ff64-7w26-62rf
+fix available via `npm audit fix`
+node_modules/@anthropic-ai/claude-code
+
+@babel/runtime  <7.26.10
+Severity: moderate
+Babel has inefficient RegExp complexity in generated code with .replace when transpiling named capturing groups - https://github.com/advisories/GHSA-968p-4wvh-cqc8
+fix available via `npm audit fix --force`
+Will install react-mentions@3.0.2, which is a breaking change
+node_modules/react-mentions/node_modules/@babel/runtime
+  react-mentions  >=3.1.0
+  Depends on vulnerable versions of @babel/runtime
+  node_modules/react-mentions
+
+@metamask/sdk  0.16.0 - 0.33.0
+Severity: moderate
+Depends on vulnerable versions of @metamask/sdk-communication-layer
+MetaMask SDK indirectly exposed via malicious debug@4.4.2 dependency - https://github.com/advisories/GHSA-qj3p-xc97-xw74
+fix available via `npm audit fix`
+node_modules/@metamask/sdk
+  @wagmi/connectors  <=0.0.0-wc-links-20240926225814 || 4.1.27 - 4.3.10 || 5.0.1 - 5.10.0
+  Depends on vulnerable versions of @metamask/sdk
+  node_modules/@wagmi/connectors
+    wagmi  <=0.0.0-wc-links-20240926225814 || 2.5.21 - 2.7.1 || 2.8.1 - 2.8.8 || 2.9.1 - 2.17.0
+    Depends on vulnerable versions of @wagmi/connectors
+    node_modules/wagmi
+
+@metamask/sdk-communication-layer  0.16.0 - 0.33.0
+Severity: moderate
+MetaMask SDK indirectly exposed via malicious debug@4.4.2 dependency - https://github.com/advisories/GHSA-qj3p-xc97-xw74
+fix available via `npm audit fix`
+node_modules/@metamask/sdk/node_modules/@metamask/sdk-communication-layer
+
+axios  <=1.13.4
+Severity: high
+axios Requests Vulnerable To Possible SSRF and Credential Leakage via Absolute URL - https://github.com/advisories/GHSA-jr5f-v2jv-69x6
+Axios is vulnerable to DoS attack through lack of data size check - https://github.com/advisories/GHSA-4hjh-wcwx-xvwj
+Axios is vulnerable to DoS attack through lack of data size check - https://github.com/advisories/GHSA-4hjh-wcwx-xvwj
+Axios is Vulnerable to Denial of Service via __proto__ Key in mergeConfig - https://github.com/advisories/GHSA-43fc-jf86-j433
+fix available via `npm audit fix`
+node_modules/@gelatonetwork/relay-sdk/node_modules/axios
+node_modules/axios
+  @gelatonetwork/relay-sdk  <=3.5.0 || 5.0.0 - 5.6.0
+  Depends on vulnerable versions of axios
+  Depends on vulnerable versions of ethers
+  node_modules/@gelatonetwork/relay-sdk
+
+cookie  <0.7.0
+cookie accepts cookie name, path, and domain with out of bounds characters - https://github.com/advisories/GHSA-pxg6-pf52-xh8x
+No fix available
+node_modules/cookie
+  @sentry/node  4.0.0-beta.0 - 7.74.2-alpha.1
+  Depends on vulnerable versions of cookie
+  node_modules/@sentry/node
+    hardhat  0.1.0-rc.0 - 3.0.0-next.32
+    Depends on vulnerable versions of @ethersproject/abi
+    Depends on vulnerable versions of @sentry/node
+    Depends on vulnerable versions of solc
+    Depends on vulnerable versions of undici
+    node_modules/hardhat
+      @nomicfoundation/hardhat-chai-matchers  *
+      Depends on vulnerable versions of @nomicfoundation/hardhat-ethers
+      Depends on vulnerable versions of hardhat
+      node_modules/@nomicfoundation/hardhat-chai-matchers
+      @nomicfoundation/hardhat-ethers  3.0.7 || 3.1.0 - 3.1.3
+      Depends on vulnerable versions of hardhat
+      node_modules/@nomicfoundation/hardhat-ethers
+        @nomicfoundation/hardhat-ignition-ethers  <=0.15.17
+        Depends on vulnerable versions of @nomicfoundation/hardhat-ethers
+        Depends on vulnerable versions of @nomicfoundation/hardhat-ignition
+        Depends on vulnerable versions of @nomicfoundation/ignition-core
+        Depends on vulnerable versions of hardhat
+        node_modules/@nomicfoundation/hardhat-ignition-ethers
+          @nomicfoundation/hardhat-toolbox  *
+          Depends on vulnerable versions of @nomicfoundation/hardhat-chai-matchers
+          Depends on vulnerable versions of @nomicfoundation/hardhat-ignition-ethers
+          Depends on vulnerable versions of @nomicfoundation/hardhat-verify
+          Depends on vulnerable versions of @typechain/hardhat
+          Depends on vulnerable versions of hardhat
+          Depends on vulnerable versions of solidity-coverage
+          node_modules/@nomicfoundation/hardhat-toolbox
+      @nomicfoundation/hardhat-network-helpers  <=1.1.2
+      Depends on vulnerable versions of ethereumjs-util
+      Depends on vulnerable versions of hardhat
+      node_modules/@nomicfoundation/hardhat-network-helpers
+      @nomicfoundation/hardhat-verify  *
+      Depends on vulnerable versions of @ethersproject/abi
+      Depends on vulnerable versions of hardhat
+      Depends on vulnerable versions of undici
+      node_modules/@nomicfoundation/hardhat-verify
+        @nomicfoundation/hardhat-ignition  <=0.15.16
+        Depends on vulnerable versions of @nomicfoundation/hardhat-verify
+        Depends on vulnerable versions of @nomicfoundation/ignition-core
+        Depends on vulnerable versions of hardhat
+        node_modules/@nomicfoundation/hardhat-ignition
+      @typechain/hardhat  >=6.1.0
+      Depends on vulnerable versions of hardhat
+      node_modules/@typechain/hardhat
+      solidity-coverage  >=0.8.0-beta.0
+      Depends on vulnerable versions of hardhat
+      node_modules/solidity-coverage
+
+diff  4.0.0 - 4.0.3 || 5.0.0 - 5.2.1
+jsdiff has a Denial of Service vulnerability in parsePatch and applyPatch - https://github.com/advisories/GHSA-73rr-hh4g-fpgx
+jsdiff has a Denial of Service vulnerability in parsePatch and applyPatch - https://github.com/advisories/GHSA-73rr-hh4g-fpgx
+fix available via `npm audit fix`
+node_modules/diff
+node_modules/npm/node_modules/diff
+node_modules/ts-node/node_modules/diff
+
+elliptic  *
+Elliptic Uses a Cryptographic Primitive with a Risky Implementation - https://github.com/advisories/GHSA-848j-6mx2-7j84
+No fix available
+node_modules/elliptic
+  @ethersproject/signing-key  <=5.8.0
+  Depends on vulnerable versions of elliptic
+  node_modules/@ethersproject/signing-key
+    @ethersproject/hdnode  *
+    Depends on vulnerable versions of @ethersproject/abstract-signer
+    Depends on vulnerable versions of @ethersproject/signing-key
+    Depends on vulnerable versions of @ethersproject/transactions
+    Depends on vulnerable versions of @ethersproject/wordlists
+    node_modules/@ethersproject/hdnode
+    @ethersproject/transactions  <=5.8.0
+    Depends on vulnerable versions of @ethersproject/signing-key
+    node_modules/@ethersproject/transactions
+      @ethersproject/abstract-provider  *
+      Depends on vulnerable versions of @ethersproject/transactions
+      node_modules/@ethersproject/abstract-provider
+        @ethersproject/abstract-signer  *
+        Depends on vulnerable versions of @ethersproject/abstract-provider
+        node_modules/@ethersproject/abstract-signer
+          @ethersproject/hash  5.0.6 - 5.8.0
+          Depends on vulnerable versions of @ethersproject/abstract-signer
+          node_modules/@ethersproject/hash
+            @ethersproject/abi  5.0.10 - 5.8.0
+            Depends on vulnerable versions of @ethersproject/hash
+            node_modules/@ethersproject/abi
+              @ethersproject/contracts  *
+              Depends on vulnerable versions of @ethersproject/abi
+              Depends on vulnerable versions of @ethersproject/abstract-provider
+              Depends on vulnerable versions of @ethersproject/abstract-signer
+              Depends on vulnerable versions of @ethersproject/transactions
+              node_modules/@ethersproject/contracts
+                @safe-global/safe-core-sdk-types  <=4.1.1
+                Depends on vulnerable versions of @ethersproject/contracts
+                Depends on vulnerable versions of web3-core
+                node_modules/@safe-global/safe-core-sdk-types
+                  @safe-global/safe-core-sdk-utils  *
+                  Depends on vulnerable versions of @safe-global/safe-core-sdk-types
+                  node_modules/@safe-global/safe-core-sdk-utils
+                    @safe-global/safe-core-sdk  *
+                    Depends on vulnerable versions of @safe-global/safe-core-sdk-types
+                    Depends on vulnerable versions of @safe-global/safe-core-sdk-utils
+                    Depends on vulnerable versions of ethereumjs-util
+                    Depends on vulnerable versions of zksync-web3
+                    node_modules/@safe-global/safe-core-sdk
+                @snapshot-labs/snapshot.js  >=0.1.1
+                Depends on vulnerable versions of @ethersproject/abi
+                Depends on vulnerable versions of @ethersproject/contracts
+                Depends on vulnerable versions of @ethersproject/hash
+                Depends on vulnerable versions of @ethersproject/providers
+                Depends on vulnerable versions of @ethersproject/wallet
+                Depends on vulnerable versions of lodash.set
+                node_modules/@snapshot-labs/snapshot.js
+                ethers  5.0.0-beta.119 - 6.13.0
+                Depends on vulnerable versions of @ethersproject/abi
+                Depends on vulnerable versions of @ethersproject/abstract-provider
+                Depends on vulnerable versions of @ethersproject/abstract-signer
+                Depends on vulnerable versions of @ethersproject/contracts
+                Depends on vulnerable versions of @ethersproject/hash
+                Depends on vulnerable versions of @ethersproject/hdnode
+                Depends on vulnerable versions of @ethersproject/json-wallets
+                Depends on vulnerable versions of @ethersproject/providers
+                Depends on vulnerable versions of @ethersproject/signing-key
+                Depends on vulnerable versions of @ethersproject/transactions
+                Depends on vulnerable versions of @ethersproject/wallet
+                Depends on vulnerable versions of @ethersproject/wordlists
+                Depends on vulnerable versions of ws
+                node_modules/@biconomy/bundler/node_modules/ethers
+                node_modules/@biconomy/common/node_modules/ethers
+                node_modules/@biconomy/core-types/node_modules/ethers
+                node_modules/@biconomy/node-client/node_modules/ethers
+                node_modules/@biconomy/paymaster/node_modules/ethers
+                node_modules/@gelatonetwork/relay-sdk/node_modules/ethers
+                node_modules/@safe-global/safe-core-sdk/node_modules/ethers
+                node_modules/eth-gas-reporter/node_modules/ethers
+                  @biconomy/bundler  3.1.0-alpha.0 - 3.1.4
+                  Depends on vulnerable versions of @biconomy/common
+                  Depends on vulnerable versions of @biconomy/core-types
+                  Depends on vulnerable versions of @ethersproject/providers
+                  Depends on vulnerable versions of ethers
+                  node_modules/@biconomy/bundler
+                  @biconomy/common  <=3.1.4
+                  Depends on vulnerable versions of @biconomy/core-types
+                  Depends on vulnerable versions of @biconomy/node-client
+                  Depends on vulnerable versions of @ethersproject/abi
+                  Depends on vulnerable versions of @ethersproject/providers
+                  Depends on vulnerable versions of @typechain/ethers-v5
+                  Depends on vulnerable versions of ethers
+                  node_modules/@biconomy/common
+                  @biconomy/core-types  *
+                  Depends on vulnerable versions of @ethersproject/contracts
+                  Depends on vulnerable versions of @ethersproject/providers
+                  Depends on vulnerable versions of ethers
+                  Depends on vulnerable versions of web3-core
+                  node_modules/@biconomy/core-types
+                    @biconomy/node-client  *
+                    Depends on vulnerable versions of @biconomy/core-types
+                    Depends on vulnerable versions of @ethersproject/abstract-signer
+                    Depends on vulnerable versions of @nomiclabs/hardhat-ethers
+                    node_modules/@biconomy/node-client
+                  @biconomy/paymaster  3.1.0-alpha.0 - 3.1.4
+                  Depends on vulnerable versions of @biconomy/common
+                  Depends on vulnerable versions of @biconomy/core-types
+                  Depends on vulnerable versions of @ethersproject/abstract-provider
+                  Depends on vulnerable versions of ethers
+                  node_modules/@biconomy/paymaster
+                  @nomiclabs/hardhat-ethers  2.0.0-rc.0 - 2.2.3
+                  Depends on vulnerable versions of ethers
+                  node_modules/@biconomy/node-client/node_modules/@nomiclabs/hardhat-ethers
+                  @typechain/ethers-v5  *
+                  Depends on vulnerable versions of @ethersproject/providers
+                  Depends on vulnerable versions of ethers
+                  node_modules/@biconomy/common/node_modules/@typechain/ethers-v5
+                  eth-gas-reporter  >=0.2.26
+                  Depends on vulnerable versions of ethers
+                  node_modules/eth-gas-reporter
+                  zksync-web3  *
+                  Depends on vulnerable versions of ethers
+                  node_modules/@safe-global/safe-core-sdk/node_modules/zksync-web3
+            @ethersproject/providers  <=5.8.0
+            Depends on vulnerable versions of @ethersproject/abstract-provider
+            Depends on vulnerable versions of @ethersproject/abstract-signer
+            Depends on vulnerable versions of @ethersproject/hash
+            Depends on vulnerable versions of @ethersproject/transactions
+            node_modules/@ethersproject/providers
+            @ethersproject/wallet  <=5.8.0
+            Depends on vulnerable versions of @ethersproject/abstract-provider
+            Depends on vulnerable versions of @ethersproject/abstract-signer
+            Depends on vulnerable versions of @ethersproject/hash
+            Depends on vulnerable versions of @ethersproject/hdnode
+            Depends on vulnerable versions of @ethersproject/json-wallets
+            Depends on vulnerable versions of @ethersproject/signing-key
+            Depends on vulnerable versions of @ethersproject/transactions
+            Depends on vulnerable versions of @ethersproject/wordlists
+            node_modules/@ethersproject/wallet
+            @ethersproject/wordlists  5.0.8 - 5.8.0
+            Depends on vulnerable versions of @ethersproject/hash
+            node_modules/@ethersproject/wordlists
+      @ethersproject/json-wallets  *
+      Depends on vulnerable versions of @ethersproject/abstract-signer
+      Depends on vulnerable versions of @ethersproject/hdnode
+      Depends on vulnerable versions of @ethersproject/transactions
+      node_modules/@ethersproject/json-wallets
+      web3-core-method  *
+      Depends on vulnerable versions of @ethersproject/transactions
+      Depends on vulnerable versions of web3-core-subscriptions
+      node_modules/web3-core-method
+        web3-core  <=2.0.0-alpha.1
+        Depends on vulnerable versions of web3-core-method
+        node_modules/web3-core
+  secp256k1  >=2.0.0
+  Depends on vulnerable versions of elliptic
+  node_modules/@coinbase/coinbase-sdk/node_modules/secp256k1
+  node_modules/secp256k1
+    @coinbase/coinbase-sdk  *
+    Depends on vulnerable versions of secp256k1
+    node_modules/@coinbase/coinbase-sdk
+    ethereum-cryptography  0.1.0 - 0.1.3
+    Depends on vulnerable versions of secp256k1
+    node_modules/ethereum-cryptography
+      ethereumjs-util  4.5.1 || 5.2.1 || 6.2.1 || >=7.0.3
+      Depends on vulnerable versions of ethereum-cryptography
+      node_modules/ethereumjs-util
+
+esbuild  <=0.24.2
+Severity: moderate
+esbuild enables any website to send any requests to the development server and read the response - https://github.com/advisories/GHSA-67mh-4wv8-2f99
+fix available via `npm audit fix`
+node_modules/vite/node_modules/esbuild
+  vite  <=6.1.6
+  Depends on vulnerable versions of esbuild
+  node_modules/vite
+
+fast-xml-parser  5.0.9 - 5.3.3
+Severity: high
+fast-xml-parser has RangeError DoS Numeric Entities Bug - https://github.com/advisories/GHSA-37qj-frw5-hhjh
+fix available via `npm audit fix`
+node_modules/fast-xml-parser
+  @aws-sdk/xml-builder  3.894.0 - 3.972.2
+  Depends on vulnerable versions of fast-xml-parser
+  node_modules/@aws-sdk/xml-builder
+    @aws-sdk/core  3.894.0 - 3.972.0
+    Depends on vulnerable versions of @aws-sdk/xml-builder
+    node_modules/@aws-sdk/core
+      @aws-sdk/client-ses  3.894.0 - 3.972.0
+      Depends on vulnerable versions of @aws-sdk/core
+      Depends on vulnerable versions of @aws-sdk/credential-provider-node
+      Depends on vulnerable versions of @aws-sdk/middleware-user-agent
+      Depends on vulnerable versions of @aws-sdk/util-user-agent-node
+      node_modules/@aws-sdk/client-ses
+      @aws-sdk/client-sso  3.894.0 - 3.972.0
+      Depends on vulnerable versions of @aws-sdk/core
+      Depends on vulnerable versions of @aws-sdk/middleware-user-agent
+      Depends on vulnerable versions of @aws-sdk/util-user-agent-node
+      node_modules/@aws-sdk/client-sso
+      @aws-sdk/credential-provider-env  3.894.0 - 3.972.0
+      Depends on vulnerable versions of @aws-sdk/core
+      node_modules/@aws-sdk/credential-provider-env
+      @aws-sdk/credential-provider-http  3.894.0 - 3.972.0
+      Depends on vulnerable versions of @aws-sdk/core
+      node_modules/@aws-sdk/credential-provider-http
+        @aws-sdk/credential-provider-node  3.894.0 - 3.972.0
+        Depends on vulnerable versions of @aws-sdk/credential-provider-env
+        Depends on vulnerable versions of @aws-sdk/credential-provider-http
+        Depends on vulnerable versions of @aws-sdk/credential-provider-ini
+        Depends on vulnerable versions of @aws-sdk/credential-provider-process
+        Depends on vulnerable versions of @aws-sdk/credential-provider-sso
+        Depends on vulnerable versions of @aws-sdk/credential-provider-web-identity
+        node_modules/@aws-sdk/credential-provider-node
+      @aws-sdk/credential-provider-ini  3.894.0 - 3.972.0
+      Depends on vulnerable versions of @aws-sdk/core
+      Depends on vulnerable versions of @aws-sdk/credential-provider-env
+      Depends on vulnerable versions of @aws-sdk/credential-provider-http
+      Depends on vulnerable versions of @aws-sdk/credential-provider-login
+      Depends on vulnerable versions of @aws-sdk/credential-provider-process
+      Depends on vulnerable versions of @aws-sdk/credential-provider-sso
+      Depends on vulnerable versions of @aws-sdk/credential-provider-web-identity
+      Depends on vulnerable versions of @aws-sdk/nested-clients
+      node_modules/@aws-sdk/credential-provider-ini
+      @aws-sdk/credential-provider-login  <=3.972.0
+      Depends on vulnerable versions of @aws-sdk/core
+      Depends on vulnerable versions of @aws-sdk/nested-clients
+      node_modules/@aws-sdk/credential-provider-login
+      @aws-sdk/credential-provider-process  3.894.0 - 3.972.0
+      Depends on vulnerable versions of @aws-sdk/core
+      node_modules/@aws-sdk/credential-provider-process
+      @aws-sdk/credential-provider-sso  3.894.0 - 3.972.0
+      Depends on vulnerable versions of @aws-sdk/client-sso
+      Depends on vulnerable versions of @aws-sdk/core
+      Depends on vulnerable versions of @aws-sdk/token-providers
+      node_modules/@aws-sdk/credential-provider-sso
+      @aws-sdk/credential-provider-web-identity  3.894.0 - 3.972.0
+      Depends on vulnerable versions of @aws-sdk/core
+      Depends on vulnerable versions of @aws-sdk/nested-clients
+      node_modules/@aws-sdk/credential-provider-web-identity
+      @aws-sdk/middleware-user-agent  3.894.0 - 3.972.0
+      Depends on vulnerable versions of @aws-sdk/core
+      node_modules/@aws-sdk/middleware-user-agent
+        @aws-sdk/util-user-agent-node  3.894.0 - 3.972.0
+        Depends on vulnerable versions of @aws-sdk/middleware-user-agent
+        node_modules/@aws-sdk/util-user-agent-node
+      @aws-sdk/nested-clients  3.894.0 - 3.972.0
+      Depends on vulnerable versions of @aws-sdk/core
+      Depends on vulnerable versions of @aws-sdk/middleware-user-agent
+      Depends on vulnerable versions of @aws-sdk/util-user-agent-node
+      node_modules/@aws-sdk/nested-clients
+      @aws-sdk/token-providers  3.894.0 - 3.972.0
+      Depends on vulnerable versions of @aws-sdk/core
+      Depends on vulnerable versions of @aws-sdk/nested-clients
+      node_modules/@aws-sdk/token-providers
+
+glob  10.2.0 - 10.4.5
+Severity: high
+glob CLI: Command injection via -c/--cmd executes matches with shell:true - https://github.com/advisories/GHSA-5j98-mcp5-4vw2
+fix available via `npm audit fix --force`
+Will install npm@11.10.0, which is a breaking change
+node_modules/glob
+node_modules/npm/node_modules/glob
+  npm  <=11.7.0
+  Depends on vulnerable versions of @npmcli/arborist
+  Depends on vulnerable versions of glob
+  Depends on vulnerable versions of libnpmdiff
+  Depends on vulnerable versions of libnpmexec
+  Depends on vulnerable versions of libnpmfund
+  Depends on vulnerable versions of libnpmpack
+  Depends on vulnerable versions of pacote
+  Depends on vulnerable versions of tar
+  node_modules/npm
+
+h3  <=1.15.4
+Severity: high
+h3 v1 has Request Smuggling (TE.TE) issue - https://github.com/advisories/GHSA-mp2g-9vg9-f4cg
+fix available via `npm audit fix`
+node_modules/h3
+
+js-yaml  <3.14.2 || >=4.0.0 <4.1.1
+Severity: moderate
+js-yaml has prototype pollution in merge (<<) - https://github.com/advisories/GHSA-mh29-5h37-fv8m
+js-yaml has prototype pollution in merge (<<) - https://github.com/advisories/GHSA-mh29-5h37-fv8m
+fix available via `npm audit fix`
+node_modules/js-yaml
+node_modules/mocha/node_modules/js-yaml
+
+jws  <3.2.3
+Severity: high
+auth0/node-jws Improperly Verifies HMAC Signature - https://github.com/advisories/GHSA-869p-cjfg-cm3x
+fix available via `npm audit fix`
+node_modules/jws
+
+lodash  4.0.0 - 4.17.21
+Severity: moderate
+Lodash has Prototype Pollution Vulnerability in `_.unset` and `_.omit` functions - https://github.com/advisories/GHSA-xxjr-mmjv-4gpg
+No fix available
+node_modules/lodash
+  @nomicfoundation/ignition-core  <=0.15.15
+  Depends on vulnerable versions of lodash
+  node_modules/@nomicfoundation/ignition-core
+
+lodash.set  *
+Severity: high
+Prototype Pollution in lodash - https://github.com/advisories/GHSA-p6mc-m468-83gw
+fix available via `npm audit fix --force`
+Will install @snapshot-labs/snapshot.js@0.1.2, which is a breaking change
+node_modules/lodash.set
+
+mdast-util-to-hast  13.0.0 - 13.2.0
+Severity: moderate
+mdast-util-to-hast has unsanitized class attribute - https://github.com/advisories/GHSA-4fh9-h7wg-q85m
+fix available via `npm audit fix`
+node_modules/mdast-util-to-hast
+
+next  10.0.0 - 15.5.9
+Severity: high
+Next Server Actions Source Code Exposure  - https://github.com/advisories/GHSA-w37m-7fhw-fmv9
+Next Vulnerable to Denial of Service with Server Components - https://github.com/advisories/GHSA-mwv6-3258-q52c
+Next.js self-hosted applications vulnerable to DoS via Image Optimizer remotePatterns configuration - https://github.com/advisories/GHSA-9g9p-9gw9-jx7f
+Next.js HTTP request deserialization can lead to DoS when using insecure React Server Components - https://github.com/advisories/GHSA-h25m-26qc-wcjf
+fix available via `npm audit fix`
+node_modules/next
+
+nodemailer  <=7.0.10
+Severity: moderate
+Nodemailer: Email to an unintended domain can occur due to Interpretation Conflict - https://github.com/advisories/GHSA-mm7p-fcc7-pg87
+Nodemailer’s addressparser is vulnerable to DoS caused by recursive calls - https://github.com/advisories/GHSA-rcmh-qjqh-p98v
+fix available via `npm audit fix --force`
+Will install nodemailer@8.0.1, which is a breaking change
+node_modules/nodemailer
+
+playwright  <1.55.1
+Severity: high
+Playwright downloads and installs browsers without verifying the authenticity of the SSL certificate - https://github.com/advisories/GHSA-7mvr-c777-76hp
+fix available via `npm audit fix`
+node_modules/playwright
+
+qs  <6.14.1
+Severity: high
+qs's arrayLimit bypass in its bracket notation allows DoS via memory exhaustion - https://github.com/advisories/GHSA-6rw7-vpxm-498p
+fix available via `npm audit fix`
+node_modules/qs
+
+storybook  8.0.0 - 8.6.14
+Severity: high
+Storybook manager bundle may expose environment variables during build - https://github.com/advisories/GHSA-8452-54wp-rmv6
+fix available via `npm audit fix`
+node_modules/storybook
+
+tar  <=7.5.6
+Severity: high
+node-tar is Vulnerable to Arbitrary File Overwrite and Symlink Poisoning via Insufficient Path Sanitization - https://github.com/advisories/GHSA-8qq5-rm4j-mr97
+Race Condition in node-tar Path Reservations via Unicode Ligature Collisions on macOS APFS - https://github.com/advisories/GHSA-r6q2-hw4h-h46w
+node-tar Vulnerable to Arbitrary File Creation/Overwrite via Hardlink Path Traversal - https://github.com/advisories/GHSA-34x7-hfp2-rc4v
+fix available via `npm audit fix --force`
+Will install npm@11.10.0, which is a breaking change
+node_modules/npm/node_modules/cacache/node_modules/tar
+node_modules/npm/node_modules/node-gyp/node_modules/tar
+node_modules/npm/node_modules/tar
+  libnpmdiff  <=8.0.7
+  Depends on vulnerable versions of @npmcli/arborist
+  Depends on vulnerable versions of pacote
+  Depends on vulnerable versions of tar
+  node_modules/npm/node_modules/libnpmdiff
+  pacote  5.0.0 - 21.0.0
+  Depends on vulnerable versions of tar
+  node_modules/npm/node_modules/@npmcli/metavuln-calculator/node_modules/pacote
+  node_modules/npm/node_modules/pacote
+    @npmcli/arborist  <=9.0.0-pre.1
+    Depends on vulnerable versions of @npmcli/metavuln-calculator
+    Depends on vulnerable versions of pacote
+    node_modules/npm/node_modules/@npmcli/arborist
+      libnpmexec  <=10.0.0-pre.1
+      Depends on vulnerable versions of @npmcli/arborist
+      Depends on vulnerable versions of pacote
+      node_modules/npm/node_modules/libnpmexec
+      libnpmfund  <=6.0.1
+      Depends on vulnerable versions of @npmcli/arborist
+      node_modules/npm/node_modules/libnpmfund
+      libnpmpack  <=9.0.0-pre.1
+      Depends on vulnerable versions of @npmcli/arborist
+      Depends on vulnerable versions of pacote
+      node_modules/npm/node_modules/libnpmpack
+    @npmcli/metavuln-calculator  <=8.0.1
+    Depends on vulnerable versions of pacote
+    node_modules/npm/node_modules/@npmcli/metavuln-calculator
+
+tmp  <=0.2.3
+tmp allows arbitrary temporary file / directory write via symbolic link `dir` parameter - https://github.com/advisories/GHSA-52f5-9888-hmc6
+No fix available
+node_modules/tmp
+  solc  >=0.5.1
+  Depends on vulnerable versions of tmp
+  node_modules/solc
+
+undici  <6.23.0
+Severity: moderate
+Undici has an unbounded decompression chain in HTTP responses on Node.js Fetch API via Content-Encoding leads to resource exhaustion - https://github.com/advisories/GHSA-g9mf-h72j-4rw9
+No fix available
+node_modules/undici
+  @xmtp/proto  1.1.0 - 3.87.0
+  Depends on vulnerable versions of undici
+  node_modules/@xmtp/proto
+
+
+web3-core-subscriptions  <=2.0.0-alpha.1
+web3-core-subscriptions has a Prototype Pollution vulnerability - https://github.com/advisories/GHSA-hhf6-3xpg-pggx
+No fix available
+node_modules/web3-core-subscriptions
+
+ws  8.0.0 - 8.17.0
+Severity: high
+ws affected by a DoS when handling a request with many HTTP headers - https://github.com/advisories/GHSA-3h5v-q93c-6h6q
+fix available via `npm audit fix --force`
+Will install @biconomy/common@4.1.1, which is a breaking change
+node_modules/@gelatonetwork/relay-sdk/node_modules/ethers/node_modules/ws
+
+102 vulnerabilities (37 low, 25 moderate, 40 high)
+
+To address issues that do not require attention, run:
+  npm audit fix
+
+To address all issues possible (including breaking changes), run:
+  npm audit fix --force
+
+Some issues need review, and may require choosing
+a different dependency.
