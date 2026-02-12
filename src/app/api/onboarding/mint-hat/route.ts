@@ -484,7 +484,7 @@ export async function POST(request: NextRequest) {
 
       // Check for common errors
       if (errorMessage.includes('AllHatsWorn')) {
-        errorMessage = 'Hat supply limit reached';
+        errorMessage = 'Beta Tester Hat supply limit reached. Please contact support to increase the hat supply.';
       } else if (errorMessage.includes('AlreadyWearingHat')) {
         errorMessage = 'User already wears this hat';
       } else if (errorMessage.includes('NotAdmin')) {
