@@ -156,6 +156,12 @@ export const useEnhancedProposals = () => {
               canVote,
             });
 
+            // ✅ TOKEN-GATING: Only show pod creation proposals to users who can vote on them
+            if (!canVote) {
+              console.log(`🔒 [TOKEN-GATE] Hiding pod creation proposal "${pod.name}" - user lacks approver token`);
+              return null; // Will be filtered out
+            }
+
             let userVote = null;
             if (address && canVote) {
               try {
@@ -212,9 +218,10 @@ export const useEnhancedProposals = () => {
           }),
         );
 
-        // ✅ TRANSPARENCY FIX: Show ALL pod proposals (filter happens at page level)
-        // The page-level filter toggle will handle "My Proposals" vs "All Proposals"
-        allProposals.push(...userVotableProposals);
+        // ✅ TOKEN-GATING: Filter out null entries (proposals user can't vote on)
+        const visiblePodProposals = userVotableProposals.filter(p => p !== null);
+        allProposals.push(...visiblePodProposals);
+        console.log(`✅ Loaded ${visiblePodProposals.length} pod creation proposals (${userVotableProposals.length - visiblePodProposals.length} hidden due to token-gating)`);
       } catch (error) {
         console.error('Failed to load pod proposals:', error);
       }
@@ -276,6 +283,13 @@ export const useEnhancedProposals = () => {
               console.log('Skipping vote check for pod-level proposal:', proposal.id, '- error:', error.code || error.message);
               userVote = null;
             }
+          }
+
+          // ✅ TOKEN-GATING: Only show pod-level proposals to users who have the appropriate token/hat
+          // Skip this proposal if user doesn't have governance permission in this pod
+          if (!canVote) {
+            console.log(`🔒 [TOKEN-GATE] Hiding pod-level proposal "${proposal.title}" - user lacks pod token`);
+            return; // Skip this proposal entirely
           }
 
           const enhancedProposal: EnhancedProposal = {

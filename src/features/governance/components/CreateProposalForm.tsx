@@ -984,6 +984,15 @@ export function CreateProposalForm({
               })
               .eq('onchain_proposal_id', tempProposalId);
 
+            // Also update pod_level_proposals if it exists (for deduplication to work)
+            await supabase
+              .from('pod_level_proposals')
+              .update({
+                onchain_proposal_id: realProposalId,
+                transaction_hash: receipt.transactionHash,
+              })
+              .eq('onchain_proposal_id', tempProposalId);
+
             console.log('✅ Proposal metadata updated successfully');
             toast({
               title: '✅ Proposal Confirmed!',
