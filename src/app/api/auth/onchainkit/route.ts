@@ -86,6 +86,19 @@ export async function POST(req: NextRequest) {
         throw new Error('User profile exists but user_id is null');
       }
 
+      // CRITICAL: Ensure wallet_address is in auth.users raw_user_meta_data
+      // Without this, Supabase JWTs won't have wallet_address in user_metadata,
+      // causing RLS to block governance vote inserts for existing users.
+      const { error: metaUpdateError } = await supabaseAdmin.auth.admin.updateUserById(
+        userId,
+        { user_metadata: { wallet_address: normalizedAddress } },
+      );
+      if (metaUpdateError) {
+        console.error('⚠️ Auth API: Failed to update user_metadata (non-critical):', metaUpdateError);
+      } else {
+        console.log(`✅ Auth API: Ensured wallet_address in user_metadata for ${userId}`);
+      }
+
       // Update profile with email if provided and not already set
       if (email) {
         const { error: updateError } = await supabaseAdmin
