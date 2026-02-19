@@ -262,20 +262,68 @@ export const EnhancedVoteButton: React.FC<EnhancedVoteButtonProps> = ({
         await GovernanceService.submitVote(voteData);
         console.log('✅ [VOTE V3] Vote saved to database');
 
-        // Show success immediately after database save
-        toast({
-          title: 'Vote Recorded ✓',
-          description: `Your ${voteValue} vote has been saved successfully`,
+        // 2. Encode contract call
+        console.log('📝 [VOTE V3] Step 2: Encoding contract call...');
+        const callData = encodeFunctionData({
+          abi: POD_GOVERNANCE_V3_ABI,
+          functionName: 'recordVote',
+          args: [
+            uuidToBytes32(proposal.id),
+            uuidToBytes32(proposal.approving_pod_id || proposal.id),
+            voteToUint8(voteValue),
+          ],
         });
+        console.log('✅ [VOTE V3] Call data encoded');
 
-        // CRITICAL: Trigger refetch to update UI immediately
+        // 3. Submit to blockchain via CDP (gasless)
+        console.log('⛓️ [VOTE V3] Step 3: Submitting to blockchain (gasless via CDP)...');
+
+        // Check if smart account is available for on-chain submission
+        if (!currentUser?.evmSmartAccounts?.[0]) {
+          console.warn('⚠️ [VOTE V3] No smart account found - vote saved to DB only');
+          toast({
+            title: 'Vote Saved (Database Only)',
+            description: `Your ${voteValue} vote was saved. On-chain recording requires smart account initialization.`,
+          });
+        } else {
+          // Smart account available - submit on-chain
+          const smartAccount = currentUser.evmSmartAccounts[0];
+          console.log('🔐 [VOTE V3] Using smart account:', smartAccount);
+
+          try {
+            const result = await sendUserOperation({
+              evmSmartAccount: smartAccount,
+              network: 'base',
+              calls: [{
+                to: contractAddress,
+                data: callData,
+                value: 0n,  // bigint format required by CDP
+              }],
+              useCdpPaymaster: true,  // Enable gas sponsorship
+            });
+
+            console.log('✅ [VOTE V3] Vote recorded on-chain!', {
+              result,
+              status,
+            });
+
+            const proposalTypeLabel = proposal.type === 'pod_creation' ? 'pod creation' : 'pod-level';
+            toast({
+              title: 'Vote Recorded On-Chain ⛓️',
+              description: `Your ${voteValue} vote has been permanently recorded on Base blockchain`,
+            });
+          } catch (onchainError) {
+            console.error('⚠️ [VOTE V3] On-chain submission failed (vote still saved to DB):', onchainError);
+            toast({
+              title: 'Vote Saved (DB Only)',
+              description: `Your ${voteValue} vote was saved to database. On-chain recording will be retried later.`,
+            });
+          }
+        }
+
+        // CRITICAL: Always trigger refetch to update UI, even if on-chain failed
         console.log('🔄 [VOTE V3] Triggering UI refetch...');
         onVoteSuccess?.();
-
-        // NOTE: On-chain recording temporarily disabled due to CDP Smart Account issues
-        // Votes are saved to database and tallied correctly
-        // On-chain recording will be re-enabled once CDP issue is resolved
-        console.log('ℹ️ [VOTE V3] On-chain recording disabled - vote saved to database only');
       } else {
         // Handle governance votes - this would integrate with existing VoteButton logic
         toast({
@@ -285,11 +333,11 @@ export const EnhancedVoteButton: React.FC<EnhancedVoteButtonProps> = ({
         return;
       }
     } catch (error) {
-      console.error('Failed to submit vote to database:', error);
+      console.error('Failed to submit vote:', error);
       toast({
         title: 'Vote Failed',
         description:
-          error instanceof Error ? error.message : 'Failed to save vote to database',
+          error instanceof Error ? error.message : 'Failed to submit vote',
         variant: 'destructive',
       });
     } finally {
