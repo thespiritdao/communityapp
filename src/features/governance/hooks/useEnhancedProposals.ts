@@ -38,6 +38,7 @@ export interface EnhancedProposal {
   // ✅ Track which pod should approve this proposal
   approving_pod_id?: string; // Specific pod for pod-level, Executive Pod for DAO-wide, Parent Pod for pod-creation
   governance_context?: 'dao-wide' | 'pod-level' | 'pod-creation';
+  governance_tier?: 'DAO_CONSTITUTIONAL' | 'POD_TREASURY_BINDING' | 'POD_OPERATIONAL';
 }
 
 // Minimal HATS ABI for checking balances
@@ -307,6 +308,7 @@ export const useEnhancedProposals = () => {
             user_vote: userVote,
             approving_pod_id: proposal.pod_id, // Same pod votes
             governance_context: 'pod-level',
+            governance_tier: proposal.governance_tier ?? 'POD_OPERATIONAL',
             vote_counts: proposal.vote_counts,
           } as EnhancedProposal & { vote_counts: typeof proposal.vote_counts };
 

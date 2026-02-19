@@ -41,11 +41,14 @@ if (!GOVERNOR_ADDRESS) {
   throw new Error('Missing DAO Governor contract address');
 }
 
+type GovernanceTier = 'DAO_CONSTITUTIONAL' | 'POD_TREASURY_BINDING' | 'POD_OPERATIONAL';
+
 interface ProposalFormData {
   title: string;
   body: string;
   forumThreadId: string;
   selectedToken: string; // token gating
+  governanceTier: GovernanceTier;
 }
 
 interface CreateProposalFormProps {
@@ -316,6 +319,7 @@ export function CreateProposalForm({
     body: '',
     forumThreadId: '',
     selectedToken: '',
+    governanceTier: 'POD_OPERATIONAL',
   });
   const [userTokens, setUserTokens] = useState<{ id: string; label: string }[]>(
     [],
@@ -1245,22 +1249,65 @@ export function CreateProposalForm({
     });
 
     if (isPodLevelProposal) {
-      // ✅ CREATE POD-LEVEL PROPOSAL
-      // Architecture:
-      // 1. Submit to blockchain (on-chain, permanent, gasless via CDP)
-      // 2. Store in pod_level_proposals table (with on-chain ID)
-      // 3. Voting is off-chain (database, pod-specific permissions)
+      // ✅ TIER ROUTING: POD_OPERATIONAL → DB only (no Governor submission)
+      const tier = formData.governanceTier;
 
-      // NOTE: Proposal will be submitted on-chain, but voting is controlled by our app
-      // The on-chain contract votes are ignored - we use governance_votes table instead
-      // This gives us permanence + transparency (blockchain) AND flexible permissions (app)
+      if (tier === 'POD_OPERATIONAL') {
+        console.log('🌱 [POD_OPERATIONAL] Creating DB-only proposal (no blockchain submission)');
+        setSubmissionStatus('💾 Saving operational proposal to database...');
 
-      // Fall through to standard on-chain proposal creation below
-      // After blockchain submission, we'll also save to pod_level_proposals table
-      console.log('🏛️ [POD-LEVEL] Will submit on-chain AND save to pod_level_proposals table');
+        // Capture form values before reset
+        const proposalTitle = formData.title;
+        const proposalBody = formData.body;
+        const proposalTokenId = formData.selectedToken;
+        const proposalForumThreadId = formData.forumThreadId;
+
+        setFormData({ title: '', body: '', forumThreadId: '', selectedToken: '', governanceTier: 'POD_OPERATIONAL' });
+        setHasInteracted(false);
+
+        try {
+          await GovernanceService.createPodLevelProposal({
+            title: proposalTitle,
+            description: proposalBody,
+            pod_id: proposalTokenId,
+            created_by: address!,
+            governance_tier: 'POD_OPERATIONAL',
+            metadata: {
+              forum_thread_id: proposalForumThreadId,
+              choices: ['For', 'Against', 'Abstain'],
+            },
+          });
+
+          console.log('✅ [POD_OPERATIONAL] Proposal saved to DB');
+          setSubmissionStatus('✅ Proposal created successfully!');
+          setTimeout(() => setSubmissionStatus(''), 3000);
+
+          toast({
+            title: '✅ Proposal Created',
+            description: 'Your operational proposal is now open for voting in your pod.',
+          });
+
+          onSuccess?.();
+          setTimeout(() => refreshNotifications(), 2000);
+        } catch (dbError: any) {
+          console.error('❌ [POD_OPERATIONAL] DB insert failed:', dbError);
+          setSubmissionStatus('❌ Failed to create proposal');
+          setTimeout(() => setSubmissionStatus(''), 5000);
+          toast({
+            title: 'Proposal Failed',
+            description: dbError.message || 'Failed to save proposal',
+            variant: 'destructive',
+          });
+        }
+        return; // ← Stop here. Do NOT submit to Governor.
+      }
+
+      // POD_TREASURY_BINDING: fall through to on-chain submission below.
+      // After blockchain submission, we'll also save to pod_level_proposals table.
+      console.log('🏛️ [POD_TREASURY_BINDING] Will submit on-chain AND save to pod_level_proposals table');
     }
 
-    // ✅ CREATE DAO-WIDE PROPOSAL (on-chain, Executive Pod voting)
+    // ✅ CREATE DAO-WIDE / TREASURY-BINDING PROPOSAL (on-chain, Governor)
     const smartAccount = currentUser.evmSmartAccounts[0];
 
     try {
@@ -1357,6 +1404,7 @@ export function CreateProposalForm({
       const proposalBody = formData.body;
       const proposalTokenId = formData.selectedToken;
       const proposalForumThreadId = formData.forumThreadId;
+      const proposalGovernanceTier = formData.governanceTier;
 
       // Reset form
       setFormData({
@@ -1364,6 +1412,7 @@ export function CreateProposalForm({
         body: '',
         forumThreadId: '',
         selectedToken: '',
+        governanceTier: 'POD_OPERATIONAL',
       });
 
       // Use a temporary ID based on the user operation hash
@@ -1416,7 +1465,7 @@ export function CreateProposalForm({
             const isPodLevelProp = proposalTokenId && !isDAOWide;
 
             if (isPodLevelProp) {
-              console.log('🏛️ [POD-LEVEL] Saving to pod_level_proposals table (pod-specific governance)');
+              console.log('🏛️ [POD_TREASURY_BINDING] Saving to pod_level_proposals table (pod-specific governance)');
 
               try {
                 await GovernanceService.createPodLevelProposal({
@@ -1424,6 +1473,7 @@ export function CreateProposalForm({
                   description: proposalBody,
                   pod_id: proposalTokenId,
                   created_by: address!,
+                  governance_tier: proposalGovernanceTier as 'POD_TREASURY_BINDING',
                   metadata: {
                     forum_thread_id: proposalForumThreadId,
                     choices: ['For', 'Against', 'Abstain'],
@@ -1994,6 +2044,33 @@ export function CreateProposalForm({
                   </p>
                 )}
               </div>
+
+              {/* Governance Tier — only visible for pod-level proposals */}
+              {formData.selectedToken && formData.selectedToken !== 'dao-wide' && (
+                <div>
+                  <label
+                    htmlFor="governanceTier"
+                    className="block text-sm font-semibold text-gray-700 mb-2"
+                  >
+                    Proposal Type *
+                  </label>
+                  <select
+                    id="governanceTier"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:border-transparent transition-colors"
+                    style={{ '--tw-ring-color': '#2F5D50' } as React.CSSProperties}
+                    onFocus={(e) => { e.currentTarget.style.boxShadow = '0 0 0 2px #2F5D50'; }}
+                    onBlur={(e) => { e.currentTarget.style.boxShadow = ''; }}
+                    value={formData.governanceTier}
+                    onChange={(e) => handleFormChange('governanceTier', e.target.value as GovernanceTier)}
+                  >
+                    <option value="POD_OPERATIONAL">Operational — Routine coordination, no treasury impact (DB only)</option>
+                    <option value="POD_TREASURY_BINDING">Treasury-Binding — Allocates pod funds or triggers contract (on-chain after vote)</option>
+                  </select>
+                  <p className="text-xs mt-1 text-gray-500">
+                    Operational proposals are stored in the database only. Treasury-binding proposals are recorded on-chain after passing.
+                  </p>
+                </div>
+              )}
             </div>
 
 

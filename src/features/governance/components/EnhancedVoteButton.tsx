@@ -262,62 +262,66 @@ export const EnhancedVoteButton: React.FC<EnhancedVoteButtonProps> = ({
         await GovernanceService.submitVote(voteData);
         console.log('✅ [VOTE V3] Vote saved to database');
 
-        // 2. Encode contract call
-        console.log('📝 [VOTE V3] Step 2: Encoding contract call...');
-        const callData = encodeFunctionData({
-          abi: POD_GOVERNANCE_V3_ABI,
-          functionName: 'recordVote',
-          args: [
-            uuidToBytes32(proposal.id),
-            uuidToBytes32(proposal.approving_pod_id || proposal.id),
-            voteToUint8(voteValue),
-          ],
-        });
-        console.log('✅ [VOTE V3] Call data encoded');
+        // 2. For POD_OPERATIONAL proposals: DB-only vote, no on-chain recording
+        const isOperational = proposal.governance_tier === 'POD_OPERATIONAL' || !proposal.governance_tier;
 
-        // 3. Submit to blockchain via CDP (gasless)
-        console.log('⛓️ [VOTE V3] Step 3: Submitting to blockchain (gasless via CDP)...');
-
-        // Check if smart account is available for on-chain submission
-        if (!currentUser?.evmSmartAccounts?.[0]) {
-          console.warn('⚠️ [VOTE V3] No smart account found - vote saved to DB only');
+        if (isOperational) {
+          console.log('🌱 [VOTE V3] POD_OPERATIONAL — vote saved to DB only (no on-chain recording)');
           toast({
-            title: 'Vote Saved (Database Only)',
-            description: `Your ${voteValue} vote was saved. On-chain recording requires smart account initialization.`,
+            title: 'Vote Recorded',
+            description: `Your ${voteValue} vote has been saved.`,
           });
         } else {
-          // Smart account available - submit on-chain
-          const smartAccount = currentUser.evmSmartAccounts[0];
-          console.log('🔐 [VOTE V3] Using smart account:', smartAccount);
+          // POD_TREASURY_BINDING: record on-chain via PodGovernanceV3
+          console.log('📝 [VOTE V3] Step 2: Encoding contract call...');
+          const callData = encodeFunctionData({
+            abi: POD_GOVERNANCE_V3_ABI,
+            functionName: 'recordVote',
+            args: [
+              uuidToBytes32(proposal.id),
+              uuidToBytes32(proposal.approving_pod_id || proposal.id),
+              voteToUint8(voteValue),
+            ],
+          });
+          console.log('✅ [VOTE V3] Call data encoded');
 
-          try {
-            const result = await sendUserOperation({
-              evmSmartAccount: smartAccount,
-              network: 'base',
-              calls: [{
-                to: contractAddress,
-                data: callData,
-                value: 0n,  // bigint format required by CDP
-              }],
-              useCdpPaymaster: true,  // Enable gas sponsorship
-            });
+          console.log('⛓️ [VOTE V3] Step 3: Submitting to blockchain (gasless via CDP)...');
 
-            console.log('✅ [VOTE V3] Vote recorded on-chain!', {
-              result,
-              status,
-            });
-
-            const proposalTypeLabel = proposal.type === 'pod_creation' ? 'pod creation' : 'pod-level';
+          if (!currentUser?.evmSmartAccounts?.[0]) {
+            console.warn('⚠️ [VOTE V3] No smart account found - vote saved to DB only');
             toast({
-              title: 'Vote Recorded On-Chain ⛓️',
-              description: `Your ${voteValue} vote has been permanently recorded on Base blockchain`,
+              title: 'Vote Saved (Database Only)',
+              description: `Your ${voteValue} vote was saved. On-chain recording requires smart account initialization.`,
             });
-          } catch (onchainError) {
-            console.error('⚠️ [VOTE V3] On-chain submission failed (vote still saved to DB):', onchainError);
-            toast({
-              title: 'Vote Saved (DB Only)',
-              description: `Your ${voteValue} vote was saved to database. On-chain recording will be retried later.`,
-            });
+          } else {
+            const smartAccount = currentUser.evmSmartAccounts[0];
+            console.log('🔐 [VOTE V3] Using smart account:', smartAccount);
+
+            try {
+              const result = await sendUserOperation({
+                evmSmartAccount: smartAccount,
+                network: 'base',
+                calls: [{
+                  to: contractAddress,
+                  data: callData,
+                  value: 0n,
+                }],
+                useCdpPaymaster: true,
+              });
+
+              console.log('✅ [VOTE V3] Vote recorded on-chain!', { result, status });
+
+              toast({
+                title: 'Vote Recorded On-Chain ⛓️',
+                description: `Your ${voteValue} vote has been permanently recorded on Base blockchain`,
+              });
+            } catch (onchainError) {
+              console.error('⚠️ [VOTE V3] On-chain submission failed (vote still saved to DB):', onchainError);
+              toast({
+                title: 'Vote Saved (DB Only)',
+                description: `Your ${voteValue} vote was saved to database. On-chain recording will be retried later.`,
+              });
+            }
           }
         }
 

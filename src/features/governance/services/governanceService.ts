@@ -440,6 +440,7 @@ export class GovernanceService {
     description: string;
     pod_id: string;
     created_by: string;
+    governance_tier?: 'DAO_CONSTITUTIONAL' | 'POD_TREASURY_BINDING' | 'POD_OPERATIONAL';
     metadata?: Record<string, any>;
     onchain_proposal_id?: string;
     transaction_hash?: string;
@@ -453,6 +454,7 @@ export class GovernanceService {
           pod_id: data.pod_id,
           created_by: data.created_by.toLowerCase(),
           status: 'proposed',
+          governance_tier: data.governance_tier ?? 'POD_OPERATIONAL',
           voting_deadline: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(), // 7 days
           metadata: data.metadata || {},
           onchain_proposal_id: data.onchain_proposal_id,
