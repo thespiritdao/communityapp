@@ -272,46 +272,10 @@ export const EnhancedVoteButton: React.FC<EnhancedVoteButtonProps> = ({
         console.log('🔄 [VOTE V3] Triggering UI refetch...');
         onVoteSuccess?.();
 
-        // 2. Encode contract call for on-chain recording (best effort, non-blocking)
-        console.log('📝 [VOTE V3] Step 2: Attempting on-chain recording (background)...');
-        const callData = encodeFunctionData({
-          abi: POD_GOVERNANCE_V3_ABI,
-          functionName: 'recordVote',
-          args: [
-            uuidToBytes32(proposal.id),
-            uuidToBytes32(proposal.approving_pod_id || proposal.id),
-            voteToUint8(voteValue),
-          ],
-        });
-
-        // 3. Submit to blockchain via CDP (gasless, background, non-blocking)
-        // This runs in background and won't block the UI or cause errors
-        if (currentUser?.evmSmartAccounts?.[0]) {
-          const smartAccount = currentUser.evmSmartAccounts[0];
-          console.log('⛓️ [VOTE V3] Submitting to blockchain (background, non-blocking)...');
-
-          // Run on-chain submission in background (don't await)
-          sendUserOperation({
-            evmSmartAccount: smartAccount,
-            network: 'base',
-            calls: [{
-              to: contractAddress,
-              data: callData,
-              value: 0n,
-            }],
-            useCdpPaymaster: true,
-          })
-            .then((result) => {
-              console.log('✅ [VOTE V3] Vote recorded on-chain!', result);
-              // Optionally show a subtle notification
-            })
-            .catch((onchainError) => {
-              console.warn('⚠️ [VOTE V3] On-chain recording failed (vote is safe in DB):', onchainError);
-              // Silent fail - vote is already saved in database
-            });
-        } else {
-          console.log('ℹ️ [VOTE V3] No smart account - skipping on-chain recording');
-        }
+        // NOTE: On-chain recording temporarily disabled due to CDP Smart Account issues
+        // Votes are saved to database and tallied correctly
+        // On-chain recording will be re-enabled once CDP issue is resolved
+        console.log('ℹ️ [VOTE V3] On-chain recording disabled - vote saved to database only');
       } else {
         // Handle governance votes - this would integrate with existing VoteButton logic
         toast({
@@ -321,11 +285,11 @@ export const EnhancedVoteButton: React.FC<EnhancedVoteButtonProps> = ({
         return;
       }
     } catch (error) {
-      console.error('Failed to submit vote:', error);
+      console.error('Failed to submit vote to database:', error);
       toast({
         title: 'Vote Failed',
         description:
-          error instanceof Error ? error.message : 'Failed to submit vote',
+          error instanceof Error ? error.message : 'Failed to save vote to database',
         variant: 'destructive',
       });
     } finally {
