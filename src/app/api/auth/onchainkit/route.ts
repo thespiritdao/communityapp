@@ -187,28 +187,42 @@ export async function POST(req: NextRequest) {
       throw new Error('Failed to retrieve or create user ID');
     }
 
-    // Generate a real Supabase session via GoTrue Admin REST API.
-    // supabaseAdmin.auth.admin.createSession() was added in a later SDK version;
-    // call the underlying endpoint directly so we get a real refresh token.
+    // Generate a real Supabase session using generateLink + verify.
+    // This is the correct pattern for SDK v2 — createSession() was added later.
+    // generateLink produces a hashed_token; POST /auth/v1/verify exchanges it
+    // for a real access_token + refresh_token pair.
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+    const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
-    const tokenRes = await fetch(`${supabaseUrl}/auth/v1/admin/users/${userId}/token`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${serviceRoleKey}`,
-        'apikey': serviceRoleKey,
-      },
+    const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
+      type: 'magiclink',
+      email: userEmail!,
     });
 
-    if (!tokenRes.ok) {
-      const body = await tokenRes.text();
-      console.error('❌ Auth API: GoTrue token endpoint failed:', tokenRes.status, body);
+    if (linkError || !linkData?.properties?.hashed_token) {
+      console.error('❌ Auth API: generateLink failed:', linkError);
       return NextResponse.json({ error: 'Failed to create session' }, { status: 500 });
     }
 
-    const session = await tokenRes.json();
+    const verifyRes = await fetch(`${supabaseUrl}/auth/v1/verify`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': anonKey,
+      },
+      body: JSON.stringify({
+        type: 'magiclink',
+        token_hash: linkData.properties.hashed_token,
+      }),
+    });
+
+    if (!verifyRes.ok) {
+      const body = await verifyRes.text();
+      console.error('❌ Auth API: verify failed:', verifyRes.status, body);
+      return NextResponse.json({ error: 'Failed to create session' }, { status: 500 });
+    }
+
+    const session = await verifyRes.json();
     console.log('✅ Auth API: Generated real Supabase session');
 
     return NextResponse.json({
