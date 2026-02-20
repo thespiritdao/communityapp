@@ -63,8 +63,8 @@ export class VideoChatService {
 
     if (error) throw error;
 
-    // Notify recipient
-    await unifiedNotificationService.createNotification({
+    // Notify recipient (non-fatal — call proceeds even if notification fails)
+    unifiedNotificationService.createNotification({
       recipient_address: recipientWallet.toLowerCase(),
       sender_address: initiatorWallet.toLowerCase(),
       notification_type: 'video_call_requested',
@@ -74,7 +74,7 @@ export class VideoChatService {
       context_id: data.id,
       context_url: `/chat/video/${data.id}`,
       priority: 'urgent',
-    });
+    }).catch((err) => console.warn('Video call notification failed (non-fatal):', err));
 
     return data as VideoCallSession;
   }
