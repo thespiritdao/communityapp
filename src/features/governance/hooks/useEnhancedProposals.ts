@@ -266,14 +266,14 @@ export const useEnhancedProposals = () => {
           const canVote =
             podRole?.permissions?.governanceParticipation === true;
 
-          // console.log('🏛️ [POD-LEVEL VOTE CHECK]', {
-          //   proposalTitle: proposal.title,
-          //   podId: proposal.pod_id,
-          //   podName: proposal.pods?.name,
-          //   userRole: podRole ? `Found (${podRole.role_name})` : 'Not found',
-          //   governancePermission: podRole?.permissions?.governanceParticipation,
-          //   canVote,
-          // });
+          console.log('🏛️ [POD-LEVEL VOTE CHECK]', {
+            proposalTitle: proposal.title,
+            podId: proposal.pod_id,
+            podName: proposal.pods?.name,
+            userRole: podRole ? `Found (${podRole.role_name})` : 'Not found',
+            governancePermission: podRole?.permissions?.governanceParticipation,
+            canVote,
+          });
 
           // Get user's vote if they can vote
           let userVote = null;
@@ -290,7 +290,7 @@ export const useEnhancedProposals = () => {
           // Skip this proposal if user doesn't have governance permission in this pod
           if (!canVote) {
             console.log(`🔒 [TOKEN-GATE] Hiding pod-level proposal "${proposal.title}" - user lacks pod token`);
-            return; // Skip this proposal entirely
+            continue; // Skip this proposal, continue with next
           }
 
           const enhancedProposal: EnhancedProposal = {
