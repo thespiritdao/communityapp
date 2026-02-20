@@ -187,19 +187,33 @@ export async function POST(req: NextRequest) {
       throw new Error('Failed to retrieve or create user ID');
     }
 
-    // Generate a real Supabase session with a valid refresh token
-    const { data: sessionData, error: sessionError } = await supabaseAdmin.auth.admin.createSession(userId);
+    // Generate a real Supabase session via GoTrue Admin REST API.
+    // supabaseAdmin.auth.admin.createSession() was added in a later SDK version;
+    // call the underlying endpoint directly so we get a real refresh token.
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
-    if (sessionError || !sessionData?.session) {
-      console.error('❌ Auth API: Failed to create session:', sessionError);
+    const tokenRes = await fetch(`${supabaseUrl}/auth/v1/admin/users/${userId}/token`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${serviceRoleKey}`,
+        'apikey': serviceRoleKey,
+      },
+    });
+
+    if (!tokenRes.ok) {
+      const body = await tokenRes.text();
+      console.error('❌ Auth API: GoTrue token endpoint failed:', tokenRes.status, body);
       return NextResponse.json({ error: 'Failed to create session' }, { status: 500 });
     }
 
+    const session = await tokenRes.json();
     console.log('✅ Auth API: Generated real Supabase session');
 
     return NextResponse.json({
-      supabaseToken: sessionData.session.access_token,
-      supabaseRefreshToken: sessionData.session.refresh_token,
+      supabaseToken: session.access_token,
+      supabaseRefreshToken: session.refresh_token,
       userId,
     });
   } catch (err) {
