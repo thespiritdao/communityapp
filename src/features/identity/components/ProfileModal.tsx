@@ -96,6 +96,27 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
   const [showGiftModal, setShowGiftModal] = useState(false);
   const [videoSessionId, setVideoSessionId] = useState<string | null>(null);
   const [isStartingCall, setIsStartingCall] = useState(false);
+  const [vpOffset, setVpOffset] = useState({ top: 0, height: '100dvh' });
+
+  useEffect(() => {
+    const originalOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    const updateVp = () => {
+      const vv = window.visualViewport;
+      if (vv) setVpOffset({ top: vv.offsetTop, height: `${vv.height}px` });
+    };
+
+    updateVp();
+    window.visualViewport?.addEventListener('resize', updateVp);
+    window.visualViewport?.addEventListener('scroll', updateVp);
+
+    return () => {
+      document.body.style.overflow = originalOverflow;
+      window.visualViewport?.removeEventListener('resize', updateVp);
+      window.visualViewport?.removeEventListener('scroll', updateVp);
+    };
+  }, []);
 
   const mappedInterests = mapStoredValuesToLabels(user.interests ?? null, interestsOptions);
   const mappedSeeking = mapStoredValuesToLabels(user.seeking ?? null, seekingOptions);
@@ -143,7 +164,12 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
   };
 
   return (
-    <div className="profile-modal">
+    <div
+      className="profile-modal-overlay"
+      onClick={onClose}
+      style={{ top: vpOffset.top, height: vpOffset.height }}
+    >
+    <div className="profile-modal" onClick={(e) => e.stopPropagation()}>
       <button className="close-button" onClick={onClose}>
         ✖
       </button>
@@ -365,6 +391,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
           onClose={() => setVideoSessionId(null)}
         />
       )}
+    </div>
     </div>
   );
 };

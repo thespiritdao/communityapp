@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useEvmAddress, useSendUserOperation, useCurrentUser } from '@coinbase/cdp-hooks';
 import { useBalance } from 'wagmi';
 import { parseUnits, encodeFunctionData } from 'viem';
@@ -47,6 +47,27 @@ export function GiftModal({
   const [amount, setAmount] = useState('');
   const [message, setMessage] = useState('');
   const [isSending, setIsSending] = useState(false);
+  const [vpOffset, setVpOffset] = useState({ top: 0, height: '100dvh' });
+
+  useEffect(() => {
+    const originalOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    const updateVp = () => {
+      const vv = window.visualViewport;
+      if (vv) setVpOffset({ top: vv.offsetTop, height: `${vv.height}px` });
+    };
+
+    updateVp();
+    window.visualViewport?.addEventListener('resize', updateVp);
+    window.visualViewport?.addEventListener('scroll', updateVp);
+
+    return () => {
+      document.body.style.overflow = originalOverflow;
+      window.visualViewport?.removeEventListener('resize', updateVp);
+      window.visualViewport?.removeEventListener('scroll', updateVp);
+    };
+  }, []);
   const [txStatus, setTxStatus] = useState<'idle' | 'pending' | 'success' | 'error'>('idle');
   const [statusMessage, setStatusMessage] = useState('');
 
@@ -168,7 +189,11 @@ export function GiftModal({
   };
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
+    <div
+      className="modal-overlay"
+      onClick={onClose}
+      style={{ top: vpOffset.top, height: vpOffset.height }}
+    >
       <div className="gift-modal" onClick={(e) => e.stopPropagation()}>
         {/* Header */}
         <div className="gift-header">
@@ -325,7 +350,7 @@ export function GiftModal({
           top: 0;
           left: 0;
           right: 0;
-          bottom: 0;
+          height: 100dvh;
           background: rgba(0, 0, 0, 0.5);
           display: flex;
           align-items: center;

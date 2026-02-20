@@ -1,33 +1,30 @@
-/* Modal Content */
-.profile-modal {
-  position: fixed;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  background: white;
-  padding: 32px; /* ⬆️ slightly more padding */
-  border-radius: 12px;
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
-  z-index: 1000;
-  max-height: 85vh; /* Keep it readable on short screens */
-  max-width: 80vw;  /* ⬆️ wider than before */
-  width: 500px;     /* ⬆️ about 50% larger than standard modal sizes */
-  overflow-y: auto;
-  font-size: 1.05rem; /* ⬆️ slightly bump text size */
-  font-weight: 400;
-}
-
+/* Overlay — covers the visual viewport, flexbox-centres the modal */
 .profile-modal-overlay {
   position: fixed;
-  top: 0;
+  top: 0; /* overridden by inline style with visualViewport.offsetTop */
   left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(0, 0, 0, 0.5); /* Dimmed background */
+  right: 0;
+  height: 100dvh; /* overridden by inline style with visualViewport.height */
+  background: rgba(0, 0, 0, 0.5);
   display: flex;
   justify-content: center;
   align-items: center;
-  z-index: 999;
+  z-index: 1000;
+}
+
+/* Modal Content — positioned by flexbox parent, no fixed centering needed */
+.profile-modal {
+  position: relative;
+  background: white;
+  padding: 32px;
+  border-radius: 12px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+  max-height: 85vh;
+  max-width: 80vw;
+  width: 500px;
+  overflow-y: auto;
+  font-size: 1.05rem;
+  font-weight: 400;
 }
 
 .profile-modal .close-button {
