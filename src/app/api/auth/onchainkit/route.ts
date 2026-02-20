@@ -2,7 +2,6 @@
 // Authentication endpoint for Coinbase Embedded Wallets
 
 import { type NextRequest, NextResponse } from 'next/server';
-import jwt from 'jsonwebtoken';
 import { supabaseAdmin } from '@/utils/supabaseAdminClient';
 
 // IMPORTANT: Must use Node.js runtime (not Edge) because jsonwebtoken requires crypto module
@@ -188,40 +187,19 @@ export async function POST(req: NextRequest) {
       throw new Error('Failed to retrieve or create user ID');
     }
 
-    // Generate Supabase JWT tokens
-    const JWT_SECRET = process.env.SUPABASE_JWT_SECRET;
-    if (!JWT_SECRET) {
-      console.error('❌ Auth API: Missing SUPABASE_JWT_SECRET');
-      return NextResponse.json(
-        { error: 'Server configuration error' },
-        { status: 500 },
-      );
+    // Generate a real Supabase session with a valid refresh token
+    const { data: sessionData, error: sessionError } = await supabaseAdmin.auth.admin.createSession(userId);
+
+    if (sessionError || !sessionData?.session) {
+      console.error('❌ Auth API: Failed to create session:', sessionError);
+      return NextResponse.json({ error: 'Failed to create session' }, { status: 500 });
     }
 
-    // CRITICAL: wallet_address MUST be in user_metadata to match RLS policy
-    // RLS checks: auth.jwt() -> 'user_metadata' ->> 'wallet_address'
-    const jwtPayload = {
-      sub: userId,
-      aud: 'authenticated',
-      role: 'authenticated',
-      user_metadata: {
-        wallet_address: normalizedAddress,
-      },
-    };
-
-    const supabaseToken = jwt.sign(jwtPayload, JWT_SECRET, {
-      expiresIn: '30m',
-    });
-
-    const supabaseRefreshToken = jwt.sign(jwtPayload, JWT_SECRET, {
-      expiresIn: '7d',
-    });
-
-    console.log('✅ Auth API: Generated JWT tokens successfully');
+    console.log('✅ Auth API: Generated real Supabase session');
 
     return NextResponse.json({
-      supabaseToken,
-      supabaseRefreshToken,
+      supabaseToken: sessionData.session.access_token,
+      supabaseRefreshToken: sessionData.session.refresh_token,
       userId,
     });
   } catch (err) {
