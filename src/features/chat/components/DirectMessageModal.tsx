@@ -38,17 +38,32 @@ export function DirectMessageModal({
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Prevent body scroll when modal is open
-  useEffect(() => {
-    // Save original overflow
-    const originalOverflow = document.body.style.overflow;
+  // Prevent body scroll when modal is open + track visual viewport offset
+  // so the overlay stays centred when the mobile keyboard shifts the viewport.
+  const [vpOffset, setVpOffset] = useState({ top: 0, height: '100dvh' });
 
-    // Disable body scroll
+  useEffect(() => {
+    const originalOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
 
-    // Re-enable on unmount
+    const updateVp = () => {
+      const vv = window.visualViewport;
+      if (vv) {
+        setVpOffset({
+          top: vv.offsetTop,
+          height: `${vv.height}px`,
+        });
+      }
+    };
+
+    updateVp();
+    window.visualViewport?.addEventListener('resize', updateVp);
+    window.visualViewport?.addEventListener('scroll', updateVp);
+
     return () => {
       document.body.style.overflow = originalOverflow;
+      window.visualViewport?.removeEventListener('resize', updateVp);
+      window.visualViewport?.removeEventListener('scroll', updateVp);
     };
   }, []);
 
@@ -268,7 +283,11 @@ export function DirectMessageModal({
   const isRecipient = address?.toLowerCase() === recipientAddress.toLowerCase();
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
+    <div
+      className="modal-overlay"
+      onClick={onClose}
+      style={{ top: vpOffset.top, height: vpOffset.height }}
+    >
       <div className="dm-modal" onClick={(e) => e.stopPropagation()}>
         {/* Header */}
         <div className="dm-header">
@@ -378,10 +397,10 @@ export function DirectMessageModal({
       <style jsx>{`
         .modal-overlay {
           position: fixed;
-          top: 0;
+          top: 0; /* overridden by inline style with visualViewport.offsetTop */
           left: 0;
           right: 0;
-          bottom: 0;
+          height: 100dvh; /* overridden by inline style with visualViewport.height */
           background: rgba(0, 0, 0, 0.5);
           display: flex;
           align-items: center;
