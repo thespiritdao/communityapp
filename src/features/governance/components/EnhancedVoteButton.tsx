@@ -108,8 +108,6 @@ export const EnhancedVoteButton: React.FC<EnhancedVoteButtonProps> = ({
   }
 
   const handleVote = async () => {
-    console.log('[VOTE CLICKED] handleVote function called');
-
     if (!address) {
       toast({
         title: 'Wallet Required',
@@ -131,20 +129,10 @@ export const EnhancedVoteButton: React.FC<EnhancedVoteButtonProps> = ({
     try {
       setIsVoting(true);
 
-      // CRITICAL: Ensure Supabase session exists before voting
-      console.log('[VOTE DEBUG] Starting vote submission for proposal:', proposal.id);
-      console.log('[VOTE DEBUG] Wallet address:', address);
-      console.log('[VOTE DEBUG] Choice:', choice, '->', getChoiceText(choice).toLowerCase());
-
+      // Ensure Supabase session exists before voting
       const { data: sessionData } = await supabase.auth.getSession();
-      console.log('[VOTE DEBUG] Session check result:', {
-        hasSession: !!sessionData?.session,
-        sessionUser: sessionData?.session?.user?.id,
-      });
 
       if (!sessionData?.session) {
-        console.log('[VOTE DEBUG] No Supabase session found. Creating one...');
-
         // Authenticate with Supabase using wallet address
         const authResponse = await fetch('/api/auth/onchainkit', {
           method: 'POST',
@@ -155,48 +143,20 @@ export const EnhancedVoteButton: React.FC<EnhancedVoteButtonProps> = ({
           }),
         });
 
-        console.log('[VOTE DEBUG] Auth API response status:', authResponse.status);
-
         if (!authResponse.ok) {
           const errorText = await authResponse.text();
-          console.error('[VOTE DEBUG] Auth API failed:', errorText);
+          console.error('Auth API failed:', errorText);
           throw new Error('Failed to authenticate with Supabase');
         }
 
         const { supabaseToken, supabaseRefreshToken } = await authResponse.json();
 
         if (!supabaseToken || !supabaseRefreshToken) {
-          console.error('[VOTE DEBUG] No tokens received from auth API');
           throw new Error('No authentication tokens received');
         }
 
-        console.log('[VOTE DEBUG] Received auth tokens, creating session...');
-
         // Set Supabase session
         await createSupabaseSession(supabaseToken, supabaseRefreshToken);
-
-        // Verify session was created
-        const { data: newSessionData } = await supabase.auth.getSession();
-        console.log('[VOTE DEBUG] Session created:', {
-          hasSession: !!newSessionData?.session,
-          userId: newSessionData?.session?.user?.id,
-        });
-
-        // Log JWT claims for debugging
-        if (newSessionData?.session) {
-          console.log('[VOTE DEBUG] JWT claims:', {
-            sub: newSessionData.session.user.id,
-            userMetadata: newSessionData.session.user.user_metadata,
-          });
-        }
-      } else {
-        console.log('[VOTE DEBUG] Supabase session already exists');
-
-        // Log JWT claims for debugging
-        console.log('[VOTE DEBUG] Existing JWT claims:', {
-          sub: sessionData.session.user.id,
-          userMetadata: sessionData.session.user.user_metadata,
-        });
       }
 
       const voteValue = getChoiceText(choice).toLowerCase() as
@@ -204,26 +164,9 @@ export const EnhancedVoteButton: React.FC<EnhancedVoteButtonProps> = ({
         | 'for'
         | 'abstain';
 
-      console.log('[VOTE DEBUG] Proposal type check:', {
-        proposalId: proposal.id,
-        proposalType: proposal.type,
-        userCanVote: proposal.user_can_vote,
-        governanceTier: proposal.governance_tier,
-        approvingPodId: proposal.approving_pod_id,
-      });
-
       if (proposal.type === 'pod_creation' || proposal.type === 'pod_level') {
-        // CRITICAL: Check tier FIRST — POD_OPERATIONAL never needs contract address
+        // Check tier FIRST — POD_OPERATIONAL never needs contract address
         const isOperational = proposal.governance_tier === 'POD_OPERATIONAL' || !proposal.governance_tier;
-
-        console.log('[VOTE V3] Vote path:', {
-          proposalType: proposal.type,
-          governance_tier: proposal.governance_tier ?? 'POD_OPERATIONAL (default)',
-          isOperational,
-          proposalId: proposal.id,
-          vote: voteValue,
-          podId: proposal.approving_pod_id,
-        });
 
         // Helper function to convert UUID to bytes32
         const uuidToBytes32 = (uuid: string): `0x${string}` => {
@@ -241,8 +184,7 @@ export const EnhancedVoteButton: React.FC<EnhancedVoteButtonProps> = ({
           }
         };
 
-        // Step 1: Always save to database first (for all tiers)
-        console.log('[VOTE V3] Step 1: Saving to database...');
+        // Step 1: Save to database (all tiers)
         const voteData = {
           proposal_id: proposal.id,
           voter_address: address.toLowerCase(),
@@ -253,11 +195,9 @@ export const EnhancedVoteButton: React.FC<EnhancedVoteButtonProps> = ({
           pod_id: proposal.approving_pod_id,
         };
         await GovernanceService.submitVote(voteData);
-        console.log('[VOTE V3] Vote saved to database');
 
         // Step 2: POD_OPERATIONAL = DB only, done
         if (isOperational) {
-          console.log('[VOTE V3] POD_OPERATIONAL - vote complete (DB only)');
           toast({
             title: 'Vote Recorded',
             description: `Your ${voteValue} vote has been saved.`,
@@ -267,13 +207,11 @@ export const EnhancedVoteButton: React.FC<EnhancedVoteButtonProps> = ({
           const contractAddress = process.env.NEXT_PUBLIC_POD_GOVERNANCE_ADDRESS as `0x${string}`;
 
           if (!contractAddress) {
-            console.warn('[VOTE V3] NEXT_PUBLIC_POD_GOVERNANCE_ADDRESS not set - vote saved to DB only');
             toast({
               title: 'Vote Saved',
               description: `Your ${voteValue} vote was saved. On-chain recording requires contract configuration.`,
             });
           } else {
-            console.log('[VOTE V3] Step 2: Encoding contract call for POD_TREASURY_BINDING...');
             const callData = encodeFunctionData({
               abi: POD_GOVERNANCE_V3_ABI,
               functionName: 'recordVote',
@@ -283,19 +221,13 @@ export const EnhancedVoteButton: React.FC<EnhancedVoteButtonProps> = ({
                 voteToUint8(voteValue),
               ],
             });
-            console.log('[VOTE V3] Call data encoded');
-
-            console.log('[VOTE V3] Step 3: Submitting to blockchain (gasless via CDP)...');
-
             if (!currentUser?.evmSmartAccounts?.[0]) {
-              console.warn('[VOTE V3] No smart account found - vote saved to DB only');
               toast({
                 title: 'Vote Saved (Database Only)',
                 description: `Your ${voteValue} vote was saved. On-chain recording requires smart account initialization.`,
               });
             } else {
               const smartAccount = currentUser.evmSmartAccounts[0];
-              console.log('[VOTE V3] Using smart account:', smartAccount);
 
               try {
                 const result = await sendUserOperation({
@@ -309,14 +241,12 @@ export const EnhancedVoteButton: React.FC<EnhancedVoteButtonProps> = ({
                   useCdpPaymaster: true,
                 });
 
-                console.log('[VOTE V3] Vote recorded on-chain!', { result, status });
-
                 toast({
                   title: 'Vote Recorded On-Chain',
                   description: `Your ${voteValue} vote has been permanently recorded on Base blockchain`,
                 });
               } catch (onchainError) {
-                console.error('[VOTE V3] On-chain submission failed (vote still saved to DB):', onchainError);
+                console.error('On-chain vote submission failed (vote still saved to DB):', onchainError);
                 toast({
                   title: 'Vote Saved (DB Only)',
                   description: `Your ${voteValue} vote was saved to database. On-chain recording will be retried later.`,
@@ -326,8 +256,6 @@ export const EnhancedVoteButton: React.FC<EnhancedVoteButtonProps> = ({
           }
         }
 
-        // Always trigger refetch to update UI
-        console.log('[VOTE V3] Triggering UI refetch...');
         onVoteSuccess?.();
       } else {
         // Handle governance votes - this would integrate with existing VoteButton logic

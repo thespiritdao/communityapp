@@ -2063,11 +2063,11 @@ export function CreateProposalForm({
                     value={formData.governanceTier}
                     onChange={(e) => handleFormChange('governanceTier', e.target.value as GovernanceTier)}
                   >
-                    <option value="POD_OPERATIONAL">Operational — Routine coordination, no treasury impact (DB only)</option>
-                    <option value="POD_TREASURY_BINDING">Treasury-Binding — Allocates pod funds or triggers contract (on-chain after vote)</option>
+                    <option value="POD_OPERATIONAL">Off-chain: No Treasury Impact</option>
+                    <option value="POD_TREASURY_BINDING">On-chain: Funds Exchanged</option>
                   </select>
                   <p className="text-xs mt-1 text-gray-500">
-                    Operational proposals are stored in the database only. Treasury-binding proposals are recorded on-chain after passing.
+                    Off-chain proposals are stored in the database only. On-chain proposals are recorded on Base after passing.
                   </p>
                 </div>
               )}

@@ -41,21 +41,9 @@ export class GovernanceService {
       const session = sessionCheck.session;
       const jwt = session.user;
 
-      // DEBUG: Log JWT structure
-      console.error('🔍 [VOTE DEBUG] JWT Structure Check:', {
-        sub: jwt.id,
-        role: jwt.role,
-        user_metadata: jwt.user_metadata,
-        wallet_in_metadata: jwt.user_metadata?.wallet_address,
-        app_metadata: jwt.app_metadata,
-      });
-
-      // CRITICAL: Verify wallet_address exists in user_metadata
+      // Verify wallet_address exists in user_metadata
       const jwtWalletAddress = jwt.user_metadata?.wallet_address;
       if (!jwtWalletAddress) {
-        console.error('❌ [VOTE DEBUG] JWT missing user_metadata.wallet_address!', {
-          available_metadata: jwt.user_metadata,
-        });
         throw new Error('JWT does not contain wallet_address in user_metadata. Auth flow may be incomplete.');
       }
 
@@ -76,10 +64,6 @@ export class GovernanceService {
         signature: vote.signature,
       };
 
-      console.error('📊 [VOTE DEBUG] Inserting vote:', rowToInsert);
-      console.error('📊 [VOTE DEBUG] RLS will check: LOWER(voter_address) = LOWER(jwt.user_metadata.wallet_address)');
-      console.error(`📊 [VOTE DEBUG] Should match: "${votingWallet}" === "${jwtWallet}"`);
-
       // Use the EXISTING supabase client that already has the session
       const { error } = await supabase.from('governance_votes').upsert(
         rowToInsert,
@@ -89,33 +73,9 @@ export class GovernanceService {
       );
 
       if (error) {
-        console.error('❌ [VOTE DEBUG] Database error:', {
-          code: error.code,
-          message: error.message,
-          details: error.details,
-          hint: error.hint,
-        });
+        console.error('Failed to insert vote:', error.message);
         throw error;
       }
-
-      console.log('✅ Vote submitted successfully:', {
-        proposal_id: vote.proposal_id,
-        vote: vote.vote,
-        has_signature: !!vote.signature,
-        signature_preview: vote.signature
-          ? vote.signature.substring(0, 20) + '...'
-          : 'null',
-        full_vote_data: {
-          proposal_id: vote.proposal_id,
-          voter_address: vote.voter_address,
-          vote: vote.vote,
-          timestamp: vote.timestamp,
-          hat_id: vote.hat_id,
-          signature: vote.signature
-            ? vote.signature.substring(0, 20) + '...'
-            : 'null',
-        },
-      });
 
       // Update proposal approval count
       await this.updateProposalApprovalCount(vote.proposal_id);
