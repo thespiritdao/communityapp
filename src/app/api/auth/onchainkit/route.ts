@@ -2,6 +2,7 @@
 // Authentication endpoint for Coinbase Embedded Wallets
 
 import { type NextRequest, NextResponse } from 'next/server';
+import jwt from 'jsonwebtoken';
 import { supabaseAdmin } from '@/utils/supabaseAdminClient';
 
 // IMPORTANT: Must use Node.js runtime (not Edge) because jsonwebtoken requires crypto module
@@ -83,19 +84,6 @@ export async function POST(req: NextRequest) {
 
       if (!userId) {
         throw new Error('User profile exists but user_id is null');
-      }
-
-      // CRITICAL: Ensure wallet_address is in auth.users raw_user_meta_data
-      // Without this, Supabase JWTs won't have wallet_address in user_metadata,
-      // causing RLS to block governance vote inserts for existing users.
-      const { error: metaUpdateError } = await supabaseAdmin.auth.admin.updateUserById(
-        userId,
-        { user_metadata: { wallet_address: normalizedAddress } },
-      );
-      if (metaUpdateError) {
-        console.error('⚠️ Auth API: Failed to update user_metadata (non-critical):', metaUpdateError);
-      } else {
-        console.log(`✅ Auth API: Ensured wallet_address in user_metadata for ${userId}`);
       }
 
       // Update profile with email if provided and not already set
@@ -187,47 +175,36 @@ export async function POST(req: NextRequest) {
       throw new Error('Failed to retrieve or create user ID');
     }
 
-    // Generate a real Supabase session using generateLink + verify.
-    // This is the correct pattern for SDK v2 — createSession() was added later.
-    // generateLink produces a hashed_token; POST /auth/v1/verify exchanges it
-    // for a real access_token + refresh_token pair.
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-    const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-
-    const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
-      type: 'magiclink',
-      email: userEmail!,
-    });
-
-    if (linkError || !linkData?.properties?.hashed_token) {
-      console.error('❌ Auth API: generateLink failed:', linkError);
-      return NextResponse.json({ error: 'Failed to create session' }, { status: 500 });
+    // Sign a JWT directly with the Supabase JWT secret.
+    // This is the correct approach for wallet-based auth — we know exactly which
+    // userId and wallet_address to embed, bypassing email-based session flows that
+    // would pick the wrong auth user when multiple accounts share an email.
+    // The RLS policy reads wallet_address from this JWT claim directly.
+    const JWT_SECRET = process.env.SUPABASE_JWT_SECRET;
+    if (!JWT_SECRET) {
+      console.error('❌ Auth API: Missing SUPABASE_JWT_SECRET');
+      return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
     }
 
-    const verifyRes = await fetch(`${supabaseUrl}/auth/v1/verify`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'apikey': anonKey,
+    const now = Math.floor(Date.now() / 1000);
+    const jwtPayload = {
+      sub: userId,
+      aud: 'authenticated',
+      role: 'authenticated',
+      iat: now,
+      exp: now + 60 * 60, // 1 hour
+      user_metadata: {
+        wallet_address: normalizedAddress,
       },
-      body: JSON.stringify({
-        type: 'magiclink',
-        token_hash: linkData.properties.hashed_token,
-      }),
-    });
+    };
 
-    if (!verifyRes.ok) {
-      const body = await verifyRes.text();
-      console.error('❌ Auth API: verify failed:', verifyRes.status, body);
-      return NextResponse.json({ error: 'Failed to create session' }, { status: 500 });
-    }
+    const supabaseToken = jwt.sign(jwtPayload, JWT_SECRET, { algorithm: 'HS256' });
 
-    const session = await verifyRes.json();
-    console.log('✅ Auth API: Generated real Supabase session');
+    console.log('✅ Auth API: Generated JWT token');
 
     return NextResponse.json({
-      supabaseToken: session.access_token,
-      supabaseRefreshToken: session.refresh_token,
+      supabaseToken,
+      supabaseRefreshToken: supabaseToken, // same token; refresh is handled by re-auth on page load
       userId,
     });
   } catch (err) {
