@@ -28,6 +28,8 @@ import {
 } from 'lucide-react';
 import { DirectMessageModal } from '@/features/chat/components/DirectMessageModal';
 import { GiftModal } from '@/features/identity/components/GiftModal';
+import { VideoCallModal } from '@/features/chat/components/VideoCallModal';
+import { VideoChatService } from '@/features/chat/services/videoChatService';
 import '../styles/ProfileModal.css';
 
 interface ProfileModalProps {
@@ -92,31 +94,11 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
   const profilePictureUrl = getProfilePictureUrl(user.wallet_address, users);
   const [showDMModal, setShowDMModal] = useState(false);
   const [showGiftModal, setShowGiftModal] = useState(false);
+  const [videoSessionId, setVideoSessionId] = useState<string | null>(null);
+  const [isStartingCall, setIsStartingCall] = useState(false);
 
-  // 🔍 DIAGNOSTIC LOGGING: Profile data analysis
-  console.log('📊 [ProfileModal] Rendering with user data:', {
-    wallet_address: user.wallet_address,
-    name: `${user.first_name} ${user.last_name}`,
-    hasInterests: !!user.interests,
-    interestsType: typeof user.interests,
-    interestsValue: user.interests,
-    hasSeeking: !!user.seeking,
-    seekingType: typeof user.seeking,
-    seekingValue: user.seeking,
-    open_to_connect: user.open_to_connect,
-    allProfileKeys: Object.keys(user),
-  });
-
-  // 🔍 DIAGNOSTIC LOGGING: Mapped values analysis
   const mappedInterests = mapStoredValuesToLabels(user.interests ?? null, interestsOptions);
   const mappedSeeking = mapStoredValuesToLabels(user.seeking ?? null, seekingOptions);
-
-  console.log('🎯 [ProfileModal] Mapped results:', {
-    interestsCount: mappedInterests.length,
-    interestsLabels: mappedInterests,
-    seekingCount: mappedSeeking.length,
-    seekingLabels: mappedSeeking,
-  });
 
   const handleFundUser = () => {
     openMemberFunding({
@@ -140,6 +122,24 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
 
   const handleOpenGift = () => {
     setShowGiftModal(true);
+  };
+
+  const handleStartVideoCall = async () => {
+    if (!address || isStartingCall) return;
+    setIsStartingCall(true);
+    try {
+      const callerName = `${user.first_name ?? ''} ${user.last_name ?? ''}`.trim() || address.slice(0, 6);
+      const session = await VideoChatService.initiateCall(
+        address,
+        user.wallet_address,
+        callerName,
+      );
+      setVideoSessionId(session.id);
+    } catch (err) {
+      console.error('Failed to start video call:', err);
+    } finally {
+      setIsStartingCall(false);
+    }
   };
 
   return (
@@ -169,7 +169,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
               </a>
             )}
 
-            {/* Action Buttons: Message & Gift */}
+            {/* Action Buttons: Message, Video & Gift */}
             {canInteractWithUser && (
               <div className="profile-action-buttons">
                 <button
@@ -178,6 +178,14 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
                 >
                   <MessageCircle size={16} />
                   <span>Message</span>
+                </button>
+                <button
+                  className="action-btn video-btn"
+                  onClick={handleStartVideoCall}
+                  disabled={isStartingCall}
+                >
+                  <Video size={16} />
+                  <span>{isStartingCall ? 'Calling...' : 'Video'}</span>
                 </button>
                 <button
                   className="action-btn gift-btn"
@@ -344,6 +352,17 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
           recipientName={`${user.first_name} ${user.last_name}`}
           recipientImage={profilePictureUrl}
           onClose={() => setShowGiftModal(false)}
+        />
+      )}
+
+      {/* Video Call Modal */}
+      {videoSessionId && address && (
+        <VideoCallModal
+          sessionId={videoSessionId}
+          localWallet={address}
+          remoteUser={user}
+          role="initiator"
+          onClose={() => setVideoSessionId(null)}
         />
       )}
     </div>

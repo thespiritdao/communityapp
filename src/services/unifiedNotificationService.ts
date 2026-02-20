@@ -61,7 +61,11 @@ export type NotificationType =
   | 'proposal_cancelled'
   | 'token_holder_notification'
   | 'voting_reminder'
-  | 'proposal_deadline_approaching';
+  | 'proposal_deadline_approaching'
+  // Video call notifications
+  | 'video_call_requested'
+  | 'video_call_missed'
+  | 'video_call_declined';
 
 export type NotificationCategory =
   | 'general'
