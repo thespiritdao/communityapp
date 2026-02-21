@@ -14,6 +14,7 @@ interface UseVideoCallOptions {
   localWallet: string;
   remoteWallet: string;
   role: CallRole;
+  initialStatus?: CallStatus;
   onCallEnded?: () => void;
 }
 
@@ -36,11 +37,12 @@ export const useVideoCall = ({
   localWallet,
   remoteWallet,
   role,
+  initialStatus,
   onCallEnded,
 }: UseVideoCallOptions): UseVideoCallReturn => {
   const [localStream, setLocalStream] = useState<MediaStream | null>(null);
   const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);
-  const [callStatus, setCallStatus] = useState<CallStatus>('ringing');
+  const [callStatus, setCallStatus] = useState<CallStatus>(initialStatus ?? 'ringing');
   const [isAudioMuted, setIsAudioMuted] = useState(false);
   const [isVideoOff, setIsVideoOff] = useState(false);
   const [connectionState, setConnectionState] = useState<RTCPeerConnectionState | null>(null);
@@ -205,6 +207,22 @@ export const useVideoCall = ({
     });
     setIsVideoOff((prev) => !prev);
   }, []);
+
+  // ─── Auto-setup media when recipient opens modal already accepted ─────────
+
+  useEffect(() => {
+    if (role === 'recipient' && initialStatus === 'accepted') {
+      // Banner already called acceptCall() — just set up media + peer connection
+      const setup = async () => {
+        const stream = await VideoChatService.getUserMedia(true, true);
+        localStreamRef.current = stream;
+        setLocalStream(stream);
+        await setupPeerConnection(stream);
+      };
+      setup().catch(console.error);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // run once on mount only
 
   // ─── Supabase Realtime subscriptions ─────────────────────────────────────
 

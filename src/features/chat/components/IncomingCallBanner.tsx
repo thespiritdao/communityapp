@@ -82,10 +82,13 @@ export const IncomingCallBanner: React.FC = () => {
     };
   }, [address, incomingCall?.id]);
 
-  const handleAccept = () => {
+  const handleAccept = async () => {
     if (!incomingCall) return;
-    setActiveSessionId(incomingCall.id);
+    const sessionId = incomingCall.id;
     setIncomingCall(null);
+    // Accept in DB first so the initiator's postgres_changes fires and they send the offer
+    await VideoChatService.acceptCall(sessionId);
+    setActiveSessionId(sessionId);
   };
 
   const handleDecline = async () => {
@@ -142,6 +145,7 @@ export const IncomingCallBanner: React.FC = () => {
           localWallet={address}
           remoteUser={callerProfile}
           role="recipient"
+          initialStatus="accepted"
           onClose={() => setActiveSessionId(null)}
         />
       )}

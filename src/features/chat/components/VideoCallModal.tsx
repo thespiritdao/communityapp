@@ -19,6 +19,7 @@ interface VideoCallModalProps {
   localWallet: string;
   remoteUser: UserProfile;
   role: CallRole;
+  initialStatus?: 'ringing' | 'accepted';
   onClose: () => void;
 }
 
@@ -36,6 +37,7 @@ export const VideoCallModal: React.FC<VideoCallModalProps> = ({
   localWallet,
   remoteUser,
   role,
+  initialStatus,
   onClose,
 }) => {
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
@@ -57,6 +59,7 @@ export const VideoCallModal: React.FC<VideoCallModalProps> = ({
     localWallet,
     remoteWallet: remoteUser.wallet_address,
     role,
+    initialStatus,
     onCallEnded: () => {
       setTimeout(onClose, 1500); // brief pause so user sees "Call Ended"
     },
