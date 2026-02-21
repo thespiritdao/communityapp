@@ -1,11 +1,12 @@
 // src/features/chat/hooks/useVideoCall.ts
 //
-// Manages the full WebRTC + Supabase signaling lifecycle for a single call session.
-// Used by VideoCallModal to orchestrate offer/answer/ICE exchange and media streams.
+// WebRTC + Supabase Broadcast signaling lifecycle for a single call session.
+// All signaling (offer/answer/ICE/accepted) delivered via Broadcast channel
+// so there is no postgres_changes latency and no missed-event race conditions.
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { supabase } from '@/utils/supabaseClient';
-import { VideoChatService, type CallStatus, type SignalingMessage } from '../services/videoChatService';
+import { VideoChatService, type CallStatus } from '../services/videoChatService';
 
 export type CallRole = 'initiator' | 'recipient';
 
@@ -51,11 +52,21 @@ export const useVideoCall = ({
   const localStreamRef = useRef<MediaStream | null>(null);
   const pendingCandidates = useRef<RTCIceCandidateInit[]>([]);
   const hasRemoteDesc = useRef(false);
-  // Stable refs to callbacks so subscriptions don't need to re-subscribe
-  const startOfferRef = useRef<() => Promise<void>>(() => Promise.resolve());
-  const handleSignalRef = useRef<(msg: SignalingMessage) => Promise<void>>(() => Promise.resolve());
+  const onCallEndedRef = useRef(onCallEnded);
+  useEffect(() => { onCallEndedRef.current = onCallEnded; }, [onCallEnded]);
 
-  // ─── Cleanup ─────────────────────────────────────────────────────────────
+  // Broadcast channel shared by both sides for this session
+  const signalingChannelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
+
+  // ─── Helpers ──────────────────────────────────────────────────────────────
+
+  const broadcast = useCallback((event: string, payload: unknown) => {
+    signalingChannelRef.current?.send({
+      type: 'broadcast',
+      event,
+      payload,
+    });
+  }, []);
 
   const cleanup = useCallback(() => {
     pcRef.current?.close();
@@ -66,243 +77,214 @@ export const useVideoCall = ({
     setRemoteStream(null);
   }, []);
 
+  // ─── Drain pending ICE candidates ────────────────────────────────────────
+
+  const drainPendingCandidates = useCallback(async () => {
+    const pc = pcRef.current;
+    if (!pc || !hasRemoteDesc.current) return;
+    for (const c of pendingCandidates.current) {
+      try { await pc.addIceCandidate(new RTCIceCandidate(c)); } catch (_) { /* ignore */ }
+    }
+    pendingCandidates.current = [];
+  }, []);
+
   // ─── Setup PeerConnection ─────────────────────────────────────────────────
 
-  const setupPeerConnection = useCallback(async (stream: MediaStream) => {
+  const setupPeerConnection = useCallback((stream: MediaStream): RTCPeerConnection => {
     const pc = VideoChatService.createPeerConnection(
-      // onIceCandidate
-      async (candidate) => {
-        await VideoChatService.sendSignal(
-          sessionId,
-          localWallet,
-          remoteWallet,
-          'ice_candidate',
-          candidate.toJSON(),
-        );
+      (candidate) => {
+        broadcast('ice_candidate', { from: localWallet, payload: candidate.toJSON() });
+        // Also persist for logging (non-blocking)
+        VideoChatService.sendSignal(sessionId, localWallet, remoteWallet, 'ice_candidate', candidate.toJSON())
+          .catch(() => {});
       },
-      // onTrack
       (event) => {
-        if (event.streams?.[0]) {
-          setRemoteStream(event.streams[0]);
-        }
+        if (event.streams?.[0]) setRemoteStream(event.streams[0]);
       },
-      // onConnectionStateChange
       (state) => {
         setConnectionState(state);
         if (state === 'connected') setCallStatus('active');
         if (state === 'disconnected' || state === 'failed' || state === 'closed') {
           setCallStatus('ended');
-          onCallEnded?.();
+          onCallEndedRef.current?.();
         }
       },
     );
-
     stream.getTracks().forEach((track) => pc.addTrack(track, stream));
     pcRef.current = pc;
     return pc;
-  }, [sessionId, localWallet, remoteWallet, onCallEnded]);
+  }, [sessionId, localWallet, remoteWallet, broadcast]);
 
-  // ─── Drain pending ICE candidates after remote desc is set ───────────────
-
-  const drainPendingCandidates = useCallback(async () => {
-    if (!pcRef.current || !hasRemoteDesc.current) return;
-    for (const c of pendingCandidates.current) {
-      try {
-        await pcRef.current.addIceCandidate(new RTCIceCandidate(c));
-      } catch (_) {
-        // ignore stale candidates
-      }
-    }
-    pendingCandidates.current = [];
-  }, []);
-
-  // ─── Handle incoming signaling messages ──────────────────────────────────
-
-  const handleSignal = useCallback(async (msg: SignalingMessage) => {
-    const pc = pcRef.current;
-    if (!pc) return;
-
-    if (msg.message_type === 'offer') {
-      await pc.setRemoteDescription(new RTCSessionDescription(msg.payload));
-      hasRemoteDesc.current = true;
-      await drainPendingCandidates();
-      const answer = await pc.createAnswer();
-      await pc.setLocalDescription(answer);
-      await VideoChatService.sendSignal(
-        sessionId, localWallet, remoteWallet, 'answer', answer,
-      );
-    } else if (msg.message_type === 'answer') {
-      await pc.setRemoteDescription(new RTCSessionDescription(msg.payload));
-      hasRemoteDesc.current = true;
-      await drainPendingCandidates();
-    } else if (msg.message_type === 'ice_candidate') {
-      if (hasRemoteDesc.current) {
-        try {
-          await pc.addIceCandidate(new RTCIceCandidate(msg.payload));
-        } catch (_) { /* ignore */ }
-      } else {
-        pendingCandidates.current.push(msg.payload);
-      }
-    }
-  }, [sessionId, localWallet, remoteWallet, drainPendingCandidates]);
-
-  // ─── Accept call (recipient) ──────────────────────────────────────────────
-
-  const acceptCall = useCallback(async () => {
-    await VideoChatService.acceptCall(sessionId);
-    setCallStatus('accepted');
-
-    const stream = await VideoChatService.getUserMedia(true, true);
-    localStreamRef.current = stream;
-    setLocalStream(stream);
-
-    await setupPeerConnection(stream);
-    // Initiator will detect 'accepted' status and send the offer
-  }, [sessionId, setupPeerConnection]);
-
-  // ─── Start call (initiator, after recipient accepts) ─────────────────────
+  // ─── Initiator: send offer after recipient accepts ────────────────────────
 
   const startOffer = useCallback(async () => {
     const stream = await VideoChatService.getUserMedia(true, true);
     localStreamRef.current = stream;
     setLocalStream(stream);
-
-    const pc = await setupPeerConnection(stream);
+    const pc = setupPeerConnection(stream);
     const offer = await pc.createOffer();
     await pc.setLocalDescription(offer);
-    await VideoChatService.sendSignal(
-      sessionId, localWallet, remoteWallet, 'offer', offer,
-    );
-  }, [sessionId, localWallet, remoteWallet, setupPeerConnection]);
+    broadcast('offer', { from: localWallet, payload: offer });
+    // Persist for logging
+    VideoChatService.sendSignal(sessionId, localWallet, remoteWallet, 'offer', offer).catch(() => {});
+  }, [sessionId, localWallet, remoteWallet, setupPeerConnection, broadcast]);
+
+  // Keep a stable ref so the subscription closure can call the latest version
+  const startOfferRef = useRef(startOffer);
+  useEffect(() => { startOfferRef.current = startOffer; }, [startOffer]);
+
+  // ─── Handle incoming signal ───────────────────────────────────────────────
+
+  const handleSignal = useCallback(async (type: string, payload: unknown) => {
+    const pc = pcRef.current;
+    if (!pc) return;
+
+    if (type === 'offer') {
+      await pc.setRemoteDescription(new RTCSessionDescription(payload as RTCSessionDescriptionInit));
+      hasRemoteDesc.current = true;
+      await drainPendingCandidates();
+      const answer = await pc.createAnswer();
+      await pc.setLocalDescription(answer);
+      broadcast('answer', { from: localWallet, payload: answer });
+      VideoChatService.sendSignal(sessionId, localWallet, remoteWallet, 'answer', answer).catch(() => {});
+    } else if (type === 'answer') {
+      await pc.setRemoteDescription(new RTCSessionDescription(payload as RTCSessionDescriptionInit));
+      hasRemoteDesc.current = true;
+      await drainPendingCandidates();
+    } else if (type === 'ice_candidate') {
+      const candidate = payload as RTCIceCandidateInit;
+      if (hasRemoteDesc.current) {
+        try { await pc.addIceCandidate(new RTCIceCandidate(candidate)); } catch (_) { /* ignore */ }
+      } else {
+        pendingCandidates.current.push(candidate);
+      }
+    }
+  }, [sessionId, localWallet, remoteWallet, broadcast, drainPendingCandidates]);
+
+  const handleSignalRef = useRef(handleSignal);
+  useEffect(() => { handleSignalRef.current = handleSignal; }, [handleSignal]);
+
+  // ─── Accept call (recipient, when using in-modal accept button) ───────────
+
+  const acceptCall = useCallback(async () => {
+    await VideoChatService.acceptCall(sessionId);
+    broadcast('accepted', { from: localWallet });
+    setCallStatus('accepted');
+    const stream = await VideoChatService.getUserMedia(true, true);
+    localStreamRef.current = stream;
+    setLocalStream(stream);
+    setupPeerConnection(stream);
+  }, [sessionId, localWallet, setupPeerConnection, broadcast]);
 
   // ─── Decline / End ────────────────────────────────────────────────────────
 
   const declineCall = useCallback(async () => {
     await VideoChatService.declineCall(sessionId);
+    broadcast('ended', { from: localWallet });
     setCallStatus('declined');
     cleanup();
-    onCallEnded?.();
-  }, [sessionId, cleanup, onCallEnded]);
+    onCallEndedRef.current?.();
+  }, [sessionId, localWallet, cleanup, broadcast]);
 
   const endCall = useCallback(async () => {
     await VideoChatService.endCall(sessionId);
+    broadcast('ended', { from: localWallet });
     setCallStatus('ended');
     cleanup();
-    onCallEnded?.();
-  }, [sessionId, cleanup, onCallEnded]);
+    onCallEndedRef.current?.();
+  }, [sessionId, localWallet, cleanup, broadcast]);
 
   // ─── Media controls ───────────────────────────────────────────────────────
 
   const toggleAudio = useCallback(() => {
-    const stream = localStreamRef.current;
-    if (!stream) return;
-    stream.getAudioTracks().forEach((t) => {
-      t.enabled = !t.enabled;
-    });
+    localStreamRef.current?.getAudioTracks().forEach((t) => { t.enabled = !t.enabled; });
     setIsAudioMuted((prev) => !prev);
   }, []);
 
   const toggleVideo = useCallback(() => {
-    const stream = localStreamRef.current;
-    if (!stream) return;
-    stream.getVideoTracks().forEach((t) => {
-      t.enabled = !t.enabled;
-    });
+    localStreamRef.current?.getVideoTracks().forEach((t) => { t.enabled = !t.enabled; });
     setIsVideoOff((prev) => !prev);
   }, []);
 
-  // Keep stable refs pointing at latest callbacks
-  useEffect(() => { startOfferRef.current = startOffer; }, [startOffer]);
-  useEffect(() => { handleSignalRef.current = handleSignal; }, [handleSignal]);
-
-  // ─── Auto-setup media when recipient opens modal already accepted ─────────
+  // ─── Broadcast subscription (set up once on mount) ───────────────────────
 
   useEffect(() => {
-    if (role === 'recipient' && initialStatus === 'accepted') {
-      // Banner already called acceptCall() — just set up media + peer connection
-      const setup = async () => {
-        const stream = await VideoChatService.getUserMedia(true, true);
-        localStreamRef.current = stream;
-        setLocalStream(stream);
-        await setupPeerConnection(stream);
-      };
-      setup().catch(console.error);
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // run once on mount only
+    const channel = supabase.channel(`signal:${sessionId}`);
+    signalingChannelRef.current = channel;
 
-  // ─── Supabase Realtime subscriptions (stable — set up once on mount) ─────
-
-  useEffect(() => {
-    const cleanupRef = { current: cleanup };
-    const onCallEndedRef = { current: onCallEnded };
-
-    // Listen for session status changes (accept/decline/end from other party)
-    const sessionSub = supabase
-      .channel(`vcs_${sessionId}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'video_call_sessions',
-          filter: `id=eq.${sessionId}`,
-        },
-        async (payload) => {
-          const newStatus = payload.new.status as CallStatus;
-          setCallStatus(newStatus);
-
-          if (newStatus === 'accepted' && role === 'initiator') {
-            // Recipient accepted — now initiator sends the offer
-            await startOfferRef.current();
-          }
-
-          if (newStatus === 'ended' || newStatus === 'declined' || newStatus === 'missed') {
-            cleanupRef.current();
-            onCallEndedRef.current?.();
-          }
-        },
-      )
-      .subscribe();
-
-    // Listen for incoming signaling messages
-    const signalSub = supabase
-      .channel(`vcsi_${sessionId}_${localWallet}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'video_call_signaling',
-          filter: `session_id=eq.${sessionId}`,
-        },
-        (payload) => {
-          const msg = payload.new as SignalingMessage;
-          if (msg.to_wallet.toLowerCase() === localWallet.toLowerCase()) {
-            handleSignalRef.current(msg);
-          }
-        },
-      )
+    channel
+      // Recipient accepted — initiator now sends offer
+      .on('broadcast', { event: 'accepted' }, () => {
+        if (role === 'initiator') {
+          setCallStatus('accepted');
+          startOfferRef.current();
+        }
+      })
+      // Initiator sent offer — recipient processes it
+      .on('broadcast', { event: 'offer' }, ({ payload }) => {
+        if (role === 'recipient') {
+          handleSignalRef.current('offer', payload.payload);
+        }
+      })
+      // Recipient sent answer — initiator processes it
+      .on('broadcast', { event: 'answer' }, ({ payload }) => {
+        if (role === 'initiator') {
+          handleSignalRef.current('answer', payload.payload);
+        }
+      })
+      // ICE candidates — both sides process (ignore own messages via from field)
+      .on('broadcast', { event: 'ice_candidate' }, ({ payload }) => {
+        if (payload.from !== localWallet) {
+          handleSignalRef.current('ice_candidate', payload.payload);
+        }
+      })
+      // Remote party ended or declined
+      .on('broadcast', { event: 'ended' }, ({ payload }) => {
+        if (payload.from !== localWallet) {
+          setCallStatus('ended');
+          cleanup();
+          onCallEndedRef.current?.();
+        }
+      })
       .subscribe();
 
     return () => {
-      sessionSub.unsubscribe();
-      signalSub.unsubscribe();
+      channel.unsubscribe();
+      signalingChannelRef.current = null;
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sessionId, localWallet, role]); // stable — never re-subscribes
 
-  // Auto-miss if ringing too long (45s)
+  // ─── Auto-setup recipient media when modal opens already accepted ─────────
+
+  useEffect(() => {
+    if (role === 'recipient' && initialStatus === 'accepted') {
+      const setup = async () => {
+        const stream = await VideoChatService.getUserMedia(true, true);
+        localStreamRef.current = stream;
+        setLocalStream(stream);
+        setupPeerConnection(stream);
+        // Broadcast "accepted" so the initiator sends the offer
+        // (in case they subscribed before the banner's acceptCall DB write resolved)
+        broadcast('accepted', { from: localWallet });
+      };
+      setup().catch(console.error);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // run once on mount
+
+  // ─── Auto-miss timer ──────────────────────────────────────────────────────
+
   useEffect(() => {
     if (callStatus !== 'ringing') return;
     const timer = setTimeout(async () => {
       await VideoChatService.markMissed(sessionId);
       setCallStatus('missed');
       cleanup();
-      onCallEnded?.();
+      onCallEndedRef.current?.();
     }, 45_000);
     return () => clearTimeout(timer);
-  }, [callStatus, sessionId, cleanup, onCallEnded]);
+  }, [callStatus, sessionId, cleanup]);
 
   return {
     localStream,

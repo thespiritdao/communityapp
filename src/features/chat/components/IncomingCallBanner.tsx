@@ -94,11 +94,18 @@ export const IncomingCallBanner: React.FC = () => {
     const sessionId = incomingCall.id;
     // Snapshot the caller profile before clearing incomingCall
     activeCallerRef.current = callerProfile;
-    // Accept in DB first so the initiator's postgres_changes fires and they send the offer
+    // Persist accept to DB
     await VideoChatService.acceptCall(sessionId);
-    // Set active session — this triggers the modal to mount with the snapshotted profile
+    // Broadcast accepted on the signaling channel so the initiator's modal
+    // receives it instantly via Broadcast (even if postgres_changes is slow)
+    supabase.channel(`signal:${sessionId}`).send({
+      type: 'broadcast',
+      event: 'accepted',
+      payload: { from: address?.toLowerCase() },
+    });
+    // Set active session — triggers the VideoCallModal to mount
     setActiveSessionId(sessionId);
-    // Now clear the banner (profile cleared only after modal is ready)
+    // Clear the banner after modal is queued to render
     setIncomingCall(null);
   };
 
