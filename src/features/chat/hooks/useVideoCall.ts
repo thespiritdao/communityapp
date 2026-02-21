@@ -51,6 +51,9 @@ export const useVideoCall = ({
   const localStreamRef = useRef<MediaStream | null>(null);
   const pendingCandidates = useRef<RTCIceCandidateInit[]>([]);
   const hasRemoteDesc = useRef(false);
+  // Stable refs to callbacks so subscriptions don't need to re-subscribe
+  const startOfferRef = useRef<() => Promise<void>>(() => Promise.resolve());
+  const handleSignalRef = useRef<(msg: SignalingMessage) => Promise<void>>(() => Promise.resolve());
 
   // ─── Cleanup ─────────────────────────────────────────────────────────────
 
@@ -208,6 +211,10 @@ export const useVideoCall = ({
     setIsVideoOff((prev) => !prev);
   }, []);
 
+  // Keep stable refs pointing at latest callbacks
+  useEffect(() => { startOfferRef.current = startOffer; }, [startOffer]);
+  useEffect(() => { handleSignalRef.current = handleSignal; }, [handleSignal]);
+
   // ─── Auto-setup media when recipient opens modal already accepted ─────────
 
   useEffect(() => {
@@ -224,9 +231,12 @@ export const useVideoCall = ({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // run once on mount only
 
-  // ─── Supabase Realtime subscriptions ─────────────────────────────────────
+  // ─── Supabase Realtime subscriptions (stable — set up once on mount) ─────
 
   useEffect(() => {
+    const cleanupRef = { current: cleanup };
+    const onCallEndedRef = { current: onCallEnded };
+
     // Listen for session status changes (accept/decline/end from other party)
     const sessionSub = supabase
       .channel(`vcs_${sessionId}`)
@@ -244,12 +254,12 @@ export const useVideoCall = ({
 
           if (newStatus === 'accepted' && role === 'initiator') {
             // Recipient accepted — now initiator sends the offer
-            await startOffer();
+            await startOfferRef.current();
           }
 
           if (newStatus === 'ended' || newStatus === 'declined' || newStatus === 'missed') {
-            cleanup();
-            onCallEnded?.();
+            cleanupRef.current();
+            onCallEndedRef.current?.();
           }
         },
       )
@@ -269,7 +279,7 @@ export const useVideoCall = ({
         (payload) => {
           const msg = payload.new as SignalingMessage;
           if (msg.to_wallet.toLowerCase() === localWallet.toLowerCase()) {
-            handleSignal(msg);
+            handleSignalRef.current(msg);
           }
         },
       )
@@ -279,7 +289,8 @@ export const useVideoCall = ({
       sessionSub.unsubscribe();
       signalSub.unsubscribe();
     };
-  }, [sessionId, localWallet, role, startOffer, handleSignal, cleanup, onCallEnded]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sessionId, localWallet, role]); // stable — never re-subscribes
 
   // Auto-miss if ringing too long (45s)
   useEffect(() => {

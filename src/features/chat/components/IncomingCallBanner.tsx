@@ -6,7 +6,7 @@
 // Subscribes to video_call_sessions where the current user is the recipient.
 // When a ringing call arrives, shows a floating banner with Accept / Decline.
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Phone, PhoneOff } from 'lucide-react';
 import { useEvmAddress } from '@coinbase/cdp-hooks';
 import { supabase } from '@/utils/supabaseClient';
@@ -19,11 +19,15 @@ export const IncomingCallBanner: React.FC = () => {
   const [incomingCall, setIncomingCall] = useState<VideoCallSession | null>(null);
   const [callerProfile, setCallerProfile] = useState<UserProfile | null>(null);
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
+  // Holds the caller profile across the banner→modal transition so clearing
+  // incomingCall doesn't wipe the profile before the modal can mount.
+  const activeCallerRef = useRef<UserProfile | null>(null);
 
   // Load caller's profile when a call arrives
   useEffect(() => {
     if (!incomingCall) {
-      setCallerProfile(null);
+      // Only clear the displayed profile if we're not in an active call
+      if (!activeSessionId) setCallerProfile(null);
       return;
     }
     supabase
@@ -32,9 +36,12 @@ export const IncomingCallBanner: React.FC = () => {
       .eq('wallet_address', incomingCall.initiator_wallet)
       .single()
       .then(({ data }) => {
-        if (data) setCallerProfile(data as UserProfile);
+        if (data) {
+          setCallerProfile(data as UserProfile);
+          activeCallerRef.current = data as UserProfile;
+        }
       });
-  }, [incomingCall]);
+  }, [incomingCall, activeSessionId]);
 
   // Subscribe to incoming calls via Broadcast (instant, no DB-write latency)
   useEffect(() => {
@@ -85,10 +92,14 @@ export const IncomingCallBanner: React.FC = () => {
   const handleAccept = async () => {
     if (!incomingCall) return;
     const sessionId = incomingCall.id;
-    setIncomingCall(null);
+    // Snapshot the caller profile before clearing incomingCall
+    activeCallerRef.current = callerProfile;
     // Accept in DB first so the initiator's postgres_changes fires and they send the offer
     await VideoChatService.acceptCall(sessionId);
+    // Set active session — this triggers the modal to mount with the snapshotted profile
     setActiveSessionId(sessionId);
+    // Now clear the banner (profile cleared only after modal is ready)
+    setIncomingCall(null);
   };
 
   const handleDecline = async () => {
@@ -139,14 +150,18 @@ export const IncomingCallBanner: React.FC = () => {
       )}
 
       {/* ── Active call modal (after accepting) ── */}
-      {activeSessionId && callerProfile && address && (
+      {activeSessionId && address && (activeCallerRef.current ?? callerProfile) && (
         <VideoCallModal
           sessionId={activeSessionId}
           localWallet={address}
-          remoteUser={callerProfile}
+          remoteUser={(activeCallerRef.current ?? callerProfile)!}
           role="recipient"
           initialStatus="accepted"
-          onClose={() => setActiveSessionId(null)}
+          onClose={() => {
+            setActiveSessionId(null);
+            activeCallerRef.current = null;
+            setCallerProfile(null);
+          }}
         />
       )}
     </>
