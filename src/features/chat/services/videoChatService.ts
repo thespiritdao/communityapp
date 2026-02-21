@@ -63,7 +63,17 @@ export class VideoChatService {
 
     if (error) throw error;
 
-    // Notify recipient (non-fatal — call proceeds even if notification fails)
+    // Broadcast via Supabase Realtime for instant delivery (no DB-write latency)
+    supabase
+      .channel(`call:${recipientWallet.toLowerCase()}`)
+      .send({
+        type: 'broadcast',
+        event: 'incoming_call',
+        payload: data,
+      })
+      .catch((err) => console.warn('Video call broadcast failed (non-fatal):', err));
+
+    // Also notify via persistent notification (non-fatal)
     unifiedNotificationService.createNotification({
       recipient_address: recipientWallet.toLowerCase(),
       sender_address: initiatorWallet.toLowerCase(),

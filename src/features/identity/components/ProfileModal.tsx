@@ -1,5 +1,6 @@
 import type React from 'react';
 import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { useEvmAddress } from '@coinbase/cdp-hooks';
 import type { UserProfile } from '@/features/identity/types';
 import { DatabaseTokenGallery } from '@/features/identity/components/DatabaseTokenGallery';
@@ -163,7 +164,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
     }
   };
 
-  return (
+  const content = (
     <div
       className="profile-modal-overlay"
       onClick={onClose}
@@ -394,4 +395,6 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
     </div>
     </div>
   );
+
+  return createPortal(content, document.body);
 };

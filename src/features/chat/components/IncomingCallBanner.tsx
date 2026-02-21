@@ -36,29 +36,26 @@ export const IncomingCallBanner: React.FC = () => {
       });
   }, [incomingCall]);
 
-  // Subscribe to incoming calls
+  // Subscribe to incoming calls via Broadcast (instant, no DB-write latency)
   useEffect(() => {
     if (!address) return;
 
     const normalized = address.toLowerCase();
 
-    const sub = supabase
-      .channel(`incoming_calls_${normalized}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'video_call_sessions',
-          filter: `recipient_wallet=eq.${normalized}`,
-        },
-        (payload) => {
-          const session = payload.new as VideoCallSession;
-          if (session.status === 'ringing') {
-            setIncomingCall(session);
-          }
-        },
-      )
+    // Primary: Broadcast channel — fires the moment the caller calls initiateCall()
+    const broadcastSub = supabase
+      .channel(`call:${normalized}`)
+      .on('broadcast', { event: 'incoming_call' }, ({ payload }) => {
+        const session = payload as VideoCallSession;
+        if (session.status === 'ringing') {
+          setIncomingCall(session);
+        }
+      })
+      .subscribe();
+
+    // Secondary: postgres_changes UPDATE — to dismiss banner if caller cancels before answer
+    const updateSub = supabase
+      .channel(`incoming_calls_update_${normalized}`)
       .on(
         'postgres_changes',
         {
@@ -69,7 +66,6 @@ export const IncomingCallBanner: React.FC = () => {
         },
         (payload) => {
           const session = payload.new as VideoCallSession;
-          // If the current banner call was cancelled/missed before answering, dismiss it
           if (
             incomingCall?.id === session.id &&
             (session.status === 'ended' || session.status === 'missed' || session.status === 'declined')
@@ -80,7 +76,10 @@ export const IncomingCallBanner: React.FC = () => {
       )
       .subscribe();
 
-    return () => { sub.unsubscribe(); };
+    return () => {
+      broadcastSub.unsubscribe();
+      updateSub.unsubscribe();
+    };
   }, [address, incomingCall?.id]);
 
   const handleAccept = () => {

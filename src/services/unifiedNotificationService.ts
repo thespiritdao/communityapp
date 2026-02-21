@@ -65,7 +65,9 @@ export type NotificationType =
   // Video call notifications
   | 'video_call_requested'
   | 'video_call_missed'
-  | 'video_call_declined';
+  | 'video_call_declined'
+  // Admin / system notifications
+  | 'system_alert';
 
 export type NotificationCategory =
   | 'general'

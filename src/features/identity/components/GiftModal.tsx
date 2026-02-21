@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { useEvmAddress, useSendUserOperation, useCurrentUser } from '@coinbase/cdp-hooks';
 import { useBalance } from 'wagmi';
 import { parseUnits, encodeFunctionData } from 'viem';
@@ -188,7 +189,7 @@ export function GiftModal({
     }
   };
 
-  return (
+  const content = (
     <div
       className="modal-overlay"
       onClick={onClose}
@@ -680,4 +681,6 @@ export function GiftModal({
       `}</style>
     </div>
   );
+
+  return createPortal(content, document.body);
 }

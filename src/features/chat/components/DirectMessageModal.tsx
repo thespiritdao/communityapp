@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { useEvmAddress } from '@coinbase/cdp-hooks';
 import { supabase } from '@/lib/supabase';
 import { unifiedNotificationService } from '@/services/unifiedNotificationService';
@@ -282,7 +283,7 @@ export function DirectMessageModal({
 
   const isRecipient = address?.toLowerCase() === recipientAddress.toLowerCase();
 
-  return (
+  const content = (
     <div
       className="modal-overlay"
       onClick={onClose}
@@ -589,4 +590,6 @@ export function DirectMessageModal({
       `}</style>
     </div>
   );
+
+  return createPortal(content, document.body);
 }
