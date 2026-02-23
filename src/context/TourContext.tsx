@@ -25,7 +25,7 @@ export const HOME_TOUR_STEPS: TourStep[] = [
     id: 'welcome',
     title: 'Welcome to SpiritDAO',
     description:
-      'This is your home — a hub for all efforts within SpiritDAO. Let's take 2 minutes to orient you.',
+      "This is your home — a hub for all efforts within SpiritDAO. Let's take 2 minutes to orient you.",
     placement: 'bottom',
   },
   {
@@ -39,7 +39,7 @@ export const HOME_TOUR_STEPS: TourStep[] = [
     id: 'chat',
     title: 'Chat',
     description:
-      'Daily conversations. There's a General chat for all of SpiritDAO and private chats within each Pod.',
+      "Daily conversations. There's a General chat for all of SpiritDAO and private chats within each Pod.",
     placement: 'bottom',
   },
   {
@@ -81,7 +81,7 @@ export const HOME_TOUR_STEPS: TourStep[] = [
     id: 'knowledge',
     title: 'Knowledge Base',
     description:
-      'The DAO's living library. Guides, research, and AI-powered search across all content.',
+      "The DAO's living library. Guides, research, and AI-powered search across all content.",
     placement: 'bottom',
   },
   {
