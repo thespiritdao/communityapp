@@ -3,6 +3,7 @@
 
 import { useState, useEffect } from 'react';
 import { useEvmAddress } from '@coinbase/cdp-hooks';
+import { useTour } from '@/context/TourContext';
 import { KnowledgeGrid } from '@/features/knowledge/components/KnowledgeGrid';
 import { KnowledgeSearch } from '@/features/knowledge/components/KnowledgeSearch';
 import { supabase } from '@/utils/supabaseClient';
@@ -16,6 +17,7 @@ interface Pod {
 
 export default function KnowledgePage() {
   const { evmAddress: address } = useEvmAddress();
+  const { startTour } = useTour();
   const { userRoles, isLoading: hatLoading } = useHatPermissions();
   const [categories, setCategories] = useState<KnowledgeCategory[]>([]);
   const [items, setItems] = useState<KnowledgeItem[]>([]);
@@ -311,6 +313,34 @@ export default function KnowledgePage() {
 
       {/* Knowledge Grid */}
       <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 16px 24px' }}>
+        {/* Pinned tour card */}
+        <button
+          onClick={startTour}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '14px',
+            width: '100%',
+            marginBottom: '20px',
+            padding: '16px 20px',
+            borderRadius: '14px',
+            border: '1.5px dashed #8FAAA1',
+            backgroundColor: 'rgba(47, 93, 80, 0.04)',
+            cursor: 'pointer',
+            textAlign: 'left',
+          }}
+        >
+          <span style={{ fontSize: '28px', lineHeight: 1 }}>🧭</span>
+          <div>
+            <p style={{ fontSize: '15px', fontWeight: '600', color: '#2F5D50', marginBottom: '2px' }}>
+              Take a guided tour
+            </p>
+            <p style={{ fontSize: '13px', color: '#8FAAA1' }}>
+              New to SpiritDAO? Walk through every section in ~2 minutes.
+            </p>
+          </div>
+          <span style={{ marginLeft: 'auto', color: '#8FAAA1', fontSize: '18px' }}>→</span>
+        </button>
         {filteredItems.length === 0 ? (
           <div
             style={{

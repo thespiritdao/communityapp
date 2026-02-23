@@ -111,6 +111,7 @@ function MobileBottomNavContent() {
         boxSizing: 'border-box',
       }}
       data-testid="mobile-bottom-nav"
+      data-tour="bottom-nav"
     >
       <ul
         style={{

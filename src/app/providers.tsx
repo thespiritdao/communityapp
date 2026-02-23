@@ -15,6 +15,7 @@ import MobileBottomNav from '@/components/MobileBottomNav';
 import { InstallPrompt } from '@/components/InstallPrompt';
 import { SessionCacheManager } from '@/components/SessionCacheManager';
 import { IncomingCallBanner } from '@/features/chat/components/IncomingCallBanner';
+import { TourManager } from '@/components/tour/TourManager';
 
 // Hide navigation ONLY on loading screen (root page)
 const ConditionalBottomNav = React.memo(function ConditionalBottomNav() {
@@ -64,11 +65,13 @@ export function Providers({ children }: ProvidersProps) {
                   <SessionCacheManager />
                   {/* Global incoming call listener */}
                   <IncomingCallBanner />
-                  <main id="page-root" className="min-h-screen">
-                    {children}
-                  </main>
-                  {/* Navigation inside providers so it can access notification context */}
-                  <ConditionalBottomNav />
+                  <TourManager>
+                    <main id="page-root" className="min-h-screen">
+                      {children}
+                    </main>
+                    {/* Navigation inside providers so it can access notification context */}
+                    <ConditionalBottomNav />
+                  </TourManager>
                   {/* PWA Install Prompt */}
                   <InstallPrompt />
                 </UnifiedNotificationProvider>

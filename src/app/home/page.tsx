@@ -47,7 +47,7 @@ export default function HomePage() {
   return (
     <div className="home-container">
       {/* HEADER */}
-      <div className="home-header">
+      <div className="home-header" data-tour="welcome">
         {/* Left-bound logo */}
         <Image
           src="/images/spiritdaosymbol.png"
@@ -131,7 +131,7 @@ export default function HomePage() {
       {/* USER MODULES */}
       <section className="home-section">
         <div className="home-module-list">
-          <Link href="/identity" className="home-module-card" prefetch={true}>
+          <Link href="/identity" className="home-module-card" prefetch={true} data-tour="identity">
             <Image
               src="/images/icons/identityicon.png"
               alt="Identity"
@@ -176,7 +176,7 @@ export default function HomePage() {
       {/* SPIRITDAO MODULES */}
       <section className="home-section-2">
         <div className="home-module-list">
-          <Link href="/chat" className="home-module-card" prefetch={true}>
+          <Link href="/chat" className="home-module-card" prefetch={true} data-tour="chat">
             <Image
               src="/images/icons/chaticon.png"
               alt="Chat"
@@ -188,7 +188,7 @@ export default function HomePage() {
             <div className="home-module-title">Chat</div>
           </Link>
 
-          <Link href="/forum" className="home-module-card" prefetch={true}>
+          <Link href="/forum" className="home-module-card" prefetch={true} data-tour="forum">
             <Image
               src="/images/icons/forumicon.png"
               alt="Forum"
@@ -200,7 +200,7 @@ export default function HomePage() {
             <div className="home-module-title">Forum</div>
           </Link>
 
-          <Link href="/events" className="home-module-card" prefetch={true}>
+          <Link href="/events" className="home-module-card" prefetch={true} data-tour="events">
             <Image
               src="/images/icons/eventsicon.png"
               alt="Events"
@@ -212,7 +212,7 @@ export default function HomePage() {
             <div className="home-module-title">Events</div>
           </Link>
 
-          <Link href="/pods" className="home-module-card" prefetch={true}>
+          <Link href="/pods" className="home-module-card" prefetch={true} data-tour="pods">
             <Image
               src="/images/icons/podsicon.png"
               alt="Pods"
@@ -224,7 +224,7 @@ export default function HomePage() {
             <div className="home-module-title">Pods</div>
           </Link>
 
-          <Link href="/governance" className="home-module-card" prefetch={true}>
+          <Link href="/governance" className="home-module-card" prefetch={true} data-tour="governance">
             <Image
               src="/images/icons/governanceicon.png"
               alt="Governance"
@@ -236,7 +236,7 @@ export default function HomePage() {
             <div className="home-module-title">Governance</div>
           </Link>
 
-          <Link href="/bounty" className="home-module-card" prefetch={true}>
+          <Link href="/bounty" className="home-module-card" prefetch={true} data-tour="bounties">
             <Image
               src="/images/icons/bountiesicon.png"
               alt="Bounties"
@@ -248,7 +248,7 @@ export default function HomePage() {
             <div className="home-module-title">Bounties</div>
           </Link>
 
-          <Link href="/knowledge" className="home-module-card" prefetch={true}>
+          <Link href="/knowledge" className="home-module-card" prefetch={true} data-tour="knowledge">
             <Image
               src="/images/icons/knowledgebaseicon.png"
               alt="Knowledge Base"
