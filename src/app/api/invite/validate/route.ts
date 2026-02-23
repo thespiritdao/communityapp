@@ -118,8 +118,25 @@ export async function POST(request: NextRequest) {
 
     console.log(`✅ Found profile for invite code: ${normalizedCode} - ${profile.wallet_address}`);
 
-    // Prevent self-referral
+    // Prevent self-referral — BUT allow returning users who already completed onboarding.
+    // This happens when a deploy clears sessionStorage and they re-enter their own code.
     if (profile.wallet_address.toLowerCase() === normalizedWallet) {
+      const { data: selfProfile } = await supabaseAdmin
+        .from('user_profiles')
+        .select('onboarded_at')
+        .eq('wallet_address', normalizedWallet)
+        .maybeSingle();
+
+      if (selfProfile?.onboarded_at) {
+        console.log('✅ Returning user re-entering own code after deploy — allowing through');
+        return NextResponse.json({
+          success: true,
+          referrerWallet: normalizedWallet,
+          message: 'Welcome back!',
+          isReturningUser: true,
+        });
+      }
+
       return NextResponse.json(
         {
           success: false,

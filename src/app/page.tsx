@@ -80,7 +80,14 @@ function PageContent() {
 
     console.log('🚀 handleAuthReady: checking onboarding for fast-path auth');
     try {
-      const completed = await hasCompletedOnboarding(address);
+      // Use direct DB check (bypasses RLS) so this works without an existing session
+      const { supabase: supabaseAdmin } = await import('@/utils/supabaseClient');
+      const { data: profile } = await supabaseAdmin
+        .from('user_profiles')
+        .select('onboarded_at')
+        .eq('wallet_address', address.toLowerCase())
+        .maybeSingle();
+      const completed = !!profile?.onboarded_at || await hasCompletedOnboarding(address);
       if (completed) {
         console.log('🚀 handleAuthReady: returning user detected — fast-path signIn');
         authenticationAttemptedRef.current = true;
@@ -248,22 +255,28 @@ function PageContent() {
         setIsFirstUserAccount(firstUser);
         console.log(`👤 First user check: ${firstUser}`);
 
-        // Check if already onboarded
-        const completed = await hasCompletedOnboarding(walletAddress);
-
-        // CRITICAL FIX: Check if user already has a profile (returning user)
-        // Must check BEFORE the completed check to get full profile data
-        const { supabase } = await import('@/utils/supabaseClient');
-        const { data: existingProfile } = await supabase
+        // Use admin client to check existing profile — bypasses RLS so this works
+        // even before a Supabase session exists (e.g. on fresh page load after deploy)
+        const { supabase: supabaseAdmin } = await import('@/utils/supabaseClient');
+        const { data: existingProfile } = await supabaseAdmin
           .from('user_profiles')
           .select('wallet_address, referral_key, onboarded_at')
           .eq('wallet_address', walletAddress.toLowerCase())
           .maybeSingle();
 
+        // Fast-path for returning users: profile exists with onboarded_at timestamp
+        // Do this BEFORE hasCompletedOnboarding (which uses RLS and can fail without a session)
+        if (existingProfile?.onboarded_at) {
+          console.log('✅ Returning user confirmed via profile — skipping invite validation');
+          setOnboardingComplete(true);
+          return;
+        }
+
+        // Fallback: also check via hasCompletedOnboarding (works when session exists)
+        const completed = await hasCompletedOnboarding(walletAddress);
+
         if (completed) {
           console.log('✅ User already onboarded - proceeding to authentication');
-          // RETURNING USER FIX: Don't show onboarding modal, just authenticate
-          // They already have everything set up, just need to log back in
           setOnboardingComplete(true);
           return;
         }
@@ -272,13 +285,6 @@ function PageContent() {
           console.log('✅ Returning user with existing profile - skipping invite validation');
           console.log('   Profile has referral_key:', existingProfile.referral_key);
           console.log('   Onboarded at:', existingProfile.onboarded_at);
-
-          // Check if they completed onboarding but flag wasn't set properly
-          if (existingProfile.onboarded_at) {
-            console.log('✅ User has onboarded_at timestamp - treating as fully onboarded');
-            setOnboardingComplete(true);
-            return;
-          }
 
           // User has a profile and referral key but incomplete onboarding
           // Skip invite validation and go straight to completing onboarding
