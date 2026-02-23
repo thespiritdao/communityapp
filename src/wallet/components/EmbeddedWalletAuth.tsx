@@ -2,7 +2,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useSignInWithEmail, useVerifyEmailOTP, useSignInWithOAuth, useEvmAddress } from '@coinbase/cdp-hooks';
+import { useSignInWithEmail, useVerifyEmailOTP, useSignInWithOAuth, useEvmAddress, useSignOut } from '@coinbase/cdp-hooks';
 
 interface EmbeddedWalletAuthProps {
   isLoading?: boolean;
@@ -15,6 +15,7 @@ export function EmbeddedWalletAuth({ isLoading, onEmailCaptured, onAuthReady }: 
   const { signInWithEmail } = useSignInWithEmail();
   const { verifyEmailOTP } = useVerifyEmailOTP();
   const { signInWithOAuth } = useSignInWithOAuth();
+  const { signOut: cdpSignOut } = useSignOut();
 
   const [email, setEmail] = useState('');
   const [otp, setOtp] = useState('');
@@ -41,6 +42,23 @@ export function EmbeddedWalletAuth({ isLoading, onEmailCaptured, onAuthReady }: 
       }
     } catch (err: any) {
       console.error('❌ Email sign-in failed:', err);
+      if (err?.message?.includes('already authenticated')) {
+        console.log('🔄 Stale CDP session — signing out and retrying...');
+        try {
+          await cdpSignOut();
+          const result = await signInWithEmail({ email });
+          if (result.flowId) {
+            setFlowId(result.flowId);
+            setStep('otp');
+          }
+          setIsSubmitting(false);
+          return;
+        } catch (retryErr: any) {
+          setError('Session recovery failed. Please clear your browser cache and try again.');
+          setIsSubmitting(false);
+          return;
+        }
+      }
       setError(err.message || 'Failed to send OTP. Please try again.');
     } finally {
       setIsSubmitting(false);
@@ -132,14 +150,29 @@ export function EmbeddedWalletAuth({ isLoading, onEmailCaptured, onAuthReady }: 
       console.log('🔐 Signing in with Google...');
       const result = await signInWithOAuth('google');
       console.log('✅ Google sign-in successful!', result);
-
-      // Note: Wallet creation happens automatically in the background
-      // The currentUser and evmAddress hooks will update when ready
     } catch (err: any) {
       console.error('❌ Google sign-in failed:', err);
-      console.error('Error details:', JSON.stringify(err, null, 2));
 
-      // Show detailed error for debugging
+      // CDP throws "User is already authenticated" when a stale CDP session
+      // persists after a deploy wipes the Supabase session. Sign out of CDP
+      // first, then retry automatically.
+      if (err?.message?.includes('already authenticated')) {
+        console.log('🔄 Stale CDP session detected — signing out and retrying...');
+        try {
+          await cdpSignOut();
+          console.log('✅ CDP sign-out complete, retrying Google sign-in...');
+          await signInWithOAuth('google');
+          console.log('✅ Google sign-in successful after recovery!');
+          setIsSubmitting(false);
+          return;
+        } catch (retryErr: any) {
+          console.error('❌ Retry after sign-out also failed:', retryErr);
+          setError('Session recovery failed. Please clear your browser cache and try again.');
+          setIsSubmitting(false);
+          return;
+        }
+      }
+
       const errorMessage = err.message || err.toString() || 'Failed to sign in with Google';
       setError(`Google sign-in error: ${errorMessage}. Please try again or use email instead.`);
       setIsSubmitting(false);
