@@ -1,7 +1,7 @@
 // src/app/page.tsx
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import '@/styles/transactionStyles.css';
 import { useRouter } from 'next/navigation';
 import { useAuthContext } from '@/features/identity';
@@ -67,6 +67,39 @@ function PageContent() {
 
   // Ref to prevent multiple onboarding checks
   const onboardingCheckRunRef = useRef(false);
+
+  // Called immediately after OTP verification by EmbeddedWalletAuth.
+  // For returning users this gives us a fast path: skip the multi-step
+  // effect chain and go straight to signIn.
+  const handleAuthReady = useCallback(async (address: string, email: string) => {
+    // Always store the email so the effect chain also has it
+    setCapturedEmail(email);
+
+    // Only fast-path if auth hasn't been attempted yet
+    if (authenticationAttemptedRef.current) return;
+
+    console.log('🚀 handleAuthReady: checking onboarding for fast-path auth');
+    try {
+      const completed = await hasCompletedOnboarding(address);
+      if (completed) {
+        console.log('🚀 handleAuthReady: returning user detected — fast-path signIn');
+        authenticationAttemptedRef.current = true;
+        setIsProcessing(true);
+        try {
+          await signIn(address, email);
+          console.log('✅ handleAuthReady: fast-path auth complete');
+        } catch (err) {
+          console.error('❌ handleAuthReady: fast-path signIn failed:', err);
+          authenticationAttemptedRef.current = false;
+        } finally {
+          setIsProcessing(false);
+        }
+      }
+      // New user: fall through to normal onboarding flow (effect chain will handle it)
+    } catch (err) {
+      console.error('❌ handleAuthReady: onboarding check failed:', err);
+    }
+  }, [signIn]);
 
   // Client-side mounting
   useEffect(() => {
@@ -434,7 +467,6 @@ function PageContent() {
       if (
         walletAddress &&
         !isAuthenticated &&
-        !authLoading &&
         (onboardingComplete || isFirstUserAccount) &&
         !authenticationAttemptedRef.current
       ) {
@@ -466,13 +498,13 @@ function PageContent() {
   }, [
     walletAddress,
     isAuthenticated,
-    authLoading,
     onboardingComplete,
     isFirstUserAccount,
     capturedEmail,
     // Note: currentUser is intentionally NOT in deps to prevent flickering
     // We read it inside the effect when needed, not as a dependency
-    signIn,
+    // Note: signIn is intentionally excluded — it's now a stable ref (no [authState] dep)
+    // Note: authLoading is intentionally excluded — authenticationAttemptedRef guards duplicates
   ]);
 
   // Redirect to home when authenticated
@@ -539,6 +571,7 @@ function PageContent() {
               <EmbeddedWalletAuth
                 isLoading={isLoading}
                 onEmailCaptured={setCapturedEmail}
+                onAuthReady={handleAuthReady}
               />
               {isLoading && (
                 <p className="text-center text-white mt-4">

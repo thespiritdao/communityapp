@@ -42,6 +42,12 @@ export function useAuth(): UseAuthReturn {
   const hasInitialized = useRef(false);
   const isAuthenticating = useRef(false);
 
+  // Stable ref so signIn can read current authState without being in its deps
+  const authStateRef = useRef(authState);
+  useEffect(() => {
+    authStateRef.current = authState;
+  }, [authState]);
+
   // Register this component to listen for auth state changes
   useEffect(() => {
     authStateListeners.add(setAuthState);
@@ -121,7 +127,7 @@ export function useAuth(): UseAuthReturn {
     async (walletAddress: string, email?: string) => {
       // If already authenticated with same wallet, skip
       if (
-        authState.session?.user?.user_metadata?.wallet_address ===
+        authStateRef.current.session?.user?.user_metadata?.wallet_address ===
         walletAddress.toLowerCase()
       ) {
         console.log('✅ Auth: Already authenticated with this wallet');
@@ -138,7 +144,7 @@ export function useAuth(): UseAuthReturn {
 
       try {
         notifyAuthStateListeners({
-          ...authState,
+          ...authStateRef.current,
           loading: true,
           error: null,
         });
@@ -231,7 +237,7 @@ export function useAuth(): UseAuthReturn {
         isAuthenticating.current = false;
       }
     },
-    [authState],
+    [], // stable reference — reads authState via authStateRef
   );
 
   const signOut = useCallback(async () => {
@@ -253,18 +259,18 @@ export function useAuth(): UseAuthReturn {
       console.error('❌ Auth: Sign out failed:', error);
 
       const newState = {
-        ...authState,
+        ...authStateRef.current,
         error: error as Error,
       };
 
       notifyAuthStateListeners(newState);
     }
-  }, [authState]);
+  }, []); // stable reference — reads authState via authStateRef
 
   const refreshSession = useCallback(async () => {
     try {
       notifyAuthStateListeners({
-        ...authState,
+        ...authStateRef.current,
         loading: true,
       });
 
@@ -293,7 +299,7 @@ export function useAuth(): UseAuthReturn {
 
       notifyAuthStateListeners(newState);
     }
-  }, [authState]);
+  }, []); // stable reference — reads authState via authStateRef
 
   return {
     ...authState,

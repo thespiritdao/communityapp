@@ -1,16 +1,16 @@
 // src/wallet/components/EmbeddedWalletAuth.tsx
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useSignInWithEmail, useVerifyEmailOTP, useSignInWithOAuth, useCurrentUser, useEvmAddress } from '@coinbase/cdp-hooks';
+import { useState } from 'react';
+import { useSignInWithEmail, useVerifyEmailOTP, useSignInWithOAuth, useEvmAddress } from '@coinbase/cdp-hooks';
 
 interface EmbeddedWalletAuthProps {
   isLoading?: boolean;
   onEmailCaptured?: (email: string) => void;
+  onAuthReady?: (walletAddress: string, email: string) => void;
 }
 
-export function EmbeddedWalletAuth({ isLoading, onEmailCaptured }: EmbeddedWalletAuthProps) {
-  const { currentUser } = useCurrentUser();
+export function EmbeddedWalletAuth({ isLoading, onEmailCaptured, onAuthReady }: EmbeddedWalletAuthProps) {
   const { evmAddress } = useEvmAddress();
   const { signInWithEmail } = useSignInWithEmail();
   const { verifyEmailOTP } = useVerifyEmailOTP();
@@ -22,60 +22,6 @@ export function EmbeddedWalletAuth({ isLoading, onEmailCaptured }: EmbeddedWalle
   const [step, setStep] = useState<'email' | 'otp'>('email');
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [showManualBypass, setShowManualBypass] = useState(false);
-
-  // Set timeout to show bypass button after 10 seconds of "Completing setup..."
-  useEffect(() => {
-    if (currentUser && evmAddress && !isLoading) {
-      const timeoutId = setTimeout(() => {
-        console.warn('⚠️ Authentication stuck - showing manual bypass');
-        setShowManualBypass(true);
-      }, 10000);
-
-      return () => clearTimeout(timeoutId);
-    } else {
-      // Reset bypass button if conditions change
-      setShowManualBypass(false);
-    }
-  }, [currentUser, evmAddress, isLoading]);
-
-  // If wallet exists but not yet fully authenticated, show loading state with timeout
-  if (currentUser && evmAddress && !isLoading) {
-    return (
-      <div style={{ textAlign: 'center', width: '100%' }}>
-        <button className="button enter-button" disabled style={{ marginBottom: '12px' }}>
-          <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
-            <svg className="animate-spin" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
-              <circle cx="12" cy="12" r="10" opacity="0.25" />
-              <path d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" opacity="0.75" fill="currentColor" />
-            </svg>
-            Completing setup...
-          </span>
-        </button>
-        {showManualBypass && (
-          <>
-            <p style={{ color: 'white', fontSize: '14px', marginBottom: '8px' }}>
-              Taking longer than expected...
-            </p>
-            <button
-              onClick={() => {
-                console.log('🔓 Manual bypass - redirecting to /home');
-                window.location.href = '/home';
-              }}
-              className="button"
-              style={{
-                backgroundColor: '#8FAAA1',
-                padding: '8px 16px',
-                fontSize: '14px',
-              }}
-            >
-              Continue to App →
-            </button>
-          </>
-        )}
-      </div>
-    );
-  }
 
   const handleEmailSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -123,7 +69,16 @@ export function EmbeddedWalletAuth({ isLoading, onEmailCaptured }: EmbeddedWalle
         onEmailCaptured(email);
       }
 
-      // Wallet will be created automatically, currentUser will update
+      // Fire onAuthReady immediately with wallet address + email so page.tsx
+      // can kick off auth without waiting for the multi-step effect chain.
+      // evmAddress may not be available yet (wallet creation async), so we
+      // wait briefly for it — page.tsx will also catch it via the effect chain.
+      if (onAuthReady && evmAddress && email) {
+        console.log('🚀 EmbeddedWalletAuth: firing onAuthReady immediately');
+        onAuthReady(evmAddress, email);
+      }
+      // If evmAddress isn't ready yet, page.tsx's useEffect watching walletAddress
+      // will pick it up once the CDP SDK resolves the address.
     } catch (err: any) {
       console.error('❌ OTP verification failed:', err);
 

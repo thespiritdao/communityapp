@@ -192,7 +192,7 @@ export async function POST(req: NextRequest) {
       aud: 'authenticated',
       role: 'authenticated',
       iat: now,
-      exp: now + 60 * 60, // 1 hour
+      exp: now + 60 * 60 * 24 * 7, // 7 days
       user_metadata: {
         wallet_address: normalizedAddress,
       },
@@ -200,11 +200,19 @@ export async function POST(req: NextRequest) {
 
     const supabaseToken = jwt.sign(jwtPayload, JWT_SECRET, { algorithm: 'HS256' });
 
-    console.log('✅ Auth API: Generated JWT token');
+    // Separate long-lived refresh token (30 days)
+    const refreshPayload = {
+      ...jwtPayload,
+      exp: now + 60 * 60 * 24 * 30, // 30 days
+      token_type: 'refresh',
+    };
+    const supabaseRefreshToken = jwt.sign(refreshPayload, JWT_SECRET, { algorithm: 'HS256' });
+
+    console.log('✅ Auth API: Generated JWT tokens (access: 7d, refresh: 30d)');
 
     return NextResponse.json({
       supabaseToken,
-      supabaseRefreshToken: supabaseToken, // same token; refresh is handled by re-auth on page load
+      supabaseRefreshToken,
       userId,
     });
   } catch (err) {
