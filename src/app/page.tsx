@@ -57,6 +57,8 @@ function PageContent() {
   const [showPreAuthInvite, setShowPreAuthInvite] = useState(false);
   const [validatedInviteCode, setValidatedInviteCode] = useState<string | null>(null);
   const [oauthInProgress, setOauthInProgress] = useState(false);
+  // True if localStorage has a prior Supabase session (returning user, even with expired token)
+  const [hasKnownUser, setHasKnownUser] = useState(false);
 
   // Post-auth onboarding state
   const [showOnboardingModal, setShowOnboardingModal] = useState(false);
@@ -127,6 +129,31 @@ function PageContent() {
       if (localStorage.getItem('oauth_in_progress') === 'true') {
         console.log('🔄 OAuth redirect detected — suppressing invite modal');
         setOauthInProgress(true);
+      }
+
+      // Detect returning user — skip invite gate if any of these are true:
+      // 1. Stale Supabase JWT in localStorage (expired token but user exists)
+      // 2. Explicit returning_user flag set on logout
+      const SUPABASE_PROJECT = 'yqgqodofeliuurrmxlks';
+      const sbKey = `sb-${SUPABASE_PROJECT}-auth-token`;
+      let knownUser = false;
+      try {
+        const stored = localStorage.getItem(sbKey);
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          if (parsed?.user?.user_metadata?.wallet_address) {
+            knownUser = true;
+          }
+        }
+      } catch {
+        // localStorage parse error — ignore
+      }
+      if (!knownUser && localStorage.getItem('returning_user') === 'true') {
+        knownUser = true;
+      }
+      if (knownUser) {
+        console.log('👤 Returning user detected via localStorage — skipping invite gate');
+        setHasKnownUser(true);
       }
 
       const urlParams = new URLSearchParams(window.location.search);
@@ -222,13 +249,16 @@ function PageContent() {
       walletAddress,
       currentUser: !!currentUser,
       oauthInProgress,
+      hasKnownUser,
       validatedInviteCode,
       showPreAuthInvite,
     });
 
-    // Suppress invite modal if CDP has an active session OR if we're mid-OAuth
-    // redirect (flag survives the page reload that OAuth causes on mobile)
-    if (currentUser || oauthInProgress) return;
+    // Suppress invite modal if:
+    // - CDP has an active session (currentUser set)
+    // - OAuth redirect is in progress
+    // - localStorage has a prior Supabase session (returning user, even with expired token)
+    if (currentUser || oauthInProgress || hasKnownUser) return;
 
     // If user doesn't have a wallet yet and hasn't validated invite code
     // Show modal immediately without waiting for CDP initialization
@@ -236,22 +266,23 @@ function PageContent() {
       console.log('🔑 No wallet detected - showing pre-auth invite modal');
       setShowPreAuthInvite(true);
     }
-  }, [isClient, currentUser, oauthInProgress, walletAddress, validatedInviteCode, showPreAuthInvite]);
+  }, [isClient, currentUser, oauthInProgress, hasKnownUser, walletAddress, validatedInviteCode, showPreAuthInvite]);
 
   // FAILSAFE: Force show invite modal after 2 seconds if nothing is happening
   useEffect(() => {
     if (!isClient) return;
 
     const failsafeTimer = setTimeout(() => {
-      // Don't force the modal if CDP has an active session or OAuth is in progress
-      if (!walletAddress && !validatedInviteCode && !showPreAuthInvite && !currentUser && !oauthInProgress) {
+      // Don't force the modal if CDP has an active session, OAuth is in progress,
+      // or we detected a prior Supabase session for this user
+      if (!walletAddress && !validatedInviteCode && !showPreAuthInvite && !currentUser && !oauthInProgress && !hasKnownUser) {
         console.warn('⚠️ FAILSAFE: Forcing invite modal to show after 2s delay');
         setShowPreAuthInvite(true);
       }
     }, 2000);
 
     return () => clearTimeout(failsafeTimer);
-  }, [isClient, currentUser, oauthInProgress, walletAddress, validatedInviteCode, showPreAuthInvite]);
+  }, [isClient, currentUser, oauthInProgress, hasKnownUser, walletAddress, validatedInviteCode, showPreAuthInvite]);
 
   // STEP 2: After wallet created, check onboarding status
   useEffect(() => {
@@ -517,6 +548,8 @@ function PageContent() {
 
           await signIn(walletAddress, emailToUse);
           console.log('✅ Authentication successful');
+          // Clean up flags now that we have a fresh session
+          localStorage.removeItem('returning_user');
         } catch (err) {
           console.error('❌ Authentication failed:', err);
           authenticationAttemptedRef.current = false;

@@ -33,6 +33,10 @@ export function useIdentityPage(address: string | undefined) {
   const handleLogout = useCallback(async () => {
     console.log('🚪 Logging out...');
 
+    // Mark this device as having a registered user so that after logout the
+    // login page shows the email/Google auth screen, not the invite gate.
+    localStorage.setItem('returning_user', 'true');
+
     // 1. Sign out from Supabase (clears auth session)
     await signOut();
     console.log('✅ Supabase session cleared');
