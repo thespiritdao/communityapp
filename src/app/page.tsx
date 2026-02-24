@@ -241,13 +241,14 @@ function PageContent() {
   useEffect(() => {
     if (!isClient) return;
 
-    console.log('👀 Invite modal check:', {
+    console.log('👀 STEP1-v2 Invite modal check:', {
       walletAddress,
       currentUser: !!currentUser,
       oauthInProgress,
       hasKnownUser,
       validatedInviteCode,
       showPreAuthInvite,
+      returning_user_flag: typeof window !== 'undefined' ? localStorage.getItem('returning_user') : null,
     });
 
     // Suppress invite modal if:
