@@ -341,7 +341,13 @@ function PageContent() {
         console.log('🔑 New user detected - needs onboarding');
 
         // NEW USERS need invite validation
+        // Skip invite gate if localStorage signals a returning user — DB may have
+        // failed to find the profile (RLS, network) but we trust the local signal.
         if (!validatedInviteCode && !firstUser) {
+          if (hasKnownUser) {
+            console.log('✅ hasKnownUser=true — skipping invite gate despite no profile found');
+            return;
+          }
           console.log('⚠️ Missing invite code for new user - showing pre-auth modal');
           setShowPreAuthInvite(true);
           return;
