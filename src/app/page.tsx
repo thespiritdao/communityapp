@@ -517,6 +517,8 @@ function PageContent() {
         if (!hasKnownUser) {
           setHasKnownUser(true);
         }
+        // Also dismiss the invite modal if it was shown before walletAddress resolved
+        setShowPreAuthInvite(false);
       }
       previousAddressRef.current = walletAddress;
     }
