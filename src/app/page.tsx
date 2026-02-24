@@ -56,9 +56,26 @@ function PageContent() {
   // Pre-auth invite code state
   const [showPreAuthInvite, setShowPreAuthInvite] = useState(false);
   const [validatedInviteCode, setValidatedInviteCode] = useState<string | null>(null);
-  const [oauthInProgress, setOauthInProgress] = useState(false);
-  // True if localStorage has a prior Supabase session (returning user, even with expired token)
-  const [hasKnownUser, setHasKnownUser] = useState(false);
+  const [oauthInProgress, setOauthInProgress] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return false;
+    return localStorage.getItem('oauth_in_progress') === 'true';
+  });
+  // True if localStorage has a prior Supabase session (returning user, even with expired token).
+  // Initialized synchronously so STEP 1 effect sees the correct value on the first render.
+  const [hasKnownUser, setHasKnownUser] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return false;
+    const SUPABASE_PROJECT = 'yqgqodofeliuurrmxlks';
+    try {
+      const stored = localStorage.getItem(`sb-${SUPABASE_PROJECT}-auth-token`);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (parsed?.user?.user_metadata?.wallet_address) return true;
+      }
+    } catch {
+      // ignore parse errors
+    }
+    return localStorage.getItem('returning_user') === 'true';
+  });
 
   // Post-auth onboarding state
   const [showOnboardingModal, setShowOnboardingModal] = useState(false);
@@ -125,35 +142,12 @@ function PageContent() {
         setValidatedInviteCode(savedInviteCode);
       }
 
-      // Detect OAuth redirect return — suppress invite modal while CDP re-hydrates
-      if (localStorage.getItem('oauth_in_progress') === 'true') {
+      // Log detected states (both initialized synchronously in useState above)
+      if (oauthInProgress) {
         console.log('🔄 OAuth redirect detected — suppressing invite modal');
-        setOauthInProgress(true);
       }
-
-      // Detect returning user — skip invite gate if any of these are true:
-      // 1. Stale Supabase JWT in localStorage (expired token but user exists)
-      // 2. Explicit returning_user flag set on logout
-      const SUPABASE_PROJECT = 'yqgqodofeliuurrmxlks';
-      const sbKey = `sb-${SUPABASE_PROJECT}-auth-token`;
-      let knownUser = false;
-      try {
-        const stored = localStorage.getItem(sbKey);
-        if (stored) {
-          const parsed = JSON.parse(stored);
-          if (parsed?.user?.user_metadata?.wallet_address) {
-            knownUser = true;
-          }
-        }
-      } catch {
-        // localStorage parse error — ignore
-      }
-      if (!knownUser && localStorage.getItem('returning_user') === 'true') {
-        knownUser = true;
-      }
-      if (knownUser) {
+      if (hasKnownUser) {
         console.log('👤 Returning user detected via localStorage — skipping invite gate');
-        setHasKnownUser(true);
       }
 
       const urlParams = new URLSearchParams(window.location.search);
