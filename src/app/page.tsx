@@ -211,9 +211,15 @@ function PageContent() {
 
     console.log('👀 Invite modal check:', {
       walletAddress,
+      currentUser: !!currentUser,
       validatedInviteCode,
       showPreAuthInvite,
     });
+
+    // If CDP already has a currentUser, an active session exists (e.g. returning
+    // user after OAuth or after deploy). Don't gate them on the invite modal —
+    // the wallet address will resolve shortly and handleAuthReady will take over.
+    if (currentUser) return;
 
     // If user doesn't have a wallet yet and hasn't validated invite code
     // Show modal immediately without waiting for CDP initialization
@@ -221,21 +227,22 @@ function PageContent() {
       console.log('🔑 No wallet detected - showing pre-auth invite modal');
       setShowPreAuthInvite(true);
     }
-  }, [isClient, walletAddress, validatedInviteCode, showPreAuthInvite]);
+  }, [isClient, currentUser, walletAddress, validatedInviteCode, showPreAuthInvite]);
 
   // FAILSAFE: Force show invite modal after 2 seconds if nothing is happening
   useEffect(() => {
     if (!isClient) return;
 
     const failsafeTimer = setTimeout(() => {
-      if (!walletAddress && !validatedInviteCode && !showPreAuthInvite) {
+      // Don't force the modal if CDP already has an active session
+      if (!walletAddress && !validatedInviteCode && !showPreAuthInvite && !currentUser) {
         console.warn('⚠️ FAILSAFE: Forcing invite modal to show after 2s delay');
         setShowPreAuthInvite(true);
       }
     }, 2000);
 
     return () => clearTimeout(failsafeTimer);
-  }, [isClient, walletAddress, validatedInviteCode, showPreAuthInvite]);
+  }, [isClient, currentUser, walletAddress, validatedInviteCode, showPreAuthInvite]);
 
   // STEP 2: After wallet created, check onboarding status
   useEffect(() => {
