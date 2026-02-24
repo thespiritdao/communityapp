@@ -62,6 +62,8 @@ function PageContent() {
   const [showOnboardingModal, setShowOnboardingModal] = useState(false);
   const [isFirstUserAccount, setIsFirstUserAccount] = useState(false);
   const [onboardingComplete, setOnboardingComplete] = useState(false);
+  // True while STEP 2 DB check is in flight — prevents invite modal flashing for returning users
+  const [checkingOnboarding, setCheckingOnboarding] = useState(false);
 
   // Email capture for database storage
   const [capturedEmail, setCapturedEmail] = useState<string | undefined>(undefined);
@@ -257,6 +259,9 @@ function PageContent() {
       if (!walletAddress || onboardingCheckRunRef.current) return;
       onboardingCheckRunRef.current = true; // Mark as running to prevent re-runs
 
+      // Suppress invite modal while we check — prevents flash for returning users
+      setCheckingOnboarding(true);
+
       console.log('📋 Wallet created - checking onboarding status:', {
         walletAddress,
         hasInviteCode: !!validatedInviteCode,
@@ -339,6 +344,8 @@ function PageContent() {
       } catch (error) {
         console.error('❌ Error checking wallet onboarding:', error);
         alert(`Error during onboarding: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      } finally {
+        setCheckingOnboarding(false);
       }
     };
 
@@ -622,8 +629,8 @@ function PageContent() {
       </div>
 
       {/* PRE-AUTH: Invite Code Modal (BEFORE wallet creation) */}
-      {/* Show immediately when mounted, no need to wait for CDP */}
-      {isClient && showPreAuthInvite && !walletAddress && (
+      {/* Hide while STEP 2 DB check is in flight to prevent returning-user flash */}
+      {isClient && showPreAuthInvite && !onboardingComplete && !checkingOnboarding && (
         <InviteCodeModal
           isOpen={showPreAuthInvite}
           onClose={() => {
