@@ -21,45 +21,19 @@ export function SessionCacheManager() {
       try {
         const { data: { session }, error } = await supabase.auth.getSession();
 
-        // If there's an error getting the session or no session exists
+        // No session or refresh error: do nothing — page.tsx re-authenticates
+        // silently via the walletAddress + onboarding check flow. Clearing
+        // Supabase storage here actively breaks that recovery path.
         if (error || !session) {
-          console.log('🗑️ No valid session found, clearing cache...');
-
-          // Clear all relevant caches
-          localStorage.removeItem('wagmi.store');
-          localStorage.removeItem('wagmi.cache');
-          localStorage.removeItem('wagmi.recentConnectorId');
-
-          // Clear any Supabase cached data
-          const supabaseKeys = Object.keys(localStorage).filter(key =>
-            key.startsWith('sb-') || key.startsWith('supabase')
-          );
-          supabaseKeys.forEach(key => localStorage.removeItem(key));
-
-          console.log('✅ Cache cleared');
           return;
         }
 
-        // Check if session is expired
+        // Session exists but is expired: sign out cleanly so the re-auth
+        // flow in page.tsx starts from a known-clean state.
         const expiresAt = session.expires_at;
         if (expiresAt && expiresAt < Date.now() / 1000) {
-          console.log('🗑️ Session expired, clearing cache and reloading...');
-
-          // Sign out to clear session
+          console.log('🗑️ Session expired, signing out...');
           await supabase.auth.signOut();
-
-          // Clear caches
-          localStorage.removeItem('wagmi.store');
-          localStorage.removeItem('wagmi.cache');
-          localStorage.removeItem('wagmi.recentConnectorId');
-
-          const supabaseKeys = Object.keys(localStorage).filter(key =>
-            key.startsWith('sb-') || key.startsWith('supabase')
-          );
-          supabaseKeys.forEach(key => localStorage.removeItem(key));
-
-          // Force reload to get fresh state
-          window.location.reload();
         }
       } catch (error) {
         console.error('❌ SessionCacheManager error:', error);
