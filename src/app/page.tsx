@@ -61,7 +61,8 @@ function PageContent() {
     return localStorage.getItem('oauth_in_progress') === 'true';
   });
   // True if localStorage has a prior Supabase session (returning user, even with expired token).
-  // Initialized synchronously so STEP 1 effect sees the correct value on the first render.
+  // Initialized synchronously (lazy useState) so STEP 1 effect sees the correct value on the
+  // very first render — before any effects run. This prevents the invite gate race condition.
   const [hasKnownUser, setHasKnownUser] = useState<boolean>(() => {
     if (typeof window === 'undefined') return false;
     const SUPABASE_PROJECT = 'yqgqodofeliuurrmxlks';
@@ -146,6 +147,7 @@ function PageContent() {
       if (oauthInProgress) {
         console.log('🔄 OAuth redirect detected — suppressing invite modal');
       }
+      console.log('🔎 hasKnownUser on mount:', hasKnownUser, '| returning_user:', localStorage.getItem('returning_user'));
       if (hasKnownUser) {
         console.log('👤 Returning user detected via localStorage — skipping invite gate');
       }
