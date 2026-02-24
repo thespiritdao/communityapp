@@ -143,14 +143,13 @@ function PageContent() {
         setValidatedInviteCode(savedInviteCode);
       }
 
-      // Log detected states (both initialized synchronously in useState above)
-      if (oauthInProgress) {
-        console.log('🔄 OAuth redirect detected — suppressing invite modal');
-      }
-      console.log('🔎 hasKnownUser on mount:', hasKnownUser, '| returning_user:', localStorage.getItem('returning_user'));
-      if (hasKnownUser) {
-        console.log('👤 Returning user detected via localStorage — skipping invite gate');
-      }
+      // Expose debug state on window for production diagnostics
+      (window as any).__spiritDebug = {
+        hasKnownUser,
+        oauthInProgress,
+        returning_user: localStorage.getItem('returning_user'),
+        sb_key: !!localStorage.getItem('sb-yqgqodofeliuurrmxlks-auth-token'),
+      };
 
       const urlParams = new URLSearchParams(window.location.search);
       if (urlParams.get('debug') === 'true' || process.env.NODE_ENV === 'development') {
