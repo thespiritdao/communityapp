@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import { EventRegistrationModal } from './EventRegistrationModal';
 import { EventTokenDisplay } from './EventTokenDisplay';
+import { EventConferenceSection } from '@/features/conference/components/EventConferenceSection';
 import {
   useEvent,
   useEventRegistration,
@@ -758,6 +759,15 @@ export const EventDetailView: React.FC<EventDetailViewProps> = ({
               )}
             </CardContent>
           </Card>
+
+          {/* Meeting Room */}
+          <EventConferenceSection
+            eventId={event.id}
+            eventTitle={event.title}
+            walletAddress={address ?? undefined}
+            isOrganizer={canManage}
+            isRegistered={effectiveIsRegistered}
+          />
 
           {/* QR Code for Check-in (if registered) */}
           {effectiveRegistration &&
