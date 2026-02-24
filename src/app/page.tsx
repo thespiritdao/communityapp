@@ -56,6 +56,7 @@ function PageContent() {
   // Pre-auth invite code state
   const [showPreAuthInvite, setShowPreAuthInvite] = useState(false);
   const [validatedInviteCode, setValidatedInviteCode] = useState<string | null>(null);
+  const [oauthInProgress, setOauthInProgress] = useState(false);
 
   // Post-auth onboarding state
   const [showOnboardingModal, setShowOnboardingModal] = useState(false);
@@ -118,6 +119,12 @@ function PageContent() {
       if (savedInviteCode) {
         console.log('🔑 Restored validated invite code from session');
         setValidatedInviteCode(savedInviteCode);
+      }
+
+      // Detect OAuth redirect return — suppress invite modal while CDP re-hydrates
+      if (localStorage.getItem('oauth_in_progress') === 'true') {
+        console.log('🔄 OAuth redirect detected — suppressing invite modal');
+        setOauthInProgress(true);
       }
 
       const urlParams = new URLSearchParams(window.location.search);
@@ -212,14 +219,14 @@ function PageContent() {
     console.log('👀 Invite modal check:', {
       walletAddress,
       currentUser: !!currentUser,
+      oauthInProgress,
       validatedInviteCode,
       showPreAuthInvite,
     });
 
-    // If CDP already has a currentUser, an active session exists (e.g. returning
-    // user after OAuth or after deploy). Don't gate them on the invite modal —
-    // the wallet address will resolve shortly and handleAuthReady will take over.
-    if (currentUser) return;
+    // Suppress invite modal if CDP has an active session OR if we're mid-OAuth
+    // redirect (flag survives the page reload that OAuth causes on mobile)
+    if (currentUser || oauthInProgress) return;
 
     // If user doesn't have a wallet yet and hasn't validated invite code
     // Show modal immediately without waiting for CDP initialization
@@ -227,22 +234,22 @@ function PageContent() {
       console.log('🔑 No wallet detected - showing pre-auth invite modal');
       setShowPreAuthInvite(true);
     }
-  }, [isClient, currentUser, walletAddress, validatedInviteCode, showPreAuthInvite]);
+  }, [isClient, currentUser, oauthInProgress, walletAddress, validatedInviteCode, showPreAuthInvite]);
 
   // FAILSAFE: Force show invite modal after 2 seconds if nothing is happening
   useEffect(() => {
     if (!isClient) return;
 
     const failsafeTimer = setTimeout(() => {
-      // Don't force the modal if CDP already has an active session
-      if (!walletAddress && !validatedInviteCode && !showPreAuthInvite && !currentUser) {
+      // Don't force the modal if CDP has an active session or OAuth is in progress
+      if (!walletAddress && !validatedInviteCode && !showPreAuthInvite && !currentUser && !oauthInProgress) {
         console.warn('⚠️ FAILSAFE: Forcing invite modal to show after 2s delay');
         setShowPreAuthInvite(true);
       }
     }, 2000);
 
     return () => clearTimeout(failsafeTimer);
-  }, [isClient, currentUser, walletAddress, validatedInviteCode, showPreAuthInvite]);
+  }, [isClient, currentUser, oauthInProgress, walletAddress, validatedInviteCode, showPreAuthInvite]);
 
   // STEP 2: After wallet created, check onboarding status
   useEffect(() => {
@@ -456,16 +463,21 @@ function PageContent() {
     }
   };
 
-  // Reset authentication attempt flag when address changes
+  // Reset authentication attempt flag when address changes.
+  // Also clear the oauth_in_progress flag once the wallet resolves — OAuth is done.
   const previousAddressRef = useRef<`0x${string}` | null | undefined>(undefined);
   useEffect(() => {
     if (previousAddressRef.current !== walletAddress) {
       if (walletAddress) {
         authenticationAttemptedRef.current = false;
+        if (oauthInProgress) {
+          localStorage.removeItem('oauth_in_progress');
+          setOauthInProgress(false);
+        }
       }
       previousAddressRef.current = walletAddress;
     }
-  }, [walletAddress]);
+  }, [walletAddress, oauthInProgress]);
 
   // Authenticate when embedded wallet is created and onboarding is complete
   useEffect(() => {

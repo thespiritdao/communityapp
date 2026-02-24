@@ -147,6 +147,11 @@ export function EmbeddedWalletAuth({ isLoading, onEmailCaptured, onAuthReady }: 
     setIsSubmitting(true);
 
     try {
+      // Flag that OAuth is starting — survives the mobile redirect so the
+      // post-redirect page load can suppress the invite modal
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('oauth_in_progress', 'true');
+      }
       console.log('🔐 Signing in with Google...');
       const result = await signInWithOAuth('google');
       console.log('✅ Google sign-in successful!', result);
@@ -159,6 +164,11 @@ export function EmbeddedWalletAuth({ isLoading, onEmailCaptured, onAuthReady }: 
       if (err?.message?.includes('already authenticated')) {
         console.log('🔄 Stale CDP session detected — signing out and retrying...');
         try {
+          // Set flag before sign-out so the post-redirect page load knows
+          // OAuth is in progress and suppresses the invite modal
+          if (typeof window !== 'undefined') {
+            localStorage.setItem('oauth_in_progress', 'true');
+          }
           await cdpSignOut();
           console.log('✅ CDP sign-out complete, retrying Google sign-in...');
           await signInWithOAuth('google');
