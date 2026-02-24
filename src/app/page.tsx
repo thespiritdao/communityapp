@@ -512,10 +512,15 @@ function PageContent() {
           localStorage.removeItem('oauth_in_progress');
           setOauthInProgress(false);
         }
+        // CDP resolved a wallet address — this device is registered.
+        // Suppress the invite gate immediately regardless of localStorage state.
+        if (!hasKnownUser) {
+          setHasKnownUser(true);
+        }
       }
       previousAddressRef.current = walletAddress;
     }
-  }, [walletAddress, oauthInProgress]);
+  }, [walletAddress, oauthInProgress, hasKnownUser]);
 
   // Authenticate when embedded wallet is created and onboarding is complete
   useEffect(() => {
@@ -627,11 +632,11 @@ function PageContent() {
       />
       <div className="wrapper">
         <div className="button-container">
-          {/* Show wallet auth only if:
+          {/* Show wallet auth if:
               1. CDP is initialized
-              2. Invite code validated OR wallet already exists
+              2. Invite code validated OR wallet exists OR known returning user
               3. Not showing onboarding modal */}
-          {isClient && cdpInitialized && (validatedInviteCode || walletAddress) && !showOnboardingModal && (
+          {isClient && cdpInitialized && (validatedInviteCode || walletAddress || hasKnownUser) && !showOnboardingModal && (
             <>
               <EmbeddedWalletAuth
                 isLoading={isLoading}
@@ -654,8 +659,8 @@ function PageContent() {
             </div>
           )}
 
-          {/* Show preparing message if mounted but no invite code yet */}
-          {isClient && !validatedInviteCode && !showPreAuthInvite && (
+          {/* Show preparing message only for genuine new users awaiting invite modal */}
+          {isClient && !validatedInviteCode && !showPreAuthInvite && !hasKnownUser && !walletAddress && (
             <p className="text-center text-white">Preparing...</p>
           )}
         </div>
