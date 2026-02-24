@@ -8,6 +8,7 @@ import React, {
   useEffect,
   useRef,
 } from 'react';
+import { useRouter, usePathname } from 'next/navigation';
 import { supabase } from '@/utils/supabaseClient';
 
 // ─── Step Definitions ────────────────────────────────────────────────────────
@@ -136,6 +137,8 @@ export function TourProvider({ children, walletAddress }: TourProviderProps) {
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const [showPrompt, setShowPrompt] = useState(false);
   const hasChecked = useRef(false);
+  const router = useRouter();
+  const pathname = usePathname();
 
   // Check if user needs the tour (once wallet address is available)
   useEffect(() => {
@@ -180,7 +183,10 @@ export function TourProvider({ children, walletAddress }: TourProviderProps) {
     setShowPrompt(false);
     setCurrentStepIndex(0);
     setIsActive(true);
-  }, []);
+    if (pathname !== '/home') {
+      router.push('/home');
+    }
+  }, [pathname, router]);
 
   const nextStep = useCallback(() => {
     setCurrentStepIndex((i) => {
