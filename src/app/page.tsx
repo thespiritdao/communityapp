@@ -345,7 +345,8 @@ function PageContent() {
         // failed to find the profile (RLS, network) but we trust the local signal.
         if (!validatedInviteCode && !firstUser) {
           if (hasKnownUser) {
-            console.log('✅ hasKnownUser=true — skipping invite gate despite no profile found');
+            console.log('✅ hasKnownUser=true — treating as returning user, proceeding to auth');
+            setOnboardingComplete(true);
             return;
           }
           console.log('⚠️ Missing invite code for new user - showing pre-auth modal');
