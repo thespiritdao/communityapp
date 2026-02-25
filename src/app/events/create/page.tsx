@@ -3,7 +3,7 @@ import { SimplifiedEventCreationForm } from '@/features/events/components/Simpli
 
 export default function CreateEventPage() {
   return (
-    <div className="min-h-screen pt-2 p-4">
+    <div className="min-h-screen pt-2 p-4 pb-20">
       <div className="max-w-7xl mx-auto">
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">

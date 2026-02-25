@@ -149,7 +149,7 @@ export const UnifiedNotificationProvider: React.FC<
     } finally {
       setLoading(false);
     }
-  }, [address]);
+  }, [address, recentlyClearedIds]);
 
   /**
    * Debounced refresh to avoid rapid refreshes from real-time updates

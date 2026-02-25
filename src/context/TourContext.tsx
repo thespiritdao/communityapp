@@ -37,6 +37,13 @@ export const HOME_TOUR_STEPS: TourStep[] = [
     placement: 'bottom',
   },
   {
+    id: 'artifacts',
+    title: 'Artifacts',
+    description:
+      'Community marketplaces where we use $SELF or $SYSTEM to acquire unique artifacts exclusive to your communities.',
+    placement: 'bottom',
+  },
+  {
     id: 'chat',
     title: 'Chat',
     description:

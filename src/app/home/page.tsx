@@ -143,7 +143,7 @@ export default function HomePage() {
             <div className="home-module-title">Identity</div>
           </Link>
 
-          <Link href="/market" className="home-module-card" prefetch={true}>
+          <Link href="/market" className="home-module-card" prefetch={true} data-tour="artifacts">
             <Image
               src="/images/icons/artifactsicon.png"
               alt="Artifacts"
