@@ -32,7 +32,9 @@ export default function KnowledgePage() {
   }, []);
 
   useEffect(() => {
-    if (!hatLoading) {
+    // Global KB needs no permissions — load immediately.
+    // Pod-specific KB must wait for hat permissions to resolve.
+    if (!selectedPod || !hatLoading) {
       loadKnowledgeBase();
     }
   }, [selectedPod, hatLoading, userRoles]);
