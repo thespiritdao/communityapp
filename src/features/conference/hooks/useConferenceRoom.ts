@@ -176,7 +176,10 @@ export function useConferenceRoom({
           setConnectionState(ConnectionState.Disconnected);
           setRemoteParticipants([]);
           setDominantSpeaker(null);
-          onMeetingEndedRef.current?.();
+          // Do NOT call onMeetingEnded here — LiveKit fires Disconnected during
+          // SFU renegotiation (e.g. when a second participant joins), which
+          // would incorrectly unmount the overlay and close the peer connection.
+          // onMeetingEnded is only called by explicit leave() or host metadata.
         })
         .on(RoomEvent.RoomMetadataChanged, (metadata: string) => {
           // Host sets metadata to 'ended' when ending the meeting
