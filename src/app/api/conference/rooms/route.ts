@@ -73,13 +73,18 @@ export async function GET(req: NextRequest) {
       .eq('room_id', room.id)
       .eq('is_active', true);
 
-    // Auto-end a live room with zero active participants (handles tab-close / disconnect)
-    if (room.status === 'live' && (count ?? 0) === 0) {
-      await supabaseAdmin
-        .from('conference_rooms')
-        .update({ status: 'ended', ended_at: new Date().toISOString() })
-        .eq('id', room.id);
-      room.status = 'ended';
+    // Auto-end a live room with zero active participants, but only after a
+    // 5-minute grace period so a host starting the meeting doesn't get
+    // auto-ended before attendees have joined.
+    if (room.status === 'live' && (count ?? 0) === 0 && room.started_at) {
+      const aliveMs = Date.now() - new Date(room.started_at).getTime();
+      if (aliveMs > 5 * 60 * 1000) {
+        await supabaseAdmin
+          .from('conference_rooms')
+          .update({ status: 'ended', ended_at: new Date().toISOString() })
+          .eq('id', room.id);
+        room.status = 'ended';
+      }
     }
 
     return NextResponse.json({ room, participantCount: count ?? 0 });
