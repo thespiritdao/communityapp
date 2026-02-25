@@ -10,6 +10,7 @@ import React, { useEffect, useRef } from 'react';
 import { Participant, Track } from 'livekit-client';
 import { Mic, MicOff, Crown, Shield } from 'lucide-react';
 import type { ParticipantRole } from '../types/conference';
+import { useParticipantName } from '../hooks/useParticipantName';
 
 interface ParticipantTileProps {
   participant: Participant;
@@ -42,9 +43,8 @@ export const ParticipantTile: React.FC<ParticipantTileProps> = ({
 
   const hasVideo = !!participant.getTrackPublication(Track.Source.Camera)?.isSubscribed;
   const isMuted  = !participant.getTrackPublication(Track.Source.Microphone)?.isMuted === false;
-  const shortName = participant.name
-    ? participant.name.slice(0, 12)
-    : `${participant.identity.slice(0, 6)}…`;
+  const profileName = useParticipantName(participant.identity);
+  const shortName = profileName.slice(0, 16);
 
   const isThumb = size === 'thumb';
 

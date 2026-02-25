@@ -10,6 +10,7 @@ import React, { useEffect, useRef } from 'react';
 import { Participant, Track, LocalParticipant } from 'livekit-client';
 import { Crown, Shield } from 'lucide-react';
 import type { ParticipantRole } from '../types/conference';
+import { useParticipantName } from '../hooks/useParticipantName';
 
 interface SpeakerViewProps {
   dominant: Participant | null;
@@ -51,11 +52,9 @@ export const SpeakerView: React.FC<SpeakerViewProps> = ({
 
   const hasVideo = !!displayed?.getTrackPublication(Track.Source.Camera)?.videoTrack;
 
-  const displayName = displayed?.name
-    ? displayed.name
-    : displayed
-      ? `${displayed.identity.slice(0, 6)}…${displayed.identity.slice(-4)}`
-      : '';
+  // Look up name from user_profiles using the participant's wallet identity.
+  const profileName = useParticipantName(displayed?.identity);
+  const displayName = profileName || '';
 
   return (
     <div style={{ position: 'absolute', inset: 0, background: '#0D1F1A' }}>
