@@ -183,7 +183,9 @@ const nextConfig = {
                 https://uploads.pinata.cloud
                 https://gateway.pinata.cloud
                 https://ipfs.io
-                https://api.stripe.com;
+                https://api.stripe.com
+                https://*.livekit.cloud
+                wss://*.livekit.cloud;
               img-src 'self' data: https:
                 https://ipfs.io
                 https://gateway.pinata.cloud

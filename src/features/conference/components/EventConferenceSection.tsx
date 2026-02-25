@@ -119,8 +119,12 @@ export const EventConferenceSection: React.FC<EventConferenceSectionProps> = ({
   }
 
   const isLive = room?.status === 'live';
+  const isScheduled = room?.status === 'scheduled';
   const isEnded = room?.status === 'ended';
-  const canJoin = isLive && (isOrganizer || isRegistered) && !!walletAddress;
+  // Organizer can join a scheduled room (they'll flip it to live on connect).
+  // Attendees can only join once the organizer has started it (status = live).
+  const canJoin = !!room && !isEnded && !!walletAddress &&
+    (isOrganizer || isLive && isRegistered);
 
   return (
     <>
@@ -201,7 +205,7 @@ export const EventConferenceSection: React.FC<EventConferenceSectionProps> = ({
               style={{ backgroundColor: '#2F5D50', color: '#fff' }}
             >
               <Video className="w-4 h-4 mr-2" />
-              {isOrganizer ? 'Rejoin Meeting' : 'Join Meeting'}
+              {isOrganizer && isScheduled ? 'Open Meeting Room' : isOrganizer ? 'Rejoin Meeting' : 'Join Meeting'}
             </Button>
           )}
 
