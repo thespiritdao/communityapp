@@ -225,33 +225,20 @@ export const EventRegistrationModal: React.FC<EventRegistrationModalProps> = ({
           }
         }
 
-        if (!blockchainEventId) {
-          setRegistrationStatus('ineligible');
-          setErrorMessage(
-            'Event is not available for blockchain registration - missing blockchain_event_id',
-          );
-          return;
-        }
-
-        // Check if event exists on blockchain after contract call completes
+        // Blockchain check: only block if on-chain event exists but is not active.
+        // If blockchainEventId is missing or the contract lookup fails (event not on-chain),
+        // fall through to DB-only registration for free events.
         if (!contractLoading) {
-          if (contractError || !onChainEvent) {
-            setRegistrationStatus('ineligible');
-            setErrorMessage(
-              `Event not found on blockchain (ID: ${blockchainEventId}). ` +
-                'This event may not have been properly created on-chain. ' +
-                'Please contact the event organizer.',
-            );
-            return;
+          if (onChainEvent) {
+            // Event found on-chain — enforce blockchain status
+            if (onChainEvent.status !== 0) {
+              // 0 = Active status
+              setRegistrationStatus('ineligible');
+              setErrorMessage('Event is not active on blockchain');
+              return;
+            }
           }
-
-          // Verify event status on blockchain
-          if (onChainEvent.status !== 0) {
-            // 0 = Active status
-            setRegistrationStatus('ineligible');
-            setErrorMessage('Event is not active on blockchain');
-            return;
-          }
+          // If contractError || !onChainEvent: event not on-chain, allow DB registration to proceed
         }
 
         setRegistrationStatus('eligible');
@@ -309,64 +296,53 @@ export const EventRegistrationModal: React.FC<EventRegistrationModalProps> = ({
 
   // CDP-based registration handler (matches pattern from SimplifiedEventCreationForm)
   const handleCdpRegistration = async () => {
-    if (!currentUser?.evmSmartAccounts?.[0]) {
-      toast({
-        title: 'Error',
-        description: 'Smart Account not found. Please connect your wallet.',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    if (!event.blockchain_event_id) {
-      toast({
-        title: 'Error',
-        description: 'Event not created on blockchain yet',
-        variant: 'destructive',
-      });
-      return;
-    }
-
     setIsRegistering(true);
 
     try {
-      console.log('🚀 Starting CDP event registration:', {
-        eventId: event.blockchain_event_id,
-        eventTitle: event.title,
-        smartAccount: currentUser.evmSmartAccounts[0],
-        contractAddress: EVENT_MANAGER_CONTRACT,
-      });
+      // If event exists on-chain, use blockchain registration
+      if (event.blockchain_event_id && onChainEvent) {
+        if (!currentUser?.evmSmartAccounts?.[0]) {
+          toast({
+            title: 'Error',
+            description: 'Smart Account not found. Please connect your wallet.',
+            variant: 'destructive',
+          });
+          setIsRegistering(false);
+          return;
+        }
 
-      const smartAccount = currentUser.evmSmartAccounts[0];
+        console.log('🚀 Starting CDP on-chain event registration:', {
+          eventId: event.blockchain_event_id,
+          eventTitle: event.title,
+          contractAddress: EVENT_MANAGER_CONTRACT,
+        });
 
-      // Encode the registerForEvent call
-      const callData = encodeFunctionData({
-        abi: EventManagerABI,
-        functionName: 'registerForEvent',
-        args: [event.blockchain_event_id],
-      });
+        const smartAccount = currentUser.evmSmartAccounts[0];
 
-      console.log('📝 Encoded registration call data:', {
-        function: 'registerForEvent',
-        eventId: event.blockchain_event_id,
-      });
+        const callData = encodeFunctionData({
+          abi: EventManagerABI,
+          functionName: 'registerForEvent',
+          args: [event.blockchain_event_id],
+        });
 
-      // Send user operation with CDP paymaster (gasless)
-      const result = await sendUserOperation({
-        evmSmartAccount: smartAccount,
-        network: 'base',
-        calls: [{
-          to: EVENT_MANAGER_CONTRACT as `0x${string}`,
-          value: 0n,
-          data: callData,
-        }],
-        useCdpPaymaster: true,
-      });
+        const result = await sendUserOperation({
+          evmSmartAccount: smartAccount,
+          network: 'base',
+          calls: [{
+            to: EVENT_MANAGER_CONTRACT as `0x${string}`,
+            value: 0n,
+            data: callData,
+          }],
+          useCdpPaymaster: true,
+        });
 
-      console.log('✅ Registration transaction submitted:', result);
-
-      // Call the success handler with the result
-      await handleRegistrationSuccess(result);
+        console.log('✅ On-chain registration transaction submitted:', result);
+        await handleRegistrationSuccess(result);
+      } else {
+        // Event not on-chain — DB-only registration (free events, test events, etc.)
+        console.log('📝 DB-only registration (event not on-chain):', event.id);
+        await handleRegistrationSuccess(null);
+      }
 
       toast({
         title: 'Registration successful!',

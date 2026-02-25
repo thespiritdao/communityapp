@@ -118,10 +118,9 @@ export const getUserIdentity = async (
     // Add pod UUIDs from active pod membership so events gated by pod UUID are accessible
     try {
       const { data: memberships, error: memError } = await supabase
-        .from('pod_members')
+        .from('active_pod_members')
         .select('pod_id')
-        .eq('wallet', normalizeAddress(userAddress))
-        .eq('is_active', true);
+        .eq('wallet', normalizeAddress(userAddress));
 
       if (!memError && memberships) {
         for (const m of memberships) {
