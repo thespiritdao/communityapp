@@ -69,15 +69,21 @@ export async function POST(req: NextRequest) {
     const decoded = verifyAppToken(token);
     if (!decoded) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-    if (decoded.walletAddress.toLowerCase() !== walletAddress.toLowerCase()) {
-      return NextResponse.json({ error: 'Wallet address mismatch' }, { status: 403 });
-    }
+    // Use the verified wallet from the JWT as the canonical identity.
+    // The body walletAddress is used for room/host lookup but the JWT wallet
+    // is what we issue the LiveKit token for.
+    const verifiedWallet = decoded.walletAddress.toLowerCase();
+    const requestedWallet = walletAddress.toLowerCase();
+
+    // Allow if they match, OR fall back to the JWT wallet if they differ
+    // (handles cases where body has smart-account address vs JWT has EOA, etc.)
+    const effectiveWallet = requestedWallet === verifiedWallet ? requestedWallet : verifiedWallet;
 
     // ── 3. Fetch display name from user_profiles (best-effort) ───────────────
     const { data: profile } = await supabaseAdmin
       .from('user_profiles')
       .select('username, first_name, last_name')
-      .eq('wallet_address', walletAddress.toLowerCase())
+      .eq('wallet_address', effectiveWallet)
       .maybeSingle();
 
     // ── 4. Verify the room exists in our DB ──────────────────────────────────
@@ -96,16 +102,16 @@ export async function POST(req: NextRequest) {
     }
 
     // ── 5. Determine effective role ──────────────────────────────────────────
-    const isHost = room.host_wallet.toLowerCase() === walletAddress.toLowerCase();
+    const isHost = room.host_wallet.toLowerCase() === effectiveWallet;
     const effectiveRole = isHost ? 'host' : role;
     const canPublish = PUBLISH_ROLES.has(effectiveRole);
 
     // ── 6. Mint LiveKit token ────────────────────────────────────────────────
     const fullName = [profile?.first_name, profile?.last_name].filter(Boolean).join(' ').trim();
-    const displayName = fullName || profile?.username || `${walletAddress.slice(0, 6)}…${walletAddress.slice(-4)}`;
+    const displayName = fullName || profile?.username || `${effectiveWallet.slice(0, 6)}…${effectiveWallet.slice(-4)}`;
 
     const at = new AccessToken(LIVEKIT_API_KEY, LIVEKIT_API_SECRET, {
-      identity: walletAddress.toLowerCase(),
+      identity: effectiveWallet,
       name: displayName,
       ttl: '4h',
     });
@@ -124,7 +130,7 @@ export async function POST(req: NextRequest) {
       .upsert(
         {
           room_id: room.id,
-          wallet_address: walletAddress.toLowerCase(),
+          wallet_address: effectiveWallet,
           role: effectiveRole,
           can_publish: canPublish,
           is_active: true,
@@ -137,7 +143,7 @@ export async function POST(req: NextRequest) {
         },
       );
 
-    console.log(`🎥 Conference token issued: room=${roomName} wallet=${walletAddress.slice(0, 8)} role=${effectiveRole}`);
+    console.log(`🎥 Conference token issued: room=${roomName} wallet=${effectiveWallet.slice(0, 8)} role=${effectiveRole}`);
 
     return NextResponse.json({
       token: await at.toJwt(),
