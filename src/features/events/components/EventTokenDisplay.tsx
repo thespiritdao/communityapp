@@ -23,11 +23,8 @@ interface PodRole {
   id: string;
   pod_id: string;
   role_name: string;
-  role_hat_id: string;
-  pods?: {
-    name: string;
-    pod_image_url?: string;
-  };
+  token_address: string;
+  // pod name/image resolved separately via pods state
 }
 
 interface EventTokenDisplayProps {
@@ -54,19 +51,11 @@ export const EventTokenDisplay: React.FC<EventTokenDisplayProps> = ({
         const podsData = await EventService.getPods();
         setPods(podsData);
 
-        // Fetch pod roles with pod information
+        // Fetch pod roles using correct column name (token_address, not role_hat_id)
         const { data: rolesData, error: rolesError } = await supabase
           .from('pod_role_permissions')
-          .select(`
-            id,
-            pod_id,
-            role_name,
-            role_hat_id,
-            pods (
-              name,
-              pod_image_url
-            )
-          `);
+          .select('id, pod_id, role_name, token_address')
+          .eq('is_active', true);
 
         if (!rolesError && rolesData) {
           setRoles(rolesData);
@@ -100,16 +89,27 @@ export const EventTokenDisplay: React.FC<EventTokenDisplayProps> = ({
       };
     }
 
-    // If not found in pods, check pod_role_permissions for role hat IDs
-    const role = roles.find((r) => r.role_hat_id === tokenId);
+    // If not found in pods by UUID, check pod_role_permissions by token_address (hat ID)
+    const role = roles.find((r) => r.token_address?.toLowerCase() === tokenId.toLowerCase());
 
     if (role) {
-      const podName = role.pods?.name || 'Pod';
+      const podData = pods.find((p) => p.id === role.pod_id);
+      const podName = podData?.name || 'Pod';
       const displayName = `${podName} - ${role.role_name}`;
       return {
         name: displayName,
         description: `Role: ${role.role_name}`,
-        imageUrl: role.pods?.pod_image_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&size=48&background=8FAAA1&color=fff&bold=true`,
+        imageUrl: podData?.pod_image_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&size=48&background=8FAAA1&color=fff&bold=true`,
+      };
+    }
+
+    // If token is a pod UUID, display the pod name directly
+    const podById = pods.find((p) => p.id === tokenId);
+    if (podById) {
+      return {
+        name: podById.name,
+        description: `${podById.name} members`,
+        imageUrl: podById.pod_image_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(podById.name)}&size=48&background=8FAAA1&color=fff&bold=true`,
       };
     }
 
@@ -195,23 +195,22 @@ export const getTokenName = async (tokenId: string): Promise<string> => {
       return pod.name;
     }
 
-    // Check pod_role_permissions for role hat IDs
+    // Check pod_role_permissions by token_address (hat ID)
     const { data: rolesData, error: rolesError } = await supabase
       .from('pod_role_permissions')
-      .select(`
-        id,
-        pod_id,
-        role_name,
-        role_hat_id,
-        pods (
-          name
-        )
-      `)
-      .eq('role_hat_id', tokenId)
+      .select('id, pod_id, role_name, token_address')
+      .eq('token_address', tokenId)
+      .eq('is_active', true)
       .maybeSingle();
 
     if (!rolesError && rolesData) {
-      const podName = rolesData.pods?.name || 'Pod';
+      // Look up pod name separately
+      const podResult = await supabase
+        .from('pods')
+        .select('name')
+        .eq('id', rolesData.pod_id)
+        .maybeSingle();
+      const podName = podResult.data?.name || 'Pod';
       return `${podName} - ${rolesData.role_name}`;
     }
 

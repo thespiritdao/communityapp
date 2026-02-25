@@ -335,17 +335,30 @@ export const EventRegistrationModal: React.FC<EventRegistrationModalProps> = ({
     } catch (error: any) {
       console.error('❌ Registration failed:', error);
 
+      const errMsg: string = error.shortMessage || error.message || '';
+
+      // If on-chain call reverted because the event has already started,
+      // fall back to DB-only registration (the DB is the source of truth).
+      if (errMsg.toLowerCase().includes('event has started') || errMsg.toLowerCase().includes('event started')) {
+        console.log('⚠️ On-chain reverted (event started) — falling back to DB-only registration');
+        try {
+          await handleRegistrationSuccess(null);
+          toast({
+            title: 'Registration successful!',
+            description: `You're registered for ${event.title}`,
+            variant: 'success',
+          });
+          return;
+        } catch (dbErr) {
+          console.error('❌ DB-only fallback also failed:', dbErr);
+        }
+      }
+
       setIsRegistering(false);
-
-      let errorMessage = 'Registration failed';
-      if (error.shortMessage) errorMessage = error.shortMessage;
-      else if (error.message) errorMessage = error.message;
-
-      setErrorMessage(errorMessage);
-
+      setErrorMessage(errMsg || 'Registration failed');
       toast({
         title: 'Registration failed',
-        description: errorMessage,
+        description: errMsg || 'Registration failed',
         variant: 'destructive',
       });
     }
