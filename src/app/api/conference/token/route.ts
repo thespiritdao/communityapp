@@ -76,7 +76,7 @@ export async function POST(req: NextRequest) {
     // ── 3. Fetch display name from user_profiles (best-effort) ───────────────
     const { data: profile } = await supabaseAdmin
       .from('user_profiles')
-      .select('username')
+      .select('username, first_name, last_name')
       .eq('wallet_address', walletAddress.toLowerCase())
       .maybeSingle();
 
@@ -101,7 +101,8 @@ export async function POST(req: NextRequest) {
     const canPublish = PUBLISH_ROLES.has(effectiveRole);
 
     // ── 6. Mint LiveKit token ────────────────────────────────────────────────
-    const displayName = profile?.username ?? `${walletAddress.slice(0, 6)}…${walletAddress.slice(-4)}`;
+    const fullName = [profile?.first_name, profile?.last_name].filter(Boolean).join(' ').trim();
+    const displayName = fullName || profile?.username || `${walletAddress.slice(0, 6)}…${walletAddress.slice(-4)}`;
 
     const at = new AccessToken(LIVEKIT_API_KEY, LIVEKIT_API_SECRET, {
       identity: walletAddress.toLowerCase(),

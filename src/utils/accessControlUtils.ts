@@ -114,6 +114,25 @@ export const getUserIdentity = async (
     } catch (error) {
       console.error('🔐 Error fetching user hat permissions:', error);
     }
+
+    // Add pod UUIDs from active pod membership so events gated by pod UUID are accessible
+    try {
+      const { data: memberships, error: memError } = await supabase
+        .from('pod_members')
+        .select('pod_id')
+        .eq('wallet', normalizeAddress(userAddress))
+        .eq('is_active', true);
+
+      if (!memError && memberships) {
+        for (const m of memberships) {
+          if (m.pod_id) {
+            userTokens.push(normalizeAddress(m.pod_id));
+          }
+        }
+      }
+    } catch (error) {
+      console.error('🔐 Error fetching pod memberships:', error);
+    }
   }
 
   // Add explicitly provided HAT IDs
