@@ -15,10 +15,11 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'wallet required' }, { status: 400 });
   }
 
+  // user_profiles.wallet_address may be mixed-case — use ilike for case-insensitive match
   const { data, error } = await supabaseAdmin
     .from('user_profiles')
     .select('first_name, last_name, username, wallet_address')
-    .eq('wallet_address', wallet.toLowerCase())
+    .ilike('wallet_address', wallet.toLowerCase())
     .maybeSingle();
 
   if (error) {
