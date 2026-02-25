@@ -80,12 +80,14 @@ export async function POST(req: NextRequest) {
     const effectiveWallet = requestedWallet === verifiedWallet ? requestedWallet : verifiedWallet;
 
     // ── 3. Fetch display name from user_profiles (best-effort) ───────────────
+    // Use wallet address for lookup — it's already verified from the JWT and
+    // avoids user_id mismatches when sessions predate our auth changes.
     const { data: profile } = await supabaseAdmin
       .from('user_profiles')
       .select('username, first_name, last_name')
-      .eq('user_id', decoded.userId)
+      .ilike('wallet_address', verifiedWallet)
       .maybeSingle();
-    console.log(`👤 token profile lookup: userId=${decoded.userId} → first=${profile?.first_name} last=${profile?.last_name}`);
+    console.log(`👤 token profile lookup: wallet=${verifiedWallet.slice(0, 8)} → first=${profile?.first_name} last=${profile?.last_name}`);
 
     // ── 4. Verify the room exists in our DB ──────────────────────────────────
     const { data: room, error: roomError } = await supabaseAdmin

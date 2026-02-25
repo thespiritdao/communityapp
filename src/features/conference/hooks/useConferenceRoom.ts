@@ -101,6 +101,7 @@ export function useConferenceRoom({
   // Server-assigned identity (wallet from JWT, not EVM address from CDP hook).
   // Set after token fetch; used for leave() so it matches what the server recorded.
   const identityRef = useRef<string>(walletAddress);
+  const [identity, setIdentity] = useState<string>(walletAddress);
   useEffect(() => { onMeetingEndedRef.current = onMeetingEnded; }, [onMeetingEnded]);
 
   // Stable refs for join() so it never changes identity due to prop changes
@@ -143,7 +144,9 @@ export function useConferenceRoom({
       setRole(tokenResponse.role);
       setCanPublish(tokenResponse.canPublish);
       // Use the server-assigned identity (JWT wallet) as the canonical identity
-      identityRef.current = tokenResponse.identity ?? currentWallet;
+      const serverIdentity = tokenResponse.identity ?? currentWallet;
+      identityRef.current = serverIdentity;
+      setIdentity(serverIdentity);
 
       // 2. Create LiveKit Room instance
       const lkRoom = new Room({
@@ -291,6 +294,6 @@ export function useConferenceRoom({
     toggleVideo,
     join,
     leave,
-    identity: identityRef.current,
+    identity,
   };
 }

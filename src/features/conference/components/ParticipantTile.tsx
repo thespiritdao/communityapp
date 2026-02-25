@@ -41,7 +41,12 @@ export const ParticipantTile: React.FC<ParticipantTileProps> = ({
   const isMuted  = !participant.getTrackPublication(Track.Source.Microphone)?.isMuted === false;
 
   const identity = participant.identity?.toLowerCase() ?? '';
-  const displayName = nameMap[identity] || (identity ? `${identity.slice(0, 6)}…${identity.slice(-4)}` : '');
+  // participant.name is set from the LiveKit JWT (first_name + last_name from token route).
+  // Fall back to nameMap (async-fetched) then truncated wallet.
+  const displayName =
+    participant.name ||
+    nameMap[identity] ||
+    (identity ? `${identity.slice(0, 6)}…${identity.slice(-4)}` : '');
   const shortName = displayName.slice(0, 16);
 
   const isThumb = size === 'thumb';

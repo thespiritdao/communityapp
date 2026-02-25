@@ -42,8 +42,12 @@ export const SpeakerView: React.FC<SpeakerViewProps> = ({
   const hasVideo = !!displayed?.getTrackPublication(Track.Source.Camera)?.videoTrack;
 
   const identity = displayed?.identity?.toLowerCase() ?? '';
-  const displayName = nameMap[identity] || (identity ? `${identity.slice(0, 6)}…${identity.slice(-4)}` : '');
-  console.log('🎤 SpeakerView — identity:', identity, 'nameMap keys:', Object.keys(nameMap), 'displayName:', displayName);
+  // participant.name is set from the LiveKit JWT (first_name + last_name from token route).
+  // Fall back to nameMap (async-fetched) then truncated wallet.
+  const displayName =
+    displayed?.name ||
+    nameMap[identity] ||
+    (identity ? `${identity.slice(0, 6)}…${identity.slice(-4)}` : '');
 
   return (
     <div style={{ position: 'absolute', inset: 0, background: '#0D1F1A' }}>
