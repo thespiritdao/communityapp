@@ -1,22 +1,18 @@
 'use client';
 
 // src/features/conference/components/ParticipantTile.tsx
-//
-// Single video tile for a remote participant in the thumbnail strip.
-// Shows video track if published, avatar fallback if not.
-// Audio level ring pulses when the participant is speaking.
 
 import React, { useEffect, useRef } from 'react';
 import { Participant, Track } from 'livekit-client';
 import { Mic, MicOff, Crown, Shield } from 'lucide-react';
 import type { ParticipantRole } from '../types/conference';
-import { useParticipantName } from '../hooks/useParticipantName';
 
 interface ParticipantTileProps {
   participant: Participant;
   role?: ParticipantRole;
   isSpeaking?: boolean;
   size?: 'thumb' | 'full';
+  nameMap: Record<string, string>;
 }
 
 const ROLE_ICON: Partial<Record<ParticipantRole, React.ReactNode>> = {
@@ -29,10 +25,10 @@ export const ParticipantTile: React.FC<ParticipantTileProps> = ({
   role,
   isSpeaking = false,
   size = 'thumb',
+  nameMap,
 }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
 
-  // Attach the participant's camera track to the video element
   useEffect(() => {
     const videoTrack = participant.getTrackPublication(Track.Source.Camera)?.videoTrack;
     if (videoRef.current && videoTrack) {
@@ -43,8 +39,10 @@ export const ParticipantTile: React.FC<ParticipantTileProps> = ({
 
   const hasVideo = !!participant.getTrackPublication(Track.Source.Camera)?.isSubscribed;
   const isMuted  = !participant.getTrackPublication(Track.Source.Microphone)?.isMuted === false;
-  const profileName = useParticipantName(participant.identity);
-  const shortName = profileName.slice(0, 16);
+
+  const identity = participant.identity?.toLowerCase() ?? '';
+  const displayName = nameMap[identity] || (identity ? `${identity.slice(0, 6)}…${identity.slice(-4)}` : '');
+  const shortName = displayName.slice(0, 16);
 
   const isThumb = size === 'thumb';
 
@@ -65,7 +63,6 @@ export const ParticipantTile: React.FC<ParticipantTileProps> = ({
         boxShadow: isSpeaking ? '0 0 12px rgba(100,220,150,0.4)' : 'none',
       }}
     >
-      {/* Video */}
       {hasVideo ? (
         <video
           ref={videoRef}
@@ -95,7 +92,6 @@ export const ParticipantTile: React.FC<ParticipantTileProps> = ({
         </div>
       )}
 
-      {/* Name + role badge */}
       <div style={{
         position: 'absolute', bottom: 0, left: 0, right: 0,
         background: 'linear-gradient(transparent, rgba(0,0,0,0.7))',

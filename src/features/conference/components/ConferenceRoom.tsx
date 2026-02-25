@@ -19,7 +19,7 @@
 //  [floating reactions overlay]
 //  [host panel slide-up]
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { ConnectionState } from 'livekit-client';
 import {
   Mic, MicOff, Video, VideoOff,
@@ -50,6 +50,8 @@ export const ConferenceRoom: React.FC<ConferenceRoomProps> = ({
 }) => {
   const [showHostPanel, setShowHostPanel] = useState(false);
   const [handRaised, setLocalHandRaised] = useState(false);
+  // wallet → display name map, fetched once per unique wallet seen
+  const [nameMap, setNameMap] = useState<Record<string, string>>({});
 
   const {
     connectionState,
@@ -73,6 +75,29 @@ export const ConferenceRoom: React.FC<ConferenceRoomProps> = ({
 
   // Use server-assigned identity for all participant actions (JWT wallet, not EVM address)
   const { floatingReactions, sendReaction } = useReactions(room.room_name, identity);
+
+  // Fetch display names for all participants we haven't resolved yet
+  useEffect(() => {
+    const wallets = [
+      ...dbParticipants.map(p => p.wallet_address),
+      identity,
+    ].filter(Boolean).map(w => w.toLowerCase());
+
+    const unseen = wallets.filter(w => !(w in nameMap));
+    if (unseen.length === 0) return;
+
+    unseen.forEach(w => {
+      fetch(`/api/conference/participant-name?wallet=${encodeURIComponent(w)}`)
+        .then(r => r.json())
+        .then(({ name }) => {
+          const display = name || `${w.slice(0, 6)}…${w.slice(-4)}`;
+          setNameMap(prev => ({ ...prev, [w]: display }));
+        })
+        .catch(() => {
+          setNameMap(prev => ({ ...prev, [w]: `${w.slice(0, 6)}…${w.slice(-4)}` }));
+        });
+    });
+  }, [dbParticipants, identity]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Resolve dominant speaker role from DB participants
   const dominantDbParticipant = dbParticipants.find(
@@ -141,6 +166,7 @@ export const ConferenceRoom: React.FC<ConferenceRoomProps> = ({
           dominant={dominantSpeaker}
           localParticipant={localParticipant}
           speakerRole={dominantDbParticipant?.role}
+          nameMap={nameMap}
         />
 
         {/* ── Floating emoji reactions ── */}
@@ -178,6 +204,7 @@ export const ConferenceRoom: React.FC<ConferenceRoomProps> = ({
                   role={dbP?.role}
                   isSpeaking={isSpeaking}
                   size="thumb"
+                  nameMap={nameMap}
                 />
               );
             })}
@@ -189,6 +216,7 @@ export const ConferenceRoom: React.FC<ConferenceRoomProps> = ({
                 role={role}
                 isSpeaking={false}
                 size="thumb"
+                nameMap={nameMap}
               />
             )}
           </div>

@@ -1,22 +1,17 @@
 'use client';
 
 // src/features/conference/components/SpeakerView.tsx
-//
-// Dominant speaker full-screen view. Fills the entire room background.
-// Shows the dominant speaker's video; falls back to local participant
-// if no one else is speaking. Avatar fallback when camera is off.
 
 import React, { useEffect, useRef } from 'react';
 import { Participant, Track, LocalParticipant } from 'livekit-client';
 import { Crown, Shield } from 'lucide-react';
 import type { ParticipantRole } from '../types/conference';
-import { useParticipantName } from '../hooks/useParticipantName';
 
 interface SpeakerViewProps {
   dominant: Participant | null;
   localParticipant: LocalParticipant | null;
-  /** Role of the currently displayed speaker (for badge) */
   speakerRole?: ParticipantRole;
+  nameMap: Record<string, string>;
 }
 
 const ROLE_LABEL: Partial<Record<ParticipantRole, React.ReactNode>> = {
@@ -28,22 +23,16 @@ export const SpeakerView: React.FC<SpeakerViewProps> = ({
   dominant,
   localParticipant,
   speakerRole,
+  nameMap,
 }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
 
-  // Resolve which participant to display
   const displayed: Participant | null = dominant ?? localParticipant;
 
   useEffect(() => {
     if (!displayed || !videoRef.current) return;
-
-    const source = displayed instanceof LocalParticipant
-      ? Track.Source.Camera
-      : Track.Source.Camera;
-
-    const pub = displayed.getTrackPublication(source);
+    const pub = displayed.getTrackPublication(Track.Source.Camera);
     const track = pub?.videoTrack;
-
     if (track) {
       track.attach(videoRef.current);
       return () => { if (videoRef.current) track.detach(videoRef.current); };
@@ -52,9 +41,8 @@ export const SpeakerView: React.FC<SpeakerViewProps> = ({
 
   const hasVideo = !!displayed?.getTrackPublication(Track.Source.Camera)?.videoTrack;
 
-  // Look up name from user_profiles using the participant's wallet identity.
-  const profileName = useParticipantName(displayed?.identity);
-  const displayName = profileName || '';
+  const identity = displayed?.identity?.toLowerCase() ?? '';
+  const displayName = nameMap[identity] || (identity ? `${identity.slice(0, 6)}…${identity.slice(-4)}` : '');
 
   return (
     <div style={{ position: 'absolute', inset: 0, background: '#0D1F1A' }}>
@@ -67,7 +55,6 @@ export const SpeakerView: React.FC<SpeakerViewProps> = ({
           style={{ width: '100%', height: '100%', objectFit: 'cover' }}
         />
       ) : (
-        // Avatar fallback
         <div style={{
           width: '100%', height: '100%',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -86,7 +73,6 @@ export const SpeakerView: React.FC<SpeakerViewProps> = ({
         </div>
       )}
 
-      {/* Speaker name overlay — bottom-left */}
       {displayName && (
         <div style={{
           position: 'absolute', bottom: 0, left: 0, right: 0,
