@@ -407,6 +407,25 @@ export const hasEventAccess = async (
       }
     }
 
+    // Direct pod-membership check: if any required token is a pod UUID,
+    // check active_pod_members directly (more reliable than the RPC for UUID tokens).
+    if (event?.required_tokens?.length && userAddress) {
+      const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      const podUUIDs = event.required_tokens.filter((t: string) => uuidPattern.test(t));
+      if (podUUIDs.length > 0) {
+        const { data: membership } = await supabase
+          .from('active_pod_members')
+          .select('pod_id')
+          .eq('wallet', userAddress.toLowerCase())
+          .in('pod_id', podUUIDs)
+          .maybeSingle();
+        if (membership) {
+          console.log(`🎪 Event ${eventId} access granted via pod membership`);
+          return true;
+        }
+      }
+    }
+
     // Fall back to RPC check for token-gated events
     const accessibleEvents = await getAccessibleEvents(identity);
     return accessibleEvents.some((event: any) => event.id === eventId);

@@ -584,7 +584,7 @@ export const EventDetailView: React.FC<EventDetailViewProps> = ({
                       ).length
                     }{' '}
                     registered
-                    {event.max_attendees && ` of ${event.max_attendees} max`}
+                    {event.max_attendees > 0 && ` of ${event.max_attendees} max`}
                   </p>
                 </div>
               </div>
