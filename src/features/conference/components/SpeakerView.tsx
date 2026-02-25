@@ -43,6 +43,7 @@ export const SpeakerView: React.FC<SpeakerViewProps> = ({
 
   const identity = displayed?.identity?.toLowerCase() ?? '';
   const displayName = nameMap[identity] || (identity ? `${identity.slice(0, 6)}…${identity.slice(-4)}` : '');
+  console.log('🎤 SpeakerView — identity:', identity, 'nameMap keys:', Object.keys(nameMap), 'displayName:', displayName);
 
   return (
     <div style={{ position: 'absolute', inset: 0, background: '#0D1F1A' }}>

@@ -83,17 +83,22 @@ export const ConferenceRoom: React.FC<ConferenceRoomProps> = ({
       identity,
     ].filter(Boolean).map(w => w.toLowerCase());
 
+    console.log('🏷️ nameMap effect — wallets:', wallets, 'current nameMap:', nameMap);
+
     const unseen = wallets.filter(w => !(w in nameMap));
     if (unseen.length === 0) return;
 
     unseen.forEach(w => {
+      console.log('🏷️ fetching name for:', w);
       fetch(`/api/conference/participant-name?wallet=${encodeURIComponent(w)}`)
         .then(r => r.json())
         .then(({ name }) => {
+          console.log('🏷️ resolved:', w, '→', name);
           const display = name || `${w.slice(0, 6)}…${w.slice(-4)}`;
           setNameMap(prev => ({ ...prev, [w]: display }));
         })
-        .catch(() => {
+        .catch((err) => {
+          console.error('🏷️ fetch error for', w, err);
           setNameMap(prev => ({ ...prev, [w]: `${w.slice(0, 6)}…${w.slice(-4)}` }));
         });
     });
