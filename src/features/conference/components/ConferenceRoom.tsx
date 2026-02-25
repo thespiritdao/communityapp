@@ -68,9 +68,11 @@ export const ConferenceRoom: React.FC<ConferenceRoomProps> = ({
     toggleVideo,
     join,
     leave,
+    identity,
   } = useConferenceRoom({ room, walletAddress, requestedRole, onMeetingEnded: onLeave });
 
-  const { floatingReactions, sendReaction } = useReactions(room.room_name, walletAddress);
+  // Use server-assigned identity for all participant actions (JWT wallet, not EVM address)
+  const { floatingReactions, sendReaction } = useReactions(room.room_name, identity);
 
   // Resolve dominant speaker role from DB participants
   const dominantDbParticipant = dbParticipants.find(
@@ -81,8 +83,8 @@ export const ConferenceRoom: React.FC<ConferenceRoomProps> = ({
   const toggleHand = useCallback(async () => {
     const next = !handRaised;
     setLocalHandRaised(next);
-    await setHandRaised(room.id, walletAddress, next).catch(console.error);
-  }, [handRaised, room.id, walletAddress]);
+    await setHandRaised(room.id, identity, next).catch(console.error);
+  }, [handRaised, room.id, identity]);
 
   const handleLeave = useCallback(async () => {
     await leave();
@@ -258,7 +260,7 @@ export const ConferenceRoom: React.FC<ConferenceRoomProps> = ({
           <HostControls
             roomName={room.room_name}
             participants={dbParticipants}
-            callerWallet={walletAddress}
+            callerWallet={identity}
             callerRole={role}
             onClose={() => setShowHostPanel(false)}
             onEndMeeting={onLeave}

@@ -68,6 +68,8 @@ export interface UseConferenceRoomReturn {
   // Room actions
   join: () => Promise<void>;
   leave: () => Promise<void>;
+  /** Server-assigned wallet identity (from JWT, may differ from EVM address) */
+  identity: string;
 }
 
 export function useConferenceRoom({
@@ -96,6 +98,9 @@ export function useConferenceRoom({
   const livekitRoomRef = useRef<Room | null>(null);
   const tokenRef = useRef<TokenResponse | null>(null);
   const onMeetingEndedRef = useRef(onMeetingEnded);
+  // Server-assigned identity (wallet from JWT, not EVM address from CDP hook).
+  // Set after token fetch; used for leave() so it matches what the server recorded.
+  const identityRef = useRef<string>(walletAddress);
   useEffect(() => { onMeetingEndedRef.current = onMeetingEnded; }, [onMeetingEnded]);
 
   // Stable refs for join() so it never changes identity due to prop changes
@@ -137,6 +142,8 @@ export function useConferenceRoom({
       tokenRef.current = tokenResponse;
       setRole(tokenResponse.role);
       setCanPublish(tokenResponse.canPublish);
+      // Use the server-assigned identity (JWT wallet) as the canonical identity
+      identityRef.current = tokenResponse.identity ?? currentWallet;
 
       // 2. Create LiveKit Room instance
       const lkRoom = new Room({
@@ -231,7 +238,7 @@ export function useConferenceRoom({
       livekitRoomRef.current = null;
       setLivekitRoom(null);
     }
-    await leaveRoom(roomRef.current.id, walletAddressRef.current).catch(console.error);
+    await leaveRoom(roomRef.current.id, identityRef.current).catch(console.error);
     setConnectionState(ConnectionState.Disconnected);
     setRemoteParticipants([]);
     setDominantSpeaker(null);
@@ -280,5 +287,6 @@ export function useConferenceRoom({
     toggleVideo,
     join,
     leave,
+    identity: identityRef.current,
   };
 }

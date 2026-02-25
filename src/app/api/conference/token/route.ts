@@ -150,6 +150,7 @@ export async function POST(req: NextRequest) {
       wsUrl: LIVEKIT_URL,
       role: effectiveRole,
       canPublish,
+      identity: effectiveWallet,
     });
 
   } catch (err) {

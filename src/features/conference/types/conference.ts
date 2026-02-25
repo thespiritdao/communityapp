@@ -57,6 +57,8 @@ export interface TokenResponse {
   wsUrl: string;
   role: ParticipantRole;
   canPublish: boolean;
+  /** Canonical wallet identity used by the server (from JWT, not EVM address) */
+  identity: string;
 }
 
 export interface RoomWithCount {
