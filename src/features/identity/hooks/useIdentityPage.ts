@@ -37,6 +37,10 @@ export function useIdentityPage(address: string | undefined) {
     // login page shows the email/Google auth screen, not the invite gate.
     localStorage.setItem('returning_user', 'true');
 
+    // Signal to the login page that the user explicitly logged out and wants
+    // to choose an account — suppress the fast-path auto-signIn.
+    localStorage.setItem('force_account_switch', 'true');
+
     // 1. Sign out from Supabase (clears auth session)
     await signOut();
     console.log('✅ Supabase session cleared');
@@ -45,10 +49,21 @@ export function useIdentityPage(address: string | undefined) {
     disconnect();
     console.log('✅ Wallet disconnected');
 
-    // 3. Clear wallet cache
+    // 3. Clear wallet cache and CDP session so the embedded wallet re-prompts
     localStorage.removeItem('wagmi.store');
     localStorage.removeItem('wagmi.cache');
     localStorage.removeItem('wagmi.recentConnectorId');
+    // Clear CDP/Coinbase embedded wallet keys so a different account can sign in
+    Object.keys(localStorage).forEach((key) => {
+      if (
+        key.startsWith('cdp_') ||
+        key.startsWith('coinbase_') ||
+        key.startsWith('cbw_') ||
+        key.includes('embedded_wallet')
+      ) {
+        localStorage.removeItem(key);
+      }
+    });
     console.log('✅ Wallet cache cleared');
 
     // 4. Redirect to home after a brief delay

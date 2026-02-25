@@ -101,6 +101,14 @@ function PageContent() {
     // Only fast-path if auth hasn't been attempted yet
     if (authenticationAttemptedRef.current) return;
 
+    // If the user explicitly logged out to switch accounts, skip the fast-path
+    // so they can authenticate with the new account manually.
+    if (localStorage.getItem('force_account_switch') === 'true') {
+      console.log('🔄 handleAuthReady: account switch in progress — skipping fast-path');
+      localStorage.removeItem('force_account_switch');
+      return;
+    }
+
     console.log('🚀 handleAuthReady: checking onboarding for fast-path auth');
     try {
       // Use direct DB check (bypasses RLS) so this works without an existing session

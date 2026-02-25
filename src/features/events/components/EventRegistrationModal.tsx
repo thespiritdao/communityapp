@@ -225,22 +225,8 @@ export const EventRegistrationModal: React.FC<EventRegistrationModalProps> = ({
           }
         }
 
-        // Blockchain check: only block if on-chain event exists but is not active.
-        // If blockchainEventId is missing or the contract lookup fails (event not on-chain),
-        // fall through to DB-only registration for free events.
-        if (!contractLoading) {
-          if (onChainEvent) {
-            // Event found on-chain — enforce blockchain status
-            if (onChainEvent.status !== 0) {
-              // 0 = Active status
-              setRegistrationStatus('ineligible');
-              setErrorMessage('Event is not active on blockchain');
-              return;
-            }
-          }
-          // If contractError || !onChainEvent: event not on-chain, allow DB registration to proceed
-        }
-
+        // DB status is the source of truth — always allow registration if the event
+        // is published and upcoming. Blockchain status is informational only.
         setRegistrationStatus('eligible');
         console.log('✅ Registration status set to ELIGIBLE - ready to register');
       } catch (error) {
@@ -256,9 +242,6 @@ export const EventRegistrationModal: React.FC<EventRegistrationModalProps> = ({
     event,
     isOpen,
     canRegister,
-    contractLoading,
-    contractError,
-    onChainEvent,
     isRegistered,
     regStatus,
   ]);
