@@ -195,8 +195,7 @@ CREATE POLICY "Users can view their own view history"
 ON knowledge_item_views
 FOR SELECT
 USING (
-  viewer_address = LOWER(auth.jwt() ->> 'wallet_address')
-  OR viewer_address IS NULL
+  user_address IS NULL OR user_address = LOWER(auth.jwt() ->> 'wallet_address')
 );
 
 -- ============================================================================
