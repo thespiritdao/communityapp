@@ -84,10 +84,10 @@ export async function POST(req: NextRequest) {
     // avoids user_id mismatches when sessions predate our auth changes.
     const { data: profile } = await supabaseAdmin
       .from('user_profiles')
-      .select('username, first_name, last_name')
+      .select('first_name, last_name, email')
       .ilike('wallet_address', verifiedWallet)
       .maybeSingle();
-    console.log(`👤 token profile lookup: wallet=${verifiedWallet.slice(0, 8)} → first=${profile?.first_name} last=${profile?.last_name}`);
+    console.log(`👤 token profile lookup: wallet=${verifiedWallet.slice(0, 8)} → first=${profile?.first_name} last=${profile?.last_name} email=${profile?.email}`);
 
     // ── 4. Verify the room exists in our DB ──────────────────────────────────
     const { data: room, error: roomError } = await supabaseAdmin
@@ -111,7 +111,8 @@ export async function POST(req: NextRequest) {
 
     // ── 6. Mint LiveKit token ────────────────────────────────────────────────
     const fullName = [profile?.first_name, profile?.last_name].filter(Boolean).join(' ').trim();
-    const displayName = fullName || profile?.username || `${effectiveWallet.slice(0, 6)}…${effectiveWallet.slice(-4)}`;
+    const emailFallback = profile?.email ? profile.email.split('@')[0] : null;
+    const displayName = fullName || emailFallback || `${effectiveWallet.slice(0, 6)}…${effectiveWallet.slice(-4)}`;
 
     const at = new AccessToken(LIVEKIT_API_KEY, LIVEKIT_API_SECRET, {
       identity: effectiveWallet,

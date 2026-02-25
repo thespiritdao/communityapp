@@ -18,7 +18,7 @@ export async function GET(req: NextRequest) {
   // user_profiles.wallet_address may be mixed-case — use ilike for case-insensitive match
   const { data, error } = await supabaseAdmin
     .from('user_profiles')
-    .select('first_name, last_name, username, wallet_address')
+    .select('first_name, last_name, email, wallet_address')
     .ilike('wallet_address', wallet.toLowerCase())
     .maybeSingle();
 
@@ -28,7 +28,8 @@ export async function GET(req: NextRequest) {
   }
 
   const fullName = [data?.first_name, data?.last_name].filter(Boolean).join(' ').trim();
-  const name = fullName || data?.username || null;
+  const emailFallback = data?.email ? data.email.split('@')[0] : null;
+  const name = fullName || emailFallback || null;
 
   console.log(`👤 participant-name: wallet=${wallet.slice(0, 8)} → "${name}"`);
 

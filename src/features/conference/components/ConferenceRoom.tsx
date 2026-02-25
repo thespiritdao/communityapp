@@ -50,8 +50,10 @@ export const ConferenceRoom: React.FC<ConferenceRoomProps> = ({
 }) => {
   const [showHostPanel, setShowHostPanel] = useState(false);
   const [handRaised, setLocalHandRaised] = useState(false);
-  // wallet → display name map, fetched once per unique wallet seen
+  // wallet → display name map; only real names are stored (not truncated addresses).
+  // wallets with no resolvable name are tracked in fetchedWallets to prevent re-fetching.
   const [nameMap, setNameMap] = useState<Record<string, string>>({});
+  const fetchedWallets = React.useRef<Set<string>>(new Set());
 
   const {
     connectionState,
@@ -85,21 +87,25 @@ export const ConferenceRoom: React.FC<ConferenceRoomProps> = ({
 
     console.log('🏷️ nameMap effect — wallets:', wallets, 'current nameMap:', nameMap);
 
-    const unseen = wallets.filter(w => !(w in nameMap));
+    const unseen = wallets.filter(w => !fetchedWallets.current.has(w));
     if (unseen.length === 0) return;
 
     unseen.forEach(w => {
+      fetchedWallets.current.add(w); // mark before fetch to prevent duplicate requests
       console.log('🏷️ fetching name for:', w);
       fetch(`/api/conference/participant-name?wallet=${encodeURIComponent(w)}`)
         .then(r => r.json())
         .then(({ name }) => {
           console.log('🏷️ resolved:', w, '→', name);
-          const display = name || `${w.slice(0, 6)}…${w.slice(-4)}`;
-          setNameMap(prev => ({ ...prev, [w]: display }));
+          // Only store real names — don't cache a truncated wallet here.
+          // SpeakerView/ParticipantTile fall back to participant.name (from
+          // the LiveKit JWT) which already contains the correct display name.
+          if (name) {
+            setNameMap(prev => ({ ...prev, [w]: name }));
+          }
         })
         .catch((err) => {
           console.error('🏷️ fetch error for', w, err);
-          setNameMap(prev => ({ ...prev, [w]: `${w.slice(0, 6)}…${w.slice(-4)}` }));
         });
     });
   }, [dbParticipants, identity]); // eslint-disable-line react-hooks/exhaustive-deps
