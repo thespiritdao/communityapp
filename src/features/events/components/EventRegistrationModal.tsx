@@ -333,34 +333,30 @@ export const EventRegistrationModal: React.FC<EventRegistrationModalProps> = ({
         variant: 'success',
       });
     } catch (error: any) {
-      console.error('❌ Registration failed:', error);
+      console.error('❌ On-chain registration failed, falling back to DB-only:', error);
 
-      const errMsg: string = error.shortMessage || error.message || '';
-
-      // If on-chain call reverted because the event has already started,
-      // fall back to DB-only registration (the DB is the source of truth).
-      if (errMsg.toLowerCase().includes('event has started') || errMsg.toLowerCase().includes('event started')) {
-        console.log('⚠️ On-chain reverted (event started) — falling back to DB-only registration');
-        try {
-          await handleRegistrationSuccess(null);
-          toast({
-            title: 'Registration successful!',
-            description: `You're registered for ${event.title}`,
-            variant: 'success',
-          });
-          return;
-        } catch (dbErr) {
-          console.error('❌ DB-only fallback also failed:', dbErr);
-        }
+      // On-chain call failed for any reason (event started, gas error, contract issue).
+      // Fall back to DB-only registration — the DB record is the source of truth
+      // for check-in, QR codes, and event management.
+      registrationProcessedRef.current = false; // reset so handleRegistrationSuccess can run
+      try {
+        await handleRegistrationSuccess(null);
+        toast({
+          title: 'Registration successful!',
+          description: `You're registered for ${event.title}`,
+          variant: 'success',
+        });
+      } catch (dbErr: any) {
+        console.error('❌ DB-only fallback also failed:', dbErr);
+        setIsRegistering(false);
+        const errMsg = dbErr?.message || 'Registration failed';
+        setErrorMessage(errMsg);
+        toast({
+          title: 'Registration failed',
+          description: errMsg,
+          variant: 'destructive',
+        });
       }
-
-      setIsRegistering(false);
-      setErrorMessage(errMsg || 'Registration failed');
-      toast({
-        title: 'Registration failed',
-        description: errMsg || 'Registration failed',
-        variant: 'destructive',
-      });
     }
   };
 
