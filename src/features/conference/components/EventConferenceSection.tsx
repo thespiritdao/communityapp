@@ -222,7 +222,7 @@ export const EventConferenceSection: React.FC<EventConferenceSectionProps> = ({
               style={{ backgroundColor: '#2F5D50', color: '#fff' }}
             >
               <Video className="w-4 h-4 mr-2" />
-              {isOrganizer && isScheduled ? 'Open Meeting Room' : isOrganizer ? 'Rejoin Meeting' : 'Join Meeting'}
+              {isOrganizer ? (isScheduled ? 'Open Meeting Room' : 'Join Meeting') : 'Join Meeting'}
             </Button>
           )}
 

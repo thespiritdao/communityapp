@@ -73,6 +73,15 @@ export async function GET(req: NextRequest) {
       .eq('room_id', room.id)
       .eq('is_active', true);
 
+    // Auto-end a live room with zero active participants (handles tab-close / disconnect)
+    if (room.status === 'live' && (count ?? 0) === 0) {
+      await supabaseAdmin
+        .from('conference_rooms')
+        .update({ status: 'ended', ended_at: new Date().toISOString() })
+        .eq('id', room.id);
+      room.status = 'ended';
+    }
+
     return NextResponse.json({ room, participantCount: count ?? 0 });
   } catch (err) {
     console.error('❌ GET /api/conference/rooms error:', err);

@@ -262,10 +262,14 @@ export function useConferenceRoom({
   }, []);
 
   // ── Cleanup on unmount ───────────────────────────────────────────────────
+  // Also mark the participant as left in DB so the room doesn't stay "live"
+  // with ghost participants when the user closes the tab/window.
   useEffect(() => {
     return () => {
       livekitRoomRef.current?.disconnect();
       livekitRoomRef.current = null;
+      // Fire-and-forget DB cleanup — best effort on unmount
+      leaveRoom(roomRef.current.id, identityRef.current).catch(() => {});
     };
   }, []);
 

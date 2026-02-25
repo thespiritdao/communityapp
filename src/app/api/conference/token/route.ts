@@ -80,10 +80,11 @@ export async function POST(req: NextRequest) {
     const effectiveWallet = requestedWallet === verifiedWallet ? requestedWallet : verifiedWallet;
 
     // ── 3. Fetch display name from user_profiles (best-effort) ───────────────
+    // Look up by user_id first (most reliable), fall back to wallet address.
     const { data: profile } = await supabaseAdmin
       .from('user_profiles')
       .select('username, first_name, last_name')
-      .eq('wallet_address', effectiveWallet)
+      .eq('user_id', decoded.userId)
       .maybeSingle();
 
     // ── 4. Verify the room exists in our DB ──────────────────────────────────
