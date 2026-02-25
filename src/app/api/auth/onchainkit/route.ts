@@ -44,15 +44,44 @@ export async function POST(req: NextRequest) {
     // For embedded wallets, we trust the address from Coinbase SDK
     // No signature verification needed
 
-    // Check if user exists in user_profiles FIRST
+    // Check if user exists in user_profiles.
+    // IMPORTANT: Multiple accounts can share the same CDP embedded wallet address
+    // (e.g. family members on the same device). Email is the reliable unique
+    // identifier from Coinbase — look up by email first, fall back to wallet.
     console.log('🔍 Auth API: Checking for existing user...');
-    const { data: existingUserProfile, error: profileCheckError } = await supabaseAdmin
-      .from('user_profiles')
-      .select('user_id, email')
-      .eq('wallet_address', normalizedAddress)
-      .single();
 
-    if (profileCheckError && profileCheckError.code !== 'PGRST116') {
+    let existingUserProfile: { user_id: string; email: string | null; wallet_address: string } | null = null;
+    let profileCheckError: any = null;
+
+    // 1. Try email lookup first (most reliable — email is unique per Coinbase account)
+    if (email) {
+      const { data, error } = await supabaseAdmin
+        .from('user_profiles')
+        .select('user_id, email, wallet_address')
+        .eq('email', email)
+        .maybeSingle();
+      if (error && error.code !== 'PGRST116') { profileCheckError = error; }
+      else if (data) {
+        existingUserProfile = data;
+        console.log(`✅ Auth API: Found existing user by email: ${data.user_id} (wallet: ${data.wallet_address})`);
+      }
+    }
+
+    // 2. Fall back to wallet address lookup only if email lookup found nothing
+    if (!existingUserProfile) {
+      const { data, error } = await supabaseAdmin
+        .from('user_profiles')
+        .select('user_id, email, wallet_address')
+        .eq('wallet_address', normalizedAddress)
+        .maybeSingle();
+      if (error && error.code !== 'PGRST116') { profileCheckError = error; }
+      else if (data) {
+        existingUserProfile = data;
+        console.log(`✅ Auth API: Found existing user by wallet: ${data.user_id}`);
+      }
+    }
+
+    if (profileCheckError) {
       console.error('❌ Auth API: Database error:', profileCheckError);
       throw profileCheckError;
     }
@@ -78,9 +107,8 @@ export async function POST(req: NextRequest) {
     let userId: string | null = null;
 
     if (existingUserProfile) {
-      // Existing user
       userId = existingUserProfile.user_id;
-      console.log(`✅ Auth API: Found existing user: ${userId}`);
+      console.log(`✅ Auth API: Found existing user: ${userId} (canonical wallet: ${existingUserProfile.wallet_address || normalizedAddress})`);
 
       if (!userId) {
         throw new Error('User profile exists but user_id is null');
@@ -186,6 +214,11 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
     }
 
+    // For existing users, embed their profile wallet (not the CDP EVM address).
+    // Multiple accounts can share the same CDP embedded wallet; the profile wallet
+    // is the canonical identity used by RLS policies, conference tokens, etc.
+    const canonicalWallet = existingUserProfile?.wallet_address || normalizedAddress;
+
     const now = Math.floor(Date.now() / 1000);
     const jwtPayload = {
       sub: userId,
@@ -194,7 +227,7 @@ export async function POST(req: NextRequest) {
       iat: now,
       exp: now + 60 * 60 * 24 * 7, // 7 days
       user_metadata: {
-        wallet_address: normalizedAddress,
+        wallet_address: canonicalWallet,
       },
     };
 
