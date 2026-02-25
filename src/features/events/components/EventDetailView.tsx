@@ -19,6 +19,7 @@ import {
   QrCode,
   ArrowLeft,
   CheckCircle,
+  Video,
 } from 'lucide-react';
 import { EventRegistrationModal } from './EventRegistrationModal';
 import { EventTokenDisplay } from './EventTokenDisplay';
@@ -546,13 +547,26 @@ export const EventDetailView: React.FC<EventDetailViewProps> = ({
 
               {event.location && (
                 <div className="flex items-center">
-                  <MapPin
-                    className="w-5 h-5 mr-3"
-                    style={{ color: '#3F7A5A' }}
-                  />
+                  {event.location === 'Virtual — In-App Conference Room' ? (
+                    <Video
+                      className="w-5 h-5 mr-3 flex-shrink-0"
+                      style={{ color: '#2F5D50' }}
+                    />
+                  ) : (
+                    <MapPin
+                      className="w-5 h-5 mr-3 flex-shrink-0"
+                      style={{ color: '#3F7A5A' }}
+                    />
+                  )}
                   <div>
                     <p className="font-medium">Location</p>
-                    <p className="text-sm text-gray-600">{event.location}</p>
+                    {event.location === 'Virtual — In-App Conference Room' ? (
+                      <p className="text-sm font-medium" style={{ color: '#2F5D50' }}>
+                        Virtual — In-App Conference Room
+                      </p>
+                    ) : (
+                      <p className="text-sm text-gray-600">{event.location}</p>
+                    )}
                   </div>
                 </div>
               )}

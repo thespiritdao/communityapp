@@ -18,7 +18,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import { Calendar as CalendarIcon, Loader2, RefreshCw } from 'lucide-react';
+import { Calendar as CalendarIcon, Loader2, RefreshCw, Video } from 'lucide-react';
 
 import { useCreateEvent } from '../hooks/useEvents';
 import {
@@ -103,6 +103,7 @@ export const SimplifiedEventCreationForm: React.FC<
     };
   });
 
+  const [isVirtualEvent, setIsVirtualEvent] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showEndDatePicker, setShowEndDatePicker] = useState(false);
   const [isTransactionPending, setIsTransactionPending] = useState(false);
@@ -170,7 +171,7 @@ export const SimplifiedEventCreationForm: React.FC<
     const errors: string[] = [];
 
     if (!formData.title) errors.push('Title Required');
-    if (!formData.location) errors.push('Location Required');
+    if (!isVirtualEvent && !formData.location) errors.push('Location Required');
     if (!formData.description) errors.push('Description Required');
     if (!address) errors.push('Wallet not connected');
     if (!formData.organizing_pod_id) errors.push('Select an organizing pod');
@@ -687,14 +688,65 @@ export const SimplifiedEventCreationForm: React.FC<
               />
             </div>
 
-            <div>
+            <div className="space-y-2">
               <Label htmlFor="location">Location</Label>
-              <Input
-                id="location"
-                value={formData.location}
-                onChange={(e) => handleInputChange('location', e.target.value)}
-                placeholder="Enter location or meeting URL"
-              />
+
+              {/* Virtual event toggle */}
+              <button
+                type="button"
+                onClick={() => {
+                  const next = !isVirtualEvent;
+                  setIsVirtualEvent(next);
+                  handleInputChange('location', next ? 'Virtual — In-App Conference Room' : '');
+                }}
+                className="flex items-center gap-2 w-full rounded-lg border px-3 py-2 text-sm transition-colors"
+                style={{
+                  borderColor: isVirtualEvent ? '#2F5D50' : 'rgba(0,0,0,0.12)',
+                  background: isVirtualEvent ? '#E8F1EE' : 'transparent',
+                  color: isVirtualEvent ? '#1F453A' : 'inherit',
+                }}
+              >
+                <div
+                  className="flex items-center justify-center rounded-md w-7 h-7 flex-shrink-0"
+                  style={{ background: isVirtualEvent ? '#2F5D50' : 'rgba(0,0,0,0.06)' }}
+                >
+                  <Video size={14} style={{ color: isVirtualEvent ? '#fff' : 'rgba(0,0,0,0.4)' }} />
+                </div>
+                <div className="flex-1 text-left">
+                  <div className="font-medium leading-tight">
+                    {isVirtualEvent ? 'Virtual — In-App Conference Room' : 'Use in-app conference room'}
+                  </div>
+                  {!isVirtualEvent && (
+                    <div className="text-xs" style={{ color: 'rgba(0,0,0,0.45)' }}>
+                      Host this event via SpiritDAO video conference
+                    </div>
+                  )}
+                </div>
+                {/* Checkmark */}
+                <div
+                  className="w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0"
+                  style={{
+                    borderColor: isVirtualEvent ? '#2F5D50' : 'rgba(0,0,0,0.2)',
+                    background: isVirtualEvent ? '#2F5D50' : 'transparent',
+                  }}
+                >
+                  {isVirtualEvent && (
+                    <svg width="8" height="6" viewBox="0 0 8 6" fill="none">
+                      <path d="M1 3L3 5L7 1" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                  )}
+                </div>
+              </button>
+
+              {/* Physical location input — hidden when virtual */}
+              {!isVirtualEvent && (
+                <Input
+                  id="location"
+                  value={formData.location}
+                  onChange={(e) => handleInputChange('location', e.target.value)}
+                  placeholder="Enter physical location"
+                />
+              )}
             </div>
           </div>
 
