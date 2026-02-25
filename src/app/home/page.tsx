@@ -159,6 +159,7 @@ export default function HomePage() {
             href="/sensemaker-ai"
             className="home-module-card"
             prefetch={true}
+            data-tour="sensemaker"
           >
             <Image
               src="/images/sensemakeraikey.png"
@@ -200,18 +201,6 @@ export default function HomePage() {
             <div className="home-module-title">Forum</div>
           </Link>
 
-          <Link href="/events" className="home-module-card" prefetch={true} data-tour="events">
-            <Image
-              src="/images/icons/eventsicon.png"
-              alt="Events"
-              className="home-module-icon"
-              width={64}
-              height={64}
-              loading="lazy"
-            />
-            <div className="home-module-title">Events</div>
-          </Link>
-
           <Link href="/pods" className="home-module-card" prefetch={true} data-tour="pods">
             <Image
               src="/images/icons/podsicon.png"
@@ -222,6 +211,18 @@ export default function HomePage() {
               loading="lazy"
             />
             <div className="home-module-title">Pods</div>
+          </Link>
+
+          <Link href="/events" className="home-module-card" prefetch={true} data-tour="events">
+            <Image
+              src="/images/icons/eventsicon.png"
+              alt="Events"
+              className="home-module-icon"
+              width={64}
+              height={64}
+              loading="lazy"
+            />
+            <div className="home-module-title">Events</div>
           </Link>
 
           <Link href="/governance" className="home-module-card" prefetch={true} data-tour="governance">

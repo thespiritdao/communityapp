@@ -44,6 +44,13 @@ export const HOME_TOUR_STEPS: TourStep[] = [
     placement: 'bottom',
   },
   {
+    id: 'sensemaker',
+    title: 'Sensemaker',
+    description:
+      'Sensemaker is your companion for better understanding Temporal Naturalism and SpiritDAO operations. Ask it anything!',
+    placement: 'bottom',
+  },
+  {
     id: 'chat',
     title: 'Chat',
     description:
@@ -65,6 +72,13 @@ export const HOME_TOUR_STEPS: TourStep[] = [
     placement: 'bottom',
   },
   {
+    id: 'events',
+    title: 'Events',
+    description:
+      'In-person and digital gatherings. Register to attend and earn a proof-of-participation credential.',
+    placement: 'bottom',
+  },
+  {
     id: 'governance',
     title: 'Governance',
     description:
@@ -76,13 +90,6 @@ export const HOME_TOUR_STEPS: TourStep[] = [
     title: 'Bounties',
     description:
       'Work you can claim and get paid for. Pod leaders post tasks; contributors complete them.',
-    placement: 'bottom',
-  },
-  {
-    id: 'events',
-    title: 'Events',
-    description:
-      'In-person and digital gatherings. Register to attend and earn a proof-of-participation credential.',
     placement: 'bottom',
   },
   {
