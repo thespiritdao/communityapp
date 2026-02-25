@@ -10,7 +10,7 @@
 //
 // When joined, <ConferenceRoom> mounts as a full-screen overlay above the page.
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Video, Users, Loader2 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -46,6 +46,10 @@ export const EventConferenceSection: React.FC<EventConferenceSectionProps> = ({
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showRoom, setShowRoom] = useState(false);
+  // Frozen snapshot of the room at the moment of joining — never changes while
+  // the conference overlay is mounted, preventing re-renders from breaking the
+  // LiveKit peer connection.
+  const [activeRoom, setActiveRoom] = useState<ConferenceRoomType | null>(null);
 
   // ── Fetch existing room for this event ───────────────────────────────────
   const fetchRoom = useCallback(async () => {
@@ -64,10 +68,19 @@ export const EventConferenceSection: React.FC<EventConferenceSectionProps> = ({
     }
   }, [eventId]);
 
+  // Initial fetch on mount
   useEffect(() => {
     fetchRoom();
-    // Poll every 15s to pick up live status changes made by the organizer
-    const interval = setInterval(fetchRoom, 15_000);
+  }, [fetchRoom]);
+
+  // Poll every 15s — pause while the conference overlay is open so that
+  // setRoom() never fires while a LiveKit peer connection is active.
+  const showRoomRef = useRef(showRoom);
+  useEffect(() => { showRoomRef.current = showRoom; }, [showRoom]);
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (!showRoomRef.current) fetchRoom();
+    }, 15_000);
     return () => clearInterval(interval);
   }, [fetchRoom]);
 
@@ -82,6 +95,7 @@ export const EventConferenceSection: React.FC<EventConferenceSectionProps> = ({
         eventId,
       });
       setRoom(created);
+      setActiveRoom(created);
       setShowRoom(true);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to start meeting');
@@ -92,12 +106,15 @@ export const EventConferenceSection: React.FC<EventConferenceSectionProps> = ({
 
   // ── Attendee / organizer: join existing live room ────────────────────────
   const handleJoin = useCallback(() => {
+    // Freeze the current room snapshot so polling can't swap it out mid-call
+    setActiveRoom(room);
     setShowRoom(true);
-  }, []);
+  }, [room]);
 
   // ── After leaving / meeting ended ────────────────────────────────────────
   const handleLeave = useCallback(() => {
     setShowRoom(false);
+    setActiveRoom(null);
     // Refresh room state (may now be ended)
     fetchRoom();
   }, [fetchRoom]);
@@ -226,9 +243,9 @@ export const EventConferenceSection: React.FC<EventConferenceSectionProps> = ({
       </Card>
 
       {/* Full-screen conference room overlay */}
-      {showRoom && room && walletAddress && (
+      {showRoom && activeRoom && walletAddress && (
         <ConferenceRoom
-          room={room}
+          room={activeRoom}
           walletAddress={walletAddress}
           requestedRole={callerRole}
           onLeave={handleLeave}

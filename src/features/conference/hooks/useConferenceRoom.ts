@@ -98,11 +98,21 @@ export function useConferenceRoom({
   const onMeetingEndedRef = useRef(onMeetingEnded);
   useEffect(() => { onMeetingEndedRef.current = onMeetingEnded; }, [onMeetingEnded]);
 
+  // Stable refs for join() so it never changes identity due to prop changes
+  const roomRef = useRef(room);
+  const walletAddressRef = useRef(walletAddress);
+  const requestedRoleRef = useRef(requestedRole);
+  useEffect(() => { roomRef.current = room; }, [room]);
+  useEffect(() => { walletAddressRef.current = walletAddress; }, [walletAddress]);
+  useEffect(() => { requestedRoleRef.current = requestedRole; }, [requestedRole]);
+
   // ── DB participant subscription ──────────────────────────────────────────
+  // room.id is a stable primitive — subscribe once on mount.
+  const roomId = room.id;
   useEffect(() => {
-    const unsub = subscribeToParticipants(room.id, setDbParticipants);
+    const unsub = subscribeToParticipants(roomId, setDbParticipants);
     return unsub;
-  }, [room.id]);
+  }, [roomId]);
 
   // ── Sync remote participants from LiveKit room ────────────────────────────
   const syncRemoteParticipants = useCallback((lkRoom: Room) => {
@@ -115,9 +125,15 @@ export function useConferenceRoom({
     setIsConnecting(true);
     setError(null);
 
+    // Read current values from refs so this callback never needs to be
+    // recreated when room/walletAddress/requestedRole change identity.
+    const currentRoom = roomRef.current;
+    const currentWallet = walletAddressRef.current;
+    const currentRole = requestedRoleRef.current;
+
     try {
       // 1. Fetch LiveKit token from our API
-      const tokenResponse = await getJoinToken(room.room_name, walletAddress, requestedRole);
+      const tokenResponse = await getJoinToken(currentRoom.room_name, currentWallet, currentRole);
       tokenRef.current = tokenResponse;
       setRole(tokenResponse.role);
       setCanPublish(tokenResponse.canPublish);
@@ -188,8 +204,8 @@ export function useConferenceRoom({
       }
 
       // 6. If host is starting the meeting, mark room as live
-      if (tokenResponse.role === 'host' && room.status === 'scheduled') {
-        await startRoom(room.id);
+      if (tokenResponse.role === 'host' && currentRoom.status === 'scheduled') {
+        await startRoom(currentRoom.id);
       }
 
     } catch (err) {
@@ -202,7 +218,7 @@ export function useConferenceRoom({
     } finally {
       setIsConnecting(false);
     }
-  }, [room, walletAddress, requestedRole, isConnecting, connectionState, syncRemoteParticipants]);
+  }, [isConnecting, connectionState, syncRemoteParticipants]);
 
   // ── Leave ────────────────────────────────────────────────────────────────
   const leave = useCallback(async () => {
@@ -212,11 +228,11 @@ export function useConferenceRoom({
       livekitRoomRef.current = null;
       setLivekitRoom(null);
     }
-    await leaveRoom(room.id, walletAddress).catch(console.error);
+    await leaveRoom(roomRef.current.id, walletAddressRef.current).catch(console.error);
     setConnectionState(ConnectionState.Disconnected);
     setRemoteParticipants([]);
     setDominantSpeaker(null);
-  }, [room.id, walletAddress]);
+  }, []);
 
   // ── Media controls ───────────────────────────────────────────────────────
   const toggleAudio = useCallback(async () => {
