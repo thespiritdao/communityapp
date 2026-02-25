@@ -4,6 +4,7 @@
 
 import { type NextRequest, NextResponse } from 'next/server';
 import { RoomServiceClient } from 'livekit-server-sdk';
+import jwt from 'jsonwebtoken';
 import { supabaseAdmin } from '@/utils/supabaseAdminClient';
 
 export const runtime = 'nodejs';
@@ -12,6 +13,23 @@ export const maxDuration = 30;
 const LIVEKIT_API_KEY    = process.env.LIVEKIT_API_KEY!;
 const LIVEKIT_API_SECRET = process.env.LIVEKIT_API_SECRET!;
 const LIVEKIT_URL        = process.env.LIVEKIT_URL!;
+const JWT_SECRET         = process.env.SUPABASE_JWT_SECRET!;
+
+interface JwtPayload {
+  sub: string;
+  user_metadata?: { wallet_address?: string };
+}
+
+function verifyAppToken(token: string): { userId: string; walletAddress: string } | null {
+  try {
+    const payload = jwt.verify(token, JWT_SECRET) as JwtPayload;
+    const walletAddress = payload?.user_metadata?.wallet_address;
+    if (!payload.sub || !walletAddress) return null;
+    return { userId: payload.sub, walletAddress };
+  } catch {
+    return null;
+  }
+}
 
 function getRoomServiceClient() {
   return new RoomServiceClient(LIVEKIT_URL, LIVEKIT_API_KEY, LIVEKIT_API_SECRET);
@@ -28,24 +46,27 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'roomName or eventId required' }, { status: 400 });
     }
 
-    const query = supabaseAdmin
+    let query = supabaseAdmin
       .from('conference_rooms')
-      .select(`
-        id, room_name, display_name, status, host_wallet,
-        settings, started_at, ended_at, created_at,
-        event_id, pod_id
-      `);
+      .select('id, room_name, display_name, status, host_wallet, settings, started_at, ended_at, created_at, event_id, pod_id');
 
-    if (roomName) query.eq('room_name', roomName);
-    else if (eventId) query.eq('event_id', eventId).order('created_at', { ascending: false }).limit(1);
+    if (roomName) {
+      query = query.eq('room_name', roomName);
+    } else {
+      query = query.eq('event_id', eventId!).order('created_at', { ascending: false }).limit(1);
+    }
 
-    const { data: room, error } = await query.single();
+    const { data: room, error } = await query.maybeSingle();
 
-    if (error || !room) {
+    if (error) {
+      console.error('GET /api/conference/rooms error:', error);
+      return NextResponse.json({ error: 'Database error' }, { status: 500 });
+    }
+
+    if (!room) {
       return NextResponse.json({ error: 'Room not found' }, { status: 404 });
     }
 
-    // Fetch live participant count
     const { count } = await supabaseAdmin
       .from('conference_participants')
       .select('id', { count: 'exact', head: true })
@@ -71,31 +92,18 @@ export async function POST(req: NextRequest) {
     const token = authHeader.replace('Bearer ', '').trim();
     if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-    const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token);
-    if (authError || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const decoded = verifyAppToken(token);
+    if (!decoded) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-    const { data: profile } = await supabaseAdmin
-      .from('user_profiles')
-      .select('wallet_address, username')
-      .eq('user_id', user.id)
-      .single();
-
-    if (!profile) return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
+    const walletAddress = decoded.walletAddress.toLowerCase();
 
     // ── 2. Parse body ────────────────────────────────────────────────────────
     const body = await req.json().catch(() => null);
-    const {
-      displayName,
-      eventId,
-      podId,
-      settings = {},
-    } = body ?? {};
+    const { displayName, eventId, podId, settings = {} } = body ?? {};
 
     if (!displayName) {
       return NextResponse.json({ error: 'displayName is required' }, { status: 400 });
     }
-
-    const walletAddress = profile.wallet_address.toLowerCase();
 
     // ── 3. Generate unique room name ─────────────────────────────────────────
     const shortId = crypto.randomUUID().replace(/-/g, '').slice(0, 12);
@@ -108,7 +116,7 @@ export async function POST(req: NextRequest) {
     await roomService.createRoom({
       name: roomName,
       maxParticipants: settings.maxParticipants ?? 200,
-      emptyTimeout: 300,          // auto-close after 5 min empty
+      emptyTimeout: 300,
       metadata: JSON.stringify({ displayName, hostWallet: walletAddress }),
     });
 
@@ -138,7 +146,6 @@ export async function POST(req: NextRequest) {
 
     if (insertError) {
       console.error('❌ Failed to insert conference room:', insertError);
-      // Clean up LiveKit room if DB insert failed
       await roomService.deleteRoom(roomName).catch(() => {});
       return NextResponse.json({ error: 'Failed to create room' }, { status: 500 });
     }
@@ -149,7 +156,7 @@ export async function POST(req: NextRequest) {
       wallet_address: walletAddress,
       role: 'host',
       can_publish: true,
-      is_active: false,     // not yet joined — becomes true when token is fetched
+      is_active: false,
     });
 
     console.log(`🎥 Conference room created: ${roomName} by ${walletAddress.slice(0, 8)}`);

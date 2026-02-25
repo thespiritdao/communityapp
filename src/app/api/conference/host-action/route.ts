@@ -12,6 +12,7 @@
 
 import { type NextRequest, NextResponse } from 'next/server';
 import { RoomServiceClient, TrackSource } from 'livekit-server-sdk';
+import jwt from 'jsonwebtoken';
 import { supabaseAdmin } from '@/utils/supabaseAdminClient';
 
 export const runtime = 'nodejs';
@@ -20,6 +21,23 @@ export const maxDuration = 30;
 const LIVEKIT_API_KEY    = process.env.LIVEKIT_API_KEY!;
 const LIVEKIT_API_SECRET = process.env.LIVEKIT_API_SECRET!;
 const LIVEKIT_URL        = process.env.LIVEKIT_URL!;
+const JWT_SECRET         = process.env.SUPABASE_JWT_SECRET!;
+
+interface JwtPayload {
+  sub: string;
+  user_metadata?: { wallet_address?: string };
+}
+
+function verifyAppToken(token: string): { userId: string; walletAddress: string } | null {
+  try {
+    const payload = jwt.verify(token, JWT_SECRET) as JwtPayload;
+    const walletAddress = payload?.user_metadata?.wallet_address;
+    if (!payload.sub || !walletAddress) return null;
+    return { userId: payload.sub, walletAddress };
+  } catch {
+    return null;
+  }
+}
 
 type HostActionType =
   | 'mute_participant'
@@ -39,18 +57,10 @@ export async function POST(req: NextRequest) {
     const token = authHeader.replace('Bearer ', '').trim();
     if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-    const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token);
-    if (authError || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const decoded = verifyAppToken(token);
+    if (!decoded) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-    const { data: profile } = await supabaseAdmin
-      .from('user_profiles')
-      .select('wallet_address')
-      .eq('user_id', user.id)
-      .single();
-
-    if (!profile) return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
-
-    const callerWallet = profile.wallet_address.toLowerCase();
+    const callerWallet = decoded.walletAddress.toLowerCase();
 
     // ── 2. Parse body ────────────────────────────────────────────────────────
     const body = await req.json().catch(() => null);
