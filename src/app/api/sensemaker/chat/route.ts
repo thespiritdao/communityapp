@@ -28,9 +28,11 @@ import {
 
 export async function POST(req: NextRequest) {
   const startTime = Date.now();
+  let step = 'init';
 
   try {
     // Step 0: Rate limiting (CRITICAL - prevents expensive AI API abuse)
+    step = 'ratelimit';
     const clientIp = getClientIp(req);
     const { success, limit, remaining, reset } =
       await rateLimiters.sensemaker.limit(clientIp);
@@ -48,10 +50,7 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    console.log(
-      `[Sensemaker Chat] Rate limit check passed: ${remaining}/${limit} remaining`,
-    );
-
+    step = 'parse';
     const { message, conversationHistory, sessionId } = await req.json();
 
     // Validate input
@@ -69,42 +68,18 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    console.log('─────────────────────────────────────────────');
-    console.log('[Sensemaker Chat] New request received');
-    console.log('[Sensemaker Chat] Message:', message.substring(0, 100));
-
-    // Step 1: Classify the query (GPT-4o-mini)
-    console.log('[Sensemaker Chat] Step 1: Classifying query...');
+    // Step 1: Classify the query
+    step = 'classify';
     const queryType = await classifyQuery(message);
-    console.log('[Sensemaker Chat] Query classified as:', queryType);
 
     // Step 2: Retrieve relevant context from Pinecone
-    console.log(
-      '[Sensemaker Chat] Step 2: Retrieving context from Pinecone...',
-    );
+    step = 'pinecone';
     const contexts = await queryPinecone(message, queryType, 5);
-    console.log(
-      '[Sensemaker Chat] Retrieved',
-      contexts.length,
-      'context chunks',
-    );
-
-    if (contexts.length > 0) {
-      console.log(
-        '[Sensemaker Chat] Top relevance score:',
-        (contexts[0].score * 100).toFixed(1) + '%',
-      );
-    } else {
-      console.warn(
-        '[Sensemaker Chat] No context retrieved - will respond without knowledge base',
-      );
-    }
 
     // Step 3: Generate response using appropriate model
-    console.log('[Sensemaker Chat] Step 3: Generating response...');
+    step = 'generate';
     const model =
       queryType === 'spiritdao' ? 'claude-haiku-4-5-20251001' : 'claude-sonnet-4-6';
-    console.log('[Sensemaker Chat] Using model:', model);
 
     const response = await generateResponse(
       message,
@@ -160,17 +135,13 @@ export async function POST(req: NextRequest) {
       },
     );
   } catch (error: any) {
-    console.error('─────────────────────────────────────────────');
-    console.error('[Sensemaker Chat] ERROR:', error);
-    console.error('[Sensemaker Chat] Error message:', error.message);
-    console.error('[Sensemaker Chat] Error stack:', error.stack);
-    console.error('─────────────────────────────────────────────');
-
     return NextResponse.json(
       {
         error: 'Failed to process message',
+        step,
         details: error.message,
         errorType: error.constructor?.name,
+        cause: error.cause ? String(error.cause) : undefined,
       },
       { status: 500 },
     );
