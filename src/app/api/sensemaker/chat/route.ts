@@ -103,7 +103,7 @@ export async function POST(req: NextRequest) {
     // Step 3: Generate response using appropriate model
     console.log('[Sensemaker Chat] Step 3: Generating response...');
     const model =
-      queryType === 'spiritdao' ? 'gpt-4o-mini' : 'claude-sonnet-4.5';
+      queryType === 'spiritdao' ? 'claude-haiku-4-5-20251001' : 'claude-sonnet-4-6';
     console.log('[Sensemaker Chat] Using model:', model);
 
     const response = await generateResponse(
@@ -259,7 +259,7 @@ async function logConversation({
     let walletAddress = null;
     if (user) {
       const { data: profile } = await supabase
-        .from('profiles')
+        .from('user_profiles')
         .select('wallet_address')
         .eq('id', user.id)
         .single();

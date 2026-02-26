@@ -1,43 +1,44 @@
 // src/services/sensemaker/routingService.ts
 
-import OpenAI from 'openai';
+import Anthropic from '@anthropic-ai/sdk';
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
 export type QueryType = 'spiritdao' | 'temporal-naturalism';
 
 /**
  * Classify user query to determine which knowledge base to use
- * Uses GPT-4o-mini for fast, cheap, accurate classification
+ * Uses Claude Haiku for fast, cheap, accurate classification
  */
 export async function classifyQuery(userMessage: string): Promise<QueryType> {
   try {
-    const completion = await openai.chat.completions.create({
-      model: 'gpt-4o-mini',
-      messages: [
-        {
-          role: 'system',
-          content: `You are a query classifier for SpiritDAO's Sensemaker AI.
+    const message = await anthropic.messages.create({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 10,
+      temperature: 0,
+      system: `You are a query classifier for SpiritDAO's Sensemaker AI.
 
 Classify user queries into ONE of these categories:
 
 1. "spiritdao" - Questions about:
    - DAO operations (voting, proposals, pods, governance)
-   - App features (marketplace, events, bounties, forum)
+   - App features (marketplace, events, bounties, forum, video chat, conferencing)
    - Technical help (wallet, transactions, permissions, NFTs)
    - Community operations (pod management, member applications)
    - Getting started (onboarding, setup, identity)
    - Any "how do I..." or "where is..." about SpiritDAO features
    - Troubleshooting app issues
+   - The Eight Dignities as community practice or mission
+   - SpiritDAO events, retreats, or community gatherings
 
 2. "temporal-naturalism" - Questions about:
    - Philosophy, metaphysics, theology
    - Time, causality, nature, existence
+   - The work of Unger, Smolin, or Ron Rivers
    - Theoretical/academic discussions
-   - Abstract concepts
-   - Existential questions
-   - Religious or spiritual topics
-   - Academic philosophical inquiry
+   - Abstract concepts and existential questions
+   - Spiritual or religious topics not tied to specific app features
+   - The meaning or foundations of Temporal Naturalism
 
 Respond with ONLY ONE WORD: "spiritdao" or "temporal-naturalism"
 
@@ -49,20 +50,16 @@ Examples:
 - "Where is the marketplace?" → spiritdao
 - "Explain causality in naturalism" → temporal-naturalism
 - "How do I mint an Advocate NFT?" → spiritdao
-- "What does theology say about creation?" → temporal-naturalism`,
-        },
-        {
-          role: 'user',
-          content: userMessage,
-        },
-      ],
-      temperature: 0.1,
-      max_tokens: 10,
+- "What does theology say about creation?" → temporal-naturalism
+- "What are the Eight Dignities?" → temporal-naturalism
+- "How do I use video chat in a pod?" → spiritdao`,
+      messages: [{ role: 'user', content: userMessage }],
     });
 
-    const classification = completion.choices[0]?.message?.content
-      ?.trim()
-      .toLowerCase();
+    const textContent = message.content.find((block) => block.type === 'text');
+    const classification = textContent && 'text' in textContent
+      ? textContent.text.trim().toLowerCase()
+      : null;
 
     if (
       classification === 'spiritdao' ||
@@ -74,12 +71,10 @@ Examples:
       return classification as QueryType;
     }
 
-    // Default to spiritdao if unclear (most users will ask about DAO)
     console.log(`[Routing] Unclear classification, defaulting to: spiritdao`);
     return 'spiritdao';
   } catch (error) {
     console.error('[Routing] Classification error:', error);
-    // Default to spiritdao on error
     return 'spiritdao';
   }
 }

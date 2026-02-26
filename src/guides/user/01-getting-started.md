@@ -129,10 +129,20 @@ SpiritDAO uses role-based permissions:
 - Pod-specific or public forums
 - Markdown support
 
-### Marketplace
-- Buy/sell items with crypto
+### Marketplace (Artifacts)
+- Buy/sell community artifacts with $SELF or $SYSTEM tokens
 - Shopping cart system
 - Gasless checkout option
+
+### Video Chat & Conferencing
+- Real-time video calls between pod members
+- Multi-participant conference rooms for meetings and governance calls
+- Integrated with pod membership — access governed by your roles
+
+### Knowledge Base
+- Video tutorials for every platform feature
+- Step-by-step written guides
+- Guided tour to walk through the full app in ~2 minutes
 
 ---
 
@@ -221,10 +231,20 @@ SpiritDAO uses role-based permissions:
 
 ## Getting Help
 
+### Guided Tour
+1. Go to **Knowledge Base** page
+2. Click the "Take a guided tour" card (🧭) at the top
+3. Walk through every section in ~2 minutes
+
+### Knowledge Base Videos
+1. Go to **Knowledge Base** from the home screen
+2. Browse categories for step-by-step video guides
+3. Available for every major feature
+
 ### In-App AI Assistant
 1. Click **Sensemaker AI** icon
-2. Ask questions in plain language
-3. Get instant help on features
+2. Ask about the platform or Temporal Naturalism philosophy
+3. Get instant, contextual help
 
 ### Community Support
 - **Forum**: Post in Help category

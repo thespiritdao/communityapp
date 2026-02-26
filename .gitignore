@@ -93,8 +93,12 @@ storybook-static/
 nul
 src/nul
 
-# Knowledge base video/guide files (large binaries, hosted externally)
-src/guides/
+# Knowledge base video files (large binaries, hosted externally at files.spiritdao.org)
+src/guides/Instructional/
+src/guides/**/*.mp4
+src/guides/**/*.mov
+src/guides/**/*.avi
+src/guides/**/*.webm
 public/guides/
 
 # Error logs and debugging files
