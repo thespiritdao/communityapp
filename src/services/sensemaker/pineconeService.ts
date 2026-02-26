@@ -3,13 +3,17 @@
 import { Pinecone } from '@pinecone-database/pinecone';
 import OpenAI from 'openai';
 
-const pinecone = new Pinecone({
-  apiKey: process.env.PINECONE_API_KEY!,
-});
+let _pinecone: Pinecone | null = null;
+function getPinecone() {
+  if (!_pinecone) _pinecone = new Pinecone({ apiKey: process.env.PINECONE_API_KEY! });
+  return _pinecone;
+}
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY!,
-});
+let _openai: OpenAI | null = null;
+function getOpenAI() {
+  if (!_openai) _openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
+  return _openai;
+}
 
 export type Namespace = 'spiritdao' | 'temporal-naturalism';
 
@@ -24,7 +28,7 @@ export interface RelevantContext {
  */
 async function getEmbedding(text: string): Promise<number[]> {
   try {
-    const response = await openai.embeddings.create({
+    const response = await getOpenAI().embeddings.create({
       model: 'text-embedding-3-small',
       input: text,
       dimensions: 1536,
@@ -71,7 +75,7 @@ export async function queryPinecone(
     }
 
     // Get the index
-    const index = pinecone.index(indexName);
+    const index = getPinecone().index(indexName);
 
     // Get embedding for user's message
     const embedding = await getEmbedding(userMessage);
@@ -136,7 +140,7 @@ export async function checkPineconeConnection(): Promise<boolean> {
   try {
     // Check sensemaker index (DAO)
     const daoIndexName = process.env.PINECONE_INDEX_NAME || 'sensemaker';
-    const daoIndex = pinecone.index(daoIndexName);
+    const daoIndex = getPinecone().index(daoIndexName);
     const daoStats = await daoIndex.describeIndexStats();
 
     console.log('[Pinecone] DAO index connection successful');
@@ -148,7 +152,7 @@ export async function checkPineconeConnection(): Promise<boolean> {
     );
 
     // Check spiritdao-books index (Philosophy)
-    const philIndex = pinecone.index('spiritdao-books');
+    const philIndex = getPinecone().index('spiritdao-books');
     const philStats = await philIndex.describeIndexStats();
 
     console.log('[Pinecone] Philosophy index connection successful');
@@ -173,7 +177,7 @@ export async function getNamespaceStats(namespace: Namespace): Promise<{
 }> {
   try {
     const indexName = process.env.PINECONE_INDEX_NAME || 'sensemaker';
-    const index = pinecone.index(indexName);
+    const index = getPinecone().index(indexName);
 
     const stats = await index.describeIndexStats();
     const namespaceStats = stats.namespaces?.[namespace];

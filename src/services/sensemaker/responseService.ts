@@ -3,9 +3,11 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { RelevantContext } from './pineconeService';
 
-const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY!,
-});
+let _anthropic: Anthropic | null = null;
+function getAnthropic() {
+  if (!_anthropic) _anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY! });
+  return _anthropic;
+}
 
 /**
  * System prompt for SpiritDAO Support (Claude)
@@ -160,7 +162,7 @@ Use this context to give accurate, specific answers. If context is sparse, draw 
 
     console.log('[Response] Calling Claude Haiku 4.5 for DAO support');
 
-    const message = await anthropic.messages.create({
+    const message = await getAnthropic().messages.create({
       model: 'claude-haiku-4-5-20251001',
       max_tokens: 1024,
       temperature: 0.7,
@@ -230,7 +232,7 @@ Use this context to inform your responses. Cite specific sources when referencin
 
     console.log('[Response] Calling Claude Sonnet 4.5 for Temporal Naturalism');
 
-    const message = await anthropic.messages.create({
+    const message = await getAnthropic().messages.create({
       model: 'claude-sonnet-4-6',
       max_tokens: 2000,
       temperature: 0.7,
