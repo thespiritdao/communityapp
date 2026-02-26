@@ -208,9 +208,9 @@ export async function GET(req: NextRequest) {
       timestamp: new Date().toISOString(),
       version: '1.0.0',
       features: {
-        routing: 'gpt-4o-mini',
-        daoSupport: 'gpt-4o-mini',
-        philosophy: 'claude-sonnet-4.5',
+        routing: 'claude-haiku-4-5-20251001',
+        daoSupport: 'claude-haiku-4-5-20251001',
+        philosophy: 'claude-sonnet-4-6',
         vectorSearch: 'pinecone',
       },
     });
