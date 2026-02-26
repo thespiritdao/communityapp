@@ -181,48 +181,68 @@ export async function POST(req: NextRequest) {
  * GET endpoint for health check
  */
 export async function GET(req: NextRequest) {
+  const checks: Record<string, { ok: boolean; error?: string }> = {};
+
+  // Check env vars present
+  const requiredEnvVars = ['OPENAI_API_KEY', 'ANTHROPIC_API_KEY', 'PINECONE_API_KEY'];
+  const missing = requiredEnvVars.filter((v) => !process.env[v]);
+  checks.envVars = missing.length === 0
+    ? { ok: true }
+    : { ok: false, error: `Missing: ${missing.join(', ')}` };
+
+  // Live-test Anthropic
   try {
-    // Check if required environment variables are set
-    const requiredEnvVars = [
-      'OPENAI_API_KEY',
-      'ANTHROPIC_API_KEY',
-      'PINECONE_API_KEY',
-    ];
-
-    const missing = requiredEnvVars.filter((varName) => !process.env[varName]);
-
-    if (missing.length > 0) {
-      return NextResponse.json(
-        {
-          status: 'error',
-          message: 'Missing required environment variables',
-          missing,
-        },
-        { status: 500 },
-      );
-    }
-
-    return NextResponse.json({
-      status: 'healthy',
-      message: 'Sensemaker AI Chat API is operational',
-      timestamp: new Date().toISOString(),
-      version: '1.0.0',
-      features: {
-        routing: 'claude-haiku-4-5-20251001',
-        daoSupport: 'claude-haiku-4-5-20251001',
-        philosophy: 'claude-sonnet-4-6',
-        vectorSearch: 'pinecone',
-      },
+    const Anthropic = (await import('@anthropic-ai/sdk')).default;
+    const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY! });
+    await client.messages.create({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 5,
+      messages: [{ role: 'user', content: 'ping' }],
     });
-  } catch (error: any) {
-    return NextResponse.json(
-      {
-        status: 'error',
-        message: error.message,
-      },
-      { status: 500 },
-    );
+    checks.anthropic = { ok: true };
+  } catch (e: any) {
+    checks.anthropic = { ok: false, error: e.message };
   }
+
+  // Live-test OpenAI
+  try {
+    const OpenAI = (await import('openai')).default;
+    const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
+    await client.embeddings.create({
+      model: 'text-embedding-3-small',
+      input: 'ping',
+      dimensions: 8,
+    });
+    checks.openai = { ok: true };
+  } catch (e: any) {
+    checks.openai = { ok: false, error: e.message };
+  }
+
+  // Live-test Pinecone
+  try {
+    const { Pinecone } = await import('@pinecone-database/pinecone');
+    const pc = new Pinecone({ apiKey: process.env.PINECONE_API_KEY! });
+    await pc.index(process.env.PINECONE_INDEX_NAME || 'sensemaker').describeIndexStats();
+    checks.pinecone = { ok: true };
+  } catch (e: any) {
+    checks.pinecone = { ok: false, error: e.message };
+  }
+
+  const allOk = Object.values(checks).every((c) => c.ok);
+
+  return NextResponse.json(
+    {
+      status: allOk ? 'healthy' : 'degraded',
+      timestamp: new Date().toISOString(),
+      models: {
+        routing: 'claude-haiku-4-5-20251001',
+        dao: 'claude-haiku-4-5-20251001',
+        philosophy: 'claude-sonnet-4-6',
+      },
+      checks,
+    },
+    { status: allOk ? 200 : 500 },
+  );
 }
 
 /**
