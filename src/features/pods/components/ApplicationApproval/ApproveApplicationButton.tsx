@@ -382,6 +382,8 @@ export const ApproveApplicationButton: React.FC<
       });
 
       // Encode createHat call
+      // NOTE: Hats Protocol reverts on address(0) for eligibility or toggle.
+      // Use address(1) as the dummy eligibility (no on-chain enforcement) per existing patterns.
       const createHatData = encodeFunctionData({
         abi: CREATE_HAT_ABI,
         functionName: 'createHat',
@@ -389,8 +391,8 @@ export const ApproveApplicationButton: React.FC<
           adminHatBigInt,
           details,
           1000, // maxSupply
-          '0x0000000000000000000000000000000000000000' as `0x${string}`, // eligibility
-          toggleModule, // toggle
+          '0x0000000000000000000000000000000000000001' as `0x${string}`, // eligibility (address(1) = no enforcement)
+          toggleModule, // toggle = creator EOA
           true, // mutable
           '', // imageURI
         ],
