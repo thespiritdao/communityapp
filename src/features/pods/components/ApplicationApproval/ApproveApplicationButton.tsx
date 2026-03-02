@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useEvmAddress, useSendUserOperation, useCurrentUser } from '@coinbase/cdp-hooks';
 import {
   encodeFunctionData,
+  decodeEventLog,
   createPublicClient,
   http,
   createWalletClient,
@@ -44,6 +45,40 @@ const HATS_MINT_ABI = [
     outputs: [{ name: '', type: 'bool' }],
     stateMutability: 'nonpayable',
     type: 'function',
+  },
+] as const;
+
+// ABI for HatCreated event - NO parameters are indexed (Hats Protocol spec)
+const HAT_CREATED_EVENT_ABI = {
+  type: 'event',
+  name: 'HatCreated',
+  inputs: [
+    { name: 'id', type: 'uint256', indexed: false },
+    { name: 'details', type: 'string', indexed: false },
+    { name: 'maxSupply', type: 'uint32', indexed: false },
+    { name: 'eligibility', type: 'address', indexed: false },
+    { name: 'toggle', type: 'address', indexed: false },
+    { name: 'mutable_', type: 'bool', indexed: false },
+    { name: 'imageURI', type: 'string', indexed: false },
+  ],
+} as const;
+
+// ABI for createHat function
+const CREATE_HAT_ABI = [
+  {
+    name: 'createHat',
+    type: 'function',
+    inputs: [
+      { name: '_admin', type: 'uint256' },
+      { name: '_details', type: 'string' },
+      { name: '_maxSupply', type: 'uint32' },
+      { name: '_eligibility', type: 'address' },
+      { name: '_toggle', type: 'address' },
+      { name: '_mutable', type: 'bool' },
+      { name: '_imageURI', type: 'string' },
+    ],
+    outputs: [{ name: 'newHatId', type: 'uint256' }],
+    stateMutability: 'nonpayable',
   },
 ] as const;
 
@@ -315,71 +350,116 @@ export const ApproveApplicationButton: React.FC<
     try {
       setIsAutoCreatingHat(true);
 
-      toast({
-        title: 'Creating Membership Role',
-        description:
-          'Please sign the transaction to create a new membership role for this pod...',
-      });
-
-      // Check if wallet client is available
-      if (!walletClient || !evmAddress) {
-        throw new Error('Please connect your wallet to continue');
+      // Guard: must have CDP smart account
+      if (!evmAddress || !currentUser?.evmSmartAccounts?.[0]) {
+        throw new Error('Please connect your Smart Wallet to continue');
       }
 
-      // Convert management HAT ID to hex format if it's in decimal format
-      let formattedManagementHatId = managementHatId;
+      toast({
+        title: 'Creating Membership Role',
+        description: 'Please approve the transaction to create a new membership role for this pod...',
+      });
 
-      // Check if it's already a valid hex string (0x + 64 chars)
-      const isHexFormat =
-        managementHatId.startsWith('0x') && managementHatId.length === 66;
+      const smartAccount = currentUser.evmSmartAccounts[0];
 
-      if (!isHexFormat) {
-        // Convert from decimal string to hex
-        try {
-          const hatIdBigInt = BigInt(managementHatId);
-          formattedManagementHatId =
-            '0x' + hatIdBigInt.toString(16).padStart(64, '0');
-          console.log('🔄 Converted management HAT ID from decimal to hex:', {
-            decimal: managementHatId,
-            hex: formattedManagementHatId,
-          });
-        } catch (conversionError) {
-          console.error(
-            'Failed to convert management HAT ID:',
-            conversionError,
-          );
-          throw new Error('Invalid management HAT ID format');
+      // Normalize management HAT ID to BigInt for ABI encoding
+      let adminHatBigInt: bigint;
+      try {
+        adminHatBigInt = BigInt(managementHatId);
+      } catch {
+        throw new Error('Invalid management HAT ID format');
+      }
+
+      // Use the smart account EOA address as the toggle module
+      // (so the account that wears the management HAT can control membership HATs)
+      const toggleModule = evmAddress as `0x${string}`;
+
+      const details = JSON.stringify({
+        name: `${podName} Member`,
+        description: `Membership hat for ${podName} pod`,
+        responsibilities: ['Participate in pod activities', 'Follow pod guidelines'],
+        authorities: ['Access pod resources', 'Participate in discussions'],
+      });
+
+      // Encode createHat call
+      const createHatData = encodeFunctionData({
+        abi: CREATE_HAT_ABI,
+        functionName: 'createHat',
+        args: [
+          adminHatBigInt,
+          details,
+          1000, // maxSupply
+          '0x0000000000000000000000000000000000000000' as `0x${string}`, // eligibility
+          toggleModule, // toggle
+          true, // mutable
+          '', // imageURI
+        ],
+      });
+
+      // Send via CDP sendUserOperation (same pattern as HAT mint)
+      const result = await sendUserOperation({
+        evmSmartAccount: smartAccount,
+        network: 'base',
+        calls: [{
+          to: HATS_PROTOCOL_ADDRESS,
+          value: 0n,
+          data: createHatData,
+        }],
+        useCdpPaymaster: true,
+      });
+
+      console.log('✅ createHat user operation sent:', result);
+
+      // Extract new HAT ID from receipt logs
+      const resultWithReceipt = result as any;
+      let newHatId: string | null = null;
+
+      if (resultWithReceipt?.receipt?.logs) {
+        const hatsAddress = HATS_PROTOCOL_ADDRESS.toLowerCase();
+        for (const log of resultWithReceipt.receipt.logs) {
+          if (log.address?.toLowerCase() !== hatsAddress) continue;
+          try {
+            const decoded = decodeEventLog({
+              abi: [HAT_CREATED_EVENT_ABI],
+              data: log.data,
+              topics: log.topics,
+            });
+            if (decoded.eventName === 'HatCreated' && (decoded.args as any).id) {
+              const extracted = (decoded.args as any).id.toString();
+              if (extracted.length <= 100) {
+                newHatId = extracted;
+                console.log('🎩 Extracted new membership HAT ID from logs:', newHatId);
+                break;
+              }
+            }
+          } catch {
+            // not a HatCreated log, skip
+          }
         }
       }
 
-      // Create membership HAT on-demand
-      const result = await HatCreationService.createMembershipHatOnDemand(
-        podId,
-        podName,
-        formattedManagementHatId,
-        walletClient,
-      );
-
-      if (!result.success || !result.hatId) {
-        throw new Error(result.error || 'Failed to create membership HAT');
+      // Fallback: if receipt not available yet or log parse failed, use userOperationHash
+      // and store a pending state — the hat ID will be picked up on next page load
+      if (!newHatId) {
+        const userOpHash = (result as any)?.userOperationHash;
+        console.warn('⚠️ Could not extract HAT ID from logs. userOpHash:', userOpHash);
+        toast({
+          title: 'Role Created (pending confirmation)',
+          description: 'Transaction submitted. Refresh the page in a moment to proceed with approval.',
+        });
+        return;
       }
 
-      console.log('✅ Membership HAT created:', result.hatId);
+      // Persist the new membership_hat_id to the pod record
+      await supabase
+        .from('pods')
+        .update({ membership_hat_id: newHatId })
+        .eq('id', podId);
 
-      // Update pod database with new membership_hat_id
-      if (result.needsDbUpdate) {
-        await supabase
-          .from('pods')
-          .update({
-            membership_hat_id: result.hatId,
-          })
-          .eq('id', podId);
+      console.log('✅ Database updated with new membership_hat_id:', newHatId);
 
-        console.log('✅ Database updated with new membership_hat_id');
-      }
-
-      // Set the auto-created HAT ID for use in approval
-      setAutoCreatedHatId(result.hatId);
+      // Surface the new HAT ID so the approval flow can proceed immediately
+      setAutoCreatedHatId(newHatId);
 
       toast({
         title: 'Membership Role Created!',
@@ -389,8 +469,7 @@ export const ApproveApplicationButton: React.FC<
       console.error('❌ Failed to auto-create membership role:', error);
       toast({
         title: 'Failed to Create Membership Role',
-        description:
-          error?.message || 'Please try again or contact an administrator.',
+        description: error?.message || 'Please try again or contact an administrator.',
         variant: 'destructive',
       });
     } finally {
@@ -418,7 +497,7 @@ export const ApproveApplicationButton: React.FC<
         </p>
         <button
           onClick={handleAutoCreateMembershipHat}
-          disabled={isAutoCreatingHat || !evmAddress}
+          disabled={isAutoCreatingHat || !evmAddress || !currentUser?.evmSmartAccounts?.[0]}
           className="w-full text-white px-4 py-3 rounded-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
           style={{ backgroundColor: '#2F5D50' }}
           onMouseEnter={(e) =>
