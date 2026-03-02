@@ -350,19 +350,19 @@ export const ApproveApplicationButton: React.FC<
     try {
       setIsAutoCreatingHat(true);
 
-      // Guard: must have CDP smart account
       if (!evmAddress || !currentUser?.evmSmartAccounts?.[0]) {
         throw new Error('Please connect your Smart Wallet to continue');
       }
 
-      toast({
-        title: 'Creating Membership Role',
-        description: 'Please approve the transaction to create a new membership role for this pod...',
-      });
+      if (!publicClient) {
+        throw new Error('Public client not available');
+      }
 
       const smartAccount = currentUser.evmSmartAccounts[0];
+      const smartAccountAddress = (typeof smartAccount === 'string'
+        ? smartAccount
+        : (smartAccount as any).address) as `0x${string}`;
 
-      // Normalize management HAT ID to BigInt for ABI encoding
       let adminHatBigInt: bigint;
       try {
         adminHatBigInt = BigInt(managementHatId);
@@ -370,106 +370,55 @@ export const ApproveApplicationButton: React.FC<
         throw new Error('Invalid management HAT ID format');
       }
 
-      // Normalize smart account to address string
-      const smartAccountAddress = (typeof smartAccount === 'string'
-        ? smartAccount
-        : (smartAccount as any).address) as `0x${string}`;
+      // Step 1: Pre-read getNextId so we know the hat ID before sending the tx
+      const GET_NEXT_ID_ABI = [{
+        name: 'getNextId',
+        type: 'function',
+        inputs: [{ name: '_admin', type: 'uint256' }],
+        outputs: [{ name: 'nextId', type: 'uint256' }],
+        stateMutability: 'view',
+      }] as const;
 
-      // Use the smart account address as the toggle module
-      // (consistent with how minted hats reference the smart account)
-      const toggleModule = smartAccountAddress;
+      const predictedHatId = await publicClient.readContract({
+        address: HATS_PROTOCOL_ADDRESS as `0x${string}`,
+        abi: GET_NEXT_ID_ABI,
+        functionName: 'getNextId',
+        args: [adminHatBigInt],
+      });
+      const newHatId = predictedHatId.toString();
+      console.log('🔮 Predicted new membership HAT ID:', newHatId);
 
-      // Simple string details to minimize calldata size
-      const details = `${podName} Member`;
+      toast({
+        title: 'Creating Membership Role',
+        description: 'Submitting transaction to create a new membership role...',
+      });
 
-      // Encode createHat call
-      // NOTE: Hats Protocol reverts on address(0) for eligibility or toggle.
-      // Use address(1) as the dummy eligibility (no on-chain enforcement) per existing patterns.
+      // Step 2: Send createHat transaction
       const createHatData = encodeFunctionData({
         abi: CREATE_HAT_ABI,
         functionName: 'createHat',
         args: [
           adminHatBigInt,
-          details,
-          1000, // maxSupply
-          '0x0000000000000000000000000000000000000001' as `0x${string}`, // eligibility (address(1) = no enforcement)
-          toggleModule, // toggle = smart account address
-          true, // mutable
-          '', // imageURI
+          `${podName} Member`,
+          1000,
+          '0x0000000000000000000000000000000000000001' as `0x${string}`,
+          smartAccountAddress,
+          true,
+          '',
         ],
       });
 
-      console.log('📋 createHat calldata args:', {
-        admin: adminHatBigInt.toString(),
-        adminHex: '0x' + adminHatBigInt.toString(16),
-        details,
-        maxSupply: 1000,
-        eligibility: '0x0000000000000000000000000000000000000001',
-        toggle: toggleModule,
-        mutable: true,
-        imageURI: '',
-        callerSmartAccount: smartAccountAddress,
-      });
-
-      // Use paymasterUrl for gas sponsorship — more compatible with ERC-7677 standard
-      // than useCdpPaymaster (which may have function-level restrictions)
       const paymasterUrl = process.env.NEXT_PUBLIC_PAYMASTER;
-
-      // Send via CDP sendUserOperation
       const result = await sendUserOperation({
         evmSmartAccount: smartAccount,
         network: 'base',
-        calls: [{
-          to: HATS_PROTOCOL_ADDRESS,
-          value: 0n,
-          data: createHatData,
-        }],
+        calls: [{ to: HATS_PROTOCOL_ADDRESS, value: 0n, data: createHatData }],
         ...(paymasterUrl ? { paymasterUrl } : { useCdpPaymaster: true }),
       });
 
-      console.log('✅ createHat user operation sent:', result);
+      console.log('✅ createHat userOp submitted:', (result as any)?.userOperationHash);
 
-      // Extract new HAT ID from receipt logs
-      const resultWithReceipt = result as any;
-      let newHatId: string | null = null;
-
-      if (resultWithReceipt?.receipt?.logs) {
-        const hatsAddress = HATS_PROTOCOL_ADDRESS.toLowerCase();
-        for (const log of resultWithReceipt.receipt.logs) {
-          if (log.address?.toLowerCase() !== hatsAddress) continue;
-          try {
-            const decoded = decodeEventLog({
-              abi: [HAT_CREATED_EVENT_ABI],
-              data: log.data,
-              topics: log.topics,
-            });
-            if (decoded.eventName === 'HatCreated' && (decoded.args as any).id) {
-              const extracted = (decoded.args as any).id.toString();
-              if (extracted.length <= 100) {
-                newHatId = extracted;
-                console.log('🎩 Extracted new membership HAT ID from logs:', newHatId);
-                break;
-              }
-            }
-          } catch {
-            // not a HatCreated log, skip
-          }
-        }
-      }
-
-      // Fallback: if receipt not available yet or log parse failed, use userOperationHash
-      // and store a pending state — the hat ID will be picked up on next page load
-      if (!newHatId) {
-        const userOpHash = (result as any)?.userOperationHash;
-        console.warn('⚠️ Could not extract HAT ID from logs. userOpHash:', userOpHash);
-        toast({
-          title: 'Role Created (pending confirmation)',
-          description: 'Transaction submitted. Refresh the page in a moment to proceed with approval.',
-        });
-        return;
-      }
-
-      // Persist the new membership_hat_id to the pod record
+      // Step 3: Update DB with the predicted hat ID (confirmed by tx success)
       await supabase
         .from('pods')
         .update({ membership_hat_id: newHatId })
@@ -477,7 +426,6 @@ export const ApproveApplicationButton: React.FC<
 
       console.log('✅ Database updated with new membership_hat_id:', newHatId);
 
-      // Surface the new HAT ID so the approval flow can proceed immediately
       setAutoCreatedHatId(newHatId);
 
       toast({
