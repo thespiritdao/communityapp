@@ -370,16 +370,17 @@ export const ApproveApplicationButton: React.FC<
         throw new Error('Invalid management HAT ID format');
       }
 
-      // Use the smart account EOA address as the toggle module
-      // (so the account that wears the management HAT can control membership HATs)
-      const toggleModule = evmAddress as `0x${string}`;
+      // Normalize smart account to address string
+      const smartAccountAddress = (typeof smartAccount === 'string'
+        ? smartAccount
+        : (smartAccount as any).address) as `0x${string}`;
 
-      const details = JSON.stringify({
-        name: `${podName} Member`,
-        description: `Membership hat for ${podName} pod`,
-        responsibilities: ['Participate in pod activities', 'Follow pod guidelines'],
-        authorities: ['Access pod resources', 'Participate in discussions'],
-      });
+      // Use the smart account address as the toggle module
+      // (consistent with how minted hats reference the smart account)
+      const toggleModule = smartAccountAddress;
+
+      // Simple string details to minimize calldata size
+      const details = `${podName} Member`;
 
       // Encode createHat call
       // NOTE: Hats Protocol reverts on address(0) for eligibility or toggle.
@@ -392,13 +393,29 @@ export const ApproveApplicationButton: React.FC<
           details,
           1000, // maxSupply
           '0x0000000000000000000000000000000000000001' as `0x${string}`, // eligibility (address(1) = no enforcement)
-          toggleModule, // toggle = creator EOA
+          toggleModule, // toggle = smart account address
           true, // mutable
           '', // imageURI
         ],
       });
 
-      // Send via CDP sendUserOperation (same pattern as HAT mint)
+      console.log('📋 createHat calldata args:', {
+        admin: adminHatBigInt.toString(),
+        adminHex: '0x' + adminHatBigInt.toString(16),
+        details,
+        maxSupply: 1000,
+        eligibility: '0x0000000000000000000000000000000000000001',
+        toggle: toggleModule,
+        mutable: true,
+        imageURI: '',
+        callerSmartAccount: smartAccountAddress,
+      });
+
+      // Use paymasterUrl for gas sponsorship — more compatible with ERC-7677 standard
+      // than useCdpPaymaster (which may have function-level restrictions)
+      const paymasterUrl = process.env.NEXT_PUBLIC_PAYMASTER;
+
+      // Send via CDP sendUserOperation
       const result = await sendUserOperation({
         evmSmartAccount: smartAccount,
         network: 'base',
@@ -407,7 +424,7 @@ export const ApproveApplicationButton: React.FC<
           value: 0n,
           data: createHatData,
         }],
-        useCdpPaymaster: true,
+        ...(paymasterUrl ? { paymasterUrl } : { useCdpPaymaster: true }),
       });
 
       console.log('✅ createHat user operation sent:', result);
