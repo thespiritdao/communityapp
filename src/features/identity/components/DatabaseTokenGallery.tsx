@@ -203,25 +203,16 @@ export const DatabaseTokenGallery: React.FC<DatabaseTokenGalleryProps> =
       <div className="token-gallery">
         {ownedTokens.map((token, index) => (
           <div key={token.id} className="token-card">
-            <div className="token-image">
-              <Image
-                src={convertIpfsUrl(token.token_image)}
-                alt={token.name}
-                width={60}
-                height={60}
-                className="rounded-full object-cover"
-                style={{ width: '60px', height: '60px', objectFit: 'cover', borderRadius: '50%' }}
-                onError={(e) => {
-                  (e.currentTarget as HTMLImageElement).src =
-                    '/images/symbolobinfin.png';
-                }}
-                unoptimized={
-                  token.token_image?.startsWith('ipfs://') ||
-                  token.token_image?.includes('ui-avatars.com') ||
-                  false
-                }
-              />
-            </div>
+            <div
+              className="token-image"
+              style={{
+                backgroundImage: `url(${convertIpfsUrl(token.token_image)})`,
+                backgroundSize: 'cover',
+                backgroundPosition: 'center',
+              }}
+              role="img"
+              aria-label={token.name}
+            />
             <div className="token-info">
               <div className="token-name">
                 {token.source === 'pod_roles' && token.role_name

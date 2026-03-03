@@ -305,24 +305,16 @@ export const TokenGallery: React.FC<TokenGalleryProps> = ({
         {podCredentials.map((credential, index) => (
           <div key={index} className="token-card">
             {credential.image ? (
-              <div className="token-image">
-                <Image
-                  src={LocalTokenService.sanitizeImageUrl(
-                    credential.image,
-                    credential.label,
-                  )}
-                  alt={credential.label}
-                  width={60}
-                  height={60}
-                  className="rounded-full object-cover"
-                  style={{ width: '60px', height: '60px', objectFit: 'cover', borderRadius: '50%' }}
-                  unoptimized={
-                    credential.image?.includes('ui-avatars.com') ||
-                    credential.image?.includes('supabase') ||
-                    false
-                  }
-                />
-              </div>
+              <div
+                className="token-image"
+                style={{
+                  backgroundImage: `url(${LocalTokenService.sanitizeImageUrl(credential.image, credential.label)})`,
+                  backgroundSize: 'cover',
+                  backgroundPosition: 'center',
+                }}
+                role="img"
+                aria-label={credential.label}
+              />
             ) : (
               <div className="token-placeholder">
                 <div className="placeholder-text">{credential.label}</div>
@@ -347,24 +339,16 @@ export const TokenGallery: React.FC<TokenGalleryProps> = ({
       {ownedTokens.map((token, index) => (
         <div key={index} className="token-card">
           {token.image ? (
-            <div className="token-image">
-              <Image
-                src={LocalTokenService.sanitizeImageUrl(
-                  token.image,
-                  token.name,
-                )}
-                alt={token.name}
-                width={60}
-                height={60}
-                className="rounded-full object-cover"
-                style={{ width: '60px', height: '60px', objectFit: 'cover', borderRadius: '50%' }}
-                unoptimized={
-                  token.image?.includes('ui-avatars.com') ||
-                  token.image?.startsWith('ipfs://') ||
-                  false
-                }
-              />
-            </div>
+            <div
+              className="token-image"
+              style={{
+                backgroundImage: `url(${LocalTokenService.sanitizeImageUrl(token.image, token.name)})`,
+                backgroundSize: 'cover',
+                backgroundPosition: 'center',
+              }}
+              role="img"
+              aria-label={token.name}
+            />
           ) : (
             <div className="token-placeholder">
               <div className="placeholder-text">{token.name}</div>
