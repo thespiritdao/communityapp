@@ -5,7 +5,7 @@ import { useEvmAddress } from '@coinbase/cdp-hooks';
 import { Card } from '@/components/ui/card';
 import { supabase } from '@/utils/supabaseClient';
 import { ApplicationApprovalCard } from './ApplicationApprovalCard';
-import { ClipboardList, CheckCircle, XCircle } from 'lucide-react';
+import { ClipboardList, CheckCircle, XCircle, AlertTriangle } from 'lucide-react';
 
 interface Application {
   id: string;
@@ -35,6 +35,7 @@ export const ApplicationsPanel: React.FC<ApplicationsPanelProps> = ({
   const { evmAddress: address } = useEvmAddress();
   const [applications, setApplications] = useState<Application[]>([]);
   const [loading, setLoading] = useState(true);
+  const [membershipHatId, setMembershipHatId] = useState<string | null>(null);
   const [filter, setFilter] = useState<'pending' | 'approved' | 'all'>(
     'pending',
   );
@@ -68,16 +69,24 @@ export const ApplicationsPanel: React.FC<ApplicationsPanelProps> = ({
     try {
       setLoading(true);
 
-      // ALWAYS load ALL applications - don't filter in query
-      const { data, error } = await supabase
-        .from('pod_membership_applications')
-        .select('*')
-        .eq('pod_id', podId)
-        .order('submitted_at', { ascending: false });
+      // Load pod membership_hat_id and applications in parallel
+      const [appsResult, podResult] = await Promise.all([
+        supabase
+          .from('pod_membership_applications')
+          .select('*')
+          .eq('pod_id', podId)
+          .order('submitted_at', { ascending: false }),
+        supabase
+          .from('pods')
+          .select('membership_hat_id')
+          .eq('id', podId)
+          .single(),
+      ]);
 
-      if (error) throw error;
+      if (appsResult.error) throw appsResult.error;
 
-      setApplications(data || []);
+      setApplications(appsResult.data || []);
+      setMembershipHatId(podResult.data?.membership_hat_id || null);
     } catch (error) {
       console.error('Failed to load applications:', error);
     } finally {
@@ -138,6 +147,25 @@ export const ApplicationsPanel: React.FC<ApplicationsPanelProps> = ({
           Review and approve applications from new members
         </p>
       </div>
+
+      {/* No member role banner — must be resolved before approvals can proceed */}
+      {canManageMembers && !membershipHatId && (
+        <div
+          className="flex items-start gap-3 p-4 rounded-lg"
+          style={{ backgroundColor: '#FEF3C7', border: '1px solid #F59E0B' }}
+        >
+          <AlertTriangle className="w-5 h-5 mt-0.5 flex-shrink-0" style={{ color: '#D97706' }} />
+          <div>
+            <p className="font-semibold text-sm" style={{ color: '#92400E' }}>
+              Member role not set up yet
+            </p>
+            <p className="text-sm mt-1" style={{ color: '#92400E' }}>
+              Before you can approve member applications, this pod needs a Member role with an on-chain hat.
+              Go to <strong>Settings → Roles</strong> and create a Member role first.
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Filter Tabs - Now on separate row */}
       <div className="flex gap-2 flex-wrap">
