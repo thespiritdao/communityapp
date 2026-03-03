@@ -315,6 +315,7 @@ export const TokenGallery: React.FC<TokenGalleryProps> = ({
                   width={60}
                   height={60}
                   className="rounded-full object-cover"
+                  style={{ width: '60px', height: '60px', objectFit: 'cover', borderRadius: '50%' }}
                   unoptimized={
                     credential.image?.includes('ui-avatars.com') ||
                     credential.image?.includes('supabase') ||
@@ -356,6 +357,7 @@ export const TokenGallery: React.FC<TokenGalleryProps> = ({
                 width={60}
                 height={60}
                 className="rounded-full object-cover"
+                style={{ width: '60px', height: '60px', objectFit: 'cover', borderRadius: '50%' }}
                 unoptimized={
                   token.image?.includes('ui-avatars.com') ||
                   token.image?.startsWith('ipfs://') ||

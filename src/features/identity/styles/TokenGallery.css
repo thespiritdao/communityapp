@@ -32,7 +32,17 @@
   display: flex;
   justify-content: center;
   align-items: center;
-  
+  flex-shrink: 0;
+}
+
+/* Ensure Next.js Image span wrapper and the rendered img both stay circular */
+.token-image > span,
+.token-image > span > img,
+.token-image > img {
+  width: 60px !important;
+  height: 60px !important;
+  border-radius: 50% !important;
+  object-fit: cover !important;
 }
 
 .token-placeholder {

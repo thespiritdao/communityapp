@@ -196,11 +196,17 @@
   overflow: hidden;
   position: relative;
   border-radius: 50%;
+  flex-shrink: 0;
 }
 
-.token-gallery-modal .token-image img {
-  border-radius: 50%; /* ⭕ makes the image circular */
-  object-fit: cover;
+/* Target both direct img and Next.js Image span wrapper */
+.token-gallery-modal .token-image > span,
+.token-gallery-modal .token-image > span > img,
+.token-gallery-modal .token-image > img {
+  width: 64px !important;
+  height: 64px !important;
+  border-radius: 50% !important;
+  object-fit: cover !important;
 }
 
 .token-gallery-modal .token-placeholder {

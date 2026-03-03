@@ -354,7 +354,7 @@ export function ProfileEditForm({
                     <img
                       src={profileImagePreview}
                       alt="Preview"
-                      style={{ maxWidth: '150px', borderRadius: '8px' }}
+                      style={{ width: '120px', height: '120px', borderRadius: '50%', objectFit: 'cover' }}
                     />
                   </div>
                 )}

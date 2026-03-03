@@ -210,6 +210,7 @@ export const DatabaseTokenGallery: React.FC<DatabaseTokenGalleryProps> =
                 width={60}
                 height={60}
                 className="rounded-full object-cover"
+                style={{ width: '60px', height: '60px', objectFit: 'cover', borderRadius: '50%' }}
                 onError={(e) => {
                   (e.currentTarget as HTMLImageElement).src =
                     '/images/symbolobinfin.png';
