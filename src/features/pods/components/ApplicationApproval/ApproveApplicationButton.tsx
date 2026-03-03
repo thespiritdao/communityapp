@@ -385,8 +385,8 @@ export const ApproveApplicationButton: React.FC<
         functionName: 'getNextId',
         args: [adminHatBigInt],
       });
-      const newHatId = predictedHatId.toString();
-      console.log('🔮 Predicted new membership HAT ID:', newHatId);
+      const newHatId = '0x' + predictedHatId.toString(16).padStart(64, '0');
+      console.log('🔮 Predicted new membership HAT ID (hex):', newHatId);
 
       toast({
         title: 'Creating Membership Role',
@@ -1243,12 +1243,28 @@ export const ApproveApplicationButton: React.FC<
         console.log('🔍 Applicant HAT balance:', Number(applicantBalance));
 
         if (Number(applicantBalance) > 0) {
-          console.error('❌ FAILED CHECK #5: Applicant already wears this HAT');
+          console.warn('⚠️ CHECK #5: Applicant already wears this HAT — marking application approved without re-minting');
+          // Hat already minted — still mark application approved and add to pod_members
+          await supabase
+            .from('pod_membership_applications')
+            .update({ status: 'approved', approved_at: new Date().toISOString() })
+            .eq('id', applicationId);
+          await supabase.from('pod_members').upsert({
+            pod_id: podId,
+            wallet: applicantAddress.toLowerCase(),
+            membership_type: roleLabel.toLowerCase(),
+            role: roleLabel.toLowerCase(),
+            hat_id: effectiveHatId,
+            is_active: true,
+            joined_at: new Date().toISOString(),
+          }, { onConflict: 'pod_id,wallet' });
+          const { data: pod } = await supabase.from('pods').select('name').eq('id', podId).single();
           toast({
-            title: 'Already Has Role',
-            description: 'This applicant already has this role. No need to mint again.',
-            variant: 'destructive',
+            title: '✅ Application Approved',
+            description: `${applicantProfile?.first_name || 'Applicant'} already holds this role. Application marked as approved.`,
+            duration: 5000,
           });
+          onSuccess?.();
           setIsTransactionPending(false);
           setIsProcessing(false);
           return;
@@ -1321,90 +1337,79 @@ export const ApproveApplicationButton: React.FC<
         useCdpPaymaster: true,           // ← ENABLE GAS SPONSORSHIP!
       });
 
-      console.log('✅ User operation sent successfully!', result);
+      const userOpHash = (result as any)?.userOperationHash;
+      console.log('✅ mintHat userOp submitted:', userOpHash);
 
-      // Handle success with receipt
-      // Type assertion needed due to incomplete CDP SDK types
-      const resultWithReceipt = result as any;
-      if (resultWithReceipt?.receipt) {
-        const txHash = resultWithReceipt.receipt.transactionHash;
+      // CDP sendUserOperation only returns { userOperationHash } — no receipt.
+      // Update DB immediately after submission (same pattern as createHat).
 
-        // Update application status
-        await supabase
-          .from('pod_membership_applications')
-          .update({
-            status: 'approved',
-            approved_at: new Date().toISOString(),
-          })
-          .eq('id', applicationId);
+      // Update application status
+      await supabase
+        .from('pod_membership_applications')
+        .update({
+          status: 'approved',
+          approved_at: new Date().toISOString(),
+        })
+        .eq('id', applicationId);
 
-        // Add to pod_members
-        await supabase.from('pod_members').insert({
-          pod_id: podId,
-          wallet: applicantAddress.toLowerCase(),
-          membership_type: roleLabel,
-          role: roleLabel,
-          hat_id: effectiveHatId,
-          is_active: true,
-          joined_at: new Date().toISOString(),
-        });
+      // Add to pod_members
+      await supabase.from('pod_members').insert({
+        pod_id: podId,
+        wallet: applicantAddress.toLowerCase(),
+        membership_type: roleLabel.toLowerCase(),
+        role: roleLabel.toLowerCase(),
+        hat_id: effectiveHatId,
+        is_active: true,
+        joined_at: new Date().toISOString(),
+      });
 
-        // Get pod name for notification
-        const { data: pod } = await supabase
-          .from('pods')
-          .select('name')
-          .eq('id', podId)
-          .single();
+      // Get pod name for notifications
+      const { data: pod } = await supabase
+        .from('pods')
+        .select('name')
+        .eq('id', podId)
+        .single();
 
-        // Send success notification to applicant
-        await supabase.from('general_notifications').insert({
-          recipient_address: applicantAddress.toLowerCase(),
-          sender_address: evmAddress.toLowerCase(),
-          notification_type: 'pod_application_status',
-          title: `Welcome to ${pod?.name || 'the pod'}!`,
-          message: `Your application has been approved and your ${roleLabel} role has been minted.`,
-          context_type: 'governance',
-          context_id: podId,
-          context_url: `/pods/${podId}`,
-        });
+      const applicantName = applicantProfile?.first_name && applicantProfile?.last_name
+        ? `${applicantProfile.first_name} ${applicantProfile.last_name}`
+        : applicantProfile?.first_name || undefined;
 
-        // Notify exec pod members of new member
-        await notifyExecPodOfNewMember({
-          newMemberAddress: applicantAddress,
-          newMemberName: applicantProfile?.first_name && applicantProfile?.last_name
-            ? `${applicantProfile.first_name} ${applicantProfile.last_name}`
-            : applicantProfile?.first_name || undefined,
-          podId,
-          podName: pod?.name || 'Unknown Pod',
-          roleLabel,
-        });
+      // Notify applicant
+      await supabase.from('general_notifications').insert({
+        recipient_address: applicantAddress.toLowerCase(),
+        sender_address: evmAddress.toLowerCase(),
+        notification_type: 'pod_application_status',
+        title: `Welcome to ${pod?.name || 'the pod'}!`,
+        message: `Your application has been approved and your ${roleLabel} role has been minted.`,
+        context_type: 'governance',
+        context_id: podId,
+        context_url: `/pods/${podId}`,
+      });
 
-        // Notify pod leaders of new member
-        await notifyPodLeadersOfNewMember({
-          newMemberAddress: applicantAddress,
-          newMemberName: applicantProfile?.first_name && applicantProfile?.last_name
-            ? `${applicantProfile.first_name} ${applicantProfile.last_name}`
-            : applicantProfile?.first_name || undefined,
-          podId,
-          podName: pod?.name || 'Unknown Pod',
-          roleLabel,
-        });
+      // Notify exec pod and pod leaders
+      await notifyExecPodOfNewMember({
+        newMemberAddress: applicantAddress,
+        newMemberName: applicantName,
+        podId,
+        podName: pod?.name || 'Unknown Pod',
+        roleLabel,
+      });
 
-        toast({
-          title: 'Application Approved!',
-          description: `${roleLabel} role minted successfully. Transaction: ${txHash?.slice(0, 10)}...`,
-          duration: 5000,
-        });
+      await notifyPodLeadersOfNewMember({
+        newMemberAddress: applicantAddress,
+        newMemberName: applicantName,
+        podId,
+        podName: pod?.name || 'Unknown Pod',
+        roleLabel,
+      });
 
-        onSuccess?.();
-      } else {
-        console.warn('⚠️ No receipt found in result');
-        toast({
-          title: 'Transaction Completed',
-          description: 'Member HAT minting completed but receipt not found. Please refresh.',
-          variant: 'destructive',
-        });
-      }
+      toast({
+        title: '🎉 Application Approved!',
+        description: `${applicantName ? applicantName + ' has been' : 'Applicant'} approved as a ${roleLabel} of ${pod?.name || 'the pod'}. Their role hat has been minted on-chain.`,
+        duration: 7000,
+      });
+
+      onSuccess?.();
     } catch (error: any) {
       console.error('❌ Member HAT minting failed:', error);
       console.error('Error details:', {
