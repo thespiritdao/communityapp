@@ -444,9 +444,6 @@ export const ClaimManagementHATButton: React.FC<
                   ✅ HAT is active and ready to claim
                 </p>
               )}
-              <p className="text-xs" style={{ color: '#C6933F' }}>
-                💡 This transaction is sponsored (no gas fees required)
-              </p>
             </div>
           </div>
 

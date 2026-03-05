@@ -486,8 +486,8 @@ export const PodManagementContainer = React.memo<PodManagementContainerProps>(
         <PodHeader pod={pod} isLoading={isLoadingPod} />
 
         <CardContent className="p-0">
-          {/* Claim Management HAT Button - shows when user is eligible but doesn't have HAT */}
-          {pod && pod.management_hat_id && userAddress && pod.pod_leads && (
+          {/* Claim Management HAT Button - only relevant once pod is active (hats minted by activatePod) */}
+          {pod && pod.status === 'active' && pod.management_hat_id && userAddress && pod.pod_leads && (
             <div className="p-4 border-b">
               <ClaimManagementHATButton
                 podId={podId}
