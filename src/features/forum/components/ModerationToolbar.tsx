@@ -4,7 +4,6 @@
 
 import { useState } from 'react';
 import { useEvmAddress } from '@coinbase/cdp-hooks';
-import { useRouter } from 'next/navigation';
 import { useModerationPermissions } from '../hooks/useModerationPermissions';
 import {
   pinThread,
@@ -40,7 +39,6 @@ export function ModerationToolbar({
   podId,
 }: ModerationToolbarProps) {
   const { evmAddress: address } = useEvmAddress();
-  const router = useRouter();
   const { canModerate, moderatorRoles } = useModerationPermissions(
     podId || undefined,
   );
@@ -70,7 +68,7 @@ export function ModerationToolbar({
       if (result.success) {
         console.log(`✅ ${actionName} successful`);
         if (isDelete && targetType === 'thread') {
-          router.push('/forum');
+          window.location.href = '/forum';
         } else {
           onActionComplete?.();
         }
@@ -106,20 +104,23 @@ export function ModerationToolbar({
     e.preventDefault();
     e.stopPropagation();
 
-    const confirmMsg =
-      targetType === 'thread'
-        ? 'Are you sure you want to delete this thread? This will also delete all posts in it.'
-        : 'Are you sure you want to delete this post?';
+    // Defer past current event loop so Radix dropdown close doesn't interfere
+    setTimeout(() => {
+      const confirmMsg =
+        targetType === 'thread'
+          ? 'Are you sure you want to delete this thread? This will also delete all posts in it.'
+          : 'Are you sure you want to delete this post?';
 
-    if (!confirm(confirmMsg)) return;
+      if (!confirm(confirmMsg)) return;
 
-    const reason = prompt('Reason for deletion (optional):') || undefined;
-    const action =
-      targetType === 'thread'
-        ? () => deleteThread(targetId, address, moderatorHatId, reason)
-        : () => deletePost(targetId, address, moderatorHatId, reason);
+      const reason = prompt('Reason for deletion (optional):') || undefined;
+      const action =
+        targetType === 'thread'
+          ? () => deleteThread(targetId, address!, moderatorHatId, reason)
+          : () => deletePost(targetId, address!, moderatorHatId, reason);
 
-    handleAction(action, 'Delete', true);
+      handleAction(action, 'Delete', true);
+    }, 0);
   };
 
   return (
