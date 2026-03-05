@@ -60,24 +60,23 @@ export async function POST(req: NextRequest) {
         .single();
 
       if (category?.pod_id) {
+        // Verify at least one forumModeration role exists for this pod
         const { data: roles } = await supabaseAdmin
           .from('pod_role_permissions')
           .select('permissions')
           .eq('pod_id', category.pod_id)
           .eq('is_active', true);
 
-        const hasModerationRole = roles?.some(
+        const hasModerationRole = (roles || []).some(
           (r: any) => r.permissions?.forumModeration === true,
         );
 
-        // Check if user holds any of those hats via user_hats or similar
-        // For now: verify the moderatorAddress matches a known exec/TN leader
-        // Full on-chain hat check is app-layer responsibility; we trust the
-        // client already gated the button behind useModerationPermissions.
-        // We still verify they are authenticated (token valid above).
         if (!hasModerationRole) {
-          return NextResponse.json({ error: 'No moderation roles exist for this pod' }, { status: 403 });
+          return NextResponse.json({ error: 'No moderation roles configured for this pod' }, { status: 403 });
         }
+
+        // TODO: add on-chain hat balance check here once hat_holders table exists
+        // For now: JWT validity + pod having a moderation role is the gate.
       }
     }
 
