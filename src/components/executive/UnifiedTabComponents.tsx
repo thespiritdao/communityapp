@@ -35,8 +35,191 @@ import {
   Clock,
   Brain,
   MessageSquare,
+  Shield,
+  AlertTriangle,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+
+// Pods Review Tab — exec veto/activate for pending_review pods
+export function PodsTab() {
+  const [pods, setPods] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [actionPending, setActionPending] = useState<string | null>(null);
+  const [vetoReason, setVetoReason] = useState<Record<string, string>>({});
+
+  const fetchPods = async () => {
+    setLoading(true);
+    try {
+      const { createClient } = await import('@supabase/supabase-js');
+      const supabase = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      );
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+
+      const res = await fetch('/api/pods/review', {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      const json = await res.json();
+      setPods(json.pods || []);
+    } catch (e) {
+      toast.error('Failed to load pending pods');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { fetchPods(); }, []);
+
+  const handleAction = async (podId: string, action: 'activate' | 'veto') => {
+    setActionPending(podId + action);
+    try {
+      const { createClient } = await import('@supabase/supabase-js');
+      const supabase = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      );
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+
+      const res = await fetch('/api/pods/review', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({
+          podId,
+          action,
+          reason: vetoReason[podId] || 'Vetoed by exec',
+        }),
+      });
+
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || 'Action failed');
+
+      toast.success(action === 'activate' ? 'Pod activated — hats minted to leaders' : 'Pod vetoed');
+      fetchPods();
+    } catch (e: any) {
+      toast.error(e.message || 'Action failed');
+    } finally {
+      setActionPending(null);
+    }
+  };
+
+  const vetoWindowDeadline = (createdAt: string) => {
+    const created = new Date(createdAt).getTime();
+    const deadline = created + 48 * 60 * 60 * 1000;
+    const now = Date.now();
+    const remaining = deadline - now;
+    if (remaining <= 0) return { expired: true, label: 'Window expired' };
+    const hours = Math.floor(remaining / 3600000);
+    const mins = Math.floor((remaining % 3600000) / 60000);
+    return { expired: false, label: `${hours}h ${mins}m remaining` };
+  };
+
+  if (loading) return (
+    <div className="flex items-center justify-center py-12">
+      <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      <span className="ml-2 text-muted-foreground">Loading pending pods...</span>
+    </div>
+  );
+
+  if (pods.length === 0) return (
+    <Card className="p-8 text-center">
+      <CheckCircle className="h-10 w-10 text-green-500 mx-auto mb-3" />
+      <p className="font-medium">No pods pending review</p>
+      <p className="text-sm text-muted-foreground mt-1">All pod proposals have been reviewed or the veto window has passed.</p>
+    </Card>
+  );
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-lg font-semibold">Pending Pod Proposals</h2>
+          <p className="text-sm text-muted-foreground">
+            Activate to mint hats to pod leaders, or veto within the 48h window.
+            Pods auto-activate after the window expires.
+          </p>
+        </div>
+        <Button variant="outline" size="sm" onClick={fetchPods}>
+          Refresh
+        </Button>
+      </div>
+
+      {pods.map((pod) => {
+        const window = vetoWindowDeadline(pod.created_at);
+        const isActivating = actionPending === pod.id + 'activate';
+        const isVetoing = actionPending === pod.id + 'veto';
+
+        return (
+          <Card key={pod.id} className="p-5">
+            <div className="flex items-start gap-4">
+              {pod.pod_image_url && (
+                <img src={pod.pod_image_url} alt={pod.name} className="w-12 h-12 rounded-full object-cover shrink-0" />
+              )}
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 mb-1">
+                  <h3 className="font-semibold text-base">{pod.name}</h3>
+                  <Badge variant="outline" className="text-xs">
+                    <Clock className="h-3 w-3 mr-1" />
+                    {window.label}
+                  </Badge>
+                  {window.expired && (
+                    <Badge variant="secondary" className="text-xs">
+                      <AlertTriangle className="h-3 w-3 mr-1" />
+                      Auto-activates next call
+                    </Badge>
+                  )}
+                </div>
+                <p className="text-sm text-muted-foreground mb-2 line-clamp-2">{pod.description}</p>
+                <div className="text-xs text-muted-foreground mb-1">
+                  <span className="font-medium">Proposed by:</span> {pod.created_by_address}
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  <span className="font-medium">Leaders ({pod.pod_leads?.length || 0}):</span>{' '}
+                  {(pod.pod_leads || []).join(', ')}
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-4 flex items-end gap-3">
+              <div className="flex-1">
+                <Input
+                  placeholder="Veto reason (optional)"
+                  value={vetoReason[pod.id] || ''}
+                  onChange={(e) => setVetoReason((r) => ({ ...r, [pod.id]: e.target.value }))}
+                  className="text-sm h-8"
+                />
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={!!actionPending || window.expired}
+                onClick={() => handleAction(pod.id, 'veto')}
+                className="text-red-600 border-red-200 hover:bg-red-50"
+              >
+                {isVetoing ? <Loader2 className="h-4 w-4 animate-spin" /> : <XCircle className="h-4 w-4 mr-1" />}
+                Veto
+              </Button>
+              <Button
+                size="sm"
+                disabled={!!actionPending}
+                onClick={() => handleAction(pod.id, 'activate')}
+                className="bg-green-700 hover:bg-green-800 text-white"
+              >
+                {isActivating ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle className="h-4 w-4 mr-1" />}
+                Activate
+              </Button>
+            </div>
+          </Card>
+        );
+      })}
+    </div>
+  );
+}
 
 // Overview Tab
 export function OverviewTab() {

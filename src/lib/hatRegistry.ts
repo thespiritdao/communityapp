@@ -82,7 +82,6 @@ async function loadFromDb(): Promise<HatIds> {
           .select('token_address')
           .eq('pod_id', lookup.podId)
           .ilike('role_name', lookup.roleName)
-          .eq('is_active', true)
           .limit(1)
           .single();
 
