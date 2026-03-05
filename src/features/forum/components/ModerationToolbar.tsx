@@ -4,6 +4,7 @@
 
 import { useState } from 'react';
 import { useEvmAddress } from '@coinbase/cdp-hooks';
+import { useRouter } from 'next/navigation';
 import { useModerationPermissions } from '../hooks/useModerationPermissions';
 import {
   pinThread,
@@ -39,6 +40,7 @@ export function ModerationToolbar({
   podId,
 }: ModerationToolbarProps) {
   const { evmAddress: address } = useEvmAddress();
+  const router = useRouter();
   const { canModerate, moderatorRoles } = useModerationPermissions(
     podId || undefined,
   );
@@ -60,13 +62,18 @@ export function ModerationToolbar({
   const handleAction = async (
     action: () => Promise<{ success: boolean; error?: string }>,
     actionName: string,
+    isDelete = false,
   ) => {
     setIsProcessing(true);
     try {
       const result = await action();
       if (result.success) {
         console.log(`✅ ${actionName} successful`);
-        onActionComplete?.();
+        if (isDelete && targetType === 'thread') {
+          router.push('/forum');
+        } else {
+          onActionComplete?.();
+        }
       } else {
         console.error(`❌ ${actionName} failed:`, result.error);
         alert(`Failed to ${actionName}: ${result.error}`);
@@ -109,7 +116,7 @@ export function ModerationToolbar({
         ? () => deleteThread(targetId, address, moderatorHatId, reason)
         : () => deletePost(targetId, address, moderatorHatId, reason);
 
-    handleAction(action, 'Delete');
+    handleAction(action, 'Delete', true);
   };
 
   return (

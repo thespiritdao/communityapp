@@ -215,12 +215,13 @@ export async function deleteThread(
 ): Promise<{ success: boolean; error?: string }> {
   try {
     // Delete thread (cascades to posts due to foreign key)
-    const { error: deleteError } = await supabase
+    const { error: deleteError, count } = await supabase
       .from('forum_threads')
-      .delete()
+      .delete({ count: 'exact' })
       .eq('id', threadId);
 
     if (deleteError) throw deleteError;
+    if (count === 0) throw new Error('Delete failed: thread not found or permission denied');
 
     // Log action after confirming delete succeeded
     await logModerationAction({
