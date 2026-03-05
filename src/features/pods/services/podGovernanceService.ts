@@ -192,8 +192,7 @@ This pod requests permission to:
       title: proposalTitle,
       body: proposalBody,
       targetContract:
-        process.env.NEXT_PUBLIC_POD_CREATION_CONTRACT ||
-        '0x43C124Df0dFb324CCC742808D9FdF62C764f2644',
+        process.env.NEXT_PUBLIC_POD_CREATION_MANAGER || '',
       functionName: 'activatePod',
       args: [podData.id],
     };

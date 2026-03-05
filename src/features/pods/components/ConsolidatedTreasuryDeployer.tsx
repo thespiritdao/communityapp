@@ -16,9 +16,8 @@ import { supabase } from '@/utils/supabaseClient';
 const POD_TREASURY_FACTORY_ADDRESS = (process.env
   .NEXT_PUBLIC_POD_TREASURY_FACTORY ||
   '0x0000000000000000000000000000000000000000') as `0x${string}`;
-const POD_CREATION_MANAGER_ADDRESS = (process.env
-  .NEXT_PUBLIC_POD_CREATION_MANAGER ||
-  '0x43C124Df0dFb324CCC742808D9FdF62C764f2644') as `0x${string}`;
+const POD_CREATION_MANAGER_ADDRESS = process.env
+  .NEXT_PUBLIC_POD_CREATION_MANAGER as `0x${string}`;
 const PODS_TESTING_MODE = process.env.NEXT_PUBLIC_PODS_TESTING === 'true';
 
 // Default supported tokens from environment (Your community currencies)

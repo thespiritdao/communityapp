@@ -37,7 +37,7 @@ const POD_CREATION_MANAGER_ABI = [
 ] as const;
 
 const POD_CREATION_MANAGER_ADDRESS =
-  '0x43C124Df0dFb324CCC742808D9FdF62C764f2644';
+  process.env.NEXT_PUBLIC_POD_CREATION_MANAGER as `0x${string}`;
 
 interface PodContractCreatorProps {
   onPodCreated?: (podId: string) => void;

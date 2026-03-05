@@ -12,7 +12,7 @@ import { Loader2 } from 'lucide-react';
 // Your deployed contract address
 const POD_CREATION_MANAGER_ADDRESS = (process.env
   .NEXT_PUBLIC_POD_CREATION_MANAGER ||
-  '0x43C124Df0dFb324CCC742808D9FdF62C764f2644') as `0x${string}`;
+  '') as `0x${string}`;
 
 // ABI for createPodProposal function
 const POD_CREATION_MANAGER_ABI = [
