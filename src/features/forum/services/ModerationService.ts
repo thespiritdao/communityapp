@@ -81,7 +81,7 @@ export async function pinThread(
     if (updateError) throw updateError;
 
     // Log action
-    await logModerationAction({
+    logModerationAction({
       moderator_address: moderatorAddress,
       moderator_hat_id: moderatorHatId,
       action_type: 'pin',
@@ -118,7 +118,7 @@ export async function unpinThread(
 
     if (updateError) throw updateError;
 
-    await logModerationAction({
+    logModerationAction({
       moderator_address: moderatorAddress,
       moderator_hat_id: moderatorHatId,
       action_type: 'unpin',
@@ -153,7 +153,7 @@ export async function lockThread(
 
     if (updateError) throw updateError;
 
-    await logModerationAction({
+    logModerationAction({
       moderator_address: moderatorAddress,
       moderator_hat_id: moderatorHatId,
       action_type: 'lock',
@@ -188,7 +188,7 @@ export async function unlockThread(
 
     if (updateError) throw updateError;
 
-    await logModerationAction({
+    logModerationAction({
       moderator_address: moderatorAddress,
       moderator_hat_id: moderatorHatId,
       action_type: 'unlock',
@@ -223,8 +223,8 @@ export async function deleteThread(
     if (deleteError) throw deleteError;
     if (count === 0) throw new Error('Delete failed: thread not found or permission denied');
 
-    // Log action after confirming delete succeeded
-    await logModerationAction({
+    // Log action after confirming delete succeeded (fire-and-forget, non-blocking)
+    logModerationAction({
       moderator_address: moderatorAddress,
       moderator_hat_id: moderatorHatId,
       action_type: 'delete',
@@ -265,7 +265,7 @@ export async function deletePost(
 
     if (updateError) throw updateError;
 
-    await logModerationAction({
+    logModerationAction({
       moderator_address: moderatorAddress,
       moderator_hat_id: moderatorHatId,
       action_type: 'delete',
@@ -336,7 +336,7 @@ export async function muteUser(
 
     if (insertError) throw insertError;
 
-    await logModerationAction({
+    logModerationAction({
       moderator_address: moderatorAddress,
       moderator_hat_id: null,
       action_type: 'mute',
