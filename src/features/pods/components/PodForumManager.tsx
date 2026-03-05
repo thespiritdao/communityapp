@@ -112,6 +112,13 @@ export default function PodForumManager({
         return;
       }
 
+      // Normalize: if the token is a decimal BigInt string (no 0x prefix), convert to hex
+      if (/^\d+$/.test(requiredToken.trim())) {
+        requiredToken = '0x' + BigInt(requiredToken).toString(16).padStart(64, '0');
+      }
+      // Always store lowercase
+      requiredToken = requiredToken.toLowerCase();
+
       console.log('Creating forum category with required_token:', requiredToken);
 
       const { data, error } = await supabase

@@ -226,6 +226,7 @@ export async function POST(req: NextRequest) {
       role: 'authenticated',
       iat: now,
       exp: now + 60 * 60 * 24 * 7, // 7 days
+      wallet_address: canonicalWallet,
       user_metadata: {
         wallet_address: canonicalWallet,
       },
