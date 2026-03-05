@@ -212,6 +212,7 @@ export const HatsModulePodCreationForm: React.FC<
     | 'rules'
     | 'review'
     | 'creating'
+    | 'submitted'
     | 'mint-hats'
     | 'set-hat-ids'
     | 'create-admin-hat'
@@ -278,6 +279,7 @@ export const HatsModulePodCreationForm: React.FC<
   const [hatCreationReceipt, setHatCreationReceipt] = useState<any>(null);
   const [extractedHatId, setExtractedHatId] = useState<string>('');
   const [proxyDeploymentComplete, setProxyDeploymentComplete] = useState(false);
+  const [isV2ChildPod, setIsV2ChildPod] = useState(false); // True for createPodProposal flow — no proxy needed
 
   // Button processing states for immediate UI feedback
   const [isCreatingPod, setIsCreatingPod] = useState(false);
@@ -1133,6 +1135,9 @@ export const HatsModulePodCreationForm: React.FC<
             config.podLeaders as `0x${string}`[],
           ],
         };
+        // V2 child pods: createPodProposal is the only user tx needed.
+        // Proxy deployment, admin hat, and mintHats are handled by exec on activation.
+        setIsV2ChildPod(true);
       }
 
       console.log('🔧 Available parent options:', availableParentPods);
@@ -1231,21 +1236,24 @@ export const HatsModulePodCreationForm: React.FC<
         });
       }
 
-      // Always include proxy deployment (user deploys their own proxy)
-      if (
-        !proxyDeploymentCall.to ||
-        !/^0x[a-fA-F0-9]{40}$/.test(proxyDeploymentCall.to) ||
-        !proxyDeploymentCall.functionName ||
-        !proxyDeploymentCall.args
-      ) {
-        throw new Error('Invalid proxy deployment transaction call prepared');
+      // For V2 child pods (createPodProposal flow), proxy deployment is done by exec on activation.
+      // Only include proxy deployment for top-level pods.
+      if (isTopLevel) {
+        if (
+          !proxyDeploymentCall.to ||
+          !/^0x[a-fA-F0-9]{40}$/.test(proxyDeploymentCall.to) ||
+          !proxyDeploymentCall.functionName ||
+          !proxyDeploymentCall.args
+        ) {
+          throw new Error('Invalid proxy deployment transaction call prepared');
+        }
+        transactionCalls.push({
+          address: proxyDeploymentCall.to as `0x${string}`,
+          abi: proxyDeploymentCall.abi,
+          functionName: proxyDeploymentCall.functionName,
+          args: proxyDeploymentCall.args,
+        });
       }
-      transactionCalls.push({
-        address: proxyDeploymentCall.to as `0x${string}`,
-        abi: proxyDeploymentCall.abi,
-        functionName: proxyDeploymentCall.functionName,
-        args: proxyDeploymentCall.args,
-      });
 
       console.log('📦 Transaction calls prepared:', {
         totalCalls: transactionCalls.length,
@@ -1793,6 +1801,14 @@ export const HatsModulePodCreationForm: React.FC<
             blockchainPodId: blockchainPodId,
           });
 
+          // V2 child pods go straight to pending_review (exec veto window)
+          if (isV2ChildPod && podData?.podId) {
+            await supabase
+              .from('pods')
+              .update({ status: 'pending_review', is_active: false })
+              .eq('id', podData.podId);
+          }
+
           // ✅ RENAME IMAGE FILE: Now that we have the real pod ID, move the image file
           if (
             formData.podImage &&
@@ -1957,6 +1973,30 @@ export const HatsModulePodCreationForm: React.FC<
           }
         } else {
           console.warn('⚠️ Skipping role creation - missing pod ID or HAT ID');
+        }
+
+        // V2 child pods: no user-side minting needed — exec does it via activatePod
+        if (isV2ChildPod) {
+          console.log('✅ V2 child pod submitted for exec review');
+          toast({
+            title: 'Pod Submitted for Review',
+            description: 'Your pod is pending exec review. You will be notified when it goes live.',
+          });
+          setStep('submitted');
+          setShowTransaction(false);
+
+          // Notify exec via API (non-blocking)
+          try {
+            await fetch('/api/pods/notify-exec', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ podId: podData?.podId, podName: formData.name }),
+            });
+          } catch (notifErr) {
+            console.warn('⚠️ Could not send exec notification:', notifErr);
+          }
+
+          return;
         }
 
         // ✅ PHASE 3: Prepare mintHat calls for OnchainKit Transaction (sponsored)
@@ -2249,6 +2289,7 @@ export const HatsModulePodCreationForm: React.FC<
       extractedHatId,
       extractedProxyAddress,
       availableParentPods,
+      isV2ChildPod,
     ],
   );
 
@@ -3765,12 +3806,19 @@ export const HatsModulePodCreationForm: React.FC<
         if (hatId) setExtractedHatId(hatId);
         setHatCreationReceipt(receipt);
         setHatCreationComplete(true);
-        console.log('🔄 Moving to proxy deployment...');
+
+        if (isV2ChildPod) {
+          // V2 child pod: no proxy tx needed — go straight to DB save + submitted state
+          console.log('✅ V2 child pod — skipping proxy, saving pod to DB...');
+          handleTransactionSuccess({ transactionReceipts: [receipt] });
+        } else {
+          console.log('🔄 Moving to proxy deployment...');
+        }
       } else {
         console.warn('⚠️ No receipt or userOperationHash found in HAT creation response');
       }
     }
-  }, [publicClient, formData.parentPodId, transactionCalls]);
+  }, [publicClient, formData.parentPodId, transactionCalls, isV2ChildPod, handleTransactionSuccess]);
 
   // Handle Phase 1: HAT Creation errors
   const handleHatCreationError = useCallback((error: any) => {
@@ -4402,6 +4450,28 @@ export const HatsModulePodCreationForm: React.FC<
                     )}
                 </>
               )}
+            </div>
+          </div>
+        )}
+
+        {/* V2: Pod Submitted for Review */}
+        {step === 'submitted' && (
+          <div className="space-y-6">
+            <div className="p-6 rounded-lg border border-green-200 bg-green-50 text-center">
+              <CheckCircle className="h-12 w-12 text-green-600 mx-auto mb-4" />
+              <h3 className="font-semibold text-lg text-green-800 mb-2">Pod Submitted for Review</h3>
+              <p className="text-sm text-green-700 mb-4">
+                Your pod has been submitted and is pending exec approval. Leadership tokens will be issued automatically once approved.
+              </p>
+              <p className="text-xs text-green-600 mb-6">
+                The exec team has been notified and will review your pod within 48 hours.
+              </p>
+              <Button
+                onClick={() => router.push('/pods')}
+                className="bg-green-700 hover:bg-green-800 text-white"
+              >
+                Back to Pods
+              </Button>
             </div>
           </div>
         )}
@@ -5139,6 +5209,7 @@ export const HatsModulePodCreationForm: React.FC<
           <div>
             {step !== 'config' &&
               step !== 'creating' &&
+              step !== 'submitted' &&
               step !== 'mint-hats' &&
               step !== 'create-admin-hat' &&
               step !== 'mint-admin-hat' &&
@@ -5162,6 +5233,7 @@ export const HatsModulePodCreationForm: React.FC<
 
           <div className="flex gap-2">
             {step !== 'creating' &&
+              step !== 'submitted' &&
               step !== 'mint-hats' &&
               step !== 'create-admin-hat' &&
               step !== 'mint-admin-hat' &&
