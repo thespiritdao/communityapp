@@ -58,7 +58,7 @@ export function PodsTab() {
       const { data: { session } } = await supabase.auth.getSession();
       const token = session?.access_token;
 
-      const res = await fetch('/api/pods/review', {
+      const res = await fetch('/api/pods/review?scope=exec', {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
       const json = await res.json();

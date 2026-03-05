@@ -20,6 +20,7 @@ import {
   FileText,
   ClipboardList,
   Image as ImageIcon,
+  GitBranch,
 } from 'lucide-react';
 import { MembersPanel } from './MembersPanel/MembersPanel';
 import { PodManagerControlPanel } from './PodManagerControlPanel';
@@ -30,6 +31,7 @@ import { ApplicationsPanel } from './ApplicationApproval';
 import { PodDeletionButtonV2 } from '@/app/pods/[id]/manage/components/PodDeletionButtonV2';
 import { ClaimManagementHATButton } from './ClaimManagementHATButton';
 import { PodSettingsPanel } from './PodSettingsPanel';
+import { SubPodReviewPanel } from './SubPodReviewPanel';
 import { usePodManagementState } from '../hooks/usePodManagementState';
 import { usePodManagementHandlers } from '../hooks/usePodManagementHandlers';
 import '../styles/tab-navigation.css';
@@ -139,6 +141,17 @@ const TabContent = React.memo<{
           </div>
         );
 
+      case 'sub_pod_review':
+        return (
+          <div className="p-6">
+            <SubPodReviewPanel
+              podId={podId}
+              podName={pod?.name || 'This Pod'}
+              canManage={canManageMembers}
+            />
+          </div>
+        );
+
       case 'deletion':
         return (
           <div className="p-6">
@@ -180,6 +193,7 @@ const TabNavigation = React.memo<{
   leaderCount: number;
   canManageMembers: boolean;
   canManageTreasury: boolean;
+  subPodsEnabled?: boolean;
 }>(
   ({
     activeTab,
@@ -188,6 +202,7 @@ const TabNavigation = React.memo<{
     leaderCount,
     canManageMembers,
     canManageTreasury,
+    subPodsEnabled = false,
   }) => {
     const tabs = React.useMemo(
       () => [
@@ -248,6 +263,14 @@ const TabNavigation = React.memo<{
           enabled: canManageMembers, // Only pod leaders can edit settings
         },
         {
+          id: 'sub_pod_review',
+          label: 'Sub-Pods',
+          mobileLabel: 'Sub-Pods',
+          icon: GitBranch,
+          badge: null,
+          enabled: canManageMembers && subPodsEnabled,
+        },
+        {
           id: 'deletion',
           label: 'Delete Pod',
           mobileLabel: 'Delete',
@@ -256,7 +279,7 @@ const TabNavigation = React.memo<{
           enabled: canManageMembers, // Only pod leaders can delete
         },
       ],
-      [memberCount, leaderCount, canManageMembers, canManageTreasury],
+      [memberCount, leaderCount, canManageMembers, canManageTreasury, subPodsEnabled],
     );
 
     // Add a small loading state to prevent layout shift
@@ -481,6 +504,22 @@ export const PodManagementContainer = React.memo<PodManagementContainerProps>(
       [members.length, leaders.length],
     );
 
+    // Check if sub-pods module is enabled for this pod
+    const [subPodsEnabled, setSubPodsEnabled] = React.useState(false);
+    React.useEffect(() => {
+      if (!podId) return;
+      import('@/utils/supabaseClient').then(({ supabase }) => {
+        supabase
+          .from('pod_modules')
+          .select('sub_pods_enabled')
+          .eq('pod_id', podId)
+          .single()
+          .then(({ data }) => {
+            setSubPodsEnabled(data?.sub_pods_enabled ?? false);
+          });
+      });
+    }, [podId]);
+
     return (
       <Card className="w-full max-w-6xl mx-auto">
         <PodHeader pod={pod} isLoading={isLoadingPod} />
@@ -505,6 +544,7 @@ export const PodManagementContainer = React.memo<PodManagementContainerProps>(
             leaderCount={leaderCount}
             canManageMembers={canManageMembers}
             canManageTreasury={canManageTreasury}
+            subPodsEnabled={subPodsEnabled}
           />
 
           <TabContent

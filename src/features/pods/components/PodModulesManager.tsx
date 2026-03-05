@@ -23,6 +23,7 @@ import {
   Settings,
   Info,
   BookOpen,
+  GitBranch,
 } from 'lucide-react';
 import PodChatManager from './PodChatManager';
 import PodForumManager from './PodForumManager';
@@ -44,6 +45,7 @@ interface PodModules {
   bounties_enabled: boolean;
   marketplace_enabled: boolean;
   knowledge_base_enabled: boolean;
+  sub_pods_enabled: boolean;
   chat_config?: any;
   forum_config?: any;
   treasury_config?: any;
@@ -51,6 +53,7 @@ interface PodModules {
   bounties_config?: any;
   marketplace_config?: any;
   knowledge_base_config?: any;
+  sub_pods_config?: any;
 }
 
 const MODULE_INFO = [
@@ -117,6 +120,15 @@ const MODULE_INFO = [
     bgColor: '#E8F1EE',
     configComponent: 'knowledge',
   },
+  {
+    key: 'sub_pods_enabled',
+    label: 'Sub-Pods',
+    description: 'Allow pod leaders to create and approve sub-pods within this pod',
+    icon: GitBranch,
+    color: '#3F7A5A',
+    bgColor: '#D1E6DC',
+    configComponent: null,
+  },
 ];
 
 export default function PodModulesManager({
@@ -134,6 +146,7 @@ export default function PodModulesManager({
     bounties_enabled: false,
     marketplace_enabled: false,
     knowledge_base_enabled: false,
+    sub_pods_enabled: false,
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -170,6 +183,7 @@ export default function PodModulesManager({
             bounties_enabled: false,
             marketplace_enabled: false,
             knowledge_base_enabled: false,
+            sub_pods_enabled: false,
           })
           .select()
           .single();
@@ -198,6 +212,7 @@ export default function PodModulesManager({
           bounties_enabled: data.bounties_enabled ?? false,
           marketplace_enabled: data.marketplace_enabled ?? false,
           knowledge_base_enabled: data.knowledge_base_enabled ?? false,
+          sub_pods_enabled: data.sub_pods_enabled ?? false,
           chat_config: data.chat_config,
           forum_config: data.forum_config,
           treasury_config: data.treasury_config,
@@ -205,6 +220,7 @@ export default function PodModulesManager({
           bounties_config: data.bounties_config,
           marketplace_config: data.marketplace_config,
           knowledge_base_config: data.knowledge_base_config,
+          sub_pods_config: data.sub_pods_config,
         });
       } else {
         console.warn('PodModulesManager: No data received, using defaults');
@@ -216,6 +232,7 @@ export default function PodModulesManager({
           bounties_enabled: false,
           marketplace_enabled: false,
           knowledge_base_enabled: false,
+          sub_pods_enabled: false,
         });
       }
     } catch (error) {

@@ -227,6 +227,10 @@ export interface Pod {
   // Proxy contract fields (v2.0 architecture)
   proxy_contract_address?: string | null;
   proxy_admin_hat_id?: string | null;
+
+  // Sub-pod creation manager (PodCreationManagerV2 deployed per pod on activation)
+  creation_manager_address?: string | null;
+  blockchain_pod_id?: string | null;
 }
 
 // Utility types

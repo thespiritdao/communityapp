@@ -307,8 +307,9 @@ export const HatsModulePodCreationForm: React.FC<
         } else {
           seenPodIds.add(pod.id);
           options.push({
-            id: pod.id, // ✅ Use pod UUID for database operations
-            hatId: pod.management_hat_id, // Store HAT ID separately for blockchain operations
+            id: pod.id,
+            hatId: pod.management_hat_id,
+            creationManagerAddress: pod.creation_manager_address || null,
             uniqueKey: `user-pod-${pod.id}`,
             name: `👑 ${pod.name}`,
             description: `Create sub-pod under your ${pod.name} pod`,
@@ -339,8 +340,11 @@ export const HatsModulePodCreationForm: React.FC<
         management_hat_id: communityPodParent.management_hat_id,
       });
       options.push({
-        id: communityPodParent.id, // ✅ Use pod UUID for database operations
-        hatId: communityPodsHatId, // HAT ID for blockchain operations
+        id: communityPodParent.id,
+        hatId: communityPodsHatId,
+        creationManagerAddress: (communityPodParent as any).creation_manager_address
+          || process.env.NEXT_PUBLIC_POD_CREATION_MANAGER
+          || null,
         uniqueKey: 'default-community',
         name: '🏘️ Community Pods',
         description: 'Default parent for community-created pods',
@@ -1101,10 +1105,18 @@ export const HatsModulePodCreationForm: React.FC<
         }
 
         const IMAGE_URI = `https://ui-avatars.com/api/?name=${encodeURIComponent(config.name)}&size=400&background=bfe7c6&color=000&bold=true`;
-        const POD_CREATION_MANAGER_ADDRESS = process.env.NEXT_PUBLIC_POD_CREATION_MANAGER as `0x${string}`;
+
+        // Use the parent pod's own creation manager (self-sovereign), fall back to community env var
+        const selectedParentForManager = availableParentPods.find(
+          (p) => p.id === formData.parentPodId,
+        );
+        const POD_CREATION_MANAGER_ADDRESS = (
+          (selectedParentForManager as any)?.creationManagerAddress ||
+          process.env.NEXT_PUBLIC_POD_CREATION_MANAGER
+        ) as `0x${string}`;
 
         if (!POD_CREATION_MANAGER_ADDRESS) {
-          throw new Error('NEXT_PUBLIC_POD_CREATION_MANAGER not configured');
+          throw new Error('No creation manager configured for this parent pod. The pod leader must enable Sub-Pods in their pod settings first.');
         }
 
         // Build the createPodProposal call — goes into transactionCalls for OnChainKit
@@ -1418,8 +1430,13 @@ export const HatsModulePodCreationForm: React.FC<
             );
 
             if (receipt.logs && receipt.logs.length > 0) {
-              const podCreationManagerAddress =
-                process.env.NEXT_PUBLIC_POD_CREATION_MANAGER?.toLowerCase();
+              const selectedParentOpt = availableParentPods.find(
+                (p) => p.id === formData.parentPodId,
+              );
+              const podCreationManagerAddress = (
+                (selectedParentOpt as any)?.creationManagerAddress ||
+                process.env.NEXT_PUBLIC_POD_CREATION_MANAGER
+              )?.toLowerCase();
 
               let hatIdExtracted = false;
 
