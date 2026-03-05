@@ -102,7 +102,10 @@ export function ModerationToolbar({
     handleAction(action, isLocked ? 'Unlock' : 'Lock');
   };
 
-  const handleDelete = () => {
+  const handleDelete = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+
     const confirmMsg =
       targetType === 'thread'
         ? 'Are you sure you want to delete this thread? This will also delete all posts in it.'
@@ -140,7 +143,7 @@ export function ModerationToolbar({
               </DropdownMenuItem>
             </>
           )}
-          <DropdownMenuItem onClick={handleDelete} style={{ color: '#8B3A3A' }}>
+          <DropdownMenuItem onClick={(e) => handleDelete(e)} style={{ color: '#8B3A3A' }}>
             🗑️ Delete {targetType === 'thread' ? 'Thread' : 'Post'}
           </DropdownMenuItem>
         </DropdownMenuContent>
