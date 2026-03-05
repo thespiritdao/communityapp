@@ -186,8 +186,6 @@ export const HatsModulePodCreationForm: React.FC<
   }, [continuePodId, existingPod, toast]);
 
   // Check Advocate token ownership for pod creation permission
-  const [hasAdvocateToken, setHasAdvocateToken] = useState(false);
-  const [checkingAdvocateToken, setCheckingAdvocateToken] = useState(true);
 
   // User's leadership permissions and pods
   const [userPods, setUserPods] = useState<any[]>([]);
@@ -444,49 +442,6 @@ export const HatsModulePodCreationForm: React.FC<
     loadTokens();
   }, [address, publicClient]);
 
-  // Check if user is a leader of ANY pod (permission to create pods)
-  useEffect(() => {
-    const checkPodLeaderStatus = async () => {
-      if (!address) {
-        setCheckingAdvocateToken(false);
-        return;
-      }
-
-      try {
-        console.log('🔍 Checking pod leader status for address:', address);
-
-        // Check if user has ANY leader role in active_pod_members
-        const { data: leaderRoles, error } = await supabase
-          .from('active_pod_members')
-          .select('membership_type, pod_name')
-          .eq('wallet', address.toLowerCase())
-          .eq('membership_type', 'leader')
-          .eq('is_active', true)
-          .limit(1);
-
-        if (error) {
-          console.error('❌ Error checking leader status:', error);
-          setHasAdvocateToken(false);
-        } else {
-          const isLeader = leaderRoles && leaderRoles.length > 0;
-          setHasAdvocateToken(isLeader);
-
-          if (isLeader) {
-            console.log('✅ User is a pod leader:', leaderRoles[0].pod_name);
-          } else {
-            console.log('❌ User is not a leader of any pod');
-          }
-        }
-      } catch (error) {
-        console.error('❌ Failed to check pod leader status:', error);
-        setHasAdvocateToken(false);
-      } finally {
-        setCheckingAdvocateToken(false);
-      }
-    };
-
-    checkPodLeaderStatus();
-  }, [address]);
 
   // Load user's pods for hierarchical creation (including HAT-based leadership)
   useEffect(() => {
@@ -616,11 +571,6 @@ export const HatsModulePodCreationForm: React.FC<
   const validation = useMemo(() => {
     const errors: string[] = [];
 
-    // Check pod leader requirement (skip in testing mode)
-    if (!testingMode && !hasAdvocateToken) {
-      errors.push('Pod leader access required to create pods');
-    }
-
     if (!formData.name.trim()) errors.push('Pod name is required');
     if (!formData.description.trim()) errors.push('Description is required');
     if (!formData.parentPodId) errors.push('Parent pod selection is required');
@@ -658,7 +608,7 @@ export const HatsModulePodCreationForm: React.FC<
       validLeads,
       requiredLeads,
     };
-  }, [formData, testingMode, hasAdvocateToken, availableTokens]);
+  }, [formData, testingMode, availableTokens]);
 
   // Debug validation state
   useEffect(() => {
@@ -672,10 +622,9 @@ export const HatsModulePodCreationForm: React.FC<
         podLeaders: formData.podLeaders,
       },
       testingMode,
-      hasAdvocateToken,
       loading,
     });
-  }, [validation, formData, testingMode, hasAdvocateToken, loading]);
+  }, [validation, formData, testingMode, loading]);
 
   // Update form data (memoized to prevent infinite loops)
   const updateFormData = useCallback((field: keyof FormData, value: any) => {
@@ -3923,74 +3872,6 @@ export const HatsModulePodCreationForm: React.FC<
     [hatCreationReceipt, handleTransactionSuccess],
   );
 
-  // Advocate token status indicator
-  const AdvocateTokenStatus = () => (
-    <div
-      className="mb-6 p-4 border rounded-lg"
-      style={{
-        backgroundColor: checkingAdvocateToken
-          ? '#f9fafb'
-          : hasAdvocateToken
-            ? '#D1E6DC'
-            : '#F5E6E6',
-        borderColor: checkingAdvocateToken
-          ? '#e5e7eb'
-          : hasAdvocateToken
-            ? '#B8D9CA'
-            : '#D9B3B3',
-      }}
-    >
-      <div className="flex items-center gap-2 mb-2">
-        <Shield
-          className="h-5 w-5"
-          style={{
-            color: checkingAdvocateToken
-              ? '#4b5563'
-              : hasAdvocateToken
-                ? '#3F7A5A'
-                : '#8B3A3A',
-          }}
-        />
-        <h4
-          className="font-medium"
-          style={{
-            color: checkingAdvocateToken
-              ? '#1f2937'
-              : hasAdvocateToken
-                ? '#1F453A'
-                : '#5C1F1F',
-          }}
-        >
-          Pod Leader Access {!testingMode && '(Required)'}
-        </h4>
-      </div>
-
-      {checkingAdvocateToken ? (
-        <div className="flex items-center gap-2">
-          <Clock className="h-4 w-4 animate-spin" />
-          <span className="text-gray-700 text-sm">
-            Verifying pod leader status...
-          </span>
-        </div>
-      ) : hasAdvocateToken ? (
-        <div className="flex items-center gap-2">
-          <CheckCircle className="h-4 w-4" style={{ color: '#3F7A5A' }} />
-          <span className="text-sm" style={{ color: '#2F5D50' }}>
-            ✅ Verified - You are a pod leader
-          </span>
-        </div>
-      ) : (
-        <div className="flex items-center gap-2">
-          <Shield className="h-4 w-4" style={{ color: '#8B3A3A' }} />
-          <span className="text-sm" style={{ color: '#8B3A3A' }}>
-            {testingMode
-              ? '⚠️ Not a pod leader (bypassed in testing mode)'
-              : '❌ Pod leader access required to create pods'}
-          </span>
-        </div>
-      )}
-    </div>
-  );
 
   return (
     <Card className="max-w-4xl mx-auto">
@@ -4040,8 +3921,6 @@ export const HatsModulePodCreationForm: React.FC<
       </CardHeader>
 
       <CardContent className="space-y-6">
-        <AdvocateTokenStatus />
-
         {step === 'config' && (
           <div className="space-y-6">
             <div>
