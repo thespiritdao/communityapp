@@ -395,7 +395,8 @@ const PostList: React.FC<PostListProps> = ({ threadId }) => {
                 authorProfile={profileMap?.[originalPost.author_address]}
                 attachments={threadLevelAttachments}
                 podId={threadInfo.pod_id}
-                hideModeration={true}
+                isOriginalPost={true}
+                threadId={threadInfo.id}
               />
             );
           })()}

@@ -27,7 +27,9 @@ interface PostCardProps {
   authorProfile?: UserProfile;
   attachments?: MediaAttachment[];
   podId?: string | null;
-  hideModeration?: boolean; // Suppress moderation toolbar (e.g. original post — thread toolbar handles it)
+  isOriginalPost?: boolean; // When true, moderation targets the thread (not the post)
+  threadId?: string;        // Required when isOriginalPost=true
+  hideModeration?: boolean;
 }
 
 const PostCard: React.FC<PostCardProps> = ({
@@ -35,6 +37,8 @@ const PostCard: React.FC<PostCardProps> = ({
   authorProfile: providedProfile,
   attachments,
   podId,
+  isOriginalPost = false,
+  threadId,
   hideModeration = false,
 }) => {
   const [isEditing, setIsEditing] = useState(false);
@@ -180,8 +184,8 @@ const PostCard: React.FC<PostCardProps> = ({
           {/* Moderation Toolbar */}
           {!hideModeration && (
             <ModerationToolbar
-              targetType="post"
-              targetId={post.id}
+              targetType={isOriginalPost ? 'thread' : 'post'}
+              targetId={isOriginalPost ? (threadId || post.id) : post.id}
               podId={podId}
               onActionComplete={() => {
                 window.location.reload();
