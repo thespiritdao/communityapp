@@ -214,7 +214,15 @@ export async function deleteThread(
   reason?: string,
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    // Log action before deleting
+    // Delete thread (cascades to posts due to foreign key)
+    const { error: deleteError } = await supabase
+      .from('forum_threads')
+      .delete()
+      .eq('id', threadId);
+
+    if (deleteError) throw deleteError;
+
+    // Log action after confirming delete succeeded
     await logModerationAction({
       moderator_address: moderatorAddress,
       moderator_hat_id: moderatorHatId,
@@ -223,14 +231,6 @@ export async function deleteThread(
       target_id: threadId,
       reason,
     });
-
-    // Delete thread (cascades to posts due to foreign key)
-    const { error: deleteError } = await supabase
-      .from('forum_threads')
-      .delete()
-      .eq('id', threadId);
-
-    if (deleteError) throw deleteError;
 
     return { success: true };
   } catch (error: any) {
