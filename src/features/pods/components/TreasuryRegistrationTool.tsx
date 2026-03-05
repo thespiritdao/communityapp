@@ -30,7 +30,7 @@ export function TreasuryRegistrationTool() {
   const UNREGISTERED_TREASURY: TreasuryToRegister = {
     podId: 'e35c9e25-d29f-4988-b1e8-2902e960b94c',
     treasuryAddress: '0xf00ca2682a8128affaada61c57322f0e6061c9e4',
-    managementHatId: '0x0000008800010000000000000000000000000000000000000000000000000000',
+    managementHatId: '0x0000074900010000000000000000000000000000000000000000000000000000',
     podName: 'Executive Pod',
   };
 

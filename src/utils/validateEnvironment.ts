@@ -104,14 +104,8 @@ const OPTIONAL_ENV_VARS = {
   // Testing/Development
   testing: ['NEXT_PUBLIC_PODS_TESTING'],
 
-  // Hat IDs (legacy/specific)
-  hatIds: [
-    'NEXT_PUBLIC_EXECUTIVE_POD_LEADER',
-    'NEXT_PUBLIC_EXECUTIVE_POD_MEMBER',
-    'NEXT_PUBLIC_COMMUNITY_PODS_PARENT',
-    'NEXT_PUBLIC_DEV_POD_LEADER',
-    'NEXT_PUBLIC_DEV_POD_MEMBER',
-  ],
+  // Hat IDs — sourced from hat_registry DB table, not env vars
+  hatIds: [], // Run scripts/db-migrations/002_hat_registry.sql to seed them
 
   // Pod IDs (legacy/specific)
   podIds: ['NEXT_PUBLIC_GOVERNANCE_POD_ID', 'NEXT_PUBLIC_COMMUNITY_POD_ID'],

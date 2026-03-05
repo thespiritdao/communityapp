@@ -5,6 +5,7 @@ import { supabase } from '@/utils/supabaseClient';
 import { fetchTokenBalances } from '@/utils/fetchTokenBalances';
 import { parseAbiItem } from 'viem';
 import { useCDPStatus } from '@/hooks/useCDPStatus';
+import { getClientHatId } from '@/lib/hatRegistryClient';
 
 /**
  * Unified Forum Access Hook
@@ -154,24 +155,14 @@ export function useUnifiedForumAccess(): UseUnifiedForumAccessReturn {
         })
         .filter((addr): addr is string => addr !== null);
 
-      // Add Beta Tester Hat and other hats from token balances to ownedHats
+      // Add executive pod hat from token balances to ownedHats
       const detectedHats = Object.entries(tokenBalances)
         .filter(([key, hasHat]) => {
-          // Filter for hat-related keys that are true
-          return (
-            hasHat &&
-            (key === 'hasBetaTesterHat' ||
-              key === 'hasExecutivePod' ||
-              key === 'hasDevPod')
-          );
+          return hasHat && key === 'hasExecutivePod';
         })
         .map(([key]) => {
-          // Map hat balance keys to hat addresses
-          if (key === 'hasBetaTesterHat')
-            return process.env.NEXT_PUBLIC_BETA_TESTER_HAT;
           if (key === 'hasExecutivePod')
-            return process.env.NEXT_PUBLIC_EXECUTIVE_POD;
-          if (key === 'hasDevPod') return process.env.NEXT_PUBLIC_DEV_POD;
+            return getClientHatId('EXECUTIVE_POD_LEADER') || null;
           return null;
         })
         .filter((addr): addr is string => addr !== null);

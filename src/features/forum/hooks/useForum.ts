@@ -8,6 +8,7 @@ import { useTokenGate } from '@/features/forum/hooks/useTokenGate';
 import { useAuthContext } from '@/features/identity/components/AuthProvider';
 import { useUnifiedNotifications } from '@/context/UnifiedNotificationContext';
 import { extractMentionedWalletsEnhanced } from '@/utils/mentions';
+import { getClientHatId } from '@/lib/hatRegistryClient';
 
 // Debug mode flag - set to false in production
 const DEBUG = true;
@@ -30,7 +31,7 @@ const getRequiredTokenForCategory = (categoryId: string) => {
   // Map category IDs to their required tokens (replace with actual logic)
   const categoryTokenMap: Record<string, string> = {
     'category-id-1': process.env.NEXT_PUBLIC_PROOF_OF_CURIOSITY || '',
-    'category-id-2': process.env.NEXT_PUBLIC_EXECUTIVE_POD_LEADER || '',
+    'category-id-2': getClientHatId('EXECUTIVE_POD_LEADER') || '',
     'category-id-3': process.env.NEXT_PUBLIC_DEV_POD_HAT_ID || '',
   };
 
@@ -81,7 +82,7 @@ export function useForum() {
   useEffect(() => {
     debug('Environment Variables:', {
       poc: process.env.NEXT_PUBLIC_PROOF_OF_CURIOSITY,
-      exec: process.env.NEXT_PUBLIC_EXECUTIVE_POD_LEADER,
+      exec: getClientHatId('EXECUTIVE_POD_LEADER'),
       dev: process.env.NEXT_PUBLIC_DEV_POD_HAT_ID,
     });
   }, []);
@@ -251,7 +252,7 @@ export function useForum() {
       if (tokenBalances) {
         const pocToken = normalize(process.env.NEXT_PUBLIC_PROOF_OF_CURIOSITY);
         const execHatId = normalize(
-          process.env.NEXT_PUBLIC_EXECUTIVE_POD_LEADER,
+          getClientHatId('EXECUTIVE_POD_LEADER'),
         );
         const devHatId = normalize(process.env.NEXT_PUBLIC_DEV_POD_HAT_ID);
 

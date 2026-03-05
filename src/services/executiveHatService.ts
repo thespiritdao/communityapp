@@ -1,21 +1,18 @@
 /**
  * Executive Hat Assignment Service
  *
- * Handles assignment of Executive Pod Leader and Member hats
- * Used for first user and beta testers
+ * Handles assignment of Executive Pod Leader hat.
  */
 
 import { encodeFunctionData } from 'viem';
-import { CONTRACT_ADDRESSES, HAT_IDS } from '@/config/contracts';
+import { CONTRACT_ADDRESSES } from '@/config/contracts';
+import { getHatIdBigInt, getHatId } from '@/lib/hatRegistry';
 
 // ============================================================
 // Constants
 // ============================================================
 
 const HATS_PROTOCOL_ADDRESS = CONTRACT_ADDRESSES.HATS_PROTOCOL;
-const EXECUTIVE_LEADER_HAT_ID = HAT_IDS.EXECUTIVE_POD_LEADER;
-const EXECUTIVE_MEMBER_HAT_ID = HAT_IDS.EXECUTIVE_POD_MEMBER;
-const BETA_TESTER_HAT_ID = HAT_IDS.BETA_TESTER_HAT;
 
 // Minimal Hats ABI for mintHat function
 const HATS_MINT_ABI = [
@@ -71,94 +68,19 @@ export interface MintHatCall {
  * @param recipientAddress - Address to receive the leader hat
  * @returns Transaction call object
  */
-export function createMintExecutiveLeaderHatCall(
+export async function createMintExecutiveLeaderHatCall(
   recipientAddress: `0x${string}`,
-): MintHatCall {
-  if (!EXECUTIVE_LEADER_HAT_ID) {
-    throw new Error(
-      'EXECUTIVE_POD_LEADER hat ID not configured. ' +
-        'Please set NEXT_PUBLIC_EXECUTIVE_POD_LEADER in your environment variables.',
-    );
-  }
+): Promise<MintHatCall> {
+  const hatId = await getHatIdBigInt('EXECUTIVE_POD_LEADER');
 
   console.log('👑 Creating Executive Leader hat mint for:', recipientAddress);
-  console.log('   Hat ID:', EXECUTIVE_LEADER_HAT_ID);
+  console.log('   Hat ID:', hatId.toString(16));
   console.log('   Hats Protocol:', HATS_PROTOCOL_ADDRESS);
 
   const data = encodeFunctionData({
     abi: HATS_MINT_ABI,
     functionName: 'mintHat',
-    args: [BigInt(EXECUTIVE_LEADER_HAT_ID), recipientAddress],
-  });
-
-  return {
-    to: HATS_PROTOCOL_ADDRESS,
-    data,
-    value: BigInt(0),
-  };
-}
-
-/**
- * Create call data for minting Executive Pod Member hat
- *
- * @param recipientAddress - Address to receive the member hat
- * @returns Transaction call object
- */
-export function createMintExecutiveMemberHatCall(
-  recipientAddress: `0x${string}`,
-): MintHatCall {
-  if (!EXECUTIVE_MEMBER_HAT_ID) {
-    throw new Error('EXECUTIVE_POD_MEMBER hat ID not configured');
-  }
-
-  const data = encodeFunctionData({
-    abi: HATS_MINT_ABI,
-    functionName: 'mintHat',
-    args: [BigInt(EXECUTIVE_MEMBER_HAT_ID), recipientAddress],
-  });
-
-  return {
-    to: HATS_PROTOCOL_ADDRESS,
-    data,
-    value: BigInt(0),
-  };
-}
-
-/**
- * Create call data for minting Beta Tester hat (temporary 30-day testing)
- *
- * @param recipientAddress - Address to receive the beta tester hat
- * @returns Transaction call object
- */
-export function createMintBetaTesterHatCall(
-  recipientAddress: `0x${string}`,
-): MintHatCall {
-  if (!BETA_TESTER_HAT_ID) {
-    throw new Error(
-      'BETA_TESTER_HAT hat ID not configured. ' +
-        'Please set NEXT_PUBLIC_BETA_TESTER_HAT in your environment variables.',
-    );
-  }
-
-  // Validate hat ID format (should be 32-byte hex string)
-  if (
-    BETA_TESTER_HAT_ID ===
-    '0x0000000000000000000000000000000000000000000000000000000000000000'
-  ) {
-    throw new Error(
-      'BETA_TESTER_HAT is set to zero address. ' +
-        'Please create the Beta Tester hat in Hats Protocol and set the correct hat ID.',
-    );
-  }
-
-  console.log('🗝️ Creating Beta Tester hat mint for:', recipientAddress);
-  console.log('   Hat ID:', BETA_TESTER_HAT_ID);
-  console.log('   Hats Protocol:', HATS_PROTOCOL_ADDRESS);
-
-  const data = encodeFunctionData({
-    abi: HATS_MINT_ABI,
-    functionName: 'mintHat',
-    args: [BigInt(BETA_TESTER_HAT_ID), recipientAddress],
+    args: [hatId, recipientAddress],
   });
 
   return {
@@ -183,47 +105,20 @@ export async function isExecutiveLeader(
   address: `0x${string}`,
   publicClient: any,
 ): Promise<boolean> {
-  if (!EXECUTIVE_LEADER_HAT_ID) return false;
+  const hatId = await getHatId('EXECUTIVE_POD_LEADER');
+  if (!hatId) return false;
 
   try {
     const result = await publicClient.readContract({
       address: HATS_PROTOCOL_ADDRESS,
       abi: HATS_MINT_ABI,
       functionName: 'isWearerOfHat',
-      args: [address, BigInt(EXECUTIVE_LEADER_HAT_ID)],
+      args: [address, BigInt(hatId)],
     });
 
     return result as boolean;
   } catch (error) {
     console.error('Error checking Executive Leader status:', error);
-    return false;
-  }
-}
-
-/**
- * Check if address is wearing Executive Member hat
- *
- * @param address - Address to check
- * @param publicClient - Viem public client
- * @returns Boolean indicating if address wears member hat
- */
-export async function isExecutiveMember(
-  address: `0x${string}`,
-  publicClient: any,
-): Promise<boolean> {
-  if (!EXECUTIVE_MEMBER_HAT_ID) return false;
-
-  try {
-    const result = await publicClient.readContract({
-      address: HATS_PROTOCOL_ADDRESS,
-      abi: HATS_MINT_ABI,
-      functionName: 'isWearerOfHat',
-      args: [address, BigInt(EXECUTIVE_MEMBER_HAT_ID)],
-    });
-
-    return result as boolean;
-  } catch (error) {
-    console.error('Error checking Executive Member status:', error);
     return false;
   }
 }
@@ -240,14 +135,15 @@ export async function getExecutiveLeaderHatBalance(
   address: `0x${string}`,
   publicClient: any,
 ): Promise<number> {
-  if (!EXECUTIVE_LEADER_HAT_ID) return 0;
+  const hatId = await getHatId('EXECUTIVE_POD_LEADER');
+  if (!hatId) return 0;
 
   try {
     const result = await publicClient.readContract({
       address: HATS_PROTOCOL_ADDRESS,
       abi: HATS_MINT_ABI,
       functionName: 'balanceOf',
-      args: [address, BigInt(EXECUTIVE_LEADER_HAT_ID)],
+      args: [address, BigInt(hatId)],
     });
 
     return Number(result);

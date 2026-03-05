@@ -4,11 +4,11 @@ pragma solidity ^0.8.19;
 /**
  * @title HatMinter
  * @author SpiritDAO
- * @notice Mints Beta Tester hats to new users during onboarding
+ * @notice Mints Temporal Naturalism Member hats to new users during onboarding
  *
  * @dev This contract:
  * - Wears the Executive Pod Leader hat (granted by DAO admin)
- * - Mints Beta Tester hats to eligible users
+ * - Mints Temporal Naturalism Member hats to eligible users
  * - Is whitelisted with Coinbase Paymaster for gas-free operations
  * - Can only be called by authorized backend addresses
  *
@@ -32,8 +32,8 @@ contract HatMinter {
     /// @notice Hats Protocol contract address (Base: 0x3bc1A0Ad72417f2d411118085256fC53CBdDd137)
     IHats public immutable hatsProtocol;
 
-    /// @notice Beta Tester hat ID (30-day testing hat)
-    uint256 public immutable betaTesterHatId;
+    /// @notice Temporal Naturalism Member hat ID (default hat for all new members)
+    uint256 public immutable temporalNaturalismMemberId;
 
     /// @notice Executive Pod Leader hat ID (permanent admin hat)
     uint256 public immutable executiveLeaderHatId;
@@ -48,7 +48,7 @@ contract HatMinter {
     // EVENTS
     // ============================================================
 
-    event BetaTesterHatMinted(address indexed recipient, uint256 hatId, address indexed caller);
+    event TNMemberHatMinted(address indexed recipient, uint256 hatId, address indexed caller);
     event ExecutiveLeaderHatMinted(address indexed recipient, uint256 hatId, address indexed caller);
     event CallerAuthorized(address indexed caller, bool authorized);
     event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
@@ -68,13 +68,13 @@ contract HatMinter {
 
     /**
      * @param _hatsProtocol Address of Hats Protocol contract
-     * @param _betaTesterHatId Hat ID for Beta Testers
+     * @param _temporalNaturalismMember Hat ID for Temporal Naturalism Members (default onboarding hat)
      * @param _executiveLeaderHatId Hat ID for Executive Pod Leaders
      * @param _initialOwner Initial owner of the contract
      */
     constructor(
         address _hatsProtocol,
-        uint256 _betaTesterHatId,
+        uint256 _temporalNaturalismMember,
         uint256 _executiveLeaderHatId,
         address _initialOwner
     ) {
@@ -83,7 +83,7 @@ contract HatMinter {
         }
 
         hatsProtocol = IHats(_hatsProtocol);
-        betaTesterHatId = _betaTesterHatId;
+        temporalNaturalismMemberId = _temporalNaturalismMember;
         executiveLeaderHatId = _executiveLeaderHatId;
         owner = _initialOwner;
 
@@ -111,30 +111,30 @@ contract HatMinter {
     // ============================================================
 
     /**
-     * @notice Mint Beta Tester hat to a new user
-     * @param recipient Address to receive the Beta Tester hat
+     * @notice Mint Temporal Naturalism Member hat to a new user
+     * @param recipient Address to receive the TN Member hat
      *
      * @dev Can only be called by authorized addresses (backend)
      *      Gas fees sponsored by Coinbase Paymaster
      */
-    function mintBetaTesterHat(address recipient) external onlyAuthorized returns (bool) {
+    function mintTNMemberHat(address recipient) external onlyAuthorized returns (bool) {
         if (recipient == address(0)) revert InvalidAddress();
 
         // Check if already wearing the hat
-        if (hatsProtocol.isWearerOfHat(recipient, betaTesterHatId)) {
+        if (hatsProtocol.isWearerOfHat(recipient, temporalNaturalismMemberId)) {
             revert AlreadyWearingHat();
         }
 
         // Mint the hat
-        bool success = hatsProtocol.mintHat(betaTesterHatId, recipient);
+        bool success = hatsProtocol.mintHat(temporalNaturalismMemberId, recipient);
         if (!success) revert MintFailed();
 
-        emit BetaTesterHatMinted(recipient, betaTesterHatId, msg.sender);
+        emit TNMemberHatMinted(recipient, temporalNaturalismMemberId, msg.sender);
         return true;
     }
 
     /**
-     * @notice Mint Executive Pod Leader hat to a first user
+     * @notice Mint Executive Pod Leader hat to a founding member
      * @param recipient Address to receive the Executive Leader hat
      *
      * @dev Can only be called by authorized addresses (backend)
@@ -157,10 +157,10 @@ contract HatMinter {
     }
 
     /**
-     * @notice Batch mint Beta Tester hats (gas efficient for airdrops)
+     * @notice Batch mint TN Member hats (gas efficient for airdrops)
      * @param recipients Array of addresses to receive hats
      */
-    function batchMintBetaTesterHats(address[] calldata recipients)
+    function batchMintTNMemberHats(address[] calldata recipients)
         external
         onlyAuthorized
         returns (uint256 successCount)
@@ -170,13 +170,13 @@ contract HatMinter {
 
             // Skip if invalid or already wearing
             if (recipient == address(0)) continue;
-            if (hatsProtocol.isWearerOfHat(recipient, betaTesterHatId)) continue;
+            if (hatsProtocol.isWearerOfHat(recipient, temporalNaturalismMemberId)) continue;
 
             // Try to mint (don't revert on individual failures)
-            try hatsProtocol.mintHat(betaTesterHatId, recipient) returns (bool success) {
+            try hatsProtocol.mintHat(temporalNaturalismMemberId, recipient) returns (bool success) {
                 if (success) {
                     successCount++;
-                    emit BetaTesterHatMinted(recipient, betaTesterHatId, msg.sender);
+                    emit TNMemberHatMinted(recipient, temporalNaturalismMemberId, msg.sender);
                 }
             } catch {
                 // Continue on failure
@@ -237,18 +237,18 @@ contract HatMinter {
 
     /**
      * @notice Check if this contract wears the Executive Pod Leader hat
-     * @dev This contract must wear this hat to mint Beta Tester hats
+     * @dev This contract must wear this hat to mint TN Member hats
      */
     function hasAdminHat() external view returns (bool) {
         return hatsProtocol.isWearerOfHat(address(this), executiveLeaderHatId);
     }
 
     /**
-     * @notice Check if an address already wears the Beta Tester hat
+     * @notice Check if an address already wears the TN Member hat
      * @param user Address to check
      */
-    function hasBetaTesterHat(address user) external view returns (bool) {
-        return hatsProtocol.isWearerOfHat(user, betaTesterHatId);
+    function hasTNMemberHat(address user) external view returns (bool) {
+        return hatsProtocol.isWearerOfHat(user, temporalNaturalismMemberId);
     }
 
     /**

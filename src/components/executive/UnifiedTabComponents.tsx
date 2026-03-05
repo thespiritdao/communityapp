@@ -1303,3 +1303,638 @@ function CreateTaskDialog({ onTaskCreated }: { onTaskCreated: () => void }) {
     </Dialog>
   );
 }
+
+// ─── Marketing Tab ────────────────────────────────────────────────────────────
+
+type MarketingPhase = 'questions' | 'review' | 'done';
+
+interface GeneratedPost {
+  id: string;
+  platform: string;
+  account_label: string;
+  pillar: 'philosophy' | 'platform' | 'current_events';
+  content: string;
+  image_suggestion?: string;
+  character_count: number;
+  hashtags?: string[];
+  status: 'pending_review' | 'approved' | 'skipped';
+}
+
+interface MarketingStateType {
+  synthesis: {
+    date: string;
+    topic_summary: string;
+    angles: any[];
+    founder_questions: any[];
+  };
+  postSet: {
+    date: string;
+    founder_answers: Record<string, string>;
+    posts: GeneratedPost[];
+  };
+  phase: MarketingPhase;
+}
+
+const PILLAR_BADGE: Record<string, string> = {
+  philosophy:     'bg-purple-500/10 text-purple-700 border-purple-200',
+  platform:       'bg-blue-500/10 text-blue-700 border-blue-200',
+  current_events: 'bg-amber-500/10 text-amber-700 border-amber-200',
+};
+
+const PLATFORM_ICON: Record<string, string> = {
+  twitter_personal:    '\u{1D54F}',
+  twitter_spiritdao:   '\u{1D54F}',
+  linkedin_personal:   'in',
+  linkedin_spiritdao:  'in',
+  bluesky_personal:    '\u{1F98B}',
+  tiktok_script:       '\u25B6',
+  instagram_spiritdao: '\u{1F4F8}',
+  facebook_spiritdao:  'f',
+};
+
+export function MarketingTab() {
+  const [state, setState] = useState<MarketingStateType | null>(null);
+  const [message, setMessage] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [running, setRunning] = useState(false);
+  const [clearing, setClearing] = useState(false);
+  const [activeSection, setActiveSection] = useState<'brief' | 'questions' | 'posts'>('brief');
+  const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
+
+  async function loadState() {
+    try {
+      const res = await fetch('/api/marketing');
+      const data = await res.json();
+      setRunning(!!data.running);
+      if (data.state) {
+        setState(data.state);
+        setMessage(null);
+      } else {
+        setState(null);
+        setMessage(data.message || null);
+      }
+      return !!data.state;
+    } finally {
+      setLoading(false);
+      setLastRefresh(new Date());
+    }
+  }
+
+  // Smart polling: 5s while running, stop entirely once state loads successfully
+  useEffect(() => {
+    let interval: ReturnType<typeof setInterval> | null = null;
+
+    async function init() {
+      const hasState = await loadState();
+      if (!hasState) {
+        // Poll every 5s until state appears (pipeline may be running)
+        interval = setInterval(async () => {
+          const hasStateNow = await loadState();
+          if (hasStateNow) {
+            // State loaded — stop polling
+            if (interval) clearInterval(interval);
+          }
+        }, 5000);
+      }
+      // If state already loaded on first fetch, no polling needed at all
+    }
+
+    init();
+    return () => { if (interval) clearInterval(interval); };
+  }, []);
+
+  async function handleRunBrief() {
+    setRunning(true);
+    try {
+      await fetch('/api/marketing', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'run_brief' }),
+      });
+      toast.success('Brief pipeline started — refreshing every 5s until complete');
+    } catch {
+      toast.error('Failed to start pipeline');
+      setRunning(false);
+      return;
+    }
+
+    // Poll every 5s until state appears
+    const interval = setInterval(async () => {
+      const res = await fetch('/api/marketing');
+      const data = await res.json();
+      setRunning(!!data.running);
+      setLastRefresh(new Date());
+      if (data.state) {
+        setState(data.state);
+        setMessage(null);
+        setLoading(false);
+        clearInterval(interval);
+        toast.success('Brief ready!');
+      }
+    }, 5000);
+  }
+
+  async function handleClear() {
+    setClearing(true);
+    await fetch('/api/marketing', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'clear' }),
+    });
+    setState(null);
+    setMessage(null);
+    setClearing(false);
+    toast.success('Brief cleared — ready for tomorrow');
+  }
+
+  const pendingPosts = state?.postSet.posts.filter(p => p.status === 'pending_review').length ?? 0;
+  const approvedPosts = state?.postSet.posts.filter(p => p.status === 'approved').length ?? 0;
+  const totalPosts = state?.postSet.posts.length ?? 0;
+  const answeredQ = Object.keys(state?.postSet.founder_answers ?? {}).length;
+  const totalQ = state?.synthesis.founder_questions.length ?? 0;
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64 text-muted-foreground text-sm gap-3">
+        <Loader2 className="h-5 w-5 animate-spin" />
+        Loading marketing data...
+      </div>
+    );
+  }
+
+  if (!state) {
+    return (
+      <Card className="p-8">
+        <div className="flex flex-col items-center justify-center gap-4 text-center">
+          <div className="text-4xl">📰</div>
+          {running ? (
+            <>
+              <p className="font-medium text-blue-700">Pipeline running...</p>
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Scraping intel, synthesizing, generating posts. This takes 2–5 minutes.
+              </div>
+              <p className="text-xs text-muted-foreground font-mono">
+                Checking every 5s · Last checked {lastRefresh.toLocaleTimeString()}
+              </p>
+            </>
+          ) : (
+            <>
+              <p className="font-medium">{message ?? 'No brief generated today.'}</p>
+              <p className="text-sm text-muted-foreground max-w-md">
+                Start the pipeline to scrape today&apos;s intel, synthesize narrative angles, and generate posts.
+              </p>
+              <Button onClick={handleRunBrief} className="mt-2 gap-2">
+                <Play className="h-4 w-4" />
+                Run Today&apos;s Brief
+              </Button>
+            </>
+          )}
+        </div>
+      </Card>
+    );
+  }
+
+  const phaseLabel =
+    state.phase === 'done' ? 'Complete' :
+    state.phase === 'review' ? 'Reviewing' : 'Awaiting Input';
+  const phaseColor =
+    state.phase === 'done' ? 'bg-green-500/10 text-green-700' :
+    state.phase === 'review' ? 'bg-amber-500/10 text-amber-700' :
+    'bg-blue-500/10 text-blue-700';
+
+  return (
+    <div className="space-y-4">
+      {/* Sub-header */}
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <div className="flex items-center gap-2">
+          <Badge className={phaseColor + ' border-0'}>{phaseLabel}</Badge>
+          <span className="text-xs text-muted-foreground font-mono">
+            {lastRefresh.toLocaleTimeString()}
+          </span>
+        </div>
+        <div className="flex items-center gap-2">
+          {running && (
+            <span className="flex items-center gap-1.5 text-xs text-blue-600">
+              <Loader2 className="h-3 w-3 animate-spin" />
+              Pipeline running
+            </span>
+          )}
+          <Button variant="ghost" size="sm" onClick={loadState}>Refresh</Button>
+          {state?.phase === 'done' && (
+            <Button
+              variant="ghost"
+              size="sm"
+              disabled={clearing}
+              onClick={handleClear}
+              className="text-red-500 hover:text-red-700 hover:bg-red-50"
+            >
+              {clearing ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : null}
+              Clear
+            </Button>
+          )}
+        </div>
+      </div>
+
+      {/* Section tabs */}
+      <div className="flex border-b gap-0">
+        {([
+          { id: 'brief' as const, label: 'Brief' },
+          { id: 'questions' as const, label: 'Questions', badge: totalQ > 0 ? answeredQ + '/' + totalQ : undefined },
+          { id: 'posts' as const, label: 'Posts', badge: totalPosts > 0 ? (pendingPosts > 0 ? pendingPosts + ' pending' : approvedPosts + ' approved') : undefined },
+        ] as { id: 'brief' | 'questions' | 'posts'; label: string; badge?: string }[]).map(tab => (
+          <button
+            key={tab.id}
+            onClick={() => setActiveSection(tab.id)}
+            className={`px-5 py-2.5 text-sm font-medium transition-colors border-b-2 -mb-px flex items-center gap-2 ${
+              activeSection === tab.id
+                ? 'border-primary text-primary'
+                : 'border-transparent text-muted-foreground hover:text-foreground hover:border-muted-foreground'
+            }`}
+          >
+            {tab.label}
+            {tab.badge && (
+              <span className={'text-xs px-1.5 py-0.5 rounded-full font-medium ' + (activeSection === tab.id ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground')}>
+                {tab.badge}
+              </span>
+            )}
+          </button>
+        ))}
+      </div>
+
+      {activeSection === 'brief' && <MarketingBriefPanel synthesis={state.synthesis} />}
+      {activeSection === 'questions' && (
+        <MarketingQuestionsPanel
+          questions={state.synthesis.founder_questions}
+          existingAnswers={state.postSet.founder_answers}
+          onSaved={loadState}
+        />
+      )}
+      {activeSection === 'posts' && (
+        <MarketingPostsPanel posts={state.postSet.posts} onUpdate={loadState} />
+      )}
+    </div>
+  );
+}
+
+function MarketingBriefPanel({ synthesis }: { synthesis: MarketingStateType['synthesis'] }) {
+  return (
+    <div className="space-y-4">
+      <Card className="p-4">
+        <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide mb-2">
+          Today&apos;s Topic Summary
+        </h3>
+        <p className="text-sm leading-relaxed">{synthesis.topic_summary}</p>
+        <p className="text-xs text-muted-foreground mt-2 font-mono">{synthesis.date}</p>
+      </Card>
+
+      {synthesis.angles.length > 0 && (
+        <div className="grid gap-3 md:grid-cols-3">
+          {synthesis.angles.map((angle: any, i: number) => (
+            <Card key={i} className="p-4 space-y-2">
+              <Badge variant="outline" className={'text-xs border ' + (PILLAR_BADGE[angle.pillar] ?? 'bg-muted text-muted-foreground')}>
+                {(angle.pillar ?? '').replace('_', ' ')}
+              </Badge>
+              <p className="font-medium text-sm">{angle.headline}</p>
+              <p className="text-xs text-muted-foreground leading-relaxed">{angle.hook}</p>
+              {angle.tn_passage && (
+                <blockquote className="border-l-2 border-purple-300 pl-3 text-xs italic text-muted-foreground mt-2">
+                  {angle.tn_passage}
+                </blockquote>
+              )}
+            </Card>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function MarketingQuestionsPanel({
+  questions,
+  existingAnswers,
+  onSaved,
+}: {
+  questions: any[];
+  existingAnswers: Record<string, string>;
+  onSaved: () => void;
+}) {
+  const [answers, setAnswers] = useState<Record<string, string>>(existingAnswers);
+  const [saving, setSaving] = useState(false);
+  const [generating, setGenerating] = useState(false);
+
+  if (questions.length === 0) {
+    return (
+      <Card className="p-6">
+        <p className="text-sm text-muted-foreground text-center">No questions generated yet. Run the brief first.</p>
+      </Card>
+    );
+  }
+
+  async function handleSave() {
+    setSaving(true);
+    await fetch('/api/marketing', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'save_answers', payload: { answers } }),
+    });
+    await onSaved();
+    setSaving(false);
+    toast.success('Answers saved');
+  }
+
+  async function handleGenerate() {
+    // Save answers first, then trigger generation
+    setSaving(true);
+    await fetch('/api/marketing', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'save_answers', payload: { answers } }),
+    });
+    setSaving(false);
+
+    setGenerating(true);
+    await fetch('/api/marketing', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'generate_posts' }),
+    });
+    toast.success('Generating posts — will switch to Posts tab when ready');
+
+    // Poll every 5s until posts appear
+    const interval = setInterval(async () => {
+      const res = await fetch('/api/marketing');
+      const data = await res.json();
+      if (data.state?.postSet?.posts?.length > 0) {
+        clearInterval(interval);
+        setGenerating(false);
+        await onSaved();
+        toast.success('Posts ready!');
+      }
+    }, 5000);
+  }
+
+  const answeredCount = questions.filter((q: any) => answers[q.id]?.trim()).length;
+  const allAnswered = answeredCount === questions.length;
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        <p className="text-sm text-muted-foreground">{answeredCount}/{questions.length} answered</p>
+        <div className="flex gap-2">
+          <Button onClick={handleSave} disabled={saving || generating || answeredCount === 0} variant="outline" size="sm">
+            {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+            Save Answers
+          </Button>
+          <Button onClick={handleGenerate} disabled={saving || generating || answeredCount === 0} size="sm" className="gap-2">
+            {generating
+              ? <><Loader2 className="h-4 w-4 animate-spin" /> Generating...</>
+              : <><Play className="h-4 w-4" /> Generate Posts</>
+            }
+          </Button>
+        </div>
+      </div>
+
+      {generating && (
+        <Card className="p-4 bg-blue-500/5 border-blue-200">
+          <div className="flex items-center gap-2 text-sm text-blue-700">
+            <Loader2 className="h-4 w-4 animate-spin flex-shrink-0" />
+            Generating posts across all platforms — checking every 5s...
+          </div>
+        </Card>
+      )}
+
+      {!allAnswered && answeredCount > 0 && (
+        <p className="text-xs text-amber-600">You can generate with partial answers — unanswered questions will be skipped.</p>
+      )}
+
+      {questions.map((q: any, i: number) => (
+        <Card key={q.id ?? i} className="p-4 space-y-2">
+          <div className="flex items-start gap-2">
+            <Badge variant="outline" className="text-xs flex-shrink-0 mt-0.5">Q{i + 1}</Badge>
+            <p className="text-sm font-medium">{q.question}</p>
+          </div>
+          {q.context && <p className="text-xs text-muted-foreground pl-8">{q.context}</p>}
+          <Textarea
+            placeholder="Your answer..."
+            value={answers[q.id] ?? ''}
+            onChange={e => setAnswers(prev => ({ ...prev, [q.id]: e.target.value }))}
+            rows={3}
+            className="mt-2 text-sm resize-none"
+          />
+        </Card>
+      ))}
+    </div>
+  );
+}
+
+function MarketingPostsPanel({ posts, onUpdate }: { posts: GeneratedPost[]; onUpdate: () => void }) {
+  const [filterStatus, setFilterStatus] = useState<'all' | 'pending_review' | 'approved' | 'skipped'>('all');
+  const [filterPlatform, setFilterPlatform] = useState('all');
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editContent, setEditContent] = useState('');
+  const [loadingId, setLoadingId] = useState<string | null>(null);
+  const [approvingAll, setApprovingAll] = useState(false);
+  const [copied, setCopied] = useState<string | null>(null);
+
+  const platforms = Array.from(new Set(posts.map(p => p.account_label))).sort();
+  const pending = posts.filter(p => p.status === 'pending_review').length;
+  const approved = posts.filter(p => p.status === 'approved').length;
+  const skipped = posts.filter(p => p.status === 'skipped').length;
+
+  const filtered = posts.filter(p => {
+    if (filterStatus !== 'all' && p.status !== filterStatus) return false;
+    if (filterPlatform !== 'all' && p.account_label !== filterPlatform) return false;
+    return true;
+  });
+
+  async function callApi(body: object) {
+    await fetch('/api/marketing', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+  }
+
+  async function handleApprove(post: GeneratedPost) {
+    setLoadingId(post.id);
+    await callApi({ action: 'update_post_status', payload: { post_id: post.id, status: 'approved' } });
+    await onUpdate();
+    setLoadingId(null);
+  }
+
+  async function handleSkip(post: GeneratedPost) {
+    setLoadingId(post.id);
+    await callApi({ action: 'update_post_status', payload: { post_id: post.id, status: 'skipped' } });
+    await onUpdate();
+    setLoadingId(null);
+  }
+
+  async function handleSaveEdit(post: GeneratedPost) {
+    setLoadingId(post.id);
+    await callApi({ action: 'update_post_status', payload: { post_id: post.id, status: 'approved', content: editContent } });
+    setEditingId(null);
+    await onUpdate();
+    setLoadingId(null);
+  }
+
+  async function handleApproveAll() {
+    setApprovingAll(true);
+    await callApi({ action: 'approve_all' });
+    await onUpdate();
+    setApprovingAll(false);
+  }
+
+  function handleCopy(post: GeneratedPost) {
+    const text = post.hashtags?.length ? post.content + '\n\n' + post.hashtags.join(' ') : post.content;
+    navigator.clipboard.writeText(text);
+    setCopied(post.id);
+    setTimeout(() => setCopied(null), 1500);
+  }
+
+  if (posts.length === 0) {
+    return (
+      <Card className="p-8">
+        <div className="flex flex-col items-center gap-2 text-center text-muted-foreground text-sm">
+          <p>No posts generated yet.</p>
+          <p className="text-xs">Answer the founder questions and run generation from the CLI.</p>
+        </div>
+      </Card>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between gap-4 flex-wrap">
+        <div className="flex gap-3">
+          <Badge variant="outline" className="text-amber-600 bg-amber-500/10 border-amber-200 px-3 py-1">
+            <span className="font-bold mr-1">{pending}</span> Pending
+          </Badge>
+          <Badge variant="outline" className="text-green-700 bg-green-500/10 border-green-200 px-3 py-1">
+            <span className="font-bold mr-1">{approved}</span> Approved
+          </Badge>
+          <Badge variant="outline" className="text-muted-foreground px-3 py-1">
+            <span className="font-bold mr-1">{skipped}</span> Skipped
+          </Badge>
+        </div>
+        {pending > 0 && (
+          <Button onClick={handleApproveAll} disabled={approvingAll} size="sm" className="bg-green-600 hover:bg-green-700">
+            {approvingAll ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <CheckCircle className="h-4 w-4 mr-2" />}
+            Approve All ({pending})
+          </Button>
+        )}
+      </div>
+
+      <div className="flex gap-2 flex-wrap">
+        <div className="flex rounded-lg border overflow-hidden text-sm">
+          {(['all', 'pending_review', 'approved', 'skipped'] as const).map(s => (
+            <button
+              key={s}
+              onClick={() => setFilterStatus(s)}
+              className={'px-3 py-1.5 font-medium transition-colors ' + (filterStatus === s ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-muted')}
+            >
+              {s === 'all' ? 'All' : s === 'pending_review' ? 'Pending' : s.charAt(0).toUpperCase() + s.slice(1)}
+            </button>
+          ))}
+        </div>
+        <Select value={filterPlatform} onValueChange={setFilterPlatform}>
+          <SelectTrigger className="text-sm h-9 w-44">
+            <SelectValue placeholder="All Platforms" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Platforms</SelectItem>
+            {platforms.map(p => <SelectItem key={p} value={p}>{p}</SelectItem>)}
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div className="space-y-3">
+        {filtered.map(post => {
+          const isEditing = editingId === post.id;
+          const isLoading = loadingId === post.id;
+          const icon = PLATFORM_ICON[post.platform] || '📄';
+
+          return (
+            <Card
+              key={post.id}
+              className={'transition-colors ' + (post.status === 'approved' ? 'border-green-200 bg-green-500/5' : post.status === 'skipped' ? 'opacity-60' : '')}
+            >
+              <div className="flex items-center justify-between gap-3 px-4 pt-3 pb-2">
+                <div className="flex items-center gap-2 min-w-0">
+                  <span className="text-sm font-bold w-6 text-center text-muted-foreground flex-shrink-0">{icon}</span>
+                  <span className="font-medium text-sm truncate">{post.account_label}</span>
+                  <Badge variant="outline" className={'text-xs flex-shrink-0 ' + (PILLAR_BADGE[post.pillar] ?? '')}>
+                    {(post.pillar ?? '').replace('_', ' ')}
+                  </Badge>
+                </div>
+                <div className="flex items-center gap-1.5 flex-shrink-0">
+                  <span className="text-xs text-muted-foreground font-mono">{post.id}</span>
+                  {post.status === 'approved' && <Badge className="bg-green-500/10 text-green-700 border-green-200 text-xs">Approved</Badge>}
+                  {post.status === 'skipped'  && <Badge variant="outline" className="text-xs text-muted-foreground">Skipped</Badge>}
+                </div>
+              </div>
+
+              <div className="px-4 pb-3">
+                {isEditing ? (
+                  <Textarea
+                    value={editContent}
+                    onChange={e => setEditContent(e.target.value)}
+                    rows={6}
+                    autoFocus
+                    className="text-sm resize-none font-mono"
+                  />
+                ) : (
+                  <div className="text-sm leading-relaxed whitespace-pre-wrap bg-muted rounded-lg px-3 py-2 font-mono border border-border">
+                    {post.content}
+                  </div>
+                )}
+                {post.hashtags && post.hashtags.length > 0 && !isEditing && (
+                  <p className="text-xs text-blue-600 mt-1.5 px-1">{post.hashtags.join(' ')}</p>
+                )}
+                {post.image_suggestion && (
+                  <p className="text-xs text-muted-foreground mt-1.5 px-1 italic">📸 {post.image_suggestion}</p>
+                )}
+                <p className="text-xs text-muted-foreground mt-1.5 px-1">{post.character_count} chars</p>
+              </div>
+
+              <div className="px-4 pb-3 flex items-center gap-2 flex-wrap">
+                {isEditing ? (
+                  <>
+                    <Button size="sm" onClick={() => handleSaveEdit(post)} disabled={isLoading} className="bg-green-600 hover:bg-green-700 h-7 text-xs">
+                      {isLoading ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : null}
+                      Save & Approve
+                    </Button>
+                    <Button size="sm" variant="outline" onClick={() => setEditingId(null)} className="h-7 text-xs">Cancel</Button>
+                  </>
+                ) : (
+                  <>
+                    {post.status !== 'approved' && (
+                      <Button size="sm" onClick={() => handleApprove(post)} disabled={isLoading} className="bg-green-600 hover:bg-green-700 h-7 text-xs">
+                        {isLoading ? <Loader2 className="h-3 w-3 animate-spin" /> : 'Approve'}
+                      </Button>
+                    )}
+                    <Button size="sm" variant="outline" onClick={() => { setEditContent(post.content); setEditingId(post.id); }} className="h-7 text-xs">
+                      Edit
+                    </Button>
+                    {post.status !== 'skipped' && (
+                      <Button size="sm" variant="ghost" onClick={() => handleSkip(post)} disabled={isLoading} className="h-7 text-xs text-muted-foreground">
+                        Skip
+                      </Button>
+                    )}
+                    <Button size="sm" variant="ghost" onClick={() => handleCopy(post)} className="h-7 text-xs ml-auto">
+                      {copied === post.id ? 'Copied' : 'Copy'}
+                    </Button>
+                  </>
+                )}
+              </div>
+            </Card>
+          );
+        })}
+      </div>
+
+      {filtered.length === 0 && (
+        <div className="text-center text-muted-foreground text-sm py-8">No posts match the current filters.</div>
+      )}
+    </div>
+  );
+}

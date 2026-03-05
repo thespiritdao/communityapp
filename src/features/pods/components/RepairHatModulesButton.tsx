@@ -2,9 +2,8 @@
 import { useState } from 'react';
 import { usePublicClient, useWalletClient } from 'wagmi';
 import { HatToggleService } from '@/features/pods/services/hatToggleService';
-
 export function RepairHatModulesButton({
-  hatId = process.env.NEXT_PUBLIC_EXECUTIVE_POD_MEMBER as `0x${string}`,
+  hatId = '' as `0x${string}`,
 }: { hatId?: `0x${string}` }) {
   const publicClient = usePublicClient();
   const { data: walletClient } = useWalletClient();

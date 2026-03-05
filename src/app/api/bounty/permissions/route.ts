@@ -1,7 +1,7 @@
 /**
- * API Route: Check Bounty Permissions (V3)
+ * API Route: Check Bounty Permissions
  *
- * For BountyManagerV3: Reads permissions directly from contract
+ * Reads permissions directly from BountyManagerV4 contract
  * Uses Hats Protocol to verify leader status
  */
 
@@ -10,7 +10,7 @@ import { createPublicClient, http } from 'viem';
 import { base } from 'viem/chains';
 
 const BOUNTY_MANAGER_V3_ADDRESS = process.env
-  .NEXT_PUBLIC_BOUNTY_MANAGER_V3_ADDRESS as `0x${string}`;
+  .NEXT_PUBLIC_BOUNTY_MANAGER_ADDRESS as `0x${string}`;
 
 const BountyManagerV3ABI = [
   {
@@ -65,7 +65,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    console.log(`🔍 Checking V3 permission: ${action} for ${user} on ${podId}`);
+    console.log(`🔍 Checking bounty permission: ${action} for ${user} on ${podId}`);
 
     // Check if pod is registered in V3 contract
     const isValidPod = await publicClient.readContract({
@@ -76,7 +76,7 @@ export async function GET(request: NextRequest) {
     });
 
     if (!isValidPod) {
-      console.log(`⚠️ Pod ${podId} not registered in BountyManagerV3`);
+      console.log(`⚠️ Pod ${podId} not registered in BountyManager`);
       return NextResponse.json({
         canManage: false,
         error: 'Pod not registered',
@@ -96,7 +96,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       canManage,
       isPodRegistered: isValidPod,
-      contractVersion: 'V3',
+      contractVersion: 'V4',
     });
   } catch (error) {
     console.error('❌ Error checking V3 permissions:', error);

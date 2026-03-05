@@ -2,17 +2,19 @@
  * Viem Hat ID Compatibility Fixes
  *
  * Fixes viem compatibility issues with valid Hats Protocol hat IDs.
- * Your hat ID 0x0000008800010000000000000000000000000000000000000000000000000000
- * is structurally valid but causes viem parsing errors.
+ * Hat IDs are sourced from the hat_registry DB table (see src/lib/hatRegistry.ts).
+ * The fallback below is the new Base mainnet hat tree (top hat 0x00000749).
  */
 
 import type { PublicClient } from 'viem';
+import { getClientHatId } from '@/lib/hatRegistryClient';
 
 /**
- * Executive Pod Hat ID from your deployment - this is correct!
+ * Executive Pod Hat ID — reads from client registry, falls back to new tree value.
  */
 export const EXECUTIVE_POD_HAT_ID =
-  '0x0000008800010000000000000000000000000000000000000000000000000000';
+  getClientHatId('EXECUTIVE_POD_LEADER') ||
+  '0x0000074900010000000000000000000000000000000000000000000000000000';
 
 /**
  * Converts hat ID to BigInt with viem compatibility fixes

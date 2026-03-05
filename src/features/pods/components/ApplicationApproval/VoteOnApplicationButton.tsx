@@ -8,6 +8,7 @@ import { Loader2 } from 'lucide-react';
 import { encodeFunctionData } from 'viem';
 import { supabase } from '@/utils/supabaseClient';
 import PodApplicationVotingABI from '@/abis/PodApplicationVotingABI.json';
+import { getClientHatId } from '@/lib/hatRegistryClient';
 
 interface VoteOnApplicationButtonProps {
   applicationId: string;
@@ -22,7 +23,7 @@ interface VoteOnApplicationButtonProps {
 const POD_APPLICATION_VOTING_CONTRACT = process.env.NEXT_PUBLIC_POD_APPLICATION_VOTING as `0x${string}`;
 
 // Hats Protocol - Executive Pod Leader HAT (required to vote)
-const EXECUTIVE_POD_LEADER_HAT = process.env.NEXT_PUBLIC_EXECUTIVE_POD_LEADER as string;
+const EXECUTIVE_POD_LEADER_HAT = getClientHatId('EXECUTIVE_POD_LEADER') || '';
 
 /**
  * Convert UUID string to bytes32 for contract call

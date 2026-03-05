@@ -1,5 +1,6 @@
 import { HatToggleService } from './hatToggleService';
 import type { PublicClient, WalletClient } from 'viem';
+import { getClientHatId } from '@/lib/hatRegistryClient';
 
 /**
  * Service for configuring HAT-based toggle modules for Pod roles
@@ -76,19 +77,12 @@ export class HatModuleConfigurationService {
    * For Executive Pod Member, use Executive Pod Leader HAT
    */
   static getToggleHatForRole(hatId: string): string | null {
-    const executivePodMember = process.env.NEXT_PUBLIC_EXECUTIVE_POD_MEMBER;
-    const executivePodLeader = process.env.NEXT_PUBLIC_EXECUTIVE_POD_LEADER;
-
-    // If this is the Executive Pod Member HAT, use Executive Pod Leader as toggle
-    if (hatId === executivePodMember && executivePodLeader) {
-      console.log(
-        '🎯 Using Executive Pod Leader as toggle for Executive Pod Member',
-      );
-      return executivePodLeader;
-    }
+    const executivePodLeader = getClientHatId('EXECUTIVE_POD_LEADER');
 
     // For other roles, you can add more mappings here
     // Example pattern: subordinate HATs are toggled by their parent/admin HATs
+    void hatId;
+    void executivePodLeader;
 
     console.log('⚠️ No specific toggle HAT mapping found for:', hatId);
     return null;

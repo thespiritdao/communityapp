@@ -7,6 +7,52 @@ const supabase = createClient(
 );
 
 /**
+ * Fire-and-forget: mint Advocate NFT if this is the donor's first confirmed donation.
+ * Non-blocking — failure here does not affect the mint confirmation response.
+ */
+async function maybeAirdropAdvocate(userWallet: string, currentDonationId: string) {
+  try {
+    // Check if this wallet has any OTHER donations that have been minted (status = 'minting' or 'minted')
+    // We exclude the current one since it just transitioned to 'minting' in this same request.
+    const { data: priorMints } = await supabase
+      .from('pending_donations')
+      .select('id')
+      .eq('user_wallet', userWallet.toLowerCase())
+      .in('status', ['minting', 'minted'])
+      .neq('id', currentDonationId)
+      .limit(1);
+
+    if (priorMints && priorMints.length > 0) {
+      // Not a first donation — skip
+      return;
+    }
+
+    // First donation — trigger Advocate mint
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXTAUTH_URL || 'http://localhost:3000';
+    const mintResponse = await fetch(`${baseUrl}/api/onboarding/mint-advocate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ walletAddress: userWallet }),
+    });
+
+    if (!mintResponse.ok) {
+      const errData = await mintResponse.json().catch(() => ({}));
+      console.error('⚠️ First-donation Advocate mint failed (non-critical):', errData);
+    } else {
+      const result = await mintResponse.json();
+      if (result.alreadyHadNFT) {
+        console.log(`ℹ️ First donation for ${userWallet} — Advocate already held, skipping mint`);
+      } else {
+        console.log(`🎖️ Advocate NFT minted for first-time donor: ${userWallet}`);
+      }
+    }
+  } catch (err) {
+    // Non-blocking — log and continue
+    console.error('⚠️ maybeAirdropAdvocate error (non-critical):', err);
+  }
+}
+
+/**
  * POST /api/donations/mint/confirm
  *
  * Records that a donation has been minted via frontend Smart Wallet transaction
@@ -55,6 +101,9 @@ export async function POST(request: NextRequest) {
     }
 
     console.log('✅ Mint transaction recorded');
+
+    // Fire-and-forget: airdrop Advocate NFT on first donation
+    maybeAirdropAdvocate(data.user_wallet, donationId);
 
     return NextResponse.json({
       success: true,

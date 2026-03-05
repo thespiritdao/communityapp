@@ -40,6 +40,7 @@ import type { EligibilityCriteria } from '../services/EligibilityService';
 import { HatsModuleSyncService } from '../services/HatsModuleSyncService';
 import { TimeBasedToggleService } from '../services/TimeBasedToggleService';
 import { HatVerificationService } from '../services/HatVerificationService';
+import { getClientHatId } from '@/lib/hatRegistryClient';
 
 interface HatsModulePodCreationFormProps {
   onSuccess?: (result: any) => void;
@@ -319,7 +320,7 @@ export const HatsModulePodCreationForm: React.FC<
     }
 
     // Add Community Pods option (always available)
-    const communityPodsHatId = process.env.NEXT_PUBLIC_COMMUNITY_PODS_PARENT || '';
+    const communityPodsHatId = getClientHatId('COMMUNITY_PODS_PARENT') || '';
     // Look up the Community Pods parent's UUID from the database
     console.log('🔍 Looking up Community Pods parent in allPods:', {
       communityPodsHatId,
@@ -1119,80 +1120,8 @@ export const HatsModulePodCreationForm: React.FC<
           );
         }
 
-        // CRITICAL: Check if current user has admin permissions on the parent HAT
-        console.log('🔑 Checking admin permissions for HAT creation...');
-        let hasAdminPermission = false;
-        try {
-          const balanceOfResult = await publicClient!.readContract({
-            address: process.env.NEXT_PUBLIC_HATS_CONTRACT as `0x${string}`,
-            abi: [
-              {
-                name: 'balanceOf',
-                type: 'function',
-                inputs: [
-                  { name: 'account', type: 'address' },
-                  { name: 'id', type: 'uint256' },
-                ],
-                outputs: [{ name: '', type: 'uint256' }],
-                stateMutability: 'view',
-              },
-            ],
-            functionName: 'balanceOf',
-            args: [address!, parentHatBigInt],
-          });
-
-          hasAdminPermission = Number(balanceOfResult) > 0;
-          console.log('🔑 Admin permission check result:', {
-            userAddress: address,
-            parentHatId: config.parentHatId,
-            hasAdminPermission: hasAdminPermission,
-            balance: Number(balanceOfResult),
-          });
-        } catch (adminError) {
-          console.error('❌ Admin permission check failed:', {
-            hatId: config.parentHatId,
-            userAddress: address,
-            error:
-              adminError instanceof Error
-                ? adminError.message
-                : 'Unknown error',
-          });
-          throw new Error(
-            `Failed to check admin permissions: ${adminError instanceof Error ? adminError.message : 'Unknown error'}`,
-          );
-        }
-
-        if (!hasAdminPermission) {
-          console.log('⚠️ User lacks parent HAT - providing debugging info...');
-
-          const shortHatId = `${config.parentHatId.slice(0, 6)}...${config.parentHatId.slice(-6)}`;
-          const envParentHat = process.env.NEXT_PUBLIC_COMMUNITY_PODS_PARENT;
-
-          console.log('🔍 HAT Configuration Debug:', {
-            configParentHatId: config.parentHatId,
-            envVarValue: envParentHat,
-            formDataParentPodId: formData.parentPodId,
-            userAddress: address,
-            areTheyEqual: config.parentHatId === envParentHat,
-          });
-
-          throw new Error(`❌ Permission Denied: You need the parent HAT (${shortHatId}) to create child HATs.
-
-Debug Info:
-- Required HAT: ${config.parentHatId}
-- Environment Variable: ${envParentHat}
-- Your Address: ${address}
-- Your Balance for this HAT: 0
-
-Instructions:
-1. Verify you have the correct HAT: ${shortHatId}
-2. If the environment variable is wrong, update NEXT_PUBLIC_COMMUNITY_PODS_PARENT
-3. Contact a HAT admin to mint the HAT to your address if needed`);
-        }
-
-        console.log(
-          '✅ Admin permission verified - proceeding with HAT creation',
-        );
+        // PodCreationManagerV2 holds COMMUNITY_PODS_PARENT and calls createHat internally.
+        // The contract is whitelisted with Coinbase Paymaster — gas sponsored for the user.
 
         // Create structured metadata using Hats Details SDK
         console.log('🔗 Creating IPFS metadata for HAT...');
@@ -1217,276 +1146,66 @@ Instructions:
             '❌ IPFS metadata creation failed, falling back to simple string:',
             ipfsError,
           );
-          // Fallback to simple string if IPFS fails
           ipfsMetadataHash = config.name;
         }
 
-        // Get eligibility module address for on-chain enforcement
-        console.log(
-          '🎩 Retrieving eligibility module address for HAT creation...',
-        );
-        const eligibilityModuleAddress =
-          EligibilityModuleService.getModuleAddress();
-        const eligibilityAddress =
-          eligibilityModuleAddress ||
-          '0x0000000000000000000000000000000000000001';
+        const IMAGE_URI = `https://ui-avatars.com/api/?name=${encodeURIComponent(config.name)}&size=400&background=bfe7c6&color=000&bold=true`;
+        const POD_CREATION_MANAGER_ADDRESS = process.env.NEXT_PUBLIC_POD_CREATION_MANAGER as `0x${string}`;
 
-        if (eligibilityModuleAddress) {
-          console.log(
-            '✅ Using eligibility module for on-chain enforcement:',
-            eligibilityModuleAddress,
-          );
-        } else {
-          console.warn(
-            '⚠️ Eligibility module not configured - using dummy address (no on-chain enforcement)',
-          );
-          console.warn(
-            '   Configure NEXT_PUBLIC_ELIGIBILITY_MODULE_ADDRESS to enable automatic eligibility checks',
-          );
+        if (!POD_CREATION_MANAGER_ADDRESS) {
+          throw new Error('NEXT_PUBLIC_POD_CREATION_MANAGER not configured');
         }
 
-        // ✅ Check for time-based eligibility criteria to determine toggle module
-        console.log('🔀 Checking for time-based eligibility criteria...');
-        const hasTimeCriteria =
-          formData.eligibilityRules?.some((c) => c.type === 'time_based') ||
-          false;
-        const timeBasedToggleConfigured = TimeBasedToggleService.isConfigured();
-
-        console.log('🔀 Toggle module selection:', {
-          hasTimeCriteria,
-          timeBasedToggleConfigured,
-          criteriaCount: formData.eligibilityRules?.length || 0,
-          toggleModuleAddress: TimeBasedToggleService.getModuleAddress(),
-        });
-
-        // ✅ CRITICAL FIX: Predict Management HAT ID for SELF-ADMIN architecture
-        // This enables pod leaders to manage their own pods without needing Community Pod HAT
-        console.log(
-          '🔮 === PREDICTING MANAGEMENT HAT ID FOR SELF-ADMIN ARCHITECTURE ===',
-        );
-
-        let predictedManagementHatId: bigint | null = null; // Store for self-admin
-
-        try {
-          const parentHatIdBigInt = BigInt(config.parentHatId);
-
-          // Query database for accurate next child index
-          const { HatChildIndexService } = await import(
-            '@/features/pods/services/HatChildIndexService'
-          );
-          const nextChildIndex = await HatChildIndexService.getNextChildIndex(
-            config.parentHatId,
-          );
-
-          console.log(
-            '✅ Database-backed child index retrieved:',
-            nextChildIndex,
-          );
-
-          const { predictChildHatId } = await import('@/utils/hatIdPrediction');
-
-          // Predict management HAT ID
-          const predictedManagementId = predictChildHatId(
-            parentHatIdBigInt,
-            nextChildIndex,
-          );
-          predictedManagementHatId = predictedManagementId; // ✅ Store for self-admin
-
-          // Predict admin HAT ID (first child of management HAT)
-          const predictedAdminId = predictAdminHatId(predictedManagementId);
-          predictedProxyAdminHatIdStr = predictedAdminId.toString(); // Store for proxy initialization
-
-          console.log('✅ Management HAT will use SELF-ADMIN architecture:');
-          console.log(
-            '  Predicted Management HAT ID:',
-            predictedManagementId.toString(),
-          );
-          console.log(
-            '  Management HAT Admin:',
-            predictedManagementId.toString(),
-            '(SELF-ADMIN)',
-          );
-          console.log(
-            '  Predicted Proxy Admin HAT ID:',
-            predictedProxyAdminHatIdStr,
-          );
-          console.log(
-            '🎯 Pod leaders can now manage their pods without Community Pod HAT!',
-          );
-          console.log('🎯 This also enables gasless Phase 6 elimination!');
-        } catch (predictionError) {
-          console.error(
-            '❌ Failed to predict Management HAT ID:',
-            predictionError,
-          );
-          console.warn('⚠️ Falling back to parent HAT as admin (old behavior)');
-          // predictedManagementHatId remains null - will use parent as fallback
-        }
-
+        // Build the createPodProposal call — goes into transactionCalls for OnChainKit
+        // Gas sponsored via Coinbase Paymaster (contract is whitelisted)
         hatCreationCall = {
-          to: process.env.NEXT_PUBLIC_HATS_CONTRACT as `0x${string}`,
+          to: POD_CREATION_MANAGER_ADDRESS,
           abi: [
             {
-              name: 'createHat',
+              name: 'createPodProposal',
               type: 'function',
               inputs: [
-                { name: '_admin', type: 'uint256' },
-                { name: '_details', type: 'string' },
-                { name: '_maxSupply', type: 'uint32' },
-                { name: '_eligibility', type: 'address' },
-                { name: '_toggle', type: 'address' },
-                { name: '_mutable', type: 'bool' },
-                { name: '_imageURI', type: 'string' },
+                { name: 'podId', type: 'string' },
+                { name: 'name', type: 'string' },
+                { name: 'description', type: 'string' },
+                { name: 'imageURI', type: 'string' },
+                { name: 'podLeads', type: 'address[]' },
               ],
-              outputs: [{ name: 'newHatId', type: 'uint256' }],
+              outputs: [{ name: 'managementHatId', type: 'uint256' }],
               stateMutability: 'nonpayable',
             },
           ],
-          functionName: 'createHat',
+          functionName: 'createPodProposal',
           args: [
-            // ✅ CRITICAL FIX: Smart admin assignment based on pod level
-            // - Top-level community pods: SELF-ADMIN (pod leaders control their pods)
-            // - Sub-pods: Parent Management HAT as admin (parent pod leaders control sub-pods)
-            (() => {
-              const COMMUNITY_POD_HAT_ID =
-                process.env.NEXT_PUBLIC_COMMUNITY_PODS_PARENT;
-              const isTopLevelCommunityPod =
-                config.parentHatId === COMMUNITY_POD_HAT_ID;
-
-              if (isTopLevelCommunityPod && predictedManagementHatId !== null) {
-                console.log('🎯 Top-level community pod → Using SELF-ADMIN');
-                return predictedManagementHatId; // ✅ SELF-ADMIN for community pods
-              } else if (!isTopLevelCommunityPod) {
-                console.log(
-                  '🎯 Sub-pod → Using parent Management HAT as admin',
-                );
-                return BigInt(config.parentHatId); // ✅ Parent pod controls sub-pods
-              } else {
-                console.log('⚠️ Fallback to parent HAT as admin');
-                return BigInt(config.parentHatId); // ❌ Fallback
-              }
-            })(),
-            ipfsMetadataHash, // ✅ Using IPFS hash (required by Hats Protocol)
-            Math.max(1, config.podLeaders.length),
-            eligibilityAddress as `0x${string}`, // ✅ Eligibility module for on-chain enforcement
-            (() => {
-              // ✅ Conditional toggle module selection based on time-based criteria
-              if (hasTimeCriteria && timeBasedToggleConfigured) {
-                const toggleAddress =
-                  TimeBasedToggleService.getModuleAddress()!;
-                console.log(
-                  '🔀 Using TimeBasedToggleModule for automatic expiration:',
-                  toggleAddress,
-                );
-                return toggleAddress;
-              } else {
-                console.log(
-                  '🔀 Using PodAuthProxy as toggle module:',
-                  predictedProxyAddress,
-                );
-                return predictedProxyAddress;
-              }
-            })() as `0x${string}`, // ✅ Toggle module: TimeBasedToggleModule if time criteria exist, else PodAuthProxy
-            true, // Mutable
-            `https://ui-avatars.com/api/?name=${encodeURIComponent(config.name)}&size=400&background=bfe7c6&color=000&bold=true`,
+            podId,
+            config.name,
+            config.description || '',
+            IMAGE_URI,
+            config.podLeaders as `0x${string}`[],
           ],
         };
       }
 
-      // DETAILED ARGUMENT LOGGING
-      console.log('📊 Function arguments analysis:', {
-        functionName: hatCreationCall.functionName,
-        isTopLevel,
-        ...(isTopLevel
-          ? {
-              arg0_target: hatCreationCall.args[0],
-              arg1_details: hatCreationCall.args[1],
-              arg1_details_type: HatsDetailsService.isValidIPFSHash(
-                hatCreationCall.args[1] as string,
-              )
-                ? 'IPFS_HASH'
-                : 'RAW_STRING',
-              arg2_imageURI: hatCreationCall.args[2],
-            }
-          : {
-              arg0_admin: hatCreationCall.args[0]?.toString(),
-              arg1_details: hatCreationCall.args[1],
-              arg1_details_type: HatsDetailsService.isValidIPFSHash(
-                hatCreationCall.args[1] as string,
-              )
-                ? 'IPFS_HASH'
-                : 'RAW_STRING',
-              arg2_maxSupply: hatCreationCall.args[2],
-              arg3_eligibility: hatCreationCall.args[3],
-              arg4_toggle: hatCreationCall.args[4],
-              arg5_mutable: hatCreationCall.args[5],
-              arg6_imageURI: hatCreationCall.args[6],
-            }),
-        totalArgs: hatCreationCall.args.length,
-      });
-
       console.log('🔧 Available parent options:', availableParentPods);
 
-      try {
-        console.log('🔧 Form data parent selection:', formData.parentPodId);
-        console.log('🔧 Config parent HAT ID:', config.parentHatId);
-      } catch (logError) {
-        console.error('❌ Error logging parent selection:', logError);
-      }
-
-      console.log('🔧 Complete transaction call object:', {
-        to: hatCreationCall.to,
-        functionName: hatCreationCall.functionName,
-        abi: hatCreationCall.abi,
-        args: hatCreationCall.args,
-        podId: podId,
-        parentHat: config.parentHatId,
-        parentHatBigInt:
-          config.parentHatId === 'TOP_LEVEL'
-            ? 'N/A (using mintTopHat)'
-            : BigInt(config.parentHatId).toString(),
-        chainId: base.id,
-        hatsContract: process.env.NEXT_PUBLIC_HATS_CONTRACT,
-      });
-
-      // Validate the transaction call structure
-      console.log('🔍 Transaction call validation:', {
-        hasTo: !!hatCreationCall.to,
-        hasFunction: !!hatCreationCall.functionName,
-        hasAbi: !!hatCreationCall.abi && hatCreationCall.abi.length > 0,
-        hasArgs: !!hatCreationCall.args && hatCreationCall.args.length > 0,
-        argsCount: hatCreationCall.args?.length,
-        expectedArgsCount: 7,
-        toFormat: /^0x[a-fA-F0-9]{40}$/.test(hatCreationCall.to),
-        toValue: hatCreationCall.to,
-      });
-
-      if (
-        !hatCreationCall.to ||
-        !hatCreationCall.functionName ||
-        !hatCreationCall.args
-      ) {
-        throw new Error('Invalid HATS creation transaction call prepared');
-      }
-
-      // Pre-transaction validation: simulate the createHat call
-      console.log(
-        '🧪 Pre-transaction validation: simulating createHat call...',
-      );
-      try {
-        await publicClient!.simulateContract({
-          address: hatCreationCall.to,
-          abi: hatCreationCall.abi,
-          functionName: hatCreationCall.functionName,
-          args: hatCreationCall.args,
-          account: address,
-        });
-        console.log('✅ Pre-transaction simulation successful');
-      } catch (simulationError) {
-        console.error('❌ Pre-transaction simulation failed:', simulationError);
-        throw new Error(
-          `Transaction would fail: ${simulationError instanceof Error ? simulationError.message : 'Simulation failed'}`,
-        );
+      // Pre-transaction simulation only applies to client-side hat creation (top-level / mintTopHat)
+      if (hatCreationCall) {
+        console.log('🧪 Pre-transaction validation: simulating hat creation call...');
+        try {
+          await publicClient!.simulateContract({
+            address: hatCreationCall.to,
+            abi: hatCreationCall.abi,
+            functionName: hatCreationCall.functionName,
+            args: hatCreationCall.args,
+            account: address,
+          });
+          console.log('✅ Pre-transaction simulation successful');
+        } catch (simulationError) {
+          console.error('❌ Pre-transaction simulation failed:', simulationError);
+          throw new Error(
+            `Transaction would fail: ${simulationError instanceof Error ? simulationError.message : 'Simulation failed'}`,
+          );
+        }
       }
 
       console.log('✅ Transaction preparation complete, setting state...');
@@ -1538,110 +1257,50 @@ Instructions:
         leaders: config.podLeaders.length,
       });
 
-      // ✅ CRITICAL FIX: Validate BOTH transaction calls before setting state
-      // Note: We validate "to" here but will convert to "address" for OnChainKit
-      console.log('🔍 === VALIDATING TRANSACTION CALLS ===');
+      // ✅ Build transaction calls for user wallet
+      // For child pods: hat was created server-side, so only proxy deployment goes to user wallet
+      // For top-level pods: mintTopHat still goes to user wallet
+      console.log('🔧 === BUILDING ONCHAINKIT TRANSACTION CALLS ===');
 
-      // Validate HAT creation call
-      if (!hatCreationCall.to) {
-        throw new Error(
-          'HAT creation call missing contract address (to field)',
-        );
-      }
-      if (!/^0x[a-fA-F0-9]{40}$/.test(hatCreationCall.to)) {
-        throw new Error(
-          `HAT creation call has invalid contract address: ${hatCreationCall.to}`,
-        );
-      }
-      if (!hatCreationCall.functionName) {
-        throw new Error('HAT creation call missing "functionName"');
-      }
-      if (
-        !hatCreationCall.abi ||
-        !Array.isArray(hatCreationCall.abi) ||
-        hatCreationCall.abi.length === 0
-      ) {
-        throw new Error('HAT creation call missing or invalid "abi"');
-      }
-      if (!hatCreationCall.args || !Array.isArray(hatCreationCall.args)) {
-        throw new Error('HAT creation call missing or invalid "args"');
-      }
+      const transactionCalls: any[] = [];
 
-      console.log('✅ HAT creation call validated:', {
-        to: hatCreationCall.to,
-        functionName: hatCreationCall.functionName,
-        argsCount: hatCreationCall.args.length,
-      });
-
-      // Validate proxy deployment call
-      if (!proxyDeploymentCall.to) {
-        throw new Error(
-          'Proxy deployment call missing contract address (to field)',
-        );
-      }
-      if (!/^0x[a-fA-F0-9]{40}$/.test(proxyDeploymentCall.to)) {
-        throw new Error(
-          `Proxy deployment call has invalid contract address: ${proxyDeploymentCall.to}`,
-        );
-      }
-      if (!proxyDeploymentCall.functionName) {
-        throw new Error('Proxy deployment call missing "functionName"');
-      }
-      if (
-        !proxyDeploymentCall.abi ||
-        !Array.isArray(proxyDeploymentCall.abi) ||
-        proxyDeploymentCall.abi.length === 0
-      ) {
-        throw new Error('Proxy deployment call missing or invalid "abi"');
-      }
-      if (
-        !proxyDeploymentCall.args ||
-        !Array.isArray(proxyDeploymentCall.args)
-      ) {
-        throw new Error('Proxy deployment call missing or invalid "args"');
-      }
-
-      console.log('✅ Proxy deployment call validated:', {
-        to: proxyDeploymentCall.to,
-        functionName: proxyDeploymentCall.functionName,
-        argsCount: proxyDeploymentCall.args.length,
-      });
-
-      // ✅ CRITICAL FIX: OnChainKit expects "address" property, not "to"
-      // According to OnChainKit docs: https://docs.base.org/onchainkit/transaction/transaction
-      // Calls should use ContractFunctionParameters format with "address" property
-      console.log('🔧 === CONVERTING TO ONCHAINKIT FORMAT ===');
-
-      // Prepare calls in OnChainKit-compatible format
-      const transactionCalls = [
-        {
-          address: hatCreationCall.to as `0x${string}`, // ✅ Changed from "to" to "address"
+      // Only include hat creation call if it wasn't handled server-side
+      if (hatCreationCall) {
+        if (
+          !hatCreationCall.to ||
+          !/^0x[a-fA-F0-9]{40}$/.test(hatCreationCall.to) ||
+          !hatCreationCall.functionName ||
+          !hatCreationCall.args
+        ) {
+          throw new Error('Invalid HAT creation transaction call prepared');
+        }
+        transactionCalls.push({
+          address: hatCreationCall.to as `0x${string}`,
           abi: hatCreationCall.abi,
           functionName: hatCreationCall.functionName,
           args: hatCreationCall.args,
-        },
-        {
-          address: proxyDeploymentCall.to as `0x${string}`, // ✅ Changed from "to" to "address"
-          abi: proxyDeploymentCall.abi,
-          functionName: proxyDeploymentCall.functionName,
-          args: proxyDeploymentCall.args,
-        },
-      ];
+        });
+      }
 
-      console.log('📦 Transaction calls prepared in OnChainKit format:', {
+      // Always include proxy deployment (user deploys their own proxy)
+      if (
+        !proxyDeploymentCall.to ||
+        !/^0x[a-fA-F0-9]{40}$/.test(proxyDeploymentCall.to) ||
+        !proxyDeploymentCall.functionName ||
+        !proxyDeploymentCall.args
+      ) {
+        throw new Error('Invalid proxy deployment transaction call prepared');
+      }
+      transactionCalls.push({
+        address: proxyDeploymentCall.to as `0x${string}`,
+        abi: proxyDeploymentCall.abi,
+        functionName: proxyDeploymentCall.functionName,
+        args: proxyDeploymentCall.args,
+      });
+
+      console.log('📦 Transaction calls prepared:', {
         totalCalls: transactionCalls.length,
-        call1: {
-          type: 'HAT Creation',
-          address: transactionCalls[0].address,
-          functionName: transactionCalls[0].functionName,
-          argsCount: transactionCalls[0].args.length,
-        },
-        call2: {
-          type: 'Proxy Deployment',
-          address: transactionCalls[1].address,
-          functionName: transactionCalls[1].functionName,
-          argsCount: transactionCalls[1].args.length,
-        },
+        hatCreatedServerSide: !hatCreationCall,
       });
 
       console.log(
@@ -1713,14 +1372,17 @@ Instructions:
           response.transactionReceipts?.length || 0,
         );
 
-        // Extract HAT ID from transaction logs (first transaction)
-        let newHatId = '';
+        // Extract HAT ID from server response (if hat was created server-side) or from tx logs
+        // createdHatId is set in state by the server API call before transactions are submitted
+        let newHatId = createdHatId || '';
         let proxyAddress = '';
         let hatReceipt: any;
 
+        console.log('🎩 Hat ID from server state:', newHatId || 'none — will extract from tx');
+
         try {
           console.log(
-            '🔍 Analyzing transaction response for HAT ID and Proxy Address:',
+            '🔍 Analyzing transaction response for Proxy Address:',
             response,
           );
 
@@ -1730,17 +1392,24 @@ Instructions:
             Array.isArray(response.transactionReceipts) &&
             response.transactionReceipts.length > 0
           ) {
-            // Transaction 0: HAT creation
-            hatReceipt = response.transactionReceipts[0];
-            console.log(
-              '🎩 Processing HAT creation receipt (tx 0) with',
-              hatReceipt.logs?.length || 0,
-              'logs',
-            );
+            // When hat was created server-side: tx[0] = proxy deployment
+            // When hat was created client-side: tx[0] = hat creation, tx[1] = proxy deployment
+            const hadClientHatTx = !createdHatId; // hat tx was included if we didn't use server
 
-            // Transaction 1: Proxy deployment (if exists)
-            if (response.transactionReceipts.length > 1) {
-              const proxyReceipt = response.transactionReceipts[1];
+            if (hadClientHatTx) {
+              // Transaction 0: HAT creation
+              hatReceipt = response.transactionReceipts[0];
+              console.log(
+                '🎩 Processing HAT creation receipt (tx 0) with',
+                hatReceipt.logs?.length || 0,
+                'logs',
+              );
+            }
+
+            // Proxy deployment: tx[1] if hat was client-side, tx[0] if hat was server-side
+            const proxyReceiptIndex = hadClientHatTx ? 1 : 0;
+            if (response.transactionReceipts.length > proxyReceiptIndex) {
+              const proxyReceipt = response.transactionReceipts[proxyReceiptIndex];
               console.log(
                 '🔐 Processing Proxy deployment receipt (tx 1) with',
                 proxyReceipt.logs?.length || 0,
@@ -1774,7 +1443,9 @@ Instructions:
               }
             }
 
-            const receipt = hatReceipt; // Use HAT receipt for HAT ID extraction
+            // Only extract hat ID from tx logs if it wasn't returned by the server
+            const receipt = hatReceipt;
+            if (!newHatId && receipt) {
             console.log(
               '🔍 Using OnChainKit transaction receipt with',
               receipt.logs?.length || 0,
@@ -1790,40 +1461,53 @@ Instructions:
             );
 
             if (receipt.logs && receipt.logs.length > 0) {
-              // Log all contract addresses to debug
-              receipt.logs.forEach((log: any, index: number) => {
-                console.log(`🔍 Log ${index}:`, {
-                  address: log.address?.toLowerCase(),
-                  topics: log.topics?.length || 0,
-                  firstTopic: log.topics?.[0],
-                });
-              });
+              const podCreationManagerAddress =
+                process.env.NEXT_PUBLIC_POD_CREATION_MANAGER?.toLowerCase();
 
-              // Find logs from HATS contract
+              let hatIdExtracted = false;
+
+              // Primary: extract managementHatId from PodProposed event on PodCreationManagerV2
+              const POD_PROPOSED_ABI = [{
+                name: 'PodProposed',
+                type: 'event',
+                inputs: [
+                  { name: 'podId', type: 'string', indexed: true },
+                  { name: 'creator', type: 'address', indexed: true },
+                  { name: 'podLeads', type: 'address[]', indexed: false },
+                  { name: 'managementHatId', type: 'uint256', indexed: false },
+                  { name: 'vetoDeadline', type: 'uint256', indexed: false },
+                ],
+              }] as const;
+
+              for (const log of receipt.logs) {
+                if (log.address?.toLowerCase() !== podCreationManagerAddress) continue;
+                try {
+                  const decoded = decodeEventLog({
+                    abi: POD_PROPOSED_ABI,
+                    data: log.data,
+                    topics: log.topics,
+                    eventName: 'PodProposed',
+                  });
+                  const extractedHatId = (decoded.args as any).managementHatId.toString();
+                  if (extractedHatId && extractedHatId.length < 100) {
+                    newHatId = extractedHatId;
+                    console.log('🎩 ✅ Extracted hat ID from PodProposed event:', newHatId);
+                    hatIdExtracted = true;
+                    break;
+                  }
+                } catch {
+                  // not this log
+                }
+              }
+
+              // Fallback: extract from HatCreated event on Hats Protocol contract
+              if (!hatIdExtracted) {
               const hatsLogs = receipt.logs.filter(
                 (log: any) => log.address?.toLowerCase() === hatsContractAddress,
               );
 
-              console.log(
-                '🎩 Found',
-                hatsLogs.length,
-                'logs from HATS contract',
-              );
-
-              let hatIdExtracted = false;
-
-              // ===============================================================
-              // EXTRACTION FIX: Use proper ABI decoding instead of manual slicing
-              // ===============================================================
               for (const hatsLog of hatsLogs) {
-                console.log('🔍 Analyzing HATS log:', {
-                  topics: hatsLog.topics?.length || 0,
-                  data: hatsLog.data?.length || 0,
-                  firstTopic: hatsLog.topics?.[0],
-                });
-
                 try {
-                  // Primary method: Use viem's decodeEventLog for proper ABI decoding
                   const decoded = decodeEventLog({
                     abi: [HAT_CREATED_EVENT_ABI],
                     data: hatsLog.data,
@@ -1833,32 +1517,12 @@ Instructions:
                   if (decoded.eventName === 'HatCreated' && decoded.args.id) {
                     const extractedHatId = decoded.args.id.toString();
 
-                    // ✅ VALIDATION: Reject HAT IDs > 100 digits (indicates corruption)
                     if (extractedHatId.length > 100) {
-                      console.error(
-                        '⚠️ Rejected corrupted HAT ID from ABI decoding (too long):',
-                        {
-                          length: extractedHatId.length,
-                          value: extractedHatId.substring(0, 50) + '...',
-                        },
-                      );
-                      continue; // Try next log
+                      continue;
                     }
 
                     newHatId = extractedHatId;
-                    console.log(
-                      '🎩 ✅ Extracted HAT ID using ABI decoding:',
-                      newHatId,
-                    );
-                    console.log('📋 Decoded event details:', {
-                      id: decoded.args.id.toString(),
-                      details: decoded.args.details,
-                      maxSupply: decoded.args.maxSupply,
-                      eligibility: decoded.args.eligibility,
-                      toggle: decoded.args.toggle,
-                      mutable: decoded.args.mutable_,
-                      imageURI: decoded.args.imageURI,
-                    });
+                    console.log('🎩 ✅ Extracted HAT ID from HatCreated (fallback):', newHatId);
                     hatIdExtracted = true;
                     break;
                   }
@@ -1902,22 +1566,13 @@ Instructions:
               }
 
               if (!hatIdExtracted) {
-                console.warn(
-                  '⚠️ Could not extract HAT ID from any HATS contract logs',
-                );
-                console.warn(
-                  '⚠️ HATS logs details:',
-                  hatsLogs.map((log: any) => ({
-                    topics: log.topics?.length || 0,
-                    dataLength: log.data?.length || 0,
-                    firstTopic: log.topics?.[0],
-                    data: log.data,
-                  })),
-                );
+                console.warn('⚠️ Could not extract HAT ID from any HATS contract logs');
               }
+              } // end if (!hatIdExtracted) fallback
             } else {
               console.warn('⚠️ No logs found in OnChainKit transaction receipt');
             }
+            } // end if (!newHatId && receipt)
           } else {
             console.warn(
               '⚠️ OnChainKit transactionReceipts not found in response',
@@ -2116,7 +1771,7 @@ Instructions:
                 : null,
               proxy_contract_address: proxyAddress || null,
               blockchain_pod_id: blockchainPodId,
-              status: 'active',
+              status: 'pending_review',
               updated_at: new Date().toISOString(),
             })
             .eq('id', continuePodId)
@@ -2137,6 +1792,25 @@ Instructions:
             description:
               'Blockchain components have been configured successfully!',
           });
+        } else if (createdHatId && blockchainPodId) {
+          // Pod was created server-side (Option D flow) — update with proxy address
+          console.log('📝 Updating server-created pod with proxy address:', blockchainPodId);
+          const { data: updatedPod, error } = await supabase
+            .from('pods')
+            .update({
+              proxy_contract_address: proxyAddress || null,
+              status: 'pending_review',
+              updated_at: new Date().toISOString(),
+            })
+            .eq('id', blockchainPodId)
+            .select()
+            .single();
+
+          if (error) {
+            console.error('❌ Failed to update server-created pod:', error);
+            // Non-fatal — pod already in DB
+          }
+          podData = { podId: blockchainPodId };
         } else {
           // Create new pod
           console.log('📝 Creating new pod in database');
@@ -2622,6 +2296,7 @@ Instructions:
       formData.enableTreasury,
       validation.validLeads,
       blockchainPodId,
+      createdHatId,
       extractedHatId,
       extractedProxyAddress,
       availableParentPods,
@@ -4469,7 +4144,7 @@ Instructions:
                 )}
                 {formData.parentPodId &&
                   formData.parentPodId !== 'TOP_LEVEL' &&
-                  formData.parentPodId === '0x00000088' && (
+                  formData.parentPodId === '0x00000749' && (
                     <div
                       className="text-sm p-2 rounded border"
                       style={{

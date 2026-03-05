@@ -110,14 +110,14 @@ export async function POST(request: NextRequest) {
     const { data: donation, error: dbError } = await supabase
       .from('pending_donations')
       .insert({
-        mercury_payment_id: paymentIntent.id, // Reusing column for Stripe payment intent ID
+        stripe_payment_id: paymentIntent.id,
         payment_method: 'card', // Will update after payment confirms actual method
         user_wallet: userWallet,
         donor_email: donorEmail || null,
         fiat_amount: fiatAmount,
         system_tokens_to_mint: systemTokensToMint,
         org_fee: platformFee,
-        mercury_fee: estimatedStripeFee, // Reusing column for Stripe fee
+        stripe_fee: estimatedStripeFee,
         settlement_days: 0, // Will calculate after payment
         settlement_date: null,
         is_reversible: true, // Cards can chargeback
@@ -149,6 +149,7 @@ export async function POST(request: NextRequest) {
         amount: fiatAmount,
         systemTokens: systemTokensToMint.toFixed(2),
         platformFee: platformFee.toFixed(2),
+        platformFeePercent: platformFeePercentage,
         estimatedStripeFee: estimatedStripeFee.toFixed(2),
         minAmount,
         supportedMethods: paymentMethodTypes

@@ -32,6 +32,14 @@ logger = logging.getLogger(__name__)
 conversation_manager = ConversationManager()
 
 
+@app.after_request
+def set_frame_headers(response):
+    """Allow spiritdao.org to embed the widget in an iframe"""
+    response.headers['X-Frame-Options'] = 'ALLOWALL'
+    response.headers['Content-Security-Policy'] = "frame-ancestors 'self' https://spiritdao.org https://*.spiritdao.org https://*.webflow.io"
+    return response
+
+
 @app.route('/')
 def index():
     """Home page - simple info about the chatbot"""

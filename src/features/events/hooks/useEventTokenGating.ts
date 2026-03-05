@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useEvmAddress } from '@coinbase/cdp-hooks';
 import { EventService } from '../lib/supabase';
+import { getClientHatId } from '@/lib/hatRegistryClient';
 import type { Pod, Event, EventWithStats } from '../types/event';
 import { fetchTokenBalances } from '../../../utils/fetchTokenBalances';
 import { useTokenBalances } from '@/context/TokenBalancesContext';
@@ -432,7 +433,7 @@ export function useTokenRequirements(requiredTokens: string[]) {
         // Check against known token IDs (both shorthand and full hat ID)
         if (
           (tokenId === 'exec' ||
-            tokenId === process.env.NEXT_PUBLIC_EXECUTIVE_POD_LEADER) &&
+            tokenId === getClientHatId('EXECUTIVE_POD_LEADER')) &&
           tokenBalances.hasExecutivePod
         ) {
           hasToken = true;

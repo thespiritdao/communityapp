@@ -105,3 +105,6 @@ public/guides/
 **/errors.txt
 **/errors*.txt
 .wallet-data.json
+
+# Executive marketing tools (local only)
+src/app/api/marketing/

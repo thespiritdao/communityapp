@@ -2,6 +2,7 @@ import { supabase } from '@/utils/supabaseClient';
 import { fetchTokenBalances } from '@/utils/fetchTokenBalances';
 import { ScalableTokenService } from '@/services/ScalableTokenService';
 import { EligibilityModuleService } from '@/services/eligibilityModuleService';
+import { getClientHatId } from '@/lib/hatRegistryClient';
 
 // Enhanced eligibility criteria types
 export interface EligibilityCriteria {
@@ -343,19 +344,14 @@ export class EligibilityService {
 
       // Map environment contract addresses to balance checks
       const execPodLeader =
-        process.env.NEXT_PUBLIC_EXECUTIVE_POD_LEADER?.toLowerCase();
-      const execPodMember =
-        process.env.NEXT_PUBLIC_EXECUTIVE_POD_MEMBER?.toLowerCase();
+        getClientHatId('EXECUTIVE_POD_LEADER')?.toLowerCase();
       const systemToken = process.env.NEXT_PUBLIC_SYSTEM_TOKEN?.toLowerCase();
       const selfToken = process.env.NEXT_PUBLIC_SELF_TOKEN?.toLowerCase();
       const proofOfCuriosity =
         process.env.NEXT_PUBLIC_PROOF_OF_CURIOSITY?.toLowerCase();
 
-      // Check Executive Pod tokens (HAT tokens)
-      if (
-        targetContract === execPodLeader ||
-        targetContract === execPodMember
-      ) {
+      // Check Executive Pod leader token (HAT token)
+      if (targetContract === execPodLeader) {
         const passed = balances.hasExecutivePod;
         console.log('✅ Executive Pod token check:', {
           passed,
@@ -1100,7 +1096,7 @@ export class EligibilityService {
           type: 'token_balance',
           name: 'Minimum Token Balance',
           description: 'Must hold minimum governance tokens',
-          contract_address: process.env.NEXT_PUBLIC_EXECUTIVE_POD_LEADER,
+          contract_address: getClientHatId('EXECUTIVE_POD_LEADER'),
           minimum_amount: '1',
           token_type: 'ERC20',
           required: true,
@@ -1111,7 +1107,7 @@ export class EligibilityService {
           type: 'token_balance',
           name: 'Member Token Requirement',
           description: 'Must hold member access token',
-          contract_address: process.env.NEXT_PUBLIC_EXECUTIVE_POD_MEMBER,
+          contract_address: getClientHatId('EXECUTIVE_POD_LEADER'),
           minimum_amount: '1',
           token_type: 'ERC20',
           required: true,

@@ -261,18 +261,8 @@ export const useHatPermissions = (): UseHatPermissionsReturn => {
         // Continue with just hardcoded roles
       }
 
-      // 🆕 ADD NON-POD HATS (Beta Tester, Advocate) from balances
-      // These are not in active_pod_members because they're not pods
-      // console.log('🎩 Checking for non-pod HATs from balances...');
-
-      const BETA_TESTER_HAT = process.env.NEXT_PUBLIC_BETA_TESTER_HAT;
+      // ADD NON-POD TOKENS (Advocate) from balances
       const ADVOCATE_TOKEN = process.env.NEXT_PUBLIC_ADVOCATE;
-
-      if (balances?.hasBetaTesterHat && BETA_TESTER_HAT) {
-        // console.log('✅ Adding Beta Tester HAT to userHats');
-        hats.push(BETA_TESTER_HAT);
-        // Beta Tester doesn't need a "role" - it's just a HAT for access control
-      }
 
       if ((balances as any)?.hasAdvocate && ADVOCATE_TOKEN) {
         // console.log('✅ Adding Advocate token to userHats');

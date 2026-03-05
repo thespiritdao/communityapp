@@ -44,6 +44,7 @@ import { PodRolePermissionsService } from '../services/PodRolePermissionsService
 import { EligibilityService } from '../services/EligibilityService';
 import type { HatPermissions } from '@/services/hatPermissionsService';
 import type { EligibilityCriteria } from '../services/EligibilityService';
+import { getClientHatId } from '@/lib/hatRegistryClient';
 
 interface UnifiedMembershipManagerProps {
   podId: string;
@@ -775,7 +776,7 @@ export const UnifiedMembershipManager: React.FC<
               </div>
 
               <SetHatExpirationButton
-                hatId={process.env.NEXT_PUBLIC_BETA_TESTER_HAT || ''}
+                hatId={''}
                 expirationTimestamp={betaTesterExpirationTimestamp}
                 onSuccess={() => {
                   setShowBetaTesterExpiration(false);

@@ -6,6 +6,7 @@
  */
 
 import { supabase } from './supabaseClient';
+import { getClientHatId } from '@/lib/hatRegistryClient';
 
 /**
  * Normalize addresses for consistent comparison
@@ -77,20 +78,11 @@ export const getUserIdentity = async (
     }
     if (tokenBalances.hasExecutivePod) {
       userTokens.push(
-        normalizeAddress(process.env.NEXT_PUBLIC_EXECUTIVE_POD_LEADER),
+        normalizeAddress(getClientHatId('EXECUTIVE_POD_LEADER')),
       );
-    }
-    if (tokenBalances.hasDevPod) {
-      userTokens.push(normalizeAddress(process.env.NEXT_PUBLIC_DEV_POD_HAT_ID));
     }
     if (tokenBalances.hasMarketAdmin || tokenBalances.hasMarketManagement) {
       userTokens.push(normalizeAddress(process.env.NEXT_PUBLIC_MARKET_ADMIN));
-    }
-    // Add Beta Tester Hat if user has it
-    if (tokenBalances.hasBetaTesterHat) {
-      discoveredHats.push(
-        normalizeAddress(process.env.NEXT_PUBLIC_BETA_TESTER_HAT),
-      );
     }
   }
 
@@ -274,14 +266,11 @@ export const canParticipateInGovernance = (
   // Default governance tokens if none specified
   const defaultGovTokens = [
     normalizeAddress(process.env.NEXT_PUBLIC_PROOF_OF_CURIOSITY),
-    normalizeAddress(process.env.NEXT_PUBLIC_EXECUTIVE_POD_LEADER),
-    normalizeAddress(process.env.NEXT_PUBLIC_DEV_POD_HAT_ID),
+    normalizeAddress(getClientHatId('EXECUTIVE_POD_LEADER')),
   ].filter(Boolean);
 
   // Default governance HATs if none specified
-  const defaultGovHats = [
-    normalizeAddress(process.env.NEXT_PUBLIC_BETA_TESTER_HAT),
-  ].filter(Boolean);
+  const defaultGovHats: string[] = [];
 
   const tokensToCheck = requiredTokens
     ? normalizeAddresses(requiredTokens)
@@ -298,17 +287,13 @@ export const canParticipateInGovernance = (
  * Check bounty system eligibility
  */
 export const canAccessBounties = (identity: UserIdentity): boolean => {
-  // Bounties typically require Executive Pod, Dev Pod, or Market Admin access
+  // Bounties typically require Executive Pod or Market Admin access
   const bountyTokens = [
-    normalizeAddress(process.env.NEXT_PUBLIC_EXECUTIVE_POD_LEADER),
-    normalizeAddress(process.env.NEXT_PUBLIC_DEV_POD_HAT_ID),
+    normalizeAddress(getClientHatId('EXECUTIVE_POD_LEADER')),
     normalizeAddress(process.env.NEXT_PUBLIC_MARKET_ADMIN),
   ].filter(Boolean);
 
-  // Default bounty HATs
-  const bountyHats = [
-    normalizeAddress(process.env.NEXT_PUBLIC_BETA_TESTER_HAT),
-  ].filter(Boolean);
+  const bountyHats: string[] = [];
 
   return (
     bountyTokens.some((token) => identity.userTokens.includes(token)) ||
@@ -333,11 +318,8 @@ export const mapTokenBalancesToIdentity = (
   }
   if (tokenBalances?.hasExecutivePod) {
     userTokens.push(
-      normalizeAddress(process.env.NEXT_PUBLIC_EXECUTIVE_POD_LEADER),
+      normalizeAddress(getClientHatId('EXECUTIVE_POD_LEADER')),
     );
-  }
-  if (tokenBalances?.hasDevPod) {
-    userTokens.push(normalizeAddress(process.env.NEXT_PUBLIC_DEV_POD_HAT_ID));
   }
   if (tokenBalances?.hasMarketAdmin || tokenBalances?.hasMarketManagement) {
     userTokens.push(normalizeAddress(process.env.NEXT_PUBLIC_MARKET_ADMIN));
@@ -449,8 +431,7 @@ export const canRegisterForEvents = (identity: UserIdentity): boolean => {
 export const canCreateEvents = (identity: UserIdentity): boolean => {
   // Event creation typically requires pod membership or specific tokens
   const creationTokens = [
-    normalizeAddress(process.env.NEXT_PUBLIC_EXECUTIVE_POD_LEADER),
-    normalizeAddress(process.env.NEXT_PUBLIC_DEV_POD_HAT_ID),
+    normalizeAddress(getClientHatId('EXECUTIVE_POD_LEADER')),
     normalizeAddress(process.env.NEXT_PUBLIC_MARKET_ADMIN),
   ].filter(Boolean);
 

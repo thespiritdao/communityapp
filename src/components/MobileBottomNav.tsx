@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { Home, Vote, Bell, Droplets } from 'lucide-react';
+import { Home, Vote, Bell, HeartHandshake } from 'lucide-react';
 import { useUnifiedNotifications } from '@/context/UnifiedNotificationContext';
 
 type Item = {
@@ -22,9 +22,9 @@ const NAV_ITEMS: Item[] = [
   },
   {
     href: '/faucet',
-    label: 'Tokens',
-    match: 'exact',
-    icon: <Droplets size={36} />,
+    label: 'Donate',
+    match: 'startsWith',
+    icon: <HeartHandshake size={36} />,
   },
   {
     href: '/governance',
@@ -46,14 +46,6 @@ function MobileBottomNavContent() {
   const [mounted, setMounted] = useState(false);
   const navRef = useRef<HTMLElement | null>(null);
   const { unreadCounts } = useUnifiedNotifications();
-
-  // CRITICAL DEBUG: Prove component mounts
-  useEffect(() => {
-    console.log('🚨 MobileBottomNav MOUNTED at', new Date().toISOString());
-    console.log('🚨 Current pathname:', pathname);
-    console.log('🚨 Nav ref:', navRef.current);
-    return () => console.log('🚨 MobileBottomNav UNMOUNTED');
-  }, []);
 
   useEffect(() => setMounted(true), []);
 

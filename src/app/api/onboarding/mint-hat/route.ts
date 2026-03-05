@@ -1,8 +1,8 @@
 /**
- * API Route: Mint Beta Tester Hat
+ * API Route: Mint Executive Pod Leader Hat
  * POST /api/onboarding/mint-hat
  *
- * Mints Beta Tester or Executive Leader hat to new users.
+ * Mints Executive Pod Leader hat to the first/admin user.
  *
  * Two modes:
  * 1. Smart Contract (PREFERRED) - Zero gas costs via Coinbase Paymaster
@@ -24,7 +24,8 @@ import {
 } from 'viem';
 import { base } from 'viem/chains';
 import { privateKeyToAccount } from 'viem/accounts';
-import { CONTRACT_ADDRESSES, HAT_IDS } from '@/config/contracts';
+import { CONTRACT_ADDRESSES } from '@/config/contracts';
+import { getHatId } from '@/lib/hatRegistry';
 import { createClient } from '@supabase/supabase-js';
 
 export const runtime = 'nodejs';
@@ -55,23 +56,19 @@ async function syncToPodMembers(
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Pod IDs (hardcoded - matches pods in database)
+    // Pod ID for executive pod
     const EXECUTIVE_POD_ID = 'e35c9e25-d29f-4988-b1e8-2902e960b94c';
-    const BETA_TESTERS_POD_ID = 'af4cc4d1-e4e1-4ae3-b70e-19f89a07e0cb';
 
-    const hatId = isFirstUser
-      ? HAT_IDS.EXECUTIVE_POD_LEADER
-      : HAT_IDS.BETA_TESTER_HAT;
+    const hatId = await getHatId('EXECUTIVE_POD_LEADER');
 
     if (!hatId) {
       console.warn('⚠️ HAT ID not configured - skipping database sync');
       return;
     }
 
-    // Determine pod and membership details based on user type
-    const podId = isFirstUser ? EXECUTIVE_POD_ID : BETA_TESTERS_POD_ID;
-    const membershipType = isFirstUser ? 'leader' : 'member';
-    const role = isFirstUser ? 'leader' : 'member';
+    const podId = EXECUTIVE_POD_ID;
+    const membershipType = 'leader';
+    const role = 'leader';
 
     // Add user to appropriate pod_members table
     const { error: syncError } = await supabase
@@ -91,10 +88,10 @@ async function syncToPodMembers(
       });
 
     if (syncError) {
-      console.error(`❌ Failed to sync to pod_members (${isFirstUser ? 'Executive Pod' : 'Beta Testers Pod'}):`, syncError);
+      console.error(`❌ Failed to sync to pod_members (Executive Pod):`, syncError);
       // Don't throw - HAT is minted on-chain, DB sync is supplementary
     } else {
-      console.log(`✅ ${isFirstUser ? 'Executive Pod Leader' : 'Beta Tester'} synced to database!`);
+      console.log(`✅ Executive Pod Leader synced to database!`);
     }
   } catch (error) {
     console.error('❌ Database sync error:', error);
@@ -107,10 +104,10 @@ async function syncToPodMembers(
 // ============================================================
 
 const HAT_MINTER_ABI = parseAbi([
-  'function mintBetaTesterHat(address recipient) external returns (bool)',
+  'function mintTNMemberHat(address recipient) external returns (bool)',
   'function mintExecutiveLeaderHat(address recipient) external returns (bool)',
   'function hasAdminHat() external view returns (bool)',
-  'function hasBetaTesterHat(address user) external view returns (bool)',
+  'function hasTNMemberHat(address user) external view returns (bool)',
   'function hasExecutiveLeaderHat(address user) external view returns (bool)',
 ]);
 
@@ -194,16 +191,14 @@ export async function POST(request: NextRequest) {
         });
 
         // Check if user already has the hat
-        const alreadyHasHat = isFirstUser
-          ? await hatMinterRead.read.hasExecutiveLeaderHat([walletAddress as `0x${string}`])
-          : await hatMinterRead.read.hasBetaTesterHat([walletAddress as `0x${string}`]);
+        const alreadyHasHat = await hatMinterRead.read.hasExecutiveLeaderHat([walletAddress as `0x${string}`]);
 
         if (alreadyHasHat) {
-          console.log(`ℹ️ Mint Hat API: User already has ${isFirstUser ? 'Executive Leader' : 'Beta Tester'} hat`);
+          console.log(`ℹ️ Mint Hat API: User already has Executive Leader hat`);
           return NextResponse.json({
             success: true,
             alreadyHadHat: true,
-            message: `User already wears ${isFirstUser ? 'Executive Leader' : 'Beta Tester'} hat`,
+            message: `User already wears Executive Leader hat`,
             mode: 'contract',
           });
         }
@@ -244,9 +239,7 @@ export async function POST(request: NextRequest) {
             // Mint via contract (gas sponsored!)
             console.log('📤 Mint Hat API: Calling contract to mint hat...');
 
-            const hash = isFirstUser
-              ? await hatMinterWrite.write.mintExecutiveLeaderHat([walletAddress as `0x${string}`])
-              : await hatMinterWrite.write.mintBetaTesterHat([walletAddress as `0x${string}`]);
+            const hash = await hatMinterWrite.write.mintExecutiveLeaderHat([walletAddress as `0x${string}`]);
 
             console.log(`   ⏳ Transaction hash: ${hash}`);
 
@@ -309,15 +302,24 @@ export async function POST(request: NextRequest) {
 
     console.log(`🔑 Mint Hat API: Using admin wallet: ${adminAccount.address}`);
 
-    // Determine which hat to mint
-    const hatId = isFirstUser
-      ? HAT_IDS.EXECUTIVE_POD_LEADER
-      : HAT_IDS.BETA_TESTER_HAT;
-
-    const hatName = isFirstUser ? 'Executive Pod Leader' : 'Beta Tester';
+    // Hat to mint: Executive Pod Leader
+    const hatId = await getHatId('EXECUTIVE_POD_LEADER');
+    const hatName = 'Executive Pod Leader';
 
     console.log(`   Hat to mint: ${hatName}`);
     console.log(`   Hat ID: ${hatId || 'NOT CONFIGURED'}`);
+
+    if (!hatId) {
+      console.error('❌ Mint Hat API: EXECUTIVE_POD_LEADER hat ID not found in pod_role_permissions');
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Server configuration error - Executive Pod Leader hat not configured',
+          details: 'Set the token_address for the Executive Pod Leader role in pod_role_permissions.',
+        },
+        { status: 500 },
+      );
+    }
 
     // Create clients
     const RPC_URL = process.env.NEXT_PUBLIC_RPC_URL || 'https://mainnet.base.org';
@@ -336,77 +338,31 @@ export async function POST(request: NextRequest) {
     // Verify admin wallet has Executive Pod Leader hat
     console.log('🔍 Mint Hat API: Verifying admin wallet permissions...');
 
-    // CRITICAL: Only validate EXECUTIVE_POD_LEADER if we're minting it (first user scenario)
-    // For beta testers, we don't need admin wallet to have exec pod leader hat
-    if (isFirstUser) {
-      if (!HAT_IDS.EXECUTIVE_POD_LEADER) {
-        console.error('❌ Mint Hat API: EXECUTIVE_POD_LEADER hat ID not configured');
-        console.error('   Set NEXT_PUBLIC_EXECUTIVE_POD_LEADER in environment variables');
-        return NextResponse.json(
-          {
-            success: false,
-            error: 'Server configuration error - Executive Pod Leader hat not configured',
-            details: 'NEXT_PUBLIC_EXECUTIVE_POD_LEADER environment variable is missing',
-          },
-          { status: 500 },
-        );
-      }
+    const isAdminWearer = await publicClient.readContract({
+      address: CONTRACT_ADDRESSES.HATS_PROTOCOL,
+      abi: HATS_MINT_ABI,
+      functionName: 'isWearerOfHat',
+      args: [adminAccount.address, BigInt(hatId)],
+    });
 
-      const isAdminWearer = await publicClient.readContract({
-        address: CONTRACT_ADDRESSES.HATS_PROTOCOL,
-        abi: HATS_MINT_ABI,
-        functionName: 'isWearerOfHat',
-        args: [adminAccount.address, BigInt(HAT_IDS.EXECUTIVE_POD_LEADER)],
-      });
-
-      if (!isAdminWearer) {
-        console.error('❌ Mint Hat API: Admin wallet does NOT wear Executive Pod Leader hat');
-        console.error(`   Admin wallet: ${adminAccount.address}`);
-        console.error(`   Required hat: ${HAT_IDS.EXECUTIVE_POD_LEADER}`);
-        return NextResponse.json(
-          {
-            success: false,
-            error: 'Admin wallet lacks required permissions',
-            details: 'Admin wallet must wear Executive Pod Leader hat',
-          },
-          { status: 500 },
-        );
-      }
-
-      console.log('✅ Mint Hat API: Admin wallet verified - has Executive Pod Leader hat');
-    } else {
-      // For beta testers, just verify BETA_TESTER_HAT is configured
-      if (!HAT_IDS.BETA_TESTER_HAT) {
-        console.error('❌ Mint Hat API: BETA_TESTER_HAT hat ID not configured');
-        console.error('   Set NEXT_PUBLIC_BETA_TESTER_HAT in environment variables');
-        return NextResponse.json(
-          {
-            success: false,
-            error: 'Server configuration error - Beta Tester hat not configured',
-            details: 'NEXT_PUBLIC_BETA_TESTER_HAT environment variable is missing',
-          },
-          { status: 500 },
-        );
-      }
-      console.log('✅ Mint Hat API: Beta Tester hat configured');
-    }
-
-    // Check if user already has the hat
-    console.log('🔍 Mint Hat API: Checking if user already has hat...');
-
-    // Defensive check: This should never happen due to earlier validation, but checking anyway
-    if (!hatId) {
-      console.error(`❌ Mint Hat API: ${hatName} hat ID is undefined (unexpected)`);
-      console.error('   This should have been caught earlier - indicates a logic error');
+    if (!isAdminWearer) {
+      console.error('❌ Mint Hat API: Admin wallet does NOT wear Executive Pod Leader hat');
+      console.error(`   Admin wallet: ${adminAccount.address}`);
+      console.error(`   Required hat: ${hatId}`);
       return NextResponse.json(
         {
           success: false,
-          error: `Server configuration error - ${hatName} hat not configured`,
-          details: `Hat ID for ${hatName} is undefined. This is unexpected - check configuration logic.`,
+          error: 'Admin wallet lacks required permissions',
+          details: 'Admin wallet must wear Executive Pod Leader hat',
         },
         { status: 500 },
       );
     }
+
+    console.log('✅ Mint Hat API: Admin wallet verified - has Executive Pod Leader hat');
+
+    // Check if user already has the hat
+    console.log('🔍 Mint Hat API: Checking if user already has hat...');
 
     const alreadyHasHat = await publicClient.readContract({
       address: CONTRACT_ADDRESSES.HATS_PROTOCOL,
@@ -484,7 +440,7 @@ export async function POST(request: NextRequest) {
 
       // Check for common errors
       if (errorMessage.includes('AllHatsWorn')) {
-        errorMessage = 'Beta Tester Hat supply limit reached. Please contact support to increase the hat supply.';
+        errorMessage = 'Hat supply limit reached. Please contact support to increase the hat supply.';
       } else if (errorMessage.includes('AlreadyWearingHat')) {
         errorMessage = 'User already wears this hat';
       } else if (errorMessage.includes('NotAdmin')) {

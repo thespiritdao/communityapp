@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useEvmAddress } from '@coinbase/cdp-hooks';
 import { PodCoreService } from '../services/PodCoreService';
+import { getClientHatId } from '@/lib/hatRegistryClient';
 import { HatsMigrationService } from '../services/hatsMigrationService';
 import type { Pod } from '../types';
 import { useHatPermissions } from '@/hooks/useHatPermissions';
@@ -56,7 +57,7 @@ export function usePods(config: UsePodsConfig = {}): UsePodsReturn {
     if (!address) return false;
 
     // Check if user is Executive Pod leader via HAT
-    const EXECUTIVE_POD_LEADER_HAT = process.env.NEXT_PUBLIC_EXECUTIVE_POD_LEADER;
+    const EXECUTIVE_POD_LEADER_HAT = getClientHatId('EXECUTIVE_POD_LEADER');
     const hasExecHat = userHats?.some(
       (hat) => hat.toLowerCase() === EXECUTIVE_POD_LEADER_HAT?.toLowerCase()
     );

@@ -4,6 +4,7 @@
  */
 
 import Web3 from 'web3';
+import { getClientHatId } from '@/lib/hatRegistryClient';
 
 const HATS_ABI = [
   {
@@ -43,9 +44,7 @@ export async function debugHatsBalance(walletAddress: string) {
 
   // All Hat IDs to check
   const HAT_IDS_TO_CHECK = {
-    EXECUTIVE_POD_LEADER: process.env.NEXT_PUBLIC_EXECUTIVE_POD_LEADER,
-    EXECUTIVE_POD_MEMBER: process.env.NEXT_PUBLIC_EXECUTIVE_POD_MEMBER,
-    DEV_POD_HAT_ID: process.env.NEXT_PUBLIC_DEV_POD_HAT_ID,
+    EXECUTIVE_POD_LEADER: getClientHatId('EXECUTIVE_POD_LEADER'),
     BOUNTY_MANAGEMENT: process.env.NEXT_PUBLIC_BOUNTY_MANAGEMENT,
     MARKET_MANAGEMENT: process.env.NEXT_PUBLIC_MARKET_MANAGEMENT,
     EVENT_MANAGEMENT: process.env.NEXT_PUBLIC_EVENT_MANAGEMENT,

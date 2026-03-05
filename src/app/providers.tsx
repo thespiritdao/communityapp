@@ -16,6 +16,21 @@ import { InstallPrompt } from '@/components/InstallPrompt';
 import { SessionCacheManager } from '@/components/SessionCacheManager';
 import { IncomingCallBanner } from '@/features/chat/components/IncomingCallBanner';
 import { TourManager } from '@/components/tour/TourManager';
+import { initHatRegistry } from '@/lib/hatRegistryClient';
+
+/**
+ * Fetches hat IDs from /api/hat-registry on app startup and populates
+ * the client-side registry so synchronous lookups work throughout the app.
+ */
+function HatRegistryInitializer() {
+  useEffect(() => {
+    fetch('/api/hat-registry')
+      .then((r) => r.json())
+      .then((ids) => initHatRegistry(ids))
+      .catch((err) => console.warn('[HatRegistryInitializer] Failed to load hat IDs:', err));
+  }, []);
+  return null;
+}
 
 // Hide navigation ONLY on loading screen (root page)
 const ConditionalBottomNav = React.memo(function ConditionalBottomNav() {
@@ -61,6 +76,8 @@ export function Providers({ children }: ProvidersProps) {
             <ProfilesProvider>
               <CommunityProvider>
                 <UnifiedNotificationProvider>
+                  {/* Load hat IDs from DB into client-side registry */}
+                  <HatRegistryInitializer />
                   {/* Session cache manager - clears stale cache on expired sessions */}
                   <SessionCacheManager />
                   {/* Global incoming call listener */}

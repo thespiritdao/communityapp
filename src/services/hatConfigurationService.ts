@@ -1,4 +1,5 @@
 import type { PublicClient, WalletClient } from 'viem';
+import { getClientHatId } from '@/lib/hatRegistryClient';
 
 /**
  * Service for configuring HAT properties like toggle modules
@@ -22,7 +23,7 @@ export class HatConfigurationService {
 
       const HATS_CONTRACT = process.env
         .NEXT_PUBLIC_HATS_CONTRACT as `0x${string}`;
-      const EXECUTIVE_POD_MEMBER = process.env.NEXT_PUBLIC_EXECUTIVE_POD_MEMBER;
+      const EXECUTIVE_POD_MEMBER = undefined as `0x${string}` | undefined; // exec member hat retired
       const TOGGLE_MODULE = process.env
         .NEXT_PUBLIC_EXECUTIVE_POD_MEMBER_TOGGLE_MODULE as `0x${string}`;
 
@@ -232,7 +233,7 @@ export class HatConfigurationService {
       // Check if user owns the admin HAT
       const userHats = [];
       const hatsToCheck = [
-        process.env.NEXT_PUBLIC_EXECUTIVE_POD_LEADER,
+        getClientHatId('EXECUTIVE_POD_LEADER'),
         adminHat,
       ].filter(Boolean);
 

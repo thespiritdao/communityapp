@@ -10,6 +10,7 @@ import { PodService } from '../services/PodService';
 import { useAccount } from 'wagmi';
 import { useToast } from '@/components/ui/use-toast';
 import { supabase } from '@/utils/supabaseClient';
+import { getClientHatId } from '@/lib/hatRegistryClient';
 
 interface RolePermissionsDiagnosticsProps {
   podId: string;
@@ -48,9 +49,7 @@ export const RolePermissionsDiagnostics: React.FC<
       // 3. Environment variables
       const envVars = {
         NEXT_PUBLIC_EXECUTIVE_POD_LEADER:
-          process.env.NEXT_PUBLIC_EXECUTIVE_POD_LEADER,
-        NEXT_PUBLIC_EXECUTIVE_POD_MEMBER:
-          process.env.NEXT_PUBLIC_EXECUTIVE_POD_MEMBER,
+          getClientHatId('EXECUTIVE_POD_LEADER'),
       };
 
       // 4. Check for the specific problematic ID and clean up if needed
@@ -198,14 +197,13 @@ export const RolePermissionsDiagnostics: React.FC<
       }
 
       // Initialize fresh roles
-      const leaderHatId = process.env.NEXT_PUBLIC_EXECUTIVE_POD_LEADER;
-      const memberHatId = process.env.NEXT_PUBLIC_EXECUTIVE_POD_MEMBER;
+      const leaderHatId = getClientHatId('EXECUTIVE_POD_LEADER');
 
-      if (leaderHatId && memberHatId) {
+      if (leaderHatId) {
         await PodRolePermissionsService.initializeDefaultRoles(
           podId,
           leaderHatId,
-          memberHatId,
+          undefined,
           address,
         );
 
@@ -338,11 +336,6 @@ export const RolePermissionsDiagnostics: React.FC<
                 <p>
                   <strong>Leader HAT:</strong>{' '}
                   {diagnostics.envVars.NEXT_PUBLIC_EXECUTIVE_POD_LEADER ||
-                    '❌ Missing'}
-                </p>
-                <p>
-                  <strong>Member HAT:</strong>{' '}
-                  {diagnostics.envVars.NEXT_PUBLIC_EXECUTIVE_POD_MEMBER ||
                     '❌ Missing'}
                 </p>
               </div>

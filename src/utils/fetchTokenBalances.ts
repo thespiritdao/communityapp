@@ -74,8 +74,8 @@ const MULTICALL_ADDRESS =
 //hats
 
 const HATS_CONTRACT = process.env.NEXT_PUBLIC_HATS_CONTRACT;
-const EXECUTIVE_POD_HAT_ID = process.env.NEXT_PUBLIC_EXECUTIVE_POD_LEADER; // raw hat id (hex string)
-const DEV_POD_HAT_ID = process.env.NEXT_PUBLIC_DEV_POD_HAT_ID; // raw hat id (hex string)
+import { getClientHatId } from '@/lib/hatRegistryClient';
+const EXECUTIVE_POD_HAT_ID = getClientHatId('EXECUTIVE_POD_LEADER'); // raw hat id (hex string)
 
 // Add bounty hat ID
 const BOUNTY_HAT_ID = process.env.NEXT_PUBLIC_BOUNTY_MANAGEMENT;
@@ -85,9 +85,6 @@ const MARKET_MANAGEMENT_HAT_ID = process.env.NEXT_PUBLIC_MARKET_MANAGEMENT;
 
 // Add event management hat ID
 const EVENT_MANAGEMENT_HAT_ID = process.env.NEXT_PUBLIC_EVENT_MANAGEMENT;
-
-// Add beta tester hat ID
-const BETA_TESTER_HAT_ID = process.env.NEXT_PUBLIC_BETA_TESTER_HAT;
 
 // Add Advocate NFT contract
 const ADVOCATE_TOKEN_CONTRACT = '0x592E560171D2a882474cdfc3BbeeDb21cEB4015d';
@@ -105,10 +102,10 @@ export interface TokenBalance {
   hasMarketAdmin: boolean; // Kept for backward compatibility - maps to hasMarketManagement
   hasMarketManagement: boolean;
   hasExecutivePod: boolean;
-  hasDevPod: boolean;
+  hasDevPod: boolean; // legacy field - always false
   hasBountyHat: boolean;
   hasEventManagement: boolean;
-  hasBetaTesterHat: boolean; // Beta tester hat for beta access
+  hasBetaTesterHat: boolean; // legacy field - always false
   hasAdvocate: boolean; // Advocate NFT for universal bounty access
   systemBalance: string;
   selfBalance: string;
@@ -249,8 +246,6 @@ export async function fetchTokenBalances(
       let systemIndex = -1;
       let selfIndex = -1;
       let executivePodLeaderIndex = -1;
-      let executivePodMemberIndex = -1;
-      let devPodIndex = -1;
       let advocateIndex = -1;
 
       // --- Proof of Curiosity (ERC721) ---
@@ -350,25 +345,14 @@ export async function fetchTokenBalances(
 
       // Market Admin Token (ERC20) removed - replaced by Market Management Hat (ERC1155)
 
-      // --- Executive Pod Token (ERC1155) ---
+      // --- Executive Pod Leader Token (ERC1155) ---
       console.log('🔍 Executive Pod Token Setup:');
       console.log('  HATS_CONTRACT:', HATS_CONTRACT);
-      console.log(
-        '  NEXT_PUBLIC_EXECUTIVE_POD_LEADER:',
-        process.env.NEXT_PUBLIC_EXECUTIVE_POD_LEADER,
-      );
-      console.log(
-        '  NEXT_PUBLIC_EXECUTIVE_POD_MEMBER:',
-        process.env.NEXT_PUBLIC_EXECUTIVE_POD_MEMBER,
-      );
+      console.log('  EXECUTIVE_POD_LEADER:', EXECUTIVE_POD_HAT_ID);
       console.log('  Wallet Address:', walletAddress);
 
       if (isValidAddress(HATS_CONTRACT ?? '')) {
-        // Check BOTH EXECUTIVE_POD_LEADER and EXECUTIVE_POD_MEMBER
-        const leaderHatId = process.env.NEXT_PUBLIC_EXECUTIVE_POD_LEADER || '0';
-        const memberHatId = process.env.NEXT_PUBLIC_EXECUTIVE_POD_MEMBER || '0';
-
-        // Check LEADER hat first (higher privilege)
+        const leaderHatId = EXECUTIVE_POD_HAT_ID || '0';
         if (leaderHatId && leaderHatId !== '0') {
           try {
             const hatsContract = new web3.eth.Contract(
@@ -393,64 +377,10 @@ export async function fetchTokenBalances(
             );
           }
         }
-
-        // Also check MEMBER hat (will be checked separately)
-        if (memberHatId && memberHatId !== '0' && memberHatId !== leaderHatId) {
-          try {
-            const hatsContract = new web3.eth.Contract(
-              erc1155Abi as any,
-              (HATS_CONTRACT ?? '') as string,
-            );
-            executivePodMemberIndex = calls.length;
-            calls.push({
-              target: (HATS_CONTRACT ?? '') as string,
-              callData: hatsContract.methods
-                .balanceOf(walletAddress, memberHatId)
-                .encodeABI(),
-            });
-            console.log(
-              '  ✅ Executive Pod MEMBER Token call added at index:',
-              executivePodMemberIndex,
-            );
-          } catch (error) {
-            console.error(
-              '  ❌ Error setting up Executive Pod Member call:',
-              error,
-            );
-          }
-        }
       } else {
         console.warn(
           '  ❌ HATS_CONTRACT is not valid; cannot check Executive Pod Token.',
         );
-      }
-
-      // --- Dev Pod Token (ERC1155) ---
-      if (isValidAddress(HATS_CONTRACT ?? '')) {
-        const devHatId = process.env.NEXT_PUBLIC_DEV_POD_HAT_ID ?? '0';
-        if (devHatId) {
-          try {
-            const hatsContract = new web3.eth.Contract(
-              erc1155Abi as any,
-              (HATS_CONTRACT ?? '') as string,
-            );
-            devPodIndex = calls.length;
-            calls.push({
-              target: (HATS_CONTRACT ?? '') as string,
-              callData: hatsContract.methods
-                .balanceOf(walletAddress, devHatId)
-                .encodeABI(),
-            });
-          } catch (error) {
-            console.error('Error setting up Dev Pod Token call:', error);
-          }
-        } else {
-          console.warn(
-            'Dev Pod Hat ID is not defined; defaulting to balance 0.',
-          );
-        }
-      } else {
-        console.warn('HATS_CONTRACT is not valid; cannot check Dev Pod Token.');
       }
 
       // --- Bounty Hat Token (ERC1155) ---
@@ -552,40 +482,6 @@ export async function fetchTokenBalances(
         );
       }
 
-      // --- Beta Tester Hat Token (ERC1155) ---
-      let betaTesterHatIndex = -1;
-      if (isValidAddress(HATS_CONTRACT ?? '')) {
-        const betaTesterHatId = BETA_TESTER_HAT_ID ?? '0';
-        if (betaTesterHatId) {
-          try {
-            const hatsContract = new web3.eth.Contract(
-              erc1155Abi as any,
-              (HATS_CONTRACT ?? '') as string,
-            );
-            betaTesterHatIndex = calls.length;
-            calls.push({
-              target: (HATS_CONTRACT ?? '') as string,
-              callData: hatsContract.methods
-                .balanceOf(walletAddress, betaTesterHatId)
-                .encodeABI(),
-            });
-          } catch (error) {
-            console.error(
-              'Error setting up Beta Tester Hat Token call:',
-              error,
-            );
-          }
-        } else {
-          console.warn(
-            'Beta Tester Hat ID is not defined; defaulting to balance 0.',
-          );
-        }
-      } else {
-        console.warn(
-          'HATS_CONTRACT is not valid; cannot check Beta Tester Hat Token.',
-        );
-      }
-
       // Execute multicall with retry logic and proper typing
       const multicallContract = new web3.eth.Contract(
         multicallAbi as any,
@@ -670,69 +566,21 @@ export async function fetchTokenBalances(
 
       console.log('🎯 Processing Executive Pod Token balance:');
       console.log('  executivePodLeaderIndex:', executivePodLeaderIndex);
-      console.log('  executivePodMemberIndex:', executivePodMemberIndex);
       console.log('  returnData length:', returnData.length);
 
       try {
-        let hasExecutivePod = false;
-
-        // Check LEADER hat balance
-        if (
-          executivePodLeaderIndex >= 0 &&
-          returnData[executivePodLeaderIndex]
-        ) {
-          const leaderRawData = returnData[executivePodLeaderIndex];
-          console.log('  Leader Hat raw return data:', leaderRawData);
-
+        if (executivePodLeaderIndex >= 0 && returnData[executivePodLeaderIndex]) {
           const leaderBalance = web3.utils.hexToNumberString(
             (returnData[executivePodLeaderIndex] ?? '0') as string,
           );
-          console.log('  Leader Hat parsed balance:', leaderBalance);
-
-          if (Number(leaderBalance) > 0) {
-            hasExecutivePod = true;
-            console.log('  ✅ Has Executive Pod LEADER Token!');
-          }
+          balances.hasExecutivePod = Number(leaderBalance) > 0;
+          if (balances.hasExecutivePod) console.log('  ✅ Has Executive Pod LEADER Token!');
         }
-
-        // Check MEMBER hat balance (only if not already has leader)
-        if (
-          !hasExecutivePod &&
-          executivePodMemberIndex >= 0 &&
-          returnData[executivePodMemberIndex]
-        ) {
-          const memberRawData = returnData[executivePodMemberIndex];
-          console.log('  Member Hat raw return data:', memberRawData);
-
-          const memberBalance = web3.utils.hexToNumberString(
-            (returnData[executivePodMemberIndex] ?? '0') as string,
-          );
-          console.log('  Member Hat parsed balance:', memberBalance);
-
-          if (Number(memberBalance) > 0) {
-            hasExecutivePod = true;
-            console.log('  ✅ Has Executive Pod MEMBER Token!');
-          }
-        }
-
-        console.log('  Final Executive Pod Status:', hasExecutivePod);
-        balances.hasExecutivePod = hasExecutivePod;
       } catch (error) {
         console.error(
           '  ❌ Error processing Executive Pod Token balance:',
           error,
         );
-      }
-
-      try {
-        if (devPodIndex >= 0 && returnData[devPodIndex]) {
-          const devPodBalance = web3.utils.hexToNumberString(
-            (returnData[devPodIndex] ?? '0') as string,
-          );
-          balances.hasDevPod = Number(devPodBalance) > 0;
-        }
-      } catch (error) {
-        console.error('Error processing Dev Pod Token balance:', error);
       }
 
       try {
@@ -787,23 +635,6 @@ export async function fetchTokenBalances(
         console.error('Error processing Advocate NFT balance:', error);
       }
 
-      try {
-        if (betaTesterHatIndex >= 0 && returnData[betaTesterHatIndex]) {
-          const betaTesterHatBalance = web3.utils.hexToNumberString(
-            (returnData[betaTesterHatIndex] ?? '0') as string,
-          );
-          balances.hasBetaTesterHat = Number(betaTesterHatBalance) > 0;
-          console.log(
-            '  ✅ Beta Tester Hat balance:',
-            betaTesterHatBalance,
-            'hasBetaTesterHat:',
-            balances.hasBetaTesterHat,
-          );
-        }
-      } catch (error) {
-        console.error('Error processing Beta Tester Hat balance:', error);
-      }
-
       // Log final results
       console.log(
         '📊 Final Token Balances for',
@@ -813,11 +644,9 @@ export async function fetchTokenBalances(
           ':',
       );
       console.log('  hasExecutivePod:', balances.hasExecutivePod);
-      console.log('  hasDevPod:', balances.hasDevPod);
       console.log('  hasMarketManagement:', balances.hasMarketManagement);
       console.log('  hasBountyHat:', balances.hasBountyHat);
       console.log('  hasEventManagement:', balances.hasEventManagement);
-      console.log('  hasBetaTesterHat:', balances.hasBetaTesterHat);
       console.log('  hasProofOfCuriosity:', balances.hasProofOfCuriosity);
       console.log('  hasAdvocate:', balances.hasAdvocate);
 

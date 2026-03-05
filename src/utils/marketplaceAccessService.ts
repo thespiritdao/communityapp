@@ -4,6 +4,7 @@
 import { useAccount, usePublicClient } from 'wagmi';
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
+import { getClientHatId } from '@/lib/hatRegistryClient';
 
 const HATS_ABI = [
   {
@@ -67,32 +68,17 @@ export const useEnhancedMarketplaceAccess = () => {
 
         // Check Executive Pod access (global marketplace permissions)
         let isExecutive = false;
-        const executiveLeaderHat = process.env.NEXT_PUBLIC_EXECUTIVE_POD_LEADER;
-        const executiveMemberHat = process.env.NEXT_PUBLIC_EXECUTIVE_POD_MEMBER;
+        const executiveLeaderHat = getClientHatId('EXECUTIVE_POD_LEADER');
 
-        if (hatsContract && (executiveLeaderHat || executiveMemberHat)) {
+        if (hatsContract && executiveLeaderHat) {
           try {
-            // Check if user is executive leader
-            if (executiveLeaderHat) {
-              const leaderBalance = await publicClient.readContract({
-                address: hatsContract,
-                abi: HATS_ABI,
-                functionName: 'balanceOf',
-                args: [address as `0x${string}`, executiveLeaderHat],
-              });
-              if (Number(leaderBalance) > 0) isExecutive = true;
-            }
-
-            // Check if user is executive member
-            if (!isExecutive && executiveMemberHat) {
-              const memberBalance = await publicClient.readContract({
-                address: hatsContract,
-                abi: HATS_ABI,
-                functionName: 'balanceOf',
-                args: [address as `0x${string}`, executiveMemberHat],
-              });
-              if (Number(memberBalance) > 0) isExecutive = true;
-            }
+            const leaderBalance = await publicClient.readContract({
+              address: hatsContract,
+              abi: HATS_ABI,
+              functionName: 'balanceOf',
+              args: [address as `0x${string}`, executiveLeaderHat],
+            });
+            if (Number(leaderBalance) > 0) isExecutive = true;
           } catch (error) {
             console.error('Error checking executive pod access:', error);
           }
@@ -263,10 +249,9 @@ export const fetchUserAuthorizedTokensForGating = async (
     console.log('🎫 User address:', userAddress);
     console.log('🎫 Hats contract:', hatsContract);
 
-    // First, check Executive Pod membership using same logic as fetchTokenBalances
+    // First, check Executive Pod membership
     const executiveHatIds = [
-      process.env.NEXT_PUBLIC_EXECUTIVE_POD_LEADER,
-      process.env.NEXT_PUBLIC_EXECUTIVE_POD_MEMBER,
+      getClientHatId('EXECUTIVE_POD_LEADER'),
     ].filter(Boolean);
 
     let hasExecutiveAccess = false;

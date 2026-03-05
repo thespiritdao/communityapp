@@ -151,7 +151,7 @@ export async function quickDebugExecutiveHat(
   const hatsProtocolAddress =
     '0x3bc1A0Ad72417f2d411118085256fC53CBdDd137' as `0x${string}`;
   const executiveHatId =
-    '0x0000008800010000000000000000000000000000000000000000000000000000';
+    '0x0000074900010000000000000000000000000000000000000000000000000000';
   const testIpfsUri =
     'ipfs://bafkreibbuu6dghupp44np23iddoy7grduzmqze26cuhpronr5n5ba5dz2u';
 

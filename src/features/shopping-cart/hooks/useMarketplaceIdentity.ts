@@ -4,6 +4,7 @@ import { useTokenBalances } from '@/context/TokenBalancesContext';
 import { getUserIdentity, type UserIdentity } from '@/utils/accessControlUtils';
 import { canUserAccessProductAsync } from '../services/accessControl';
 import type { IProduct } from '../models';
+import { getClientHatId } from '@/lib/hatRegistryClient';
 
 interface MarketplaceIdentity {
   identity: UserIdentity | null;
@@ -223,15 +224,10 @@ export function useMarketplaceManager(): {
   const canManageProducts = useMemo(() => {
     if (!identity) return false;
 
-    // Check for Executive Pod membership
-    const execHat = process.env.NEXT_PUBLIC_EXECUTIVE_POD_LEADER?.toLowerCase();
-    const execMemberHat =
-      process.env.NEXT_PUBLIC_EXECUTIVE_POD_MEMBER?.toLowerCase();
+    // Check for Executive Pod leader membership
+    const execHat = getClientHatId('EXECUTIVE_POD_LEADER')?.toLowerCase();
 
-    return (
-      identity.userHats.includes(execHat || '') ||
-      identity.userHats.includes(execMemberHat || '')
-    );
+    return identity.userHats.includes(execHat || '');
   }, [identity]);
 
   return {

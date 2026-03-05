@@ -148,7 +148,7 @@ export function getFixedExecutivePodHatId(): string {
 export function createHatIdMigrationMap(): Record<string, string> {
   return {
     // Map the problematic hat ID to a valid one
-    '0x0000008800010000000000000000000000000000000000000000000000000000':
+    '0x0000074900010000000000000000000000000000000000000000000000000000':
       getFixedExecutivePodHatId(),
   };
 }

@@ -5,7 +5,6 @@ import { useHatPermissions } from '@/hooks/useHatPermissions';
 import { useTokenBalances } from '@/context/TokenBalancesContext';
 import { usePodModules } from '@/features/pods/hooks/usePodModules';
 import { useState } from 'react';
-
 export function ChatDebugPanel() {
   const [isOpen, setIsOpen] = useState(false);
   const { userHats, userRoles, permissions } = useHatPermissions();
@@ -164,7 +163,6 @@ export function ChatDebugPanel() {
       <div style={{ marginBottom: '12px' }}>
         <strong style={{ color: '#8FAAA1', display: 'block', marginBottom: '4px' }}>Environment:</strong>
         <div style={{ background: '#f3f4f6', padding: '8px', borderRadius: '4px', fontSize: '10px', wordBreak: 'break-all' }}>
-          <div>Beta Tester HAT: {process.env.NEXT_PUBLIC_BETA_TESTER_HAT?.slice(0, 20)}...</div>
           <div>Advocate: {process.env.NEXT_PUBLIC_ADVOCATE?.slice(0, 20)}...</div>
           <div>PoC: {process.env.NEXT_PUBLIC_PROOF_OF_CURIOSITY?.slice(0, 20)}...</div>
         </div>

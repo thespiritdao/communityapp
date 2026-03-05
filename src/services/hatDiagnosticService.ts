@@ -1,4 +1,5 @@
 import type { PublicClient } from 'viem';
+import { getClientHatId } from '@/lib/hatRegistryClient';
 
 /**
  * Diagnostic service for HAT configuration and permissions
@@ -223,13 +224,13 @@ export class HatDiagnosticService {
         console.log('🎯 Controller HAT ID:', controllerHatId);
         console.log(
           '👑 Expected Executive Pod Leader:',
-          process.env.NEXT_PUBLIC_EXECUTIVE_POD_LEADER,
+          getClientHatId('EXECUTIVE_POD_LEADER'),
         );
 
         // Check if controller HAT matches expected Executive Pod Leader
         if (
           controllerHatId.toLowerCase() ===
-          process.env.NEXT_PUBLIC_EXECUTIVE_POD_LEADER?.toLowerCase()
+          getClientHatId('EXECUTIVE_POD_LEADER')?.toLowerCase()
         ) {
           console.log('✅ Controller HAT matches Executive Pod Leader!');
         } else {
@@ -292,9 +293,8 @@ export class HatDiagnosticService {
       // This is simplified - in practice you'd need to check specific HAT IDs
       // For now, let's check the main HATs from the environment
       const hatsToCheck = [
-        process.env.NEXT_PUBLIC_EXECUTIVE_POD_LEADER,
-        process.env.NEXT_PUBLIC_EXECUTIVE_POD_MEMBER,
-        process.env.NEXT_PUBLIC_COMMUNITY_PODS_PARENT,
+        getClientHatId('EXECUTIVE_POD_LEADER'),
+        getClientHatId('COMMUNITY_PODS_PARENT'),
       ].filter(Boolean);
 
       const ownedHats = [];

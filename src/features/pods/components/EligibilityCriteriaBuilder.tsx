@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { getClientHatId } from '@/lib/hatRegistryClient';
 import { DateTimePicker } from '@/components/ui/datetime-picker';
 import {
   Plus,
@@ -152,9 +153,7 @@ export const EligibilityCriteriaBuilder: React.FC<
 
       // Map known environment contract addresses to balance values
       const envMappings = {
-        [process.env.NEXT_PUBLIC_EXECUTIVE_POD_LEADER?.toLowerCase() || '']:
-          balances.hasExecutivePod ? '1' : '0',
-        [process.env.NEXT_PUBLIC_EXECUTIVE_POD_MEMBER?.toLowerCase() || '']:
+        [getClientHatId('EXECUTIVE_POD_LEADER')?.toLowerCase() || '']:
           balances.hasExecutivePod ? '1' : '0',
         [process.env.NEXT_PUBLIC_SYSTEM_TOKEN?.toLowerCase() || '']:
           balances.systemBalance,
@@ -263,18 +262,10 @@ export const EligibilityCriteriaBuilder: React.FC<
         );
 
         // Add HAT tokens (Pod management tokens)
-        if (process.env.NEXT_PUBLIC_EXECUTIVE_POD_LEADER) {
+        if (getClientHatId('EXECUTIVE_POD_LEADER')) {
           envTokens.push({
             name: 'Executive Pod Leader',
-            address: process.env.NEXT_PUBLIC_EXECUTIVE_POD_LEADER,
-            source: 'pods',
-          });
-        }
-
-        if (process.env.NEXT_PUBLIC_EXECUTIVE_POD_MEMBER) {
-          envTokens.push({
-            name: 'Executive Pod Member',
-            address: process.env.NEXT_PUBLIC_EXECUTIVE_POD_MEMBER,
+            address: getClientHatId('EXECUTIVE_POD_LEADER'),
             source: 'pods',
           });
         }

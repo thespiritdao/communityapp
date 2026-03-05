@@ -90,3 +90,21 @@ CREATE POLICY "Thread creators can update their threads"
     OR
     author_address = lower(current_setting('request.jwt.claims', true)::json -> 'user_metadata' ->> 'wallet_address')
   );
+
+-- Authenticated users can delete threads
+-- Moderator permission is enforced at the application layer (useModerationPermissions hook).
+-- RLS only checks that the caller is authenticated.
+DROP POLICY IF EXISTS "Authenticated users can delete threads" ON forum_threads;
+CREATE POLICY "Authenticated users can delete threads"
+  ON forum_threads FOR DELETE
+  TO authenticated
+  USING (auth.jwt() IS NOT NULL);
+
+-- Authenticated users can delete posts (moderators)
+-- Also allow moderators to hard-delete posts (soft-delete is handled by UPDATE, but
+-- hard-delete needed when moderator removes a post via the moderation toolbar).
+DROP POLICY IF EXISTS "Authenticated users can delete posts" ON forum_posts;
+CREATE POLICY "Authenticated users can delete posts"
+  ON forum_posts FOR DELETE
+  TO authenticated
+  USING (auth.jwt() IS NOT NULL);

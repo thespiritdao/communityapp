@@ -32,6 +32,7 @@ import { UnifiedMembershipManager } from './UnifiedMembershipManager';
 import { supabase } from '@/utils/supabaseClient';
 import TransactionLogger from '@/utils/transactionLogger';
 import { RoleCreationModal } from './RoleCreationModal';
+import { getClientHatId } from '@/lib/hatRegistryClient';
 
 // Use HatPermissions from service for consistency
 type PodPermissions = HatPermissions;
@@ -342,12 +343,12 @@ export const PodManagerControlPanel: React.FC<PodManagerControlPanelProps> = ({
   console.log('  userHatId:', userHatId);
   console.log(
     '  NEXT_PUBLIC_EXECUTIVE_POD_LEADER:',
-    process.env.NEXT_PUBLIC_EXECUTIVE_POD_LEADER,
+    getClientHatId('EXECUTIVE_POD_LEADER'),
   );
 
   const isPodManager =
     canManageMembers ||
-    userHatId === process.env.NEXT_PUBLIC_EXECUTIVE_POD_LEADER;
+    userHatId === getClientHatId('EXECUTIVE_POD_LEADER');
   console.log('  Final isPodManager result:', isPodManager);
 
   // Helper function to initialize default roles if none exist

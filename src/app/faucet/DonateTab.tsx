@@ -82,7 +82,7 @@ function DonationCheckoutForm({
           <span style={{ fontWeight: 600 }}>${donationData.amount.toFixed(2)}</span>
         </div>
         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px', marginBottom: '8px' }}>
-          <span style={{ color: '#6B7280' }}>Platform Fee (7.5%):</span>
+          <span style={{ color: '#6B7280' }}>Platform Fee ({donationData.platformFeePercent ?? 8}%):</span>
           <span style={{ color: '#6B7280' }}>-${donationData.platformFee}</span>
         </div>
         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px', marginBottom: '8px' }}>

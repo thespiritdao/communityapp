@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Coins, ExternalLink, AlertCircle } from 'lucide-react';
 import type { EligibilityCriteria } from '../services/EligibilityService';
+import { getClientHatId } from '@/lib/hatRegistryClient';
 
 interface TokenBalanceInputProps {
   value: Partial<EligibilityCriteria>;
@@ -27,15 +28,8 @@ const COMMON_TOKENS = [
   },
   {
     name: 'Executive Pod Leader HAT',
-    address: process.env.NEXT_PUBLIC_EXECUTIVE_POD_LEADER,
+    address: getClientHatId('EXECUTIVE_POD_LEADER'),
     symbol: 'POD-EXEC',
-    decimals: 0,
-    type: 'HAT' as const,
-  },
-  {
-    name: 'Executive Pod Member HAT',
-    address: process.env.NEXT_PUBLIC_EXECUTIVE_POD_MEMBER,
-    symbol: 'POD-MEM',
     decimals: 0,
     type: 'HAT' as const,
   },

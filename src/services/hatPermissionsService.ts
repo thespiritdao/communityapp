@@ -1,6 +1,7 @@
 'use client';
 
 import type { PublicClient } from 'viem';
+import { getClientHatId } from '@/lib/hatRegistryClient';
 
 // HATS Contract ABI (minimal)
 const HATS_ABI = [
@@ -108,7 +109,7 @@ export interface HatRole {
 // Predefined HAT roles configuration
 export const HAT_ROLES: Record<string, HatRole> = {
   EXECUTIVE_LEADER: {
-    hatId: process.env.NEXT_PUBLIC_EXECUTIVE_POD_LEADER || '',
+    hatId: getClientHatId('EXECUTIVE_POD_LEADER') || '',
     name: 'Executive Pod Leader',
     isLeaderRole: true,
     podId: 'executive-pod',
@@ -120,79 +121,15 @@ export const HAT_ROLES: Record<string, HatRole> = {
       governanceParticipation: true,
       eventCreation: true,
       treasuryViewing: true,
-      treasuryManagement: true, // Executive pod leaders can manage treasuries
+      treasuryManagement: true,
       memberManagement: true,
       subPodCreation: true,
       roleAssignment: true,
       bountyManagement: true,
       marketplaceAccess: true,
       marketplaceManage: true,
-    },
-  },
-  EXECUTIVE_MEMBER: {
-    hatId: process.env.NEXT_PUBLIC_EXECUTIVE_POD_MEMBER || '',
-    name: 'Executive Pod Member',
-    isLeaderRole: false,
-    podId: 'executive-pod',
-    permissions: {
-      chatAccess: true,
-      chatModeration: false,
-      forumAccess: true,
-      forumModeration: false,
-      governanceParticipation: true,
-      eventCreation: false,
-      treasuryViewing: false,
-      treasuryManagement: false, // Members cannot manage treasuries
-      memberManagement: false,
-      subPodCreation: false,
-      roleAssignment: false,
-      bountyManagement: false,
-      marketplaceAccess: true,
-      marketplaceManage: false,
-    },
-  },
-  DEV_LEADER: {
-    hatId: process.env.NEXT_PUBLIC_DEV_POD_LEADER || '',
-    name: 'Development Pod Leader',
-    isLeaderRole: true,
-    podId: 'dev-pod',
-    permissions: {
-      chatAccess: true,
-      chatModeration: true,
-      forumAccess: true,
-      forumModeration: false,
-      governanceParticipation: true,
-      eventCreation: true,
-      treasuryViewing: true,
-      treasuryManagement: true, // Pod leaders can manage their pod's treasury
-      memberManagement: true,
-      subPodCreation: true,
-      roleAssignment: true,
-      bountyManagement: true,
-      marketplaceAccess: true,
-      marketplaceManage: true,
-    },
-  },
-  DEV_MEMBER: {
-    hatId: process.env.NEXT_PUBLIC_DEV_POD_MEMBER || '',
-    name: 'Development Pod Member',
-    isLeaderRole: false,
-    podId: 'dev-pod',
-    permissions: {
-      chatAccess: true,
-      chatModeration: false,
-      forumAccess: true,
-      forumModeration: false,
-      governanceParticipation: true,
-      eventCreation: false,
-      treasuryViewing: false,
-      treasuryManagement: false,
-      memberManagement: false,
-      subPodCreation: false,
-      roleAssignment: false,
-      bountyManagement: false,
-      marketplaceAccess: true,
-      marketplaceManage: false,
+      knowledgeBaseAccess: true,
+      knowledgeBaseManage: true,
     },
   },
   // Legacy management roles (maintained for compatibility)
@@ -431,6 +368,8 @@ export class HatPermissionsService {
       bountyManagement: false,
       marketplaceAccess: false,
       marketplaceManage: false,
+      knowledgeBaseAccess: false,
+      knowledgeBaseManage: false,
     };
 
     // Combine permissions from all roles (OR operation)

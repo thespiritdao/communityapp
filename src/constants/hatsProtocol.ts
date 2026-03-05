@@ -1,45 +1,54 @@
 /**
  * Hats Protocol Constants
  *
- * Contract addresses and HAT IDs for role-based access control
+ * Contract address and hat ID helpers for role-based access control.
+ * Hat IDs are sourced from pod_role_permissions.token_address via
+ * src/lib/hatRegistry.ts — not from environment variables.
  */
+
+import { createClient } from '@supabase/supabase-js';
 
 // Hats Protocol contract address on Base mainnet
 export const HATS_PROTOCOL_ADDRESS =
   '0x3bc1A0Ad72417f2d411118085256fC53CBdDd137' as const;
 
 /**
- * HAT ID mappings for permission types
- * These map to specific HAT tokens that users must hold to access certain features
+ * Get HAT ID for a specific pod role.
  *
- * HAT IDs are stored in the database in pod_role_permissions table
- * and should be fetched dynamically per pod. These are fallback/example values.
- */
-export const HAT_ID_PERMISSIONS = {
-  // Example HAT IDs - actual IDs should be fetched from database per pod
-  EXAMPLE_EXECUTIVE_POD_LEADER: BigInt(
-    process.env.NEXT_PUBLIC_EXECUTIVE_POD_LEADER || '0',
-  ),
-  EXAMPLE_DEV_POD_LEADER: BigInt(process.env.NEXT_PUBLIC_DEV_POD_HAT_ID || '0'),
-} as const;
-
-/**
- * Get HAT ID from pod role
+ * Queries pod_role_permissions to find the token_address for the given
+ * pod + role. This is the primary DB-backed hat ID lookup for arbitrary pods.
  *
- * In production, this should query the database to get the HAT ID
- * associated with a specific pod and role.
+ * For the fixed system roles (exec leader, community parent, TN member),
+ * prefer getHatId() from src/lib/hatRegistry.ts which caches results.
  *
- * @param podId - The pod identifier
- * @param roleName - The role name (e.g., "Leader", "Member")
- * @returns The HAT ID as a bigint
+ * @param podId   — The pod UUID
+ * @param roleName — The role_name value (e.g. "Temporal Naturalism Member")
+ * @returns The hat ID as a bigint, or null if not found / not active
  */
 export async function getHatIdForPodRole(
   podId: string,
   roleName: string,
 ): Promise<bigint | null> {
-  // TODO: Query database to get HAT ID from pod_role_permissions
-  // For now, return null and let the hook handle it
-  return null;
+  try {
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    );
+
+    const { data } = await supabase
+      .from('pod_role_permissions')
+      .select('token_address')
+      .eq('pod_id', podId)
+      .ilike('role_name', roleName)
+      .eq('is_active', true)
+      .limit(1)
+      .single();
+
+    if (!data?.token_address?.startsWith('0x')) return null;
+    return BigInt(data.token_address);
+  } catch {
+    return null;
+  }
 }
 
 /**
@@ -55,7 +64,6 @@ export const PERMISSION_HAT_MAPPING = {
   eventCreation: 'Leader',
   memberManagement: 'Leader',
   podManagement: 'Leader',
-  // Lower privilege permissions
   chatParticipation: 'Member',
   governanceParticipation: 'Member',
 } as const;

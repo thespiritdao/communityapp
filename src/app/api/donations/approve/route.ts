@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { createPublicClient, http, getAddress } from 'viem';
 import { base } from 'viem/chains';
+import { getHatId } from '@/lib/hatRegistry';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -10,7 +11,6 @@ const supabase = createClient(
 
 // Hats Protocol contract on Base
 const HATS_PROTOCOL_ADDRESS = '0x3bc1A0Ad72417f2d411118085256fC53CBdDd137';
-const EXECUTIVE_POD_LEADER_HAT_ID = process.env.NEXT_PUBLIC_EXECUTIVE_POD_LEADER!;
 
 const publicClient = createPublicClient({
   chain: base,
@@ -50,6 +50,13 @@ async function verifyExecutiveRole(walletAddress: string): Promise<boolean> {
       return false;
     }
 
+    // Load hat ID from registry
+    const executiveHatId = await getHatId('EXECUTIVE_POD_LEADER');
+    if (!executiveHatId) {
+      console.error('❌ EXECUTIVE_POD_LEADER hat ID not configured in hat_registry');
+      return false;
+    }
+
     // Verify on-chain HAT ownership
     const hatBalance = await publicClient.readContract({
       address: HATS_PROTOCOL_ADDRESS as `0x${string}`,
@@ -57,7 +64,7 @@ async function verifyExecutiveRole(walletAddress: string): Promise<boolean> {
       functionName: 'balanceOf',
       args: [
         getAddress(walletAddress),
-        BigInt(EXECUTIVE_POD_LEADER_HAT_ID),
+        BigInt(executiveHatId),
       ],
     });
 
@@ -197,12 +204,14 @@ export async function POST(request: NextRequest) {
     // 5. RECORD APPROVAL
     // =====================================================
 
+    const executiveHatIdForRecord = await getHatId('EXECUTIVE_POD_LEADER');
+
     const { data: approval, error: approvalError } = await supabase
       .from('donation_approvals')
       .insert({
         donation_id: donationId,
         approver_wallet: normalizedWallet,
-        approver_hat_id: EXECUTIVE_POD_LEADER_HAT_ID,
+        approver_hat_id: executiveHatIdForRecord ?? null,
         approved_at: new Date().toISOString()
       })
       .select()

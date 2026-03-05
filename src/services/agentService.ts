@@ -18,7 +18,7 @@ const supabase = createClient(
 );
 
 // Agent configuration
-const AGENT_MODEL = 'claude-sonnet-4-20250514';
+const AGENT_MODEL = 'claude-sonnet-4-6';
 const MAX_TOKENS = 8000;
 
 // Load prompts (we'll inline them for now)

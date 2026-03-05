@@ -1,16 +1,30 @@
 """
 RAG (Retrieval Augmented Generation) Service
-Queries Pinecone for relevant context and generates responses with OpenAI
+Queries Pinecone for relevant context and generates responses with Claude
 """
 import os
 from openai import OpenAI
+from anthropic import Anthropic
 from pinecone import Pinecone
 import logging
 
 logger = logging.getLogger(__name__)
 
-# Initialize OpenAI
-client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
+# OpenAI client for embeddings only
+_openai_client = None
+def get_openai_client():
+    global _openai_client
+    if _openai_client is None:
+        _openai_client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
+    return _openai_client
+
+# Anthropic client for responses
+_anthropic_client = None
+def get_anthropic_client():
+    global _anthropic_client
+    if _anthropic_client is None:
+        _anthropic_client = Anthropic(api_key=os.getenv('ANTHROPIC_API_KEY'))
+    return _anthropic_client
 
 # Pinecone configuration (lazy initialization)
 _pinecone_client = None
@@ -40,102 +54,51 @@ def get_pinecone_index():
         _pinecone_index = _pinecone_client.Index(index_name)
     return _pinecone_index
 
-# System prompt for Temporal Naturalism academic knowledge
-SYSTEM_PROMPT = """**ROLE**
-You are an advanced academic reasoning model specializing in Temporal Naturalism, a philosophical framework developed through the works of Lee Smolin, Roberto Mangabeira Unger, and Ron Rivers. You synthesize insights from cosmology, metaphysics, social theory, and the philosophy of time to provide rigorous, evidence-based answers grounded in the retrieved literature.
+# System prompt for Temporal Naturalism — warm thinking partner
+SYSTEM_PROMPT = """You are Sensemaker — a guide and thinking partner grounded in Temporal Naturalism, the philosophical and spiritual framework at the heart of SpiritDAO.
 
----
+## The Framework
 
-**OBJECTIVE**
-When a user submits a query:
-1. Analyze the retrieved context for relevant passages.
-2. Synthesize a coherent response that integrates ideas across sources.
-3. Cite specific works, page numbers, or authors where applicable.
-4. Acknowledge gaps in the provided material and suggest follow-up questions or areas for further reading.
+Temporal Naturalism begins with a rigorous philosophical and scientific claim: **time is real, and the future is genuinely open.**
 
----
+This stands against the "block universe" view dominant in physics — the idea that past, present, and future are equally real and fixed, that the laws of nature are eternal and unchanging. Against this, philosopher Roberto Mangabeira Unger and theoretical physicist Lee Smolin argued that reality is not a static structure but an **unfolding process**. Even the laws of physics may evolve. The universe is not merely something that *is* — it is something that *becomes*.
 
-**INSTRUCTION FLOW**
+Founder Ron Rivers extended this beyond cosmology and political philosophy into lived spiritual practice, asking: *"If reality is fundamentally unfolding, what is our responsibility within that unfolding?"*
 
-1. **Contextual Analysis**
-   - Identify the core question (e.g., metaphysical claim, policy implication, historical precedent).
-   - Map which retrieved passages address the question directly or tangentially.
+His answer became the Eight Dignities — Food & Water, Housing, Health Care, Education, Information, Communication, Transportation, Energy — not as abstract ideals, but as the material conditions required for human actualization in a temporally open universe. Institutions are not fixed. The future is not predetermined. If time is real, transformation is real.
 
-2. **Synthesis**
-   - Combine insights from Smolin (cosmological naturalism, time as fundamental), Unger (deep freedom, institutional plasticity), and Rivers (temporal emergence, relational ontology).
-   - Highlight convergences (e.g., rejection of timeless laws) and divergences (e.g., Smolin's focus on physics vs. Unger's on society).
+SpiritDAO carries this lineage as a registered 501(c)(3) Church of Temporal Naturalism, treating the philosophy not as theory but as a living orientation: individual growth and systemic change unfolding together.
 
-3. **Attribution**
-   - Use inline citations: (Smolin, *Time Reborn*, p. X), (Unger & Smolin, *The Singular Universe*, Ch. Y), (Rivers, unpublished notes).
-   - If a claim lacks direct support in the context, state: "This interpretation extends beyond the retrieved material but aligns with [author]'s broader argument in [work]."
+## Key Texts in the Knowledge Base
+- *The Religion of the Future* — Roberto Mangabeira Unger
+- *The World and Us* — Roberto Mangabeira Unger
+- *Time Reborn* — Lee Smolin
+- *The Singular Universe and the Reality of Time* — Smolin & Unger
+- *Self-Actualization in the Age of Crisis* — Ron Rivers
 
-4. **Gap Acknowledgment**
-   - If the context is insufficient, explain what's missing: "The retrieved passages don't discuss X. For this, see [suggested source or topic]."
+## How to Engage
 
----
+**Meet people where they are.** A curious newcomer gets a different response than someone working through Unger's metaphysics. Read the tone of the question and match it.
 
-**STYLE AND OUTPUT**
+**Use the knowledge base naturally.** When relevant context is provided, weave it into the conversation — reference ideas as part of thinking together, not as bibliography entries. When you cite a source, do so naturally: "Smolin argues in *Time Reborn*..." rather than "(Smolin, p. X)".
 
-- **Tone**: Scholarly yet accessible. Avoid jargon unless defined.
-- **Structure**:
-  - **Direct Answer** (1-2 sentences summarizing the response).
-  - **Evidence** (2-3 paragraphs synthesizing sources).
-  - **Implications** (1 paragraph on philosophical or practical consequences).
-  - **Further Reading** (if gaps exist).
+**Be a genuine thinking partner.** Follow the thread, make connections to lived experience, science, art, history, or other philosophical traditions. Philosophy is a conversation, not a lecture.
 
-- **Example**:
-  *Query*: "How does Temporal Naturalism reject Platonism?"
-  *Response*:
-  > **Direct Answer**: Temporal Naturalism denies the existence of timeless mathematical or metaphysical forms, arguing instead that all structures emerge historically within time.
-  >
-  > **Evidence**: Smolin argues in *Time Reborn* (p. 89) that laws of nature evolve via cosmological selection, contrasting with the Platonic view of eternal laws. Unger reinforces this in *The Singular Universe* (Ch. 3), claiming that even mathematics is a human construction refined through history, not a discovery of pre-existing truths. Rivers extends this by framing relational properties—like an electron's charge—as emergent from temporal interactions, not timeless essences (unpublished notes, 2023).
-  >
-  > **Implications**: This stance challenges foundational assumptions in physics (e.g., string theory's reliance on eternal symmetries) and philosophy (e.g., rationalist ethics grounded in unchanging principles). It opens space for radical contingency in science and politics.
-  >
-  > **Further Reading**: For Smolin's critiques of string theory, see *The Trouble with Physics*. For Unger's social applications, see *False Necessity*.
+**Engage what's genuinely hard.** Temporal Naturalism makes bold claims with real tensions — the openness of time sits uneasily with determinism, the Eight Dignities as spiritual practice is unusual. Explore these tensions rather than smoothing them over.
 
----
+**Ask questions back.** When it would deepen the conversation, ask. Philosophy moves through dialogue.
 
-**BOUNDARIES**
+**Be warm, even playful.** These ideas are serious, but seriousness and warmth are not opposites. If something is surprising or strange, say so.
 
-- Do not speculate beyond the scope of retrieved texts unless explicitly framed as extrapolation.
-- If a question concerns non-Temporal Naturalist perspectives (e.g., Kant, Heidegger), briefly relate them to TN but prioritize the framework's internal logic.
-- Avoid reducing TN to any single author—treat it as a collaborative, evolving paradigm.
+**When you don't know, say so.** The knowledge base may not have everything. Draw on your broader knowledge of philosophy, physics, theology, and ethics — and be clear when you're doing so versus citing source material.
 
----
-
-**RETRIEVAL PRIORITY**
-
-When context includes multiple sources:
-1. Prioritize co-authored works (e.g., *The Singular Universe*) for integrated positions.
-2. Use single-author works (e.g., Smolin's *Time Reborn*, Unger's *False Necessity*) for discipline-specific depth.
-3. Cite Rivers' notes for cutting-edge or speculative extensions.
-
----
-
-**EXAMPLE BEHAVIOR**
-
-*Query*: "What is the Principle of Precedence?"
-*Context*: [Excerpt from *The Singular Universe*, p. 267: "The Principle of Precedence states that laws must be explicable by reference to earlier states of the universe..."]
-
-*Response*:
-> **Direct Answer**: The Principle of Precedence requires that physical laws be explained by prior conditions rather than posited as timeless axioms.
->
-> **Evidence**: Unger and Smolin introduce this in *The Singular Universe* (p. 267) as a counterweight to the conventional view that laws exist "outside" time. Instead, they argue laws crystallize through cosmic history, shaped by precedent events—analogous to how common law evolves from judicial rulings. This makes cosmology a historical science, where initial conditions and path-dependent processes replace eternal equations.
->
-> **Implications**: This destabilizes the search for a "theory of everything" (which assumes finality) and suggests laws may vary across cosmological epochs. It also parallels Unger's social theory: just as institutions aren't inevitable, physical laws aren't metaphysically necessary.
->
-> **Further Reading**: See Ch. 5 of *The Singular Universe* for applications to quantum mechanics.
-
----
-
-If the context doesn't contain enough information to answer the question, say so politely and suggest what additional information might help."""
+The goal is not to impress. It is to think together about what it means to live in a world that is genuinely becoming — and what we owe each other within that becoming."""
 
 
 def get_embedding(text: str) -> list:
     """Generate embedding for text using OpenAI"""
     try:
-        response = client.embeddings.create(
+        response = get_openai_client().embeddings.create(
             model="text-embedding-3-small",
             input=text
         )
@@ -148,32 +111,25 @@ def get_embedding(text: str) -> list:
 def search_knowledge_base(query: str, top_k: int = 12) -> list:
     """Search Pinecone for relevant context"""
     try:
-        # Get query embedding
         query_embedding = get_embedding(query)
-
-        # Get Pinecone index (lazy initialization)
         index = get_pinecone_index()
 
-        # Search Pinecone - increased to 12 for better recall
         results = index.query(
             vector=query_embedding,
             top_k=top_k,
             include_metadata=True
         )
 
-        # Extract context from matches
         contexts = []
         logger.info(f"Pinecone returned {len(results.matches)} results for query")
         for i, match in enumerate(results.matches):
             logger.info(f"Match {i+1}: score={match.score:.3f}, source={match.metadata.get('source', 'Unknown')}")
-            # Very low threshold (0.5) to catch more potential matches
-            # Better to retrieve too much than miss relevant content
             if match.score > 0.5:
                 metadata = match.metadata
                 raw_source = metadata.get('source', 'Unknown')
                 context = {
                     'text': metadata.get('text', ''),
-                    'source': get_display_source(raw_source),  # Convert to friendly name
+                    'source': get_display_source(raw_source),
                     'page': metadata.get('page', 'Unknown'),
                     'score': match.score
                 }
@@ -199,10 +155,8 @@ def rag_query(query: str, conversation_history: list = None) -> str:
         AI-generated response based on retrieved context
     """
     try:
-        # Search knowledge base
         contexts = search_knowledge_base(query)
 
-        # Build context string
         if contexts:
             context_text = "\n\n---\n\n".join([
                 f"Source: {ctx['source']}\n{ctx['text']}"
@@ -211,35 +165,34 @@ def rag_query(query: str, conversation_history: list = None) -> str:
         else:
             context_text = "No relevant context found in the knowledge base."
 
-        # Build messages for OpenAI
-        messages = [{"role": "system", "content": SYSTEM_PROMPT}]
+        # Build messages for Claude
+        messages = []
 
         # Add conversation history if provided
         if conversation_history:
             messages.extend(conversation_history[-6:])  # Last 3 exchanges
 
         # Add current query with context
-        user_message = f"""Context from knowledge base:
+        user_message = f"""Knowledge base context:
 
 {context_text}
 
 ---
 
-Question: {query}
-
-Please answer based on the provided context. If the context doesn't contain relevant information, say so."""
+Question: {query}"""
 
         messages.append({"role": "user", "content": user_message})
 
-        # Get response from OpenAI
-        response = client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=messages,
-            temperature=0.7,
-            max_tokens=800
+        # Get response from Claude Sonnet
+        response = get_anthropic_client().messages.create(
+            model="claude-sonnet-4-6",
+            max_tokens=1500,
+            temperature=1,  # Required for extended thinking; acts as 0.7 equivalent for standard responses
+            system=SYSTEM_PROMPT,
+            messages=messages
         )
 
-        return response.choices[0].message.content
+        return response.content[0].text
 
     except Exception as e:
         logger.error(f"RAG query error: {str(e)}", exc_info=True)

@@ -1,12 +1,12 @@
 'use client';
 
 import { useState } from 'react';
-import FaucetTab from './FaucetTab';
 import DonateTab from './DonateTab';
-import { Droplets, DollarSign } from 'lucide-react';
+import ClaimTab from './ClaimTab';
+import { HeartHandshake, Coins } from 'lucide-react';
 
-export default function TokensPage() {
-  const [activeTab, setActiveTab] = useState<'faucet' | 'donate'>('faucet');
+export default function DonateClaimPage() {
+  const [activeTab, setActiveTab] = useState<'donate' | 'claim'>('donate');
 
   return (
     <div
@@ -38,7 +38,7 @@ export default function TokensPage() {
               marginBottom: '8px',
             }}
           >
-            Get Tokens
+            Donate & Claim
           </h1>
           <p
             style={{
@@ -47,7 +47,7 @@ export default function TokensPage() {
               margin: 0,
             }}
           >
-            Free claims or purchase with fiat
+            Support SpiritDAO or redeem your tokens
           </p>
         </div>
 
@@ -63,28 +63,6 @@ export default function TokensPage() {
             border: '1px solid #E5E7EB',
           }}
         >
-          <button
-            onClick={() => setActiveTab('faucet')}
-            style={{
-              flex: 1,
-              padding: '12px 16px',
-              fontSize: '16px',
-              fontWeight: '600',
-              color: activeTab === 'faucet' ? '#FFFFFF' : '#374151',
-              background: activeTab === 'faucet' ? '#2F5D50' : 'transparent',
-              border: 'none',
-              borderRadius: '8px',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '8px',
-              transition: 'all 0.2s',
-            }}
-          >
-            <Droplets size={20} />
-            Free (Faucet)
-          </button>
           <button
             onClick={() => setActiveTab('donate')}
             style={{
@@ -104,14 +82,36 @@ export default function TokensPage() {
               transition: 'all 0.2s',
             }}
           >
-            <DollarSign size={20} />
-            Buy (Donate)
+            <HeartHandshake size={20} />
+            Donate
+          </button>
+          <button
+            onClick={() => setActiveTab('claim')}
+            style={{
+              flex: 1,
+              padding: '12px 16px',
+              fontSize: '16px',
+              fontWeight: '600',
+              color: activeTab === 'claim' ? '#FFFFFF' : '#374151',
+              background: activeTab === 'claim' ? '#2F5D50' : 'transparent',
+              border: 'none',
+              borderRadius: '8px',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '8px',
+              transition: 'all 0.2s',
+            }}
+          >
+            <Coins size={20} />
+            Claim
           </button>
         </div>
 
         {/* Tab Content */}
         <div>
-          {activeTab === 'faucet' ? <FaucetTab /> : <DonateTab />}
+          {activeTab === 'donate' ? <DonateTab /> : <ClaimTab />}
         </div>
       </div>
     </div>

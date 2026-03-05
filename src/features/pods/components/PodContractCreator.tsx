@@ -56,7 +56,7 @@ export function PodContractCreator({ onPodCreated }: PodContractCreatorProps) {
     imageURI: 'https://example.com/executive-pod.png',
     podLeads: '', // comma-separated addresses
     parentHatId:
-      '3666552746732487012074714051834669771614651641465517857430090993893376', // Executive Hat ID in decimal (0x0000008800000000...)
+      '50280300534235943217053983137291611206333274348038167677258233114787840', // Top Hat ID in decimal (0x0000074900000000...)
   });
   const [createdPodId, setCreatedPodId] = useState<string>('');
   const [isProposing, setIsProposing] = useState(false);

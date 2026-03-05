@@ -1,118 +1,46 @@
 /**
  * Beta Tester Utility Functions
  *
- * BETA TESTING ONLY - These functions grant superuser privileges to Beta Tester hat holders.
- *
- * ⚠️ IMPORTANT: Remove or disable these checks before full production launch!
- * See: BETA_TESTER_REMOVAL_GUIDE.md for reversal instructions.
+ * Beta testing period has ended. All functions return false.
+ * The beta tester hat has been retired.
  */
 
 import type { HatRole } from '@/services/hatPermissionsService';
 
-// Beta Tester Hat ID from environment
-const BETA_TESTER_HAT_ID = process.env.NEXT_PUBLIC_BETA_TESTER_HAT as `0x${string}`;
-
 /**
- * Check if user has Beta Tester hat
- *
- * @param userHats - Array of user's hat IDs (string[]) or hat roles (HatRole[])
- * @returns true if user has Beta Tester hat
+ * Check if user has Beta Tester hat — always false (hat retired)
  */
-export function isBetaTester(userHats: string[] | HatRole[]): boolean {
-  if (!BETA_TESTER_HAT_ID) {
-    console.warn('⚠️ BETA_TESTER_HAT_ID not configured');
-    return false;
-  }
-
-  // Handle both string[] and HatRole[] formats
-  if (userHats.length === 0) return false;
-
-  // Check if it's a string array or HatRole array
-  const isStringArray = typeof userHats[0] === 'string';
-
-  if (isStringArray) {
-    // userHats is string[] - compare directly
-    return (userHats as string[]).some(
-      (hatId) => hatId.toLowerCase() === BETA_TESTER_HAT_ID.toLowerCase(),
-    );
-  } else {
-    // userHats is HatRole[] - compare hatId property
-    return (userHats as HatRole[]).some(
-      (hat) => hat.hatId.toLowerCase() === BETA_TESTER_HAT_ID.toLowerCase(),
-    );
-  }
+export function isBetaTester(_userHats: string[] | HatRole[]): boolean {
+  return false;
 }
 
 /**
- * Check if Beta Tester superuser mode is enabled
- *
- * Controlled by NEXT_PUBLIC_ENABLE_BETA_TESTER_SUPERUSER environment variable.
- * Default: true (enabled for beta period)
- *
- * @returns true if Beta Tester superuser mode is enabled
+ * Check if Beta Tester superuser mode is enabled — always false (beta ended)
  */
 export function isBetaTesterSuperuserEnabled(): boolean {
-  // Default to enabled for beta period
-  const envValue = process.env.NEXT_PUBLIC_ENABLE_BETA_TESTER_SUPERUSER;
-
-  // Explicitly disabled?
-  if (envValue === 'false') {
-    return false;
-  }
-
-  // Enabled by default (true or undefined)
-  return true;
+  return false;
 }
 
 /**
- * Check if user should have superuser access
- *
- * Returns true if:
- * - Beta Tester superuser mode is enabled AND
- * - User has Beta Tester hat
- *
- * @param userHats - Array of user's hat IDs (string[]) or hat roles (HatRole[])
- * @returns true if user should have superuser access
+ * Check if user should have superuser access — always false (beta ended)
  */
-export function hasBetaTesterSuperuser(userHats: string[] | HatRole[]): boolean {
-  if (!isBetaTesterSuperuserEnabled()) {
-    return false;
-  }
-
-  const result = isBetaTester(userHats);
-
-  if (result) {
-    console.log(
-      '👑 Beta Tester Superuser: Granting full permissions (beta testing mode)',
-    );
-  }
-
-  return result;
+export function hasBetaTesterSuperuser(_userHats: string[] | HatRole[]): boolean {
+  return false;
 }
 
 /**
- * Get Beta Tester hat ID
+ * Get Beta Tester hat ID — always null (hat retired)
  */
 export function getBetaTesterHatId(): string | null {
-  return BETA_TESTER_HAT_ID || null;
+  return null;
 }
 
 /**
  * Log Beta Tester status for debugging
  */
 export function logBetaTesterStatus(
-  userHats: string[] | HatRole[],
+  _userHats: string[] | HatRole[],
   context: string,
 ): void {
-  const isBeta = isBetaTester(userHats);
-  const superuserEnabled = isBetaTesterSuperuserEnabled();
-  const hasSuperuser = hasBetaTesterSuperuser(userHats);
-
-  console.log(`🔍 [${context}] Beta Tester Status:`, {
-    isBetaTester: isBeta,
-    superuserModeEnabled: superuserEnabled,
-    hasSuperuserAccess: hasSuperuser,
-    betaTesterHatId: BETA_TESTER_HAT_ID,
-    userHatCount: userHats.length,
-  });
+  console.log(`🔍 [${context}] Beta Tester Status: retired`);
 }

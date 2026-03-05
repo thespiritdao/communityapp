@@ -74,20 +74,26 @@ export const CONTRACT_ADDRESSES = {
 } as const;
 
 // ============================================================================
-// HAT IDS (from environment)
+// HAT IDS
 // ============================================================================
-
-export const HAT_IDS = {
-  EXECUTIVE_POD_LEADER: process.env
-    .NEXT_PUBLIC_EXECUTIVE_POD_LEADER as `0x${string}`,
-  EXECUTIVE_POD_MEMBER: process.env
-    .NEXT_PUBLIC_EXECUTIVE_POD_MEMBER as `0x${string}`,
-  BETA_TESTER_HAT: process.env.NEXT_PUBLIC_BETA_TESTER_HAT as `0x${string}`, // Temporary 30-day testing hat
-  COMMUNITY_PODS_PARENT: process.env
-    .NEXT_PUBLIC_COMMUNITY_PODS_PARENT as `0x${string}`,
-  DEV_POD_LEADER: process.env.NEXT_PUBLIC_DEV_POD_LEADER as `0x${string}`,
-  DEV_POD_MEMBER: process.env.NEXT_PUBLIC_DEV_POD_MEMBER as `0x${string}`,
-} as const;
+// Hat IDs are sourced from pod_role_permissions via src/lib/hatRegistry.ts.
+// They are NOT stored in env vars. Update token_address in pod_role_permissions
+// after redeploying the hat tree and the app picks up new values automatically.
+//
+// Active hats (top hat 0x00000749):
+//   EXECUTIVE_POD_LEADER       — Executive Pod leader hat
+//   COMMUNITY_PODS_PARENT      — Community Pods parent hat
+//   TEMPORAL_NATURALISM        — Temporal Naturalism pod hat
+//   TEMPORAL_NATURALISM_MEMBER — Temporal Naturalism member hat
+//
+// Server-side usage:
+//   import { getHatId, getHatIdBigInt } from '@/lib/hatRegistry';
+//   const leaderId = await getHatIdBigInt('EXECUTIVE_POD_LEADER');
+//
+// Client-side usage:
+//   import { getClientHatId } from '@/lib/hatRegistryClient';
+//   const leaderId = getClientHatId('EXECUTIVE_POD_LEADER');  // populated at app boot
+export type { HatIds, HatKey } from '@/lib/hatRegistry';
 
 // ============================================================================
 // POD IDS (from environment)

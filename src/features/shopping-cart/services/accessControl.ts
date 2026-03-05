@@ -2,6 +2,7 @@
 import { getUserIdentity, type UserIdentity } from '@/utils/accessControlUtils';
 import { supabase } from '@/lib/supabase';
 import type { IProduct } from '../models';
+import { getClientHatId } from '@/lib/hatRegistryClient';
 
 /**
  * 🛒 Shopping Cart Access Control Service
@@ -107,12 +108,9 @@ export const canUserAccessProduct = (
   // Legacy token mapping for backward compatibility
   switch (requiredToken) {
     case 'exec':
-      return (
-        hasTokenOrHat(process.env.NEXT_PUBLIC_EXECUTIVE_POD_LEADER) ||
-        hasTokenOrHat(process.env.NEXT_PUBLIC_EXECUTIVE_POD_MEMBER)
-      );
+      return hasTokenOrHat(getClientHatId('EXECUTIVE_POD_LEADER'));
     case 'dev':
-      return hasTokenOrHat(process.env.NEXT_PUBLIC_DEV_POD_HAT_ID);
+      return false; // dev pod extinct
     case 'bounty':
       return hasTokenOrHat(process.env.NEXT_PUBLIC_BOUNTY_HAT);
     case 'poc':

@@ -10,6 +10,7 @@
  */
 
 import { supabase } from '@/utils/supabaseClient';
+import { getClientHatId } from '@/lib/hatRegistryClient';
 
 export interface EveryoneTagPermission {
   canUseEveryoneTag: boolean;
@@ -101,7 +102,7 @@ class EveryoneTagService {
    * Check if user is an Executive Pod Leader
    */
   private async isExecutivePodLeader(userWallet: string): Promise<boolean> {
-    const executiveLeaderHat = process.env.NEXT_PUBLIC_EXECUTIVE_POD_LEADER;
+    const executiveLeaderHat = getClientHatId('EXECUTIVE_POD_LEADER');
 
     if (!executiveLeaderHat) {
       console.warn('[EveryoneTagService] EXECUTIVE_POD_LEADER hat not configured');

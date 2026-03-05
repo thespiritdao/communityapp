@@ -127,7 +127,8 @@ export async function POST(request: NextRequest) {
         : amount * 0.029 + 0.30;
 
       // Recalculate tokens with actual fee
-      const platformFee = amount * 0.075; // 7.5%
+      const platformFeePercentage = Number(process.env.DONATION_PLATFORM_FEE_PERCENTAGE) || 8;
+      const platformFee = amount * (platformFeePercentage / 100);
       const systemTokensToMint = amount - actualStripeFee - platformFee;
 
       // Calculate settlement period
@@ -145,15 +146,15 @@ export async function POST(request: NextRequest) {
         .from('pending_donations')
         .update({
           payment_method: paymentMethod,
-          mercury_fee: actualStripeFee, // Actual Stripe fee
+          stripe_fee: actualStripeFee, // Actual Stripe fee
           system_tokens_to_mint: systemTokensToMint,
           settlement_days: settlementDays,
           settlement_date: settlementDate,
           is_reversible: paymentMethod !== 'us_bank_account',
           status: newStatus,
-          mercury_confirmed_at: new Date().toISOString()
+          stripe_confirmed_at: new Date().toISOString()
         })
-        .eq('mercury_payment_id', paymentIntent.id)
+        .eq('stripe_payment_id', paymentIntent.id)
         .select()
         .single();
 
@@ -196,7 +197,7 @@ export async function POST(request: NextRequest) {
           status: 'failed',
           failure_reason: paymentIntent.last_payment_error?.message || 'Payment failed'
         })
-        .eq('mercury_payment_id', paymentIntent.id);
+        .eq('stripe_payment_id', paymentIntent.id);
 
       return NextResponse.json({ received: true });
     }
@@ -221,7 +222,7 @@ export async function POST(request: NextRequest) {
       const { data: donation } = await supabase
         .from('pending_donations')
         .select('*')
-        .eq('mercury_payment_id', paymentIntentId)
+        .eq('stripe_payment_id', paymentIntentId)
         .single();
 
       if (!donation) {
@@ -277,7 +278,7 @@ export async function POST(request: NextRequest) {
         await supabase
           .from('pending_donations')
           .update({ status: 'awaiting_executive_approval' })
-          .eq('mercury_payment_id', paymentIntentId);
+          .eq('stripe_payment_id', paymentIntentId);
 
         console.log('✅ Dispute won, donation restored');
       } else {

@@ -7,6 +7,7 @@ import { fetchTokenBalances } from '../../../utils/fetchTokenBalances';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { getClientHatId } from '@/lib/hatRegistryClient';
 
 export const TokenDebugger: React.FC = () => {
   const { evmAddress: address } = useEvmAddress();
@@ -80,7 +81,7 @@ export const TokenDebugger: React.FC = () => {
             </p>
             <p>
               <strong>EXECUTIVE_POD_HAT_ID:</strong>{' '}
-              {process.env.NEXT_PUBLIC_EXECUTIVE_POD_LEADER || 'Not set'}
+              {getClientHatId('EXECUTIVE_POD_LEADER') || 'Not set'}
             </p>
             <p>
               <strong>DEV_POD_HAT_ID:</strong>{' '}

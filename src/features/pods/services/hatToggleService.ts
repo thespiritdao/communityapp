@@ -1,6 +1,7 @@
 import { HatsCoreService } from '../../../services/hatsCoreService';
 import { HatsToggleModuleService } from '../../../services/hatsToggleModuleService';
 import type { PublicClient, WalletClient } from 'viem';
+import { getClientHatId } from '@/lib/hatRegistryClient';
 
 // HATS Protocol Contract Address
 const HATS_CONTRACT_ADDRESS = process.env
@@ -698,8 +699,7 @@ export class HatToggleService {
    * Read the current toggle module for Executive Pod Member HAT from on-chain
    */
   static async readMemberToggle(publicClient: PublicClient) {
-    const EXEC_MEMBER_HAT = process.env
-      .NEXT_PUBLIC_EXECUTIVE_POD_MEMBER as string;
+    const EXEC_MEMBER_HAT = undefined || '';
 
     const viewHatAbi = [
       {
@@ -747,8 +747,7 @@ export class HatToggleService {
     publicClient: PublicClient,
     walletClient: WalletClient,
   ) {
-    const EXEC_MEMBER_HAT = process.env
-      .NEXT_PUBLIC_EXECUTIVE_POD_MEMBER as string;
+    const EXEC_MEMBER_HAT = undefined || '';
 
     const [addr] = await walletClient.getAddresses();
     const isAdmin = await publicClient.readContract({
@@ -1146,7 +1145,7 @@ export class HatToggleService {
    */
   static getKnownToggleModule(hatId: string): string | null {
     // Check if this is the Executive Pod Member HAT
-    const executivePodMember = process.env.NEXT_PUBLIC_EXECUTIVE_POD_MEMBER;
+    const executivePodMember = undefined;
     const executivePodMemberToggleModule =
       process.env.NEXT_PUBLIC_EXECUTIVE_POD_MEMBER_TOGGLE_MODULE;
 

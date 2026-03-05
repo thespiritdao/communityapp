@@ -4,12 +4,9 @@ import { createClient } from '@supabase/supabase-js';
 import { cookies } from 'next/headers';
 import { everyoneTagService } from '@/services/everyoneTagService';
 import { everyoneNotificationService } from '@/services/everyoneNotificationService';
-
 // Special access tokens (same as ChatContainer.tsx)
 const POC =
   process.env.NEXT_PUBLIC_PROOF_OF_CURIOSITY_TOKEN?.toLowerCase() || '';
-const BETA_TESTER_HAT =
-  process.env.NEXT_PUBLIC_BETA_TESTER_HAT?.toLowerCase() || '';
 const ADVOCATE_TOKEN =
   process.env.NEXT_PUBLIC_ADVOCATE?.toLowerCase() || '';
 
@@ -172,28 +169,6 @@ export async function POST(request: Request) {
       }
     }
 
-    // Special case: Beta Tester Hat grants access to Beta Tester chat
-    if (!hasPermission && required_token === BETA_TESTER_HAT) {
-      console.log('🔍 Chat message POST: Checking Beta Tester Hat balance...');
-      const { data: balanceData, error: balanceError } = await supabaseAdmin
-        .from('token_balances')
-        .select('balance')
-        .eq('wallet_address', sender_wallet_id.toLowerCase())
-        .eq('contract_address', BETA_TESTER_HAT)
-        .gt('balance', 0)
-        .single();
-
-      console.log('🔍 Chat message POST: Beta Tester Hat balance query result:', {
-        hasBalance: !!balanceData,
-        balance: balanceData?.balance,
-        error: balanceError?.message,
-      });
-
-      if (balanceData) {
-        hasPermission = true;
-        console.log('✅ Chat message POST: User has Beta Tester Hat');
-      }
-    }
 
 
     // Special case: Advocate token grants access to Advocate chat
@@ -309,7 +284,7 @@ export async function POST(request: Request) {
         podId: pod_id,
         userWallet: sender_wallet_id,
         checkedPoC: required_token === POC,
-        checkedBetaTester: required_token === BETA_TESTER_HAT,
+        checkedBetaTester: required_token === betaTesterHat,
         checkedAdvocate: required_token === ADVOCATE_TOKEN,
         checkedPodMembership: !!pod_id,
       });

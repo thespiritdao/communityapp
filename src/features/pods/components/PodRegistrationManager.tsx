@@ -64,9 +64,9 @@ export const PodRegistrationManager: React.FC = () => {
         address || '0x0000000000000000000000000000000000000000', // For now, use connected user
       ],
       parentHatId:
-        '0x0000008800000000000000000000000000000000000000000000000000000000', // Root DAO HAT
+        '0x0000074900000000000000000000000000000000000000000000000000000000', // Root DAO HAT
       pod_leader_hat_id:
-        '0x0000008800010000000000000000000000000000000000000000000000000000',
+        '0x0000074900010000000000000000000000000000000000000000000000000000',
     },
   ];
 
@@ -176,7 +176,7 @@ export const PodRegistrationManager: React.FC = () => {
             </ul>
             <p className="mt-2 text-xs" style={{ color: '#C6933F' }}>
               Note: You have the Pod Leader HAT
-              (0x0000008800010000000000000000000000000000000000000000000000000000).
+              (0x0000074900010000000000000000000000000000000000000000000000000000).
               Pod Member HATs will be created automatically when the pod is
               activated.
             </p>

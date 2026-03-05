@@ -71,8 +71,7 @@ contract BountyManagerV4 is ReentrancyGuard, Pausable {
     mapping(uint256 => address[]) public bidders;
 
     uint256 public nextBountyId = 1;
-    uint256 public platformFeeRate = 250; // 2.5%
-    address public feeRecipient;
+    address public immutable admin;
 
     // CONFIGURABLE TOKEN ADDRESSES (set at deployment)
     address public systemToken;
@@ -80,6 +79,10 @@ contract BountyManagerV4 is ReentrancyGuard, Pausable {
 
     // Whitelist of allowed tokens (for future expansion)
     mapping(address => bool) public allowedTokens;
+
+    // Platform fee (basis points, e.g. 250 = 2.5%)
+    uint256 public platformFeeRate;
+    address public feeRecipient;
 
     // Events
     event PodMetadataRegistered(string indexed podId, uint256 leaderHatId, address treasury, address registrar);
@@ -108,7 +111,7 @@ contract BountyManagerV4 is ReentrancyGuard, Pausable {
         hatsProtocol = IHats(_hatsProtocol);
         systemToken = _systemToken;
         selfToken = _selfToken;
-        feeRecipient = msg.sender;
+        admin = msg.sender;
 
         // Whitelist initial tokens
         allowedTokens[_systemToken] = true;
@@ -124,7 +127,7 @@ contract BountyManagerV4 is ReentrancyGuard, Pausable {
      * @param _allowed Whether token is allowed
      */
     function setTokenAllowed(address _token, bool _allowed) external {
-        require(msg.sender == feeRecipient, "Only admin");
+        require(msg.sender == admin, "Only admin");
         require(_token != address(0), "Invalid token");
         allowedTokens[_token] = _allowed;
         emit TokenWhitelisted(_token, _allowed);
@@ -139,7 +142,7 @@ contract BountyManagerV4 is ReentrancyGuard, Pausable {
         address _systemToken,
         address _selfToken
     ) external {
-        require(msg.sender == feeRecipient, "Only admin");
+        require(msg.sender == admin, "Only admin");
         require(_systemToken != address(0), "Invalid SYSTEM token");
         require(_selfToken != address(0), "Invalid SELF token");
 
@@ -401,13 +404,7 @@ contract BountyManagerV4 is ReentrancyGuard, Pausable {
         require(isAuthorized, "Not authorized to release payment");
         require(amount <= assignment.escrowAmount - assignment.paidAmount, "Exceeds available");
 
-        uint128 fee = (amount * uint128(platformFeeRate)) / 10000;
-        uint128 netAmount = amount - fee;
-
-        IERC20(bounty.token).safeTransfer(assignment.bidder, netAmount);
-        if (fee > 0) {
-            IERC20(bounty.token).safeTransfer(feeRecipient, fee);
-        }
+        IERC20(bounty.token).safeTransfer(assignment.bidder, amount);
 
         assignment.paidAmount += amount;
 
@@ -415,7 +412,7 @@ contract BountyManagerV4 is ReentrancyGuard, Pausable {
             bounty.status = 2;
         }
 
-        emit PaymentReleased(bountyId, assignment.bidder, netAmount);
+        emit PaymentReleased(bountyId, assignment.bidder, amount);
     }
 
     /**
@@ -585,24 +582,24 @@ contract BountyManagerV4 is ReentrancyGuard, Pausable {
 
     // Admin functions
     function updatePlatformFee(uint256 _newFee) external {
-        require(msg.sender == feeRecipient, "Only admin");
+        require(msg.sender == admin, "Only admin");
         require(_newFee <= 1000, "Max 10%");
         platformFeeRate = _newFee;
     }
 
     function updateFeeRecipient(address _recipient) external {
-        require(msg.sender == feeRecipient, "Only admin");
+        require(msg.sender == admin, "Only admin");
         require(_recipient != address(0), "Invalid address");
         feeRecipient = _recipient;
     }
 
     function pause() external {
-        require(msg.sender == feeRecipient, "Only admin");
+        require(msg.sender == admin, "Only admin");
         _pause();
     }
 
     function unpause() external {
-        require(msg.sender == feeRecipient, "Only admin");
+        require(msg.sender == admin, "Only admin");
         _unpause();
     }
 }
