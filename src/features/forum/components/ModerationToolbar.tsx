@@ -5,14 +5,6 @@
 import { useState } from 'react';
 import { useEvmAddress } from '@coinbase/cdp-hooks';
 import { useModerationPermissions } from '../hooks/useModerationPermissions';
-import {
-  pinThread,
-  unpinThread,
-  lockThread,
-  unlockThread,
-  deleteThread,
-  deletePost,
-} from '../services/ModerationService';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -20,6 +12,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { supabase } from '@/utils/supabaseClient';
 
 interface ModerationToolbarProps {
   targetType: 'thread' | 'post';
@@ -27,7 +20,36 @@ interface ModerationToolbarProps {
   isPinned?: boolean;
   isLocked?: boolean;
   onActionComplete?: () => void;
-  podId?: string | null; // NEW: Pod ID for pod-specific permissions
+  podId?: string | null;
+}
+
+async function callModerationAPI(
+  action: string,
+  targetType: string,
+  targetId: string,
+  reason?: string,
+): Promise<{ success: boolean; error?: string }> {
+  const { data: { session } } = await supabase.auth.getSession();
+  const token = session?.access_token;
+
+  if (!token) {
+    return { success: false, error: 'Not authenticated' };
+  }
+
+  const res = await fetch('/api/forum/moderate', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`,
+    },
+    body: JSON.stringify({ action, targetType, targetId, reason }),
+  });
+
+  const data = await res.json();
+  if (!res.ok) {
+    return { success: false, error: data.error || `HTTP ${res.status}` };
+  }
+  return { success: true };
 }
 
 export function ModerationToolbar({
@@ -39,72 +61,45 @@ export function ModerationToolbar({
   podId,
 }: ModerationToolbarProps) {
   const { evmAddress: address } = useEvmAddress();
-  const { canModerate, moderatorRoles } = useModerationPermissions(
-    podId || undefined,
-  );
+  const { canModerate } = useModerationPermissions(podId || undefined);
   const [isProcessing, setIsProcessing] = useState(false);
 
-  if (!canModerate || !address) {
-    console.log(
-      `🎯 [ModerationToolbar] Pod ${podId}: canModerate=${canModerate}, hiding toolbar`,
-    );
-    return null;
-  }
-
-  console.log(
-    `✅ [ModerationToolbar] Pod ${podId}: canModerate=${canModerate}, showing toolbar`,
-  );
-
-  const moderatorHatId = moderatorRoles[0]?.hatId || null;
+  if (!canModerate || !address) return null;
 
   const handleAction = async (
-    action: () => Promise<{ success: boolean; error?: string }>,
-    actionName: string,
+    action: string,
     isDelete = false,
+    reason?: string,
   ) => {
     setIsProcessing(true);
     try {
-      const result = await action();
+      const result = await callModerationAPI(action, targetType, targetId, reason);
       if (result.success) {
-        console.log(`✅ ${actionName} successful`);
+        console.log(`✅ Moderation action "${action}" successful`);
         if (isDelete && targetType === 'thread') {
           window.location.href = '/forum';
         } else {
           onActionComplete?.();
         }
       } else {
-        console.error(`❌ ${actionName} failed:`, result.error);
-        alert(`Failed to ${actionName}: ${result.error}`);
+        console.error(`❌ Moderation action "${action}" failed:`, result.error);
+        alert(`Failed: ${result.error}`);
       }
     } catch (error) {
-      console.error(`❌ ${actionName} error:`, error);
+      console.error(`❌ Moderation action "${action}" error:`, error);
       alert(`Error: ${error}`);
     } finally {
       setIsProcessing(false);
     }
   };
 
-  const handlePin = () => {
-    if (targetType !== 'thread') return;
-    const action = isPinned
-      ? () => unpinThread(targetId, address, moderatorHatId)
-      : () => pinThread(targetId, address, moderatorHatId);
-    handleAction(action, isPinned ? 'Unpin' : 'Pin');
-  };
-
-  const handleLock = () => {
-    if (targetType !== 'thread') return;
-    const action = isLocked
-      ? () => unlockThread(targetId, address, moderatorHatId)
-      : () => lockThread(targetId, address, moderatorHatId);
-    handleAction(action, isLocked ? 'Unlock' : 'Lock');
-  };
+  const handlePin = () => handleAction(isPinned ? 'unpin' : 'pin');
+  const handleLock = () => handleAction(isLocked ? 'unlock' : 'lock');
 
   const handleDelete = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
 
-    // Defer past current event loop so Radix dropdown close doesn't interfere
     setTimeout(() => {
       const confirmMsg =
         targetType === 'thread'
@@ -114,12 +109,7 @@ export function ModerationToolbar({
       if (!confirm(confirmMsg)) return;
 
       const reason = prompt('Reason for deletion (optional):') || undefined;
-      const action =
-        targetType === 'thread'
-          ? () => deleteThread(targetId, address!, moderatorHatId, reason)
-          : () => deletePost(targetId, address!, moderatorHatId, reason);
-
-      handleAction(action, 'Delete', true);
+      handleAction('delete', true, reason);
     }, 0);
   };
 
@@ -144,7 +134,7 @@ export function ModerationToolbar({
               </DropdownMenuItem>
             </>
           )}
-          <DropdownMenuItem onClick={(e) => handleDelete(e)} style={{ color: '#8B3A3A' }}>
+          <DropdownMenuItem onClick={handleDelete} style={{ color: '#8B3A3A' }}>
             🗑️ Delete {targetType === 'thread' ? 'Thread' : 'Post'}
           </DropdownMenuItem>
         </DropdownMenuContent>
