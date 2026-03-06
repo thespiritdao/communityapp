@@ -322,6 +322,7 @@ export async function POST(req: NextRequest) {
                 },
                 max_holders: 5,
                 created_by: callerAddress,
+                updated_by: callerAddress,
               });
               console.log(`Created pod_role_permissions for pod ${podId}, hat ${managementHatId}`);
             }
