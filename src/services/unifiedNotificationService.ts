@@ -52,6 +52,7 @@ export type NotificationType =
   | 'pod_leadership_invitation'
   | 'pod_member_joined'
   | 'pod_application_status'
+  | 'pod_pending_review'
   | 'new_account_created'
   // Governance notifications
   | 'proposal_mentioned'
@@ -90,7 +91,8 @@ export interface UnifiedNotification {
     | 'bounty'
     | 'governance'
     | 'marketplace'
-    | 'events';
+    | 'events'
+    | 'pod';
   context_id?: string;
   proposal_id?: string;
   transaction_hash?: string;
@@ -113,7 +115,8 @@ export interface CreateUnifiedNotificationData {
     | 'bounty'
     | 'governance'
     | 'marketplace'
-    | 'events';
+    | 'events'
+    | 'pod';
   context_id?: string;
   proposal_id?: string;
   transaction_hash?: string;

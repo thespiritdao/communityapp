@@ -113,6 +113,12 @@ function NotificationCard({
         return '💭';
       case 'bounty_update':
         return '💰';
+      case 'pod_pending_review':
+      case 'pod_member_removed':
+      case 'pod_leadership_invitation':
+      case 'pod_member_joined':
+      case 'pod_application_status':
+        return '🏛️';
       case 'event_registration':
       case 'event_checkin':
         return <Calendar className="w-8 h-8 text-green-600" />;
@@ -168,6 +174,8 @@ function NotificationCard({
         return notification.context_id
           ? `/events/${notification.context_id}`
           : '/events';
+      case 'pod':
+        return '/pods/review';
       default:
         return '#';
     }

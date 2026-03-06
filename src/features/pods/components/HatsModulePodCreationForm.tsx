@@ -4380,7 +4380,7 @@ export const HatsModulePodCreationForm: React.FC<
                         <div className="mt-2 text-sm text-blue-600 text-center">
                           {isCreatingPod && txStatus !== 'pending'
                             ? '🔄 Preparing transaction...'
-                            : '🔄 Transaction in progress... (Sponsored - no gas fees!)'}
+                            : '🔄 Transaction in progress...'}
                         </div>
                       )}
 
@@ -4459,7 +4459,7 @@ export const HatsModulePodCreationForm: React.FC<
                           <div className="mt-2 text-sm text-blue-600 text-center">
                             {isDeployingProxy && txStatus !== 'pending'
                               ? '🔄 Preparing transaction...'
-                              : '🔄 Transaction in progress... (Sponsored - no gas fees!)'}
+                              : '🔄 Transaction in progress...'}
                           </div>
                         )}
 
@@ -4631,7 +4631,7 @@ export const HatsModulePodCreationForm: React.FC<
 
                 {txStatus === 'pending' && (
                   <div className="mt-2 text-sm text-blue-600 text-center">
-                    🔄 Minting {mintHatCalls.length} tokens... (Sponsored - no gas fees!)
+                    🔄 Minting {mintHatCalls.length} tokens...
                   </div>
                 )}
 
@@ -4760,7 +4760,7 @@ export const HatsModulePodCreationForm: React.FC<
 
                 {txStatus === 'pending' && (
                   <div className="mt-2 text-sm text-blue-600 text-center">
-                    🔄 Configuring proxy... (Sponsored - no gas fees!)
+                    🔄 Configuring proxy...
                   </div>
                 )}
 
@@ -4877,7 +4877,7 @@ export const HatsModulePodCreationForm: React.FC<
 
                 {txStatus === 'pending' && (
                   <div className="mt-2 text-sm text-blue-600 text-center">
-                    🔄 Creating admin role... (Sponsored - no gas fees!)
+                    🔄 Creating admin role...
                   </div>
                 )}
 
@@ -4986,7 +4986,7 @@ export const HatsModulePodCreationForm: React.FC<
 
                 {txStatus === 'pending' && (
                   <div className="mt-2 text-sm text-blue-600 text-center">
-                    🔄 Minting admin HAT... (Sponsored - no gas fees!)
+                    🔄 Minting admin HAT...
                   </div>
                 )}
 
@@ -5012,8 +5012,7 @@ export const HatsModulePodCreationForm: React.FC<
                 Final step: Configuring the proxy contract with its admin HAT.
               </p>
               <p className="text-xs text-teal-600 mb-4">
-                This enables the proxy to modify HAT metadata autonomously!
-                Transaction sponsored - no gas fees!
+                This enables the proxy to modify HAT metadata autonomously.
               </p>
 
               <div className="bg-white p-4 rounded-lg border border-teal-100 mb-4">
@@ -5095,7 +5094,7 @@ export const HatsModulePodCreationForm: React.FC<
 
                 {txStatus === 'pending' && (
                   <div className="mt-2 text-sm text-blue-600 text-center">
-                    🔄 Configuring proxy contract... (Sponsored - no gas fees!)
+                    🔄 Configuring proxy contract...
                   </div>
                 )}
 
@@ -5123,7 +5122,7 @@ export const HatsModulePodCreationForm: React.FC<
               </p>
               <p className="text-xs text-emerald-600 mb-4">
                 This enables pod leaders to add/remove token requirements for
-                membership! Transaction sponsored - no gas fees!
+                membership.
               </p>
 
               <div className="bg-white p-4 rounded-lg border border-emerald-100 mb-4">
@@ -5212,7 +5211,7 @@ export const HatsModulePodCreationForm: React.FC<
 
                 {txStatus === 'pending' && (
                   <div className="mt-2 text-sm text-blue-600 text-center">
-                    🔄 Configuring eligibility module... (Sponsored - no gas fees!)
+                    🔄 Configuring eligibility module...
                   </div>
                 )}
 

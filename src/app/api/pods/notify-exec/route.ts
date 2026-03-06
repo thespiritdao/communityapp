@@ -38,7 +38,7 @@ export async function POST(req: NextRequest) {
       message: `Pod "${podName}" has been submitted and is awaiting exec approval.`,
       context_type: 'pod',
       context_id: podId,
-      context_url: `/pods/${podId}`,
+      context_url: '/pods/review',
       created_at: now,
       is_read: false,
     }));
