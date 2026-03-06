@@ -17,6 +17,7 @@ import type { MemberRef } from '../types';
 interface UsePodManagementStateProps {
   podId: string;
   userAddress?: string;
+  initialTab?: string;
 }
 
 interface PodManagementState {
@@ -52,8 +53,9 @@ interface PodManagementState {
 export function usePodManagementState({
   podId,
   userAddress,
+  initialTab,
 }: UsePodManagementStateProps): PodManagementState {
-  const [selectedTab, setSelectedTab] = useState('members');
+  const [selectedTab, setSelectedTab] = useState(initialTab || 'members');
 
   // 🔍 DEBUG: Log inputs to hook
   console.log('🎯 usePodManagementState called with:', { podId, userAddress });

@@ -41,6 +41,7 @@ interface PodManagementContainerProps {
   userAddress?: string;
   toast?: (options: any) => void;
   onClickName?: (address: string) => void;
+  initialTab?: string;
 }
 
 /**
@@ -457,7 +458,7 @@ PodHeader.displayName = 'PodHeader';
  * Main pod management container with optimized rendering
  */
 export const PodManagementContainer = React.memo<PodManagementContainerProps>(
-  ({ podId, userAddress, toast, onClickName }) => {
+  ({ podId, userAddress, toast, onClickName, initialTab }) => {
     // Centralized state management
     const {
       pod,
@@ -470,7 +471,7 @@ export const PodManagementContainer = React.memo<PodManagementContainerProps>(
       canManageTreasury,
       selectedTab,
       setSelectedTab,
-    } = usePodManagementState({ podId, userAddress });
+    } = usePodManagementState({ podId, userAddress, initialTab });
 
     // 🔍 DEBUG: Log what container received from hook
     console.log('📦 PodManagementContainer received capabilities:', {

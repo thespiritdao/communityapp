@@ -1,5 +1,6 @@
 'use client';
 
+import { useSearchParams } from 'next/navigation';
 import { useEvmAddress } from '@coinbase/cdp-hooks';
 import { useToast } from '@/components/ui/use-toast';
 import { PodManagementContainer } from '@/features/pods/components';
@@ -32,6 +33,8 @@ export function PodManageClient({
   const { toast } = useToast();
   const { selectedUser, users, isOpen, openProfileModal, closeProfileModal } =
     useProfileModal();
+  const searchParams = useSearchParams();
+  const initialTab = searchParams.get('tab') ?? undefined;
 
   console.log(
     '🔄 PodManageClient: Using robust management container for pod:',
@@ -50,6 +53,7 @@ export function PodManageClient({
         userAddress={address ?? undefined}
         toast={toast}
         onClickName={handleClickName}
+        initialTab={initialTab}
       />
 
       {isOpen && selectedUser && (

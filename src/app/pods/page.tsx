@@ -6,11 +6,15 @@ import { useRouter } from 'next/navigation';
 import { useCDPStatus } from '@/hooks/useCDPStatus';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Users, Plus, Shapes, Loader2 } from 'lucide-react';
+import { Users, Plus, Shapes, Loader2, Shield, GitBranch } from 'lucide-react';
 import { useProfiles } from '@/features/identity/hooks/useProfiles';
 import { PodCardGrid } from '@/features/pods/components';
 import { useDatabaseFirstPermissions } from '@/hooks/useDatabaseFirstPermissions';
 import { PodRolePermissionsService } from '@/features/pods/services/PodRolePermissionsService';
+import { getClientHatId } from '@/lib/hatRegistryClient';
+import { createPublicClient, http } from 'viem';
+import { base } from 'viem/chains';
+import { supabase } from '@/utils/supabaseClient';
 
 // Use optimized hooks
 import { usePods } from '@/features/pods/hooks';
@@ -25,6 +29,69 @@ export default function PodsPage() {
   // Check pod creation permission using database-first approach
   const [canCreatePod, setCanCreatePod] = useState(false);
   const { memberships, isLoading: permissionsLoading } = useDatabaseFirstPermissions();
+
+  // Exec hat check — show top-level pod review banner
+  const [isExecLeader, setIsExecLeader] = useState(false);
+
+  // Sub-pod review: pod IDs where user is leader + sub-pods enabled + pending proposals exist
+  const [podsPendingReview, setPodsPendingReview] = useState<{ id: string; name: string }[]>([]);
+
+  useEffect(() => {
+    if (!address) return;
+    const execHatId = getClientHatId('EXECUTIVE_POD_LEADER');
+    if (!execHatId || !process.env.NEXT_PUBLIC_HATS_CONTRACT) return;
+    const publicClient = createPublicClient({
+      chain: base,
+      transport: http(process.env.NEXT_PUBLIC_RPC_URL || 'https://mainnet.base.org'),
+    });
+    publicClient.readContract({
+      address: process.env.NEXT_PUBLIC_HATS_CONTRACT as `0x${string}`,
+      abi: [{ name: 'balanceOf', type: 'function', inputs: [{ name: 'wearer', type: 'address' }, { name: 'hatId', type: 'uint256' }], outputs: [{ name: '', type: 'uint256' }], stateMutability: 'view' }],
+      functionName: 'balanceOf',
+      args: [address as `0x${string}`, BigInt(execHatId)],
+    }).then((bal) => setIsExecLeader((bal as bigint) > 0n)).catch(() => {});
+  }, [address]);
+
+  useEffect(() => {
+    if (!address || memberships.length === 0) return;
+
+    const checkSubPodReviews = async () => {
+      // Find pods where user is a leader
+      const ledPodIds = memberships
+        .filter((m) => m.role === 'leader')
+        .map((m) => m.podId);
+      if (ledPodIds.length === 0) return;
+
+      // Check which have sub_pods_enabled
+      const { data: modules } = await supabase
+        .from('pod_modules')
+        .select('pod_id')
+        .in('pod_id', ledPodIds)
+        .eq('sub_pods_enabled', true);
+      const enabledIds = modules?.map((m: any) => m.pod_id) ?? [];
+      if (enabledIds.length === 0) return;
+
+      // Check which have pending sub-pod proposals
+      const { data: pending } = await supabase
+        .from('pods')
+        .select('id, name, parent_pod_id')
+        .in('parent_pod_id', enabledIds)
+        .eq('status', 'pending_review');
+
+      if (!pending || pending.length === 0) return;
+
+      // Group by parent — get unique parent pods that have pending children
+      const parentIds = [...new Set(pending.map((p: any) => p.parent_pod_id as string))];
+      const { data: parentPods } = await supabase
+        .from('pods')
+        .select('id, name')
+        .in('id', parentIds);
+
+      setPodsPendingReview(parentPods ?? []);
+    };
+
+    checkSubPodReviews();
+  }, [address, memberships]);
 
   useEffect(() => {
     const checkSubPodPermission = async () => {
@@ -149,6 +216,42 @@ export default function PodsPage() {
           </div>
         )}
       </div>
+
+      {/* Exec: top-level pod review banner */}
+      {isExecLeader && (
+        <Link href="/pods/review">
+          <div className="mb-4 flex items-center justify-between gap-3 rounded-lg border border-green-200 bg-green-50 px-4 py-3 hover:bg-green-100 transition-colors cursor-pointer">
+            <div className="flex items-center gap-2">
+              <Shield className="h-5 w-5 text-green-700 shrink-0" />
+              <div>
+                <p className="text-sm font-semibold text-green-800">Pods Pending Approval</p>
+                <p className="text-xs text-green-700">Review and activate new pod proposals</p>
+              </div>
+            </div>
+            <Button size="sm" className="shrink-0 bg-green-700 hover:bg-green-800 text-white">
+              Review
+            </Button>
+          </div>
+        </Link>
+      )}
+
+      {/* Pod leader: sub-pod review banners */}
+      {podsPendingReview.map((pod) => (
+        <Link key={pod.id} href={`/pods/${pod.id}/manage?tab=sub_pod_review`}>
+          <div className="mb-4 flex items-center justify-between gap-3 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 hover:bg-blue-100 transition-colors cursor-pointer">
+            <div className="flex items-center gap-2">
+              <GitBranch className="h-5 w-5 text-blue-700 shrink-0" />
+              <div>
+                <p className="text-sm font-semibold text-blue-800">Sub-Pod Proposals — {pod.name}</p>
+                <p className="text-xs text-blue-700">Pending proposals awaiting your approval</p>
+              </div>
+            </div>
+            <Button size="sm" className="shrink-0 bg-blue-700 hover:bg-blue-800 text-white">
+              Review
+            </Button>
+          </div>
+        </Link>
+      ))}
 
       {/* Filters */}
       <div className="flex flex-wrap gap-2 mb-6">
