@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/utils/supabaseClient';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -33,24 +33,29 @@ export function ExecPodReviewPanel() {
   const [actionPending, setActionPending] = useState<string | null>(null);
   const [vetoReason, setVetoReason] = useState<Record<string, string>>({});
   const { toast } = useToast();
+  const toastRef = useRef(toast);
+  useEffect(() => { toastRef.current = toast; }, [toast]);
 
   const fetchPods = useCallback(async () => {
     setLoading(true);
     try {
       const { data: { session } } = await supabase.auth.getSession();
-      const token = session?.access_token;
+      if (!session?.access_token) {
+        setLoading(false);
+        return;
+      }
 
       const res = await fetch('/api/pods/review?scope=exec', {
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        headers: { Authorization: `Bearer ${session.access_token}` },
       });
       const json = await res.json();
       setPods(json.pods || []);
     } catch {
-      toast({ title: 'Failed to load pending pods', variant: 'destructive' });
+      toastRef.current({ title: 'Failed to load pending pods', variant: 'destructive' });
     } finally {
       setLoading(false);
     }
-  }, [toast]);
+  }, []);
 
   useEffect(() => { fetchPods(); }, [fetchPods]);
 
