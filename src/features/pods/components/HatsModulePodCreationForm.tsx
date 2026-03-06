@@ -1695,8 +1695,7 @@ export const HatsModulePodCreationForm: React.FC<
             // Generate temp pod ID for file path (we'll update with real pod ID later)
             const tempPodId = `temp-${Date.now()}`;
             const fileExt = formData.podImage.name.split('.').pop();
-            const fileName = `${tempPodId}/banner.${fileExt}`;
-            const filePath = `pod-images/${fileName}`;
+            const filePath = `${tempPodId}/banner.${fileExt}`;
 
             // Upload to Supabase Storage
             const { data: uploadData, error: uploadError } =

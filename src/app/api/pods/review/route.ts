@@ -180,21 +180,38 @@ export async function POST(req: NextRequest) {
     const adminAccount = privateKeyToAccount(ADMIN_PRIVATE_KEY as `0x${string}`);
     const walletClient = createWalletClient({ account: adminAccount, chain: base, transport: http(RPC_URL) });
 
-    // Call activatePod or vetoPod on the manager contract
+    // Estimate gas explicitly — the RPC default may return 0 for this contract
+    // causing "gas required exceeds allowance (0)" on some nodes.
     let hash: `0x${string}`;
     if (action === 'activate') {
+      const gas = await publicClient.estimateContractGas({
+        address: managerAddress,
+        abi: POD_MANAGER_ABI,
+        functionName: 'activatePod',
+        args: [pod.blockchain_pod_id],
+        account: adminAccount,
+      });
       hash = await walletClient.writeContract({
         address: managerAddress,
         abi: POD_MANAGER_ABI,
         functionName: 'activatePod',
         args: [pod.blockchain_pod_id],
+        gas,
       });
     } else {
+      const gas = await publicClient.estimateContractGas({
+        address: managerAddress,
+        abi: POD_MANAGER_ABI,
+        functionName: 'vetoPod',
+        args: [pod.blockchain_pod_id, reason || 'Vetoed'],
+        account: adminAccount,
+      });
       hash = await walletClient.writeContract({
         address: managerAddress,
         abi: POD_MANAGER_ABI,
         functionName: 'vetoPod',
         args: [pod.blockchain_pod_id, reason || 'Vetoed'],
+        gas,
       });
     }
 
