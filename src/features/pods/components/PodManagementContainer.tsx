@@ -264,11 +264,11 @@ const TabNavigation = React.memo<{
         },
         {
           id: 'sub_pod_review',
-          label: 'Pod Review',
-          mobileLabel: 'Review',
+          label: 'Sub-Pods',
+          mobileLabel: 'Sub-Pods',
           icon: GitBranch,
           badge: null,
-          enabled: canManageMembers, // Always visible to leaders — reviews pending sub-pod proposals
+          enabled: canManageMembers && subPodsEnabled,
         },
         {
           id: 'deletion',
