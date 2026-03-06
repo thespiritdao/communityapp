@@ -231,7 +231,7 @@ export async function POST(req: NextRequest) {
 
       const { data: pod, error: podError } = await supabaseAdmin
         .from('pods')
-        .select('id, name, blockchain_pod_id, management_hat_id, parent_pod_id, creation_manager_address')
+        .select('id, name, blockchain_pod_id, management_hat_id, parent_pod_id, creation_manager_address, pod_leads')
         .eq('id', podId)
         .single();
 
@@ -329,6 +329,30 @@ export async function POST(req: NextRequest) {
           } catch (roleErr: any) {
             // Non-fatal — pod is active, permissions can be set manually
             console.warn('Failed to create pod_role_permissions:', roleErr.message);
+          }
+
+          // Insert pod_members rows for all pod leads so the permission system
+          // recognises them as leaders immediately (active_pod_members view reads this table)
+          const podLeads: string[] = pod.pod_leads || [];
+          if (managementHatId && podLeads.length > 0) {
+            try {
+              const memberRows = podLeads.map((addr: string) => ({
+                pod_id: podId,
+                wallet: addr.toLowerCase(),
+                membership_type: 'leader',
+                role: 'leader',
+                hat_id: managementHatId,
+                is_active: true,
+                joined_at: new Date().toISOString(),
+              }));
+              const { error: membersErr } = await supabaseAdmin
+                .from('pod_members')
+                .upsert(memberRows, { onConflict: 'pod_id,wallet', ignoreDuplicates: true });
+              if (membersErr) console.warn('Failed to insert pod_members:', membersErr.message);
+              else console.log(`Inserted ${memberRows.length} pod_members for pod ${podId}`);
+            } catch (membersErr: any) {
+              console.warn('Failed to insert pod_members:', membersErr.message);
+            }
           }
         }
       } else {
