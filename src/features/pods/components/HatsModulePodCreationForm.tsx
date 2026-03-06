@@ -1584,65 +1584,70 @@ export const HatsModulePodCreationForm: React.FC<
 
         // ===================================================================
         // 🔐 TIER 1 FIX: VERIFY HAT EXISTS ONCHAIN BEFORE SAVING TO DATABASE
+        // V2 child pods: no HAT created by user tx — exec mints on activation
         // ===================================================================
-        if (!newHatId) {
-          console.error('❌ CRITICAL: HAT ID extraction failed');
-          toast({
-            title: 'HAT Extraction Failed',
-            description:
-              'Failed to extract HAT ID from blockchain transaction. The transaction succeeded but we could not identify the created role. Please contact support with transaction hash: ' +
-              hatReceipt?.transactionHash,
-            variant: 'destructive',
-          });
-          return;
-        }
+        if (!isV2ChildPod) {
+          if (!newHatId) {
+            console.error('❌ CRITICAL: HAT ID extraction failed');
+            toast({
+              title: 'HAT Extraction Failed',
+              description:
+                'Failed to extract HAT ID from blockchain transaction. The transaction succeeded but we could not identify the created role. Please contact support with transaction hash: ' +
+                hatReceipt?.transactionHash,
+              variant: 'destructive',
+            });
+            return;
+          }
 
-        console.log(
-          '🔍 TIER 1 FIX: Verifying HAT exists onchain before database save...',
-        );
-        const hatVerification =
-          await HatVerificationService.verifyHatExistsOnchain(newHatId);
-
-        if (!hatVerification.exists) {
-          console.error(
-            '❌ CRITICAL: Extracted HAT ID does not exist onchain!',
-            {
-              extractedHatId: newHatId,
-              errorType: hatVerification.errorType,
-              error: hatVerification.error,
-            },
+          console.log(
+            '🔍 TIER 1 FIX: Verifying HAT exists onchain before database save...',
           );
+          const hatVerification =
+            await HatVerificationService.verifyHatExistsOnchain(newHatId);
 
-          const errorMessage =
-            HatVerificationService.getErrorMessage(hatVerification);
-          toast({
-            title: 'HAT Verification Failed',
-            description: `HAT verification failed: ${errorMessage}. Transaction: ${hatReceipt?.transactionHash}`,
-            variant: 'destructive',
+          if (!hatVerification.exists) {
+            console.error(
+              '❌ CRITICAL: Extracted HAT ID does not exist onchain!',
+              {
+                extractedHatId: newHatId,
+                errorType: hatVerification.errorType,
+                error: hatVerification.error,
+              },
+            );
+
+            const errorMessage =
+              HatVerificationService.getErrorMessage(hatVerification);
+            toast({
+              title: 'HAT Verification Failed',
+              description: `HAT verification failed: ${errorMessage}. Transaction: ${hatReceipt?.transactionHash}`,
+              variant: 'destructive',
+            });
+            return;
+          }
+
+          // Check if HAT has supply (exists and was minted)
+          if (!hatVerification.active) {
+            console.warn(
+              '⚠️ HAT exists but is not marked as active (this is normal for HATs with toggle modules)',
+              {
+                extractedHatId: newHatId,
+                details: hatVerification.details,
+                supply: hatVerification.details?.supply,
+              },
+            );
+            // Don't block pod creation - HAT exists and has supply, just not toggled "active" yet
+            // This is expected behavior for HATs using custom toggle modules like PodAuthProxy
+          }
+
+          console.log('✅ TIER 1 FIX: HAT verified onchain successfully!', {
+            hatId: newHatId,
+            supply: hatVerification.details?.supply,
+            maxSupply: hatVerification.details?.maxSupply,
+            active: hatVerification.active,
           });
-          return;
+        } else {
+          console.log('⏭️ V2 child pod — skipping HAT ID extraction and onchain verification');
         }
-
-        // Check if HAT has supply (exists and was minted)
-        if (!hatVerification.active) {
-          console.warn(
-            '⚠️ HAT exists but is not marked as active (this is normal for HATs with toggle modules)',
-            {
-              extractedHatId: newHatId,
-              details: hatVerification.details,
-              supply: hatVerification.details?.supply,
-            },
-          );
-          // Don't block pod creation - HAT exists and has supply, just not toggled "active" yet
-          // This is expected behavior for HATs using custom toggle modules like PodAuthProxy
-        }
-
-        console.log('✅ TIER 1 FIX: HAT verified onchain successfully!', {
-          hatId: newHatId,
-          supply: hatVerification.details?.supply,
-          maxSupply: hatVerification.details?.maxSupply,
-          active: hatVerification.active,
-        });
 
         // Ensure Supabase session is valid before saving
         console.log('🔐 Verifying Supabase session...');
