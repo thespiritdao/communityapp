@@ -282,7 +282,7 @@ export class PodService {
           pod_leads: podData.podLeads,
           pod_image_url: podData.image,
           created_by_address: podData.createdByAddress,
-          status: 'draft', // Pending governance approval
+          status: podData.blockchainPodId ? 'pending_review' : 'draft',
           is_active: false,
           management_hat_id: podData.managementHatId || null,
           membership_hat_id: podData.membershipHatId || null,

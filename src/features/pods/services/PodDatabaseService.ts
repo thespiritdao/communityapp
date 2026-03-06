@@ -115,13 +115,9 @@ export class PodDatabaseService {
         { count: 'exact' },
       );
 
-      // Apply filters
+      // Apply filters — only show active pods in the default list
       if (!config.includeInactive) {
-        query = query
-          .neq('status', 'inactive')
-          .neq('status', 'vetoed')
-          .neq('status', 'pending_review')
-          .neq('status', 'proposed');
+        query = query.eq('status', 'active');
       }
 
       // Apply ordering
