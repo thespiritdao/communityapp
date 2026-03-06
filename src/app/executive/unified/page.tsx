@@ -39,7 +39,6 @@ import {
   ArrowRight,
   AlertCircle,
   Newspaper,
-  Shield,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { UserGuideModal } from '@/components/executive/UserGuideModal';
@@ -52,7 +51,6 @@ import {
   ActivityTab,
   HistoryTab,
   MarketingTab,
-  PodsTab,
 } from '@/components/executive/UnifiedTabComponents';
 
 export default function UnifiedDashboard() {
@@ -123,7 +121,7 @@ export default function UnifiedDashboard() {
 
         {/* Main Content Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-9">
+          <TabsList className="grid w-full grid-cols-8">
             <TabsTrigger value="overview">
               <Zap className="h-4 w-4 mr-1" />
               Overview
@@ -155,10 +153,6 @@ export default function UnifiedDashboard() {
             <TabsTrigger value="marketing">
               <Newspaper className="h-4 w-4 mr-1" />
               Marketing
-            </TabsTrigger>
-            <TabsTrigger value="pods">
-              <Shield className="h-4 w-4 mr-1" />
-              Pods
             </TabsTrigger>
           </TabsList>
 
@@ -194,9 +188,6 @@ export default function UnifiedDashboard() {
             <MarketingTab />
           </TabsContent>
 
-          <TabsContent value="pods" className="space-y-4">
-            <PodsTab />
-          </TabsContent>
         </Tabs>
       </div>
     </div>
