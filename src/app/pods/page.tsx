@@ -11,7 +11,6 @@ import { useProfiles } from '@/features/identity/hooks/useProfiles';
 import { PodCardGrid } from '@/features/pods/components';
 import { useDatabaseFirstPermissions } from '@/hooks/useDatabaseFirstPermissions';
 import { PodRolePermissionsService } from '@/features/pods/services/PodRolePermissionsService';
-import { getClientHatId } from '@/lib/hatRegistryClient';
 import { createPublicClient, http } from 'viem';
 import { base } from 'viem/chains';
 import { supabase } from '@/utils/supabaseClient';
@@ -37,19 +36,30 @@ export default function PodsPage() {
   const [podsPendingReview, setPodsPendingReview] = useState<{ id: string; name: string }[]>([]);
 
   useEffect(() => {
-    if (!address) return;
-    const execHatId = getClientHatId('EXECUTIVE_POD_LEADER');
-    if (!execHatId || !process.env.NEXT_PUBLIC_HATS_CONTRACT) return;
-    const publicClient = createPublicClient({
-      chain: base,
-      transport: http(process.env.NEXT_PUBLIC_RPC_URL || 'https://mainnet.base.org'),
-    });
-    publicClient.readContract({
-      address: process.env.NEXT_PUBLIC_HATS_CONTRACT as `0x${string}`,
-      abi: [{ name: 'balanceOf', type: 'function', inputs: [{ name: 'wearer', type: 'address' }, { name: 'hatId', type: 'uint256' }], outputs: [{ name: '', type: 'uint256' }], stateMutability: 'view' }],
-      functionName: 'balanceOf',
-      args: [address as `0x${string}`, BigInt(execHatId)],
-    }).then((bal) => setIsExecLeader((bal as bigint) > 0n)).catch(() => {});
+    if (!address || !process.env.NEXT_PUBLIC_HATS_CONTRACT) return;
+    const checkExec = async () => {
+      try {
+        // Fetch hat registry directly — avoids race with HatRegistryInitializer
+        const res = await fetch('/api/hat-registry');
+        const ids = await res.json();
+        const execHatId: string | undefined = ids['EXECUTIVE_POD_LEADER'];
+        if (!execHatId) return;
+        const publicClient = createPublicClient({
+          chain: base,
+          transport: http(process.env.NEXT_PUBLIC_RPC_URL || 'https://mainnet.base.org'),
+        });
+        const bal = await publicClient.readContract({
+          address: process.env.NEXT_PUBLIC_HATS_CONTRACT as `0x${string}`,
+          abi: [{ name: 'balanceOf', type: 'function', inputs: [{ name: 'wearer', type: 'address' }, { name: 'hatId', type: 'uint256' }], outputs: [{ name: '', type: 'uint256' }], stateMutability: 'view' }],
+          functionName: 'balanceOf',
+          args: [address as `0x${string}`, BigInt(execHatId)],
+        });
+        setIsExecLeader((bal as bigint) > 0n);
+      } catch {
+        // silently ignore — banner just won't show
+      }
+    };
+    checkExec();
   }, [address]);
 
   useEffect(() => {

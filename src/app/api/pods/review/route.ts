@@ -291,7 +291,7 @@ export async function GET(req: NextRequest) {
     let query = supabaseAdmin
       .from('pods')
       .select('id, name, description, pod_leads, created_by_address, pod_image_url, pod_metadata, created_at, status, parent_pod_id, management_hat_id')
-      .eq('status', 'pending_review')
+      .in('status', ['pending_review', 'proposed'])
       .order('created_at', { ascending: false });
 
     if (scope === 'pod' && parentId) {
