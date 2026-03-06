@@ -108,7 +108,7 @@
     "@upstash/ratelimit": "^2.0.7",
     "@upstash/redis": "^1.35.6",
     "@wagmi/core": "^2.17.3",
-    "axios": "^1.7.9",
+    "axios": "^1.13.6",
     "bn.js": "^5.2.1",
     "class-variance-authority": "^0.7.1",
     "classnames": "^2.5.1",
@@ -236,5 +236,8 @@
       "default": "./esm/index.js"
     }
   },
-  "packageManager": "yarn@4.0.2"
+  "packageManager": "yarn@4.0.2",
+  "overrides": {
+    "axios": "^1.13.6"
+  }
 }
