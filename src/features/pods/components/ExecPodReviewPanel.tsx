@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { supabase } from '@/utils/supabaseClient';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -15,6 +15,39 @@ import {
   RefreshCw,
 } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
+import { useProfiles } from '@/features/identity/hooks/useProfiles';
+
+function ProfileChip({
+  address,
+  getProfile,
+}: {
+  address: string;
+  getProfile: (addr: string) => any;
+}) {
+  const profile = getProfile(address);
+  const name = profile?.first_name || profile?.last_name
+    ? `${profile.first_name || ''} ${profile.last_name || ''}`.trim()
+    : null;
+
+  return (
+    <div className="flex items-center gap-1.5">
+      {profile?.profile_picture ? (
+        <img
+          src={profile.profile_picture}
+          alt={name || address}
+          className="w-6 h-6 rounded-full object-cover shrink-0"
+        />
+      ) : (
+        <div className="w-6 h-6 rounded-full bg-muted flex items-center justify-center shrink-0">
+          <span className="text-[10px] font-medium text-muted-foreground">
+            {name ? name[0].toUpperCase() : '?'}
+          </span>
+        </div>
+      )}
+      <span>{name || 'Unknown Member'}</span>
+    </div>
+  );
+}
 
 interface PendingPod {
   id: string;
@@ -35,6 +68,18 @@ export function ExecPodReviewPanel() {
   const { toast } = useToast();
   const toastRef = useRef(toast);
   useEffect(() => { toastRef.current = toast; }, [toast]);
+
+  // Collect all addresses that need profile lookups (proposer + all leads)
+  const allAddresses = useMemo(() => {
+    const addrs: string[] = [];
+    for (const pod of pods) {
+      if (pod.created_by_address) addrs.push(pod.created_by_address);
+      for (const lead of pod.pod_leads || []) addrs.push(lead);
+    }
+    return addrs;
+  }, [pods]);
+
+  const { getProfile } = useProfiles(allAddresses);
 
   const fetchPods = useCallback(async () => {
     setLoading(true);
@@ -176,18 +221,18 @@ export function ExecPodReviewPanel() {
                   </p>
                 )}
 
-                <div className="text-xs text-muted-foreground mb-1">
-                  <span className="font-medium">Proposed by:</span>{' '}
-                  <span className="font-mono">{pod.created_by_address}</span>
+                <div className="text-xs text-muted-foreground mb-2">
+                  <span className="font-medium block mb-1">Proposed by:</span>
+                  <ProfileChip address={pod.created_by_address} getProfile={getProfile} />
                 </div>
 
                 <div className="text-xs text-muted-foreground">
-                  <span className="font-medium">Leaders ({pod.pod_leads?.length || 0}):</span>{' '}
-                  {(pod.pod_leads || []).map((addr) => (
-                    <span key={addr} className="font-mono ml-1">
-                      {addr.slice(0, 6)}…{addr.slice(-4)}
-                    </span>
-                  ))}
+                  <span className="font-medium block mb-1">Leaders ({pod.pod_leads?.length || 0}):</span>
+                  <div className="flex flex-wrap gap-2">
+                    {(pod.pod_leads || []).map((addr) => (
+                      <ProfileChip key={addr} address={addr} getProfile={getProfile} />
+                    ))}
+                  </div>
                 </div>
               </div>
             </div>

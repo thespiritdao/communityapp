@@ -125,12 +125,21 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Pod has no blockchain_pod_id — cannot call contract' }, { status: 400 });
     }
 
-    // Determine which manager contract to call.
-    // The pod was created under a parent; that parent's creation_manager_address is the contract to call.
+    // Determine which manager contract to call and which hat gates approval.
+    //
+    // Community-level pods (parent = community pods parent UUID) are always
+    // exec-gated, regardless of whether the parent pod has a manager address.
+    // Sub-pods (parent = another user pod) are gated by the parent pod's management hat.
+    const COMMUNITY_PARENT_UUID = '86d2d359-2e38-4267-b7b7-c7f6155063e2';
+    const isCommunityLevel = !pod.parent_pod_id || pod.parent_pod_id === COMMUNITY_PARENT_UUID;
+
     let managerAddress: `0x${string}` | null = null;
     let approverHatId: string | null = null;
 
-    if (pod.parent_pod_id) {
+    if (isCommunityLevel) {
+      managerAddress = process.env.NEXT_PUBLIC_POD_CREATION_MANAGER as `0x${string}`;
+      approverHatId = (await getHatId('EXECUTIVE_POD_LEADER')) || null;
+    } else {
       const { data: parentPod } = await supabaseAdmin
         .from('pods')
         .select('creation_manager_address, management_hat_id')
@@ -139,12 +148,11 @@ export async function POST(req: NextRequest) {
 
       managerAddress = (parentPod?.creation_manager_address as `0x${string}`) || null;
       approverHatId = parentPod?.management_hat_id || null;
-    }
 
-    // Fall back to community-level manager (exec-gated)
-    if (!managerAddress) {
-      managerAddress = process.env.NEXT_PUBLIC_POD_CREATION_MANAGER as `0x${string}`;
-      approverHatId = (await getHatId('EXECUTIVE_POD_LEADER')) || null;
+      // Fall back to community-level if sub-pod has no manager configured yet
+      if (!managerAddress) {
+        managerAddress = process.env.NEXT_PUBLIC_POD_CREATION_MANAGER as `0x${string}`;
+      }
     }
 
     if (!managerAddress) {
