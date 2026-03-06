@@ -181,6 +181,7 @@ export default function PodsPage() {
   }
 
   return (
+    <div className="min-h-screen" style={{ backgroundImage: 'url(/images/chatbg.png)', backgroundColor: '#f5f4ed', backgroundSize: 'cover', backgroundPosition: 'center', backgroundAttachment: 'fixed' }}>
     <div className="container mx-auto py-8 px-4 pb-20">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-8 gap-4">
@@ -366,6 +367,7 @@ export default function PodsPage() {
           </CardContent>
         </Card>
       </div>
+    </div>
     </div>
   );
 }

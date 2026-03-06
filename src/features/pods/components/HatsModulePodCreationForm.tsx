@@ -2304,6 +2304,8 @@ export const HatsModulePodCreationForm: React.FC<
       formData.description,
       formData.parentPodId,
       formData.enableTreasury,
+      formData.podImage,
+      formData.podImageUrl,
       validation.validLeads,
       blockchainPodId,
       createdHatId,
@@ -4375,6 +4377,10 @@ export const HatsModulePodCreationForm: React.FC<
                         {isCreatingPod || txStatus === 'pending' ? '⏳ Creating Pod...' : 'Create Pod'}
                       </Button>
 
+                      <p className="text-xs text-center text-muted-foreground mt-1">
+                        Pod will be created onchain — allow ~60 seconds for processing.
+                      </p>
+
                       {(isCreatingPod || txStatus === 'pending') && (
                         <div className="mt-2 text-sm text-blue-600 text-center">
                           {isCreatingPod && txStatus !== 'pending'
@@ -4453,6 +4459,10 @@ export const HatsModulePodCreationForm: React.FC<
                         >
                           {isDeployingProxy || txStatus === 'pending' ? '⏳ Deploying Proxy...' : 'Deploy Proxy'}
                         </Button>
+
+                        <p className="text-xs text-center text-muted-foreground mt-1">
+                          Pod will be created onchain — allow ~60 seconds for processing.
+                        </p>
 
                         {(isDeployingProxy || txStatus === 'pending') && (
                           <div className="mt-2 text-sm text-blue-600 text-center">

@@ -55,6 +55,34 @@ const HATS_ABI = [
   },
 ] as const;
 
+// Read management hat ID from the contract after activation
+const POD_MANAGER_VIEW_ABI = [
+  {
+    name: 'getPodData',
+    type: 'function',
+    inputs: [{ name: 'podId', type: 'string' }],
+    outputs: [
+      {
+        name: '',
+        type: 'tuple',
+        components: [
+          { name: 'podId', type: 'string' },
+          { name: 'name', type: 'string' },
+          { name: 'description', type: 'string' },
+          { name: 'imageURI', type: 'string' },
+          { name: 'podLeads', type: 'address[]' },
+          { name: 'managementHatId', type: 'uint256' },
+          { name: 'treasuryContract', type: 'address' },
+          { name: 'creator', type: 'address' },
+          { name: 'createdAt', type: 'uint256' },
+          { name: 'status', type: 'uint8' },
+        ],
+      },
+    ],
+    stateMutability: 'view',
+  },
+] as const;
+
 function getWalletFromToken(token: string): string | null {
   try {
     const JWT_SECRET = process.env.SUPABASE_JWT_SECRET;
@@ -203,7 +231,7 @@ export async function POST(req: NextRequest) {
 
       const { data: pod, error: podError } = await supabaseAdmin
         .from('pods')
-        .select('id, name, management_hat_id, parent_pod_id, creation_manager_address')
+        .select('id, name, blockchain_pod_id, management_hat_id, parent_pod_id, creation_manager_address')
         .eq('id', podId)
         .single();
 
@@ -211,7 +239,7 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: 'Pod not found' }, { status: 404 });
       }
 
-      const { approverHatId } = await resolveManagerAndHat(pod);
+      const { approverHatId, managerAddress } = await resolveManagerAndHat(pod);
       if (!approverHatId) {
         return NextResponse.json({ error: 'Approver hat not configured' }, { status: 500 });
       }
@@ -233,10 +261,75 @@ export async function POST(req: NextRequest) {
       }
 
       if (pendingAction === 'activate') {
+        // Read management hat ID from the contract (it was set during createPodProposal)
+        let managementHatId: string | null = pod.management_hat_id || null;
+        if (!managementHatId && pod.blockchain_pod_id) {
+          try {
+            const onChainPod = await publicClient.readContract({
+              address: managerAddress as `0x${string}`,
+              abi: POD_MANAGER_VIEW_ABI,
+              functionName: 'getPodData',
+              args: [pod.blockchain_pod_id],
+            }) as any;
+            if (onChainPod?.managementHatId) {
+              managementHatId = onChainPod.managementHatId.toString();
+            }
+          } catch (e) {
+            console.warn('Could not fetch on-chain pod data:', e);
+          }
+        }
+
         await supabaseAdmin
           .from('pods')
-          .update({ status: 'active', is_active: true, updated_at: new Date().toISOString() })
+          .update({
+            status: 'active',
+            is_active: true,
+            ...(managementHatId ? { management_hat_id: managementHatId } : {}),
+            updated_at: new Date().toISOString(),
+          })
           .eq('id', podId);
+
+        // Create pod_role_permissions so the permission system recognises pod leaders
+        if (managementHatId) {
+          try {
+            const { data: existing } = await supabaseAdmin
+              .from('pod_role_permissions')
+              .select('id')
+              .eq('pod_id', podId)
+              .eq('token_address', managementHatId)
+              .single();
+
+            if (!existing) {
+              await supabaseAdmin.from('pod_role_permissions').insert({
+                pod_id: podId,
+                token_address: managementHatId,
+                role_name: 'Pod Leader',
+                permissions: {
+                  chatAccess: true,
+                  chatModeration: true,
+                  governanceParticipation: true,
+                  eventCreation: true,
+                  treasuryViewing: true,
+                  treasuryManagement: true,
+                  memberManagement: true,
+                  subPodCreation: true,
+                  roleAssignment: true,
+                  forumAccess: true,
+                  forumModeration: false,
+                  bountyManagement: true,
+                  marketplaceAccess: true,
+                  marketplaceManage: true,
+                },
+                max_holders: 5,
+                created_by: callerAddress,
+              });
+              console.log(`Created pod_role_permissions for pod ${podId}, hat ${managementHatId}`);
+            }
+          } catch (roleErr: any) {
+            // Non-fatal — pod is active, permissions can be set manually
+            console.warn('Failed to create pod_role_permissions:', roleErr.message);
+          }
+        }
       } else {
         // Hard-delete vetoed pods — they should not appear anywhere in the app
         await supabaseAdmin.from('pods').delete().eq('id', podId);
