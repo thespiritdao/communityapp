@@ -117,7 +117,11 @@ export class PodDatabaseService {
 
       // Apply filters
       if (!config.includeInactive) {
-        query = query.neq('status', 'inactive');
+        query = query
+          .neq('status', 'inactive')
+          .neq('status', 'vetoed')
+          .neq('status', 'pending_review')
+          .neq('status', 'proposed');
       }
 
       // Apply ordering

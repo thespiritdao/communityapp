@@ -238,10 +238,8 @@ export async function POST(req: NextRequest) {
           .update({ status: 'active', is_active: true, updated_at: new Date().toISOString() })
           .eq('id', podId);
       } else {
-        await supabaseAdmin
-          .from('pods')
-          .update({ status: 'vetoed', is_active: false, updated_at: new Date().toISOString() })
-          .eq('id', podId);
+        // Hard-delete vetoed pods — they should not appear anywhere in the app
+        await supabaseAdmin.from('pods').delete().eq('id', podId);
       }
 
       return NextResponse.json({ success: true, pendingAction, txHash });
