@@ -1,14 +1,18 @@
 // src/app/api/pods/review/route.ts
-// Pod review — activate or veto pending pods.
+// Pod review — authorize and record activate/veto actions for pending pods.
+//
+// Flow (gas-sponsored):
+//   1. POST { action: 'authorize', podId, pendingAction } — verify hat ownership on-chain,
+//      return { authorized, contractAddress, functionName, encodedCallData, blockchainPodId }
+//   2. Client executes the call via sendUserOperation with useCdpPaymaster: true (gasless)
+//   3. POST { action: 'dbUpdate', podId, pendingAction, txHash } — update DB status
+//
 // For community-level pods: caller must wear the exec hat.
 // For sub-pods: caller must wear the parent pod's management hat.
-// On activation, deploys a PodCreationManagerV2 for the pod via the factory
-// so pod leaders can later approve their own sub-pods.
 
 import { type NextRequest, NextResponse } from 'next/server';
-import { createPublicClient, createWalletClient, http } from 'viem';
+import { createPublicClient, http, encodeFunctionData } from 'viem';
 import { base } from 'viem/chains';
-import { privateKeyToAccount } from 'viem/accounts';
 import { supabaseAdmin } from '@/utils/supabaseAdminClient';
 import { getHatId } from '@/lib/hatRegistry';
 import jwt from 'jsonwebtoken';
@@ -17,7 +21,6 @@ export const runtime = 'nodejs';
 
 const RPC_URL = process.env.NEXT_PUBLIC_RPC_URL || 'https://mainnet.base.org';
 const HATS_CONTRACT = process.env.NEXT_PUBLIC_HATS_CONTRACT as `0x${string}`;
-const FACTORY_ADDRESS = process.env.NEXT_PUBLIC_POD_CREATION_MANAGER_FACTORY as `0x${string}` | undefined;
 
 const POD_MANAGER_ABI = [
   {
@@ -39,22 +42,6 @@ const POD_MANAGER_ABI = [
   },
 ] as const;
 
-const FACTORY_ABI = [
-  {
-    name: 'deployManager',
-    type: 'function',
-    inputs: [
-      { name: 'podUUID', type: 'string' },
-      { name: 'parentHatId', type: 'uint256' },
-      { name: 'execHatId', type: 'uint256' },
-      { name: 'defaultTokens', type: 'address[]' },
-      { name: 'managerOwner', type: 'address' },
-    ],
-    outputs: [{ name: 'manager', type: 'address' }],
-    stateMutability: 'nonpayable',
-  },
-] as const;
-
 const HATS_ABI = [
   {
     name: 'balanceOf',
@@ -68,18 +55,6 @@ const HATS_ABI = [
   },
 ] as const;
 
-// Decode the ManagerDeployed event to extract the deployed address
-const MANAGER_DEPLOYED_EVENT = {
-  name: 'ManagerDeployed',
-  type: 'event',
-  inputs: [
-    { name: 'podUUID', type: 'string', indexed: true },
-    { name: 'manager', type: 'address', indexed: true },
-    { name: 'parentHatId', type: 'uint256', indexed: false },
-    { name: 'execHatId', type: 'uint256', indexed: false },
-  ],
-} as const;
-
 function getWalletFromToken(token: string): string | null {
   try {
     const JWT_SECRET = process.env.SUPABASE_JWT_SECRET;
@@ -91,6 +66,35 @@ function getWalletFromToken(token: string): string | null {
   }
 }
 
+async function resolveManagerAndHat(pod: {
+  id: string;
+  parent_pod_id: string | null;
+  management_hat_id: string | null;
+  creation_manager_address: string | null;
+}) {
+  const COMMUNITY_PARENT_UUID = '86d2d359-2e38-4267-b7b7-c7f6155063e2';
+  const isCommunityLevel = !pod.parent_pod_id || pod.parent_pod_id === COMMUNITY_PARENT_UUID;
+
+  if (isCommunityLevel) {
+    return {
+      managerAddress: process.env.NEXT_PUBLIC_POD_CREATION_MANAGER as `0x${string}` | null,
+      approverHatId: (await getHatId('EXECUTIVE_POD_LEADER')) || null,
+    };
+  }
+
+  const { data: parentPod } = await supabaseAdmin
+    .from('pods')
+    .select('creation_manager_address, management_hat_id')
+    .eq('id', pod.parent_pod_id)
+    .single();
+
+  return {
+    managerAddress: ((parentPod?.creation_manager_address as `0x${string}`) ||
+      (process.env.NEXT_PUBLIC_POD_CREATION_MANAGER as `0x${string}`)) ?? null,
+    approverHatId: parentPod?.management_hat_id || null,
+  };
+}
+
 export async function POST(req: NextRequest) {
   try {
     const token = req.headers.get('Authorization')?.replace('Bearer ', '');
@@ -99,199 +103,151 @@ export async function POST(req: NextRequest) {
     const callerAddress = getWalletFromToken(token);
     if (!callerAddress) return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
 
-    const { podId, action, reason } = await req.json();
+    const body = await req.json();
+    const { podId, action } = body;
 
-    if (!podId || !action || !['activate', 'veto'].includes(action)) {
-      return NextResponse.json({ error: 'Missing or invalid fields: podId, action (activate|veto)' }, { status: 400 });
+    if (!podId || !action || !['authorize', 'dbUpdate'].includes(action)) {
+      return NextResponse.json(
+        { error: 'Missing or invalid fields: podId, action (authorize|dbUpdate)' },
+        { status: 400 },
+      );
     }
 
-    const ADMIN_PRIVATE_KEY = process.env.POD_ADMIN_PRIVATE_KEY || process.env.PRIVATE_KEY;
-    if (!ADMIN_PRIVATE_KEY) {
-      return NextResponse.json({ error: 'Server configuration error: no admin key' }, { status: 500 });
-    }
+    // ── Phase 1: authorize ──────────────────────────────────────────────────
+    // Verify the caller wears the required hat on-chain, then return the
+    // encoded calldata for the client to execute via CDP smart wallet.
+    if (action === 'authorize') {
+      const { pendingAction, reason } = body;
+      if (!pendingAction || !['activate', 'veto'].includes(pendingAction)) {
+        return NextResponse.json(
+          { error: 'Missing or invalid pendingAction (activate|veto)' },
+          { status: 400 },
+        );
+      }
 
-    // Load the pod to find which creation manager to call and which hat gates approval
-    const { data: pod, error: podError } = await supabaseAdmin
-      .from('pods')
-      .select('id, name, blockchain_pod_id, management_hat_id, parent_pod_id, creation_manager_address')
-      .eq('id', podId)
-      .single();
-
-    if (podError || !pod) {
-      return NextResponse.json({ error: 'Pod not found' }, { status: 404 });
-    }
-
-    if (!pod.blockchain_pod_id) {
-      return NextResponse.json({ error: 'Pod has no blockchain_pod_id — cannot call contract' }, { status: 400 });
-    }
-
-    // Determine which manager contract to call and which hat gates approval.
-    //
-    // Community-level pods (parent = community pods parent UUID) are always
-    // exec-gated, regardless of whether the parent pod has a manager address.
-    // Sub-pods (parent = another user pod) are gated by the parent pod's management hat.
-    const COMMUNITY_PARENT_UUID = '86d2d359-2e38-4267-b7b7-c7f6155063e2';
-    const isCommunityLevel = !pod.parent_pod_id || pod.parent_pod_id === COMMUNITY_PARENT_UUID;
-
-    let managerAddress: `0x${string}` | null = null;
-    let approverHatId: string | null = null;
-
-    if (isCommunityLevel) {
-      managerAddress = process.env.NEXT_PUBLIC_POD_CREATION_MANAGER as `0x${string}`;
-      approverHatId = (await getHatId('EXECUTIVE_POD_LEADER')) || null;
-    } else {
-      const { data: parentPod } = await supabaseAdmin
+      const { data: pod, error: podError } = await supabaseAdmin
         .from('pods')
-        .select('creation_manager_address, management_hat_id')
-        .eq('id', pod.parent_pod_id)
+        .select('id, name, blockchain_pod_id, management_hat_id, parent_pod_id, creation_manager_address')
+        .eq('id', podId)
         .single();
 
-      managerAddress = (parentPod?.creation_manager_address as `0x${string}`) || null;
-      approverHatId = parentPod?.management_hat_id || null;
+      if (podError || !pod) {
+        return NextResponse.json({ error: 'Pod not found' }, { status: 404 });
+      }
 
-      // Fall back to community-level if sub-pod has no manager configured yet
+      if (!pod.blockchain_pod_id) {
+        return NextResponse.json(
+          { error: 'Pod has no blockchain_pod_id — cannot call contract' },
+          { status: 400 },
+        );
+      }
+
+      const { managerAddress, approverHatId } = await resolveManagerAndHat(pod);
+
       if (!managerAddress) {
-        managerAddress = process.env.NEXT_PUBLIC_POD_CREATION_MANAGER as `0x${string}`;
+        return NextResponse.json({ error: 'No creation manager configured for this pod' }, { status: 500 });
       }
-    }
-
-    if (!managerAddress) {
-      return NextResponse.json({ error: 'No creation manager configured for this pod' }, { status: 500 });
-    }
-
-    if (!approverHatId) {
-      return NextResponse.json({ error: 'Approver hat not configured' }, { status: 500 });
-    }
-
-    const publicClient = createPublicClient({ chain: base, transport: http(RPC_URL) });
-
-    // Verify caller wears the approver hat on-chain
-    const balance = await publicClient.readContract({
-      address: HATS_CONTRACT,
-      abi: HATS_ABI,
-      functionName: 'balanceOf',
-      args: [callerAddress as `0x${string}`, BigInt(approverHatId)],
-    });
-
-    if ((balance as bigint) === 0n) {
-      return NextResponse.json({ error: 'Forbidden: caller does not wear the required approval hat' }, { status: 403 });
-    }
-
-    const adminAccount = privateKeyToAccount(ADMIN_PRIVATE_KEY as `0x${string}`);
-    const walletClient = createWalletClient({ account: adminAccount, chain: base, transport: http(RPC_URL) });
-
-    // Estimate gas explicitly — the RPC default may return 0 for this contract
-    // causing "gas required exceeds allowance (0)" on some nodes.
-    let hash: `0x${string}`;
-    if (action === 'activate') {
-      const gas = await publicClient.estimateContractGas({
-        address: managerAddress,
-        abi: POD_MANAGER_ABI,
-        functionName: 'activatePod',
-        args: [pod.blockchain_pod_id],
-        account: adminAccount,
-      });
-      hash = await walletClient.writeContract({
-        address: managerAddress,
-        abi: POD_MANAGER_ABI,
-        functionName: 'activatePod',
-        args: [pod.blockchain_pod_id],
-        gas,
-      });
-    } else {
-      const gas = await publicClient.estimateContractGas({
-        address: managerAddress,
-        abi: POD_MANAGER_ABI,
-        functionName: 'vetoPod',
-        args: [pod.blockchain_pod_id, reason || 'Vetoed'],
-        account: adminAccount,
-      });
-      hash = await walletClient.writeContract({
-        address: managerAddress,
-        abi: POD_MANAGER_ABI,
-        functionName: 'vetoPod',
-        args: [pod.blockchain_pod_id, reason || 'Vetoed'],
-        gas,
-      });
-    }
-
-    const receipt = await publicClient.waitForTransactionReceipt({ hash, timeout: 60_000 });
-    if (receipt.status !== 'success') {
-      throw new Error(`${action} transaction failed on-chain`);
-    }
-
-    // On activation: deploy a PodCreationManagerV2 for this pod via the factory
-    // so it can approve its own sub-pods later
-    let deployedManagerAddress: string | null = null;
-    if (action === 'activate' && FACTORY_ADDRESS && pod.management_hat_id) {
-      try {
-        const deployHash = await walletClient.writeContract({
-          address: FACTORY_ADDRESS,
-          abi: FACTORY_ABI,
-          functionName: 'deployManager',
-          args: [
-            pod.id,
-            BigInt(pod.management_hat_id),
-            BigInt(pod.management_hat_id), // pod leaders gate their own sub-pods
-            [], // no default tokens needed (sub-pods don't auto-deploy treasury)
-            adminAccount.address,
-          ],
-        });
-
-        const deployReceipt = await publicClient.waitForTransactionReceipt({ hash: deployHash, timeout: 60_000 });
-
-        // Extract deployed address from ManagerDeployed event
-        if (deployReceipt.status === 'success') {
-          const { decodeEventLog } = await import('viem');
-          for (const log of deployReceipt.logs) {
-            try {
-              const decoded = decodeEventLog({
-                abi: [MANAGER_DEPLOYED_EVENT],
-                data: log.data,
-                topics: log.topics,
-                eventName: 'ManagerDeployed',
-              });
-              deployedManagerAddress = (decoded.args as any).manager as string;
-              break;
-            } catch {
-              // not this log
-            }
-          }
-        }
-
-        if (deployedManagerAddress) {
-          console.log(`✅ Deployed sub-pod manager for ${pod.name}:`, deployedManagerAddress);
-        }
-      } catch (deployErr: any) {
-        // Non-fatal — pod is activated, manager can be deployed manually later
-        console.warn('⚠️ Failed to deploy sub-pod manager (non-fatal):', deployErr.message);
+      if (!approverHatId) {
+        return NextResponse.json({ error: 'Approver hat not configured' }, { status: 500 });
       }
+
+      const publicClient = createPublicClient({ chain: base, transport: http(RPC_URL) });
+
+      const balance = await publicClient.readContract({
+        address: HATS_CONTRACT,
+        abi: HATS_ABI,
+        functionName: 'balanceOf',
+        args: [callerAddress as `0x${string}`, BigInt(approverHatId)],
+      });
+
+      if ((balance as bigint) === 0n) {
+        return NextResponse.json(
+          { error: 'Forbidden: caller does not wear the required approval hat' },
+          { status: 403 },
+        );
+      }
+
+      // Encode the calldata — the client will execute this via sendUserOperation
+      const callData =
+        pendingAction === 'activate'
+          ? encodeFunctionData({
+              abi: POD_MANAGER_ABI,
+              functionName: 'activatePod',
+              args: [pod.blockchain_pod_id],
+            })
+          : encodeFunctionData({
+              abi: POD_MANAGER_ABI,
+              functionName: 'vetoPod',
+              args: [pod.blockchain_pod_id, reason || 'Vetoed'],
+            });
+
+      return NextResponse.json({
+        authorized: true,
+        contractAddress: managerAddress,
+        callData,
+        blockchainPodId: pod.blockchain_pod_id,
+      });
     }
 
-    // Update DB
-    if (action === 'activate') {
-      await supabaseAdmin
+    // ── Phase 2: dbUpdate ───────────────────────────────────────────────────
+    // Called after the client's UserOperation lands. Re-verify hat ownership
+    // then update the DB record.
+    if (action === 'dbUpdate') {
+      const { pendingAction, txHash } = body;
+      if (!pendingAction || !['activate', 'veto'].includes(pendingAction)) {
+        return NextResponse.json(
+          { error: 'Missing or invalid pendingAction (activate|veto)' },
+          { status: 400 },
+        );
+      }
+
+      const { data: pod, error: podError } = await supabaseAdmin
         .from('pods')
-        .update({
-          status: 'active',
-          is_active: true,
-          ...(deployedManagerAddress ? { creation_manager_address: deployedManagerAddress } : {}),
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', podId);
-    } else {
-      await supabaseAdmin
-        .from('pods')
-        .update({ status: 'vetoed', is_active: false, updated_at: new Date().toISOString() })
-        .eq('id', podId);
+        .select('id, name, management_hat_id, parent_pod_id, creation_manager_address')
+        .eq('id', podId)
+        .single();
+
+      if (podError || !pod) {
+        return NextResponse.json({ error: 'Pod not found' }, { status: 404 });
+      }
+
+      const { approverHatId } = await resolveManagerAndHat(pod);
+      if (!approverHatId) {
+        return NextResponse.json({ error: 'Approver hat not configured' }, { status: 500 });
+      }
+
+      const publicClient = createPublicClient({ chain: base, transport: http(RPC_URL) });
+
+      const balance = await publicClient.readContract({
+        address: HATS_CONTRACT,
+        abi: HATS_ABI,
+        functionName: 'balanceOf',
+        args: [callerAddress as `0x${string}`, BigInt(approverHatId)],
+      });
+
+      if ((balance as bigint) === 0n) {
+        return NextResponse.json(
+          { error: 'Forbidden: caller does not wear the required approval hat' },
+          { status: 403 },
+        );
+      }
+
+      if (pendingAction === 'activate') {
+        await supabaseAdmin
+          .from('pods')
+          .update({ status: 'active', is_active: true, updated_at: new Date().toISOString() })
+          .eq('id', podId);
+      } else {
+        await supabaseAdmin
+          .from('pods')
+          .update({ status: 'vetoed', is_active: false, updated_at: new Date().toISOString() })
+          .eq('id', podId);
+      }
+
+      return NextResponse.json({ success: true, pendingAction, txHash });
     }
 
-    return NextResponse.json({
-      success: true,
-      action,
-      txHash: hash,
-      ...(deployedManagerAddress ? { subPodManagerAddress: deployedManagerAddress } : {}),
-    });
+    return NextResponse.json({ error: 'Unknown action' }, { status: 400 });
   } catch (err: any) {
     console.error('Pod review API error:', err);
     return NextResponse.json({ error: err.message || 'Server error' }, { status: 500 });
