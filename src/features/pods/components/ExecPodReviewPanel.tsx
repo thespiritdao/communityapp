@@ -59,6 +59,7 @@ interface PendingPod {
   pod_image_url: string | null;
   created_at: string;
   status: string;
+  parent_pod_id: string | null;
 }
 
 export function ExecPodReviewPanel() {
@@ -93,7 +94,7 @@ export function ExecPodReviewPanel() {
         return;
       }
 
-      const res = await fetch('/api/pods/review?scope=exec', {
+      const res = await fetch('/api/pods/review?scope=all', {
         headers: { Authorization: `Bearer ${session.access_token}` },
       });
       const json = await res.json();
@@ -238,6 +239,9 @@ export function ExecPodReviewPanel() {
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 flex-wrap mb-1">
                   <h3 className="font-semibold text-base">{pod.name}</h3>
+                  {pod.parent_pod_id && pod.parent_pod_id !== '86d2d359-2e38-4267-b7b7-c7f6155063e2' && (
+                    <Badge className="text-xs bg-blue-100 text-blue-800 border-blue-200">Sub-pod</Badge>
+                  )}
                   <Badge variant="outline" className="text-xs">
                     <Clock className="h-3 w-3 mr-1" />
                     {window.label}
@@ -281,11 +285,10 @@ export function ExecPodReviewPanel() {
               />
               {!window.expired && (
                 <Button
-                  variant="outline"
                   size="sm"
                   disabled={!!actionPending}
                   onClick={() => handleAction(pod.id, 'veto')}
-                  className="text-red-600 border-red-200 hover:bg-red-50"
+                  style={{ backgroundColor: '#8B3A3A', color: '#FFFFFF' }}
                 >
                   {isVetoing
                     ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" />
@@ -297,7 +300,7 @@ export function ExecPodReviewPanel() {
                 size="sm"
                 disabled={!!actionPending}
                 onClick={() => handleAction(pod.id, 'activate')}
-                className="bg-green-700 hover:bg-green-800 text-white"
+                style={{ backgroundColor: '#2F5D50', color: '#FFFFFF' }}
               >
                 {isActivating
                   ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" />

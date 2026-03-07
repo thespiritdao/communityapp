@@ -394,6 +394,9 @@ export async function GET(req: NextRequest) {
     if (scope === 'pod' && parentId) {
       // Sub-pods pending review under a specific parent pod
       query = query.eq('parent_pod_id', parentId);
+    } else if (scope === 'all') {
+      // All pending pods regardless of parent (exec sees everything)
+      // No additional filter needed
     } else {
       // Community-level pods: parent is the community pods parent
       const COMMUNITY_PARENT_UUID = '86d2d359-2e38-4267-b7b7-c7f6155063e2';
