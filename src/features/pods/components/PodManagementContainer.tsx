@@ -510,14 +510,15 @@ export const PodManagementContainer = React.memo<PodManagementContainerProps>(
     React.useEffect(() => {
       if (!podId) return;
       import('@/utils/supabaseClient').then(({ supabase }) => {
-        supabase
-          .from('pod_modules')
-          .select('sub_pods_enabled')
-          .eq('pod_id', podId)
-          .single()
-          .then(({ data }) => {
-            setSubPodsEnabled(data?.sub_pods_enabled ?? false);
-          });
+        supabase.auth.getSession().then(({ data: { session } }) => {
+          if (!session?.access_token) return;
+          fetch(`/api/pods/${podId}/modules`, {
+            headers: { Authorization: `Bearer ${session.access_token}` },
+          })
+            .then((r) => r.json())
+            .then((json) => setSubPodsEnabled(json.modules?.sub_pods_enabled ?? false))
+            .catch(() => {});
+        });
       });
     }, [podId]);
 

@@ -1,10 +1,10 @@
 // src/app/api/pods/[id]/modules/route.ts
-// GET/PUT pod_modules for a specific pod — uses supabaseAdmin to bypass RLS.
-// Caller must be a pod leader (enforced by withPodManagement middleware).
+// GET/PUT pod_modules — uses supabaseAdmin to bypass RLS.
+// Auth: caller must be a pod leader (pod_leads array or pod_members with role=leader).
 
-import type { NextRequest } from 'next/server';
-import { withPodManagement, PodAuthResponse, type PodAuthContext } from '@/features/pods/middleware/podAuthMiddleware';
+import { type NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/utils/supabaseAdminClient';
+import jwt from 'jsonwebtoken';
 
 export const runtime = 'nodejs';
 
@@ -19,75 +19,129 @@ const ALLOWED_KEYS = [
   'sub_pods_enabled',
 ] as const;
 
-export async function GET(request: NextRequest): Promise<Response> {
-  return withPodManagement(request, async (_req, context: PodAuthContext) => {
-    const { data, error } = await supabaseAdmin
-      .from('pod_modules')
-      .select('*')
-      .eq('pod_id', context.podId)
-      .single();
-
-    if (error && error.code !== 'PGRST116') {
-      return PodAuthResponse.error(error.message, 500);
-    }
-
-    return PodAuthResponse.success({ modules: data || null });
-  });
+function getWalletFromToken(token: string): string | null {
+  try {
+    const JWT_SECRET = process.env.SUPABASE_JWT_SECRET;
+    if (!JWT_SECRET) return null;
+    const payload = jwt.verify(token, JWT_SECRET) as any;
+    return payload.wallet_address || payload.user_metadata?.wallet_address || null;
+  } catch {
+    return null;
+  }
 }
 
-export async function PUT(request: NextRequest): Promise<Response> {
-  return withPodManagement(request, async (req, context: PodAuthContext) => {
-    const body = await req.json();
+async function isPodLeader(podId: string, wallet: string): Promise<boolean> {
+  // Check pod_leads array
+  const { data: pod } = await supabaseAdmin
+    .from('pods')
+    .select('pod_leads')
+    .eq('id', podId)
+    .single();
 
-    // Only allow toggling known boolean module keys
-    const updates: Record<string, boolean> = {};
-    for (const key of ALLOWED_KEYS) {
-      if (key in body && typeof body[key] === 'boolean') {
-        updates[key] = body[key];
-      }
+  if (pod?.pod_leads?.includes(wallet.toLowerCase())) return true;
+
+  // Check pod_members table
+  const { data: member } = await supabaseAdmin
+    .from('pod_members')
+    .select('id')
+    .eq('pod_id', podId)
+    .eq('wallet', wallet.toLowerCase())
+    .eq('role', 'leader')
+    .eq('is_active', true)
+    .single();
+
+  return !!member;
+}
+
+function podIdFromRequest(req: NextRequest): string {
+  const match = req.nextUrl.pathname.match(/\/api\/pods\/([^/]+)\/modules/);
+  return match?.[1] ?? '';
+}
+
+export async function GET(req: NextRequest): Promise<NextResponse> {
+  const token = req.headers.get('Authorization')?.replace('Bearer ', '');
+  if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+  const wallet = getWalletFromToken(token);
+  if (!wallet) return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
+
+  const podId = podIdFromRequest(req);
+  if (!podId) return NextResponse.json({ error: 'Missing pod ID' }, { status: 400 });
+
+  const { data, error } = await supabaseAdmin
+    .from('pod_modules')
+    .select('*')
+    .eq('pod_id', podId)
+    .single();
+
+  if (error && error.code !== 'PGRST116') {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
+  return NextResponse.json({ modules: data || null });
+}
+
+export async function PUT(req: NextRequest): Promise<NextResponse> {
+  const token = req.headers.get('Authorization')?.replace('Bearer ', '');
+  if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+  const wallet = getWalletFromToken(token);
+  if (!wallet) return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
+
+  const podId = podIdFromRequest(req);
+  if (!podId) return NextResponse.json({ error: 'Missing pod ID' }, { status: 400 });
+
+  const isLeader = await isPodLeader(podId, wallet);
+  if (!isLeader) return NextResponse.json({ error: 'Forbidden: not a pod leader' }, { status: 403 });
+
+  const body = await req.json();
+
+  const updates: Record<string, boolean> = {};
+  for (const key of ALLOWED_KEYS) {
+    if (key in body && typeof body[key] === 'boolean') {
+      updates[key] = body[key];
     }
+  }
 
-    if (Object.keys(updates).length === 0) {
-      return PodAuthResponse.error('No valid module keys provided', 400);
-    }
+  if (Object.keys(updates).length === 0) {
+    return NextResponse.json({ error: 'No valid module keys provided' }, { status: 400 });
+  }
 
-    // Upsert so first toggle creates the row if it doesn't exist
-    const { data, error } = await supabaseAdmin
-      .from('pod_modules')
-      .upsert(
-        { pod_id: context.podId, ...updates, updated_at: new Date().toISOString() },
-        { onConflict: 'pod_id' },
-      )
-      .select()
-      .single();
+  const { data, error } = await supabaseAdmin
+    .from('pod_modules')
+    .upsert(
+      { pod_id: podId, ...updates, updated_at: new Date().toISOString() },
+      { onConflict: 'pod_id' },
+    )
+    .select()
+    .single();
 
-    if (error) return PodAuthResponse.error(error.message, 500);
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-    // When sub_pods_enabled changes, sync subPodCreation on all leader roles for this pod
-    if ('sub_pods_enabled' in updates) {
-      try {
-        const { data: roles } = await supabaseAdmin
-          .from('pod_role_permissions')
-          .select('id, permissions')
-          .eq('pod_id', context.podId);
+  // When sub_pods_enabled changes, sync subPodCreation on all role permissions for this pod
+  if ('sub_pods_enabled' in updates) {
+    try {
+      const { data: roles } = await supabaseAdmin
+        .from('pod_role_permissions')
+        .select('id, permissions')
+        .eq('pod_id', podId);
 
-        if (roles) {
-          for (const role of roles) {
-            const perms = typeof role.permissions === 'string'
-              ? JSON.parse(role.permissions)
-              : { ...(role.permissions || {}) };
-            perms.subPodCreation = updates.sub_pods_enabled;
-            await supabaseAdmin
-              .from('pod_role_permissions')
-              .update({ permissions: perms })
-              .eq('id', role.id);
-          }
+      if (roles) {
+        for (const role of roles) {
+          const perms = typeof role.permissions === 'string'
+            ? JSON.parse(role.permissions)
+            : { ...(role.permissions || {}) };
+          perms.subPodCreation = updates.sub_pods_enabled;
+          await supabaseAdmin
+            .from('pod_role_permissions')
+            .update({ permissions: perms })
+            .eq('id', role.id);
         }
-      } catch (permErr) {
-        console.warn('Could not sync subPodCreation permission:', permErr);
       }
+    } catch (permErr) {
+      console.warn('Could not sync subPodCreation permission:', permErr);
     }
+  }
 
-    return PodAuthResponse.success({ modules: data });
-  });
+  return NextResponse.json({ modules: data });
 }
