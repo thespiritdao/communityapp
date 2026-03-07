@@ -287,6 +287,8 @@ export const HatsModulePodCreationForm: React.FC<
   const [extractedProxyAddress, setExtractedProxyAddress] =
     useState<string>('');
   const proxyButtonRef = useRef<HTMLButtonElement>(null);
+  // Holds the Supabase URL uploaded before the tx so handleTransactionSuccess can use it
+  const preUploadedImageUrlRef = useRef<string>('');
 
   // Available parent pods for selection - includes user's leadership pods and defaults
   const availableParentPods = useMemo(() => {
@@ -870,6 +872,27 @@ export const HatsModulePodCreationForm: React.FC<
         validParentHatId = 'TOP_LEVEL';
       }
 
+      // Upload image early so the Supabase URL is ready for both the on-chain call and DB record
+      if (formData.podImage && !preUploadedImageUrlRef.current) {
+        try {
+          const { data: { session } } = await supabase.auth.getSession();
+          if (session) {
+            const fileExt = formData.podImage.name.split('.').pop();
+            const tempPath = `temp-${Date.now()}/banner.${fileExt}`;
+            const { error: uploadError } = await supabase.storage
+              .from('pod-images')
+              .upload(tempPath, formData.podImage, { cacheControl: '3600', upsert: true });
+            if (!uploadError) {
+              const { data: { publicUrl } } = supabase.storage.from('pod-images').getPublicUrl(tempPath);
+              preUploadedImageUrlRef.current = publicUrl;
+              console.log('✅ Pre-uploaded pod image:', publicUrl);
+            }
+          }
+        } catch (imgErr) {
+          console.warn('⚠️ Pre-upload image failed, will use avatar fallback:', imgErr);
+        }
+      }
+
       const config: PodCreationConfig = {
         name: formData.name,
         description: formData.description,
@@ -1104,7 +1127,9 @@ export const HatsModulePodCreationForm: React.FC<
           ipfsMetadataHash = config.name;
         }
 
-        const IMAGE_URI = `https://ui-avatars.com/api/?name=${encodeURIComponent(config.name)}&size=400&background=bfe7c6&color=000&bold=true`;
+        const IMAGE_URI = preUploadedImageUrlRef.current
+          ? preUploadedImageUrlRef.current
+          : `https://ui-avatars.com/api/?name=${encodeURIComponent(config.name)}&size=400&background=bfe7c6&color=000&bold=true`;
 
         // Use the parent pod's own creation manager (self-sovereign), fall back to community env var
         const selectedParentForManager = availableParentPods.find(
@@ -1683,50 +1708,11 @@ export const HatsModulePodCreationForm: React.FC<
           variant: 'default',
         });
 
-        // ===================================================================
-        // 🆕 UPLOAD POD IMAGE TO SUPABASE STORAGE (if provided)
-        // ===================================================================
-        let podImageUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(formData.name)}&size=400&background=bfe7c6&color=000&bold=true`;
-
-        if (formData.podImage) {
-          try {
-            console.log('📸 Uploading pod image to Supabase Storage...');
-
-            // Generate temp pod ID for file path (we'll update with real pod ID later)
-            const tempPodId = `temp-${Date.now()}`;
-            const fileExt = formData.podImage.name.split('.').pop();
-            const filePath = `${tempPodId}/banner.${fileExt}`;
-
-            // Upload to Supabase Storage
-            const { data: uploadData, error: uploadError } =
-              await supabase.storage
-                .from('pod-images')
-                .upload(filePath, formData.podImage, {
-                  cacheControl: '3600',
-                  upsert: true,
-                });
-
-            if (uploadError) {
-              console.error('❌ Image upload failed:', uploadError);
-              toast({
-                title: 'Image Upload Failed',
-                description: 'Using default image. Pod will still be created.',
-                variant: 'destructive',
-              });
-            } else {
-              // Get public URL
-              const {
-                data: { publicUrl },
-              } = supabase.storage.from('pod-images').getPublicUrl(filePath);
-
-              podImageUrl = publicUrl;
-              console.log('✅ Pod image uploaded:', publicUrl);
-            }
-          } catch (error) {
-            console.error('❌ Image upload error:', error);
-            // Continue with default image
-          }
-        }
+        // Use the image URL pre-uploaded before the transaction (or fall back to avatar)
+        let podImageUrl = preUploadedImageUrlRef.current
+          || `https://ui-avatars.com/api/?name=${encodeURIComponent(formData.name)}&size=400&background=bfe7c6&color=000&bold=true`;
+        // Clear ref so it doesn't carry over to a subsequent pod creation
+        preUploadedImageUrlRef.current = '';
 
         // Store pod in Supabase with HAT ID AND proxy address
         // ===================================================================
@@ -1789,6 +1775,24 @@ export const HatsModulePodCreationForm: React.FC<
             // Non-fatal — pod already in DB
           }
           podData = { podId: blockchainPodId };
+
+          // Rename temp image to pod path and update DB URL
+          if (formData.podImage && podImageUrl.includes('temp-')) {
+            try {
+              const tempPath = podImageUrl.split('/pod-images/')[1];
+              const fileExt = formData.podImage.name.split('.').pop();
+              const newPath = `${blockchainPodId}/banner.${fileExt}`;
+              const { error: moveError } = await supabase.storage.from('pod-images').move(tempPath, newPath);
+              if (!moveError) {
+                const { data: { publicUrl: newPublicUrl } } = supabase.storage.from('pod-images').getPublicUrl(newPath);
+                await supabase.from('pods').update({ pod_image_url: newPublicUrl }).eq('id', blockchainPodId);
+                podImageUrl = newPublicUrl;
+                console.log('✅ Image renamed and URL updated for server-created pod');
+              }
+            } catch (imgErr) {
+              console.warn('⚠️ Image rename failed (non-fatal):', imgErr);
+            }
+          }
         } else {
           // Create new pod
           console.log('📝 Creating new pod in database');

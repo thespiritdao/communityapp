@@ -2,7 +2,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { supabase } from '@/utils/supabaseClient';
+import { supabase } from '@/utils/supabaseClient'; // still needed for realtime subscription
 import {
   Card,
   CardContent,
@@ -159,51 +159,17 @@ export default function PodModulesManager({
 
   const loadModules = async () => {
     try {
-      console.log('PodModulesManager: Loading modules for pod:', podId);
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      if (!token) return;
 
-      let { data, error } = await supabase
-        .from('pod_modules')
-        .select('*')
-        .eq('pod_id', podId)
-        .single();
-
-      console.log('PodModulesManager: Raw database response:', { data, error });
-
-      if (error && error.code === 'PGRST116') {
-        // No modules found, create default
-        console.log('PodModulesManager: No modules found, creating defaults');
-        const { data: newModules, error: insertError } = await supabase
-          .from('pod_modules')
-          .insert({
-            pod_id: podId,
-            treasury_enabled: true,
-            chat_enabled: false,
-            forum_enabled: false,
-            events_enabled: false,
-            bounties_enabled: false,
-            marketplace_enabled: false,
-            knowledge_base_enabled: false,
-            sub_pods_enabled: false,
-          })
-          .select()
-          .single();
-
-        if (!insertError && newModules) {
-          data = newModules;
-          console.log('PodModulesManager: Created new modules:', data);
-        } else {
-          console.error(
-            'PodModulesManager: Error creating modules:',
-            insertError,
-          );
-        }
-      } else if (error) {
-        console.error('PodModulesManager: Database error:', error);
-        throw error;
-      }
+      const res = await fetch(`/api/pods/${podId}/modules`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const json = await res.json();
+      const data = json.modules;
 
       if (data) {
-        console.log('PodModulesManager: Setting modules from database:', data);
         setModules({
           chat_enabled: data.chat_enabled ?? false,
           forum_enabled: data.forum_enabled ?? false,
@@ -221,18 +187,6 @@ export default function PodModulesManager({
           marketplace_config: data.marketplace_config,
           knowledge_base_config: data.knowledge_base_config,
           sub_pods_config: data.sub_pods_config,
-        });
-      } else {
-        console.warn('PodModulesManager: No data received, using defaults');
-        setModules({
-          chat_enabled: false,
-          forum_enabled: false,
-          treasury_enabled: true,
-          events_enabled: false,
-          bounties_enabled: false,
-          marketplace_enabled: false,
-          knowledge_base_enabled: false,
-          sub_pods_enabled: false,
         });
       }
     } catch (error) {
@@ -253,24 +207,19 @@ export default function PodModulesManager({
     setSaving(true);
 
     try {
-      const updateData: any = {};
-      updateData[moduleKey] = enabled;
-      updateData['updated_at'] = new Date().toISOString();
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      if (!token) throw new Error('Not authenticated');
 
-      console.log('PodModulesManager: Updating with data:', updateData);
+      const res = await fetch(`/api/pods/${podId}/modules`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ [moduleKey]: enabled }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || 'Failed to update module');
 
-      const { data, error } = await supabase
-        .from('pod_modules')
-        .update(updateData)
-        .eq('pod_id', podId)
-        .select();
-
-      if (error) {
-        console.error('PodModulesManager: Database error:', error);
-        throw error;
-      }
-
-      console.log('PodModulesManager: Database updated successfully:', data);
+      console.log('PodModulesManager: Database updated successfully:', json.modules);
 
       // Update local state immediately
       setModules((prev) => ({

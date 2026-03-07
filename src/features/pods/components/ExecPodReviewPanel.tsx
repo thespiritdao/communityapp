@@ -192,13 +192,15 @@ export function ExecPodReviewPanel() {
 
   if (pods.length === 0) {
     return (
-      <Card className="p-8 text-center">
-        <CheckCircle className="h-10 w-10 text-green-500 mx-auto mb-3" />
-        <p className="font-medium">No pods pending review</p>
-        <p className="text-sm text-muted-foreground mt-1">
-          All pod proposals have been reviewed or the veto window has passed.
-        </p>
-      </Card>
+      <div className="space-y-4">
+        <Card className="p-8 text-center">
+          <CheckCircle className="h-10 w-10 text-green-500 mx-auto mb-3" />
+          <p className="font-medium">No pods pending review</p>
+          <p className="text-sm text-muted-foreground mt-1">
+            All pod proposals have been reviewed or the veto window has passed.
+          </p>
+        </Card>
+      </div>
     );
   }
 
