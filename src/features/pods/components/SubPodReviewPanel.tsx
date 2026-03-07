@@ -265,7 +265,7 @@ export function SubPodReviewPanel({ podId, podName, canManage }: SubPodReviewPan
                   <div className="mt-4 flex flex-wrap gap-2 items-center">
                     <Button
                       size="sm"
-                      className="bg-green-700 hover:bg-green-800 text-white"
+                      style={{ backgroundColor: '#2F5D50', color: '#FFFFFF' }}
                       onClick={() => handleAction(pod.id, 'activate')}
                       disabled={!!actionPending}
                     >
@@ -283,7 +283,7 @@ export function SubPodReviewPanel({ podId, podName, canManage }: SubPodReviewPan
                         />
                         <Button
                           size="sm"
-                          variant="destructive"
+                          style={{ backgroundColor: '#8B3A3A', color: '#FFFFFF' }}
                           onClick={() => handleAction(pod.id, 'veto')}
                           disabled={!!actionPending}
                         >

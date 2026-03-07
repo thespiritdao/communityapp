@@ -94,7 +94,7 @@ export function ExecPodReviewPanel() {
         return;
       }
 
-      const res = await fetch('/api/pods/review?scope=all', {
+      const res = await fetch('/api/pods/review?scope=exec', {
         headers: { Authorization: `Bearer ${session.access_token}` },
       });
       const json = await res.json();

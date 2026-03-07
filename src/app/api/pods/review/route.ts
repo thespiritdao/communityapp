@@ -11,11 +11,28 @@
 // For sub-pods: caller must wear the parent pod's management hat.
 
 import { type NextRequest, NextResponse } from 'next/server';
-import { createPublicClient, http, encodeFunctionData } from 'viem';
+import { createPublicClient, createWalletClient, http, encodeFunctionData } from 'viem';
+import { privateKeyToAccount } from 'viem/accounts';
 import { base } from 'viem/chains';
 import { supabaseAdmin } from '@/utils/supabaseAdminClient';
 import { getHatId } from '@/lib/hatRegistry';
 import jwt from 'jsonwebtoken';
+
+const FACTORY_ABI = [
+  {
+    name: 'deployManager',
+    type: 'function',
+    inputs: [
+      { name: 'podUUID', type: 'string' },
+      { name: 'parentHatId', type: 'uint256' },
+      { name: 'execHatId', type: 'uint256' },
+      { name: 'defaultTokens', type: 'address[]' },
+      { name: 'managerOwner', type: 'address' },
+    ],
+    outputs: [{ name: 'manager', type: 'address' }],
+    stateMutability: 'nonpayable',
+  },
+] as const;
 
 export const runtime = 'nodejs';
 
@@ -355,6 +372,57 @@ export async function POST(req: NextRequest) {
             }
           }
         }
+        // Deploy a per-pod PodCreationManagerV2 via factory so pod leaders can
+        // approve their own sub-pods (factory uses management hat as exec hat)
+        if (managementHatId && process.env.NEXT_PUBLIC_POD_CREATION_MANAGER_FACTORY) {
+          try {
+            const ADMIN_KEY = process.env.POD_ADMIN_PRIVATE_KEY as `0x${string}`;
+            const adminAccount = privateKeyToAccount(ADMIN_KEY);
+            const walletClient = createWalletClient({ account: adminAccount, chain: base, transport: http(RPC_URL) });
+
+            const { request } = await publicClient.simulateContract({
+              address: process.env.NEXT_PUBLIC_POD_CREATION_MANAGER_FACTORY as `0x${string}`,
+              abi: FACTORY_ABI,
+              functionName: 'deployManager',
+              args: [
+                podId,
+                BigInt(managementHatId),
+                BigInt(managementHatId), // pod leaders gate sub-pod approval
+                [],                      // no default tokens for now
+                adminAccount.address,    // manager owner = admin wallet
+              ],
+              account: adminAccount,
+            });
+
+            const hash = await walletClient.writeContract(request);
+            const receipt = await publicClient.waitForTransactionReceipt({ hash });
+
+            // Extract deployed manager address from ManagerDeployed event or return value
+            const MANAGER_DEPLOYED_TOPIC = '0x' + Buffer.from('ManagerDeployed(string,address,uint256,uint256)').toString('hex');
+            let childManagerAddress: string | null = null;
+
+            // Read managerForPod from factory after deploy
+            const managerAddr = await publicClient.readContract({
+              address: process.env.NEXT_PUBLIC_POD_CREATION_MANAGER_FACTORY as `0x${string}`,
+              abi: [{ name: 'managerForPod', type: 'function', inputs: [{ name: '', type: 'string' }], outputs: [{ type: 'address' }], stateMutability: 'view' }],
+              functionName: 'managerForPod',
+              args: [podId],
+            });
+
+            childManagerAddress = managerAddr as string;
+
+            if (childManagerAddress && childManagerAddress !== '0x0000000000000000000000000000000000000000') {
+              await supabaseAdmin
+                .from('pods')
+                .update({ creation_manager_address: childManagerAddress })
+                .eq('id', podId);
+              console.log(`Deployed child manager ${childManagerAddress} for pod ${podId}`);
+            }
+          } catch (factoryErr: any) {
+            // Non-fatal — pod is active, sub-pod creation falls back to community manager
+            console.warn('Failed to deploy child manager:', factoryErr.message);
+          }
+        }
       } else {
         // Hard-delete vetoed pods — they should not appear anywhere in the app
         await supabaseAdmin.from('pods').delete().eq('id', podId);
@@ -394,9 +462,6 @@ export async function GET(req: NextRequest) {
     if (scope === 'pod' && parentId) {
       // Sub-pods pending review under a specific parent pod
       query = query.eq('parent_pod_id', parentId);
-    } else if (scope === 'all') {
-      // All pending pods regardless of parent (exec sees everything)
-      // No additional filter needed
     } else {
       // Community-level pods: parent is the community pods parent
       const COMMUNITY_PARENT_UUID = '86d2d359-2e38-4267-b7b7-c7f6155063e2';
