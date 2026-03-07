@@ -451,114 +451,25 @@ export const HatsModulePodCreationForm: React.FC<
   }, [address, publicClient]);
 
 
-  // Load user's pods for hierarchical creation (including HAT-based leadership)
+  // Load pods where user is a leader — DB-only, no on-chain calls
   useEffect(() => {
     const loadUserPods = async () => {
-      if (!address || !publicClient) {
+      if (!address) {
         setLoadingUserPods(false);
         return;
       }
-
       try {
         setLoadingUserPods(true);
-        // Get all pods and check for leadership (database or HAT-based)
         const fetchedPods = await PodGovernanceService.getPods();
-        setAllPods(fetchedPods); // Store all pods for UUID lookup
-        const hatsContract = process.env
-          .NEXT_PUBLIC_HATS_CONTRACT as `0x${string}`;
-        const leadershipPods = [];
+        setAllPods(fetchedPods);
 
-        // Check each pod for leadership access
-        const seenPodIds = new Set(); // Track duplicates
-
-        for (const pod of fetchedPods) {
-          let hasLeadership = false;
-          let leadershipSource = '';
-
-          // Check traditional database leadership
-          if (
-            pod.pod_leads?.includes(address.toLowerCase()) ||
-            pod.created_by_address?.toLowerCase() === address.toLowerCase()
-          ) {
-            hasLeadership = true;
-            leadershipSource = 'database';
-            console.log(
-              `📋 Database leadership found for ${pod.name} (ID: ${pod.id})`,
-            );
-          }
-
-          // Check HAT-based leadership if not found in database
-          if (
-            !hasLeadership &&
-            pod.management_hat_id &&
-            pod.management_hat_id !== 'placeholder' &&
-            pod.management_hat_id !== 'extracted_from_tx' &&
-            hatsContract
-          ) {
-            try {
-              console.log(
-                `🔍 Checking HAT leadership for ${pod.name} (Hat ID: ${pod.management_hat_id})`,
-              );
-              const balance = await publicClient!.readContract({
-                address: hatsContract,
-                abi: [
-                  {
-                    name: 'balanceOf',
-                    type: 'function',
-                    inputs: [
-                      { name: '_wearer', type: 'address' },
-                      { name: '_hatId', type: 'uint256' },
-                    ],
-                    outputs: [{ name: 'balance', type: 'uint256' }],
-                    stateMutability: 'view',
-                  },
-                ],
-                functionName: 'balanceOf',
-                args: [address as `0x${string}`, BigInt(pod.management_hat_id)],
-              });
-
-              console.log(
-                `🎩 HAT balance check for ${pod.name}: ${Number(balance)} (Hat: ${pod.management_hat_id})`,
-              );
-              if (Number(balance) > 0) {
-                hasLeadership = true;
-                leadershipSource = 'hat';
-                console.log(
-                  `✅ User has HAT-based leadership for ${pod.name} (Hat: ${pod.management_hat_id})`,
-                );
-              }
-            } catch (error) {
-              // HAT check failed, skip
-              console.error(
-                `❌ Could not check HAT for ${pod.name} (Hat: ${pod.management_hat_id}):`,
-                error,
-              );
-            }
-          }
-
-          // Add to leadership pods if has leadership and not already seen
-          if (hasLeadership) {
-            if (seenPodIds.has(pod.id)) {
-              console.warn(
-                `⚠️ Duplicate pod detected: ${pod.name} (ID: ${pod.id}) - skipping duplicate`,
-              );
-            } else {
-              seenPodIds.add(pod.id);
-              leadershipPods.push(pod);
-              console.log(
-                `➕ Added ${pod.name} to leadership pods (source: ${leadershipSource})`,
-              );
-            }
-          }
-        }
-
-        console.log(
-          '👑 Total leadership pods (DB + HAT):',
-          leadershipPods.length,
+        const lowerAddr = address.toLowerCase();
+        const leadershipPods = fetchedPods.filter((pod) =>
+          pod.pod_leads?.includes(lowerAddr) ||
+          pod.pod_leads?.includes(address) ||
+          pod.created_by_address?.toLowerCase() === lowerAddr
         );
-        leadershipPods.forEach((pod) => {
-          console.log(`  - ${pod.name} (${pod.id})`);
-        });
+
         setUserPods(leadershipPods);
       } catch (error) {
         console.error('❌ Failed to load user pods:', error);
@@ -569,7 +480,7 @@ export const HatsModulePodCreationForm: React.FC<
     };
 
     loadUserPods();
-  }, [address, publicClient]);
+  }, [address]);
 
   // NOTE: Removed auto-trigger for Phase 2 to prevent popup blocker issues
   // User now clicks manually to proceed to Phase 2
