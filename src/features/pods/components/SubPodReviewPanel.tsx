@@ -9,7 +9,6 @@ import { Badge } from '@/components/ui/badge';
 import { CheckCircle, XCircle, Clock, Loader2, GitBranch, RefreshCw } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import { useProfiles } from '@/features/identity/hooks/useProfiles';
-import { useSendUserOperation, useCurrentUser } from '@coinbase/cdp-hooks';
 
 function ProfileChip({
   address,
@@ -68,8 +67,6 @@ export function SubPodReviewPanel({ podId, podName, canManage }: SubPodReviewPan
   const { toast } = useToast();
   const toastRef = useRef(toast);
   useEffect(() => { toastRef.current = toast; }, [toast]);
-  const { sendUserOperation } = useSendUserOperation();
-  const { currentUser } = useCurrentUser();
 
   const allAddresses = useMemo(() => {
     const addrs: string[] = [];
@@ -127,27 +124,7 @@ export function SubPodReviewPanel({ podId, podName, canManage }: SubPodReviewPan
       const authJson = await authRes.json();
       if (!authRes.ok) throw new Error(authJson.error || 'Action failed');
 
-      let txHash = authJson.txHash;
-
-      // Step 2: if community manager was used, client executes via gasless CDP wallet
-      if (authJson.executeOnClient) {
-        if (!currentUser?.evmSmartAccounts?.[0]) {
-          throw new Error('Smart wallet not available');
-        }
-        const result = await sendUserOperation({
-          evmSmartAccount: currentUser.evmSmartAccounts[0],
-          network: 'base',
-          calls: [{
-            to: authJson.contractAddress,
-            value: 0n,
-            data: authJson.callData,
-          }],
-          useCdpPaymaster: true,
-        });
-        txHash = (result as any).userOpHash || (result as any).transactionHash;
-      }
-
-      // Step 3: record DB update
+      // Step 2: record DB update (on-chain tx already confirmed by server)
       const dbRes = await fetch('/api/pods/review', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
@@ -155,7 +132,7 @@ export function SubPodReviewPanel({ podId, podName, canManage }: SubPodReviewPan
           podId: subPodId,
           action: 'dbUpdate',
           pendingAction: action,
-          txHash,
+          txHash: authJson.txHash || '',
         }),
       });
       const dbJson = await dbRes.json();

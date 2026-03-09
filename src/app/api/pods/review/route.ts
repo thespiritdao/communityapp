@@ -216,29 +216,18 @@ export async function POST(req: NextRequest) {
         );
       }
 
+      // All activation/veto calls run server-side:
+      // - Community manager: deployed with PRIVATE_KEY as owner() → satisfies onlyExec
+      // - Per-pod managers: deployed with POD_ADMIN_PRIVATE_KEY as owner() → satisfies onlyExec
+      // This avoids client-side gas sponsorship issues entirely.
       const COMMUNITY_MANAGER = (process.env.NEXT_PUBLIC_POD_CREATION_MANAGER || '').toLowerCase();
       const isCommunityManager = managerAddress.toLowerCase() === COMMUNITY_MANAGER;
 
-      if (isCommunityManager) {
-        // Community manager is whitelisted — return calldata for the client's
-        // CDP smart wallet to execute (gasless via Coinbase paymaster).
-        const callData =
-          pendingAction === 'activate'
-            ? encodeFunctionData({ abi: POD_MANAGER_ABI, functionName: 'activatePod', args: [pod.blockchain_pod_id] })
-            : encodeFunctionData({ abi: POD_MANAGER_ABI, functionName: 'vetoPod', args: [pod.blockchain_pod_id, reason || 'Vetoed'] });
-
-        return NextResponse.json({
-          authorized: true,
-          executeOnClient: true,
-          contractAddress: managerAddress,
-          callData,
-          blockchainPodId: pod.blockchain_pod_id,
-        });
-      }
-
-      // Per-pod manager: admin EOA is owner(), satisfying onlyExec.
-      // Execute server-side — no client gas or paymaster needed.
-      const ADMIN_KEY = process.env.POD_ADMIN_PRIVATE_KEY as `0x${string}`;
+      const ADMIN_KEY = (
+        isCommunityManager
+          ? process.env.PRIVATE_KEY          // community manager owner
+          : process.env.POD_ADMIN_PRIVATE_KEY // per-pod manager owner
+      ) as `0x${string}`;
       if (!ADMIN_KEY) {
         return NextResponse.json({ error: 'Admin key not configured' }, { status: 500 });
       }
@@ -270,7 +259,6 @@ export async function POST(req: NextRequest) {
 
       return NextResponse.json({
         authorized: true,
-        executeOnClient: false,
         txHash,
         contractAddress: managerAddress,
         blockchainPodId: pod.blockchain_pod_id,
