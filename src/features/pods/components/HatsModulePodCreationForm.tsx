@@ -4273,6 +4273,7 @@ export const HatsModulePodCreationForm: React.FC<
                                 value: 0n,
                               }],
                               useCdpPaymaster: true,
+                              paymasterUrl: process.env.NEXT_PUBLIC_PAYMASTER,
                             });
 
                             console.log('✅ HAT Creation successful:', result);
@@ -4356,6 +4357,7 @@ export const HatsModulePodCreationForm: React.FC<
                                   value: 0n,
                                 }],
                                 useCdpPaymaster: true,
+                                paymasterUrl: process.env.NEXT_PUBLIC_PAYMASTER,
                               });
 
                               console.log('✅ Proxy Deployment successful:', result);
@@ -4536,6 +4538,7 @@ export const HatsModulePodCreationForm: React.FC<
                         network: 'base',
                         calls,
                         useCdpPaymaster: true,
+                        paymasterUrl: process.env.NEXT_PUBLIC_PAYMASTER,
                       });
 
                       console.log('✅ Mint HATs successful:', result);
@@ -4665,6 +4668,7 @@ export const HatsModulePodCreationForm: React.FC<
                         network: 'base',
                         calls,
                         useCdpPaymaster: true,
+                        paymasterUrl: process.env.NEXT_PUBLIC_PAYMASTER,
                       });
 
                       console.log('✅ Set HAT IDs successful:', result);
@@ -4783,6 +4787,7 @@ export const HatsModulePodCreationForm: React.FC<
                         network: 'base',
                         calls,
                         useCdpPaymaster: true,
+                        paymasterUrl: process.env.NEXT_PUBLIC_PAYMASTER,
                       });
 
                       console.log('✅ Admin HAT Creation successful:', result);
@@ -4892,6 +4897,7 @@ export const HatsModulePodCreationForm: React.FC<
                         network: 'base',
                         calls,
                         useCdpPaymaster: true,
+                        paymasterUrl: process.env.NEXT_PUBLIC_PAYMASTER,
                       });
 
                       console.log('✅ Mint Admin HAT successful:', result);
@@ -5000,6 +5006,7 @@ export const HatsModulePodCreationForm: React.FC<
                         network: 'base',
                         calls,
                         useCdpPaymaster: true,
+                        paymasterUrl: process.env.NEXT_PUBLIC_PAYMASTER,
                       });
 
                       console.log('✅ Configure Proxy successful:', result);
@@ -5117,6 +5124,7 @@ export const HatsModulePodCreationForm: React.FC<
                         network: 'base',
                         calls,
                         useCdpPaymaster: true,
+                        paymasterUrl: process.env.NEXT_PUBLIC_PAYMASTER,
                       });
 
                       console.log('✅ Set Eligibility Admin successful:', result);

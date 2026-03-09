@@ -144,6 +144,7 @@ export function ExecPodReviewPanel() {
           data: authJson.callData,
         }],
         useCdpPaymaster: true,
+        paymasterUrl: process.env.NEXT_PUBLIC_PAYMASTER,
       });
 
       // Step 3: record DB update
