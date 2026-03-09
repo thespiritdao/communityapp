@@ -16,7 +16,6 @@ import {
 } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import { useProfiles } from '@/features/identity/hooks/useProfiles';
-import { useSendUserOperation, useCurrentUser } from '@coinbase/cdp-hooks';
 
 function ProfileChip({
   address,
@@ -70,8 +69,6 @@ export function ExecPodReviewPanel() {
   const { toast } = useToast();
   const toastRef = useRef(toast);
   useEffect(() => { toastRef.current = toast; }, [toast]);
-  const { sendUserOperation } = useSendUserOperation();
-  const { currentUser } = useCurrentUser();
 
   // Collect all addresses that need profile lookups (proposer + all leads)
   const allAddresses = useMemo(() => {
@@ -109,18 +106,13 @@ export function ExecPodReviewPanel() {
   useEffect(() => { fetchPods(); }, [fetchPods]);
 
   const handleAction = async (podId: string, action: 'activate' | 'veto') => {
-    if (!currentUser?.evmSmartAccounts?.[0]) {
-      toast({ title: 'Smart wallet not available', variant: 'destructive' });
-      return;
-    }
-
     setActionPending(podId + action);
     try {
       const { data: { session } } = await supabase.auth.getSession();
       const token = session?.access_token;
       if (!token) throw new Error('Not authenticated');
 
-      // Step 1: authorize — verify hat on-chain, get encoded calldata
+      // Step 1: authorize + execute on-chain server-side (admin EOA owns all managers)
       const authRes = await fetch('/api/pods/review', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
@@ -132,23 +124,9 @@ export function ExecPodReviewPanel() {
         }),
       });
       const authJson = await authRes.json();
-      if (!authRes.ok) throw new Error(authJson.error || 'Authorization failed');
+      if (!authRes.ok) throw new Error(authJson.error || 'Action failed');
 
-      // Step 2: execute gasless via CDP smart wallet
-      // Use our proxy paymaster so per-pod manager contracts (not on Coinbase's
-      // static whitelist) are also sponsored.
-      const result = await sendUserOperation({
-        evmSmartAccount: currentUser.evmSmartAccounts[0],
-        network: 'base',
-        calls: [{
-          to: authJson.contractAddress,
-          value: 0n,
-          data: authJson.callData,
-        }],
-        paymasterUrl: `${process.env.NEXT_PUBLIC_APP_URL}/api/paymaster`,
-      });
-
-      // Step 3: record DB update
+      // Step 2: record DB update (on-chain tx already landed, hash returned by server)
       const dbRes = await fetch('/api/pods/review', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
@@ -156,7 +134,7 @@ export function ExecPodReviewPanel() {
           podId,
           action: 'dbUpdate',
           pendingAction: action,
-          txHash: result.userOpHash,
+          txHash: authJson.txHash,
         }),
       });
       const dbJson = await dbRes.json();

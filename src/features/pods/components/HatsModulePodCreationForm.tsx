@@ -344,9 +344,10 @@ export const HatsModulePodCreationForm: React.FC<
       options.push({
         id: communityPodParent.id,
         hatId: communityPodsHatId,
-        creationManagerAddress: (communityPodParent as any).creation_manager_address
-          || process.env.NEXT_PUBLIC_POD_CREATION_MANAGER
-          || null,
+        // Always use the env-var community manager for top-level pods — the DB row
+        // may have a creation_manager_address from a factory deploy which is NOT
+        // whitelisted with the Coinbase paymaster.
+        creationManagerAddress: process.env.NEXT_PUBLIC_POD_CREATION_MANAGER || null,
         uniqueKey: 'default-community',
         name: '🏘️ Community Pods',
         description: 'Default parent for community-created pods',
@@ -2090,7 +2091,7 @@ export const HatsModulePodCreationForm: React.FC<
                     data: mintData,
                     value: 0n,
                   }],
-                  paymasterUrl: `${process.env.NEXT_PUBLIC_APP_URL}/api/paymaster`,
+                  useCdpPaymaster: true,
                 });
                 // CDP result doesn't have transactionHash property directly
                 const mintTxHash = 'tx-hash-placeholder';
@@ -4273,7 +4274,7 @@ export const HatsModulePodCreationForm: React.FC<
                                 data,
                                 value: 0n,
                               }],
-                              paymasterUrl: `${process.env.NEXT_PUBLIC_APP_URL}/api/paymaster`,
+                              useCdpPaymaster: true,
                             });
 
                             console.log('✅ HAT Creation successful:', result);
@@ -4356,7 +4357,7 @@ export const HatsModulePodCreationForm: React.FC<
                                   data,
                                   value: 0n,
                                 }],
-                                paymasterUrl: `${process.env.NEXT_PUBLIC_APP_URL}/api/paymaster`,
+                                useCdpPaymaster: true,
                               });
 
                               console.log('✅ Proxy Deployment successful:', result);
@@ -4536,7 +4537,7 @@ export const HatsModulePodCreationForm: React.FC<
                         evmSmartAccount: currentUser.evmSmartAccounts[0] as `0x${string}`,
                         network: 'base',
                         calls,
-                        paymasterUrl: `${process.env.NEXT_PUBLIC_APP_URL}/api/paymaster`,
+                        useCdpPaymaster: true,
                       });
 
                       console.log('✅ Mint HATs successful:', result);
@@ -4665,7 +4666,7 @@ export const HatsModulePodCreationForm: React.FC<
                         evmSmartAccount: currentUser.evmSmartAccounts[0] as `0x${string}`,
                         network: 'base',
                         calls,
-                        paymasterUrl: `${process.env.NEXT_PUBLIC_APP_URL}/api/paymaster`,
+                        useCdpPaymaster: true,
                       });
 
                       console.log('✅ Set HAT IDs successful:', result);
@@ -4783,7 +4784,7 @@ export const HatsModulePodCreationForm: React.FC<
                         evmSmartAccount: currentUser.evmSmartAccounts[0] as `0x${string}`,
                         network: 'base',
                         calls,
-                        paymasterUrl: `${process.env.NEXT_PUBLIC_APP_URL}/api/paymaster`,
+                        useCdpPaymaster: true,
                       });
 
                       console.log('✅ Admin HAT Creation successful:', result);
@@ -4892,7 +4893,7 @@ export const HatsModulePodCreationForm: React.FC<
                         evmSmartAccount: currentUser.evmSmartAccounts[0] as `0x${string}`,
                         network: 'base',
                         calls,
-                        paymasterUrl: `${process.env.NEXT_PUBLIC_APP_URL}/api/paymaster`,
+                        useCdpPaymaster: true,
                       });
 
                       console.log('✅ Mint Admin HAT successful:', result);
@@ -5000,7 +5001,7 @@ export const HatsModulePodCreationForm: React.FC<
                         evmSmartAccount: currentUser.evmSmartAccounts[0] as `0x${string}`,
                         network: 'base',
                         calls,
-                        paymasterUrl: `${process.env.NEXT_PUBLIC_APP_URL}/api/paymaster`,
+                        useCdpPaymaster: true,
                       });
 
                       console.log('✅ Configure Proxy successful:', result);
@@ -5117,7 +5118,7 @@ export const HatsModulePodCreationForm: React.FC<
                         evmSmartAccount: currentUser.evmSmartAccounts[0] as `0x${string}`,
                         network: 'base',
                         calls,
-                        paymasterUrl: `${process.env.NEXT_PUBLIC_APP_URL}/api/paymaster`,
+                        useCdpPaymaster: true,
                       });
 
                       console.log('✅ Set Eligibility Admin successful:', result);

@@ -158,9 +158,11 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // ── Phase 1: authorize ──────────────────────────────────────────────────
-    // Verify the caller wears the required hat on-chain, then return the
-    // encoded calldata for the client to execute via CDP smart wallet.
+    // ── Phase 1: execute ────────────────────────────────────────────────────
+    // Verify the caller wears the required hat on-chain, then execute the
+    // activate/veto call server-side using the admin EOA (owner of all pod
+    // managers). This avoids the client needing to call unwhitelisted per-pod
+    // manager contracts via the CDP paymaster.
     if (action === 'authorize') {
       const { pendingAction, reason } = body;
       if (!pendingAction || !['activate', 'veto'].includes(pendingAction)) {
@@ -198,6 +200,7 @@ export async function POST(req: NextRequest) {
 
       const publicClient = createPublicClient({ chain: base, transport: http(RPC_URL) });
 
+      // Verify the caller wears the required hat
       const balance = await publicClient.readContract({
         address: HATS_CONTRACT,
         abi: HATS_ABI,
@@ -212,24 +215,43 @@ export async function POST(req: NextRequest) {
         );
       }
 
-      // Encode the calldata — the client will execute this via sendUserOperation
-      const callData =
-        pendingAction === 'activate'
-          ? encodeFunctionData({
-              abi: POD_MANAGER_ABI,
-              functionName: 'activatePod',
-              args: [pod.blockchain_pod_id],
-            })
-          : encodeFunctionData({
-              abi: POD_MANAGER_ABI,
-              functionName: 'vetoPod',
-              args: [pod.blockchain_pod_id, reason || 'Vetoed'],
-            });
+      // Execute on-chain using admin EOA — admin is owner of all pod managers,
+      // satisfying onlyExec (owner() branch). No client gas required.
+      const ADMIN_KEY = process.env.POD_ADMIN_PRIVATE_KEY as `0x${string}`;
+      if (!ADMIN_KEY) {
+        return NextResponse.json({ error: 'Admin key not configured' }, { status: 500 });
+      }
+      const adminAccount = privateKeyToAccount(ADMIN_KEY);
+      const walletClient = createWalletClient({ account: adminAccount, chain: base, transport: http(RPC_URL) });
+
+      let txHash: string;
+      if (pendingAction === 'activate') {
+        const { request } = await publicClient.simulateContract({
+          address: managerAddress as `0x${string}`,
+          abi: POD_MANAGER_ABI,
+          functionName: 'activatePod',
+          args: [pod.blockchain_pod_id],
+          account: adminAccount,
+        });
+        txHash = await walletClient.writeContract(request);
+      } else {
+        const { request } = await publicClient.simulateContract({
+          address: managerAddress as `0x${string}`,
+          abi: POD_MANAGER_ABI,
+          functionName: 'vetoPod',
+          args: [pod.blockchain_pod_id, reason || 'Vetoed'],
+          account: adminAccount,
+        });
+        txHash = await walletClient.writeContract(request);
+      }
+
+      // Wait for confirmation so DB update (dbUpdate action) can trust it landed
+      await publicClient.waitForTransactionReceipt({ hash: txHash as `0x${string}` });
 
       return NextResponse.json({
         authorized: true,
+        txHash,
         contractAddress: managerAddress,
-        callData,
         blockchainPodId: pod.blockchain_pod_id,
       });
     }
