@@ -209,14 +209,13 @@ export async function POST(req: NextRequest) {
       const COMMUNITY_MANAGER = (process.env.NEXT_PUBLIC_POD_CREATION_MANAGER || '').toLowerCase();
       const isCommunityManager = managerAddress.toLowerCase() === COMMUNITY_MANAGER;
 
-      const ADMIN_KEY = (
-        isCommunityManager
-          ? process.env.PRIVATE_KEY          // community manager owner
-          : process.env.POD_ADMIN_PRIVATE_KEY // per-pod manager owner
-      ) as `0x${string}`;
-      if (!ADMIN_KEY) {
+      const rawKey = isCommunityManager
+        ? process.env.PRIVATE_KEY          // community manager owner
+        : process.env.POD_ADMIN_PRIVATE_KEY; // per-pod manager owner
+      if (!rawKey) {
         return NextResponse.json({ error: 'Admin key not configured' }, { status: 500 });
       }
+      const ADMIN_KEY = (rawKey.startsWith('0x') ? rawKey : `0x${rawKey}`) as `0x${string}`;
       const adminAccount = privateKeyToAccount(ADMIN_KEY);
       const walletClient = createWalletClient({ account: adminAccount, chain: base, transport: http(RPC_URL) });
 
