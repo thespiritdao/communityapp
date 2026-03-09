@@ -283,6 +283,65 @@ contract PodCreationManagerV2 is Ownable, ReentrancyGuard, Pausable {
     }
 
     /**
+     * @notice Activate a sub-pod. Caller must hold the parent pod's management hat.
+     * Allows pod leaders to approve sub-pods without requiring the exec hat.
+     * @param podId The sub-pod's blockchain ID
+     * @param parentManagementHatId The management hat ID of the parent pod
+     */
+    function activateSubPod(
+        string memory podId,
+        uint256 parentManagementHatId
+    ) external nonReentrant {
+        require(
+            hatsContract.balanceOf(msg.sender, parentManagementHatId) > 0,
+            "Must wear parent pod management hat"
+        );
+        require(podExists[podId], "Pod does not exist");
+        PodData storage pod = pods[podId];
+        require(pod.status == PodStatus.PendingReview, "Pod not in review");
+
+        pod.status = PodStatus.Active;
+
+        uint256[] memory hatIds = new uint256[](pod.podLeads.length);
+        for (uint i = 0; i < pod.podLeads.length; i++) {
+            hatIds[i] = pod.managementHatId;
+        }
+        bool success = hatsContract.batchMintHats(hatIds, pod.podLeads);
+        require(success, "Failed to mint management hats");
+
+        emit PodActivated(podId, msg.sender, block.timestamp);
+    }
+
+    /**
+     * @notice Veto a sub-pod within the veto window. Caller must hold the parent pod's management hat.
+     * @param podId The sub-pod's blockchain ID
+     * @param parentManagementHatId The management hat ID of the parent pod
+     * @param reason Reason for veto
+     */
+    function vetoSubPod(
+        string memory podId,
+        uint256 parentManagementHatId,
+        string memory reason
+    ) external {
+        require(
+            hatsContract.balanceOf(msg.sender, parentManagementHatId) > 0,
+            "Must wear parent pod management hat"
+        );
+        require(podExists[podId], "Pod does not exist");
+        PodData storage pod = pods[podId];
+        require(pod.status == PodStatus.PendingReview, "Pod not in review");
+        require(
+            block.timestamp <= pod.createdAt + vetoWindowSeconds,
+            "Veto window has passed"
+        );
+
+        pod.status = PodStatus.Vetoed;
+        podCountByCreator[pod.creator]--;
+
+        emit PodVetoed(podId, msg.sender, reason, block.timestamp);
+    }
+
+    /**
      * @notice Deactivate an active pod (emergency).
      * Can be called by any exec hat wearer.
      */

@@ -41,6 +41,27 @@ const POD_MANAGER_ABI = [
     outputs: [],
     stateMutability: 'nonpayable',
   },
+  {
+    name: 'activateSubPod',
+    type: 'function',
+    inputs: [
+      { name: 'podId', type: 'string' },
+      { name: 'parentManagementHatId', type: 'uint256' },
+    ],
+    outputs: [],
+    stateMutability: 'nonpayable',
+  },
+  {
+    name: 'vetoSubPod',
+    type: 'function',
+    inputs: [
+      { name: 'podId', type: 'string' },
+      { name: 'parentManagementHatId', type: 'uint256' },
+      { name: 'reason', type: 'string' },
+    ],
+    outputs: [],
+    stateMutability: 'nonpayable',
+  },
 ] as const;
 
 const HATS_ABI = [
@@ -108,6 +129,7 @@ async function resolveManagerAndHat(pod: {
     return {
       managerAddress: process.env.NEXT_PUBLIC_POD_CREATION_MANAGER as `0x${string}` | null,
       approverHatId: (await getHatId('EXECUTIVE_POD_LEADER')) || null,
+      isSubPod: false,
     };
   }
 
@@ -122,6 +144,7 @@ async function resolveManagerAndHat(pod: {
   return {
     managerAddress: process.env.NEXT_PUBLIC_POD_CREATION_MANAGER as `0x${string}` | null,
     approverHatId: parentPod?.management_hat_id || null,
+    isSubPod: true,
   };
 }
 
@@ -175,7 +198,7 @@ export async function POST(req: NextRequest) {
         );
       }
 
-      const { managerAddress, approverHatId } = await resolveManagerAndHat(pod);
+      const { managerAddress, approverHatId, isSubPod } = await resolveManagerAndHat(pod);
 
       if (!managerAddress) {
         return NextResponse.json({ error: 'No creation manager configured for this pod' }, { status: 500 });
@@ -203,18 +226,34 @@ export async function POST(req: NextRequest) {
 
       // Hat check passed — return calldata for the client to execute via
       // sendUserOperation with useCdpPaymaster: true (Coinbase sponsored).
-      // The community manager is whitelisted in the CDP portal.
-      const callData = pendingAction === 'activate'
-        ? encodeFunctionData({
-            abi: POD_MANAGER_ABI,
-            functionName: 'activatePod',
-            args: [pod.blockchain_pod_id],
-          })
-        : encodeFunctionData({
-            abi: POD_MANAGER_ABI,
-            functionName: 'vetoPod',
-            args: [pod.blockchain_pod_id, reason || 'Vetoed'],
-          });
+      // Sub-pods use activateSubPod/vetoSubPod which check parentManagementHatId on-chain.
+      // Top-level pods use activatePod/vetoPod which check execHatId on-chain.
+      let callData: `0x${string}`;
+      if (isSubPod) {
+        callData = pendingAction === 'activate'
+          ? encodeFunctionData({
+              abi: POD_MANAGER_ABI,
+              functionName: 'activateSubPod',
+              args: [pod.blockchain_pod_id, BigInt(approverHatId)],
+            })
+          : encodeFunctionData({
+              abi: POD_MANAGER_ABI,
+              functionName: 'vetoSubPod',
+              args: [pod.blockchain_pod_id, BigInt(approverHatId), reason || 'Vetoed'],
+            });
+      } else {
+        callData = pendingAction === 'activate'
+          ? encodeFunctionData({
+              abi: POD_MANAGER_ABI,
+              functionName: 'activatePod',
+              args: [pod.blockchain_pod_id],
+            })
+          : encodeFunctionData({
+              abi: POD_MANAGER_ABI,
+              functionName: 'vetoPod',
+              args: [pod.blockchain_pod_id, reason || 'Vetoed'],
+            });
+      }
 
       return NextResponse.json({
         authorized: true,
