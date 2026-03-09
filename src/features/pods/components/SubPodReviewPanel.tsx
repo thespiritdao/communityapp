@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import { useSendUserOperation } from '@coinbase/cdp-hooks';
 import { supabase } from '@/utils/supabaseClient';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -102,6 +103,8 @@ export function SubPodReviewPanel({ podId, podName, canManage }: SubPodReviewPan
 
   useEffect(() => { fetchPods(); }, [fetchPods]);
 
+  const { sendUserOperation } = useSendUserOperation();
+
   const handleAction = async (subPodId: string, action: 'activate' | 'veto') => {
     setActionPending(subPodId + action);
     try {
@@ -109,8 +112,7 @@ export function SubPodReviewPanel({ podId, podName, canManage }: SubPodReviewPan
       const token = session?.access_token;
       if (!token) throw new Error('Not authenticated');
 
-      // Step 1: authorize — server verifies hat, executes server-side for per-pod
-      // managers (admin is owner) or returns calldata for community manager.
+      // Step 1: server verifies hat ownership, returns calldata
       const authRes = await fetch('/api/pods/review', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
@@ -124,7 +126,14 @@ export function SubPodReviewPanel({ podId, podName, canManage }: SubPodReviewPan
       const authJson = await authRes.json();
       if (!authRes.ok) throw new Error(authJson.error || 'Action failed');
 
-      // Step 2: record DB update (on-chain tx already confirmed by server)
+      // Step 2: client executes via CDP smart wallet — Coinbase sponsors gas
+      const result = await sendUserOperation({
+        calls: [{ to: authJson.contractAddress, data: authJson.callData }],
+        useCdpPaymaster: true,
+      });
+      const txHash = result?.transactionHash || result?.userOpHash || '';
+
+      // Step 3: write DB now that tx is confirmed
       const dbRes = await fetch('/api/pods/review', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
@@ -132,7 +141,7 @@ export function SubPodReviewPanel({ podId, podName, canManage }: SubPodReviewPan
           podId: subPodId,
           action: 'dbUpdate',
           pendingAction: action,
-          txHash: authJson.txHash || '',
+          txHash,
         }),
       });
       const dbJson = await dbRes.json();

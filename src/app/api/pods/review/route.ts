@@ -11,8 +11,7 @@
 // For sub-pods: caller must wear the parent pod's management hat.
 
 import { type NextRequest, NextResponse } from 'next/server';
-import { createPublicClient, createWalletClient, http, encodeFunctionData } from 'viem';
-import { privateKeyToAccount } from 'viem/accounts';
+import { createPublicClient, http, encodeFunctionData } from 'viem';
 import { base } from 'viem/chains';
 import { supabaseAdmin } from '@/utils/supabaseAdminClient';
 import { getHatId } from '@/lib/hatRegistry';
@@ -202,50 +201,25 @@ export async function POST(req: NextRequest) {
         );
       }
 
-      // All activation/veto calls run server-side:
-      // - Community manager: deployed with PRIVATE_KEY as owner() → satisfies onlyExec
-      // - Per-pod managers: deployed with POD_ADMIN_PRIVATE_KEY as owner() → satisfies onlyExec
-      // This avoids client-side gas sponsorship issues entirely.
-      const COMMUNITY_MANAGER = (process.env.NEXT_PUBLIC_POD_CREATION_MANAGER || '').toLowerCase();
-      const isCommunityManager = managerAddress.toLowerCase() === COMMUNITY_MANAGER;
-
-      const rawKey = isCommunityManager
-        ? process.env.PRIVATE_KEY          // community manager owner
-        : process.env.POD_ADMIN_PRIVATE_KEY; // per-pod manager owner
-      if (!rawKey) {
-        return NextResponse.json({ error: 'Admin key not configured' }, { status: 500 });
-      }
-      const ADMIN_KEY = (rawKey.startsWith('0x') ? rawKey : `0x${rawKey}`) as `0x${string}`;
-      const adminAccount = privateKeyToAccount(ADMIN_KEY);
-      const walletClient = createWalletClient({ account: adminAccount, chain: base, transport: http(RPC_URL) });
-
-      let txHash: string;
-      if (pendingAction === 'activate') {
-        const { request } = await publicClient.simulateContract({
-          address: managerAddress as `0x${string}`,
-          abi: POD_MANAGER_ABI,
-          functionName: 'activatePod',
-          args: [pod.blockchain_pod_id],
-          account: adminAccount,
-        });
-        txHash = await walletClient.writeContract(request);
-      } else {
-        const { request } = await publicClient.simulateContract({
-          address: managerAddress as `0x${string}`,
-          abi: POD_MANAGER_ABI,
-          functionName: 'vetoPod',
-          args: [pod.blockchain_pod_id, reason || 'Vetoed'],
-          account: adminAccount,
-        });
-        txHash = await walletClient.writeContract(request);
-      }
-
-      await publicClient.waitForTransactionReceipt({ hash: txHash as `0x${string}` });
+      // Hat check passed — return calldata for the client to execute via
+      // sendUserOperation with useCdpPaymaster: true (Coinbase sponsored).
+      // The community manager is whitelisted in the CDP portal.
+      const callData = pendingAction === 'activate'
+        ? encodeFunctionData({
+            abi: POD_MANAGER_ABI,
+            functionName: 'activatePod',
+            args: [pod.blockchain_pod_id],
+          })
+        : encodeFunctionData({
+            abi: POD_MANAGER_ABI,
+            functionName: 'vetoPod',
+            args: [pod.blockchain_pod_id, reason || 'Vetoed'],
+          });
 
       return NextResponse.json({
         authorized: true,
-        txHash,
         contractAddress: managerAddress,
+        callData,
         blockchainPodId: pod.blockchain_pod_id,
       });
     }
