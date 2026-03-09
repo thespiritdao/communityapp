@@ -140,7 +140,6 @@ export function SubPodReviewPanel({ podId, podName, canManage }: SubPodReviewPan
           value: 0n,
           data: authJson.callData,
         }],
-        useCdpPaymaster: true,
         paymasterUrl: process.env.NEXT_PUBLIC_PAYMASTER,
       });
 

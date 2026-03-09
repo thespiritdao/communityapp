@@ -4272,7 +4272,6 @@ export const HatsModulePodCreationForm: React.FC<
                                 data,
                                 value: 0n,
                               }],
-                              useCdpPaymaster: true,
                               paymasterUrl: process.env.NEXT_PUBLIC_PAYMASTER,
                             });
 
@@ -4356,7 +4355,6 @@ export const HatsModulePodCreationForm: React.FC<
                                   data,
                                   value: 0n,
                                 }],
-                                useCdpPaymaster: true,
                                 paymasterUrl: process.env.NEXT_PUBLIC_PAYMASTER,
                               });
 
@@ -4537,7 +4535,6 @@ export const HatsModulePodCreationForm: React.FC<
                         evmSmartAccount: currentUser.evmSmartAccounts[0] as `0x${string}`,
                         network: 'base',
                         calls,
-                        useCdpPaymaster: true,
                         paymasterUrl: process.env.NEXT_PUBLIC_PAYMASTER,
                       });
 
@@ -4667,7 +4664,6 @@ export const HatsModulePodCreationForm: React.FC<
                         evmSmartAccount: currentUser.evmSmartAccounts[0] as `0x${string}`,
                         network: 'base',
                         calls,
-                        useCdpPaymaster: true,
                         paymasterUrl: process.env.NEXT_PUBLIC_PAYMASTER,
                       });
 
@@ -4786,7 +4782,6 @@ export const HatsModulePodCreationForm: React.FC<
                         evmSmartAccount: currentUser.evmSmartAccounts[0] as `0x${string}`,
                         network: 'base',
                         calls,
-                        useCdpPaymaster: true,
                         paymasterUrl: process.env.NEXT_PUBLIC_PAYMASTER,
                       });
 
@@ -4896,7 +4891,6 @@ export const HatsModulePodCreationForm: React.FC<
                         evmSmartAccount: currentUser.evmSmartAccounts[0] as `0x${string}`,
                         network: 'base',
                         calls,
-                        useCdpPaymaster: true,
                         paymasterUrl: process.env.NEXT_PUBLIC_PAYMASTER,
                       });
 
@@ -5005,7 +4999,6 @@ export const HatsModulePodCreationForm: React.FC<
                         evmSmartAccount: currentUser.evmSmartAccounts[0] as `0x${string}`,
                         network: 'base',
                         calls,
-                        useCdpPaymaster: true,
                         paymasterUrl: process.env.NEXT_PUBLIC_PAYMASTER,
                       });
 
@@ -5123,7 +5116,6 @@ export const HatsModulePodCreationForm: React.FC<
                         evmSmartAccount: currentUser.evmSmartAccounts[0] as `0x${string}`,
                         network: 'base',
                         calls,
-                        useCdpPaymaster: true,
                         paymasterUrl: process.env.NEXT_PUBLIC_PAYMASTER,
                       });
 

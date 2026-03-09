@@ -143,7 +143,6 @@ export function ExecPodReviewPanel() {
           value: 0n,
           data: authJson.callData,
         }],
-        useCdpPaymaster: true,
         paymasterUrl: process.env.NEXT_PUBLIC_PAYMASTER,
       });
 
