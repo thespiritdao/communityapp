@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import { useSendUserOperation } from '@coinbase/cdp-hooks';
+import { useSendUserOperation, useCurrentUser } from '@coinbase/cdp-hooks';
 import { supabase } from '@/utils/supabaseClient';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -107,6 +107,7 @@ export function ExecPodReviewPanel() {
   useEffect(() => { fetchPods(); }, [fetchPods]);
 
   const { sendUserOperation } = useSendUserOperation();
+  const { currentUser } = useCurrentUser();
 
   const handleAction = async (podId: string, action: 'activate' | 'veto') => {
     setActionPending(podId + action);
@@ -130,7 +131,11 @@ export function ExecPodReviewPanel() {
       if (!authRes.ok) throw new Error(authJson.error || 'Action failed');
 
       // Step 2: client executes via CDP smart wallet — Coinbase sponsors gas
+      const smartAccount = currentUser?.evmSmartAccounts?.[0];
+      if (!smartAccount) throw new Error('Smart account not available');
       const result = await sendUserOperation({
+        evmSmartAccount: smartAccount as `0x${string}`,
+        network: 'base',
         calls: [{ to: authJson.contractAddress, data: authJson.callData }],
         useCdpPaymaster: true,
       });
