@@ -362,9 +362,37 @@ export async function POST(req: NextRequest) {
             }
           }
         }
-        // All pod creation (including sub-pods) routes through the single community
-        // manager. No per-pod manager deployment needed — hierarchy is enforced by
-        // DB parent_pod_id and hat ownership checks, not by contract addresses.
+        // Rename temp image to permanent path using admin client (bypasses storage RLS)
+        try {
+          const { data: freshPod } = await supabaseAdmin
+            .from('pods')
+            .select('pod_image_url, blockchain_pod_id')
+            .eq('id', podId)
+            .single();
+          const imageUrl = freshPod?.pod_image_url || '';
+          const bpid = freshPod?.blockchain_pod_id || '';
+          if (imageUrl.includes('/temp-') && bpid) {
+            const tempPath = imageUrl.split('/pod-images/')[1]?.split('?')[0];
+            if (tempPath) {
+              const ext = tempPath.split('.').pop() || 'png';
+              const newPath = `${bpid}/banner.${ext}`;
+              const { error: moveErr } = await supabaseAdmin.storage
+                .from('pod-images')
+                .move(tempPath, newPath);
+              if (!moveErr) {
+                const { data: { publicUrl } } = supabaseAdmin.storage
+                  .from('pod-images')
+                  .getPublicUrl(newPath);
+                await supabaseAdmin.from('pods').update({ pod_image_url: publicUrl }).eq('id', podId);
+                console.log(`Image renamed: ${tempPath} → ${newPath}`);
+              } else {
+                console.warn('Image rename failed (non-fatal):', moveErr.message);
+              }
+            }
+          }
+        } catch (imgErr: any) {
+          console.warn('Image rename error (non-fatal):', imgErr.message);
+        }
       } else {
         // Hard-delete vetoed pods — they should not appear anywhere in the app
         await supabaseAdmin.from('pods').delete().eq('id', podId);
