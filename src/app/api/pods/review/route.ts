@@ -18,21 +18,6 @@ import { supabaseAdmin } from '@/utils/supabaseAdminClient';
 import { getHatId } from '@/lib/hatRegistry';
 import jwt from 'jsonwebtoken';
 
-const FACTORY_ABI = [
-  {
-    name: 'deployManager',
-    type: 'function',
-    inputs: [
-      { name: 'podUUID', type: 'string' },
-      { name: 'parentHatId', type: 'uint256' },
-      { name: 'execHatId', type: 'uint256' },
-      { name: 'defaultTokens', type: 'address[]' },
-      { name: 'managerOwner', type: 'address' },
-    ],
-    outputs: [{ name: 'manager', type: 'address' }],
-    stateMutability: 'nonpayable',
-  },
-] as const;
 
 export const runtime = 'nodejs';
 
@@ -127,15 +112,16 @@ async function resolveManagerAndHat(pod: {
     };
   }
 
+  // Sub-pods always use the single whitelisted community manager.
+  // Approver is the parent pod's management hat.
   const { data: parentPod } = await supabaseAdmin
     .from('pods')
-    .select('creation_manager_address, management_hat_id')
+    .select('management_hat_id')
     .eq('id', pod.parent_pod_id)
     .single();
 
   return {
-    managerAddress: ((parentPod?.creation_manager_address as `0x${string}`) ||
-      (process.env.NEXT_PUBLIC_POD_CREATION_MANAGER as `0x${string}`)) ?? null,
+    managerAddress: process.env.NEXT_PUBLIC_POD_CREATION_MANAGER as `0x${string}` | null,
     approverHatId: parentPod?.management_hat_id || null,
   };
 }
@@ -403,57 +389,9 @@ export async function POST(req: NextRequest) {
             }
           }
         }
-        // Deploy a per-pod PodCreationManagerV2 via factory so pod leaders can
-        // approve their own sub-pods (factory uses management hat as exec hat)
-        if (managementHatId && process.env.NEXT_PUBLIC_POD_CREATION_MANAGER_FACTORY) {
-          try {
-            const ADMIN_KEY = process.env.POD_ADMIN_PRIVATE_KEY as `0x${string}`;
-            const adminAccount = privateKeyToAccount(ADMIN_KEY);
-            const walletClient = createWalletClient({ account: adminAccount, chain: base, transport: http(RPC_URL) });
-
-            const { request } = await publicClient.simulateContract({
-              address: process.env.NEXT_PUBLIC_POD_CREATION_MANAGER_FACTORY as `0x${string}`,
-              abi: FACTORY_ABI,
-              functionName: 'deployManager',
-              args: [
-                podId,
-                BigInt(managementHatId),
-                BigInt(managementHatId), // pod leaders gate sub-pod approval
-                [],                      // no default tokens for now
-                adminAccount.address,    // manager owner = admin wallet
-              ],
-              account: adminAccount,
-            });
-
-            const hash = await walletClient.writeContract(request);
-            const receipt = await publicClient.waitForTransactionReceipt({ hash });
-
-            // Extract deployed manager address from ManagerDeployed event or return value
-            const MANAGER_DEPLOYED_TOPIC = '0x' + Buffer.from('ManagerDeployed(string,address,uint256,uint256)').toString('hex');
-            let childManagerAddress: string | null = null;
-
-            // Read managerForPod from factory after deploy
-            const managerAddr = await publicClient.readContract({
-              address: process.env.NEXT_PUBLIC_POD_CREATION_MANAGER_FACTORY as `0x${string}`,
-              abi: [{ name: 'managerForPod', type: 'function', inputs: [{ name: '', type: 'string' }], outputs: [{ type: 'address' }], stateMutability: 'view' }],
-              functionName: 'managerForPod',
-              args: [podId],
-            });
-
-            childManagerAddress = managerAddr as string;
-
-            if (childManagerAddress && childManagerAddress !== '0x0000000000000000000000000000000000000000') {
-              await supabaseAdmin
-                .from('pods')
-                .update({ creation_manager_address: childManagerAddress })
-                .eq('id', podId);
-              console.log(`Deployed child manager ${childManagerAddress} for pod ${podId}`);
-            }
-          } catch (factoryErr: any) {
-            // Non-fatal — pod is active, sub-pod creation falls back to community manager
-            console.warn('Failed to deploy child manager:', factoryErr.message);
-          }
-        }
+        // All pod creation (including sub-pods) routes through the single community
+        // manager. No per-pod manager deployment needed — hierarchy is enforced by
+        // DB parent_pod_id and hat ownership checks, not by contract addresses.
       } else {
         // Hard-delete vetoed pods — they should not appear anywhere in the app
         await supabaseAdmin.from('pods').delete().eq('id', podId);

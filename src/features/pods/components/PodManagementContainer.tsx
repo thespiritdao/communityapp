@@ -29,7 +29,6 @@ import PodModulesManager from './PodModulesManager';
 import { AgreementsPanel } from './AgreementsPanel';
 import { ApplicationsPanel } from './ApplicationApproval';
 import { PodDeletionButtonV2 } from '@/app/pods/[id]/manage/components/PodDeletionButtonV2';
-import { ClaimManagementHATButton } from './ClaimManagementHATButton';
 import { PodSettingsPanel } from './PodSettingsPanel';
 import { SubPodReviewPanel } from './SubPodReviewPanel';
 import { usePodManagementState } from '../hooks/usePodManagementState';
@@ -527,17 +526,6 @@ export const PodManagementContainer = React.memo<PodManagementContainerProps>(
         <PodHeader pod={pod} isLoading={isLoadingPod} />
 
         <CardContent className="p-0">
-          {/* Claim Management HAT Button - only relevant once pod is active (hats minted by activatePod) */}
-          {pod && pod.status === 'active' && pod.management_hat_id && userAddress && pod.pod_leads && (
-            <div className="p-4 border-b">
-              <ClaimManagementHATButton
-                podId={podId}
-                podName={pod.name || 'Unknown Pod'}
-                managementHatId={pod.management_hat_id}
-                podLeads={pod.pod_leads || []}
-              />
-            </div>
-          )}
 
           <TabNavigation
             activeTab={selectedTab}

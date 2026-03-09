@@ -54,7 +54,6 @@ export { MembershipAgreementModal } from './MembershipAgreementModal';
 export { OnChainAgreementSigningModal } from './OnChainAgreementSigningModal';
 export { default as AgreementSigningModal } from './AgreementSigningModal';
 export { AgreementsPanel } from './AgreementsPanel';
-export { ClaimManagementHATButton } from './ClaimManagementHATButton';
 
 // Governance and approvals
 export { GovernanceProposalModal } from './GovernanceProposalModal';
