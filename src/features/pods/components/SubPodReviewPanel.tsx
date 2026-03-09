@@ -142,7 +142,7 @@ export function SubPodReviewPanel({ podId, podName, canManage }: SubPodReviewPan
           value: 0n,
           data: authJson.callData,
         }],
-        paymasterUrl: '/api/paymaster',
+        paymasterUrl: `${process.env.NEXT_PUBLIC_APP_URL}/api/paymaster`,
       });
 
       // Step 3: record DB update

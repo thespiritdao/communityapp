@@ -2090,7 +2090,7 @@ export const HatsModulePodCreationForm: React.FC<
                     data: mintData,
                     value: 0n,
                   }],
-                  paymasterUrl: '/api/paymaster',
+                  paymasterUrl: `${process.env.NEXT_PUBLIC_APP_URL}/api/paymaster`,
                 });
                 // CDP result doesn't have transactionHash property directly
                 const mintTxHash = 'tx-hash-placeholder';
@@ -4273,7 +4273,7 @@ export const HatsModulePodCreationForm: React.FC<
                                 data,
                                 value: 0n,
                               }],
-                              paymasterUrl: '/api/paymaster',
+                              paymasterUrl: `${process.env.NEXT_PUBLIC_APP_URL}/api/paymaster`,
                             });
 
                             console.log('✅ HAT Creation successful:', result);
@@ -4356,7 +4356,7 @@ export const HatsModulePodCreationForm: React.FC<
                                   data,
                                   value: 0n,
                                 }],
-                                paymasterUrl: '/api/paymaster',
+                                paymasterUrl: `${process.env.NEXT_PUBLIC_APP_URL}/api/paymaster`,
                               });
 
                               console.log('✅ Proxy Deployment successful:', result);
@@ -4536,7 +4536,7 @@ export const HatsModulePodCreationForm: React.FC<
                         evmSmartAccount: currentUser.evmSmartAccounts[0] as `0x${string}`,
                         network: 'base',
                         calls,
-                        paymasterUrl: '/api/paymaster',
+                        paymasterUrl: `${process.env.NEXT_PUBLIC_APP_URL}/api/paymaster`,
                       });
 
                       console.log('✅ Mint HATs successful:', result);
@@ -4665,7 +4665,7 @@ export const HatsModulePodCreationForm: React.FC<
                         evmSmartAccount: currentUser.evmSmartAccounts[0] as `0x${string}`,
                         network: 'base',
                         calls,
-                        paymasterUrl: '/api/paymaster',
+                        paymasterUrl: `${process.env.NEXT_PUBLIC_APP_URL}/api/paymaster`,
                       });
 
                       console.log('✅ Set HAT IDs successful:', result);
@@ -4783,7 +4783,7 @@ export const HatsModulePodCreationForm: React.FC<
                         evmSmartAccount: currentUser.evmSmartAccounts[0] as `0x${string}`,
                         network: 'base',
                         calls,
-                        paymasterUrl: '/api/paymaster',
+                        paymasterUrl: `${process.env.NEXT_PUBLIC_APP_URL}/api/paymaster`,
                       });
 
                       console.log('✅ Admin HAT Creation successful:', result);
@@ -4892,7 +4892,7 @@ export const HatsModulePodCreationForm: React.FC<
                         evmSmartAccount: currentUser.evmSmartAccounts[0] as `0x${string}`,
                         network: 'base',
                         calls,
-                        paymasterUrl: '/api/paymaster',
+                        paymasterUrl: `${process.env.NEXT_PUBLIC_APP_URL}/api/paymaster`,
                       });
 
                       console.log('✅ Mint Admin HAT successful:', result);
@@ -5000,7 +5000,7 @@ export const HatsModulePodCreationForm: React.FC<
                         evmSmartAccount: currentUser.evmSmartAccounts[0] as `0x${string}`,
                         network: 'base',
                         calls,
-                        paymasterUrl: '/api/paymaster',
+                        paymasterUrl: `${process.env.NEXT_PUBLIC_APP_URL}/api/paymaster`,
                       });
 
                       console.log('✅ Configure Proxy successful:', result);
@@ -5117,7 +5117,7 @@ export const HatsModulePodCreationForm: React.FC<
                         evmSmartAccount: currentUser.evmSmartAccounts[0] as `0x${string}`,
                         network: 'base',
                         calls,
-                        paymasterUrl: '/api/paymaster',
+                        paymasterUrl: `${process.env.NEXT_PUBLIC_APP_URL}/api/paymaster`,
                       });
 
                       console.log('✅ Set Eligibility Admin successful:', result);
