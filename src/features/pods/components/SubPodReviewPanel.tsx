@@ -132,6 +132,8 @@ export function SubPodReviewPanel({ podId, podName, canManage }: SubPodReviewPan
       if (!authRes.ok) throw new Error(authJson.error || 'Authorization failed');
 
       // Step 2: execute gasless via CDP smart wallet
+      // Use our proxy paymaster so per-pod manager contracts (not on Coinbase's
+      // static whitelist) are also sponsored.
       const result = await sendUserOperation({
         evmSmartAccount: currentUser.evmSmartAccounts[0],
         network: 'base',
@@ -140,7 +142,7 @@ export function SubPodReviewPanel({ podId, podName, canManage }: SubPodReviewPan
           value: 0n,
           data: authJson.callData,
         }],
-        useCdpPaymaster: true,
+        paymasterUrl: '/api/paymaster',
       });
 
       // Step 3: record DB update
