@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import { useProfiles } from '@/features/identity/hooks/useProfiles';
+import { useSendUserOperation, useCurrentUser } from '@coinbase/cdp-hooks';
 
 function ProfileChip({
   address,
@@ -69,6 +70,8 @@ export function ExecPodReviewPanel() {
   const { toast } = useToast();
   const toastRef = useRef(toast);
   useEffect(() => { toastRef.current = toast; }, [toast]);
+  const { sendUserOperation } = useSendUserOperation();
+  const { currentUser } = useCurrentUser();
 
   // Collect all addresses that need profile lookups (proposer + all leads)
   const allAddresses = useMemo(() => {
@@ -112,7 +115,9 @@ export function ExecPodReviewPanel() {
       const token = session?.access_token;
       if (!token) throw new Error('Not authenticated');
 
-      // Step 1: authorize + execute on-chain server-side (admin EOA owns all managers)
+      // Step 1: authorize — server verifies hat, then either executes server-side
+      // (per-pod managers, admin is owner) or returns calldata for client execution
+      // (community manager, whitelisted with Coinbase paymaster).
       const authRes = await fetch('/api/pods/review', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
@@ -126,7 +131,27 @@ export function ExecPodReviewPanel() {
       const authJson = await authRes.json();
       if (!authRes.ok) throw new Error(authJson.error || 'Action failed');
 
-      // Step 2: record DB update (on-chain tx already landed, hash returned by server)
+      let txHash = authJson.txHash;
+
+      // Step 2: if community manager, client executes via gasless CDP wallet
+      if (authJson.executeOnClient) {
+        if (!currentUser?.evmSmartAccounts?.[0]) {
+          throw new Error('Smart wallet not available');
+        }
+        const result = await sendUserOperation({
+          evmSmartAccount: currentUser.evmSmartAccounts[0],
+          network: 'base',
+          calls: [{
+            to: authJson.contractAddress,
+            value: 0n,
+            data: authJson.callData,
+          }],
+          useCdpPaymaster: true,
+        });
+        txHash = (result as any).userOpHash || (result as any).transactionHash;
+      }
+
+      // Step 3: record DB update
       const dbRes = await fetch('/api/pods/review', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
@@ -134,7 +159,7 @@ export function ExecPodReviewPanel() {
           podId,
           action: 'dbUpdate',
           pendingAction: action,
-          txHash: authJson.txHash,
+          txHash,
         }),
       });
       const dbJson = await dbRes.json();

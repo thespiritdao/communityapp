@@ -158,11 +158,12 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // ── Phase 1: execute ────────────────────────────────────────────────────
-    // Verify the caller wears the required hat on-chain, then execute the
-    // activate/veto call server-side using the admin EOA (owner of all pod
-    // managers). This avoids the client needing to call unwhitelisted per-pod
-    // manager contracts via the CDP paymaster.
+    // ── Phase 1: authorize ──────────────────────────────────────────────────
+    // Verify the caller wears the required hat on-chain, then either:
+    //   a) Execute on-chain server-side using admin EOA — for sub-pods whose
+    //      per-pod manager is owned by the admin wallet (not on Coinbase whitelist)
+    //   b) Return encoded calldata for the client to execute — for community-level
+    //      pods whose manager IS whitelisted with Coinbase paymaster
     if (action === 'authorize') {
       const { pendingAction, reason } = body;
       if (!pendingAction || !['activate', 'veto'].includes(pendingAction)) {
@@ -215,8 +216,28 @@ export async function POST(req: NextRequest) {
         );
       }
 
-      // Execute on-chain using admin EOA — admin is owner of all pod managers,
-      // satisfying onlyExec (owner() branch). No client gas required.
+      const COMMUNITY_MANAGER = (process.env.NEXT_PUBLIC_POD_CREATION_MANAGER || '').toLowerCase();
+      const isCommunityManager = managerAddress.toLowerCase() === COMMUNITY_MANAGER;
+
+      if (isCommunityManager) {
+        // Community manager is whitelisted — return calldata for the client's
+        // CDP smart wallet to execute (gasless via Coinbase paymaster).
+        const callData =
+          pendingAction === 'activate'
+            ? encodeFunctionData({ abi: POD_MANAGER_ABI, functionName: 'activatePod', args: [pod.blockchain_pod_id] })
+            : encodeFunctionData({ abi: POD_MANAGER_ABI, functionName: 'vetoPod', args: [pod.blockchain_pod_id, reason || 'Vetoed'] });
+
+        return NextResponse.json({
+          authorized: true,
+          executeOnClient: true,
+          contractAddress: managerAddress,
+          callData,
+          blockchainPodId: pod.blockchain_pod_id,
+        });
+      }
+
+      // Per-pod manager: admin EOA is owner(), satisfying onlyExec.
+      // Execute server-side — no client gas or paymaster needed.
       const ADMIN_KEY = process.env.POD_ADMIN_PRIVATE_KEY as `0x${string}`;
       if (!ADMIN_KEY) {
         return NextResponse.json({ error: 'Admin key not configured' }, { status: 500 });
@@ -245,11 +266,11 @@ export async function POST(req: NextRequest) {
         txHash = await walletClient.writeContract(request);
       }
 
-      // Wait for confirmation so DB update (dbUpdate action) can trust it landed
       await publicClient.waitForTransactionReceipt({ hash: txHash as `0x${string}` });
 
       return NextResponse.json({
         authorized: true,
+        executeOnClient: false,
         txHash,
         contractAddress: managerAddress,
         blockchainPodId: pod.blockchain_pod_id,
