@@ -784,20 +784,25 @@ export const HatsModulePodCreationForm: React.FC<
         validParentHatId = 'TOP_LEVEL';
       }
 
-      // Upload image early so the Supabase URL is ready for both the on-chain call and DB record
+      // Generate unique pod ID early so the image can be uploaded to its final path
+      const podId = `pod-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+      setBlockchainPodId(podId);
+      console.log('📝 Stored blockchain pod ID for factory:', podId);
+
+      // Upload image directly to final path — no temp/rename needed
       if (formData.podImage && !preUploadedImageUrlRef.current) {
         try {
           const { data: { session } } = await supabase.auth.getSession();
           if (session) {
             const fileExt = formData.podImage.name.split('.').pop();
-            const tempPath = `temp-${Date.now()}/banner.${fileExt}`;
+            const finalPath = `${podId}/banner.${fileExt}`;
             const { error: uploadError } = await supabase.storage
               .from('pod-images')
-              .upload(tempPath, formData.podImage, { cacheControl: '3600', upsert: true });
+              .upload(finalPath, formData.podImage, { cacheControl: '3600', upsert: true });
             if (!uploadError) {
-              const { data: { publicUrl } } = supabase.storage.from('pod-images').getPublicUrl(tempPath);
+              const { data: { publicUrl } } = supabase.storage.from('pod-images').getPublicUrl(finalPath);
               preUploadedImageUrlRef.current = publicUrl;
-              console.log('✅ Pre-uploaded pod image:', publicUrl);
+              console.log('✅ Pre-uploaded pod image to final path:', publicUrl);
             }
           }
         } catch (imgErr) {
@@ -870,12 +875,7 @@ export const HatsModulePodCreationForm: React.FC<
         );
       }
 
-      // Generate unique pod ID
-      const podId = `pod-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-
-      // Store blockchain podId for later phases
-      setBlockchainPodId(podId);
-      console.log('📝 Stored blockchain pod ID for factory:', podId);
+      // podId already generated above (before image upload)
 
       // 🔮 PREDICT PROXY ADDRESS using CREATE2
       console.log('🔮 Predicting proxy address with CREATE2...');
@@ -1734,42 +1734,6 @@ export const HatsModulePodCreationForm: React.FC<
               .eq('id', podData.podId);
           }
 
-          // ✅ RENAME IMAGE FILE: Now that we have the real pod ID, move the image file
-          if (
-            formData.podImage &&
-            podData?.podId &&
-            podImageUrl.includes('temp-')
-          ) {
-            try {
-              console.log('🔄 Renaming image file with real pod ID...');
-              const tempPath = podImageUrl.split('/pod-images/')[1];
-              const fileExt = formData.podImage.name.split('.').pop();
-              const newPath = `${podData.podId}/banner.${fileExt}`;
-
-              // Copy to new location
-              const { error: moveError } = await supabase.storage
-                .from('pod-images')
-                .move(tempPath, newPath);
-
-              if (!moveError) {
-                // Get new public URL
-                const {
-                  data: { publicUrl: newPublicUrl },
-                } = supabase.storage.from('pod-images').getPublicUrl(newPath);
-
-                // Update pod with correct image URL
-                await supabase
-                  .from('pods')
-                  .update({ pod_image_url: newPublicUrl })
-                  .eq('id', podData.podId);
-
-                console.log('✅ Image file renamed and URL updated');
-              }
-            } catch (error) {
-              console.error('⚠️ Failed to rename image file:', error);
-              // Not critical, image still works
-            }
-          }
         }
 
         // ✅ FIX #3: ALWAYS create leader role immediately after pod creation
