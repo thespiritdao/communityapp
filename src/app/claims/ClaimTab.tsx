@@ -54,8 +54,8 @@ const TOKEN_CLAIM_ABI = [
 type Step = 'idle' | 'requesting' | 'approving' | 'burning' | 'confirming' | 'done' | 'error';
 
 export default function ClaimTab() {
-  const { address: walletAddress, isInitializing } = useCDPStatus();
-  const isConnected = !!walletAddress && !isInitializing;
+  const { address: walletAddress } = useCDPStatus();
+  const isConnected = !!walletAddress;
   const { data: walletClient } = useWalletClient();
   const publicClient = usePublicClient();
 
@@ -395,7 +395,7 @@ export default function ClaimTab() {
         <ol style={{ color: '#6B7280', marginLeft: '20px', lineHeight: '1.8' }}>
           <li>Your $SYSTEM tokens are approved and burned on-chain (permanent)</li>
           <li>Executive Pod receives your payout request</li>
-          <li>Pod reviews and approves (2-of-3 multi-sig)</li>
+          <li>Pod reviews and approves</li>
           <li>Fiat disbursement initiated via ACH / wire</li>
           <li>You receive funds at your verified account</li>
         </ol>
