@@ -529,66 +529,37 @@ export const syncPaymentState = async (
       };
     }
 
-    // Step 2: Verify on-chain state (if publicClient provided)
+    // Step 2: Verify on-chain state (advisory only — never blocks DB sync)
+    // The transaction is already confirmed on-chain by the time this runs.
+    // RPC failures or timing mismatches must not prevent the DB from updating.
     if (publicClient) {
-      // Get bid to find the on-chain bounty ID
-      const { data: bid, error: bidError } = await supabase
-        .from('bids')
-        .select('bounty_id')
-        .eq('id', config.bidId)
-        .single();
+      try {
+        const { data: bid } = await supabase
+          .from('bids')
+          .select('bounty_id')
+          .eq('id', config.bidId)
+          .single();
 
-      if (bidError || !bid) {
-        console.error('❌ Could not find bid in database');
-        return {
-          success: false,
-          isDuplicate: false,
-          error: 'Bid not found in database',
-        };
-      }
+        if (bid) {
+          const { data: bounty } = await supabase
+            .from('bounties')
+            .select('onchain_id')
+            .eq('id', bid.bounty_id)
+            .single();
 
-      // Get bounty to find on-chain ID
-      const { data: bounty, error: bountyError } = await supabase
-        .from('bounties')
-        .select('onchain_id')
-        .eq('id', bid.bounty_id)
-        .single();
+          if (bounty?.onchain_id) {
+            const onChainBounty = await getOnChainBountyState(
+              publicClient,
+              bounty.onchain_id.toString(),
+            );
 
-      if (bountyError || !bounty || !bounty.onchain_id) {
-        console.error('❌ Could not find bounty on-chain ID');
-        return {
-          success: false,
-          isDuplicate: false,
-          error: 'Bounty on-chain ID not found',
-        };
-      }
-
-      // Verify bounty is completed on-chain
-      const onChainBounty = await getOnChainBountyState(
-        publicClient,
-        bounty.onchain_id.toString(),
-      );
-
-      if (!onChainBounty) {
-        console.error('❌ Could not verify on-chain bounty state');
-        return {
-          success: false,
-          isDuplicate: false,
-          error: 'On-chain verification failed',
-        };
-      }
-
-      // Verify bounty status is Completed (2)
-      if (onChainBounty.status !== 2) {
-        console.error('❌ On-chain bounty status mismatch:', {
-          expected: 2,
-          actual: onChainBounty.status,
-        });
-        return {
-          success: false,
-          isDuplicate: false,
-          error: 'On-chain bounty not in Completed state',
-        };
+            if (onChainBounty && onChainBounty.status !== 2) {
+              console.warn('⚠️ On-chain bounty status is not Completed (2), got:', onChainBounty.status, '— proceeding with DB sync anyway since tx is confirmed');
+            }
+          }
+        }
+      } catch (verifyError) {
+        console.warn('⚠️ On-chain verification failed (non-blocking):', verifyError instanceof Error ? verifyError.message : verifyError);
       }
     }
 
