@@ -14,6 +14,7 @@ export async function GET(request: NextRequest) {
     let query = supabase
       .from('bounties')
       .select('*')
+      .not('status', 'in', '("completed","cancelled")')
       .order('created_at', { ascending: false });
 
     // Filter by pod if specified
