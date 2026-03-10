@@ -1,21 +1,18 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/utils/supabaseAdminClient';
 
-const COMMUNITY_POD_ID = process.env.NEXT_PUBLIC_COMMUNITY_POD_ID?.replace(/^C/, '').toLowerCase();
-const EXEC_POD_ID = process.env.NEXT_PUBLIC_GOVERNANCE_POD_ID;
+// Pod UUIDs sourced from pod_role_permissions / pods table — same as hatRegistry.ts.
+// Do NOT use env vars for pod identity.
+const COMMUNITY_POD_ID = '86d2d359-2e38-4267-b7b7-c7f6155063e2';
+const EXEC_POD_ID = 'e35c9e25-d29f-4988-b1e8-2902e960b94c';
 
 /**
- * Resolve the wallet addresses of pod leaders who should be notified
- * about a new pod application.
- *
- * For top-level pods (parent is community pod or null): notify exec pod leaders.
- * For sub-pods (parent is a real pod): notify that parent pod's leaders.
+ * Resolve the wallet addresses of the leaders for a given pod.
  *
  * Strategy 1: active_pod_members WHERE pod_id = X AND membership_type IN ('leader','admin')
  * Strategy 2: pods.pod_leads fallback
  */
 async function resolveLeaders(podId: string): Promise<string[]> {
-  // Strategy 1: active_pod_members
   try {
     const { data, error } = await supabaseAdmin
       .from('active_pod_members')
@@ -30,7 +27,6 @@ async function resolveLeaders(podId: string): Promise<string[]> {
     // fall through to strategy 2
   }
 
-  // Strategy 2: pods.pod_leads
   const { data: pod } = await supabaseAdmin
     .from('pods')
     .select('pod_leads')
@@ -38,12 +34,22 @@ async function resolveLeaders(podId: string): Promise<string[]> {
     .single();
 
   if (pod?.pod_leads?.length) {
-    return (pod.pod_leads as string[]).map((w) => w.toLowerCase());
+    return (pod.pod_leads as string[]).map((w: string) => w.toLowerCase());
   }
 
   return [];
 }
 
+/**
+ * POST /api/pods/notify-leaders
+ *
+ * Notifies the appropriate pod leaders when a new pod application is submitted.
+ *
+ * - Top-level pod (parent is null or community pod): notify exec pod leaders
+ * - Sub-pod (parent is any other pod): notify that parent pod's leaders
+ *
+ * Body: { podId, podName, creatorAddress, parentPodId }
+ */
 export async function POST(req: NextRequest) {
   try {
     const { podId, podName, creatorAddress, parentPodId } = await req.json();
@@ -52,13 +58,11 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
-    // Determine which pod's leaders to notify
-    const parentIsTopLevel =
+    const isTopLevel =
       !parentPodId ||
-      parentPodId.toLowerCase() === COMMUNITY_POD_ID ||
-      parentPodId === process.env.NEXT_PUBLIC_COMMUNITY_POD_ID;
+      parentPodId === COMMUNITY_POD_ID;
 
-    const notifyPodId = parentIsTopLevel ? EXEC_POD_ID! : parentPodId;
+    const notifyPodId = isTopLevel ? EXEC_POD_ID : parentPodId;
 
     const leaders = await resolveLeaders(notifyPodId);
 
@@ -69,17 +73,13 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: true, notified: 0 });
     }
 
-    const contextUrl = `/pods/review`;
-    const title = 'New Pod Application';
-    const message = `A new pod "${podName}" has been submitted for review and requires approval.`;
-
     const rows = recipients.map((wallet) => ({
       recipient_address: wallet,
       sender_address: creator,
       notification_type: 'pod_approval_request',
-      title,
-      message,
-      context_url: contextUrl,
+      title: 'New Pod Application',
+      message: `A new pod "${podName}" has been submitted for review and requires approval.`,
+      context_url: '/pods/review',
       context_type: 'pod',
       context_id: podId,
     }));
