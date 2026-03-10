@@ -1,10 +1,22 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/utils/supabaseAdminClient';
 
-// Pod UUIDs sourced from pod_role_permissions / pods table — same as hatRegistry.ts.
-// Do NOT use env vars for pod identity.
-const COMMUNITY_POD_ID = '86d2d359-2e38-4267-b7b7-c7f6155063e2';
-const EXEC_POD_ID = 'e35c9e25-d29f-4988-b1e8-2902e960b94c';
+/**
+ * Resolve the pod_id for a named role by querying pod_role_permissions.
+ * This is the single source of truth — no hardcoded UUIDs or env vars.
+ */
+async function getPodIdByRole(roleName: string): Promise<string | null> {
+  const { data, error } = await supabaseAdmin
+    .from('pod_role_permissions')
+    .select('pod_id')
+    .ilike('role_name', roleName)
+    .eq('is_active', true)
+    .limit(1)
+    .single();
+
+  if (error || !data) return null;
+  return data.pod_id;
+}
 
 /**
  * Resolve the wallet addresses of the leaders for a given pod.
@@ -44,6 +56,7 @@ async function resolveLeaders(podId: string): Promise<string[]> {
  * POST /api/pods/notify-leaders
  *
  * Notifies the appropriate pod leaders when a new pod application is submitted.
+ * Pod identity is resolved from pod_role_permissions by role name — no hardcoded UUIDs.
  *
  * - Top-level pod (parent is null or community pod): notify exec pod leaders
  * - Sub-pod (parent is any other pod): notify that parent pod's leaders
@@ -58,11 +71,27 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
+    // Resolve community pod UUID dynamically — stable role name, not UUID
+    const communityPodId = await getPodIdByRole('Community Pod Member');
+
     const isTopLevel =
       !parentPodId ||
-      parentPodId === COMMUNITY_POD_ID;
+      (communityPodId && parentPodId === communityPodId);
 
-    const notifyPodId = isTopLevel ? EXEC_POD_ID : parentPodId;
+    let notifyPodId: string | null;
+
+    if (isTopLevel) {
+      // Top-level: notify exec pod leaders
+      notifyPodId = await getPodIdByRole('Executive Pod Leader');
+    } else {
+      // Sub-pod: notify the parent pod's leaders directly
+      notifyPodId = parentPodId;
+    }
+
+    if (!notifyPodId) {
+      console.error('notify-leaders: could not resolve target pod ID');
+      return NextResponse.json({ error: 'Could not resolve notify target pod' }, { status: 500 });
+    }
 
     const leaders = await resolveLeaders(notifyPodId);
 
