@@ -21,8 +21,8 @@ const NAV_ITEMS: Item[] = [
     icon: <Home size={36} />,
   },
   {
-    href: '/faucet',
-    label: 'Donate',
+    href: '/claims',
+    label: 'Claims',
     match: 'startsWith',
     icon: <HeartHandshake size={36} />,
   },
