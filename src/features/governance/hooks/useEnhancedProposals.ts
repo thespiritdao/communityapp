@@ -10,6 +10,7 @@ import {
 } from '@/features/pods/utils/podLeaderHats';
 import { useHatPermissions } from '@/hooks/useHatPermissions';
 import { useGovernancePermission } from '@/hooks/useGovernancePermission';
+import { CONTRACT_ADDRESSES } from '@/config/contracts';
 
 export interface EnhancedProposal {
   id: string;
@@ -39,6 +40,8 @@ export interface EnhancedProposal {
   approving_pod_id?: string; // Specific pod for pod-level, Executive Pod for DAO-wide, Parent Pod for pod-creation
   governance_context?: 'dao-wide' | 'pod-level' | 'pod-creation';
   governance_tier?: 'DAO_CONSTITUTIONAL' | 'POD_TREASURY_BINDING' | 'POD_OPERATIONAL';
+  // ✅ Advocate token gating: DAO_CONSTITUTIONAL proposals require Advocate ERC-721
+  is_advocate_gated?: boolean;
 }
 
 // Minimal HATS ABI for checking balances
@@ -83,15 +86,65 @@ export const useEnhancedProposals = () => {
 
       const allProposals: EnhancedProposal[] = [];
 
-      // 1. Add on-chain governance proposals (DAO-wide, open to ALL members)
-      // Note: We'll filter these later to remove duplicates after loading pod-level proposals
-      const execPodId = process.env.NEXT_PUBLIC_GOVERNANCE_POD_ID;
+      // 1. Add on-chain governance proposals
+      // Routing is determined by token_id in proposal_metadata:
+      //   'dao-wide' (or missing) → DAO_CONSTITUTIONAL, any Advocate ERC-721 holder can vote
+      //   <pod-uuid>              → POD_TREASURY_BINDING, only that pod's members can vote
+      const ADVOCATE_TOKEN = CONTRACT_ADDRESSES.ADVOCATE_TOKEN;
       const onChainProposalsToAdd: EnhancedProposal[] = [];
 
+      // Check if user holds Advocate token (single call, reused for all DAO-wide proposals)
+      let userHasAdvocate = false;
+      if (address && ADVOCATE_TOKEN && publicClient) {
+        try {
+          const ERC721_BALANCE_ABI = [{
+            name: 'balanceOf',
+            type: 'function',
+            inputs: [{ name: 'owner', type: 'address' }],
+            outputs: [{ name: '', type: 'uint256' }],
+            stateMutability: 'view',
+          }] as const;
+          const balance = await publicClient.readContract({
+            address: ADVOCATE_TOKEN,
+            abi: ERC721_BALANCE_ABI,
+            functionName: 'balanceOf',
+            args: [address as `0x${string}`],
+          });
+          userHasAdvocate = BigInt(balance as bigint) > 0n;
+        } catch {
+          // RPC failure — default to false, user won't see vote buttons
+        }
+      }
+
       for (const proposal of onChainProposals) {
-        // Use metadata.created_at if available (for pending proposals), otherwise use current time
         const createdAt = proposal.metadata?.created_at || new Date().toISOString();
         const proposalStatus = proposal.isPending ? 'proposed' : undefined;
+        const tokenId = proposal.metadata?.token_id as string | undefined;
+
+        // Determine governance scope from token_id
+        const isDaoWide = !tokenId || tokenId === 'dao-wide';
+        const podUuid = isDaoWide ? undefined : tokenId;
+
+        // Determine if user can vote
+        let userCanVote: boolean;
+        let approvingPodId: string | undefined;
+        let governanceContext: 'dao-wide' | 'pod-level';
+        let governanceTier: 'DAO_CONSTITUTIONAL' | 'POD_TREASURY_BINDING';
+
+        if (isDaoWide) {
+          // DAO_CONSTITUTIONAL: any Advocate holder votes
+          userCanVote = userHasAdvocate;
+          approvingPodId = undefined;
+          governanceContext = 'dao-wide';
+          governanceTier = 'DAO_CONSTITUTIONAL';
+        } else {
+          // POD_TREASURY_BINDING: only pod members vote
+          const podRole = userRoles.find(role => role.podId === podUuid);
+          userCanVote = podRole?.permissions?.governanceParticipation === true;
+          approvingPodId = podUuid;
+          governanceContext = 'pod-level';
+          governanceTier = 'POD_TREASURY_BINDING';
+        }
 
         onChainProposalsToAdd.push({
           id: proposal.id,
@@ -103,12 +156,16 @@ export const useEnhancedProposals = () => {
           choices: proposal.choices,
           scores: proposal.scores,
           state: proposal.state,
-          status: proposalStatus, // Mark pending proposals with status
+          status: proposalStatus,
           created_at: createdAt,
-          user_can_vote: true, // ✅ DAO-wide proposals: ALL members can vote
+          created_by: proposal.metadata?.proposer_address,
+          user_can_vote: userCanVote,
           user_vote: null,
-          approving_pod_id: execPodId,
-          governance_context: 'dao-wide',
+          approving_pod_id: approvingPodId,
+          governance_context: governanceContext,
+          governance_tier: governanceTier,
+          is_advocate_gated: isDaoWide,
+          pod_id: podUuid,
         });
       }
 

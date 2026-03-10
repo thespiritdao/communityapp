@@ -431,12 +431,15 @@ export default function GovernancePage() {
                                 key={`${proposal.id}-${idx}`}
                                 proposalId={proposal.id}
                                 choice={idx + 1}
+                                approvingPodId={proposal.approving_pod_id}
                                 onVoteSuccess={refetchProposals}
                                 voteCounts={{
                                   for: proposal.scores?.[0] || 0,
                                   against: proposal.scores?.[1] || 0,
                                   abstain: proposal.scores?.[2] || 0,
                                 }}
+                                isAdvocateGated={(proposal as any).is_advocate_gated}
+                                userCanVote={proposal.user_can_vote}
                               />
                             ) : (
                               <EnhancedVoteButton

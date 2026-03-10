@@ -19,6 +19,8 @@ interface VoteButtonProps {
   onVoteSuccess?: () => void; // Callback to refetch proposals after voting
   hasVoted?: boolean; // Optional: pass from parent to avoid duplicate RPC calls
   voteCounts?: { for: number; against: number; abstain: number }; // Optional: trigger re-check when counts change
+  isAdvocateGated?: boolean; // DAO_CONSTITUTIONAL: any Advocate ERC-721 holder can vote
+  userCanVote?: boolean; // Pre-computed from useEnhancedProposals — skip local permission check
 }
 
 const BASE_CHAIN_ID = 8453;
@@ -30,6 +32,8 @@ const VoteButton: React.FC<VoteButtonProps> = ({
   onVoteSuccess,
   hasVoted: hasVotedProp,
   voteCounts,
+  isAdvocateGated,
+  userCanVote,
 }) => {
   const { currentUser } = useCurrentUser();
   const { sendUserOperation } = useSendUserOperation();
@@ -45,12 +49,16 @@ const VoteButton: React.FC<VoteButtonProps> = ({
   // Get address from CDP Smart Account
   const address = currentUser?.evmSmartAccounts?.[0] as `0x${string}` | undefined;
 
-  // ✅ ARCHITECTURE FIX: Check governance permission for correct pod
-  // On-chain governance proposals typically require Executive Pod permission
-  const { canParticipate: hasGovernancePermission } = useGovernancePermission(
-    approvingPodId,
+  // Permission check:
+  // - If userCanVote is explicitly passed (from useEnhancedProposals), use it directly.
+  //   This covers both Advocate-gated (DAO_CONSTITUTIONAL) and pod-scoped (POD_TREASURY_BINDING).
+  // - Otherwise fall back to useGovernancePermission (legacy path).
+  const { canParticipate: legacyPermission } = useGovernancePermission(
+    // Skip pod check when advocate-gated or when parent already resolved it
+    (isAdvocateGated || userCanVote !== undefined) ? null : approvingPodId,
     'dao-wide',
   );
+  const hasGovernancePermission = userCanVote !== undefined ? userCanVote : legacyPermission;
 
   // Use prop if provided, otherwise check via RPC
   const hasVoted = hasVotedProp !== undefined ? hasVotedProp : hasVotedState;
