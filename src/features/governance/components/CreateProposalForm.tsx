@@ -1460,36 +1460,9 @@ export function CreateProposalForm({
               console.log('✅ Proposal metadata created with temporary ID:', tempProposalId);
             }
 
-            // ✅ Save to pod_level_proposals ONLY if user selected a specific pod (not "dao-wide")
-            const isDAOWide = proposalTokenId === 'dao-wide';
-            const isPodLevelProp = proposalTokenId && !isDAOWide;
-
-            if (isPodLevelProp) {
-              console.log('🏛️ [POD_TREASURY_BINDING] Saving to pod_level_proposals table (pod-specific governance)');
-
-              try {
-                await GovernanceService.createPodLevelProposal({
-                  title: proposalTitle,
-                  description: proposalBody,
-                  pod_id: proposalTokenId,
-                  created_by: address!,
-                  governance_tier: proposalGovernanceTier as 'POD_TREASURY_BINDING',
-                  metadata: {
-                    forum_thread_id: proposalForumThreadId,
-                    choices: ['For', 'Against', 'Abstain'],
-                  },
-                  onchain_proposal_id: tempProposalId, // Link to on-chain proposal
-                  transaction_hash: txHash,
-                });
-
-                console.log('✅ Pod-level proposal entry created');
-              } catch (podError) {
-                console.error('❌ Error creating pod-level proposal entry:', podError);
-                // Don't fail the whole process - proposal is still on-chain
-              }
-            } else if (isDAOWide) {
-              console.log('🌍 [DAO-WIDE] Proposal created for all SpiritDAO members - no pod_level entry needed');
-            }
+            // On-chain proposals (DAO_CONSTITUTIONAL / POD_TREASURY_BINDING) are tracked
+            // exclusively via proposal_metadata. Writing to pod_level_proposals here would
+            // cause the proposal to appear twice in the governance list.
           }
 
           setSubmissionStatus('⏳ Waiting for blockchain confirmation (this may take 30-60 seconds)...');

@@ -248,11 +248,18 @@ export const useEnhancedProposals = () => {
         })));
 
         // ✅ DEDUPLICATION: Collect onchain_proposal_ids from pod-level proposals
-        // so we can filter them out from the on-chain list later
+        // so we can filter them out from the on-chain list later.
+        // Also collect transaction_hashes to catch rows whose onchain_proposal_id
+        // was never updated from the temp_ value after on-chain confirmation.
         const podLevelOnchainIds = new Set(
           activeProposals
             .map(p => p.onchain_proposal_id)
             .filter(id => id && !id.startsWith('temp_')) // Exclude temporary IDs
+        );
+        const podLevelTxHashes = new Set(
+          activeProposals
+            .map(p => p.transaction_hash)
+            .filter(Boolean)
         );
 
         console.log(`🔍 [DEDUP] Pod-level onchain IDs to filter:`, Array.from(podLevelOnchainIds));
@@ -317,9 +324,15 @@ export const useEnhancedProposals = () => {
 
         console.log(`✅ Loaded ${activeProposals.length} active pod-level proposals (${podLevelProposals.length} total, ${podLevelProposals.length - activeProposals.length} expired)`);
 
-        // ✅ DEDUPLICATION: Now filter out on-chain proposals that are already in pod-level
+        // ✅ DEDUPLICATION: Now filter out on-chain proposals that are already in pod-level.
+        // Match on onchain_proposal_id first; fall back to transaction_hash for rows where
+        // the temp_ ID was never resolved (legacy data from the dual-write era).
         const filteredOnChainProposals = onChainProposalsToAdd.filter(proposal => {
-          const isDuplicate = podLevelOnchainIds.has(proposal.id);
+          const idMatch = podLevelOnchainIds.has(proposal.id);
+          const txMatch = proposal.metadata?.transaction_hash
+            ? podLevelTxHashes.has(proposal.metadata.transaction_hash)
+            : false;
+          const isDuplicate = idMatch || txMatch;
           if (isDuplicate) {
             console.log(`🔍 [DEDUP] Filtered out duplicate on-chain proposal: ${proposal.title} (ID: ${proposal.id})`);
           }

@@ -62,6 +62,7 @@ export class GovernanceService {
         timestamp: vote.timestamp,
         hat_id: vote.hat_id,
         signature: vote.signature,
+        pod_id: (vote as any).pod_id ?? null,
       };
 
       // Use the EXISTING supabase client that already has the session

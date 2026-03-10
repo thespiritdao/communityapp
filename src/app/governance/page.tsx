@@ -276,11 +276,15 @@ export default function GovernancePage() {
                               variant={
                                 proposal.type === 'governance'
                                   ? 'default'
+                                  : proposal.type === 'pod_level'
+                                  ? 'outline'
                                   : 'secondary'
                               }
                             >
                               {proposal.type === 'governance'
                                 ? 'Governance'
+                                : proposal.type === 'pod_level'
+                                ? 'Pod Governance'
                                 : 'Pod Creation'}
                             </Badge>
                             {proposal.status && (
