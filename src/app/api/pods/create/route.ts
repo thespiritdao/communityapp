@@ -193,6 +193,19 @@ export async function POST(req: NextRequest) {
 
     console.log(`Pod create API: pod saved (${savedPod.id}), status: pending_review`);
 
+    // Fire-and-forget: notify relevant pod leaders of the new application
+    const notifyUrl = new URL('/api/pods/notify-leaders', req.url);
+    fetch(notifyUrl.toString(), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        podId: savedPod.id,
+        podName: name,
+        creatorAddress: callerAddress,
+        parentPodId: parentPodId || null,
+      }),
+    }).catch((e) => console.error('Pod create API: notify-leaders failed:', e));
+
     return NextResponse.json({
       success: true,
       managementHatId,

@@ -1734,6 +1734,20 @@ export const HatsModulePodCreationForm: React.FC<
               .eq('id', podData.podId);
           }
 
+          // Fire-and-forget: notify relevant pod leaders of the new application
+          if (podData?.podId) {
+            fetch('/api/pods/notify-leaders', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                podId: podData.podId,
+                podName: formData.name,
+                creatorAddress: address,
+                parentPodId: formData.parentPodId || null,
+              }),
+            }).catch((e) => console.error('notify-leaders fetch failed:', e));
+          }
+
         }
 
         // ✅ FIX #3: ALWAYS create leader role immediately after pod creation
