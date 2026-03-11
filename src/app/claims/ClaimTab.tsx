@@ -80,7 +80,9 @@ export default function ClaimTab() {
   };
 
   const handleSubmitClaim = async () => {
+    console.log('🔍 ClaimTab submit:', { walletAddress, walletClient: !!walletClient, publicClient: !!publicClient, contractsReady, TOKEN_CLAIM_ADDRESS, SYSTEM_TOKEN_ADDRESS });
     if (!walletAddress || !walletClient || !publicClient) {
+      console.error('Missing:', { walletAddress, walletClient, publicClient });
       toast.error('Please connect your wallet first');
       return;
     }
