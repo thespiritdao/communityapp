@@ -120,7 +120,9 @@ export default function ClaimTab() {
 
       const { payoutRef } = requestData;
 
-      // ── Step 2: Approve TOKEN_CLAIM_ADDRESS to spend $SYSTEM ───────────────
+      // ── Steps 2 + 3: Approve + burnForClaim in a single user operation ───────
+      // Batching into one op guarantees approve lands before burn (atomic sequencing)
+      // and avoids polling for an intermediate tx hash.
       setStep('approving');
       const approveData = encodeFunctionData({
         abi: ERC20_APPROVE_ABI,
@@ -128,39 +130,25 @@ export default function ClaimTab() {
         args: [TOKEN_CLAIM_ADDRESS!, amountWei],
       });
 
-      const approveResult = await sendUserOperation({
-        evmSmartAccount: smartAccount,
-        network: 'base',
-        calls: [{ to: SYSTEM_TOKEN_ADDRESS!, value: 0n, data: approveData }],
-        useCdpPaymaster: true,
-      });
-
-      console.log('✅ Approve op submitted:', approveResult.userOperationHash);
-
-      // Wait for approve to land before burning
-      if (publicClient) {
-        await publicClient.waitForTransactionReceipt({
-          hash: approveResult.transactionHash as `0x${string}`,
-        });
-      }
-
-      // ── Step 3: burnForClaim on-chain ──────────────────────────────────────
-      setStep('burning');
       const burnData = encodeFunctionData({
         abi: TOKEN_CLAIM_ABI,
         functionName: 'burnForClaim',
         args: [amountWei, payoutRef],
       });
 
+      setStep('burning');
       const burnResult = await sendUserOperation({
         evmSmartAccount: smartAccount,
         network: 'base',
-        calls: [{ to: TOKEN_CLAIM_ADDRESS!, value: 0n, data: burnData }],
+        calls: [
+          { to: SYSTEM_TOKEN_ADDRESS!, value: 0n, data: approveData },
+          { to: TOKEN_CLAIM_ADDRESS!, value: 0n, data: burnData },
+        ],
         useCdpPaymaster: true,
       });
 
       const txHash = burnResult.transactionHash || burnResult.userOperationHash;
-      console.log('✅ Burn op submitted:', txHash);
+      console.log('✅ Approve + burn op submitted:', txHash);
       setBurnTxHash(txHash);
 
       // ── Step 4: Confirm burn with server ───────────────────────────────────
