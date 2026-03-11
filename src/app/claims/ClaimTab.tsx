@@ -2,21 +2,22 @@
 
 import React, { useState } from 'react';
 import { toast } from 'react-hot-toast';
-import { useCDPStatus } from '@/hooks/useCDPStatus';
-import { useWalletClient, usePublicClient } from 'wagmi';
-import { parseUnits } from 'viem';
+import { useCurrentUser, useSendUserOperation } from '@coinbase/cdp-hooks';
+import { usePublicClient } from 'wagmi';
+import { parseUnits, encodeFunctionData } from 'viem';
 import { Info, Flame, CheckCircle, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 
 /**
  * ClaimTab — Burn $SYSTEM tokens to request a fiat payout.
  *
- * Full flow:
- * 1. User enters amount + payout email.
- * 2. POST /api/claims/request → receive payoutRef UUID.
- * 3. Approve TOKEN_CLAIM_ADDRESS to spend `amount` of $SYSTEM.
- * 4. Call TokenClaim.burnForClaim(amount, payoutRef) on-chain.
- * 5. POST /api/claims/confirm with burnTxHash → claim moves to awaiting_executive_approval.
+ * Uses CDP embedded wallet (sendUserOperation) — same pattern as the rest of the app.
+ *
+ * Flow:
+ * 1. POST /api/claims/request → get payoutRef UUID
+ * 2. sendUserOperation: approve TOKEN_CLAIM_ADDRESS to spend $SYSTEM
+ * 3. sendUserOperation: burnForClaim(amount, payoutRef)
+ * 4. POST /api/claims/confirm with burnTxHash
  */
 
 const TOKEN_CLAIM_ADDRESS = process.env
@@ -54,10 +55,13 @@ const TOKEN_CLAIM_ABI = [
 type Step = 'idle' | 'requesting' | 'approving' | 'burning' | 'confirming' | 'done' | 'error';
 
 export default function ClaimTab() {
-  const { address: walletAddress } = useCDPStatus();
-  const isConnected = !!walletAddress;
-  const { data: walletClient } = useWalletClient();
+  const { currentUser } = useCurrentUser();
+  const { sendUserOperation } = useSendUserOperation();
   const publicClient = usePublicClient();
+
+  const smartAccount = currentUser?.evmSmartAccounts?.[0];
+  const walletAddress = smartAccount as `0x${string}` | undefined;
+  const isConnected = !!walletAddress;
 
   const [claimAmount, setClaimAmount] = useState('');
   const [payoutEmail, setPayoutEmail] = useState('');
@@ -66,7 +70,6 @@ export default function ClaimTab() {
   const [burnTxHash, setBurnTxHash] = useState('');
 
   const isSubmitting = step !== 'idle' && step !== 'done' && step !== 'error';
-
   const contractsReady = !!TOKEN_CLAIM_ADDRESS && !!SYSTEM_TOKEN_ADDRESS;
 
   const stepLabel: Record<Step, string> = {
@@ -80,9 +83,7 @@ export default function ClaimTab() {
   };
 
   const handleSubmitClaim = async () => {
-    console.log('🔍 ClaimTab submit:', { walletAddress, walletClient: !!walletClient, publicClient: !!publicClient, contractsReady, TOKEN_CLAIM_ADDRESS, SYSTEM_TOKEN_ADDRESS });
-    if (!walletAddress || !walletClient || !publicClient) {
-      console.error('Missing:', { walletAddress, walletClient, publicClient });
+    if (!walletAddress || !smartAccount) {
       toast.error('Please connect your wallet first');
       return;
     }
@@ -106,7 +107,7 @@ export default function ClaimTab() {
     const amountWei = parseUnits(claimAmount, 18);
 
     try {
-      // ── Step 1: Create pending claim record, get payoutRef ─────────────────
+      // ── Step 1: Create pending claim record ────────────────────────────────
       setStep('requesting');
       const requestRes = await fetch('/api/claims/request', {
         method: 'POST',
@@ -121,33 +122,53 @@ export default function ClaimTab() {
 
       // ── Step 2: Approve TOKEN_CLAIM_ADDRESS to spend $SYSTEM ───────────────
       setStep('approving');
-      const approveHash = await walletClient.writeContract({
-        address: SYSTEM_TOKEN_ADDRESS!,
+      const approveData = encodeFunctionData({
         abi: ERC20_APPROVE_ABI,
         functionName: 'approve',
         args: [TOKEN_CLAIM_ADDRESS!, amountWei],
       });
 
-      await publicClient.waitForTransactionReceipt({ hash: approveHash });
+      const approveResult = await sendUserOperation({
+        evmSmartAccount: smartAccount,
+        network: 'base',
+        calls: [{ to: SYSTEM_TOKEN_ADDRESS!, value: 0n, data: approveData }],
+        useCdpPaymaster: true,
+      });
 
-      // ── Step 3: Call burnForClaim on-chain ─────────────────────────────────
+      console.log('✅ Approve op submitted:', approveResult.userOperationHash);
+
+      // Wait for approve to land before burning
+      if (publicClient) {
+        await publicClient.waitForTransactionReceipt({
+          hash: approveResult.transactionHash as `0x${string}`,
+        });
+      }
+
+      // ── Step 3: burnForClaim on-chain ──────────────────────────────────────
       setStep('burning');
-      const burnHash = await walletClient.writeContract({
-        address: TOKEN_CLAIM_ADDRESS!,
+      const burnData = encodeFunctionData({
         abi: TOKEN_CLAIM_ABI,
         functionName: 'burnForClaim',
         args: [amountWei, payoutRef],
       });
 
-      await publicClient.waitForTransactionReceipt({ hash: burnHash });
-      setBurnTxHash(burnHash);
+      const burnResult = await sendUserOperation({
+        evmSmartAccount: smartAccount,
+        network: 'base',
+        calls: [{ to: TOKEN_CLAIM_ADDRESS!, value: 0n, data: burnData }],
+        useCdpPaymaster: true,
+      });
+
+      const txHash = burnResult.transactionHash || burnResult.userOperationHash;
+      console.log('✅ Burn op submitted:', txHash);
+      setBurnTxHash(txHash);
 
       // ── Step 4: Confirm burn with server ───────────────────────────────────
       setStep('confirming');
       const confirmRes = await fetch('/api/claims/confirm', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ payoutRef, burnTxHash: burnHash, walletAddress }),
+        body: JSON.stringify({ payoutRef, burnTxHash: txHash, walletAddress }),
       });
 
       const confirmData = await confirmRes.json();
