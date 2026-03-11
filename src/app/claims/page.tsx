@@ -12,7 +12,10 @@ export default function DonateClaimPage() {
     <div
       style={{
         minHeight: '100vh',
-        background: '#F5F4ED',
+        backgroundImage: 'url(/images/chatbg.png)',
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundAttachment: 'fixed',
         paddingBottom: 'var(--bottom-nav-height, 80px)',
       }}
     >

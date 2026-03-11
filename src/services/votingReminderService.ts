@@ -366,7 +366,7 @@ class VotingReminderService {
           sender_address: proposerAddress,
           notification_type: 'token_holder_notification',
           title: `New proposal: ${proposalTitle}`,
-          message: `A new governance proposal has been created. As a ${voter.tokenType} token holder, you can participate in voting!`,
+          message: `A new governance proposal has been created. As an Advocate Member, you can participate in voting!`,
           context_type: 'governance',
           context_id: proposalId,
           context_url: `/governance/${proposalId}`,

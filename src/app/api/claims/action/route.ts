@@ -146,7 +146,7 @@ export async function POST(request: NextRequest) {
         title: action === 'approve' ? 'Claim Approved' : 'Claim Not Approved',
         message,
         context_url: '/claims',
-        context_type: 'claim',
+        context_type: 'governance',
         context_id: claimId,
       });
     }

@@ -178,7 +178,7 @@ async function notifyExecPod({
     title: 'New Token Claim Request',
     message: `A member has burned ${displayAmount} $SYSTEM and submitted a fiat payout request. View their profile at ${profileUrl} and approve or reject at ${manageUrl}.`,
     context_url: manageUrl,
-    context_type: 'claim',
+    context_type: 'governance',
     context_id: claimId,
   }));
 
