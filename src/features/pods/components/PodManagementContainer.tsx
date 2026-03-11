@@ -537,7 +537,8 @@ export const PodManagementContainer = React.memo<PodManagementContainerProps>(
           .eq('is_active', true)
           .limit(1)
           .single()
-          .then(({ data }) => {
+          .then(({ data, error }) => {
+            console.log('🏛️ isExecPod check:', { podId, execPodId: data?.pod_id, match: data?.pod_id === podId, error });
             if (data?.pod_id === podId) setIsExecPod(true);
           });
       });
