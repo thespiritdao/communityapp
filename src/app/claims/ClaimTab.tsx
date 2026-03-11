@@ -200,7 +200,7 @@ export default function ClaimTab() {
   if (flowStep === 'done') {
     return (
       <div style={{ display: 'flex', justifyContent: 'center', padding: '16px' }}>
-        <div style={{ maxWidth: '448px', width: '100%', background: 'white', borderRadius: '12px', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)', padding: '32px', textAlign: 'center' }}>
+        <div style={{ maxWidth: '448px', width: '100%', background: 'rgba(255,255,255,0.75)', backdropFilter: 'blur(8px)', borderRadius: '12px', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)', padding: '32px', textAlign: 'center' }}>
           <CheckCircle size={48} color="#2F5D50" style={{ margin: '0 auto 24px' }} />
           <h2 style={{ fontSize: '22px', fontWeight: 700, marginBottom: '12px' }}>Claim Request Submitted</h2>
           <p style={{ color: '#6B7280', marginBottom: '8px', fontSize: '14px' }}>
@@ -230,7 +230,7 @@ export default function ClaimTab() {
 
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-        <div style={{ backgroundColor: '#E8F1EE', border: '1px solid #B8D9CA', padding: '16px', borderRadius: '12px' }}>
+        <div style={{ backgroundColor: 'rgba(232,241,238,0.75)', border: '1px solid #B8D9CA', padding: '16px', borderRadius: '12px' }}>
           <p style={{ fontWeight: 600, fontSize: '14px', color: '#1F4035', marginBottom: '12px' }}>
             Claiming {claimAmount} $SYSTEM
           </p>
@@ -264,7 +264,7 @@ export default function ClaimTab() {
 
         {/* Processing state */}
         {isProcessing && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', backgroundColor: '#F9FAFB', padding: '14px', borderRadius: '10px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', backgroundColor: 'rgba(249,250,251,0.7)', padding: '14px', borderRadius: '10px' }}>
             <Loader2 size={18} color="#2F5D50" style={{ animation: 'spin 1s linear infinite', flexShrink: 0 }} />
             <p style={{ fontSize: '13px', color: '#374151', fontWeight: 500 }}>
               {flowStep === 'approving' && 'Approving token spend…'}
@@ -307,7 +307,7 @@ export default function ClaimTab() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
 
-      <div style={{ backgroundColor: '#E8F1EE', border: '1px solid #B8D9CA', padding: '16px', borderRadius: '12px' }}>
+      <div style={{ backgroundColor: 'rgba(232,241,238,0.75)', border: '1px solid #B8D9CA', padding: '16px', borderRadius: '12px' }}>
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
           <Info size={18} color="#2F5D50" style={{ flexShrink: 0, marginTop: '2px' }} />
           <div>
@@ -321,7 +321,7 @@ export default function ClaimTab() {
         </div>
       </div>
 
-      <div style={{ backgroundColor: '#FAF4EC', border: '1px solid #E8D7B8', padding: '14px 16px', borderRadius: '12px' }}>
+      <div style={{ backgroundColor: 'rgba(250,244,236,0.75)', border: '1px solid #E8D7B8', padding: '14px 16px', borderRadius: '12px' }}>
         <p style={{ fontSize: '13px', color: '#6B5A3E', lineHeight: '1.6' }}>
           <strong>Before you burn:</strong> Please ensure your{' '}
           <Link href="/identity" style={{ color: '#2F5D50', textDecoration: 'underline', fontWeight: 600 }}>identity profile</Link>{' '}
@@ -330,7 +330,7 @@ export default function ClaimTab() {
         </p>
       </div>
 
-      <div style={{ backgroundColor: '#FEF2F2', border: '1px solid #FECACA', padding: '14px 16px', borderRadius: '12px', display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
+      <div style={{ backgroundColor: 'rgba(254,242,242,0.75)', border: '1px solid #FECACA', padding: '14px 16px', borderRadius: '12px', display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
         <Flame size={18} color="#991B1B" style={{ flexShrink: 0, marginTop: '2px' }} />
         <p style={{ fontSize: '13px', color: '#7F1D1D', lineHeight: '1.6' }}>
           <strong>Irreversible action:</strong> Burning is permanent. Your tokens will be destroyed on-chain before payout is issued.
@@ -338,13 +338,13 @@ export default function ClaimTab() {
       </div>
 
       {!contractsReady && (
-        <div style={{ backgroundColor: '#FEF2F2', border: '1px solid #FECACA', padding: '14px 16px', borderRadius: '12px' }}>
+        <div style={{ backgroundColor: 'rgba(254,242,242,0.75)', border: '1px solid #FECACA', padding: '14px 16px', borderRadius: '12px' }}>
           <p style={{ fontSize: '13px', color: '#991B1B' }}>⚠️ Token claim contract not yet configured. Claims are temporarily unavailable.</p>
         </div>
       )}
 
       {!isConnected && (
-        <div style={{ backgroundColor: '#FAF4EC', border: '1px solid #E8D7B8', padding: '16px', borderRadius: '12px' }}>
+        <div style={{ backgroundColor: 'rgba(250,244,236,0.75)', border: '1px solid #E8D7B8', padding: '16px', borderRadius: '12px' }}>
           <p style={{ fontSize: '14px', color: '#6B5A3E' }}>⚠️ Please connect your wallet to submit a claim</p>
         </div>
       )}
@@ -383,7 +383,7 @@ export default function ClaimTab() {
         <Flame size={18} /> Request Claim for {claimAmount || '0'} $SYSTEM
       </button>
 
-      <div style={{ backgroundColor: '#F9FAFB', padding: '16px', borderRadius: '8px', fontSize: '14px' }}>
+      <div style={{ backgroundColor: 'rgba(249,250,251,0.7)', padding: '16px', borderRadius: '8px', fontSize: '14px' }}>
         <p style={{ fontWeight: 600, marginBottom: '8px' }}>What happens next:</p>
         <ol style={{ color: '#6B7280', marginLeft: '20px', lineHeight: '1.8' }}>
           <li>Your $SYSTEM tokens are approved and burned on-chain (permanent)</li>

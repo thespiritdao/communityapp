@@ -60,10 +60,11 @@ export default function DonateClaimPage() {
             display: 'flex',
             gap: '12px',
             marginBottom: '24px',
-            background: 'white',
+            background: 'rgba(255,255,255,0.65)',
+            backdropFilter: 'blur(8px)',
             padding: '8px',
             borderRadius: '12px',
-            border: '1px solid #E5E7EB',
+            border: '1px solid rgba(229,231,235,0.5)',
           }}
         >
           <button

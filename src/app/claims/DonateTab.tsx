@@ -71,7 +71,7 @@ function DonationCheckoutForm({
       {/* Donation Summary */}
       <div
         style={{
-          backgroundColor: '#E8F1EE',
+          backgroundColor: 'rgba(232,241,238,0.75)',
           border: '1px solid #B8D9CA',
           padding: '16px',
           borderRadius: '12px',
@@ -102,7 +102,7 @@ function DonationCheckoutForm({
       {/* Payment Methods Info */}
       <div
         style={{
-          backgroundColor: '#E8F1EE',
+          backgroundColor: 'rgba(232,241,238,0.75)',
           border: '1px solid #B8D9CA',
           padding: '16px',
           borderRadius: '12px',
@@ -138,7 +138,7 @@ function DonationCheckoutForm({
       {/* No Refund Policy */}
       <div
         style={{
-          backgroundColor: '#FAF4EC',
+          backgroundColor: 'rgba(250,244,236,0.75)',
           border: '1px solid #E8D7B8',
           padding: '12px',
           borderRadius: '12px',
@@ -259,7 +259,7 @@ export default function DonateTab() {
           style={{
             maxWidth: '448px',
             width: '100%',
-            background: 'white',
+            background: 'rgba(255,255,255,0.65)',
             borderRadius: '12px',
             boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)',
             padding: '32px',
@@ -319,7 +319,7 @@ export default function DonateTab() {
           {!isConnected && (
             <div
               style={{
-                backgroundColor: '#FAF4EC',
+                backgroundColor: 'rgba(250,244,236,0.75)',
                 border: '1px solid #E8D7B8',
                 padding: '16px',
                 borderRadius: '12px',
@@ -437,7 +437,7 @@ export default function DonateTab() {
           {/* Info Box */}
           <div
             style={{
-              backgroundColor: '#F9FAFB',
+              backgroundColor: 'rgba(249,250,251,0.7)',
               padding: '16px',
               borderRadius: '8px',
               fontSize: '14px',
