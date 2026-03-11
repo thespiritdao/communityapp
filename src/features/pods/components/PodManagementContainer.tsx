@@ -182,7 +182,7 @@ const TabContent = React.memo<{
       case 'claims':
         return (
           <div className="p-6">
-            <ClaimsManagementPanel canManage={canManageMembers} />
+            <ClaimsManagementPanel canManage={isExecPod} />
           </div>
         );
 
@@ -289,7 +289,7 @@ const TabNavigation = React.memo<{
           mobileLabel: 'Claims',
           icon: Coins,
           badge: null,
-          enabled: canManageMembers && isExecPod,
+          enabled: isExecPod,
         },
         {
           id: 'deletion',
