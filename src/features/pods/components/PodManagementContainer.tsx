@@ -493,14 +493,6 @@ export const PodManagementContainer = React.memo<PodManagementContainerProps>(
       setSelectedTab,
     } = usePodManagementState({ podId, userAddress, initialTab });
 
-    // 🔍 DEBUG: Log what container received from hook
-    console.log('📦 PodManagementContainer received capabilities:', {
-      canManageMembers,
-      canManageTreasury,
-      userAddress,
-      podId,
-    });
-
     // Centralized event handlers
     const { handleClickName: defaultHandleClickName, handleRemoveMember } =
       usePodManagementHandlers({ podId, toast });
@@ -538,7 +530,6 @@ export const PodManagementContainer = React.memo<PodManagementContainerProps>(
           .limit(1)
           .single()
           .then(({ data, error }) => {
-            console.log('🏛️ isExecPod check:', { podId, execPodId: data?.pod_id, match: data?.pod_id === podId, error });
             if (data?.pod_id === podId) setIsExecPod(true);
           });
       });

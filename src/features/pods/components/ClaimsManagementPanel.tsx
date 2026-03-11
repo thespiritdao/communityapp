@@ -2,8 +2,9 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { useEvmAddress } from '@coinbase/cdp-hooks';
-import { ExternalLink, CheckCircle, XCircle, Clock, RefreshCw, User } from 'lucide-react';
+import { ExternalLink, CheckCircle, XCircle, Clock, RefreshCw } from 'lucide-react';
 import Link from 'next/link';
+import { supabase } from '@/utils/supabaseClient';
 
 type ClaimStatus = 'awaiting_executive_approval' | 'approved' | 'rejected' | 'pending_burn';
 
@@ -22,6 +23,13 @@ interface TokenClaim {
   reviewer_note?: string;
 }
 
+interface UserProfile {
+  wallet_address: string;
+  first_name?: string;
+  last_name?: string;
+  profile_picture?: string;
+}
+
 const STATUS_LABELS: Record<ClaimStatus, string> = {
   awaiting_executive_approval: 'Pending Review',
   approved: 'Approved',
@@ -36,13 +44,60 @@ const STATUS_COLORS: Record<ClaimStatus, { bg: string; text: string; border: str
   pending_burn: { bg: '#EDE9FE', text: '#4C1D95', border: '#C4B5FD' },
 };
 
+function ProfileCard({ profile, walletAddress }: { profile?: UserProfile; walletAddress: string }) {
+  const fullName = profile?.first_name || profile?.last_name
+    ? `${profile?.first_name || ''} ${profile?.last_name || ''}`.trim()
+    : null;
+  const initials = fullName ? fullName[0].toUpperCase() : '?';
+
+  return (
+    <Link href={`/identity/${walletAddress}`} style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '8px' }}>
+      {profile?.profile_picture ? (
+        <img
+          src={profile.profile_picture}
+          alt={fullName || walletAddress}
+          style={{ width: '32px', height: '32px', borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }}
+        />
+      ) : (
+        <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: '#E5E7EB', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+          <span style={{ fontSize: '13px', fontWeight: 600, color: '#6B7280' }}>{initials}</span>
+        </div>
+      )}
+      <div>
+        <p style={{ fontSize: '13px', fontWeight: 600, color: '#111827', margin: 0 }}>
+          {fullName || 'Unknown Member'}
+        </p>
+        <p style={{ fontSize: '11px', color: '#2F5D50', margin: 0, display: 'flex', alignItems: 'center', gap: '3px' }}>
+          View Profile <ExternalLink size={9} />
+        </p>
+      </div>
+    </Link>
+  );
+}
+
+function SystemTokenBadge({ amount }: { amount: number }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+      <img
+        src="/logos/systemlogo.jpg"
+        alt="$SYSTEM"
+        style={{ width: '22px', height: '22px', borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }}
+      />
+      <span style={{ fontSize: '16px', fontWeight: 700, color: '#111827' }}>
+        {Number(amount).toLocaleString()} $SYSTEM
+      </span>
+    </div>
+  );
+}
+
 interface ClaimsManagementPanelProps {
   canManage: boolean;
 }
 
 export function ClaimsManagementPanel({ canManage }: ClaimsManagementPanelProps) {
   const { evmAddress: address } = useEvmAddress();
-  const [claims, setClaims] = useState<TokenClaim[]>([]);
+  const [allClaims, setAllClaims] = useState<TokenClaim[]>([]);
+  const [profiles, setProfiles] = useState<Record<string, UserProfile>>({});
   const [loading, setLoading] = useState(false);
   const [filter, setFilter] = useState<'pending' | 'all'>('pending');
   const [reviewingId, setReviewingId] = useState<string | null>(null);
@@ -52,13 +107,30 @@ export function ClaimsManagementPanel({ canManage }: ClaimsManagementPanelProps)
   const fetchClaims = useCallback(async () => {
     setLoading(true);
     try {
-      const url = filter === 'all' ? '/api/claims/list?all=true' : '/api/claims/list';
-      const res = await fetch(url);
-      if (res.ok) setClaims(await res.json());
+      // Always fetch all claims so stats are always accurate
+      const res = await fetch('/api/claims/list?all=true');
+      if (res.ok) {
+        const data: TokenClaim[] = await res.json();
+        setAllClaims(data);
+
+        // Fetch profiles for all unique wallets
+        const wallets = [...new Set(data.map((c) => c.wallet_address))];
+        if (wallets.length > 0) {
+          const { data: profileData } = await supabase
+            .from('user_profiles')
+            .select('wallet_address, first_name, last_name, profile_picture')
+            .in('wallet_address', wallets);
+          if (profileData) {
+            const map: Record<string, UserProfile> = {};
+            for (const p of profileData) map[p.wallet_address] = p;
+            setProfiles(map);
+          }
+        }
+      }
     } finally {
       setLoading(false);
     }
-  }, [filter]);
+  }, []);
 
   useEffect(() => {
     fetchClaims();
@@ -88,7 +160,12 @@ export function ClaimsManagementPanel({ canManage }: ClaimsManagementPanelProps)
   const formatWallet = (w: string) => `${w.slice(0, 6)}…${w.slice(-4)}`;
   const formatDate = (d: string) => new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 
-  const pendingCount = claims.filter((c) => c.status === 'awaiting_executive_approval').length;
+  // Stats always use the full set; display list is filtered by tab
+  const claims = filter === 'pending'
+    ? allClaims.filter((c) => c.status === 'awaiting_executive_approval')
+    : allClaims;
+
+  const pendingCount = allClaims.filter((c) => c.status === 'awaiting_executive_approval').length;
 
   if (!canManage) {
     return (
@@ -117,8 +194,8 @@ export function ClaimsManagementPanel({ canManage }: ClaimsManagementPanelProps)
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px' }}>
         {[
           { label: 'Pending', count: pendingCount, color: '#92400E', bg: '#FEF3C7' },
-          { label: 'Approved', count: claims.filter((c) => c.status === 'approved').length, color: '#065F46', bg: '#D1FAE5' },
-          { label: 'Rejected', count: claims.filter((c) => c.status === 'rejected').length, color: '#991B1B', bg: '#FEE2E2' },
+          { label: 'Approved', count: allClaims.filter((c) => c.status === 'approved').length, color: '#065F46', bg: '#D1FAE5' },
+          { label: 'Rejected', count: allClaims.filter((c) => c.status === 'rejected').length, color: '#991B1B', bg: '#FEE2E2' },
         ].map((s) => (
           <div key={s.label} style={{ background: s.bg, borderRadius: '8px', padding: '10px', textAlign: 'center' }}>
             <p style={{ fontSize: '20px', fontWeight: 700, color: s.color, margin: 0 }}>{s.count}</p>
@@ -154,32 +231,27 @@ export function ClaimsManagementPanel({ canManage }: ClaimsManagementPanelProps)
             const sc = STATUS_COLORS[claim.status] || STATUS_COLORS['pending_burn'];
             const isPending = claim.status === 'awaiting_executive_approval';
             const isReviewing = reviewingId === claim.id;
+            const profile = profiles[claim.wallet_address];
 
             return (
               <div key={claim.id} style={{ background: 'white', borderRadius: '10px', padding: '14px', border: '1px solid #E5E7EB' }}>
-                {/* Header row */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '10px' }}>
-                  <div>
-                    <p style={{ fontSize: '16px', fontWeight: 700, color: '#111827', margin: '0 0 2px' }}>
-                      {Number(claim.system_tokens_to_burn).toLocaleString()} $SYSTEM
-                    </p>
-                    <p style={{ fontSize: '11px', color: '#6B7280', margin: 0 }}>{formatDate(claim.created_at)}</p>
-                  </div>
-                  <span style={{ padding: '3px 9px', borderRadius: '20px', fontSize: '11px', fontWeight: 600, backgroundColor: sc.bg, color: sc.text, border: `1px solid ${sc.border}` }}>
+
+                {/* Header row: profile card + status badge */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
+                  <ProfileCard profile={profile} walletAddress={claim.wallet_address} />
+                  <span style={{ padding: '3px 9px', borderRadius: '20px', fontSize: '11px', fontWeight: 600, backgroundColor: sc.bg, color: sc.text, border: `1px solid ${sc.border}`, flexShrink: 0 }}>
                     {STATUS_LABELS[claim.status]}
                   </span>
                 </div>
 
+                {/* Amount row */}
+                <div style={{ marginBottom: '10px' }}>
+                  <SystemTokenBadge amount={claim.system_tokens_to_burn} />
+                  <p style={{ fontSize: '11px', color: '#6B7280', margin: '2px 0 0 28px' }}>{formatDate(claim.created_at)}</p>
+                </div>
+
                 {/* Details */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '5px', fontSize: '12px', color: '#374151', marginBottom: '10px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <User size={12} color="#6B7280" />
-                    <span style={{ fontFamily: 'monospace' }}>{formatWallet(claim.wallet_address)}</span>
-                    <Link href={`/identity/${claim.wallet_address}`}
-                      style={{ color: '#2F5D50', textDecoration: 'none', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '3px' }}>
-                      Profile <ExternalLink size={10} />
-                    </Link>
-                  </div>
                   <div><span style={{ color: '#9CA3AF' }}>Email: </span>{claim.payout_email}</div>
                   {claim.payout_note && (
                     <div style={{ fontStyle: 'italic', color: '#6B7280', backgroundColor: '#F9FAFB', padding: '6px 8px', borderRadius: '6px' }}>
@@ -188,7 +260,7 @@ export function ClaimsManagementPanel({ canManage }: ClaimsManagementPanelProps)
                   )}
                   {claim.burn_tx_hash && (
                     <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                      <span style={{ color: '#9CA3AF' }}>Burn: </span>
+                      <span style={{ color: '#9CA3AF' }}>Burn tx: </span>
                       <a href={`https://basescan.org/tx/${claim.burn_tx_hash}`} target="_blank" rel="noreferrer"
                         style={{ color: '#2F5D50', display: 'flex', alignItems: 'center', gap: '3px' }}>
                         {formatWallet(claim.burn_tx_hash)} <ExternalLink size={10} />
@@ -197,7 +269,7 @@ export function ClaimsManagementPanel({ canManage }: ClaimsManagementPanelProps)
                   )}
                   {claim.reviewed_by && (
                     <div style={{ color: '#9CA3AF', fontSize: '11px' }}>
-                      Reviewed by {formatWallet(claim.reviewed_by)} on {formatDate(claim.reviewed_at!)}
+                      Reviewed on {formatDate(claim.reviewed_at!)}
                       {claim.reviewer_note && <span> — "{claim.reviewer_note}"</span>}
                     </div>
                   )}

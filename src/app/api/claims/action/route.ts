@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { createPublicClient, http } from 'viem';
 import { base } from 'viem/chains';
+import nodemailer from 'nodemailer';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -152,7 +153,29 @@ export async function POST(request: NextRequest) {
 
     console.log(`✅ Claim ${claimId} ${newStatus} by ${reviewerAddress}`);
 
-    return NextResponse.json({ success: true, status: newStatus });
+    // Send email to claimant (awaited so result is logged + returned in response)
+    let emailResult: { sent: boolean; to?: string; error?: string } = { sent: false };
+    if (claim.payout_email) {
+      try {
+        await sendClaimEmail({
+          action,
+          toEmail: claim.payout_email as string,
+          amount: claim.system_tokens_to_burn,
+          reviewerNote: note,
+          claimId,
+        });
+        emailResult = { sent: true, to: claim.payout_email };
+        console.log(`📧 Claim email sent to ${claim.payout_email}`);
+      } catch (err: any) {
+        emailResult = { sent: false, to: claim.payout_email, error: err.message };
+        console.error('⚠️ Failed to send claim email:', err);
+      }
+    } else {
+      emailResult = { sent: false, error: 'no payout_email on claim' };
+      console.warn(`⚠️ Claim ${claimId} has no payout_email — skipping email`);
+    }
+
+    return NextResponse.json({ success: true, status: newStatus, email: emailResult });
 
   } catch (error: any) {
     console.error('Claim action error:', error);
@@ -161,4 +184,74 @@ export async function POST(request: NextRequest) {
       { status: 500 },
     );
   }
+}
+
+async function sendClaimEmail({
+  action,
+  toEmail,
+  amount,
+  reviewerNote,
+  claimId,
+}: {
+  action: 'approve' | 'reject';
+  toEmail: string;
+  amount: number | string;
+  reviewerNote?: string;
+  claimId: string;
+}) {
+  const transporter = nodemailer.createTransport({
+    host: process.env.SMTP_HOST,
+    port: Number(process.env.SMTP_PORT || 587),
+    secure: process.env.SMTP_SECURE === 'true',
+    auth: {
+      user: process.env.SMTP_USER,
+      pass: process.env.SMTP_PASS,
+    },
+  });
+
+  const displayAmount = amount != null ? Number(amount).toLocaleString() : '?';
+  const from = `SpiritDAO <${process.env.EMAIL_FROM || process.env.SMTP_USER}>`;
+
+  if (action === 'approve') {
+    await transporter.sendMail({
+      from,
+      to: toEmail,
+      subject: `Your $SYSTEM token claim has been approved`,
+      text: [
+        `Great news — your claim to convert ${displayAmount} $SYSTEM tokens has been approved by the Executive Pod.`,
+        '',
+        'To complete your payout, please reply to this email with your bank details:',
+        '  • Bank name',
+        '  • Account holder name',
+        '  • Account number',
+        '  • Routing number (ACH)',
+        '  • (International) SWIFT/IBAN if applicable',
+        '',
+        'We will process your fiat transfer once we receive this information.',
+        '',
+        `Claim reference: ${claimId}`,
+        '',
+        '— SpiritDAO Executive Pod',
+      ].join('\n'),
+    });
+  } else {
+    await transporter.sendMail({
+      from,
+      to: toEmail,
+      subject: `Your $SYSTEM token claim has been rejected`,
+      text: [
+        `Your claim to convert ${displayAmount} $SYSTEM tokens has been reviewed and rejected by the Executive Pod.`,
+        '',
+        `Reason: ${reviewerNote || 'No reason provided.'}`,
+        '',
+        'Please note that your tokens have already been permanently removed from circulation. If you believe this decision was made in error, please contact the Executive Pod directly through the SpiritDAO platform.',
+        '',
+        `Claim reference: ${claimId}`,
+        '',
+        '— SpiritDAO Executive Pod',
+      ].join('\n'),
+    });
+  }
+
+  console.log(`📧 Claim email sent to ${toEmail} (${action})`);
 }
