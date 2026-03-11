@@ -79,7 +79,7 @@ function SystemTokenBadge({ amount }: { amount: number }) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
       <img
-        src="/logos/systemlogo.jpg"
+        src="/images/erc20tokens/SystemToken.png"
         alt="$SYSTEM"
         style={{ width: '22px', height: '22px', borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }}
       />
