@@ -168,22 +168,18 @@ async function notifyExecPod({
 
   const displayAmount = amount != null ? Number(amount).toLocaleString() : '?';
   const profileUrl = `/identity/${claimerWallet}`;
-  const manageUrl = '/claims/manage';
+  // Link directly to the Claims tab in exec pod manage page
+  const manageUrl = `/pods/${execPodId}/manage?tab=claims`;
 
   const rows = recipients.map((wallet) => ({
     recipient_address: wallet,
     sender_address: claimerWallet,
     notification_type: 'claim_approval_request',
     title: 'New Token Claim Request',
-    message: `A member has burned ${displayAmount} $SYSTEM and submitted a fiat payout request. Review their identity profile and approve or reject the claim.`,
+    message: `A member has burned ${displayAmount} $SYSTEM and submitted a fiat payout request. View their profile at ${profileUrl} and approve or reject at ${manageUrl}.`,
     context_url: manageUrl,
     context_type: 'claim',
     context_id: claimId,
-    metadata: {
-      profile_url: profileUrl,
-      burn_tx_hash: burnTxHash,
-      amount: displayAmount,
-    },
   }));
 
   const { error } = await supabase.from('general_notifications').insert(rows);

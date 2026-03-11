@@ -21,6 +21,7 @@ import {
   ClipboardList,
   Image as ImageIcon,
   GitBranch,
+  Coins,
 } from 'lucide-react';
 import { MembersPanel } from './MembersPanel/MembersPanel';
 import { PodManagerControlPanel } from './PodManagerControlPanel';
@@ -31,6 +32,7 @@ import { ApplicationsPanel } from './ApplicationApproval';
 import { PodDeletionButtonV2 } from '@/app/pods/[id]/manage/components/PodDeletionButtonV2';
 import { PodSettingsPanel } from './PodSettingsPanel';
 import { SubPodReviewPanel } from './SubPodReviewPanel';
+import { ClaimsManagementPanel } from './ClaimsManagementPanel';
 import { usePodManagementState } from '../hooks/usePodManagementState';
 import { usePodManagementHandlers } from '../hooks/usePodManagementHandlers';
 import '../styles/tab-navigation.css';
@@ -50,7 +52,7 @@ const TabContent = React.memo<{
   activeTab: string;
   leaders: string[];
   members: string[];
-  memberRefs: import('../types').MemberRef[]; // ✅ ISSUE #7: Full member data
+  memberRefs: import('../types').MemberRef[];
   isLoadingMembers: boolean;
   onClickName: (address: string) => void;
   podId: string;
@@ -58,6 +60,7 @@ const TabContent = React.memo<{
   pod: any;
   canManageMembers: boolean;
   canManageTreasury: boolean;
+  isExecPod: boolean;
   onRemoveMember?: (address: string, requiresVote: boolean) => void;
   onPodDeleted?: () => void;
 }>(
@@ -65,7 +68,7 @@ const TabContent = React.memo<{
     activeTab,
     leaders,
     members,
-    memberRefs, // ✅ ISSUE #7: Extract memberRefs
+    memberRefs,
     isLoadingMembers,
     onClickName,
     podId,
@@ -73,6 +76,7 @@ const TabContent = React.memo<{
     pod,
     canManageMembers,
     canManageTreasury,
+    isExecPod,
     onRemoveMember,
     onPodDeleted,
   }) => {
@@ -175,6 +179,13 @@ const TabContent = React.memo<{
           </div>
         );
 
+      case 'claims':
+        return (
+          <div className="p-6">
+            <ClaimsManagementPanel canManage={canManageMembers} />
+          </div>
+        );
+
       default:
         return null;
     }
@@ -194,6 +205,7 @@ const TabNavigation = React.memo<{
   canManageMembers: boolean;
   canManageTreasury: boolean;
   subPodsEnabled?: boolean;
+  isExecPod?: boolean;
 }>(
   ({
     activeTab,
@@ -203,6 +215,7 @@ const TabNavigation = React.memo<{
     canManageMembers,
     canManageTreasury,
     subPodsEnabled = false,
+    isExecPod = false,
   }) => {
     const tabs = React.useMemo(
       () => [
@@ -271,15 +284,23 @@ const TabNavigation = React.memo<{
           enabled: canManageMembers && subPodsEnabled,
         },
         {
+          id: 'claims',
+          label: 'Claims',
+          mobileLabel: 'Claims',
+          icon: Coins,
+          badge: null,
+          enabled: canManageMembers && isExecPod,
+        },
+        {
           id: 'deletion',
           label: 'Delete Pod',
           mobileLabel: 'Delete',
           icon: Trash2,
           badge: null,
-          enabled: canManageMembers, // Only pod leaders can delete
+          enabled: canManageMembers,
         },
       ],
-      [memberCount, leaderCount, canManageMembers, canManageTreasury, subPodsEnabled],
+      [memberCount, leaderCount, canManageMembers, canManageTreasury, subPodsEnabled, isExecPod],
     );
 
     // Add a small loading state to prevent layout shift
@@ -504,6 +525,24 @@ export const PodManagementContainer = React.memo<PodManagementContainerProps>(
       [members.length, leaders.length],
     );
 
+    // Check if this is the exec pod (for Claims tab visibility)
+    const [isExecPod, setIsExecPod] = React.useState(false);
+    React.useEffect(() => {
+      if (!podId) return;
+      import('@/utils/supabaseClient').then(({ supabase }) => {
+        supabase
+          .from('pod_role_permissions')
+          .select('pod_id')
+          .ilike('role_name', 'Executive Pod Leader')
+          .eq('is_active', true)
+          .limit(1)
+          .single()
+          .then(({ data }) => {
+            if (data?.pod_id === podId) setIsExecPod(true);
+          });
+      });
+    }, [podId]);
+
     // Check if sub-pods module is enabled for this pod
     const [subPodsEnabled, setSubPodsEnabled] = React.useState(false);
     React.useEffect(() => {
@@ -535,6 +574,7 @@ export const PodManagementContainer = React.memo<PodManagementContainerProps>(
             canManageMembers={canManageMembers}
             canManageTreasury={canManageTreasury}
             subPodsEnabled={subPodsEnabled}
+            isExecPod={isExecPod}
           />
 
           <TabContent
@@ -549,6 +589,7 @@ export const PodManagementContainer = React.memo<PodManagementContainerProps>(
             pod={pod}
             canManageMembers={canManageMembers}
             canManageTreasury={canManageTreasury}
+            isExecPod={isExecPod}
             onRemoveMember={handleRemoveMember}
             onPodDeleted={handlePodDeleted}
           />
