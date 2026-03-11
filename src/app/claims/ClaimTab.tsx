@@ -120,9 +120,9 @@ export default function ClaimTab() {
 
       const { payoutRef } = requestData;
 
-      // ── Steps 2 + 3: Approve + burnForClaim in a single user operation ───────
-      // Batching into one op guarantees approve lands before burn (atomic sequencing)
-      // and avoids polling for an intermediate tx hash.
+      // ── Step 2: Approve TOKEN_CLAIM_ADDRESS to spend $SYSTEM ─────────────────
+      // Must be a separate operation from burn — gas estimation for the burn
+      // reads allowance on-chain, so approve must be confirmed first.
       setStep('approving');
       const approveData = encodeFunctionData({
         abi: ERC20_APPROVE_ABI,
@@ -130,25 +130,43 @@ export default function ClaimTab() {
         args: [TOKEN_CLAIM_ADDRESS!, amountWei],
       });
 
+      const approveResult = await sendUserOperation({
+        evmSmartAccount: smartAccount,
+        network: 'base',
+        calls: [{ to: SYSTEM_TOKEN_ADDRESS!, value: 0n, data: approveData }],
+        useCdpPaymaster: true,
+      });
+
+      console.log('✅ Approve submitted, waiting for confirmation…', approveResult.userOperationHash);
+
+      // Poll until approve is confirmed on-chain before sending burn
+      if (publicClient && approveResult.transactionHash) {
+        await publicClient.waitForTransactionReceipt({
+          hash: approveResult.transactionHash as `0x${string}`,
+          timeout: 60_000,
+        });
+      } else {
+        // Fallback: wait a few seconds for the op to land
+        await new Promise((res) => setTimeout(res, 5000));
+      }
+
+      // ── Step 3: burnForClaim ───────────────────────────────────────────────
+      setStep('burning');
       const burnData = encodeFunctionData({
         abi: TOKEN_CLAIM_ABI,
         functionName: 'burnForClaim',
         args: [amountWei, payoutRef],
       });
 
-      setStep('burning');
       const burnResult = await sendUserOperation({
         evmSmartAccount: smartAccount,
         network: 'base',
-        calls: [
-          { to: SYSTEM_TOKEN_ADDRESS!, value: 0n, data: approveData },
-          { to: TOKEN_CLAIM_ADDRESS!, value: 0n, data: burnData },
-        ],
+        calls: [{ to: TOKEN_CLAIM_ADDRESS!, value: 0n, data: burnData }],
         useCdpPaymaster: true,
       });
 
       const txHash = burnResult.transactionHash || burnResult.userOperationHash;
-      console.log('✅ Approve + burn op submitted:', txHash);
+      console.log('✅ Burn submitted:', txHash);
       setBurnTxHash(txHash);
 
       // ── Step 4: Confirm burn with server ───────────────────────────────────
