@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { toast } from 'react-hot-toast';
 import { useCurrentUser, useSendUserOperation } from '@coinbase/cdp-hooks';
+import { usePublicClient } from 'wagmi';
 import { parseUnits, encodeFunctionData } from 'viem';
 import { Info, Flame, CheckCircle, Loader2, ArrowRight } from 'lucide-react';
 import Link from 'next/link';
@@ -59,6 +60,7 @@ type FlowStep = 'form' | 'approving' | 'approved' | 'burning' | 'confirming' | '
 export default function ClaimTab() {
   const { currentUser } = useCurrentUser();
   const { sendUserOperation } = useSendUserOperation();
+  const publicClient = usePublicClient();
 
   const smartAccount = currentUser?.evmSmartAccounts?.[0];
   const walletAddress = smartAccount as `0x${string}` | undefined;
@@ -112,14 +114,29 @@ export default function ClaimTab() {
         args: [TOKEN_CLAIM_ADDRESS!, amountWei],
       });
 
-      await sendUserOperation({
+      const result = await sendUserOperation({
         evmSmartAccount: smartAccount,
         network: 'base',
         calls: [{ to: SYSTEM_TOKEN_ADDRESS!, value: 0n, data: callData }],
         useCdpPaymaster: true,
       });
 
-      console.log('✅ Approve confirmed');
+      console.log('✅ Approve op complete, waiting for on-chain confirmation…', result.transactionHash);
+
+      // Wait for the approve tx to be mined so the allowance is visible on-chain
+      // before the burn op's gas estimation reads it.
+      if (publicClient && result.transactionHash) {
+        await publicClient.waitForTransactionReceipt({
+          hash: result.transactionHash as `0x${string}`,
+          timeout: 60_000,
+          pollingInterval: 2_000,
+        });
+        console.log('✅ Approve mined');
+      } else {
+        // Fallback: give the chain a moment
+        await new Promise((res) => setTimeout(res, 8000));
+      }
+
       setFlowStep('approved');
       toast.success('Approval confirmed — ready to burn');
     } catch (err: any) {
@@ -278,8 +295,8 @@ export default function ClaimTab() {
         )}
 
         {flowStep === 'error' && (
-          <button onClick={handleReset} style={{ backgroundColor: '#6B7280', color: 'white', padding: '10px', borderRadius: '8px', border: 'none', cursor: 'pointer' }}>
-            Start Over
+          <button onClick={handleReset} style={{ backgroundColor: '#6B7280', color: 'white', padding: '10px 20px', borderRadius: '8px', border: 'none', cursor: 'pointer', fontWeight: 500 }}>
+            ← Back to Form
           </button>
         )}
       </div>
