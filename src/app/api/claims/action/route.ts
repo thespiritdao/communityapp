@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { createPublicClient, http } from 'viem';
 import { base } from 'viem/chains';
-import nodemailer from 'nodemailer';
+import { Resend } from 'resend';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -199,21 +199,12 @@ async function sendClaimEmail({
   reviewerNote?: string;
   claimId: string;
 }) {
-  const transporter = nodemailer.createTransport({
-    host: process.env.SMTP_HOST,
-    port: Number(process.env.SMTP_PORT || 587),
-    secure: process.env.SMTP_SECURE === 'true',
-    auth: {
-      user: process.env.SMTP_USER,
-      pass: process.env.SMTP_PASS,
-    },
-  });
-
+  const resend = new Resend(process.env.RESEND_API_KEY);
   const displayAmount = amount != null ? Number(amount).toLocaleString() : '?';
-  const from = `SpiritDAO <${process.env.EMAIL_FROM || process.env.SMTP_USER}>`;
+  const from = 'SpiritDAO <community@spiritdao.org>';
 
   if (action === 'approve') {
-    await transporter.sendMail({
+    await resend.emails.send({
       from,
       to: toEmail,
       subject: `Your $SYSTEM token claim has been approved`,
@@ -235,7 +226,7 @@ async function sendClaimEmail({
       ].join('\n'),
     });
   } else {
-    await transporter.sendMail({
+    await resend.emails.send({
       from,
       to: toEmail,
       subject: `Your $SYSTEM token claim has been rejected`,
