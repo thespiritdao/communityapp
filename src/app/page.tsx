@@ -351,7 +351,7 @@ function PageContent() {
         // NEW USERS need invite validation
         // Skip invite gate if localStorage signals a returning user — DB may have
         // failed to find the profile (RLS, network) but we trust the local signal.
-        if (!validatedInviteCode && !firstUser) {
+        if (!validatedInviteCode && !firstUser && validatedInviteCode !== 'NO_CODE') {
           if (hasKnownUser) {
             console.log('✅ hasKnownUser=true — treating as returning user, proceeding to auth');
             setOnboardingComplete(true);
@@ -362,8 +362,8 @@ function PageContent() {
           return;
         }
 
-        // Validate invite code for non-first users
-        if (!firstUser && validatedInviteCode && validatedInviteCode !== 'FIRST_USER') {
+        // Validate invite code for non-first users (skip if no-code path)
+        if (!firstUser && validatedInviteCode && validatedInviteCode !== 'FIRST_USER' && validatedInviteCode !== 'NO_CODE') {
           console.log('🔍 Validating invite code post-auth:', validatedInviteCode);
           try {
             const isValid = await handlePostAuthInviteValidation(validatedInviteCode);
@@ -398,6 +398,16 @@ function PageContent() {
   const handlePreAuthInviteCheck = async (
     inviteCode: string,
   ): Promise<boolean> => {
+    // No-code path — user chose to join without an invite code
+    if (!inviteCode) {
+      console.log('🔓 No invite code — proceeding without one');
+      setValidatedInviteCode('NO_CODE');
+      if (typeof window !== 'undefined') {
+        sessionStorage.setItem('validated_invite_code', 'NO_CODE');
+      }
+      return true;
+    }
+
     try {
       console.log('📝 Checking invite code (pre-auth)...');
       const checkResponse = await fetch('/api/invite/check', {
@@ -426,6 +436,16 @@ function PageContent() {
       console.error('Error checking invite code:', error);
       return false;
     }
+  };
+
+  // PRE-AUTH: User chose to join without an invite code
+  const handleJoinWithoutCode = () => {
+    console.log('🔓 Joining without invite code');
+    setValidatedInviteCode('NO_CODE');
+    if (typeof window !== 'undefined') {
+      sessionStorage.setItem('validated_invite_code', 'NO_CODE');
+    }
+    setShowPreAuthInvite(false);
   };
 
   // POST-AUTH: Full validation with wallet address (after wallet creation)
@@ -689,6 +709,7 @@ function PageContent() {
             setShowPreAuthInvite(false);
           }}
           onValidate={handlePreAuthInviteCheck}
+          onJoinWithoutCode={handleJoinWithoutCode}
           preAuthMode={true}
           isFirstUser={true} // Allow first user bypass in pre-auth mode
         />

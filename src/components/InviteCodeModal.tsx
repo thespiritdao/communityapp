@@ -22,6 +22,7 @@ interface InviteCodeModalProps {
   isOpen: boolean;
   onClose: () => void;
   onValidate: (code: string) => Promise<boolean>;
+  onJoinWithoutCode?: () => void;
   onHatMinted?: (txHash: string) => Promise<void>;
   walletAddress?: string; // Optional - not needed for pre-auth validation
   isFirstUser?: boolean;
@@ -34,6 +35,7 @@ export function InviteCodeModal({
   isOpen,
   onClose,
   onValidate,
+  onJoinWithoutCode,
   onHatMinted,
   walletAddress,
   isFirstUser = false,
@@ -128,6 +130,16 @@ export function InviteCodeModal({
   const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' && inviteCode.length === 6) {
       handleSubmit();
+    }
+  };
+
+  const handleJoinWithoutCode = () => {
+    if (onJoinWithoutCode) {
+      onJoinWithoutCode();
+    } else {
+      onValidate('').then((ok) => {
+        if (ok) onClose();
+      });
     }
   };
 
@@ -334,16 +346,29 @@ export function InviteCodeModal({
                   )}
                 </button>
 
-                {/* Footer Note */}
+                {/* No-code fallback */}
                 <p
                   style={{
-                    marginTop: '20px',
+                    marginTop: '16px',
                     fontSize: '12px',
                     color: '#8FAAA1',
-                    fontStyle: 'italic',
                   }}
                 >
-                  Powered by Base Mainnet · Gas fees sponsored
+                  Don&apos;t have a code?{' '}
+                  <button
+                    onClick={handleJoinWithoutCode}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      color: '#2F5D50',
+                      cursor: 'pointer',
+                      fontSize: '12px',
+                      textDecoration: 'underline',
+                      padding: 0,
+                    }}
+                  >
+                    Join without one
+                  </button>
                 </p>
               </div>
             </div>
