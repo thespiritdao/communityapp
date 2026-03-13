@@ -2,20 +2,24 @@
  * airdrop-poc.mjs
  *
  * One-time script to batch mint Proof of Curiosity tokens to all beta testers.
+ * Uses CDP smart wallet + Coinbase paymaster — fully gasless.
  *
  * Usage:
  *   node scripts/airdrop-poc.mjs
  *
  * Requires in .env:
- *   POD_ADMIN_PRIVATE_KEY   — EOA that is an authorized minter on the PoC contract
- *   NEXT_PUBLIC_RPC_URL     — Base mainnet RPC
- *   POC_CONTRACT_ADDRESS    — Deployed ProofOfCuriosity contract address
+ *   POD_ADMIN_PRIVATE_KEY       — EOA owner/signer of the CDP smart wallet
+ *   CDP_API_KEY                 — Coinbase CDP API key name
+ *   EXECUTIVE_MINTING_PRIVATE_KEY — CDP API private key (PEM)
+ *   NEXT_PUBLIC_PAYMASTER       — Coinbase paymaster URL
+ *   NEXT_PUBLIC_RPC_URL         — Base mainnet RPC
+ *   POC_CONTRACT_ADDRESS        — Deployed ProofOfCuriosity contract address
  */
 
-import { createWalletClient, createPublicClient, http } from 'viem';
+import { createPublicClient, http, encodeFunctionData } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
 import { base } from 'viem/chains';
-import { readFileSync } from 'fs';
+import { Coinbase, toSmartWallet, sendUserOperation, waitForUserOperation } from '@coinbase/coinbase-sdk';
 import { config } from 'dotenv';
 
 config({ path: '.env' });
@@ -65,34 +69,46 @@ const ABI = [
     inputs: [{ name: 'account', type: 'address' }],
     outputs: [{ name: '', type: 'bool' }],
   },
-  {
-    name: 'balanceOf',
-    type: 'function',
-    stateMutability: 'view',
-    inputs: [{ name: 'account', type: 'address' }],
-    outputs: [{ name: '', type: 'uint256' }],
-  },
 ];
 
 // ── Main ──────────────────────────────────────────────────────────────────────
 
 async function main() {
   const privateKey = process.env.POD_ADMIN_PRIVATE_KEY;
+  const paymasterUrl = process.env.NEXT_PUBLIC_PAYMASTER;
   const rpcUrl = process.env.NEXT_PUBLIC_RPC_URL || 'https://mainnet.base.org';
   const contractAddress = process.env.POC_CONTRACT_ADDRESS;
+  const cdpApiKey = process.env.CDP_API_KEY;
+  let cdpPrivateKey = process.env.EXECUTIVE_MINTING_PRIVATE_KEY;
 
   if (!privateKey) throw new Error('POD_ADMIN_PRIVATE_KEY not set in .env');
+  if (!paymasterUrl) throw new Error('NEXT_PUBLIC_PAYMASTER not set in .env');
   if (!contractAddress) throw new Error('POC_CONTRACT_ADDRESS not set in .env');
+  if (!cdpApiKey) throw new Error('CDP_API_KEY not set in .env');
+  if (!cdpPrivateKey) throw new Error('EXECUTIVE_MINTING_PRIVATE_KEY not set in .env');
 
-  const account = privateKeyToAccount(privateKey.startsWith('0x') ? privateKey : `0x${privateKey}`);
+  // Normalize PEM newlines (Vercel/dotenv may store literal \n)
+  if (cdpPrivateKey.includes('\\n')) cdpPrivateKey = cdpPrivateKey.replace(/\\n/g, '\n');
+
+  // Initialize CDP SDK (required for sendUserOperation + waitForUserOperation)
+  Coinbase.configure({ apiKeyName: cdpApiKey, privateKey: cdpPrivateKey });
+
+  // Reconstruct the existing CDP smart wallet — address is deterministic
+  const signer = privateKeyToAccount(
+    privateKey.startsWith('0x') ? privateKey : `0x${privateKey}`
+  );
+  const wallet = toSmartWallet({
+    smartWalletAddress: '0x05c06af9fe1a996144902D9571d1d2783866cF63',
+    signer,
+  });
 
   const publicClient = createPublicClient({ chain: base, transport: http(rpcUrl) });
-  const walletClient = createWalletClient({ account, chain: base, transport: http(rpcUrl) });
 
-  console.log(`\n🚀 PoC Airdrop`);
-  console.log(`   Minter:   ${account.address}`);
-  console.log(`   Contract: ${contractAddress}`);
-  console.log(`   Total:    ${RECIPIENTS.length} recipients\n`);
+  console.log(`\n🚀 PoC Airdrop (gasless via CDP paymaster)`);
+  console.log(`   Smart wallet: ${wallet.address}`);
+  console.log(`   Signer EOA:   ${signer.address}`);
+  console.log(`   Contract:     ${contractAddress}`);
+  console.log(`   Total:        ${RECIPIENTS.length} recipients\n`);
 
   // Pre-check: filter out addresses that already hold a token
   console.log('🔍 Checking existing holdings...');
@@ -116,26 +132,36 @@ async function main() {
     return;
   }
 
-  console.log(`\n📦 Minting to ${needsMint.length} addresses...`);
+  console.log(`\n📦 Minting to ${needsMint.length} addresses (gasless)...`);
 
-  const { request } = await publicClient.simulateContract({
-    address: contractAddress,
+  const callData = encodeFunctionData({
     abi: ABI,
     functionName: 'batchMint',
     args: [needsMint],
-    account,
   });
 
-  const txHash = await walletClient.writeContract(request);
-  console.log(`\n⏳ Tx submitted: ${txHash}`);
-  console.log(`   https://basescan.org/tx/${txHash}`);
+  const result = await sendUserOperation(wallet, {
+    calls: [{ to: contractAddress, data: callData, value: 0n }],
+    chainId: 8453, // Base mainnet
+    paymasterUrl,
+  });
 
-  const receipt = await publicClient.waitForTransactionReceipt({ hash: txHash });
-  console.log(`\n✅ Confirmed in block ${receipt.blockNumber}`);
-  console.log(`   Status: ${receipt.status}`);
+  console.log(`\n⏳ UserOp submitted: ${result.userOpHash}`);
+  console.log(`   Waiting for on-chain confirmation...`);
+
+  const receipt = await waitForUserOperation({
+    userOpHash: result.userOpHash,
+    smartWalletAddress: wallet.address,
+  });
+
+  const txHash = receipt.transaction_hash || result.userOpHash;
+  console.log(`\n✅ Confirmed!`);
+  if (receipt.transaction_hash) {
+    console.log(`   Tx: https://basescan.org/tx/${receipt.transaction_hash}`);
+  }
 
   // Verify
-  console.log('\n🔎 Verifying...');
+  console.log('\n🔎 Verifying on-chain...');
   let minted = 0;
   for (const addr of needsMint) {
     const has = await publicClient.readContract({
