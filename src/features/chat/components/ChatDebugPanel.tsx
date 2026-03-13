@@ -136,7 +136,7 @@ export function ChatDebugPanel() {
         <strong style={{ color: '#8FAAA1', display: 'block', marginBottom: '4px' }}>Token Balances:</strong>
         <div style={{ background: '#f3f4f6', padding: '8px', borderRadius: '4px', fontSize: '11px' }}>
           <div>PoC: {balances?.hasProofOfCuriosity ? '✅' : '❌'}</div>
-          <div>Beta Tester HAT: {(balances as any)?.hasBetaTesterHat ? '✅' : '❌'}</div>
+
           <div>Advocate: {(balances as any)?.hasAdvocate ? '✅' : '❌'}</div>
           <div>Exec Pod: {balances?.hasExecutivePod ? '✅' : '❌'}</div>
           <div>Dev Pod: {balances?.hasDevPod ? '✅' : '❌'}</div>

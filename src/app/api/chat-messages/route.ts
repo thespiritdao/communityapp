@@ -284,7 +284,7 @@ export async function POST(request: Request) {
         podId: pod_id,
         userWallet: sender_wallet_id,
         checkedPoC: required_token === POC,
-        checkedBetaTester: required_token === betaTesterHat,
+
         checkedAdvocate: required_token === ADVOCATE_TOKEN,
         checkedPodMembership: !!pod_id,
       });

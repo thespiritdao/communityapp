@@ -3,7 +3,7 @@ import { useEvmAddress } from '@coinbase/cdp-hooks';
 import { useHatPermissions } from '@/hooks/useHatPermissions';
 import { usePodModules } from '@/features/pods/hooks/usePodModules';
 import { supabase } from '@/lib/supabase';
-import { hasBetaTesterSuperuser } from '@/utils/betaTesterUtils';
+
 
 interface Pod {
   id: string;
@@ -100,16 +100,6 @@ export function useBountyManagementAccess(): UseBountyManagementAccessReturn {
       console.log(
         `💰 [Bounties] Checking ${allPods.length} pods for bounty access...`,
       );
-
-      // BETA TESTING: Check if user has Beta Tester superuser access
-      // 🔧 FIX: Beta Testers should STILL respect bountyManagement permissions
-      // They can test micro communities, but not create bounties for OTHER communities
-      const isBetaTester = hasBetaTesterSuperuser(userHats);
-
-      if (isBetaTester) {
-        console.log('👑 [Bounties] Beta Tester detected - will still check bounty permissions for each pod');
-        // Don't bypass permission checks - let normal flow continue
-      }
 
       // Filter pods where user has both module enabled AND bounty management permission
       const podsWithPermission = allPods.filter((pod) => {

@@ -105,7 +105,7 @@ export interface TokenBalance {
   hasDevPod: boolean; // legacy field - always false
   hasBountyHat: boolean;
   hasEventManagement: boolean;
-  hasBetaTesterHat: boolean; // legacy field - always false
+
   hasAdvocate: boolean; // Advocate NFT for universal bounty access
   systemBalance: string;
   selfBalance: string;
@@ -509,7 +509,6 @@ export async function fetchTokenBalances(
         hasDevPod: false,
         hasBountyHat: false,
         hasEventManagement: false,
-        hasBetaTesterHat: false,
         hasAdvocate: false,
         systemBalance: '0',
         selfBalance: '0',
@@ -675,7 +674,6 @@ export async function fetchTokenBalances(
         hasDevPod: false,
         hasBountyHat: false,
         hasEventManagement: false,
-        hasBetaTesterHat: false,
         hasAdvocate: false,
         systemBalance: '0',
         selfBalance: '0',

@@ -6,7 +6,7 @@ import { HatsMigrationService } from '../services/hatsMigrationService';
 import type { Pod } from '../types';
 import { useHatPermissions } from '@/hooks/useHatPermissions';
 import { useDatabaseFirstPermissions } from '@/hooks/useDatabaseFirstPermissions';
-import { hasBetaTesterSuperuser } from '@/utils/betaTesterUtils';
+
 
 export interface UsePodsConfig {
   filter?: 'all' | 'active' | 'draft' | 'proposed' | 'inactive';
@@ -101,25 +101,14 @@ export function usePods(config: UsePodsConfig = {}): UsePodsReturn {
       }
 
       // VISIBILITY FILTERING: Hide Community Pod and Top Hat from non-executive members
-      // 🔧 FIX: Use userHats instead of userRoles - Beta Tester is a standalone HAT
-      const isBetaTester = hasBetaTesterSuperuser(userHats);
       const isExecutiveMember = hasExecutivePodAccess();
 
-      // Only executive pod members (and not beta testers) should see Community Pod and Top Hat
-      if (!isExecutiveMember && !isBetaTester) {
+      if (!isExecutiveMember) {
         allPods = allPods.filter(pod => {
           const podName = pod.name?.toLowerCase() || '';
-          // Filter out Community Pod and Top Hat for non-exec members
           return podName !== 'community pod' && podName !== 'top hat';
         });
         console.log('🔒 Filtered pods for non-executive member');
-      } else if (isBetaTester && !isExecutiveMember) {
-        // Beta testers should NOT see Community Pod or Top Hat
-        allPods = allPods.filter(pod => {
-          const podName = pod.name?.toLowerCase() || '';
-          return podName !== 'community pod' && podName !== 'top hat';
-        });
-        console.log('🧪 Filtered pods for beta tester (hiding Community Pod and Top Hat)');
       }
 
       console.log('📋 Loaded pods:', allPods.length);
@@ -232,31 +221,6 @@ export function usePods(config: UsePodsConfig = {}): UsePodsReturn {
           console.log('👑 [DB-First] Pod Leader has access to:', pod.name);
         }
       } else {
-        // Check Beta Tester restrictions
-        const isBetaTester = hasBetaTesterSuperuser(userHats);
-        if (isBetaTester) {
-          // Beta Testers Pod ID (production)
-          const BETA_TESTERS_POD_ID = 'af4cc4d1-e4e1-4ae3-b70e-19f89a07e0cb';
-
-          // Check if this is the Beta Testers Pod itself OR a sub-pod of it
-          const isBetaTestersPod = pod.id === BETA_TESTERS_POD_ID;
-          const isSubPodOfBetaTesters = pod.parent_pod_id === BETA_TESTERS_POD_ID;
-
-          if (isBetaTestersPod) {
-            console.log(
-              '👑 [DB-First] Beta Tester can manage Beta Testers Pod',
-            );
-            return true;
-          }
-
-          if (isSubPodOfBetaTesters) {
-            console.log(
-              '👑 [DB-First] Beta Tester can manage sub-pod of Beta Testers Pod:',
-              pod.name,
-            );
-            return true;
-          }
-
           console.log(
             '🔒 [DB-First] Beta Tester cannot manage non-beta pod:',
             pod.name,

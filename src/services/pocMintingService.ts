@@ -15,8 +15,7 @@ import { CONTRACT_ADDRESSES } from '@/config/contracts';
 
 const POC_CONTRACT_ADDRESS = CONTRACT_ADDRESSES.PROOF_OF_CURIOSITY;
 
-// Default metadata URI for beta testers
-const DEFAULT_POC_URI = 'ipfs://QmProofOfCuriosityBetaTester'; // TODO: Replace with actual URI
+const DEFAULT_POC_URI = `${process.env.NEXT_PUBLIC_APP_URL || 'https://app.spiritdao.org'}/api/tokens/poc/1`;
 
 // ============================================================
 // Types
