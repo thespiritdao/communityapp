@@ -14,7 +14,6 @@ import { usePodModules } from '@/features/pods/hooks/usePodModules';
 import type { ChatGroup, Message, UserProfile } from '../types';
 import ChatInput from './ChatInput';
 import MessageList from './MessageList';
-import { ChatDebugPanel } from './ChatDebugPanel';
 const TABLE_NAME = 'chat_messages';
 
 interface ChatContainerProps {
@@ -572,9 +571,6 @@ export default function ChatContainer({ chatGroupId }: ChatContainerProps) {
   if (!selectedChatGroup) {
     return (
       <div className="chat-shell chat-list-view">
-        {/* Debug panel for mobile troubleshooting */}
-        <ChatDebugPanel />
-
         {/* rounded card container with white background */}
         <div className="chat-groups-container">
           <div className="flex items-center justify-between mb-4">
