@@ -6,7 +6,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { createPublicClient, createWalletClient, http, encodeFunctionData, parseAbi, getContract } from 'viem';
+import { createPublicClient, http, encodeFunctionData, parseAbi } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
 import { base } from 'viem/chains';
 import { Coinbase, toSmartWallet, sendUserOperation, waitForUserOperation } from '@coinbase/coinbase-sdk';
@@ -18,43 +18,67 @@ export const maxDuration = 60;
 const HAT_MINTER_ABI = parseAbi([
   'function mintTNMemberHat(address recipient) external returns (bool)',
   'function hasTNMemberHat(address user) external view returns (bool)',
-  'function hasAdminHat() external view returns (bool)',
 ]);
 
 const TN_POD_ID = 'f2bc166d-33d5-47dc-8409-ea8d445d3fc0';
 const TN_MEMBER_HAT_ID = '0x0000074900020001000100000000000000000000000000000000000000000000';
 
-async function mintTNMemberHat(walletAddress: string): Promise<void> {
+async function mintTNMemberHat(
+  walletAddress: string,
+  privateKey: string,
+  cdpApiKey: string,
+  cdpPrivateKey: string,
+  paymasterUrl: string,
+): Promise<void> {
   const hatMinterAddress = process.env.NEXT_PUBLIC_HAT_MINTER as `0x${string}` | undefined;
-  const adminPrivateKey = process.env.POD_ADMIN_PRIVATE_KEY;
   const rpcUrl = process.env.NEXT_PUBLIC_RPC_URL || 'https://mainnet.base.org';
 
-  if (!hatMinterAddress || !adminPrivateKey) {
-    console.warn('⚠️ HatMinter not configured — skipping TN Member HAT mint');
+  if (!hatMinterAddress) {
+    console.warn('⚠️ HAT_MINTER not configured — skipping TN Member HAT mint');
     return;
   }
 
+  // Check if user already has the HAT (read-only, no gas)
   const publicClient = createPublicClient({ chain: base, transport: http(rpcUrl) });
-  const account = privateKeyToAccount(
-    adminPrivateKey.startsWith('0x') ? adminPrivateKey as `0x${string}` : `0x${adminPrivateKey}`
-  );
-  const walletClient = createWalletClient({ account, chain: base, transport: http(rpcUrl) });
-
-  const contract = getContract({
+  const alreadyHas = await publicClient.readContract({
     address: hatMinterAddress,
     abi: HAT_MINTER_ABI,
-    client: { public: publicClient, wallet: walletClient },
+    functionName: 'hasTNMemberHat',
+    args: [walletAddress as `0x${string}`],
   });
-
-  const alreadyHas = await contract.read.hasTNMemberHat([walletAddress as `0x${string}`]);
   if (alreadyHas) {
     console.log('ℹ️ User already has TN Member HAT');
     return;
   }
 
-  const hash = await contract.write.mintTNMemberHat([walletAddress as `0x${string}`]);
-  await publicClient.waitForTransactionReceipt({ hash, timeout: 60_000 });
-  console.log('✅ TN Member HAT minted:', hash);
+  // Mint via CDP smart wallet (gasless — same pattern as PoC mint)
+  Coinbase.configure({ apiKeyName: cdpApiKey, privateKey: cdpPrivateKey });
+  const signer = privateKeyToAccount(
+    privateKey.startsWith('0x') ? privateKey as `0x${string}` : `0x${privateKey}`
+  );
+  const wallet = toSmartWallet({
+    smartWalletAddress: '0x05c06af9fe1a996144902D9571d1d2783866cF63',
+    signer,
+  });
+
+  const callData = encodeFunctionData({
+    abi: HAT_MINTER_ABI,
+    functionName: 'mintTNMemberHat',
+    args: [walletAddress as `0x${string}`],
+  });
+
+  const result = await sendUserOperation(wallet, {
+    calls: [{ to: hatMinterAddress, data: callData, value: 0n }],
+    chainId: 8453,
+    paymasterUrl,
+  });
+
+  await waitForUserOperation({
+    userOpHash: result.userOpHash,
+    smartWalletAddress: wallet.address,
+  });
+
+  console.log('✅ TN Member HAT minted (gasless):', result.userOpHash);
 
   // Sync to pod_members
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -159,7 +183,7 @@ export async function POST(request: NextRequest) {
     const txHash = receipt.transaction_hash || result.userOpHash;
 
     // Also mint TN Member HAT (non-blocking — failure doesn't fail onboarding)
-    mintTNMemberHat(walletAddress).catch((err) =>
+    mintTNMemberHat(walletAddress, privateKey, cdpApiKey, cdpPrivateKey, paymasterUrl).catch((err) =>
       console.error('⚠️ TN Member HAT mint failed (non-critical):', err)
     );
 
