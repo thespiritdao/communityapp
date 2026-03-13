@@ -264,7 +264,7 @@ export async function POST(request: NextRequest) {
               transactionHash: hash,
               blockNumber: receipt.blockNumber.toString(),
               gasUsed: receipt.gasUsed.toString(),
-              hatName: isFirstUser ? 'Executive Pod Leader' : 'Beta Tester',
+              hatName: 'Executive Pod Leader',
               mode: 'contract',
               gasSponsored: true,
             });
