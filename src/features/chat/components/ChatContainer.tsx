@@ -67,12 +67,6 @@ export default function ChatContainer({ chatGroupId }: ChatContainerProps) {
     [],
   );
 
-  // General chat token - beta testers can access this for testing
-  const GENERAL_CHAT_TOKEN = useMemo(
-    () => '0x246Cf64b9aE5d63207242Dbd466F3628d14746FF'.toLowerCase(),
-    [],
-  );
-
   // Get current user profile
   useEffect(() => {
     const fetchUser = async () => {
@@ -223,7 +217,7 @@ export default function ChatContainer({ chatGroupId }: ChatContainerProps) {
           hasProofOfCuriosity: balances?.hasProofOfCuriosity ?? false,
           hasAdvocate: (balances as any)?.hasAdvocate ?? false,
           isAdvocateChat: requiredToken === ADVOCATE_TOKEN,
-          isGeneralChat: requiredToken === GENERAL_CHAT_TOKEN,
+          isGeneralChat: requiredToken === POC,
         });
 
         // 1) Direct HAT ownership (userHats is a list of hat/token ids)
