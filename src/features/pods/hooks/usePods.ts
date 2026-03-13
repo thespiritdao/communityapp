@@ -220,13 +220,6 @@ export function usePods(config: UsePodsConfig = {}): UsePodsReturn {
         } else if (isLeaderOfPod(pod.id)) {
           console.log('👑 [DB-First] Pod Leader has access to:', pod.name);
         }
-      } else {
-          console.log(
-            '🔒 [DB-First] Beta Tester cannot manage non-beta pod:',
-            pod.name,
-          );
-          return false;
-        }
       }
 
       return canManage;
