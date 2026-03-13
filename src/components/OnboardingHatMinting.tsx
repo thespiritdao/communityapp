@@ -1,13 +1,8 @@
 /**
- * Onboarding Hat Minting Component
+ * Onboarding Minting Component
  *
- * Mints Beta Tester HAT and Advocate NFT to new users during onboarding
- * Uses CDP embedded wallet hooks directly (no wagmi required)
- *
- * Flow:
- * 1. Mint Beta Tester HAT (for permissions)
- * 2. Mint 1 Advocate NFT (for governance voting power)
- * 3. Auto-delegate NFT to user (activates voting power)
+ * For first user: mints Executive Leader HAT
+ * For all other users: mints Proof of Curiosity token (gasless via CDP paymaster)
  */
 
 'use client';
@@ -39,130 +34,89 @@ export function OnboardingHatMinting({
   const { evmAddress } = useEvmAddress();
   const { sendUserOperation } = useSendUserOperation();
 
-  const [txStatus, setTxStatus] = useState<'idle' | 'minting-hat' | 'minting-nft' | 'delegating' | 'success' | 'error'>('idle');
+  const totalSteps = isFirstUser ? 3 : 1;
+  const [txStatus, setTxStatus] = useState<'idle' | 'minting-hat' | 'minting-poc' | 'minting-nft' | 'delegating' | 'success' | 'error'>('idle');
   const [currentStep, setCurrentStep] = useState<string>('Ready to begin');
   const [txHash, setTxHash] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  // Safety gate: Ensure CDP EVM context is fully ready
   const walletReady = Boolean(currentUser && evmAddress);
 
-  const handleMintHat = async () => {
+  const handleMint = async () => {
     try {
-      // Verify wallet address exists
-      if (!walletAddress) {
-        throw new Error('No wallet address available');
-      }
+      if (!walletAddress) throw new Error('No wallet address available');
+      if (!currentUser?.evmSmartAccounts?.[0]) throw new Error('Smart account not available');
 
-      if (!currentUser?.evmSmartAccounts?.[0]) {
-        throw new Error('Smart account not available');
-      }
+      if (isFirstUser) {
+        // ── First user: mint Executive Leader HAT + Advocate NFT + delegate ──
 
-      console.log('🎩 Starting onboarding process...');
-      console.log('🔑 Recipient wallet address:', walletAddress);
-      console.log('👤 User type:', isFirstUser ? 'First User (Executive Leader)' : 'Beta Tester');
+        setTxStatus('minting-hat');
+        setCurrentStep('Granting platform access...');
 
-      // ========================================
-      // STEP 1: Mint Beta Tester HAT
-      // ========================================
-      setTxStatus('minting-hat');
-      setCurrentStep('Granting access permissions...');
-      console.log('📤 Step 1/3: Minting Beta Tester HAT...');
+        const hatResponse = await fetch('/api/onboarding/mint-hat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ walletAddress, isFirstUser }),
+        });
+        const hatResult = await hatResponse.json();
+        if (!hatResult.success) throw new Error(hatResult.error || 'HAT minting failed');
 
-      const hatResponse = await fetch('/api/onboarding/mint-hat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          walletAddress,
-          isFirstUser,
-        }),
-      });
+        setTxStatus('minting-nft');
+        setCurrentStep('Granting governance voting power...');
 
-      const hatResult = await hatResponse.json();
+        const nftResponse = await fetch('/api/onboarding/mint-advocate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ walletAddress }),
+        });
+        const nftResult = await nftResponse.json();
 
-      if (!hatResult.success) {
-        throw new Error(hatResult.error || 'HAT minting failed');
-      }
-
-      console.log('✅ HAT minted successfully!');
-      console.log('   Transaction:', hatResult.transactionHash);
-      console.log('   HAT:', hatResult.hatName);
-
-      // ========================================
-      // STEP 2: Mint Advocate NFT
-      // ========================================
-      setTxStatus('minting-nft');
-      setCurrentStep('Granting governance voting power...');
-      console.log('📤 Step 2/3: Minting Advocate NFT...');
-
-      const nftResponse = await fetch('/api/onboarding/mint-advocate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          walletAddress,
-        }),
-      });
-
-      const nftResult = await nftResponse.json();
-
-      if (!nftResult.success) {
-        // Don't fail onboarding if Advocate minting fails - user can get it later
-        console.warn('⚠️ Advocate NFT minting failed:', nftResult.error);
-        console.warn('   User can create governance proposals after receiving Advocate NFT manually');
-      } else {
-        console.log('✅ Advocate NFT minted successfully!');
-        console.log('   Transaction:', nftResult.mintTransactionHash);
-
-        // ========================================
-        // STEP 3: Auto-delegate to self for voting power
-        // ========================================
-        if (nftResult.needsDelegation && ADVOCATE_ADDRESS) {
+        if (nftResult.success && nftResult.needsDelegation && ADVOCATE_ADDRESS) {
           setTxStatus('delegating');
           setCurrentStep('Activating voting power...');
-          console.log('📤 Step 3/3: Delegating NFT to user for voting power...');
-
           try {
             const smartAccount = currentUser.evmSmartAccounts[0];
-
             const delegateCallData = encodeFunctionData({
               abi: ADVOCATE_ABI,
               functionName: 'delegate',
               args: [walletAddress],
             });
-
-            const delegateResult = await sendUserOperation({
+            await sendUserOperation({
               evmSmartAccount: smartAccount,
               network: 'base',
-              calls: [{
-                to: ADVOCATE_ADDRESS,
-                value: 0n,
-                data: delegateCallData,
-              }],
+              calls: [{ to: ADVOCATE_ADDRESS, value: 0n, data: delegateCallData }],
               useCdpPaymaster: true,
             });
-
-            console.log('✅ Delegation successful! User now has voting power');
-            console.log('   Operation:', delegateResult.userOperationHash);
-          } catch (delegateError) {
-            console.warn('⚠️ Auto-delegation failed:', delegateError);
-            console.warn('   User will need to delegate manually from governance page');
-            // Don't fail onboarding - delegation can be done later
+          } catch {
+            // Non-critical — user can delegate later
           }
         }
+
+        setTxHash(hatResult.transactionHash);
+
+      } else {
+        // ── Regular user: mint Proof of Curiosity token ──
+
+        setTxStatus('minting-poc');
+        setCurrentStep('Minting membership token...');
+
+        const pocResponse = await fetch('/api/onboarding/mint-poc', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ walletAddress }),
+        });
+        const pocResult = await pocResponse.json();
+        if (!pocResult.success) throw new Error(pocResult.error || 'Membership token minting failed');
+
+        setTxHash(pocResult.transactionHash || 'confirmed');
       }
 
-      // ========================================
-      // SUCCESS: All done!
-      // ========================================
-      setTxHash(hatResult.transactionHash);
       setTxStatus('success');
       setCurrentStep('Complete!');
-      onSuccess(hatResult.transactionHash);
+      onSuccess(txHash || 'confirmed');
 
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : 'Unknown error occurred';
-      console.error('❌ Onboarding failed:', errorMsg);
-      console.error('Full error:', err);
       setErrorMessage(errorMsg);
       setTxStatus('error');
       setCurrentStep('Failed');
@@ -182,10 +136,16 @@ export function OnboardingHatMinting({
     );
   }
 
+  const isProcessing = txStatus === 'minting-hat' || txStatus === 'minting-poc' || txStatus === 'minting-nft' || txStatus === 'delegating';
+  const stepLabel =
+    txStatus === 'minting-hat' ? `📝 Step 1/${totalSteps}` :
+    txStatus === 'minting-poc' ? `🌱 Step 1/1` :
+    txStatus === 'minting-nft' ? `🎖️ Step 2/${totalSteps}` :
+    txStatus === 'delegating'  ? `🗳️ Step 3/${totalSteps}` : '';
+
   return (
     <div className="w-full">
       <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-        {/* Status Display */}
         <div
           style={{
             background: 'rgba(143, 170, 161, 0.1)',
@@ -197,17 +157,13 @@ export function OnboardingHatMinting({
           {txStatus === 'idle' && (
             <p className="text-sm text-gray-600">{currentStep}</p>
           )}
-          {(txStatus === 'minting-hat' || txStatus === 'minting-nft' || txStatus === 'delegating') && (
+          {isProcessing && (
             <div className="flex flex-col gap-2">
               <div className="flex items-center gap-2">
                 <div className="animate-spin h-4 w-4 border-2 border-gray-300 border-t-[#2F5D50] rounded-full"></div>
                 <p className="text-sm text-gray-600">{currentStep}</p>
               </div>
-              <div className="text-xs text-gray-500">
-                {txStatus === 'minting-hat' && '📝 Step 1/3'}
-                {txStatus === 'minting-nft' && '🎖️ Step 2/3'}
-                {txStatus === 'delegating' && '🗳️ Step 3/3'}
-              </div>
+              <div className="text-xs text-gray-500">{stepLabel}</div>
             </div>
           )}
           {txStatus === 'error' && (
@@ -218,14 +174,13 @@ export function OnboardingHatMinting({
           )}
         </div>
 
-        {/* Action Button */}
         <button
-          onClick={handleMintHat}
-          disabled={!walletReady || txStatus === 'minting-hat' || txStatus === 'minting-nft' || txStatus === 'delegating'}
+          onClick={handleMint}
+          disabled={!walletReady || isProcessing}
           className="sacred-primary-button"
           style={{
             width: '100%',
-            background: !walletReady || txStatus === 'minting-hat' || txStatus === 'minting-nft' || txStatus === 'delegating' ? '#8FAAA1' : '#2F5D50',
+            background: !walletReady || isProcessing ? '#8FAAA1' : '#2F5D50',
             color: '#FFFFFF',
             border: 'none',
             borderRadius: '12px',
@@ -233,42 +188,24 @@ export function OnboardingHatMinting({
             fontSize: '16px',
             fontWeight: '500',
             letterSpacing: '0.02em',
-            cursor: !walletReady || txStatus === 'minting-hat' || txStatus === 'minting-nft' || txStatus === 'delegating' ? 'not-allowed' : 'pointer',
-            opacity: !walletReady || txStatus === 'minting-hat' || txStatus === 'minting-nft' || txStatus === 'delegating' ? 0.6 : 1,
+            cursor: !walletReady || isProcessing ? 'not-allowed' : 'pointer',
+            opacity: !walletReady || isProcessing ? 0.6 : 1,
             transition: 'all 0.2s ease',
           }}
           onMouseEnter={(e) => {
-            if (txStatus === 'idle' || txStatus === 'error') {
-              e.currentTarget.style.background = '#254A40';
-            }
+            if (!isProcessing) e.currentTarget.style.background = '#254A40';
           }}
           onMouseLeave={(e) => {
-            if (txStatus === 'idle' || txStatus === 'error') {
-              e.currentTarget.style.background = '#2F5D50';
-            }
+            if (!isProcessing) e.currentTarget.style.background = '#2F5D50';
           }}
         >
-          {txStatus === 'minting-hat' && 'Minting...'}
-          {txStatus === 'minting-nft' && 'Minting...'}
-          {txStatus === 'delegating' && 'Activating...'}
-          {(txStatus === 'idle' || txStatus === 'error') && 'Grant Access'}
+          {isProcessing ? 'Processing...' : 'Grant Access'}
         </button>
 
-        {/* Info */}
-        <div
-          style={{
-            textAlign: 'center',
-            fontSize: '12px',
-            color: '#8FAAA1',
-          }}
-        >
-          <p style={{ marginBottom: '4px' }}>
-            ⛓️ Base Mainnet · Gas fees sponsored
-          </p>
+        <div style={{ textAlign: 'center', fontSize: '12px', color: '#8FAAA1' }}>
+          <p style={{ marginBottom: '4px' }}>⛓️ Base Mainnet · Gas fees sponsored</p>
           {!isFirstUser && (
-            <p style={{ fontStyle: 'italic' }}>
-              Grants pod management + governance voting power
-            </p>
+            <p style={{ fontStyle: 'italic' }}>Grants access to community features</p>
           )}
         </div>
       </div>

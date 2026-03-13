@@ -141,7 +141,7 @@ export function InviteCodeModal({
         {/* Accessible title for screen readers */}
         <DialogTitle className="sr-only">
           {currentStep === 'invite' && 'Enter Invite Code'}
-          {currentStep === 'minting' && (isFirstUser ? 'Founding Member Access' : 'Beta Tester Access')}
+          {currentStep === 'minting' && (isFirstUser ? 'Founding Member Access' : 'Community Member Access')}
           {currentStep === 'complete' && 'Access Granted'}
         </DialogTitle>
 
@@ -343,7 +343,7 @@ export function InviteCodeModal({
                     fontStyle: 'italic',
                   }}
                 >
-                  30-day beta journey on Base Mainnet
+                  Powered by Base Mainnet · Gas fees sponsored
                 </p>
               </div>
             </div>
@@ -372,7 +372,7 @@ export function InviteCodeModal({
                   letterSpacing: '0.02em',
                 }}
               >
-                {isFirstUser ? '👑 Founding Member' : '🗝️ Beta Tester Access'}
+                {isFirstUser ? '👑 Founding Member' : '🌱 Community Member'}
               </h3>
               <p
                 style={{
@@ -383,7 +383,7 @@ export function InviteCodeModal({
               >
                 {isFirstUser
                   ? 'You are receiving full platform access as the founding member.'
-                  : 'You are receiving temporary permissions for 30-day exploration.'}
+                  : 'You are joining the SpiritDAO community.'}
               </p>
             </div>
 
