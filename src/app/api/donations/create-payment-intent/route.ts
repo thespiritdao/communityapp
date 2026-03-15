@@ -116,6 +116,10 @@ export async function POST(request: NextRequest) {
         donor_email: donorEmail || null,
         fiat_amount: fiatAmount,
         system_tokens_to_mint: systemTokensToMint,
+        org_fee: platformFee,
+        stripe_fee: estimatedStripeFee,
+        settlement_days: 5,
+        is_reversible: true,
         status: 'payment_pending'
       })
       .select()
