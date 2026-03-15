@@ -142,6 +142,8 @@ export const UnifiedMembershipManager: React.FC<
       bountyManagement: perms.bountyManagement ?? false,
       marketplaceAccess: perms.marketplaceAccess ?? false,
       marketplaceManage: perms.marketplaceManage ?? false,
+      knowledgeBaseAccess: perms.knowledgeBaseAccess ?? false,
+      knowledgeBaseManage: perms.knowledgeBaseManage ?? false,
     };
   };
 

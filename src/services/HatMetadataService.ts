@@ -847,6 +847,8 @@ export class HatMetadataService {
           bountyManagement: false,
           marketplaceAccess: false,
           marketplaceManage: false,
+          knowledgeBaseAccess: false,
+          knowledgeBaseManage: false,
         },
         metadata: null,
       };

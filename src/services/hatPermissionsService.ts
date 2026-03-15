@@ -152,6 +152,8 @@ export const HAT_ROLES: Record<string, HatRole> = {
       bountyManagement: false,
       marketplaceAccess: true,
       marketplaceManage: true,
+      knowledgeBaseAccess: false,
+      knowledgeBaseManage: false,
     },
   },
   BOUNTY_MANAGER: {
@@ -173,6 +175,8 @@ export const HAT_ROLES: Record<string, HatRole> = {
       bountyManagement: true,
       marketplaceAccess: false,
       marketplaceManage: false,
+      knowledgeBaseAccess: false,
+      knowledgeBaseManage: false,
     },
   },
   FORUM_MANAGER: {
@@ -194,6 +198,8 @@ export const HAT_ROLES: Record<string, HatRole> = {
       bountyManagement: false,
       marketplaceAccess: false,
       marketplaceManage: false,
+      knowledgeBaseAccess: false,
+      knowledgeBaseManage: false,
     },
   },
   CHAT_MANAGER: {
@@ -215,6 +221,8 @@ export const HAT_ROLES: Record<string, HatRole> = {
       bountyManagement: false,
       marketplaceAccess: false,
       marketplaceManage: false,
+      knowledgeBaseAccess: false,
+      knowledgeBaseManage: false,
     },
   },
   EVENT_MANAGER: {
@@ -236,6 +244,8 @@ export const HAT_ROLES: Record<string, HatRole> = {
       bountyManagement: false,
       marketplaceAccess: false,
       marketplaceManage: false,
+      knowledgeBaseAccess: false,
+      knowledgeBaseManage: false,
     },
   },
 };

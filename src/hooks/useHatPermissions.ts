@@ -149,6 +149,8 @@ export const useHatPermissions = (): UseHatPermissionsReturn => {
                   bountyManagement: true,
                   marketplaceAccess: true,
                   marketplaceManage: true,
+                  knowledgeBaseAccess: true,
+                  knowledgeBaseManage: true,
                 },
               };
 
@@ -193,6 +195,8 @@ export const useHatPermissions = (): UseHatPermissionsReturn => {
                   bountyManagement: isLeader,
                   marketplaceAccess: true,
                   marketplaceManage: isLeader,
+                  knowledgeBaseAccess: isLeader,
+                  knowledgeBaseManage: isLeader,
                 },
               };
 
@@ -216,6 +220,8 @@ export const useHatPermissions = (): UseHatPermissionsReturn => {
                 bountyManagement: false,
                 marketplaceAccess: false,
                 marketplaceManage: false,
+                knowledgeBaseAccess: false,
+                knowledgeBaseManage: false,
               };
 
               try {
@@ -290,6 +296,8 @@ export const useHatPermissions = (): UseHatPermissionsReturn => {
         bountyManagement: roles.some((r) => r.permissions?.bountyManagement),
         marketplaceAccess: roles.some((r) => r.permissions?.marketplaceAccess),
         marketplaceManage: roles.some((r) => r.permissions?.marketplaceManage),
+        knowledgeBaseAccess: roles.some((r) => r.permissions?.knowledgeBaseAccess),
+        knowledgeBaseManage: roles.some((r) => r.permissions?.knowledgeBaseManage),
       };
 
       setUserRoles(roles);
@@ -441,6 +449,8 @@ export const useHatPermissions = (): UseHatPermissionsReturn => {
       bountyManagement: podRoles.some((r) => r.permissions?.bountyManagement),
       marketplaceAccess: podRoles.some((r) => r.permissions?.marketplaceAccess),
       marketplaceManage: podRoles.some((r) => r.permissions?.marketplaceManage),
+      knowledgeBaseAccess: podRoles.some((r) => r.permissions?.knowledgeBaseAccess),
+      knowledgeBaseManage: podRoles.some((r) => r.permissions?.knowledgeBaseManage),
     };
 
     // console.log(`✅ Pod ${podId} permissions:`, {

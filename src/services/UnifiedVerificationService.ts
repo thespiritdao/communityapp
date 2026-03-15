@@ -142,6 +142,8 @@ export class UnifiedVerificationService {
         bountyManagement: false,
         marketplaceAccess: false,
         marketplaceManage: false,
+        knowledgeBaseAccess: false,
+        knowledgeBaseManage: false,
       };
 
       const eligibilityResults: any = {};
@@ -246,6 +248,8 @@ export class UnifiedVerificationService {
         bountyManagement: false,
         marketplaceAccess: false,
         marketplaceManage: false,
+        knowledgeBaseAccess: false,
+        knowledgeBaseManage: false,
       };
 
       let foundMetadata = false;
