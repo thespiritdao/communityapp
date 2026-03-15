@@ -1,30 +1,34 @@
 // src/app/home/page.tsx
 'use client';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useEvmAddress, useCurrentUser } from '@coinbase/cdp-hooks';
 import { useUserProfile } from '@/features/identity/hooks/useUserProfile';
+import { TosModal } from '@/components/TosModal';
+import { supabase } from '@/utils/supabaseClient';
 import '../../features/home/styles/HomePage.css';
 
 export default function HomePage() {
-  // Use CDP hooks directly instead of wagmi for better embedded wallet support
   const { evmAddress: address } = useEvmAddress();
   const { currentUser } = useCurrentUser();
   const { profile, loading } = useUserProfile(address || undefined);
+  const [showTos, setShowTos] = useState(false);
 
-  // Debug logging
-  console.log('🏠 Home Page - CDP Session Status:', {
-    currentUser: currentUser ? 'Logged in' : 'Not logged in',
-    address,
-    hasAddress: !!address,
-    profile,
-    loading,
-  });
+  useEffect(() => {
+    if (!address || loading) return;
+    const checkTos = async () => {
+      const { data } = await supabase
+        .from('user_profiles')
+        .select('tos_signed_at')
+        .eq('wallet_address', address.toLowerCase())
+        .maybeSingle();
+      if (!data?.tos_signed_at) setShowTos(true);
+    };
+    checkTos();
+  }, [address, loading]);
 
   if (!address) {
-    console.warn('⚠️ Home Page: No wallet address detected');
-    console.warn('   Current user:', currentUser ? 'Yes' : 'No');
-    console.warn('   This suggests CDP session is not persisting across navigation');
     return (
       <div className="home-container">
         <div className="flex justify-center items-center min-h-[200px]">
@@ -46,6 +50,13 @@ export default function HomePage() {
 
   return (
     <div className="home-container">
+      {showTos && address && (
+        <TosModal
+          walletAddress={address}
+          onAccepted={() => setShowTos(false)}
+        />
+      )}
+
       {/* HEADER */}
       <div className="home-header" data-tour="welcome">
         {/* Left-bound logo */}

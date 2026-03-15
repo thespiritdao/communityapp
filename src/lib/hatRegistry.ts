@@ -12,6 +12,7 @@
  *   Executive Pod Leader    0x0000074900010000...  pod e35c9e25
  *   Community Pod parent    0x0000074900020000...  pod 86d2d359 (parent hat, no role row)
  *   Temporal Naturalism     0x0000074900020001...  pod f2bc166d (pod hat)
+ *   TN Leader               0x0000074900020001000000...  pod f2bc166d, role "Temporal Naturalism Leader"
  *   TN Member               0x0000074900020001000100...  pod f2bc166d, role "Temporal Naturalism Member"
  *
  * Server-side usage:
@@ -27,6 +28,7 @@ export type HatKey =
   | 'EXECUTIVE_POD_LEADER'
   | 'COMMUNITY_PODS_PARENT'
   | 'TEMPORAL_NATURALISM'
+  | 'TEMPORAL_NATURALISM_LEADER'
   | 'TEMPORAL_NATURALISM_MEMBER';
 
 export type HatIds = Record<HatKey, `0x${string}` | undefined>;
@@ -51,6 +53,10 @@ const POD_ROLE_LOOKUPS: Record<
   TEMPORAL_NATURALISM: {
     podId: 'f2bc166d-33d5-47dc-8409-ea8d445d3fc0',
     fromPodColumn: 'management_hat_id',
+  },
+  TEMPORAL_NATURALISM_LEADER: {
+    podId: 'f2bc166d-33d5-47dc-8409-ea8d445d3fc0',
+    roleName: 'Temporal Naturalism Leader',
   },
   TEMPORAL_NATURALISM_MEMBER: {
     podId: 'f2bc166d-33d5-47dc-8409-ea8d445d3fc0',

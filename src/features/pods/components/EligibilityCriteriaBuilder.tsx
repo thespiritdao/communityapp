@@ -138,15 +138,7 @@ export const EligibilityCriteriaBuilder: React.FC<
         ...new Set(tokenList.map((token) => token.address)),
       ];
 
-      console.log('🔄 Checking user token balances:', {
-        tokenAddresses,
-        address: address.slice(0, 6) + '...',
-      });
-
-      // Fetch user balances (fetchTokenBalances returns an object, not array)
       const balances = await fetchTokenBalances(address);
-
-      console.log('📊 Fetched balances:', balances);
 
       // Convert to record format for easy lookup
       const balanceRecord: Record<string, string> = {};
@@ -176,18 +168,10 @@ export const EligibilityCriteriaBuilder: React.FC<
         if (balance !== undefined) {
           balanceRecord[lowerAddress] = balance;
         } else {
-          // For tokens not in our env mappings, check if they might be HAT tokens
-          // or other database tokens - set them as available (1) for now
-          // This allows selection in the dropdown
-          console.log(
-            '📝 Token not in env mappings, marking as selectable:',
-            tokenAddress,
-          );
-          balanceRecord[lowerAddress] = '1'; // Mark as available for selection
+          balanceRecord[lowerAddress] = '1';
         }
       });
 
-      console.log('✅ Balance record updated:', balanceRecord);
       setUserTokenBalances(balanceRecord);
 
       toast({
@@ -220,9 +204,7 @@ export const EligibilityCriteriaBuilder: React.FC<
           .select('name, token_address')
           .not('token_address', 'is', null);
 
-        if (podError) {
-          console.error('Error fetching pod tokens:', podError);
-        } else {
+        if (!podError) {
           podTokens?.forEach((pod) => {
             if (pod.token_address) {
               tokens.push({
@@ -240,9 +222,7 @@ export const EligibilityCriteriaBuilder: React.FC<
           .select('name, contract_address')
           .not('contract_address', 'is', null);
 
-        if (tokenError) {
-          console.error('Error fetching tokens:', tokenError);
-        } else {
+        if (!tokenError) {
           contractTokens?.forEach((token) => {
             if (token.contract_address) {
               tokens.push({
@@ -254,12 +234,7 @@ export const EligibilityCriteriaBuilder: React.FC<
           });
         }
 
-        // Build tokens based on environment configuration instead of database
         const envTokens: AvailableToken[] = [];
-
-        console.log(
-          '🔧 Building available tokens from environment configuration',
-        );
 
         // Add HAT tokens (Pod management tokens)
         if (getClientHatId('EXECUTIVE_POD_LEADER')) {
@@ -327,7 +302,6 @@ export const EligibilityCriteriaBuilder: React.FC<
             token.address.toLowerCase() !== SYSTEM_TOKEN_ADDRESS.toLowerCase(),
         );
 
-        console.log('🎯 Final available tokens:', filteredTokens);
         setAvailableTokens(filteredTokens);
 
         // Check user balances for these tokens
@@ -335,7 +309,6 @@ export const EligibilityCriteriaBuilder: React.FC<
           await checkUserTokenBalances(filteredTokens);
         }
       } catch (error) {
-        console.error('Failed to fetch available tokens:', error);
         toast({
           title: 'Loading Failed',
           description: 'Unable to load available credentials',
@@ -353,17 +326,12 @@ export const EligibilityCriteriaBuilder: React.FC<
   useEffect(() => {
     const fetchAvailableHats = async () => {
       try {
-        console.log('🎩 Fetching available HATs...');
-
         const { data: pods, error } = await supabase
           .from('pods')
           .select('id, name, management_hat_id, membership_hat_id')
           .not('management_hat_id', 'is', null);
 
-        if (error) {
-          console.error('Error fetching HATs:', error);
-          return;
-        }
+        if (error) return;
 
         const hats: Array<{
           id: string;
@@ -388,10 +356,9 @@ export const EligibilityCriteriaBuilder: React.FC<
           }
         });
 
-        console.log('✅ Found HATs:', hats.length);
         setAvailableHats(hats);
-      } catch (error) {
-        console.error('Failed to fetch HATs:', error);
+      } catch {
+        // silently ignore HAT fetch errors
       }
     };
 
@@ -417,16 +384,8 @@ export const EligibilityCriteriaBuilder: React.FC<
     if (!podId) return '';
 
     try {
-      console.log('🔍 Auto-populating agreement text for pod:', podId);
-      const agreement =
-        await UnifiedAgreementService.getAgreementTextForCriteria(
-          podId,
-          criteriaType,
-        );
-      console.log('✅ Agreement text populated');
-      return agreement;
-    } catch (error) {
-      console.error('❌ Error populating agreement text:', error);
+      return await UnifiedAgreementService.getAgreementTextForCriteria(podId, criteriaType);
+    } catch {
       return UnifiedAgreementService.getDefaultMembershipAgreement();
     }
   };
@@ -457,16 +416,12 @@ export const EligibilityCriteriaBuilder: React.FC<
 
     try {
       setUploadingToIPFS(true);
-      console.log('📤 Uploading agreement to IPFS...');
-
       const cid = await AgreementIPFSService.uploadAgreement(
         agreementText,
         agreementId,
         podId,
         roleType,
       );
-
-      console.log('✅ Agreement uploaded! CID:', cid);
 
       toast({
         title: 'Agreement Uploaded',
@@ -476,7 +431,6 @@ export const EligibilityCriteriaBuilder: React.FC<
 
       return cid;
     } catch (error: any) {
-      console.error('❌ IPFS upload failed:', error);
       toast({
         title: 'Upload Failed',
         description: error.message || 'Failed to upload agreement to IPFS',
@@ -614,17 +568,7 @@ export const EligibilityCriteriaBuilder: React.FC<
 
   const removeCriterion = (index: number) => {
     try {
-      console.log('🗑️ Removing criterion at index:', {
-        index,
-        totalCriteria: criteria.length,
-        criterionToRemove: criteria[index],
-      });
-
       if (index < 0 || index >= criteria.length) {
-        console.error('❌ Invalid index for criterion removal:', {
-          index,
-          arrayLength: criteria.length,
-        });
         toast({
           title: 'Removal Failed',
           description: 'Invalid criterion index',
@@ -635,12 +579,6 @@ export const EligibilityCriteriaBuilder: React.FC<
 
       const removed = criteria[index];
       const updatedCriteria = criteria.filter((_, i) => i !== index);
-
-      console.log('✅ Criterion removal successful:', {
-        removedCriterion: removed,
-        remainingCount: updatedCriteria.length,
-      });
-
       updateCriteria(updatedCriteria);
 
       toast({
@@ -648,7 +586,6 @@ export const EligibilityCriteriaBuilder: React.FC<
         description: `Removed ${removed?.name || 'criterion'} from requirements`,
       });
     } catch (error) {
-      console.error('❌ Error removing criterion:', error);
       toast({
         title: 'Removal Failed',
         description: 'Failed to remove eligibility criterion',
@@ -729,14 +666,14 @@ export const EligibilityCriteriaBuilder: React.FC<
                 <Label className="text-lg font-medium mb-3 block">
                   Token Requirements
                 </Label>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-4">
                   <div>
-                    <Label className="flex items-center gap-2">
+                    <Label className="flex items-center gap-2 mb-1">
                       <Img
                         src="/images/erc20tokens/SelfToken.png"
                         alt="SELF Token"
-                        width={10}
-                        height={10}
+                        width={16}
+                        height={16}
                         className="h-4 w-4"
                       />
                       $SELF
@@ -761,7 +698,6 @@ export const EligibilityCriteriaBuilder: React.FC<
                             contract_address: SELF_TOKEN_ADDRESS,
                           }));
                         } else if (index !== undefined) {
-                          // For existing criteria, update the minimum_amount
                           updateExistingCriterion(index, {
                             minimum_amount: e.target.value,
                             contract_address: SELF_TOKEN_ADDRESS,
@@ -773,15 +709,14 @@ export const EligibilityCriteriaBuilder: React.FC<
                       placeholder="0 (leave blank for no requirement)"
                       disabled={readonly}
                     />
-                    <p className="text-xs text-gray-500 mt-1">Required</p>
                   </div>
                   <div>
-                    <Label className="flex items-center gap-2">
+                    <Label className="flex items-center gap-2 mb-1">
                       <Img
                         src="/images/erc20tokens/SystemToken.png"
                         alt="System Token"
-                        width={10}
-                        height={10}
+                        width={16}
+                        height={16}
                         className="h-4 w-4"
                       />
                       $SYSTEM
@@ -803,11 +738,9 @@ export const EligibilityCriteriaBuilder: React.FC<
                           setNewCriterion((prev) => ({
                             ...prev,
                             system_token_amount: e.target.value,
-                            // Store both addresses in a structured format
                             contract_address: SYSTEM_TOKEN_ADDRESS,
                           }));
                         } else if (index !== undefined) {
-                          // For existing criteria with SYSTEM token
                           if (
                             criterion.contract_address?.toLowerCase() ===
                             SYSTEM_TOKEN_ADDRESS.toLowerCase()
@@ -819,7 +752,6 @@ export const EligibilityCriteriaBuilder: React.FC<
                               token_symbol: 'SYSTEM',
                             });
                           } else {
-                            // If this is a SELF criterion, we need to create a new SYSTEM criterion
                             toast({
                               title: 'Note',
                               description:
@@ -832,7 +764,6 @@ export const EligibilityCriteriaBuilder: React.FC<
                       placeholder="0 (leave blank for no requirement)"
                       disabled={readonly}
                     />
-                    <p className="text-xs text-gray-500 mt-1">Required</p>
                   </div>
                 </div>
                 <div
@@ -1131,7 +1062,7 @@ export const EligibilityCriteriaBuilder: React.FC<
                               Submit Changes
                             </>
                           ) : (
-                            <>Create Requirement</>
+                            <>Create</>
                           )}
                         </Button>
 
@@ -1397,7 +1328,7 @@ export const EligibilityCriteriaBuilder: React.FC<
             className="flex items-center gap-2"
           >
             <Plus className="h-4 w-4" />
-            Add Criterion
+            Add New
           </Button>
         )}
       </div>
@@ -1420,14 +1351,7 @@ export const EligibilityCriteriaBuilder: React.FC<
                   onMouseLeave={(e) => {
                     e.currentTarget.style.backgroundColor = 'transparent';
                   }}
-                  onClick={() => {
-                    console.log('🗑️ Trash button clicked for criterion:', {
-                      index,
-                      criterion: criterion,
-                      totalCriteria: criteria.length,
-                    });
-                    removeCriterion(index);
-                  }}
+                  onClick={() => removeCriterion(index)}
                 >
                   <Trash2 className="h-4 w-4" style={{ color: '#8B3A3A' }} />
                 </Button>
@@ -1439,82 +1363,70 @@ export const EligibilityCriteriaBuilder: React.FC<
 
       {/* Add new criterion form */}
       {showAddForm && !readonly && (
-        <Card
-          className="border-2 border-dashed"
-          style={{ borderColor: '#8FAAA1', backgroundColor: '#E8F1EE' }}
-        >
-          <CardHeader>
-            <CardTitle className="text-base flex items-center gap-2">
-              <Plus className="h-4 w-4" />
-              Add New Eligibility Criterion
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <Label>Criterion Type</Label>
-              <select
-                value={newCriterion.type}
-                onChange={async (e) => {
-                  const selectedType = e.target
-                    .value as EligibilityCriteria['type'];
+        <div className="space-y-4">
+          <div>
+            <Label>Type</Label>
+            <select
+              value={newCriterion.type}
+              onChange={async (e) => {
+                const selectedType = e.target
+                  .value as EligibilityCriteria['type'];
 
-                  // Auto-populate agreement text for agreement_signed type
-                  if (selectedType === 'agreement_signed' && podId) {
-                    const criteriaType =
-                      roleType === 'leader' ? 'leadership' : 'membership';
-                    const agreementText =
-                      await populateAgreementText(criteriaType);
+                if (selectedType === 'agreement_signed' && podId) {
+                  const criteriaType =
+                    roleType === 'leader' ? 'leadership' : 'membership';
+                  const agreementText =
+                    await populateAgreementText(criteriaType);
 
-                    setNewCriterion((prev) => ({
-                      ...prev,
-                      type: selectedType,
-                      agreement_text: agreementText,
-                      name:
-                        criteriaType === 'leadership'
-                          ? 'Leadership Accountability Agreement'
-                          : 'Pod Membership Agreement',
-                      agreement_hash: `${podId}_${criteriaType}_agreement`,
-                      signature_required: true,
-                    }));
+                  setNewCriterion((prev) => ({
+                    ...prev,
+                    type: selectedType,
+                    agreement_text: agreementText,
+                    name:
+                      criteriaType === 'leadership'
+                        ? 'Leadership Accountability Agreement'
+                        : 'Pod Membership Agreement',
+                    agreement_hash: `${podId}_${criteriaType}_agreement`,
+                    signature_required: true,
+                  }));
 
-                    toast({
-                      title: 'Agreement Auto-Populated',
-                      description: `Loaded existing ${criteriaType} agreement for this pod.`,
-                      duration: 3000,
-                    });
-                  } else {
-                    setNewCriterion((prev) => ({
-                      ...prev,
-                      type: selectedType,
-                    }));
-                  }
-                }}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                {CRITERION_TYPES.map((type) => (
-                  <option key={type.type} value={type.type}>
-                    {type.label} - {type.description}
-                  </option>
-                ))}
-              </select>
-            </div>
+                  toast({
+                    title: 'Agreement Auto-Populated',
+                    description: `Loaded existing ${criteriaType} agreement for this pod.`,
+                    duration: 3000,
+                  });
+                } else {
+                  setNewCriterion((prev) => ({
+                    ...prev,
+                    type: selectedType,
+                  }));
+                }
+              }}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              {CRITERION_TYPES.map((type) => (
+                <option key={type.type} value={type.type}>
+                  {type.label} - {type.description}
+                </option>
+              ))}
+            </select>
+          </div>
 
-            {renderCriterionForm(newCriterion, true)}
+          {renderCriterionForm(newCriterion, true)}
 
-            <div className="flex justify-end gap-2">
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setShowAddForm(false);
-                  setNewCriterion({ type: 'token_balance', required: true });
-                }}
-              >
-                Cancel
-              </Button>
-              <Button onClick={addCriterion}>Add</Button>
-            </div>
-          </CardContent>
-        </Card>
+          <div className="flex justify-end gap-2">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowAddForm(false);
+                setNewCriterion({ type: 'token_balance', required: true });
+              }}
+            >
+              Cancel
+            </Button>
+            <Button onClick={addCriterion}>Add</Button>
+          </div>
+        </div>
       )}
 
       {/* Empty state */}

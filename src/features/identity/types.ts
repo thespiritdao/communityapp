@@ -250,4 +250,7 @@ export type UserProfile = {
   interests?: string | null;
   seeking?: string | null;
   open_to_connect?: string | null; // Values: 'low_limited', 'open_available', 'actively_collaborate'
+  tos_signed_at?: string | null;
+  tos_version?: string | null;
+  tos_signature?: string | null;
 };

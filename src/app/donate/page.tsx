@@ -8,8 +8,7 @@ import {
   useStripe,
   useElements,
 } from '@stripe/react-stripe-js';
-import { useEvmAddress } from '@coinbase/cdp-hooks';
-import { toast } from 'react-hot-toast';
+import { useToast } from '@/components/ui/use-toast';
 import { useCDPStatus } from '@/hooks/useCDPStatus';
 
 // Load Stripe publishable key
@@ -35,6 +34,7 @@ function DonationCheckoutForm({
 }) {
   const stripe = useStripe();
   const elements = useElements();
+  const { toast } = useToast();
   const [isProcessing, setIsProcessing] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -59,14 +59,14 @@ function DonationCheckoutForm({
 
       if (error) {
         setErrorMessage(error.message || 'Payment failed');
-        toast.error(error.message || 'Payment failed');
+        toast({ title: 'Payment failed', description: error.message, variant: 'destructive' });
       } else if (paymentIntent?.status === 'succeeded') {
-        toast.success('Donation successful! Your tokens will be minted after settlement.');
+        toast({ title: 'Donation successful!', description: 'Your tokens will be minted after settlement.' });
         onSuccess();
       }
     } catch (err: any) {
       setErrorMessage(err.message || 'An unexpected error occurred');
-      toast.error(err.message || 'An unexpected error occurred');
+      toast({ title: 'Error', description: err.message || 'An unexpected error occurred', variant: 'destructive' });
     } finally {
       setIsProcessing(false);
     }
@@ -166,8 +166,8 @@ function DonationCheckoutForm({
  * Main Donation Page
  */
 export default function DonatePage() {
-  const evmAddress = useEvmAddress();
   const { address: walletAddress, isInitializing } = useCDPStatus();
+  const { toast } = useToast();
   const isConnected = !!walletAddress && !isInitializing;
   const [donationAmount, setDonationAmount] = useState<string>('');
   const [donorEmail, setDonorEmail] = useState<string>('');
@@ -181,19 +181,19 @@ export default function DonatePage() {
 
   const handleCreatePaymentIntent = async () => {
     if (!walletAddress) {
-      toast.error('Please connect your wallet first');
+      toast({ title: 'Wallet required', description: 'Please connect your wallet first', variant: 'destructive' });
       return;
     }
 
     const amount = parseFloat(donationAmount);
 
     if (!amount || amount < minAmount) {
-      toast.error(`Minimum donation is $${minAmount}`);
+      toast({ title: 'Amount too low', description: `Minimum donation is $${minAmount}`, variant: 'destructive' });
       return;
     }
 
     if (!donorEmail || !donorEmail.includes('@')) {
-      toast.error('Please provide a valid email address');
+      toast({ title: 'Invalid email', description: 'Please provide a valid email address', variant: 'destructive' });
       return;
     }
 
@@ -221,10 +221,8 @@ export default function DonatePage() {
 
       setClientSecret(data.clientSecret);
       setDonationData(data.donation);
-      toast.success('Payment form ready!');
     } catch (error: any) {
-      console.error('Payment intent creation error:', error);
-      toast.error(error.message || 'Failed to initialize payment');
+      toast({ title: 'Payment setup failed', description: error.message || 'Failed to initialize payment', variant: 'destructive' });
     } finally {
       setIsCreatingIntent(false);
     }

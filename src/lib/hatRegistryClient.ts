@@ -8,6 +8,7 @@
  *   EXECUTIVE_POD_LEADER       — Executive Pod leader hat
  *   COMMUNITY_PODS_PARENT      — Community Pods parent hat
  *   TEMPORAL_NATURALISM        — Temporal Naturalism pod hat
+ *   TEMPORAL_NATURALISM_LEADER — Temporal Naturalism leader hat
  *   TEMPORAL_NATURALISM_MEMBER — Temporal Naturalism member hat
  */
 
