@@ -86,7 +86,7 @@ function DonationCheckoutForm({
           <span className="font-semibold">${donationData.amount.toFixed(2)}</span>
         </div>
         <div className="flex justify-between text-sm">
-          <span className="text-gray-600 dark:text-gray-400">Platform Fee (7.5%):</span>
+          <span className="text-gray-600 dark:text-gray-400">Platform Fee ({donationData.platformFeePercent}%):</span>
           <span className="text-gray-600 dark:text-gray-400">-${donationData.platformFee}</span>
         </div>
         <div className="flex justify-between text-sm">
