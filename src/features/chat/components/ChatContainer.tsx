@@ -304,7 +304,14 @@ export default function ChatContainer({ chatGroupId }: ChatContainerProps) {
         };
       });
 
-      setChatGroups(withImages);
+      // Pin non-pod chats (General) to the top
+      const sorted = [...withImages].sort((a, b) => {
+        if (!a.pod_id && b.pod_id) return -1;
+        if (a.pod_id && !b.pod_id) return 1;
+        return 0;
+      });
+
+      setChatGroups(sorted);
       setLoading(false);
     };
 
