@@ -236,6 +236,18 @@ export default function HomePage() {
             <div className="home-module-title">Events</div>
           </Link>
 
+          <Link href="/members" className="home-module-card" prefetch={true} data-tour="members">
+            <Image
+              src="/images/icons/membersicon.png"
+              alt="Members"
+              className="home-module-icon"
+              width={64}
+              height={64}
+              loading="lazy"
+            />
+            <div className="home-module-title">Members</div>
+          </Link>
+
           <Link href="/governance" className="home-module-card" prefetch={true} data-tour="governance">
             <Image
               src="/images/icons/governanceicon.png"
