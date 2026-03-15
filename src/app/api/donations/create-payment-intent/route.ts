@@ -111,16 +111,11 @@ export async function POST(request: NextRequest) {
       .from('pending_donations')
       .insert({
         stripe_payment_id: paymentIntent.id,
-        payment_method: 'card', // Will update after payment confirms actual method
+        payment_method: 'card',
         user_wallet: userWallet,
         donor_email: donorEmail || null,
         fiat_amount: fiatAmount,
         system_tokens_to_mint: systemTokensToMint,
-        org_fee: platformFee,
-        stripe_fee: estimatedStripeFee,
-        settlement_days: 0, // Will calculate after payment
-        settlement_date: null,
-        is_reversible: true, // Cards can chargeback
         status: 'payment_pending'
       })
       .select()

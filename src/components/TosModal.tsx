@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useSignMessage } from 'wagmi';
+import { useSignEvmMessage, useCurrentUser, useEvmAddress } from '@coinbase/cdp-hooks';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/utils/supabaseClient';
 
@@ -18,20 +18,27 @@ By signing this message I confirm that I have read, understand, and agree to the
 export function TosModal({ walletAddress, onAccepted }: TosModalProps) {
   const [signing, setSigning] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const { signMessageAsync } = useSignMessage();
+  const { signEvmMessage } = useSignEvmMessage();
+  const { currentUser } = useCurrentUser();
 
   const handleSign = async () => {
     setSigning(true);
     setError(null);
     try {
-      const signature = await signMessageAsync({ message: TOS_MESSAGE });
+      const evmAccount = currentUser?.evmAccounts?.[0];
+      if (!evmAccount) throw new Error('Wallet account not ready. Please wait a moment and try again.');
+
+      const result = await signEvmMessage({
+        evmAccount: evmAccount as `0x${string}`,
+        message: TOS_MESSAGE,
+      });
 
       const { error: dbError } = await supabase
         .from('user_profiles')
         .update({
           tos_signed_at: new Date().toISOString(),
           tos_version: TOS_VERSION,
-          tos_signature: signature,
+          tos_signature: result.signature,
         })
         .eq('wallet_address', walletAddress.toLowerCase());
 
