@@ -7,7 +7,7 @@ const supabase = createClient(
 );
 
 const BOUNTY_MANAGER_ADDRESS = (process.env.NEXT_PUBLIC_BOUNTY_MANAGER_ADDRESS ||
-  '0xF80c7e4c2309F8f9de3535138De8Dd8C0876c5E2') as `0x${string}`;
+  '0x8Af29E57A962216C4661c36737CbF33510356DAD') as `0x${string}`;
 
 const BOUNTY_CREATED_TOPIC = '0xe6c97b2c674b721b612c95fcdc97bc070954ecd1851386053825e8bcfe7fd50d';
 
