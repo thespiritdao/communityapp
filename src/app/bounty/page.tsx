@@ -199,9 +199,9 @@ export default function BountyPage() {
             <TabsContent value="create">
               <div className="max-w-2xl mx-auto">
                 <BountyFormV2
+                  podId={selectedPodId}
                   onSuccess={(bountyId) => {
                     console.log('Bounty created with ID:', bountyId);
-                    // Trigger refresh and switch to public tab
                     setRefreshKey((prev) => prev + 1);
                     setTimeout(() => setActiveTab('public'), 100);
                   }}

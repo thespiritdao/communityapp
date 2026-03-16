@@ -53,6 +53,7 @@ interface BountyFormV2Props {
   onSuccess?: (bountyId: string) => void;
   onCancel?: () => void;
   categories: string[];
+  podId?: string; // Pre-selected pod from parent page
 }
 
 const EXEC_POD_ID = process.env.NEXT_PUBLIC_GOVERNANCE_POD_ID;
@@ -61,6 +62,7 @@ export const BountyFormV2: React.FC<BountyFormV2Props> = ({
   onSuccess,
   onCancel,
   categories,
+  podId: preselectedPodId,
 }) => {
   const router = useRouter();
 
@@ -96,7 +98,7 @@ export const BountyFormV2: React.FC<BountyFormV2Props> = ({
       questions: [''],
       work_requirements: [''],
       funding_source: 'wallet',
-      podId: '',
+      podId: preselectedPodId || '',
       eligibility: 'pod_only',
       // Bid limit defaults
       bid_acceptance_mode: 'single',
@@ -149,16 +151,16 @@ export const BountyFormV2: React.FC<BountyFormV2Props> = ({
   // managablePods now comes from useBountyManagementAccess hook
   // which filters based on both module settings AND role permissions
 
+  // Sync podId from parent when it changes
   useEffect(() => {
-    if (
-      managablePods.length === 1 &&
-      !formData.podId &&
-      !hasSetInitialPod.current
-    ) {
-      setFormData((prev) => ({ ...prev, podId: managablePods[0].id }));
-      hasSetInitialPod.current = true;
+    if (preselectedPodId) {
+      setFormData((prev) => ({
+        ...prev,
+        podId: preselectedPodId,
+        eligibility: preselectedPodId === EXEC_POD_ID ? prev.eligibility : 'pod_only',
+      }));
     }
-  }, [managablePods]);
+  }, [preselectedPodId]);
 
   // Clear stale sessionStorage if pods have loaded but selected pod is invalid
   useEffect(() => {
@@ -787,36 +789,13 @@ export const BountyFormV2: React.FC<BountyFormV2Props> = ({
         <CardTitle>Create New Bounty</CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">
-        {/* Pod Selection */}
-        <div className="space-y-2">
-          <Label htmlFor="pod">Pod</Label>
-          <Select
-            value={formData.podId}
-            onValueChange={(value) => {
-              setFormData((prev) => ({
-                ...prev,
-                podId: value,
-                // Reset eligibility when switching away from EP
-                eligibility: value === EXEC_POD_ID ? prev.eligibility : 'pod_only',
-              }));
-            }}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select a pod" />
-            </SelectTrigger>
-            <SelectContent>
-              {managablePods.map((pod) => (
-                <SelectItem key={pod.id} value={pod.id}>
-                  {pod.name} ({pod.status})
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          {errors.podId && (
-            <p className="text-sm" style={{ color: '#8B3A3A' }}>
-              {errors.podId}
-            </p>
-          )}
+        {/* Pod — set by parent page, displayed read-only */}
+        <div className="space-y-1">
+          <Label>Pod</Label>
+          <p className="text-sm font-medium" style={{ color: '#2F5D50' }}>
+            {managablePods.find((p) => p.id === formData.podId)?.name || formData.podId || '—'}
+            {' '}(active)
+          </p>
           {errors.treasury && (
             <div className="flex items-start gap-2 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
               <span className="text-yellow-600 text-sm font-semibold">⚠️</span>
