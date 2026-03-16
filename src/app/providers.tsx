@@ -17,6 +17,7 @@ import { SessionCacheManager } from '@/components/SessionCacheManager';
 import { IncomingCallBanner } from '@/features/chat/components/IncomingCallBanner';
 import { TourManager } from '@/components/tour/TourManager';
 import { initHatRegistry } from '@/lib/hatRegistryClient';
+import { PresenceTracker } from '@/components/PresenceTracker';
 
 /**
  * Fetches hat IDs from /api/hat-registry on app startup and populates
@@ -80,6 +81,8 @@ export function Providers({ children }: ProvidersProps) {
                   <HatRegistryInitializer />
                   {/* Session cache manager - clears stale cache on expired sessions */}
                   <SessionCacheManager />
+                  {/* Presence heartbeat — upserts wallet + timestamp every 60s */}
+                  <PresenceTracker />
                   {/* Global incoming call listener */}
                   <IncomingCallBanner />
                   <TourManager>

@@ -10,9 +10,9 @@ import {
   seekingOptions,
 } from '@/features/identity/constants/profileOptions';
 import {
-  Lightbulb,
-  Search,
-  ChevronsRightLeft,
+  User,
+  X,
+  ExternalLink,
   Twitter,
   Instagram,
   Facebook,
@@ -34,21 +34,21 @@ interface ProfileModalProps {
   user: UserProfile;
   users: UserProfile[];
   onClose: () => void;
+  pods?: { pod_id: string; name: string; membership_type: string }[];
 }
 
-const getProfilePictureUrl = (walletAddress: string, users: UserProfile[]) => {
-  const user = users.find((user) => user.wallet_address === walletAddress);
-
-  if (user?.profile_picture?.startsWith('http')) {
-    return user.profile_picture;
-  }
-
-  return user?.profile_picture
-    ? `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/profile_images/${user.profile_picture}`
-    : '/images/symbolobinfin.png';
+const CONNECT_LABELS: Record<string, string> = {
+  low_limited: 'Low / Limited',
+  open_available: 'Open / Available',
+  actively_collaborate: 'Actively Collaborating',
 };
 
-// Social platform configuration with Lucide icons
+const CONNECT_COLORS: Record<string, string> = {
+  low_limited: '#8FA09A',
+  open_available: '#4A7C6F',
+  actively_collaborate: '#2F5D50',
+};
+
 const SOCIAL_PLATFORMS = [
   { key: 'twitter', label: 'Twitter', Icon: Twitter },
   { key: 'tiktok', label: 'TikTok', Icon: Video },
@@ -62,31 +62,15 @@ const SOCIAL_PLATFORMS = [
   { key: 'email', label: 'Email', Icon: Mail },
 ];
 
-// Format social link to show readable username/handle
-const formatSocialLink = (url: string) => {
-  if (!url) return url;
-
-  // Remove protocol and www
-  let formatted = url.replace(/^https?:\/\/(www\.)?/, '');
-
-  // If it's an email, just show it
-  if (formatted.includes('@') && !formatted.includes('/')) {
-    return formatted;
-  }
-
-  // Truncate long URLs
-  if (formatted.length > 40) {
-    return formatted.substring(0, 37) + '...';
-  }
-
-  return formatted;
+const getProfilePictureUrl = (walletAddress: string, users: UserProfile[]) => {
+  const user = users.find((u) => u.wallet_address === walletAddress);
+  if (user?.profile_picture?.startsWith('http')) return user.profile_picture;
+  return user?.profile_picture
+    ? `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/profile_images/${user.profile_picture}`
+    : null;
 };
 
-export const ProfileModal: React.FC<ProfileModalProps> = ({
-  user,
-  users,
-  onClose,
-}) => {
+export const ProfileModal: React.FC<ProfileModalProps> = ({ user, users, onClose, pods }) => {
   const { evmAddress: address } = useEvmAddress();
   const profilePictureUrl = getProfilePictureUrl(user.wallet_address, users);
   const [showDMModal, setShowDMModal] = useState(false);
@@ -115,31 +99,22 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
     };
   }, []);
 
-  const mappedInterests = mapStoredValuesToLabels(user.interests ?? null, interestsOptions);
-  const mappedSeeking = mapStoredValuesToLabels(user.seeking ?? null, seekingOptions);
+  const name = [user.first_name, user.last_name].filter(Boolean).join(' ') || 'Anonymous Member';
+  const interests = mapStoredValuesToLabels(user.interests ?? null, interestsOptions);
+  const seeking = mapStoredValuesToLabels(user.seeking ?? null, seekingOptions);
+  const connectLabel = CONNECT_LABELS[user.open_to_connect || ''];
+  const connectColor = CONNECT_COLORS[user.open_to_connect || ''];
+  const socials = SOCIAL_PLATFORMS.filter(({ key }) => !!(user as any)[key]);
 
-  // Only allow message/gift for OTHER users' profiles (not your own)
   const canInteractWithUser =
     address && address.toLowerCase() !== user.wallet_address.toLowerCase();
-
-  const handleOpenMessage = () => {
-    setShowDMModal(true);
-  };
-
-  const handleOpenGift = () => {
-    setShowGiftModal(true);
-  };
 
   const handleStartVideoCall = async () => {
     if (!address || isStartingCall) return;
     setIsStartingCall(true);
     try {
-      const callerName = `${user.first_name ?? ''} ${user.last_name ?? ''}`.trim() || address.slice(0, 6);
-      const session = await VideoChatService.initiateCall(
-        address,
-        user.wallet_address,
-        callerName,
-      );
+      const callerName = name !== 'Anonymous Member' ? name : address.slice(0, 6);
+      const session = await VideoChatService.initiateCall(address, user.wallet_address, callerName);
       setVideoSessionId(session.id);
     } catch (err) {
       console.error('Failed to start video call:', err);
@@ -148,219 +123,217 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
     }
   };
 
+  const sectionLabel: React.CSSProperties = {
+    fontSize: '0.8rem',
+    fontWeight: 600,
+    color: '#8FA09A',
+    textTransform: 'uppercase',
+    letterSpacing: '0.05em',
+    marginBottom: '0.5rem',
+  };
+
   const content = (
     <div
-      className="profile-modal-overlay"
+      style={{
+        position: 'fixed',
+        inset: 0,
+        top: vpOffset.top,
+        height: vpOffset.height,
+        zIndex: 1000,
+        background: 'rgba(0,0,0,0.5)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '1rem',
+      }}
       onClick={onClose}
-      style={{ top: vpOffset.top, height: vpOffset.height }}
     >
-    <div className="profile-modal" onClick={(e) => e.stopPropagation()}>
-      <button className="close-button" onClick={onClose}>
-        ✖
-      </button>
+      <div
+        style={{
+          background: '#fff',
+          borderRadius: '16px',
+          width: '100%',
+          maxWidth: '520px',
+          maxHeight: '90vh',
+          overflowY: 'auto',
+          padding: '1.5rem',
+          position: 'relative',
+          boxShadow: '0 8px 32px rgba(0,0,0,0.18)',
+        }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Close */}
+        <button
+          onClick={onClose}
+          style={{ position: 'absolute', top: '1rem', right: '1rem', background: 'none', border: 'none', cursor: 'pointer', color: '#8FA09A', display: 'flex', alignItems: 'center' }}
+        >
+          <X size={20} />
+        </button>
 
-      {/* Profile Image */}
-      <div className="profile-image-container">
-        <img
-          src={profilePictureUrl}
-          alt={`${user.first_name} ${user.last_name}'s profile`}
-          className="profile-image"
-        />
-      </div>
-
-      {/* Section: Basic Info */}
-      <div className="profile-section">
-        <div className="profile-header">
-          <div className="profile-info">
-            <h2>{`${user.first_name} ${user.last_name}`}</h2>
-
+        {/* Header: avatar + name */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1.25rem' }}>
+          <div style={{ width: '72px', height: '72px', borderRadius: '50%', overflow: 'hidden', flexShrink: 0, background: '#E8F1EE', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            {profilePictureUrl ? (
+              <img src={profilePictureUrl} alt={name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            ) : (
+              <User size={32} color="#6F9E90" />
+            )}
+          </div>
+          <div>
+            <h2 style={{ fontSize: '1.2rem', fontWeight: 700, color: '#1A2E28', marginBottom: '4px' }}>{name}</h2>
+            {connectLabel && (
+              <span style={{ fontSize: '0.8rem', color: connectColor, fontWeight: 600 }}>{connectLabel}</span>
+            )}
             {user.website && (
-              <a href={user.website} target="_blank" rel="noopener noreferrer">
-                {user.website}
+              <a
+                href={user.website}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.8rem', color: '#4A7C6F', marginTop: '4px', textDecoration: 'none' }}
+              >
+                <ExternalLink size={12} />
+                {user.website.replace(/^https?:\/\/(www\.)?/, '').substring(0, 40)}
               </a>
             )}
-
-            {/* Action Buttons: Message, Video & Gift */}
-            {canInteractWithUser && (
-              <div className="profile-action-buttons">
-                <button
-                  className="action-btn message-btn"
-                  onClick={handleOpenMessage}
-                >
-                  <MessageCircle size={16} />
-                  <span>Message</span>
-                </button>
-                <button
-                  className="action-btn video-btn"
-                  onClick={handleStartVideoCall}
-                  disabled={isStartingCall}
-                >
-                  <Video size={16} />
-                  <span>{isStartingCall ? 'Calling...' : 'Video'}</span>
-                </button>
-                <button
-                  className="action-btn gift-btn"
-                  onClick={handleOpenGift}
-                >
-                  <Gift size={16} />
-                  <span>Gift</span>
-                </button>
-              </div>
-            )}
-
-            {user.bio && <p className="user-bio">{user.bio}</p>}
           </div>
-
-        </div>
-      </div>
-
-      <hr />
-
-      {/* Section: Interests */}
-      <div className="profile-section interests-section">
-        <div className="interests-subsection">
-          <h3 className="interests-heading">
-            <span className="interests-icon">
-              <Lightbulb size={18} strokeWidth={2} />
-            </span>
-            Interests
-          </h3>
-          {mappedInterests.length > 0 ? (
-            <div className="interests-tags">
-              {mappedInterests.map((label, i) => (
-                <span key={i} className="interest-tag">
-                  {label}
-                </span>
-              ))}
-            </div>
-          ) : (
-            <p className="interests-empty">No interests specified</p>
-          )}
         </div>
 
-        <div className="interests-subsection">
-          <h3 className="interests-heading">
-            <span className="interests-icon">
-              <Search size={18} strokeWidth={2} />
-            </span>
-            Seeking
-          </h3>
-          {mappedSeeking.length > 0 ? (
-            <div className="interests-tags">
-              {mappedSeeking.map((label, i) => (
-                <span key={i} className="interest-tag seeking-tag">
-                  {label}
-                </span>
-              ))}
-            </div>
-          ) : (
-            <p className="interests-empty">
-              Not seeking anything at the moment
-            </p>
-          )}
-        </div>
-
-        <div className="interests-subsection">
-          <h3 className="interests-heading">
-            <span className="interests-icon">
-              <ChevronsRightLeft size={18} strokeWidth={2} />
-            </span>
-            Open to Connect
-          </h3>
-          <div className="connect-status">
-            <span
-              className={`connect-badge ${user.open_to_connect || 'not-specified'}`}
+        {/* Action Buttons */}
+        {canInteractWithUser && (
+          <div style={{ display: 'flex', gap: '10px', justifyContent: 'center', marginBottom: '1.25rem' }}>
+            <button
+              onClick={() => setShowDMModal(true)}
+              style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 18px', border: 'none', borderRadius: '8px', background: '#2F5D50', color: '#fff', fontSize: '0.9rem', fontWeight: 500, cursor: 'pointer' }}
             >
-              {{
-                low_limited: 'Low / Limited',
-                open_available: 'Open / Available',
-                actively_collaborate: 'Actively looking to collaborate',
-              }[user.open_to_connect || ''] || 'Not specified'}
-            </span>
+              <MessageCircle size={15} />
+              Message
+            </button>
+            <button
+              onClick={handleStartVideoCall}
+              disabled={isStartingCall}
+              style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 18px', border: '1px solid #B8D9CA', borderRadius: '8px', background: '#E8F1EE', color: '#2F5D50', fontSize: '0.9rem', fontWeight: 500, cursor: isStartingCall ? 'not-allowed' : 'pointer', opacity: isStartingCall ? 0.6 : 1 }}
+            >
+              <Video size={15} />
+              {isStartingCall ? 'Calling…' : 'Video'}
+            </button>
+            <button
+              onClick={() => setShowGiftModal(true)}
+              style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 18px', border: 'none', borderRadius: '8px', background: '#8FA09A', color: '#fff', fontSize: '0.9rem', fontWeight: 500, cursor: 'pointer' }}
+            >
+              <Gift size={15} />
+              Gift
+            </button>
+          </div>
+        )}
+
+        {/* Bio */}
+        {user.bio && (
+          <p style={{ fontSize: '0.9rem', color: '#3A3A3A', lineHeight: 1.6, marginBottom: '1.25rem' }}>{user.bio}</p>
+        )}
+
+        {/* Pods */}
+        {pods && pods.length > 0 && (
+          <div style={{ marginBottom: '1.25rem' }}>
+            <h3 style={sectionLabel}>Pods</h3>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+              {pods.map((p) => (
+                <span key={p.pod_id} style={{
+                  fontSize: '0.8rem', padding: '3px 10px', borderRadius: '999px',
+                  background: p.membership_type === 'leader' ? '#2F5D50' : '#E8F1EE',
+                  color: p.membership_type === 'leader' ? '#fff' : '#2F5D50',
+                  fontWeight: 500,
+                }}>
+                  {p.name}{p.membership_type === 'leader' ? ' · Leader' : ''}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Interests */}
+        {interests.length > 0 && (
+          <div style={{ marginBottom: '1.25rem' }}>
+            <h3 style={sectionLabel}>Interests</h3>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+              {interests.map((label, i) => (
+                <span key={i} style={{ fontSize: '0.8rem', padding: '3px 10px', borderRadius: '999px', background: '#F0F5F3', color: '#2F5D50', fontWeight: 500 }}>{label}</span>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Seeking */}
+        {seeking.length > 0 && (
+          <div style={{ marginBottom: '1.25rem' }}>
+            <h3 style={sectionLabel}>Seeking</h3>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+              {seeking.map((label, i) => (
+                <span key={i} style={{ fontSize: '0.8rem', padding: '3px 10px', borderRadius: '999px', background: '#F9F5F0', color: '#6B5A3E', fontWeight: 500 }}>{label}</span>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Tokens */}
+        <div style={{ marginBottom: '1.25rem' }}>
+          <h3 style={sectionLabel}>Memberships</h3>
+          <div className="token-gallery-modal">
+            <DatabaseTokenGallery walletAddress={user.wallet_address} category="membership" />
+          </div>
+          <h3 style={{ ...sectionLabel, marginTop: '1rem' }}>Credentials</h3>
+          <div className="token-gallery-modal">
+            <DatabaseTokenGallery walletAddress={user.wallet_address} category="credential" />
           </div>
         </div>
+
+        {/* Socials */}
+        {socials.length > 0 && (
+          <div>
+            <h3 style={sectionLabel}>Connect</h3>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              {socials.map(({ key, label, Icon }) => {
+                const url = (user as any)[key] as string;
+                return (
+                  <a key={key} href={url} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.85rem', color: '#2F5D50', textDecoration: 'none' }}>
+                    <Icon size={14} />
+                    <span style={{ color: '#5F7A74', minWidth: '70px' }}>{label}:</span>
+                    <span style={{ color: '#2F5D50', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {url.replace(/^https?:\/\/(www\.)?/, '').substring(0, 40)}
+                    </span>
+                  </a>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Modals */}
+        {showDMModal && (
+          <DirectMessageModal
+            recipientAddress={user.wallet_address}
+            recipientName={name}
+            recipientImage={profilePictureUrl || '/images/symbolobinfin.png'}
+            onClose={() => setShowDMModal(false)}
+          />
+        )}
+        {showGiftModal && (
+          <GiftModal
+            recipientAddress={user.wallet_address}
+            recipientName={name}
+            recipientImage={profilePictureUrl || '/images/symbolobinfin.png'}
+            onClose={() => setShowGiftModal(false)}
+          />
+        )}
+        {videoSessionId && address && (
+          <VideoCallModal
+            sessionId={videoSessionId}
+            localWallet={address}
+            remoteUser={user}
+            role="initiator"
+            onClose={() => setVideoSessionId(null)}
+          />
+        )}
       </div>
-
-      <hr />
-
-      {/* Section: Tokens */}
-      <div className="profile-section token-gallery-modal">
-        <h3>Memberships</h3>
-        <DatabaseTokenGallery
-          walletAddress={user.wallet_address}
-          category="membership"
-        />
-
-        <h3 style={{ marginTop: '20px' }}>Credentials</h3>
-        <DatabaseTokenGallery
-          walletAddress={user.wallet_address}
-          category="credential"
-        />
-      </div>
-
-      <hr />
-
-      {/* Section: Social Links (New List Format) */}
-      <div className="profile-section">
-        <h3>Connect</h3>
-        <div className="social-links">
-          {SOCIAL_PLATFORMS.filter(
-            ({ key }) => user[key as keyof UserProfile],
-          ).map(({ key, label, Icon }) => {
-            const url = user[key as keyof UserProfile] as string;
-            return (
-              <div key={key} className="social-link-item">
-                <Icon size={16} className="social-link-icon" />
-                <span className="social-link-label">{label}:</span>
-                <a
-                  href={url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="social-link-url"
-                >
-                  {formatSocialLink(url)}
-                </a>
-              </div>
-            );
-          })}
-          {SOCIAL_PLATFORMS.filter(({ key }) => user[key as keyof UserProfile])
-            .length === 0 && (
-            <p className="interests-empty">No social links added</p>
-          )}
-        </div>
-      </div>
-
-      {/* Direct Message Modal */}
-      {showDMModal && (
-        <DirectMessageModal
-          recipientAddress={user.wallet_address}
-          recipientName={`${user.first_name} ${user.last_name}`}
-          recipientImage={profilePictureUrl}
-          onClose={() => setShowDMModal(false)}
-        />
-      )}
-
-      {/* Gift Modal */}
-      {showGiftModal && (
-        <GiftModal
-          recipientAddress={user.wallet_address}
-          recipientName={`${user.first_name} ${user.last_name}`}
-          recipientImage={profilePictureUrl}
-          onClose={() => setShowGiftModal(false)}
-        />
-      )}
-
-      {/* Video Call Modal */}
-      {videoSessionId && address && (
-        <VideoCallModal
-          sessionId={videoSessionId}
-          localWallet={address}
-          remoteUser={user}
-          role="initiator"
-          onClose={() => setVideoSessionId(null)}
-        />
-      )}
-    </div>
     </div>
   );
 

@@ -3,13 +3,9 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useEvmAddress } from '@coinbase/cdp-hooks';
 import { supabase } from '@/utils/supabaseClient';
-import { User, X, Search, ExternalLink, Twitter, Instagram, Facebook, Youtube, Github, Linkedin, Mail, MessageCircle, Video } from 'lucide-react';
-import {
-  interestsOptions,
-  seekingOptions,
-} from '@/features/identity/constants/profileOptions';
-import { mapStoredValuesToLabels } from '@/features/identity/utils/formatProfileValues';
+import { User, Search } from 'lucide-react';
 import type { UserProfile } from '@/features/identity/types';
+import { ProfileModal } from '@/features/identity/components/ProfileModal';
 
 interface MemberWithPods extends UserProfile {
   pods: { pod_id: string; name: string; membership_type: string }[];
@@ -27,23 +23,13 @@ const CONNECT_COLORS: Record<string, string> = {
   actively_collaborate: '#2F5D50',
 };
 
-const SOCIAL_PLATFORMS = [
-  { key: 'twitter', label: 'Twitter', Icon: Twitter },
-  { key: 'tiktok', label: 'TikTok', Icon: Video },
-  { key: 'instagram', label: 'Instagram', Icon: Instagram },
-  { key: 'facebook', label: 'Facebook', Icon: Facebook },
-  { key: 'discord', label: 'Discord', Icon: MessageCircle },
-  { key: 'youtube', label: 'YouTube', Icon: Youtube },
-  { key: 'twitch', label: 'Twitch', Icon: Video },
-  { key: 'github', label: 'GitHub', Icon: Github },
-  { key: 'linkedin', label: 'LinkedIn', Icon: Linkedin },
-  { key: 'email', label: 'Email', Icon: Mail },
-];
+const ONLINE_WINDOW_MS = 5 * 60 * 1000; // 5 minutes
 
 export default function MembersPage() {
   const { evmAddress: address } = useEvmAddress();
   const [members, setMembers] = useState<MemberWithPods[]>([]);
   const [pods, setPods] = useState<{ id: string; name: string }[]>([]);
+  const [onlineWallets, setOnlineWallets] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [filterPod, setFilterPod] = useState('');
@@ -112,6 +98,17 @@ export default function MembersPage() {
         return aName.localeCompare(bName);
       });
 
+      // Fetch presence (who was active in the last 5 minutes)
+      const cutoff = new Date(Date.now() - ONLINE_WINDOW_MS).toISOString();
+      const { data: presenceRows } = await supabase
+        .from('user_presence')
+        .select('wallet_address')
+        .gte('last_seen_at', cutoff);
+
+      if (presenceRows) {
+        setOnlineWallets(new Set(presenceRows.map((r) => r.wallet_address.toLowerCase())));
+      }
+
       setMembers(enriched);
       setLoading(false);
     };
@@ -120,14 +117,27 @@ export default function MembersPage() {
   }, []);
 
   const filtered = useMemo(() => {
-    return members.filter((m) => {
-      const name = `${m.first_name || ''} ${m.last_name || ''}`.toLowerCase();
-      if (search && !name.includes(search.toLowerCase())) return false;
-      if (filterPod && !m.pods.some((p) => p.pod_id === filterPod)) return false;
-      if (filterConnect && m.open_to_connect !== filterConnect) return false;
-      return true;
-    });
-  }, [members, search, filterPod, filterConnect]);
+    const connectOrder = { actively_collaborate: 0, open_available: 1, low_limited: 2 };
+    return members
+      .filter((m) => {
+        const name = `${m.first_name || ''} ${m.last_name || ''}`.toLowerCase();
+        if (search && !name.includes(search.toLowerCase())) return false;
+        if (filterPod && !m.pods.some((p) => p.pod_id === filterPod)) return false;
+        if (filterConnect && m.open_to_connect !== filterConnect) return false;
+        return true;
+      })
+      .sort((a, b) => {
+        const aOnline = onlineWallets.has(a.wallet_address.toLowerCase()) ? 0 : 1;
+        const bOnline = onlineWallets.has(b.wallet_address.toLowerCase()) ? 0 : 1;
+        if (aOnline !== bOnline) return aOnline - bOnline;
+        const aConn = connectOrder[a.open_to_connect as keyof typeof connectOrder] ?? 3;
+        const bConn = connectOrder[b.open_to_connect as keyof typeof connectOrder] ?? 3;
+        if (aConn !== bConn) return aConn - bConn;
+        const aName = `${a.first_name || ''} ${a.last_name || ''}`.trim().toLowerCase();
+        const bName = `${b.first_name || ''} ${b.last_name || ''}`.trim().toLowerCase();
+        return aName.localeCompare(bName);
+      });
+  }, [members, onlineWallets, search, filterPod, filterConnect]);
 
   if (!address) {
     return (
@@ -231,20 +241,30 @@ export default function MembersPage() {
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '1rem' }}>
           {filtered.map((member) => (
-            <MemberCard key={member.wallet_address} member={member} onClick={() => setSelected(member)} />
+            <MemberCard
+              key={member.wallet_address}
+              member={member}
+              isOnline={onlineWallets.has(member.wallet_address.toLowerCase())}
+              onClick={() => setSelected(member)}
+            />
           ))}
         </div>
       )}
 
       {/* Profile Modal */}
       {selected && (
-        <MemberModal member={selected} onClose={() => setSelected(null)} />
+        <ProfileModal
+          user={selected}
+          users={members}
+          pods={selected.pods}
+          onClose={() => setSelected(null)}
+        />
       )}
     </div>
   );
 }
 
-function MemberCard({ member, onClick }: { member: MemberWithPods; onClick: () => void }) {
+function MemberCard({ member, isOnline, onClick }: { member: MemberWithPods; isOnline: boolean; onClick: () => void }) {
   const name = [member.first_name, member.last_name].filter(Boolean).join(' ') || 'Anonymous Member';
   const connectColor = CONNECT_COLORS[member.open_to_connect || ''] || '#C8D8D4';
   const connectLabel = CONNECT_LABELS[member.open_to_connect || ''];
@@ -274,11 +294,26 @@ function MemberCard({ member, onClick }: { member: MemberWithPods; onClick: () =
     >
       {/* Avatar + Name */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-        <div style={{ width: '48px', height: '48px', borderRadius: '50%', overflow: 'hidden', flexShrink: 0, background: '#E8F1EE', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          {member.profile_picture ? (
-            <img src={member.profile_picture} alt={name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-          ) : (
-            <User size={22} color="#6F9E90" />
+        {/* Avatar with online dot */}
+        <div style={{ position: 'relative', flexShrink: 0 }}>
+          <div style={{ width: '48px', height: '48px', borderRadius: '50%', overflow: 'hidden', background: '#E8F1EE', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            {member.profile_picture ? (
+              <img src={member.profile_picture} alt={name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            ) : (
+              <User size={22} color="#6F9E90" />
+            )}
+          </div>
+          {isOnline && (
+            <span style={{
+              position: 'absolute',
+              bottom: '1px',
+              right: '1px',
+              width: '11px',
+              height: '11px',
+              borderRadius: '50%',
+              background: '#22C55E',
+              border: '2px solid #fff',
+            }} />
           )}
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
@@ -324,117 +359,3 @@ function MemberCard({ member, onClick }: { member: MemberWithPods; onClick: () =
   );
 }
 
-function MemberModal({ member, onClose }: { member: MemberWithPods; onClose: () => void }) {
-  const name = [member.first_name, member.last_name].filter(Boolean).join(' ') || 'Anonymous Member';
-  const interests = member.interests ? mapStoredValuesToLabels(member.interests, interestsOptions) : [];
-  const seeking = member.seeking ? mapStoredValuesToLabels(member.seeking, seekingOptions) : [];
-  const connectLabel = CONNECT_LABELS[member.open_to_connect || ''];
-  const connectColor = CONNECT_COLORS[member.open_to_connect || ''];
-  const socials = SOCIAL_PLATFORMS.filter(({ key }) => !!(member as any)[key]);
-
-  return (
-    <div
-      style={{ position: 'fixed', inset: 0, zIndex: 50, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}
-      onClick={onClose}
-    >
-      <div
-        style={{ background: '#fff', borderRadius: '16px', width: '100%', maxWidth: '520px', maxHeight: '90vh', overflowY: 'auto', padding: '1.5rem', position: 'relative' }}
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* Close */}
-        <button onClick={onClose} style={{ position: 'absolute', top: '1rem', right: '1rem', background: 'none', border: 'none', cursor: 'pointer', color: '#8FA09A' }}>
-          <X size={20} />
-        </button>
-
-        {/* Header */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1.25rem' }}>
-          <div style={{ width: '72px', height: '72px', borderRadius: '50%', overflow: 'hidden', flexShrink: 0, background: '#E8F1EE', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            {member.profile_picture ? (
-              <img src={member.profile_picture} alt={name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-            ) : (
-              <User size={32} color="#6F9E90" />
-            )}
-          </div>
-          <div>
-            <h2 style={{ fontSize: '1.2rem', fontWeight: 700, color: '#1A2E28', marginBottom: '4px' }}>{name}</h2>
-            {connectLabel && (
-              <span style={{ fontSize: '0.8rem', color: connectColor, fontWeight: 600 }}>{connectLabel}</span>
-            )}
-            {member.website && (
-              <a href={member.website} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.8rem', color: '#4A7C6F', marginTop: '4px', textDecoration: 'none' }}>
-                <ExternalLink size={12} /> {member.website.replace(/^https?:\/\/(www\.)?/, '').substring(0, 40)}
-              </a>
-            )}
-          </div>
-        </div>
-
-        {/* Bio */}
-        {member.bio && (
-          <p style={{ fontSize: '0.9rem', color: '#3A3A3A', lineHeight: 1.6, marginBottom: '1.25rem' }}>{member.bio}</p>
-        )}
-
-        {/* Pods */}
-        {member.pods.length > 0 && (
-          <div style={{ marginBottom: '1.25rem' }}>
-            <h3 style={{ fontSize: '0.8rem', fontWeight: 600, color: '#8FA09A', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.5rem' }}>Pods</h3>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-              {member.pods.map((p) => (
-                <span key={p.pod_id} style={{
-                  fontSize: '0.8rem', padding: '3px 10px', borderRadius: '999px',
-                  background: p.membership_type === 'leader' ? '#2F5D50' : '#E8F1EE',
-                  color: p.membership_type === 'leader' ? '#fff' : '#2F5D50',
-                  fontWeight: 500,
-                }}>
-                  {p.name}{p.membership_type === 'leader' ? ' · Leader' : ''}
-                </span>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Interests */}
-        {interests.length > 0 && (
-          <div style={{ marginBottom: '1.25rem' }}>
-            <h3 style={{ fontSize: '0.8rem', fontWeight: 600, color: '#8FA09A', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.5rem' }}>Interests</h3>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-              {interests.map((label, i) => (
-                <span key={i} style={{ fontSize: '0.8rem', padding: '3px 10px', borderRadius: '999px', background: '#F0F5F3', color: '#2F5D50', fontWeight: 500 }}>{label}</span>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Seeking */}
-        {seeking.length > 0 && (
-          <div style={{ marginBottom: '1.25rem' }}>
-            <h3 style={{ fontSize: '0.8rem', fontWeight: 600, color: '#8FA09A', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.5rem' }}>Seeking</h3>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-              {seeking.map((label, i) => (
-                <span key={i} style={{ fontSize: '0.8rem', padding: '3px 10px', borderRadius: '999px', background: '#F9F5F0', color: '#6B5A3E', fontWeight: 500 }}>{label}</span>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Socials */}
-        {socials.length > 0 && (
-          <div>
-            <h3 style={{ fontSize: '0.8rem', fontWeight: 600, color: '#8FA09A', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.5rem' }}>Connect</h3>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-              {socials.map(({ key, label, Icon }) => {
-                const url = (member as any)[key] as string;
-                return (
-                  <a key={key} href={url} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.85rem', color: '#2F5D50', textDecoration: 'none' }}>
-                    <Icon size={14} />
-                    <span style={{ color: '#5F7A74' }}>{label}:</span>
-                    <span style={{ color: '#2F5D50' }}>{url.replace(/^https?:\/\/(www\.)?/, '').substring(0, 40)}</span>
-                  </a>
-                );
-              })}
-            </div>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
