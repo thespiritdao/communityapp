@@ -15,6 +15,8 @@ export interface Bounty {
   status: 'open' | 'in-progress' | 'completed';
   createdAt: Date;
   token_gating?: BountyTokenGating;
+  required_pod_id?: string | null;
+  pod_id?: string;
 }
 
 export interface BountyNotification {

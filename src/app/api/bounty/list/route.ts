@@ -17,9 +17,11 @@ export async function GET(request: NextRequest) {
       .not('status', 'in', '("completed","cancelled")')
       .order('created_at', { ascending: false });
 
-    // Filter by pod if specified
+    // Filter by pod if specified:
+    // - Include the pod's own bounties (pod_id = podId)
+    // - Always include DAO-wide bounties (required_pod_id IS NULL) so they appear everywhere
     if (podId && podId !== 'all') {
-      query = query.eq('pod_id', podId);
+      query = query.or(`pod_id.eq.${podId},required_pod_id.is.null`);
     }
 
     const { data: bounties, error } = await query;
@@ -41,6 +43,7 @@ export async function GET(request: NextRequest) {
       token: bounty.token || SYSTEM_TOKEN || '',
       status: bounty.status || 0,
       podId: bounty.pod_id || '',
+      required_pod_id: bounty.required_pod_id ?? null,
       category: bounty.category || '',
       ipfsHash: bounty.ipfs_hash || 'temp',
       createdAt: bounty.created_at

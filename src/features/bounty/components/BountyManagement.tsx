@@ -91,58 +91,43 @@ const canUserBid = (
   tokenBalances: any,
   pods: any[],
 ): boolean => {
-  if (!userAddress) {
-    return false;
-  }
+  if (!userAddress) return false;
 
   // Can't bid on your own bounty (except in dev mode for testing)
   const isCreator =
     bounty.creator === userAddress.toLowerCase() ||
     bounty.creator_address === userAddress.toLowerCase();
-
-  if (isCreator) {
-    // Allow creators to bid on their own bounties in development for testing
-    const isDevelopment = process.env.NODE_ENV === 'development';
-    if (!isDevelopment) {
-      return false;
-    }
-  }
+  if (isCreator && process.env.NODE_ENV !== 'development') return false;
 
   // If bounty is not open, can't bid
-  if (
-    bounty.status !== 0 &&
-    bounty.status !== 'open' &&
-    bounty.status !== 'draft'
-  ) {
+  if (bounty.status !== 0 && bounty.status !== 'open' && bounty.status !== 'draft') {
     return false;
   }
 
-  // Check if bounty requires pod membership
-  if (bounty.podId) {
-    const pod = pods.find((p) => p.id === bounty.podId);
-
-    if (pod) {
-      // Check if user is a member or leader of the pod
-      const isMember = pod.pod_members?.some(
-        (m: string) => m.toLowerCase() === userAddress.toLowerCase(),
-      );
-      const isLeader = pod.pod_leads?.some(
-        (l: string) => l.toLowerCase() === userAddress.toLowerCase(),
-      );
-      const isPodCreator =
-        pod.created_by_address?.toLowerCase() === userAddress.toLowerCase();
-
-      // If pod-restricted and user is not a member, check for Advocate token
-      if (!isMember && !isLeader && !isPodCreator) {
-        const hasAdvocate = tokenBalances?.hasAdvocate || false;
-        return hasAdvocate;
-      }
-
-      return true;
-    }
+  // DAO-wide bounty (required_pod_id is null/undefined) — requires PoC token
+  const isDAOWide = bounty.required_pod_id === null || bounty.required_pod_id === undefined || bounty.required_pod_id === '';
+  if (isDAOWide) {
+    return tokenBalances?.hasPoC || tokenBalances?.hasAdvocate || false;
   }
 
-  // If no restrictions, allow bidding
+  // Pod-restricted bounty — requires pod membership
+  const pod = pods.find((p) => p.id === bounty.required_pod_id || p.id === bounty.podId);
+  if (pod) {
+    const isMember = pod.pod_members?.some(
+      (m: string) => m.toLowerCase() === userAddress.toLowerCase(),
+    );
+    const isLeader = pod.pod_leads?.some(
+      (l: string) => l.toLowerCase() === userAddress.toLowerCase(),
+    );
+    const isPodCreator =
+      pod.created_by_address?.toLowerCase() === userAddress.toLowerCase();
+
+    if (!isMember && !isLeader && !isPodCreator) {
+      return tokenBalances?.hasAdvocate || false;
+    }
+    return true;
+  }
+
   return true;
 };
 
@@ -330,7 +315,8 @@ export const BountyManagement: React.FC<BountyManagementProps> = ({
           value: parsedValue.toString(),
           token: rawToken || 'SYSTEM',
           status: convertedStatus,
-          podId: rawBounty.podId || rawBounty.required_pod_id || '',
+          podId: rawBounty.pod_id || rawBounty.podId || '',
+          required_pod_id: rawBounty.required_pod_id ?? null,
           category: rawBounty.category || '',
           ipfsHash: rawBounty.ipfs_hash || rawBounty.ipfsHash || 'temp',
           createdAt:
@@ -391,8 +377,9 @@ export const BountyManagement: React.FC<BountyManagementProps> = ({
       const matchesCategory =
         categoryFilter === 'all' || bounty.category === categoryFilter;
 
-      // Filter by pod if specified (and not 'all')
-      const matchesPod = podId === 'all' || !podId || bounty.podId === podId;
+      // Filter by pod: show pod-specific bounties + DAO-wide (required_pod_id null)
+      const isDAOWide = (bounty as any).required_pod_id === null || (bounty as any).required_pod_id === undefined;
+      const matchesPod = podId === 'all' || !podId || bounty.podId === podId || isDAOWide;
 
       // Log Test Bounty 18 specifically
       if (bounty.id === '735611ef-9809-4681-8aaf-db3d22c62ae8') {
