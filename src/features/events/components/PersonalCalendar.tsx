@@ -5,7 +5,7 @@ import { useEvmAddress } from '@coinbase/cdp-hooks';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Calendar, Clock, MapPin, Users, CheckCircle, Download } from 'lucide-react';
+import { Calendar, Clock, MapPin, CheckCircle } from 'lucide-react';
 import { useTokenGatedEvents } from '../hooks/useEventTokenGating';
 import { useBatchEventRegistrationStatus } from '../hooks/useEventRegistrationStatus';
 import { EventRegistrationModal } from './EventRegistrationModal';
@@ -69,12 +69,6 @@ export const PersonalCalendar: React.FC<PersonalCalendarProps> = ({ podId }) => 
     };
   };
 
-  const handleIcsDownload = () => {
-    if (!address) return;
-    const url = `/api/events/calendar.ics?wallet=${address.toLowerCase()}`;
-    window.open(url, '_blank');
-  };
-
   if (loading) {
     return (
       <Card>
@@ -89,8 +83,8 @@ export const PersonalCalendar: React.FC<PersonalCalendarProps> = ({ podId }) => 
   return (
     <div className="space-y-4">
       {/* Controls */}
-      <div className="flex flex-wrap items-center gap-3">
-        {/* Toggle */}
+      <div className="flex flex-col items-center gap-3">
+        {/* Toggle — centered */}
         <div className="flex bg-white rounded-lg p-1 shadow-sm border border-gray-200">
           <button
             onClick={() => setShowRegisteredOnly(false)}
@@ -122,17 +116,6 @@ export const PersonalCalendar: React.FC<PersonalCalendarProps> = ({ podId }) => 
             ))}
           </select>
         )}
-
-        {/* .ics export */}
-        <button
-          onClick={handleIcsDownload}
-          className="flex items-center gap-1.5 text-sm px-3 py-2 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 transition-colors"
-          style={{ color: '#2F5D50' }}
-          title="Subscribe to your calendar in Google/Apple Calendar"
-        >
-          <Download size={14} />
-          Export .ics
-        </button>
       </div>
 
       {/* Events */}

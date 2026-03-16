@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import { EventList } from '@/features/events/components/EventList';
-import { CommunityEventCalendar } from '@/features/events/components/CommunityEventCalendar';
 import { PersonalCalendar } from '@/features/events/components/PersonalCalendar';
 import { useEventManagementAccess } from '@/features/events/hooks/useEventTokenGating';
 import { useEventStats } from '@/features/events/hooks/useEventStats';
@@ -21,7 +20,7 @@ export default function EventsPage() {
     error: statsError,
   } = useEventStats();
   const [activeTab, setActiveTab] = useState<
-    'all' | 'my-events' | 'past' | 'calendar' | 'my-calendar'
+    'all' | 'my-events' | 'past' | 'my-calendar'
   >('my-events');
 
   return (
@@ -118,15 +117,7 @@ export default function EventsPage() {
                   onClick={() => setActiveTab('my-calendar')}
                 >
                   <CalendarDays className="w-4 h-4 mr-1" />
-                  My Calendar
-                </Button>
-                <Button
-                  variant={activeTab === 'calendar' ? 'default' : 'ghost'}
-                  size="sm"
-                  onClick={() => setActiveTab('calendar')}
-                >
-                  <CalendarDays className="w-4 h-4 mr-1" />
-                  All Calendar
+                  Calendar
                 </Button>
                 <Button
                   variant={activeTab === 'past' ? 'default' : 'ghost'}
@@ -184,12 +175,6 @@ export default function EventsPage() {
           {activeTab === 'my-calendar' && (
             <div key="my-calendar">
               <PersonalCalendar />
-            </div>
-          )}
-
-          {activeTab === 'calendar' && (
-            <div key="calendar" className="bg-white rounded-lg shadow-sm">
-              <CommunityEventCalendar />
             </div>
           )}
 
