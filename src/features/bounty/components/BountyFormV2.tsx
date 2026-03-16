@@ -42,6 +42,7 @@ export interface BountyFormV2Data {
   work_requirements: string[];
   funding_source: 'wallet' | 'pod_treasury';
   podId: string;
+  eligibility: 'pod_only' | 'dao_wide';
   // Bid acceptance configuration
   bid_acceptance_mode?: 'single' | 'multiple' | 'unlimited' | 'date_limited';
   max_bids_accepted?: number;
@@ -53,6 +54,8 @@ interface BountyFormV2Props {
   onCancel?: () => void;
   categories: string[];
 }
+
+const EXEC_POD_ID = process.env.NEXT_PUBLIC_GOVERNANCE_POD_ID;
 
 export const BountyFormV2: React.FC<BountyFormV2Props> = ({
   onSuccess,
@@ -94,6 +97,7 @@ export const BountyFormV2: React.FC<BountyFormV2Props> = ({
       work_requirements: [''],
       funding_source: 'wallet',
       podId: '',
+      eligibility: 'pod_only',
       // Bid limit defaults
       bid_acceptance_mode: 'single',
       max_bids_accepted: 1,
@@ -506,7 +510,7 @@ export const BountyFormV2: React.FC<BountyFormV2Props> = ({
 
         // Find BountyCreated event
         const BOUNTY_MANAGER = (process.env.NEXT_PUBLIC_BOUNTY_MANAGER_ADDRESS ||
-          '0x29e653502083442B8B6C7c969557022F6a3CC64C') as `0x${string}`;
+          '0x8Af29E57A962216C4661c36737CbF33510356DAD') as `0x${string}`;
 
         const bountyCreatedLog = logs?.find(
           (log: any) =>
@@ -557,6 +561,7 @@ export const BountyFormV2: React.FC<BountyFormV2Props> = ({
               value: currentFormData.value.amount,
               token: tokenAddress,
               podId: currentFormData.podId,
+              required_pod_id: currentFormData.eligibility === 'dao_wide' ? null : currentFormData.podId,
               ipfsHash,
               title: currentFormData.title,
               description: currentFormData.description,
@@ -795,7 +800,12 @@ export const BountyFormV2: React.FC<BountyFormV2Props> = ({
           <Select
             value={formData.podId}
             onValueChange={(value) => {
-              setFormData((prev) => ({ ...prev, podId: value }));
+              setFormData((prev) => ({
+                ...prev,
+                podId: value,
+                // Reset eligibility when switching away from EP
+                eligibility: value === EXEC_POD_ID ? prev.eligibility : 'pod_only',
+              }));
             }}
           >
             <SelectTrigger>
@@ -821,6 +831,32 @@ export const BountyFormV2: React.FC<BountyFormV2Props> = ({
             </div>
           )}
         </div>
+
+        {/* Eligibility — only shown when EP is the sponsor pod */}
+        {formData.podId === EXEC_POD_ID && (
+          <div className="space-y-2">
+            <Label htmlFor="eligibility">Who Can Apply</Label>
+            <Select
+              value={formData.eligibility}
+              onValueChange={(value: 'pod_only' | 'dao_wide') =>
+                setFormData((prev) => ({ ...prev, eligibility: value }))
+              }
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="pod_only">Executive Pod Members Only</SelectItem>
+                <SelectItem value="dao_wide">DAO-Wide — Open to All PoC Holders</SelectItem>
+              </SelectContent>
+            </Select>
+            {formData.eligibility === 'dao_wide' && (
+              <p className="text-sm" style={{ color: '#2F5D50' }}>
+                This bounty will be visible and open to all members holding a Proof of Curiosity token.
+              </p>
+            )}
+          </div>
+        )}
 
         {/* Basic Information */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1296,6 +1332,7 @@ export const BountyFormV2: React.FC<BountyFormV2Props> = ({
                         value: formData.value.amount,
                         token: tokenAddress,
                         podId: formData.podId,
+                        required_pod_id: formData.eligibility === 'dao_wide' ? null : formData.podId,
                         ipfsHash,
                         title: formData.title,
                         description: formData.description,
