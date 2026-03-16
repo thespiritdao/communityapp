@@ -6,25 +6,16 @@ import { useReadContract } from 'wagmi';
 import { parseEther, formatEther } from 'viem';
 import type { BountyFormV2Data } from '../components/BountyFormV2';
 
-// Import the contract ABIs
-import BountyManagerV2ABI from '@/abis/BountyManagerV2.json'; // Raw ABI array
-import BountyManagerV3Artifact from '@/abis/BountyManagerV3.json'; // Hardhat artifact (V3)
-import BountyManagerV4Artifact from '@/abis/BountyManagerV4.json'; // Hardhat artifact (V4)
+// Import the contract ABI
+import BountyManagerV4Artifact from '@/abis/BountyManagerV4.json';
 import PodBountyServiceABI from '@/abis/PodBountyService.json';
 
-// Extract ABI arrays from Hardhat artifacts (V2 is already an array)
-const BountyManagerV3ABI = BountyManagerV3Artifact.abi;
 const BountyManagerV4ABI = BountyManagerV4Artifact.abi;
 
-// AUTO-DETECT: Use V3/V4 if deployed, otherwise fallback to V2
-const BOUNTY_MANAGER_V3_ADDRESS = process.env.NEXT_PUBLIC_BOUNTY_MANAGER_V3_ADDRESS as `0x${string}` | undefined;
-const BOUNTY_MANAGER_V2_ADDRESS = (process.env
-  .NEXT_PUBLIC_BOUNTY_MANAGER_ADDRESS ||
-  '0xc2Ac53e7C869Ed9Bcd21b72C7aE747Abb788A8e5') as `0x${string}`;
+const BOUNTY_MANAGER_ADDRESS = (process.env.NEXT_PUBLIC_BOUNTY_MANAGER_ADDRESS ||
+  '0x8Af29E57A962216C4661c36737CbF33510356DAD') as `0x${string}`;
 
-// V3/V4 is preferred (decentralized, Hats-integrated)
-const USE_V3 = !!BOUNTY_MANAGER_V3_ADDRESS &&
-  process.env.NEXT_PUBLIC_USE_BOUNTY_V3 !== 'false';
+const BOUNTY_MANAGER_ABI = BountyManagerV4ABI;
 
 const SYSTEM_TOKEN_ADDRESS = (process.env.NEXT_PUBLIC_SYSTEM_TOKEN ||
   '0xd67e460ce56be18b573aB434b3DC962c657D8Bb5') as `0x${string}`;
@@ -33,17 +24,7 @@ const SELF_TOKEN_ADDRESS = (process.env.NEXT_PUBLIC_SELF_TOKEN ||
 const HATS_PROTOCOL_ADDRESS = (process.env.NEXT_PUBLIC_HATS_CONTRACT ||
   '0x3bc1a0ad72417f2d411118085256fc53cbddd137') as `0x${string}`;
 
-// Determine which contract to use
-const BOUNTY_MANAGER_ADDRESS = USE_V3 && BOUNTY_MANAGER_V3_ADDRESS
-  ? BOUNTY_MANAGER_V3_ADDRESS
-  : BOUNTY_MANAGER_V2_ADDRESS;
-
-// Use V4 ABI if V3/V4 is enabled (V4 has same functions as V3, just configurable tokens)
-const BOUNTY_MANAGER_ABI = USE_V3 && BOUNTY_MANAGER_V3_ADDRESS
-  ? BountyManagerV4ABI  // Using V4 ABI (deployed contract)
-  : BountyManagerV2ABI;
-
-console.log(`🎯 Bounty System: Using ${USE_V3 ? 'V4 (Configurable Tokens)' : 'V2 (Legacy)'} at ${BOUNTY_MANAGER_ADDRESS}`);
+console.log(`🎯 Bounty System: Using V4 at ${BOUNTY_MANAGER_ADDRESS}`);
 
 export interface BountyV2 {
   id: string;
@@ -150,44 +131,32 @@ export const useBountyV2 = (): UseBountyV2Return => {
         `temp_${Date.now()}`, // ipfsHash (temporary, will be updated)
       ];
 
-      // V3/V4 requires additional parameters for auto-registration
-      if (USE_V3 && BOUNTY_MANAGER_V3_ADDRESS) {
-        // V4 contract REQUIRES a valid treasury address (cannot be zero address)
-        if (!treasuryAddress || treasuryAddress === '0x0000000000000000000000000000000000000000') {
-          throw new Error('Treasury address is required for V4 bounty creation. Please deploy a treasury first.');
-        }
-
-        const v4Args = [
-          ...baseArgs,
-          BigInt(leaderHatId || '0'), // leaderHatId (0 if pod already registered)
-          treasuryAddress as `0x${string}`, // treasuryAddress (REQUIRED, cannot be zero)
-        ];
-
-        console.log('🎯 V4 createBounty args (7 params):', {
-          value: v4Args[0].toString(),
-          token: v4Args[1],
-          paymentType: v4Args[2],
-          podId: v4Args[3],
-          ipfsHash: v4Args[4],
-          leaderHatId: v4Args[5].toString(),
-          treasuryAddress: v4Args[6],
-        });
-
-        return {
-          address: BOUNTY_MANAGER_ADDRESS,
-          abi: BOUNTY_MANAGER_ABI,
-          functionName: 'createBounty' as const,
-          args: v4Args,
-        };
+      // V4 contract REQUIRES a valid treasury address (cannot be zero address)
+      if (!treasuryAddress || treasuryAddress === '0x0000000000000000000000000000000000000000') {
+        throw new Error('Treasury address is required for V4 bounty creation. Please deploy a treasury first.');
       }
 
-      // V2 original format
-      console.log('📦 V2 createBounty args (5 params):', baseArgs);
+      const v4Args = [
+        ...baseArgs,
+        BigInt(leaderHatId || '0'), // leaderHatId (0 if pod already registered)
+        treasuryAddress as `0x${string}`, // treasuryAddress (REQUIRED, cannot be zero)
+      ];
+
+      console.log('🎯 V4 createBounty args (7 params):', {
+        value: v4Args[0].toString(),
+        token: v4Args[1],
+        paymentType: v4Args[2],
+        podId: v4Args[3],
+        ipfsHash: v4Args[4],
+        leaderHatId: v4Args[5].toString(),
+        treasuryAddress: v4Args[6],
+      });
+
       return {
         address: BOUNTY_MANAGER_ADDRESS,
         abi: BOUNTY_MANAGER_ABI,
         functionName: 'createBounty' as const,
-        args: baseArgs,
+        args: v4Args,
       };
     },
     [address],
@@ -404,23 +373,12 @@ export const useBountyV2 = (): UseBountyV2Return => {
       if (!address) return false;
 
       try {
-        if (USE_V3 && BOUNTY_MANAGER_V3_ADDRESS) {
-          // V3: Direct contract read (decentralized)
-          const response = await fetch(
-            `/api/bounty/permissions?user=${address}&pod=${podId}&action=manage`,
-          );
-          if (!response.ok) return false;
-          const { canManage } = await response.json();
-          return canManage;
-        } else {
-          // V2: Legacy API call
-          const response = await fetch(
-            `/api/pod/permissions?user=${address}&pod=${podId}&action=manage_bounties`,
-          );
-          if (!response.ok) return false;
-          const { canManage } = await response.json();
-          return canManage;
-        }
+        const response = await fetch(
+          `/api/bounty/permissions?user=${address}&pod=${podId}&action=manage`,
+        );
+        if (!response.ok) return false;
+        const { canManage } = await response.json();
+        return canManage;
       } catch (err) {
         console.error('Error checking bounty management permission:', err);
         return false;
@@ -439,18 +397,7 @@ export const useBountyV2 = (): UseBountyV2Return => {
       if (!address) return false;
 
       try {
-        if (USE_V3 && BOUNTY_MANAGER_V3_ADDRESS) {
-          // V3: Same as manage (leader HAT holders control both)
-          return canManageBounties(podId);
-        } else {
-          // V2: Legacy API call
-          const response = await fetch(
-            `/api/pod/permissions?user=${address}&pod=${podId}&action=use_treasury`,
-          );
-          if (!response.ok) return false;
-          const { canUse } = await response.json();
-          return canUse;
-        }
+        return canManageBounties(podId);
       } catch (err) {
         console.error('Error checking treasury permission:', err);
         return false;
@@ -490,34 +437,34 @@ export const useBountyV2 = (): UseBountyV2Return => {
 export const useBountyReader = (bountyId?: string) => {
   // Read bounty core data
   const { data: bountyData } = useReadContract({
-    address: BOUNTY_MANAGER_V2_ADDRESS,
+    address: BOUNTY_MANAGER_ADDRESS,
     abi: BountyManagerV2ABI,
     functionName: 'getBounty',
     args: bountyId ? [BigInt(bountyId)] : undefined,
     query: {
-      enabled: !!bountyId && !!BOUNTY_MANAGER_V2_ADDRESS,
+      enabled: !!bountyId && !!BOUNTY_MANAGER_ADDRESS,
     },
   });
 
   // Read bounty metadata
   const { data: bountyMetadata } = useReadContract({
-    address: BOUNTY_MANAGER_V2_ADDRESS,
+    address: BOUNTY_MANAGER_ADDRESS,
     abi: BountyManagerV2ABI,
     functionName: 'getBountyMetadata',
     args: bountyId ? [BigInt(bountyId)] : undefined,
     query: {
-      enabled: !!bountyId && !!BOUNTY_MANAGER_V2_ADDRESS,
+      enabled: !!bountyId && !!BOUNTY_MANAGER_ADDRESS,
     },
   });
 
   // Read assignment data
   const { data: assignmentData } = useReadContract({
-    address: BOUNTY_MANAGER_V2_ADDRESS,
+    address: BOUNTY_MANAGER_ADDRESS,
     abi: BountyManagerV2ABI,
     functionName: 'getAssignment',
     args: bountyId ? [BigInt(bountyId)] : undefined,
     query: {
-      enabled: !!bountyId && !!BOUNTY_MANAGER_V2_ADDRESS,
+      enabled: !!bountyId && !!BOUNTY_MANAGER_ADDRESS,
     },
   });
 
