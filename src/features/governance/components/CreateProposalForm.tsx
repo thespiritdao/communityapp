@@ -1720,12 +1720,12 @@ export function CreateProposalForm({
                     ⚠️
                   </div>
                   <p className="font-medium" style={{ color: '#8F6B2F' }}>
-                    Delegation Required
+                    Activation Required
                   </p>
                 </div>
                 <p className="text-sm mt-2" style={{ color: '#C6933F' }}>
-                  You own {nftBalance?.toString()} NFT(s) but need to delegate
-                  voting power to yourself to create proposals.
+                  You own {nftBalance?.toString()} NFT(s) but need to activate
+                  your governance participation to vote and create proposals.
                 </p>
 
                 {isDelegating && (
@@ -1741,7 +1741,7 @@ export function CreateProposalForm({
                   >
                     {isDelegationPending
                       ? '⏳ Waiting for transaction confirmation...'
-                      : '🔄 Delegation in progress...'}
+                      : '🔄 Activation in progress...'}
                   </div>
                 )}
 
@@ -1752,15 +1752,12 @@ export function CreateProposalForm({
                     className="w-full disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-medium py-2 px-4 rounded transition-colors bg-[#C6933F] hover:bg-[#8F6B2F]"
                   >
                     {isDelegating
-                      ? 'Delegating...'
-                      : 'Delegate Voting Power to Myself'}
+                      ? 'Activating...'
+                      : 'Activate Governance Participation'}
                   </button>
                   <div className="text-xs" style={{ color: '#C6933F' }}>
-                    This transaction will delegate your NFT voting power to
-                    yourself, enabling you to vote and create proposals.
-                    {address && (
-                      <div className="mt-1">Delegating to: {address}</div>
-                    )}
+                    This transaction will register your governance participation,
+                    enabling you to vote and create proposals.
                   </div>
                 </div>
               </div>
