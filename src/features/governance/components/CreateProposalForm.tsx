@@ -1214,8 +1214,10 @@ export function CreateProposalForm({
     }
 
     // ✅ SECURITY: Validate that user has governance permission in the selected pod
+    // For dao-wide proposals, only require governanceParticipation in any pod (not a specific one)
     const selectedPodId = formData.selectedToken;
-    if (selectedPodId && !podsWithGovernancePermission.includes(selectedPodId)) {
+    const isDaoWide = !selectedPodId || selectedPodId === 'dao-wide';
+    if (!isDaoWide && !podsWithGovernancePermission.includes(selectedPodId)) {
       console.error('❌ Authorization failed: User does not have governance permission in selected pod', {
         selectedPod: selectedPodId,
         allowedPods: podsWithGovernancePermission,
