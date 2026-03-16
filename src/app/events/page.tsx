@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { EventList } from '@/features/events/components/EventList';
 import { CommunityEventCalendar } from '@/features/events/components/CommunityEventCalendar';
+import { PersonalCalendar } from '@/features/events/components/PersonalCalendar';
 import { useEventManagementAccess } from '@/features/events/hooks/useEventTokenGating';
 import { useEventStats } from '@/features/events/hooks/useEventStats';
 import { Card, CardContent } from '@/components/ui/card';
@@ -20,7 +21,7 @@ export default function EventsPage() {
     error: statsError,
   } = useEventStats();
   const [activeTab, setActiveTab] = useState<
-    'all' | 'my-events' | 'past' | 'calendar'
+    'all' | 'my-events' | 'past' | 'calendar' | 'my-calendar'
   >('my-events');
 
   return (
@@ -112,12 +113,20 @@ export default function EventsPage() {
                   All Events
                 </Button>
                 <Button
+                  variant={activeTab === 'my-calendar' ? 'default' : 'ghost'}
+                  size="sm"
+                  onClick={() => setActiveTab('my-calendar')}
+                >
+                  <CalendarDays className="w-4 h-4 mr-1" />
+                  My Calendar
+                </Button>
+                <Button
                   variant={activeTab === 'calendar' ? 'default' : 'ghost'}
                   size="sm"
                   onClick={() => setActiveTab('calendar')}
                 >
                   <CalendarDays className="w-4 h-4 mr-1" />
-                  Calendar
+                  All Calendar
                 </Button>
                 <Button
                   variant={activeTab === 'past' ? 'default' : 'ghost'}
@@ -170,6 +179,12 @@ export default function EventsPage() {
               title=""
               emptyMessage="No events available. Check back later or create the first event!"
             />
+          )}
+
+          {activeTab === 'my-calendar' && (
+            <div key="my-calendar">
+              <PersonalCalendar />
+            </div>
           )}
 
           {activeTab === 'calendar' && (

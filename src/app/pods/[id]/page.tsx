@@ -14,6 +14,7 @@ import {
   AlertCircle,
   UserPlus,
   Search,
+  Calendar,
 } from 'lucide-react';
 import FundingModal from '@/components/FundingModal';
 import FundButton from '@/components/FundButton';
@@ -30,6 +31,7 @@ import {
 } from '@/features/pods/utils/treasuryAddressUtils';
 import { supabase } from '@/utils/supabaseClient';
 import dynamic from 'next/dynamic';
+import { PersonalCalendar } from '@/features/events/components/PersonalCalendar';
 import '../../../features/home/styles/HomePage.css';
 
 // Lazy load the agreement signing modal (fixes SSR issues)
@@ -581,6 +583,15 @@ export default function PodDetailPage() {
                 </CardContent>
               </Card>
             )}
+          </div>
+
+          {/* Pod Events Calendar */}
+          <div className="space-y-3 pt-4 border-t">
+            <h3 className="text-xl font-semibold flex items-center gap-2">
+              <Calendar className="h-5 w-5" />
+              Pod Events
+            </h3>
+            <PersonalCalendar podId={id} />
           </div>
 
           {/* Apply to Join Button - TESTING MODE: Shown to all connected users */}
