@@ -167,7 +167,8 @@ contract ProofOfCuriosityV2 is ERC721Votes, Ownable {
      */
     function _update(address to, uint256 tokenId, address auth)
         internal
-        override(ERC721, ERC721Votes)
+        virtual
+        override
         returns (address)
     {
         address from = _ownerOf(tokenId);
@@ -198,7 +199,7 @@ contract ProofOfCuriosityV2 is ERC721Votes, Ownable {
     function supportsInterface(bytes4 interfaceId)
         public
         view
-        override(ERC721, ERC721Votes)
+        override
         returns (bool)
     {
         return super.supportsInterface(interfaceId);
