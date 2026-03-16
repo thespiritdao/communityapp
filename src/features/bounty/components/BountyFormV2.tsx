@@ -25,6 +25,7 @@ import { useBountyV2 } from '../hooks/useBountyV2';
 import { useBountyPermissions } from '@/features/bounty/hooks/useBountyPermissions'; // NEW: Database permission check
 import { useBountyManagementAccess } from '../hooks/useBountyManagementAccess';
 import { BountyTreasuryFundingTransaction } from './BountyTreasuryFundingTransaction';
+import PodTreasuryV2ABI from '@/abis/PodTreasuryV2.json';
 import { RegisterPodButton } from '@/features/pods/components/RegisterPodButton';
 
 export interface BountyFormV2Data {
@@ -116,7 +117,6 @@ export const BountyFormV2: React.FC<BountyFormV2Props> = ({
     return '';
   });
   const [createdBountyId, setCreatedBountyId] = useState<number | null>(null);
-  const [showTreasuryFunding, setShowTreasuryFunding] = useState(false);
   const [isTransactionPending, setIsTransactionPending] = useState(false); // CDP transaction loading state
   const [transactionStatus, setTransactionStatus] = useState<string>(''); // Status message for user
   const hasSetInitialPod = useRef(false);
@@ -389,23 +389,41 @@ export const BountyFormV2: React.FC<BountyFormV2Props> = ({
         ipfsHash: bountyCall.args[4],
         leaderHatId: bountyCall.args[5]?.toString(),
         treasuryAddress: bountyCall.args[6],
+        fundingSource: formData.funding_source,
       });
 
-      // Return array of calls: [approve, createBounty]
-      return [
-        {
-          address: tokenAddress,
-          abi: ERC20_APPROVE_ABI,
-          functionName: 'approve' as const,
-          args: [BOUNTY_MANAGER_ADDRESS, amount], // FIXED: Use correct contract address
-        },
-        bountyCall,
-      ];
+      const approveCall = {
+        address: tokenAddress,
+        abi: ERC20_APPROVE_ABI,
+        functionName: 'approve' as const,
+        args: [BOUNTY_MANAGER_ADDRESS, amount],
+      };
+
+      // Pod treasury funding: treasury distributes tokens to smart wallet first,
+      // then wallet approves + creates bounty — all atomic in one UserOperation.
+      if (formData.funding_source === 'pod_treasury') {
+        if (!evmAddress) throw new Error('Wallet address required for treasury funding');
+        console.log('🏦 Treasury funding: prepending distributeTokens call', {
+          treasury: treasuryAddress,
+          recipient: evmAddress,
+          amount: formData.value.amount,
+        });
+        const treasuryDistributeCall = {
+          address: treasuryAddress as `0x${string}`,
+          abi: PodTreasuryV2ABI,
+          functionName: 'distributeTokens' as const,
+          args: [tokenAddress, [evmAddress], [amount], 'Bounty funding'],
+        };
+        return [treasuryDistributeCall, approveCall, bountyCall];
+      }
+
+      // Wallet funding: approve + createBounty
+      return [approveCall, bountyCall];
     } catch (error) {
       console.error('Error creating transaction calls:', error);
       return null;
     }
-  }, [formData, ipfsHash, createBountyCall, managablePods]);
+  }, [formData, ipfsHash, createBountyCall, managablePods, evmAddress]);
 
   // CDP Smart Account transaction handler - EXACT FAUCET PATTERN
   const handleCreateBountyTransaction = useCallback(async () => {
@@ -524,13 +542,6 @@ export const BountyFormV2: React.FC<BountyFormV2Props> = ({
 
           // Store bounty ID
           setCreatedBountyId(parseInt(bountyId));
-
-          // If pod treasury funding, show Step 2 and DON'T save to database yet
-          if (formDataRef.current.funding_source === 'pod_treasury') {
-            console.log('🏦 Pod treasury funding detected - showing Step 2');
-            setShowTreasuryFunding(true);
-            return; // Don't save to database until treasury funding is set
-          }
 
           // Save to database (use formDataRef to access latest values)
           const currentFormData = formDataRef.current;
@@ -1272,81 +1283,7 @@ export const BountyFormV2: React.FC<BountyFormV2Props> = ({
 
         {/* Action Buttons */}
         <div className="flex gap-4">
-          {showTreasuryFunding && createdBountyId ? (
-            /* Step 2: Set Treasury Funding */
-            <div className="w-full">
-              <BountyTreasuryFundingTransaction
-                bountyId={createdBountyId}
-                podId={formData.podId}
-                onSuccess={async () => {
-                  console.log('✅ Treasury funding set successfully');
-
-                  // Now save to database with correct funding source
-                  const tokenAddress =
-                    formData.value.token === 'SYSTEM'
-                      ? process.env.NEXT_PUBLIC_SYSTEM_TOKEN
-                      : process.env.NEXT_PUBLIC_SELF_TOKEN;
-
-                  if (!tokenAddress) {
-                    throw new Error(
-                      `Token address not configured for ${formData.value.token}. Please check NEXT_PUBLIC_SYSTEM_TOKEN and NEXT_PUBLIC_SELF_TOKEN environment variables.`
-                    );
-                  }
-
-                  try {
-                    const response = await fetch('/api/bounty/create', {
-                      method: 'POST',
-                      headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({
-                        bountyId: createdBountyId.toString(),
-                        transactionHash: '0x', // Already on-chain
-                        creator: evmAddress,
-                        value: formData.value.amount,
-                        token: tokenAddress,
-                        podId: formData.podId,
-                        required_pod_id: formData.eligibility === 'dao_wide' ? null : formData.podId,
-                        ipfsHash,
-                        title: formData.title,
-                        description: formData.description,
-                        category: formData.category,
-                        deadline: formData.deadline,
-                        funding_source: 'pod_treasury', // CRITICAL: Set to pod_treasury
-                        requirements: formData.requirements.filter((r) =>
-                          r.trim(),
-                        ),
-                        tasks: formData.tasks.filter((t) => t.trim()),
-                        questions: formData.questions.filter((q) => q.trim()),
-                        bid_acceptance_mode:
-                          formData.bid_acceptance_mode || 'single',
-                        max_bids_accepted:
-                          formData.bid_acceptance_mode === 'multiple'
-                            ? formData.max_bids_accepted
-                            : formData.bid_acceptance_mode === 'single'
-                              ? 1
-                              : 0,
-                        bids_accepted_count: 0,
-                      }),
-                    });
-
-                    if (response.ok) {
-                      console.log('✅ Pod-funded bounty saved to database');
-                      onSuccess?.(createdBountyId.toString());
-                    } else {
-                      console.error(
-                        '❌ Failed to save pod-funded bounty to database',
-                      );
-                    }
-                  } catch (error) {
-                    console.error('❌ Error saving pod-funded bounty:', error);
-                  }
-                }}
-                onError={(error) => {
-                  console.error('❌ Treasury funding failed:', error);
-                  setErrors({ treasury: error });
-                }}
-              />
-            </div>
-          ) : !ipfsHash ? (
+          {!ipfsHash ? (
             <Button
               onClick={() => {
                 console.log('🔘 Prepare Bounty button clicked', {
