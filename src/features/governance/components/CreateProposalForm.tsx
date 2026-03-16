@@ -1213,18 +1213,25 @@ export function CreateProposalForm({
       return;
     }
 
-    // ✅ SECURITY: Validate that user has governance permission in the selected pod
-    // For dao-wide proposals, only require governanceParticipation in any pod (not a specific one)
+    // ✅ SECURITY: Validate governance permission based on proposal scope
+    // DAO_CONSTITUTIONAL (dao-wide) → must have governanceParticipation in exec pod
+    // Pod-level proposals → must have governanceParticipation in the specific pod
     const selectedPodId = formData.selectedToken;
+    const EXEC_POD_ID_AUTH = process.env.NEXT_PUBLIC_GOVERNANCE_POD_ID;
     const isDaoWide = !selectedPodId || selectedPodId === 'dao-wide';
-    if (!isDaoWide && !podsWithGovernancePermission.includes(selectedPodId)) {
+    const podToCheck = isDaoWide ? EXEC_POD_ID_AUTH : selectedPodId;
+
+    if (podToCheck && !podsWithGovernancePermission.includes(podToCheck)) {
       console.error('❌ Authorization failed: User does not have governance permission in selected pod', {
         selectedPod: selectedPodId,
+        podToCheck,
         allowedPods: podsWithGovernancePermission,
       });
       toast({
         title: 'Authorization Error',
-        description: 'You do not have governance participation permission in the selected pod',
+        description: isDaoWide
+          ? 'DAO-wide proposals require Executive Pod membership'
+          : 'You do not have governance participation permission in the selected pod',
         variant: 'destructive',
       });
       return;
