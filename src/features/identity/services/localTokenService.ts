@@ -33,17 +33,17 @@ const LOCAL_TOKEN_MAPPING: Record<string, LocalTokenInfo> = {
   advocate: {
     id: 'advocate',
     name: 'Advocate',
-    description: 'Verified SpiritDAO Member',
+    description: 'Fiscally contributing SpiritDAO Member',
     image: '/images/members/advocatesquare500x.jpg',
-    contract_address: '0x592E560171D2a882474cdfc3BbeeDb21cEB4015d',
+    contract_address: '',
     token_type: 'erc721',
   },
   poc: {
     id: 'poc',
     name: 'Proof of Curiosity',
-    description: 'Access token for general community features',
+    description: 'Base SpiritDAO Membership',
     image: '/images/members/curioussquare500x.jpg',
-    contract_address: '0x3bc1a0ad72417f2d411118085256fc53cbddd137',
+    contract_address: '',
     token_type: 'erc721',
   },
   'executive pod': {
@@ -51,7 +51,7 @@ const LOCAL_TOKEN_MAPPING: Record<string, LocalTokenInfo> = {
     name: 'Executive Pod',
     description: 'Executive Pod credential',
     image: '/images/pods/executivepod.png',
-    contract_address: '0x3bc1a0ad72417f2d411118085256fc53cbddd137',
+    contract_address: '',
     token_type: 'erc1155',
   },
   'dev pod': {
@@ -59,7 +59,7 @@ const LOCAL_TOKEN_MAPPING: Record<string, LocalTokenInfo> = {
     name: 'Dev Pod',
     description: 'Development Pod credential',
     image: '/images/pods/devpod.png',
-    contract_address: '0x3bc1a0ad72417f2d411118085256fc53cbddd137',
+    contract_address: '',
     token_type: 'erc1155',
   },
 };

@@ -11,11 +11,11 @@ import { useSendUserOperation, useCurrentUser, useEvmAddress } from '@coinbase/c
 import { useQueryClient } from '@tanstack/react-query';
 import { base } from 'viem/chains';
 import { encodeFunctionData, type Abi } from 'viem';
-import AdvocateMembershipABIJson from '@/abis/AdvocateMembershipABI.json';
+import MembershipTokenV2ABIJson from '@/abis/MembershipTokenV2ABI.json';
 import DAOGovernorABIJson from '@/abis/DAO_GovernorABI.json';
 import { ProposalThreadSelector } from './ProposalThreadSelector';
 
-const AdvocateMembershipABI = AdvocateMembershipABIJson as Abi;
+const AdvocateMembershipABI = MembershipTokenV2ABIJson as Abi;
 const DAOGovernorABI = DAOGovernorABIJson as Abi;
 import { useToast } from '@/components/ui/use-toast';
 import { createPublicClient, http } from 'viem';
@@ -263,56 +263,44 @@ export function CreateProposalForm({
     userRolesCount: userRoles?.length || 0,
   });
 
-  // Fetch Advocate token address from database instead of hardcoding
+  // Fetch token addresses from database
   const [advocateAddress, setAdvocateAddress] = useState<`0x${string}` | null>(null);
+  const [pocAddress, setPocAddress] = useState<`0x${string}` | null>(null);
   const [advocateAddressLoading, setAdvocateAddressLoading] = useState(true);
 
   React.useEffect(() => {
-    const fetchAdvocateAddress = async () => {
+    const fetchTokenAddresses = async () => {
       try {
         const { data, error } = await supabase
           .from('tokens')
-          .select('contract_address')
-          .eq('id', 'advocate')
-          .eq('is_active', true)
-          .single();
+          .select('id, contract_address')
+          .in('id', ['advocate', 'poc'])
+          .eq('is_active', true);
 
         if (error) {
-          console.error('❌ Failed to fetch Advocate token address:', error);
-          toast({
-            title: 'Configuration Error',
-            description: 'Failed to load governance token address',
-            variant: 'destructive',
-          });
+          console.error('❌ Failed to fetch token addresses:', error);
           return;
         }
 
-        if (!data?.contract_address) {
-          console.error('❌ Advocate token has no contract address');
-          toast({
-            title: 'Configuration Error',
-            description: 'Governance token address not configured',
-            variant: 'destructive',
-          });
-          return;
+        for (const token of data || []) {
+          if (token.id === 'advocate' && token.contract_address) {
+            console.log('✅ Loaded Advocate token address:', token.contract_address);
+            setAdvocateAddress(token.contract_address as `0x${string}`);
+          }
+          if (token.id === 'poc' && token.contract_address) {
+            console.log('✅ Loaded PoC token address:', token.contract_address);
+            setPocAddress(token.contract_address as `0x${string}`);
+          }
         }
-
-        console.log('✅ Loaded Advocate token address from database:', data.contract_address);
-        setAdvocateAddress(data.contract_address as `0x${string}`);
       } catch (err) {
-        console.error('❌ Error fetching Advocate address:', err);
-        toast({
-          title: 'Configuration Error',
-          description: 'Failed to load governance token address',
-          variant: 'destructive',
-        });
+        console.error('❌ Error fetching token addresses:', err);
       } finally {
         setAdvocateAddressLoading(false);
       }
     };
 
-    fetchAdvocateAddress();
-  }, [toast]);
+    fetchTokenAddresses();
+  }, []);
 
   const [formData, setFormData] = useState<ProposalFormData>({
     title: '',
@@ -471,6 +459,29 @@ export function CreateProposalForm({
     },
   });
 
+  // PoC token reads (for pod-level governance activation)
+  const { data: pocBalance, isLoading: isLoadingPocBalance } = useReadContract({
+    address: pocAddress || undefined,
+    abi: AdvocateMembershipABI,
+    functionName: 'balanceOf',
+    args: address ? [address] : undefined,
+    query: { enabled: !!address && !!pocAddress && isConnected, staleTime: 60000, gcTime: 120000 },
+  });
+  const { data: pocVotingPower, isLoading: isLoadingPocVotingPower } = useReadContract({
+    address: pocAddress || undefined,
+    abi: AdvocateMembershipABI,
+    functionName: 'getVotes',
+    args: address ? [address] : undefined,
+    query: { enabled: !!address && !!pocAddress && isConnected, staleTime: 60000, gcTime: 120000 },
+  });
+  const { data: pocDelegate } = useReadContract({
+    address: pocAddress || undefined,
+    abi: AdvocateMembershipABI,
+    functionName: 'delegates',
+    args: address ? [address] : undefined,
+    query: { enabled: !!address && !!pocAddress && isConnected, staleTime: 60000, gcTime: 120000 },
+  });
+
   // Get proposal threshold
   const { data: proposalThreshold, isLoading: isLoadingThreshold } =
     useReadContract({
@@ -589,42 +600,34 @@ export function CreateProposalForm({
   }, [address, userRoles]);
 
   // Determine delegation needs with enhanced logic
-  const needsDelegation = React.useMemo(() => {
-    // If we're still loading data, don't make a decision yet
-    if (isLoadingBalance || isLoadingVotingPower) {
-      return false;
-    }
+  // Determine which token the user holds (and needs to activate)
+  const hasAdvocateToken = !!nftBalance && BigInt(nftBalance.toString()) > 0n;
+  const hasPocToken = !!pocBalance && BigInt(pocBalance.toString()) > 0n;
 
-    // If we don't have an address, no delegation needed
-    if (!address) {
-      return false;
-    }
-
-    // If we have no NFT balance, no delegation needed (but also can't propose)
-    if (!nftBalance || BigInt(nftBalance.toString()) === 0n) {
-      return false;
-    }
-
-    // If we have voting power, check if we're properly delegated
+  // Check if a token needs activation (has balance but no voting power / not delegated to self)
+  const advocateNeedsActivation = React.useMemo(() => {
+    if (isLoadingBalance || isLoadingVotingPower || !address || !hasAdvocateToken) return false;
     if (votingPower && BigInt(votingPower.toString()) > 0n) {
-      // Check if we're delegated to ourselves
-      const delegateAddress = currentDelegate as string | undefined;
-      const isDelegatedToSelf =
-        delegateAddress &&
-        delegateAddress.toLowerCase() === address.toLowerCase();
-      return !isDelegatedToSelf;
+      const d = currentDelegate as string | undefined;
+      return !d || d.toLowerCase() !== address.toLowerCase();
     }
-
-    // If we have NFTs but no voting power, we need delegation
     return true;
-  }, [
-    address,
-    nftBalance,
-    votingPower,
-    currentDelegate,
-    isLoadingBalance,
-    isLoadingVotingPower,
-  ]);
+  }, [address, hasAdvocateToken, votingPower, currentDelegate, isLoadingBalance, isLoadingVotingPower]);
+
+  const pocNeedsActivation = React.useMemo(() => {
+    if (isLoadingPocBalance || isLoadingPocVotingPower || !address || !hasPocToken) return false;
+    if (pocVotingPower && BigInt(pocVotingPower.toString()) > 0n) {
+      const d = pocDelegate as string | undefined;
+      return !d || d.toLowerCase() !== address.toLowerCase();
+    }
+    return true;
+  }, [address, hasPocToken, pocVotingPower, pocDelegate, isLoadingPocBalance, isLoadingPocVotingPower]);
+
+  // needsDelegation: true if the user holds any governance token but hasn't activated it
+  const needsDelegation = advocateNeedsActivation || pocNeedsActivation;
+
+  // Which contract to call delegate() on
+  const activationTokenAddress = advocateNeedsActivation ? advocateAddress : pocAddress;
 
   // Enhanced delegation handlers
   const handleDelegationStart = () => {
@@ -687,22 +690,30 @@ export function CreateProposalForm({
     try {
       const smartAccount = currentUser.evmSmartAccounts[0];
 
+      const tokenToActivate = activationTokenAddress;
+      if (!tokenToActivate) {
+        toast({ title: 'Error', description: 'No governance token found to activate', variant: 'destructive' });
+        setIsDelegating(false);
+        return;
+      }
+
       const callData = encodeFunctionData({
         abi: AdvocateMembershipABI,
         functionName: 'delegate',
         args: [address],
       });
 
-      console.log('🚀 CDP Delegation:', {
+      console.log('🚀 CDP Activation:', {
         smartAccount,
         delegateTo: address,
+        tokenContract: tokenToActivate,
       });
 
       const result = await sendUserOperation({
         evmSmartAccount: smartAccount,
         network: 'base',
         calls: [{
-          to: advocateAddress!,
+          to: tokenToActivate,
           value: 0n,
           data: callData,
         }],
@@ -747,50 +758,32 @@ export function CreateProposalForm({
     }
   };
 
-  // Check voting power separately so we can show specific error messages
+  // Active voting power: Advocate (DAO-wide) or PoC (pod-level)
+  const hasAdvocateVotingPower = !!votingPower && BigInt(votingPower.toString()) > 0n;
+  const hasPocVotingPower = !!pocVotingPower && BigInt(pocVotingPower.toString()) > 0n;
+
   const hasVotingPower = React.useMemo(() => {
-    // ✅ BETA TESTING: If user has governance permission from HATs, bypass voting power check
-    // This allows Beta Testers to create proposals without Advocate NFTs
+    // Hat-based governance permission bypasses token requirement
     if (hasGovernancePermission) {
-      console.log('✅ Voting power check bypassed - user has governanceParticipation permission');
       return true;
     }
-
-    // Normal flow: Check Advocate NFT voting power
-    if (votingPower === undefined || votingPower === null || proposalThreshold === undefined || proposalThreshold === null) {
-      return false;
+    const tier = formData.governanceTier;
+    if (tier === 'DAO_CONSTITUTIONAL') {
+      // DAO-wide votes require Advocate token
+      return hasAdvocateVotingPower;
     }
-
-    try {
-      const votingPowerBigInt = BigInt(votingPower.toString());
-      const thresholdBigInt = BigInt(proposalThreshold.toString());
-      return votingPowerBigInt >= thresholdBigInt;
-    } catch (error) {
-      console.error('BigInt conversion error:', error);
-      return false;
-    }
-  }, [votingPower, proposalThreshold, hasGovernancePermission]);
+    // POD_TREASURY_BINDING and POD_OPERATIONAL: PoC OR Advocate suffices
+    return hasPocVotingPower || hasAdvocateVotingPower;
+  }, [hasGovernancePermission, hasAdvocateVotingPower, hasPocVotingPower, formData.governanceTier]);
 
   // Check if user can create proposals
   const canCreateProposal = React.useMemo(() => {
-    // ✅ FIX: Must have BOTH governance permission AND voting power
-    // (Note: Beta Testers automatically pass voting power check via HAT permissions)
-
-    // Check permission first
     if (!hasGovernancePermission) {
-      console.log(
-        '❌ Cannot create proposal: No governanceParticipation permission',
-      );
       return false;
     }
-
-    // Then check voting power (automatically true for users with governance permission)
     if (!hasVotingPower) {
-      console.log('❌ Cannot create proposal: Insufficient voting power');
       return false;
     }
-
-    console.log('✅ Can create proposal: Has permission AND voting power');
     return true;
   }, [hasGovernancePermission, hasVotingPower]);
 
@@ -1724,8 +1717,9 @@ export function CreateProposalForm({
                   </p>
                 </div>
                 <p className="text-sm mt-2" style={{ color: '#C6933F' }}>
-                  You own {nftBalance?.toString()} NFT(s) but need to activate
-                  your governance participation to vote and create proposals.
+                  {advocateNeedsActivation
+                    ? `You hold ${nftBalance?.toString()} Advocate token(s) but need to activate your governance participation.`
+                    : `You hold ${pocBalance?.toString()} PoC token(s) but need to activate your governance participation.`}
                 </p>
 
                 {isDelegating && (
@@ -1765,9 +1759,8 @@ export function CreateProposalForm({
 
 
             {!needsDelegation &&
-              nftBalance &&
-              BigInt(nftBalance.toString()) > 0n &&
-              (!votingPower || BigInt(votingPower.toString()) === 0n) ? (
+              (hasAdvocateToken || hasPocToken) &&
+              !hasAdvocateVotingPower && !hasPocVotingPower ? (
                 <div
                   className="mb-6 p-4 rounded-lg"
                   style={{
@@ -1786,10 +1779,8 @@ export function CreateProposalForm({
                     </p>
                   </div>
                   <p className="text-sm mt-2" style={{ color: '#8B3A3A' }}>
-                    You own {nftBalance.toString()} NFT(s) but have{' '}
-                    {votingPower?.toString() || '0'} voting power. This may be
-                    due to a contract redeployment. Please delegate your voting
-                    power.
+                    You hold governance token(s) but have 0 active voting power. This may be
+                    due to a contract redeployment. Please re-activate your governance participation.
                   </p>
 
                   <div className="flex flex-col space-y-2">
@@ -1806,7 +1797,7 @@ export function CreateProposalForm({
                       disabled={isDelegating || !address}
                       className="w-full disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-medium py-2 px-4 rounded transition-colors bg-[#8B3A3A] hover:bg-[#5C1F1F]"
                     >
-                      {isDelegating ? 'Delegating...' : 'Force Delegate Voting Power'}
+                      {isDelegating ? 'Activating...' : 'Re-activate Governance Participation'}
                     </button>
                     <div className="text-xs" style={{ color: '#8B3A3A' }}>
                       This will delegate your voting power to yourself. This
