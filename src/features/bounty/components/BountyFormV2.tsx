@@ -76,36 +76,22 @@ export const BountyFormV2: React.FC<BountyFormV2Props> = ({
   const { managedPods: managablePods, isLoading: podsLoading } =
     useBountyManagementAccess();
 
-  const [formData, setFormData] = useState<BountyFormV2Data>(() => {
-    // Restore form data from sessionStorage (survives HMR in development)
-    if (typeof window !== 'undefined') {
-      const savedFormData = sessionStorage.getItem('bounty_form_data');
-      if (savedFormData) {
-        try {
-          return JSON.parse(savedFormData);
-        } catch (e) {
-          console.error('Failed to parse saved form data:', e);
-        }
-      }
-    }
-    return {
-      title: '',
-      description: '',
-      category: '',
-      value: { amount: '', token: 'SYSTEM' },
-      deadline: '',
-      requirements: [''],
-      tasks: [''],
-      questions: [''],
-      work_requirements: [''],
-      funding_source: 'wallet',
-      podId: preselectedPodId || '',
-      eligibility: 'pod_only',
-      // Bid limit defaults
-      bid_acceptance_mode: 'single',
-      max_bids_accepted: 1,
-      bids_accepted_count: 0,
-    };
+  const [formData, setFormData] = useState<BountyFormV2Data>({
+    title: '',
+    description: '',
+    category: '',
+    value: { amount: '', token: 'SYSTEM' },
+    deadline: '',
+    requirements: [''],
+    tasks: [''],
+    questions: [''],
+    work_requirements: [''],
+    funding_source: 'wallet',
+    podId: preselectedPodId || '',
+    eligibility: 'pod_only',
+    bid_acceptance_mode: 'single',
+    max_bids_accepted: 1,
+    bids_accepted_count: 0,
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
