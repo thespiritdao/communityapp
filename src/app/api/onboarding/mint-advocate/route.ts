@@ -23,12 +23,10 @@ import { privateKeyToAccount } from 'viem/accounts';
 export const runtime = 'nodejs';
 export const maxDuration = 60;
 
-// Advocate NFT Contract ABI (ERC-721)
+// Advocate NFT Contract ABI (AdvocateV2 — ERC721Votes)
 const ADVOCATE_ABI = parseAbi([
-  'function mint(address to, uint8 memberType, string uri) external',
-  'function balanceOf(address account) external view returns (uint256)',
-  'function delegate(address delegatee) external',
-  'function delegates(address account) external view returns (address)',
+  'function mint(address recipient) external returns (uint256)',
+  'function balanceOf(address owner) external view returns (uint256)',
 ]);
 
 const ADVOCATE_ADDRESS = process.env.NEXT_PUBLIC_ADVOCATE as `0x${string}` | undefined;
@@ -122,7 +120,7 @@ export async function POST(request: NextRequest) {
       address: ADVOCATE_ADDRESS,
       abi: ADVOCATE_ABI,
       functionName: 'mint',
-      args: [walletAddress as `0x${string}`, 0, ''], // (address to, uint8 memberType, string uri)
+      args: [walletAddress as `0x${string}`],
     });
 
     console.log(`   ⏳ Mint transaction hash: ${mintHash}`);
@@ -149,20 +147,13 @@ export async function POST(request: NextRequest) {
     console.log(`   Transaction: ${mintHash}`);
     console.log(`   Block: ${mintReceipt.blockNumber}`);
 
-    // IMPORTANT: Auto-delegate to self for immediate voting power
-    // The delegation must be done by the NFT holder, not the admin
-    // So we'll return success here and let the frontend handle delegation
-    console.log('ℹ️ Mint Advocate API: User needs to delegate to themselves for voting power');
-    console.log('   This will be handled in the frontend after wallet creation');
-
+    // V2 contract auto-delegates to recipient on mint — voting power is live immediately.
     return NextResponse.json({
       success: true,
       mintTransactionHash: mintHash,
       blockNumber: mintReceipt.blockNumber.toString(),
       gasUsed: mintReceipt.gasUsed.toString(),
       amount: '1',
-      needsDelegation: true,
-      delegationMessage: 'User must delegate NFT to themselves to activate voting power',
     });
 
   } catch (error) {
