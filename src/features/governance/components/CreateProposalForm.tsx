@@ -1241,7 +1241,7 @@ export function CreateProposalForm({
     // - Executive Pod → DAO-wide on-chain proposal (Executive Pod votes)
     // - Other pods → Pod-level off-chain proposal (pod members vote)
     const EXEC_POD_ID = process.env.NEXT_PUBLIC_GOVERNANCE_POD_ID;
-    const isPodLevelProposal = selectedPodId && selectedPodId !== EXEC_POD_ID;
+    const isPodLevelProposal = selectedPodId && selectedPodId !== EXEC_POD_ID && selectedPodId !== 'dao-wide';
 
     console.log('🏛️ [PROPOSAL TYPE]', {
       selectedPod: selectedPodId,
@@ -1271,7 +1271,7 @@ export function CreateProposalForm({
           await GovernanceService.createPodLevelProposal({
             title: proposalTitle,
             description: proposalBody,
-            pod_id: proposalTokenId,
+            pod_id: (proposalTokenId && proposalTokenId !== 'dao-wide') ? proposalTokenId : null,
             created_by: address!,
             governance_tier: 'POD_OPERATIONAL',
             metadata: {
