@@ -171,7 +171,7 @@ contract AdvocateV2 is ERC721Votes, Ownable {
      */
     function _update(address to, uint256 tokenId, address auth)
         internal
-        override(ERC721Votes)
+        override(ERC721, ERC721Votes)
         returns (address)
     {
         address from = _ownerOf(tokenId);
@@ -202,7 +202,7 @@ contract AdvocateV2 is ERC721Votes, Ownable {
     function supportsInterface(bytes4 interfaceId)
         public
         view
-        override(ERC721Votes)
+        override(ERC721, ERC721Votes)
         returns (bool)
     {
         return super.supportsInterface(interfaceId);
