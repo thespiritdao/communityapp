@@ -2458,62 +2458,7 @@ export const PodManagerControlPanel: React.FC<PodManagerControlPanelProps> = ({
                   ))}
                 </div>
 
-                {/* Toggle Module Configuration Warning */}
-                {rolesNeedingConfiguration.length > 0 && (
-                  <Card
-                    style={{
-                      borderColor: '#E8D7B8',
-                      backgroundColor: '#FAF4EC',
-                    }}
-                  >
-                    <CardHeader>
-                      <CardTitle
-                        className="flex items-center"
-                        style={{ color: '#C6933F' }}
-                      >
-                        <ToyBrick className="h-5 w-5 mr-2" />
-                        Toggle Module Configuration Required
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <p className="mb-4" style={{ color: '#C6933F' }}>
-                        Some roles have null toggle modules which prevent
-                        permission management. Configure role-based toggle
-                        modules to enable proper role activation/deactivation.
-                      </p>
-                      <div className="space-y-3">
-                        {rolesNeedingConfiguration.map((role) => (
-                          <div
-                            key={role.id}
-                            className="flex items-center justify-between p-3 bg-white rounded border"
-                          >
-                            <div>
-                              <div className="font-medium">
-                                {role.role_name}
-                              </div>
-                              <div className="text-sm text-gray-600">
-                                {role.configurationIssue}
-                              </div>
-                              <div className="text-xs text-gray-500">
-                                Current: {role.currentToggleModule}
-                              </div>
-                            </div>
-                            <Button
-                              onClick={() =>
-                                handleConfigureToggleModule(role.id)
-                              }
-                              size="sm"
-                              className="ml-3"
-                            >
-                              <ToyBrick className="h-4 w-4 mr-1" />
-                              Configure
-                            </Button>
-                          </div>
-                        ))}
-                      </div>
-                    </CardContent>
-                  </Card>
-                )}
+                {/* Toggle Module Configuration Warning — removed (legacy, permissions managed at app layer) */}
 
                 {/* Toggle Module Configuration Transaction */}
                 {pendingModuleConfig && (
