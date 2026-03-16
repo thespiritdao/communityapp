@@ -9,9 +9,6 @@ import {
   interestsOptions,
   seekingOptions,
 } from '@/features/identity/constants/profileOptions';
-import FundButton from '@/components/FundButton';
-import FundingModal from '@/components/FundingModal';
-import { useFundingModal } from '@/hooks/useFundingModal';
 import {
   Lightbulb,
   Search,
@@ -91,7 +88,6 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
   onClose,
 }) => {
   const { evmAddress: address } = useEvmAddress();
-  const { modalProps, openMemberFunding } = useFundingModal();
   const profilePictureUrl = getProfilePictureUrl(user.wallet_address, users);
   const [showDMModal, setShowDMModal] = useState(false);
   const [showGiftModal, setShowGiftModal] = useState(false);
@@ -121,18 +117,6 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
 
   const mappedInterests = mapStoredValuesToLabels(user.interests ?? null, interestsOptions);
   const mappedSeeking = mapStoredValuesToLabels(user.seeking ?? null, seekingOptions);
-
-  const handleFundUser = () => {
-    openMemberFunding({
-      address: user.wallet_address,
-      name: `${user.first_name} ${user.last_name}`,
-      image: profilePictureUrl,
-      description: `Send funding directly to ${user.first_name}`,
-    });
-  };
-
-  const canFundUser =
-    address && address.toLowerCase() !== user.wallet_address.toLowerCase();
 
   // Only allow message/gift for OTHER users' profiles (not your own)
   const canInteractWithUser =
@@ -227,17 +211,6 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
             {user.bio && <p className="user-bio">{user.bio}</p>}
           </div>
 
-          {/* Fund User Button */}
-          {canFundUser && (
-            <div className="profile-actions">
-              <FundButton
-                recipientType="member"
-                variant="default"
-                size="sm"
-                onClick={handleFundUser}
-              />
-            </div>
-          )}
         </div>
       </div>
 
@@ -356,11 +329,6 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
           )}
         </div>
       </div>
-
-      {/* Funding Modal */}
-      {modalProps.recipient && (
-        <FundingModal {...modalProps} onSuccess={(amount, token) => {}} />
-      )}
 
       {/* Direct Message Modal */}
       {showDMModal && (

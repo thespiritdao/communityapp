@@ -78,8 +78,7 @@ export default function MembersPage() {
       const { data: profiles } = await supabase
         .from('user_profiles')
         .select('*')
-        .in('wallet_address', uniqueWallets)
-        .not('tos_signed_at', 'is', null);
+        .in('wallet_address', uniqueWallets);
 
       if (!profiles) {
         setLoading(false);
