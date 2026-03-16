@@ -109,19 +109,21 @@ export const BountyFormV2: React.FC<BountyFormV2Props> = ({
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [ipfsHash, setIpfsHash] = useState<string>(() => {
-    // Restore IPFS hash from sessionStorage (survives HMR in development)
-    if (typeof window !== 'undefined') {
-      return sessionStorage.getItem('bounty_ipfs_hash') || '';
-    }
-    return '';
-  });
+  const [ipfsHash, setIpfsHash] = useState<string>('');
   const [createdBountyId, setCreatedBountyId] = useState<number | null>(null);
   const [isTransactionPending, setIsTransactionPending] = useState(false); // CDP transaction loading state
   const [transactionStatus, setTransactionStatus] = useState<string>(''); // Status message for user
   const hasSetInitialPod = useRef(false);
   const savedTransactions = useRef(new Set<string>()); // Track saved transactions to prevent duplicates
   const formDataRef = useRef(formData); // Store latest formData in ref to prevent callback recreation
+
+  // Clear stale sessionStorage on mount — prevents old ipfsHash from causing wrong transaction state
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      sessionStorage.removeItem('bounty_ipfs_hash');
+      sessionStorage.removeItem('bounty_form_data');
+    }
+  }, []);
 
   // Keep formDataRef in sync with formData
   useEffect(() => {
