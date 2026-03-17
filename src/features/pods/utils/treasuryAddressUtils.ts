@@ -27,10 +27,19 @@ export async function getTreasuryAddress(
   podId: string,
   fallbackAddress?: string | null,
 ): Promise<string> {
-  try {
-    console.log('🏦 Looking up treasury for pod:', podId);
+  // Database address takes priority — it is explicitly set and may differ from
+  // the factory registry (e.g. after a treasury redeployment).
+  if (
+    fallbackAddress &&
+    fallbackAddress !== '0x0000000000000000000000000000000000000000'
+  ) {
+    console.log('🏦 Using database treasury address:', fallbackAddress);
+    return fallbackAddress;
+  }
 
-    // First, try to get from factory contract (authoritative source)
+  try {
+    console.log('🏦 No DB address, querying factory for pod:', podId);
+
     const factoryContract = getContract({
       address: TREASURY_FACTORY_ADDRESS,
       abi: FACTORY_ABI,
@@ -42,25 +51,11 @@ export async function getTreasuryAddress(
     ]);
     console.log('🏦 Factory returned treasury address:', factoryAddress);
 
-    // Check if factory has a valid address (not zero address)
     if (
       factoryAddress &&
       factoryAddress !== '0x0000000000000000000000000000000000000000'
     ) {
-      console.log('🏦 Using factory treasury address:', factoryAddress);
       return factoryAddress;
-    }
-
-    // Fallback to database address if factory doesn't have one
-    if (
-      fallbackAddress &&
-      fallbackAddress !== '0x0000000000000000000000000000000000000000'
-    ) {
-      console.log(
-        '🏦 Using database fallback treasury address:',
-        fallbackAddress,
-      );
-      return fallbackAddress;
     }
 
     throw new Error(
@@ -68,19 +63,6 @@ export async function getTreasuryAddress(
     );
   } catch (error) {
     console.error('🏦 Error getting treasury address from factory:', error);
-
-    // If factory lookup fails, use database fallback
-    if (
-      fallbackAddress &&
-      fallbackAddress !== '0x0000000000000000000000000000000000000000'
-    ) {
-      console.log(
-        '🏦 Factory lookup failed, using database fallback:',
-        fallbackAddress,
-      );
-      return fallbackAddress;
-    }
-
     throw error;
   }
 }

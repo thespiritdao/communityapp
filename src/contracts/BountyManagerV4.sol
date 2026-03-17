@@ -257,13 +257,8 @@ contract BountyManagerV4 is ReentrancyGuard, Pausable {
 
         PodMetadata memory pod = podMetadata[podId];
         require(pod.isRegistered, "Pod not registered");
-
-        require(
-            hatsProtocol.balanceOf(msg.sender, pod.leaderHatId) > 0,
-            "Must have leader HAT for treasury access"
-        );
-
         require(pod.treasuryAddress != address(0), "Treasury not found");
+
         bounties[bountyId].fundingSource = pod.treasuryAddress;
     }
 
@@ -340,13 +335,7 @@ contract BountyManagerV4 is ReentrancyGuard, Pausable {
         Bounty storage bounty = bounties[bountyId];
         require(bounty.status == 0, "Bounty not open");
 
-        PodMetadata memory pod = podMetadata[bounty.podId];
-        require(pod.isRegistered, "Pod not registered");
-        require(
-            hatsProtocol.balanceOf(msg.sender, pod.leaderHatId) > 0,
-            "Must have leader HAT to assign bounty"
-        );
-
+        require(bounty.creator == msg.sender, "Not creator");
         require(bidIndex < bids[bountyId].length, "Invalid bid index");
 
         Bid storage winningBid = bids[bountyId][bidIndex];
@@ -379,16 +368,12 @@ contract BountyManagerV4 is ReentrancyGuard, Pausable {
 
         require(bounty.status == 1, "Bounty not assigned");
 
-        bool isAuthorized = msg.sender == assignment.reviewer ||
-                           msg.sender == assignment.approver;
-
-        if (!isAuthorized) {
-            PodMetadata memory pod = podMetadata[bounty.podId];
-            require(pod.isRegistered, "Pod not registered");
-            isAuthorized = hatsProtocol.balanceOf(msg.sender, pod.leaderHatId) > 0;
-        }
-
-        require(isAuthorized, "Not authorized to release payment");
+        require(
+            msg.sender == assignment.reviewer ||
+            msg.sender == assignment.approver ||
+            msg.sender == bounty.creator,
+            "Not authorized to release payment"
+        );
         require(amount <= assignment.escrowAmount - assignment.paidAmount, "Exceeds available");
 
         IERC20(bounty.token).safeTransfer(assignment.bidder, amount);
@@ -408,15 +393,7 @@ contract BountyManagerV4 is ReentrancyGuard, Pausable {
     function cancelBounty(uint256 bountyId) external nonReentrant {
         Bounty storage bounty = bounties[bountyId];
 
-        bool isAuthorized = msg.sender == bounty.creator;
-
-        if (!isAuthorized) {
-            PodMetadata memory pod = podMetadata[bounty.podId];
-            require(pod.isRegistered, "Pod not registered");
-            isAuthorized = hatsProtocol.balanceOf(msg.sender, pod.leaderHatId) > 0;
-        }
-
-        require(isAuthorized, "Not authorized to cancel");
+        require(msg.sender == bounty.creator, "Not authorized to cancel");
         require(bounty.status < 2, "Cannot cancel completed bounty");
 
         bounty.status = 3;
