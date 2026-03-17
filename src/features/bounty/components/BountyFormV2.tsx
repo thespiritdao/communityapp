@@ -25,7 +25,6 @@ import { useBountyV2 } from '../hooks/useBountyV2';
 import { useBountyPermissions } from '@/features/bounty/hooks/useBountyPermissions'; // NEW: Database permission check
 import { useBountyManagementAccess } from '../hooks/useBountyManagementAccess';
 import { BountyTreasuryFundingTransaction } from './BountyTreasuryFundingTransaction';
-import PodTreasuryV2ABI from '@/abis/PodTreasuryV2.json';
 import { RegisterPodButton } from '@/features/pods/components/RegisterPodButton';
 
 export interface BountyFormV2Data {
@@ -387,31 +386,17 @@ export const BountyFormV2: React.FC<BountyFormV2Props> = ({
         args: [BOUNTY_MANAGER_ADDRESS, amount],
       };
 
-      // Pod treasury funding: treasury distributes tokens to smart wallet first,
-      // then wallet approves + creates bounty — all atomic in one UserOperation.
-      if (formData.funding_source === 'pod_treasury') {
-        if (!evmAddress) throw new Error('Wallet address required for treasury funding');
-        console.log('🏦 Treasury funding: prepending distributeTokens call', {
-          treasury: treasuryAddress,
-          recipient: evmAddress,
-          amount: formData.value.amount,
-        });
-        const treasuryDistributeCall = {
-          address: treasuryAddress as `0x${string}`,
-          abi: PodTreasuryV2ABI,
-          functionName: 'distributeTokens' as const,
-          args: [tokenAddress, [evmAddress], [amount], 'Bounty funding'],
-        };
-        return [treasuryDistributeCall, approveCall, bountyCall];
-      }
-
-      // Wallet funding: approve + createBounty
+      // Always 2-call UserOp: approve + createBounty.
+      // For pod_treasury path, distributeTokens is called server-side first
+      // (see handleCreateBountyTransaction) so tokens arrive in the smart wallet
+      // before this UserOp is submitted. This keeps all calls within whitelisted
+      // contracts and avoids per-pod treasury whitelist maintenance.
       return [approveCall, bountyCall];
     } catch (error) {
       console.error('Error creating transaction calls:', error);
       return null;
     }
-  }, [formData, ipfsHash, createBountyCall, managablePods, evmAddress]);
+  }, [formData, ipfsHash, createBountyCall, managablePods]);
 
   // CDP Smart Account transaction handler - EXACT FAUCET PATTERN
   const handleCreateBountyTransaction = useCallback(async () => {
@@ -431,6 +416,34 @@ export const BountyFormV2: React.FC<BountyFormV2Props> = ({
     setIsTransactionPending(true); // EXACT FAUCET PATTERN
 
     try {
+      // For pod_treasury path: server distributes tokens to smart wallet first,
+      // then the 2-call UserOp (approve + createBounty) proceeds normally.
+      if (formDataRef.current.funding_source === 'pod_treasury') {
+        setTransactionStatus('Requesting treasury distribution...');
+        const tokenAddress =
+          formDataRef.current.value.token === 'SYSTEM'
+            ? (process.env.NEXT_PUBLIC_SYSTEM_TOKEN || '0xd67e460ce56be18b573aB434b3DC962c657D8Bb5')
+            : (process.env.NEXT_PUBLIC_SELF_TOKEN || '0x1b8d424695E63ABca04E94bA46c03f1D83e14020');
+        const amount = BigInt(
+          Math.floor(parseFloat(formDataRef.current.value.amount) * 1e18).toString()
+        ).toString();
+        const distributeRes = await fetch('/api/bounty/treasury-distribute', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            podId: formDataRef.current.podId,
+            tokenAddress,
+            recipientAddress: evmAddress,
+            amount,
+          }),
+        });
+        if (!distributeRes.ok) {
+          const err = await distributeRes.json();
+          throw new Error(err.error || 'Treasury distribution failed');
+        }
+        setTransactionStatus('Treasury funded — submitting bounty transaction...');
+      }
+
       console.log('🚀 Building Smart Account User Operation for bounty creation...');
       console.log('💼 Smart Account:', smartAccount);
       console.log('🎯 Transactions: Approve + CreateBounty');
