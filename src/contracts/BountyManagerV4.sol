@@ -206,16 +206,10 @@ contract BountyManagerV4 is ReentrancyGuard, Pausable {
         require(bytes(ipfsHash).length > 0, "IPFS hash required");
         require(bytes(podId).length > 0, "Pod ID required");
 
-        // Auto-register pod metadata if not done yet (PERMISSIONLESS!)
+        // Auto-register pod metadata if not done yet
         if (!podMetadata[podId].isRegistered) {
             require(leaderHatId != 0, "Leader HAT ID required for new pod");
             require(treasuryAddress != address(0), "Treasury address required for new pod");
-
-            // Verify caller has the leader HAT
-            require(
-                hatsProtocol.balanceOf(msg.sender, leaderHatId) > 0,
-                "Must have leader HAT"
-            );
 
             podMetadata[podId] = PodMetadata({
                 leaderHatId: leaderHatId,
@@ -225,13 +219,6 @@ contract BountyManagerV4 is ReentrancyGuard, Pausable {
             });
 
             emit PodMetadataRegistered(podId, leaderHatId, treasuryAddress, msg.sender);
-        } else {
-            // Pod already registered - verify caller has leader HAT
-            PodMetadata memory pod = podMetadata[podId];
-            require(
-                hatsProtocol.balanceOf(msg.sender, pod.leaderHatId) > 0,
-                "Must have leader HAT for this pod"
-            );
         }
 
         uint256 bountyId = nextBountyId++;
