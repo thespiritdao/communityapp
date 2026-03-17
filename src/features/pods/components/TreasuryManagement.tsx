@@ -34,7 +34,6 @@ import {
 } from 'lucide-react';
 import UserRecipientSelector from './UserRecipientSelector';
 import { getTreasuryAddress } from '../utils/treasuryAddressUtils';
-import { debugTreasuryHatMismatch } from '../utils/debugTreasuryHatMismatch';
 import {
   prepareDirectDistribution,
   prepareDirectEqualDistribution,
@@ -1391,56 +1390,6 @@ export function TreasuryManagement({
                       Treasury management requires the pod management HAT
                     </p>
 
-                    {/* Always show debug button if user has address */}
-                    {evmAddress && (
-                      <div className="mt-3">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={async () => {
-                            try {
-                              console.log('🔍 Debugging HAT permissions...');
-                              const result = await debugTreasuryHatMismatch(
-                                evmAddress,
-                                podId,
-                              );
-
-                              // Also show result in toast for visibility
-                              if (!result.hatsMatch) {
-                                toast({
-                                  title: 'HAT ID Mismatch Found!',
-                                  description: `Treasury expects different HAT. Check console for details.`,
-                                  variant: 'destructive',
-                                });
-                              } else if (result.userHasTreasuryHat) {
-                                toast({
-                                  title: 'HAT Permissions OK',
-                                  description: `HATs match and you have required permissions.`,
-                                });
-                              } else {
-                                toast({
-                                  title: 'HAT Not Minted',
-                                  description: `You need the management HAT minted to your address.`,
-                                  variant: 'destructive',
-                                });
-                              }
-                            } catch (error) {
-                              console.error('Debug failed:', error);
-                              toast({
-                                title: 'Debug Failed',
-                                description: 'Check console for error details',
-                                variant: 'destructive',
-                              });
-                            }
-                          }}
-                        >
-                          Debug HAT Permissions
-                        </Button>
-                        <p className="text-xs text-gray-400 mt-1">
-                          Check why distribution transactions are failing
-                        </p>
-                      </div>
-                    )}
                   </div>
                 </div>
               </div>

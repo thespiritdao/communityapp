@@ -195,7 +195,8 @@ contract BountyManagerV4 is ReentrancyGuard, Pausable {
         string calldata podId,
         string calldata ipfsHash,
         uint256 leaderHatId,
-        address treasuryAddress
+        address treasuryAddress,
+        bool useTreasuryFunding
     )
         external
         nonReentrant
@@ -223,8 +224,15 @@ contract BountyManagerV4 is ReentrancyGuard, Pausable {
 
         uint256 bountyId = nextBountyId++;
 
-        // Handle funding
-        IERC20(token).safeTransferFrom(msg.sender, address(this), value);
+        // Handle funding: pull from treasury (pre-approved) or from caller's wallet
+        if (useTreasuryFunding) {
+            require(treasuryAddress != address(0), "Treasury address required for treasury funding");
+            IERC20(token).safeTransferFrom(treasuryAddress, address(this), value);
+        } else {
+            IERC20(token).safeTransferFrom(msg.sender, address(this), value);
+        }
+
+        address fundingSource = useTreasuryFunding ? treasuryAddress : msg.sender;
 
         // Create bounty
         Bounty storage newBounty = bounties[bountyId];
@@ -233,7 +241,7 @@ contract BountyManagerV4 is ReentrancyGuard, Pausable {
         newBounty.createdAt = uint64(block.timestamp);
         newBounty.deadline = 0;
         newBounty.token = token;
-        newBounty.fundingSource = msg.sender;
+        newBounty.fundingSource = fundingSource;
         newBounty.status = 0; // Open
         newBounty.paymentType = paymentType;
         newBounty.isEscrowed = true;

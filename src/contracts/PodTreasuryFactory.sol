@@ -15,6 +15,7 @@ import "./PodTreasuryV2WithVoting.sol";
 contract PodTreasuryFactory is Ownable, ReentrancyGuard {
     address public immutable hatsContract;
     address public authorizedProxy; // Treasury proxy address - now mutable
+    address public bountyManager;   // BountyManager address — auto-approved in each treasury at construction
     address[] public defaultSupportedTokens;
     
     mapping(string => address) public podTreasuries;
@@ -49,12 +50,14 @@ contract PodTreasuryFactory is Ownable, ReentrancyGuard {
         address _hatsContract,
         address[] memory _defaultSupportedTokens,
         address _owner,
-        address _authorizedProxy
+        address _authorizedProxy,
+        address _bountyManager
     ) Ownable(_owner) {
         require(_hatsContract != address(0), "Invalid hats contract");
         require(_authorizedProxy != address(0), "Invalid proxy address");
         hatsContract = _hatsContract;
         authorizedProxy = _authorizedProxy;
+        bountyManager = _bountyManager;
         defaultSupportedTokens = _defaultSupportedTokens;
     }
     
@@ -78,7 +81,8 @@ contract PodTreasuryFactory is Ownable, ReentrancyGuard {
             podId,
             tokens,
             authorizedProxy,
-            testingMode
+            testingMode,
+            bountyManager
         );
         
         address treasuryAddress = address(treasury);
@@ -172,7 +176,7 @@ contract PodTreasuryFactory is Ownable, ReentrancyGuard {
         bytes32 salt = keccak256(abi.encodePacked(podId, managementHatId, block.timestamp));
         bytes memory bytecode = abi.encodePacked(
             type(PodTreasuryV2WithVoting).creationCode,
-            abi.encode(hatsContract, managementHatId, podId, defaultSupportedTokens, authorizedProxy, testingMode)
+            abi.encode(hatsContract, managementHatId, podId, defaultSupportedTokens, authorizedProxy, testingMode, bountyManager)
         );
         
         bytes32 hash = keccak256(

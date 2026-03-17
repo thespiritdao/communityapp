@@ -554,6 +554,11 @@
           "internalType": "address",
           "name": "treasuryAddress",
           "type": "address"
+        },
+        {
+          "internalType": "bool",
+          "name": "useTreasuryFunding",
+          "type": "bool"
         }
       ],
       "name": "createBounty",

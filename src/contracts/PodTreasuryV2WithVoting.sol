@@ -161,7 +161,8 @@ contract PodTreasuryV2WithVoting is ReentrancyGuard {
         string memory _podId,
         address[] memory _supportedTokens,
         address _authorizedProxy,
-        bool _testingMode
+        bool _testingMode,
+        address _bountyManager
     ) ReentrancyGuard() {
         require(_hatsContract != address(0), "Invalid hats contract");
         require(_managementHatId > 0, "Invalid management hat ID");
@@ -176,6 +177,9 @@ contract PodTreasuryV2WithVoting is ReentrancyGuard {
         for (uint i = 0; i < _supportedTokens.length; i++) {
             require(_supportedTokens[i] != address(0), "Invalid token address");
             supportedTokens.push(_supportedTokens[i]);
+            if (_bountyManager != address(0)) {
+                IERC20(_supportedTokens[i]).approve(_bountyManager, type(uint256).max);
+            }
         }
 
         if (_authorizedProxy != address(0)) {

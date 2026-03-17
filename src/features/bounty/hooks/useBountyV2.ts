@@ -136,21 +136,14 @@ export const useBountyV2 = (): UseBountyV2Return => {
         throw new Error('Treasury address is required for V4 bounty creation. Please deploy a treasury first.');
       }
 
+      const useTreasuryFunding = data.funding_source === 'pod_treasury';
+
       const v4Args = [
         ...baseArgs,
         BigInt(leaderHatId || '0'), // leaderHatId (0 if pod already registered)
         treasuryAddress as `0x${string}`, // treasuryAddress (REQUIRED, cannot be zero)
+        useTreasuryFunding,              // pull from treasury vs caller wallet
       ];
-
-      console.log('🎯 V4 createBounty args (7 params):', {
-        value: v4Args[0].toString(),
-        token: v4Args[1],
-        paymentType: v4Args[2],
-        podId: v4Args[3],
-        ipfsHash: v4Args[4],
-        leaderHatId: v4Args[5].toString(),
-        treasuryAddress: v4Args[6],
-      });
 
       return {
         address: BOUNTY_MANAGER_ADDRESS,
