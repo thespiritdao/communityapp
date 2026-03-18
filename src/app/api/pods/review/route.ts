@@ -345,33 +345,36 @@ export async function POST(req: NextRequest) {
               .eq('token_address', managementHatId)
               .single();
 
-            if (!existing) {
-              await supabaseAdmin.from('pod_role_permissions').insert({
-                pod_id: podId,
-                token_address: managementHatId,
-                role_name: 'Pod Leader',
-                permissions: {
-                  chatAccess: true,
-                  chatModeration: true,
-                  governanceParticipation: true,
-                  eventCreation: true,
-                  treasuryViewing: true,
-                  treasuryManagement: true,
-                  memberManagement: true,
-                  subPodCreation: true,
-                  roleAssignment: true,
-                  forumAccess: true,
-                  forumModeration: false,
-                  bountyManagement: true,
-                  marketplaceAccess: true,
-                  marketplaceManage: true,
-                },
-                max_holders: 5,
-                created_by: callerAddress,
-                updated_by: callerAddress,
-              });
-              console.log(`Created pod_role_permissions for pod ${podId}, hat ${managementHatId}`);
-            }
+            // Upsert — overwrite any incomplete record written at creation time
+            await supabaseAdmin.from('pod_role_permissions').upsert({
+              ...(existing ? { id: existing.id } : {}),
+              pod_id: podId,
+              token_address: managementHatId,
+              role_name: 'Pod Leader',
+              permissions: {
+                chatAccess: true,
+                chatModeration: true,
+                forumAccess: true,
+                forumModeration: true,
+                eventCreation: true,
+                treasuryViewing: true,
+                treasuryManagement: true,
+                memberManagement: true,
+                subPodCreation: true,
+                roleAssignment: true,
+                bountyManagement: true,
+                marketplaceAccess: true,
+                marketplaceManage: true,
+                knowledgeBaseAccess: true,
+                knowledgeBaseManage: true,
+                governanceParticipation: true,
+              },
+              is_active: true,
+              max_holders: 10,
+              created_by: callerAddress,
+              updated_by: callerAddress,
+            }, { onConflict: 'pod_id,token_address' });
+            console.log(`Upserted pod_role_permissions for pod ${podId}, hat ${managementHatId}`);
           } catch (roleErr: any) {
             // Non-fatal — pod is active, permissions can be set manually
             console.warn('Failed to create pod_role_permissions:', roleErr.message);

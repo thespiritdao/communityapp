@@ -1750,49 +1750,11 @@ export const HatsModulePodCreationForm: React.FC<
 
         }
 
-        // ✅ FIX #3: ALWAYS create leader role immediately after pod creation
-        // This ensures permission system finds the role without race conditions
+        // pod_role_permissions are written with full permissions by the
+        // review/activate route on pod approval. Writing them here with an
+        // incomplete set caused the review route upsert to be skipped.
         if (podData?.podId && newHatId) {
-          console.log('👥 === CREATING LEADER ROLE (ATOMIC) ===');
-          console.log('📝 Creating pod_role_permissions record for leaders...');
-
-          try {
-            const { data: rolePermission, error: roleError } = await supabase
-              .from('pod_role_permissions')
-              .insert({
-                pod_id: podData.podId,
-                role_name: 'leader',
-                token_address: newHatId,
-                eligibility_criteria:
-                  formData.eligibilityRules.length > 0
-                    ? formData.eligibilityRules
-                    : [],
-                permissions: {
-                  memberManagement: true,
-                  treasuryManagement: true,
-                  podSettings: true,
-                  proposalCreation: true,
-                  voting: true,
-                },
-                is_active: true,
-                created_by: address,
-                updated_by: address, // Required by database NOT NULL constraint
-              })
-              .select()
-              .single();
-
-            if (roleError) {
-              console.error('❌ Failed to create leader role:', roleError);
-              throw new Error(
-                `Failed to create leader role: ${roleError.message}`,
-              );
-            }
-
-            console.log('✅ Leader role created successfully:', rolePermission);
-
-            // ✅ FIX #4: Add pod creator to pod_members table
-            // This is required for the permission system to find the user's role
-            console.log('👥 Adding pod leaders to pod_members table...');
+          // Add pod leaders to pod_members so the permission system can find them
 
             try {
               // Create pod_members entries for all leaders

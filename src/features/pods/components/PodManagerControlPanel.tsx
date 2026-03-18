@@ -495,24 +495,8 @@ export const PodManagerControlPanel: React.FC<PodManagerControlPanelProps> = ({
       console.log('📊 Raw roles data:', roles);
 
       if (roles.length === 0) {
-        console.log('⚠️ No roles found, initializing defaults...');
-        await initializeDefaultRoles();
-        // Retry loading after initialization
-        const newRoles =
-          await PodRolePermissionsService.getPodRolePermissions(podId);
-        console.log('📊 After initialization:', newRoles);
-        setPodRoles(newRoles);
-
-        if (newRoles.length > 0) {
-          toast({
-            title: 'Roles Initialized',
-            description: `Created ${newRoles.length} default pod roles`,
-          });
-        } else {
-          setLoadError(
-            'Failed to create default roles. Check console for details.',
-          );
-        }
+        console.log('⚠️ No roles found for pod — roles are written by the review/activate route on pod approval.');
+        setPodRoles([]);
       } else {
         console.log('✅ Loaded', roles.length, 'roles from database');
 
