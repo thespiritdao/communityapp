@@ -632,7 +632,7 @@ export const BountyFormV2: React.FC<BountyFormV2Props> = ({
                   ? 1
                   : 0,
             bids_accepted_count: 0,
-            status: 'pending', // Mark as pending until confirmed
+            status: 'open',
           }),
         })
           .then(async (saveResponse) => {
