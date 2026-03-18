@@ -201,20 +201,14 @@ export class DatabaseTokenService {
     try {
       const [
         tokensTableData,
-        podLeaderTokens,
-        podMemberTokens,
         rolePermissions,
       ] = await Promise.all([
         this.getTokensTableData(),
-        this.getPodLeaderTokens(),
-        this.getPodMemberTokens(),
         this.getPodRolePermissions(),
       ]);
 
       const allTokens = [
         ...tokensTableData,
-        ...podLeaderTokens,
-        ...podMemberTokens,
         ...rolePermissions,
       ];
 
