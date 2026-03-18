@@ -201,14 +201,30 @@ export class DatabaseTokenService {
     try {
       const [
         tokensTableData,
+        podLeaderTokens,
         rolePermissions,
       ] = await Promise.all([
         this.getTokensTableData(),
+        this.getPodLeaderTokens(),
         this.getPodRolePermissions(),
       ]);
 
+      // Pods that have pod_role_permissions entries are fully covered by rolePermissions.
+      // Only include podLeaderTokens for pods that have NO role permission entries (e.g. Executive Pod).
+      const podIdsWithRolePermissions = new Set(
+        rolePermissions.map((r) => {
+          // role id format is `role_${uuid}` — extract pod_id via the token_address match
+          // Instead, track by token_address since that's what both sources share
+          return r.token_address;
+        }),
+      );
+      const fallbackLeaderTokens = podLeaderTokens.filter(
+        (t) => !podIdsWithRolePermissions.has(t.token_address),
+      );
+
       const allTokens = [
         ...tokensTableData,
+        ...fallbackLeaderTokens,
         ...rolePermissions,
       ];
 
