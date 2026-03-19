@@ -11,6 +11,7 @@ import { useProfiles } from '@/features/identity/hooks/useProfiles';
 import { PodCardGrid } from '@/features/pods/components';
 import { useDatabaseFirstPermissions } from '@/hooks/useDatabaseFirstPermissions';
 import { PodRolePermissionsService } from '@/features/pods/services/PodRolePermissionsService';
+import { useTokenBalances } from '@/context/TokenBalancesContext';
 import { createPublicClient, http } from 'viem';
 import { base } from 'viem/chains';
 import { supabase } from '@/utils/supabaseClient';
@@ -28,6 +29,7 @@ export default function PodsPage() {
   // Check pod creation permission using database-first approach
   const [canCreatePod, setCanCreatePod] = useState(false);
   const { memberships, isLoading: permissionsLoading } = useDatabaseFirstPermissions();
+  const { balances: tokenBalances } = useTokenBalances();
 
   // Exec hat check — show top-level pod review banner
   const [isExecLeader, setIsExecLeader] = useState(false);
@@ -105,7 +107,18 @@ export default function PodsPage() {
 
   useEffect(() => {
     const checkSubPodPermission = async () => {
-      if (!address || memberships.length === 0) {
+      if (!address) {
+        setCanCreatePod(false);
+        return;
+      }
+
+      // Proof of Curiosity holders can propose new pods
+      if (tokenBalances?.hasProofOfCuriosity) {
+        setCanCreatePod(true);
+        return;
+      }
+
+      if (memberships.length === 0) {
         setCanCreatePod(false);
         return;
       }
@@ -134,7 +147,7 @@ export default function PodsPage() {
     };
 
     checkSubPodPermission();
-  }, [address, memberships]);
+  }, [address, memberships, tokenBalances]);
 
   // Use optimized pods hook
   const {

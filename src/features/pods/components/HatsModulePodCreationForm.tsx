@@ -1824,18 +1824,6 @@ export const HatsModulePodCreationForm: React.FC<
             } else {
               console.log('ℹ️ No eligibility criteria - skipping module sync');
             }
-          } catch (roleError) {
-            console.error('❌ Leader role creation failed:', roleError);
-
-            toast({
-              title: 'Warning: Role Creation Failed',
-              description:
-                'Pod created successfully but leader role permissions may need manual configuration.',
-              variant: 'destructive',
-              duration: 10000,
-            });
-            // Don't throw - pod was created successfully, role can be added later
-          }
         } else {
           console.warn('⚠️ Skipping role creation - missing pod ID or HAT ID');
         }

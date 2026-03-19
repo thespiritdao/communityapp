@@ -9,6 +9,7 @@ import { Shield, Lock, AlertTriangle, Loader2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useEvmAddress } from '@coinbase/cdp-hooks';
 import { supabase } from '@/utils/supabaseClient';
+import { useTokenBalances } from '@/context/TokenBalancesContext';
 
 interface PodAccessGateProps {
   children: ReactNode;
@@ -269,6 +270,7 @@ export const AnyPodLeaderGate: React.FC<{ children: ReactNode }> = ({
 }) => {
   const { evmAddress: address } = useEvmAddress();
   const router = useRouter();
+  const { balances: tokenBalances } = useTokenBalances();
   const [isChecking, setIsChecking] = React.useState(true);
   const [isLeader, setIsLeader] = React.useState(false);
 
@@ -277,6 +279,13 @@ export const AnyPodLeaderGate: React.FC<{ children: ReactNode }> = ({
       if (!address) {
         setIsChecking(false);
         setIsLeader(false);
+        return;
+      }
+
+      // Proof of Curiosity holders can propose new pods
+      if (tokenBalances?.hasProofOfCuriosity) {
+        setIsLeader(true);
+        setIsChecking(false);
         return;
       }
 
@@ -311,7 +320,7 @@ export const AnyPodLeaderGate: React.FC<{ children: ReactNode }> = ({
     };
 
     checkLeaderStatus();
-  }, [address]);
+  }, [address, tokenBalances]);
 
   // Loading state
   if (isChecking) {
