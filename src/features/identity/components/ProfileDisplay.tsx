@@ -6,9 +6,6 @@ import {
   seekingOptions,
 } from '@/features/identity/constants/profileOptions';
 import {
-  Lightbulb,
-  Search,
-  ChevronsRightLeft,
   Twitter,
   Instagram,
   Facebook,
@@ -114,115 +111,62 @@ export const ProfileDisplay: React.FC<ProfileDisplayProps> = ({
         </div>
       </div>
 
-      <hr />
-
       {/* Section: Interests */}
-      <div className="profile-section interests-section">
-        <div className="interests-subsection">
-          <h3 className="interests-heading">
-            <span className="interests-icon">
-              <Lightbulb size={18} strokeWidth={2} />
-            </span>
-            Interests
-          </h3>
-          {profile?.interests &&
-          mapStoredValuesToLabels(profile.interests, interestsOptions).length >
-            0 ? (
-            <div className="interests-tags">
-              {mapStoredValuesToLabels(profile.interests, interestsOptions).map(
-                (label, i) => (
-                  <span key={i} className="interest-tag">
-                    {label}
-                  </span>
-                ),
-              )}
-            </div>
-          ) : (
-            <p className="interests-empty">No interests specified</p>
-          )}
-        </div>
-
-        <div className="interests-subsection">
-          <h3 className="interests-heading">
-            <span className="interests-icon">
-              <Search size={18} strokeWidth={2} />
-            </span>
-            Seeking
-          </h3>
-          {profile?.seeking &&
-          mapStoredValuesToLabels(profile.seeking, seekingOptions).length >
-            0 ? (
-            <div className="interests-tags">
-              {mapStoredValuesToLabels(profile.seeking, seekingOptions).map(
-                (label, i) => (
-                  <span key={i} className="interest-tag seeking-tag">
-                    {label}
-                  </span>
-                ),
-              )}
-            </div>
-          ) : (
-            <p className="interests-empty">
-              Not seeking anything at the moment
-            </p>
-          )}
-        </div>
-
-        <div className="interests-subsection">
-          <h3 className="interests-heading">
-            <span className="interests-icon">
-              <ChevronsRightLeft size={18} strokeWidth={2} />
-            </span>
-            Open to Connect
-          </h3>
-          <div className="connect-status">
-            <span
-              className={`connect-badge ${profile?.open_to_connect || 'not-specified'}`}
-            >
-              {({
-                low_limited: 'Low / Limited',
-                open_available: 'Open / Available',
-                actively_collaborate: 'Actively looking to collaborate',
-              } as Record<string, string>)[profile?.open_to_connect || ''] || 'Not specified'}
-            </span>
+      {profile?.interests && mapStoredValuesToLabels(profile.interests, interestsOptions).length > 0 && (
+        <div style={{ marginBottom: '1.25rem' }}>
+          <h3 style={{ fontSize: '0.8rem', fontWeight: 600, color: '#8FA09A', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.5rem' }}>Interests</h3>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+            {mapStoredValuesToLabels(profile.interests, interestsOptions).map((label, i) => (
+              <span key={i} style={{ fontSize: '0.8rem', padding: '3px 10px', borderRadius: '999px', background: '#F0F5F3', color: '#2F5D50', fontWeight: 500 }}>{label}</span>
+            ))}
           </div>
         </div>
-      </div>
+      )}
 
-      <hr />
+      {/* Section: Seeking */}
+      {profile?.seeking && mapStoredValuesToLabels(profile.seeking, seekingOptions).length > 0 && (
+        <div style={{ marginBottom: '1.25rem' }}>
+          <h3 style={{ fontSize: '0.8rem', fontWeight: 600, color: '#8FA09A', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.5rem' }}>Seeking</h3>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+            {mapStoredValuesToLabels(profile.seeking, seekingOptions).map((label, i) => (
+              <span key={i} style={{ fontSize: '0.8rem', padding: '3px 10px', borderRadius: '999px', background: '#F9F5F0', color: '#6B5A3E', fontWeight: 500 }}>{label}</span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Section: Open to Connect */}
+      {profile?.open_to_connect && (
+        <div style={{ marginBottom: '1.25rem' }}>
+          <h3 style={{ fontSize: '0.8rem', fontWeight: 600, color: '#8FA09A', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.5rem' }}>Open to Connect</h3>
+          <span style={{
+            fontSize: '0.8rem', padding: '3px 10px', borderRadius: '999px', fontWeight: 500,
+            background: profile.open_to_connect === 'actively_collaborate' ? '#2F5D50' : profile.open_to_connect === 'open_available' ? '#E8F1EE' : '#F0F0F0',
+            color: profile.open_to_connect === 'actively_collaborate' ? '#fff' : profile.open_to_connect === 'open_available' ? '#2F5D50' : '#8FA09A',
+          }}>
+            {({ low_limited: 'Low / Limited', open_available: 'Open / Available', actively_collaborate: 'Actively looking to collaborate' } as Record<string, string>)[profile.open_to_connect] || profile.open_to_connect}
+          </span>
+        </div>
+      )}
 
       {/* Section: Social Links */}
-      <div className="profile-section">
-        <h3>Connect</h3>
-        <div className="social-links">
-          {SOCIAL_PLATFORMS.filter(({ key }) => {
-            const value = profile?.[key];
-            return value && value !== '';
-          }).map(({ key, label, Icon }) => {
-            const url = profile?.[key] as string;
-            return (
-              <div key={key} className="social-link-item">
-                <Icon size={16} className="social-link-icon" />
-                <span className="social-link-label">{label}:</span>
-                <a
-                  href={url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="social-link-url"
-                >
-                  {formatSocialLink(url)}
+      {SOCIAL_PLATFORMS.filter(({ key }) => profile?.[key]).length > 0 && (
+        <div style={{ marginBottom: '1.25rem' }}>
+          <h3 style={{ fontSize: '0.8rem', fontWeight: 600, color: '#8FA09A', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.5rem' }}>Connect</h3>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+            {SOCIAL_PLATFORMS.filter(({ key }) => profile?.[key]).map(({ key, label, Icon }) => {
+              const url = profile[key] as string;
+              return (
+                <a key={key} href={url} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.85rem', color: '#2F5D50', textDecoration: 'none' }}>
+                  <Icon size={14} />
+                  <span style={{ color: '#5F7A74', minWidth: '70px' }}>{label}:</span>
+                  <span style={{ color: '#2F5D50', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{formatSocialLink(url)}</span>
                 </a>
-              </div>
-            );
-          })}
-          {SOCIAL_PLATFORMS.filter(({ key }) => {
-            const value = profile?.[key];
-            return value && value !== '';
-          }).length === 0 && (
-            <p className="interests-empty">No social links added</p>
-          )}
+              );
+            })}
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 };
