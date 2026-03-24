@@ -36,7 +36,7 @@ const convertIpfsUrl = (url: string): string => {
 
 interface DatabaseTokenGalleryProps {
   walletAddress: string;
-  category: 'membership' | 'credential';
+  category: 'membership' | 'credential' | 'accreditation';
 }
 
 interface TokenWithBalance extends DatabaseToken {
@@ -187,6 +187,38 @@ export const DatabaseTokenGallery: React.FC<DatabaseTokenGalleryProps> =
 
     // Render no tokens state
     if (contractError) {
+    }
+
+    // Accreditations come from event_tokens (written after tx confirmation) — no on-chain check needed
+    if (category === 'accreditation') {
+      if (tokens.length === 0) {
+        return (
+          <div className="no-tokens">
+            <p>No accreditations yet</p>
+          </div>
+        );
+      }
+      return (
+        <div className="token-gallery">
+          {tokens.map((token) => (
+            <div key={token.id} className="token-card">
+              <div
+                className="token-image"
+                style={{
+                  backgroundImage: `url(${convertIpfsUrl(token.token_image)})`,
+                  backgroundSize: 'cover',
+                  backgroundPosition: 'center',
+                }}
+                role="img"
+                aria-label={token.name}
+              />
+              <div className="token-info">
+                <div className="token-name">{token.name}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      );
     }
 
     const ownedTokens = tokenBalances.filter((token) => token.owned);

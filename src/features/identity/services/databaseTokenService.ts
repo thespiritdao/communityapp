@@ -12,10 +12,10 @@ export interface DatabaseToken {
   contract_address: string;
   token_type: 'erc20' | 'erc721' | 'erc1155';
   token_image: string;
-  category: 'membership' | 'credential';
+  category: 'membership' | 'credential' | 'accreditation';
   token_address?: string; // ERC-1155 token ID (formerly hat_id)
   is_active: boolean;
-  source: 'tokens' | 'pods' | 'pod_roles';
+  source: 'tokens' | 'pods' | 'pod_roles' | 'event_tokens';
   role_name?: string; // For pod_role_permissions tokens
 }
 
@@ -190,23 +190,78 @@ export class DatabaseTokenService {
   }
 
   /**
+   * Get event completion NFTs (accreditations) for a specific user from event_tokens table
+   */
+  static async getEventAccreditations(userAddress: string): Promise<DatabaseToken[]> {
+    try {
+      const { data, error } = await supabase
+        .from('event_tokens')
+        .select(`
+          id,
+          event_id,
+          contract_address,
+          token_id,
+          token_name,
+          token_description,
+          token_image_url,
+          token_metadata,
+          owner_address,
+          events!inner(
+            id,
+            title,
+            event_image_url
+          )
+        `)
+        .eq('token_type', 'completion')
+        .eq('owner_address', userAddress.toLowerCase());
+
+      if (error) {
+        return [];
+      }
+
+      return (data || []).map((row) => {
+        const event = Array.isArray(row.events) ? row.events[0] : row.events;
+        const title = row.token_name || event?.title || 'Event Accreditation';
+        const image = row.token_image_url || event?.event_image_url || '';
+
+        return {
+          id: row.id,
+          name: title,
+          description: row.token_description || `Accreditation for attending ${title}`,
+          contract_address: row.contract_address || '',
+          token_type: 'erc721' as const,
+          token_image: image,
+          category: 'accreditation' as const,
+          token_address: row.token_id,
+          is_active: true,
+          source: 'event_tokens' as const,
+        };
+      });
+    } catch (error) {
+      return [];
+    }
+  }
+
+  /**
    * Get all tokens for a user from all sources
    * Note: For pod role permissions, we get all available roles since
    * ownership is determined by on-chain HAT balance checks
    */
   static async getAllTokensForUser(
     userAddress: string,
-    category?: 'membership' | 'credential',
+    category?: 'membership' | 'credential' | 'accreditation',
   ): Promise<DatabaseToken[]> {
     try {
       const [
         tokensTableData,
         podLeaderTokens,
         rolePermissions,
+        eventAccreditations,
       ] = await Promise.all([
         this.getTokensTableData(),
         this.getPodLeaderTokens(),
         this.getPodRolePermissions(),
+        this.getEventAccreditations(userAddress),
       ]);
 
       // Pods that have pod_role_permissions entries are fully covered by rolePermissions.
@@ -226,6 +281,7 @@ export class DatabaseTokenService {
         ...tokensTableData,
         ...fallbackLeaderTokens,
         ...rolePermissions,
+        ...eventAccreditations,
       ];
 
       // Filter by category if specified

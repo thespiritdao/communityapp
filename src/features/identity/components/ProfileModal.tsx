@@ -284,6 +284,10 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ user, users, onClose
           <div className="token-gallery-modal">
             <DatabaseTokenGallery walletAddress={user.wallet_address} category="credential" />
           </div>
+          <h3 style={{ ...sectionLabel, marginTop: '1rem' }}>Accreditations</h3>
+          <div className="token-gallery-modal">
+            <DatabaseTokenGallery walletAddress={user.wallet_address} category="accreditation" />
+          </div>
         </div>
 
         {/* Socials */}
