@@ -138,23 +138,45 @@ function IdentityPageContent() {
         onCancel={handleCancel}
       />
 
-      {/* Memberships Section - Using Database TokenGallery */}
-      <div className="profile-section token-gallery-section">
-        <h3>
-          <strong>Memberships</strong>
-        </h3>
-        <DatabaseTokenGallery walletAddress={address} category="membership" />
-      </div>
+      {/* Memberships / Credentials / Accreditations */}
+      <div style={{ marginTop: '20px', marginBottom: '8px' }}>
+        <h3 style={{
+          fontSize: '0.8rem',
+          fontWeight: 600,
+          color: '#8FA09A',
+          textTransform: 'uppercase',
+          letterSpacing: '0.05em',
+          marginBottom: '0.5rem',
+        }}>Memberships</h3>
+        <div className="token-gallery-modal">
+          <DatabaseTokenGallery walletAddress={address} category="membership" />
+        </div>
 
-      {/* Credentials Section - Using Database TokenGallery */}
-      <div
-        className="profile-section token-gallery-section"
-        style={{ marginTop: '20px' }}
-      >
-        <h3>
-          <strong>Credentials</strong>
-        </h3>
-        <DatabaseTokenGallery walletAddress={address} category="credential" />
+        <h3 style={{
+          fontSize: '0.8rem',
+          fontWeight: 600,
+          color: '#8FA09A',
+          textTransform: 'uppercase',
+          letterSpacing: '0.05em',
+          marginTop: '1rem',
+          marginBottom: '0.5rem',
+        }}>Credentials</h3>
+        <div className="token-gallery-modal">
+          <DatabaseTokenGallery walletAddress={address} category="credential" />
+        </div>
+
+        <h3 style={{
+          fontSize: '0.8rem',
+          fontWeight: 600,
+          color: '#8FA09A',
+          textTransform: 'uppercase',
+          letterSpacing: '0.05em',
+          marginTop: '1rem',
+          marginBottom: '0.5rem',
+        }}>Accreditations</h3>
+        <div className="token-gallery-modal">
+          <DatabaseTokenGallery walletAddress={address} category="accreditation" />
+        </div>
       </div>
 
       {/* Invite Code Display - Only visible to account owner */}
