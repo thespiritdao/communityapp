@@ -81,10 +81,11 @@ const PostCard: React.FC<PostCardProps> = ({
       setIsSubmitting(true);
       setError(null);
 
+      const table = isOriginalPost ? 'forum_threads' : 'forum_posts';
       const { error: updateError } = await supabase
-        .from('forum_posts')
+        .from(table)
         .update({ content: editContent })
-        .eq('id', post.id);
+        .eq('id', isOriginalPost ? threadId : post.id);
 
       if (updateError) throw updateError;
 
