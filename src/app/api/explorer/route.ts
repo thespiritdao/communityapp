@@ -217,37 +217,43 @@ export async function GET(req: NextRequest) {
     // ── 7. Bounties created ────────────────────────────────────────────────────
     const bountyEvents: ExplorerEvent[] = [];
     if (!typeFilter || typeFilter === 'bounties') {
-      if (!podFilter) {
-        const { data: bounties } = await supabaseAdmin
-          .from('bounties')
-          .select('id, title, value_amount, value_token, creator_address, created_at, status')
-          .order('created_at', { ascending: false })
-          .limit(100);
+      const bountyQuery = supabaseAdmin
+        .from('bounties')
+        .select('id, title, value_amount, value_token, creator_address, created_at, updated_at, status, pod_id, pods(name)')
+        .order('created_at', { ascending: false })
+        .limit(100);
 
-        (bounties ?? []).forEach((b: any) => {
-          if (b.status === 'completed') {
-            bountyEvents.push({
-              id: `bounty_completed-${b.id}`,
-              type: 'bounty_completed',
-              timestamp: b.updated_at ?? b.created_at,
-              actor: b.creator_address,
-              title: `Bounty completed: ${b.title}`,
-              amount: `${b.value_amount} $${b.value_token}`,
-              url: `/bounty/${b.id}`,
-            });
-          } else {
-            bountyEvents.push({
-              id: `bounty_created-${b.id}`,
-              type: 'bounty_created',
-              timestamp: b.created_at,
-              actor: b.creator_address,
-              title: `Bounty posted: ${b.title}`,
-              amount: `${b.value_amount} $${b.value_token}`,
-              url: `/bounty/${b.id}`,
-            });
-          }
-        });
-      }
+      if (podFilter) bountyQuery.eq('pod_id', podFilter);
+
+      const { data: bounties } = await bountyQuery;
+
+      (bounties ?? []).forEach((b: any) => {
+        if (b.status === 'completed') {
+          bountyEvents.push({
+            id: `bounty_completed-${b.id}`,
+            type: 'bounty_completed',
+            timestamp: b.updated_at ?? b.created_at,
+            pod_id: b.pod_id,
+            pod_name: b.pods?.name,
+            actor: b.creator_address,
+            title: `Bounty completed: ${b.title}`,
+            amount: `${b.value_amount} $${b.value_token}`,
+            url: `/bounty/${b.id}`,
+          });
+        } else {
+          bountyEvents.push({
+            id: `bounty_created-${b.id}`,
+            type: 'bounty_created',
+            timestamp: b.created_at,
+            pod_id: b.pod_id,
+            pod_name: b.pods?.name,
+            actor: b.creator_address,
+            title: `Bounty posted: ${b.title}`,
+            amount: `${b.value_amount} $${b.value_token}`,
+            url: `/bounty/${b.id}`,
+          });
+        }
+      });
     }
 
     // ── 8. Events stats (active total + weekly) ────────────────────────────────
