@@ -197,6 +197,31 @@ export async function POST(req: NextRequest) {
       } catch (notificationError) {
         console.error('⚠️ Auth API: Failed to send new account notifications (non-critical):', notificationError);
       }
+
+      // Subscribe new user to Paragraph mailing list
+      if (email) {
+        try {
+          const paragraphApiKey = process.env.NEXT_PUBLIC_PARAGRAPH_API;
+          if (paragraphApiKey) {
+            const paragraphRes = await fetch('https://public.api.paragraph.com/api/v1/subscribers', {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${paragraphApiKey}`,
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({ email }),
+            });
+            if (!paragraphRes.ok) {
+              const errBody = await paragraphRes.text();
+              console.error(`⚠️ Auth API: Paragraph subscription failed (${paragraphRes.status}): ${errBody}`);
+            } else {
+              console.log(`✅ Auth API: Subscribed ${email} to Paragraph`);
+            }
+          }
+        } catch (paragraphError) {
+          console.error('⚠️ Auth API: Paragraph subscription error (non-critical):', paragraphError);
+        }
+      }
     }
 
     if (!userId) {
