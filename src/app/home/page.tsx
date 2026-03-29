@@ -285,13 +285,11 @@ export default function HomePage() {
           </Link>
 
           <Link href="/explorer" className="home-module-card" prefetch={true} data-tour="pulse">
-            <Image
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
               src="/images/icons/pulseicon.png"
               alt="Pulse"
               className="home-module-icon"
-              width={64}
-              height={64}
-              loading="lazy"
               style={{ objectFit: 'contain' }}
             />
             <div className="home-module-title">Pulse</div>

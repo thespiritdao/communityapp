@@ -2,14 +2,13 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import styled from 'styled-components';
 import type { ExplorerEvent } from '@/app/api/explorer/route';
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
-type FilterTab = 'all' | 'pods' | 'governance' | 'treasury' | 'members' | 'bounties';
+type FilterTab = 'all' | 'pods' | 'governance' | 'treasury' | 'members' | 'bounties' | 'events';
 
 interface ExplorerResponse {
   items: ExplorerEvent[];
@@ -29,7 +28,6 @@ const Container = styled.div`
   margin: 0 auto;
   padding: 24px 20px 80px;
   background: white;
-  min-height: 100vh;
 `;
 
 const Header = styled.div`
@@ -73,6 +71,9 @@ const TabsContainer = styled.div`
   margin-bottom: 24px;
   border-bottom: 2px solid #e0e0e0;
   overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  &::-webkit-scrollbar { display: none; }
   gap: 0;
 `;
 
@@ -109,6 +110,7 @@ const EVENT_COLORS: Record<string, string> = {
   donation: '#16a34a',
   bounty_created: '#db2777',
   bounty_completed: '#059669',
+  event_published: '#f59e0b',
 };
 
 const EventCard = styled.div<{ $type: string }>`
@@ -222,6 +224,7 @@ const TYPE_LABELS: Record<string, string> = {
   donation: 'Donation',
   bounty_created: 'Bounty',
   bounty_completed: 'Completed',
+  event_published: 'Event',
 };
 
 const TAB_LABELS: Record<FilterTab, string> = {
@@ -231,6 +234,7 @@ const TAB_LABELS: Record<FilterTab, string> = {
   treasury: 'Treasury',
   members: 'Members',
   bounties: 'Bounties',
+  events: 'Events',
 };
 
 function truncateAddress(addr?: string) {
@@ -308,12 +312,13 @@ export default function ExplorerPage() {
   return (
     <Container>
       <Header>
-        <Image
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
           src="/images/icons/pulseicon.png"
           alt="Pulse"
           width={36}
           height={36}
-          style={{ borderRadius: 8 }}
+          style={{ borderRadius: 8, objectFit: 'contain', display: 'block' }}
         />
         <Title>DAO Pulse</Title>
       </Header>

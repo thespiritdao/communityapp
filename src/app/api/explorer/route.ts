@@ -17,7 +17,8 @@ export interface ExplorerEvent {
     | 'treasury_movement'
     | 'donation'
     | 'bounty_created'
-    | 'bounty_completed';
+    | 'bounty_completed'
+    | 'event_published';
   timestamp: string;
   pod_id?: string;
   pod_name?: string;
@@ -277,22 +278,39 @@ export async function GET(req: NextRequest) {
       });
     }
 
-    // ── 8. Events stats (active total + weekly) ────────────────────────────────
-    // These come back as metadata in the response, not as feed items
+    // ── 8. Events (published) ──────────────────────────────────────────────────
+    const eventFeedItems: ExplorerEvent[] = [];
     const oneWeekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
 
-    const [{ count: totalActiveEvents }, { count: weeklyActiveEvents }] =
-      await Promise.all([
-        supabaseAdmin
-          .from('events')
-          .select('id', { count: 'exact', head: true })
-          .eq('status', 'published'),
-        supabaseAdmin
-          .from('events')
-          .select('id', { count: 'exact', head: true })
-          .eq('status', 'published')
-          .gte('created_at', oneWeekAgo),
-      ]);
+    // Always fetch published events for stats; include in feed if filter matches
+    const { data: publishedEvents, count: totalActiveEvents } = await supabaseAdmin
+      .from('events')
+      .select('id, title, event_date, created_at, organizing_pod_id, creator_address', { count: 'exact' })
+      .eq('status', 'published')
+      .order('created_at', { ascending: false })
+      .limit(100);
+
+    const { count: weeklyActiveEvents } = await supabaseAdmin
+      .from('events')
+      .select('id', { count: 'exact', head: true })
+      .eq('status', 'published')
+      .gte('created_at', oneWeekAgo);
+
+    if (!typeFilter || typeFilter === 'events') {
+      (publishedEvents ?? []).forEach((e: any) => {
+        if (!podFilter || podFilter === e.organizing_pod_id) {
+          eventFeedItems.push({
+            id: `event_published-${e.id}`,
+            type: 'event_published',
+            timestamp: e.created_at,
+            pod_id: e.organizing_pod_id ?? undefined,
+            actor: e.creator_address,
+            title: `Event: ${e.title}`,
+            url: `/events`,
+          });
+        }
+      });
+    }
 
     // ── Merge, sort, paginate ──────────────────────────────────────────────────
     const all: ExplorerEvent[] = [
@@ -303,6 +321,7 @@ export async function GET(req: NextRequest) {
       ...treasuryEvents,
       ...donationEvents,
       ...bountyEvents,
+      ...eventFeedItems,
     ].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
 
     const paginated = all.slice(offsetParam, offsetParam + LIMIT);
