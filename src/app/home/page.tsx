@@ -292,6 +292,7 @@ export default function HomePage() {
               width={64}
               height={64}
               loading="lazy"
+              style={{ objectFit: 'contain' }}
             />
             <div className="home-module-title">Pulse</div>
           </Link>

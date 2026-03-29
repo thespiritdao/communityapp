@@ -79,6 +79,13 @@ export const HOME_TOUR_STEPS: TourStep[] = [
     placement: 'bottom',
   },
   {
+    id: 'members',
+    title: 'Members',
+    description:
+      'Browse everyone in the community — see who\'s online, what pods they\'re in, and who\'s open to collaborate.',
+    placement: 'bottom',
+  },
+  {
     id: 'governance',
     title: 'Governance',
     description:
