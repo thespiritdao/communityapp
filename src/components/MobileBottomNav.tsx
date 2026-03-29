@@ -1,7 +1,6 @@
 'use client';
 
 import Link from 'next/link';
-import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Home, Vote, Bell, HeartHandshake } from 'lucide-react';
@@ -26,12 +25,6 @@ const NAV_ITEMS: Item[] = [
     label: 'Claims',
     match: 'startsWith',
     icon: <HeartHandshake size={36} />,
-  },
-  {
-    href: '/explorer',
-    label: 'Pulse',
-    match: 'startsWith',
-    icon: <Image src="/images/icons/pulseicon.png" alt="Pulse" width={36} height={36} style={{ borderRadius: 6 }} />,
   },
   {
     href: '/governance',

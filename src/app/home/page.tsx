@@ -283,6 +283,18 @@ export default function HomePage() {
             />
             <div className="home-module-title">Knowledge</div>
           </Link>
+
+          <Link href="/explorer" className="home-module-card" prefetch={true} data-tour="pulse">
+            <Image
+              src="/images/icons/pulseicon.png"
+              alt="Pulse"
+              className="home-module-icon"
+              width={64}
+              height={64}
+              loading="lazy"
+            />
+            <div className="home-module-title">Pulse</div>
+          </Link>
         </div>
       </section>
 

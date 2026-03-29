@@ -100,6 +100,13 @@ export const HOME_TOUR_STEPS: TourStep[] = [
     placement: 'bottom',
   },
   {
+    id: 'pulse',
+    title: 'DAO Pulse',
+    description:
+      'A live feed of everything happening across SpiritDAO — pod activity, governance votes, treasury movements, bounties, and more. See the DAO in motion.',
+    placement: 'bottom',
+  },
+  {
     id: 'bottom-nav',
     title: 'You\'re all set',
     description:
