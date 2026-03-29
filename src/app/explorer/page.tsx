@@ -2,6 +2,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import styled from 'styled-components';
 import type { ExplorerEvent } from '@/app/api/explorer/route';
@@ -237,10 +238,6 @@ const TAB_LABELS: Record<FilterTab, string> = {
   events: 'Events',
 };
 
-function truncateAddress(addr?: string) {
-  if (!addr) return '';
-  return `${addr.slice(0, 6)}…${addr.slice(-4)}`;
-}
 
 function formatDate(iso: string) {
   const d = new Date(iso);
@@ -312,13 +309,12 @@ export default function ExplorerPage() {
   return (
     <Container>
       <Header>
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
+        <Image
           src="/images/icons/pulseicon.png"
           alt="Pulse"
           width={36}
           height={36}
-          style={{ borderRadius: 8, objectFit: 'contain', display: 'block' }}
+          style={{ objectFit: 'contain', borderRadius: 0 }}
         />
         <Title>DAO Pulse</Title>
       </Header>
@@ -365,7 +361,7 @@ export default function ExplorerPage() {
                       {TYPE_LABELS[item.type] ?? item.type}
                     </TypeBadge>
                     {item.pod_name && <span>{item.pod_name}</span>}
-                    {item.actor && <span>{truncateAddress(item.actor)}</span>}
+                    {item.actor && <span>{item.actor}</span>}
                     {item.amount && <AmountBadge>{item.amount}</AmountBadge>}
                     <span>{formatDate(item.timestamp)}</span>
                   </CardMeta>

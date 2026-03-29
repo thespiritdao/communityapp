@@ -313,7 +313,7 @@ export async function GET(req: NextRequest) {
     }
 
     // ── Merge, sort, paginate ──────────────────────────────────────────────────
-    const all: ExplorerEvent[] = [
+    const merged: ExplorerEvent[] = [
       ...podEvents,
       ...memberEvents,
       ...proposalEvents,
@@ -323,6 +323,31 @@ export async function GET(req: NextRequest) {
       ...bountyEvents,
       ...eventFeedItems,
     ].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+
+    // ── Resolve actor wallet addresses → display names ─────────────────────────
+    const uniqueWallets = [...new Set(
+      merged.map((e) => e.actor).filter(Boolean) as string[]
+    )];
+
+    let nameMap: Record<string, string> = {};
+    if (uniqueWallets.length > 0) {
+      const { data: profiles } = await supabaseAdmin
+        .from('user_profiles')
+        .select('wallet_address, first_name, last_name')
+        .in('wallet_address', uniqueWallets.map((w) => w.toLowerCase()));
+
+      (profiles ?? []).forEach((p: any) => {
+        const name = [p.first_name, p.last_name].filter(Boolean).join(' ').trim();
+        if (name) nameMap[p.wallet_address.toLowerCase()] = name;
+      });
+    }
+
+    const all = merged.map((e) => ({
+      ...e,
+      actor: e.actor
+        ? (nameMap[e.actor.toLowerCase()] ?? undefined) // omit if no name found
+        : undefined,
+    }));
 
     const paginated = all.slice(offsetParam, offsetParam + LIMIT);
 
