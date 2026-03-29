@@ -22,12 +22,32 @@ export function useIdentityPage(address: string | undefined) {
     async (data: any) => {
       if (!address) return;
 
+      // Detect first-time identity completion (name being set for the first time)
+      const isFirstIdentity = !profile?.first_name && !!data.first_name;
+
       await updateProfile(address, data);
+
+      if (isFirstIdentity) {
+        try {
+          await fetch('/api/explorer/member-introduced', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              walletAddress: address,
+              displayName: [data.first_name, data.last_name].filter(Boolean).join(' '),
+              profilePicture: data.profile_picture ?? null,
+            }),
+          });
+        } catch {
+          // non-critical — identity save already completed
+        }
+      }
+
       setIsEditing(false);
       // Reload the page to show updated profile data immediately
       window.location.reload();
     },
-    [address],
+    [address, profile],
   );
 
   const handleLogout = useCallback(async () => {

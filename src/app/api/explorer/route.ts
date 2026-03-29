@@ -62,7 +62,7 @@ export async function GET(req: NextRequest) {
       });
     }
 
-    // ── 2. Pod members ─────────────────────────────────────────────────────────
+    // ── 2. Pod members + member introductions ──────────────────────────────────
     const memberEvents: ExplorerEvent[] = [];
     if (!typeFilter || typeFilter === 'members') {
       const memberQuery = supabaseAdmin
@@ -87,6 +87,27 @@ export async function GET(req: NextRequest) {
           url: `/pods/${m.pod_id}`,
         });
       });
+
+      // Member introductions — fired when a user first sets their name
+      if (!podFilter) {
+        const { data: introductions } = await supabaseAdmin
+          .from('explorer_events')
+          .select('id, actor, title, created_at, metadata')
+          .eq('type', 'member_introduced')
+          .order('created_at', { ascending: false })
+          .limit(50);
+
+        (introductions ?? []).forEach((e: any) => {
+          memberEvents.push({
+            id: `member_introduced-${e.id}`,
+            type: 'member_joined',
+            timestamp: e.created_at,
+            actor: e.actor,
+            title: e.title,
+            url: `/members`,
+          });
+        });
+      }
     }
 
     // ── 3. Proposals (pod-level) ───────────────────────────────────────────────
