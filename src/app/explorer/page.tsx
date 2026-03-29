@@ -314,7 +314,6 @@ export default function ExplorerPage() {
           alt="Pulse"
           width={36}
           height={36}
-          style={{ objectFit: 'contain', borderRadius: 0 }}
         />
         <Title>DAO Pulse</Title>
       </Header>
