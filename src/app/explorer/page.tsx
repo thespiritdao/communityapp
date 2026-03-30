@@ -315,7 +315,7 @@ export default function ExplorerPage() {
           width={36}
           height={36}
         />
-        <Title>DAO Pulse</Title>
+        <Title>SpiritDAO Pulse</Title>
       </Header>
       <Subtitle>Live activity across all pods, governance, and treasury.</Subtitle>
 
