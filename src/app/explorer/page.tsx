@@ -24,11 +24,16 @@ interface ExplorerResponse {
 
 // ── Styled components (matches app pattern from my-activity) ──────────────────
 
+const PageWrapper = styled.div`
+  min-height: 100vh;
+  background-color: #f5f4ed;
+  background-image: url('/images/chatbg.png');
+`;
+
 const Container = styled.div`
   max-width: 900px;
   margin: 0 auto;
   padding: 24px 20px 80px;
-  background: white;
 `;
 
 const Header = styled.div`
@@ -307,6 +312,7 @@ export default function ExplorerPage() {
   const hasMore = items.length < total;
 
   return (
+    <PageWrapper>
     <Container>
       <Header>
         <Image
@@ -377,5 +383,6 @@ export default function ExplorerPage() {
         </FeedList>
       )}
     </Container>
+    </PageWrapper>
   );
 }
