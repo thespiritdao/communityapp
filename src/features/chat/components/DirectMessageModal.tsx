@@ -211,7 +211,7 @@ export function DirectMessageModal({
           message: `You have a new message from ${recipientName}`,
           context_type: 'chat',
           context_id: normalizedAddress,
-          context_url: `/chat/dm/${normalizedAddress}`,
+          context_url: `/chat?dm=${normalizedAddress}`,
           priority: 'high',
         });
       } catch (notificationError) {

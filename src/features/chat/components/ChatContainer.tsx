@@ -14,13 +14,15 @@ import { usePodModules } from '@/features/pods/hooks/usePodModules';
 import type { ChatGroup, Message, UserProfile } from '../types';
 import ChatInput from './ChatInput';
 import MessageList from './MessageList';
+import { DirectMessageModal } from './DirectMessageModal';
 const TABLE_NAME = 'chat_messages';
 
 interface ChatContainerProps {
   chatGroupId?: string;
+  dmAddress?: string;
 }
 
-export default function ChatContainer({ chatGroupId }: ChatContainerProps) {
+export default function ChatContainer({ chatGroupId, dmAddress }: ChatContainerProps) {
   const { session, isAuthenticated, signIn } = useAuthContext();
   const [chatGroups, setChatGroups] = useState<ChatGroup[]>([]);
   const [selectedChatGroup, setSelectedChatGroup] = useState<ChatGroup | null>(
@@ -30,6 +32,25 @@ export default function ChatContainer({ chatGroupId }: ChatContainerProps) {
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
+
+  // DM modal state (opened via ?dm= query param from notification)
+  const [activeDmAddress, setActiveDmAddress] = useState<string | null>(dmAddress || null);
+  const [dmProfile, setDmProfile] = useState<{ name: string; image: string } | null>(null);
+
+  useEffect(() => {
+    if (!activeDmAddress) return;
+    supabase
+      .from('user_profiles')
+      .select('display_name, username, profile_picture')
+      .eq('wallet_address', activeDmAddress.toLowerCase())
+      .maybeSingle()
+      .then(({ data }) => {
+        setDmProfile({
+          name: data?.display_name || data?.username || activeDmAddress.slice(0, 8) + '...',
+          image: data?.profile_picture || '/images/symbolobinfin.png',
+        });
+      });
+  }, [activeDmAddress]);
 
   // hats/roles from permissions
   const {
@@ -578,6 +599,14 @@ export default function ChatContainer({ chatGroupId }: ChatContainerProps) {
   if (!selectedChatGroup) {
     return (
       <div className="chat-shell chat-list-view">
+        {activeDmAddress && dmProfile && (
+          <DirectMessageModal
+            recipientAddress={activeDmAddress}
+            recipientName={dmProfile.name}
+            recipientImage={dmProfile.image}
+            onClose={() => setActiveDmAddress(null)}
+          />
+        )}
         {/* rounded card container with white background */}
         <div className="chat-groups-container">
           <div className="flex items-center justify-between mb-4">
