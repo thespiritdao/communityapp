@@ -65,40 +65,7 @@ export async function POST(request: NextRequest) {
     console.log(`   First user: ${isFirstUser}`);
     console.log(`   Transaction hashes:`, transactionHashes);
 
-    // Step 1: Mint Beta Tester or Executive Leader HAT
-    console.log('🎩 Minting HAT...');
-    try {
-      const mintResponse = await fetch(
-        `${request.nextUrl.origin}/api/onboarding/mint-hat`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            walletAddress: normalizedWallet,
-            isFirstUser,
-          }),
-        }
-      );
-
-      const mintResult = await mintResponse.json();
-
-      if (mintResult.success) {
-        console.log('✅ HAT minted successfully:', mintResult.hatName);
-        if (mintResult.alreadyHadHat) {
-          console.log('   (User already had HAT)');
-        }
-      } else {
-        console.error('⚠️ HAT minting failed:', mintResult.error);
-        // Non-critical - user can still use the platform, just without HAT-based permissions
-      }
-    } catch (mintError) {
-      console.error('⚠️ HAT minting error (non-critical):', mintError);
-      // Continue onboarding even if HAT mint fails
-    }
-
-    // Step 2: Assign invite code to user (if not already assigned)
+    // Step 1: Assign invite code to user (if not already assigned)
     try {
       const { data: profile } = await supabase
         .from('user_profiles')
@@ -115,7 +82,7 @@ export async function POST(request: NextRequest) {
       // Non-critical - continue onboarding
     }
 
-    // Step 3: Mark user as onboarded
+    // Step 2: Mark user as onboarded
     console.log('✅ Marking user as onboarded...');
     const { error: updateError } = await supabase
       .from('user_profiles')
