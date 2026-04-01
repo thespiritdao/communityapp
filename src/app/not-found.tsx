@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import Image from 'next/image';
 import { NotFoundReporter } from './not-found-client';
 
 export default function NotFound() {
@@ -7,7 +8,13 @@ export default function NotFound() {
       <NotFoundReporter />
       <div style={styles.container}>
         <div style={styles.card}>
-          <div style={styles.symbol}>⬡</div>
+          <Image
+            src="/images/404.png"
+            alt="404"
+            width={200}
+            height={200}
+            style={{ margin: '0 auto 16px', display: 'block' }}
+          />
           <h1 style={styles.code}>404</h1>
           <h2 style={styles.heading}>Page Not Found</h2>
           <p style={styles.body}>
@@ -16,9 +23,6 @@ export default function NotFound() {
           <div style={styles.actions}>
             <Link href="/" style={styles.primaryBtn}>
               Go Home
-            </Link>
-            <Link href="/community" style={styles.secondaryBtn}>
-              Community
             </Link>
           </div>
         </div>
@@ -45,12 +49,6 @@ const styles: Record<string, React.CSSProperties> = {
     textAlign: 'center',
     boxShadow: '0 4px 24px rgba(0,0,0,0.08)',
     border: '1px solid #E0EDE8',
-  },
-  symbol: {
-    fontSize: '3rem',
-    color: '#2F5D50',
-    marginBottom: 8,
-    lineHeight: 1,
   },
   code: {
     fontSize: '5rem',
@@ -81,17 +79,6 @@ const styles: Record<string, React.CSSProperties> = {
     padding: '10px 24px',
     background: '#2F5D50',
     color: '#FFFFFF',
-    borderRadius: 8,
-    textDecoration: 'none',
-    fontWeight: 600,
-    fontSize: '0.95rem',
-  },
-  secondaryBtn: {
-    display: 'inline-block',
-    padding: '10px 24px',
-    background: '#FFFFFF',
-    color: '#2F5D50',
-    border: '1px solid #B8D9CA',
     borderRadius: 8,
     textDecoration: 'none',
     fontWeight: 600,

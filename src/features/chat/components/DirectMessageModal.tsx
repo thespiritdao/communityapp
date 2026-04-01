@@ -36,6 +36,7 @@ export function DirectMessageModal({
   const [isLoading, setIsLoading] = useState(true);
   const [isSending, setIsSending] = useState(false);
   const [isBlocked, setIsBlocked] = useState(false);
+  const [senderDisplayName, setSenderDisplayName] = useState<string>('');
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -67,6 +68,19 @@ export function DirectMessageModal({
       window.visualViewport?.removeEventListener('scroll', updateVp);
     };
   }, []);
+
+  // Fetch sender's own display name for use in notifications
+  useEffect(() => {
+    if (!address) return;
+    supabase
+      .from('user_profiles')
+      .select('display_name')
+      .eq('wallet_address', address.toLowerCase())
+      .single()
+      .then(({ data }) => {
+        setSenderDisplayName(data?.display_name || address.slice(0, 8) + '…');
+      });
+  }, [address]);
 
   // Load messages
   useEffect(() => {
@@ -201,19 +215,21 @@ export function DirectMessageModal({
 
       if (error) throw error;
 
-      // Send notification to recipient
+      // Send notification to recipient (skip if messaging yourself)
       try {
-        await unifiedNotificationService.createNotification({
-          recipient_address: normalizedRecipient,
-          sender_address: normalizedAddress,
-          notification_type: 'chat_message',
-          title: 'New Direct Message',
-          message: `You have a new message from ${recipientName}`,
-          context_type: 'chat',
-          context_id: normalizedAddress,
-          context_url: `/chat?dm=${normalizedAddress}`,
-          priority: 'high',
-        });
+        if (normalizedRecipient !== normalizedAddress) {
+          await unifiedNotificationService.createNotification({
+            recipient_address: normalizedRecipient,
+            sender_address: normalizedAddress,
+            notification_type: 'chat_message',
+            title: 'New Direct Message',
+            message: `You have a new message from ${senderDisplayName}`,
+            context_type: 'chat',
+            context_id: normalizedAddress,
+            context_url: `/chat?dm=${normalizedAddress}`,
+            priority: 'high',
+          });
+        }
       } catch (notificationError) {
         console.error(
           '[DirectMessage] Failed to send notification:',

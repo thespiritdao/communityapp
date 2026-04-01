@@ -156,7 +156,7 @@ function NotificationCard({
           : '/forum';
       case 'chat':
         return notification.context_id
-          ? `/chat/${notification.context_id}`
+          ? `/chat?dm=${notification.context_id}`
           : '/chat';
       case 'bounty':
         return notification.context_id
