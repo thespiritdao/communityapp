@@ -13,7 +13,7 @@ interface TosModalProps {
 const TOS_VERSION = 'v1.0';
 const TOS_MESSAGE = `SpiritDAO Platform Terms of Service ${TOS_VERSION}
 
-By signing this message I confirm that I have read, understand, and agree to the SpiritDAO Terms of Service. I acknowledge that: (1) I will not use this platform for illegal activity, pornography, harassment, or hate speech; (2) SpiritDAO Church of Temporal Naturalism provides infrastructure only and is not responsible for the independent actions of pods or members; (3) I am responsible for my own on-chain transactions and their consequences; (4) Pod governance and treasury operations are managed by pod leaders and are not guaranteed or underwritten by SpiritDAO.`;
+By signing this message I confirm that I have read, understand, and agree to the SpiritDAO Terms of Service. I acknowledge that: (1) I will not use this platform for illegal activity, pornography, harassment, or hate speech; (2) SpiritDAO provides infrastructure only — our communities are sovereign and SpiritDAO is not responsible for the independent actions of pods or members; (3) I am responsible for my own on-chain transactions and their consequences; (4) Pod governance and treasury operations are managed by pod leaders through role tokens distributed within the platform.`;
 
 export function TosModal({ walletAddress, onAccepted }: TosModalProps) {
   const [signing, setSigning] = useState(false);
@@ -69,7 +69,7 @@ export function TosModal({ walletAddress, onAccepted }: TosModalProps) {
           </p>
           <ul className="text-sm space-y-1.5" style={{ color: '#2F5D50' }}>
             <li>• Don't use this platform for illegal activity, pornography, or harassment.</li>
-            <li>• SpiritDAO Church of Temporal Naturalism provides infrastructure — it is not responsible for pod actions.</li>
+            <li>• SpiritDAO provides infrastructure, but our communities are sovereign. We are not responsible for pod actions.</li>
             <li>• You are responsible for your own wallet transactions.</li>
             <li>• Pod funds and governance are managed by pod leaders, not SpiritDAO.</li>
           </ul>
@@ -114,7 +114,7 @@ export function TosModal({ walletAddress, onAccepted }: TosModalProps) {
           <section>
             <h3 className="font-semibold text-gray-900 mb-1">5. Pod Governance & Treasury</h3>
             <p>
-              Pod treasuries are managed by pod leaders as designated through the Hats Protocol. SpiritDAO provides the framework but does not manage, guarantee, audit, or insure any pod treasury. Participation in pod governance and financial decisions is at your own discretion and risk.
+              Pod treasuries are managed by pod leaders as designated through role tokens distributed within the platform. Participation in pod governance and financial decisions is at your own discretion and risk.
             </p>
           </section>
 
@@ -135,7 +135,7 @@ export function TosModal({ walletAddress, onAccepted }: TosModalProps) {
           <section>
             <h3 className="font-semibold text-gray-900 mb-1">8. Limitation of Liability</h3>
             <p>
-              To the fullest extent permitted by law, SpiritDAO Church of Temporal Naturalism, its officers, and volunteers are not liable for any indirect, incidental, or consequential damages arising from your use of this platform or participation in any pod.
+              To the fullest extent permitted by law, SpiritDAO, its officers, and volunteers are not liable for any indirect, incidental, or consequential damages arising from your use of this platform or participation in any pod.
             </p>
           </section>
         </div>

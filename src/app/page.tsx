@@ -363,20 +363,18 @@ function PageContent() {
         }
 
         // Validate invite code for non-first users (skip if no-code path)
+        // If validation fails or throws, proceed anyway — same as NO_CODE path
         if (!firstUser && validatedInviteCode && validatedInviteCode !== 'FIRST_USER' && validatedInviteCode !== 'NO_CODE') {
           console.log('🔍 Validating invite code post-auth:', validatedInviteCode);
           try {
             const isValid = await handlePostAuthInviteValidation(validatedInviteCode);
             if (!isValid) {
-              console.error('❌ Invite validation failed after wallet creation');
-              alert('Invite code validation failed. Please contact support with error code: INVITE_POST_AUTH_FAIL');
-              return;
+              console.warn('⚠️ Invite validation failed — proceeding without code');
+            } else {
+              console.log('✅ Invite code validated successfully post-auth');
             }
-            console.log('✅ Invite code validated successfully post-auth');
           } catch (validationError) {
-            console.error('❌ Exception during post-auth invite validation:', validationError);
-            alert(`Error validating invite code: ${validationError instanceof Error ? validationError.message : 'Unknown error'}. Please contact support.`);
-            return;
+            console.warn('⚠️ Invite validation error — proceeding without code:', validationError);
           }
         }
 
