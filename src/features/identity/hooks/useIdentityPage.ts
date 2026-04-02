@@ -18,14 +18,23 @@ export function useIdentityPage(address: string | undefined) {
     setIsEditing(false);
   }, []);
 
+  const [saveError, setSaveError] = useState<string | null>(null);
+
   const handleSave = useCallback(
     async (data: any) => {
       if (!address) return;
+      setSaveError(null);
 
       // Detect first-time identity completion (name being set for the first time)
       const isFirstIdentity = !profile?.first_name && !!data.first_name;
 
-      await updateProfile(address, data);
+      try {
+        await updateProfile(address, data);
+      } catch (err: any) {
+        const msg = err?.message || 'Failed to save profile. Please try again.';
+        setSaveError(msg);
+        return;
+      }
 
       if (isFirstIdentity) {
         try {
@@ -98,6 +107,7 @@ export function useIdentityPage(address: string | undefined) {
     profile,
     loading,
     session,
+    saveError,
 
     // Actions
     handleEditClick,

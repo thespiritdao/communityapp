@@ -30,18 +30,14 @@ export function InstallPrompt() {
     const urlParams = new URLSearchParams(window.location.search);
     const forceShow = urlParams.get('showInstall') === 'true';
 
-    // Check if user previously dismissed (REMOVED 7-DAY RESTRICTION)
+    // Suppress prompt for 7 days after dismissal
     const dismissed = localStorage.getItem('pwa-install-dismissed');
     if (dismissed && !forceShow) {
-      // TEMPORARILY DISABLED: Allow prompt to show every time for testing
-      // Uncomment below to re-enable 7-day restriction later
-      /*
       const dismissedDate = new Date(dismissed);
       const daysSinceDismissed = (Date.now() - dismissedDate.getTime()) / (1000 * 60 * 60 * 24);
       if (daysSinceDismissed < 7) {
         return;
       }
-      */
     }
 
     // Listen for install prompt event

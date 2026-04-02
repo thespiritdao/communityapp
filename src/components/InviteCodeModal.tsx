@@ -106,15 +106,12 @@ export function InviteCodeModal({
     console.log('✅ Hat minted:', txHash);
     setCurrentStep('complete');
 
-    // Call completion callback if provided
+    // Complete onboarding first, then close — do not race the two
     if (onHatMinted) {
       await onHatMinted(txHash);
     }
 
-    // Auto-close after brief delay
-    setTimeout(() => {
-      onClose();
-    }, 2000);
+    onClose();
   };
 
   const handleHatMintError = (error: Error) => {

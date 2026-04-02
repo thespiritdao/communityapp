@@ -10,6 +10,7 @@ interface ProfileSectionProps {
   onEditClick: () => void;
   onSave: (data: any) => Promise<void>;
   onCancel: () => void;
+  saveError?: string | null;
 }
 
 export const ProfileSection: React.FC<ProfileSectionProps> = React.memo(
@@ -21,6 +22,7 @@ export const ProfileSection: React.FC<ProfileSectionProps> = React.memo(
     onEditClick,
     onSave,
     onCancel,
+    saveError,
   }) => (
     <div className="profile-section-container">
       <h2>
@@ -32,6 +34,7 @@ export const ProfileSection: React.FC<ProfileSectionProps> = React.memo(
           walletAddress={address}
           onSave={onSave}
           onCancel={onCancel}
+          saveError={saveError}
         />
       ) : (
         <ProfileDisplay

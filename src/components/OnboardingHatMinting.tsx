@@ -43,6 +43,7 @@ export function OnboardingHatMinting({
   const walletReady = Boolean(currentUser && evmAddress);
 
   const handleMint = async () => {
+    let finalHash = 'confirmed';
     try {
       if (!walletAddress) throw new Error('No wallet address available');
       if (!currentUser?.evmSmartAccounts?.[0]) throw new Error('Smart account not available');
@@ -93,6 +94,7 @@ export function OnboardingHatMinting({
         }
 
         setTxHash(hatResult.transactionHash);
+      finalHash = hatResult.transactionHash;
 
       } else {
         // ── Regular user: mint Proof of Curiosity token ──
@@ -108,12 +110,13 @@ export function OnboardingHatMinting({
         const pocResult = await pocResponse.json();
         if (!pocResult.success) throw new Error(pocResult.error || 'Membership token minting failed');
 
-        setTxHash(pocResult.transactionHash || 'confirmed');
+        finalHash = pocResult.transactionHash || 'confirmed';
+        setTxHash(finalHash);
       }
 
       setTxStatus('success');
       setCurrentStep('Complete!');
-      onSuccess(txHash || 'confirmed');
+      onSuccess(finalHash);
 
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : 'Unknown error occurred';

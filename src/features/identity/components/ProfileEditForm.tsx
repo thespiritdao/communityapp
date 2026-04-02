@@ -184,6 +184,7 @@ interface ProfileEditFormProps {
   walletAddress: string; // The user's wallet address
   onSave: (data: ProfileData) => Promise<void>; // Function that handles saving the updated profile
   onCancel: () => void; // Function that cancels editing the profile
+  saveError?: string | null; // Error message from the save operation
 }
 
 export function ProfileEditForm({
@@ -191,6 +192,7 @@ export function ProfileEditForm({
   onSave,
   onCancel,
   walletAddress,
+  saveError,
 }: ProfileEditFormProps) {
   const {
     register,
@@ -390,8 +392,18 @@ export function ProfileEditForm({
                 <input
                   type="date"
                   className="input"
-                  {...register('date_of_birth')}
+                  {...register('date_of_birth', {
+                    validate: (value) => {
+                      if (!value) return true; // optional field
+                      return !isNaN(Date.parse(value)) || 'Please enter a valid date';
+                    },
+                  })}
                 />
+                {errors.date_of_birth && (
+                  <p style={{ color: 'red', fontSize: '0.85rem' }}>
+                    {errors.date_of_birth.message}
+                  </p>
+                )}
               </div>
             </div>
 
@@ -436,25 +448,17 @@ export function ProfileEditForm({
                   marginBottom: '1rem',
                 }}
               >
-                <strong>Required for use of Marketplace</strong> - This
-                information is needed for order fulfillment
+                Optional — needed if you want to use the Marketplace for order fulfillment
               </p>
 
               <div className="form-group">
-                <label>Address Line 1 *</label>
+                <label>Address Line 1</label>
                 <input
                   type="text"
                   className="input"
                   placeholder="Street address, P.O. box, etc."
-                  {...register('address_1', {
-                    required: 'Address line 1 is required for marketplace use',
-                  })}
+                  {...register('address_1')}
                 />
-                {errors.address_1 && (
-                  <p style={{ color: 'red', fontSize: '0.85rem' }}>
-                    {errors.address_1.message}
-                  </p>
-                )}
               </div>
 
               <div className="form-group">
@@ -469,19 +473,12 @@ export function ProfileEditForm({
 
               {/* City on its own row */}
               <div className="form-group">
-                <label>City *</label>
+                <label>City</label>
                 <input
                   type="text"
                   className="input"
-                  {...register('city', {
-                    required: 'City is required for marketplace use',
-                  })}
+                  {...register('city')}
                 />
-                {errors.city && (
-                  <p style={{ color: 'red', fontSize: '0.85rem' }}>
-                    {errors.city.message}
-                  </p>
-                )}
               </div>
 
               {/* State and Zip together in one row */}
@@ -493,29 +490,20 @@ export function ProfileEditForm({
                 }}
               >
                 <div className="form-group">
-                  <label>State/Province *</label>
+                  <label>State/Province</label>
                   <input
                     type="text"
                     className="input"
-                    {...register('state', {
-                      required: 'State is required for marketplace use',
-                    })}
+                    {...register('state')}
                   />
-                  {errors.state && (
-                    <p style={{ color: 'red', fontSize: '0.85rem' }}>
-                      {errors.state.message}
-                    </p>
-                  )}
                 </div>
 
                 <div className="form-group">
-                  <label>ZIP/Postal Code *</label>
+                  <label>ZIP/Postal Code</label>
                   <input
                     type="text"
                     className="input"
-                    {...register('zip', {
-                      required: 'ZIP code is required for marketplace use',
-                    })}
+                    {...register('zip')}
                   />
                   {errors.zip && (
                     <p style={{ color: 'red', fontSize: '0.85rem' }}>
@@ -771,6 +759,11 @@ export function ProfileEditForm({
             <hr className="section-divider" />
 
             {/*  Save / Cancel Buttons  */}
+            {saveError && (
+              <p style={{ color: 'red', fontSize: '0.85rem', marginBottom: '0.5rem', textAlign: 'center' }}>
+                {saveError}
+              </p>
+            )}
             <div className="form-buttons">
               <button type="submit" className="btn" disabled={uploadingImage}>
                 Save

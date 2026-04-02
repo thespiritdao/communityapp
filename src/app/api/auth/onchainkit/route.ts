@@ -86,10 +86,11 @@ export async function POST(req: NextRequest) {
       throw profileCheckError;
     }
 
-    // SECURITY: Require verified email from CDP for NEW users only
-    // Existing users can re-authenticate without email (they already have one in DB)
-    if (!email && !existingUserProfile) {
-      console.warn('❌ Auth API: No verified email provided for new user');
+    // For embedded wallets, Coinbase has already verified the user's identity
+    // (email OTP or Google OAuth). We trust isEmbedded and proceed without email
+    // when the CDP SDK doesn't surface it post-redirect (e.g. Google OAuth flow).
+    if (!email && !existingUserProfile && !isEmbedded) {
+      console.warn('❌ Auth API: No verified email provided for non-embedded new user');
       return NextResponse.json({
         error: 'Email verification required',
         code: 'EMAIL_REQUIRED',
@@ -97,10 +98,11 @@ export async function POST(req: NextRequest) {
       }, { status: 400 });
     }
 
-    // LEGACY FALLBACK: For users who signed in before we stored emails
-    // Use @wallet.com fallback ONLY if user exists but has no email stored
-    const userEmail = email || existingUserProfile?.email ||
-      (existingUserProfile ? `${normalizedAddress}@wallet.com` : undefined);
+    // Use real email if provided, fall back to stored email, then wallet-based placeholder.
+    // The wallet placeholder allows embedded-wallet users (e.g. Google OAuth) to
+    // create a Supabase auth entry even when the CDP SDK doesn't surface the email
+    // post-redirect. We update the email later if/when we receive it.
+    const userEmail = email || existingUserProfile?.email || `${normalizedAddress}@wallet.spiritdao`;
 
     console.log(`📧 Auth API: Using ${existingUserProfile ? 'existing' : 'verified'} email: ${userEmail}`);
 

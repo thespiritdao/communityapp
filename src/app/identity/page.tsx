@@ -80,6 +80,7 @@ function IdentityPageContent() {
     profile,
     loading,
     session,
+    saveError,
     handleEditClick,
     handleCancel,
     handleSave,
@@ -136,6 +137,7 @@ function IdentityPageContent() {
         onEditClick={handleEditClick}
         onSave={handleSave}
         onCancel={handleCancel}
+        saveError={saveError}
       />
 
       {/* Memberships / Credentials / Accreditations */}
