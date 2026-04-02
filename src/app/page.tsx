@@ -172,75 +172,7 @@ function PageContent() {
         });
       }
 
-      // Clear cached state with ?clear=true
-      if (urlParams.get('clear') === 'true') {
-        // Use async IIFE to properly await all cleanup before reload
-        (async () => {
-          console.log('🧹 Clearing ALL cached state...');
 
-          // Clear wallet cache
-          localStorage.removeItem('wallet_connection_state');
-          localStorage.removeItem('wagmi.store');
-          localStorage.removeItem('wagmi.cache');
-          localStorage.removeItem('wagmi.recentConnectorId');
-
-          // Clear CDP/Coinbase auth storage (fixes 400 Bad Request errors)
-          Object.keys(localStorage).forEach((key) => {
-            if (
-              key.startsWith('cdp_') ||
-              key.startsWith('coinbase_') ||
-              key.startsWith('cbw_') ||
-              key.includes('embedded_wallet')
-            ) {
-              console.log('🧹 Removing CDP storage key:', key);
-              localStorage.removeItem(key);
-            }
-          });
-
-          // Clear sessionStorage
-          sessionStorage.clear();
-
-          // Clear Supabase session (await completion)
-          const { supabase } = await import('@/utils/supabaseClient');
-          await supabase.auth.signOut();
-          console.log('✅ Supabase session cleared');
-
-          // Clear all cookies
-          document.cookie.split(';').forEach((c) => {
-            document.cookie = c
-              .replace(/^ +/, '')
-              .replace(/=.*/, '=;expires=' + new Date(0).toUTCString() + ';path=/');
-          });
-
-          // Clear IndexedDB (CDP auth data) - AWAIT completion before reload
-          if (window.indexedDB && 'databases' in indexedDB) {
-            const dbs = await indexedDB.databases();
-            await Promise.all(
-              dbs
-                .filter(
-                  (db) =>
-                    db.name &&
-                    (db.name.includes('coinbase') || db.name.includes('cdp')),
-                )
-                .map(
-                  (db) =>
-                    new Promise<void>((resolve) => {
-                      console.log('🧹 Deleting IndexedDB:', db.name);
-                      const request = indexedDB.deleteDatabase(db.name!);
-                      request.onsuccess = () => resolve();
-                      request.onerror = () => resolve(); // best effort
-                      request.onblocked = () => resolve();
-                    }),
-                ),
-            );
-          }
-
-          console.log('✅ All cache cleared. Reloading...');
-          alert('All cache cleared! You will now appear as a new user.');
-          // Reload after ALL cleanup is complete (no timeout needed)
-          window.location.href = window.location.pathname;
-        })();
-      }
     }
   }, []);
 
