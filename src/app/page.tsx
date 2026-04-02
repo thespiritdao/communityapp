@@ -573,12 +573,21 @@ function PageContent() {
         authenticationAttemptedRef.current = true;
         setIsProcessing(true);
         try {
-          // Get email from capturedEmail state OR from CDP currentUser as fallback
-          const emailToUse = capturedEmail || (currentUser as any)?.email || undefined;
+          // Get email from capturedEmail state OR from CDP authenticationMethods.
+          // currentUser.authenticationMethods is a keyed object (reduced by type):
+          //   { email: { type:'email', email:'...' }, google: { type:'google', email:'...' } }
+          // There is no top-level .email on the user object.
+          const authMethods = (currentUser as any)?.authenticationMethods;
+          const cdpEmail =
+            authMethods?.email?.email ||
+            authMethods?.google?.email ||
+            authMethods?.apple?.email ||
+            undefined;
+          const emailToUse = capturedEmail || cdpEmail || undefined;
 
           console.log('📧 Email sources:', {
             capturedEmail,
-            cdpUserEmail: (currentUser as any)?.email,
+            cdpEmail,
             emailToUse,
           });
 
