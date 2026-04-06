@@ -33,6 +33,9 @@ export const metadata: Metadata = {
     icon: '/icons/icon-192.png',
     apple: '/apple-touch-icon.png',
   },
+  other: {
+    'base:app_id': '69d3bb0887bcdc902b52fd3b',
+  },
 };
 
 export const viewport: Viewport = {
