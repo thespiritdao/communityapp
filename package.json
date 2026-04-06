@@ -156,6 +156,7 @@
     "tippy.js": "^6.3.7",
     "viem": "^2.33.3",
     "wagmi": "^2.15.6",
+    "web-push": "^3.6.7",
     "web3": "^4.16.0",
     "x402-fetch": "^0.7.3"
   },
@@ -184,6 +185,7 @@
     "@types/react-dom": "^18",
     "@types/react-mentions": "^4.4.1",
     "@types/styled-components": "^5.1.34",
+    "@types/web-push": "^3.6.4",
     "@vitest/coverage-v8": "^2.0.5",
     "@vitest/ui": "^2.0.5",
     "@xmtp/frames-validator": "^0.6.0",

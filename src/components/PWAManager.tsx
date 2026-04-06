@@ -2,64 +2,61 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useEvmAddress } from '@coinbase/cdp-hooks';
+
+const VAPID_PUBLIC_KEY = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!;
+
+function urlBase64ToUint8Array(base64String: string): Uint8Array {
+  const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
+  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+  const rawData = atob(base64);
+  return Uint8Array.from([...rawData].map((c) => c.charCodeAt(0)));
+}
 
 /**
- * PWA Manager - Handles service worker registration and auto-updates
- * Must be a client component to access browser APIs
+ * PWA Manager - Handles service worker registration, auto-updates,
+ * and Web Push subscription registration.
  */
 export function PWAManager() {
   const [updateAvailable, setUpdateAvailable] = useState(false);
   const [countdown, setCountdown] = useState(3);
+  const { evmAddress: address } = useEvmAddress();
 
   useEffect(() => {
-    // Only run in browser
     if (typeof window === 'undefined' || !('serviceWorker' in navigator)) {
       console.log('[PWA] Service workers not supported');
       return;
     }
 
-    // Register service worker
     registerServiceWorker();
-
-    // Listen for service worker updates
     listenForUpdates();
   }, []);
+
+  // Once address is available, attempt push subscription
+  useEffect(() => {
+    if (!address) return;
+    subscribeToPush(address);
+  }, [address]);
 
   // Auto-reload countdown
   useEffect(() => {
     if (updateAvailable && countdown > 0) {
-      const timer = setTimeout(() => {
-        setCountdown(countdown - 1);
-      }, 1000);
+      const timer = setTimeout(() => setCountdown(countdown - 1), 1000);
       return () => clearTimeout(timer);
     } else if (updateAvailable && countdown === 0) {
-      console.log('[PWA] Auto-reloading to apply update...');
       window.location.reload();
     }
   }, [updateAvailable, countdown]);
 
   async function registerServiceWorker() {
     try {
-      const registration = await navigator.serviceWorker.register('/sw.js', {
-        scope: '/',
-      });
-
+      const registration = await navigator.serviceWorker.register('/sw.js', { scope: '/' });
       console.log('✅ [PWA] Service worker registered:', registration.scope);
 
-      // Check for updates every 15 minutes (more frequent for critical fixes)
-      setInterval(() => {
-        console.log('[PWA] Checking for updates...');
-        registration.update();
-      }, 15 * 60 * 1000);
-
-      // Also check for updates when page becomes visible (tab switching)
+      setInterval(() => registration.update(), 15 * 60 * 1000);
       document.addEventListener('visibilitychange', () => {
-        if (!document.hidden) {
-          console.log('[PWA] Page visible, checking for updates...');
-          registration.update();
-        }
+        if (!document.hidden) registration.update();
       });
-
     } catch (error) {
       console.error('❌ [PWA] Service worker registration failed:', error);
     }
@@ -67,14 +64,39 @@ export function PWAManager() {
 
   function listenForUpdates() {
     navigator.serviceWorker.addEventListener('controllerchange', () => {
-      console.log('[PWA] ✨ New service worker activated - update available!');
-
-      // Trigger auto-reload with countdown
       setUpdateAvailable(true);
     });
   }
 
-  // Show update notification with countdown
+  async function subscribeToPush(userAddress: string) {
+    try {
+      if (!('PushManager' in window) || !VAPID_PUBLIC_KEY) return;
+
+      const permission = await Notification.requestPermission();
+      if (permission !== 'granted') return;
+
+      const registration = await navigator.serviceWorker.ready;
+      const existing = await registration.pushManager.getSubscription();
+
+      // Already subscribed — re-save in case it changed
+      const subscription = existing ?? await registration.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
+      });
+
+      await fetch('/api/push/subscribe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ subscription, user_address: userAddress }),
+      });
+
+      console.log('✅ [PWA] Push subscription registered');
+    } catch (error) {
+      // Non-fatal — app works fine without push
+      console.warn('[PWA] Push subscription failed:', error);
+    }
+  }
+
   if (updateAvailable) {
     return (
       <div
@@ -96,9 +118,7 @@ export function PWAManager() {
         }}
       >
         <div>
-          <div style={{ fontWeight: 600, marginBottom: '4px' }}>
-            ✨ Update Available
-          </div>
+          <div style={{ fontWeight: 600, marginBottom: '4px' }}>✨ Update Available</div>
           <div style={{ opacity: 0.9 }}>
             Reloading in {countdown} second{countdown !== 1 ? 's' : ''}...
           </div>
@@ -122,6 +142,5 @@ export function PWAManager() {
     );
   }
 
-  // This component doesn't render anything when no update is available
   return null;
 }

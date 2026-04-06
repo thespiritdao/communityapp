@@ -8,6 +8,13 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/utils/supabaseAdminClient';
+import webpush from 'web-push';
+
+webpush.setVapidDetails(
+  process.env.VAPID_SUBJECT!,
+  process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!,
+  process.env.VAPID_PRIVATE_KEY!,
+);
 
 export async function POST(request: NextRequest) {
   try {
@@ -141,6 +148,12 @@ export async function POST(request: NextRequest) {
     }
 
     console.log(`✅ [/api/notifications/send] Notification sent successfully to ${recipient_address}`);
+
+    // Fire push notifications to all subscribed devices for this user (non-blocking)
+    sendPushNotifications(recipient_address, title, message, context_url).catch((err) =>
+      console.warn('[push] Background push failed:', err),
+    );
+
     return NextResponse.json({
       success: true,
       notification,
@@ -298,4 +311,46 @@ function isInQuietHours(current: string, start: string, end: string): boolean {
   } else {
     return current >= start || current < end;
   }
+}
+
+/**
+ * Send Web Push notifications to all subscribed devices for a user.
+ * Stale subscriptions (410 Gone) are automatically removed.
+ */
+async function sendPushNotifications(
+  recipientAddress: string,
+  title: string,
+  message: string,
+  contextUrl?: string,
+) {
+  const { data: subscriptions, error } = await supabaseAdmin
+    .from('push_subscriptions')
+    .select('endpoint, p256dh, auth')
+    .eq('user_address', recipientAddress.toLowerCase());
+
+  if (error || !subscriptions?.length) return;
+
+  const payload = JSON.stringify({
+    title,
+    body: message,
+    icon: '/icons/icon-192.png',
+    badge: '/icons/icon-72.png',
+    data: { url: contextUrl || '/notifications' },
+  });
+
+  await Promise.allSettled(
+    subscriptions.map(async (sub) => {
+      try {
+        await webpush.sendNotification(
+          { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
+          payload,
+        );
+      } catch (err: any) {
+        if (err.statusCode === 410 || err.statusCode === 404) {
+          // Subscription expired — remove it
+          await supabaseAdmin.from('push_subscriptions').delete().eq('endpoint', sub.endpoint);
+        }
+      }
+    }),
+  );
 }

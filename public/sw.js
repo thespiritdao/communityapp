@@ -199,11 +199,9 @@ self.addEventListener('push', (event) => {
       requireInteraction: notificationData.requireInteraction,
       actions: notificationData.actions,
     }).then(() => {
-      // Update app icon badge when push notification received
       if ('setAppBadge' in navigator) {
-        // Increment badge count (you can track actual count in IndexedDB if needed)
-        navigator.setAppBadge();
-        console.log('[SW] App icon badge updated');
+        const badgeCount = (notificationData.data && notificationData.data.badgeCount) || 1;
+        navigator.setAppBadge(badgeCount);
       }
     })
   );
