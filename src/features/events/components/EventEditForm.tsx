@@ -52,7 +52,7 @@ export const EventEditForm: React.FC<EventEditFormProps> = ({ eventId }) => {
     error: agendaError,
   } = useEventAgendas(eventId);
   const { pods } = usePods();
-  const { canManage } = useEventAccess(event);
+  const { canManage, loading: accessLoading } = useEventAccess(event);
 
   const [formData, setFormData] = useState<Partial<Event>>({});
   const [isVirtualEvent, setIsVirtualEvent] = useState(false);
@@ -128,7 +128,7 @@ export const EventEditForm: React.FC<EventEditFormProps> = ({ eventId }) => {
     );
   }
 
-  if (!canManage) {
+  if (!accessLoading && !canManage) {
     return (
       <Card className="max-w-2xl mx-auto">
         <CardContent className="p-8 text-center">
