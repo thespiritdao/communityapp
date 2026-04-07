@@ -6,22 +6,52 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!,
 );
 
+const EXEC_POD_ID = 'e35c9e25-d29f-4988-b1e8-2902e960b94c';
+const BASE_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://app.spiritdao.org';
+
 /**
- * Notify Executive Pod about donations ready for approval
+ * Notify all active EP members that settled card donations are ready to approve.
  */
 async function notifyExecutivePod(donations: any[]) {
   try {
-    console.log(`📢 Notifying Executive Pod about ${donations.length} donations ready for approval`);
+    const { data: members, error } = await supabase
+      .from('pod_members')
+      .select('wallet_address')
+      .eq('pod_id', EXEC_POD_ID)
+      .is('revoked_by_governance', null);
 
-    // TODO: Implement actual notification system
-    // Options:
-    // 1. Email via SendGrid
-    // 2. Discord webhook
-    // 3. In-app notifications
-
-    for (const donation of donations) {
-      console.log(`  → ${donation.user_wallet}: $${donation.fiat_amount} → ${donation.system_tokens_to_mint} $SYSTEM`);
+    if (error || !members?.length) {
+      console.warn('⚠️ No EP members found for settlement notification');
+      return;
     }
+
+    const count = donations.length;
+    const title = `${count} Donation${count !== 1 ? 's' : ''} Ready to Approve`;
+    const message = donations
+      .map((d: any) => `${Number(d.system_tokens_to_mint).toFixed(2)} $SYSTEM (${String(d.user_wallet).slice(0, 8)}…)`)
+      .join(', ');
+
+    await Promise.allSettled(
+      members.map(({ wallet_address }: { wallet_address: string }) =>
+        fetch(`${BASE_URL}/api/notifications/send`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            recipient_address: wallet_address,
+            sender_address: '0x0000000000000000000000000000000000000000',
+            notification_type: 'pod_approval_request',
+            title,
+            message,
+            context_url: `/pods/${EXEC_POD_ID}/manage?tab=donations`,
+            context_type: 'donation',
+            priority: 'high',
+            category: 'governance',
+          }),
+        })
+      )
+    );
+
+    console.log(`📢 Notified ${members.length} EP member(s) of ${count} settled donation(s)`);
   } catch (error) {
     console.error('❌ Failed to notify Executive Pod:', error);
   }

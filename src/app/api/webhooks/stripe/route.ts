@@ -11,8 +11,12 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!,
 );
 
+const EXEC_POD_ID = 'e35c9e25-d29f-4988-b1e8-2902e960b94c';
+const BASE_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://app.spiritdao.org';
+
 /**
- * Notify Executive Pod about events requiring approval
+ * Notify all active Executive Pod members of a donation event via in-app notification.
+ * Pulls member wallets directly from pod_members; hat ID from pods.token_address.
  */
 async function notifyExecutivePod(notification: {
   type: string;
@@ -23,8 +27,66 @@ async function notifyExecutivePod(notification: {
   message?: string;
 }) {
   try {
-    console.log('📢 Executive Pod Notification:', notification);
-    // TODO: Implement actual notification (email/Discord/in-app)
+    // Fetch active EP members
+    const { data: members, error: membersError } = await supabase
+      .from('pod_members')
+      .select('wallet_address')
+      .eq('pod_id', EXEC_POD_ID)
+      .is('revoked_by_governance', null);
+
+    if (membersError || !members?.length) {
+      console.warn('⚠️ No EP members found for notification:', membersError?.message);
+      return;
+    }
+
+    const isReadyToMint = notification.type === 'donation_ready_to_mint';
+    const isCritical    = notification.type === 'CRITICAL_CHARGEBACK';
+
+    const title = isCritical
+      ? '🚨 Chargeback After Token Mint'
+      : isReadyToMint
+        ? 'New Donation Ready to Approve'
+        : 'Donation Update';
+
+    const amountDisplay = notification.amount != null
+      ? `${Number(notification.amount).toFixed(2)} $SYSTEM`
+      : '';
+
+    const methodLabel = notification.paymentMethod || '';
+
+    const message = isCritical
+      ? (notification.message || `Chargeback filed after minting ${amountDisplay}`)
+      : isReadyToMint
+        ? `${amountDisplay} donation received via ${methodLabel}. Open the Donations tab to approve.`
+        : (notification.message || 'A donation requires your attention.');
+
+    const contextUrl = notification.donationId
+      ? `/pods/${EXEC_POD_ID}/manage?tab=donations`
+      : `/pods/${EXEC_POD_ID}/manage?tab=donations`;
+
+    // Send in-app notification to each EP member
+    await Promise.allSettled(
+      members.map(({ wallet_address }) =>
+        fetch(`${BASE_URL}/api/notifications/send`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            recipient_address: wallet_address,
+            sender_address: '0x0000000000000000000000000000000000000000',
+            notification_type: 'pod_approval_request',
+            title,
+            message,
+            context_url: contextUrl,
+            context_type: 'donation',
+            context_id: notification.donationId,
+            priority: isCritical ? 'urgent' : 'high',
+            category: 'governance',
+          }),
+        })
+      )
+    );
+
+    console.log(`📢 Notified ${members.length} EP member(s) — ${notification.type}`);
   } catch (error) {
     console.error('❌ Failed to notify Executive Pod:', error);
   }
@@ -170,16 +232,16 @@ export async function POST(request: NextRequest) {
 
       console.log(`📊 Donation status: ${newStatus}, settlement: ${settlementDays} days`);
 
-      // If ACH (instant) or completed, notify executives
-      if (settlementDays === 0) {
-        await notifyExecutivePod({
-          type: 'donation_ready_to_mint',
-          donationId: donation.id,
-          amount: systemTokensToMint,
-          userWallet: donation.user_wallet,
-          paymentMethod: paymentMethod === 'us_bank_account' ? 'ACH (No chargeback risk)' : 'Credit Card'
-        });
-      }
+      // Notify EP — immediately actionable for ACH, heads-up for card (settlement pending)
+      await notifyExecutivePod({
+        type: 'donation_ready_to_mint',
+        donationId: donation.id,
+        amount: systemTokensToMint,
+        userWallet: donation.user_wallet,
+        paymentMethod: settlementDays === 0
+          ? 'ACH — ready to approve now'
+          : `Card — settles in ${settlementDays} day${settlementDays !== 1 ? 's' : ''}`,
+      });
 
       return NextResponse.json({ received: true });
     }
