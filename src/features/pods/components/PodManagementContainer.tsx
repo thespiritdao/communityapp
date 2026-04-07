@@ -15,6 +15,7 @@ import {
   Crown,
   Settings,
   DollarSign,
+  CircleDollarSign,
   Package,
   Trash2,
   FileText,
@@ -276,20 +277,20 @@ const TabNavigation = React.memo<{
           enabled: canManageTreasury, // Only show if user has treasury management access
         },
         {
-          id: 'pod_settings',
-          label: 'Pod Settings',
-          mobileLabel: 'Settings',
-          icon: ImageIcon,
-          badge: null,
-          enabled: canManageMembers, // Only pod leaders can edit settings
-        },
-        {
           id: 'sub_pod_review',
           label: 'Sub-Pods',
           mobileLabel: 'Sub-Pods',
           icon: GitBranch,
           badge: null,
           enabled: canManageMembers && subPodsEnabled,
+        },
+        {
+          id: 'donations',
+          label: 'Donations',
+          mobileLabel: 'Donations',
+          icon: CircleDollarSign,
+          badge: null,
+          enabled: isExecPod,
         },
         {
           id: 'claims',
@@ -300,12 +301,12 @@ const TabNavigation = React.memo<{
           enabled: isExecPod,
         },
         {
-          id: 'donations',
-          label: 'Donations',
-          mobileLabel: 'Donations',
-          icon: DollarSign,
+          id: 'pod_settings',
+          label: 'Pod Settings',
+          mobileLabel: 'Settings',
+          icon: ImageIcon,
           badge: null,
-          enabled: isExecPod,
+          enabled: canManageMembers,
         },
         {
           id: 'deletion',
