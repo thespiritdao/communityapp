@@ -1,9 +1,10 @@
 // Service Worker for SpiritDAO PWA
 // Handles offline caching, push notifications, and background sync
 
-const CACHE_NAME = 'spiritdao-v1.0.0';
-const RUNTIME_CACHE = 'spiritdao-runtime';
-const IMAGE_CACHE = 'spiritdao-images';
+const CACHE_VERSION = 'v1.0.4';
+const CACHE_NAME = `spiritdao-${CACHE_VERSION}`;
+const RUNTIME_CACHE = `spiritdao-runtime-${CACHE_VERSION}`;
+const IMAGE_CACHE = `spiritdao-images-${CACHE_VERSION}`;
 
 // Critical files to cache immediately on install
 const PRECACHE_URLS = [
