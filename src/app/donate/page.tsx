@@ -82,7 +82,7 @@ function DonationCheckoutForm({
         borderRadius: '0.75rem'
       }} className="space-y-2">
         <div className="flex justify-between text-sm">
-          <span className="text-gray-600 dark:text-gray-400">Donation Amount:</span>
+          <span className="text-gray-600 dark:text-gray-400">Fund Amount:</span>
           <span className="font-semibold">${donationData.amount.toFixed(2)}</span>
         </div>
         <div className="flex justify-between text-sm">
