@@ -18,6 +18,7 @@ import { IncomingCallBanner } from '@/features/chat/components/IncomingCallBanne
 import { TourManager } from '@/components/tour/TourManager';
 import { initHatRegistry } from '@/lib/hatRegistryClient';
 import { PresenceTracker } from '@/components/PresenceTracker';
+import { PushSubscriptionManager } from '@/components/PushSubscriptionManager';
 
 /**
  * Fetches hat IDs from /api/hat-registry on app startup and populates
@@ -83,6 +84,8 @@ export function Providers({ children }: ProvidersProps) {
                   <SessionCacheManager />
                   {/* Presence heartbeat — upserts wallet + timestamp every 60s */}
                   <PresenceTracker />
+                  {/* Push notification subscription — inside CDP so useEvmAddress works */}
+                  <PushSubscriptionManager />
                   {/* Global incoming call listener */}
                   <IncomingCallBanner />
                   <TourManager>

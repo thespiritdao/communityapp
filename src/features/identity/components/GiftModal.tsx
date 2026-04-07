@@ -171,6 +171,18 @@ export function GiftModal({
         console.error('[GiftModal] Error in database save:', error);
       }
 
+      // Fire-and-forget: notify recipient by email
+      fetch('/api/gifts/notify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          recipient_wallet: recipientAddress,
+          sender_wallet: address,
+          amount,
+          token: selectedToken,
+        }),
+      }).catch(() => {});
+
       // Reset form and close after delay
       setTimeout(() => {
         setAmount('');

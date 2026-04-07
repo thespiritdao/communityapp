@@ -2,25 +2,16 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useEvmAddress } from '@coinbase/cdp-hooks';
-
-const VAPID_PUBLIC_KEY = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!;
-
-function urlBase64ToUint8Array(base64String: string): Uint8Array {
-  const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
-  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
-  const rawData = atob(base64);
-  return Uint8Array.from([...rawData].map((c) => c.charCodeAt(0)));
-}
 
 /**
- * PWA Manager - Handles service worker registration, auto-updates,
- * and Web Push subscription registration.
+ * PWA Manager - Handles service worker registration and auto-updates.
+ * Must be a server-component-safe client component (no CDP hooks).
+ * Push subscription is handled separately by PushSubscriptionManager
+ * inside the CDP provider tree.
  */
 export function PWAManager() {
   const [updateAvailable, setUpdateAvailable] = useState(false);
   const [countdown, setCountdown] = useState(3);
-  const { evmAddress: address } = useEvmAddress();
 
   useEffect(() => {
     if (typeof window === 'undefined' || !('serviceWorker' in navigator)) {
@@ -31,12 +22,6 @@ export function PWAManager() {
     registerServiceWorker();
     listenForUpdates();
   }, []);
-
-  // Once address is available, attempt push subscription
-  useEffect(() => {
-    if (!address) return;
-    subscribeToPush(address);
-  }, [address]);
 
   // Auto-reload countdown
   useEffect(() => {
@@ -66,35 +51,6 @@ export function PWAManager() {
     navigator.serviceWorker.addEventListener('controllerchange', () => {
       setUpdateAvailable(true);
     });
-  }
-
-  async function subscribeToPush(userAddress: string) {
-    try {
-      if (!('PushManager' in window) || !VAPID_PUBLIC_KEY) return;
-
-      const permission = await Notification.requestPermission();
-      if (permission !== 'granted') return;
-
-      const registration = await navigator.serviceWorker.ready;
-      const existing = await registration.pushManager.getSubscription();
-
-      // Already subscribed — re-save in case it changed
-      const subscription = existing ?? await registration.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
-      });
-
-      await fetch('/api/push/subscribe', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ subscription, user_address: userAddress }),
-      });
-
-      console.log('✅ [PWA] Push subscription registered');
-    } catch (error) {
-      // Non-fatal — app works fine without push
-      console.warn('[PWA] Push subscription failed:', error);
-    }
   }
 
   if (updateAvailable) {

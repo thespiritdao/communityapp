@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { sendTokensReceivedEmail } from '@/lib/donationEmail';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -104,6 +105,13 @@ export async function POST(request: NextRequest) {
 
     // Fire-and-forget: airdrop Advocate NFT on first donation
     maybeAirdropAdvocate(data.user_wallet, donationId);
+
+    // Fire-and-forget: email recipient that tokens are incoming
+    sendTokensReceivedEmail({
+      recipientWallet: data.user_wallet,
+      amount: data.system_tokens_to_mint,
+      tokenSymbol: 'SYSTEM',
+    });
 
     return NextResponse.json({
       success: true,
