@@ -33,6 +33,7 @@ import { PodDeletionButtonV2 } from '@/app/pods/[id]/manage/components/PodDeleti
 import { PodSettingsPanel } from './PodSettingsPanel';
 import { SubPodReviewPanel } from './SubPodReviewPanel';
 import { ClaimsManagementPanel } from './ClaimsManagementPanel';
+import { DonationsManagementPanel } from './DonationsManagementPanel';
 import { usePodManagementState } from '../hooks/usePodManagementState';
 import { usePodManagementHandlers } from '../hooks/usePodManagementHandlers';
 import '../styles/tab-navigation.css';
@@ -186,6 +187,13 @@ const TabContent = React.memo<{
           </div>
         );
 
+      case 'donations':
+        return (
+          <div className="p-6">
+            <DonationsManagementPanel canManage={isExecPod} />
+          </div>
+        );
+
       default:
         return null;
     }
@@ -288,6 +296,14 @@ const TabNavigation = React.memo<{
           label: 'Claims',
           mobileLabel: 'Claims',
           icon: Coins,
+          badge: null,
+          enabled: isExecPod,
+        },
+        {
+          id: 'donations',
+          label: 'Donations',
+          mobileLabel: 'Donations',
+          icon: DollarSign,
           badge: null,
           enabled: isExecPod,
         },
