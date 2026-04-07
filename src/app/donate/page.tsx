@@ -86,7 +86,7 @@ function DonationCheckoutForm({
           <span className="font-semibold">${donationData.amount.toFixed(2)}</span>
         </div>
         <div className="flex justify-between text-sm">
-          <span className="text-gray-600 dark:text-gray-400">Platform Fee ({donationData.platformFeePercent}%):</span>
+          <span className="text-gray-600 dark:text-gray-400">SpiritDAO Donation ({donationData.platformFeePercent}%):</span>
           <span className="text-gray-600 dark:text-gray-400">-${donationData.platformFee}</span>
         </div>
         <div className="flex justify-between text-sm">
@@ -257,7 +257,7 @@ export default function DonatePage() {
               ✅ Settlement period (0-7 days based on payment method)
             </p>
             <p className="text-sm text-green-800 dark:text-green-300">
-              ✅ Executive Pod approval (2-of-3 multi-sig)
+              ✅ Executive Pod approval
             </p>
           </div>
           <p className="text-sm text-gray-600 dark:text-gray-400">
@@ -290,7 +290,7 @@ export default function DonatePage() {
             Support SpiritDAO
           </h1>
           <p className="text-gray-600 dark:text-gray-300">
-            Donate and receive $SYSTEM tokens (1:1 with USD)
+            Donate and receive $SYSTEM tokens
           </p>
         </div>
 
@@ -409,7 +409,7 @@ export default function DonatePage() {
                   <li>1. Choose your donation amount</li>
                   <li>2. Complete payment (card or bank transfer)</li>
                   <li>3. Wait for settlement period (0-7 days)</li>
-                  <li>4. Executive Pod approves (2-of-3 multi-sig)</li>
+                  <li>4. Executive Pod approves</li>
                   <li>5. $SYSTEM tokens minted to your wallet</li>
                 </ol>
               </div>
