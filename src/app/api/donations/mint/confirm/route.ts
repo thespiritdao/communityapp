@@ -111,6 +111,10 @@ export async function POST(request: NextRequest) {
       recipientWallet: data.user_wallet,
       amount: data.system_tokens_to_mint,
       tokenSymbol: 'SYSTEM',
+      fiatAmount: data.fiat_amount,
+      stripeFee: data.stripe_fee,
+      orgFee: data.org_fee,
+      communityTokens: data.community_tokens_to_mint,
     });
 
     return NextResponse.json({
