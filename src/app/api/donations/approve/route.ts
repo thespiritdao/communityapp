@@ -79,7 +79,7 @@ async function verifyExecutiveRole(walletAddress: string): Promise<boolean> {
 }
 
 /**
- * Check if donation has reached 2-of-3 approval threshold
+ * Check if donation has reached 1-of-1 approval threshold (single EP member)
  */
 async function checkApprovalThreshold(donationId: string): Promise<boolean> {
   const { data: approvals } = await supabase
@@ -88,9 +88,9 @@ async function checkApprovalThreshold(donationId: string): Promise<boolean> {
     .eq('donation_id', donationId);
 
   const approvalCount = approvals?.length || 0;
-  console.log(`📊 Donation ${donationId}: ${approvalCount}/2 approvals`);
+  console.log(`📊 Donation ${donationId}: ${approvalCount}/1 approvals`);
 
-  return approvalCount >= 2;
+  return approvalCount >= 1;
 }
 
 /**
@@ -276,7 +276,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      message: `Approval recorded. Need 1 more executive approval to mint tokens.`,
+      message: `Approval recorded.`,
       approval: {
         id: approval.id,
         donationId,
@@ -285,7 +285,7 @@ export async function POST(request: NextRequest) {
       },
       thresholdMet: false,
       currentApprovals: currentApprovals?.length || 0,
-      requiredApprovals: 2
+      requiredApprovals: 1
     });
 
   } catch (error: any) {
@@ -349,7 +349,7 @@ export async function GET(request: NextRequest) {
       },
       approvals: approvals || [],
       currentApprovals: approvals?.length || 0,
-      requiredApprovals: 2,
+      requiredApprovals: 1,
       thresholdMet
     });
 

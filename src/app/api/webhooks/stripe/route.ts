@@ -126,10 +126,14 @@ export async function POST(request: NextRequest) {
             : amount * (paymentMethod === 'us_bank_account' ? 0.008 : 0.029) + 0.30)
         : amount * 0.029 + 0.30;
 
-      // Recalculate tokens with actual fee
+      // Recalculate tokens with actual Stripe fee
+      // Platform fee is 8% of NET (post-Stripe) so we never lose money
+      // 4% ops (cash, not minted) + 4% community pool ($SYSTEM to Exec Pod treasury)
+      const netAfterStripe = amount - actualStripeFee;
       const platformFeePercentage = Number(process.env.DONATION_PLATFORM_FEE_PERCENTAGE) || 8;
-      const platformFee = amount * (platformFeePercentage / 100);
-      const systemTokensToMint = amount - actualStripeFee - platformFee;
+      const platformFee = netAfterStripe * (platformFeePercentage / 100);
+      const communityTokensToMint = netAfterStripe * ((platformFeePercentage / 2) / 100); // 4%
+      const systemTokensToMint = netAfterStripe - platformFee;
 
       // Calculate settlement period
       const settlementDays = calculateSettlementPeriod(amount, paymentMethod);
@@ -146,8 +150,9 @@ export async function POST(request: NextRequest) {
         .from('pending_donations')
         .update({
           payment_method: paymentMethod,
-          stripe_fee: actualStripeFee, // Actual Stripe fee
+          stripe_fee: actualStripeFee,
           system_tokens_to_mint: systemTokensToMint,
+          community_tokens_to_mint: communityTokensToMint,
           settlement_days: settlementDays,
           settlement_date: settlementDate,
           is_reversible: paymentMethod !== 'us_bank_account',

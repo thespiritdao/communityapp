@@ -59,26 +59,29 @@ export async function POST(request: NextRequest) {
     // =====================================================
 
     const fiatAmount = Number(amount);
-    const platformFeePercentage = Number(process.env.DONATION_PLATFORM_FEE_PERCENTAGE) || 7.5;
-    const platformFee = fiatAmount * (platformFeePercentage / 100);
 
-    // Stripe fees (estimated, actual calculated after payment)
-    // Card: 2.9% + $0.30
-    // ACH: 0.8% (no fixed fee)
-    const estimatedStripeFeeCard = (fiatAmount * 0.029) + 0.30;
-    const estimatedStripeFeeACH = fiatAmount * 0.008;
+    // Stripe fees (estimated conservatively using card rate; recalculated after payment via webhook)
+    // Card: 2.9% + $0.30 | ACH: 0.8%
+    const estimatedStripeFee = (fiatAmount * 0.029) + 0.30;
 
-    // Use card fees as conservative estimate
-    const estimatedStripeFee = estimatedStripeFeeCard;
+    // Platform fee is 8% of NET (post-Stripe) amount so we never lose money
+    // Split: 4% ops (cash, not minted) + 4% community pool ($SYSTEM minted to Exec Pod treasury)
+    const netAfterStripe = fiatAmount - estimatedStripeFee;
+    const platformFeePercentage = Number(process.env.DONATION_PLATFORM_FEE_PERCENTAGE) || 8;
+    const platformFee = netAfterStripe * (platformFeePercentage / 100); // Full 8% for ops+community
+    const communityFeePercentage = platformFeePercentage / 2; // 4%
+    const communityTokensToMint = netAfterStripe * (communityFeePercentage / 100); // 4% → minted to Exec Pod
 
-    // User receives after both fees
-    const systemTokensToMint = fiatAmount - estimatedStripeFee - platformFee;
+    // Donor receives the remainder
+    const systemTokensToMint = netAfterStripe - platformFee;
 
     console.log('💰 Donation calculation:', {
       fiatAmount,
       estimatedStripeFee: estimatedStripeFee.toFixed(2),
+      netAfterStripe: netAfterStripe.toFixed(2),
       platformFee: platformFee.toFixed(2),
-      systemTokensToMint: systemTokensToMint.toFixed(2)
+      communityTokensToMint: communityTokensToMint.toFixed(2),
+      systemTokensToMint: systemTokensToMint.toFixed(2),
     });
 
     // =====================================================
@@ -92,6 +95,7 @@ export async function POST(request: NextRequest) {
       metadata: {
         userWallet,
         systemTokenAmount: systemTokensToMint.toFixed(8),
+        communityTokenAmount: communityTokensToMint.toFixed(8),
         platformFee: platformFee.toFixed(2),
         donorEmail: donorEmail || 'anonymous',
         donationType: 'crypto_token_reward'
@@ -116,6 +120,7 @@ export async function POST(request: NextRequest) {
         donor_email: donorEmail || null,
         fiat_amount: fiatAmount,
         system_tokens_to_mint: systemTokensToMint,
+        community_tokens_to_mint: communityTokensToMint,
         org_fee: platformFee,
         stripe_fee: estimatedStripeFee,
         settlement_days: 5,
@@ -147,6 +152,7 @@ export async function POST(request: NextRequest) {
         paymentIntentId: paymentIntent.id,
         amount: fiatAmount,
         systemTokens: systemTokensToMint.toFixed(2),
+        communityTokens: communityTokensToMint.toFixed(2),
         platformFee: platformFee.toFixed(2),
         platformFeePercent: platformFeePercentage,
         estimatedStripeFee: estimatedStripeFee.toFixed(2),
