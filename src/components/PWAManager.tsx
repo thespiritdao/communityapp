@@ -35,7 +35,7 @@ export function PWAManager() {
 
   async function registerServiceWorker() {
     try {
-      const registration = await navigator.serviceWorker.register('/sw.js', { scope: '/' });
+      const registration = await navigator.serviceWorker.register('/api/sw', { scope: '/' });
       console.log('✅ [PWA] Service worker registered:', registration.scope);
 
       setInterval(() => registration.update(), 15 * 60 * 1000);
