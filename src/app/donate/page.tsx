@@ -86,8 +86,12 @@ function DonationCheckoutForm({
           <span className="font-semibold">${donationData.amount.toFixed(2)}</span>
         </div>
         <div className="flex justify-between text-sm">
-          <span className="text-gray-600 dark:text-gray-400">SpiritDAO Donation ({donationData.platformFeePercent}%):</span>
-          <span className="text-gray-600 dark:text-gray-400">-${donationData.platformFee}</span>
+          <span className="text-gray-600 dark:text-gray-400">Operations Donation (4%):</span>
+          <span className="text-gray-600 dark:text-gray-400">-${donationData.operationsFee}</span>
+        </div>
+        <div className="flex justify-between text-sm">
+          <span className="text-gray-600 dark:text-gray-400">Community Fund Donation (4%):</span>
+          <span className="text-gray-600 dark:text-gray-400">-${donationData.communityFee}</span>
         </div>
         <div className="flex justify-between text-sm">
           <span className="text-gray-600 dark:text-gray-400">Processing Fee (est):</span>

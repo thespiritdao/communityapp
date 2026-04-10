@@ -155,6 +155,8 @@ export async function POST(request: NextRequest) {
         communityTokens: communityTokensToMint.toFixed(2),
         platformFee: platformFee.toFixed(2),
         platformFeePercent: platformFeePercentage,
+        operationsFee: (platformFee / 2).toFixed(2),
+        communityFee: (platformFee / 2).toFixed(2),
         estimatedStripeFee: estimatedStripeFee.toFixed(2),
         minAmount,
         supportedMethods: paymentMethodTypes
