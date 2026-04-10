@@ -1,7 +1,7 @@
 // Service Worker for SpiritDAO PWA
 // Handles offline caching, push notifications, and background sync
 
-const CACHE_VERSION = 'v1.0.4';
+const CACHE_VERSION = 'v1.0.5';
 const CACHE_NAME = `spiritdao-${CACHE_VERSION}`;
 const RUNTIME_CACHE = `spiritdao-runtime-${CACHE_VERSION}`;
 const IMAGE_CACHE = `spiritdao-images-${CACHE_VERSION}`;
@@ -117,42 +117,31 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // For all other requests: Network first, fallback to cache
+  // Never cache HTML navigation requests — stale HTML causes chunk hash mismatches after deploys
+  if (request.mode === 'navigate') {
+    return;
+  }
+
+  // Only cache immutable _next/static/ chunks (content-hashed, safe to cache indefinitely)
+  if (!url.pathname.startsWith('/_next/static/')) {
+    return;
+  }
+
+  // Cache-first for immutable static chunks
   event.respondWith(
-    fetch(request)
-      .then((response) => {
-        // Don't cache non-successful responses
-        if (!response || response.status !== 200 || response.type === 'error') {
-          return response;
+    caches.open(RUNTIME_CACHE).then((cache) => {
+      return cache.match(request).then((cachedResponse) => {
+        if (cachedResponse) {
+          return cachedResponse;
         }
-
-        // Clone response to cache it
-        const responseToCache = response.clone();
-
-        caches.open(RUNTIME_CACHE).then((cache) => {
-          cache.put(request, responseToCache);
-        });
-
-        return response;
-      })
-      .catch((error) => {
-        // Network failed, try cache
-        console.log('[SW] Network request failed, falling back to cache:', request.url);
-
-        return caches.match(request).then((cachedResponse) => {
-          if (cachedResponse) {
-            return cachedResponse;
+        return fetch(request).then((networkResponse) => {
+          if (networkResponse && networkResponse.status === 200) {
+            cache.put(request, networkResponse.clone());
           }
-
-          // If no cache, return offline page for navigation requests
-          if (request.mode === 'navigate') {
-            return caches.match('/');
-          }
-
-          // For other requests, throw error
-          throw error;
+          return networkResponse;
         });
-      })
+      });
+    })
   );
 });
 
