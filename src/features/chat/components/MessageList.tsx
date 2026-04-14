@@ -98,15 +98,13 @@ export default function MessageList({
     url: string;
   }>({ show: false, url: '' });
   const messagesEndRef = useRef<HTMLDivElement>(null);
-
-  const scrollToBottom = () => {
-    if (messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
-    }
-  };
+  const isInitialLoad = useRef(true);
 
   useEffect(() => {
-    scrollToBottom();
+    if (!messagesEndRef.current || messages.length === 0) return;
+    const behavior = isInitialLoad.current ? 'instant' : 'smooth';
+    isInitialLoad.current = false;
+    messagesEndRef.current.scrollIntoView({ behavior });
     if (currentUser?.wallet_address) {
       markMessagesAsRead(currentUser.wallet_address);
     }
