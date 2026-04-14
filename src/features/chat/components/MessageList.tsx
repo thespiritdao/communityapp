@@ -101,18 +101,16 @@ export default function MessageList({
   const isInitialLoad = useRef(true);
 
   useEffect(() => {
-    if (!messagesEndRef.current || messages.length === 0) return;
-    const scrollContainer = messagesEndRef.current.closest('.chat-main') as HTMLElement | null;
-    if (!scrollContainer) return;
-    if (isInitialLoad.current) {
-      isInitialLoad.current = false;
-      // Bypass CSS scroll-behavior: smooth by temporarily overriding it
+    if (messages.length === 0) return;
+    const isFirst = isInitialLoad.current;
+    if (isFirst) isInitialLoad.current = false;
+    requestAnimationFrame(() => {
+      const scrollContainer = messagesEndRef.current?.closest('.chat-main') as HTMLElement | null;
+      if (!scrollContainer) return;
       scrollContainer.style.scrollBehavior = 'auto';
       scrollContainer.scrollTop = scrollContainer.scrollHeight;
-      scrollContainer.style.scrollBehavior = '';
-    } else {
-      scrollContainer.scrollTop = scrollContainer.scrollHeight;
-    }
+      if (!isFirst) scrollContainer.style.scrollBehavior = '';
+    });
     if (currentUser?.wallet_address) {
       markMessagesAsRead(currentUser.wallet_address);
     }
