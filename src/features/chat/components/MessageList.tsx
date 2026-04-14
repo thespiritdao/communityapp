@@ -102,9 +102,17 @@ export default function MessageList({
 
   useEffect(() => {
     if (!messagesEndRef.current || messages.length === 0) return;
-    const behavior = isInitialLoad.current ? 'instant' : 'smooth';
-    isInitialLoad.current = false;
-    messagesEndRef.current.scrollIntoView({ behavior });
+    const scrollContainer = messagesEndRef.current.closest('.chat-main') as HTMLElement | null;
+    if (!scrollContainer) return;
+    if (isInitialLoad.current) {
+      isInitialLoad.current = false;
+      // Bypass CSS scroll-behavior: smooth by temporarily overriding it
+      scrollContainer.style.scrollBehavior = 'auto';
+      scrollContainer.scrollTop = scrollContainer.scrollHeight;
+      scrollContainer.style.scrollBehavior = '';
+    } else {
+      scrollContainer.scrollTop = scrollContainer.scrollHeight;
+    }
     if (currentUser?.wallet_address) {
       markMessagesAsRead(currentUser.wallet_address);
     }
