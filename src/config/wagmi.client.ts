@@ -6,6 +6,9 @@ import { createPublicClient } from 'viem';
 import { base } from 'wagmi/chains';
 import { coinbaseWallet } from 'wagmi/connectors';
 
+// Builder Code attribution suffix (ERC-8021) — appended to all wagmi-routed transactions
+const BUILDER_CODE_SUFFIX = '0x62635f6871796d636778730b0080218021802180218021802180218021' as `0x${string}`;
+
 // Multiple RPC providers for redundancy and rate limit handling
 const PRIMARY_RPC = process.env.NEXT_PUBLIC_RPC_URL || 'https://mainnet.base.org';
 const FALLBACK_RPCS = [
@@ -47,6 +50,7 @@ console.log('🔗 Wagmi RPC Configuration:', {
  */
 export const wagmiConfig = createConfig({
   chains: [base],
+  dataSuffix: BUILDER_CODE_SUFFIX,
   transports: {
     [base.id]: fallback([
       http(PRIMARY_RPC, {

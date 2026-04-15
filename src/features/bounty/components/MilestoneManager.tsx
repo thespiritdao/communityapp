@@ -23,7 +23,8 @@ import {
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
-import { useEvmAddress, useSendUserOperation, useCurrentUser } from '@coinbase/cdp-hooks';
+import { useEvmAddress, useCurrentUser } from '@coinbase/cdp-hooks';
+import { useSendUserOperationWithAttribution as useSendUserOperation } from '@/wallet/hooks/useSendUserOperationWithAttribution';
 import type { Abi } from 'viem';
 import { encodeFunctionData } from 'viem';
 import { Loader2 } from 'lucide-react';

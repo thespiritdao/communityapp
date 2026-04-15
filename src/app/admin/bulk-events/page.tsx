@@ -8,7 +8,8 @@
  */
 
 import { useState, useEffect } from 'react';
-import { useEvmAddress, useSendUserOperation, useCurrentUser } from '@coinbase/cdp-hooks';
+import { useEvmAddress, useCurrentUser } from '@coinbase/cdp-hooks';
+import { useSendUserOperationWithAttribution as useSendUserOperation } from '@/wallet/hooks/useSendUserOperationWithAttribution';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { encodeFunctionData } from 'viem';

@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
-import { useEvmAddress, useSendUserOperation, useCurrentUser } from '@coinbase/cdp-hooks';
+import { useEvmAddress, useCurrentUser } from '@coinbase/cdp-hooks';
+import { useSendUserOperationWithAttribution as useSendUserOperation } from '@/wallet/hooks/useSendUserOperationWithAttribution';
 import { parseEther, encodeFunctionData, createPublicClient, http } from 'viem';
 import { base } from 'viem/chains';
 import { useRouter } from 'next/navigation';

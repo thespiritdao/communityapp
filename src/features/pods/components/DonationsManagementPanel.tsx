@@ -1,7 +1,8 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
-import { useEvmAddress, useCurrentUser, useSendUserOperation } from '@coinbase/cdp-hooks';
+import { useEvmAddress, useCurrentUser } from '@coinbase/cdp-hooks';
+import { useSendUserOperationWithAttribution as useSendUserOperation } from '@/wallet/hooks/useSendUserOperationWithAttribution';
 import { encodeFunctionData, parseUnits, getAddress } from 'viem';
 import { CheckCircle, Clock, RefreshCw, Coins, ExternalLink } from 'lucide-react';
 

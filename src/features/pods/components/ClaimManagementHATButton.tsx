@@ -3,7 +3,8 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Crown, CheckCircle, Loader2 } from 'lucide-react';
-import { useEvmAddress, useSendUserOperation, useCurrentUser } from '@coinbase/cdp-hooks';
+import { useEvmAddress, useCurrentUser } from '@coinbase/cdp-hooks';
+import { useSendUserOperationWithAttribution as useSendUserOperation } from '@/wallet/hooks/useSendUserOperationWithAttribution';
 import { usePublicClient } from 'wagmi';
 import { encodeFunctionData } from 'viem';
 import { Button } from '@/components/ui/button';

@@ -2,7 +2,8 @@
 
 import { memo, useState, useCallback, useEffect } from 'react';
 import { usePublicClient } from 'wagmi';
-import { useSendUserOperation, useCurrentUser, useEvmAddress } from '@coinbase/cdp-hooks';
+import { useCurrentUser, useEvmAddress } from '@coinbase/cdp-hooks';
+import { useSendUserOperationWithAttribution as useSendUserOperation } from '@/wallet/hooks/useSendUserOperationWithAttribution';
 import { Loader2, CheckCircle2, ShoppingBag } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {

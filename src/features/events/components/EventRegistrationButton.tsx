@@ -2,7 +2,8 @@
 
 import type React from 'react';
 import { useState, useCallback } from 'react';
-import { useSendUserOperation, useCurrentUser } from '@coinbase/cdp-hooks';
+import { useCurrentUser } from '@coinbase/cdp-hooks';
+import { useSendUserOperationWithAttribution as useSendUserOperation } from '@/wallet/hooks/useSendUserOperationWithAttribution';
 import { encodeFunctionData } from 'viem';
 
 import { useSimplifiedEventTransactions } from '../hooks/useSimplifiedEventTransactions';

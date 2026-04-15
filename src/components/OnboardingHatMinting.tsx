@@ -8,7 +8,8 @@
 'use client';
 
 import React, { useState } from 'react';
-import { useCurrentUser, useEvmAddress, useSendUserOperation } from '@coinbase/cdp-hooks';
+import { useCurrentUser, useEvmAddress } from '@coinbase/cdp-hooks';
+import { useSendUserOperationWithAttribution as useSendUserOperation } from '@/wallet/hooks/useSendUserOperationWithAttribution';
 import { encodeFunctionData, parseAbi } from 'viem';
 
 interface OnboardingHatMintingProps {

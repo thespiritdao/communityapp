@@ -1,7 +1,8 @@
 // src/components/NFTMintCardGeneral.tsx
 'use client';
 import { useState, useCallback } from 'react';
-import { useSendUserOperation, useCurrentUser } from '@coinbase/cdp-hooks';
+import { useCurrentUser } from '@coinbase/cdp-hooks';
+import { useSendUserOperationWithAttribution as useSendUserOperation } from '@/wallet/hooks/useSendUserOperationWithAttribution';
 import { encodeFunctionData } from 'viem';
 import { cn } from '@/lib/utils';
 

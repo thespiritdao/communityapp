@@ -7,7 +7,8 @@ import { useState, useEffect, useCallback } from 'react';
 import { useReadContract } from 'wagmi';
 import type { Abi } from 'viem';
 import { encodeFunctionData } from 'viem';
-import { useSendUserOperation, useCurrentUser } from '@coinbase/cdp-hooks';
+import { useCurrentUser } from '@coinbase/cdp-hooks';
+import { useSendUserOperationWithAttribution as useSendUserOperation } from '@/wallet/hooks/useSendUserOperationWithAttribution';
 import AdvocateMembershipABIJson from '@/abis/AdvocateMembershipABI.json';
 import DAOGovernorABIJson from '@/abis/DAO_GovernorABI.json';
 

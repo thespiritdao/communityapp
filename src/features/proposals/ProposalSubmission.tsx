@@ -2,7 +2,8 @@
 
 import type React from 'react';
 import { useCallback } from 'react';
-import { useEvmAddress, useSendUserOperation, useCurrentUser } from '@coinbase/cdp-hooks';
+import { useEvmAddress, useCurrentUser } from '@coinbase/cdp-hooks';
+import { useSendUserOperationWithAttribution as useSendUserOperation } from '@/wallet/hooks/useSendUserOperationWithAttribution';
 import type { Address } from 'viem';
 import { encodeFunctionData } from 'viem';
 import { useProposal } from '@/context/ProposalContext';

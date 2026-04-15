@@ -2,7 +2,8 @@
 
 import React, { useState } from 'react';
 import { toast } from 'react-hot-toast';
-import { useCurrentUser, useSendUserOperation } from '@coinbase/cdp-hooks';
+import { useCurrentUser } from '@coinbase/cdp-hooks';
+import { useSendUserOperationWithAttribution as useSendUserOperation } from '@/wallet/hooks/useSendUserOperationWithAttribution';
 import { usePublicClient } from 'wagmi';
 import { parseUnits, encodeFunctionData } from 'viem';
 import { Info, Flame, CheckCircle, Loader2, ArrowRight } from 'lucide-react';

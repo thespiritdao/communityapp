@@ -3,7 +3,8 @@
 import type React from 'react';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useEvmAddress } from '@coinbase/cdp-hooks';
+import { useEvmAddress, useCurrentUser } from '@coinbase/cdp-hooks';
+import { useSendUserOperationWithAttribution as useSendUserOperation } from '@/wallet/hooks/useSendUserOperationWithAttribution';
 import { usePublicClient } from 'wagmi';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -11,7 +12,6 @@ import { Label } from '@/components/ui/label';
 import { useToast } from '@/components/ui/use-toast';
 import { Trash2, AlertTriangle, Loader2 } from 'lucide-react';
 import { PodDeletionService } from '@/features/pods/services/PodDeletionService';
-import { useSendUserOperation, useCurrentUser } from '@coinbase/cdp-hooks';
 
 interface ExtendedPod {
   id: string;

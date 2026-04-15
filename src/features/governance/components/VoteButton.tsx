@@ -6,7 +6,8 @@ import { usePublicClient } from 'wagmi';
 import type { Abi } from 'viem';
 import { encodeFunctionData } from 'viem';
 import { useToast } from '@/components/ui/use-toast';
-import { useSendUserOperation, useCurrentUser } from '@coinbase/cdp-hooks';
+import { useCurrentUser } from '@coinbase/cdp-hooks';
+import { useSendUserOperationWithAttribution as useSendUserOperation } from '@/wallet/hooks/useSendUserOperationWithAttribution';
 import DAOGovernorABIJson from '@/abis/DAO_GovernorABI.json';
 
 const DAOGovernorABI = DAOGovernorABIJson as Abi;

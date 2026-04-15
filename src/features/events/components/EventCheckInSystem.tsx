@@ -30,7 +30,8 @@ import { QRCodeService } from '../services/QRCodeService';
 import { EventManagerService } from '../services/EventManagerService';
 import { QRScanner } from './QRScanner';
 import { useSimplifiedEventTransactions } from '../hooks/useSimplifiedEventTransactions';
-import { useSendUserOperation, useCurrentUser } from '@coinbase/cdp-hooks';
+import { useCurrentUser } from '@coinbase/cdp-hooks';
+import { useSendUserOperationWithAttribution as useSendUserOperation } from '@/wallet/hooks/useSendUserOperationWithAttribution';
 import { encodeFunctionData } from 'viem';
 
 const BASE_CHAIN_ID = 8453;

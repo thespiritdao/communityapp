@@ -16,7 +16,8 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { useEvmAddress, useSendUserOperation, useCurrentUser } from '@coinbase/cdp-hooks';
+import { useEvmAddress, useCurrentUser } from '@coinbase/cdp-hooks';
+import { useSendUserOperationWithAttribution as useSendUserOperation } from '@/wallet/hooks/useSendUserOperationWithAttribution';
 import { usePublicClient } from 'wagmi';
 import { encodeFunctionData, type Abi, type TransactionReceipt } from 'viem';
 import { parseEther } from 'viem';

@@ -1,7 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { useEvmAddress, useSendUserOperation, useCurrentUser } from '@coinbase/cdp-hooks';
+import { useEvmAddress, useCurrentUser } from '@coinbase/cdp-hooks';
+import { useSendUserOperationWithAttribution as useSendUserOperation } from '@/wallet/hooks/useSendUserOperationWithAttribution';
 import { encodeFunctionData } from 'viem';
 import { useToast } from '@/components/ui/use-toast';
 import { Button } from '@/components/ui/button';

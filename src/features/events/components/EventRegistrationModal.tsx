@@ -3,7 +3,8 @@
 import { useAuthContext } from '@/features/identity';
 import type React from 'react';
 import { useState, useEffect, useRef } from 'react';
-import { useEvmAddress, useSendUserOperation, useCurrentUser, useSignEvmMessage } from '@coinbase/cdp-hooks';
+import { useEvmAddress, useCurrentUser, useSignEvmMessage } from '@coinbase/cdp-hooks';
+import { useSendUserOperationWithAttribution as useSendUserOperation } from '@/wallet/hooks/useSendUserOperationWithAttribution';
 import { useRouter } from 'next/navigation';
 import { EventTokenDisplay } from './EventTokenDisplay';
 import {

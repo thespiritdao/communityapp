@@ -2,7 +2,8 @@
 'use client';
 
 import { useState } from 'react';
-import { useSendUserOperation, useCurrentUser } from '@coinbase/cdp-hooks';
+import { useCurrentUser } from '@coinbase/cdp-hooks';
+import { useSendUserOperationWithAttribution as useSendUserOperation } from '@/wallet/hooks/useSendUserOperationWithAttribution';
 import { encodeFunctionData } from 'viem';
 import AdvocateMembershipABI from '../../../abis/AdvocateMembershipABI.json';
 import { Button } from '@/components/ui/button';

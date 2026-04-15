@@ -34,7 +34,8 @@ import {
 } from '../hooks/useEvents';
 import { useEventManagementAccess } from '../hooks/useEventTokenGating';
 import { EventService } from '../lib/supabase';
-import { useEvmAddress, useSendUserOperation, useCurrentUser } from '@coinbase/cdp-hooks';
+import { useEvmAddress, useCurrentUser } from '@coinbase/cdp-hooks';
+import { useSendUserOperationWithAttribution as useSendUserOperation } from '@/wallet/hooks/useSendUserOperationWithAttribution';
 import Link from 'next/link';
 import { unifiedNotificationService as notificationService } from '@/services/unifiedNotificationService';
 import { useSimplifiedEventTransactions } from '../hooks/useSimplifiedEventTransactions';

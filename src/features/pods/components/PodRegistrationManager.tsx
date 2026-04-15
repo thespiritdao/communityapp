@@ -2,11 +2,11 @@
 
 import type React from 'react';
 import { useState } from 'react';
-import { useEvmAddress } from '@coinbase/cdp-hooks';
+import { useEvmAddress, useCurrentUser } from '@coinbase/cdp-hooks';
+import { useSendUserOperationWithAttribution as useSendUserOperation } from '@/wallet/hooks/useSendUserOperationWithAttribution';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
-import { useSendUserOperation, useCurrentUser } from '@coinbase/cdp-hooks';
 import { Loader2 } from 'lucide-react';
 
 // Your deployed contract address

@@ -2,7 +2,8 @@
 
 import type React from 'react';
 import { useState, useEffect } from 'react';
-import { useEvmAddress, useSendUserOperation, useCurrentUser } from '@coinbase/cdp-hooks';
+import { useEvmAddress, useCurrentUser } from '@coinbase/cdp-hooks';
+import { useSendUserOperationWithAttribution as useSendUserOperation } from '@/wallet/hooks/useSendUserOperationWithAttribution';
 import { useReadContract } from 'wagmi';
 import { parseUnits, formatUnits, encodeFunctionData } from 'viem';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
