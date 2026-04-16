@@ -1,36 +1,26 @@
 // src/wallet/hooks/useSendUserOperationWithAttribution.ts
 //
 // Drop-in replacement for useSendUserOperation from @coinbase/cdp-hooks.
-// Appends the SpiritDAO Builder Code suffix (ERC-8021) to every call's data
-// field so transactions are attributed to our app on base.dev.
+// Passes ERC-8021 dataSuffix as a top-level param to sendUserOperation so
+// the CDP SDK appends it to the outer UserOperation callData — the correct
+// location for Base builder code attribution indexing.
 //
 // Builder Code: bc_hqymcgxs
-// Encoded suffix: 0x62635f6871796d636778730b0080218021802180218021802180218021
-//
-// Usage: replace `useSendUserOperation` imports with this hook — API is identical.
+// Suffix format: [0x0b][ASCII "bc_hqymcgxs"][0x00 schema][16-byte ERC marker]
+// Encoded: 0x0b62635f6871796d636778730080218021802180218021802180218021
 
 import { useSendUserOperation } from '@coinbase/cdp-hooks';
 
-const ATTRIBUTION_SUFFIX = '0x62635f6871796d636778730b0080218021802180218021802180218021' as `0x${string}`;
-
-function appendSuffix(data: `0x${string}` | undefined): `0x${string}` {
-  if (!data || data === '0x') return ATTRIBUTION_SUFFIX;
-  return (data + ATTRIBUTION_SUFFIX.slice(2)) as `0x${string}`;
-}
+const ATTRIBUTION_SUFFIX = '0x0b62635f6871796d636778730080218021802180218021802180218021';
 
 export function useSendUserOperationWithAttribution() {
   const { sendUserOperation, ...rest } = useSendUserOperation();
 
   const sendUserOperationWithAttribution: typeof sendUserOperation = (params) => {
-    const patchedCalls = params.calls?.map((call) => ({
-      ...call,
-      data: appendSuffix(call.data as `0x${string}` | undefined),
-    }));
-
     return sendUserOperation({
       ...params,
-      calls: patchedCalls,
-    });
+      dataSuffix: ATTRIBUTION_SUFFIX,
+    } as any);
   };
 
   return { sendUserOperation: sendUserOperationWithAttribution, ...rest };
