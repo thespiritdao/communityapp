@@ -30,10 +30,10 @@ import {
   CheckCircle,
   Clock,
   Circle,
-  User,
   Loader2,
 } from 'lucide-react';
 import UserRecipientSelector from './UserRecipientSelector';
+import { UserProfileDisplay } from '@/components/UserProfileDisplay';
 import { getTreasuryAddress } from '../utils/treasuryAddressUtils';
 import {
   prepareDirectDistribution,
@@ -535,7 +535,8 @@ export function TreasuryManagement({
           duration: 8000,
         });
 
-        // Flash the distributed token balance row
+        // Switch to Overview so the balance flash is visible
+        setActiveTab('overview');
         setFlashTokenAddress(selectedToken);
         setTimeout(() => setFlashTokenAddress(null), 3000);
 
@@ -781,7 +782,20 @@ export function TreasuryManagement({
           {/* Overview Tab */}
           {activeTab === 'overview' && (
             <div className="space-y-4">
-              <h3 className="text-lg font-semibold">Token Balances</h3>
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-semibold">Token Balances</h3>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={refreshBalances}
+                  disabled={isLoadingBalances}
+                >
+                  <RefreshCw
+                    className={`h-4 w-4 mr-2 ${isLoadingBalances ? 'animate-spin' : ''}`}
+                  />
+                  Refresh
+                </Button>
+              </div>
               <div className="grid gap-4">
                 {balances.map((token) => {
                   const isSelf =
@@ -1233,53 +1247,27 @@ export function TreasuryManagement({
                                 </div>
                               )}
 
-                              {/* Recipients/Senders with profile modal integration */}
-                              <div className="flex flex-wrap gap-2">
+                              {/* Recipients/Senders with identity cards */}
+                              <div className="flex flex-col gap-1">
                                 {tx.recipient && (
-                                  <button
-                                    onClick={() =>
-                                      openProfileModal(tx.recipient!)
-                                    }
-                                    className="inline-flex items-center space-x-1 text-xs text-gray-600 px-2 py-1 rounded transition-colors"
-                                    onMouseEnter={(e) => {
-                                      e.currentTarget.style.color = '#2F5D50';
-                                      e.currentTarget.style.backgroundColor =
-                                        '#E8F1EE';
-                                    }}
-                                    onMouseLeave={(e) => {
-                                      e.currentTarget.style.color = '';
-                                      e.currentTarget.style.backgroundColor =
-                                        '';
-                                    }}
-                                  >
-                                    <User className="h-3 w-3" />
-                                    <span>
-                                      To: {tx.recipient.slice(0, 6)}...
-                                      {tx.recipient.slice(-4)}
-                                    </span>
-                                  </button>
+                                  <div className="flex items-center gap-2 text-xs text-gray-500">
+                                    <span className="w-7 shrink-0">To:</span>
+                                    <UserProfileDisplay
+                                      walletAddress={tx.recipient}
+                                      size="sm"
+                                      showModal={true}
+                                    />
+                                  </div>
                                 )}
                                 {tx.sender && (
-                                  <button
-                                    onClick={() => openProfileModal(tx.sender!)}
-                                    className="inline-flex items-center space-x-1 text-xs text-gray-600 px-2 py-1 rounded transition-colors"
-                                    onMouseEnter={(e) => {
-                                      e.currentTarget.style.color = '#2F5D50';
-                                      e.currentTarget.style.backgroundColor =
-                                        '#E8F1EE';
-                                    }}
-                                    onMouseLeave={(e) => {
-                                      e.currentTarget.style.color = '';
-                                      e.currentTarget.style.backgroundColor =
-                                        '';
-                                    }}
-                                  >
-                                    <User className="h-3 w-3" />
-                                    <span>
-                                      From: {tx.sender.slice(0, 6)}...
-                                      {tx.sender.slice(-4)}
-                                    </span>
-                                  </button>
+                                  <div className="flex items-center gap-2 text-xs text-gray-500">
+                                    <span className="w-7 shrink-0">From:</span>
+                                    <UserProfileDisplay
+                                      walletAddress={tx.sender}
+                                      size="sm"
+                                      showModal={true}
+                                    />
+                                  </div>
                                 )}
                               </div>
                             </div>
