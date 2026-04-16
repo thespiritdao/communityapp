@@ -506,14 +506,15 @@ export function TreasuryManagement({
       if (resultWithReceipt?.status === 'complete' || txHash) {
         console.log('🏦 Distribution successful:', txHash);
 
-        // Update transaction status in Supabase
-        if (pendingTransactionId) {
+        // Update transaction status in Supabase — use txId (local var) not pendingTransactionId
+        // (state flush is async so pendingTransactionId may still be null here)
+        if (txId) {
           try {
             const { PodTreasuryService } = await import(
               '../services/PodTreasuryService'
             );
             await PodTreasuryService.updateTransactionStatus(
-              pendingTransactionId,
+              txId,
               'completed',
               txHash,
             );
@@ -569,14 +570,14 @@ export function TreasuryManagement({
         cause: error?.cause,
       });
 
-      // Update transaction status in Supabase
-      if (pendingTransactionId) {
+      // Update transaction status in Supabase — use txId (local var) not pendingTransactionId
+      if (txId) {
         try {
           const { PodTreasuryService } = await import(
             '../services/PodTreasuryService'
           );
           await PodTreasuryService.updateTransactionStatus(
-            pendingTransactionId,
+            txId,
             'failed',
           );
           console.log('💾 Transaction status updated to failed');
