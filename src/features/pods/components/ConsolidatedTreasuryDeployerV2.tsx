@@ -37,7 +37,6 @@ const POD_AUTH_FACTORY_ADDRESS = (process.env.NEXT_PUBLIC_POD_AUTH_FACTORY ||
 const POD_BOUNTY_SERVICE_ADDRESS = (process.env
   .NEXT_PUBLIC_POD_BOUNTY_SERVICE ||
   '0xeCdDB060cD38439E0aC8874f159E961eB856407D') as `0x${string}`;
-const PODS_TESTING_MODE = process.env.NEXT_PUBLIC_PODS_TESTING === 'true';
 
 // Default supported tokens from environment (Your community currencies)
 const SYSTEM_TOKEN_ADDRESS = (process.env.NEXT_PUBLIC_SYSTEM_TOKEN ||
@@ -69,7 +68,6 @@ const TREASURY_FACTORY_ABI = [
       { name: 'podId', type: 'string' },
       { name: 'managementHatId', type: 'uint256' },
       { name: 'supportedTokens', type: 'address[]' },
-      { name: 'testingMode', type: 'bool' },
     ],
     outputs: [{ name: '', type: 'address' }],
     stateMutability: 'nonpayable',
@@ -239,7 +237,6 @@ export default function ConsolidatedTreasuryDeployerV2() {
         pod.id,
         getManagementHatIdBigInt(pod.management_hat_id),
         DEFAULT_SUPPORTED_TOKENS,
-        PODS_TESTING_MODE,
       ],
     };
   };
@@ -329,7 +326,6 @@ export default function ConsolidatedTreasuryDeployerV2() {
           selectedPod.id,
           getManagementHatIdBigInt(selectedPod.management_hat_id),
           DEFAULT_SUPPORTED_TOKENS,
-          PODS_TESTING_MODE,
         ],
       });
 

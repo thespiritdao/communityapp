@@ -78,9 +78,6 @@ contract PodTreasuryV2WithVoting is ReentrancyGuard {
     mapping(uint256 => Proposal) public proposals;
     uint256[] public activeProposalIds;
 
-    // Testing mode flag - when true, allows single-sig operations
-    bool public testingMode;
-
     // ============================================================================
     // EVENTS
     // ============================================================================
@@ -116,7 +113,6 @@ contract PodTreasuryV2WithVoting is ReentrancyGuard {
         uint256 timestamp
     );
 
-    event TestingModeChanged(bool enabled, address changedBy);
 
     // ============================================================================
     // MODIFIERS
@@ -139,18 +135,6 @@ contract PodTreasuryV2WithVoting is ReentrancyGuard {
         _;
     }
 
-    // Allows single-sig when testing mode is enabled, requires majority otherwise
-    modifier requiresMajorityOrTesting() {
-        if (!testingMode) {
-            revert("Use proposal system for multi-sig operations");
-        }
-        require(
-            hatsContract.balanceOf(msg.sender, managementHatId) > 0,
-            "Only pod managers can execute"
-        );
-        _;
-    }
-
     // ============================================================================
     // CONSTRUCTOR
     // ============================================================================
@@ -161,7 +145,6 @@ contract PodTreasuryV2WithVoting is ReentrancyGuard {
         string memory _podId,
         address[] memory _supportedTokens,
         address _authorizedProxy,
-        bool _testingMode,
         address _bountyManager
     ) ReentrancyGuard() {
         require(_hatsContract != address(0), "Invalid hats contract");
@@ -172,7 +155,6 @@ contract PodTreasuryV2WithVoting is ReentrancyGuard {
         managementHatId = _managementHatId;
         podId = _podId;
         authorizedProxy = _authorizedProxy;
-        testingMode = _testingMode;
 
         for (uint i = 0; i < _supportedTokens.length; i++) {
             require(_supportedTokens[i] != address(0), "Invalid token address");
@@ -185,21 +167,6 @@ contract PodTreasuryV2WithVoting is ReentrancyGuard {
         if (_authorizedProxy != address(0)) {
             emit ProxyAuthorized(_authorizedProxy);
         }
-
-        emit TestingModeChanged(_testingMode, msg.sender);
-    }
-
-    // ============================================================================
-    // TESTING MODE MANAGEMENT
-    // ============================================================================
-
-    /**
-     * @dev Toggle testing mode (requires majority approval via proposal in production)
-     * When testing mode is OFF, all distribution functions require majority voting
-     */
-    function setTestingMode(bool _enabled) external onlyPodManagers {
-        testingMode = _enabled;
-        emit TestingModeChanged(_enabled, msg.sender);
     }
 
     // ============================================================================
@@ -443,15 +410,14 @@ contract PodTreasuryV2WithVoting is ReentrancyGuard {
     }
 
     /**
-     * @dev Direct distribution (TESTING MODE ONLY or via authorized proxy)
-     * In production, use proposeDistribution instead
+     * @dev Direct distribution — callable by hat holders or the authorized proxy
      */
     function distributeTokens(
         address token,
         address[] memory recipients,
         uint256[] memory amounts,
         string memory reason
-    ) external requiresMajorityOrTesting nonReentrant {
+    ) external onlyPodManagersOrProxy nonReentrant {
         require(token != address(0), "Invalid token address");
         require(recipients.length > 0, "No recipients provided");
         require(recipients.length == amounts.length, "Arrays length mismatch");
@@ -479,7 +445,7 @@ contract PodTreasuryV2WithVoting is ReentrancyGuard {
         address[] memory recipients,
         uint256 totalAmount,
         string memory reason
-    ) external requiresMajorityOrTesting nonReentrant {
+    ) external onlyPodManagersOrProxy nonReentrant {
         require(token != address(0), "Invalid token address");
         require(recipients.length > 0, "No recipients provided");
         require(totalAmount > 0, "Total amount must be greater than 0");
@@ -509,7 +475,7 @@ contract PodTreasuryV2WithVoting is ReentrancyGuard {
         address token,
         address recipient,
         uint256 amount
-    ) external requiresMajorityOrTesting nonReentrant {
+    ) external onlyPodManagersOrProxy nonReentrant {
         require(token != address(0), "Invalid token address");
         require(recipient != address(0), "Invalid recipient address");
         require(amount > 0, "Amount must be greater than 0");

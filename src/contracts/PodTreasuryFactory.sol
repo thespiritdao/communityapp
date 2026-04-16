@@ -64,8 +64,7 @@ contract PodTreasuryFactory is Ownable, ReentrancyGuard {
     function deployTreasury(
         string memory podId,
         uint256 managementHatId,
-        address[] memory supportedTokens,
-        bool testingMode
+        address[] memory supportedTokens
     ) external nonReentrant returns (address) {
         require(bytes(podId).length > 0, "Pod ID cannot be empty");
         require(managementHatId > 0, "Invalid management hat ID");
@@ -81,7 +80,6 @@ contract PodTreasuryFactory is Ownable, ReentrancyGuard {
             podId,
             tokens,
             authorizedProxy,
-            testingMode,
             bountyManager
         );
         
@@ -126,8 +124,7 @@ contract PodTreasuryFactory is Ownable, ReentrancyGuard {
     function batchDeployTreasuries(
         string[] memory podIds,
         uint256[] memory managementHatIds,
-        address[][] memory supportedTokens,
-        bool testingMode
+        address[][] memory supportedTokens
     ) external returns (address[] memory) {
         require(podIds.length == managementHatIds.length, "Arrays length mismatch");
 
@@ -138,7 +135,7 @@ contract PodTreasuryFactory is Ownable, ReentrancyGuard {
                 ? supportedTokens[i]
                 : defaultSupportedTokens;
 
-            deployedTreasuries[i] = this.deployTreasury(podIds[i], managementHatIds[i], tokens, testingMode);
+            deployedTreasuries[i] = this.deployTreasury(podIds[i], managementHatIds[i], tokens);
         }
 
         return deployedTreasuries;
@@ -170,13 +167,12 @@ contract PodTreasuryFactory is Ownable, ReentrancyGuard {
     
     function predictTreasuryAddress(
         string memory podId,
-        uint256 managementHatId,
-        bool testingMode
+        uint256 managementHatId
     ) external view returns (address) {
         bytes32 salt = keccak256(abi.encodePacked(podId, managementHatId, block.timestamp));
         bytes memory bytecode = abi.encodePacked(
             type(PodTreasuryV2WithVoting).creationCode,
-            abi.encode(hatsContract, managementHatId, podId, defaultSupportedTokens, authorizedProxy, testingMode, bountyManager)
+            abi.encode(hatsContract, managementHatId, podId, defaultSupportedTokens, authorizedProxy, bountyManager)
         );
         
         bytes32 hash = keccak256(

@@ -19,7 +19,6 @@ const POD_TREASURY_FACTORY_ADDRESS = (process.env
   '0x0000000000000000000000000000000000000000') as `0x${string}`;
 const POD_CREATION_MANAGER_ADDRESS = process.env
   .NEXT_PUBLIC_POD_CREATION_MANAGER as `0x${string}`;
-const PODS_TESTING_MODE = process.env.NEXT_PUBLIC_PODS_TESTING === 'true';
 
 // Default supported tokens from environment (Your community currencies)
 const SYSTEM_TOKEN_ADDRESS = (process.env.NEXT_PUBLIC_SYSTEM_TOKEN ||
@@ -49,7 +48,6 @@ const TREASURY_FACTORY_ABI = [
       { name: 'podId', type: 'string' },
       { name: 'managementHatId', type: 'uint256' },
       { name: 'supportedTokens', type: 'address[]' },
-      { name: 'testingMode', type: 'bool' },
     ],
     outputs: [{ name: '', type: 'address' }],
     stateMutability: 'nonpayable',
@@ -265,7 +263,6 @@ export default function ConsolidatedTreasuryDeployer({
           selectedPod.id,
           getManagementHatIdBigInt(selectedPod.management_hat_id),
           DEFAULT_SUPPORTED_TOKENS,
-          PODS_TESTING_MODE,
         ],
       });
 

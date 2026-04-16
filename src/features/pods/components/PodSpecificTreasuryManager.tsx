@@ -19,7 +19,6 @@ import { Wallet, Plus, AlertTriangle, CheckCircle, Loader2 } from 'lucide-react'
 const POD_TREASURY_FACTORY_ADDRESS = (process.env
   .NEXT_PUBLIC_POD_TREASURY_FACTORY ||
   '0x0000000000000000000000000000000000000000') as `0x${string}`;
-const PODS_TESTING_MODE = process.env.NEXT_PUBLIC_PODS_TESTING === 'true';
 
 // Default supported tokens from environment (Your community currencies)
 const SYSTEM_TOKEN_ADDRESS = (process.env.NEXT_PUBLIC_SYSTEM_TOKEN ||
@@ -47,7 +46,6 @@ const TREASURY_FACTORY_ABI = [
       { name: 'podId', type: 'string' },
       { name: 'managementHatId', type: 'uint256' },
       { name: 'supportedTokens', type: 'address[]' },
-      { name: 'testingMode', type: 'bool' },
     ],
     outputs: [{ name: '', type: 'address' }],
     stateMutability: 'nonpayable',
@@ -226,7 +224,6 @@ export function PodSpecificTreasuryManager({
           localPod.id,
           getManagementHatIdBigInt(localPod.management_hat_id),
           DEFAULT_SUPPORTED_TOKENS,
-          PODS_TESTING_MODE,
         ],
       });
 
