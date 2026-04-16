@@ -3,8 +3,6 @@ pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "./PodTreasuryV2WithVoting.sol";
 
 
@@ -165,23 +163,6 @@ contract PodTreasuryFactory is Ownable, ReentrancyGuard {
         return allTreasuries.length;
     }
     
-    function predictTreasuryAddress(
-        string memory podId,
-        uint256 managementHatId
-    ) external view returns (address) {
-        bytes32 salt = keccak256(abi.encodePacked(podId, managementHatId, block.timestamp));
-        bytes memory bytecode = abi.encodePacked(
-            type(PodTreasuryV2WithVoting).creationCode,
-            abi.encode(hatsContract, managementHatId, podId, defaultSupportedTokens, authorizedProxy, bountyManager)
-        );
-        
-        bytes32 hash = keccak256(
-            abi.encodePacked(bytes1(0xff), address(this), salt, keccak256(bytecode))
-        );
-        
-        return address(uint160(uint(hash)));
-    }
-    
     function updateDefaultSupportedTokens(address[] memory newTokens) external onlyOwner {
         defaultSupportedTokens = newTokens;
     }
@@ -190,6 +171,28 @@ contract PodTreasuryFactory is Ownable, ReentrancyGuard {
         return defaultSupportedTokens;
     }
     
+    /**
+     * @dev Update the treasury address for an existing pod (owner only)
+     * Used when redeploying a treasury contract for an existing pod
+     */
+    function updateTreasury(
+        string memory podId,
+        address newTreasuryAddress
+    ) external onlyOwner {
+        require(isPodTreasuryDeployed[podId], "Pod not registered");
+        require(newTreasuryAddress != address(0), "Invalid treasury address");
+
+        address oldTreasury = podTreasuries[podId];
+        isTreasury[oldTreasury] = false;
+
+        podTreasuries[podId] = newTreasuryAddress;
+        isTreasury[newTreasuryAddress] = true;
+        treasuryToPod[newTreasuryAddress] = podId;
+        allTreasuries.push(newTreasuryAddress);
+
+        emit TreasuryRegistered(podId, newTreasuryAddress, 0, msg.sender);
+    }
+
     /**
      * @dev Update the authorized proxy address (owner only)
      * This allows updating the proxy reference after deployment
