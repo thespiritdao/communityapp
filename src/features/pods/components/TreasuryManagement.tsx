@@ -475,7 +475,11 @@ export function TreasuryManagement({
       const callsFormatted = calls.map((call) => ({
         to: call.address,
         value: call.value || 0n,
-        data: call.data,
+        data: encodeFunctionData({
+          abi: call.abi,
+          functionName: call.functionName,
+          args: call.args,
+        }),
       }));
 
       console.log('📋 Formatted calls for User Operation:', callsFormatted.length);

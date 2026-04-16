@@ -5,7 +5,7 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
-interface IHats {
+interface ZHatsProtocol {
     function balanceOf(address account, uint256 id) external view returns (uint256);
     function hatSupply(uint256 hatId) external view returns (uint32);
 }
@@ -24,7 +24,7 @@ interface IHats {
 contract PodTreasuryV2WithVoting is ReentrancyGuard {
     using SafeERC20 for IERC20;
 
-    IHats public immutable hatsContract;
+    ZHatsProtocol public immutable hatsContract;
     uint256 public immutable managementHatId;
     string public podId;
     address public authorizedProxy;
@@ -151,7 +151,7 @@ contract PodTreasuryV2WithVoting is ReentrancyGuard {
         require(_managementHatId > 0, "Invalid management hat ID");
         require(bytes(_podId).length > 0, "Pod ID cannot be empty");
 
-        hatsContract = IHats(_hatsContract);
+        hatsContract = ZHatsProtocol(_hatsContract);
         managementHatId = _managementHatId;
         podId = _podId;
         authorizedProxy = _authorizedProxy;
