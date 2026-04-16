@@ -1174,8 +1174,8 @@ export function TreasuryManagement({
                     const tokenSymbol = tokenInfo?.symbol || 'Unknown';
                     const formattedAmount =
                       tx.amount && tokenInfo
-                        ? `${Number.parseFloat(tx.amount).toFixed(4)} ${tokenSymbol}`
-                        : `${tx.amount || '0'} ${tokenSymbol}`;
+                        ? `${Number.parseFloat(tx.amount).toFixed(4)} $${tokenSymbol}`
+                        : `${tx.amount || '0'} $${tokenSymbol}`;
 
                     return (
                       <div
@@ -1208,11 +1208,13 @@ export function TreasuryManagement({
                             </div>
 
                             <div className="flex-1 min-w-0">
-                              {/* Amount and type */}
-                              <div className="flex items-center space-x-2 mb-1">
-                                <span className="font-medium text-gray-900">
-                                  {formattedAmount}
-                                </span>
+                              {/* Line 1: Amount */}
+                              <div className="font-medium text-gray-900 mb-1">
+                                {formattedAmount}
+                              </div>
+
+                              {/* Line 2: Type badge + status */}
+                              <div className="flex items-center gap-2 mb-2">
                                 <Badge
                                   variant={
                                     tx.type === 'deposit'
@@ -1224,6 +1226,43 @@ export function TreasuryManagement({
                                 >
                                   {tx.type}
                                 </Badge>
+                                <div className="flex items-center gap-1">
+                                  {tx.status === 'completed' && (
+                                    <CheckCircle
+                                      className="h-3.5 w-3.5"
+                                      style={{ color: '#3F7A5A' }}
+                                    />
+                                  )}
+                                  {tx.status === 'pending' && (
+                                    <Clock
+                                      className="h-3.5 w-3.5"
+                                      style={{ color: '#C6933F' }}
+                                    />
+                                  )}
+                                  {tx.status === 'failed' && (
+                                    <Circle
+                                      className="h-3.5 w-3.5"
+                                      style={{ color: '#8B3A3A' }}
+                                    />
+                                  )}
+                                  <span className="text-xs font-medium capitalize text-gray-600">
+                                    {tx.status}
+                                  </span>
+                                </div>
+                                {tx.txHash && (
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      window.open(
+                                        `https://basescan.org/tx/${tx.txHash}`,
+                                        '_blank',
+                                      )
+                                    }
+                                    className="ml-auto text-gray-400 hover:text-gray-600"
+                                  >
+                                    <ExternalLink className="h-3 w-3" />
+                                  </button>
+                                )}
                               </div>
 
                               {/* Date */}
@@ -1267,52 +1306,6 @@ export function TreasuryManagement({
                               </div>
                             </div>
                           </div>
-
-                          {/* Right side - Status and actions */}
-                          <div className="flex flex-col items-end space-y-2 flex-shrink-0">
-                            {/* Status with icon */}
-                            <div className="flex items-center space-x-1">
-                              {tx.status === 'completed' && (
-                                <CheckCircle
-                                  className="h-4 w-4"
-                                  style={{ color: '#3F7A5A' }}
-                                />
-                              )}
-                              {tx.status === 'pending' && (
-                                <Clock
-                                  className="h-4 w-4"
-                                  style={{ color: '#C6933F' }}
-                                />
-                              )}
-                              {tx.status === 'failed' && (
-                                <Circle
-                                  className="h-4 w-4"
-                                  style={{ color: '#8B3A3A' }}
-                                />
-                              )}
-                              <span className="text-sm font-medium capitalize">
-                                {tx.status}
-                              </span>
-                            </div>
-
-                            {/* Block explorer link */}
-                            {tx.txHash && (
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                onClick={() =>
-                                  window.open(
-                                    `https://basescan.org/tx/${tx.txHash}`,
-                                    '_blank',
-                                  )
-                                }
-                                className="h-8 w-8 p-0"
-                              >
-                                <ExternalLink className="h-3 w-3" />
-                              </Button>
-                            )}
-                          </div>
-                        </div>
                       </div>
                     );
                   })}
