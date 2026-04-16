@@ -35,7 +35,7 @@ export default function FixProxyPage() {
         evmSmartAccount: smartAccount,
         network: 'base',
         calls: [{ to: address, value: 0n, data }],
-        useCdpPaymaster: true,
+        paymasterUrl: '/api/paymaster',
       });
       console.log(name, 'result:', result);
       setStatus(s => ({ ...s, [name]: 'done' }));
