@@ -160,6 +160,9 @@ export function TreasuryManagement({
     string | null
   >(null);
 
+  // Track last distributed token for balance flash highlight
+  const [flashTokenAddress, setFlashTokenAddress] = useState<string | null>(null);
+
   // Listen for treasury funding events from funding modal
   useEffect(() => {
     const handleTreasuryUpdate = (event: CustomEvent) => {
@@ -520,10 +523,21 @@ export function TreasuryManagement({
           }
         }
 
+        const distributedToken = balances.find((t) => t.address === selectedToken);
+        const recipientCount = recipients.filter((r) => r.address).length;
+        const distributedAmount = distributionType === 'equal'
+          ? totalAmount
+          : recipients.filter((r) => r.address).reduce((sum, r) => sum + parseFloat(r.amount || '0'), 0).toString();
+
         toast({
-          title: 'Distribution Successful!',
-          description: `Funds distributed to ${recipients.filter((r) => r.address).length} recipient(s)`,
+          title: '✓ Distribution Sent',
+          description: `${distributedAmount} ${distributedToken?.symbol ?? ''} distributed to ${recipientCount} recipient${recipientCount !== 1 ? 's' : ''}`,
+          duration: 8000,
         });
+
+        // Flash the distributed token balance row
+        setFlashTokenAddress(selectedToken);
+        setTimeout(() => setFlashTokenAddress(null), 3000);
 
         // Reset form
         setRecipients([{ address: '', name: '', amount: '' }]);
@@ -777,7 +791,7 @@ export function TreasuryManagement({
                   return (
                     <div
                       key={token.address}
-                      className="flex items-center justify-between p-4 border rounded-lg"
+                      className={`flex items-center justify-between p-4 border rounded-lg transition-colors duration-500 ${flashTokenAddress === token.address ? 'bg-green-50 border-green-400' : ''}`}
                     >
                       <div>
                         <div className="inline-flex items-center gap-2">
