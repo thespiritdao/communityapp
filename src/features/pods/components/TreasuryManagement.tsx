@@ -547,7 +547,8 @@ export function TreasuryManagement({
         setPendingTransactionId(null);
         setIsMetadataStored(false);
 
-        // Refresh treasury data
+        // Refresh treasury data — delay to allow RPC node to index the confirmed tx
+        await new Promise((resolve) => setTimeout(resolve, 4000));
         await refreshBalances();
         await refreshTransactions();
       } else {
