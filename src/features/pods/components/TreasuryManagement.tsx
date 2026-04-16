@@ -1306,6 +1306,7 @@ export function TreasuryManagement({
                               </div>
                             </div>
                           </div>
+                        </div>
                       </div>
                     );
                   })}
