@@ -3,7 +3,9 @@
 import type React from 'react';
 import { useState, useEffect } from 'react';
 import { useEvmAddress } from '@coinbase/cdp-hooks';
-import { usePublicClient, useWriteContract } from 'wagmi'; // TODO: Convert useWriteContract to CDP pattern
+import { usePublicClient } from 'wagmi';
+import { useSendUserOperationWithAttribution } from '@/wallet/hooks/useSendUserOperationWithAttribution';
+import { encodeFunctionData } from 'viem';
 import { parseAbiItem, type Abi } from 'viem';
 import DAOGovernorABIJson from '@/abis/DAOGovernorABI.json';
 
@@ -64,7 +66,8 @@ export const ProposalsList = () => {
   const [hasVotedMap, setHasVotedMap] = useState<Record<string, boolean>>({});
 
   // Cancel proposal function
-  const { writeContract: cancelProposal, isPending: isCancelling } = useWriteContract();
+  const { sendUserOperation: cancelProposal, status: cancelStatus } = useSendUserOperationWithAttribution();
+  const isCancelling = cancelStatus === 'pending';
 
   // Fetch proposals from on-chain events
   useEffect(() => {
@@ -225,11 +228,16 @@ export const ProposalsList = () => {
 
     try {
       await cancelProposal({
-        address: GOVERNOR_ADDRESS,
-        abi: DAOGovernorABI,
-        functionName: 'cancel',
-        args: [selectedProposal.id],
-      });
+        calls: [{
+          to: GOVERNOR_ADDRESS,
+          value: 0n,
+          data: encodeFunctionData({
+            abi: DAOGovernorABI,
+            functionName: 'cancel',
+            args: [selectedProposal.id],
+          }),
+        }],
+      } as any);
       setCancelDialogOpen(false);
       setSelectedProposal(null);
       // Refresh proposals after cancellation

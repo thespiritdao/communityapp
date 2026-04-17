@@ -3,8 +3,9 @@
 
 import { useState } from 'react';
 import { useEvmAddress } from '@coinbase/cdp-hooks';
-import { useWriteContract, useWaitForTransactionReceipt, useReadContract } from 'wagmi';
-import { parseAbi } from 'viem';
+import { useReadContract } from 'wagmi';
+import { parseAbi, encodeFunctionData } from 'viem';
+import { useSendUserOperationWithAttribution } from '@/wallet/hooks/useSendUserOperationWithAttribution';
 
 const FACTORY_ADDRESS = process.env.NEXT_PUBLIC_POD_TREASURY_FACTORY as `0x${string}`;
 
@@ -50,24 +51,30 @@ export function TreasuryRegistrationTool() {
   });
 
   // Registration transaction
-  const { writeContract, data: hash, isPending, error } = useWriteContract();
-  const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash });
+  const { sendUserOperation: writeContract, status } = useSendUserOperationWithAttribution();
+  const isPending = status === 'pending';
+  const isSuccess = (status as string) === 'complete';
 
-  const handleRegister = () => {
+  const handleRegister = async () => {
     if (!selectedTreasury) return;
 
     const hatIdBigInt = BigInt(selectedTreasury.managementHatId);
 
-    writeContract({
-      address: FACTORY_ADDRESS,
-      abi: factoryABI,
-      functionName: 'registerExistingTreasury',
-      args: [
-        selectedTreasury.podId,
-        selectedTreasury.treasuryAddress as `0x${string}`,
-        hatIdBigInt,
-      ],
-    });
+    await writeContract({
+      calls: [{
+        to: FACTORY_ADDRESS,
+        value: 0n,
+        data: encodeFunctionData({
+          abi: factoryABI,
+          functionName: 'registerExistingTreasury',
+          args: [
+            selectedTreasury.podId,
+            selectedTreasury.treasuryAddress as `0x${string}`,
+            hatIdBigInt,
+          ],
+        }),
+      }],
+    } as any);
   };
 
   const isOwner = userAddress && factoryOwner &&
@@ -148,46 +155,26 @@ export function TreasuryRegistrationTool() {
               setSelectedTreasury(UNREGISTERED_TREASURY);
               handleRegister();
             }}
-            disabled={isPending || isConfirming}
+            disabled={isPending || isPending}
             style={{
               padding: '8px 16px',
-              backgroundColor: isPending || isConfirming ? '#9ca3af' : '#2563eb',
+              backgroundColor: isPending || isPending ? '#9ca3af' : '#2563eb',
               color: 'white',
               borderRadius: '6px',
               border: 'none',
-              cursor: isPending || isConfirming ? 'not-allowed' : 'pointer',
+              cursor: isPending || isPending ? 'not-allowed' : 'pointer',
               fontSize: '14px',
               fontWeight: 'bold',
             }}
           >
-            {isPending ? 'Waiting for approval...' : isConfirming ? 'Registering...' : 'Register Treasury'}
+            {isPending ? 'Waiting for approval...' : isPending ? 'Registering...' : 'Register Treasury'}
           </button>
         )}
       </div>
 
-      {error && (
-        <div style={{ padding: '16px', backgroundColor: '#fee2e2', borderRadius: '8px', marginBottom: '16px' }}>
-          <p style={{ fontWeight: 'bold' }}>❌ Error:</p>
-          <p style={{ fontSize: '14px' }}>{error.message}</p>
-        </div>
-      )}
-
-      {hash && (
+      {isSuccess && (
         <div style={{ padding: '16px', backgroundColor: '#dbeafe', borderRadius: '8px', marginBottom: '16px' }}>
-          <p style={{ fontWeight: 'bold', marginBottom: '8px' }}>
-            {isConfirming ? '⏳ Transaction pending...' : '✅ Transaction confirmed!'}
-          </p>
-          <p style={{ fontSize: '14px', wordBreak: 'break-all' }}>
-            <strong>Hash:</strong> {hash}
-          </p>
-          <a
-            href={`https://basescan.org/tx/${hash}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{ fontSize: '14px', color: '#2563eb', textDecoration: 'underline' }}
-          >
-            View on BaseScan →
-          </a>
+          <p style={{ fontWeight: 'bold', marginBottom: '8px' }}>✅ Transaction confirmed!</p>
         </div>
       )}
 

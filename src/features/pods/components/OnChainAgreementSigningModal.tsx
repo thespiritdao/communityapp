@@ -14,9 +14,10 @@ import {
   CheckCircle,
 } from 'lucide-react';
 import { useEvmAddress } from '@coinbase/cdp-hooks';
-import { useWalletClient, usePublicClient } from 'wagmi';
+import { usePublicClient } from 'wagmi';
 import { AgreementIPFSService } from '../services/AgreementIPFSService';
-import { keccak256, toHex } from 'viem';
+import { keccak256, toHex, encodeFunctionData } from 'viem';
+import { useSendUserOperationWithAttribution } from '@/wallet/hooks/useSendUserOperationWithAttribution';
 
 interface OnChainAgreementSigningModalProps {
   isOpen: boolean;
@@ -59,7 +60,7 @@ export const OnChainAgreementSigningModal: React.FC<
 
   const { toast } = useToast();
   const { evmAddress: address } = useEvmAddress();
-  const { data: walletClient } = useWalletClient();
+  const { sendUserOperation } = useSendUserOperationWithAttribution();
   const publicClient = usePublicClient();
 
   // Eligibility Module ABI - only the functions we need
@@ -176,7 +177,7 @@ export const OnChainAgreementSigningModal: React.FC<
   };
 
   const handleSignAgreement = async () => {
-    if (!address || !walletClient) {
+    if (!address) {
       toast({
         title: 'Wallet Not Connected',
         description: 'Please connect your wallet to sign the agreement.',
@@ -213,50 +214,31 @@ export const OnChainAgreementSigningModal: React.FC<
         duration: 3000,
       });
 
-      // Call signAgreement on the eligibility module
-      // ✅ FIXED: Only pass agreementHash (not hatId) to match contract signature
-      const txHash = await walletClient.writeContract({
-        address: eligibilityModuleAddress,
-        abi: ELIGIBILITY_MODULE_ABI,
-        functionName: 'signAgreement',
-        args: [agreementHash], // ✅ FIXED: Only ONE parameter (agreementHash)
-      });
-
-      console.log('⏳ Transaction submitted:', txHash);
+      await sendUserOperation({
+        calls: [{
+          to: eligibilityModuleAddress,
+          value: 0n,
+          data: encodeFunctionData({
+            abi: ELIGIBILITY_MODULE_ABI,
+            functionName: 'signAgreement',
+            args: [agreementHash],
+          }),
+        }],
+      } as any);
 
       toast({
-        title: 'Transaction Submitted',
-        description: 'Waiting for confirmation...',
-        duration: 3000,
+        title: 'Agreement Signed! ✅',
+        description:
+          'You are now eligible for membership. A pod leader can now add you as a member.',
+        duration: 8000,
       });
 
-      // Wait for transaction confirmation
-      if (publicClient) {
-        const receipt = await publicClient.waitForTransactionReceipt({
-          hash: txHash,
-        });
+      setHasAlreadySigned(true);
+      onSuccess?.();
 
-        if (receipt.status === 'success') {
-          console.log('✅ Agreement signed successfully on-chain!');
-
-          toast({
-            title: 'Agreement Signed! ✅',
-            description:
-              'You are now eligible for membership. A pod leader can now add you as a member.',
-            duration: 8000,
-          });
-
-          setHasAlreadySigned(true);
-          onSuccess?.();
-
-          // Close modal after a short delay
-          setTimeout(() => {
-            onClose();
-          }, 2000);
-        } else {
-          throw new Error('Transaction failed');
-        }
-      }
+      setTimeout(() => {
+        onClose();
+      }, 2000);
     } catch (error: any) {
       console.error('❌ Failed to sign agreement:', error);
 
