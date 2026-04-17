@@ -23,6 +23,8 @@ export interface ExplorerEvent {
   pod_id?: string;
   pod_name?: string;
   actor?: string;
+  actor_address?: string;
+  recipient_address?: string;
   title: string;
   amount?: string;
   url?: string;
@@ -185,7 +187,7 @@ export async function GET(req: NextRequest) {
     if (!typeFilter || typeFilter === 'treasury') {
       const treasuryQuery = supabaseAdmin
         .from('treasury_transactions')
-        .select('id, type, amount_formatted, token_symbol, created_at, pod_id, sender_address, recipient_address, reason, pods(name)')
+        .select('id, type, amount_formatted, token_symbol, created_at, pod_id, sender_address, recipient_address, reason, tx_hash, pods(name)')
         .eq('status', 'completed')
         .order('created_at', { ascending: false })
         .limit(100);
@@ -195,7 +197,7 @@ export async function GET(req: NextRequest) {
       const { data: txns } = await treasuryQuery;
       (txns ?? []).forEach((t: any) => {
         const amount = t.amount_formatted
-          ? `${t.amount_formatted} ${t.token_symbol ?? ''}`
+          ? `${t.amount_formatted} $${t.token_symbol ?? ''}`
           : undefined;
         treasuryEvents.push({
           id: `treasury-${t.id}`,
@@ -204,6 +206,8 @@ export async function GET(req: NextRequest) {
           pod_id: t.pod_id,
           pod_name: t.pods?.name,
           actor: t.sender_address,
+          actor_address: t.sender_address,
+          recipient_address: t.recipient_address,
           title: `Treasury ${t.type}: ${amount ?? ''}${t.reason ? ` — ${t.reason}` : ''}`,
           amount,
           url: t.pod_id ? `/pods/${t.pod_id}` : undefined,
@@ -345,8 +349,11 @@ export async function GET(req: NextRequest) {
     const all = merged.map((e) => ({
       ...e,
       actor: e.actor
-        ? (nameMap[e.actor.toLowerCase()] ?? undefined) // omit if no name found
+        ? (nameMap[e.actor.toLowerCase()] ?? undefined)
         : undefined,
+      // preserve raw addresses for UserProfileDisplay in the frontend
+      actor_address: e.actor_address,
+      recipient_address: e.recipient_address,
     }));
 
     const paginated = all.slice(offsetParam, offsetParam + LIMIT);

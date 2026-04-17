@@ -6,6 +6,7 @@ import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import styled from 'styled-components';
 import type { ExplorerEvent } from '@/app/api/explorer/route';
+import { UserProfileDisplay } from '@/components/UserProfileDisplay';
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -366,10 +367,30 @@ export default function ExplorerPage() {
                       {TYPE_LABELS[item.type] ?? item.type}
                     </TypeBadge>
                     {item.pod_name && <span>{item.pod_name}</span>}
-                    {item.actor && <span>{item.actor}</span>}
                     {item.amount && <AmountBadge>{item.amount}</AmountBadge>}
                     <span>{formatDate(item.timestamp)}</span>
                   </CardMeta>
+                  {item.type === 'treasury_movement' && (item.actor_address || item.recipient_address) && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginTop: 8 }}>
+                      {item.actor_address && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: '#6b7280' }}>
+                          <span style={{ width: 32, flexShrink: 0 }}>From:</span>
+                          <UserProfileDisplay walletAddress={item.actor_address} size="sm" showModal={true} />
+                        </div>
+                      )}
+                      {item.recipient_address && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: '#6b7280' }}>
+                          <span style={{ width: 32, flexShrink: 0 }}>To:</span>
+                          <UserProfileDisplay walletAddress={item.recipient_address} size="sm" showModal={true} />
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  {item.type !== 'treasury_movement' && item.actor && (
+                    <CardMeta style={{ marginTop: 4 }}>
+                      <span>{item.actor}</span>
+                    </CardMeta>
+                  )}
                 </CardLeft>
               </CardRow>
             </EventCard>
