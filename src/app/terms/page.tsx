@@ -109,8 +109,9 @@ export default function TermsOfServicePage() {
           </h3>
           <ul className="list-disc pl-6 mb-4 text-gray-700">
             <li>
-              <strong>Wallet Security:</strong> Safeguarding your private keys
-              and wallet access credentials
+              <strong>Account Security:</strong> Safeguarding the authentication
+              credentials (email, social login) you use to access your embedded
+              wallet account
             </li>
             <li>
               <strong>Transaction Verification:</strong> Reviewing all
@@ -194,21 +195,32 @@ export default function TermsOfServicePage() {
           </h2>
 
           <h3 className="text-xl font-semibold text-gray-800 mb-3">
-            4.1 Wallet Connection
+            4.1 Wallet Account
           </h3>
           <p className="text-gray-700 mb-4">
-            To use the Platform, you must create a compatible Web3 wallet (e.g.,
-            Coinbase Wallet). You are solely responsible for:
+            The Platform uses Coinbase-hosted embedded wallets provided through
+            the Coinbase Developer Platform (CDP). When you sign up, a wallet
+            is created and custodied by Coinbase and linked to the authentication
+            credentials you provide (such as email or social login). You are
+            solely responsible for:
           </p>
           <ul className="list-disc pl-6 mb-4 text-gray-700">
-            <li>Maintaining the security of your wallet private keys</li>
-            <li>Any transactions signed with your wallet</li>
-            <li>Losses resulting from compromised or lost private keys</li>
+            <li>
+              Maintaining the security of the authentication credentials you
+              use to access your embedded wallet account
+            </li>
+            <li>Any transactions you authorize through the Platform</li>
+            <li>
+              Losses resulting from unauthorized access to your account
+              credentials
+            </li>
           </ul>
           <p className="text-gray-700 mb-4">
+            Wallet custody, key management, and recovery are governed by
+            Coinbase's own terms and policies.{' '}
             <strong>
-              WE CANNOT RECOVER LOST PRIVATE KEYS OR REVERSE BLOCKCHAIN
-              TRANSACTIONS.
+              SPIRITDAO CANNOT REVERSE BLOCKCHAIN TRANSACTIONS AND DOES NOT
+              HOLD OR RECOVER YOUR WALLET KEYS.
             </strong>
           </p>
 
@@ -415,7 +427,11 @@ export default function TermsOfServicePage() {
                 Regulatory changes may affect token functionality or legality
               </li>
               <li>Token values may decrease or become zero</li>
-              <li>Private key loss means permanent loss of access to tokens</li>
+              <li>
+                Loss of access to your authentication credentials may result
+                in loss of access to your wallet and tokens; recovery is
+                subject to Coinbase's procedures
+              </li>
               <li>
                 No FDIC insurance or government protection for digital tokens
               </li>
@@ -1113,7 +1129,10 @@ export default function TermsOfServicePage() {
               <li>
                 Blockchain transactions are permanent, irreversible, and public
               </li>
-              <li>You are responsible for securing your wallet private keys</li>
+              <li>
+                You are responsible for securing the authentication credentials
+                used to access your embedded wallet account
+              </li>
               <li>Tokens may lose value and redemption is not guaranteed</li>
               <li>
                 You accept all risks associated with blockchain technology and
