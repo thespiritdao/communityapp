@@ -10,7 +10,7 @@ interface TosModalProps {
   onAccepted: () => void;
 }
 
-const TOS_VERSION = 'v1.1';
+const TOS_VERSION = 'v1.0';
 const TOS_MESSAGE = `SpiritDAO Platform Terms of Service ${TOS_VERSION}
 
 By signing this message I confirm that I have read, understand, and agree to the SpiritDAO Terms of Service. I acknowledge that: (1) I will not use this platform for illegal activity, pornography, harassment, or hate speech; (2) SpiritDAO provides infrastructure only — our communities are sovereign and SpiritDAO is not responsible for the independent actions of pods or members; (3) I am responsible for my own on-chain transactions and their consequences; (4) Pod governance and treasury operations are managed by pod leaders through role tokens distributed within the platform.`;
