@@ -1,0 +1,28 @@
+/**
+ * Weekly email digest cron job.
+ *
+ * Schedule: Mondays at 2pm UTC (see vercel.json)
+ * Auth: CRON_SECRET header (Vercel Cron)
+ */
+
+import { NextRequest, NextResponse } from 'next/server';
+import { runDigest } from '@/lib/emailDigest';
+
+export async function GET(req: NextRequest) {
+  const authHeader = req.headers.get('authorization');
+  if (
+    process.env.CRON_SECRET &&
+    authHeader !== `Bearer ${process.env.CRON_SECRET}`
+  ) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  try {
+    const result = await runDigest('weekly');
+    console.log(`[email-digest-weekly] Done: ${result.sent} sent, ${result.skipped} skipped`);
+    return NextResponse.json({ success: true, ...result });
+  } catch (err: any) {
+    console.error('[email-digest-weekly] Error:', err);
+    return NextResponse.json({ error: err.message }, { status: 500 });
+  }
+}

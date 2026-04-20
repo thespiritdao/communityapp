@@ -18,7 +18,10 @@ export interface ExplorerEvent {
     | 'donation'
     | 'bounty_created'
     | 'bounty_completed'
-    | 'event_published';
+    | 'work_submitted'
+    | 'event_published'
+    | 'marketplace_purchase'
+    | 'hat_minted';
   timestamp: string;
   pod_id?: string;
   pod_name?: string;
@@ -104,6 +107,30 @@ export async function GET(req: NextRequest) {
           memberEvents.push({
             id: `member_introduced-${e.id}`,
             type: 'member_joined',
+            timestamp: e.created_at,
+            actor: e.actor,
+            title: e.title,
+            url: `/members`,
+          });
+        });
+      }
+    }
+
+    // ── 2b. Hat minting events ───────────────────────────────────────────────
+    const hatEvents: ExplorerEvent[] = [];
+    if (!typeFilter || typeFilter === 'members') {
+      if (!podFilter) {
+        const { data: hatMints } = await supabaseAdmin
+          .from('explorer_events')
+          .select('id, actor, title, created_at, metadata')
+          .eq('type', 'hat_minted')
+          .order('created_at', { ascending: false })
+          .limit(50);
+
+        (hatMints ?? []).forEach((e: any) => {
+          hatEvents.push({
+            id: `hat_minted-${e.id}`,
+            type: 'hat_minted',
             timestamp: e.created_at,
             actor: e.actor,
             title: e.title,
@@ -282,6 +309,38 @@ export async function GET(req: NextRequest) {
       });
     }
 
+    // ── 7b. Work submissions on bounties ────────────────────────────────────────
+    const workSubmissionEvents: ExplorerEvent[] = [];
+    if (!typeFilter || typeFilter === 'bounties') {
+      const wsQuery = supabaseAdmin
+        .from('work_submissions')
+        .select('id, bounty_id, submitter_address, submission_title, status, created_at, bounties(title, pod_id, pods(name))')
+        .eq('status', 'pending')
+        .order('created_at', { ascending: false })
+        .limit(100);
+
+      const { data: submissions } = await wsQuery;
+
+      (submissions ?? []).forEach((ws: any) => {
+        const bountyTitle = ws.bounties?.title ?? 'a bounty';
+        const podId = ws.bounties?.pod_id;
+        const podName = ws.bounties?.pods?.name;
+
+        if (!podFilter || podFilter === podId) {
+          workSubmissionEvents.push({
+            id: `work_submitted-${ws.id}`,
+            type: 'work_submitted',
+            timestamp: ws.created_at,
+            pod_id: podId,
+            pod_name: podName,
+            actor: ws.submitter_address,
+            title: `Work submitted: ${ws.submission_title || bountyTitle}`,
+            url: `/bounty/${ws.bounty_id}`,
+          });
+        }
+      });
+    }
+
     // ── 8. Events (published) ──────────────────────────────────────────────────
     const eventFeedItems: ExplorerEvent[] = [];
     const oneWeekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
@@ -316,16 +375,49 @@ export async function GET(req: NextRequest) {
       });
     }
 
+    // ── 9. Marketplace purchases ───────────────────────────────────────────────
+    const marketplaceEvents: ExplorerEvent[] = [];
+    if (!typeFilter || typeFilter === 'marketplace') {
+      if (!podFilter) {
+        const { data: orders } = await supabaseAdmin
+          .from('marketplace_orders')
+          .select('id, product_name, buyer_address, price_paid_self, price_paid_system, status, created_at')
+          .not('status', 'eq', 'cancelled')
+          .order('created_at', { ascending: false })
+          .limit(100);
+
+        (orders ?? []).forEach((o: any) => {
+          const tokenParts: string[] = [];
+          if (o.price_paid_self && Number(o.price_paid_self) > 0) tokenParts.push(`${o.price_paid_self} $SELF`);
+          if (o.price_paid_system && Number(o.price_paid_system) > 0) tokenParts.push(`${o.price_paid_system} $SYSTEM`);
+          const amount = tokenParts.length > 0 ? tokenParts.join(' + ') : undefined;
+
+          marketplaceEvents.push({
+            id: `marketplace_purchase-${o.id}`,
+            type: 'marketplace_purchase',
+            timestamp: o.created_at,
+            actor: o.buyer_address,
+            title: `Purchase: ${o.product_name}`,
+            amount,
+            url: `/marketplace/orders/${o.id}`,
+          });
+        });
+      }
+    }
+
     // ── Merge, sort, paginate ──────────────────────────────────────────────────
     const merged: ExplorerEvent[] = [
       ...podEvents,
       ...memberEvents,
+      ...hatEvents,
       ...proposalEvents,
       ...voteEvents,
       ...treasuryEvents,
       ...donationEvents,
       ...bountyEvents,
+      ...workSubmissionEvents,
       ...eventFeedItems,
+      ...marketplaceEvents,
     ].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
 
     // ── Resolve actor wallet addresses → display names ─────────────────────────

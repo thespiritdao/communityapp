@@ -762,12 +762,13 @@ const EventManagementRow: React.FC<EventManagementRowProps> = ({
           await notificationService.createNotification({
             recipient_address: registration.user_address,
             sender_address: event.creator_address,
-            notification_type: 'bounty_update',
+            notification_type: 'event_cancellation',
             title: 'Event Cancelled',
             message: `The event "${eventToCancel.title}" has been cancelled by ${organizerName}. Any payments will be refunded automatically.`,
-            context_type: 'marketplace',
+            context_type: 'events',
             context_id: eventToCancel.id,
             context_url: `/events/${eventToCancel.id}`,
+            priority: 'high',
           });
         }
       }
@@ -1126,10 +1127,10 @@ const RegistrationManagement: React.FC<RegistrationManagementProps> = ({
                           recipient_address: registration.user_address,
                           sender_address:
                             selectedEvent?.creator_address || address || '',
-                          notification_type: 'bounty_update',
+                          notification_type: 'event_update',
                           title: 'Event Update',
                           message: notifyAllMessage.trim(),
-                          context_type: 'marketplace',
+                          context_type: 'events',
                           context_id: selectedEventId,
                           context_url: `/events/${selectedEventId}`,
                         }),
@@ -1210,10 +1211,10 @@ const RegistrationCard: React.FC<RegistrationCardProps> = ({
       await notificationService.createNotification({
         recipient_address: registration.user_address,
         sender_address: selectedEvent?.creator_address || address || '',
-        notification_type: 'bounty_update',
+        notification_type: 'event_update',
         title: 'Event Update',
         message: notificationMessage.trim(),
-        context_type: 'marketplace',
+        context_type: 'events',
         context_id: selectedEventId,
         context_url: `/events/${selectedEventId}`,
       });

@@ -3,6 +3,7 @@
 
 import { type NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/utils/supabaseAdminClient';
+import { sendServerNotificationBatch } from '@/lib/serverNotifications';
 
 export const runtime = 'nodejs';
 
@@ -28,9 +29,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: true, notified: 0 });
     }
 
-    // Send general_notifications to each exec member
-    const now = new Date().toISOString();
-    const notifications = recipients.map((wallet) => ({
+    const payloads = recipients.map((wallet) => ({
       recipient_address: wallet.toLowerCase(),
       sender_address: '0x0000000000000000000000000000000000000000',
       notification_type: 'pod_pending_review',
@@ -39,20 +38,12 @@ export async function POST(req: NextRequest) {
       context_type: 'pod',
       context_id: podId,
       context_url: '/pods/review',
-      created_at: now,
-      is_read: false,
+      priority: 'high' as const,
     }));
 
-    const { error } = await supabaseAdmin
-      .from('general_notifications')
-      .insert(notifications);
+    const { sent, skipped } = await sendServerNotificationBatch(payloads);
 
-    if (error) {
-      console.error('Failed to insert exec notifications:', error);
-      return NextResponse.json({ success: false, error: error.message });
-    }
-
-    return NextResponse.json({ success: true, notified: notifications.length });
+    return NextResponse.json({ success: true, notified: sent, skipped });
   } catch (err: any) {
     console.error('notify-exec error:', err);
     return NextResponse.json({ error: err.message || 'Server error' }, { status: 500 });

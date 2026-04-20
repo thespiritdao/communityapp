@@ -21,6 +21,7 @@ import {
   MessageSquare,
   Calendar,
   ShoppingCart,
+  Mail,
   Loader2,
 } from 'lucide-react';
 
@@ -518,6 +519,38 @@ export const NotificationPreferencesPage: React.FC = () => {
           values={preferences}
           onChange={setPreferences}
         />
+
+        {/* Email Digest */}
+        <Card className="p-6">
+          <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
+            <Mail size={20} />
+            Email Digest
+          </h2>
+          <p className="text-sm text-gray-600 mb-4">
+            Get a summary of your DAO activity delivered to your email. Requires
+            an email address on your profile.
+          </p>
+          <div className="space-y-4">
+            <PreferenceToggle
+              label="Weekly digest"
+              description="Receive a summary of the past week's notifications every Monday"
+              checked={preferences.digest_weekly_enabled}
+              onChange={(checked) =>
+                updatePreference('digest_weekly_enabled', checked)
+              }
+              disabled={!preferences.enabled}
+            />
+            <PreferenceToggle
+              label="Daily digest"
+              description="Receive a daily summary of your notifications"
+              checked={preferences.digest_daily_enabled}
+              onChange={(checked) =>
+                updatePreference('digest_daily_enabled', checked)
+              }
+              disabled={!preferences.enabled}
+            />
+          </div>
+        </Card>
 
         {/* Action Buttons */}
         <div className="flex gap-4 pt-4">

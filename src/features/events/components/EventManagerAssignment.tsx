@@ -203,10 +203,10 @@ export const EventManagerAssignment: React.FC<EventManagerAssignmentProps> = ({
         await unifiedNotificationService.createNotification({
           recipient_address: walletAddress,
           sender_address: event.creator_address,
-          notification_type: 'bounty_update', // Using existing valid type
+          notification_type: 'event_update',
           title: 'Event Manager Assignment',
           message: `You have been assigned as a manager for the event "${event.title}".`,
-          context_type: 'marketplace',
+          context_type: 'events',
           context_id: event.id,
           context_url: `/events/manage/${event.id}`,
         });

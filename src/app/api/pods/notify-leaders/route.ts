@@ -1,5 +1,6 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/utils/supabaseAdminClient';
+import { sendServerNotificationBatch } from '@/lib/serverNotifications';
 
 /**
  * Resolve the pod_id for a named role by querying pod_role_permissions.
@@ -102,7 +103,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: true, notified: 0 });
     }
 
-    const rows = recipients.map((wallet) => ({
+    const payloads = recipients.map((wallet) => ({
       recipient_address: wallet,
       sender_address: creator,
       notification_type: 'pod_approval_request',
@@ -111,19 +112,13 @@ export async function POST(req: NextRequest) {
       context_url: '/pods/review',
       context_type: 'pod',
       context_id: podId,
+      priority: 'high' as const,
     }));
 
-    const { error } = await supabaseAdmin
-      .from('general_notifications')
-      .insert(rows);
+    const { sent, skipped } = await sendServerNotificationBatch(payloads);
 
-    if (error) {
-      console.error('notify-leaders: DB insert error:', error);
-      return NextResponse.json({ error: error.message }, { status: 500 });
-    }
-
-    console.log(`notify-leaders: notified ${recipients.length} leaders for pod "${podName}"`);
-    return NextResponse.json({ success: true, notified: recipients.length });
+    console.log(`notify-leaders: notified ${sent} leaders for pod "${podName}" (${skipped} skipped by prefs)`);
+    return NextResponse.json({ success: true, notified: sent, skipped });
   } catch (err: any) {
     console.error('notify-leaders error:', err);
     return NextResponse.json({ error: err.message || 'Server error' }, { status: 500 });

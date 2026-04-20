@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { sendServerNotificationBatch } from '@/lib/serverNotifications';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -171,7 +172,7 @@ async function notifyExecPod({
   // Link directly to the Claims tab in exec pod manage page
   const manageUrl = `/pods/${execPodId}/manage?tab=claims`;
 
-  const rows = recipients.map((wallet) => ({
+  const payloads = recipients.map((wallet) => ({
     recipient_address: wallet,
     sender_address: claimerWallet,
     notification_type: 'claim_approval_request',
@@ -180,12 +181,9 @@ async function notifyExecPod({
     context_url: manageUrl,
     context_type: 'governance',
     context_id: claimId,
+    priority: 'high' as const,
   }));
 
-  const { error } = await supabase.from('general_notifications').insert(rows);
-  if (error) {
-    console.error('notifyExecPod: DB insert error:', error);
-  } else {
-    console.log(`✅ Notified ${recipients.length} exec pod members of claim ${claimId}`);
-  }
+  const { sent, skipped } = await sendServerNotificationBatch(payloads);
+  console.log(`✅ Notified ${sent} exec pod members of claim ${claimId} (${skipped} skipped by prefs)`);
 }

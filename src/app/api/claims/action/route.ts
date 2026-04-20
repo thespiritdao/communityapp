@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js';
 import { createPublicClient, http } from 'viem';
 import { base } from 'viem/chains';
 import { Resend } from 'resend';
+import { sendServerNotification } from '@/lib/serverNotifications';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -134,20 +135,21 @@ export async function POST(request: NextRequest) {
     // Notify the claimant
     const claimantWallet = claim.wallet_address as string | undefined;
     if (claimantWallet) {
-      const message =
+      const notifMessage =
         action === 'approve'
           ? 'Your token claim has been approved by the Executive Pod. Payout will be processed shortly.'
           : `Your token claim has been reviewed by the Executive Pod.${note ? ` Note: ${note}` : ''}`;
 
-      await supabase.from('general_notifications').insert({
+      await sendServerNotification({
         recipient_address: claimantWallet,
         sender_address: reviewerAddress.toLowerCase(),
         notification_type: action === 'approve' ? 'claim_approved' : 'claim_rejected',
         title: action === 'approve' ? 'Claim Approved' : 'Claim Not Approved',
-        message,
+        message: notifMessage,
         context_url: '/claims',
         context_type: 'governance',
         context_id: claimId,
+        priority: 'high',
       });
     }
 

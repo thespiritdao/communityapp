@@ -11,6 +11,22 @@
     {
       "path": "/api/cron/process-settlements",
       "schedule": "*/5 * * * *"
+    },
+    {
+      "path": "/api/cron/email-digest",
+      "schedule": "0 14 * * 1"
+    },
+    {
+      "path": "/api/cron/email-digest-daily",
+      "schedule": "0 14 * * *"
+    },
+    {
+      "path": "/api/cron/voting-reminders",
+      "schedule": "*/30 * * * *"
+    },
+    {
+      "path": "/api/cron/event-reminders",
+      "schedule": "0 */6 * * *"
     }
   ]
 }

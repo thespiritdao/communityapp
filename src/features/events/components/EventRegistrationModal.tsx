@@ -460,29 +460,48 @@ export const EventRegistrationModal: React.FC<EventRegistrationModalProps> = ({
       } else {
         console.log('✅ Registration stored successfully in database');
 
-        // Trigger notifications to event organizer and manager (non-blocking)
-        // Add a small delay to prevent duplicate notifications from rapid successive calls
+        // Notify event organizer + confirm registration to attendee (non-blocking)
         setTimeout(async () => {
           try {
             const { unifiedNotificationService } = await import(
               '@/services/unifiedNotificationService'
             );
 
-            // Send notification to event creator
-            // TODO: Implement event registration notification
-            // await unifiedNotificationService.createEventRegistrationNotification(...)
-            console.log('📧 Event registration notification not yet implemented');
+            // Notify organizer of new registration
+            if (event.creator_address && address && event.creator_address.toLowerCase() !== address.toLowerCase()) {
+              await unifiedNotificationService.createNotification({
+                recipient_address: event.creator_address,
+                sender_address: address,
+                notification_type: 'event_registration',
+                title: 'New Event Registration',
+                message: `Someone has registered for your event "${event.title}".`,
+                context_type: 'events',
+                context_id: event.id,
+                context_url: `/events/${event.id}`,
+                priority: 'medium',
+              });
+            }
 
-            // Send notification to event manager if different from creator
-            // TODO: Implement event registration notification for manager
-            console.log('📧 Manager notification not yet implemented');
+            // Confirm registration to attendee
+            if (address) {
+              await unifiedNotificationService.createNotification({
+                recipient_address: address,
+                sender_address: event.creator_address || 'system',
+                notification_type: 'event_registration',
+                title: 'Event Registration Confirmed',
+                message: `You have successfully registered for "${event.title}".`,
+                context_type: 'events',
+                context_id: event.id,
+                context_url: `/events/${event.id}`,
+                priority: 'medium',
+              });
+            }
           } catch (notificationError) {
             console.log(
               'Failed to send registration notification - continuing with registration',
             );
-            // Don't fail the registration for notification errors - this is expected due to RLS
           }
-        }, 1000); // 1 second delay to prevent duplicates
+        }, 1000);
       }
 
       // TODO: Add to user's calendar

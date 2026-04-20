@@ -10,7 +10,7 @@ import { UserProfileDisplay } from '@/components/UserProfileDisplay';
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
-type FilterTab = 'all' | 'pods' | 'governance' | 'treasury' | 'members' | 'bounties' | 'events';
+type FilterTab = 'all' | 'pods' | 'governance' | 'treasury' | 'members' | 'bounties' | 'events' | 'marketplace';
 
 interface ExplorerResponse {
   items: ExplorerEvent[];
@@ -117,7 +117,10 @@ const EVENT_COLORS: Record<string, string> = {
   donation: '#16a34a',
   bounty_created: '#db2777',
   bounty_completed: '#059669',
+  work_submitted: '#ec4899',
   event_published: '#f59e0b',
+  marketplace_purchase: '#8b5cf6',
+  hat_minted: '#f97316',
 };
 
 const EventCard = styled.div<{ $type: string }>`
@@ -231,7 +234,10 @@ const TYPE_LABELS: Record<string, string> = {
   donation: 'Donation',
   bounty_created: 'Bounty',
   bounty_completed: 'Completed',
+  work_submitted: 'Submitted',
   event_published: 'Event',
+  marketplace_purchase: 'Purchase',
+  hat_minted: 'Hat Minted',
 };
 
 const TAB_LABELS: Record<FilterTab, string> = {
@@ -242,6 +248,7 @@ const TAB_LABELS: Record<FilterTab, string> = {
   members: 'Members',
   bounties: 'Bounties',
   events: 'Events',
+  marketplace: 'Marketplace',
 };
 
 

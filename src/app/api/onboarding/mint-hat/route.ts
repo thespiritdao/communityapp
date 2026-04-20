@@ -259,6 +259,9 @@ export async function POST(request: NextRequest) {
             // CRITICAL FIX: Sync to pod_members table for permission system
             await syncToPodMembers(walletAddress, isFirstUser);
 
+            // Log to explorer_events for Pulse feed (best-effort)
+            await logHatMintEvent(walletAddress, 'Executive Pod Leader', hash).catch(() => {});
+
             return NextResponse.json({
               success: true,
               transactionHash: hash,
@@ -419,6 +422,9 @@ export async function POST(request: NextRequest) {
     // CRITICAL FIX: Sync to pod_members table for permission system
     await syncToPodMembers(walletAddress, isFirstUser);
 
+    // Log to explorer_events for Pulse feed (best-effort)
+    await logHatMintEvent(walletAddress, hatName, hash).catch(() => {});
+
     return NextResponse.json({
       success: true,
       transactionHash: hash,
@@ -430,7 +436,7 @@ export async function POST(request: NextRequest) {
       gasSponsored: false,
     });
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('❌ Mint Hat API: Unexpected error:', error);
 
     // Extract useful error message
@@ -460,5 +466,43 @@ export async function POST(request: NextRequest) {
       },
       { status: 500 },
     );
+  }
+}
+
+// ============================================================
+// EXPLORER EVENT LOGGING
+// ============================================================
+
+async function logHatMintEvent(
+  walletAddress: string,
+  hatName: string,
+  txHash: string,
+): Promise<void> {
+  try {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    if (!supabaseUrl || !supabaseServiceKey) return;
+
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    const normalized = walletAddress.toLowerCase();
+
+    // Idempotency: one hat_minted event per wallet+hatName
+    const { data: existing } = await supabase
+      .from('explorer_events')
+      .select('id')
+      .eq('type', 'hat_minted')
+      .eq('actor', normalized)
+      .maybeSingle();
+
+    if (existing) return;
+
+    await supabase.from('explorer_events').insert({
+      type: 'hat_minted',
+      actor: normalized,
+      title: `Received ${hatName} hat`,
+      metadata: { hatName, txHash },
+    });
+  } catch (err) {
+    console.warn('[mint-hat] Failed to log explorer event:', err);
   }
 }
