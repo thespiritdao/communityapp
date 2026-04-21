@@ -111,13 +111,37 @@ function PageContent() {
 
     console.log('🚀 handleAuthReady: checking onboarding for fast-path auth');
     try {
-      // Use direct DB check (bypasses RLS) so this works without an existing session
+      // Use direct DB check (bypasses RLS) so this works without an existing session.
+      // Mirror the auth endpoint: try email lookup first, then wallet lookup.
+      // This handles the case where a user signed up with email OTP (wallet A)
+      // and later logs in with Google OAuth (wallet B, same email).
       const { supabase: supabaseAdmin } = await import('@/utils/supabaseClient');
-      const { data: profile } = await supabaseAdmin
-        .from('user_profiles')
-        .select('onboarded_at')
-        .eq('wallet_address', address.toLowerCase())
-        .maybeSingle();
+
+      let profile: { onboarded_at: string | null; wallet_address: string } | null = null;
+
+      // 1. Try email lookup first (handles cross-wallet returning users)
+      if (email) {
+        const { data } = await supabaseAdmin
+          .from('user_profiles')
+          .select('onboarded_at, wallet_address')
+          .eq('email', email)
+          .maybeSingle();
+        if (data) {
+          profile = data;
+          console.log(`🚀 handleAuthReady: found profile by email (canonical wallet: ${data.wallet_address})`);
+        }
+      }
+
+      // 2. Fall back to CDP wallet lookup
+      if (!profile) {
+        const { data } = await supabaseAdmin
+          .from('user_profiles')
+          .select('onboarded_at, wallet_address')
+          .eq('wallet_address', address.toLowerCase())
+          .maybeSingle();
+        if (data) profile = data;
+      }
+
       const completed = !!profile?.onboarded_at || await hasCompletedOnboarding(address);
       if (completed) {
         console.log('🚀 handleAuthReady: returning user detected — fast-path signIn');
@@ -221,10 +245,35 @@ function PageContent() {
   }, [isClient, currentUser, oauthInProgress, hasKnownUser, walletAddress, validatedInviteCode, showPreAuthInvite]);
 
   // STEP 2: After wallet created, check onboarding status
+  // Track whether STEP 2 found a profile — if not and email arrives later, re-run.
+  // This handles the case where a returning user logs in with a different auth method
+  // (e.g., Google OAuth instead of email OTP) producing a different CDP wallet.
+  // The first run uses wallet-only lookup (no email yet) and finds nothing.
+  // When currentUser/capturedEmail arrives, the effect re-runs with email-based lookup.
+  const step2FoundProfileRef = useRef(false);
+  const step2EmailUsedRef = useRef<string | undefined>(undefined);
   useEffect(() => {
     const checkWalletOnboarding = async () => {
-      if (!walletAddress || onboardingCheckRunRef.current) return;
-      onboardingCheckRunRef.current = true; // Mark as running to prevent re-runs
+      if (!walletAddress) return;
+
+      // Resolve email early so we can decide whether to re-run
+      const authMethods = (currentUser as any)?.authenticationMethods;
+      const resolvedEmail =
+        capturedEmail ||
+        authMethods?.email?.email ||
+        authMethods?.google?.email ||
+        authMethods?.apple?.email ||
+        undefined;
+
+      if (onboardingCheckRunRef.current) {
+        // Already ran — only re-run if we now have a new email we didn't have before
+        // and the first run didn't find a profile
+        if (step2FoundProfileRef.current) return;
+        if (!resolvedEmail || resolvedEmail === step2EmailUsedRef.current) return;
+        console.log('📋 Re-running STEP 2 with newly available email:', resolvedEmail);
+      }
+      onboardingCheckRunRef.current = true;
+      step2EmailUsedRef.current = resolvedEmail;
 
       // Suppress invite modal while we check — prevents flash for returning users
       setCheckingOnboarding(true);
@@ -242,13 +291,38 @@ function PageContent() {
         console.log(`👤 First user check: ${firstUser}`);
 
         // Use admin client to check existing profile — bypasses RLS so this works
-        // even before a Supabase session exists (e.g. on fresh page load after deploy)
+        // even before a Supabase session exists (e.g. on fresh page load after deploy).
+        // Mirror the auth endpoint: try email lookup first, then wallet lookup.
+        // This handles the case where a user signed up with email OTP (wallet A)
+        // and later logs in with Google OAuth (wallet B, same email).
         const { supabase: supabaseAdmin } = await import('@/utils/supabaseClient');
-        const { data: existingProfile } = await supabaseAdmin
-          .from('user_profiles')
-          .select('wallet_address, referral_key, onboarded_at')
-          .eq('wallet_address', walletAddress.toLowerCase())
-          .maybeSingle();
+
+        let existingProfile: { wallet_address: string; referral_key: string | null; onboarded_at: string | null } | null = null;
+
+        // 1. Try email lookup first (handles cross-wallet returning users)
+        if (resolvedEmail) {
+          const { data } = await supabaseAdmin
+            .from('user_profiles')
+            .select('wallet_address, referral_key, onboarded_at')
+            .eq('email', resolvedEmail)
+            .maybeSingle();
+          if (data) {
+            existingProfile = data;
+            console.log(`📋 Found profile by email (canonical wallet: ${data.wallet_address})`);
+          }
+        }
+
+        // 2. Fall back to CDP wallet lookup
+        if (!existingProfile) {
+          const { data } = await supabaseAdmin
+            .from('user_profiles')
+            .select('wallet_address, referral_key, onboarded_at')
+            .eq('wallet_address', walletAddress.toLowerCase())
+            .maybeSingle();
+          if (data) existingProfile = data;
+        }
+
+        step2FoundProfileRef.current = !!existingProfile;
 
         // Fast-path for returning users: profile exists with onboarded_at timestamp
         // Do this BEFORE hasCompletedOnboarding (which uses RLS and can fail without a session)
@@ -322,7 +396,9 @@ function PageContent() {
     };
 
     checkWalletOnboarding();
-  }, [walletAddress, validatedInviteCode]);
+    // capturedEmail / currentUser added so email-based profile lookup re-fires
+    // when email becomes available (e.g., after Google OAuth redirect resolves)
+  }, [walletAddress, validatedInviteCode, capturedEmail, currentUser]);
 
   // PRE-AUTH: Check if invite code exists (before wallet creation)
   const handlePreAuthInviteCheck = async (

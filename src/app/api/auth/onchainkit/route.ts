@@ -116,12 +116,14 @@ export async function POST(req: NextRequest) {
         throw new Error('User profile exists but user_id is null');
       }
 
-      // Update profile with email if provided and not already set
+      // Update profile with email if provided and not already set.
+      // Use canonical wallet (from the found profile), not the CDP wallet —
+      // the CDP wallet may differ when a user switches auth methods.
       if (email) {
         const { error: updateError } = await supabaseAdmin
           .from('user_profiles')
           .update({ email })
-          .eq('wallet_address', normalizedAddress)
+          .eq('wallet_address', existingUserProfile.wallet_address)
           .is('email', null); // Only update if email is not set
 
         if (!updateError) {
@@ -203,7 +205,7 @@ export async function POST(req: NextRequest) {
       // Subscribe new user to Paragraph mailing list
       if (email) {
         try {
-          const paragraphApiKey = process.env.NEXT_PUBLIC_PARAGRAPH_API;
+          const paragraphApiKey = process.env.PARAGRAPH_API;
           if (paragraphApiKey) {
             const paragraphRes = await fetch('https://public.api.paragraph.com/api/v1/subscribers', {
               method: 'POST',
