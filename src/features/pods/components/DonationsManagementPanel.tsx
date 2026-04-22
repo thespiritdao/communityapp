@@ -5,6 +5,7 @@ import { useEvmAddress, useCurrentUser } from '@coinbase/cdp-hooks';
 import { useSendUserOperationWithAttribution as useSendUserOperation } from '@/wallet/hooks/useSendUserOperationWithAttribution';
 import { encodeFunctionData, parseUnits, getAddress } from 'viem';
 import { CheckCircle, Clock, RefreshCw, Coins, ExternalLink } from 'lucide-react';
+import { UserProfileDisplay } from '@/components/UserProfileDisplay';
 
 const SYSTEM_TOKEN_ADDRESS = process.env.NEXT_PUBLIC_SYSTEM_TOKEN as `0x${string}`;
 
@@ -259,9 +260,9 @@ export function DonationsManagementPanel({ canManage }: DonationsManagementPanel
                 {/* Top row */}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '10px' }}>
                   <div>
-                    <p style={{ fontSize: '11px', fontFamily: 'monospace', color: '#6B7280', margin: '0 0 2px' }}>
-                      {donation.user_wallet.slice(0, 10)}…{donation.user_wallet.slice(-6)}
-                    </p>
+                    <div style={{ marginBottom: '4px' }}>
+                      <UserProfileDisplay walletAddress={donation.user_wallet} size="sm" showModal={true} />
+                    </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                       <img src="/images/erc20tokens/SystemToken.png" alt="$SYSTEM"
                         style={{ width: '20px', height: '20px', borderRadius: '50%', objectFit: 'cover' }} />
