@@ -84,7 +84,7 @@ export async function POST(request: NextRequest) {
     const { data, error } = await supabase
       .from('pending_donations')
       .update({
-        status: 'minting', // Will be updated to 'minted' by cron when confirmed
+        status: 'minted',
         mint_transaction_hash: userOpHash,
         minted_at: new Date().toISOString(),
       })
