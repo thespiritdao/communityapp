@@ -121,6 +121,7 @@ const EVENT_COLORS: Record<string, string> = {
   event_published: '#f59e0b',
   marketplace_purchase: '#8b5cf6',
   hat_minted: '#f97316',
+  gift: '#8b5cf6',
 };
 
 const EventCard = styled.div<{ $type: string }>`
@@ -238,6 +239,7 @@ const TYPE_LABELS: Record<string, string> = {
   event_published: 'Event',
   marketplace_purchase: 'Purchase',
   hat_minted: 'Hat Minted',
+  gift: 'Gift',
 };
 
 const TAB_LABELS: Record<FilterTab, string> = {
@@ -377,7 +379,7 @@ export default function ExplorerPage() {
                     {item.amount && <AmountBadge>{item.amount}</AmountBadge>}
                     <span>{formatDate(item.timestamp)}</span>
                   </CardMeta>
-                  {item.type === 'treasury_movement' && (item.actor_address || item.recipient_address) && (
+                  {(item.type === 'treasury_movement' || item.type === 'gift') && (item.actor_address || item.recipient_address) && (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginTop: 8 }}>
                       {item.actor_address && (
                         <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: '#6b7280' }}>
@@ -393,7 +395,7 @@ export default function ExplorerPage() {
                       )}
                     </div>
                   )}
-                  {item.type !== 'treasury_movement' && item.actor && (
+                  {item.type !== 'treasury_movement' && item.type !== 'gift' && item.actor && (
                     <CardMeta style={{ marginTop: 4 }}>
                       <span>{item.actor}</span>
                     </CardMeta>

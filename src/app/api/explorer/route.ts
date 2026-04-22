@@ -21,7 +21,8 @@ export interface ExplorerEvent {
     | 'work_submitted'
     | 'event_published'
     | 'marketplace_purchase'
-    | 'hat_minted';
+    | 'hat_minted'
+    | 'gift';
   timestamp: string;
   pod_id?: string;
   pod_name?: string;
@@ -267,6 +268,31 @@ export async function GET(req: NextRequest) {
       }
     }
 
+    // ── 6b. Peer-to-peer gifts ────────────────────────────────────────────────
+    const giftEvents: ExplorerEvent[] = [];
+    if (!typeFilter || typeFilter === 'treasury') {
+      if (!podFilter) {
+        const { data: gifts } = await supabaseAdmin
+          .from('gifts')
+          .select('id, sender_id, recipient_id, token, amount, created_at')
+          .order('created_at', { ascending: false })
+          .limit(100);
+
+        (gifts ?? []).forEach((g: any) => {
+          giftEvents.push({
+            id: `gift-${g.id}`,
+            type: 'gift',
+            timestamp: g.created_at,
+            actor: g.sender_id,
+            actor_address: g.sender_id,
+            recipient_address: g.recipient_id,
+            title: `Gift sent: ${g.amount} $${g.token}`,
+            amount: `${g.amount} $${g.token}`,
+          });
+        });
+      }
+    }
+
     // ── 7. Bounties created ────────────────────────────────────────────────────
     const bountyEvents: ExplorerEvent[] = [];
     if (!typeFilter || typeFilter === 'bounties') {
@@ -414,6 +440,7 @@ export async function GET(req: NextRequest) {
       ...voteEvents,
       ...treasuryEvents,
       ...donationEvents,
+      ...giftEvents,
       ...bountyEvents,
       ...workSubmissionEvents,
       ...eventFeedItems,
