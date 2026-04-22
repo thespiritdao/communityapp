@@ -32,22 +32,30 @@ export async function POST(req: NextRequest) {
 
   try {
     // Step 0: Rate limiting (CRITICAL - prevents expensive AI API abuse)
+    // Gracefully degrade if Upstash Redis is unreachable — allow request through
     step = 'ratelimit';
     const clientIp = getClientIp(req);
-    const { success, limit, remaining, reset } =
-      await rateLimiters.sensemaker.limit(clientIp);
+    let limit = 0, remaining = 0, reset = 0;
+    try {
+      const rl = await rateLimiters.sensemaker.limit(clientIp);
+      limit = rl.limit;
+      remaining = rl.remaining;
+      reset = rl.reset;
 
-    if (!success) {
-      console.warn(`[Sensemaker Chat] Rate limit exceeded for IP: ${clientIp}`);
-      return NextResponse.json(rateLimitErrorResponse(reset), {
-        status: 429,
-        headers: {
-          'X-RateLimit-Limit': limit.toString(),
-          'X-RateLimit-Remaining': remaining.toString(),
-          'X-RateLimit-Reset': reset.toString(),
-          'Retry-After': Math.ceil((reset - Date.now()) / 1000).toString(),
-        },
-      });
+      if (!rl.success) {
+        console.warn(`[Sensemaker Chat] Rate limit exceeded for IP: ${clientIp}`);
+        return NextResponse.json(rateLimitErrorResponse(reset), {
+          status: 429,
+          headers: {
+            'X-RateLimit-Limit': limit.toString(),
+            'X-RateLimit-Remaining': remaining.toString(),
+            'X-RateLimit-Reset': reset.toString(),
+            'Retry-After': Math.ceil((reset - Date.now()) / 1000).toString(),
+          },
+        });
+      }
+    } catch (rlError) {
+      console.error('[Sensemaker Chat] Rate limiter unavailable, allowing request:', rlError);
     }
 
     step = 'parse';
