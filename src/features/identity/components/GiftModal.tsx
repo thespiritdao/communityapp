@@ -6,7 +6,6 @@ import { useEvmAddress, useCurrentUser } from '@coinbase/cdp-hooks';
 import { useSendUserOperationWithAttribution as useSendUserOperation } from '@/wallet/hooks/useSendUserOperationWithAttribution';
 import { useBalance } from 'wagmi';
 import { parseUnits, encodeFunctionData } from 'viem';
-import { supabase } from '@/lib/supabase';
 import { Gift, X, DollarSign, Loader2 } from 'lucide-react';
 
 interface GiftModalProps {
@@ -153,20 +152,23 @@ export function GiftModal({
       setTxStatus('success');
       setStatusMessage('Gift sent successfully!');
 
-      // Save gift to database
+      // Save gift to database via server-side API (bypasses RLS)
       try {
-        const { error } = await supabase.from('gifts').insert({
-          sender_id: address,
-          recipient_id: recipientAddress,
-          token: selectedToken,
-          amount: amount,
-          message: message.trim() || null,
-          transaction_hash: (result as any)?.transactionHash || null,
-          created_at: new Date().toISOString(),
+        const recordRes = await fetch('/api/gifts/record', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            sender_id: address,
+            recipient_id: recipientAddress,
+            token: selectedToken,
+            amount,
+            message: message.trim() || null,
+            transaction_hash: (result as any)?.transactionHash || null,
+          }),
         });
-
-        if (error) {
-          console.error('[GiftModal] Error saving gift to database:', error);
+        if (!recordRes.ok) {
+          const errData = await recordRes.json().catch(() => ({}));
+          console.error('[GiftModal] Error saving gift to database:', errData);
         }
       } catch (error) {
         console.error('[GiftModal] Error in database save:', error);

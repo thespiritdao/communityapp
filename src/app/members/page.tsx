@@ -47,37 +47,29 @@ export default function MembersPage() {
 
       if (podData) setPods(podData);
 
-      // Load all active pod members with their wallets
+      // Load all TOS-signed user profiles (primary source — not limited to pod members)
+      const { data: profiles } = await supabase
+        .from('user_profiles')
+        .select('*')
+        .not('tos_signed_at', 'is', null);
+
+      if (!profiles || profiles.length === 0) {
+        setLoading(false);
+        return;
+      }
+
+      // Load all active pod members to enrich profiles with pod badges
       const { data: memberRows } = await supabase
         .from('pod_members')
         .select('wallet, pod_id, membership_type')
         .eq('is_active', true);
-
-      if (!memberRows || memberRows.length === 0) {
-        setLoading(false);
-        return;
-      }
-
-      // Unique wallets that have signed TOS
-      const uniqueWallets = [...new Set(memberRows.map((r) => r.wallet.toLowerCase()))];
-
-      const { data: profiles } = await supabase
-        .from('user_profiles')
-        .select('*')
-        .in('wallet_address', uniqueWallets)
-        .not('tos_signed_at', 'is', null);
-
-      if (!profiles) {
-        setLoading(false);
-        return;
-      }
 
       // Build pod lookup
       const podMap = new Map((podData || []).map((p) => [p.id, p.name]));
 
       // Attach pod memberships to each profile
       const enriched: MemberWithPods[] = profiles.map((profile) => {
-        const profilePods = memberRows
+        const profilePods = (memberRows || [])
           .filter((r) => r.wallet.toLowerCase() === profile.wallet_address.toLowerCase())
           .map((r) => ({
             pod_id: r.pod_id,
