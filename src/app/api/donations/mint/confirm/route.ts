@@ -85,9 +85,8 @@ export async function POST(request: NextRequest) {
       .from('pending_donations')
       .update({
         status: 'minting', // Will be updated to 'minted' by cron when confirmed
-        tx_hash: userOpHash,
-        minter_address: minter,
-        mint_initiated_at: new Date().toISOString(),
+        mint_transaction_hash: userOpHash,
+        minted_at: new Date().toISOString(),
       })
       .eq('id', donationId)
       .select()

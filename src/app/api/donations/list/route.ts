@@ -17,7 +17,7 @@ export async function GET(request: NextRequest) {
 
   let query = supabase
     .from('pending_donations')
-    .select('id, user_wallet, fiat_amount, system_tokens_to_mint, community_tokens_to_mint, org_fee, stripe_fee, payment_method, status, settlement_date, created_at, minted_at, tx_hash')
+    .select('id, user_wallet, fiat_amount, system_tokens_to_mint, community_tokens_to_mint, org_fee, stripe_fee, payment_method, status, settlement_date, created_at, minted_at, mint_transaction_hash')
     .order('created_at', { ascending: false });
 
   if (!all) {

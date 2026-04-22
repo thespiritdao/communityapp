@@ -44,7 +44,7 @@ interface Donation {
   settlement_date?: string;
   created_at: string;
   minted_at?: string;
-  tx_hash?: string;
+  mint_transaction_hash?: string;
 }
 
 const STATUS_LABEL: Record<DonationStatus, string> = {
@@ -300,10 +300,10 @@ export function DonationsManagementPanel({ canManage }: DonationsManagementPanel
                   </p>
                 )}
 
-                {donation.tx_hash && (
-                  <a href={`https://basescan.org/tx/${donation.tx_hash}`} target="_blank" rel="noreferrer"
+                {donation.mint_transaction_hash && (
+                  <a href={`https://basescan.org/tx/${donation.mint_transaction_hash}`} target="_blank" rel="noreferrer"
                     style={{ fontSize: '11px', color: '#2F5D50', display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '10px', textDecoration: 'none' }}>
-                    Tx: {donation.tx_hash.slice(0, 16)}… <ExternalLink size={10} />
+                    Tx: {donation.mint_transaction_hash.slice(0, 16)}… <ExternalLink size={10} />
                   </a>
                 )}
 
