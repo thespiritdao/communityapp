@@ -63,6 +63,10 @@ function DonationCheckoutForm({
       } else if (paymentIntent?.status === 'succeeded') {
         toast({ title: 'Donation successful!', description: 'Your tokens will be minted after settlement.' });
         onSuccess();
+      } else if (paymentIntent?.status === 'processing') {
+        // ACH bank transfers enter "processing" immediately — funds clear in 3-5 business days.
+        toast({ title: 'Payment submitted!', description: 'Your bank transfer is processing. Tokens will be minted once funds clear (3-5 business days).' });
+        onSuccess();
       }
     } catch (err: any) {
       setErrorMessage(err.message || 'An unexpected error occurred');
@@ -117,7 +121,7 @@ function DonationCheckoutForm({
         <p className="font-semibold text-gray-900 dark:text-white">💳 Payment Options:</p>
         <ul className="text-gray-700 dark:text-gray-300 space-y-1 ml-4">
           <li>• <strong>Credit Card:</strong> 2.9% + $0.30 fee, 3-7 day hold</li>
-          <li>• <strong>Bank Transfer (ACH):</strong> 0.8% fee, instant approval</li>
+          <li>• <strong>Bank Transfer (ACH):</strong> 0.8% fee, 3-5 day processing</li>
         </ul>
       </div>
 
@@ -142,7 +146,7 @@ function DonationCheckoutForm({
       }} className="text-xs">
         <p style={{ color: '#6B5A3E' }}>
           ⚠️ <strong>No Refund Policy:</strong> All donations are final and non-refundable.
-          Tokens will be minted after settlement period (3-7 days for cards, instant for ACH).
+          Tokens will be minted after settlement period (3-7 days for cards, 3-5 days for ACH).
         </p>
       </div>
 

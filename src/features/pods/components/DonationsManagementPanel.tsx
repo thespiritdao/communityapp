@@ -179,11 +179,11 @@ export function DonationsManagementPanel({ canManage }: DonationsManagementPanel
   }
 
   const activeDonations = allDonations.filter(d =>
-    ['awaiting_settlement', 'awaiting_executive_approval', 'pending_mint', 'minting'].includes(d.status)
+    ['payment_pending', 'awaiting_settlement', 'awaiting_executive_approval', 'pending_mint', 'minting'].includes(d.status)
   );
   const displayDonations = filter === 'active' ? activeDonations : allDonations;
 
-  const needsApproval = allDonations.filter(d => d.status === 'awaiting_executive_approval').length;
+  const needsAction  = allDonations.filter(d => ['payment_pending', 'awaiting_settlement', 'awaiting_executive_approval'].includes(d.status)).length;
   const readyToMint  = allDonations.filter(d => d.status === 'pending_mint').length;
   const totalMinted  = allDonations.filter(d => d.status === 'minted').length;
 
@@ -205,7 +205,7 @@ export function DonationsManagementPanel({ canManage }: DonationsManagementPanel
       {/* Stats */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px' }}>
         {[
-          { label: 'Needs Approval', count: needsApproval, color: '#1E40AF', bg: '#DBEAFE' },
+          { label: 'Needs Action', count: needsAction, color: '#1E40AF', bg: '#DBEAFE' },
           { label: 'Ready to Mint',  count: readyToMint,  color: '#065F46', bg: '#D1FAE5' },
           { label: 'Total Minted',   count: totalMinted,  color: '#6B7280', bg: '#F3F4F6' },
         ].map(s => (
@@ -309,7 +309,7 @@ export function DonationsManagementPanel({ canManage }: DonationsManagementPanel
 
                 {/* Actions */}
                 <div style={{ display: 'flex', gap: '8px' }}>
-                  {donation.status === 'awaiting_executive_approval' && (
+                  {['payment_pending', 'awaiting_settlement', 'awaiting_executive_approval'].includes(donation.status) && (
                     <button onClick={() => handleApprove(donation.id)} disabled={isActioning}
                       style={{ display: 'flex', alignItems: 'center', gap: '5px', padding: '7px 14px', borderRadius: '7px', border: 'none', background: isActioning ? '#D1D5DB' : '#3F7A5A', color: 'white', fontWeight: 600, fontSize: '12px', cursor: isActioning ? 'not-allowed' : 'pointer' }}>
                       <CheckCircle size={13} />

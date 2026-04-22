@@ -98,7 +98,7 @@ export async function POST(request: NextRequest) {
         communityTokenAmount: communityTokensToMint.toFixed(8),
         platformFee: platformFee.toFixed(2),
         donorEmail: donorEmail || 'anonymous',
-        donationType: 'crypto_token_reward'
+        donationType: 'community_donation'
       },
       description: `SpiritDAO Donation - ${userWallet.slice(0, 10)}...`,
       receipt_email: donorEmail || undefined,

@@ -162,10 +162,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (donation.status !== 'awaiting_executive_approval') {
+    const approvableStatuses = ['payment_pending', 'awaiting_settlement', 'awaiting_executive_approval'];
+    if (!approvableStatuses.includes(donation.status)) {
       return NextResponse.json(
         {
-          error: `Donation is not awaiting approval. Current status: ${donation.status}`,
+          error: `Donation cannot be approved from status: ${donation.status}`,
           currentStatus: donation.status
         },
         { status: 400 }

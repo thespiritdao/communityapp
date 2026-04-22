@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
     .order('created_at', { ascending: false });
 
   if (!all) {
-    query = query.in('status', ['awaiting_settlement', 'awaiting_executive_approval', 'pending_mint', 'minting']);
+    query = query.in('status', ['payment_pending', 'awaiting_settlement', 'awaiting_executive_approval', 'pending_mint', 'minting']);
   }
 
   const { data, error } = await query;
