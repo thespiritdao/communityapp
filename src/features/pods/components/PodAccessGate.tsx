@@ -351,7 +351,7 @@ export const AnyPodLeaderGate: React.FC<{ children: ReactNode }> = ({
           <div className="flex justify-center mb-4">
             <Shield className="h-12 w-12" style={{ color: '#6A5F7A' }} />
           </div>
-          <CardTitle className="text-2xl">Pod Leader Access Required</CardTitle>
+          <CardTitle className="text-2xl">Membership Required</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div
@@ -365,11 +365,13 @@ export const AnyPodLeaderGate: React.FC<{ children: ReactNode }> = ({
               />
               <div className="flex-1">
                 <p className="font-medium" style={{ color: '#7A5F3F' }}>
-                  Pod Leadership Required
+                  Proof of Curiosity Required
                 </p>
                 <p className="text-sm mt-1" style={{ color: '#9B7F5F' }}>
-                  You must be a leader of any pod to create new pods. Pod leaders can
-                  create nested sub-pods within their own pod.
+                  Pod creation is open to all SpiritDAO members. You need a Proof of
+                  Curiosity token, which is minted during onboarding. If you completed
+                  onboarding but don't have one, try refreshing or contact the community
+                  for help.
                 </p>
               </div>
             </div>
@@ -384,7 +386,7 @@ export const AnyPodLeaderGate: React.FC<{ children: ReactNode }> = ({
               }}
             >
               <p className="text-sm" style={{ color: '#1F453A' }}>
-                Please connect your wallet to verify your leadership status.
+                Please connect your wallet to verify your membership status.
               </p>
             </div>
           )}
@@ -398,10 +400,10 @@ export const AnyPodLeaderGate: React.FC<{ children: ReactNode }> = ({
               View Pods
             </Button>
             <Button
-              onClick={() => router.push('/pods/apply')}
+              onClick={() => router.push('/onboarding')}
               className="flex-1"
             >
-              Apply to Join
+              Complete Onboarding
             </Button>
           </div>
         </CardContent>
