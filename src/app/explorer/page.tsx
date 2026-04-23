@@ -125,6 +125,7 @@ const EVENT_COLORS: Record<string, string> = {
   marketplace_purchase: '#8b5cf6',
   hat_minted: '#f97316',
   gift: '#8b5cf6',
+  burn: '#8B3A3A',
 };
 
 const EventCard = styled.div<{ $type: string }>`
@@ -243,6 +244,7 @@ const TYPE_LABELS: Record<string, string> = {
   marketplace_purchase: 'Purchase',
   hat_minted: 'Hat Minted',
   gift: 'Gift',
+  burn: 'Burn',
 };
 
 const TAB_LABELS: Record<FilterTab, string> = {
@@ -393,10 +395,10 @@ export default function ExplorerPage() {
                     <div style={{
                       marginTop: 10,
                       padding: '10px 12px',
-                      background: '#f9faf9',
-                      borderRadius: 6,
+                      background: '#E8F1EE',
+                      borderRadius: 8,
                       fontSize: 12,
-                      color: '#4b5563',
+                      color: '#3A3A3A',
                       display: 'grid',
                       gridTemplateColumns: '1fr auto',
                       gap: '4px 16px',
@@ -404,16 +406,16 @@ export default function ExplorerPage() {
                     }}>
                       <span>Donation</span>
                       <span style={{ textAlign: 'right', fontWeight: 500 }}>${Number(item.metadata.fiatAmount).toFixed(2)}</span>
-                      <span style={{ fontWeight: 600, gridColumn: '1 / -1', marginTop: 4 }}>Fees</span>
+                      <span style={{ fontWeight: 600, gridColumn: '1 / -1', marginTop: 4, color: '#2F5D50' }}>Fees</span>
                       <span style={{ paddingLeft: 8 }}>Stripe processing</span>
-                      <span style={{ textAlign: 'right', color: '#9ca3af' }}>-${Number(item.metadata.stripeFee).toFixed(2)}</span>
+                      <span style={{ textAlign: 'right', color: '#5F5A54' }}>-${Number(item.metadata.stripeFee).toFixed(2)}</span>
                       <span style={{ paddingLeft: 8 }}>Operations (4%)</span>
-                      <span style={{ textAlign: 'right', color: '#9ca3af' }}>-${item.metadata.operationsFee}</span>
+                      <span style={{ textAlign: 'right', color: '#5F5A54' }}>-${item.metadata.operationsFee}</span>
                       <span style={{ paddingLeft: 8 }}>Eight Dignities (4%)</span>
-                      <span style={{ textAlign: 'right', color: '#9ca3af' }}>-${item.metadata.dignitiesFee}</span>
-                      <div style={{ gridColumn: '1 / -1', borderTop: '1px solid #e5e7eb', margin: '4px 0' }} />
-                      <span style={{ fontWeight: 600 }}>$SYSTEM Generated</span>
-                      <span style={{ textAlign: 'right', fontWeight: 600, color: '#16a34a' }}>
+                      <span style={{ textAlign: 'right', color: '#5F5A54' }}>-${item.metadata.dignitiesFee}</span>
+                      <div style={{ gridColumn: '1 / -1', borderTop: '1px solid #D8D2C8', margin: '4px 0' }} />
+                      <span style={{ fontWeight: 600, color: '#2F5D50' }}>$SYSTEM Generated</span>
+                      <span style={{ textAlign: 'right', fontWeight: 600, color: '#3F7A5A' }}>
                         {Number(item.metadata.systemTokens).toLocaleString('en-US', { maximumFractionDigits: 2 })} $SYSTEM
                       </span>
                     </div>

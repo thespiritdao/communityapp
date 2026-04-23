@@ -22,7 +22,8 @@ export interface ExplorerEvent {
     | 'event_published'
     | 'marketplace_purchase'
     | 'hat_minted'
-    | 'gift';
+    | 'gift'
+    | 'burn';
   timestamp: string;
   pod_id?: string;
   pod_name?: string;
@@ -303,6 +304,32 @@ export async function GET(req: NextRequest) {
       }
     }
 
+    // ── 6c. Token burns (claims) ───────────────────────────────────────────────
+    const burnEvents: ExplorerEvent[] = [];
+    if (!typeFilter || typeFilter === 'treasury') {
+      if (!podFilter) {
+        const { data: burns } = await supabaseAdmin
+          .from('token_claims')
+          .select('id, wallet_address, system_tokens_to_burn, burned_at, status')
+          .not('burned_at', 'is', null)
+          .order('burned_at', { ascending: false })
+          .limit(50);
+
+        (burns ?? []).forEach((b: any) => {
+          const amount = Number(b.system_tokens_to_burn);
+          burnEvents.push({
+            id: `burn-${b.id}`,
+            type: 'burn',
+            timestamp: b.burned_at,
+            actor: b.wallet_address,
+            title: `$SYSTEM burned: ${amount.toLocaleString('en-US', { maximumFractionDigits: 2 })}`,
+            amount: `${amount.toLocaleString('en-US', { maximumFractionDigits: 2 })} $SYSTEM`,
+            url: `/claims`,
+          });
+        });
+      }
+    }
+
     // ── 7. Bounties created ────────────────────────────────────────────────────
     const bountyEvents: ExplorerEvent[] = [];
     if (!typeFilter || typeFilter === 'bounties') {
@@ -451,6 +478,7 @@ export async function GET(req: NextRequest) {
       ...treasuryEvents,
       ...donationEvents,
       ...giftEvents,
+      ...burnEvents,
       ...bountyEvents,
       ...workSubmissionEvents,
       ...eventFeedItems,
