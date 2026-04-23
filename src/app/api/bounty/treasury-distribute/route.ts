@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createPublicClient, createWalletClient, http, parseAbi } from 'viem';
+import { createWalletClient, parseAbi } from 'viem';
 import { base } from 'viem/chains';
 import { privateKeyToAccount } from 'viem/accounts';
 import { createClient } from '@supabase/supabase-js';
+import { createConfiguredPublicClient, getWriteTransport } from '@/utils/rpcClient';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -51,14 +52,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const RPC_URL = process.env.NEXT_PUBLIC_RPC_URL || 'https://mainnet.base.org';
     const adminAccount = privateKeyToAccount(ADMIN_PRIVATE_KEY as `0x${string}`);
 
-    const publicClient = createPublicClient({ chain: base, transport: http(RPC_URL) });
+    const publicClient = createConfiguredPublicClient();
     const walletClient = createWalletClient({
       account: adminAccount,
       chain: base,
-      transport: http(RPC_URL),
+      transport: getWriteTransport(),
     });
 
     console.log(`🏦 Treasury distribute: ${pod.name} → ${recipientAddress}, amount: ${amount}`);

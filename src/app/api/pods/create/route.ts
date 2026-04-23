@@ -8,15 +8,15 @@
 // is deployed and whitelisted, the client can call it directly via OnChainKit.
 
 import { type NextRequest, NextResponse } from 'next/server';
-import { createPublicClient, createWalletClient, http, decodeEventLog } from 'viem';
+import { createWalletClient, decodeEventLog } from 'viem';
 import { base } from 'viem/chains';
 import { privateKeyToAccount } from 'viem/accounts';
 import { supabaseAdmin } from '@/utils/supabaseAdminClient';
 import jwt from 'jsonwebtoken';
+import { createConfiguredPublicClient, getWriteTransport } from '@/utils/rpcClient';
 
 export const runtime = 'nodejs';
 
-const RPC_URL = process.env.NEXT_PUBLIC_RPC_URL || 'https://mainnet.base.org';
 const POD_CREATION_MANAGER = process.env.NEXT_PUBLIC_POD_CREATION_MANAGER as `0x${string}`;
 
 const POD_CREATION_MANAGER_ABI = [
@@ -101,15 +101,12 @@ export async function POST(req: NextRequest) {
 
     const adminAccount = privateKeyToAccount(ADMIN_PRIVATE_KEY as `0x${string}`);
 
-    const publicClient = createPublicClient({
-      chain: base,
-      transport: http(RPC_URL),
-    });
+    const publicClient = createConfiguredPublicClient();
 
     const walletClient = createWalletClient({
       account: adminAccount,
       chain: base,
-      transport: http(RPC_URL),
+      transport: getWriteTransport(),
     });
 
     const IMAGE_URI = imageURI ||

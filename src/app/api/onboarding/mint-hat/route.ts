@@ -17,8 +17,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import {
   createWalletClient,
-  createPublicClient,
-  http,
   parseAbi,
   getContract,
 } from 'viem';
@@ -27,6 +25,7 @@ import { privateKeyToAccount } from 'viem/accounts';
 import { CONTRACT_ADDRESSES } from '@/config/contracts';
 import { getHatId } from '@/lib/hatRegistry';
 import { createClient } from '@supabase/supabase-js';
+import { createConfiguredPublicClient, getWriteTransport } from '@/utils/rpcClient';
 
 export const runtime = 'nodejs';
 export const maxDuration = 60;
@@ -176,12 +175,7 @@ export async function POST(request: NextRequest) {
       console.log(`   Contract: ${HAT_MINTER_CONTRACT}`);
 
       try {
-        const RPC_URL = process.env.NEXT_PUBLIC_RPC_URL || 'https://mainnet.base.org';
-
-        const publicClient = createPublicClient({
-          chain: base,
-          transport: http(RPC_URL),
-        });
+        const publicClient = createConfiguredPublicClient();
 
         // Read-only contract for checking state
         const hatMinterRead = getContract({
@@ -222,11 +216,11 @@ export async function POST(request: NextRequest) {
 
             console.log(`🔑 Mint Hat API: Using backend wallet: ${backendAccount.address}`);
 
-            // Create wallet client for writing
+            // Create wallet client for writing — uses public RPC (Coinbase rejects eth_sendRawTransaction)
             const walletClient = createWalletClient({
               account: backendAccount,
               chain: base,
-              transport: http(RPC_URL),
+              transport: getWriteTransport(),
             });
 
             // Write-enabled contract
@@ -324,19 +318,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Create clients
-    const RPC_URL = process.env.NEXT_PUBLIC_RPC_URL || 'https://mainnet.base.org';
-
+    // Create clients — reads use Coinbase RPC, writes use public RPC (Coinbase rejects eth_sendRawTransaction)
     const walletClient = createWalletClient({
       account: adminAccount,
       chain: base,
-      transport: http(RPC_URL),
+      transport: getWriteTransport(),
     });
 
-    const publicClient = createPublicClient({
-      chain: base,
-      transport: http(RPC_URL),
-    });
+    const publicClient = createConfiguredPublicClient();
 
     // Verify admin wallet has Executive Pod Leader hat
     console.log('🔍 Mint Hat API: Verifying admin wallet permissions...');

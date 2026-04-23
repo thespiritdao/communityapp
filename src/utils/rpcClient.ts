@@ -52,6 +52,19 @@ export function createConfiguredPublicClient(chainId: number = base.id) {
 }
 
 /**
+ * Transport for admin EOA write transactions (eth_sendRawTransaction).
+ *
+ * The Coinbase Developer Platform RPC rejects eth_sendRawTransaction with 405,
+ * so admin EOA writes must go through a public RPC that accepts raw broadcasts.
+ * Set ADMIN_RPC_URL in .env to override; defaults to Base's public RPC.
+ */
+export function getWriteTransport() {
+  const adminRpc = process.env.ADMIN_RPC_URL;
+  if (adminRpc) return http(adminRpc);
+  return http('https://mainnet.base.org');
+}
+
+/**
  * Creates a wallet client using the configured RPC endpoints
  */
 export function createConfiguredWalletClient(chainId: number = base.id) {

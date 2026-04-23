@@ -10,10 +10,11 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { createWalletClient, http, publicActions, encodeFunctionData } from 'viem';
+import { createWalletClient, publicActions } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
 import { base } from 'viem/chains';
 import { supabase } from '@/lib/supabase';
+import { getWriteTransport } from '@/utils/rpcClient';
 
 export const runtime = 'nodejs'; // Need Node.js for viem
 
@@ -110,7 +111,7 @@ export async function POST(request: NextRequest) {
     const walletClient = createWalletClient({
       account,
       chain: base,
-      transport: http(process.env.NEXT_PUBLIC_RPC_URL || 'https://mainnet.base.org'),
+      transport: getWriteTransport(),
     }).extend(publicActions);
 
     console.log(`👛 Using account: ${account.address}`);

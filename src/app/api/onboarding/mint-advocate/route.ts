@@ -13,19 +13,18 @@
 import { NextRequest, NextResponse } from 'next/server';
 import {
   createWalletClient,
-  createPublicClient,
-  http,
   parseAbi,
 } from 'viem';
 import { base } from 'viem/chains';
 import { privateKeyToAccount } from 'viem/accounts';
+import { createConfiguredPublicClient, getWriteTransport } from '@/utils/rpcClient';
 
 export const runtime = 'nodejs';
 export const maxDuration = 60;
 
-// Advocate NFT Contract ABI (AdvocateV2 — ERC721Votes)
+// AdvocateMembership ABI (ERC721Votes, soulbound)
 const ADVOCATE_ABI = parseAbi([
-  'function mint(address recipient) external returns (uint256)',
+  'function mint(address to, uint8 memberType, string uri) external',
   'function balanceOf(address owner) external view returns (uint256)',
 ]);
 
@@ -80,18 +79,13 @@ export async function POST(request: NextRequest) {
     const adminAccount = privateKeyToAccount(ADMIN_PRIVATE_KEY as `0x${string}`);
     console.log(`🔑 Mint Advocate API: Using admin wallet: ${adminAccount.address}`);
 
-    // Create clients
-    const RPC_URL = process.env.NEXT_PUBLIC_RPC_URL || 'https://mainnet.base.org';
+    // Create clients — reads use Coinbase RPC, writes use public RPC (Coinbase rejects eth_sendRawTransaction)
+    const publicClient = createConfiguredPublicClient();
 
     const walletClient = createWalletClient({
       account: adminAccount,
       chain: base,
-      transport: http(RPC_URL),
-    });
-
-    const publicClient = createPublicClient({
-      chain: base,
-      transport: http(RPC_URL),
+      transport: getWriteTransport(),
     });
 
     // Check if user already has Advocate NFTs
@@ -113,14 +107,13 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // Mint 1 Advocate NFT
-    // MemberType: 0 = Standard Member
+    // Mint 1 Advocate NFT — MemberType.STANDARD = 0
     console.log('📤 Mint Advocate API: Sending mint transaction...');
     const mintHash = await walletClient.writeContract({
       address: ADVOCATE_ADDRESS,
       abi: ADVOCATE_ABI,
       functionName: 'mint',
-      args: [walletAddress as `0x${string}`],
+      args: [walletAddress as `0x${string}`, 0, ''],
     });
 
     console.log(`   ⏳ Mint transaction hash: ${mintHash}`);
