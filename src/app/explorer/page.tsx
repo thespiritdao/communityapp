@@ -357,10 +357,10 @@ export default function ExplorerPage() {
           display: 'flex',
           gap: 12,
           marginBottom: 24,
-          flexWrap: 'wrap',
         }}>
           {tokenSupply.systemTotal && (
             <div style={{
+              flex: 1,
               display: 'flex',
               alignItems: 'center',
               gap: 8,
@@ -368,6 +368,7 @@ export default function ExplorerPage() {
               border: '1px solid #D8D2C8',
               borderRadius: 10,
               padding: '8px 14px',
+              minWidth: 0,
             }}>
               <Image
                 src="/images/erc20tokens/SystemToken.png"
@@ -377,7 +378,7 @@ export default function ExplorerPage() {
                 style={{ borderRadius: '50%' }}
               />
               <div style={{ fontSize: 12 }}>
-                <div style={{ color: '#5F5A54', fontWeight: 500, lineHeight: 1.2 }}>$SYSTEM Total Circulation</div>
+                <div style={{ color: '#5F5A54', fontWeight: 500, lineHeight: 1.2 }}>$SYSTEM Total</div>
                 <div style={{ color: '#1a1a1a', fontWeight: 600, fontSize: 14 }}>
                   {Number(tokenSupply.systemTotal).toLocaleString('en-US', { maximumFractionDigits: 2 })}
                 </div>
@@ -386,6 +387,7 @@ export default function ExplorerPage() {
           )}
           {tokenSupply.selfTotal && (
             <div style={{
+              flex: 1,
               display: 'flex',
               alignItems: 'center',
               gap: 8,
@@ -393,6 +395,7 @@ export default function ExplorerPage() {
               border: '1px solid #D8D2C8',
               borderRadius: 10,
               padding: '8px 14px',
+              minWidth: 0,
             }}>
               <Image
                 src="/images/erc20tokens/SelfToken.png"
@@ -402,7 +405,7 @@ export default function ExplorerPage() {
                 style={{ borderRadius: '50%' }}
               />
               <div style={{ fontSize: 12 }}>
-                <div style={{ color: '#5F5A54', fontWeight: 500, lineHeight: 1.2 }}>$SELF Total Circulation</div>
+                <div style={{ color: '#5F5A54', fontWeight: 500, lineHeight: 1.2 }}>$SELF Total</div>
                 <div style={{ color: '#1a1a1a', fontWeight: 600, fontSize: 14 }}>
                   {Number(tokenSupply.selfTotal).toLocaleString('en-US', { maximumFractionDigits: 2 })}
                 </div>
