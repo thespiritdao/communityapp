@@ -27,13 +27,18 @@ Classify user queries into ONE of these categories:
 1. "spiritdao" - Questions about:
    - DAO operations (voting, proposals, pods, governance)
    - App features (marketplace, events, bounties, forum, video chat, conferencing)
-   - Technical help (wallet, transactions, permissions, NFTs)
+   - Technical help (wallet, transactions, permissions, roles)
    - Community operations (pod management, member applications)
-   - Getting started (onboarding, setup, identity)
+   - Getting started (onboarding, setup, identity, invite codes)
    - Any "how do I..." or "where is..." about SpiritDAO features
    - Troubleshooting app issues
-   - The Eight Dignities as community practice or mission
+   - The Eight Dignities as community practice, mission, or lived values
    - SpiritDAO events, retreats, or community gatherings
+   - Tokens: Proof of Curiosity, Advocate, $SYSTEM, $SELF
+   - Donations, claims, gifting tokens
+   - Membership types and credentials
+   - Explorer, members directory, profiles
+   - Knowledge base and tutorials
 
 2. "temporal-naturalism" - Questions about:
    - Philosophy, metaphysics, theology
@@ -43,6 +48,9 @@ Classify user queries into ONE of these categories:
    - Abstract concepts and existential questions
    - Spiritual or religious topics not tied to specific app features
    - The meaning or foundations of Temporal Naturalism
+   - The philosophical basis of the Eight Dignities (why they matter, their intellectual roots)
+
+Note on the Eight Dignities: If the question is about the philosophical roots or meaning of the Eight Dignities, classify as "temporal-naturalism". If it's about how SpiritDAO practices them, what they are as a list, or their role in the community mission, classify as "spiritdao". When ambiguous, default to "spiritdao".
 
 Respond with ONLY ONE WORD: "spiritdao" or "temporal-naturalism"
 
@@ -53,10 +61,18 @@ Examples:
 - "What is the nature of time?" → temporal-naturalism
 - "Where is the marketplace?" → spiritdao
 - "Explain causality in naturalism" → temporal-naturalism
-- "How do I mint an Advocate NFT?" → spiritdao
+- "What is a Proof of Curiosity token?" → spiritdao
 - "What does theology say about creation?" → temporal-naturalism
-- "What are the Eight Dignities?" → temporal-naturalism
-- "How do I use video chat in a pod?" → spiritdao`,
+- "What are the Eight Dignities?" → spiritdao
+- "How do I use video chat in a pod?" → spiritdao
+- "How do I donate?" → spiritdao
+- "What is an Advocate token?" → spiritdao
+- "How does $SYSTEM work?" → spiritdao
+- "Why does Unger argue institutions must change?" → temporal-naturalism
+- "What philosophical tradition do the Eight Dignities come from?" → temporal-naturalism
+- "How do I earn $SELF tokens?" → spiritdao
+- "What is the claims process?" → spiritdao
+- "How do bounties work?" → spiritdao`,
       messages: [{ role: 'user', content: userMessage }],
     });
 
