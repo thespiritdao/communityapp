@@ -42,6 +42,13 @@ const QUICK_REF = path.join(
   'guides',
   'QUICK_REFERENCE.md',
 );
+const OPS_GUIDE = path.join(
+  __dirname,
+  '..',
+  'src',
+  'sensemaker',
+  'spiritdao-operations-guide.md',
+);
 
 interface DocumentChunk {
   id: string;
@@ -197,6 +204,15 @@ async function embedDocuments() {
     console.log('\n📄 Processing QUICK_REFERENCE.md...');
     const content = fs.readFileSync(QUICK_REF, 'utf-8');
     const chunks = chunkDocument(content, 'QUICK_REFERENCE.md');
+    console.log(`   Created ${chunks.length} chunks`);
+    allChunks.push(...chunks);
+  }
+
+  // Process operations guide
+  if (fs.existsSync(OPS_GUIDE)) {
+    console.log('\n📄 Processing spiritdao-operations-guide.md...');
+    const content = fs.readFileSync(OPS_GUIDE, 'utf-8');
+    const chunks = chunkDocument(content, 'spiritdao-operations-guide.md');
     console.log(`   Created ${chunks.length} chunks`);
     allChunks.push(...chunks);
   }
