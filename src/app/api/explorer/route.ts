@@ -32,6 +32,7 @@ export interface ExplorerEvent {
   title: string;
   amount?: string;
   url?: string;
+  metadata?: Record<string, any>;
 }
 
 const LIMIT = 40;
@@ -249,12 +250,13 @@ export async function GET(req: NextRequest) {
       if (!podFilter) {
         const { data: donations } = await supabaseAdmin
           .from('pending_donations')
-          .select('id, fiat_amount, minted_at, user_wallet')
+          .select('id, fiat_amount, stripe_fee, org_fee, system_tokens_to_mint, community_tokens_to_mint, minted_at, user_wallet')
           .eq('status', 'minted')
           .order('minted_at', { ascending: false })
           .limit(50);
 
         (donations ?? []).forEach((d: any) => {
+          const orgFee = Number(d.org_fee) || 0;
           donationEvents.push({
             id: `donation-${d.id}`,
             type: 'donation',
@@ -263,6 +265,14 @@ export async function GET(req: NextRequest) {
             title: `Donation received: $${d.fiat_amount}`,
             amount: `$${d.fiat_amount}`,
             url: `/donate`,
+            metadata: {
+              fiatAmount: d.fiat_amount,
+              stripeFee: d.stripe_fee,
+              operationsFee: (orgFee / 2).toFixed(2),
+              dignitiesFee: (orgFee / 2).toFixed(2),
+              systemTokens: d.system_tokens_to_mint,
+              communityTokens: d.community_tokens_to_mint,
+            },
           });
         });
       }
@@ -477,6 +487,13 @@ export async function GET(req: NextRequest) {
 
     const paginated = all.slice(offsetParam, offsetParam + LIMIT);
 
+    // ── Token supply stats ────────────────────────────────────────────────────
+    const { data: supplyData } = await supabaseAdmin
+      .from('system_supply_metadata')
+      .select('total_supply')
+      .eq('id', 1)
+      .single();
+
     return NextResponse.json({
       items: paginated,
       total: all.length,
@@ -485,6 +502,9 @@ export async function GET(req: NextRequest) {
       stats: {
         totalActiveEvents: totalActiveEvents ?? 0,
         weeklyActiveEvents: weeklyActiveEvents ?? 0,
+      },
+      tokenSupply: {
+        systemTotal: supplyData?.total_supply?.toString() ?? null,
       },
     });
   } catch (err) {

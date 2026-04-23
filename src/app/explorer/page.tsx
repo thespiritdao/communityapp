@@ -21,6 +21,9 @@ interface ExplorerResponse {
     totalActiveEvents: number;
     weeklyActiveEvents: number;
   };
+  tokenSupply?: {
+    systemTotal?: string | null;
+  };
 }
 
 // ── Styled components (matches app pattern from my-activity) ──────────────────
@@ -274,6 +277,7 @@ export default function ExplorerPage() {
   const [total, setTotal] = useState(0);
   const [offset, setOffset] = useState(0);
   const [stats, setStats] = useState({ totalActiveEvents: 0, weeklyActiveEvents: 0 });
+  const [tokenSupply, setTokenSupply] = useState<{ systemTotal?: string | null }>({});
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
 
@@ -293,6 +297,7 @@ export default function ExplorerPage() {
         setItems((prev) => (append ? [...prev, ...data.items] : data.items));
         setTotal(data.total);
         setStats(data.stats);
+        if (data.tokenSupply) setTokenSupply(data.tokenSupply);
         setOffset(currentOffset + data.items.length);
       } catch (err) {
         console.error('[explorer] fetch error', err);
@@ -342,6 +347,11 @@ export default function ExplorerPage() {
         <StatChip>
           {stats.weeklyActiveEvents} new this week
         </StatChip>
+        {tokenSupply.systemTotal && (
+          <StatChip>
+            $SYSTEM in circulation: {Number(tokenSupply.systemTotal).toLocaleString('en-US', { maximumFractionDigits: 2 })}
+          </StatChip>
+        )}
       </StatsRow>
 
       <TabsContainer>
@@ -379,6 +389,35 @@ export default function ExplorerPage() {
                     {item.amount && <AmountBadge>{item.amount}</AmountBadge>}
                     <span>{formatDate(item.timestamp)}</span>
                   </CardMeta>
+                  {item.type === 'donation' && item.metadata && (
+                    <div style={{
+                      marginTop: 10,
+                      padding: '10px 12px',
+                      background: '#f9faf9',
+                      borderRadius: 6,
+                      fontSize: 12,
+                      color: '#4b5563',
+                      display: 'grid',
+                      gridTemplateColumns: '1fr auto',
+                      gap: '4px 16px',
+                      lineHeight: 1.6,
+                    }}>
+                      <span>Donation</span>
+                      <span style={{ textAlign: 'right', fontWeight: 500 }}>${Number(item.metadata.fiatAmount).toFixed(2)}</span>
+                      <span style={{ fontWeight: 600, gridColumn: '1 / -1', marginTop: 4 }}>Fees</span>
+                      <span style={{ paddingLeft: 8 }}>Stripe processing</span>
+                      <span style={{ textAlign: 'right', color: '#9ca3af' }}>-${Number(item.metadata.stripeFee).toFixed(2)}</span>
+                      <span style={{ paddingLeft: 8 }}>Operations (4%)</span>
+                      <span style={{ textAlign: 'right', color: '#9ca3af' }}>-${item.metadata.operationsFee}</span>
+                      <span style={{ paddingLeft: 8 }}>Eight Dignities (4%)</span>
+                      <span style={{ textAlign: 'right', color: '#9ca3af' }}>-${item.metadata.dignitiesFee}</span>
+                      <div style={{ gridColumn: '1 / -1', borderTop: '1px solid #e5e7eb', margin: '4px 0' }} />
+                      <span style={{ fontWeight: 600 }}>$SYSTEM Generated</span>
+                      <span style={{ textAlign: 'right', fontWeight: 600, color: '#16a34a' }}>
+                        {Number(item.metadata.systemTokens).toLocaleString('en-US', { maximumFractionDigits: 2 })} $SYSTEM
+                      </span>
+                    </div>
+                  )}
                   {(item.type === 'treasury_movement' || item.type === 'gift') && (item.actor_address || item.recipient_address) && (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginTop: 8 }}>
                       {item.actor_address && (
