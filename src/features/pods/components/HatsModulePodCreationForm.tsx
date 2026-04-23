@@ -1717,9 +1717,9 @@ export const HatsModulePodCreationForm: React.FC<
             parentHatId: parentHatId, // HAT ID for child index queries
             podLeads: validation.validLeads,
             image: podImageUrl,
-            createdByAddress: address || '', // Current user's address
-            managementHatId: newHatId, // TIER 1 FIX: No placeholder - verified onchain above
-            membershipHatId: undefined, // Will be created on-demand when first member added
+            createdByAddress: address || '',
+            managementHatId: newHatId,
+            membershipHatId: undefined,
             treasuryContractAddress: formData.enableTreasury
               ? 'pending'
               : undefined,
@@ -1727,12 +1727,36 @@ export const HatsModulePodCreationForm: React.FC<
             blockchainPodId: blockchainPodId,
           });
 
+          console.log('📝 PodService.createPod result:', {
+            podId: podData?.podId,
+            isV2ChildPod,
+            blockchainPodId,
+            managementHatId: newHatId,
+            parentPodId: formData.parentPodId,
+          });
+
+          if (!podData?.podId) {
+            console.error('❌ Pod DB save returned no podId — pod will not appear in pending review');
+            toast({
+              title: 'Warning: Pod may not have saved',
+              description: 'The on-chain transaction succeeded but the database save may have failed. Contact an admin.',
+              variant: 'destructive',
+              duration: 10000,
+            });
+          }
+
           // V2 child pods go straight to pending_review (exec veto window)
           if (isV2ChildPod && podData?.podId) {
-            await supabase
+            const { error: statusError } = await supabase
               .from('pods')
               .update({ status: 'pending_review', is_active: false })
               .eq('id', podData.podId);
+
+            if (statusError) {
+              console.error('❌ Failed to set pod status to pending_review:', statusError);
+            } else {
+              console.log('✅ Pod status set to pending_review');
+            }
           }
 
           // Fire-and-forget: notify relevant pod leaders of the new application
@@ -2106,8 +2130,8 @@ export const HatsModulePodCreationForm: React.FC<
           });
 
           if (onSuccess) {
-            onSuccess({ podId: podData.podId, ...response });
-          } else {
+            onSuccess({ podId: podData?.podId, ...response });
+          } else if (podData?.podId) {
             // Redirect to pod management page
             router.push(`/pods/${podData.podId}/manage`);
           }

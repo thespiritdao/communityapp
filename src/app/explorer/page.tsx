@@ -23,6 +23,7 @@ interface ExplorerResponse {
   };
   tokenSupply?: {
     systemTotal?: string | null;
+    selfTotal?: string | null;
   };
 }
 
@@ -279,7 +280,7 @@ export default function ExplorerPage() {
   const [total, setTotal] = useState(0);
   const [offset, setOffset] = useState(0);
   const [stats, setStats] = useState({ totalActiveEvents: 0, weeklyActiveEvents: 0 });
-  const [tokenSupply, setTokenSupply] = useState<{ systemTotal?: string | null }>({});
+  const [tokenSupply, setTokenSupply] = useState<{ systemTotal?: string | null; selfTotal?: string | null }>({});
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
 
@@ -344,17 +345,72 @@ export default function ExplorerPage() {
 
       <StatsRow>
         <StatChip>
-          {stats.totalActiveEvents} active event{stats.totalActiveEvents !== 1 ? 's' : ''}
+          {stats.totalActiveEvents} upcoming event{stats.totalActiveEvents !== 1 ? 's' : ''}
         </StatChip>
         <StatChip>
           {stats.weeklyActiveEvents} new this week
         </StatChip>
-        {tokenSupply.systemTotal && (
-          <StatChip>
-            $SYSTEM in circulation: {Number(tokenSupply.systemTotal).toLocaleString('en-US', { maximumFractionDigits: 2 })}
-          </StatChip>
-        )}
       </StatsRow>
+
+      {(tokenSupply.systemTotal || tokenSupply.selfTotal) && (
+        <div style={{
+          display: 'flex',
+          gap: 12,
+          marginBottom: 24,
+          flexWrap: 'wrap',
+        }}>
+          {tokenSupply.systemTotal && (
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+              background: '#fff',
+              border: '1px solid #D8D2C8',
+              borderRadius: 10,
+              padding: '8px 14px',
+            }}>
+              <Image
+                src="/images/erc20tokens/SystemToken.png"
+                alt="$SYSTEM"
+                width={22}
+                height={22}
+                style={{ borderRadius: '50%' }}
+              />
+              <div style={{ fontSize: 12 }}>
+                <div style={{ color: '#5F5A54', fontWeight: 500, lineHeight: 1.2 }}>$SYSTEM Total Circulation</div>
+                <div style={{ color: '#1a1a1a', fontWeight: 600, fontSize: 14 }}>
+                  {Number(tokenSupply.systemTotal).toLocaleString('en-US', { maximumFractionDigits: 2 })}
+                </div>
+              </div>
+            </div>
+          )}
+          {tokenSupply.selfTotal && (
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+              background: '#fff',
+              border: '1px solid #D8D2C8',
+              borderRadius: 10,
+              padding: '8px 14px',
+            }}>
+              <Image
+                src="/images/erc20tokens/SelfToken.png"
+                alt="$SELF"
+                width={22}
+                height={22}
+                style={{ borderRadius: '50%' }}
+              />
+              <div style={{ fontSize: 12 }}>
+                <div style={{ color: '#5F5A54', fontWeight: 500, lineHeight: 1.2 }}>$SELF Total Circulation</div>
+                <div style={{ color: '#1a1a1a', fontWeight: 600, fontSize: 14 }}>
+                  {Number(tokenSupply.selfTotal).toLocaleString('en-US', { maximumFractionDigits: 2 })}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       <TabsContainer>
         {(Object.keys(TAB_LABELS) as FilterTab[]).map((tab) => (

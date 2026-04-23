@@ -165,28 +165,41 @@ export async function POST(request: NextRequest) {
     if (event.type === 'payment_intent.succeeded') {
       const paymentIntent = event.data.object as Stripe.PaymentIntent;
 
-      console.log('✅ Payment succeeded:', {
-        paymentIntentId: paymentIntent.id,
-        amount: paymentIntent.amount / 100,
-        paymentMethod: paymentIntent.payment_method_types[0]
-      });
-
-      // Get actual payment method used
-      const paymentMethod = paymentIntent.payment_method_types[0];
       const amount = paymentIntent.amount / 100;
 
-      // Calculate actual Stripe fee (available after payment)
+      // Retrieve the charge to get actual payment method and fee data
       const charge = paymentIntent.latest_charge
         ? await stripe.charges.retrieve(paymentIntent.latest_charge as string)
         : null;
 
-      const actualStripeFee = charge
-        ? (charge.balance_transaction
-            ? (await stripe.balanceTransactions.retrieve(
-                charge.balance_transaction as string
-              )).fee / 100
-            : amount * (paymentMethod === 'us_bank_account' ? 0.008 : 0.029) + 0.30)
-        : amount * 0.029 + 0.30;
+      // Get actual payment method from the charge (not payment_method_types which is just the allowed list)
+      const paymentMethod = charge?.payment_method_details?.type
+        ?? (paymentIntent.payment_method_types.includes('us_bank_account')
+            && paymentIntent.payment_method_types.length === 1
+              ? 'us_bank_account'
+              : 'card');
+
+      console.log('✅ Payment succeeded:', {
+        paymentIntentId: paymentIntent.id,
+        amount,
+        paymentMethod,
+        chargeId: charge?.id,
+      });
+
+      // Calculate actual Stripe fee from Stripe's balance transaction (most accurate)
+      // Fallback: estimate based on actual payment method type
+      // ACH: 0.8% capped at $5, no flat fee  |  Card: 2.9% + $0.30
+      let actualStripeFee: number;
+      if (charge?.balance_transaction) {
+        const balanceTx = await stripe.balanceTransactions.retrieve(
+          charge.balance_transaction as string
+        );
+        actualStripeFee = balanceTx.fee / 100;
+      } else if (paymentMethod === 'us_bank_account') {
+        actualStripeFee = Math.min(amount * 0.008, 5);
+      } else {
+        actualStripeFee = amount * 0.029 + 0.30;
+      }
 
       // Recalculate tokens with actual Stripe fee
       // Platform fee is 8% of NET (post-Stripe) so we never lose money
@@ -207,7 +220,7 @@ export async function POST(request: NextRequest) {
         ? 'awaiting_settlement'
         : 'awaiting_executive_approval';
 
-      // Update donation record
+      // Update donation record (may not exist if payment came via Stripe Checkout or other flow)
       const { data: donation, error: updateError } = await supabase
         .from('pending_donations')
         .update({
@@ -226,8 +239,16 @@ export async function POST(request: NextRequest) {
         .single();
 
       if (updateError) {
-        console.error('❌ Failed to update donation:', updateError);
-        return NextResponse.json({ error: 'Database error' }, { status: 500 });
+        // No matching pending_donations row — payment may have come through Stripe Checkout
+        // or another flow. Log it and return 200 so Stripe doesn't retry.
+        console.warn('⚠️ No pending_donations row found for payment:', {
+          paymentIntentId: paymentIntent.id,
+          amount,
+          paymentMethod,
+          description: paymentIntent.description,
+          metadata: paymentIntent.metadata,
+        });
+        return NextResponse.json({ received: true, note: 'No matching donation record' });
       }
 
       console.log(`📊 Donation status: ${newStatus}, settlement: ${settlementDays} days`);

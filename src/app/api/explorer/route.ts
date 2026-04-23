@@ -1,6 +1,8 @@
 // src/app/api/explorer/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { parseAbi, formatUnits } from 'viem';
+import { createConfiguredPublicClient } from '@/utils/rpcClient';
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -409,12 +411,21 @@ export async function GET(req: NextRequest) {
     const oneWeekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
 
     // Always fetch published events for stats; include in feed if filter matches
-    const { data: publishedEvents, count: totalActiveEvents } = await supabaseAdmin
+    // "Active events" = upcoming (event_date >= now), not all published ever
+    const now = new Date().toISOString();
+
+    const { data: publishedEvents } = await supabaseAdmin
       .from('events')
-      .select('id, title, event_date, created_at, organizing_pod_id, creator_address', { count: 'exact' })
+      .select('id, title, event_date, created_at, organizing_pod_id, creator_address')
       .eq('status', 'published')
       .order('created_at', { ascending: false })
       .limit(100);
+
+    const { count: totalActiveEvents } = await supabaseAdmin
+      .from('events')
+      .select('id', { count: 'exact', head: true })
+      .eq('status', 'published')
+      .gte('event_date', now);
 
     const { count: weeklyActiveEvents } = await supabaseAdmin
       .from('events')
@@ -515,12 +526,43 @@ export async function GET(req: NextRequest) {
 
     const paginated = all.slice(offsetParam, offsetParam + LIMIT);
 
-    // ── Token supply stats ────────────────────────────────────────────────────
-    const { data: supplyData } = await supabaseAdmin
-      .from('system_supply_metadata')
-      .select('total_supply')
-      .eq('id', 1)
-      .single();
+    // ── Token supply stats (on-chain totalSupply) ─────────────────────────────
+    const SYSTEM_TOKEN = process.env.NEXT_PUBLIC_SYSTEM_TOKEN as `0x${string}` | undefined;
+    const SELF_TOKEN = process.env.NEXT_PUBLIC_SELF_TOKEN as `0x${string}` | undefined;
+    const erc20Abi = parseAbi(['function totalSupply() view returns (uint256)']);
+
+    let systemTotal: string | null = null;
+    let selfTotal: string | null = null;
+
+    try {
+      const publicClient = createConfiguredPublicClient();
+      const calls: Promise<any>[] = [];
+
+      if (SYSTEM_TOKEN) {
+        calls.push(
+          publicClient.readContract({
+            address: SYSTEM_TOKEN,
+            abi: erc20Abi,
+            functionName: 'totalSupply',
+          }).then((v) => { systemTotal = formatUnits(v as bigint, 18); })
+            .catch((e) => console.warn('[explorer] $SYSTEM totalSupply failed:', e.message))
+        );
+      }
+      if (SELF_TOKEN) {
+        calls.push(
+          publicClient.readContract({
+            address: SELF_TOKEN,
+            abi: erc20Abi,
+            functionName: 'totalSupply',
+          }).then((v) => { selfTotal = formatUnits(v as bigint, 18); })
+            .catch((e) => console.warn('[explorer] $SELF totalSupply failed:', e.message))
+        );
+      }
+
+      await Promise.all(calls);
+    } catch (e) {
+      console.warn('[explorer] Token supply query failed:', e);
+    }
 
     return NextResponse.json({
       items: paginated,
@@ -532,7 +574,8 @@ export async function GET(req: NextRequest) {
         weeklyActiveEvents: weeklyActiveEvents ?? 0,
       },
       tokenSupply: {
-        systemTotal: supplyData?.total_supply?.toString() ?? null,
+        systemTotal,
+        selfTotal,
       },
     });
   } catch (err) {
