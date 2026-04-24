@@ -23,6 +23,7 @@ import {
   Trash2,
   Eye,
   Video,
+  Image as ImageIcon,
 } from 'lucide-react';
 import type {
   KnowledgeCategory,
@@ -64,6 +65,8 @@ export default function PodKnowledgeManager({
   const [itemFile, setItemFile] = useState<File | null>(null);
   const [itemDuration, setItemDuration] = useState('');
   const [itemIsPublic, setItemIsPublic] = useState(false);
+  const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
+  const [thumbnailPreview, setThumbnailPreview] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
 
   useEffect(() => {
@@ -146,6 +149,35 @@ export default function PodKnowledgeManager({
     return publicUrl;
   };
 
+  const uploadThumbnail = async (file: File): Promise<string> => {
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${podId}/thumbnails/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+
+    const { data, error } = await supabase.storage
+      .from('knowledge-documents')
+      .upload(fileName, file);
+
+    if (error) throw error;
+
+    const { data: { publicUrl } } = supabase.storage
+      .from('knowledge-documents')
+      .getPublicUrl(fileName);
+
+    return publicUrl;
+  };
+
+  const handleThumbnailSelect = (file: File | null) => {
+    setThumbnailFile(file);
+    if (thumbnailPreview) {
+      URL.revokeObjectURL(thumbnailPreview);
+    }
+    if (file) {
+      setThumbnailPreview(URL.createObjectURL(file));
+    } else {
+      setThumbnailPreview(null);
+    }
+  };
+
   const createItem = async () => {
     if (!itemTitle.trim() || !selectedCategory || !userAddress) {
       alert('Please fill in title and category');
@@ -165,10 +197,16 @@ export default function PodKnowledgeManager({
     try {
       setUploading(true);
       let contentUrl = null;
+      let thumbnailUrl = null;
 
       // Upload file to Supabase if not markdown
       if (itemContentType !== 'markdown' && itemFile) {
         contentUrl = await uploadFile(itemFile);
+      }
+
+      // Upload thumbnail if provided
+      if (thumbnailFile) {
+        thumbnailUrl = await uploadThumbnail(thumbnailFile);
       }
 
       const duration = itemDuration ? parseInt(itemDuration) : null;
@@ -181,7 +219,7 @@ export default function PodKnowledgeManager({
         content_type: itemContentType,
         content_url: contentUrl,
         content_text: itemContentType === 'markdown' ? itemContentText : null,
-        thumbnail_url: null,
+        thumbnail_url: thumbnailUrl,
         duration_seconds: duration,
         is_public: itemIsPublic,
         view_count: 0,
@@ -200,6 +238,7 @@ export default function PodKnowledgeManager({
       setItemFile(null);
       setItemDuration('');
       setItemIsPublic(false);
+      handleThumbnailSelect(null);
       setShowCreateItem(false);
       loadKnowledgeBase();
     } catch (error) {
@@ -465,6 +504,52 @@ export default function PodKnowledgeManager({
                     />
                   </div>
 
+                  {/* Thumbnail / Cover Image (optional) */}
+                  <div className="w-full">
+                    <Label htmlFor="item-thumbnail">
+                      <span className="flex items-center gap-1">
+                        <ImageIcon size={14} />
+                        Cover Image (optional)
+                      </span>
+                    </Label>
+                    <div className="mt-2 w-full">
+                      <Input
+                        id="item-thumbnail"
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) => handleThumbnailSelect(e.target.files?.[0] || null)}
+                        className="w-full"
+                      />
+                      {thumbnailPreview && (
+                        <div className="mt-2 relative">
+                          <img
+                            src={thumbnailPreview}
+                            alt="Thumbnail preview"
+                            className="rounded-md border w-full max-h-40 object-cover"
+                            style={{ borderColor: '#E8E4DC' }}
+                          />
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="absolute top-1 right-1"
+                            style={{ backgroundColor: 'rgba(0,0,0,0.5)', color: '#fff' }}
+                            onClick={() => {
+                              handleThumbnailSelect(null);
+                              const input = document.getElementById('item-thumbnail') as HTMLInputElement;
+                              if (input) input.value = '';
+                            }}
+                          >
+                            <Trash2 size={14} />
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                    <p className="text-xs mt-1" style={{ color: '#8F8A84' }}>
+                      Displayed as the cover image in the knowledge base grid. Recommended: 1280x720 (16:9).
+                    </p>
+                  </div>
+
                   {itemContentType === 'markdown' ? (
                     <div className="w-full">
                       <Label htmlFor="item-text">Content *</Label>
@@ -572,6 +657,13 @@ export default function PodKnowledgeManager({
                     >
                       <div className="flex items-start justify-between gap-2">
                         <div className="flex gap-3 flex-1 min-w-0">
+                          {item.thumbnail_url && (
+                            <img
+                              src={item.thumbnail_url}
+                              alt=""
+                              className="w-16 h-10 rounded object-cover flex-shrink-0"
+                            />
+                          )}
                           <div className="flex-1 min-w-0">
                             <p className="font-medium truncate">{item.title}</p>
                             {item.description && (
