@@ -235,12 +235,14 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Import getUserInviteCode
-    const { getUserInviteCode } = await import('@/services/inviteCodeService');
+    // Use admin client to bypass RLS — the regular client has no session in API routes
+    const { data, error } = await supabaseAdmin
+      .from('user_profiles')
+      .select('referral_key')
+      .eq('wallet_address', walletAddress.toLowerCase())
+      .single();
 
-    const inviteCode = await getUserInviteCode(walletAddress);
-
-    if (!inviteCode) {
+    if (error || !data?.referral_key) {
       return NextResponse.json(
         {
           success: false,
@@ -252,7 +254,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      inviteCode,
+      inviteCode: data.referral_key,
     });
   } catch (error) {
     console.error('Error fetching invite code:', error);
