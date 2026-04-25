@@ -102,25 +102,27 @@ export const KnowledgeGrid: React.FC<KnowledgeGridProps> = ({
               backgroundPosition: 'center',
             }}
           >
-            {/* Content type icon overlay */}
-            <div
-              style={{
-                position: 'absolute',
-                top: '50%',
-                left: '50%',
-                transform: 'translate(-50%, -50%)',
-                width: '56px',
-                height: '56px',
-                borderRadius: '50%',
-                backgroundColor: 'rgba(255, 255, 255, 0.9)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                transition: 'all 0.2s ease',
-              }}
-            >
-              {getContentIcon(item.content_type)}
-            </div>
+            {/* Content type icon overlay — only show when no thumbnail */}
+            {!item.thumbnail_url && (
+              <div
+                style={{
+                  position: 'absolute',
+                  top: '50%',
+                  left: '50%',
+                  transform: 'translate(-50%, -50%)',
+                  width: '56px',
+                  height: '56px',
+                  borderRadius: '50%',
+                  backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  transition: 'all 0.2s ease',
+                }}
+              >
+                {getContentIcon(item.content_type)}
+              </div>
+            )}
 
             {/* Duration badge - only for videos */}
             {item.content_type === 'video' && item.duration_seconds && (

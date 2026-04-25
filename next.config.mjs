@@ -186,7 +186,7 @@ const nextConfig = {
                 https://api.stripe.com
                 https://*.livekit.cloud
                 wss://*.livekit.cloud;
-              img-src 'self' data: https:
+              img-src 'self' data: blob: https:
                 https://ipfs.io
                 https://gateway.pinata.cloud
                 https://cloudflare-ipfs.com
