@@ -38,9 +38,11 @@ export async function POST(req: NextRequest) {
       .from('explorer_events')
       .insert({
         type: 'member_introduced',
+        category: 'members',
         actor: normalized,
         title: `${displayName} joined SpiritDAO`,
         metadata: { displayName, profilePicture: profilePicture ?? null },
+        dedupe_key: `member_introduced:${normalized}`,
       });
 
     if (error) throw error;

@@ -487,9 +487,11 @@ async function logHatMintEvent(
 
     await supabase.from('explorer_events').insert({
       type: 'hat_minted',
+      category: 'members',
       actor: normalized,
       title: `Received ${hatName} hat`,
       metadata: { hatName, txHash },
+      dedupe_key: `hat_minted:${normalized}:${hatName}`,
     });
   } catch (err) {
     console.warn('[mint-hat] Failed to log explorer event:', err);

@@ -10,7 +10,7 @@ import { UserProfileDisplay } from '@/components/UserProfileDisplay';
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
-type FilterTab = 'all' | 'pods' | 'governance' | 'treasury' | 'members' | 'bounties' | 'events' | 'marketplace';
+type FilterTab = 'all' | 'pods' | 'governance' | 'treasury' | 'members' | 'bounties' | 'events' | 'marketplace' | 'forum' | 'knowledge';
 
 interface ExplorerResponse {
   items: ExplorerEvent[];
@@ -112,21 +112,96 @@ const FeedList = styled.div`
   gap: 10px;
 `;
 
+// Color palette derived from SpiritDAO Visual Style Guide
+// (src/guides/design/SPIRITDAO_VISUAL_STYLE_GUIDE.md). Sacred minimalism —
+// no neons, no harsh blues. Each event type maps to a semantic palette role
+// based on what the event communicates: forward motion, completion,
+// caution, destruction, supportive coordination, contemplative thought.
+const PALETTE = {
+  ritualGreen: '#2F5D50',   // primary / forward motion (creation, governance proposal)
+  successGreen: '#3F7A5A',  // completion / fruition (executed, approved, fulfilled)
+  mutedSage: '#8FAAA1',     // supportive / harmonious (member joins, supportive coord)
+  sageDeep: '#6F8F86',      // sage hover — used for less-prominent supportive events
+  warmAmber: '#C6933F',     // caution / deliberation (queued, in-flight, escrow held)
+  earthenRed: '#8B3A3A',    // destructive / serious (burns, vetoes, rejections)
+  mutedBrown: '#9B7E5A',    // grounded earth tone (treasury motion)
+  groundedNeutral: '#BFB7A8', // muted neutral (canceled, disabled, low-signal)
+  contemplative: '#7A6E8F', // muted dusty violet — deliberation/knowledge/AI
+};
+
 const EVENT_COLORS: Record<string, string> = {
-  pod_created: '#2F5D50',
-  member_joined: '#0ea5e9',
-  proposal_created: '#7c3aed',
-  vote_cast: '#2563eb',
-  treasury_movement: '#d97706',
-  donation: '#16a34a',
-  bounty_created: '#db2777',
-  bounty_completed: '#059669',
-  work_submitted: '#ec4899',
-  event_published: '#f59e0b',
-  marketplace_purchase: '#8b5cf6',
-  hat_minted: '#f97316',
-  gift: '#8b5cf6',
-  burn: '#8B3A3A',
+  // pods — creation = primary; veto/deletion = destructive; modules = supportive
+  pod_created: PALETTE.ritualGreen,
+  pod_activated: PALETTE.successGreen,
+  pod_vetoed: PALETTE.earthenRed,
+  pod_deletion_proposed: PALETTE.earthenRed,
+  pod_module_enabled: PALETTE.mutedSage,
+  pod_module_disabled: PALETTE.groundedNeutral,
+  // members — joining is harmonious / supportive
+  member_joined: PALETTE.mutedSage,
+  member_introduced: PALETTE.ritualGreen,
+  member_joined_via_referral: PALETTE.mutedSage,
+  pod_member_applied: PALETTE.mutedSage,
+  pod_member_approved: PALETTE.successGreen,
+  pod_member_rejected: PALETTE.earthenRed,
+  hat_minted: PALETTE.warmAmber,
+  hat_burned: PALETTE.earthenRed,
+  hat_renounced: PALETTE.earthenRed,
+  profile_updated: PALETTE.sageDeep,
+  chat_channel_created: PALETTE.mutedSage,
+  chat_first_message_in_pod: PALETTE.mutedSage,
+  // governance — deliberation lifecycle
+  proposal_created: PALETTE.ritualGreen,
+  proposal_queued: PALETTE.warmAmber,
+  proposal_executed: PALETTE.successGreen,
+  proposal_defeated: PALETTE.earthenRed,
+  proposal_canceled: PALETTE.groundedNeutral,
+  vote_cast: PALETTE.contemplative,
+  // treasury — earth tones for value movement
+  treasury_movement: PALETTE.mutedBrown,
+  donation: PALETTE.successGreen,
+  gift: PALETTE.contemplative,
+  burn: PALETTE.earthenRed,
+  // bounties — work lifecycle
+  bounty_created: PALETTE.ritualGreen,
+  bounty_completed: PALETTE.successGreen,
+  work_submitted: PALETTE.warmAmber,
+  work_approved: PALETTE.successGreen,
+  work_rejected: PALETTE.earthenRed,
+  bid_placed: PALETTE.mutedSage,
+  bid_accepted: PALETTE.successGreen,
+  bid_rejected: PALETTE.earthenRed,
+  bid_review_submitted: PALETTE.contemplative,
+  milestone_reached: PALETTE.successGreen,
+  dispute_opened: PALETTE.earthenRed,
+  dispute_evidence_added: PALETTE.warmAmber,
+  dispute_mediator_assigned: PALETTE.contemplative,
+  dispute_resolved: PALETTE.successGreen,
+  // events — gathering, holding, releasing
+  event_published: PALETTE.ritualGreen,
+  event_rsvp: PALETTE.mutedSage,
+  event_escrow_held: PALETTE.warmAmber,
+  event_escrow_released: PALETTE.successGreen,
+  event_tokens_distributed: PALETTE.successGreen,
+  // marketplace
+  marketplace_purchase: PALETTE.contemplative,
+  marketplace_listing_created: PALETTE.ritualGreen,
+  marketplace_listing_updated: PALETTE.mutedSage,
+  marketplace_order_fulfilled: PALETTE.successGreen,
+  marketplace_order_shipped: PALETTE.mutedSage,
+  marketplace_order_refunded: PALETTE.warmAmber,
+  marketplace_order_cancelled: PALETTE.groundedNeutral,
+  // forum — deliberation; moderator actions are destructive intent
+  forum_thread_created: PALETTE.ritualGreen,
+  forum_post_created: PALETTE.mutedSage,
+  forum_poll_created: PALETTE.ritualGreen,
+  forum_poll_voted: PALETTE.contemplative,
+  forum_post_reaction: PALETTE.mutedSage,
+  forum_moderator_action: PALETTE.earthenRed,
+  forum_thread_summary_published: PALETTE.contemplative,
+  // knowledge — contemplative thought
+  knowledge_item_published: PALETTE.contemplative,
+  knowledge_item_updated: PALETTE.contemplative,
 };
 
 const EventCard = styled.div<{ $type: string }>`
@@ -233,19 +308,68 @@ const LoadingMessage = styled.div`
 
 const TYPE_LABELS: Record<string, string> = {
   pod_created: 'Pod Created',
+  pod_activated: 'Pod Activated',
+  pod_vetoed: 'Pod Vetoed',
+  pod_deletion_proposed: 'Pod Deletion',
+  pod_module_enabled: 'Module Enabled',
+  pod_module_disabled: 'Module Disabled',
   member_joined: 'Joined',
+  member_introduced: 'New Member',
+  member_joined_via_referral: 'Referred',
+  pod_member_applied: 'Applied',
+  pod_member_approved: 'Approved',
+  pod_member_rejected: 'Rejected',
+  hat_minted: 'Hat Minted',
+  hat_burned: 'Hat Burned',
+  hat_renounced: 'Hat Renounced',
+  profile_updated: 'Profile Updated',
+  chat_channel_created: 'Channel Created',
+  chat_first_message_in_pod: 'First Message',
   proposal_created: 'Proposal',
+  proposal_queued: 'Queued',
+  proposal_executed: 'Executed',
+  proposal_defeated: 'Defeated',
+  proposal_canceled: 'Canceled',
   vote_cast: 'Vote',
   treasury_movement: 'Treasury',
   donation: 'Donation',
+  gift: 'Gift',
+  burn: 'Burn',
   bounty_created: 'Bounty',
   bounty_completed: 'Completed',
   work_submitted: 'Submitted',
+  work_approved: 'Approved',
+  work_rejected: 'Rejected',
+  bid_placed: 'Bid Placed',
+  bid_accepted: 'Bid Accepted',
+  bid_rejected: 'Bid Rejected',
+  bid_review_submitted: 'Bid Review',
+  milestone_reached: 'Milestone',
+  dispute_opened: 'Dispute',
+  dispute_evidence_added: 'Evidence',
+  dispute_mediator_assigned: 'Mediator',
+  dispute_resolved: 'Resolved',
   event_published: 'Event',
+  event_rsvp: 'RSVP',
+  event_escrow_held: 'Escrow Held',
+  event_escrow_released: 'Escrow Released',
+  event_tokens_distributed: 'Tokens Distributed',
   marketplace_purchase: 'Purchase',
-  hat_minted: 'Hat Minted',
-  gift: 'Gift',
-  burn: 'Burn',
+  marketplace_listing_created: 'Listing',
+  marketplace_listing_updated: 'Listing Updated',
+  marketplace_order_fulfilled: 'Fulfilled',
+  marketplace_order_shipped: 'Shipped',
+  marketplace_order_refunded: 'Refunded',
+  marketplace_order_cancelled: 'Cancelled',
+  forum_thread_created: 'Thread',
+  forum_post_created: 'Reply',
+  forum_poll_created: 'Poll',
+  forum_poll_voted: 'Poll Vote',
+  forum_post_reaction: 'Reaction',
+  forum_moderator_action: 'Moderation',
+  forum_thread_summary_published: 'Summary',
+  knowledge_item_published: 'Published',
+  knowledge_item_updated: 'Updated',
 };
 
 const TAB_LABELS: Record<FilterTab, string> = {
@@ -257,6 +381,8 @@ const TAB_LABELS: Record<FilterTab, string> = {
   bounties: 'Bounties',
   events: 'Events',
   marketplace: 'Marketplace',
+  forum: 'Forum',
+  knowledge: 'Knowledge',
 };
 
 
