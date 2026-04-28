@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { unifiedNotificationService } from '@/services/unifiedNotificationService';
+import { recordExplorerEvent, type ExplorerEventType } from '@/lib/explorerEvents';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -123,6 +124,26 @@ export async function POST(request: NextRequest) {
       status,
       reviewer: reviewerAddress,
     });
+
+    // Pulse: surface approve/reject decisions. revision_requested is a softer
+    // back-and-forth signal — skip to keep the feed clean.
+    if (status === 'approved' || status === 'rejected') {
+      const eventType: ExplorerEventType = status === 'approved' ? 'work_approved' : 'work_rejected';
+      recordExplorerEvent({
+        type: eventType,
+        title: `Work ${status}: ${bounty.title}`,
+        actor: reviewerAddress,
+        pod_id: bounty.pod_id ?? null,
+        url: `/bounty/${submission.bounty_id}`,
+        metadata: {
+          submission_id: submissionId,
+          bounty_id: submission.bounty_id,
+          bid_id: submission.bid_id,
+          submitter: submission.bids?.bidder_address ?? null,
+        },
+        dedupe_key: `${eventType}:${submissionId}`,
+      }).catch((err) => console.warn('[work/review] explorer event failed:', err));
+    }
 
     // Handle status-specific actions
     if (status === 'approved') {

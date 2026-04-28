@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { unifiedNotificationService } from '@/services/unifiedNotificationService';
+import { recordExplorerEvent } from '@/lib/explorerEvents';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -263,6 +264,15 @@ export async function POST(request: NextRequest) {
     }
 
     console.log('✅ Dispute created:', newDispute.id);
+
+    recordExplorerEvent({
+      type: 'dispute_opened',
+      title: `Dispute filed: ${disputeTitle}`,
+      actor: filerAddress,
+      url: `/bounty/${bountyId}`,
+      metadata: { dispute_id: newDispute.id, bounty_id: bountyId, dispute_type: disputeType, priority },
+      dedupe_key: `dispute_opened:${newDispute.id}`,
+    }).catch((err) => console.warn('[dispute/file] explorer event failed:', err));
 
     // =====================================================
     // 6. CREATE INITIAL SYSTEM COMMENT

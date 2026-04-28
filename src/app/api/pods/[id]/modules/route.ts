@@ -5,6 +5,7 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/utils/supabaseAdminClient';
 import jwt from 'jsonwebtoken';
+import { recordExplorerEvent } from '@/lib/explorerEvents';
 
 export const runtime = 'nodejs';
 
@@ -107,6 +108,13 @@ export async function PUT(req: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ error: 'No valid module keys provided' }, { status: 400 });
   }
 
+  // Snapshot prior state so we can fire Pulse events only on actual transitions.
+  const { data: prior } = await supabaseAdmin
+    .from('pod_modules')
+    .select('*')
+    .eq('pod_id', podId)
+    .single();
+
   const { data, error } = await supabaseAdmin
     .from('pod_modules')
     .upsert(
@@ -117,6 +125,26 @@ export async function PUT(req: NextRequest): Promise<NextResponse> {
     .single();
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+  // Pulse: emit one event per module toggled. Module name is normalized
+  // (chat_enabled → chat) and event type encodes the new state.
+  for (const [key, newValue] of Object.entries(updates)) {
+    const priorValue = prior?.[key] ?? false;
+    if (priorValue === newValue) continue; // no-op edits don't fire
+    const moduleName = key.replace(/_enabled$/, '');
+    const eventType = newValue ? 'pod_module_enabled' : 'pod_module_disabled';
+    recordExplorerEvent({
+      type: eventType,
+      title: `${newValue ? 'Enabled' : 'Disabled'} ${moduleName} module`,
+      actor: wallet,
+      pod_id: podId,
+      url: `/pods/${podId}`,
+      metadata: { module: moduleName, new_value: newValue },
+      // Per-(pod, module, transition-direction) — re-toggling fires again.
+      // Including timestamp via Date.now() ensures successive toggles record.
+      dedupe_key: `${eventType}:${podId}:${moduleName}:${Date.now()}`,
+    }).catch((err) => console.warn('[pod modules] explorer event failed:', err));
+  }
 
   // When sub_pods_enabled changes, sync subPodCreation on all role permissions for this pod
   if ('sub_pods_enabled' in updates) {

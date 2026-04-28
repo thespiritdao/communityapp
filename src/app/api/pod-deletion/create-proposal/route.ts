@@ -1,6 +1,7 @@
 // src/app/api/pod-deletion/create-proposal/route.ts
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { recordExplorerEvent } from '@/lib/explorerEvents';
 
 // Server-side Supabase client with service role (bypasses RLS)
 const supabaseAdmin = createClient(
@@ -68,6 +69,16 @@ export async function POST(request: Request) {
     }
 
     console.log('✅ API: Proposal created successfully:', data.id);
+
+    recordExplorerEvent({
+      type: 'pod_deletion_proposed',
+      title: `Pod deletion proposed: ${body.pod_name}`,
+      actor: body.proposed_by,
+      pod_id: body.pod_id,
+      url: `/pods/${body.pod_id}`,
+      metadata: { proposal_id: data.id, pod_name: body.pod_name },
+      dedupe_key: `pod_deletion_proposed:${data.id}`,
+    }).catch((err) => console.warn('[pod-deletion] explorer event failed:', err));
 
     return NextResponse.json({
       success: true,

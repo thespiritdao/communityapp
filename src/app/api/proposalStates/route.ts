@@ -3,6 +3,17 @@ import { createPublicClient, http, type Abi } from 'viem';
 import { base } from 'viem/chains';
 import DAOGovernorABI from '@/abis/DAO_GovernorABI.json';
 import { supabase } from '@/utils/supabaseClient';
+import { recordExplorerEvent, type ExplorerEventType } from '@/lib/explorerEvents';
+
+// Governor state enum → Pulse event type. Only transitions into one of
+// these terminal/notable states fire a Pulse row; transient states
+// (pending, active, succeeded, expired) do not.
+const STATE_EVENT_TYPE: Record<number, ExplorerEventType | undefined> = {
+  2: 'proposal_canceled',
+  3: 'proposal_defeated',
+  5: 'proposal_queued',
+  7: 'proposal_executed',
+};
 
 const GOVERNOR_ADDRESS = process.env.NEXT_PUBLIC_DAO_GOVERNOR as `0x${string}`;
 const RPC_URL = process.env.NEXT_PUBLIC_RPC_URL!;
@@ -97,6 +108,7 @@ export async function GET(req: NextRequest) {
       const id = needsUpdate[i];
       const state = Number(stateResults[i].result);
       const vote = user ? userVotes[id] : undefined;
+      const priorState = cacheMap[id]?.state;
       await supabase.from('proposal_onchain_status').upsert({
         proposal_id: id,
         state,
@@ -104,6 +116,20 @@ export async function GET(req: NextRequest) {
         user_votes: user ? { [user]: vote } : undefined,
       });
       updates.push({ id, state, vote });
+
+      // Pulse: log on transitions into a notable terminal state. Dedupe key
+      // is per-(proposal, state) so even if the cache misses and we re-detect
+      // the same state, only one event is recorded.
+      const eventType = STATE_EVENT_TYPE[state];
+      if (eventType && priorState !== state) {
+        recordExplorerEvent({
+          type: eventType,
+          title: `Proposal ${eventType.replace('proposal_', '')}`,
+          url: '/governance',
+          metadata: { proposal_id: id, prior_state: priorState ?? null, new_state: state },
+          dedupe_key: `${eventType}:${id}`,
+        }).catch((err) => console.warn('[proposalStates] explorer event failed:', err));
+      }
     }
   }
 

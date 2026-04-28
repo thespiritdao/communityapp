@@ -4,6 +4,7 @@ import { createClient } from '@supabase/supabase-js';
 import { cookies } from 'next/headers';
 import { everyoneTagService } from '@/services/everyoneTagService';
 import { everyoneNotificationService } from '@/services/everyoneNotificationService';
+import { recordExplorerEvent } from '@/lib/explorerEvents';
 // Special access tokens (same as ChatContainer.tsx)
 const POC =
   process.env.NEXT_PUBLIC_PROOF_OF_CURIOSITY_TOKEN?.toLowerCase() || '';
@@ -381,6 +382,27 @@ export async function POST(request: Request) {
       }).catch((error) => {
         console.error('❌ Chat message POST: @everyone notification error:', error);
       });
+    }
+
+    // Pulse: log first-ever chat message in this pod's group as a milestone.
+    // Cheap to detect — count rows in this group and gate on === 1. Dedupe key
+    // ensures races (concurrent inserts) only produce one event.
+    if (data && pod_id) {
+      const { count: msgCount } = await supabase
+        .from('chat_messages')
+        .select('id', { count: 'exact', head: true })
+        .eq('chat_group_id', chat_group_id);
+      if (msgCount === 1) {
+        recordExplorerEvent({
+          type: 'chat_first_message_in_pod',
+          title: 'First message sent in a chat channel',
+          actor: sender_wallet_id,
+          pod_id,
+          url: `/chat/${chat_group_id}`,
+          metadata: { chat_group_id, message_id: data.id },
+          dedupe_key: `chat_first_message_in_pod:${chat_group_id}`,
+        }).catch((err) => console.warn('[chat-messages] explorer event failed:', err));
+      }
     }
 
     console.log('✅ Chat message POST: Message sent successfully');

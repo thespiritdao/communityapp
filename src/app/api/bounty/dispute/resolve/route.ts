@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { unifiedNotificationService } from '@/services/unifiedNotificationService';
+import { recordExplorerEvent } from '@/lib/explorerEvents';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -286,6 +287,19 @@ export async function POST(request: NextRequest) {
         console.error('❌ Error updating dispute:', updateDisputeError);
       } else {
         console.log('✅ Dispute status updated to', newDisputeStatus);
+        recordExplorerEvent({
+          type: 'dispute_resolved',
+          title: `Dispute resolved: ${resolutionType.replace(/_/g, ' ')}`,
+          actor: proposerLower,
+          metadata: {
+            dispute_id: disputeId,
+            resolution_type: resolutionType,
+            new_status: newDisputeStatus,
+            payment_amount: paymentAmount || null,
+            payment_token: paymentToken || null,
+          },
+          dedupe_key: `dispute_resolved:${disputeId}`,
+        }).catch((err) => console.warn('[dispute/resolve] explorer event failed:', err));
       }
 
       // Update resolution status

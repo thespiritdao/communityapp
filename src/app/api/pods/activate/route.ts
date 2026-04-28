@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { recordExplorerEvent } from '@/lib/explorerEvents';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
@@ -57,6 +58,23 @@ export async function POST(request: Request) {
     }
 
     console.log('🏦 Pod updated successfully:', data[0]);
+
+    // Pulse: log activation only when the pod actually transitions to active.
+    // The dedupe_key on pod_id keeps re-activations idempotent.
+    if (data[0].is_active) {
+      recordExplorerEvent({
+        type: 'pod_activated',
+        title: `Pod activated: ${data[0].name ?? 'Unnamed'}`,
+        actor: data[0].created_by_address ?? null,
+        pod_id: podId,
+        url: `/pods/${podId}`,
+        metadata: {
+          pod_name: data[0].name,
+          treasury_address: data[0].treasury_contract_address ?? null,
+        },
+        dedupe_key: `pod_activated:${podId}`,
+      }).catch((err) => console.warn('[pods/activate] explorer event failed:', err));
+    }
 
     return NextResponse.json({
       ok: true,

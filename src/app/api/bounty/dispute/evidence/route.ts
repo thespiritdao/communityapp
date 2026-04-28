@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { unifiedNotificationService } from '@/services/unifiedNotificationService';
+import { recordExplorerEvent } from '@/lib/explorerEvents';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -231,6 +232,14 @@ export async function POST(request: NextRequest) {
     }
 
     console.log('✅ Evidence submitted:', newEvidence.id);
+
+    recordExplorerEvent({
+      type: 'dispute_evidence_added',
+      title: `Evidence submitted: ${evidenceTitle}`,
+      actor: submitterLower,
+      metadata: { dispute_id: disputeId, evidence_id: newEvidence.id, evidence_type: evidenceType },
+      dedupe_key: `dispute_evidence_added:${newEvidence.id}`,
+    }).catch((err) => console.warn('[dispute/evidence] explorer event failed:', err));
 
     // =====================================================
     // 6. CREATE COMMENT NOTIFICATION

@@ -8,6 +8,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import { recordExplorerEvent } from '@/lib/explorerEvents';
 import {
   validateInviteCode,
   recordInviteCodeUsage,
@@ -196,6 +197,22 @@ export async function POST(request: NextRequest) {
       normalizedWallet,
       profile.wallet_address,
     );
+
+    // Pulse: surface "X invited Y" via the invitee's actor row. The card
+    // renders at /members and metadata.referrer_address lets the UI
+    // attribute it. Dedupe on the invitee — only one referral per signup.
+    recordExplorerEvent({
+      type: 'member_joined_via_referral',
+      title: 'Joined SpiritDAO via referral',
+      actor: normalizedWallet,
+      recipient_address: profile.wallet_address,
+      url: '/members',
+      metadata: {
+        referrer_address: profile.wallet_address?.toLowerCase(),
+        invite_code: normalizedCode,
+      },
+      dedupe_key: `member_joined_via_referral:${normalizedWallet}`,
+    }).catch((err) => console.warn('[invite/validate] explorer event failed:', err));
 
     // Return success
     console.log(`✅ Invite code validation successful for ${normalizedWallet}`);

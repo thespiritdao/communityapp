@@ -18,6 +18,7 @@ import {
 import { base } from 'viem/chains';
 import { privateKeyToAccount } from 'viem/accounts';
 import { createConfiguredPublicClient, getWriteTransport } from '@/utils/rpcClient';
+import { recordExplorerEvent } from '@/lib/explorerEvents';
 
 export const runtime = 'nodejs';
 export const maxDuration = 60;
@@ -139,6 +140,15 @@ export async function POST(request: NextRequest) {
     console.log(`✅ Mint Advocate API: 1 Advocate NFT minted successfully!`);
     console.log(`   Transaction: ${mintHash}`);
     console.log(`   Block: ${mintReceipt.blockNumber}`);
+
+    recordExplorerEvent({
+      type: 'hat_minted',
+      title: 'Became an Advocate',
+      actor: walletAddress,
+      url: '/members',
+      metadata: { hatName: 'Advocate', txHash: mintHash, source: 'advocate_mint' },
+      dedupe_key: `hat_minted:${walletAddress.toLowerCase()}:Advocate`,
+    }).catch((err) => console.warn('[mint-advocate] explorer event failed:', err));
 
     // V2 contract auto-delegates to recipient on mint — voting power is live immediately.
     return NextResponse.json({

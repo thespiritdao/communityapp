@@ -3,6 +3,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { recordExplorerEvent } from '@/lib/explorerEvents';
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!;
@@ -100,6 +101,18 @@ export async function POST(request: NextRequest) {
         { status: 500 }
       );
     }
+
+    // Pulse: log DAO-wide vote_cast (the existing pod-level vote_cast comes
+    // from a separate governance_votes table; this covers the on-chain path).
+    const choiceLabel = choice === 1 ? 'For' : choice === 0 ? 'Against' : 'Abstain';
+    recordExplorerEvent({
+      type: 'vote_cast',
+      title: `DAO vote: ${choiceLabel}`,
+      actor: voter,
+      url: '/governance',
+      metadata: { proposal_id: proposalId, choice, voting_power: votingPower, tx_hash: txHash, source: 'dao_wide' },
+      dedupe_key: `vote_cast:dao_wide:${proposalId}:${voter.toLowerCase()}`,
+    }).catch((err) => console.warn('[sync-vote] explorer event failed:', err));
 
     console.log(`✅ API: Successfully synced vote for proposal ${proposalId.substring(0, 20)}...`);
 
