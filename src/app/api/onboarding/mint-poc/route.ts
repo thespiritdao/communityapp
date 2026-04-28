@@ -11,6 +11,7 @@ import { privateKeyToAccount } from 'viem/accounts';
 import { base } from 'viem/chains';
 import { Coinbase, toSmartWallet, sendUserOperation, waitForUserOperation } from '@coinbase/coinbase-sdk';
 import { createClient } from '@supabase/supabase-js';
+import { recordExplorerEvent } from '@/lib/explorerEvents';
 
 export const runtime = 'nodejs';
 export const maxDuration = 60;
@@ -181,6 +182,18 @@ export async function POST(request: NextRequest) {
     });
 
     const txHash = receipt.transaction_hash || result.userOpHash;
+
+    // Pulse: record member_joined exactly once per wallet (dedupe_key ensures
+    // re-onboarding attempts don't fire a second event). Non-blocking — a
+    // failure here must never break onboarding.
+    recordExplorerEvent({
+      type: 'member_joined',
+      title: 'New member joined SpiritDAO',
+      actor: walletAddress,
+      url: '/members',
+      metadata: { txHash, source: 'poc_mint' },
+      dedupe_key: `member_joined:${walletAddress.toLowerCase()}`,
+    }).catch((err) => console.warn('[mint-poc] explorer event failed:', err));
 
     // Also mint TN Member HAT (non-blocking — failure doesn't fail onboarding)
     mintTNMemberHat(walletAddress, privateKey, cdpApiKey, cdpPrivateKey, paymasterUrl).catch((err) =>
