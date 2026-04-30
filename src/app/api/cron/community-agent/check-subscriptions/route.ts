@@ -8,6 +8,30 @@ import { supabaseAdmin } from '@/utils/supabaseAdminClient';
 
 export const runtime = 'nodejs';
 
+/** Insert a notification into general_notifications (unified notification system). */
+async function notifyLeader(
+  leaderWallet: string,
+  podId: string,
+  podName: string,
+  type: 'community_agent_expiring' | 'community_agent_expired',
+  message: string,
+) {
+  await supabaseAdmin.from('general_notifications').insert({
+    recipient_address: leaderWallet.toLowerCase(),
+    sender_address: null,
+    notification_type: type,
+    title: type === 'community_agent_expired'
+      ? 'Community Agent subscription expired'
+      : 'Community Agent subscription expiring soon',
+    message,
+    context_url: `/pods/${podId}/manage`,
+    context_type: 'pod',
+    context_id: podId,
+    priority: type === 'community_agent_expired' ? 'urgent' : 'high',
+    is_read: false,
+  });
+}
+
 export async function GET(req: NextRequest) {
   const authHeader = req.headers.get('authorization');
   if (process.env.CRON_SECRET && authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
@@ -20,7 +44,7 @@ export async function GET(req: NextRequest) {
   try {
     const now = new Date().toISOString();
 
-    // Mark expired subscriptions
+    // ── 1. Mark expired subscriptions ──────────────────────────────────
     const { data: expiredSubs } = await supabaseAdmin
       .from('community_agent_subscriptions')
       .update({ status: 'expired', updated_at: now })
@@ -30,7 +54,30 @@ export async function GET(req: NextRequest) {
 
     expired = expiredSubs?.length || 0;
 
-    // Find subscriptions expiring in the next 3 days (for warning notifications)
+    // Notify leaders of pods that just expired
+    if (expiredSubs) {
+      for (const sub of expiredSubs) {
+        const { data: pod } = await supabaseAdmin
+          .from('pods')
+          .select('pod_leads, name')
+          .eq('id', sub.pod_id)
+          .single();
+
+        if (pod?.pod_leads) {
+          for (const leaderWallet of pod.pod_leads) {
+            await notifyLeader(
+              leaderWallet,
+              sub.pod_id,
+              pod.name,
+              'community_agent_expired',
+              `The Community Agent for ${pod.name} has expired and is no longer active. Renew your subscription to restore it.`,
+            );
+          }
+        }
+      }
+    }
+
+    // ── 2. Warn about subscriptions expiring in 3 days ─────────────────
     const threeDaysFromNow = new Date();
     threeDaysFromNow.setDate(threeDaysFromNow.getDate() + 3);
 
@@ -43,7 +90,6 @@ export async function GET(req: NextRequest) {
 
     if (expiringSoon) {
       for (const sub of expiringSoon) {
-        // Get pod leaders to notify
         const { data: pod } = await supabaseAdmin
           .from('pods')
           .select('pod_leads, name')
@@ -52,23 +98,14 @@ export async function GET(req: NextRequest) {
 
         if (pod?.pod_leads) {
           for (const leaderWallet of pod.pod_leads) {
-            const { data: profile } = await supabaseAdmin
-              .from('user_profiles')
-              .select('user_id')
-              .eq('wallet_address', leaderWallet)
-              .single();
-
-            if (profile?.user_id) {
-              const { error: notifErr } = await supabaseAdmin.from('notifications').insert({
-                user_id: profile.user_id,
-                type: 'community_agent_expiring',
-                title: `Community Agent subscription expiring soon`,
-                message: `The Community Agent for ${pod.name} expires on ${new Date(sub.expires_at).toLocaleDateString()}. Renew to keep it active.`,
-                url: `/pods/${sub.pod_id}/manage`,
-                created_at: now,
-              });
-              if (!notifErr) warned++;
-            }
+            await notifyLeader(
+              leaderWallet,
+              sub.pod_id,
+              pod.name,
+              'community_agent_expiring',
+              `The Community Agent for ${pod.name} expires on ${new Date(sub.expires_at).toLocaleDateString()}. Renew to keep it active.`,
+            );
+            warned++;
           }
         }
       }

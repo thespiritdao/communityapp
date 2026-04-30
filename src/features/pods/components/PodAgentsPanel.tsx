@@ -58,7 +58,7 @@ export default function PodAgentsPanel({ podId, podName, isManager }: PodAgentsP
           'Content-Type': 'application/json',
           Authorization: `Bearer ${session.access_token}`,
         },
-        body: JSON.stringify({ key: 'community_agent_enabled', value: true }),
+        body: JSON.stringify({ community_agent_enabled: true }),
       });
 
       if (res.ok) {
@@ -180,8 +180,7 @@ export default function PodAgentsPanel({ podId, podName, isManager }: PodAgentsP
               >
                 <p className="text-sm font-medium text-[#3C3C3C] mb-1">Pricing</p>
                 <p className="text-xs text-[#5A5A5A]">
-                  <strong>25 $SYSTEM per month</strong> &mdash; burned via the DAO&rsquo;s purchase
-                  router. Revenue supports DAO operations. Some founding pods are exempt.
+                  <strong>25 $SYSTEM for 30 days of usage</strong> &mdash; Revenue supports DAO operations.  Communities can toggle the Agent on/off and retain unused days.
                 </p>
               </div>
 

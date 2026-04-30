@@ -19,9 +19,31 @@ import {
   AlertCircle,
   Upload,
   CalendarDays,
+  Flame,
+  ShieldCheck,
 } from 'lucide-react';
-import { useEvmAddress } from '@coinbase/cdp-hooks';
+import { useEvmAddress, useCurrentUser } from '@coinbase/cdp-hooks';
+import { useSendUserOperationWithAttribution } from '@/wallet/hooks/useSendUserOperationWithAttribution';
+import { encodeFunctionData, parseUnits } from 'viem';
 import AgentEventDrafts from './AgentEventDrafts';
+import purchaseRouterABI from '@/abis/PurchaseRouterDecentralized.json';
+
+const SYSTEM_TOKEN = process.env.NEXT_PUBLIC_SYSTEM_TOKEN as `0x${string}`;
+const PURCHASE_ROUTER = process.env.NEXT_PUBLIC_PURCHASE_ROUTER_DECENTRALIZED as `0x${string}`;
+const SUBSCRIPTION_AMOUNT = parseUnits('25', 18); // 25 $SYSTEM
+
+const ERC20_APPROVE_ABI = [
+  {
+    name: 'approve',
+    type: 'function',
+    inputs: [
+      { name: 'spender', type: 'address' },
+      { name: 'amount', type: 'uint256' },
+    ],
+    outputs: [{ name: '', type: 'bool' }],
+    stateMutability: 'nonpayable',
+  },
+] as const;
 
 interface PodCommunityAgentManagerProps {
   podId: string;
@@ -67,6 +89,8 @@ export default function PodCommunityAgentManager({
 }: PodCommunityAgentManagerProps) {
   const evmAddress = useEvmAddress();
   const walletAddress = evmAddress?.evmAddress || '';
+  const { currentUser } = useCurrentUser();
+  const { sendUserOperation } = useSendUserOperationWithAttribution();
   const [config, setConfig] = useState({ ...DEFAULT_CONFIG, ...(currentConfig || {}) });
   const [categories, setCategories] = useState<ForumCategory[]>([]);
   const [chatGroups, setChatGroups] = useState<ChatGroup[]>([]);
@@ -75,6 +99,9 @@ export default function PodCommunityAgentManager({
   const [saved, setSaved] = useState(false);
   const [loading, setLoading] = useState(true);
   const [corpusStats, setCorpusStats] = useState<{ vectorCount: number } | null>(null);
+  const [subscribing, setSubscribing] = useState(false);
+  const [subscribeError, setSubscribeError] = useState<string | null>(null);
+  const [showConfirm, setShowConfirm] = useState(false);
 
   // Load forum categories, chat groups, subscription, and corpus stats
   useEffect(() => {
@@ -172,6 +199,88 @@ export default function PodCommunityAgentManager({
     setConfig((prev: typeof DEFAULT_CONFIG) => ({ ...prev, [key]: value }));
   };
 
+  const handleSubscribe = useCallback(async () => {
+    const smartAccount = currentUser?.evmSmartAccounts?.[0];
+    if (!smartAccount || !walletAddress) {
+      setSubscribeError('Wallet not connected');
+      return;
+    }
+
+    setSubscribing(true);
+    setSubscribeError(null);
+    setShowConfirm(false);
+
+    try {
+      // Build approval + burn calls
+      const approveData = encodeFunctionData({
+        abi: ERC20_APPROVE_ABI,
+        functionName: 'approve',
+        args: [PURCHASE_ROUTER, SUBSCRIPTION_AMOUNT],
+      });
+
+      const purchaseData = encodeFunctionData({
+        abi: purchaseRouterABI,
+        functionName: 'purchaseWithExplicitDestination',
+        args: [
+          SUBSCRIPTION_AMOUNT,       // systemAmount
+          BigInt(0),                  // selfAmount
+          'community_agent_monthly', // productId
+          0,                         // destinationType = BURN
+          '0x0000000000000000000000000000000000000000', // burn address
+          '',                        // podId (not needed for burn)
+        ],
+      });
+
+      const calls = [
+        { to: SYSTEM_TOKEN, value: BigInt(0), data: approveData },
+        { to: PURCHASE_ROUTER, value: BigInt(0), data: purchaseData },
+      ];
+
+      // Send via CDP Smart Wallet (gasless)
+      const result = await sendUserOperation({
+        evmSmartAccount: smartAccount,
+        network: 'base',
+        calls,
+        useCdpPaymaster: true,
+      } as any);
+
+      const txHash = (result as any)?.userOperationHash;
+      if (!txHash) throw new Error('No transaction hash returned');
+
+      // Record subscription server-side
+      const { data: { session } } = await supabase.auth.getSession();
+      const subRes = await fetch('/api/community-agent/subscribe', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session?.access_token}`,
+        },
+        body: JSON.stringify({
+          podId,
+          txHash,
+          walletAddress,
+        }),
+      });
+
+      if (!subRes.ok) {
+        const err = await subRes.json();
+        throw new Error(err.error || 'Failed to record subscription');
+      }
+
+      const subData = await subRes.json();
+      setSubscription({
+        isActive: true,
+        expiresAt: subData.expiresAt,
+        isExempt: false,
+      });
+    } catch (error: any) {
+      console.error('Subscription failed:', error);
+      setSubscribeError(error.message || 'Transaction failed');
+    } finally {
+      setSubscribing(false);
+    }
+  }, [currentUser, walletAddress, podId, sendUserOperation]);
+
   if (loading) {
     return (
       <div className="flex items-center justify-center p-4">
@@ -184,31 +293,108 @@ export default function PodCommunityAgentManager({
     <div className="space-y-5">
       {/* Subscription Status */}
       {subscription && !subscription.isExempt && (
-        <div
-          className="flex items-center justify-between p-3 rounded-lg"
-          style={{
-            backgroundColor: subscription.isActive ? '#D1E6DC' : '#FDE8E8',
-            borderColor: subscription.isActive ? '#3F7A5A' : '#E53E3E',
-            borderWidth: 1,
-          }}
-        >
-          <div className="flex items-center gap-2">
-            {subscription.isActive ? (
-              <CheckCircle className="h-4 w-4" style={{ color: '#3F7A5A' }} />
-            ) : (
-              <AlertCircle className="h-4 w-4" style={{ color: '#E53E3E' }} />
+        <div className="space-y-2">
+          <div
+            className="flex items-center justify-between p-3 rounded-lg"
+            style={{
+              backgroundColor: subscription.isActive ? '#D1E6DC' : '#FAF4EC',
+              border: `1px solid ${subscription.isActive ? '#B8D9CA' : '#D1C4A9'}`,
+            }}
+          >
+            <div className="flex items-center gap-2">
+              {subscription.isActive ? (
+                <ShieldCheck className="h-4 w-4" style={{ color: '#3F7A5A' }} />
+              ) : (
+                <AlertCircle className="h-4 w-4" style={{ color: '#C6933F' }} />
+              )}
+              <span className="text-sm font-medium">
+                {subscription.isActive
+                  ? `Active until ${new Date(subscription.expiresAt!).toLocaleDateString()}`
+                  : 'Subscription required — 25 $SYSTEM/month'}
+              </span>
+            </div>
+            {isManager && !subscription.isActive && (
+              <Button
+                size="sm"
+                onClick={() => setShowConfirm(true)}
+                disabled={subscribing}
+                style={{ backgroundColor: '#2F5D50' }}
+              >
+                {subscribing ? <Loader2 className="h-3 w-3 animate-spin" /> : <Flame className="h-3 w-3 mr-1" />}
+                {subscribing ? 'Processing...' : 'Activate'}
+              </Button>
             )}
-            <span className="text-sm font-medium">
-              {subscription.isActive
-                ? `Active until ${new Date(subscription.expiresAt!).toLocaleDateString()}`
-                : 'Subscription required — 25 $SYSTEM/month'}
-            </span>
+            {isManager && subscription.isActive && subscription.expiresAt && (
+              (() => {
+                const daysLeft = Math.ceil((new Date(subscription.expiresAt).getTime() - Date.now()) / 86400000);
+                return daysLeft <= 7 ? (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setShowConfirm(true)}
+                    disabled={subscribing}
+                    className="text-xs"
+                  >
+                    {subscribing ? <Loader2 className="h-3 w-3 animate-spin" /> : 'Renew'}
+                  </Button>
+                ) : null;
+              })()
+            )}
           </div>
-          {!subscription.isActive && (
-            <Button size="sm" variant="default">
-              Activate
-            </Button>
+
+          {subscribeError && (
+            <div className="flex items-center gap-2 p-2 rounded text-xs" style={{ backgroundColor: '#F5E6E6', color: '#8B3A3A' }}>
+              <AlertCircle className="h-3 w-3 flex-shrink-0" />
+              {subscribeError}
+            </div>
           )}
+        </div>
+      )}
+
+      {/* Burn Confirmation Dialog */}
+      {showConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="bg-white rounded-xl max-w-sm w-full mx-4 p-6 shadow-xl space-y-4">
+            <div className="flex items-center gap-2">
+              <Flame className="h-5 w-5" style={{ color: '#C6933F' }} />
+              <h3 className="text-base font-semibold text-[#3C3C3C]">
+                {subscription?.isActive ? 'Renew' : 'Activate'} Community Agent
+              </h3>
+            </div>
+            <p className="text-sm text-[#5A5A5A]">
+              You are about to burn <strong>25 $SYSTEM</strong> to {subscription?.isActive ? 'extend' : 'activate'} your
+              Community Agent for <strong>30 days</strong>.
+              {subscription?.isActive && subscription.expiresAt && (
+                <> Your existing time will be extended from {new Date(subscription.expiresAt).toLocaleDateString()}.</>
+              )}
+            </p>
+            <p className="text-xs text-[#7C6F5B]">
+              This transaction is processed through your smart wallet. Gas is sponsored. The $SYSTEM tokens will be permanently burned.
+            </p>
+            <div className="flex gap-2 justify-end">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowConfirm(false)}
+                disabled={subscribing}
+              >
+                Cancel
+              </Button>
+              <Button
+                size="sm"
+                onClick={handleSubscribe}
+                disabled={subscribing}
+                style={{ backgroundColor: '#2F5D50' }}
+              >
+                {subscribing ? (
+                  <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                ) : (
+                  <Flame className="h-3 w-3 mr-1" />
+                )}
+                {subscribing ? 'Burning...' : 'Confirm & Burn 25 $SYSTEM'}
+              </Button>
+            </div>
+          </div>
         </div>
       )}
 

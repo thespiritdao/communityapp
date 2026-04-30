@@ -147,6 +147,28 @@ export async function PUT(req: NextRequest): Promise<NextResponse> {
     }).catch((err) => console.warn('[pod modules] explorer event failed:', err));
   }
 
+  // Special Pulse event when community agent is enabled — richer card in explorer
+  if (updates.community_agent_enabled === true && !(prior?.community_agent_enabled)) {
+    // Resolve pod name + agent name for a descriptive title
+    const { data: podRow } = await supabaseAdmin
+      .from('pods')
+      .select('name')
+      .eq('id', podId)
+      .single();
+    const agentCfg = prior?.community_agent_config || {};
+    const agentName = agentCfg.agent_name || 'Community Agent';
+
+    recordExplorerEvent({
+      type: 'agent_enabled' as any,
+      title: `${podRow?.name || 'A pod'} enabled a Community AI Agent`,
+      actor: wallet,
+      pod_id: podId,
+      url: `/pods/${podId}`,
+      metadata: { agent_name: agentName },
+      dedupe_key: `agent_enabled:${podId}`,
+    }).catch((err) => console.warn('[pod modules] agent_enabled event failed:', err));
+  }
+
   // When sub_pods_enabled changes, sync subPodCreation on all role permissions for this pod
   if ('sub_pods_enabled' in updates) {
     try {

@@ -99,7 +99,9 @@ export type ExplorerEventType =
   // chat milestones
   | 'chat_channel_created'
   | 'chat_first_message_in_pod'
-  | 'chat_agent_reply';
+  | 'chat_agent_reply'
+  // community agent
+  | 'agent_enabled';
 
 export const EVENT_CATEGORY: Record<ExplorerEventType, ExplorerCategory> = {
   pod_created: 'pods',
@@ -175,6 +177,8 @@ export const EVENT_CATEGORY: Record<ExplorerEventType, ExplorerCategory> = {
   chat_channel_created: 'members',
   chat_first_message_in_pod: 'members',
   chat_agent_reply: 'members',
+
+  agent_enabled: 'pods',
 };
 
 // ── Helper ────────────────────────────────────────────────────────────────────

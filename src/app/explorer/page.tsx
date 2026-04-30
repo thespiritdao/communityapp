@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation';
 import styled from 'styled-components';
 import type { ExplorerEvent } from '@/app/api/explorer/route';
 import { UserProfileDisplay } from '@/components/UserProfileDisplay';
+import { Bot } from 'lucide-react';
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -202,6 +203,8 @@ const EVENT_COLORS: Record<string, string> = {
   // knowledge — contemplative thought
   knowledge_item_published: PALETTE.contemplative,
   knowledge_item_updated: PALETTE.contemplative,
+  // community agent — AI/contemplative
+  agent_enabled: PALETTE.contemplative,
 };
 
 const EventCard = styled.div<{ $type: string }>`
@@ -370,6 +373,7 @@ const TYPE_LABELS: Record<string, string> = {
   forum_thread_summary_published: 'Summary',
   knowledge_item_published: 'Published',
   knowledge_item_updated: 'Updated',
+  agent_enabled: 'AI Agent',
 };
 
 const TAB_LABELS: Record<FilterTab, string> = {
@@ -621,7 +625,25 @@ export default function ExplorerPage() {
                       )}
                     </div>
                   )}
-                  {item.type !== 'treasury_movement' && item.type !== 'gift' && item.actor && (
+                  {item.type === 'agent_enabled' && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginTop: 8 }}>
+                      {item.actor_address && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: '#6b7280' }}>
+                          <span style={{ width: 24, flexShrink: 0 }}>By:</span>
+                          <UserProfileDisplay walletAddress={item.actor_address} size="sm" showModal={true} />
+                        </div>
+                      )}
+                      {item.metadata?.agent_name && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: '#7A6E8F' }}>
+                          <span style={{ width: 24, flexShrink: 0 }}>
+                            <Bot style={{ width: 14, height: 14 }} />
+                          </span>
+                          <span style={{ fontWeight: 500 }}>{item.metadata.agent_name}</span>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  {item.type !== 'treasury_movement' && item.type !== 'gift' && item.type !== 'agent_enabled' && item.actor && (
                     <CardMeta style={{ marginTop: 4 }}>
                       <span>{item.actor}</span>
                     </CardMeta>
