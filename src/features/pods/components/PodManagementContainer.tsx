@@ -23,6 +23,7 @@ import {
   Image as ImageIcon,
   GitBranch,
   Coins,
+  Bot,
 } from 'lucide-react';
 import { MembersPanel } from './MembersPanel/MembersPanel';
 import { PodManagerControlPanel } from './PodManagerControlPanel';
@@ -35,6 +36,7 @@ import { PodSettingsPanel } from './PodSettingsPanel';
 import { SubPodReviewPanel } from './SubPodReviewPanel';
 import { ClaimsManagementPanel } from './ClaimsManagementPanel';
 import { DonationsManagementPanel } from './DonationsManagementPanel';
+import PodAgentsPanel from './PodAgentsPanel';
 import { usePodManagementState } from '../hooks/usePodManagementState';
 import { usePodManagementHandlers } from '../hooks/usePodManagementHandlers';
 import '../styles/tab-navigation.css';
@@ -143,6 +145,17 @@ const TabContent = React.memo<{
               isManager={canManageMembers}
               managementHatId={pod?.management_hat_id}
               membershipHatId={pod?.membership_hat_id}
+            />
+          </div>
+        );
+
+      case 'agents':
+        return (
+          <div className="p-6">
+            <PodAgentsPanel
+              podId={podId}
+              podName={pod?.name || 'Unknown Pod'}
+              isManager={canManageMembers}
             />
           </div>
         );
@@ -265,6 +278,14 @@ const TabNavigation = React.memo<{
           label: 'Modules',
           mobileLabel: 'Modules',
           icon: Package,
+          badge: null,
+          enabled: canManageMembers,
+        },
+        {
+          id: 'agents',
+          label: 'Agents',
+          mobileLabel: 'Agents',
+          icon: Bot,
           badge: null,
           enabled: canManageMembers,
         },

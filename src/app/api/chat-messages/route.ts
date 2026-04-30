@@ -5,6 +5,7 @@ import { cookies } from 'next/headers';
 import { everyoneTagService } from '@/services/everyoneTagService';
 import { everyoneNotificationService } from '@/services/everyoneNotificationService';
 import { recordExplorerEvent } from '@/lib/explorerEvents';
+import { handleChatAgentMention } from '@/services/communityAgent/chatHandler';
 // Special access tokens (same as ChatContainer.tsx)
 const POC =
   process.env.NEXT_PUBLIC_PROOF_OF_CURIOSITY_TOKEN?.toLowerCase() || '';
@@ -403,6 +404,16 @@ export async function POST(request: Request) {
           dedupe_key: `chat_first_message_in_pod:${chat_group_id}`,
         }).catch((err) => console.warn('[chat-messages] explorer event failed:', err));
       }
+    }
+
+    // ✅ COMMUNITY AGENT: Check if message mentions a pod's community agent
+    if (data && pod_id) {
+      handleChatAgentMention({
+        content,
+        senderWallet: sender_wallet_id,
+        chatGroupId: chat_group_id,
+        podId: pod_id,
+      }).catch((err) => console.warn('[chat-messages] agent mention handler failed:', err));
     }
 
     console.log('✅ Chat message POST: Message sent successfully');

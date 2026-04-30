@@ -18,6 +18,7 @@ const ALLOWED_KEYS = [
   'marketplace_enabled',
   'knowledge_base_enabled',
   'sub_pods_enabled',
+  'community_agent_enabled',
 ] as const;
 
 function getWalletFromToken(token: string): string | null {
