@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation';
 import styled from 'styled-components';
 import type { ExplorerEvent } from '@/app/api/explorer/route';
 import { UserProfileDisplay } from '@/components/UserProfileDisplay';
+import { PodProfileDisplay } from '@/components/PodProfileDisplay';
 import { Bot } from 'lucide-react';
 
 // ── Types ──────────────────────────────────────────────────────────────────────
@@ -627,15 +628,21 @@ export default function ExplorerPage() {
                   )}
                   {item.type === 'agent_enabled' && (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginTop: 8 }}>
+                      {item.pod_id && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: '#6b7280' }}>
+                          <span style={{ width: 32, flexShrink: 0 }}>Pod:</span>
+                          <PodProfileDisplay podId={item.pod_id} size="sm" />
+                        </div>
+                      )}
                       {item.actor_address && (
                         <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: '#6b7280' }}>
-                          <span style={{ width: 24, flexShrink: 0 }}>By:</span>
+                          <span style={{ width: 32, flexShrink: 0 }}>By:</span>
                           <UserProfileDisplay walletAddress={item.actor_address} size="sm" showModal={true} />
                         </div>
                       )}
                       {item.metadata?.agent_name && (
                         <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: '#7A6E8F' }}>
-                          <span style={{ width: 24, flexShrink: 0 }}>
+                          <span style={{ width: 32, flexShrink: 0 }}>
                             <Bot style={{ width: 14, height: 14 }} />
                           </span>
                           <span style={{ fontWeight: 500 }}>{item.metadata.agent_name}</span>

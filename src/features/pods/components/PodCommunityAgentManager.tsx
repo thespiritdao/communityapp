@@ -9,7 +9,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import {
-  Bot,
   Clock,
   MessageSquare,
   FileText,
@@ -398,40 +397,34 @@ export default function PodCommunityAgentManager({
         </div>
       )}
 
-      {/* Agent Identity */}
-      <div className="space-y-3">
-        <div className="flex items-center gap-2 text-sm font-medium">
-          <Bot className="h-4 w-4" style={{ color: '#8B5E3C' }} />
-          Agent Identity
+      {/* Agent Configuration */}
+      <div className="space-y-2">
+        <div>
+          <Label htmlFor="agent-name" className="text-xs text-muted-foreground">
+            Agent Name
+          </Label>
+          <Input
+            id="agent-name"
+            value={config.agent_name}
+            onChange={(e) => updateField('agent_name', e.target.value)}
+            placeholder="e.g., Kairos"
+            disabled={!isManager}
+            className="mt-1"
+          />
         </div>
-        <div className="space-y-2">
-          <div>
-            <Label htmlFor="agent-name" className="text-xs text-muted-foreground">
-              Agent Name
-            </Label>
-            <Input
-              id="agent-name"
-              value={config.agent_name}
-              onChange={(e) => updateField('agent_name', e.target.value)}
-              placeholder="e.g., Kairos"
-              disabled={!isManager}
-              className="mt-1"
-            />
-          </div>
-          <div>
-            <Label htmlFor="agent-persona" className="text-xs text-muted-foreground">
-              Persona / System Prompt Override
-            </Label>
-            <textarea
-              id="agent-persona"
-              value={config.system_prompt || ''}
-              onChange={(e) => updateField('system_prompt', e.target.value)}
-              placeholder="Optional: describe your agent's personality, tone, and areas of expertise. Leave blank for default."
-              disabled={!isManager}
-              className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm min-h-[80px] resize-y"
-              rows={3}
-            />
-          </div>
+        <div>
+          <Label htmlFor="agent-persona" className="text-xs text-muted-foreground">
+            Persona / System Prompt Override
+          </Label>
+          <textarea
+            id="agent-persona"
+            value={config.system_prompt || ''}
+            onChange={(e) => updateField('system_prompt', e.target.value)}
+            placeholder="Optional: describe your agent's personality, tone, and areas of expertise. Leave blank for default."
+            disabled={!isManager}
+            className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm min-h-[80px] resize-y"
+            rows={3}
+          />
         </div>
       </div>
 
@@ -538,13 +531,23 @@ export default function PodCommunityAgentManager({
           <FileText className="h-4 w-4" style={{ color: '#8B5E3C' }} />
           Knowledge Base
         </div>
-        <div className="p-3 rounded-lg bg-gray-100 text-sm space-y-1">
-          <p>
-            Namespace: <code className="text-xs bg-gray-200 px-1 rounded">agent-{podId.slice(0, 8)}...</code>
-          </p>
-          <p>
-            Vectors: <strong>{corpusStats?.vectorCount ?? '—'}</strong>
-          </p>
+        <div className="p-3 rounded-lg text-sm space-y-1" style={{ backgroundColor: '#F5EDD7', border: '1px solid #D1C4A9' }}>
+          {podId === 'f2bc166d-33d5-47dc-8409-ea8d445d3fc0' ? (
+            <>
+              <p className="font-medium text-[#3C3C3C]">Connected to Temporal Naturalism library</p>
+              <p className="text-xs text-[#7C6F5B]">
+                Your agent draws from the shared philosophy collection plus any documents you upload.
+              </p>
+            </>
+          ) : (corpusStats?.vectorCount ?? 0) > 0 ? (
+            <p className="text-[#3C3C3C]">
+              <strong>{corpusStats?.vectorCount}</strong> document {corpusStats?.vectorCount === 1 ? 'chunk' : 'chunks'} indexed
+            </p>
+          ) : (
+            <p className="text-[#7C6F5B]">
+              No documents uploaded yet. Upload PDFs or text files to give your agent domain-specific knowledge.
+            </p>
+          )}
         </div>
         {isManager && (
           <Button
