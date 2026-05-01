@@ -15,6 +15,7 @@ import type { ChatGroup, Message, UserProfile } from '../types';
 import ChatInput from './ChatInput';
 import MessageList from './MessageList';
 import { DirectMessageModal } from './DirectMessageModal';
+import { MessageCircle } from 'lucide-react';
 const TABLE_NAME = 'chat_messages';
 
 interface ChatContainerProps {
@@ -325,8 +326,33 @@ export default function ChatContainer({ chatGroupId, dmAddress }: ChatContainerP
         };
       });
 
+      // Fetch unread counts per group for current user
+      const groupIds = withImages.map((g) => g.id);
+      let unreadByGroup: Record<string, number> = {};
+      if (groupIds.length > 0) {
+        try {
+          const { data: unreadRows } = await supabase
+            .from('chat_messages')
+            .select('chat_group_id')
+            .eq('is_read', false)
+            .in('chat_group_id', groupIds);
+          if (unreadRows) {
+            for (const row of unreadRows) {
+              unreadByGroup[row.chat_group_id] = (unreadByGroup[row.chat_group_id] || 0) + 1;
+            }
+          }
+        } catch (e) {
+          console.warn('Chat: Could not fetch unread counts', e);
+        }
+      }
+
+      const withUnread = withImages.map((g) => ({
+        ...g,
+        unread_count: unreadByGroup[g.id] || 0,
+      }));
+
       // Pin non-pod chats (General) to the top
-      const sorted = [...withImages].sort((a, b) => {
+      const sorted = [...withUnread].sort((a, b) => {
         if (!a.pod_id && b.pod_id) return -1;
         if (a.pod_id && !b.pod_id) return 1;
         return 0;
@@ -670,23 +696,50 @@ export default function ChatContainer({ chatGroupId, dmAddress }: ChatContainerP
               {chatGroups.map((group) => (
                 <li
                   key={group.id}
-                  className="chat-group-item chat-group-item"
+                  className="chat-group-item"
                   onClick={() => setSelectedChatGroup(group)}
                   style={{ cursor: 'pointer' }}
                 >
-                  <div className="chat-group-core">
+                  <div className="chat-group-core" style={{ flex: 1, minWidth: 0 }}>
                     <img
                       src={group.pod_image_url || '/images/symbolobinfin.png'}
                       alt={`${group.title} icon`}
                       className="pod-avatar pod-avatar--sm"
                     />
-                    <span className="chat-group-name">{group.title}</span>
+                    <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0, flex: 1 }}>
+                      <span className="chat-group-name">{group.title}</span>
+                      {group.description && (
+                        <span style={{ fontSize: '0.8rem', color: '#8B5E3C', opacity: 0.7, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {group.description}
+                        </span>
+                      )}
+                    </div>
                   </div>
+                  {(group as any).unread_count > 0 && (
+                    <span style={{
+                      backgroundColor: '#2F5D50',
+                      color: '#fff',
+                      borderRadius: '9999px',
+                      fontSize: '0.75rem',
+                      fontWeight: 700,
+                      padding: '2px 8px',
+                      marginLeft: 'auto',
+                      minWidth: '20px',
+                      textAlign: 'center',
+                      flexShrink: 0,
+                    }}>
+                      {(group as any).unread_count}
+                    </span>
+                  )}
                 </li>
               ))}
             </ul>
           ) : (
-            <p>No accessible chat groups.</p>
+            <div style={{ textAlign: 'center', padding: '3rem 1rem' }}>
+              <MessageCircle size={48} style={{ margin: '0 auto 1rem', display: 'block', opacity: 0.4, color: '#8FAAA1' }} />
+              <p style={{ fontSize: '1.1rem', fontWeight: 600, color: '#8B5E3C', margin: '0 0 0.5rem' }}>No chats available</p>
+              <p style={{ fontSize: '0.9rem', color: '#A0937E', margin: 0 }}>Join a pod to unlock community chats.</p>
+            </div>
           )}
         </div>
       </div>
@@ -705,9 +758,18 @@ export default function ChatContainer({ chatGroupId, dmAddress }: ChatContainerP
           >
             Chat List
           </button>
-          <h2>
-            <b>{selectedChatGroup.title}</b>
-          </h2>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flex: 1, justifyContent: 'center', minWidth: 0 }}>
+            <img
+              src={selectedChatGroup.pod_image_url || '/images/symbolobinfin.png'}
+              alt=""
+              style={{ width: 28, height: 28, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }}
+            />
+            <h2 style={{ margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              <b>{selectedChatGroup.title}</b>
+            </h2>
+          </div>
+          {/* Spacer to balance the back button */}
+          <div style={{ width: 80, flexShrink: 0 }} />
         </header>
 
         <main className="chat-main">

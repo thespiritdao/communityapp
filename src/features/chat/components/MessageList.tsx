@@ -5,7 +5,7 @@ import '../styles/ChatModeration.css';
 import { ProfileModal } from '@/features/identity/components/ProfileModal';
 import { ChatModerationMenu } from './ChatModerationMenu';
 import { supabase } from '@/utils/supabaseClient';
-import { Pin } from 'lucide-react';
+import { Pin, MessageSquare } from 'lucide-react';
 import { MarkdownContent } from '@/components/MarkdownContent';
 
 interface MessageListProps {
@@ -64,6 +64,34 @@ const markMessagesAsRead = async (receiver_wallet_id: string) => {
   }
 };
 
+
+function getDateLabel(date: Date): string {
+  const today = new Date();
+  const yesterday = new Date(today);
+  yesterday.setDate(yesterday.getDate() - 1);
+
+  if (date.toDateString() === today.toDateString()) return 'Today';
+  if (date.toDateString() === yesterday.toDateString()) return 'Yesterday';
+  return date.toLocaleDateString('default', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+function renderDayDivider(label: string) {
+  return (
+    <div key={`divider-${label}`} style={{ display: 'flex', justifyContent: 'center', margin: '1rem 0' }}>
+      <span style={{
+        backgroundColor: '#F5EDD7',
+        color: '#8B5E3C',
+        fontSize: '0.75rem',
+        fontWeight: 600,
+        padding: '4px 14px',
+        borderRadius: '9999px',
+        border: '1px solid #D1C4A9',
+      }}>
+        {label}
+      </span>
+    </div>
+  );
+}
 
 export default function MessageList({
   messages,
@@ -258,10 +286,29 @@ export default function MessageList({
         </div>
       )}
 
-      {/* Regular messages section */}
+      {/* Regular messages section with day dividers */}
       {regularMessages && regularMessages.length > 0
-        ? regularMessages.map((message) => renderMessage(message))
-        : !pinnedMessages.length && <div>No messages to display.</div>}
+        ? (() => {
+            const elements: React.ReactNode[] = [];
+            let lastDateStr = '';
+            for (const message of regularMessages) {
+              const msgDate = new Date(message.created_at);
+              const dateStr = msgDate.toDateString();
+              if (dateStr !== lastDateStr) {
+                elements.push(renderDayDivider(getDateLabel(msgDate)));
+                lastDateStr = dateStr;
+              }
+              elements.push(renderMessage(message));
+            }
+            return elements;
+          })()
+        : !pinnedMessages.length && (
+            <div style={{ textAlign: 'center', padding: '3rem 1rem' }}>
+              <MessageSquare size={48} style={{ margin: '0 auto 1rem', display: 'block', opacity: 0.4, color: '#8FAAA1' }} />
+              <p style={{ fontSize: '1.1rem', fontWeight: 600, color: '#8B5E3C', margin: '0 0 0.5rem' }}>No messages yet</p>
+              <p style={{ fontSize: '0.9rem', color: '#A0937E', margin: 0 }}>Start the conversation!</p>
+            </div>
+          )}
 
       <div ref={messagesEndRef} />
 

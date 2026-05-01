@@ -126,14 +126,14 @@ body {
   padding: 10px 15px;
   border-radius: 15px;
   max-width: 70%;
-  background-color: #faf8d7; /* User's message background color */
+  background-color: #E8F1EE; /* User's message background color — light sage */
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
   word-wrap: break-word;
 }
 
 /* Incoming messages (other users) */
 .message-incoming .message-content {
-  background-color: #e8fad7; /* Other users' message background color */
+  background-color: #F5EDD7; /* Other users' message background color — cream */
 }
 
 
@@ -147,13 +147,13 @@ body {
   height: 0;
   border-style: solid;
   border-width: 15px 15px 0 0; /* Creates a right-pointing triangle */
-  border-color: #faf8d7 transparent transparent transparent; /* Match bubble color */
+  border-color: #E8F1EE transparent transparent transparent; /* Match bubble color */
   transform: translateY(50%) rotate(180deg); /* Adjusts alignment and rotates triangle */
   
 }
 
 .message-incoming .message-content::after {
-  border-color: #e8fad7 transparent transparent transparent; /* Match bubble color */
+  border-color: #F5EDD7 transparent transparent transparent; /* Match bubble color */
 }
 
 
@@ -272,8 +272,8 @@ body {
   padding: 12px 16px; /* Increased padding for better touch targets */
   background-color: #fff;
   border-radius: 24px; /* Slightly more rounded */
-  border: none;
-  box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.2);
+  border: 1px solid #D1C4A9;
+  box-shadow: 0 2px 8px rgba(47, 93, 80, 0.10);
   margin: 0 0.5rem; /* Center with small margins */
   min-height: 48px; /* Minimum height for better mobile usability */
 }
@@ -317,7 +317,7 @@ body {
   width: 24px;
   height: 24px;
   margin: 0 2px;
-  color: #555;
+  color: #2F5D50;
   cursor: pointer;
 }
 
@@ -333,7 +333,7 @@ body {
 
 
 .icon:hover {
-  color: #000;
+  color: #1a3d34;
 }
 
 .icon.mic {
@@ -349,12 +349,12 @@ body {
   border: none;
   box-shadow: none;
   padding: 0;
-  color: #555;
+  color: #2F5D50;
   margin-left: auto; /* Keep it right-aligned */
 }
 
 .icon.send:hover {
-  color: #000;
+  color: #1a3d34;
 }
 
 .icon.emoji {
@@ -581,12 +581,12 @@ body {
   margin-bottom: 1rem;
   border-radius: 0.5rem;
   background-color: #ffffff;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 1px 3px rgba(47, 93, 80, 0.08);
   transition: transform 0.2s ease, box-shadow 0.2s ease;
   cursor: pointer;
   padding: 1rem;
   text-align: left;
-  border-bottom: 1px solid #eaeaea;
+  border-bottom: 1px solid #D1C4A9;
   display: flex;
   align-items: center; /* Center align items */
   gap: 1rem;
@@ -613,18 +613,18 @@ body {
 
 /* For odd-numbered chat groups */
 .chat-group-item:nth-child(odd) {
-  background-color: #F0ECE6; /* Warm ritual off-white */
+  background-color: #F5EDD7; /* Cream */
 }
 
 /* For even-numbered chat groups */
 .chat-group-item:nth-child(even) {
-  background-color: #E8E4DC; /* Grounded neutral */
+  background-color: #E8F1EE; /* Light sage */
 }
 
 
 .chat-group-item:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 4px 12px rgba(47, 93, 80, 0.12);
 }
 
 /* Chat Group Link styling (if using an anchor) */
@@ -648,8 +648,8 @@ body {
   right: 0; /* Flush to right edge */
   width: 100%;
   z-index: 50;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  border-bottom: 1px solid #D1C4A9;
+  box-shadow: 0 2px 6px rgba(47, 93, 80, 0.06);
   box-sizing: border-box;
   margin: 0;
   height: 60px;
@@ -667,7 +667,7 @@ body {
 
 /* Chat Back Button styled similar to ForumBackButton */
 .back-button {
-  background-color: #8FAAA1;
+  background-color: #2F5D50;
   color: #FFFFFF;
   padding: 0.5rem 1rem;
   border: none;
@@ -675,6 +675,15 @@ body {
   margin-left: 6px;
   cursor: pointer;
   font-size: 0.9rem;
+  transition: background-color 0.2s ease;
+}
+
+.back-button:hover {
+  background-color: #1a3d34;
+}
+
+.back-button:active {
+  transform: scale(0.97);
 }
 
 
@@ -915,7 +924,7 @@ img.pod-avatar--sm {
     width: 100%;
     margin-left: 0;
     margin-right: 0;
-    padding: 0.75rem;
+    padding: 0.875rem;
   }
   
   /* Chat header mobile adjustments */

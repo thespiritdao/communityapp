@@ -98,40 +98,40 @@
   cursor: not-allowed;
 }
 
-/* Pin option - blue */
+/* Pin option - forest green */
 .moderation-option-pin {
-  color: #1976d2;
+  color: #2F5D50;
 }
 
 .moderation-option-pin:hover:not(:disabled) {
-  background-color: rgba(25, 118, 210, 0.08);
+  background-color: rgba(47, 93, 80, 0.08);
 }
 
-/* Mute option - orange */
+/* Mute option - warm amber */
 .moderation-option-mute {
-  color: #f57c00;
+  color: #C6933F;
 }
 
 .moderation-option-mute:hover:not(:disabled) {
-  background-color: rgba(245, 124, 0, 0.08);
+  background-color: rgba(198, 147, 63, 0.08);
 }
 
-/* Unmute option - green */
+/* Unmute option - muted sage */
 .moderation-option-unmute {
-  color: #2e7d32;
+  color: #8FAAA1;
 }
 
 .moderation-option-unmute:hover:not(:disabled) {
-  background-color: rgba(46, 125, 50, 0.08);
+  background-color: rgba(143, 170, 161, 0.08);
 }
 
-/* Delete option - red */
+/* Delete option - earthen red */
 .moderation-option-delete {
-  color: #d32f2f;
+  color: #8B3A3A;
 }
 
 .moderation-option-delete:hover:not(:disabled) {
-  background-color: rgba(211, 47, 47, 0.08);
+  background-color: rgba(139, 58, 58, 0.08);
 }
 
 /* Separator between options */
@@ -157,7 +157,7 @@
   position: sticky;
   top: 0;
   z-index: 10;
-  background: #f9f9f9;
+  background: #F5EDD7;
   padding: 12px;
   margin-bottom: 8px;
   border-radius: 8px;
@@ -166,7 +166,7 @@
 /* Separator between pinned and regular messages */
 .pinned-separator {
   height: 1px;
-  background: linear-gradient(to right, transparent, rgba(25, 118, 210, 0.3), transparent);
+  background: linear-gradient(to right, transparent, rgba(47, 93, 80, 0.3), transparent);
   margin-top: 12px;
 }
 
@@ -177,12 +177,12 @@
 
 /* Change chat bubble color to blue when pinned */
 .message.message-pinned .message-content {
-  background-color: #e3f2fd !important;
+  background-color: #dceee8 !important;
 }
 
 /* Change triangle color to blue when pinned */
 .message.message-pinned .message-content::after {
-  border-color: #e3f2fd transparent transparent transparent !important;
+  border-color: #dceee8 transparent transparent transparent !important;
 }
 
 .pinned-indicator {
@@ -190,7 +190,7 @@
   align-items: center;
   gap: 6px;
   font-size: 12px;
-  color: #1976d2;
+  color: #2F5D50;
   margin-bottom: 4px;
   font-weight: 600;
 }
@@ -215,11 +215,11 @@
 
 /* Accessibility: Focus states */
 .moderation-trigger:focus-visible {
-  outline: 2px solid #1976d2;
+  outline: 2px solid #2F5D50;
   outline-offset: 2px;
 }
 
 .moderation-option:focus-visible {
-  outline: 2px solid #1976d2;
+  outline: 2px solid #2F5D50;
   outline-offset: -2px;
 }
