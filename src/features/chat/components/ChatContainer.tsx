@@ -395,7 +395,7 @@ export default function ChatContainer({ chatGroupId, dmAddress }: ChatContainerP
 
     fetchData();
 
-    // subscribe to new messages
+    // subscribe to message changes (INSERT for new messages, UPDATE for pin/delete)
     const sub = supabase
       .channel(`chat-${selectedChatGroup.id}`)
       .on(
@@ -408,7 +408,6 @@ export default function ChatContainer({ chatGroupId, dmAddress }: ChatContainerP
         },
         (payload) => {
           const newMsg = payload.new as Message;
-          // Parse attachments from JSON string to array
           const parsedMsg = {
             ...newMsg,
             attachments: typeof newMsg.attachments === 'string'
@@ -416,6 +415,42 @@ export default function ChatContainer({ chatGroupId, dmAddress }: ChatContainerP
               : newMsg.attachments || []
           };
           setMessages((prev) => [...prev, parsedMsg]);
+        },
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: TABLE_NAME,
+          filter: `chat_group_id=eq.${selectedChatGroup.id}`,
+        },
+        (payload) => {
+          const updated = payload.new as Message;
+          const parsedUpdated = {
+            ...updated,
+            attachments: typeof updated.attachments === 'string'
+              ? JSON.parse(updated.attachments || '[]')
+              : updated.attachments || []
+          };
+          setMessages((prev) =>
+            prev.map((msg) => msg.id === parsedUpdated.id ? parsedUpdated : msg),
+          );
+        },
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'DELETE',
+          schema: 'public',
+          table: TABLE_NAME,
+          filter: `chat_group_id=eq.${selectedChatGroup.id}`,
+        },
+        (payload) => {
+          const deletedId = (payload.old as any)?.id;
+          if (deletedId) {
+            setMessages((prev) => prev.filter((msg) => msg.id !== deletedId));
+          }
         },
       )
       .subscribe();

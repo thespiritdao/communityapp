@@ -10,6 +10,7 @@ import ForumContainer from '@/features/forum/components/ForumContainer';
 import CategoryList from '@/features/forum/components/CategoryList';
 import ThreadList from '@/features/forum/components/ThreadList';
 import ForumErrorBoundary from '@/features/forum/components/ForumErrorBoundary';
+import { ForumSearch } from '@/features/forum/components/ForumSearch';
 import { Button } from '@/components/ui/button';
 import { useForum } from '@/features/forum/hooks/useForum';
 import { useTokenGate } from '@/features/forum/hooks/useTokenGate';
@@ -20,7 +21,8 @@ import {
   logUserIdentity,
 } from '@/utils/accessControlUtils';
 import { useForumUserProfiles } from '@/features/forum/hooks/useForumUserProfiles';
-import { Loader2 } from 'lucide-react';
+import { getCurrentSession } from '@/features/identity';
+import { Loader2, Bookmark, MessageSquare, Clock } from 'lucide-react';
 import styles from '@/features/forum/styles/Forum.module.css';
 
 interface Category {
@@ -53,6 +55,7 @@ export default function ForumPage() {
   const { userHats, isLoading: hatPermissionsLoading } = useHatPermissions();
   const [categories, setCategories] = useState<Category[]>([]);
   const [recentThreads, setRecentThreads] = useState<Thread[]>([]);
+  const [bookmarkedThreads, setBookmarkedThreads] = useState<any[]>([]);
   const [loadingData, setLoadingData] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
 
@@ -262,6 +265,23 @@ export default function ForumPage() {
       // Take only the 6 most recent enriched threads
       setRecentThreads(enrichedThreads.slice(0, 6));
 
+      // Fetch user's bookmarks
+      try {
+        const session = await getCurrentSession();
+        const token = session?.access_token;
+        if (token) {
+          const bmRes = await fetch('/api/forum/bookmarks', {
+            headers: { 'Authorization': `Bearer ${token}` },
+          });
+          if (bmRes.ok) {
+            const bmData = await bmRes.json();
+            setBookmarkedThreads(bmData.bookmarks || []);
+          }
+        }
+      } catch (e) {
+        // Non-critical — ignore
+      }
+
       setLoadingData(false);
     } catch (err: any) {
       console.error('Error loading forum data:', err);
@@ -281,8 +301,8 @@ export default function ForumPage() {
         {/* Add bottom-nav-spacing to create space at the bottom so the bottom bar doesn't overlap the content */}
         <div className="bottom-nav-spacing">
           {/* Top row: Forum title + "New Thread" button */}
-          <div className="flex justify-between items-center mb-8">
-            <h1 className="text-3xl font-bold">SpiritDAO Forums</h1>
+          <div className="flex justify-between items-center mb-4">
+            <h1 className="text-3xl font-bold" style={{ color: '#2F5D50' }}>SpiritDAO Forums</h1>
             <Button
               className={styles.newThreadButton}
               onClick={() => {
@@ -292,6 +312,11 @@ export default function ForumPage() {
             >
               New Thread
             </Button>
+          </div>
+
+          {/* Search bar */}
+          <div style={{ marginBottom: 24 }}>
+            <ForumSearch />
           </div>
 
           {/* Error display */}
@@ -323,9 +348,48 @@ export default function ForumPage() {
             </div>
           ) : (
             <>
+              {/* Bookmarks Section — only if user has bookmarks */}
+              {bookmarkedThreads.length > 0 && (
+                <section style={{ marginBottom: 32 }}>
+                  <h2 style={{
+                    fontSize: '1.1rem', fontWeight: 600, marginBottom: 12,
+                    display: 'flex', alignItems: 'center', gap: 8, color: '#8B5E3C',
+                  }}>
+                    <Bookmark size={18} /> My Bookmarks
+                  </h2>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    {bookmarkedThreads.slice(0, 5).map((bm: any) => (
+                      <a
+                        key={bm.id}
+                        href={`/forum/thread/${bm.thread_id}`}
+                        style={{
+                          display: 'block',
+                          padding: '10px 14px',
+                          borderRadius: 10,
+                          backgroundColor: '#fff',
+                          border: '1px solid rgba(209,196,169,0.4)',
+                          textDecoration: 'none',
+                          color: '#212121',
+                          fontSize: '0.9rem',
+                          fontWeight: 500,
+                          transition: 'box-shadow 0.2s',
+                        }}
+                      >
+                        {bm.forum_threads?.title || 'Bookmarked Thread'}
+                      </a>
+                    ))}
+                  </div>
+                </section>
+              )}
+
               {/* Categories Section */}
               <section className="mb-12">
-                <h2 className="text-2xl font-semibold mb-4"></h2>
+                <h2 style={{
+                  fontSize: '1.1rem', fontWeight: 600, marginBottom: 12,
+                  display: 'flex', alignItems: 'center', gap: 8, color: '#2F5D50',
+                }}>
+                  <MessageSquare size={18} /> Forum Categories
+                </h2>
                 {categories.length > 0 ? (
                   <ForumErrorBoundary>
                     <CategoryList categories={categories} />
@@ -337,7 +401,12 @@ export default function ForumPage() {
 
               {/* Recent Threads Section */}
               <section>
-                <h2 className="text-2xl font-semibold mb-4"></h2>
+                <h2 style={{
+                  fontSize: '1.1rem', fontWeight: 600, marginBottom: 12,
+                  display: 'flex', alignItems: 'center', gap: 8, color: '#2F5D50',
+                }}>
+                  <Clock size={18} /> Recent Threads
+                </h2>
                 {recentThreads.length > 0 ? (
                   <ForumErrorBoundary>
                     <ThreadList

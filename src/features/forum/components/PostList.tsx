@@ -2,7 +2,7 @@
 'use client';
 
 import type React from 'react';
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useRef, useCallback } from 'react';
 import { supabase } from '@/utils/supabaseClient';
 import PostCard from './PostCard';
 import { useRouter } from 'next/navigation';
@@ -13,8 +13,11 @@ import { ModerationToolbar } from './ModerationToolbar';
 import { ThreadSummary } from './ThreadSummary';
 import { PollDisplay } from './PollDisplay';
 import { MediaUpload } from './MediaUpload';
+import { BookmarkButton } from './BookmarkButton';
 import { getPollByThreadId } from '../services/PollService';
 import { useForumUserProfiles } from '../hooks/useForumUserProfiles';
+import { getCurrentSession } from '@/features/identity';
+import { CheckCircle } from 'lucide-react';
 import type { MediaAttachment } from '../services/MediaUploadService';
 
 interface Post {
@@ -36,6 +39,7 @@ interface ThreadInfo {
   pod_id: string | null;
   is_pinned?: boolean;
   is_locked?: boolean;
+  is_resolved?: boolean;
 }
 
 interface PostListProps {
@@ -55,6 +59,9 @@ const PostList: React.FC<PostListProps> = ({ threadId }) => {
   const [threadAttachments, setThreadAttachments] = useState<
     Record<string, MediaAttachment[]>
   >({});
+  const [isResolved, setIsResolved] = useState(false);
+  const [resolving, setResolving] = useState(false);
+  const viewTrackedRef = useRef(false);
   const router = useRouter();
   const { submitPost, isLoading: forumLoading, address } = useForum();
 
@@ -90,6 +97,7 @@ const PostList: React.FC<PostListProps> = ({ threadId }) => {
               category_id,
               is_pinned,
               is_locked,
+              is_resolved,
               forum_categories (
                 name,
                 required_token,
@@ -131,7 +139,9 @@ const PostList: React.FC<PostListProps> = ({ threadId }) => {
             : null,
           is_pinned: threadData.is_pinned,
           is_locked: threadData.is_locked,
+          is_resolved: threadData.is_resolved,
         });
+        setIsResolved(!!threadData.is_resolved);
 
         // Fetch posts separately (after thread is loaded)
         // Filter out deleted posts
@@ -204,6 +214,116 @@ const PostList: React.FC<PostListProps> = ({ threadId }) => {
       fetchThreadAndPosts();
     }
   }, [threadId]);
+
+  // Real-time subscription for new/updated/deleted posts
+  useEffect(() => {
+    if (!threadId) return;
+
+    const channel = supabase
+      .channel(`thread-${threadId}`)
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'forum_posts',
+        filter: `thread_id=eq.${threadId}`,
+      }, (payload) => {
+        const newPost = payload.new as Post;
+        setPosts((prev) => {
+          if (prev.some((p) => p.id === newPost.id)) return prev;
+          return [...prev, newPost];
+        });
+      })
+      .on('postgres_changes', {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'forum_posts',
+        filter: `thread_id=eq.${threadId}`,
+      }, (payload) => {
+        const updated = payload.new as any;
+        if (updated.is_deleted) {
+          setPosts((prev) => prev.filter((p) => p.id !== updated.id));
+        } else {
+          setPosts((prev) => prev.map((p) => p.id === updated.id ? { ...p, content: updated.content } : p));
+        }
+      })
+      .on('postgres_changes', {
+        event: 'DELETE',
+        schema: 'public',
+        table: 'forum_posts',
+        filter: `thread_id=eq.${threadId}`,
+      }, (payload) => {
+        const deletedId = (payload.old as any)?.id;
+        if (deletedId) {
+          setPosts((prev) => prev.filter((p) => p.id !== deletedId));
+        }
+      })
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  }, [threadId]);
+
+  // View count tracking (fire once per session)
+  useEffect(() => {
+    if (!threadId || viewTrackedRef.current) return;
+    viewTrackedRef.current = true;
+    fetch('/api/forum/view', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ thread_id: threadId }),
+    }).catch(() => {});
+  }, [threadId]);
+
+  // Mark thread as read
+  useEffect(() => {
+    if (!threadId) return;
+    (async () => {
+      const session = await getCurrentSession();
+      const token = session?.access_token;
+      if (!token) return;
+      fetch('/api/forum/read', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ thread_id: threadId }),
+      }).catch(() => {});
+    })();
+  }, [threadId]);
+
+  // Quote handler — inserts blockquote into reply
+  const handleQuote = useCallback((content: string, authorName: string) => {
+    // Strip HTML for quoting
+    const tmp = typeof document !== 'undefined' ? document.createElement('div') : null;
+    let plainText = content;
+    if (tmp) {
+      tmp.innerHTML = content;
+      plainText = tmp.textContent || tmp.innerText || content;
+    }
+    const quoted = plainText.split('\n').map((line: string) => `> ${line}`).join('\n');
+    const quoteBlock = `> **${authorName}** wrote:\n${quoted}\n\n`;
+    setReplyContent((prev) => quoteBlock + prev);
+  }, []);
+
+  // Resolve handler
+  const handleResolve = async () => {
+    const session = await getCurrentSession();
+    const token = session?.access_token;
+    if (!token || resolving) return;
+
+    setResolving(true);
+    try {
+      const res = await fetch('/api/forum/resolve', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ thread_id: threadId, resolved: !isResolved }),
+      });
+      if (res.ok) {
+        setIsResolved(!isResolved);
+      }
+    } catch (err) {
+      console.error('Resolve error:', err);
+    } finally {
+      setResolving(false);
+    }
+  };
 
   // Handle new replies
   const handleSubmitReply = async (e: React.FormEvent) => {
@@ -326,22 +446,46 @@ const PostList: React.FC<PostListProps> = ({ threadId }) => {
           <h1 className={styles.threadTitle}>
             {threadInfo.is_pinned && '📌 '}
             {threadInfo.is_locked && '🔒 '}
+            {isResolved && <CheckCircle size={18} style={{ color: '#2F5D50', display: 'inline', marginRight: 4 }} />}
             {threadInfo.title}
           </h1>
         </div>
 
-        {/* Moderation Toolbar */}
-        <ModerationToolbar
-          targetType="thread"
-          targetId={threadInfo.id}
-          isPinned={threadInfo.is_pinned}
-          podId={threadInfo.pod_id}
-          isLocked={threadInfo.is_locked}
-          onActionComplete={() => {
-            // Refresh thread data after moderation action
-            window.location.reload();
-          }}
-        />
+        {/* Action bar: resolve + bookmark + moderation */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+          {/* Resolve button — only thread author sees this */}
+          {address && address.toLowerCase() === threadInfo.author_address?.toLowerCase() && (
+            <button
+              onClick={handleResolve}
+              disabled={resolving}
+              style={{
+                padding: '6px 12px',
+                borderRadius: '8px',
+                border: `1px solid ${isResolved ? '#2F5D50' : '#D1C4A9'}`,
+                backgroundColor: isResolved ? '#E8F1EE' : '#fff',
+                color: isResolved ? '#2F5D50' : '#616161',
+                fontSize: '0.8rem',
+                fontWeight: 500,
+                cursor: resolving ? 'wait' : 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 4,
+              }}
+            >
+              <CheckCircle size={14} />
+              {isResolved ? 'Resolved' : 'Mark Resolved'}
+            </button>
+          )}
+          <BookmarkButton threadId={threadInfo.id} />
+          <ModerationToolbar
+            targetType="thread"
+            targetId={threadInfo.id}
+            isPinned={threadInfo.is_pinned}
+            podId={threadInfo.pod_id}
+            isLocked={threadInfo.is_locked}
+            onActionComplete={() => { window.location.reload(); }}
+          />
+        </div>
       </div>
 
       {/* AI Summary */}
@@ -420,6 +564,7 @@ const PostList: React.FC<PostListProps> = ({ threadId }) => {
                     authorProfile={profileMap?.[post.author_address]}
                     attachments={threadAttachments[post.id] || []}
                     podId={threadInfo.pod_id}
+                    onQuote={handleQuote}
                   />
                 </li>
               ))}

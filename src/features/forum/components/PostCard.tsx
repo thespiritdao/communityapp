@@ -11,6 +11,7 @@ import { AttachmentDisplay } from './AttachmentDisplay';
 import { ProfileModal } from '@/features/identity/components/ProfileModal';
 import { RichTextEditor } from './RichTextEditor';
 import { MentionRenderer } from './MentionRenderer';
+import { Quote } from 'lucide-react';
 import type { MediaAttachment } from '../services/MediaUploadService';
 import type { UserProfile } from '@/features/identity/types';
 
@@ -30,6 +31,7 @@ interface PostCardProps {
   isOriginalPost?: boolean; // When true, moderation targets the thread (not the post)
   threadId?: string;        // Required when isOriginalPost=true
   hideModeration?: boolean;
+  onQuote?: (content: string, authorName: string) => void;
 }
 
 const PostCard: React.FC<PostCardProps> = ({
@@ -40,6 +42,7 @@ const PostCard: React.FC<PostCardProps> = ({
   isOriginalPost = false,
   threadId,
   hideModeration = false,
+  onQuote,
 }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [editContent, setEditContent] = useState(post.content);
@@ -257,6 +260,20 @@ const PostCard: React.FC<PostCardProps> = ({
             marginLeft: 'auto',
           }}
         >
+          {onQuote && (
+            <button
+              onClick={() => onQuote(post.content, getAuthorDisplay())}
+              title="Quote this post"
+              style={{
+                background: 'none', border: 'none', cursor: 'pointer', padding: '2px 6px',
+                display: 'flex', alignItems: 'center', gap: 4,
+                fontSize: '0.75rem', color: '#8FAAA1',
+              }}
+            >
+              <Quote size={14} />
+              Quote
+            </button>
+          )}
           <ReportButton
             targetType="post"
             targetId={post.id}

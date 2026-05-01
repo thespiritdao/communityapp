@@ -93,6 +93,8 @@ export type ExplorerEventType =
   | 'forum_post_reaction'
   | 'forum_moderator_action'
   | 'forum_thread_summary_published'
+  | 'forum_thread_resolved'
+  | 'forum_thread_bookmarked'
   // knowledge
   | 'knowledge_item_published'
   | 'knowledge_item_updated'
@@ -170,6 +172,8 @@ export const EVENT_CATEGORY: Record<ExplorerEventType, ExplorerCategory> = {
   forum_post_reaction: 'forum',
   forum_moderator_action: 'forum',
   forum_thread_summary_published: 'forum',
+  forum_thread_resolved: 'forum',
+  forum_thread_bookmarked: 'forum',
 
   knowledge_item_published: 'knowledge',
   knowledge_item_updated: 'knowledge',
