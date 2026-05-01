@@ -1,5 +1,6 @@
 // src/app/api/forum/search/route.ts
 // Full-text search for forum threads via search_forum_threads RPC
+// Falls back to ILIKE search if the RPC function doesn't exist yet
 
 import { type NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/utils/supabaseAdminClient';
@@ -18,16 +19,38 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'Query must be at least 2 characters' }, { status: 400 });
     }
 
-    const { data, error } = await supabaseAdmin.rpc('search_forum_threads', {
+    // Try FTS RPC first
+    let data: any[] | null = null;
+    const { data: rpcData, error: rpcError } = await supabaseAdmin.rpc('search_forum_threads', {
       search_query: q,
       cat_id: categoryId,
       result_limit: limit,
       result_offset: page * limit,
     });
 
-    if (error) {
-      console.error('Forum search error:', error);
-      return NextResponse.json({ error: 'Search failed' }, { status: 500 });
+    if (rpcError) {
+      console.warn('Forum FTS RPC unavailable, falling back to ILIKE:', rpcError.message);
+
+      // Fallback: simple ILIKE search on title
+      let query = supabaseAdmin
+        .from('forum_threads')
+        .select('id, title, content, author_address, category_id, created_at, is_pinned')
+        .ilike('title', `%${q}%`)
+        .order('created_at', { ascending: false })
+        .range(page * limit, page * limit + limit - 1);
+
+      if (categoryId) {
+        query = query.eq('category_id', categoryId);
+      }
+
+      const { data: fallbackData, error: fallbackError } = await query;
+      if (fallbackError) {
+        console.error('Forum search fallback error:', fallbackError);
+        return NextResponse.json({ error: 'Search failed' }, { status: 500 });
+      }
+      data = fallbackData;
+    } else {
+      data = rpcData;
     }
 
     // Fetch author profiles for results

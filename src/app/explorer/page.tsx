@@ -201,6 +201,8 @@ const EVENT_COLORS: Record<string, string> = {
   forum_post_reaction: PALETTE.mutedSage,
   forum_moderator_action: PALETTE.earthenRed,
   forum_thread_summary_published: PALETTE.contemplative,
+  forum_thread_resolved: PALETTE.successGreen,
+  forum_thread_bookmarked: PALETTE.mutedSage,
   // knowledge — contemplative thought
   knowledge_item_published: PALETTE.contemplative,
   knowledge_item_updated: PALETTE.contemplative,
@@ -372,6 +374,8 @@ const TYPE_LABELS: Record<string, string> = {
   forum_post_reaction: 'Reaction',
   forum_moderator_action: 'Moderation',
   forum_thread_summary_published: 'Summary',
+  forum_thread_resolved: 'Resolved',
+  forum_thread_bookmarked: 'Bookmarked',
   knowledge_item_published: 'Published',
   knowledge_item_updated: 'Updated',
   agent_enabled: 'AI Agent',

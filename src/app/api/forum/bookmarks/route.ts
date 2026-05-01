@@ -28,7 +28,8 @@ export async function GET(req: NextRequest) {
     const wallet = getWalletFromToken(token);
     if (!wallet) return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
 
-    const { data, error } = await supabaseAdmin
+    // Try with new columns first, fall back to base columns if they don't exist yet
+    let { data, error } = await supabaseAdmin
       .from('forum_bookmarks')
       .select(`
         id, created_at,
@@ -40,6 +41,24 @@ export async function GET(req: NextRequest) {
       `)
       .eq('user_address', wallet)
       .order('created_at', { ascending: false });
+
+    if (error && error.message?.includes('does not exist')) {
+      // Fallback: new columns not yet available
+      const fallback = await supabaseAdmin
+        .from('forum_bookmarks')
+        .select(`
+          id, created_at,
+          thread_id,
+          forum_threads (
+            id, title, author_address, category_id, created_at,
+            is_pinned, is_locked
+          )
+        `)
+        .eq('user_address', wallet)
+        .order('created_at', { ascending: false });
+      data = fallback.data;
+      error = fallback.error;
+    }
 
     if (error) {
       console.error('Bookmark list error:', error);

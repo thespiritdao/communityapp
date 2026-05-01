@@ -97,7 +97,6 @@ const PostList: React.FC<PostListProps> = ({ threadId }) => {
               category_id,
               is_pinned,
               is_locked,
-              is_resolved,
               forum_categories (
                 name,
                 required_token,
@@ -139,9 +138,23 @@ const PostList: React.FC<PostListProps> = ({ threadId }) => {
             : null,
           is_pinned: threadData.is_pinned,
           is_locked: threadData.is_locked,
-          is_resolved: threadData.is_resolved,
+          is_resolved: false,
         });
-        setIsResolved(!!threadData.is_resolved);
+
+        // Fetch is_resolved separately — column may not exist yet (migration pending)
+        try {
+          const { data: resolvedData } = await supabase
+            .from('forum_threads')
+            .select('is_resolved')
+            .eq('id', threadId)
+            .single();
+          if (resolvedData && typeof resolvedData.is_resolved === 'boolean') {
+            setIsResolved(resolvedData.is_resolved);
+            setThreadInfo((prev) => prev ? { ...prev, is_resolved: resolvedData.is_resolved } : prev);
+          }
+        } catch {
+          // Column doesn't exist yet — silently default to false
+        }
 
         // Fetch posts separately (after thread is loaded)
         // Filter out deleted posts

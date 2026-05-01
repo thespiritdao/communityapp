@@ -8,7 +8,7 @@ import ForumAccessGate from '@/features/forum/components/ForumAccessGate';
 import { supabase } from '@/utils/supabaseClient';
 import ForumContainer from '@/features/forum/components/ForumContainer';
 import CategoryList from '@/features/forum/components/CategoryList';
-import ThreadList from '@/features/forum/components/ThreadList';
+import ThreadCard from '@/features/forum/components/ThreadCard';
 import ForumErrorBoundary from '@/features/forum/components/ForumErrorBoundary';
 import { ForumSearch } from '@/features/forum/components/ForumSearch';
 import { Button } from '@/components/ui/button';
@@ -409,18 +409,28 @@ export default function ForumPage() {
                 </h2>
                 {recentThreads.length > 0 ? (
                   <ForumErrorBoundary>
-                    <ThreadList
-                      threads={recentThreads.map((thread) => ({
-                        ...thread,
-                        author_wallet: thread.author_address,
-                        author_first_name:
-                          profileMap?.[thread.author_address]?.first_name ||
-                          null,
-                        author_last_name:
-                          profileMap?.[thread.author_address]?.last_name ||
-                          null,
-                      }))}
-                    />
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                      {recentThreads.map((thread) => {
+                        const profile = profileMap?.[thread.author_address];
+                        return (
+                          <ThreadCard
+                            key={thread.id}
+                            thread={{
+                              id: thread.id,
+                              title: thread.title,
+                              author_wallet: thread.author_address,
+                              author_first_name: profile?.first_name || null,
+                              author_last_name: profile?.last_name || null,
+                              author_profile_picture: profile?.profile_picture || null,
+                              created_at: thread.created_at,
+                              post_count: thread.post_count ?? 0,
+                              category_name: thread.category_name,
+                              pod_name: thread.pod_name,
+                            }}
+                          />
+                        );
+                      })}
+                    </div>
                   </ForumErrorBoundary>
                 ) : (
                   <p className="text-muted-foreground">

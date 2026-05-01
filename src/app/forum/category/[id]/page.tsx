@@ -16,6 +16,71 @@ import styles from '@/features/forum/styles/Forum.module.css';
 
 const THREADS_PER_PAGE = 20;
 
+// Base columns that are guaranteed to exist on forum_threads
+const BASE_SELECT = `
+  id,
+  categoryId:category_id,
+  title,
+  content,
+  author_address,
+  created_at,
+  is_pinned
+`;
+
+async function fetchThreadPage(
+  categoryId: string,
+  sortOption: SortOption,
+  start: number,
+  end: number,
+): Promise<{ data: any[] | null; error: any }> {
+  // Try with new columns first
+  let query = supabase
+    .from('forum_threads')
+    .select(`
+      id,
+      categoryId:category_id,
+      title,
+      content,
+      author_address,
+      created_at,
+      is_pinned,
+      is_resolved,
+      view_count,
+      reply_count,
+      last_reply_at
+    `)
+    .eq('category_id', categoryId)
+    .order('is_pinned', { ascending: false });
+
+  // Apply sort
+  if (sortOption === 'active') {
+    query = query.order('last_reply_at', { ascending: false, nullsFirst: false });
+  } else if (sortOption === 'replies') {
+    query = query.order('reply_count', { ascending: false });
+  } else if (sortOption === 'unanswered') {
+    query = query.eq('reply_count', 0).order('created_at', { ascending: false });
+  } else {
+    query = query.order('created_at', { ascending: false });
+  }
+
+  const result = await query.range(start, end);
+
+  // If query fails (missing columns), fall back to base columns only
+  if (result.error && result.error.message?.includes('does not exist')) {
+    console.warn('[CategoryPage] Falling back to base columns — new columns not yet available');
+    const fallbackQuery = supabase
+      .from('forum_threads')
+      .select(BASE_SELECT)
+      .eq('category_id', categoryId)
+      .order('is_pinned', { ascending: false })
+      .order('created_at', { ascending: false });
+
+    return await fallbackQuery.range(start, end);
+  }
+
+  return result;
+}
+
 export default function CategoryPage() {
   const params = useParams();
   const categoryId = typeof params.id === 'string' ? params.id : '';
@@ -36,14 +101,6 @@ export default function CategoryPage() {
   }, [threads]);
 
   const { data: profileMap } = useForumUserProfiles(uniqueAuthors);
-
-  // Helper to strip HTML tags
-  const stripHtml = (html: string) => {
-    if (typeof document === 'undefined') return html || ''; // SSR safety
-    const tmp = document.createElement('DIV');
-    tmp.innerHTML = html || '';
-    return tmp.textContent || tmp.innerText || '';
-  };
 
   // Initial load - fetch category name and first page
   useEffect(() => {
@@ -67,46 +124,13 @@ export default function CategoryPage() {
           setCategoryName(catData.name);
         }
 
-        // 2) Fetch first page of threads with pagination
-        const start = 0;
-        const end = THREADS_PER_PAGE - 1;
-
-        let query = supabase
-          .from('forum_threads')
-          .select(`
-            id,
-            categoryId:category_id,
-            title,
-            content,
-            author_address,
-            created_at,
-            is_pinned,
-            is_resolved,
-            view_count,
-            reply_count,
-            last_reply_at
-          `)
-          .eq('category_id', categoryId)
-          .order('is_pinned', { ascending: false });
-
-        // Apply sort
-        if (sortOption === 'active') {
-          query = query.order('last_reply_at', { ascending: false, nullsFirst: false });
-        } else if (sortOption === 'replies') {
-          query = query.order('reply_count', { ascending: false });
-        } else if (sortOption === 'unanswered') {
-          query = query.eq('reply_count', 0).order('created_at', { ascending: false });
-        } else {
-          query = query.order('created_at', { ascending: false });
-        }
-
-        const { data, error } = await query.range(start, end);
+        // 2) Fetch first page of threads (with fallback for missing columns)
+        const { data, error } = await fetchThreadPage(categoryId, sortOption, 0, THREADS_PER_PAGE - 1);
 
         if (error) {
           setError(error.message);
         } else {
           setThreads(data || []);
-          // If we got fewer threads than requested, there are no more
           setHasMore((data?.length || 0) === THREADS_PER_PAGE);
         }
       } catch (err: any) {
@@ -131,42 +155,13 @@ export default function CategoryPage() {
     const end = start + THREADS_PER_PAGE - 1;
 
     try {
-      let moreQuery = supabase
-        .from('forum_threads')
-        .select(`
-          id,
-          categoryId:category_id,
-          title,
-          content,
-          author_address,
-          created_at,
-          is_pinned,
-          is_resolved,
-          view_count,
-          reply_count,
-          last_reply_at
-        `)
-        .eq('category_id', categoryId)
-        .order('is_pinned', { ascending: false });
-
-      if (sortOption === 'active') {
-        moreQuery = moreQuery.order('last_reply_at', { ascending: false, nullsFirst: false });
-      } else if (sortOption === 'replies') {
-        moreQuery = moreQuery.order('reply_count', { ascending: false });
-      } else if (sortOption === 'unanswered') {
-        moreQuery = moreQuery.eq('reply_count', 0).order('created_at', { ascending: false });
-      } else {
-        moreQuery = moreQuery.order('created_at', { ascending: false });
-      }
-
-      const { data, error } = await moreQuery.range(start, end);
+      const { data, error } = await fetchThreadPage(categoryId, sortOption, start, end);
 
       if (error) {
         console.error('Error loading more threads:', error);
       } else {
         setThreads((prev) => [...prev, ...(data || [])]);
         setPage(nextPage);
-        // If we got fewer threads than requested, there are no more
         setHasMore((data?.length || 0) === THREADS_PER_PAGE);
       }
     } catch (err) {
