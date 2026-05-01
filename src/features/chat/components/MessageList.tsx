@@ -6,6 +6,7 @@ import { ProfileModal } from '@/features/identity/components/ProfileModal';
 import { ChatModerationMenu } from './ChatModerationMenu';
 import { supabase } from '@/utils/supabaseClient';
 import { Pin } from 'lucide-react';
+import { MarkdownContent } from '@/components/MarkdownContent';
 
 interface MessageListProps {
   messages: Message[];
@@ -63,23 +64,6 @@ const markMessagesAsRead = async (receiver_wallet_id: string) => {
   }
 };
 
-// Utility to format message with mentions and hyperlinks
-function formatMessageWithMentions(message: string): string {
-  // First, replace @[Name](wallet) with <span class="mention">@Name</span>
-  let formatted = message.replace(
-    /@\[([^\]]+)\]\([^\)]+\)/g,
-    '<span class="mention">@$1</span>',
-  );
-
-  // Then, convert URLs to clickable links with data attribute for confirmation
-  // Match http:// or https:// URLs
-  formatted = formatted.replace(
-    /(https?:\/\/[^\s<]+)/g,
-    '<a href="$1" class="message-link" data-external-link="true" target="_blank" rel="noopener noreferrer">$1</a>',
-  );
-
-  return formatted;
-}
 
 export default function MessageList({
   messages,
@@ -220,12 +204,9 @@ export default function MessageList({
               <span>Pinned</span>
             </div>
           )}
-          <div
-            className="message-text"
-            dangerouslySetInnerHTML={{
-              __html: formatMessageWithMentions(message.content),
-            }}
-          ></div>
+          <div className="message-text">
+            <MarkdownContent content={message.content} className="chat-markdown" />
+          </div>
 
           {/* Moderation menu - only show if user has chatModeration permission */}
           {canModerate && chatGroupId && (
