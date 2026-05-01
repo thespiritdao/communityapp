@@ -113,6 +113,21 @@ export default function PodCommunityAgentManager({
       const token = session?.access_token;
       if (!token) return;
 
+      // Load saved agent config
+      try {
+        const cfgRes = await fetch(`/api/community-agent/config?podId=${podId}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (cfgRes.ok) {
+          const cfgData = await cfgRes.json();
+          if (cfgData.config && Object.keys(cfgData.config).length > 0) {
+            setConfig((prev: typeof DEFAULT_CONFIG) => ({ ...prev, ...cfgData.config }));
+          }
+        }
+      } catch {
+        // Config endpoint may not exist yet
+      }
+
       // Load forum categories for this pod
       const { data: cats } = await supabase
         .from('forum_categories')
