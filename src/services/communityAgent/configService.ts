@@ -211,7 +211,6 @@ export async function ensureAgentProfile(
         first_name: agentName,
         last_name: '(Agent)',
         bio: `AI community agent`,
-        has_membership: false,
         ...(avatarUrl ? { profile_picture: avatarUrl } : {}),
       });
   }

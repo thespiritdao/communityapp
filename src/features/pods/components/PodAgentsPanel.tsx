@@ -26,6 +26,7 @@ export default function PodAgentsPanel({ podId, podName, isManager }: PodAgentsP
   const [showLearnMore, setShowLearnMore] = useState(false);
   const [agentEnabled, setAgentEnabled] = useState<boolean | null>(null);
   const [enabling, setEnabling] = useState(false);
+  const [disabling, setDisabling] = useState(false);
 
   // Check if agent is already enabled for this pod
   React.useEffect(() => {
@@ -68,6 +69,33 @@ export default function PodAgentsPanel({ podId, podName, isManager }: PodAgentsP
       console.error('Failed to enable agent:', err);
     } finally {
       setEnabling(false);
+    }
+  }, [podId]);
+
+  const handleDisable = useCallback(async () => {
+    if (!confirm('Disable the community agent? Your subscription time will be paused and preserved.')) return;
+    setDisabling(true);
+    try {
+      const { supabase } = await import('@/utils/supabaseClient');
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) return;
+
+      const res = await fetch(`/api/pods/${podId}/modules`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ community_agent_enabled: false }),
+      });
+
+      if (res.ok) {
+        setAgentEnabled(false);
+      }
+    } catch (err) {
+      console.error('Failed to disable agent:', err);
+    } finally {
+      setDisabling(false);
     }
   }, [podId]);
 
@@ -202,12 +230,25 @@ export default function PodAgentsPanel({ podId, podName, isManager }: PodAgentsP
               Community Agent
             </CardTitle>
             {agentEnabled ? (
-              <Badge
-                className="text-[10px]"
-                style={{ backgroundColor: '#D1E6DC', color: '#2F5D50', border: 'none' }}
-              >
-                Active
-              </Badge>
+              <div className="flex items-center gap-2">
+                <Badge
+                  className="text-[10px]"
+                  style={{ backgroundColor: '#D1E6DC', color: '#2F5D50', border: 'none' }}
+                >
+                  Active
+                </Badge>
+                {isManager && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleDisable}
+                    disabled={disabling}
+                    className="text-[10px] h-6 px-2 text-[#7C6F5B] hover:text-red-600"
+                  >
+                    {disabling ? 'Disabling...' : 'Deactivate'}
+                  </Button>
+                )}
+              </div>
             ) : (
               <Badge variant="outline" className="text-[10px] text-[#7C6F5B]">
                 Not Enabled
