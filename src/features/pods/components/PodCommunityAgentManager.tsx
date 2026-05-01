@@ -20,6 +20,7 @@ import {
   CalendarDays,
   Flame,
   ShieldCheck,
+  Camera,
 } from 'lucide-react';
 import { useEvmAddress, useCurrentUser } from '@coinbase/cdp-hooks';
 import { useSendUserOperationWithAttribution } from '@/wallet/hooks/useSendUserOperationWithAttribution';
@@ -103,6 +104,8 @@ export default function PodCommunityAgentManager({
   const [subscribing, setSubscribing] = useState(false);
   const [subscribeError, setSubscribeError] = useState<string | null>(null);
   const [showConfirm, setShowConfirm] = useState(false);
+  const [agentAvatarUrl, setAgentAvatarUrl] = useState<string | null>(null);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
 
   // Load forum categories, chat groups, subscription, and corpus stats
   useEffect(() => {
@@ -124,6 +127,9 @@ export default function PodCommunityAgentManager({
           const cfgData = await cfgRes.json();
           if (cfgData.config && Object.keys(cfgData.config).length > 0) {
             setConfig((prev: typeof DEFAULT_CONFIG) => ({ ...prev, ...cfgData.config }));
+            if (cfgData.config.agent_avatar_url) {
+              setAgentAvatarUrl(cfgData.config.agent_avatar_url);
+            }
           }
         }
       } catch {
@@ -214,6 +220,60 @@ export default function PodCommunityAgentManager({
   const updateField = (key: string, value: any) => {
     setConfig((prev: typeof DEFAULT_CONFIG) => ({ ...prev, [key]: value }));
   };
+
+  const handleAvatarUpload = useCallback(async (file: File) => {
+    if (!isManager) return;
+    const ALLOWED_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+    const MAX_SIZE = 2 * 1024 * 1024; // 2MB
+
+    if (!ALLOWED_TYPES.includes(file.type)) {
+      alert('Only JPG, PNG, and WebP images are allowed.');
+      return;
+    }
+    if (file.size > MAX_SIZE) {
+      alert('Image must be under 2 MB.');
+      return;
+    }
+
+    setUploadingAvatar(true);
+    try {
+      const ext = file.name.split('.').pop()?.toLowerCase() || 'jpg';
+      const fileName = `agent-${podId}-${Date.now()}.${ext}`;
+
+      const { data, error } = await supabase.storage
+        .from('profile_images')
+        .upload(fileName, file, { cacheControl: '3600', upsert: true });
+
+      if (error) throw error;
+
+      const { data: urlData } = supabase.storage
+        .from('profile_images')
+        .getPublicUrl(fileName);
+
+      if (!urlData?.publicUrl) throw new Error('Failed to get public URL');
+
+      setAgentAvatarUrl(urlData.publicUrl);
+
+      // Save the avatar URL in agent config so it persists
+      const { data: { session } } = await supabase.auth.getSession();
+      await fetch('/api/community-agent/config', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session?.access_token}`,
+        },
+        body: JSON.stringify({
+          podId,
+          config: { agent_avatar_url: urlData.publicUrl },
+        }),
+      });
+    } catch (err: any) {
+      console.error('Avatar upload failed:', err);
+      alert('Failed to upload avatar: ' + (err.message || 'Unknown error'));
+    } finally {
+      setUploadingAvatar(false);
+    }
+  }, [podId, isManager]);
 
   const handleSubscribe = useCallback(async () => {
     const smartAccount = currentUser?.evmSmartAccounts?.[0];
@@ -431,6 +491,50 @@ export default function PodCommunityAgentManager({
             className="mt-1"
           />
         </div>
+        {/* Agent Avatar */}
+        <div>
+          <Label className="text-xs text-muted-foreground">Agent Avatar</Label>
+          <div className="mt-1 flex items-center gap-3">
+            <div
+              className="relative w-12 h-12 rounded-full overflow-hidden border flex-shrink-0"
+              style={{ borderColor: '#D1C4A9', backgroundColor: '#F5EDD7' }}
+            >
+              {agentAvatarUrl ? (
+                <img src={agentAvatarUrl} alt="Agent avatar" className="w-full h-full object-cover" />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center">
+                  <Camera className="h-5 w-5" style={{ color: '#8B5E3C' }} />
+                </div>
+              )}
+            </div>
+            {isManager && (
+              <Button
+                size="sm"
+                variant="outline"
+                className="gap-1 text-xs"
+                disabled={uploadingAvatar}
+                onClick={() => {
+                  const input = document.createElement('input');
+                  input.type = 'file';
+                  input.accept = 'image/jpeg,image/png,image/webp';
+                  input.onchange = (e) => {
+                    const file = (e.target as HTMLInputElement).files?.[0];
+                    if (file) handleAvatarUpload(file);
+                  };
+                  input.click();
+                }}
+              >
+                {uploadingAvatar ? (
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                ) : (
+                  <Upload className="h-3 w-3" />
+                )}
+                {uploadingAvatar ? 'Uploading...' : agentAvatarUrl ? 'Change' : 'Upload'}
+              </Button>
+            )}
+          </div>
+        </div>
+
         <div>
           <Label htmlFor="agent-persona" className="text-xs text-muted-foreground">
             Persona / System Prompt Override

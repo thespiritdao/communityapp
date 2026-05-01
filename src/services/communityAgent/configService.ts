@@ -167,8 +167,9 @@ export async function updateAgentConfig(
   // Ensure user_profiles row exists for the agent wallet
   const agentWallet = merged.agent_wallet || deriveAgentWallet(podId);
   const agentName = merged.agent_name || 'Community Agent';
+  const agentAvatar = merged.agent_avatar_url || null;
 
-  await ensureAgentProfile(agentWallet, agentName);
+  await ensureAgentProfile(agentWallet, agentName, agentAvatar);
 }
 
 /**
@@ -178,22 +179,27 @@ export async function updateAgentConfig(
 export async function ensureAgentProfile(
   walletAddress: string,
   agentName: string,
+  avatarUrl?: string | null,
 ): Promise<void> {
   const wallet = walletAddress.toLowerCase();
 
   // Check if profile already exists
   const { data: existing } = await supabaseAdmin
     .from('user_profiles')
-    .select('wallet_address, first_name')
+    .select('wallet_address, first_name, profile_picture')
     .eq('wallet_address', wallet)
     .single();
 
   if (existing) {
-    // Update name if it changed
-    if (existing.first_name !== agentName) {
+    // Update name/avatar if changed
+    const profileUpdates: Record<string, any> = { last_name: '(Agent)' };
+    if (existing.first_name !== agentName) profileUpdates.first_name = agentName;
+    if (avatarUrl && existing.profile_picture !== avatarUrl) profileUpdates.profile_picture = avatarUrl;
+
+    if (Object.keys(profileUpdates).length > 1 || profileUpdates.first_name || profileUpdates.profile_picture) {
       await supabaseAdmin
         .from('user_profiles')
-        .update({ first_name: agentName, last_name: '(Agent)' })
+        .update(profileUpdates)
         .eq('wallet_address', wallet);
     }
   } else {
@@ -206,6 +212,7 @@ export async function ensureAgentProfile(
         last_name: '(Agent)',
         bio: `AI community agent`,
         has_membership: false,
+        ...(avatarUrl ? { profile_picture: avatarUrl } : {}),
       });
   }
 }

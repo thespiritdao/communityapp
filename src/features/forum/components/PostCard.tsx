@@ -245,7 +245,10 @@ const PostCard: React.FC<PostCardProps> = ({
 
       {/* Post Footer: Reactions + Report + Date */}
       <div className={styles.postFooter}>
-        <ReactionPicker postId={post.id} />
+        <ReactionPicker
+          postId={isOriginalPost ? undefined : post.id}
+          threadId={isOriginalPost ? (threadId || post.thread_id) : undefined}
+        />
         <div
           style={{
             display: 'flex',

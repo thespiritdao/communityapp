@@ -6,6 +6,8 @@ import { type NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/utils/supabaseAdminClient';
 import jwt from 'jsonwebtoken';
 import { recordExplorerEvent } from '@/lib/explorerEvents';
+import { ensureAgentProfile } from '@/services/communityAgent/configService';
+import { deriveAgentWallet } from '@/services/communityAgent/types';
 
 export const runtime = 'nodejs';
 
@@ -182,6 +184,18 @@ export async function PUT(req: NextRequest): Promise<NextResponse> {
       } catch (err) {
         console.warn('[pod modules] subscription resume failed:', err);
       }
+    }
+  }
+
+  // Ensure agent user_profiles row exists so it appears in @mention autocomplete
+  if (updates.community_agent_enabled === true) {
+    try {
+      const agentCfg = prior?.community_agent_config || {};
+      const agentWallet = agentCfg.agent_wallet || deriveAgentWallet(podId);
+      const agentName = agentCfg.agent_name || 'Community Agent';
+      await ensureAgentProfile(agentWallet, agentName);
+    } catch (err) {
+      console.warn('[pod modules] ensureAgentProfile failed:', err);
     }
   }
 
