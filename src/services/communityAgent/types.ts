@@ -80,4 +80,6 @@ export interface SubscriptionStatus {
   isActive: boolean;
   expiresAt: string | null;
   isExempt: boolean;
+  isPaused?: boolean;
+  remainingDays?: number | null;
 }

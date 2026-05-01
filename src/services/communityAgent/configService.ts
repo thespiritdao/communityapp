@@ -72,11 +72,26 @@ export async function getSubscriptionStatus(podId: string): Promise<Subscription
 
   const { data: sub } = await supabaseAdmin
     .from('community_agent_subscriptions')
-    .select('status, expires_at')
+    .select('status, expires_at, remaining_days')
     .eq('pod_id', podId)
     .single();
 
-  if (!sub || sub.status !== 'active') {
+  if (!sub) {
+    return { isActive: false, expiresAt: null, isExempt: false };
+  }
+
+  // Paused subscriptions retain their remaining days
+  if (sub.status === 'paused') {
+    return {
+      isActive: false,
+      expiresAt: null,
+      isExempt: false,
+      isPaused: true,
+      remainingDays: sub.remaining_days ?? 0,
+    };
+  }
+
+  if (sub.status !== 'active') {
     return { isActive: false, expiresAt: null, isExempt: false };
   }
 

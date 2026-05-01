@@ -127,6 +127,64 @@ export async function PUT(req: NextRequest): Promise<NextResponse> {
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
+  // ── Pause / resume subscription timer when community_agent_enabled toggles ──
+  if ('community_agent_enabled' in updates) {
+    const wasEnabled = prior?.community_agent_enabled ?? false;
+    const nowEnabled = updates.community_agent_enabled;
+    if (wasEnabled && !nowEnabled) {
+      // PAUSE: snapshot remaining days, clear expires_at
+      try {
+        const { data: sub } = await supabaseAdmin
+          .from('community_agent_subscriptions')
+          .select('expires_at, status')
+          .eq('pod_id', podId)
+          .eq('status', 'active')
+          .single();
+        if (sub?.expires_at) {
+          const remaining = Math.max(0, (new Date(sub.expires_at).getTime() - Date.now()) / 86400000);
+          await supabaseAdmin
+            .from('community_agent_subscriptions')
+            .update({
+              status: 'paused',
+              remaining_days: remaining,
+              paused_at: new Date().toISOString(),
+              updated_at: new Date().toISOString(),
+            })
+            .eq('pod_id', podId)
+            .eq('status', 'active');
+        }
+      } catch (err) {
+        console.warn('[pod modules] subscription pause failed:', err);
+      }
+    } else if (!wasEnabled && nowEnabled) {
+      // RESUME: restore remaining days → new expires_at
+      try {
+        const { data: sub } = await supabaseAdmin
+          .from('community_agent_subscriptions')
+          .select('remaining_days, status')
+          .eq('pod_id', podId)
+          .eq('status', 'paused')
+          .single();
+        if (sub?.remaining_days && sub.remaining_days > 0) {
+          const newExpiry = new Date(Date.now() + sub.remaining_days * 86400000);
+          await supabaseAdmin
+            .from('community_agent_subscriptions')
+            .update({
+              status: 'active',
+              expires_at: newExpiry.toISOString(),
+              remaining_days: null,
+              paused_at: null,
+              updated_at: new Date().toISOString(),
+            })
+            .eq('pod_id', podId)
+            .eq('status', 'paused');
+        }
+      } catch (err) {
+        console.warn('[pod modules] subscription resume failed:', err);
+      }
+    }
+  }
+
   // Pulse: emit one event per module toggled. Module name is normalized
   // (chat_enabled → chat) and event type encodes the new state.
   for (const [key, newValue] of Object.entries(updates)) {

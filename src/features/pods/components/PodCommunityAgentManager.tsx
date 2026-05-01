@@ -67,6 +67,8 @@ interface SubscriptionInfo {
   isActive: boolean;
   expiresAt: string | null;
   isExempt: boolean;
+  isPaused?: boolean;
+  remainingDays?: number | null;
 }
 
 const DEFAULT_CONFIG = {
@@ -319,15 +321,17 @@ export default function PodCommunityAgentManager({
               {subscription.isActive ? (
                 <ShieldCheck className="h-4 w-4" style={{ color: '#3F7A5A' }} />
               ) : (
-                <AlertCircle className="h-4 w-4" style={{ color: '#C6933F' }} />
+                <AlertCircle className="h-4 w-4" style={{ color: subscription.isPaused ? '#7A6E8F' : '#C6933F' }} />
               )}
               <span className="text-sm font-medium">
                 {subscription.isActive
                   ? `Active until ${new Date(subscription.expiresAt!).toLocaleDateString()}`
-                  : 'Subscription required — 25 $SYSTEM/month'}
+                  : subscription.isPaused
+                    ? `Paused — ${Math.round(subscription.remainingDays || 0)} day${Math.round(subscription.remainingDays || 0) === 1 ? '' : 's'} remaining`
+                    : 'Subscription required — 25 $SYSTEM for 30 days'}
               </span>
             </div>
-            {isManager && !subscription.isActive && (
+            {isManager && !subscription.isActive && !subscription.isPaused && (
               <Button
                 size="sm"
                 onClick={() => setShowConfirm(true)}
@@ -435,7 +439,7 @@ export default function PodCommunityAgentManager({
             id="agent-persona"
             value={config.system_prompt || ''}
             onChange={(e) => updateField('system_prompt', e.target.value)}
-            placeholder="Optional: describe your agent's personality, tone, and areas of expertise. Leave blank for default."
+            placeholder={`Default: "You are ${config.agent_name || 'Community Agent'}, the community agent for ${podName} on SpiritDAO. You help foster discussion, create engagement, and answer questions using the pod's knowledge base. You are warm, thoughtful, and grounded."\n\nOverride here to customize your agent's personality, tone, and areas of expertise.`}
             disabled={!isManager}
             className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm min-h-[80px] resize-y"
             rows={3}
