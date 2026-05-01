@@ -28,6 +28,8 @@ import { encodeFunctionData, parseUnits } from 'viem';
 import AgentEventDrafts from './AgentEventDrafts';
 import purchaseRouterABI from '@/abis/PurchaseRouterDecentralized.json';
 
+const TN_POD_ID = 'f2bc166d-33d5-47dc-8409-ea8d445d3fc0';
+
 const SYSTEM_TOKEN = process.env.NEXT_PUBLIC_SYSTEM_TOKEN as `0x${string}`;
 const PURCHASE_ROUTER = process.env.NEXT_PUBLIC_PURCHASE_ROUTER_DECENTRALIZED as `0x${string}`;
 const SUBSCRIPTION_AMOUNT = parseUnits('25', 18); // 25 $SYSTEM
@@ -537,17 +539,33 @@ export default function PodCommunityAgentManager({
 
         <div>
           <Label htmlFor="agent-persona" className="text-xs text-muted-foreground">
-            Persona / System Prompt Override
+            Persona / System Prompt
           </Label>
-          <textarea
-            id="agent-persona"
-            value={config.system_prompt || ''}
-            onChange={(e) => updateField('system_prompt', e.target.value)}
-            placeholder={`Default: "You are ${config.agent_name || 'Community Agent'}, the community agent for ${podName} on SpiritDAO. You help foster discussion, create engagement, and answer questions using the pod's knowledge base. You are warm, thoughtful, and grounded."\n\nOverride here to customize your agent's personality, tone, and areas of expertise.`}
-            disabled={!isManager}
-            className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm min-h-[80px] resize-y"
-            rows={3}
-          />
+          {podId === TN_POD_ID ? (
+            <div className="mt-1 p-3 rounded-lg text-sm" style={{ backgroundColor: '#F5EDD7', border: '1px solid #D1C4A9' }}>
+              <p className="font-medium text-[#3C3C3C] text-xs">Kairos — Dedicated Persona</p>
+              <p className="text-xs text-[#7C6F5B] mt-1">
+                This agent uses the Kairos persona, a specialized prompt grounded in Temporal Naturalism philosophy.
+                The prompt is maintained in the codebase and cannot be overridden from this panel.
+                To edit, update <code className="text-[10px] bg-white/50 px-1 rounded">prompts/kairos.ts</code>.
+              </p>
+            </div>
+          ) : (
+            <textarea
+              id="agent-persona"
+              value={config.system_prompt ?? ''}
+              onChange={(e) => updateField('system_prompt', e.target.value)}
+              placeholder={`You are ${config.agent_name || 'Community Agent'}, the community agent for ${podName} within the SpiritDAO Ecosystem — a registered 501(c)(3) nonprofit and decentralized community platform.\n\nYou help foster discussion, create engagement, and answer questions using the pod's knowledge base. You are warm, thoughtful, and grounded. You ask good questions and encourage participation.\n\nYou never claim to have all the answers. When you reach the limits of your knowledge base, you say so honestly and suggest the community discuss further.`}
+              disabled={!isManager}
+              className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm min-h-[100px] resize-y"
+              rows={5}
+            />
+          )}
+          {podId !== TN_POD_ID && (
+            <p className="text-[10px] text-[#A39171] mt-1">
+              Leave blank to use the default prompt shown above. Edit to customize your agent's personality, tone, and expertise.
+            </p>
+          )}
         </div>
       </div>
 
