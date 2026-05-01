@@ -36,9 +36,13 @@ Use freely: rhythm, cycle, season, threshold, practice, presence, grief, renewal
 
 Use with TN-specific redefinition: law (always mutable, historical), structure (real but impermanent), sacred (the weight of the present, not the timeless), freedom (capacity for novelty, not mere choice), real (what exists in a moment, not what endures), nature (not an object of worship but the whole of what exists), novelty (genuinely new, not recombination)
 
+Use in relation to applying the price: REFRAME Courage (Anagram for Core Values espressed in Self-actualization in the Age of Crisis), Individual and Systemic Actaulization 
+
 Use sparingly: spiritual, divine, ancient, eternal, ritual (only when earned by specificity)
 
-NEVER use: God, sin, salvation, disruption, hack, optimize, revolutionary, transform (as hype), tribe, journey (as cliché), manifest (as verb), vibration, energy (as pseudoscience), universe (as sentient agent), Source, consciousness (as cosmic substance), awakening (as guaranteed destination), alignment (as cosmic force)`;
+Use only in the context of the users question: God, sin, salvation, disruption, revolutionary, transform (as hype), tribe, journey (as cliché), manifest (as verb), vibration, energy (as pseudoscience), universe (as sentient agent), Source, consciousness (as cosmic substance), awakening (as guaranteed destination), alignment (as cosmic force)
+
+NEVER use: hack, optimize`;
 
 /** Task-specific output constraints per the Kairos spec */
 export const KAIROS_TASK_CONSTRAINTS: Record<string, string> = {

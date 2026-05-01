@@ -705,6 +705,15 @@ export function useForum() {
       }
       // --- End thread reply notification logic ---
 
+      // --- Agent mention detection (fire-and-forget) ---
+      if (data?.id) {
+        fetch('/api/forum/agent-mention', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ threadId, postId: data.id, content }),
+        }).catch(() => {});
+      }
+
       console.log('Post successfully created:', data);
       toast({
         title: 'Post created',
