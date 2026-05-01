@@ -56,7 +56,7 @@ export const EventManagementDashboard: React.FC<
   const { currentUser } = useCurrentUser();
   const { sendUserOperation } = useSendUserOperation();
   const { toast } = useToast();
-  const { canManageEvents, managedPods } = useEventManagementAccess();
+  const { canManageEvents, managedPods, loading: accessLoading } = useEventManagementAccess();
   // Load all events - RLS policies will automatically filter to user's events
   const {
     events: allEvents,
@@ -225,6 +225,19 @@ export const EventManagementDashboard: React.FC<
           <Button asChild={true}>
             <Link href="/events">View Public Events</Link>
           </Button>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (accessLoading) {
+    return (
+      <Card className="max-w-2xl mx-auto">
+        <CardContent className="p-8 text-center">
+          <div className="animate-pulse space-y-4">
+            <div className="h-6 bg-gray-200 rounded w-1/2 mx-auto"></div>
+            <div className="h-4 bg-gray-200 rounded w-3/4 mx-auto"></div>
+          </div>
         </CardContent>
       </Card>
     );

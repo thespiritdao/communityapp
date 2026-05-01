@@ -147,7 +147,7 @@ export function useEventManagementAccess() {
   const [canManageEvents, setCanManageEvents] = useState(false);
   const [canCreateEvents, setCanCreateEvents] = useState(false);
   const [managedPods, setManagedPods] = useState<Pod[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true); // Start true — access not yet determined
   const [error, setError] = useState<string | null>(null);
 
   // Create a stable string representation of modules for events
@@ -160,10 +160,15 @@ export function useEventManagementAccess() {
   }, [modules]);
 
   const checkManagementAccess = useCallback(async () => {
-    if (!address || hatPermissionsLoading || modulesLoading) {
+    if (!address) {
       setCanManageEvents(false);
       setCanCreateEvents(false);
       setManagedPods([]);
+      setLoading(false);
+      return;
+    }
+    if (hatPermissionsLoading || modulesLoading) {
+      // Dependencies still loading — keep loading=true, wait for next call
       return;
     }
 
