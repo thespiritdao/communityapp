@@ -108,7 +108,7 @@ export async function GET(req: NextRequest) {
           .insert({
             thread_id: item.thread_id,
             content: response.content,
-            author_wallet: config.agentWallet,
+            author_address: config.agentWallet,
             created_at: new Date().toISOString(),
           })
           .select('id')

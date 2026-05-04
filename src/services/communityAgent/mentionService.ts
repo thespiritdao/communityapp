@@ -67,7 +67,7 @@ export async function extractForumContext(
   // Get recent posts in the thread (last 10)
   const { data: posts } = await supabaseAdmin
     .from('forum_posts')
-    .select('id, content, author_wallet, created_at')
+    .select('id, content, author_address, created_at')
     .eq('thread_id', threadId)
     .eq('is_deleted', false)
     .order('created_at', { ascending: true })
@@ -81,7 +81,7 @@ export async function extractForumContext(
       if (post.id === triggerPostId) {
         userMessage = stripMentionMarkup(post.content);
       } else {
-        const isAgent = agentWallets.has(post.author_wallet);
+        const isAgent = agentWallets.has(post.author_address);
         history.push({
           role: isAgent ? 'assistant' : 'user',
           content: stripMentionMarkup(post.content),

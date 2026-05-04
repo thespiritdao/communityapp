@@ -83,9 +83,7 @@ export async function GET(req: NextRequest) {
             category_id: config.dailyCategoryId,
             title,
             content: response.content,
-            author_wallet: config.agentWallet,
-            author_first_name: config.agentName,
-            author_last_name: '',
+            author_address: config.agentWallet,
             created_at: new Date().toISOString(),
           })
           .select('id')
