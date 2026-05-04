@@ -58,9 +58,7 @@ export const createThread = async ({
         category_id: categoryId,
         title: title.trim(),
         content: content.trim(),
-        author_wallet: authorWallet,
-        author_first_name: authorFirstName,
-        author_last_name: authorLastName,
+        author_address: authorWallet,
         created_at: new Date().toISOString(),
       })
       .select('*')

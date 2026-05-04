@@ -76,7 +76,7 @@ export default async function createPost(
     const { error: insertError } = await supabase.from('forum_posts').insert({
       thread_id: threadId,
       content,
-      author_wallet: profile.wallet_address,
+      author_address: profile.wallet_address,
       required_token: required_token,
       created_at: new Date().toISOString(),
     });

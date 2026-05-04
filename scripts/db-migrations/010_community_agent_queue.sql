@@ -73,7 +73,7 @@ BEGIN
   v_agent_wallet := COALESCE(v_agent_config->>'agent_wallet', v_pseudo_wallet);
 
   -- Don't process agent's own posts (check both per-pod wallet and legacy pseudo wallet)
-  IF NEW.author_wallet = v_agent_wallet OR NEW.author_wallet = v_pseudo_wallet THEN
+  IF NEW.author_address = v_agent_wallet OR NEW.author_address = v_pseudo_wallet THEN
     RETURN NEW;
   END IF;
 
@@ -84,7 +84,7 @@ BEGIN
      OR NEW.content ILIKE '%@[' || v_agent_name || ']%' THEN
 
     INSERT INTO community_agent_queue (pod_id, thread_id, trigger_post_id, trigger_wallet)
-    VALUES (v_pod_id, NEW.thread_id, NEW.id, NEW.author_wallet);
+    VALUES (v_pod_id, NEW.thread_id, NEW.id, NEW.author_address);
   END IF;
 
   RETURN NEW;

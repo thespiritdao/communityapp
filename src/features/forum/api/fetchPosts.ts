@@ -21,9 +21,7 @@ export const fetchPosts = async ({
         id,
         thread_id,
         content,
-        author_wallet,
-        author_first_name,
-        author_last_name,
+        author_address,
         created_at,
         required_token,
 		forum_threads(required_token)

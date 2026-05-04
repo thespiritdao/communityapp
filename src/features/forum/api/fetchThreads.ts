@@ -29,9 +29,7 @@ export const fetchThreads = async ({
         title,
         category_id,
         required_token,
-        author_wallet,
-        author_first_name,
-        author_last_name,
+        author_address,
         created_at,
         forum_categories(name, required_token)
       `)
