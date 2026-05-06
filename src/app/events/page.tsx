@@ -43,7 +43,7 @@ export default function EventsPage() {
           <div className="grid grid-cols-3 gap-2 sm:gap-3 mb-6 max-w-2xl mx-auto">
             <Card className="shadow-sm">
               <CardContent className="p-3 sm:p-4 text-center">
-                <Calendar className="w-4 h-4 sm:w-5 sm:h-5 mx-auto text-blue-500 mb-1" />
+                <Calendar className="w-4 h-4 sm:w-5 sm:h-5 mx-auto text-sage-600 mb-1" />
                 {statsLoading ? (
                   <div className="h-5 sm:h-6 bg-gray-200 rounded animate-pulse mb-1"></div>
                 ) : (
@@ -57,7 +57,7 @@ export default function EventsPage() {
 
             <Card className="shadow-sm">
               <CardContent className="p-3 sm:p-4 text-center">
-                <Users className="w-4 h-4 sm:w-5 sm:h-5 mx-auto text-green-500 mb-1" />
+                <Users className="w-4 h-4 sm:w-5 sm:h-5 mx-auto text-sage-500 mb-1" />
                 {statsLoading ? (
                   <div className="h-5 sm:h-6 bg-gray-200 rounded animate-pulse mb-1"></div>
                 ) : (
@@ -71,7 +71,7 @@ export default function EventsPage() {
 
             <Card className="shadow-sm">
               <CardContent className="p-3 sm:p-4 text-center">
-                <Trophy className="w-4 h-4 sm:w-5 sm:h-5 mx-auto text-purple-500 mb-1" />
+                <Trophy className="w-4 h-4 sm:w-5 sm:h-5 mx-auto text-earth-400 mb-1" />
                 {statsLoading ? (
                   <div className="h-5 sm:h-6 bg-gray-200 rounded animate-pulse mb-1"></div>
                 ) : (
@@ -86,8 +86,8 @@ export default function EventsPage() {
 
           {/* Error display for stats */}
           {statsError && (
-            <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-4 max-w-2xl mx-auto">
-              <p className="text-red-600 text-sm text-center">
+            <div className="bg-earth-red-50 border border-earth-red-100 rounded-lg p-3 mb-4 max-w-2xl mx-auto">
+              <p className="text-earth-red-500 text-sm text-center">
                 Failed to load event statistics: {statsError}
               </p>
             </div>

@@ -410,7 +410,7 @@ export default function MyOrdersPage() {
           <div className="grid grid-cols-3 gap-2 sm:gap-3">
             <Card className="shadow-sm">
               <CardContent className="p-3 sm:p-4 text-center">
-                <Package className="w-4 h-4 sm:w-5 sm:h-5 mx-auto text-blue-500 mb-1" />
+                <Package className="w-4 h-4 sm:w-5 sm:h-5 mx-auto text-sage-600 mb-1" />
                 <p className="text-lg sm:text-xl font-bold text-gray-900">
                   {stats.total}
                 </p>
@@ -420,7 +420,7 @@ export default function MyOrdersPage() {
 
             <Card className="shadow-sm">
               <CardContent className="p-3 sm:p-4 text-center">
-                <Clock className="w-4 h-4 sm:w-5 sm:h-5 mx-auto text-orange-500 mb-1" />
+                <Clock className="w-4 h-4 sm:w-5 sm:h-5 mx-auto text-earth-400 mb-1" />
                 <p className="text-lg sm:text-xl font-bold text-gray-900">
                   {stats.processing}
                 </p>
@@ -430,7 +430,7 @@ export default function MyOrdersPage() {
 
             <Card className="shadow-sm">
               <CardContent className="p-3 sm:p-4 text-center">
-                <Clock className="w-4 h-4 sm:w-5 sm:h-5 mx-auto text-yellow-500 mb-1" />
+                <Clock className="w-4 h-4 sm:w-5 sm:h-5 mx-auto text-earth-500 mb-1" />
                 <p className="text-lg sm:text-xl font-bold text-gray-900">
                   {stats.preparing}
                 </p>
@@ -443,7 +443,7 @@ export default function MyOrdersPage() {
           <div className="grid grid-cols-2 gap-2 sm:gap-3 max-w-md mx-auto">
             <Card className="shadow-sm">
               <CardContent className="p-3 sm:p-4 text-center">
-                <Truck className="w-4 h-4 sm:w-5 sm:h-5 mx-auto text-blue-600 mb-1" />
+                <Truck className="w-4 h-4 sm:w-5 sm:h-5 mx-auto text-sage-300 mb-1" />
                 <p className="text-lg sm:text-xl font-bold text-gray-900">
                   {stats.shipped}
                 </p>
@@ -453,7 +453,7 @@ export default function MyOrdersPage() {
 
             <Card className="shadow-sm">
               <CardContent className="p-3 sm:p-4 text-center">
-                <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5 mx-auto text-green-600 mb-1" />
+                <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5 mx-auto text-sage-500 mb-1" />
                 <p className="text-lg sm:text-xl font-bold text-gray-900">
                   {stats.delivered}
                 </p>

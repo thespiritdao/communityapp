@@ -391,7 +391,7 @@ export default function EventManagePage({ params }: EventManagePageProps) {
         <div className="grid grid-cols-2 gap-3 max-w-2xl mx-auto">
           <Card className="shadow-sm">
             <CardContent className="p-3 sm:p-4 text-center">
-              <Users className="w-4 h-4 sm:w-5 sm:h-5 mx-auto text-blue-500 mb-1" />
+              <Users className="w-4 h-4 sm:w-5 sm:h-5 mx-auto text-sage-600 mb-1" />
               <p className="text-lg sm:text-xl font-bold text-gray-900">
                 {event.registration_count}
               </p>
@@ -401,7 +401,7 @@ export default function EventManagePage({ params }: EventManagePageProps) {
 
           <Card className="shadow-sm">
             <CardContent className="p-3 sm:p-4 text-center">
-              <UserCheck className="w-4 h-4 sm:w-5 sm:h-5 mx-auto text-green-500 mb-1" />
+              <UserCheck className="w-4 h-4 sm:w-5 sm:h-5 mx-auto text-sage-500 mb-1" />
               <p className="text-lg sm:text-xl font-bold text-gray-900">
                 {event.checked_in_count || 0}
               </p>
@@ -411,7 +411,7 @@ export default function EventManagePage({ params }: EventManagePageProps) {
 
           <Card className="shadow-sm">
             <CardContent className="p-3 sm:p-4 text-center">
-              <DollarSign className="w-4 h-4 sm:w-5 sm:h-5 mx-auto text-yellow-500 mb-1" />
+              <DollarSign className="w-4 h-4 sm:w-5 sm:h-5 mx-auto text-earth-400 mb-1" />
               <p className="text-lg sm:text-xl font-bold text-gray-900">
                 {event.price_token === 'free'
                   ? 'Free'
@@ -423,7 +423,7 @@ export default function EventManagePage({ params }: EventManagePageProps) {
 
           <Card className="shadow-sm">
             <CardContent className="p-3 sm:p-4 text-center">
-              <Clock className="w-4 h-4 sm:w-5 sm:h-5 mx-auto text-purple-500 mb-1" />
+              <Clock className="w-4 h-4 sm:w-5 sm:h-5 mx-auto text-earth-500 mb-1" />
               <p className="text-lg sm:text-xl font-bold text-gray-900">
                 {new Date(event.event_date) > new Date()
                   ? Math.ceil(

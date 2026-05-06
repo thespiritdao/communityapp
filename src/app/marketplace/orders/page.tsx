@@ -341,7 +341,7 @@ export default function OrderManagementPage() {
             <div className="grid grid-cols-3 gap-2 sm:gap-3">
               <Card className="shadow-sm">
                 <CardContent className="p-3 sm:p-4 text-center">
-                  <Package className="w-4 h-4 sm:w-5 sm:h-5 mx-auto text-blue-500 mb-1" />
+                  <Package className="w-4 h-4 sm:w-5 sm:h-5 mx-auto text-sage-600 mb-1" />
                   <p className="text-lg sm:text-xl font-bold text-gray-900">
                     {stats.total}
                   </p>
@@ -351,7 +351,7 @@ export default function OrderManagementPage() {
 
               <Card className="shadow-sm">
                 <CardContent className="p-3 sm:p-4 text-center">
-                  <Clock className="w-4 h-4 sm:w-5 sm:h-5 mx-auto text-yellow-500 mb-1" />
+                  <Clock className="w-4 h-4 sm:w-5 sm:h-5 mx-auto text-earth-400 mb-1" />
                   <p className="text-lg sm:text-xl font-bold text-gray-900">
                     {stats.processing}
                   </p>
@@ -361,7 +361,7 @@ export default function OrderManagementPage() {
 
               <Card className="shadow-sm">
                 <CardContent className="p-3 sm:p-4 text-center">
-                  <Package className="w-4 h-4 sm:w-5 sm:h-5 mx-auto text-orange-500 mb-1" />
+                  <Package className="w-4 h-4 sm:w-5 sm:h-5 mx-auto text-earth-500 mb-1" />
                   <p className="text-lg sm:text-xl font-bold text-gray-900">
                     {stats.preparing}
                   </p>
@@ -374,7 +374,7 @@ export default function OrderManagementPage() {
             <div className="grid grid-cols-2 gap-2 sm:gap-3 max-w-md mx-auto">
               <Card className="shadow-sm">
                 <CardContent className="p-3 sm:p-4 text-center">
-                  <Truck className="w-4 h-4 sm:w-5 sm:h-5 mx-auto text-blue-600 mb-1" />
+                  <Truck className="w-4 h-4 sm:w-5 sm:h-5 mx-auto text-sage-300 mb-1" />
                   <p className="text-lg sm:text-xl font-bold text-gray-900">
                     {stats.shipped}
                   </p>
@@ -384,7 +384,7 @@ export default function OrderManagementPage() {
 
               <Card className="shadow-sm">
                 <CardContent className="p-3 sm:p-4 text-center">
-                  <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5 mx-auto text-green-500 mb-1" />
+                  <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5 mx-auto text-sage-500 mb-1" />
                   <p className="text-lg sm:text-xl font-bold text-gray-900">
                     {stats.delivered}
                   </p>
@@ -515,8 +515,8 @@ export default function OrderManagementPage() {
                       </div>
 
                       {order.tracking_number && (
-                        <div className="mt-3 p-2 bg-blue-50 rounded text-sm">
-                          <span className="font-medium text-blue-900">
+                        <div className="mt-3 p-2 bg-sage-50 rounded text-sm">
+                          <span className="font-medium text-sage-700">
                             Tracking:
                           </span>{' '}
                           {order.tracking_number}

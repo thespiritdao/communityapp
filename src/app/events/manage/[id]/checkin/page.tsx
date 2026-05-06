@@ -75,7 +75,7 @@ export default function ManageCheckInPage({ params }: ManageCheckInPageProps) {
         <div className="max-w-2xl mx-auto">
           <Card>
             <CardContent className="p-8 text-center">
-              <AlertTriangle className="w-12 h-12 mx-auto text-red-500 mb-4" />
+              <AlertTriangle className="w-12 h-12 mx-auto text-earth-red-500 mb-4" />
               <h2 className="text-xl font-semibold mb-4">Access Denied</h2>
               <p className="text-gray-600 mb-4">
                 You don't have permission to manage check-in for this event.

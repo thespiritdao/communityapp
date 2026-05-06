@@ -143,7 +143,7 @@ function MobileBottomNavContent() {
                   justifyContent: ALIGN[item.href] ?? 'center',
                   padding: '8px 12px',
                   textDecoration: 'none',
-                  color: active ? '#2563EB' : '#374151',
+                  color: active ? '#2F5D50' : '#374151',
                   minHeight: '40px',
                   width: '100%',
                   borderRadius: '8px',

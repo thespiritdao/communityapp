@@ -142,12 +142,12 @@ export const ProposalModal: React.FC<ProposalModalProps> = ({
                 {proposal.choices.map((choice, idx) => (
                   <div
                     key={idx}
-                    className="text-center p-4 bg-gray-50 rounded-lg border border-gray-200"
+                    className="text-center p-4 bg-earth-50 rounded-lg border border-earth-300"
                   >
-                    <div className="text-2xl font-bold text-gray-900">
+                    <div className="text-2xl font-bold text-sage-700">
                       {proposal.scores?.[idx] || 0}
                     </div>
-                    <div className="text-sm text-gray-600 font-medium">
+                    <div className="text-sm text-earth-500 font-medium">
                       {choice}
                     </div>
                   </div>
