@@ -10,8 +10,8 @@ import { useGovernanceForumPosts } from '@/features/governance/hooks/useGovernan
 import type { EnhancedProposal } from '@/features/governance/hooks/useEnhancedProposals';
 import { Badge } from '@/components/ui/badge';
 import { Shield, FileText, Loader2, Clock } from 'lucide-react';
+import { UserProfileDisplay } from '@/components/UserProfileDisplay';
 import { FeatureErrorBoundary } from '@/components/ErrorBoundary/FeatureErrorBoundary';
-import { supabase } from '@/utils/supabaseClient';
 
 export default function GovernancePage() {
   const { address, isInitializing } = useCDPStatus();
@@ -66,41 +66,7 @@ export default function GovernancePage() {
     ? enhancedProposals
     : enhancedProposals.filter(p => p.user_can_vote);
 
-  // Fetch user profiles for proposal creators
-  const [creatorProfiles, setCreatorProfiles] = useState<Map<string, any>>(new Map());
-
-  useEffect(() => {
-    const fetchCreatorProfiles = async () => {
-      if (!enhancedProposals || enhancedProposals.length === 0) return;
-
-      const addresses = enhancedProposals
-        .map(p => p.created_by)
-        .filter(addr => addr && !creatorProfiles.has(addr));
-
-      if (addresses.length === 0) return;
-
-      try {
-        const { data, error } = await supabase
-          .from('user_profiles')
-          .select('wallet_address, first_name, last_name, profile_picture')
-          .in('wallet_address', addresses);
-
-        if (error) throw error;
-
-        if (data) {
-          const profileMap = new Map(creatorProfiles);
-          data.forEach(profile => {
-            profileMap.set(profile.wallet_address.toLowerCase(), profile);
-          });
-          setCreatorProfiles(profileMap);
-        }
-      } catch (error) {
-        console.error('Error fetching creator profiles:', error);
-      }
-    };
-
-    fetchCreatorProfiles();
-  }, [enhancedProposals]);
+  // Creator profiles are now handled by the UserProfileDisplay component
 
   // Debug logs removed - caused console spam with auto-refresh
   // console.log('enhanced proposals:', enhancedProposals);
@@ -240,15 +206,6 @@ export default function GovernancePage() {
             filteredProposals.length > 0 && (
               <ul className="space-y-6">
                 {filteredProposals.map((proposal) => {
-                  const creatorProfile = proposal.created_by
-                    ? creatorProfiles.get(proposal.created_by.toLowerCase())
-                    : null;
-                  const creatorName = creatorProfile
-                    ? `${creatorProfile.first_name || ''} ${creatorProfile.last_name || ''}`.trim()
-                    : null;
-                  const avatarUrl = creatorProfile?.profile_picture ||
-                    `https://ui-avatars.com/api/?name=${encodeURIComponent(creatorName || 'User')}&size=32&background=8FAAA1&color=fff&bold=true`;
-
                   // Helper function to truncate text
                   const truncateText = (text: string, maxLength: number) => {
                     if (text.length <= maxLength) return text;
@@ -327,15 +284,12 @@ export default function GovernancePage() {
                       {/* Creator name card */}
                       {proposal.created_by && (
                         <div className="mb-4 flex items-center gap-2">
-                          <img
-                            src={avatarUrl}
-                            alt={creatorName || 'Creator'}
-                            className="w-6 h-6 rounded-full object-cover"
+                          <span className="text-sm font-medium text-[#5F5A54]">Created by:</span>
+                          <UserProfileDisplay
+                            walletAddress={proposal.created_by}
+                            size="sm"
+                            showModal={true}
                           />
-                          <span className="text-sm text-gray-600">
-                            <span className="font-medium">Created by:</span>{' '}
-                            {creatorName || `${proposal.created_by.slice(0, 6)}...${proposal.created_by.slice(-4)}`}
-                          </span>
                         </div>
                       )}
 
