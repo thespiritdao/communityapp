@@ -9,8 +9,8 @@ import { useEvmAddress } from '@coinbase/cdp-hooks';
 import {
   getAccessibleProductsForUser,
   sortProducts,
+  filterProductsByCommunity,
 } from '@/features/shopping-cart/services/accessControl';
-import { getUserIdentity } from '@/utils/accessControlUtils';
 
 // Supabase setup
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -27,25 +27,49 @@ const useProducts = () => {
     setFilters,
     totalProductCount,
     setTotalProductCount,
+    communityFilter,
+    setCommunityFilter,
+    sortOption,
+    setSortOption,
+    userCommunities,
+    setUserCommunities,
   } = useProductsContext();
 
   // Use the centralized token balances context and account
   const { balances: userTokens } = useTokenBalances();
   const { evmAddress: address } = useEvmAddress();
 
-  // Get user identity for access control
-  const getUserAccessControl = useCallback(async () => {
-    if (!address || !userTokens) return null;
+  // Fetch user's pod memberships from the database
+  const fetchUserCommunities = useCallback(async () => {
+    if (!address) return [];
 
     try {
-      return await getUserIdentity(address, userTokens);
-    } catch (error) {
-      console.error('🛒 Error getting user identity for products:', error);
-      return null;
-    }
-  }, [address, userTokens]);
+      const { data, error } = await supabase
+        .from('active_pod_members')
+        .select('pod_id, pod_name, membership_type')
+        .eq('wallet', address.toLowerCase());
 
-  // Fetch products from Supabase and apply token gating.
+      if (error) {
+        console.error('🛒 Error fetching user communities:', error);
+        return [];
+      }
+
+      // Deduplicate by pod_id (user may have multiple roles in same pod)
+      const seen = new Set<string>();
+      const unique = (data || []).filter((m) => {
+        if (seen.has(m.pod_id)) return false;
+        seen.add(m.pod_id);
+        return true;
+      });
+
+      return unique;
+    } catch (error) {
+      console.error('🛒 Error fetching user communities:', error);
+      return [];
+    }
+  }, [address]);
+
+  // Fetch products from Supabase, load communities, and apply default filter.
   const fetchProducts = useCallback(async () => {
     setIsFetching(true);
 
@@ -60,6 +84,10 @@ const useProducts = () => {
       // Always set the total product count
       setTotalProductCount(data.length);
 
+      // Load user communities from DB
+      const communities = await fetchUserCommunities();
+      setUserCommunities(communities);
+
       if (!address || !userTokens) {
         // Return only products with no token requirements if user not authenticated
         const publicProducts = data.filter(
@@ -67,35 +95,56 @@ const useProducts = () => {
             !product.required_token && !product.requiredToken,
         );
         setProducts(publicProducts);
+        setCommunityFilter('all_products');
         setIsFetching(false);
         return;
       }
 
-      // Use the new access control system
+      // Get all accessible products using the access control system
       const accessibleProducts = await getAccessibleProductsForUser(
         data,
         address,
         userTokens,
       );
 
-      console.log(
-        `🛒 Loaded ${accessibleProducts.length} accessible products out of ${data.length} total`,
+      // Default to "My Communities" if user has communities, otherwise "All Products"
+      const defaultFilter =
+        communities.length > 0 ? 'my_communities' : 'all_products';
+      const filtered = filterProductsByCommunity(
+        accessibleProducts,
+        defaultFilter,
+        communities,
       );
-      setProducts(accessibleProducts);
+
+      setCommunityFilter(defaultFilter);
+      setProducts(filtered);
+
+      console.log(
+        `🛒 Loaded ${accessibleProducts.length} accessible products out of ${data.length} total (${communities.length} communities, default: ${defaultFilter})`,
+      );
     } catch (error) {
       console.error('🛒 Error in fetchProducts:', error);
       setProducts([]);
     } finally {
       setIsFetching(false);
     }
-  }, [setIsFetching, setProducts, setTotalProductCount, address, userTokens]);
+  }, [
+    setIsFetching,
+    setProducts,
+    setTotalProductCount,
+    setCommunityFilter,
+    setUserCommunities,
+    address,
+    userTokens,
+    fetchUserCommunities,
+  ]);
 
-  // Filter products by available sizes, token gating, and sorting.
+  // Filter and sort products. Sort and filter are independent — both apply simultaneously.
   const filterProducts = useCallback(
     async (
       selectedFilters: string[] = [],
-      sortOption = '',
-      tokenFilter = '',
+      newSortOption = '',
+      newCommunityFilter = 'my_communities',
     ) => {
       setIsFetching(true);
 
@@ -113,36 +162,17 @@ const useProducts = () => {
         if (selectedFilters.length > 0) {
           filteredProducts = filteredProducts.filter((p: IProduct) =>
             selectedFilters.some((filter: string) =>
-              p.availableSizes.includes(filter),
+              (p.available_sizes || p.availableSizes || []).includes(filter),
             ),
           );
         }
 
-        // Apply token filtering if specified
-        if (tokenFilter) {
-          if (tokenFilter === 'no_token') {
-            // Show only products with no token requirement
-            filteredProducts = filteredProducts.filter(
-              (p: IProduct) => !p.required_token && !p.requiredToken,
-            );
-          } else {
-            // Show only products that require the specified token
-            filteredProducts = filteredProducts.filter(
-              (p: IProduct) =>
-                p.required_token === tokenFilter ||
-                p.requiredToken === tokenFilter,
-            );
-          }
-        }
-
-        // Apply access control using the new system
+        // Apply access control
         if (!address || !userTokens) {
-          // Return only public products if user not authenticated
           filteredProducts = filteredProducts.filter(
             (p: IProduct) => !p.required_token && !p.requiredToken,
           );
         } else {
-          // Get accessible products using the new system
           const accessibleProducts = await getAccessibleProductsForUser(
             filteredProducts,
             address,
@@ -151,14 +181,23 @@ const useProducts = () => {
           filteredProducts = accessibleProducts;
         }
 
-        // Apply sorting using the centralized sort function
-        const sortedProducts = sortProducts(filteredProducts, sortOption);
+        // Apply community filter (narrows within accessible products)
+        filteredProducts = filterProductsByCommunity(
+          filteredProducts,
+          newCommunityFilter,
+          userCommunities,
+        );
+
+        // Apply sorting
+        const sortedProducts = sortProducts(filteredProducts, newSortOption);
 
         console.log(
-          `🛒 Filtered to ${sortedProducts.length} products (filters: ${selectedFilters.join(',') || 'none'}, sort: ${sortOption || 'none'}, token: ${tokenFilter || 'none'})`,
+          `🛒 Filtered to ${sortedProducts.length} products (community: ${newCommunityFilter}, sort: ${newSortOption || 'default'})`,
         );
 
         setFilters(selectedFilters);
+        setCommunityFilter(newCommunityFilter);
+        setSortOption(newSortOption);
         setProducts(sortedProducts);
       } catch (error) {
         console.error('🛒 Error in filterProducts:', error);
@@ -167,7 +206,16 @@ const useProducts = () => {
         setIsFetching(false);
       }
     },
-    [setIsFetching, setProducts, setFilters, address, userTokens],
+    [
+      setIsFetching,
+      setProducts,
+      setFilters,
+      setCommunityFilter,
+      setSortOption,
+      address,
+      userTokens,
+      userCommunities,
+    ],
   );
 
   return {
@@ -177,6 +225,9 @@ const useProducts = () => {
     filterProducts,
     filters,
     totalProductCount,
+    communityFilter,
+    sortOption,
+    userCommunities,
   };
 };
 

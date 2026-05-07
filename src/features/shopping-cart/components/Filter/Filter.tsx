@@ -1,88 +1,66 @@
-// src\features\shopping-cart\components\Filter
+// src/features/shopping-cart/components/Filter/Filter.tsx
 
 'use client';
 
 import { useProducts } from '@/features/shopping-cart/contexts/products-context';
-import { useTokenBalances } from '@/context/TokenBalancesContext';
-import { useState, useMemo } from 'react';
 import * as S from './style';
 
-// Define sort options - prices first, then token filters
-const baseSortOptions = [
-  { value: 'priceLowHigh', label: 'Price: Low to High' },
-  { value: 'priceHighLow', label: 'Price: High to Low' },
-];
-
 const Filter = () => {
-  const { filterProducts } = useProducts();
-  const { balances } = useTokenBalances();
-  const [selectedOption, setSelectedOption] = useState('');
+  const {
+    filterProducts,
+    communityFilter,
+    sortOption,
+    userCommunities,
+  } = useProducts();
 
-  // Generate combined sort/filter options
-  const allOptions = useMemo(() => {
-    if (!balances)
-      return [
-        ...baseSortOptions,
-        { value: 'no_token', label: 'No Token Required' },
-      ];
-
-    const options = [
-      ...baseSortOptions,
-      // Everyone can filter by "No Token Required" products
-      { value: 'no_token', label: 'No Token Required' },
-    ];
-
-    // Add token filter options based on user's holdings
-    if (balances.hasExecutivePod) {
-      options.push({ value: 'exec', label: 'Executive Pod Only' });
-    }
-    if (balances.hasDevPod) {
-      options.push({ value: 'dev', label: 'Dev Pod Only' });
-    }
-    if (balances.hasBountyHat) {
-      options.push({ value: 'bounty', label: 'Bounty Hat Only' });
-    }
-    if (balances.hasProofOfCuriosity) {
-      options.push({ value: 'curiosity', label: 'Proof of Curiosity Only' });
-    }
-    if (balances.hasMarketAdmin) {
-      options.push({ value: 'market_admin', label: 'Market Admin Only' });
-    }
-
-    return options;
-  }, [balances]);
-
-  const handleOptionChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+  const handleFilterChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const value = e.target.value;
-    setSelectedOption(value);
+    filterProducts([], sortOption, value);
+  };
 
-    // Determine if it's a sort option or token filter
-    const isSortOption = baseSortOptions.some(
-      (option) => option.value === value,
-    );
-
-    if (isSortOption) {
-      // It's a sort option
-      filterProducts([], value, '');
-    } else {
-      // It's a token filter
-      filterProducts([], '', value);
-    }
+  const handleSortChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const value = e.target.value;
+    filterProducts([], value, communityFilter);
   };
 
   return (
     <S.Container>
-      <S.FilterGroup>
-        <S.Label>Sort:</S.Label>
-        <S.SortDropdown value={selectedOption} onChange={handleOptionChange}>
-          <option value="">All Products</option>
-          {allOptions.map((option) => (
-            <option key={option.value} value={option.value}>
-              {option.label}
-            </option>
-          ))}
-        </S.SortDropdown>
-      </S.FilterGroup>
+      <S.FilterGrid>
+        {/* Community / Access Filter */}
+        <S.FilterGroup>
+          <S.Label>Filter</S.Label>
+          <S.FilterDropdown value={communityFilter} onChange={handleFilterChange}>
+            {userCommunities.length > 0 && (
+              <option value="my_communities">My Communities</option>
+            )}
+            <option value="all_products">All Products</option>
+            <option value="no_token_required">No Token Required</option>
+            {userCommunities.length > 0 && (
+              <optgroup label="Communities">
+                {userCommunities.map((community) => (
+                  <option
+                    key={community.pod_id}
+                    value={`community_${community.pod_id}`}
+                  >
+                    {community.pod_name || 'Unnamed Community'}
+                  </option>
+                ))}
+              </optgroup>
+            )}
+          </S.FilterDropdown>
+        </S.FilterGroup>
+
+        {/* Sort */}
+        <S.FilterGroup>
+          <S.Label>Sort</S.Label>
+          <S.SortDropdown value={sortOption} onChange={handleSortChange}>
+            <option value="">Default</option>
+            <option value="newest">Newest First</option>
+            <option value="priceLowHigh">Price: Low to High</option>
+            <option value="priceHighLow">Price: High to Low</option>
+          </S.SortDropdown>
+        </S.FilterGroup>
+      </S.FilterGrid>
     </S.Container>
   );
 };

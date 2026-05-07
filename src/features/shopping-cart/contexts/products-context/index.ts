@@ -2,5 +2,6 @@
 export {
   ProductsProvider,
   useProductsContext,
+  type UserCommunity,
 } from './ProductsContextProvider';
 export { default as useProducts } from './useProducts';

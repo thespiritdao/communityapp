@@ -5,10 +5,11 @@ import CB from '@/features/shopping-cart/commons/Checkbox/Checkbox';
 
 export const Container = styled.div`
   display: flex;
-  align-items: center;
-  padding: 10px;
-  background: ${({ theme }: any) => theme.colors.secondaryLight};
-  border-radius: 5px;
+  align-items: stretch;
+  padding: 12px;
+  background: #f5f4ed;
+  border-radius: 8px;
+  border: 1px solid #D1C4A9;
 `;
 
 export const FilterGrid = styled.div`
@@ -118,22 +119,42 @@ export const PaymentFilters = styled.div`
 `;
 
 export const Label = styled.label`
-  font-size: 16px;
-  font-weight: bold;
-  color: ${({ theme }: any) => theme.colors.primary};
+  font-size: 13px;
+  font-weight: 600;
+  color: #5F5A54;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
 `;
 
 export const SortDropdown = styled.select`
   padding: 8px 12px;
-  font-size: 16px;
+  font-size: 14px;
   border: 1px solid ${({ theme }: any) => theme.colors.primary};
-  border-radius: 4px;
-  background: #f0f0f0; /* Light grey background */
-  color: #000;       /* Black text */
+  border-radius: 6px;
+  background: #f5f4ed;
+  color: #1F453A;
   cursor: pointer;
   outline: none;
+  width: 100%;
 
   &:focus {
     border-color: ${({ theme }: any) => theme.colors.secondary};
+    box-shadow: 0 0 0 2px rgba(198, 147, 63, 0.15);
+  }
+
+  &:hover {
+    background: #E8F1EE;
+  }
+
+  optgroup {
+    font-weight: 600;
+    color: #2F5D50;
+  }
+
+  option {
+    color: #1F453A;
+    padding: 4px 8px;
   }
 `;
+
+export const FilterDropdown = styled(SortDropdown)``;

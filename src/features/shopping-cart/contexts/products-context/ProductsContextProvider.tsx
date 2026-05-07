@@ -9,6 +9,12 @@ import {
 } from 'react';
 import type { IProduct } from '../../models';
 
+export interface UserCommunity {
+  pod_id: string;
+  pod_name: string;
+  membership_type: string;
+}
+
 export interface IProductsContext {
   isFetching: boolean;
   setIsFetching: (state: boolean) => void;
@@ -18,6 +24,12 @@ export interface IProductsContext {
   setFilters: (filters: string[]) => void;
   totalProductCount: number;
   setTotalProductCount: (count: number) => void;
+  communityFilter: string;
+  setCommunityFilter: (filter: string) => void;
+  sortOption: string;
+  setSortOption: (option: string) => void;
+  userCommunities: UserCommunity[];
+  setUserCommunities: (communities: UserCommunity[]) => void;
 }
 
 const ProductsContext = createContext<IProductsContext | undefined>(undefined);
@@ -41,6 +53,9 @@ export const ProductsProvider: FC<ProductsProviderProps> = ({ children }) => {
   const [products, setProducts] = useState<IProduct[]>([]);
   const [filters, setFilters] = useState<string[]>([]);
   const [totalProductCount, setTotalProductCount] = useState(0);
+  const [communityFilter, setCommunityFilter] = useState('my_communities');
+  const [sortOption, setSortOption] = useState('');
+  const [userCommunities, setUserCommunities] = useState<UserCommunity[]>([]);
 
   const value: IProductsContext = {
     isFetching,
@@ -51,6 +66,12 @@ export const ProductsProvider: FC<ProductsProviderProps> = ({ children }) => {
     setFilters,
     totalProductCount,
     setTotalProductCount,
+    communityFilter,
+    setCommunityFilter,
+    sortOption,
+    setSortOption,
+    userCommunities,
+    setUserCommunities,
   };
 
   return (

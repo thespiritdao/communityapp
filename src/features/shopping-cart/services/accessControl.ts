@@ -282,6 +282,49 @@ export const getAccessibleProductsForUser = async (
 };
 
 /**
+ * Filter products by community membership
+ * Narrows already-accessible products based on the selected community filter.
+ */
+export const filterProductsByCommunity = (
+  products: IProduct[],
+  communityFilter: string,
+  userCommunities: { pod_id: string; pod_name: string }[],
+): IProduct[] => {
+  switch (communityFilter) {
+    case 'all_products':
+      return products;
+
+    case 'my_communities': {
+      const userPodIds = userCommunities.map((c) => c.pod_id);
+      return products.filter((p) => {
+        const token = p.required_token || p.requiredToken || '';
+        return (
+          (p.pod_id && userPodIds.includes(p.pod_id)) ||
+          userPodIds.includes(token)
+        );
+      });
+    }
+
+    case 'no_token_required':
+      return products.filter(
+        (p) => !p.required_token && !p.requiredToken,
+      );
+
+    default: {
+      // Handle community_{podId} format
+      if (communityFilter.startsWith('community_')) {
+        const podId = communityFilter.replace('community_', '');
+        return products.filter((p) => {
+          const token = p.required_token || p.requiredToken || '';
+          return p.pod_id === podId || token === podId;
+        });
+      }
+      return products;
+    }
+  }
+};
+
+/**
  * Sort products based on different criteria
  */
 export const sortProducts = (
@@ -322,6 +365,13 @@ export const sortProducts = (
         const tokenA = a.required_token || a.requiredToken || 'no_token';
         const tokenB = b.required_token || b.requiredToken || 'no_token';
         return tokenA.localeCompare(tokenB);
+      });
+
+    case 'newest':
+      return sorted.sort((a, b) => {
+        const dateA = new Date(a.created_at || 0).getTime();
+        const dateB = new Date(b.created_at || 0).getTime();
+        return dateB - dateA;
       });
 
     default:
