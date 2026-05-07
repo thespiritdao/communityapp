@@ -5,7 +5,7 @@ import { TreasuryRegistrationTool } from '@/features/pods/components/TreasuryReg
 
 export default function RegisterTreasuryPage() {
   return (
-    <div style={{ minHeight: '100vh', padding: '24px', backgroundColor: '#f9fafb' }}>
+    <div style={{ minHeight: '100vh', padding: '24px', backgroundColor: '#f5f4ed' }}>
       <TreasuryRegistrationTool />
     </div>
   );

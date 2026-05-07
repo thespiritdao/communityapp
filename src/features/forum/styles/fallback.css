@@ -3,7 +3,7 @@
 .thread-card-fallback {
   display: block;
   padding: 16px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid #D1C4A9;
   border-radius: 8px;
   margin-bottom: 12px;
   background: white;
@@ -13,8 +13,8 @@
 }
 
 .thread-card-fallback:hover {
-  background: #f8fafc;
-  border-color: #cbd5e0;
+  background: #E8F1EE;
+  border-color: #D1C4A9;
 }
 
 .thread-meta-fallback {
@@ -23,12 +23,12 @@
   align-items: center;
   margin-top: 8px;
   font-size: 0.875rem;
-  color: #64748b;
+  color: #5F5A54;
 }
 
 .post-count-badge-fallback {
-  background: #e2e8f0;
-  color: #475569;
+  background: #D1C4A9;
+  color: #5F5A54;
   padding: 2px 8px;
   border-radius: 12px;
   font-size: 0.75rem;
@@ -47,5 +47,5 @@
 .loading-fallback {
   text-align: center;
   padding: 32px;
-  color: #64748b;
+  color: #5F5A54;
 }

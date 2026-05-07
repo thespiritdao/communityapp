@@ -3,9 +3,9 @@
 .attachmentContainer {
   margin: 1rem 0;
   padding: 1rem;
-  background-color: #f9f9f9;
+  background-color: #F5F4ED;
   border-radius: 8px;
-  border: 1px solid #e0e0e0;
+  border: 1px solid #D1C4A9;
 }
 
 .attachmentGrid {
@@ -18,7 +18,7 @@
   border-radius: 6px;
   overflow: hidden;
   background-color: white;
-  border: 1px solid #ddd;
+  border: 1px solid #D1C4A9;
   transition: transform 0.2s, box-shadow 0.2s;
 }
 
@@ -55,7 +55,7 @@
 }
 
 .fileLink:hover {
-  background-color: #f5f5f5;
+  background-color: #F5F4ED;
 }
 
 .fileIcon {
@@ -74,12 +74,12 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  color: #333;
+  color: #1F453A;
 }
 
 .fileSize {
   font-size: 0.75rem;
-  color: #666;
+  color: #5F5A54;
   margin-top: 0.25rem;
 }
 
@@ -88,7 +88,7 @@
 .error {
   padding: 1rem;
   text-align: center;
-  color: #666;
+  color: #5F5A54;
   font-size: 0.9rem;
 }
 

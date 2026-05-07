@@ -155,7 +155,7 @@
 }
 
 .event-time-past {
-  color: #6b7280;
+  color: #5F5A54;
 }
 
 .event-time-upcoming {
@@ -237,7 +237,7 @@
   .event-card {
     break-inside: avoid;
     box-shadow: none;
-    border: 1px solid #e5e7eb;
+    border: 1px solid #D1C4A9;
   }
   
   .event-registration-modal {

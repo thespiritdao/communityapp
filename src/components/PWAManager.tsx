@@ -60,7 +60,7 @@ export function PWAManager() {
           position: 'fixed',
           bottom: '20px',
           right: '20px',
-          backgroundColor: '#10b981',
+          backgroundColor: '#3F7A5A',
           color: 'white',
           padding: '16px 24px',
           borderRadius: '8px',

@@ -5,8 +5,8 @@ html, body {
   margin: 0;
   padding: 0;
   font-family: Arial, sans-serif;
-  background-color: #f2f2f2; /* Soft gray background (kept from original) */
-  color: #333;
+  background-color: #F5F4ED; /* Soft gray background (kept from original) */
+  color: #1F453A;
 }
 
 /* 
@@ -45,7 +45,7 @@ html, body {
 }
 
 h2 {
-  color: #4a4a4a; 
+  color: #1F453A; 
   margin-bottom: 15px;
 }
 
@@ -56,7 +56,7 @@ h2 {
 .section-divider {
   border: 0;
   height: 1px;
-  background: #ddd;
+  background: #D1C4A9;
   margin: 15px 0;
 }
 
@@ -133,21 +133,21 @@ h2 {
   background-color: #38ead5;
 }
 .form-buttons button[type="button"] {
-  background-color: #748384;
+  background-color: #8FAAA1;
   color: #fff;
 }
 .form-buttons button[type="button"]:hover {
-  background-color: #9db3b5;
+  background-color: #8FAAA1;
 }
 
 /* Merged input style: from chat’s .input with your original widths & radius. */
 .input {
   width: 100%; /* Use 100% rather than calc(...) */
   padding: 0.5rem; 
-  border: 1px solid #ddd; /* or #ccc, up to you */
+  border: 1px solid #D1C4A9; /* or #D1C4A9, up to you */
   border-radius: 8px; /* narrower radius if you want a slightly sharper look */
   background-color: #ffffff;
-  color: #333;
+  color: #1F453A;
   margin-top: 0.5rem;
 }
 
@@ -184,8 +184,8 @@ textarea.input {
 
 /* Additional “cancel” or “secondary” button if needed */
 .button-secondary {
-  background-color: #ddd;
-  color: #333;
+  background-color: #D1C4A9;
+  color: #1F453A;
 }
 
 .close-button {
@@ -236,9 +236,9 @@ textarea.input {
   display: inline-block;
   padding: 5px 15px;
   margin: 5px;
-  background-color: #e0e0e0;
+  background-color: #E8E4DC;
   border-radius: 25px;
-  color: #333;
+  color: #1F453A;
 }
 
 /* -------------------------------------------------------------------------
@@ -249,9 +249,9 @@ textarea.input {
   margin-top: 20px;
   padding: 15px;
   text-align: center;
-  background-color: #f2f2f2;
-  border-top: 1px solid #ccc;
-  color: #666;
+  background-color: #F5F4ED;
+  border-top: 1px solid #D1C4A9;
+  color: #5F5A54;
 }
 
 .wallet-address {
@@ -271,14 +271,14 @@ textarea.input {
 
 /* Use a single selector for all states (rather than :-webkit-any-link etc.) */
 .footer-links a {
-  color: #888 !important;
+  color: #8FAAA1 !important;
   text-decoration: none !important;
 }
 
 /* Hover/focus states */
 .footer-links a:hover,
 .footer-links a:focus {
-  color: #aaa !important;
+  color: #8FAAA1 !important;
   text-decoration: underline !important;
 }
 

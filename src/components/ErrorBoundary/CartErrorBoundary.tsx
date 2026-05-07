@@ -12,12 +12,12 @@ function ErrorFallback({
       style={{
         padding: '20px',
         margin: '20px',
-        border: '1px solid #ff0000',
+        border: '1px solid #8B3A3A',
         borderRadius: '4px',
-        backgroundColor: '#fff1f1',
+        backgroundColor: '#F5E6E6',
       }}
     >
-      <h3 style={{ color: '#cc0000', marginBottom: '10px' }}>
+      <h3 style={{ color: '#8B3A3A', marginBottom: '10px' }}>
         Something went wrong:
       </h3>
       <pre

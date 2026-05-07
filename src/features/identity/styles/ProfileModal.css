@@ -77,7 +77,7 @@
 
 .profile-content {
   font-family: Arial, sans-serif;
-  color: #333;
+  color: #1F453A;
 }
 
 .profile-section {
@@ -87,12 +87,12 @@
 .section-divider {
   border: 0;
   height: 1px;
-  background: #ddd;
+  background: #D1C4A9;
   margin: 15px 0;
 }
 
 .profile-website {
-  color: #007bff;
+  color: #2F5D50;
   text-decoration: none;
 }
 
@@ -136,7 +136,7 @@
 .user-bio {
   margin-top: 10px;
   font-size: 1rem; /* Adjust font size */
-  color: #666; /* Optional: Gray text color for better contrast */
+  color: #5F5A54; /* Optional: Gray text color for better contrast */
   line-height: 1.5; /* Improve readability */
 }
 
@@ -155,7 +155,7 @@
 
 .input {
   padding: 0.5rem;
-  border: 1px solid #ddd;
+  border: 1px solid #D1C4A9;
   border-radius: 4px;
 }
 
@@ -259,8 +259,8 @@
 }
 
 .btn[type="button"] {
-  background-color: #ddd;
-  color: #333;
+  background-color: #D1C4A9;
+  color: #1F453A;
 }
 
 .option-label {
@@ -309,7 +309,7 @@
   gap: 8px;
   font-size: 1rem;
   font-weight: 600;
-  color: #333;
+  color: #1F453A;
   margin-bottom: 12px;
 }
 
@@ -317,7 +317,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #555;
+  color: #5F5A54;
 }
 
 .interests-tags {
@@ -349,7 +349,7 @@
 }
 
 .interests-empty {
-  color: #999;
+  color: #8FAAA1;
   font-style: italic;
   font-size: 0.9rem;
 }
@@ -387,9 +387,9 @@
 }
 
 .connect-badge.not-specified {
-  background-color: #f5f5f5;
-  color: #666;
-  border: 1px solid #ddd;
+  background-color: #F5F4ED;
+  color: #5F5A54;
+  border: 1px solid #D1C4A9;
 }
 
 @media (max-width: 600px) {
@@ -432,18 +432,18 @@
 }
 
 .social-link-icon {
-  color: #555;
+  color: #5F5A54;
   flex-shrink: 0;
 }
 
 .social-link-label {
   font-weight: 500;
-  color: #333;
+  color: #1F453A;
   min-width: 80px;
 }
 
 .social-link-url {
-  color: #007bff;
+  color: #2F5D50;
   text-decoration: none;
   flex: 1;
   overflow: hidden;
@@ -477,13 +477,13 @@
 }
 
 .message-btn {
-  background-color: #e3f2fd;
-  color: #1565c0;
-  border: 1px solid #90caf9;
+  background-color: #E8F1EE;
+  color: #2F5D50;
+  border: 1px solid #B8D9CA;
 }
 
 .message-btn:hover {
-  background-color: #bbdefb;
+  background-color: #D1E6DC;
 }
 
 .message-btn:disabled {

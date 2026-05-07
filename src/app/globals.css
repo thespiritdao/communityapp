@@ -205,7 +205,7 @@
   .footer-links a:-webkit-any-link,
   .footer-links a:link,
   .footer-links a:visited {
-    color: #888 !important;
+    color: #8FAAA1 !important;
     text-decoration: none !important;
   }
 }
@@ -251,7 +251,7 @@
 /* Custom switch/toggle styling for pod permissions */
 @layer utilities {
   .permission-switch.bg-gray-300 {
-    background-color: #e5e7eb !important;
+    background-color: #E8E4DC !important;
   }
 
   .permission-switch.bg-blue-600 {

@@ -9,7 +9,7 @@
 }
 
 .loading {
-  background-color: rgba(0, 0, 0, 0.05);
+  background-color: rgba(47, 93, 80, 0.05);
 }
 
 .error {
@@ -18,8 +18,8 @@
 }
 
 .emptyState {
-  background-color: rgba(0, 0, 0, 0.05);
-  color: #757575;
+  background-color: rgba(47, 93, 80, 0.05);
+  color: #8FAAA1;
 }
 
 .sectionTitle {
@@ -88,14 +88,14 @@
 
 .threadCount {
   font-size: 0.875rem;
-  color: #757575;
-  background-color: rgba(0, 0, 0, 0.05);
+  color: #8FAAA1;
+  background-color: rgba(47, 93, 80, 0.05);
   padding: 0.25rem 0.5rem;
   border-radius: 1rem;
 }
 
 .categoryDescription {
-  color: #757575;
+  color: #8FAAA1;
   margin: 0;
   font-size: 0.875rem;
 }
@@ -227,7 +227,7 @@
   font-size: 1.125rem;
   font-weight: 600;
   margin: 0 0 0.5rem 0;
-  color: #212121;
+  color: #1F453A;
 }
 
 .threadMeta {
@@ -239,7 +239,7 @@
 }
 
 .threadDescription {
-  color: #616161;
+  color: #5F5A54;
   font-size: 0.875rem;
   line-height: 1.4;
   margin: 0.5rem 0;
@@ -274,12 +274,12 @@
   width: 32px;
   height: 32px;
   border-radius: 50%;
-  background-color: #e0e0e0;
+  background-color: #D1C4A9;
   display: flex;
   align-items: center;
   justify-content: center;
   font-weight: 600;
-  color: #666;
+  color: #5F5A54;
   cursor: pointer;
   transition: transform 0.2s;
 }
@@ -304,13 +304,13 @@
 }
 
 .threadDate {
-  color: #757575;
+  color: #8FAAA1;
   font-size: 0.75rem;
 }
 
 .postCountBadge {
-  background-color: rgba(0, 0, 0, 0.05);
-  color: #616161;
+  background-color: rgba(47, 93, 80, 0.05);
+  color: #5F5A54;
   padding: 0.25rem 0.5rem;
   border-radius: 1rem;
   font-size: 0.75rem;
@@ -334,7 +334,7 @@
 }
 
 .breadcrumbSeparator {
-  color: #757575;
+  color: #8FAAA1;
 }
 
 .threadTitle {
@@ -371,12 +371,12 @@
   align-items: center;
   padding: 0.75rem 1rem;
   background-color: rgba(0, 0, 0, 0.025);
-  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+  border-bottom: 1px solid rgba(47, 93, 80, 0.05);
 }
 
 .postDate {
   font-size: 0.75rem;
-  color: #757575;
+  color: #8FAAA1;
 }
 
 .postContent {
@@ -494,11 +494,11 @@
   border-left: 4px solid #B8D9CA;
   background-color: #F5FAF8;
   font-style: italic;
-  color: #555;
+  color: #5F5A54;
 }
 
 .contentText code {
-  background-color: rgba(0, 0, 0, 0.05);
+  background-color: rgba(47, 93, 80, 0.05);
   padding: 0.125rem 0.25rem;
   border-radius: 0.25rem;
   font-family: 'Courier New', Courier, monospace;
@@ -506,7 +506,7 @@
 }
 
 .contentText pre {
-  background-color: rgba(0, 0, 0, 0.05);
+  background-color: rgba(47, 93, 80, 0.05);
   padding: 1rem;
   border-radius: 0.5rem;
   overflow-x: auto;
@@ -520,7 +520,7 @@
 
 .contentText hr {
   border: none;
-  border-top: 1px solid #ddd;
+  border-top: 1px solid #D1C4A9;
   margin: 1.5rem 0;
 }
 
@@ -586,12 +586,12 @@
 }
 
 .cancelButton {
-  background-color: #e0e0e0;
-  color: #424242;
+  background-color: #D1C4A9;
+  color: #5F5A54;
 }
 
 .cancelButton:hover:not(:disabled) {
-  background-color: #bdbdbd;
+  background-color: #D1C4A9;
 }
 
 .saveButton:disabled, .cancelButton:disabled {
@@ -713,12 +713,12 @@
 .placeholderLabel {
   font-weight: 600;
   margin-bottom: 0.5rem;
-  color: #333;
+  color: #1F453A;
 }
 
 .placeholderInput {
   padding: 0.5rem;
-  border: 1px solid #ccc;
+  border: 1px solid #D1C4A9;
   border-radius: 4px;
   font-size: 1rem;
   transition: border-color 0.2s ease;
@@ -731,7 +731,7 @@
 
 .placeholderTextarea {
   padding: 0.5rem;
-  border: 1px solid #ccc;
+  border: 1px solid #D1C4A9;
   border-radius: 4px;
   font-size: 1rem;
   transition: border-color 0.2s ease;
@@ -745,7 +745,7 @@
 
 .inputFootnote {
   font-size: 0.875rem;
-  color: #666;
+  color: #5F5A54;
   margin-top: 0.25rem;
   line-height: 1.2;
 }
@@ -754,9 +754,9 @@
 .previewContainer {
   margin-top: 1.5rem;
   padding: 1rem;
-  border: 1px solid #eaeaea;
+  border: 1px solid #D1C4A9;
   border-radius: 4px;
-  background-color: #fafafa;
+  background-color: #F5F4ED;
 }
 
 .previewTitle {
@@ -768,7 +768,7 @@
 .contentPreview {
   font-size: 1rem;
   line-height: 1.5;
-  color: #444;
+  color: #1F453A;
 }
 
 .replyTextarea {
@@ -818,7 +818,7 @@
 
 .select {
   padding: 6px 12px;
-  border: 1px solid #ccc;
+  border: 1px solid #D1C4A9;
   border-radius: 4px;
   font-size: 16px;
   margin-left: 10px; 
@@ -831,10 +831,10 @@
 
 .fieldGroup {
   margin-bottom: 2rem;
-  background-color: #f9f9f9;
+  background-color: #F5F4ED;
   border-radius: 8px;
   padding: 1.5rem;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 1px 3px rgba(47, 93, 80, 0.05);
 }
 
 .groupTitle {
@@ -842,8 +842,8 @@
   font-weight: 600;
   margin-top: 0;
   margin-bottom: 1.25rem;
-  color: #333;
-  border-bottom: 1px solid #e0e0e0;
+  color: #1F453A;
+  border-bottom: 1px solid #D1C4A9;
   padding-bottom: 0.75rem;
 }
 
@@ -862,7 +862,7 @@
   display: block;
   font-weight: 600;
   margin-bottom: 0.5rem;
-  color: #333;
+  color: #1F453A;
 }
 
 .placeholderInput,
@@ -870,7 +870,7 @@
 .templateSelect {
   width: 100%;
   padding: 0.75rem;
-  border: 1px solid #ccc;
+  border: 1px solid #D1C4A9;
   border-radius: 6px;
   font-size: 1rem;
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
@@ -901,7 +901,7 @@
 
 .inputFootnote {
   font-size: 0.875rem;
-  color: #666;
+  color: #5F5A54;
   margin-top: 0.5rem;
   line-height: 1.4;
   font-style: italic;
@@ -916,8 +916,8 @@
 }
 
 .previewButton {
-  background-color: #e0e0e0;
-  color: #333;
+  background-color: #D1C4A9;
+  color: #1F453A;
   border: none;
   border-radius: 6px;
   padding: 0.75rem 1.5rem;
@@ -927,7 +927,7 @@
 }
 
 .previewButton:hover {
-  background-color: #d0d0d0;
+  background-color: #D1C4A9;
 }
 
 
@@ -935,10 +935,10 @@
 .previewContainer {
   margin-top: 2rem;
   padding: 2rem;
-  border: 1px solid #e0e0e0;
+  border: 1px solid #D1C4A9;
   border-radius: 8px;
   background-color: white;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 1px 3px rgba(47, 93, 80, 0.05);
 }
 
 .previewTitle {
@@ -947,13 +947,13 @@
   margin-top: 0;
   margin-bottom: 1.5rem;
   padding-bottom: 0.75rem;
-  border-bottom: 1px solid #eaeaea;
+  border-bottom: 1px solid #D1C4A9;
 }
 
 .contentPreview {
   font-size: 1rem;
   line-height: 1.6;
-  color: #333;
+  color: #1F453A;
   white-space: pre-line;
 }
 
@@ -970,7 +970,7 @@
   display: block;
   margin-bottom: 0.75rem;
   font-weight: 600;
-  color: #333;
+  color: #1F453A;
 }
 
 .templateSelect {

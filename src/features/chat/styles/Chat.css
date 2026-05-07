@@ -224,7 +224,7 @@ body {
   align-items: center; /* Vertically align items */
   gap: 5px; /* Add space between the timestamp and checkmark */
   font-size: 0.85rem; /* Adjust font size */
-  color: #999; /* Gray color */
+  color: #8FAAA1; /* Gray color */
   margin-top: 5px; /* Optional spacing above */
 }
 
@@ -234,14 +234,14 @@ body {
   justify-content: space-between; /* Space out items */
   align-items: center; /* Vertically align items */
   font-size: 0.85rem; /* Adjust font size if needed */
-  color: #999; /* Light gray color */
+  color: #8FAAA1; /* Light gray color */
   margin-top: 5px; /* Space above */
 }
 
 /* Style for the checkmark */
 .read-receipt {
   margin-left: 8px; /* Optional spacing between timestamp and check */
-  color: #999; /* Match timestamp color */
+  color: #8FAAA1; /* Match timestamp color */
   font-size: 0.85rem; /* Ensure size matches the timestamp */
 }
 
@@ -494,14 +494,14 @@ body {
 .user-name {
   font-size: 1rem;
   font-weight: 500;
-  color: #333;
+  color: #1F453A;
 }
 
 /* Empty user list */
 .user-list-empty {
   text-align: center;
   font-size: 0.9rem;
-  color: #888;
+  color: #8FAAA1;
   margin-top: 20px;
 }
 
@@ -717,7 +717,7 @@ body {
   align-items: center;
   gap: 8px;
   padding: 8px;
-  background-color: #f0f0f0;
+  background-color: #E8F1EE;
   cursor: pointer;
 }
 
@@ -737,7 +737,7 @@ body {
   bottom: -20px;
   left: 0;
   font-size: 12px;
-  color: #888;
+  color: #8FAAA1;
 }
 
 

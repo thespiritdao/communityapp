@@ -3,7 +3,7 @@ html, body {
 
   font-family: Arial, sans-serif;
   background-color: #f5f4ed; /* Soft gray background (kept from original) */
-  color: #333;
+  color: #1F453A;
   background-image: url('/images/chatbg.png'); /* Update path if needed */
 }
 
@@ -40,7 +40,7 @@ html, body {
 /* Subtext or welcome message near the top */
 .home-subtitle {
   font-size: 1rem;
-  color: #666;
+  color: #5F5A54;
   text-align: center;
   margin-bottom: 30px;
 }
@@ -114,13 +114,13 @@ html, body {
   margin-top: 8px;
   font-size: 14px;
   font-weight: bold;
-  color: #333;
+  color: #1F453A;
 }
 
 /* Optional descriptive text in the card */
 .home-module-description {
   font-size: 0.875rem;
-  color: #666;
+  color: #5F5A54;
 }
 
 /* -------------------------------------------------------------------------
@@ -129,7 +129,7 @@ html, body {
 .home-footer {
   text-align: center;
   margin-top: 30px;
-  color: #666;
+  color: #5F5A54;
   font-size: 0.9rem;
 }
 

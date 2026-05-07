@@ -11,7 +11,7 @@
   cursor: pointer;
   padding: 4px;
   border-radius: 4px;
-  color: #999;
+  color: #8FAAA1;
   transition: all 0.2s ease;
   display: flex;
   align-items: center;
@@ -28,7 +28,7 @@
 
 .moderation-trigger:hover {
   background-color: rgba(0, 0, 0, 0.05);
-  color: #333;
+  color: #1F453A;
 }
 
 .moderation-trigger:disabled {
@@ -86,7 +86,7 @@
   font-size: 14px;
   transition: background-color 0.15s ease;
   text-align: left;
-  color: #333;
+  color: #1F453A;
 }
 
 .moderation-option:hover:not(:disabled) {

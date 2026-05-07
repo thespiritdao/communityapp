@@ -17,7 +17,7 @@
 
 /* Override UserTagging styles for forum context */
 .userTaggingInput :global(.mentions__input) {
-  border: 1px solid #e0e0e0;
+  border: 1px solid #D1C4A9;
   border-radius: 8px;
   padding: 12px;
   font-size: 14px;
@@ -34,7 +34,7 @@
 
 .mentionHint {
   font-size: 12px;
-  color: #666;
+  color: #5F5A54;
   margin-top: 4px;
   padding-left: 4px;
 }

@@ -1,4 +1,4 @@
-@tailwind base;
+﻿@tailwind base;
 @tailwind components;
 @tailwind utilities;
 
@@ -200,7 +200,7 @@ html {
 /* Scrollbar */
 .ock-scrollbar {
   scrollbar-width: thin;
-  scrollbar-color: #d1d5db #ffffff;
+  scrollbar-color: #D1C4A9 #F5F4ED;
 }
 
 /* Shadow */

@@ -287,7 +287,7 @@ export function EmbeddedWalletAuth({ isLoading, onEmailCaptured, onAuthReady }: 
 
           {error && (
             <p style={{
-              color: '#DC2626',
+              color: '#8B3A3A',
               fontSize: '14px',
               marginTop: '12px',
               textAlign: 'center',
@@ -381,7 +381,7 @@ export function EmbeddedWalletAuth({ isLoading, onEmailCaptured, onAuthReady }: 
 
             {error && (
               <p style={{
-                color: '#DC2626',
+                color: '#8B3A3A',
                 fontSize: '14px',
                 marginTop: '12px',
                 textAlign: 'center',
