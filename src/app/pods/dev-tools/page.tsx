@@ -295,7 +295,7 @@ export default function PodDevToolsPage() {
                               {role.isLeaderRole ? (
                                 <Crown className="h-4 w-4 text-yellow-500" />
                               ) : (
-                                <Users className="h-4 w-4 text-blue-500" />
+                                <Users className="h-4 w-4 text-[#2F5D50]" />
                               )}
                               <span className="font-medium">{role.name}</span>
                               {role.isLeaderRole && (

@@ -304,10 +304,10 @@ export default function VotePage() {
 
   if (!isConnected || !address) {
     return (
-      <div className="min-h-screen bg-gray-50 p-4">
+      <div className="min-h-screen bg-[#f5f4ed] p-4">
         <div className="max-w-6xl mx-auto">
-          <h1 className="text-2xl font-bold mb-4">Governance Proposals</h1>
-          <p className="text-gray-600">
+          <h1 className="text-2xl font-bold mb-4 text-[#1F453A]">Governance Proposals</h1>
+          <p className="text-[#5F5A54]">
             Please connect your wallet to view proposals.
           </p>
         </div>
@@ -317,12 +317,12 @@ export default function VotePage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 p-4">
+      <div className="min-h-screen bg-[#f5f4ed] p-4">
         <div className="max-w-6xl mx-auto">
           <div className="animate-pulse">
-            <div className="h-4 bg-gray-200 rounded w-3/4 mb-4"></div>
-            <div className="h-4 bg-gray-200 rounded w-1/2 mb-4"></div>
-            <div className="h-4 bg-gray-200 rounded w-5/6"></div>
+            <div className="h-4 bg-[#E8F1EE] rounded w-3/4 mb-4"></div>
+            <div className="h-4 bg-[#E8F1EE] rounded w-1/2 mb-4"></div>
+            <div className="h-4 bg-[#E8F1EE] rounded w-5/6"></div>
           </div>
         </div>
       </div>
@@ -331,9 +331,9 @@ export default function VotePage() {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gray-50 p-4">
+      <div className="min-h-screen bg-[#f5f4ed] p-4">
         <div className="max-w-6xl mx-auto">
-          <p className="text-red-600">Error loading proposals: {error}</p>
+          <p className="text-[#8B3A3A]">Error loading proposals: {error}</p>
         </div>
       </div>
     );
@@ -363,7 +363,7 @@ export default function VotePage() {
             className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
               statusFilter === 'all'
                 ? 'text-white'
-                : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-300'
+                : 'bg-white text-[#5F5A54] hover:bg-[#E8F1EE] border border-[#D1C4A9]'
             }`}
             style={statusFilter === 'all' ? { backgroundColor: '#2F5D50' } : {}}
           >
@@ -374,7 +374,7 @@ export default function VotePage() {
             className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
               statusFilter === 'active'
                 ? 'text-white'
-                : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-300'
+                : 'bg-white text-[#5F5A54] hover:bg-[#E8F1EE] border border-[#D1C4A9]'
             }`}
             style={
               statusFilter === 'active' ? { backgroundColor: '#2F5D50' } : {}
@@ -387,7 +387,7 @@ export default function VotePage() {
             className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
               statusFilter === 'passed'
                 ? 'text-white'
-                : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-300'
+                : 'bg-white text-[#5F5A54] hover:bg-[#E8F1EE] border border-[#D1C4A9]'
             }`}
             style={
               statusFilter === 'passed' ? { backgroundColor: '#3F7A5A' } : {}
@@ -400,7 +400,7 @@ export default function VotePage() {
             className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
               statusFilter === 'failed'
                 ? 'text-white'
-                : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-300'
+                : 'bg-white text-[#5F5A54] hover:bg-[#E8F1EE] border border-[#D1C4A9]'
             }`}
             style={
               statusFilter === 'failed' ? { backgroundColor: '#8B3A3A' } : {}
@@ -412,9 +412,10 @@ export default function VotePage() {
             onClick={() => setStatusFilter('executed')}
             className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
               statusFilter === 'executed'
-                ? 'bg-purple-600 text-white'
-                : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-300'
+                ? 'text-white'
+                : 'bg-white text-[#5F5A54] hover:bg-[#E8F1EE] border border-[#D1C4A9]'
             }`}
+            style={statusFilter === 'executed' ? { backgroundColor: '#1F453A' } : {}}
           >
             Executed ({getStatusCount('executed')})
           </button>
@@ -422,9 +423,10 @@ export default function VotePage() {
             onClick={() => setStatusFilter('expired')}
             className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
               statusFilter === 'expired'
-                ? 'bg-yellow-600 text-white'
-                : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-300'
+                ? 'text-white'
+                : 'bg-white text-[#5F5A54] hover:bg-[#E8F1EE] border border-[#D1C4A9]'
             }`}
+            style={statusFilter === 'expired' ? { backgroundColor: '#C6933F' } : {}}
           >
             Expired ({getStatusCount('expired')})
           </button>
@@ -432,11 +434,11 @@ export default function VotePage() {
 
         {filteredProposals.length === 0 ? (
           <div className="text-center py-12">
-            <div className="text-gray-400 text-6xl mb-4">🗳️</div>
-            <h2 className="text-xl font-semibold text-gray-600 mb-2">
+            <div className="text-[#8FAAA1] text-6xl mb-4">🗳️</div>
+            <h2 className="text-xl font-semibold text-[#5F5A54] mb-2">
               No proposals yet
             </h2>
-            <p className="text-gray-500">
+            <p className="text-[#8FAAA1]">
               Be the first to create a proposal for the DAO community to vote
               on.
             </p>
@@ -453,7 +455,7 @@ export default function VotePage() {
             {filteredProposals.map((proposal) => (
               <div
                 key={proposal.id}
-                className="bg-white rounded-xl shadow-md border border-gray-200 hover:shadow-lg transition-shadow cursor-pointer relative"
+                className="bg-white rounded-xl shadow-md border border-[#D1C4A9] hover:shadow-lg transition-shadow cursor-pointer relative"
                 onClick={() => handleProposalClick(proposal.id)}
               >
                 <div className="p-4">
@@ -463,29 +465,29 @@ export default function VotePage() {
                     <span
                       className={`ml-2 px-2 py-1 text-xs font-medium rounded-full ${
                         proposalStates[getProposalKey(proposal)]?.state === 1
-                          ? 'bg-gradient-to-r from-blue-200 to-blue-300 text-blue-900' // Active
+                          ? 'bg-[#E8F1EE] text-[#1F453A]' // Active
                           : proposalStates[getProposalKey(proposal)]?.state ===
                               4
-                            ? 'bg-gradient-to-r from-green-200 to-green-300 text-green-900' // Succeeded/Passed
+                            ? 'bg-[#D1E6DC] text-[#1F453A]' // Succeeded/Passed
                             : proposalStates[getProposalKey(proposal)]
                                   ?.state === 3
-                              ? 'bg-gradient-to-r from-red-200 to-red-300 text-red-900' // Defeated/Failed
+                              ? 'bg-[#F5E6E6] text-[#5C1F1F]' // Defeated/Failed
                               : proposalStates[getProposalKey(proposal)]
                                     ?.state === 7
-                                ? 'bg-gradient-to-r from-purple-200 to-purple-300 text-purple-900' // Executed
+                                ? 'bg-[#D1E6DC] text-[#1F453A]' // Executed
                                 : proposalStates[getProposalKey(proposal)]
                                       ?.state === 2
-                                  ? 'bg-gradient-to-r from-gray-200 to-gray-300 text-gray-900' // Canceled
+                                  ? 'bg-[#FAF4EC] text-[#8F6B2F]' // Canceled
                                   : proposalStates[getProposalKey(proposal)]
                                         ?.state === 6
-                                    ? 'bg-gradient-to-r from-yellow-200 to-yellow-300 text-yellow-900' // Expired
+                                    ? 'bg-[#FAF4EC] text-[#8F6B2F]' // Expired
                                     : proposalStates[getProposalKey(proposal)]
                                           ?.state === 5
-                                      ? 'bg-gradient-to-r from-orange-200 to-orange-300 text-orange-900' // Queued
+                                      ? 'bg-[#FAF4EC] text-[#A67E35]' // Queued
                                       : proposalStates[getProposalKey(proposal)]
                                             ?.state === 0
-                                        ? 'bg-gradient-to-r from-gray-200 to-gray-300 text-gray-900' // Pending
-                                        : 'bg-gradient-to-r from-gray-200 to-gray-300 text-gray-900' // Unknown
+                                        ? 'bg-[#E8F1EE] text-[#2F5D50]' // Pending
+                                        : 'bg-[#E8F1EE] text-[#2F5D50]' // Unknown
                       }`}
                     >
                       {proposalStates[getProposalKey(proposal)]?.state !==
@@ -520,11 +522,11 @@ export default function VotePage() {
                     </span>
                   </h2>
                   {/* Icon Row */}
-                  <div className="flex flex-col gap-2 mb-4 text-sm text-gray-600">
+                  <div className="flex flex-col gap-2 mb-4 text-sm text-[#5F5A54]">
                     <div className="flex items-center gap-2">
                       <User className="w-4 h-4 mr-1" />
                       <span
-                        className="hover:text-blue-600 transition-colors font-medium cursor-pointer"
+                        className="hover:text-[#2F5D50] transition-colors font-medium cursor-pointer"
                         onClick={(e) => {
                           e.stopPropagation();
                           setSelectedProfile(proposal.proposer.profile);
@@ -539,7 +541,7 @@ export default function VotePage() {
                     </div>
                     {proposal.tokenId && (
                       <div className="flex items-center gap-2">
-                        <Key className="w-4 h-4 mr-1 text-blue-400" />
+                        <Key className="w-4 h-4 mr-1 text-[#8FAAA1]" />
                         <span>
                           {POD_NAMES[proposal.tokenId] || proposal.tokenId}
                         </span>
@@ -550,7 +552,7 @@ export default function VotePage() {
                         <MessageSquare className="w-4 h-4 mr-1" />
                         <Link
                           href={`/forum/thread/${proposal.forumThreadId}`}
-                          className="hover:text-blue-600 transition-colors"
+                          className="hover:text-[#2F5D50] transition-colors"
                           onClick={(e) => e.stopPropagation()}
                         >
                           View Discussion
@@ -564,7 +566,7 @@ export default function VotePage() {
                           href={getBasescanUrl(proposal.transactionHash)}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="hover:text-blue-600 transition-colors"
+                          className="hover:text-[#2F5D50] transition-colors"
                           onClick={(e) => e.stopPropagation()}
                         >
                           View on Basescan
@@ -573,7 +575,7 @@ export default function VotePage() {
                     )}
                   </div>
                   {/* Description */}
-                  <div className="mb-4 text-gray-700 text-sm line-clamp-4">
+                  <div className="mb-4 text-[#5F5A54] text-sm line-clamp-4">
                     {proposal.description}
                   </div>
                   {/* Voting Countdown */}
@@ -608,7 +610,7 @@ export default function VotePage() {
                     )
                   ) : (
                     <button
-                      className="w-full py-2 px-4 bg-gray-300 text-gray-500 rounded-lg font-semibold cursor-not-allowed"
+                      className="w-full py-2 px-4 bg-[#E8E4DC] text-[#8FAAA1] rounded-lg font-semibold cursor-not-allowed"
                       disabled={true}
                       title="Voting is only available for active proposals."
                     >

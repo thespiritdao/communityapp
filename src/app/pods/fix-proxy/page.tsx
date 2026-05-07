@@ -76,7 +76,7 @@ export default function FixProxyPage() {
             <button
               onClick={() => fixTreasury(t.name, t.address)}
               disabled={status[t.name] === 'pending' || status[t.name] === 'done'}
-              className="px-3 py-1.5 text-sm bg-blue-600 text-white rounded disabled:opacity-50"
+              className="px-3 py-1.5 text-sm bg-[#2F5D50] text-white rounded disabled:opacity-50"
             >
               Fix
             </button>

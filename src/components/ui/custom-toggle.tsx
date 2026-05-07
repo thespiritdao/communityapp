@@ -48,8 +48,8 @@ export function CustomToggle({
         relative inline-flex items-center rounded-full transition-colors duration-200 ease-in-out
         ${
           checked
-            ? 'bg-blue-600 hover:bg-blue-700 focus:ring-blue-500'
-            : 'bg-gray-200 hover:bg-gray-300 focus:ring-gray-400'
+            ? 'bg-[#2F5D50] hover:bg-[#1F453A] focus:ring-[#2F5D50]'
+            : 'bg-[#E8E4DC] hover:bg-[#D1C4A9] focus:ring-[#8FAAA1]'
         }
         ${disabled ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}
         focus:outline-none focus:ring-2 focus:ring-offset-2

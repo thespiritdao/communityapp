@@ -78,7 +78,7 @@ export default function DemoHatsModulesPage() {
     <div className="container mx-auto py-8 px-4 pb-20">
       <div className="mb-8">
         <h1 className="text-3xl font-bold mb-2 flex items-center gap-2">
-          <Zap className="h-8 w-8 text-blue-600" />
+          <Zap className="h-8 w-8 text-[#2F5D50]" />
           HATS Modules Integration Demo
         </h1>
         <p className="text-gray-600">
@@ -207,7 +207,7 @@ export default function DemoHatsModulesPage() {
                               {role.isLeaderRole ? (
                                 <Crown className="h-4 w-4 text-yellow-500" />
                               ) : (
-                                <Users className="h-4 w-4 text-blue-500" />
+                                <Users className="h-4 w-4 text-[#2F5D50]" />
                               )}
                               <span className="font-medium">{role.name}</span>
                               {role.isLeaderRole && (
@@ -220,7 +220,7 @@ export default function DemoHatsModulesPage() {
                               HAT: {role.hatId.slice(0, 10)}...
                             </p>
                             {role.podId && (
-                              <p className="text-xs text-blue-600">
+                              <p className="text-xs text-[#2F5D50]">
                                 Pod: {role.podId}
                               </p>
                             )}

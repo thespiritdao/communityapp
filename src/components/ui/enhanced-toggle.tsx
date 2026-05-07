@@ -39,15 +39,15 @@ export function EnhancedToggle({
           inline-flex items-center gap-2 rounded-lg font-medium transition-all duration-200
           ${
             checked
-              ? 'bg-green-100 text-green-800 border-2 border-green-300 hover:bg-green-200'
-              : 'bg-red-100 text-red-800 border-2 border-red-300 hover:bg-red-200'
+              ? 'bg-[#E8F1EE] text-[#1F453A] border-2 border-[#B8D9CA] hover:bg-[#D1E6DC]'
+              : 'bg-[#F5E6E6] text-[#8B3A3A] border-2 border-[#D9B3B3] hover:bg-[#F5E6E6]'
           }
           ${
             disabled
               ? 'cursor-not-allowed opacity-50'
               : 'cursor-pointer hover:scale-105 active:scale-95'
           }
-          focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2
+          focus:outline-none focus:ring-2 focus:ring-[#2F5D50] focus:ring-offset-2
         `}
       >
         {checked ? (
@@ -97,15 +97,15 @@ export function EnhancedToggle({
           relative inline-flex items-center rounded-full transition-all duration-300 ease-in-out
           ${
             checked
-              ? 'bg-gradient-to-r from-green-400 to-green-600 shadow-lg'
-              : 'bg-gradient-to-r from-gray-200 to-gray-400'
+              ? 'bg-gradient-to-r from-[#3F7A5A] to-[#2F5D50] shadow-lg'
+              : 'bg-gradient-to-r from-[#E8E4DC] to-[#D1C4A9]'
           }
           ${
             disabled
               ? 'cursor-not-allowed opacity-50'
               : 'cursor-pointer hover:shadow-xl'
           }
-          focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2
+          focus:outline-none focus:ring-2 focus:ring-[#2F5D50] focus:ring-offset-2
           border-2 border-white
         `}
       >
@@ -118,9 +118,9 @@ export function EnhancedToggle({
           `}
         >
           {checked ? (
-            <Check className="h-3 w-3 text-green-600" />
+            <Check className="h-3 w-3 text-[#3F7A5A]" />
           ) : (
-            <X className="h-3 w-3 text-gray-400" />
+            <X className="h-3 w-3 text-[#8FAAA1]" />
           )}
         </span>
       </button>
@@ -161,15 +161,15 @@ export function EnhancedToggle({
         relative inline-flex items-center rounded-full transition-all duration-300 ease-in-out
         ${
           checked
-            ? 'bg-gradient-to-r from-blue-500 to-blue-600 shadow-lg'
-            : 'bg-gradient-to-r from-gray-300 to-gray-400'
+            ? 'bg-gradient-to-r from-[#2F5D50] to-[#1F453A] shadow-lg'
+            : 'bg-gradient-to-r from-[#E8E4DC] to-[#D1C4A9]'
         }
         ${
           disabled
             ? 'cursor-not-allowed opacity-50'
             : 'cursor-pointer hover:shadow-xl'
         }
-        focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2
+        focus:outline-none focus:ring-2 focus:ring-[#2F5D50] focus:ring-offset-2
         border-2 border-white
       `}
     >

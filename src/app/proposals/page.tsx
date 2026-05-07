@@ -298,7 +298,7 @@ function InnerProposalSubmissionPage() {
                 <input
                   id="title"
                   type="text"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2F5D50] focus:border-transparent transition-colors"
                   value={formData.title}
                   onChange={(e) => updateFormField('title', e.target.value)}
                   placeholder="Enter a clear, descriptive title for your proposal"
@@ -328,7 +328,7 @@ function InnerProposalSubmissionPage() {
                   value={formData.body}
                   onChange={(value) => updateFormField('body', value)}
                   placeholder="Provide a detailed description of your proposal... Use @ to mention someone&#10;&#10;Include:&#10;• Background and motivation&#10;• Specific actions or changes requested&#10;• Expected outcomes and benefits&#10;• Implementation timeline&#10;• Any relevant links or references"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors resize-none"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2F5D50] focus:border-transparent transition-colors resize-none"
                   multiLine={true}
                   contextType="proposal"
                   contextId="new-proposal"

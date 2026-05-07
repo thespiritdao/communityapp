@@ -11,20 +11,20 @@
 
 /* Default variant */
 .default {
-  background-color: #0070f3;
+  background-color: #2F5D50;
   color: white;
 }
 
 /* Outline variant */
 .outline {
   background-color: transparent;
-  color: #0070f3;
-  border: 2px solid #0070f3;
+  color: #2F5D50;
+  border: 2px solid #2F5D50;
 }
 
 /* Destructive variant */
 .destructive {
-  background-color: #e00;
+  background-color: #8B3A3A;
   color: white;
 }
 

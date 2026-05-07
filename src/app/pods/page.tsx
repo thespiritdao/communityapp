@@ -262,15 +262,15 @@ export default function PodsPage() {
       {/* Pod leader: sub-pod review banners */}
       {podsPendingReview.map((pod) => (
         <Link key={pod.id} href={`/pods/${pod.id}/manage?tab=sub_pod_review`}>
-          <div className="mb-4 flex items-center justify-between gap-3 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 hover:bg-blue-100 transition-colors cursor-pointer">
+          <div className="mb-4 flex items-center justify-between gap-3 rounded-lg border border-[#B8D9CA] bg-[#E8F1EE] px-4 py-3 hover:bg-[#D1E6DC] transition-colors cursor-pointer">
             <div className="flex items-center gap-2">
-              <GitBranch className="h-5 w-5 text-blue-700 shrink-0" />
+              <GitBranch className="h-5 w-5 text-[#2F5D50] shrink-0" />
               <div>
-                <p className="text-sm font-semibold text-blue-800">Sub-Pod Proposals — {pod.name}</p>
-                <p className="text-xs text-blue-700">Pending proposals awaiting your approval</p>
+                <p className="text-sm font-semibold text-[#1F453A]">Sub-Pod Proposals — {pod.name}</p>
+                <p className="text-xs text-[#2F5D50]">Pending proposals awaiting your approval</p>
               </div>
             </div>
-            <Button size="sm" className="shrink-0 bg-blue-700 hover:bg-blue-800 text-white">
+            <Button size="sm" className="shrink-0 bg-[#2F5D50] hover:bg-[#1F453A] text-white">
               Review
             </Button>
           </div>

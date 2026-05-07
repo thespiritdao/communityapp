@@ -9,7 +9,7 @@ const DialogContent = React.forwardRef<
   React.ComponentPropsWithoutRef<typeof RadixDialog.Content>
 >(({ className, children, ...props }, ref) => (
   <RadixDialog.Portal>
-    <RadixDialog.Overlay className="fixed inset-0 bg-black/40 z-50" />
+    <RadixDialog.Overlay className="fixed inset-0 bg-[#1F453A]/60 z-50" />
     <RadixDialog.Content
       ref={ref}
       className={cn(
@@ -40,7 +40,7 @@ const DialogTitle: React.FC<{
 const DialogDescription: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => (
-  <RadixDialog.Description className="text-sm text-gray-600 mb-4">
+  <RadixDialog.Description className="text-sm text-[#5F5A54] mb-4">
     {children}
   </RadixDialog.Description>
 );

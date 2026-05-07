@@ -317,7 +317,7 @@ export default function PodDetailPage() {
     return (
       <div className="home-container">
         <div className="flex justify-center items-center h-64">
-          <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+          <div className="w-8 h-8 border-4 border-[#2F5D50] border-t-transparent rounded-full animate-spin"></div>
         </div>
       </div>
     );
@@ -369,7 +369,7 @@ export default function PodDetailPage() {
                     : pod.status === 'draft'
                       ? 'bg-yellow-100 text-yellow-800 border-yellow-300'
                       : pod.status === 'pending'
-                        ? 'bg-blue-100 text-blue-800 border-blue-300'
+                        ? 'bg-[#E8F1EE] text-[#1F453A] border-[#B8D9CA]'
                         : 'bg-gray-100 text-gray-800 border-gray-300'
                 }`}
               >
@@ -509,7 +509,7 @@ export default function PodDetailPage() {
 
             {membersLoading ? (
               <div className="flex justify-center p-8">
-                <div className="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+                <div className="w-6 h-6 border-2 border-[#2F5D50] border-t-transparent rounded-full animate-spin"></div>
               </div>
             ) : allMembers.length === 0 ? (
               <Card>
@@ -545,7 +545,7 @@ export default function PodDetailPage() {
                                 className="w-10 h-10 rounded-full object-cover"
                               />
                             ) : (
-                              <div className="w-10 h-10 rounded-full bg-blue-500 flex items-center justify-center">
+                              <div className="w-10 h-10 rounded-full bg-[#2F5D50] flex items-center justify-center">
                                 <span className="text-white font-medium text-sm">
                                   {profile?.first_name
                                     ?.charAt(0)

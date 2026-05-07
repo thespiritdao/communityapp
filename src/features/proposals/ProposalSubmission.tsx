@@ -157,14 +157,14 @@ export const ProposalSubmission: React.FC<ProposalSubmissionProps> = ({
         <div className="space-y-4">
           <input
             type="text"
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#2F5D50]"
             value={formData.title}
             onChange={(e) => updateFormField('title', e.target.value)}
             placeholder="Proposal title"
             disabled={isSubmitting}
           />
           <textarea
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#2F5D50]"
             value={formData.body}
             onChange={(e) => updateFormField('body', e.target.value)}
             placeholder="Proposal description"
@@ -219,7 +219,7 @@ export const ProposalSubmission: React.FC<ProposalSubmissionProps> = ({
         <div className="space-y-4">
           <input
             type="text"
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#2F5D50]"
             value={formData.title}
             onChange={(e) => updateFormField('title', e.target.value)}
             placeholder="Proposal title"
@@ -227,7 +227,7 @@ export const ProposalSubmission: React.FC<ProposalSubmissionProps> = ({
             maxLength={200}
           />
           <textarea
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#2F5D50]"
             value={formData.body}
             onChange={(e) => updateFormField('body', e.target.value)}
             placeholder="Proposal description"
@@ -237,7 +237,7 @@ export const ProposalSubmission: React.FC<ProposalSubmissionProps> = ({
           />
           <input
             type="text"
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#2F5D50]"
             value={formData.forumThreadId}
             onChange={(e) => updateFormField('forumThreadId', e.target.value)}
             placeholder="Forum thread ID (optional)"
@@ -353,7 +353,7 @@ export const ProposalSubmission: React.FC<ProposalSubmissionProps> = ({
           <input
             id="title"
             type="text"
-            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2F5D50] focus:border-transparent"
             value={formData.title}
             onChange={(e) => updateFormField('title', e.target.value)}
             required={true}
@@ -384,7 +384,7 @@ export const ProposalSubmission: React.FC<ProposalSubmissionProps> = ({
             value={formData.body}
             onChange={(value) => updateFormField('body', value)}
             placeholder="Provide a detailed description of your proposal... Use @ to mention someone&#10;&#10;Include:&#10;• Background and motivation&#10;• Specific actions or changes requested&#10;• Expected outcomes and benefits&#10;• Implementation timeline&#10;• Any relevant links or references"
-            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2F5D50] focus:border-transparent resize-none"
             multiLine={true}
             contextType="proposal"
             contextId="new-proposal"
@@ -415,7 +415,7 @@ export const ProposalSubmission: React.FC<ProposalSubmissionProps> = ({
           <input
             id="forumThreadId"
             type="text"
-            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2F5D50] focus:border-transparent"
             value={formData.forumThreadId}
             onChange={(e) => updateFormField('forumThreadId', e.target.value)}
             placeholder="e.g., forum-thread-123, discussion-456"
@@ -461,11 +461,11 @@ export const ProposalSubmission: React.FC<ProposalSubmissionProps> = ({
         </div>
 
         {/* Requirements */}
-        <div className="mt-8 p-6 bg-blue-50 border border-blue-200 rounded-lg">
-          <h4 className="text-blue-900 font-semibold mb-3">
+        <div className="mt-8 p-6 bg-[#E8F1EE] border border-[#B8D9CA] rounded-lg">
+          <h4 className="text-[#1F453A] font-semibold mb-3">
             📋 Proposal Requirements
           </h4>
-          <div className="grid md:grid-cols-2 gap-4 text-sm text-blue-800">
+          <div className="grid md:grid-cols-2 gap-4 text-sm text-[#1F453A]">
             <div className="space-y-2">
               <div className="flex items-center">
                 <span
@@ -524,7 +524,7 @@ export const ProposalFormInputs: React.FC = () => {
         <input
           id="title"
           type="text"
-          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#2F5D50]"
           value={formData.title}
           onChange={(e) => updateFormField('title', e.target.value)}
           placeholder="Enter a clear, descriptive title"
@@ -544,7 +544,7 @@ export const ProposalFormInputs: React.FC = () => {
           value={formData.body}
           onChange={(value) => updateFormField('body', value)}
           placeholder="Provide a detailed description of your proposal... Use @ to mention someone"
-          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#2F5D50]"
           multiLine={true}
           contextType="proposal"
           contextId="new-proposal"
@@ -568,7 +568,7 @@ export const ProposalFormInputs: React.FC = () => {
         <input
           id="forumThreadId"
           type="text"
-          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#2F5D50]"
           value={formData.forumThreadId}
           onChange={(e) => updateFormField('forumThreadId', e.target.value)}
           placeholder="Enter a forum thread ID"

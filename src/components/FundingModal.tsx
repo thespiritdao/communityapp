@@ -235,7 +235,7 @@ export default function FundingModal({
         <DialogHeader>
           <DialogTitle>
             <span className="inline-flex items-center gap-2 whitespace-nowrap">
-              <DollarSign className="h-5 w-5 text-blue-600" />
+              <DollarSign className="h-5 w-5 text-[#2F5D50]" />
               <span>Fund {recipientType === 'member' ? 'Member' : 'Pod'}</span>
             </span>
           </DialogTitle>
@@ -255,11 +255,11 @@ export default function FundingModal({
                   }}
                 />
               ) : (
-                <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
+                <div className="w-12 h-12 bg-[#D1E6DC] rounded-full flex items-center justify-center">
                   {recipientType === 'member' ? (
-                    <User className="h-6 w-6 text-blue-600" />
+                    <User className="h-6 w-6 text-[#2F5D50]" />
                   ) : (
-                    <Users className="h-6 w-6 text-blue-600" />
+                    <Users className="h-6 w-6 text-[#2F5D50]" />
                   )}
                 </div>
               )}
@@ -281,7 +281,7 @@ export default function FundingModal({
 
           <div className="space-y-3">
             <Label>Payment Token</Label>
-            <div className="p-3 border border-blue-500 bg-blue-50 rounded-lg">
+            <div className="p-3 border border-[#2F5D50] bg-[#E8F1EE] rounded-lg">
               <div className="flex items-center justify-between">
                 <div>
                   <div className="font-medium">SYSTEM Token</div>

@@ -36,7 +36,7 @@ body, html {
 .wallet-button {
   padding: 12px 24px;
   font-size: 1em;
-  background-color: #0052FF;
+  background-color: #2F5D50;
   color: white;
   border: none;
   border-radius: 8px;
@@ -45,13 +45,13 @@ body, html {
 }
 
 .wallet-button:hover {
-  background-color: #003dbf;
+  background-color: #1F453A;
 }
 
 .wallet-button.secondary {
-  background-color: #757575;
+  background-color: #8FAAA1;
 }
 
 .wallet-button.secondary:hover {
-  background-color: #565656;
+  background-color: #6F8F86;
 }

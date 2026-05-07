@@ -114,12 +114,12 @@ export const DateTimePicker: React.FC<DateTimePickerProps> = ({
           </Button>
         </PopoverTrigger>
         <PopoverContent
-          className="w-auto p-0 bg-white dark:bg-gray-800 border shadow-lg"
+          className="w-auto p-0 bg-white dark:bg-[#1A3A30] border shadow-lg"
           align="center"
           sideOffset={5}
         >
-          <div className="p-4 space-y-4 bg-white dark:bg-gray-800 rounded-lg">
-            <div className="bg-white dark:bg-gray-800">
+          <div className="p-4 space-y-4 bg-white dark:bg-[#1A3A30] rounded-lg">
+            <div className="bg-white dark:bg-[#1A3A30]">
               <Calendar
                 mode="single"
                 selected={date}
@@ -128,10 +128,10 @@ export const DateTimePicker: React.FC<DateTimePickerProps> = ({
                 className="rounded-md"
               />
             </div>
-            <div className="border-t border-gray-200 dark:border-gray-700 pt-3">
+            <div className="border-t border-[#D1C4A9] dark:border-[#5F5A54] pt-3">
               <Label
                 htmlFor="time-input"
-                className="text-sm font-medium text-gray-700 dark:text-gray-300"
+                className="text-sm font-medium text-[#5F5A54] dark:text-[#D1C4A9]"
               >
                 Time
               </Label>
@@ -140,10 +140,10 @@ export const DateTimePicker: React.FC<DateTimePickerProps> = ({
                 type="time"
                 value={time}
                 onChange={handleTimeChange}
-                className="mt-1.5 bg-white dark:bg-gray-700"
+                className="mt-1.5 bg-white dark:bg-[#1A3A30]"
               />
             </div>
-            <div className="flex gap-2 border-t border-gray-200 dark:border-gray-700 pt-3">
+            <div className="flex gap-2 border-t border-[#D1C4A9] dark:border-[#5F5A54] pt-3">
               {date && (
                 <Button
                   variant="outline"

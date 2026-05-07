@@ -106,7 +106,7 @@ function NotificationCard({
       case 'proposal_created':
       case 'voting_reminder':
       case 'token_holder_notification':
-        return <Vote className="w-8 h-8 text-blue-600" />;
+        return <Vote className="w-8 h-8 text-[#2F5D50]" />;
       case 'forum_reply':
         return '💬';
       case 'chat_message':
@@ -136,11 +136,11 @@ function NotificationCard({
       case 'high':
         return 'border-l-orange-500 bg-orange-50';
       case 'medium':
-        return 'border-l-blue-500 bg-blue-50';
+        return 'border-l-[#2F5D50] bg-[#E8F1EE]';
       case 'low':
         return 'border-l-gray-500 bg-white';
       default:
-        return 'border-l-blue-500 bg-white';
+        return 'border-l-[#2F5D50] bg-white';
     }
   };
 
@@ -200,7 +200,7 @@ function NotificationCard({
                   </h3>
                   {!notification.is_read && (
                     <div className="flex items-center space-x-1 flex-shrink-0">
-                      <span className="inline-block w-2 h-2 bg-blue-500 rounded-full"></span>
+                      <span className="inline-block w-2 h-2 bg-[#2F5D50] rounded-full"></span>
                     </div>
                   )}
                 </div>
@@ -240,7 +240,7 @@ function NotificationCard({
                 {notification.context_url && (
                   <a
                     href={getContextLink()}
-                    className="flex items-center space-x-1 text-xs text-blue-500 hover:text-blue-600 transition-colors flex-shrink-0"
+                    className="flex items-center space-x-1 text-xs text-[#2F5D50] hover:text-[#2F5D50] transition-colors flex-shrink-0"
                   >
                     <span>View</span>
                     <ExternalLink className="w-3 h-3" />

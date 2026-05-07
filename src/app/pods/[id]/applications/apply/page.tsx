@@ -200,7 +200,7 @@ export default function ApplyToPodPage() {
     return (
       <div className="container max-w-3xl mx-auto py-12">
         <div className="flex justify-center items-center h-64">
-          <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+          <div className="w-8 h-8 border-4 border-[#2F5D50] border-t-transparent rounded-full animate-spin"></div>
         </div>
       </div>
     );
@@ -244,11 +244,11 @@ export default function ApplyToPodPage() {
       existingApplication.intended_role === 'leader' ? Crown : Users;
     const roleColor =
       existingApplication.intended_role === 'leader'
-        ? 'text-purple-600'
+        ? 'text-[#8B5E3C]'
         : 'text-[#2F5D50]';
     const roleBgColor =
       existingApplication.intended_role === 'leader'
-        ? 'bg-purple-50'
+        ? 'bg-[#F5EDD7]'
         : 'bg-[#E8F1EE]';
     const RoleIcon = roleIcon;
 
@@ -398,10 +398,10 @@ export default function ApplyToPodPage() {
               >
                 <div className="flex flex-col items-center gap-2">
                   <Users
-                    className={`w-8 h-8 ${selectedRole === 'member' ? 'text-blue-600' : 'text-gray-400'}`}
+                    className={`w-8 h-8 ${selectedRole === 'member' ? 'text-[#2F5D50]' : 'text-gray-400'}`}
                   />
                   <span
-                    className={`font-medium ${selectedRole === 'member' ? 'text-blue-900' : 'text-gray-700'}`}
+                    className={`font-medium ${selectedRole === 'member' ? 'text-[#1F453A]' : 'text-gray-700'}`}
                   >
                     Member
                   </span>
@@ -415,16 +415,16 @@ export default function ApplyToPodPage() {
                 onClick={() => setSelectedRole('leader')}
                 className={`p-4 border-2 rounded-lg transition-all ${
                   selectedRole === 'leader'
-                    ? 'border-purple-600 bg-purple-50'
+                    ? 'border-[#8B5E3C] bg-[#F5EDD7]'
                     : 'border-gray-200 hover:border-gray-300'
                 }`}
               >
                 <div className="flex flex-col items-center gap-2">
                   <Crown
-                    className={`w-8 h-8 ${selectedRole === 'leader' ? 'text-purple-600' : 'text-gray-400'}`}
+                    className={`w-8 h-8 ${selectedRole === 'leader' ? 'text-[#8B5E3C]' : 'text-gray-400'}`}
                   />
                   <span
-                    className={`font-medium ${selectedRole === 'leader' ? 'text-purple-900' : 'text-gray-700'}`}
+                    className={`font-medium ${selectedRole === 'leader' ? 'text-[#8B5E3C]' : 'text-gray-700'}`}
                   >
                     Leader
                   </span>

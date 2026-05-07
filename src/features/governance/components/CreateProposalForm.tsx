@@ -2140,8 +2140,8 @@ export function CreateProposalForm({
 
                   {/* Submission Status Display */}
                   {submissionStatus && (
-                    <div className="mt-4 p-3 rounded-lg bg-blue-50 border border-blue-200">
-                      <p className="text-sm text-blue-800 text-center font-medium">
+                    <div className="mt-4 p-3 rounded-lg bg-[#E8F1EE] border border-[#B8D9CA]">
+                      <p className="text-sm text-[#1F453A] text-center font-medium">
                         {submissionStatus}
                       </p>
                     </div>

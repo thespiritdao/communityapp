@@ -37,10 +37,10 @@ function DonationSuccessContent() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+      <div className="min-h-screen bg-[#f5f4ed] dark:bg-[#1A2E28] flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600 dark:text-gray-300">Loading donation details...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#2F5D50] mx-auto mb-4"></div>
+          <p className="text-[#5F5A54] dark:text-[#D1C4A9]">Loading donation details...</p>
         </div>
       </div>
     );
@@ -48,18 +48,18 @@ function DonationSuccessContent() {
 
   if (!donationId || !donationDetails) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center p-4">
-        <div className="max-w-md w-full bg-white dark:bg-gray-800 rounded-xl shadow-lg p-8 text-center">
+      <div className="min-h-screen bg-[#f5f4ed] dark:bg-[#1A2E28] flex items-center justify-center p-4">
+        <div className="max-w-md w-full bg-white dark:bg-[#1A3A30] rounded-xl shadow-lg p-8 text-center">
           <div className="text-6xl mb-4">❌</div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
+          <h1 className="text-2xl font-bold text-[#1F453A] dark:text-white mb-4">
             Donation Not Found
           </h1>
-          <p className="text-gray-600 dark:text-gray-300 mb-6">
+          <p className="text-[#5F5A54] dark:text-[#D1C4A9] mb-6">
             We couldn't find the donation you're looking for.
           </p>
           <Link
             href="/donate"
-            className="inline-block bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-6 rounded-lg transition-colors"
+            className="inline-block bg-[#2F5D50] hover:bg-[#1F453A] text-white font-semibold py-2 px-6 rounded-lg transition-colors"
           >
             Make a Donation
           </Link>
@@ -100,63 +100,63 @@ function DonationSuccessContent() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-12 px-4">
+    <div className="min-h-screen bg-[#f5f4ed] dark:bg-[#1A2E28] py-12 px-4">
       <div className="max-w-2xl mx-auto">
         {/* Success Header */}
         <div className="text-center mb-8">
           <div className="text-6xl mb-4">🎉</div>
-          <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-2">
+          <h1 className="text-4xl font-bold text-[#1F453A] dark:text-white mb-2">
             Thank You for Your Support!
           </h1>
-          <p className="text-gray-600 dark:text-gray-300">
+          <p className="text-[#5F5A54] dark:text-[#D1C4A9]">
             Your donation has been received successfully
           </p>
         </div>
 
         <div className="space-y-6">
           {/* Status Card */}
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
-            <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">
+          <div className="bg-white dark:bg-[#1A3A30] rounded-xl shadow-lg p-6">
+            <h2 className="text-xl font-bold text-[#1F453A] dark:text-white mb-4">
               Current Status
             </h2>
             {getStatusDisplay(donationDetails.status)}
           </div>
 
           {/* Donation Details */}
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
-            <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">
+          <div className="bg-white dark:bg-[#1A3A30] rounded-xl shadow-lg p-6">
+            <h2 className="text-xl font-bold text-[#1F453A] dark:text-white mb-4">
               Donation Details
             </h2>
             <div className="space-y-3">
-              <div className="flex justify-between pb-2 border-b border-gray-200 dark:border-gray-700">
-                <span className="text-gray-600 dark:text-gray-400">Amount Donated:</span>
-                <span className="font-semibold text-gray-900 dark:text-white">
+              <div className="flex justify-between pb-2 border-b border-[#D1C4A9] dark:border-[#5F5A54]">
+                <span className="text-[#5F5A54] dark:text-[#8FAAA1]">Amount Donated:</span>
+                <span className="font-semibold text-[#1F453A] dark:text-white">
                   ${donationDetails.amount?.toFixed(2)}
                 </span>
               </div>
-              <div className="flex justify-between pb-2 border-b border-gray-200 dark:border-gray-700">
-                <span className="text-gray-600 dark:text-gray-400">$SYSTEM Tokens:</span>
-                <span className="font-semibold text-green-600 dark:text-green-400">
+              <div className="flex justify-between pb-2 border-b border-[#D1C4A9] dark:border-[#5F5A54]">
+                <span className="text-[#5F5A54] dark:text-[#8FAAA1]">$SYSTEM Tokens:</span>
+                <span className="font-semibold text-[#3F7A5A] dark:text-[#B8D9CA]">
                   {donationDetails.systemTokens}
                 </span>
               </div>
-              <div className="flex justify-between pb-2 border-b border-gray-200 dark:border-gray-700">
-                <span className="text-gray-600 dark:text-gray-400">Payment Method:</span>
-                <span className="font-semibold text-gray-900 dark:text-white">
+              <div className="flex justify-between pb-2 border-b border-[#D1C4A9] dark:border-[#5F5A54]">
+                <span className="text-[#5F5A54] dark:text-[#8FAAA1]">Payment Method:</span>
+                <span className="font-semibold text-[#1F453A] dark:text-white">
                   {donationDetails.paymentMethod === 'us_bank_account' ? 'Bank Transfer (ACH)' : 'Credit Card'}
                 </span>
               </div>
               {donationDetails.settlementDate && (
-                <div className="flex justify-between pb-2 border-b border-gray-200 dark:border-gray-700">
-                  <span className="text-gray-600 dark:text-gray-400">Settlement Date:</span>
-                  <span className="font-semibold text-gray-900 dark:text-white">
+                <div className="flex justify-between pb-2 border-b border-[#D1C4A9] dark:border-[#5F5A54]">
+                  <span className="text-[#5F5A54] dark:text-[#8FAAA1]">Settlement Date:</span>
+                  <span className="font-semibold text-[#1F453A] dark:text-white">
                     {new Date(donationDetails.settlementDate).toLocaleDateString()}
                   </span>
                 </div>
               )}
               <div className="flex justify-between">
-                <span className="text-gray-600 dark:text-gray-400">Donation ID:</span>
-                <span className="font-mono text-xs text-gray-900 dark:text-white">
+                <span className="text-[#5F5A54] dark:text-[#8FAAA1]">Donation ID:</span>
+                <span className="font-mono text-xs text-[#1F453A] dark:text-white">
                   {donationDetails.id}
                 </span>
               </div>
@@ -164,11 +164,11 @@ function DonationSuccessContent() {
           </div>
 
           {/* What Happens Next */}
-          <div className="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-6">
-            <h2 className="text-xl font-bold text-blue-900 dark:text-blue-200 mb-4">
+          <div className="bg-[#E8F1EE] dark:bg-[#2F5D50]/20 rounded-xl p-6">
+            <h2 className="text-xl font-bold text-[#1F453A] dark:text-[#B8D9CA] mb-4">
               What Happens Next?
             </h2>
-            <ol className="space-y-3 text-blue-800 dark:text-blue-300">
+            <ol className="space-y-3 text-[#1F453A] dark:text-[#D1C4A9]">
               <li className="flex items-start">
                 <span className="font-bold mr-2">1.</span>
                 <span>
@@ -203,11 +203,11 @@ function DonationSuccessContent() {
           </div>
 
           {/* Important Notice */}
-          <div className="bg-yellow-50 dark:bg-yellow-900/20 rounded-xl p-6">
-            <h3 className="font-bold text-yellow-900 dark:text-yellow-200 mb-2">
+          <div className="bg-[#FAF4EC] dark:bg-[#C6933F]/10 rounded-xl p-6">
+            <h3 className="font-bold text-[#8F6B2F] dark:text-[#C6933F] mb-2">
               ⚠️ Important Notice
             </h3>
-            <p className="text-yellow-800 dark:text-yellow-300 text-sm">
+            <p className="text-[#8F6B2F] dark:text-[#C6933F] text-sm">
               All donations are final and non-refundable. Your donation supports SpiritDAO's mission
               and the $SYSTEM tokens represent your contribution to the community treasury.
             </p>
@@ -217,13 +217,13 @@ function DonationSuccessContent() {
           <div className="flex flex-col sm:flex-row gap-4">
             <Link
               href="/donate"
-              className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors text-center"
+              className="flex-1 bg-[#2F5D50] hover:bg-[#1F453A] text-white font-semibold py-3 px-6 rounded-lg transition-colors text-center"
             >
               Make Another Donation
             </Link>
             <Link
               href="/"
-              className="flex-1 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-900 dark:text-white font-semibold py-3 px-6 rounded-lg transition-colors text-center"
+              className="flex-1 bg-[#E8E4DC] dark:bg-[#1A3A30] hover:bg-[#D1C4A9] dark:hover:bg-[#1F453A] text-[#1F453A] dark:text-white font-semibold py-3 px-6 rounded-lg transition-colors text-center"
             >
               Back to Home
             </Link>
@@ -237,8 +237,8 @@ function DonationSuccessContent() {
 export default function DonationSuccessPage() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      <div className="min-h-screen bg-[#f5f4ed] dark:bg-[#1A2E28] flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#2F5D50]"></div>
       </div>
     }>
       <DonationSuccessContent />

@@ -86,20 +86,20 @@ function DonationCheckoutForm({
         borderRadius: '0.75rem'
       }} className="space-y-2">
         <div className="flex justify-between text-sm">
-          <span className="text-gray-600 dark:text-gray-400">Fund Amount:</span>
+          <span className="text-[#5F5A54] dark:text-[#8FAAA1]">Fund Amount:</span>
           <span className="font-semibold">${donationData.amount.toFixed(2)}</span>
         </div>
         <div className="flex justify-between text-sm">
-          <span className="text-gray-600 dark:text-gray-400">Operations Donation (4%):</span>
-          <span className="text-gray-600 dark:text-gray-400">-${donationData.operationsFee}</span>
+          <span className="text-[#5F5A54] dark:text-[#8FAAA1]">Operations Donation (4%):</span>
+          <span className="text-[#5F5A54] dark:text-[#8FAAA1]">-${donationData.operationsFee}</span>
         </div>
         <div className="flex justify-between text-sm">
-          <span className="text-gray-600 dark:text-gray-400">Community Fund Donation (4%):</span>
-          <span className="text-gray-600 dark:text-gray-400">-${donationData.communityFee}</span>
+          <span className="text-[#5F5A54] dark:text-[#8FAAA1]">Community Fund Donation (4%):</span>
+          <span className="text-[#5F5A54] dark:text-[#8FAAA1]">-${donationData.communityFee}</span>
         </div>
         <div className="flex justify-between text-sm">
-          <span className="text-gray-600 dark:text-gray-400">Processing Fee (est):</span>
-          <span className="text-gray-600 dark:text-gray-400">-${donationData.estimatedStripeFee}</span>
+          <span className="text-[#5F5A54] dark:text-[#8FAAA1]">Processing Fee (est):</span>
+          <span className="text-[#5F5A54] dark:text-[#8FAAA1]">-${donationData.estimatedStripeFee}</span>
         </div>
         <div className="border-t pt-2 mt-2" style={{ borderColor: '#B8D9CA' }}>
           <div className="flex justify-between">
@@ -118,15 +118,15 @@ function DonationCheckoutForm({
         padding: '1rem',
         borderRadius: '0.75rem'
       }} className="text-sm space-y-2">
-        <p className="font-semibold text-gray-900 dark:text-white">💳 Payment Options:</p>
-        <ul className="text-gray-700 dark:text-gray-300 space-y-1 ml-4">
+        <p className="font-semibold text-[#1F453A] dark:text-white">💳 Payment Options:</p>
+        <ul className="text-[#5F5A54] dark:text-[#D1C4A9] space-y-1 ml-4">
           <li>• <strong>Credit Card:</strong> 2.9% + $0.30 fee, 3-7 day hold</li>
           <li>• <strong>Bank Transfer (ACH):</strong> 0.8% fee, 3-5 day processing</li>
         </ul>
       </div>
 
       {/* Stripe Payment Element */}
-      <div className="border border-gray-300 dark:border-gray-600 rounded-lg p-4">
+      <div className="border border-[#D1C4A9] dark:border-[#5F5A54] rounded-lg p-4">
         <PaymentElement />
       </div>
 
@@ -251,24 +251,24 @@ export default function DonatePage() {
   // Success Screen
   if (showSuccess) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center p-4">
-        <div className="max-w-md w-full bg-white dark:bg-gray-800 rounded-xl shadow-lg p-8 text-center space-y-6">
+      <div className="min-h-screen bg-[#f5f4ed] dark:bg-[#1A2E28] flex items-center justify-center p-4">
+        <div className="max-w-md w-full bg-white dark:bg-[#1A3A30] rounded-xl shadow-lg p-8 text-center space-y-6">
           <div className="text-6xl">🎉</div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+          <h1 className="text-3xl font-bold text-[#1F453A] dark:text-white">
             Thank You!
           </h1>
-          <p className="text-gray-600 dark:text-gray-300">
+          <p className="text-[#5F5A54] dark:text-[#D1C4A9]">
             Your donation has been received. Your $SYSTEM tokens will be minted after:
           </p>
-          <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg space-y-2">
-            <p className="text-sm text-green-800 dark:text-green-300">
+          <div className="bg-[#E8F1EE] dark:bg-[#2F5D50]/20 p-4 rounded-lg space-y-2">
+            <p className="text-sm text-[#1F453A] dark:text-[#B8D9CA]">
               ✅ Settlement period (0-7 days based on payment method)
             </p>
-            <p className="text-sm text-green-800 dark:text-green-300">
+            <p className="text-sm text-[#1F453A] dark:text-[#B8D9CA]">
               ✅ Executive Pod approval
             </p>
           </div>
-          <p className="text-sm text-gray-600 dark:text-gray-400">
+          <p className="text-sm text-[#5F5A54] dark:text-[#8FAAA1]">
             You'll receive an email confirmation when your tokens are minted.
           </p>
           <button
@@ -294,15 +294,15 @@ export default function DonatePage() {
       <div className="max-w-2xl mx-auto">
         {/* Header */}
         <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-2">
+          <h1 className="text-4xl font-bold text-[#1F453A] dark:text-white mb-2">
             Support SpiritDAO
           </h1>
-          <p className="text-gray-600 dark:text-gray-300">
+          <p className="text-[#5F5A54] dark:text-[#D1C4A9]">
             Donate and receive $SYSTEM tokens
           </p>
         </div>
 
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 md:p-8">
+        <div className="bg-white dark:bg-[#1A3A30] rounded-xl shadow-lg p-6 md:p-8">
           {!clientSecret ? (
             // Donation Amount Form
             <div className="space-y-6">
@@ -322,7 +322,7 @@ export default function DonatePage() {
 
               {/* Suggested Amounts */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                <label className="block text-sm font-medium text-[#5F5A54] dark:text-[#D1C4A9] mb-2">
                   Select Amount
                 </label>
                 <div className="grid grid-cols-3 gap-3">
@@ -340,7 +340,7 @@ export default function DonatePage() {
                         fontWeight: 500,
                         transition: 'all 0.2s'
                       }}
-                      className={donationAmount === amount.toString() ? '' : 'text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700'}
+                      className={donationAmount === amount.toString() ? '' : 'text-[#1F453A] dark:text-white hover:bg-[#E8F1EE] dark:hover:bg-[#1A3A30]'}
                     >
                       ${amount}
                     </button>
@@ -352,12 +352,12 @@ export default function DonatePage() {
               <div>
                 <label
                   htmlFor="customAmount"
-                  className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+                  className="block text-sm font-medium text-[#5F5A54] dark:text-[#D1C4A9] mb-2"
                 >
                   Or Enter Custom Amount (min ${minAmount})
                 </label>
                 <div className="relative">
-                  <span className="absolute left-3 top-3 text-gray-500 dark:text-gray-400">
+                  <span className="absolute left-3 top-3 text-[#8FAAA1] dark:text-[#8FAAA1]">
                     $
                   </span>
                   <input
@@ -368,7 +368,7 @@ export default function DonatePage() {
                     value={donationAmount}
                     onChange={(e) => setDonationAmount(e.target.value)}
                     placeholder={`${minAmount}.00`}
-                    className="w-full pl-8 pr-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full pl-8 pr-4 py-3 border border-[#D1C4A9] dark:border-[#5F5A54] rounded-lg bg-white dark:bg-[#1A3A30] text-[#1F453A] dark:text-white focus:ring-2 focus:ring-[#2F5D50] focus:border-transparent"
                   />
                 </div>
               </div>
@@ -377,7 +377,7 @@ export default function DonatePage() {
               <div>
                 <label
                   htmlFor="email"
-                  className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+                  className="block text-sm font-medium text-[#5F5A54] dark:text-[#D1C4A9] mb-2"
                 >
                   Email (for receipt and notifications)
                 </label>
@@ -387,7 +387,7 @@ export default function DonatePage() {
                   value={donorEmail}
                   onChange={(e) => setDonorEmail(e.target.value)}
                   placeholder="your@email.com"
-                  className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-4 py-3 border border-[#D1C4A9] dark:border-[#5F5A54] rounded-lg bg-white dark:bg-[#1A3A30] text-[#1F453A] dark:text-white focus:ring-2 focus:ring-[#2F5D50] focus:border-transparent"
                 />
               </div>
 
@@ -409,11 +409,11 @@ export default function DonatePage() {
               </button>
 
               {/* Info Box */}
-              <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg text-sm space-y-2">
-                <p className="font-semibold text-gray-900 dark:text-white">
+              <div className="bg-[#E8F1EE] dark:bg-[#1A3A30] p-4 rounded-lg text-sm space-y-2">
+                <p className="font-semibold text-[#1F453A] dark:text-white">
                   How it works:
                 </p>
-                <ol className="text-gray-600 dark:text-gray-300 space-y-1 ml-4">
+                <ol className="text-[#5F5A54] dark:text-[#D1C4A9] space-y-1 ml-4">
                   <li>1. Choose your donation amount</li>
                   <li>2. Complete payment (card or bank transfer)</li>
                   <li>3. Wait for settlement period (0-7 days)</li>
@@ -431,7 +431,7 @@ export default function DonatePage() {
                 appearance: {
                   theme: 'stripe',
                   variables: {
-                    colorPrimary: '#2563eb',
+                    colorPrimary: '#2F5D50',
                   },
                 },
               }}

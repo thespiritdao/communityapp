@@ -12,7 +12,7 @@
   flex-wrap: wrap;
   gap: 4px;
   padding: 8px;
-  background-color: #f5f5f5;
+  background-color: #E8F1EE;
   border-bottom: 1px solid rgba(0, 0, 0, 0.1);
 }
 
@@ -28,7 +28,7 @@
 }
 
 .toolbar button:hover:not(:disabled) {
-  background-color: #e8e8e8;
+  background-color: #E8E4DC;
   border-color: rgba(0, 0, 0, 0.2);
 }
 
@@ -38,9 +38,9 @@
 }
 
 .toolbar button.active {
-  background-color: #0066cc;
+  background-color: #2F5D50;
   color: white;
-  border-color: #0052a3;
+  border-color: #1F453A;
 }
 
 .divider {
@@ -64,7 +64,7 @@
 
 /* Placeholder */
 .editor p.is-editor-empty:first-child::before {
-  color: #adb5bd;
+  color: #8FAAA1;
   content: attr(data-placeholder);
   float: left;
   height: 0;
@@ -105,15 +105,15 @@
 }
 
 .editor blockquote {
-  border-left: 3px solid #ccc;
+  border-left: 3px solid #D1C4A9;
   padding-left: 1em;
   margin: 1em 0;
-  color: #666;
+  color: #5F5A54;
   font-style: italic;
 }
 
 .editor code {
-  background-color: #f4f4f4;
+  background-color: #E8F1EE;
   padding: 2px 6px;
   border-radius: 3px;
   font-family: 'Courier New', monospace;
@@ -121,7 +121,7 @@
 }
 
 .editor pre {
-  background-color: #f4f4f4;
+  background-color: #E8F1EE;
   padding: 1em;
   border-radius: 6px;
   overflow-x: auto;
@@ -135,13 +135,13 @@
 }
 
 .editor a {
-  color: #0066cc;
+  color: #2F5D50;
   text-decoration: underline;
   cursor: pointer;
 }
 
 .editor a:hover {
-  color: #0052a3;
+  color: #1F453A;
 }
 
 /* Focus state */
@@ -150,6 +150,6 @@
 }
 
 .richTextContainer:focus-within {
-  border-color: #0066cc;
-  box-shadow: 0 0 0 2px rgba(0, 102, 204, 0.1);
+  border-color: #2F5D50;
+  box-shadow: 0 0 0 2px rgba(47, 93, 80, 0.1);
 }
