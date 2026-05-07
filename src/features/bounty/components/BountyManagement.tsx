@@ -421,15 +421,15 @@ export const BountyManagement: React.FC<BountyManagementProps> = ({
   const getStatusDisplay = (status: number) => {
     switch (status) {
       case 0:
-        return { label: 'Open', color: 'bg-green-100 text-green-800' };
+        return { label: 'Open', color: 'bg-sage-50 text-sage-700' };
       case 1:
-        return { label: 'Assigned', color: 'bg-blue-100 text-blue-800' };
+        return { label: 'Assigned', color: 'bg-[#FAF4EC] text-[#8F6B2F]' };
       case 2:
-        return { label: 'Completed', color: 'bg-gray-100 text-gray-800' };
+        return { label: 'Completed', color: 'bg-sage-100 text-sage-700' };
       case 3:
-        return { label: 'Cancelled', color: 'bg-red-100 text-red-800' };
+        return { label: 'Cancelled', color: 'bg-earth-red-50 text-earth-red-500' };
       default:
-        return { label: 'Unknown', color: 'bg-gray-100 text-gray-800' };
+        return { label: 'Unknown', color: 'bg-earth-50 text-earth-500' };
     }
   };
 
@@ -468,7 +468,7 @@ export const BountyManagement: React.FC<BountyManagementProps> = ({
     return (
       <div className="flex items-center justify-center py-12">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-4"></div>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-sage-600 mx-auto mb-4"></div>
           <p className="text-gray-600">Loading bounties...</p>
         </div>
       </div>
@@ -634,7 +634,7 @@ export const BountyManagement: React.FC<BountyManagementProps> = ({
                     }}
                   >
                     <Card
-                      className="cursor-pointer transition-colors hover:bg-gray-50 overflow-hidden"
+                      className="cursor-pointer transition-colors hover:bg-sage-50 overflow-hidden"
                       onClick={() => setOpenBountyDetailId(bounty.id)}
                     >
                       <CardContent className="p-4">
@@ -701,11 +701,11 @@ export const BountyManagement: React.FC<BountyManagementProps> = ({
                                     matchingSupabaseBounty?.description
                                   ) {
                                     return (
-                                      <div className="p-4 bg-gray-50 rounded-lg">
+                                      <div className="p-4 bg-earth-50 rounded-lg">
                                         <h4 className="font-semibold mb-2">
                                           Description
                                         </h4>
-                                        <p className="text-sm text-gray-700 whitespace-pre-wrap">
+                                        <p className="text-sm text-[#5F5A54] whitespace-pre-wrap">
                                           {matchingSupabaseBounty.description}
                                         </p>
                                       </div>
@@ -800,7 +800,7 @@ export const BountyManagement: React.FC<BountyManagementProps> = ({
 
                                   if (requirements && Array.isArray(requirements) && requirements.length > 0) {
                                     return (
-                                      <div className="p-4 bg-blue-50 rounded-lg">
+                                      <div className="p-4 bg-sage-50 rounded-lg">
                                         <h4 className="font-semibold mb-2">Requirements</h4>
                                         <ul className="list-disc list-inside space-y-1">
                                           {requirements.map((req: string, idx: number) => (
@@ -825,7 +825,7 @@ export const BountyManagement: React.FC<BountyManagementProps> = ({
 
                                   if (tasks && Array.isArray(tasks) && tasks.length > 0) {
                                     return (
-                                      <div className="p-4 bg-purple-50 rounded-lg">
+                                      <div className="p-4 bg-[#F5EDD7] rounded-lg">
                                         <h4 className="font-semibold mb-2">Tasks</h4>
                                         <ul className="list-disc list-inside space-y-1">
                                           {tasks.map((task: string, idx: number) => (
@@ -850,7 +850,7 @@ export const BountyManagement: React.FC<BountyManagementProps> = ({
 
                                   if (questions && Array.isArray(questions) && questions.length > 0) {
                                     return (
-                                      <div className="p-4 bg-green-50 rounded-lg">
+                                      <div className="p-4 bg-[#E8F1EE] rounded-lg">
                                         <h4 className="font-semibold mb-2">
                                           Questions to Answer When Bidding
                                         </h4>
@@ -1075,7 +1075,7 @@ export const BountyManagement: React.FC<BountyManagementProps> = ({
                                           <Button
                                             variant="outline"
                                             size="sm"
-                                            className="border-red-600 text-red-600 hover:bg-red-50"
+                                            className="border-[#8B3A3A] text-[#8B3A3A] hover:bg-[#F5E6E6]"
                                             onClick={() => {
                                               console.log(
                                                 '🚫 Cancel Bounty clicked',
@@ -1135,7 +1135,7 @@ export const BountyManagement: React.FC<BountyManagementProps> = ({
                                           <Button
                                             variant="outline"
                                             size="sm"
-                                            className="border-orange-600 text-orange-600 hover:bg-orange-50"
+                                            className="border-[#C6933F] text-[#C6933F] hover:bg-[#FAF4EC]"
                                             onClick={() => {
                                               console.log(
                                                 '⚖️ File Dispute clicked',
@@ -1221,7 +1221,7 @@ export const BountyManagement: React.FC<BountyManagementProps> = ({
                   <Card>
                     <CardContent className="pt-6">
                       <div className="text-center py-8">
-                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-4"></div>
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-sage-600 mx-auto mb-4"></div>
                         <p className="text-gray-600">
                           Loading milestone bounties...
                         </p>
@@ -1296,7 +1296,7 @@ export const BountyManagement: React.FC<BountyManagementProps> = ({
                   <Card>
                     <CardContent className="pt-6">
                       <div className="text-center py-8">
-                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-4"></div>
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-sage-600 mx-auto mb-4"></div>
                         <p className="text-gray-600">
                           Loading payment-ready bounties...
                         </p>
@@ -1478,15 +1478,15 @@ export const BountyManagement: React.FC<BountyManagementProps> = ({
                                 }}
                               />
                             ) : (
-                              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                                <p className="text-sm text-yellow-800">
+                              <div className="bg-[#FAF4EC] border border-[#E8D7B8] rounded-lg p-4">
+                                <p className="text-sm text-[#8F6B2F]">
                                   <strong>⚠️ Incomplete Data</strong>
                                 </p>
-                                <p className="text-xs text-yellow-700 mt-2">
+                                <p className="text-xs text-[#8F6B2F] mt-2">
                                   Missing required information for payment
                                   release:
                                 </p>
-                                <ul className="text-xs text-yellow-700 mt-1 ml-4 list-disc">
+                                <ul className="text-xs text-[#8F6B2F] mt-1 ml-4 list-disc">
                                   {!supabaseBounty?.onchain_id && (
                                     <li>On-chain bounty ID</li>
                                   )}
@@ -1498,7 +1498,7 @@ export const BountyManagement: React.FC<BountyManagementProps> = ({
                                   {!supabaseBounty?.creator_address &&
                                     !bounty.creator && <li>Creator address</li>}
                                 </ul>
-                                <p className="text-xs text-yellow-700 mt-2">
+                                <p className="text-xs text-[#8F6B2F] mt-2">
                                   Please ensure the bounty was properly created
                                   on-chain and a bid was approved.
                                 </p>

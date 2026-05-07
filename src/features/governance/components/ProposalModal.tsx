@@ -28,22 +28,22 @@ export const ProposalModal: React.FC<ProposalModalProps> = ({
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
-          <h2 className="text-2xl font-bold text-gray-800">{proposal.title}</h2>
+        <div className="sticky top-0 bg-white border-b border-[#D1C4A9] px-6 py-4 flex items-center justify-between">
+          <h2 className="text-2xl font-bold text-[#1F453A]">{proposal.title}</h2>
           <button
             onClick={onClose}
-            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+            className="p-2 hover:bg-sage-50 rounded-lg transition-colors"
             aria-label="Close modal"
           >
-            <X className="h-5 w-5 text-gray-500" />
+            <X className="h-5 w-5 text-sage-300" />
           </button>
         </div>
 
         {/* Content */}
         <div className="px-6 py-6 overflow-y-auto max-h-[calc(85vh-80px)]">
           {/* Metadata */}
-          <div className="mb-6 pb-4 border-b border-gray-200">
-            <div className="flex flex-wrap gap-4 text-sm text-gray-600">
+          <div className="mb-6 pb-4 border-b border-[#D1C4A9]">
+            <div className="flex flex-wrap gap-4 text-sm text-[#5F5A54]">
               <div>
                 <span className="font-medium">Created:</span>{' '}
                 {new Date(proposal.created_at).toLocaleDateString('en-US', {
@@ -134,8 +134,8 @@ export const ProposalModal: React.FC<ProposalModalProps> = ({
 
           {/* Vote Counts (if available) */}
           {proposal.scores && proposal.scores.length > 0 && (
-            <div className="mt-6 pt-6 border-t border-gray-200 mb-12">
-              <h3 className="text-lg font-semibold text-gray-800 mb-4">
+            <div className="mt-6 pt-6 border-t border-[#D1C4A9] mb-12">
+              <h3 className="text-lg font-semibold text-[#1F453A] mb-4">
                 Current Vote Tally
               </h3>
               <div className="grid grid-cols-3 gap-4 mb-4">
@@ -161,7 +161,7 @@ export const ProposalModal: React.FC<ProposalModalProps> = ({
         </div>
 
         {/* Footer */}
-        <div className="sticky bottom-0 bg-gray-50 border-t border-gray-200 px-6 py-4">
+        <div className="sticky bottom-0 bg-[#F5EDD7] border-t border-[#D1C4A9] px-6 py-4">
           <button
             onClick={onClose}
             className="w-full px-4 py-2 bg-[#2F5D50] hover:bg-[#1F453A] text-white rounded-lg font-medium transition-colors"

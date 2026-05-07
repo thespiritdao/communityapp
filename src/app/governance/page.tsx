@@ -130,8 +130,8 @@ export default function GovernancePage() {
         <main className="max-w-4xl mx-auto p-4">
           {/* Header */}
           <header className="mb-8">
-            <h1 className="text-3xl font-bold text-gray-800">Governance</h1>
-            <p className="text-gray-700 mt-2">
+            <h1 className="text-3xl font-bold text-[#2F5D50]">Governance</h1>
+            <p className="text-[#5F5A54] mt-2">
               Create and vote on proposals. Available proposals are filtered based
               on your pod memberships.
             </p>
@@ -166,13 +166,13 @@ export default function GovernancePage() {
           {/* Filter Toggle - Neutral Gray - Only show on Vote tab */}
           {activeTab === 'vote' && address && (
             <div className="mb-8 flex justify-center">
-              <div className="inline-flex rounded-lg p-1" style={{ backgroundColor: '#E8EBF0' }}>
+              <div className="inline-flex rounded-lg p-1" style={{ backgroundColor: '#E8F1EE' }}>
                 <button
                   onClick={() => setProposalFilter('votable')}
                   className="px-4 py-2 rounded-md text-sm font-medium transition-all duration-200"
                   style={{
-                    backgroundColor: proposalFilter === 'votable' ? '#5B6B7D' : 'transparent',
-                    color: proposalFilter === 'votable' ? '#FFFFFF' : '#7B8B9D',
+                    backgroundColor: proposalFilter === 'votable' ? '#2F5D50' : 'transparent',
+                    color: proposalFilter === 'votable' ? '#FFFFFF' : '#8FAAA1',
                   }}
                 >
                   My Proposals ({enhancedProposals.filter(p => p.user_can_vote).length})
@@ -181,8 +181,8 @@ export default function GovernancePage() {
                   onClick={() => setProposalFilter('all')}
                   className="px-4 py-2 rounded-md text-sm font-medium transition-all duration-200"
                   style={{
-                    backgroundColor: proposalFilter === 'all' ? '#5B6B7D' : 'transparent',
-                    color: proposalFilter === 'all' ? '#FFFFFF' : '#7B8B9D',
+                    backgroundColor: proposalFilter === 'all' ? '#2F5D50' : 'transparent',
+                    color: proposalFilter === 'all' ? '#FFFFFF' : '#8FAAA1',
                   }}
                 >
                   All Proposals ({enhancedProposals.length})
@@ -196,8 +196,8 @@ export default function GovernancePage() {
             <section aria-label="Governance proposals">
           {!address && (
             <div className="text-center p-8 bg-white rounded-lg shadow-lg">
-              <Shield className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              <p className="text-gray-600">
+              <Shield className="h-12 w-12 text-sage-300 mx-auto mb-4" />
+              <p className="text-[#5F5A54]">
                 Connect your wallet to view available proposals
               </p>
             </div>
@@ -205,13 +205,13 @@ export default function GovernancePage() {
 
           {address && proposalsLoading && (
             <div className="text-center p-8 bg-white rounded-lg shadow-lg">
-              <Loader2 className="h-8 w-8 animate-spin text-gray-400 mx-auto mb-4" />
-              <p className="text-gray-600">Loading proposals…</p>
+              <Loader2 className="h-8 w-8 animate-spin text-sage-300 mx-auto mb-4" />
+              <p className="text-[#5F5A54]">Loading proposals…</p>
             </div>
           )}
           {address && proposalsError && (
             <div className="text-center p-8 bg-white rounded-lg shadow-lg">
-              <p className="text-red-600">
+              <p className="text-earth-red-500">
                 Error loading proposals: {error?.message}
               </p>
             </div>
@@ -221,13 +221,13 @@ export default function GovernancePage() {
             !proposalsError &&
             filteredProposals.length === 0 && (
               <div className="text-center p-8 bg-white rounded-lg shadow-lg">
-                <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                <p className="text-gray-700">
+                <FileText className="h-12 w-12 text-sage-300 mx-auto mb-4" />
+                <p className="text-[#5F5A54]">
                   {proposalFilter === 'votable'
                     ? 'No proposals available for you to vote on'
                     : 'No proposals available'}
                 </p>
-                <p className="text-sm text-gray-500 mt-2">
+                <p className="text-sm text-[#8FAAA1] mt-2">
                   {proposalFilter === 'votable'
                     ? 'You can view all proposals using the "All Proposals" filter above.'
                     : 'Check back later for new governance proposals.'}
@@ -260,7 +260,7 @@ export default function GovernancePage() {
                       key={proposal.id}
                       className="proposal-card bg-white rounded-lg p-6 shadow-lg hover:shadow-xl transition-shadow cursor-pointer"
                       style={{
-                        boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1), 0 2px 4px rgba(0, 0, 0, 0.06)',
+                        boxShadow: '0 4px 12px rgba(47, 93, 80, 0.1), 0 2px 4px rgba(209, 196, 169, 0.15)',
                       }}
                       onClick={() => openProposalModal(proposal)}
                     >

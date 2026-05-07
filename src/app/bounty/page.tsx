@@ -55,7 +55,7 @@ export default function BountyPage() {
     return (
       <div className="container mx-auto py-8 bottom-nav-spacing">
         <div className="text-center py-12">
-          <p className="text-gray-600 mb-4">
+          <p className="text-[#5F5A54] mb-4">
             Please connect your wallet to access bounties.
           </p>
         </div>
@@ -123,14 +123,14 @@ export default function BountyPage() {
         )}
 
         {!podsLoading && managedPods.length === 0 && (
-          <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-            <h3 className="font-medium text-yellow-800 mb-2">
+          <div className="mb-6 p-4 bg-[#FAF4EC] border border-[#E8D7B8] rounded-lg">
+            <h3 className="font-medium text-[#8F6B2F] mb-2">
               No Pods Available for Bounty Management
             </h3>
-            <p className="text-sm text-yellow-700 mb-2">
+            <p className="text-sm text-[#8F6B2F] mb-2">
               To create and manage bounties in a pod, you need:
             </p>
-            <ul className="list-disc list-inside text-sm text-yellow-700 space-y-1">
+            <ul className="list-disc list-inside text-sm text-[#8F6B2F] space-y-1">
               <li>
                 <strong>Bounty Module ON</strong> (pod-wide setting)
               </li>
@@ -139,7 +139,7 @@ export default function BountyPage() {
                 pod)
               </li>
             </ul>
-            <p className="text-sm text-yellow-600 mt-2">
+            <p className="text-sm text-[#A67E35] mt-2">
               Contact your pod administrators to enable the bounty module or
               grant you bounty management permissions.
             </p>
@@ -166,8 +166,8 @@ export default function BountyPage() {
               canManageBounties={false}
             />
             {!selectedPodId && managedPods.length > 0 && (
-              <div className="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-                <p className="text-yellow-800">
+              <div className="mt-4 p-4 bg-[#FAF4EC] border border-[#E8D7B8] rounded-lg">
+                <p className="text-[#8F6B2F]">
                   Select a pod above to create bounties and access management
                   options.
                 </p>

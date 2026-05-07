@@ -264,17 +264,17 @@ export const ProposalVoteForm: React.FC<ProposalVoteFormProps> = ({
       case 3:
         return { backgroundColor: '#F5E6E6', color: '#5C1F1F' }; // Failed
       case 7:
-        return { backgroundColor: '#EDEAF0', color: '#574C66' }; // Executed
+        return { backgroundColor: '#D1E6DC', color: '#1F453A' }; // Executed
       case 2:
-        return { backgroundColor: '#f3f4f6', color: '#1f2937' }; // Canceled
+        return { backgroundColor: '#FAF4EC', color: '#8F6B2F' }; // Canceled
       case 6:
         return { backgroundColor: '#FAF4EC', color: '#8F6B2F' }; // Expired
       case 5:
         return { backgroundColor: '#FAF4EC', color: '#A67E35' }; // Queued
       case 0:
-        return { backgroundColor: '#f3f4f6', color: '#1f2937' }; // Pending
+        return { backgroundColor: '#E8F1EE', color: '#2F5D50' }; // Pending
       default:
-        return { backgroundColor: '#f3f4f6', color: '#1f2937' };
+        return { backgroundColor: '#E8F1EE', color: '#2F5D50' };
     }
   };
 
@@ -378,7 +378,7 @@ export const ProposalVoteForm: React.FC<ProposalVoteFormProps> = ({
                 <button
                   onClick={handleCDPVote}
                   disabled={!canVote || selectedVote === null || isLoading}
-                  className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full bg-sage-600 hover:bg-sage-700 text-white font-semibold py-2 px-4 rounded disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {isLoading ? 'Submitting Vote...' : 'Submit Vote'}
                 </button>

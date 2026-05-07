@@ -44,7 +44,7 @@
   font-weight: 600;
   font-size: 1rem;
   background: transparent;
-  color: #000;
+  color: #1F453A;
   transition: border-color 0.2s, background 0.2s;
   cursor: pointer;
 }
@@ -55,7 +55,7 @@
   border-color: #8B3A3A; /* DESTRUCTIVE */
 }
 .vote-option.abstain {
-  border-color: #6b7280; /* gray-500 - neutral, keep as is */
+  border-color: #8FAAA1; /* Muted sage */
 }
 .vote-option.selected {
   background: rgba(63, 122, 90, 0.07); /* subtle SUCCESS tint for selected */
@@ -64,5 +64,5 @@
   background: rgba(139, 58, 58, 0.07); /* subtle DESTRUCTIVE tint for selected */
 }
 .vote-option.abstain.selected {
-  background: rgba(107, 114, 128, 0.07); /* subtle gray tint for selected */
+  background: rgba(143, 170, 161, 0.1); /* subtle sage tint for selected */
 } 

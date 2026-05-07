@@ -236,25 +236,25 @@ const VoteButton: React.FC<VoteButtonProps> = ({
         return {
           bg: '#3F7A5A', // Success Green
           hover: '#2F5D50',
-          processing: '#6B7280'
+          processing: '#8FAAA1'
         };
       case 2: // Against
         return {
           bg: '#8B3A3A', // Earthen Red
           hover: '#5C1F1F',
-          processing: '#6B7280'
+          processing: '#8FAAA1'
         };
       case 3: // Abstain
         return {
-          bg: '#6b7280', // Gray
-          hover: '#4b5563',
-          processing: '#6B7280'
+          bg: '#8FAAA1', // Muted Sage
+          hover: '#6F8F86',
+          processing: '#8FAAA1'
         };
       default:
         return {
           bg: '#2F5D50',
           hover: '#1F453A',
-          processing: '#6B7280'
+          processing: '#8FAAA1'
         };
     }
   };
