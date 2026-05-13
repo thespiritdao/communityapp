@@ -24,10 +24,14 @@ import {
   Info,
   BookOpen,
   GitBranch,
+  ChevronDown,
+  ChevronUp,
+  ClipboardCheck,
 } from 'lucide-react';
 import PodChatManager from './PodChatManager';
 import PodForumManager from './PodForumManager';
 import PodKnowledgeManager from './PodKnowledgeManager';
+import PodSurveyManager from './PodSurveyManager';
 
 interface PodModulesManagerProps {
   podId: string;
@@ -46,6 +50,7 @@ interface PodModules {
   marketplace_enabled: boolean;
   knowledge_base_enabled: boolean;
   sub_pods_enabled: boolean;
+  surveys_enabled: boolean;
   chat_config?: any;
   forum_config?: any;
   treasury_config?: any;
@@ -54,9 +59,20 @@ interface PodModules {
   marketplace_config?: any;
   knowledge_base_config?: any;
   sub_pods_config?: any;
+  surveys_config?: any;
 }
 
-const MODULE_INFO = [
+interface ModuleInfo {
+  key: string;
+  label: string;
+  description: string;
+  icon: any;
+  color: string;
+  bgColor: string;
+  configComponent: string | null;
+}
+
+const CORE_MODULES: ModuleInfo[] = [
   {
     key: 'chat_enabled',
     label: 'Chat Channels',
@@ -131,6 +147,18 @@ const MODULE_INFO = [
   },
 ];
 
+const ADDON_MODULES: ModuleInfo[] = [
+  {
+    key: 'surveys_enabled',
+    label: 'Surveys',
+    description: 'Create and distribute surveys to your pod members and sub-pods',
+    icon: ClipboardCheck,
+    color: '#6A5F7A',
+    bgColor: '#EDEAF0',
+    configComponent: 'surveys',
+  },
+];
+
 export default function PodModulesManager({
   podId,
   podName,
@@ -147,10 +175,13 @@ export default function PodModulesManager({
     marketplace_enabled: false,
     knowledge_base_enabled: false,
     sub_pods_enabled: false,
+    surveys_enabled: false,
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [expandedModule, setExpandedModule] = useState<string | null>(null);
+  const [coreExpanded, setCoreExpanded] = useState(true);
+  const [addonsExpanded, setAddonsExpanded] = useState(true);
 
   // Load pod modules configuration
   useEffect(() => {
@@ -179,6 +210,7 @@ export default function PodModulesManager({
           marketplace_enabled: data.marketplace_enabled ?? false,
           knowledge_base_enabled: data.knowledge_base_enabled ?? false,
           sub_pods_enabled: data.sub_pods_enabled ?? false,
+          surveys_enabled: data.surveys_enabled ?? false,
           chat_config: data.chat_config,
           forum_config: data.forum_config,
           treasury_config: data.treasury_config,
@@ -187,6 +219,7 @@ export default function PodModulesManager({
           marketplace_config: data.marketplace_config,
           knowledge_base_config: data.knowledge_base_config,
           sub_pods_config: data.sub_pods_config,
+          surveys_config: data.surveys_config,
         });
       }
     } catch (error) {
@@ -227,13 +260,15 @@ export default function PodModulesManager({
         [moduleKey]: enabled,
       }));
 
-      // If enabling chat, forum, or knowledge base, expand it to show configuration
+      // If enabling configurable modules, expand to show configuration
       if (moduleKey === 'chat_enabled' && enabled) {
         setExpandedModule('chat');
       } else if (moduleKey === 'forum_enabled' && enabled) {
         setExpandedModule('forum');
       } else if (moduleKey === 'knowledge_base_enabled' && enabled) {
         setExpandedModule('knowledge');
+      } else if (moduleKey === 'surveys_enabled' && enabled) {
+        setExpandedModule('surveys');
       }
 
       console.log('PodModulesManager: Module toggle completed successfully');
@@ -247,6 +282,131 @@ export default function PodModulesManager({
     } finally {
       setSaving(false);
     }
+  };
+
+  const renderModuleCard = (module: ModuleInfo) => {
+    const Icon = module.icon;
+    const isEnabled = modules[module.key as keyof PodModules] as boolean;
+    const isExpanded = expandedModule === module.configComponent;
+
+    return (
+      <div key={module.key} className="space-y-3">
+        <Card
+          className="p-4"
+          style={{
+            backgroundColor: isEnabled ? module.bgColor : '#f9fafb',
+          }}
+        >
+          <div className="flex items-start justify-between">
+            <div className="flex gap-3">
+              <div
+                className="mt-1"
+                style={{ color: isEnabled ? module.color : '#9ca3af' }}
+              >
+                <Icon className="h-5 w-5" />
+              </div>
+              <div className="space-y-1">
+                <Label
+                  htmlFor={module.key}
+                  className="text-base font-medium cursor-pointer"
+                >
+                  {module.label}
+                </Label>
+                <p className="text-sm text-muted-foreground">
+                  {module.description}
+                </p>
+              </div>
+            </div>
+            <EnhancedToggle
+              id={module.key}
+              checked={isEnabled}
+              onCheckedChange={(checked) =>
+                toggleModule(module.key, checked)
+              }
+              disabled={!isManager || saving}
+              size="md"
+              variant="button"
+            />
+          </div>
+
+          {/* Show configuration button for enabled modules with config */}
+          {isEnabled && module.configComponent && (
+            <div className="mt-3 pt-3 border-t">
+              <button
+                onClick={() =>
+                  setExpandedModule(
+                    isExpanded ? null : module.configComponent,
+                  )
+                }
+                className="text-sm text-primary hover:underline"
+              >
+                {isExpanded ? 'Hide' : 'Configure'} {module.label}
+              </button>
+            </div>
+          )}
+        </Card>
+
+        {/* Expanded configuration panel */}
+        {isExpanded &&
+          module.configComponent === 'chat' &&
+          modules.chat_enabled && (
+            <Card className="mt-4 p-4 bg-gray-50">
+              <PodChatManager
+                podId={podId}
+                podName={podName}
+                managementHatId={managementHatId || ''}
+                membershipHatId={membershipHatId}
+                isManager={isManager}
+              />
+            </Card>
+          )}
+
+        {/* Forum configuration panel */}
+        {isExpanded &&
+          module.configComponent === 'forum' &&
+          modules.forum_enabled && (
+            <Card className="mt-4 p-4 bg-gray-50">
+              <PodForumManager
+                podId={podId}
+                podName={podName}
+                managementHatId={managementHatId || ''}
+                membershipHatId={membershipHatId}
+                isManager={isManager}
+              />
+            </Card>
+          )}
+
+        {/* Knowledge Base configuration panel */}
+        {isExpanded &&
+          module.configComponent === 'knowledge' &&
+          modules.knowledge_base_enabled && (
+            <div className="mt-4">
+              <PodKnowledgeManager
+                podId={podId}
+                podName={podName}
+                managementHatId={managementHatId || ''}
+                membershipHatId={membershipHatId}
+                isManager={isManager}
+              />
+            </div>
+          )}
+
+        {/* Surveys configuration panel */}
+        {isExpanded &&
+          module.configComponent === 'surveys' &&
+          modules.surveys_enabled && (
+            <div className="mt-4">
+              <PodSurveyManager
+                podId={podId}
+                podName={podName}
+                managementHatId={managementHatId || ''}
+                membershipHatId={membershipHatId}
+                isManager={isManager}
+              />
+            </div>
+          )}
+      </div>
+    );
   };
 
   if (loading) {
@@ -279,118 +439,58 @@ export default function PodModulesManager({
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
-          {MODULE_INFO.map((module) => {
-            const Icon = module.icon;
-            const isEnabled = modules[
-              module.key as keyof PodModules
-            ] as boolean;
-            const isExpanded = expandedModule === module.configComponent;
-
-            return (
-              <div key={module.key} className="space-y-3">
-                <Card
-                  className="p-4"
-                  style={{
-                    backgroundColor: isEnabled ? module.bgColor : '#f9fafb',
-                  }}
-                >
-                  <div className="flex items-start justify-between">
-                    <div className="flex gap-3">
-                      <div
-                        className="mt-1"
-                        style={{ color: isEnabled ? module.color : '#9ca3af' }}
-                      >
-                        <Icon className="h-5 w-5" />
-                      </div>
-                      <div className="space-y-1">
-                        <Label
-                          htmlFor={module.key}
-                          className="text-base font-medium cursor-pointer"
-                        >
-                          {module.label}
-                        </Label>
-                        <p className="text-sm text-muted-foreground">
-                          {module.description}
-                        </p>
-                      </div>
-                    </div>
-                    <EnhancedToggle
-                      id={module.key}
-                      checked={isEnabled}
-                      onCheckedChange={(checked) =>
-                        toggleModule(module.key, checked)
-                      }
-                      disabled={!isManager || saving}
-                      size="md"
-                      variant="button"
-                    />
-                  </div>
-
-                  {/* Show configuration button for enabled modules with config */}
-                  {isEnabled && module.configComponent && (
-                    <div className="mt-3 pt-3 border-t">
-                      <button
-                        onClick={() =>
-                          setExpandedModule(
-                            isExpanded ? null : module.configComponent,
-                          )
-                        }
-                        className="text-sm text-primary hover:underline"
-                      >
-                        {isExpanded ? 'Hide' : 'Configure'} {module.label}
-                      </button>
-                    </div>
-                  )}
-                </Card>
-
-                {/* Expanded configuration panel */}
-                {isExpanded &&
-                  module.configComponent === 'chat' &&
-                  modules.chat_enabled && (
-                    <Card className="mt-4 p-4 bg-gray-50">
-                      <PodChatManager
-                        podId={podId}
-                        podName={podName}
-                        managementHatId={managementHatId || ''}
-                        membershipHatId={membershipHatId}
-                        isManager={isManager}
-                      />
-                    </Card>
-                  )}
-
-                {/* Forum configuration panel */}
-                {isExpanded &&
-                  module.configComponent === 'forum' &&
-                  modules.forum_enabled && (
-                    <Card className="mt-4 p-4 bg-gray-50">
-                      <PodForumManager
-                        podId={podId}
-                        podName={podName}
-                        managementHatId={managementHatId || ''}
-                        membershipHatId={membershipHatId}
-                        isManager={isManager}
-                      />
-                    </Card>
-                  )}
-
-                {/* Knowledge Base configuration panel */}
-                {isExpanded &&
-                  module.configComponent === 'knowledge' &&
-                  modules.knowledge_base_enabled && (
-                    <div className="mt-4">
-                      <PodKnowledgeManager
-                        podId={podId}
-                        podName={podName}
-                        managementHatId={managementHatId || ''}
-                        membershipHatId={membershipHatId}
-                        isManager={isManager}
-                      />
-                    </div>
-                  )}
-
+          {/* Core Modules Section */}
+          <div>
+            <button
+              onClick={() => setCoreExpanded(!coreExpanded)}
+              className="flex items-center justify-between w-full py-2 px-1 text-left rounded-md hover:bg-gray-50 transition-colors"
+            >
+              <span
+                className="text-xs font-semibold uppercase tracking-wider"
+                style={{ color: '#5F5A54' }}
+              >
+                Core
+              </span>
+              {coreExpanded ? (
+                <ChevronUp className="h-4 w-4" style={{ color: '#5F5A54' }} />
+              ) : (
+                <ChevronDown className="h-4 w-4" style={{ color: '#5F5A54' }} />
+              )}
+            </button>
+            {coreExpanded && (
+              <div className="space-y-3 mt-2">
+                {CORE_MODULES.map(renderModuleCard)}
               </div>
-            );
-          })}
+            )}
+          </div>
+
+          {/* Divider */}
+          <div className="border-t" style={{ borderColor: '#E8E4DC' }} />
+
+          {/* Add-Ons Section */}
+          <div>
+            <button
+              onClick={() => setAddonsExpanded(!addonsExpanded)}
+              className="flex items-center justify-between w-full py-2 px-1 text-left rounded-md hover:bg-gray-50 transition-colors"
+            >
+              <span
+                className="text-xs font-semibold uppercase tracking-wider"
+                style={{ color: '#5F5A54' }}
+              >
+                Add-Ons
+              </span>
+              {addonsExpanded ? (
+                <ChevronUp className="h-4 w-4" style={{ color: '#5F5A54' }} />
+              ) : (
+                <ChevronDown className="h-4 w-4" style={{ color: '#5F5A54' }} />
+              )}
+            </button>
+            {addonsExpanded && (
+              <div className="space-y-3 mt-2">
+                {ADDON_MODULES.map(renderModuleCard)}
+              </div>
+            )}
+          </div>
         </CardContent>
       </Card>
 

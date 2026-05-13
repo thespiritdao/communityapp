@@ -168,6 +168,7 @@ function determineCategory(notificationType: string): string {
     notificationType === 'pod_rejected'
   ) return 'governance';
   if (notificationType.startsWith('pod_')) return 'pod';
+  if (notificationType.startsWith('survey_')) return 'pod';
   if (notificationType.startsWith('bounty_')) return 'bounty';
   if (notificationType.startsWith('chat_')) return 'chat';
   if (notificationType.startsWith('forum_')) return 'forum';

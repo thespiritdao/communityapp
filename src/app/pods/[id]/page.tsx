@@ -32,6 +32,7 @@ import {
 import { supabase } from '@/utils/supabaseClient';
 import dynamic from 'next/dynamic';
 import { PersonalCalendar } from '@/features/events/components/PersonalCalendar';
+import ActiveSurveysBanner from '@/features/surveys/components/ActiveSurveysBanner';
 import '../../../features/home/styles/HomePage.css';
 
 // Lazy load the agreement signing modal (fixes SSR issues)
@@ -430,6 +431,11 @@ export default function PodDetailPage() {
           <div>
             <p className="text-gray-700">{pod.description}</p>
           </div>
+
+          {/* Active Surveys Banner */}
+          {id && address && (
+            <ActiveSurveysBanner podId={String(id)} />
+          )}
 
           {/* Agreements Section */}
           {agreementCriteria.length > 0 && (

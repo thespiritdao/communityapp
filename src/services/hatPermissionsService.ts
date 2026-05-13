@@ -96,6 +96,8 @@ export interface HatPermissions {
   marketplaceManage: boolean;
   knowledgeBaseAccess: boolean; // 🆕 View knowledge base items
   knowledgeBaseManage: boolean; // 🆕 Create/edit categories and upload content
+  surveyManage: boolean; // Create/edit/close surveys
+  surveyRespond: boolean; // Respond to surveys
 }
 
 export interface HatRole {
@@ -130,6 +132,8 @@ export const HAT_ROLES: Record<string, HatRole> = {
       marketplaceManage: true,
       knowledgeBaseAccess: true,
       knowledgeBaseManage: true,
+      surveyManage: true,
+      surveyRespond: true,
     },
   },
   // Legacy management roles (maintained for compatibility)
@@ -154,6 +158,8 @@ export const HAT_ROLES: Record<string, HatRole> = {
       marketplaceManage: true,
       knowledgeBaseAccess: false,
       knowledgeBaseManage: false,
+      surveyManage: false,
+      surveyRespond: true,
     },
   },
   BOUNTY_MANAGER: {
@@ -177,6 +183,8 @@ export const HAT_ROLES: Record<string, HatRole> = {
       marketplaceManage: false,
       knowledgeBaseAccess: false,
       knowledgeBaseManage: false,
+      surveyManage: false,
+      surveyRespond: true,
     },
   },
   FORUM_MANAGER: {
@@ -200,6 +208,8 @@ export const HAT_ROLES: Record<string, HatRole> = {
       marketplaceManage: false,
       knowledgeBaseAccess: false,
       knowledgeBaseManage: false,
+      surveyManage: false,
+      surveyRespond: true,
     },
   },
   CHAT_MANAGER: {
@@ -223,6 +233,8 @@ export const HAT_ROLES: Record<string, HatRole> = {
       marketplaceManage: false,
       knowledgeBaseAccess: false,
       knowledgeBaseManage: false,
+      surveyManage: false,
+      surveyRespond: true,
     },
   },
   EVENT_MANAGER: {
@@ -246,6 +258,8 @@ export const HAT_ROLES: Record<string, HatRole> = {
       marketplaceManage: false,
       knowledgeBaseAccess: false,
       knowledgeBaseManage: false,
+      surveyManage: false,
+      surveyRespond: true,
     },
   },
 };
@@ -380,6 +394,8 @@ export class HatPermissionsService {
       marketplaceManage: false,
       knowledgeBaseAccess: false,
       knowledgeBaseManage: false,
+      surveyManage: false,
+      surveyRespond: false,
     };
 
     // Combine permissions from all roles (OR operation)

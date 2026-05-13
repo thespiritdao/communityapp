@@ -24,6 +24,7 @@ import {
   Eye,
   Video,
   Image as ImageIcon,
+  Download,
 } from 'lucide-react';
 import type {
   KnowledgeCategory,
@@ -68,6 +69,7 @@ export default function PodKnowledgeManager({
   const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
   const [thumbnailPreview, setThumbnailPreview] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [exporting, setExporting] = useState(false);
 
   useEffect(() => {
     loadKnowledgeBase();
@@ -284,6 +286,36 @@ export default function PodKnowledgeManager({
     }
   };
 
+  const handleExport = async () => {
+    if (exporting) return;
+    setExporting(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      if (!token) throw new Error('Not authenticated');
+
+      const res = await fetch(`/api/pods/${podId}/knowledge/export`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error('Export failed');
+
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `knowledge-export-${podName.replace(/[^a-zA-Z0-9_-]/g, '_')}.zip`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Error exporting knowledge base:', error);
+      alert('Failed to export. Please try again.');
+    } finally {
+      setExporting(false);
+    }
+  };
+
   if (!isManager) {
     return (
       <Card>
@@ -315,13 +347,27 @@ export default function PodKnowledgeManager({
           <div className="w-full mb-6">
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-lg font-semibold">Categories</h3>
-              <Button
-                onClick={() => setShowCreateCategory(!showCreateCategory)}
-                size="sm"
-                style={{ backgroundColor: '#2F5D50', color: '#FFFFFF' }}
-              >
-                Add
-              </Button>
+              <div className="flex gap-2">
+                {items.length > 0 && (
+                  <Button
+                    onClick={handleExport}
+                    disabled={exporting}
+                    size="sm"
+                    variant="outline"
+                    style={{ borderColor: '#2F5D50', color: '#2F5D50' }}
+                  >
+                    <Download size={16} className="mr-1" />
+                    {exporting ? 'Exporting...' : 'Export All'}
+                  </Button>
+                )}
+                <Button
+                  onClick={() => setShowCreateCategory(!showCreateCategory)}
+                  size="sm"
+                  style={{ backgroundColor: '#2F5D50', color: '#FFFFFF' }}
+                >
+                  Add
+                </Button>
+              </div>
             </div>
 
             {/* Create Category Form */}

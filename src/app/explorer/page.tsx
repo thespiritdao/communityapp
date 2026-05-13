@@ -12,7 +12,7 @@ import { Bot } from 'lucide-react';
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
-type FilterTab = 'all' | 'pods' | 'governance' | 'treasury' | 'members' | 'bounties' | 'events' | 'marketplace' | 'forum' | 'knowledge';
+type FilterTab = 'all' | 'pods' | 'governance' | 'treasury' | 'members' | 'bounties' | 'events' | 'marketplace' | 'forum' | 'knowledge' | 'surveys';
 
 interface ExplorerResponse {
   items: ExplorerEvent[];
@@ -208,6 +208,9 @@ const EVENT_COLORS: Record<string, string> = {
   knowledge_item_updated: PALETTE.contemplative,
   // community agent — AI/contemplative
   agent_enabled: PALETTE.contemplative,
+  // surveys — community input/contemplation
+  survey_published: PALETTE.ritualGreen,
+  survey_response_submitted: PALETTE.mutedSage,
 };
 
 const EventCard = styled.div<{ $type: string }>`
@@ -379,6 +382,8 @@ const TYPE_LABELS: Record<string, string> = {
   knowledge_item_published: 'Published',
   knowledge_item_updated: 'Updated',
   agent_enabled: 'AI Agent',
+  survey_published: 'Survey',
+  survey_response_submitted: 'Response',
 };
 
 const TAB_LABELS: Record<FilterTab, string> = {
@@ -392,6 +397,7 @@ const TAB_LABELS: Record<FilterTab, string> = {
   marketplace: 'Marketplace',
   forum: 'Forum',
   knowledge: 'Knowledge',
+  surveys: 'Surveys',
 };
 
 

@@ -23,7 +23,8 @@ export type ExplorerCategory =
   | 'events'
   | 'marketplace'
   | 'forum'
-  | 'knowledge';
+  | 'knowledge'
+  | 'surveys';
 
 export type ExplorerEventType =
   // pods
@@ -103,7 +104,10 @@ export type ExplorerEventType =
   | 'chat_first_message_in_pod'
   | 'chat_agent_reply'
   // community agent
-  | 'agent_enabled';
+  | 'agent_enabled'
+  // surveys
+  | 'survey_published'
+  | 'survey_response_submitted';
 
 export const EVENT_CATEGORY: Record<ExplorerEventType, ExplorerCategory> = {
   pod_created: 'pods',
@@ -183,6 +187,9 @@ export const EVENT_CATEGORY: Record<ExplorerEventType, ExplorerCategory> = {
   chat_agent_reply: 'members',
 
   agent_enabled: 'pods',
+
+  survey_published: 'surveys',
+  survey_response_submitted: 'surveys',
 };
 
 // ── Helper ────────────────────────────────────────────────────────────────────
