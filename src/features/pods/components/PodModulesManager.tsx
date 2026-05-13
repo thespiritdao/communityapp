@@ -27,11 +27,11 @@ import {
   ChevronDown,
   ChevronUp,
   ClipboardCheck,
+  Bot,
 } from 'lucide-react';
 import PodChatManager from './PodChatManager';
 import PodForumManager from './PodForumManager';
 import PodKnowledgeManager from './PodKnowledgeManager';
-import PodSurveyManager from './PodSurveyManager';
 
 interface PodModulesManagerProps {
   podId: string;
@@ -39,6 +39,8 @@ interface PodModulesManagerProps {
   isManager: boolean;
   managementHatId?: string;
   membershipHatId?: string;
+  /** Called when a module that creates a dedicated tab is toggled */
+  onModuleToggle?: (moduleKey: string, enabled: boolean) => void;
 }
 
 interface PodModules {
@@ -51,6 +53,7 @@ interface PodModules {
   knowledge_base_enabled: boolean;
   sub_pods_enabled: boolean;
   surveys_enabled: boolean;
+  community_agent_enabled: boolean;
   chat_config?: any;
   forum_config?: any;
   treasury_config?: any;
@@ -60,6 +63,7 @@ interface PodModules {
   knowledge_base_config?: any;
   sub_pods_config?: any;
   surveys_config?: any;
+  community_agent_config?: any;
 }
 
 interface ModuleInfo {
@@ -70,6 +74,8 @@ interface ModuleInfo {
   color: string;
   bgColor: string;
   configComponent: string | null;
+  /** When true, enabling this module creates a dedicated tab in the pod management menu */
+  createsTab?: boolean;
 }
 
 const CORE_MODULES: ModuleInfo[] = [
@@ -155,7 +161,21 @@ const ADDON_MODULES: ModuleInfo[] = [
     icon: ClipboardCheck,
     color: '#6A5F7A',
     bgColor: '#EDEAF0',
-    configComponent: 'surveys',
+    configComponent: null,
+    createsTab: true,
+  },
+];
+
+const PAID_MODULES: ModuleInfo[] = [
+  {
+    key: 'community_agent_enabled',
+    label: 'Community AI Agent',
+    description: 'AI-powered agent that posts daily discussions, replies to mentions, and generates events',
+    icon: Bot,
+    color: '#7A6E8F',
+    bgColor: '#EDEAF0',
+    configComponent: null,
+    createsTab: true,
   },
 ];
 
@@ -165,6 +185,7 @@ export default function PodModulesManager({
   isManager,
   managementHatId,
   membershipHatId,
+  onModuleToggle,
 }: PodModulesManagerProps) {
   const [modules, setModules] = useState<PodModules>({
     chat_enabled: false,
@@ -176,12 +197,14 @@ export default function PodModulesManager({
     knowledge_base_enabled: false,
     sub_pods_enabled: false,
     surveys_enabled: false,
+    community_agent_enabled: false,
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [expandedModule, setExpandedModule] = useState<string | null>(null);
-  const [coreExpanded, setCoreExpanded] = useState(true);
-  const [addonsExpanded, setAddonsExpanded] = useState(true);
+  const [coreExpanded, setCoreExpanded] = useState(false);
+  const [addonsExpanded, setAddonsExpanded] = useState(false);
+  const [paidExpanded, setPaidExpanded] = useState(false);
 
   // Load pod modules configuration
   useEffect(() => {
@@ -211,6 +234,7 @@ export default function PodModulesManager({
           knowledge_base_enabled: data.knowledge_base_enabled ?? false,
           sub_pods_enabled: data.sub_pods_enabled ?? false,
           surveys_enabled: data.surveys_enabled ?? false,
+          community_agent_enabled: data.community_agent_enabled ?? false,
           chat_config: data.chat_config,
           forum_config: data.forum_config,
           treasury_config: data.treasury_config,
@@ -220,6 +244,7 @@ export default function PodModulesManager({
           knowledge_base_config: data.knowledge_base_config,
           sub_pods_config: data.sub_pods_config,
           surveys_config: data.surveys_config,
+          community_agent_config: data.community_agent_config,
         });
       }
     } catch (error) {
@@ -267,8 +292,11 @@ export default function PodModulesManager({
         setExpandedModule('forum');
       } else if (moduleKey === 'knowledge_base_enabled' && enabled) {
         setExpandedModule('knowledge');
-      } else if (moduleKey === 'surveys_enabled' && enabled) {
-        setExpandedModule('surveys');
+      }
+
+      // Notify parent when a tab-creating module is toggled
+      if (onModuleToggle) {
+        onModuleToggle(moduleKey, enabled);
       }
 
       console.log('PodModulesManager: Module toggle completed successfully');
@@ -344,6 +372,15 @@ export default function PodModulesManager({
               </button>
             </div>
           )}
+
+          {/* Hint for modules that create their own tab */}
+          {isEnabled && module.createsTab && (
+            <div className="mt-3 pt-3 border-t">
+              <p className="text-xs" style={{ color: '#5F5A54' }}>
+                A <strong>{module.label}</strong> tab has been added to your pod menu above.
+              </p>
+            </div>
+          )}
         </Card>
 
         {/* Expanded configuration panel */}
@@ -391,20 +428,6 @@ export default function PodModulesManager({
             </div>
           )}
 
-        {/* Surveys configuration panel */}
-        {isExpanded &&
-          module.configComponent === 'surveys' &&
-          modules.surveys_enabled && (
-            <div className="mt-4">
-              <PodSurveyManager
-                podId={podId}
-                podName={podName}
-                managementHatId={managementHatId || ''}
-                membershipHatId={membershipHatId}
-                isManager={isManager}
-              />
-            </div>
-          )}
       </div>
     );
   };
@@ -488,6 +511,34 @@ export default function PodModulesManager({
             {addonsExpanded && (
               <div className="space-y-3 mt-2">
                 {ADDON_MODULES.map(renderModuleCard)}
+              </div>
+            )}
+          </div>
+
+          {/* Divider */}
+          <div className="border-t" style={{ borderColor: '#E8E4DC' }} />
+
+          {/* Paid Section */}
+          <div>
+            <button
+              onClick={() => setPaidExpanded(!paidExpanded)}
+              className="flex items-center justify-between w-full py-2 px-1 text-left rounded-md hover:bg-gray-50 transition-colors"
+            >
+              <span
+                className="text-xs font-semibold uppercase tracking-wider"
+                style={{ color: '#5F5A54' }}
+              >
+                Paid
+              </span>
+              {paidExpanded ? (
+                <ChevronUp className="h-4 w-4" style={{ color: '#5F5A54' }} />
+              ) : (
+                <ChevronDown className="h-4 w-4" style={{ color: '#5F5A54' }} />
+              )}
+            </button>
+            {paidExpanded && (
+              <div className="space-y-3 mt-2">
+                {PAID_MODULES.map(renderModuleCard)}
               </div>
             )}
           </div>

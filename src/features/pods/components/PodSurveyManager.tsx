@@ -478,47 +478,21 @@ export default function PodSurveyManager({
                     {questions.map((q, qIndex) => (
                       <Card key={qIndex} className="p-3" style={{ backgroundColor: '#FFFFFF' }}>
                         <div className="space-y-2">
-                          <div className="flex items-start gap-2">
-                            <span className="text-sm font-medium mt-2" style={{ color: '#5F5A54' }}>
+                          {/* Question text — full width */}
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-medium flex-shrink-0" style={{ color: '#5F5A54' }}>
                               {qIndex + 1}.
                             </span>
-                            <div className="flex-1">
-                              <Input
-                                value={q.question_text}
-                                onChange={(e) => updateQuestion(qIndex, { question_text: e.target.value })}
-                                placeholder="Enter your question"
-                              />
-                            </div>
-                            <div className="flex gap-1">
-                              <Button
-                                onClick={() => moveQuestion(qIndex, 'up')}
-                                disabled={qIndex === 0}
-                                size="sm"
-                                variant="ghost"
-                              >
-                                <ArrowUp size={14} />
-                              </Button>
-                              <Button
-                                onClick={() => moveQuestion(qIndex, 'down')}
-                                disabled={qIndex === questions.length - 1}
-                                size="sm"
-                                variant="ghost"
-                              >
-                                <ArrowDown size={14} />
-                              </Button>
-                              <Button
-                                onClick={() => removeQuestion(qIndex)}
-                                disabled={questions.length <= 1}
-                                size="sm"
-                                variant="ghost"
-                                style={{ color: '#8B3A3A' }}
-                              >
-                                <Trash2 size={14} />
-                              </Button>
-                            </div>
+                            <Input
+                              value={q.question_text}
+                              onChange={(e) => updateQuestion(qIndex, { question_text: e.target.value })}
+                              placeholder="Enter your question"
+                              className="flex-1"
+                            />
                           </div>
 
-                          <div className="flex items-center gap-3 ml-6">
+                          {/* Controls row — type, rating, required, reorder, delete */}
+                          <div className="flex items-center flex-wrap gap-2 ml-6">
                             <select
                               value={q.question_type}
                               onChange={(e) => updateQuestion(qIndex, { question_type: e.target.value as any })}
@@ -544,15 +518,46 @@ export default function PodSurveyManager({
                               </select>
                             )}
 
-                            <label className="flex items-center gap-1 text-xs" style={{ color: '#5F5A54' }}>
+                            <label className="flex items-center gap-1 text-xs flex-shrink-0" style={{ color: '#5F5A54' }}>
                               <input
                                 type="checkbox"
                                 checked={q.is_required}
                                 onChange={(e) => updateQuestion(qIndex, { is_required: e.target.checked })}
                                 className="rounded"
                               />
-                              Required
+                              Req
                             </label>
+
+                            <div className="flex gap-0.5 ml-auto flex-shrink-0">
+                              <Button
+                                onClick={() => moveQuestion(qIndex, 'up')}
+                                disabled={qIndex === 0}
+                                size="sm"
+                                variant="ghost"
+                                className="h-7 w-7 p-0"
+                              >
+                                <ArrowUp size={14} />
+                              </Button>
+                              <Button
+                                onClick={() => moveQuestion(qIndex, 'down')}
+                                disabled={qIndex === questions.length - 1}
+                                size="sm"
+                                variant="ghost"
+                                className="h-7 w-7 p-0"
+                              >
+                                <ArrowDown size={14} />
+                              </Button>
+                              <Button
+                                onClick={() => removeQuestion(qIndex)}
+                                disabled={questions.length <= 1}
+                                size="sm"
+                                variant="ghost"
+                                className="h-7 w-7 p-0"
+                                style={{ color: '#8B3A3A' }}
+                              >
+                                <Trash2 size={14} />
+                              </Button>
+                            </div>
                           </div>
 
                           {/* Options editor for MC/SS */}

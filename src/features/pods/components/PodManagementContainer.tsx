@@ -23,6 +23,7 @@ import {
   Image as ImageIcon,
   GitBranch,
   Coins,
+  ClipboardCheck,
   Bot,
 } from 'lucide-react';
 import { MembersPanel } from './MembersPanel/MembersPanel';
@@ -36,7 +37,9 @@ import { PodSettingsPanel } from './PodSettingsPanel';
 import { SubPodReviewPanel } from './SubPodReviewPanel';
 import { ClaimsManagementPanel } from './ClaimsManagementPanel';
 import { DonationsManagementPanel } from './DonationsManagementPanel';
+import PodSurveyManager from './PodSurveyManager';
 import PodAgentsPanel from './PodAgentsPanel';
+
 import { usePodManagementState } from '../hooks/usePodManagementState';
 import { usePodManagementHandlers } from '../hooks/usePodManagementHandlers';
 import '../styles/tab-navigation.css';
@@ -67,6 +70,7 @@ const TabContent = React.memo<{
   isExecPod: boolean;
   onRemoveMember?: (address: string, requiresVote: boolean) => void;
   onPodDeleted?: () => void;
+  onModuleToggle?: (moduleKey: string, enabled: boolean) => void;
 }>(
   ({
     activeTab,
@@ -83,6 +87,7 @@ const TabContent = React.memo<{
     isExecPod,
     onRemoveMember,
     onPodDeleted,
+    onModuleToggle,
   }) => {
     switch (activeTab) {
       case 'members':
@@ -145,17 +150,7 @@ const TabContent = React.memo<{
               isManager={canManageMembers}
               managementHatId={pod?.management_hat_id}
               membershipHatId={pod?.membership_hat_id}
-            />
-          </div>
-        );
-
-      case 'agents':
-        return (
-          <div className="p-6">
-            <PodAgentsPanel
-              podId={podId}
-              podName={pod?.name || 'Unknown Pod'}
-              isManager={canManageMembers}
+              onModuleToggle={onModuleToggle}
             />
           </div>
         );
@@ -208,6 +203,30 @@ const TabContent = React.memo<{
           </div>
         );
 
+      case 'surveys':
+        return (
+          <div className="p-6">
+            <PodSurveyManager
+              podId={podId}
+              podName={pod?.name || 'Unknown Pod'}
+              managementHatId={pod?.management_hat_id || ''}
+              membershipHatId={pod?.membership_hat_id}
+              isManager={canManageMembers}
+            />
+          </div>
+        );
+
+      case 'agents':
+        return (
+          <div className="p-6">
+            <PodAgentsPanel
+              podId={podId}
+              podName={pod?.name || 'Unknown Pod'}
+              isManager={canManageMembers}
+            />
+          </div>
+        );
+
       default:
         return null;
     }
@@ -228,6 +247,8 @@ const TabNavigation = React.memo<{
   canManageTreasury: boolean;
   subPodsEnabled?: boolean;
   isExecPod?: boolean;
+  surveysEnabled?: boolean;
+  agentEnabled?: boolean;
 }>(
   ({
     activeTab,
@@ -238,6 +259,8 @@ const TabNavigation = React.memo<{
     canManageTreasury,
     subPodsEnabled = false,
     isExecPod = false,
+    surveysEnabled = false,
+    agentEnabled = false,
   }) => {
     const tabs = React.useMemo(
       () => [
@@ -282,14 +305,6 @@ const TabNavigation = React.memo<{
           enabled: canManageMembers,
         },
         {
-          id: 'agents',
-          label: 'Agents',
-          mobileLabel: 'Agents',
-          icon: Bot,
-          badge: null,
-          enabled: canManageMembers,
-        },
-        {
           id: 'treasury',
           label: 'Treasury',
           mobileLabel: 'Treasury',
@@ -322,6 +337,22 @@ const TabNavigation = React.memo<{
           enabled: isExecPod,
         },
         {
+          id: 'surveys',
+          label: 'Surveys',
+          mobileLabel: 'Surveys',
+          icon: ClipboardCheck,
+          badge: null,
+          enabled: canManageMembers && surveysEnabled,
+        },
+        {
+          id: 'agents',
+          label: 'AI Agent',
+          mobileLabel: 'Agent',
+          icon: Bot,
+          badge: null,
+          enabled: canManageMembers && agentEnabled,
+        },
+        {
           id: 'pod_settings',
           label: 'Pod Settings',
           mobileLabel: 'Settings',
@@ -338,7 +369,7 @@ const TabNavigation = React.memo<{
           enabled: canManageMembers,
         },
       ],
-      [memberCount, leaderCount, canManageMembers, canManageTreasury, subPodsEnabled, isExecPod],
+      [memberCount, leaderCount, canManageMembers, canManageTreasury, subPodsEnabled, isExecPod, surveysEnabled, agentEnabled],
     );
 
     // Add a small loading state to prevent layout shift
@@ -573,8 +604,11 @@ export const PodManagementContainer = React.memo<PodManagementContainerProps>(
       });
     }, [podId]);
 
-    // Check if sub-pods module is enabled for this pod
+    // Track which modules are enabled (for dynamic tabs + sub-pods)
     const [subPodsEnabled, setSubPodsEnabled] = React.useState(false);
+    const [surveysEnabled, setSurveysEnabled] = React.useState(false);
+    const [agentEnabled, setAgentEnabled] = React.useState(false);
+
     React.useEffect(() => {
       if (!podId) return;
       import('@/utils/supabaseClient').then(({ supabase }) => {
@@ -584,11 +618,22 @@ export const PodManagementContainer = React.memo<PodManagementContainerProps>(
             headers: { Authorization: `Bearer ${session.access_token}` },
           })
             .then((r) => r.json())
-            .then((json) => setSubPodsEnabled(json.modules?.sub_pods_enabled ?? false))
+            .then((json) => {
+              setSubPodsEnabled(json.modules?.sub_pods_enabled ?? false);
+              setSurveysEnabled(json.modules?.surveys_enabled ?? false);
+              setAgentEnabled(json.modules?.community_agent_enabled ?? false);
+            })
             .catch(() => {});
         });
       });
     }, [podId]);
+
+    // Callback for when a module is toggled inside PodModulesManager
+    const handleModuleToggle = React.useCallback((moduleKey: string, enabled: boolean) => {
+      if (moduleKey === 'surveys_enabled') setSurveysEnabled(enabled);
+      if (moduleKey === 'community_agent_enabled') setAgentEnabled(enabled);
+      if (moduleKey === 'sub_pods_enabled') setSubPodsEnabled(enabled);
+    }, []);
 
     return (
       <Card className="w-full max-w-6xl mx-auto">
@@ -605,6 +650,8 @@ export const PodManagementContainer = React.memo<PodManagementContainerProps>(
             canManageTreasury={canManageTreasury}
             subPodsEnabled={subPodsEnabled}
             isExecPod={isExecPod}
+            surveysEnabled={surveysEnabled}
+            agentEnabled={agentEnabled}
           />
 
           <TabContent
@@ -622,6 +669,7 @@ export const PodManagementContainer = React.memo<PodManagementContainerProps>(
             isExecPod={isExecPod}
             onRemoveMember={handleRemoveMember}
             onPodDeleted={handlePodDeleted}
+            onModuleToggle={handleModuleToggle}
           />
         </CardContent>
       </Card>
