@@ -130,7 +130,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
   if (podId === EXEC_POD_ID) {
     const { count: totalUsers } = await supabaseAdmin
       .from('user_profiles')
-      .select('id', { count: 'exact', head: true });
+      .select('user_id', { count: 'exact', head: true });
 
     options.push({
       type: 'all_users',
