@@ -152,9 +152,6 @@ export const PodConferenceSection: React.FC<PodConferenceSectionProps> = ({
                 style={{ backgroundColor: '#E85555', boxShadow: '0 0 6px #E85555' }}
               />
               <Video className="w-5 h-5 flex-shrink-0" style={{ color: '#2F5D50' }} />
-              <span className="text-sm font-medium truncate" style={{ color: '#1F2D2A' }}>
-                Meeting in progress
-              </span>
               <Badge
                 variant="outline"
                 className="flex items-center gap-1 text-xs flex-shrink-0"
@@ -211,9 +208,7 @@ export const PodConferenceSection: React.FC<PodConferenceSectionProps> = ({
         >
           <div className="flex items-center gap-3">
             <Video className="w-5 h-5 flex-shrink-0" style={{ color: '#2F5D50' }} />
-            <span className="text-sm flex-1" style={{ color: '#4A6D5E' }}>
-              Start an ad-hoc meeting for pod members
-            </span>
+            <div className="flex-1" />
             <Button
               size="sm"
               disabled={creating || !walletAddress}
