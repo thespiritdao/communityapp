@@ -347,27 +347,13 @@ export default function PodKnowledgeManager({
           <div className="w-full mb-6">
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-lg font-semibold">Categories</h3>
-              <div className="flex gap-2">
-                {items.length > 0 && (
-                  <Button
-                    onClick={handleExport}
-                    disabled={exporting}
-                    size="sm"
-                    variant="outline"
-                    style={{ borderColor: '#2F5D50', color: '#2F5D50' }}
-                  >
-                    <Download size={16} className="mr-1" />
-                    {exporting ? 'Exporting...' : 'Export All'}
-                  </Button>
-                )}
-                <Button
-                  onClick={() => setShowCreateCategory(!showCreateCategory)}
-                  size="sm"
-                  style={{ backgroundColor: '#2F5D50', color: '#FFFFFF' }}
-                >
-                  Add
-                </Button>
-              </div>
+              <Button
+                onClick={() => setShowCreateCategory(!showCreateCategory)}
+                size="sm"
+                style={{ backgroundColor: '#2F5D50', color: '#FFFFFF' }}
+              >
+                Add
+              </Button>
             </div>
 
             {/* Create Category Form */}
@@ -470,6 +456,23 @@ export default function PodKnowledgeManager({
               )}
             </div>
           </div>
+
+          {/* Export Button */}
+          {items.length > 0 && (
+            <div className="mb-4">
+              <Button
+                onClick={handleExport}
+                disabled={exporting}
+                size="sm"
+                variant="outline"
+                className="w-full"
+                style={{ borderColor: '#2F5D50', color: '#2F5D50' }}
+              >
+                <Download size={16} className="mr-2" />
+                {exporting ? 'Exporting...' : 'Export All'}
+              </Button>
+            </div>
+          )}
 
           {/* Content Items Section */}
           <div className="w-full">

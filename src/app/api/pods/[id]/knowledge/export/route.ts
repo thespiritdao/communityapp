@@ -46,6 +46,31 @@ function sanitizeFilename(name: string): string {
   return name.replace(/[/\\?%*:|"<>]/g, '_');
 }
 
+/** Attempt to fetch file bytes from a public URL. Returns null on failure. */
+async function tryDownloadFile(url: string): Promise<Buffer | null> {
+  try {
+    const res = await fetch(url, { signal: AbortSignal.timeout(30_000) });
+    if (!res.ok) return null;
+    const arrayBuffer = await res.arrayBuffer();
+    return Buffer.from(arrayBuffer);
+  } catch {
+    return null;
+  }
+}
+
+/** Guess a file extension from the URL path or content type. */
+function guessExtension(url: string, contentType?: string): string {
+  // Try to extract from URL path
+  const urlPath = new URL(url).pathname;
+  const match = urlPath.match(/\.([a-zA-Z0-9]+)(?:\?|$)/);
+  if (match) return `.${match[1].toLowerCase()}`;
+
+  // Fall back to content type
+  if (contentType === 'document') return '.pdf';
+  if (contentType === 'video') return '.mp4';
+  return '';
+}
+
 export async function GET(req: NextRequest): Promise<NextResponse> {
   const token = req.headers.get('Authorization')?.replace('Bearer ', '');
   if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -99,10 +124,18 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
       if (item.content_type === 'markdown' && item.content_text) {
         catFolder.file(`${safeTitle}.md`, item.content_text);
       } else if (item.content_url) {
-        catFolder.file(
-          `${safeTitle}.url`,
-          `[InternetShortcut]\nURL=${item.content_url}\n`,
-        );
+        // Try to download the actual file from Supabase storage
+        const fileData = await tryDownloadFile(item.content_url);
+        if (fileData) {
+          const ext = guessExtension(item.content_url, item.content_type);
+          catFolder.file(`${safeTitle}${ext}`, fileData);
+        } else {
+          // Fallback to URL shortcut if download fails
+          catFolder.file(
+            `${safeTitle}.url`,
+            `[InternetShortcut]\nURL=${item.content_url}\n`,
+          );
+        }
       }
     }
   }
