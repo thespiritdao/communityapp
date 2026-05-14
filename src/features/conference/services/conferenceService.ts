@@ -79,6 +79,17 @@ export async function getRoomByEventId(eventId: string): Promise<RoomWithCount |
 }
 
 /**
+ * Fetch the most recent active/scheduled room for a pod (returns null if none).
+ */
+export async function getRoomByPodId(podId: string): Promise<RoomWithCount | null> {
+  try {
+    return await apiGet<RoomWithCount>(`/api/conference/rooms?podId=${encodeURIComponent(podId)}`);
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Mark a room as live (called by host when they officially start the meeting).
  * Uses the RLS policy — only the host wallet can update their room.
  */

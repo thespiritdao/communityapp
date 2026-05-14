@@ -41,9 +41,10 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     const roomName = searchParams.get('roomName');
     const eventId  = searchParams.get('eventId');
+    const podId    = searchParams.get('podId');
 
-    if (!roomName && !eventId) {
-      return NextResponse.json({ error: 'roomName or eventId required' }, { status: 400 });
+    if (!roomName && !eventId && !podId) {
+      return NextResponse.json({ error: 'roomName, eventId, or podId required' }, { status: 400 });
     }
 
     let query = supabaseAdmin
@@ -52,8 +53,11 @@ export async function GET(req: NextRequest) {
 
     if (roomName) {
       query = query.eq('room_name', roomName);
+    } else if (eventId) {
+      query = query.eq('event_id', eventId).order('created_at', { ascending: false }).limit(1);
     } else {
-      query = query.eq('event_id', eventId!).order('created_at', { ascending: false }).limit(1);
+      // podId — find most recent non-ended room for this pod
+      query = query.eq('pod_id', podId!).neq('status', 'ended').order('created_at', { ascending: false }).limit(1);
     }
 
     const { data: room, error } = await query.maybeSingle();
