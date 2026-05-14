@@ -207,6 +207,7 @@ async function notifySurveyAudience(
         }
       }
     } else if (target.type === 'pod' && target.pod_id) {
+      // active_pod_members view
       const { data: members } = await supabaseAdmin
         .from('active_pod_members')
         .select('wallet')
@@ -214,6 +215,17 @@ async function notifySurveyAudience(
       if (members) {
         for (const m of members) {
           if (m.wallet) walletSet.add(m.wallet.toLowerCase());
+        }
+      }
+      // pod_leads array (leaders may not be in pod_members)
+      const { data: pod } = await supabaseAdmin
+        .from('pods')
+        .select('pod_leads')
+        .eq('id', target.pod_id)
+        .single();
+      if (pod?.pod_leads && Array.isArray(pod.pod_leads)) {
+        for (const lead of pod.pod_leads) {
+          if (lead) walletSet.add(lead.toLowerCase());
         }
       }
     }

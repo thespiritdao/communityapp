@@ -2,8 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/utils/supabaseClient';
-import { ClipboardCheck, ChevronDown, ChevronUp, X } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
+import { ClipboardCheck, ChevronDown, ChevronUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import SurveyResponseForm from './SurveyResponseForm';
 import type { Survey } from '../types';
@@ -17,7 +16,6 @@ export default function ActiveSurveysBanner({ podId }: ActiveSurveysBannerProps)
   const [loading, setLoading] = useState(true);
   const [expanded, setExpanded] = useState(false);
   const [activeSurveyId, setActiveSurveyId] = useState<string | null>(null);
-  const [dismissed, setDismissed] = useState(false);
 
   useEffect(() => {
     loadActiveSurveys();
@@ -53,7 +51,7 @@ export default function ActiveSurveysBanner({ podId }: ActiveSurveysBannerProps)
     setSurveys((prev) => prev.filter((s) => s.id !== activeSurveyId));
   }
 
-  if (loading || surveys.length === 0 || dismissed) return null;
+  if (loading || surveys.length === 0) return null;
 
   // If user is taking a survey, show the response form
   if (activeSurveyId) {
@@ -83,40 +81,53 @@ export default function ActiveSurveysBanner({ podId }: ActiveSurveysBannerProps)
     );
   }
 
+  // Single survey — show inline with direct respond button
+  if (surveys.length === 1) {
+    const survey = surveys[0];
+    return (
+      <div
+        className="rounded-lg border p-3"
+        style={{ backgroundColor: '#E8F1EE', borderColor: '#B8D9CA' }}
+      >
+        <div className="flex items-center gap-3">
+          <ClipboardCheck className="w-5 h-5 flex-shrink-0" style={{ color: '#2F5D50' }} />
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium truncate" style={{ color: '#1F2D2A' }}>
+              {survey.title}
+            </p>
+          </div>
+          <Button
+            size="sm"
+            onClick={() => setActiveSurveyId(survey.id)}
+            style={{ backgroundColor: '#2F5D50', color: 'white' }}
+            className="flex-shrink-0"
+          >
+            Respond
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  // Multiple surveys — collapsible list
   return (
     <div
-      className="rounded-lg border p-4"
+      className="rounded-lg border p-3"
       style={{ backgroundColor: '#E8F1EE', borderColor: '#B8D9CA' }}
     >
-      <div className="flex items-center justify-between">
-        <div
-          className="flex items-center gap-2 cursor-pointer flex-1"
-          onClick={() => setExpanded(!expanded)}
-        >
-          <ClipboardCheck className="w-5 h-5" style={{ color: '#2F5D50' }} />
-          <span className="font-medium text-sm" style={{ color: '#1F2D2A' }}>
-            {surveys.length} Active Survey{surveys.length !== 1 ? 's' : ''}
-          </span>
-          <Badge
-            variant="outline"
-            className="text-xs"
-            style={{ borderColor: '#2F5D50', color: '#2F5D50' }}
-          >
-            Needs your input
-          </Badge>
-          {expanded ? (
-            <ChevronUp className="w-4 h-4 ml-auto" style={{ color: '#2F5D50' }} />
-          ) : (
-            <ChevronDown className="w-4 h-4 ml-auto" style={{ color: '#2F5D50' }} />
-          )}
-        </div>
-        <button
-          onClick={() => setDismissed(true)}
-          className="ml-2 p-1 rounded hover:bg-white/50 transition-colors"
-          title="Dismiss"
-        >
-          <X className="w-4 h-4 text-gray-500" />
-        </button>
+      <div
+        className="flex items-center gap-2 cursor-pointer"
+        onClick={() => setExpanded(!expanded)}
+      >
+        <ClipboardCheck className="w-5 h-5 flex-shrink-0" style={{ color: '#2F5D50' }} />
+        <span className="font-medium text-sm flex-1" style={{ color: '#1F2D2A' }}>
+          {surveys.length} surveys available
+        </span>
+        {expanded ? (
+          <ChevronUp className="w-4 h-4 flex-shrink-0" style={{ color: '#2F5D50' }} />
+        ) : (
+          <ChevronDown className="w-4 h-4 flex-shrink-0" style={{ color: '#2F5D50' }} />
+        )}
       </div>
 
       {expanded && (
@@ -124,7 +135,7 @@ export default function ActiveSurveysBanner({ podId }: ActiveSurveysBannerProps)
           {surveys.map((survey) => (
             <div
               key={survey.id}
-              className="flex items-center justify-between p-3 rounded-md bg-white border"
+              className="flex items-center gap-3 p-3 rounded-md bg-white border"
               style={{ borderColor: '#E0E0E0' }}
             >
               <div className="flex-1 min-w-0">
@@ -141,8 +152,9 @@ export default function ActiveSurveysBanner({ podId }: ActiveSurveysBannerProps)
                 size="sm"
                 onClick={() => setActiveSurveyId(survey.id)}
                 style={{ backgroundColor: '#2F5D50', color: 'white' }}
+                className="flex-shrink-0"
               >
-                Take Survey
+                Respond
               </Button>
             </div>
           ))}
