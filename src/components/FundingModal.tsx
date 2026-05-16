@@ -7,16 +7,14 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { useEvmAddress, useCurrentUser } from '@coinbase/cdp-hooks';
 import { useSendUserOperationWithAttribution as useSendUserOperation } from '@/wallet/hooks/useSendUserOperationWithAttribution';
 import { useBalance } from 'wagmi';
 import { parseUnits, encodeFunctionData } from 'viem';
-import { DollarSign, User, Users, Wallet, AlertCircle, Loader2 } from 'lucide-react';
+import { DollarSign, User, Users, AlertCircle, Loader2 } from 'lucide-react';
 
 // Token addresses from environment
 const SYSTEM_TOKEN = process.env.NEXT_PUBLIC_SYSTEM_TOKEN as `0x${string}`;
@@ -88,7 +86,7 @@ export default function FundingModal({
   const { evmAddress: address } = useEvmAddress();
   const { currentUser } = useCurrentUser();
   const { sendUserOperation } = useSendUserOperation();
-  const [selectedToken, setSelectedToken] = useState<'SYSTEM' | null>('SYSTEM');
+  const [selectedToken, setSelectedToken] = useState<'SYSTEM' | 'SELF'>('SYSTEM');
   const [amount, setAmount] = useState('');
   const [message, setMessage] = useState('');
   const [isSending, setIsSending] = useState(false);
@@ -104,7 +102,10 @@ export default function FundingModal({
     token: SYSTEM_TOKEN,
   });
 
-  // SELF token transfers removed - non-transferable
+  const { data: selfBalance, error: selfError } = useBalance({
+    address: address || undefined,
+    token: SELF_TOKEN,
+  });
 
   // Quick amount buttons
   const quickAmounts = ['10', '25', '50', '100'];
@@ -206,11 +207,11 @@ export default function FundingModal({
   };
 
   const getBalance = () => {
-    return systemBalance; // Only SYSTEM tokens are transferable
+    return selectedToken === 'SYSTEM' ? systemBalance : selfBalance;
   };
 
   const getBalanceError = () => {
-    return systemError;
+    return selectedToken === 'SYSTEM' ? systemError : selfError;
   };
 
   const canTransfer = () => {
@@ -243,163 +244,203 @@ export default function FundingModal({
 
         <div className="space-y-6">
           {/* Recipient Display */}
-          <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-            <div className="relative">
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px',
+              padding: '12px',
+              background: '#E8F1EE',
+              border: '1px solid #B8D9CA',
+              borderRadius: '12px',
+            }}
+          >
+            <div style={{ position: 'relative', flexShrink: 0 }}>
               {recipient.image ? (
                 <img
                   src={recipient.image}
                   alt=""
-                  className="w-12 h-12 rounded-full object-cover"
+                  style={{ width: '48px', height: '48px', borderRadius: '50%', objectFit: 'cover' }}
                   onError={(e) => {
                     e.currentTarget.src = '/observableinfinities.png';
                   }}
                 />
               ) : (
-                <div className="w-12 h-12 bg-[#D1E6DC] rounded-full flex items-center justify-center">
+                <div style={{ width: '48px', height: '48px', background: '#D1E6DC', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   {recipientType === 'member' ? (
-                    <User className="h-6 w-6 text-[#2F5D50]" />
+                    <User style={{ width: '24px', height: '24px', color: '#2F5D50' }} />
                   ) : (
-                    <Users className="h-6 w-6 text-[#2F5D50]" />
+                    <Users style={{ width: '24px', height: '24px', color: '#2F5D50' }} />
                   )}
                 </div>
               )}
             </div>
-            <div className="flex-1 min-w-0">
-              <h3 className="font-semibold text-gray-900 truncate">
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <h3 style={{ fontWeight: 600, color: '#1F453A', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', margin: 0 }}>
                 {recipient.name}
               </h3>
-              <p className="text-sm text-gray-500 font-mono truncate">
+              <p style={{ fontSize: '14px', color: '#5F5A54', fontFamily: 'monospace', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', margin: 0 }}>
                 {recipient.address.slice(0, 8)}...{recipient.address.slice(-6)}
               </p>
               {recipient.description && (
-                <p className="text-xs text-gray-400 mt-1">
+                <p style={{ fontSize: '12px', color: '#8FAAA1', marginTop: '4px', margin: '4px 0 0' }}>
                   {recipient.description}
                 </p>
               )}
             </div>
           </div>
 
-          <div className="space-y-3">
-            <Label>Payment Token</Label>
-            <div className="p-3 border border-[#2F5D50] bg-[#E8F1EE] rounded-lg">
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="font-medium">SYSTEM Token</div>
-                  <div className="text-sm text-gray-500">
-                    Transferable • 1:1 USD
-                  </div>
+          {/* Token Selection */}
+          <div>
+            <Label style={{ display: 'block', marginBottom: '8px' }}>Select Token</Label>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+              <button
+                type="button"
+                onClick={() => setSelectedToken('SYSTEM')}
+                style={{
+                  padding: '12px',
+                  border: selectedToken === 'SYSTEM' ? '2px solid #2F5D50' : '2px solid #D1C4A9',
+                  borderRadius: '12px',
+                  background: selectedToken === 'SYSTEM' ? '#E8F1EE' : 'white',
+                  cursor: 'pointer',
+                  textAlign: 'left',
+                  transition: 'all 0.2s',
+                }}
+              >
+                <div style={{ fontWeight: 600, fontSize: '14px', marginBottom: '4px' }}>$SYSTEM</div>
+                <div style={{ fontSize: '12px', color: '#5F5A54' }}>1:1 USD backed</div>
+                <div style={{ fontSize: '12px', color: '#8FAAA1', marginTop: '4px' }}>
+                  {systemError ? (
+                    <span style={{ color: '#8B3A3A' }}>Error</span>
+                  ) : (
+                    `Bal: ${formatBalance(systemBalance)}`
+                  )}
                 </div>
-                <div className="text-right">
-                  <div className="text-sm font-medium">
-                    {systemError ? (
-                      <span className="text-red-500">Error</span>
-                    ) : (
-                      `${formatBalance(systemBalance)} SYSTEM`
-                    )}
-                  </div>
-                  <Badge variant="outline">
-                    Available
-                  </Badge>
+              </button>
+              <button
+                type="button"
+                onClick={() => setSelectedToken('SELF')}
+                style={{
+                  padding: '12px',
+                  border: selectedToken === 'SELF' ? '2px solid #2F5D50' : '2px solid #D1C4A9',
+                  borderRadius: '12px',
+                  background: selectedToken === 'SELF' ? '#E8F1EE' : 'white',
+                  cursor: 'pointer',
+                  textAlign: 'left',
+                  transition: 'all 0.2s',
+                }}
+              >
+                <div style={{ fontWeight: 600, fontSize: '14px', marginBottom: '4px' }}>$SELF</div>
+                <div style={{ fontSize: '12px', color: '#5F5A54' }}>Governance token</div>
+                <div style={{ fontSize: '12px', color: '#8FAAA1', marginTop: '4px' }}>
+                  {selfError ? (
+                    <span style={{ color: '#8B3A3A' }}>Error</span>
+                  ) : (
+                    `Bal: ${formatBalance(selfBalance)}`
+                  )}
                 </div>
-              </div>
+              </button>
             </div>
           </div>
 
           {/* Amount Input */}
-          {selectedToken && (
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <Label htmlFor="amount">Amount ({selectedToken})</Label>
-                <div className="text-sm text-gray-500">
-                  Balance: {formatBalance(getBalance())} {selectedToken}
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Input
-                  id="amount"
-                  type="number"
-                  step="0.01"
-                  placeholder="0.00"
-                  value={amount}
-                  onChange={(e) => setAmount(e.target.value)}
-                  className="text-right text-lg"
-                />
-
-                {/* Quick Amount Buttons */}
-                <div className="grid grid-cols-4 gap-2">
-                  {quickAmounts.map((quickAmount) => (
-                    <Button
-                      key={quickAmount}
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setAmount(quickAmount)}
-                      className="text-xs"
-                    >
-                      ${quickAmount}
-                    </Button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Insufficient Balance Warning */}
-              {amount && !canTransfer() && (
-                <div className="flex items-center gap-2 p-2 bg-red-50 text-red-700 rounded text-sm">
-                  <AlertCircle className="h-4 w-4" />
-                  Insufficient balance
-                </div>
-              )}
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+              <Label htmlFor="amount">Amount ({selectedToken})</Label>
+              <span style={{ fontSize: '14px', color: '#5F5A54' }}>
+                Balance: {formatBalance(getBalance())} {selectedToken}
+              </span>
             </div>
-          )}
+
+            <Input
+              id="amount"
+              type="number"
+              step="0.01"
+              placeholder="0.00"
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+              style={{ textAlign: 'right', fontSize: '18px', borderColor: '#D1C4A9', borderRadius: '8px' }}
+            />
+
+            {/* Quick Amount Buttons */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px', marginTop: '8px' }}>
+              {quickAmounts.map((quickAmount) => (
+                <button
+                  key={quickAmount}
+                  type="button"
+                  onClick={() => setAmount(quickAmount)}
+                  style={{
+                    padding: '6px',
+                    border: '1px solid #D1C4A9',
+                    borderRadius: '8px',
+                    background: 'white',
+                    cursor: 'pointer',
+                    fontSize: '13px',
+                    transition: 'all 0.2s',
+                  }}
+                >
+                  ${quickAmount}
+                </button>
+              ))}
+            </div>
+
+            {/* Insufficient Balance Warning */}
+            {amount && !canTransfer() && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 12px', background: '#FAF4EC', border: '1px solid #E8D7B8', borderRadius: '8px', fontSize: '14px', color: '#6B5A3E', marginTop: '8px' }}>
+                <AlertCircle style={{ width: '16px', height: '16px', flexShrink: 0 }} />
+                Insufficient balance
+              </div>
+            )}
+          </div>
 
           {/* Optional Message */}
-          <div className="space-y-2">
-            <Label htmlFor="message">Message (Optional)</Label>
+          <div>
+            <Label htmlFor="message" style={{ display: 'block', marginBottom: '8px' }}>Message (Optional)</Label>
             <Textarea
               id="message"
               placeholder={`Add a note for this ${recipientType === 'member' ? 'transfer' : 'contribution'}...`}
               value={message}
               onChange={(e) => setMessage(e.target.value)}
               rows={3}
+              style={{ borderColor: '#D1C4A9', borderRadius: '8px' }}
             />
           </div>
 
-          {/* Transaction Section */}
-          <div className="border-t pt-4">
-            {address && selectedToken && amount && canTransfer() ? (
-              <Button
-                onClick={handleSendFunds}
-                disabled={isSending}
-                className="w-full h-12 text-white font-semibold bg-[#2F5D50]"
-              >
-                {isSending ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Sending...
-                  </>
-                ) : (
-                  `Send ${amount} ${selectedToken}`
-                )}
-              </Button>
-            ) : (
-              <div className="text-center py-4">
-                <Wallet className="h-8 w-8 mx-auto mb-2 text-gray-300" />
-                <p className="text-sm text-gray-500 mb-1">
-                  Ready to send funds?
-                </p>
-                <div className="text-xs text-gray-400 space-y-1">
-                  <div className={selectedToken ? 'text-green-600' : ''}>
-                    {selectedToken ? '✓' : '○'} Token selected
-                  </div>
-                  <div
-                    className={amount && canTransfer() ? 'text-green-600' : ''}
-                  >
-                    {amount && canTransfer() ? '✓' : '○'} Valid amount entered
-                  </div>
-                </div>
-              </div>
-            )}
+          {/* Send Button */}
+          <div style={{ borderTop: '1px solid #B8D9CA', paddingTop: '16px' }}>
+            <button
+              onClick={handleSendFunds}
+              disabled={!address || !selectedToken || !amount || !canTransfer() || isSending}
+              style={{
+                width: '100%',
+                height: '48px',
+                background: (!address || !selectedToken || !amount || !canTransfer() || isSending) ? '#D8D2C8' : '#2F5D50',
+                color: (!address || !selectedToken || !amount || !canTransfer() || isSending) ? '#8FAAA1' : '#FFFFFF',
+                fontWeight: 600,
+                fontSize: '16px',
+                border: 'none',
+                borderRadius: '12px',
+                cursor: (!address || !selectedToken || !amount || !canTransfer() || isSending) ? 'not-allowed' : 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px',
+                transition: 'all 0.2s',
+              }}
+            >
+              {isSending ? (
+                <>
+                  <Loader2 style={{ width: '18px', height: '18px', animation: 'spin 1s linear infinite' }} />
+                  Sending...
+                </>
+              ) : !amount ? (
+                'Enter an amount'
+              ) : !canTransfer() ? (
+                'Insufficient balance'
+              ) : (
+                `Send ${amount} ${selectedToken}`
+              )}
+            </button>
           </div>
         </div>
       </DialogContent>

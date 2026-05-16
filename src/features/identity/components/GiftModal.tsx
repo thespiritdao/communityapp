@@ -391,7 +391,7 @@ export function GiftModal({
           justify-content: space-between;
           margin-bottom: 20px;
           padding-bottom: 16px;
-          border-bottom: 1px solid #eee;
+          border-bottom: 1px solid #B8D9CA;
         }
 
         .gift-header-info {
@@ -401,7 +401,7 @@ export function GiftModal({
         }
 
         .gift-icon {
-          color: #7b1fa2;
+          color: #2F5D50;
         }
 
         .gift-header h3 {
@@ -428,8 +428,9 @@ export function GiftModal({
           align-items: center;
           gap: 12px;
           padding: 12px;
-          background: #f9f9f9;
-          border-radius: 8px;
+          background: #E8F1EE;
+          border: 1px solid #B8D9CA;
+          border-radius: 12px;
           margin-bottom: 20px;
         }
 
@@ -471,8 +472,8 @@ export function GiftModal({
 
         .gift-token-option {
           padding: 12px;
-          border: 2px solid #ddd;
-          border-radius: 8px;
+          border: 2px solid #D1C4A9;
+          border-radius: 12px;
           background: white;
           cursor: pointer;
           transition: all 0.2s;
@@ -480,13 +481,13 @@ export function GiftModal({
         }
 
         .gift-token-option:hover:not(:disabled) {
-          border-color: #7b1fa2;
-          background: #f9f5fa;
+          border-color: #2F5D50;
+          background: #E8F1EE;
         }
 
         .gift-token-option.active {
-          border-color: #7b1fa2;
-          background: #f3e5f5;
+          border-color: #2F5D50;
+          background: #E8F1EE;
         }
 
         .gift-token-option:disabled {
@@ -520,14 +521,14 @@ export function GiftModal({
         .gift-amount-input {
           width: 100%;
           padding: 10px 10px 10px 36px;
-          border: 1px solid #ddd;
+          border: 1px solid #D1C4A9;
           border-radius: 8px;
           font-size: 1rem;
           outline: none;
         }
 
         .gift-amount-input:focus {
-          border-color: #7b1fa2;
+          border-color: #2F5D50;
         }
 
         .gift-amount-input:disabled {
@@ -544,8 +545,8 @@ export function GiftModal({
 
         .gift-quick-amount-btn {
           padding: 6px;
-          border: 1px solid #ddd;
-          border-radius: 6px;
+          border: 1px solid #D1C4A9;
+          border-radius: 8px;
           background: white;
           cursor: pointer;
           font-size: 0.85rem;
@@ -553,8 +554,8 @@ export function GiftModal({
         }
 
         .gift-quick-amount-btn:hover:not(:disabled) {
-          border-color: #7b1fa2;
-          background: #f9f5fa;
+          border-color: #2F5D50;
+          background: #E8F1EE;
         }
 
         .gift-quick-amount-btn:disabled {
@@ -565,17 +566,17 @@ export function GiftModal({
         .gift-warning {
           margin-top: 8px;
           padding: 8px 12px;
-          background: #fff3cd;
-          border: 1px solid #ffc107;
-          border-radius: 6px;
+          background: #FAF4EC;
+          border: 1px solid #E8D7B8;
+          border-radius: 8px;
           font-size: 0.85rem;
-          color: #856404;
+          color: #6B5A3E;
         }
 
         .gift-message-input {
           width: 100%;
           padding: 10px;
-          border: 1px solid #ddd;
+          border: 1px solid #D1C4A9;
           border-radius: 8px;
           font-size: 0.9rem;
           font-family: inherit;
@@ -584,7 +585,7 @@ export function GiftModal({
         }
 
         .gift-message-input:focus {
-          border-color: #7b1fa2;
+          border-color: #2F5D50;
         }
 
         .gift-message-input:disabled {
@@ -604,21 +605,21 @@ export function GiftModal({
 
         .gift-status-pending,
         .gift-status-confirming {
-          background: #e3f2fd;
-          color: #1565c0;
-          border: 1px solid #90caf9;
+          background: #E8F1EE;
+          color: #1F453A;
+          border: 1px solid #B8D9CA;
         }
 
         .gift-status-success {
-          background: #e8f5e9;
-          color: #2e7d32;
-          border: 1px solid #81c784;
+          background: #E8F1EE;
+          color: #3F7A5A;
+          border: 1px solid #B8D9CA;
         }
 
         .gift-status-error {
-          background: #ffebee;
-          color: #c62828;
-          border: 1px solid #ef5350;
+          background: #F5E6E6;
+          color: #8B3A3A;
+          border: 1px solid #D9B3B3;
         }
 
         .gift-status-icon {
@@ -645,10 +646,10 @@ export function GiftModal({
           justify-content: center;
           gap: 8px;
           padding: 12px;
-          background: linear-gradient(135deg, #7b1fa2, #9c27b0);
+          background: #2F5D50;
           color: white;
           border: none;
-          border-radius: 8px;
+          border-radius: 12px;
           font-size: 1rem;
           font-weight: 600;
           cursor: pointer;
@@ -656,9 +657,9 @@ export function GiftModal({
         }
 
         .gift-send-btn:hover:not(:disabled) {
-          background: linear-gradient(135deg, #6a1b8f, #8e24a0);
+          background: #254A40;
           transform: translateY(-1px);
-          box-shadow: 0 4px 12px rgba(123, 31, 162, 0.3);
+          box-shadow: 0 4px 12px rgba(47, 93, 80, 0.3);
         }
 
         .gift-send-btn:disabled {
@@ -674,10 +675,10 @@ export function GiftModal({
           justify-content: center;
           gap: 8px;
           padding: 12px;
-          background: #e0e0e0;
-          color: #999;
+          background: #D8D2C8;
+          color: #8FAAA1;
           border: none;
-          border-radius: 8px;
+          border-radius: 12px;
           font-size: 1rem;
           font-weight: 600;
           cursor: not-allowed;

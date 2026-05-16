@@ -410,7 +410,7 @@ export default function DonateTab() {
             transition: 'all 0.2s',
           }}
         >
-          Fund the Ecosystem
+          Get $SYSTEM
         </button>
         <button
           onClick={() => setDonationType('direct')}
