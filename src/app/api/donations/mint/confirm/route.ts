@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { sendTokensReceivedEmail } from '@/lib/donationEmail';
+import { sendDonationReceiptEmail } from '@/lib/donationReceipt';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -105,16 +105,51 @@ export async function POST(request: NextRequest) {
     // Fire-and-forget: airdrop Advocate NFT on first donation
     maybeAirdropAdvocate(data.user_wallet, donationId);
 
-    // Fire-and-forget: email recipient that tokens are incoming
-    sendTokensReceivedEmail({
-      recipientWallet: data.user_wallet,
-      amount: data.system_tokens_to_mint,
-      tokenSymbol: 'SYSTEM',
-      fiatAmount: data.fiat_amount,
-      stripeFee: data.stripe_fee,
-      orgFee: data.org_fee,
-      communityTokens: data.community_tokens_to_mint,
-    });
+    // Fire-and-forget: send PDF receipt with HTML email
+    (async () => {
+      try {
+        // Look up donor profile for name and email
+        const { data: profile } = await supabase
+          .from('user_profiles')
+          .select('first_name, last_name, email')
+          .eq('wallet_address', data.user_wallet.toLowerCase())
+          .maybeSingle();
+
+        const donorEmail = profile?.email || data.donor_email;
+        if (!donorEmail) return;
+
+        const donorName = profile?.first_name
+          ? `${profile.first_name}${profile.last_name ? ' ' + profile.last_name : ''}`
+          : 'Community Member';
+
+        const systemTokens = Number(data.system_tokens_to_mint);
+        const fiat = Number(data.fiat_amount);
+        const stripeFee = Number(data.stripe_fee ?? 0);
+        const orgFee = Number(data.org_fee ?? 0);
+        const communityTokens = Number(data.community_tokens_to_mint ?? 0);
+
+        const donationDate = new Date().toLocaleDateString('en-US', {
+          year: 'numeric', month: 'long', day: 'numeric',
+        });
+
+        await sendDonationReceiptEmail({
+          type: 'system',
+          donorName,
+          donorEmail,
+          donationDate,
+          paymentId: data.stripe_payment_id || donationId,
+          fiatAmount: fiat,
+          stripeFee,
+          operationsFee: orgFee / 2,
+          communityFee: orgFee / 2,
+          systemTokensMinted: systemTokens,
+          communityTokensMinted: communityTokens,
+          deductibleAmount: fiat - systemTokens,
+        });
+      } catch (err) {
+        console.error('[mint/confirm] PDF receipt email failed (non-critical):', err);
+      }
+    })();
 
     return NextResponse.json({
       success: true,

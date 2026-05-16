@@ -12,7 +12,7 @@ import { toast } from 'react-hot-toast';
 import { useCDPStatus } from '@/hooks/useCDPStatus';
 
 // Load Stripe publishable key
-const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!);
+const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_SYSTEM_PUBLISHABLE_KEY!);
 
 /**
  * Donation Checkout Form Component
