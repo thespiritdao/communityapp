@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import DonateTab from './DonateTab';
+import DonateTab from '../claims/DonateTab';
 import ClaimTab from './ClaimTab';
 import { HeartHandshake, Coins } from 'lucide-react';
 

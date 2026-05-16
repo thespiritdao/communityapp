@@ -42,7 +42,7 @@ export default function DirectDonationSuccessPage() {
 
         <div className="flex flex-col gap-3 pt-2">
           <Link
-            href="/donate"
+            href="/claims"
             style={{
               backgroundColor: '#2F5D50',
               color: '#FFFFFF',

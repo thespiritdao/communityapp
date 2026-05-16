@@ -58,7 +58,7 @@ function DonationSuccessContent() {
             We couldn't find the donation you're looking for.
           </p>
           <Link
-            href="/donate"
+            href="/claims"
             className="inline-block bg-[#2F5D50] hover:bg-[#1F453A] text-white font-semibold py-2 px-6 rounded-lg transition-colors"
           >
             Make a Donation
@@ -216,7 +216,7 @@ function DonationSuccessContent() {
           {/* Action Buttons */}
           <div className="flex flex-col sm:flex-row gap-4">
             <Link
-              href="/donate"
+              href="/claims"
               className="flex-1 bg-[#2F5D50] hover:bg-[#1F453A] text-white font-semibold py-3 px-6 rounded-lg transition-colors text-center"
             >
               Make Another Donation
