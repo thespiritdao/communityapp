@@ -11,12 +11,14 @@ import {
 import { toast } from 'react-hot-toast';
 import { useCDPStatus } from '@/hooks/useCDPStatus';
 
-// Load Stripe publishable key
+// Load Stripe publishable key (new account — for $SYSTEM token purchases)
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_SYSTEM_PUBLISHABLE_KEY!);
+
+type DonationType = 'ecosystem' | 'direct';
 
 /**
  * Donation Checkout Form Component
- * Uses Stripe Elements for payment collection
+ * Uses Stripe Elements for payment collection ($SYSTEM flow)
  */
 function DonationCheckoutForm({
   clientSecret,
@@ -71,7 +73,7 @@ function DonationCheckoutForm({
       {/* Donation Summary */}
       <div
         style={{
-          backgroundColor: 'rgba(232,241,238,0.75)',
+          backgroundColor: '#E8F1EE',
           border: '1px solid #B8D9CA',
           padding: '16px',
           borderRadius: '12px',
@@ -106,17 +108,17 @@ function DonationCheckoutForm({
       {/* Payment Methods Info */}
       <div
         style={{
-          backgroundColor: 'rgba(232,241,238,0.75)',
+          backgroundColor: '#E8F1EE',
           border: '1px solid #B8D9CA',
           padding: '16px',
           borderRadius: '12px',
           fontSize: '14px',
         }}
       >
-        <p style={{ fontWeight: 600, marginBottom: '8px' }}>💳 Payment Options:</p>
+        <p style={{ fontWeight: 600, marginBottom: '8px' }}>Payment Options:</p>
         <ul style={{ marginLeft: '16px', color: '#374151' }}>
-          <li>• <strong>Credit Card:</strong> 2.9% + $0.30 fee, 3-7 day hold</li>
-          <li style={{ marginTop: '4px' }}>• <strong>Bank Transfer (ACH):</strong> 0.8% fee, instant approval</li>
+          <li>* <strong>Credit Card:</strong> 2.9% + $0.30 fee, 3-7 day hold</li>
+          <li style={{ marginTop: '4px' }}>* <strong>Bank Transfer (ACH):</strong> 0.8% fee, instant approval</li>
         </ul>
       </div>
 
@@ -142,7 +144,7 @@ function DonationCheckoutForm({
       {/* No Refund Policy */}
       <div
         style={{
-          backgroundColor: 'rgba(250,244,236,0.75)',
+          backgroundColor: '#FAF4EC',
           border: '1px solid #E8D7B8',
           padding: '12px',
           borderRadius: '12px',
@@ -150,7 +152,7 @@ function DonationCheckoutForm({
         }}
       >
         <p style={{ color: '#6B5A3E' }}>
-          ⚠️ <strong>No Refund Policy:</strong> All donations are final and non-refundable.
+          <strong>No Refund Policy:</strong> All donations are final and non-refundable.
           Tokens will be minted after settlement period (3-7 days for cards, instant for ACH).
         </p>
       </div>
@@ -178,10 +180,19 @@ function DonationCheckoutForm({
 
 /**
  * Donate Tab Component
+ *
+ * Two donation paths:
+ * 1. "Fund the Ecosystem" — Donate and receive $SYSTEM tokens (new Stripe account)
+ * 2. "Direct Donation" — 100% tax-deductible, no tokens (old Stripe account via Checkout)
  */
 export default function DonateTab() {
   const { address: walletAddress, isInitializing } = useCDPStatus();
   const isConnected = !!walletAddress && !isInitializing;
+
+  // Donation type toggle
+  const [donationType, setDonationType] = useState<DonationType>('ecosystem');
+
+  // Ecosystem donation state
   const [donationAmount, setDonationAmount] = useState<string>('');
   const [donorEmail, setDonorEmail] = useState<string>('');
   const [clientSecret, setClientSecret] = useState<string | null>(null);
@@ -189,8 +200,16 @@ export default function DonateTab() {
   const [isCreatingIntent, setIsCreatingIntent] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
 
-  const minAmount = 10;
+  // Direct donation state
+  const [directAmount, setDirectAmount] = useState<string>('');
+  const [directEmail, setDirectEmail] = useState<string>('');
+  const [isRedirecting, setIsRedirecting] = useState(false);
+
+  const ecosystemMinAmount = 10;
+  const directMinAmount = 1;
   const suggestedAmounts = [10, 25, 50, 100, 250, 500];
+
+  // ── Ecosystem donation handlers ───────────────────────────────
 
   const handleCreatePaymentIntent = async () => {
     if (!walletAddress) {
@@ -200,8 +219,8 @@ export default function DonateTab() {
 
     const amount = parseFloat(donationAmount);
 
-    if (!amount || amount < minAmount) {
-      toast.error(`Minimum donation is $${minAmount}`);
+    if (!amount || amount < ecosystemMinAmount) {
+      toast.error(`Minimum donation is $${ecosystemMinAmount}`);
       return;
     }
 
@@ -255,7 +274,55 @@ export default function DonateTab() {
     setShowSuccess(false);
   };
 
-  // Success Screen
+  // ── Direct donation handlers ──────────────────────────────────
+
+  const handleDirectDonation = async () => {
+    if (!walletAddress) {
+      toast.error('Please connect your wallet first');
+      return;
+    }
+
+    const amount = parseFloat(directAmount);
+
+    if (!amount || amount < directMinAmount) {
+      toast.error(`Minimum donation is $${directMinAmount}`);
+      return;
+    }
+
+    if (!directEmail || !directEmail.includes('@')) {
+      toast.error('Please provide a valid email address for your receipt');
+      return;
+    }
+
+    setIsRedirecting(true);
+
+    try {
+      const response = await fetch('/api/donations/direct-checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          amount,
+          email: directEmail,
+          walletAddress,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to create checkout session');
+      }
+
+      // Redirect to Stripe Checkout (hosted on old account)
+      window.location.href = data.url;
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to start checkout');
+      setIsRedirecting(false);
+    }
+  };
+
+  // ── Success screen (ecosystem only — direct has its own page) ──
+
   if (showSuccess) {
     return (
       <div style={{ display: 'flex', justifyContent: 'center', padding: '16px' }}>
@@ -270,7 +337,7 @@ export default function DonateTab() {
             textAlign: 'center',
           }}
         >
-          <div style={{ fontSize: '48px', marginBottom: '24px' }}>🎉</div>
+          <div style={{ fontSize: '48px', marginBottom: '24px' }}>&#x1F389;</div>
           <h1 style={{ fontSize: '24px', fontWeight: 700, marginBottom: '16px' }}>
             Thank You!
           </h1>
@@ -286,10 +353,10 @@ export default function DonateTab() {
             }}
           >
             <p style={{ fontSize: '14px', color: '#065F46', marginBottom: '8px' }}>
-              ✅ Settlement period (0-7 days based on payment method)
+              Settlement period (0-7 days based on payment method)
             </p>
             <p style={{ fontSize: '14px', color: '#065F46' }}>
-              ✅ Executive Pod approval (2-of-3 multi-sig)
+              Executive Pod approval
             </p>
           </div>
           <p style={{ fontSize: '14px', color: '#6B7280', marginBottom: '24px' }}>
@@ -316,21 +383,265 @@ export default function DonateTab() {
 
   return (
     <div>
-      {!clientSecret ? (
-        // Donation Amount Form
+      {/* ── Donation Type Toggle ─────────────────────────────── */}
+      <div
+        style={{
+          display: 'flex',
+          gap: '8px',
+          marginBottom: '20px',
+          background: 'rgba(255,255,255,0.5)',
+          padding: '6px',
+          borderRadius: '10px',
+          border: '1px solid rgba(229,231,235,0.5)',
+        }}
+      >
+        <button
+          onClick={() => setDonationType('ecosystem')}
+          style={{
+            flex: 1,
+            padding: '10px 12px',
+            fontSize: '14px',
+            fontWeight: 600,
+            color: donationType === 'ecosystem' ? '#FFFFFF' : '#374151',
+            background: donationType === 'ecosystem' ? '#2F5D50' : 'transparent',
+            border: 'none',
+            borderRadius: '8px',
+            cursor: 'pointer',
+            transition: 'all 0.2s',
+          }}
+        >
+          Fund the Ecosystem
+        </button>
+        <button
+          onClick={() => setDonationType('direct')}
+          style={{
+            flex: 1,
+            padding: '10px 12px',
+            fontSize: '14px',
+            fontWeight: 600,
+            color: donationType === 'direct' ? '#FFFFFF' : '#374151',
+            background: donationType === 'direct' ? '#2F5D50' : 'transparent',
+            border: 'none',
+            borderRadius: '8px',
+            cursor: 'pointer',
+            transition: 'all 0.2s',
+          }}
+        >
+          Direct Donation
+        </button>
+      </div>
+
+      {/* ════════════════════════════════════════════════════ */}
+      {/* ECOSYSTEM FUNDING PATH                              */}
+      {/* ════════════════════════════════════════════════════ */}
+      {donationType === 'ecosystem' && (
+        <>
+          {!clientSecret ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+              {/* Wallet Connection Status */}
+              {!isConnected && (
+                <div
+                  style={{
+                    backgroundColor: '#FAF4EC',
+                    border: '1px solid #E8D7B8',
+                    padding: '16px',
+                    borderRadius: '12px',
+                  }}
+                >
+                  <p style={{ fontSize: '14px', color: '#6B5A3E' }}>
+                    Please connect your wallet to receive $SYSTEM tokens
+                  </p>
+                </div>
+              )}
+
+              {/* Suggested Amounts */}
+              <div>
+                <label style={{ display: 'block', fontSize: '14px', fontWeight: 500, marginBottom: '8px', color: '#374151' }}>
+                  Select Amount
+                </label>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px' }}>
+                  {suggestedAmounts.map((amount) => (
+                    <button
+                      key={amount}
+                      type="button"
+                      onClick={() => setDonationAmount(amount.toString())}
+                      style={{
+                        backgroundColor: donationAmount === amount.toString() ? '#2F5D50' : 'transparent',
+                        color: donationAmount === amount.toString() ? '#FFFFFF' : '#374151',
+                        border: donationAmount === amount.toString() ? 'none' : '1px solid #6F8F86',
+                        padding: '12px 16px',
+                        borderRadius: '12px',
+                        fontWeight: 500,
+                        cursor: 'pointer',
+                      }}
+                    >
+                      ${amount}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Custom Amount */}
+              <div>
+                <label
+                  htmlFor="customAmount"
+                  style={{ display: 'block', fontSize: '14px', fontWeight: 500, marginBottom: '8px', color: '#374151' }}
+                >
+                  Or Enter Custom Amount (min ${ecosystemMinAmount})
+                </label>
+                <div style={{ position: 'relative' }}>
+                  <span style={{ position: 'absolute', left: '12px', top: '12px', color: '#6B7280' }}>
+                    $
+                  </span>
+                  <input
+                    id="customAmount"
+                    type="number"
+                    min={ecosystemMinAmount}
+                    step="0.01"
+                    value={donationAmount}
+                    onChange={(e) => setDonationAmount(e.target.value)}
+                    placeholder={`${ecosystemMinAmount}.00`}
+                    style={{
+                      width: '100%',
+                      paddingLeft: '32px',
+                      paddingRight: '16px',
+                      paddingTop: '12px',
+                      paddingBottom: '12px',
+                      border: '1px solid #D1D5DB',
+                      borderRadius: '8px',
+                      fontSize: '16px',
+                    }}
+                  />
+                </div>
+              </div>
+
+              {/* Email Input */}
+              <div>
+                <label
+                  htmlFor="email"
+                  style={{ display: 'block', fontSize: '14px', fontWeight: 500, marginBottom: '8px', color: '#374151' }}
+                >
+                  Email (for receipt and notifications)
+                </label>
+                <input
+                  id="email"
+                  type="email"
+                  value={donorEmail}
+                  onChange={(e) => setDonorEmail(e.target.value)}
+                  placeholder="your@email.com"
+                  style={{
+                    width: '100%',
+                    padding: '12px 16px',
+                    border: '1px solid #D1D5DB',
+                    borderRadius: '8px',
+                    fontSize: '16px',
+                  }}
+                />
+              </div>
+
+              {/* Continue Button */}
+              <button
+                onClick={handleCreatePaymentIntent}
+                disabled={!isConnected || isCreatingIntent || !donationAmount || !donorEmail}
+                style={{
+                  backgroundColor: (!isConnected || isCreatingIntent || !donationAmount || !donorEmail) ? '#D8D2C8' : '#2F5D50',
+                  color: '#FFFFFF',
+                  fontWeight: 500,
+                  padding: '12px 24px',
+                  borderRadius: '12px',
+                  width: '100%',
+                  border: 'none',
+                  cursor: (!isConnected || isCreatingIntent || !donationAmount || !donorEmail) ? 'not-allowed' : 'pointer',
+                }}
+              >
+                {isCreatingIntent ? 'Preparing...' : 'Continue to Payment'}
+              </button>
+
+              {/* Info Box */}
+              <div
+                style={{
+                  backgroundColor: '#F9FAFB',
+                  padding: '16px',
+                  borderRadius: '8px',
+                  fontSize: '14px',
+                }}
+              >
+                <p style={{ fontWeight: 600, marginBottom: '8px' }}>
+                  How it works:
+                </p>
+                <ol style={{ color: '#6B7280', marginLeft: '20px' }}>
+                  <li>Choose your donation amount</li>
+                  <li>Complete payment (card or bank transfer)</li>
+                  <li>Wait for settlement period (0-7 days)</li>
+                  <li>Executive Pod approves</li>
+                  <li>$SYSTEM tokens minted to your wallet</li>
+                </ol>
+              </div>
+            </div>
+          ) : (
+            // Stripe Payment Form
+            <Elements
+              stripe={stripePromise}
+              options={{
+                clientSecret,
+                appearance: {
+                  theme: 'stripe',
+                  variables: {
+                    colorPrimary: '#2F5D50',
+                  },
+                },
+              }}
+            >
+              <DonationCheckoutForm
+                clientSecret={clientSecret}
+                donationData={donationData}
+                onSuccess={handleSuccessfulPayment}
+              />
+            </Elements>
+          )}
+        </>
+      )}
+
+      {/* ════════════════════════════════════════════════════ */}
+      {/* DIRECT DONATION PATH                                */}
+      {/* ════════════════════════════════════════════════════ */}
+      {donationType === 'direct' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+          {/* Explainer Panel */}
+          <div
+            style={{
+              backgroundColor: '#E8F1EE',
+              border: '1px solid #B8D9CA',
+              padding: '20px',
+              borderRadius: '12px',
+            }}
+          >
+            <p style={{ fontWeight: 600, color: '#1F453A', fontSize: '14px', marginBottom: '12px' }}>
+              About Direct Donations
+            </p>
+            <p style={{ fontSize: '14px', color: '#5F5A54', marginBottom: '12px' }}>
+              SpiritDAO is a 501(c)(3) nonprofit (EIN: 99-1308806) providing infrastructure for mission-driven and lifestyle communities. 100% of direct donations support our operations fund, which allows us to continue offering our ecosystem for free to communities around the world.
+            </p>
+            <p style={{ fontSize: '14px', color: '#5F5A54', marginBottom: '12px' }}>
+              Unlike ecosystem funding (which returns $SYSTEM tokens), direct donations are a charitable contribution with no goods or services provided in exchange. Your entire donation is <strong style={{ color: '#1F453A' }}>tax-deductible to the full extent permitted by law</strong>.
+            </p>
+            <p style={{ fontSize: '12px', color: '#8FAAA1' }}>
+              No goods or services are provided in exchange for this contribution. You will receive a receipt via email for your tax records.
+            </p>
+          </div>
+
           {/* Wallet Connection Status */}
           {!isConnected && (
             <div
               style={{
-                backgroundColor: 'rgba(250,244,236,0.75)',
+                backgroundColor: '#FAF4EC',
                 border: '1px solid #E8D7B8',
                 padding: '16px',
                 borderRadius: '12px',
               }}
             >
               <p style={{ fontSize: '14px', color: '#6B5A3E' }}>
-                ⚠️ Please connect your wallet to receive $SYSTEM tokens
+                Please connect your wallet to link your donation to your account
               </p>
             </div>
           )}
@@ -345,11 +656,11 @@ export default function DonateTab() {
                 <button
                   key={amount}
                   type="button"
-                  onClick={() => setDonationAmount(amount.toString())}
+                  onClick={() => setDirectAmount(amount.toString())}
                   style={{
-                    backgroundColor: donationAmount === amount.toString() ? '#2F5D50' : 'transparent',
-                    color: donationAmount === amount.toString() ? '#FFFFFF' : '#374151',
-                    border: donationAmount === amount.toString() ? 'none' : '1px solid #6F8F86',
+                    backgroundColor: directAmount === amount.toString() ? '#2F5D50' : 'transparent',
+                    color: directAmount === amount.toString() ? '#FFFFFF' : '#374151',
+                    border: directAmount === amount.toString() ? 'none' : '1px solid #6F8F86',
                     padding: '12px 16px',
                     borderRadius: '12px',
                     fontWeight: 500,
@@ -365,23 +676,23 @@ export default function DonateTab() {
           {/* Custom Amount */}
           <div>
             <label
-              htmlFor="customAmount"
+              htmlFor="directCustomAmount"
               style={{ display: 'block', fontSize: '14px', fontWeight: 500, marginBottom: '8px', color: '#374151' }}
             >
-              Or Enter Custom Amount (min ${minAmount})
+              Or Enter Custom Amount (min ${directMinAmount})
             </label>
             <div style={{ position: 'relative' }}>
               <span style={{ position: 'absolute', left: '12px', top: '12px', color: '#6B7280' }}>
                 $
               </span>
               <input
-                id="customAmount"
+                id="directCustomAmount"
                 type="number"
-                min={minAmount}
+                min={directMinAmount}
                 step="0.01"
-                value={donationAmount}
-                onChange={(e) => setDonationAmount(e.target.value)}
-                placeholder={`${minAmount}.00`}
+                value={directAmount}
+                onChange={(e) => setDirectAmount(e.target.value)}
+                placeholder={`${directMinAmount}.00`}
                 style={{
                   width: '100%',
                   paddingLeft: '32px',
@@ -399,16 +710,16 @@ export default function DonateTab() {
           {/* Email Input */}
           <div>
             <label
-              htmlFor="email"
+              htmlFor="directEmail"
               style={{ display: 'block', fontSize: '14px', fontWeight: 500, marginBottom: '8px', color: '#374151' }}
             >
-              Email (for receipt and notifications)
+              Email (for your tax receipt)
             </label>
             <input
-              id="email"
+              id="directEmail"
               type="email"
-              value={donorEmail}
-              onChange={(e) => setDonorEmail(e.target.value)}
+              value={directEmail}
+              onChange={(e) => setDirectEmail(e.target.value)}
               placeholder="your@email.com"
               style={{
                 width: '100%',
@@ -422,63 +733,37 @@ export default function DonateTab() {
 
           {/* Continue Button */}
           <button
-            onClick={handleCreatePaymentIntent}
-            disabled={!isConnected || isCreatingIntent || !donationAmount || !donorEmail}
+            onClick={handleDirectDonation}
+            disabled={!isConnected || isRedirecting || !directAmount || !directEmail}
             style={{
-              backgroundColor: (!isConnected || isCreatingIntent || !donationAmount || !donorEmail) ? '#D8D2C8' : '#2F5D50',
+              backgroundColor: (!isConnected || isRedirecting || !directAmount || !directEmail) ? '#D8D2C8' : '#2F5D50',
               color: '#FFFFFF',
               fontWeight: 500,
               padding: '12px 24px',
               borderRadius: '12px',
               width: '100%',
               border: 'none',
-              cursor: (!isConnected || isCreatingIntent || !donationAmount || !donorEmail) ? 'not-allowed' : 'pointer',
+              cursor: (!isConnected || isRedirecting || !directAmount || !directEmail) ? 'not-allowed' : 'pointer',
             }}
           >
-            {isCreatingIntent ? 'Preparing...' : 'Continue to Payment'}
+            {isRedirecting ? 'Redirecting to checkout...' : 'Continue to Payment'}
           </button>
 
-          {/* Info Box */}
+          {/* No Refund Policy */}
           <div
             style={{
-              backgroundColor: 'rgba(249,250,251,0.7)',
-              padding: '16px',
-              borderRadius: '8px',
-              fontSize: '14px',
+              backgroundColor: '#FAF4EC',
+              border: '1px solid #E8D7B8',
+              padding: '12px',
+              borderRadius: '12px',
+              fontSize: '12px',
             }}
           >
-            <p style={{ fontWeight: 600, marginBottom: '8px' }}>
-              How it works:
+            <p style={{ color: '#6B5A3E' }}>
+              <strong>No Refund Policy:</strong> All donations are final and non-refundable.
             </p>
-            <ol style={{ color: '#6B7280', marginLeft: '20px' }}>
-              <li>Choose your donation amount</li>
-              <li>Complete payment (card or bank transfer)</li>
-              <li>Wait for settlement period (0-7 days)</li>
-              <li>Executive Pod approves (2-of-3 multi-sig)</li>
-              <li>$SYSTEM tokens minted to your wallet</li>
-            </ol>
           </div>
         </div>
-      ) : (
-        // Stripe Payment Form
-        <Elements
-          stripe={stripePromise}
-          options={{
-            clientSecret,
-            appearance: {
-              theme: 'stripe',
-              variables: {
-                colorPrimary: '#2563eb',
-              },
-            },
-          }}
-        >
-          <DonationCheckoutForm
-            clientSecret={clientSecret}
-            donationData={donationData}
-            onSuccess={handleSuccessfulPayment}
-          />
-        </Elements>
       )}
     </div>
   );
