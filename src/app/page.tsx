@@ -51,6 +51,9 @@ function PageContent() {
   const [isRedirecting, setIsRedirecting] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const authenticationAttemptedRef = useRef(false);
+  // Tracks whether the initial auth call included an email (for post-auth backfill)
+  const authEmailSentRef = useRef<string | undefined>(undefined);
+  const emailBackfillAttemptedRef = useRef(false);
   const [isClient, setIsClient] = useState(false);
 
   // Pre-auth invite code state
@@ -146,6 +149,7 @@ function PageContent() {
       if (completed) {
         console.log('🚀 handleAuthReady: returning user detected — fast-path signIn');
         authenticationAttemptedRef.current = true;
+        authEmailSentRef.current = email;
         setIsProcessing(true);
         try {
           await signIn(address, email);
@@ -599,6 +603,7 @@ function PageContent() {
             emailToUse,
           });
 
+          authEmailSentRef.current = emailToUse;
           await signIn(walletAddress, emailToUse);
           console.log('✅ Authentication successful');
           // Clean up flags now that we have a fresh session
@@ -624,6 +629,45 @@ function PageContent() {
     // Note: signIn is intentionally excluded — it's now a stable ref (no [authState] dep)
     // Note: authLoading is intentionally excluded — authenticationAttemptedRef guards duplicates
   ]);
+
+  // Post-auth email backfill: when a user authenticates without email (e.g. Google
+  // OAuth race condition where currentUser resolves after signIn fires), this effect
+  // detects the email arriving later and backfills it to the profile + Paragraph list.
+  // Runs separately from the auth effect so it doesn't cause flickering or re-auth.
+  useEffect(() => {
+    if (!isAuthenticated || !walletAddress || emailBackfillAttemptedRef.current) return;
+
+    // If auth already had an email, nothing to backfill
+    if (authEmailSentRef.current) return;
+
+    // Resolve email from CDP authenticationMethods
+    const authMethods = (currentUser as any)?.authenticationMethods;
+    const cdpEmail =
+      authMethods?.email?.email ||
+      authMethods?.google?.email ||
+      authMethods?.apple?.email ||
+      undefined;
+    const resolvedEmail = capturedEmail || cdpEmail;
+
+    if (!resolvedEmail) return;
+
+    // Email is now available but wasn't sent during auth — backfill it
+    emailBackfillAttemptedRef.current = true;
+    console.log(`📧 Post-auth email backfill: ${resolvedEmail} (was missing at auth time)`);
+
+    fetch('/api/auth/backfill-email', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ walletAddress, email: resolvedEmail }),
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        console.log('✅ Email backfill result:', data);
+      })
+      .catch((err) => {
+        console.error('⚠️ Email backfill failed (non-critical):', err);
+      });
+  }, [isAuthenticated, walletAddress, currentUser, capturedEmail]);
 
   // Redirect to home when authenticated
   useEffect(() => {
