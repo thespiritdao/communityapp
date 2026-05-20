@@ -7,14 +7,20 @@ import "./PodTreasuryV3.sol";
 
 /**
  * @title PodTreasuryFactoryV3
- * @dev Factory for deploying PodTreasuryV3 contracts with configurable initial threshold.
- *      Separate from PodTreasuryFactory (V2) so existing pods can continue
- *      using V2WithVoting unchanged.
+ * @dev Factory for deploying PodTreasuryV3 contracts.
+ *      `deployTreasury` is gated to `authorizedDeployer` only — the wrapper
+ *      contract (PodTreasuryDeployerV3) that enforces the pod↔hat binding
+ *      against the canonical Hats tree before any deploy. This closes the
+ *      front-run/squat attack (H-1) while keeping the flow self-sovereign:
+ *      anyone holding a legitimate pod management hat can call the deployer,
+ *      no central admin gate on actual treasury creation.
+ *      `Ownable` retained only for proxy/default-tokens/deployer config.
  */
 contract PodTreasuryFactoryV3 is Ownable, ReentrancyGuard {
     address public immutable hatsContract;
     address public authorizedProxy;
     address public bountyManager;
+    address public authorizedDeployer;
     address[] public defaultSupportedTokens;
 
     mapping(string => address) public podTreasuries;
@@ -39,6 +45,17 @@ contract PodTreasuryFactoryV3 is Ownable, ReentrancyGuard {
         address updater
     );
 
+    event AuthorizedDeployerUpdated(
+        address indexed oldDeployer,
+        address indexed newDeployer,
+        address updater
+    );
+
+    modifier onlyAuthorizedDeployer() {
+        require(msg.sender == authorizedDeployer, "Only authorized deployer");
+        _;
+    }
+
     constructor(
         address _hatsContract,
         address[] memory _defaultSupportedTokens,
@@ -59,7 +76,7 @@ contract PodTreasuryFactoryV3 is Ownable, ReentrancyGuard {
         uint256 managementHatId,
         address[] memory supportedTokens,
         uint256 initialThresholdBps
-    ) external onlyOwner nonReentrant returns (address) {
+    ) external onlyAuthorizedDeployer nonReentrant returns (address) {
         require(bytes(podId).length > 0, "Pod ID cannot be empty");
         require(managementHatId > 0, "Invalid management hat ID");
         require(!isPodTreasuryDeployed[podId], "Treasury already exists for pod");
@@ -129,5 +146,12 @@ contract PodTreasuryFactoryV3 is Ownable, ReentrancyGuard {
         address oldProxy = authorizedProxy;
         authorizedProxy = _newProxy;
         emit AuthorizedProxyUpdated(oldProxy, _newProxy, msg.sender);
+    }
+
+    function updateAuthorizedDeployer(address _newDeployer) external onlyOwner {
+        require(_newDeployer != address(0), "Invalid deployer address");
+        address oldDeployer = authorizedDeployer;
+        authorizedDeployer = _newDeployer;
+        emit AuthorizedDeployerUpdated(oldDeployer, _newDeployer, msg.sender);
     }
 }
