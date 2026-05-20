@@ -37,7 +37,6 @@ export function DirectMessageModal({
   const [isLoading, setIsLoading] = useState(true);
   const [isSending, setIsSending] = useState(false);
   const [isBlocked, setIsBlocked] = useState(false);
-  const [senderDisplayName, setSenderDisplayName] = useState<string>('');
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -69,23 +68,6 @@ export function DirectMessageModal({
       window.visualViewport?.removeEventListener('scroll', updateVp);
     };
   }, []);
-
-  // Fetch sender's own display name for use in notifications
-  useEffect(() => {
-    if (!address) return;
-    supabase
-      .from('user_profiles')
-      .select('first_name, last_name, display_name')
-      .eq('wallet_address', address.toLowerCase())
-      .single()
-      .then(({ data }) => {
-        const fullName =
-          data?.first_name && data?.last_name
-            ? `${data.first_name} ${data.last_name}`
-            : data?.first_name || data?.display_name;
-        setSenderDisplayName(fullName || address.slice(0, 8) + '…');
-      });
-  }, [address]);
 
   // Load messages
   useEffect(() => {
@@ -228,7 +210,7 @@ export function DirectMessageModal({
             sender_address: normalizedAddress,
             notification_type: 'chat_message',
             title: 'New Direct Message',
-            message: `You have a new message from ${senderDisplayName}`,
+            message: 'You have a new direct message',
             context_type: 'chat',
             context_id: normalizedAddress,
             context_url: `/chat?dm=${normalizedAddress}`,
@@ -333,7 +315,8 @@ export function DirectMessageModal({
             <div className="dm-empty">No messages yet. Say hello!</div>
           ) : (
             messages.map((msg) => {
-              const isOwnMessage = msg.sender_wallet_id === address;
+              const isOwnMessage =
+                msg.sender_wallet_id?.toLowerCase() === address?.toLowerCase();
               return (
                 <div
                   key={msg.id}
