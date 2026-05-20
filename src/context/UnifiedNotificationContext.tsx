@@ -152,23 +152,11 @@ export const UnifiedNotificationProvider: React.FC<
   }, [address, recentlyClearedIds]);
 
   /**
-   * Debounced refresh to avoid rapid refreshes from real-time updates
-   * Only refreshes if user is not actively viewing notifications
+   * Debounced refresh to avoid rapid refreshes from real-time updates.
+   * recentlyClearedIds (filtered inside refreshNotifications) prevents cleared
+   * items from reappearing, so refresh is safe to run while on /notifications.
    */
   const debouncedRefresh = useCallback(() => {
-    // Check if user is currently on notifications page - if so, don't auto-refresh
-    // This prevents cleared notifications from reappearing due to new notifications
-    if (
-      typeof window !== 'undefined' &&
-      window.location.pathname === '/notifications'
-    ) {
-      console.log(
-        '🚫 Skipping auto-refresh while user is viewing notifications page',
-      );
-      return;
-    }
-
-    // Simple debounce using setTimeout to avoid rapid consecutive refreshes
     setTimeout(() => {
       refreshNotifications();
     }, 300);

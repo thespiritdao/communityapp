@@ -74,11 +74,15 @@ export function DirectMessageModal({
     if (!address) return;
     supabase
       .from('user_profiles')
-      .select('display_name')
+      .select('first_name, last_name, display_name')
       .eq('wallet_address', address.toLowerCase())
       .single()
       .then(({ data }) => {
-        setSenderDisplayName(data?.display_name || address.slice(0, 8) + '…');
+        const fullName =
+          data?.first_name && data?.last_name
+            ? `${data.first_name} ${data.last_name}`
+            : data?.first_name || data?.display_name;
+        setSenderDisplayName(fullName || address.slice(0, 8) + '…');
       });
   }, [address]);
 

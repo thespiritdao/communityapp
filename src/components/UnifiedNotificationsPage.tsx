@@ -2,7 +2,6 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
 import { useEvmAddress } from '@coinbase/cdp-hooks';
 import { useUnifiedNotifications } from '@/context/UnifiedNotificationContext';
 import { Badge } from '@/components/ui/badge';
@@ -20,8 +19,8 @@ import {
   ShoppingCart,
   Settings,
 } from 'lucide-react';
-import { supabase } from '@/utils/supabaseClient';
 import Link from 'next/link';
+import { UserProfileDisplay } from '@/components/UserProfileDisplay';
 import type {
   UnifiedNotification,
   NotificationCategory,
@@ -62,46 +61,13 @@ function NotificationCard({
   notification,
   onMarkAsRead,
 }: NotificationCardProps) {
-  const [senderProfilePicture, setSenderProfilePicture] = useState<
-    string | null
-  >(null);
-
-  useEffect(() => {
-    async function fetchSenderProfilePicture() {
-      if (
-        notification.sender_address &&
-        notification.sender_address !== 'system'
-      ) {
-        const { data } = await supabase
-          .from('user_profiles')
-          .select('profile_picture')
-          .eq('wallet_address', notification.sender_address)
-          .single();
-
-        setSenderProfilePicture(
-          data?.profile_picture || '/observableinfinities.png',
-        );
-      }
-    }
-    fetchSenderProfilePicture();
-  }, [notification.sender_address]);
+  const hasHumanSender =
+    !!notification.sender_address && notification.sender_address !== 'system';
 
   const getNotificationIcon = () => {
     switch (notification.notification_type) {
       case 'user_mentioned':
-        return notification.sender_address === 'system' ? (
-          '👤'
-        ) : (
-          <img
-            src={senderProfilePicture || '/observableinfinities.png'}
-            alt="Profile"
-            className="w-8 h-8 rounded-full object-cover border border-gray-200"
-            onError={(e) => {
-              (e.currentTarget as HTMLImageElement).src =
-                '/observableinfinities.png';
-            }}
-          />
-        );
+        return '👤';
       case 'proposal_mentioned':
       case 'proposal_created':
       case 'voting_reminder':
@@ -218,6 +184,16 @@ function NotificationCard({
                     </Badge>
                   )}
               </div>
+
+              {/* Sender namecard for human-sent notifications */}
+              {hasHumanSender && (
+                <div className="mb-2">
+                  <UserProfileDisplay
+                    walletAddress={notification.sender_address!}
+                    size="sm"
+                  />
+                </div>
+              )}
 
               {/* Message with line clamping */}
               <p className="text-gray-600 text-sm mb-3 text-truncate-2">
