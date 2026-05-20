@@ -5,6 +5,7 @@ import { createPortal } from 'react-dom';
 import { useEvmAddress } from '@coinbase/cdp-hooks';
 import { supabase } from '@/lib/supabase';
 import { unifiedNotificationService } from '@/services/unifiedNotificationService';
+import { UserProfileDisplay } from '@/components/UserProfileDisplay';
 import { Send, X, Ban, Trash2 } from 'lucide-react';
 import '../styles/Chat.css';
 
@@ -313,14 +314,11 @@ export function DirectMessageModal({
         {/* Header */}
         <div className="dm-header">
           <div className="dm-header-info">
-            <img
-              src={recipientImage}
-              alt={recipientName}
-              className="dm-avatar"
+            <UserProfileDisplay
+              walletAddress={recipientAddress}
+              size="lg"
+              showModal={false}
             />
-            <div>
-              <h3>{recipientName}</h3>
-            </div>
           </div>
           <button onClick={onClose} className="dm-close-btn">
             <X size={20} />
@@ -505,20 +503,21 @@ export function DirectMessageModal({
         }
 
         .dm-message-content {
-          background: #f0f0f0;
+          background: #F5EDD7;
+          color: #2a2a2a;
           padding: 10px 14px;
           border-radius: 12px;
           word-break: break-word;
         }
 
         .dm-message-own .dm-message-content {
-          background: #2F5D50;
-          color: white;
+          background: #E8F1EE;
+          color: #2a2a2a;
         }
 
         .dm-message-time {
           font-size: 0.7rem;
-          opacity: 0.7;
+          color: #8FAAA1;
           display: block;
           margin-top: 4px;
         }

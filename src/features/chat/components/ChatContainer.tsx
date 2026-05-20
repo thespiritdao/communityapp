@@ -42,12 +42,16 @@ export default function ChatContainer({ chatGroupId, dmAddress }: ChatContainerP
     if (!activeDmAddress) return;
     supabase
       .from('user_profiles')
-      .select('display_name, username, profile_picture')
+      .select('first_name, last_name, display_name, username, profile_picture')
       .eq('wallet_address', activeDmAddress.toLowerCase())
       .maybeSingle()
       .then(({ data }) => {
+        const fullName =
+          data?.first_name && data?.last_name
+            ? `${data.first_name} ${data.last_name}`
+            : data?.first_name || data?.display_name || data?.username;
         setDmProfile({
-          name: data?.display_name || data?.username || activeDmAddress.slice(0, 8) + '...',
+          name: fullName || activeDmAddress.slice(0, 8) + '...',
           image: data?.profile_picture || '/images/symbolobinfin.png',
         });
       });
