@@ -43,7 +43,7 @@ interface ISELFToken {
  */
 contract PodSELFDistributor is Ownable, ReentrancyGuard {
     
-    IPodTreasuryFactory public immutable treasuryFactory;
+    IPodTreasuryFactory public treasuryFactory;
     ISELFToken public immutable selfToken;
     address public authorizedProxy; // Treasury proxy for sponsored transactions
     
@@ -84,6 +84,7 @@ contract PodSELFDistributor is Ownable, ReentrancyGuard {
     
     event ProxyAuthorized(address indexed proxy);
     event DistributionMethodUpdated(string method);
+    event TreasuryFactoryUpdated(address indexed oldFactory, address indexed newFactory);
     
     // Distribution method configuration
     enum DistributionMethod {
@@ -132,6 +133,17 @@ contract PodSELFDistributor is Ownable, ReentrancyGuard {
     function setAuthorizedProxy(address _proxy) external onlyOwner {
         authorizedProxy = _proxy;
         emit ProxyAuthorized(_proxy);
+    }
+
+    /**
+     * @dev Update treasury factory (owner only) — used to point at a new
+     * factory version (e.g. V2 → V3) without redeploying this contract.
+     */
+    function updateTreasuryFactory(address _treasuryFactory) external onlyOwner {
+        require(_treasuryFactory != address(0), "Invalid treasury factory");
+        address oldFactory = address(treasuryFactory);
+        treasuryFactory = IPodTreasuryFactory(_treasuryFactory);
+        emit TreasuryFactoryUpdated(oldFactory, _treasuryFactory);
     }
     
     /**

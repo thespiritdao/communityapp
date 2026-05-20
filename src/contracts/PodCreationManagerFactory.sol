@@ -23,7 +23,7 @@ import "./PodCreationManagerV2.sol";
 contract PodCreationManagerFactory {
 
     address public immutable hatsContract;
-    address public immutable treasuryFactory;
+    address public treasuryFactory;
     address public owner;
 
     // podUUID => deployed manager address
@@ -35,6 +35,8 @@ contract PodCreationManagerFactory {
         uint256 parentHatId,
         uint256 execHatId
     );
+
+    event TreasuryFactoryUpdated(address indexed oldFactory, address indexed newFactory);
 
     modifier onlyOwner() {
         require(msg.sender == owner, "Not owner");
@@ -86,5 +88,18 @@ contract PodCreationManagerFactory {
     function transferOwnership(address newOwner) external onlyOwner {
         require(newOwner != address(0), "Invalid owner");
         owner = newOwner;
+    }
+
+    /**
+     * @notice Update the treasury factory used by newly-deployed managers.
+     * Existing deployed managers retain their own factory reference and must
+     * be updated separately via their own setter (PodCreationManagerV2 has
+     * updateTreasuryFactory).
+     */
+    function updateTreasuryFactory(address _treasuryFactory) external onlyOwner {
+        require(_treasuryFactory != address(0), "Invalid treasury factory");
+        address oldFactory = treasuryFactory;
+        treasuryFactory = _treasuryFactory;
+        emit TreasuryFactoryUpdated(oldFactory, _treasuryFactory);
     }
 }
