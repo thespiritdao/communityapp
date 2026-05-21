@@ -1,7 +1,7 @@
 // src/features/governance/pages/ProposalDetailPage.tsx
 'use client';
 import { useEffect, useState } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useEvmAddress } from '@coinbase/cdp-hooks';
 import { usePublicClient } from 'wagmi';
@@ -9,6 +9,7 @@ import DAOGovernorABI from '@/abis/DAO_GovernorABI.json';
 import { decodeEventLog, type AbiEvent } from 'viem';
 import VoteButton from '@/features/governance/components/VoteButton';
 import { useForumPostTitle } from '@/features/governance/hooks/useForumPostTitle';
+import { isUuidProposalId } from '@/features/governance/utils/proposalUrl';
 
 interface OnChainProposal {
   proposer: `0x${string}`;
@@ -35,6 +36,7 @@ interface ProposalDetail {
 
 export default function ProposalDetailPage() {
   const params = useParams();
+  const router = useRouter();
   const id = typeof params.id === 'string' ? params.id : '';
   const { evmAddress: address } = useEvmAddress();
   const publicClient = usePublicClient();
@@ -49,9 +51,21 @@ export default function ProposalDetailPage() {
     (item) => item.type === 'event' && item.name === 'ProposalCreated',
   )! as AbiEvent;
 
+  // Pod-level proposals have UUID ids and are DB-only — they don't live
+  // on the Governor contract. Redirect to the index page's modal
+  // deep-link form, which is the canonical surface for them. This
+  // catches any stale notification URL (push or in-app inbox) that
+  // points here.
+  useEffect(() => {
+    if (id && isUuidProposalId(id)) {
+      router.replace(`/governance?proposal=${encodeURIComponent(id)}`);
+    }
+  }, [id, router]);
+
   // Fetch on‑chain proposal core + metadata
   useEffect(() => {
     if (!id || !publicClient) return;
+    if (isUuidProposalId(id)) return; // handled by the redirect effect above
     setLoading(true);
 
     (async () => {
@@ -141,6 +155,16 @@ export default function ProposalDetailPage() {
       <div className="max-w-4xl mx-auto p-4 bottom-nav-spacing">
         <div className="flex justify-center items-center min-h-[200px]">
           <div>Loading proposal...</div>
+        </div>
+      </div>
+    );
+  // While a UUID redirect is in flight, render a neutral loading state
+  // rather than the on-chain "not found" message.
+  if (isUuidProposalId(id))
+    return (
+      <div className="max-w-4xl mx-auto p-4 bottom-nav-spacing">
+        <div className="flex justify-center items-center min-h-[200px]">
+          <div>Opening proposal…</div>
         </div>
       </div>
     );

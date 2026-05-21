@@ -44,7 +44,7 @@ export default function GovernancePage() {
   const [closeNonce, setCloseNonce] = useState(0); // bumped on close so the deep-linker can clear the URL
 
   const handleDeepLink = useCallback(
-    (proposalId: string) => {
+    async (proposalId: string) => {
       if (proposalsLoading) return;
       if (selectedProposal?.id === proposalId) return;
       const match = enhancedProposals.find(
@@ -53,8 +53,42 @@ export default function GovernancePage() {
       if (match) {
         setSelectedProposal(match);
         setIsModalOpen(true);
+        return;
       }
-      // If no match: leave modal closed; user sees the list, not a 404.
+      // Fallback: useEnhancedProposals filters out expired and
+      // permission-gated proposals. If a notification links to one of
+      // those, fetch directly so the user can still view it read-only.
+      try {
+        const { GovernanceService } = await import(
+          '@/features/governance/services/governanceService'
+        );
+        const raw = await GovernanceService.getPodLevelProposal(proposalId);
+        if (!raw) return;
+        const fallbackProposal: EnhancedProposal = {
+          id: raw.id,
+          title: raw.title,
+          body: raw.description,
+          type: 'pod_level',
+          choices: raw.metadata?.choices || ['For', 'Against', 'Abstain'],
+          status: raw.status,
+          created_at: raw.created_at,
+          created_by: raw.created_by,
+          pod_id: raw.pod_id,
+          pod_data: raw.pods,
+          user_can_vote: false, // read-only fallback view
+          approving_pod_id: raw.pod_id,
+          governance_context: 'pod-level',
+          governance_tier: raw.governance_tier ?? 'POD_OPERATIONAL',
+          approval_threshold_bps: raw.approval_threshold_bps ?? null,
+          quorum_threshold_bps: raw.quorum_threshold_bps ?? null,
+          eligible_voter_count: raw.eligible_voter_count ?? null,
+          vote_counts: raw.vote_counts,
+        };
+        setSelectedProposal(fallbackProposal);
+        setIsModalOpen(true);
+      } catch (err) {
+        console.error('Deep-link fallback fetch failed:', err);
+      }
     },
     [proposalsLoading, enhancedProposals, selectedProposal?.id],
   );
