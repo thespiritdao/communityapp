@@ -1273,17 +1273,31 @@ export function CreateProposalForm({
       return;
     }
 
-    // ✅ ARCHITECTURE FIX: Determine proposal type
-    // - Executive Pod → DAO-wide on-chain proposal (Executive Pod votes)
-    // - Other pods → Pod-level off-chain proposal (pod members vote)
+    // ✅ Proposal-type routing
+    // - selectedPodId === 'dao-wide'  → DAO-wide on-chain proposal (Executive Pod members vote)
+    // - selectedPodId === <pod uuid>  → Pod-scoped proposal; tier dropdown decides:
+    //     POD_OPERATIONAL       → DB-only (pod_level_proposals)
+    //     POD_TREASURY_BINDING  → on-chain Governor + DB record
+    //
+    // Executive Pod is treated like any other pod here: when it's
+    // selected (as opposed to the 'dao-wide' synthetic option exec
+    // members also see), the tier dropdown is authoritative — so the
+    // exec pod can run internal off-chain votes scoped to its own
+    // members, separate from DAO-wide governance.
     const EXEC_POD_ID = process.env.NEXT_PUBLIC_GOVERNANCE_POD_ID;
-    const isPodLevelProposal = selectedPodId && selectedPodId !== EXEC_POD_ID && selectedPodId !== 'dao-wide';
+    const isPodLevelProposal = selectedPodId && selectedPodId !== 'dao-wide';
 
     console.log('🏛️ [PROPOSAL TYPE]', {
       selectedPod: selectedPodId,
       execPodId: EXEC_POD_ID,
       isPodLevel: isPodLevelProposal,
-      type: isPodLevelProposal ? 'Pod-Level (on-chain, pod-specific voting)' : 'DAO-Wide (on-chain, Executive Pod voting)',
+      isExecPodInternal:
+        isPodLevelProposal && selectedPodId === EXEC_POD_ID,
+      type: isPodLevelProposal
+        ? selectedPodId === EXEC_POD_ID
+          ? 'Executive Pod internal (pod-scoped, exec members vote)'
+          : 'Pod-Level (pod-scoped voting)'
+        : 'DAO-Wide (on-chain, Executive Pod voting)',
     });
 
     if (isPodLevelProposal) {
@@ -2071,11 +2085,11 @@ export function CreateProposalForm({
                     value={formData.governanceTier}
                     onChange={(e) => handleFormChange('governanceTier', e.target.value as GovernanceTier)}
                   >
-                    <option value="POD_OPERATIONAL">Off-chain: No Treasury Impact</option>
+                    <option value="POD_OPERATIONAL">Off-chain: Internal pod decision (no treasury impact)</option>
                     <option value="POD_TREASURY_BINDING">On-chain: Funds Exchanged</option>
                   </select>
                   <p className="text-xs mt-1 text-gray-500">
-                    Off-chain proposals are stored in the database only. On-chain proposals are recorded on Base after passing.
+                    Off-chain proposals are stored in the database and voted on by pod members only. On-chain proposals are recorded on Base after passing.
                   </p>
                 </div>
               )}
