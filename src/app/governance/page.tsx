@@ -1,5 +1,5 @@
 'use client';
-import { useCallback, useState, useEffect } from 'react';
+import { useCallback, useState, useEffect, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useCDPStatus } from '@/hooks/useCDPStatus';
 import CreateProposalForm from '@/features/governance/components/CreateProposalForm';
@@ -30,46 +30,40 @@ export default function GovernancePage() {
     refetch: refetchProposals,
   } = useEnhancedProposals();
 
-  // Deep-link support: if /governance?proposal=<id> is present, open the
-  // matching proposal in the modal once proposals have loaded. Used by
-  // notifications for pod-level proposals (which have no dedicated detail
-  // page, only the modal).
-  const searchParams = useSearchParams();
-  const router = useRouter();
-  const deepLinkProposalId = searchParams?.get('proposal') ?? null;
-
   // Handle opening proposal modal
   const openProposalModal = (proposal: EnhancedProposal) => {
     setSelectedProposal(proposal);
     setIsModalOpen(true);
   };
 
+  // Deep-link support: notifications for pod-level proposals route to
+  // /governance?proposal=<id>. ProposalDeepLink reads the query param
+  // and tells the page which proposal to open. Extracted into a child
+  // component because useSearchParams forces a client-side render
+  // bailout and must live inside a Suspense boundary in Next.js 14.
+  const [closeNonce, setCloseNonce] = useState(0); // bumped on close so the deep-linker can clear the URL
+
+  const handleDeepLink = useCallback(
+    (proposalId: string) => {
+      if (proposalsLoading) return;
+      if (selectedProposal?.id === proposalId) return;
+      const match = enhancedProposals.find(
+        (p) => String(p.id) === String(proposalId),
+      );
+      if (match) {
+        setSelectedProposal(match);
+        setIsModalOpen(true);
+      }
+      // If no match: leave modal closed; user sees the list, not a 404.
+    },
+    [proposalsLoading, enhancedProposals, selectedProposal?.id],
+  );
+
   const closeProposalModal = () => {
     setIsModalOpen(false);
     setSelectedProposal(null);
-    // Clear ?proposal= from URL so refresh doesn't re-open the modal.
-    const next = new URLSearchParams(searchParams?.toString() ?? '');
-    if (next.has('proposal')) {
-      next.delete('proposal');
-      const qs = next.toString();
-      router.replace(qs ? `/governance?${qs}` : '/governance', { scroll: false });
-    }
+    setCloseNonce((n) => n + 1);
   };
-
-  useEffect(() => {
-    if (!deepLinkProposalId) return;
-    if (proposalsLoading) return;
-    if (selectedProposal?.id === deepLinkProposalId) return;
-    const match = enhancedProposals.find(
-      (p) => String(p.id) === String(deepLinkProposalId),
-    );
-    if (match) {
-      setSelectedProposal(match);
-      setIsModalOpen(true);
-    }
-    // If no match: leave modal closed. The user lands on the index, can see
-    // the proposal list, and is not stuck on a broken detail page.
-  }, [deepLinkProposalId, proposalsLoading, enhancedProposals, selectedProposal?.id]);
 
   // 2) Forum posts: dynamic based on dropdown selection
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>('');
@@ -115,6 +109,12 @@ export default function GovernancePage() {
 
   return (
     <FeatureErrorBoundary featureName="Governance & Voting">
+      <Suspense fallback={null}>
+        <ProposalDeepLink
+          onResolve={handleDeepLink}
+          closeNonce={closeNonce}
+        />
+      </Suspense>
       <div
         className="min-h-screen"
         style={{
@@ -464,4 +464,44 @@ export default function GovernancePage() {
       </div>
     </FeatureErrorBoundary>
   );
+}
+
+/**
+ * Reads ?proposal=<id> from the URL and reports it via onResolve. Wrapped
+ * in a Suspense boundary by the parent because useSearchParams forces a
+ * client-side render bailout in Next.js 14.
+ *
+ * Also clears the param from the URL when closeNonce changes (i.e. when
+ * the modal closes) so a refresh doesn't re-open the modal.
+ */
+function ProposalDeepLink({
+  onResolve,
+  closeNonce,
+}: {
+  onResolve: (proposalId: string) => void;
+  closeNonce: number;
+}) {
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const deepLinkProposalId = searchParams?.get('proposal') ?? null;
+
+  useEffect(() => {
+    if (deepLinkProposalId) {
+      onResolve(deepLinkProposalId);
+    }
+  }, [deepLinkProposalId, onResolve]);
+
+  // When the modal closes, strip ?proposal= from the URL.
+  useEffect(() => {
+    if (closeNonce === 0) return;
+    const next = new URLSearchParams(searchParams?.toString() ?? '');
+    if (next.has('proposal')) {
+      next.delete('proposal');
+      const qs = next.toString();
+      router.replace(qs ? `/governance?${qs}` : '/governance', { scroll: false });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [closeNonce]);
+
+  return null;
 }
