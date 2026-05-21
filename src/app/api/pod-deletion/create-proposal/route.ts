@@ -2,6 +2,10 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { recordExplorerEvent } from '@/lib/explorerEvents';
+import {
+  getEligibleVoterCount,
+  getPodGovernanceConfig,
+} from '@/features/pods/services/podGovernanceConfigService';
 
 // Server-side Supabase client with service role (bypasses RLS)
 const supabaseAdmin = createClient(
@@ -47,6 +51,27 @@ export async function POST(request: Request) {
     //   );
     // }
 
+    // Resolve required_approvals from the pod's operational governance
+    // config (or platform default if none is set). Caller's body.required_approvals
+    // is honored only when it's >= the configured count — never lower —
+    // so a deletion proposal can't quietly bypass the configured bar.
+    const podConfig = await getPodGovernanceConfig(body.pod_id);
+    const eligibleManagers = await getEligibleVoterCount(
+      body.pod_id,
+      'POD_OPERATIONAL',
+    );
+    const configuredRequired = Math.max(
+      1,
+      Math.ceil(
+        (Math.max(1, eligibleManagers) * podConfig.operational.approval_bps) /
+          10000,
+      ),
+    );
+    const effectiveRequired = Math.max(
+      configuredRequired,
+      typeof body.required_approvals === 'number' ? body.required_approvals : 0,
+    );
+
     // Insert proposal using service role (bypasses RLS)
     const { data, error } = await supabaseAdmin
       .from('pod_deletion_proposals')
@@ -54,7 +79,8 @@ export async function POST(request: Request) {
         pod_id: body.pod_id,
         pod_name: body.pod_name,
         proposed_by: body.proposed_by.toLowerCase(),
-        required_approvals: body.required_approvals || 1,
+        required_approvals: effectiveRequired,
+        approval_threshold_bps: podConfig.operational.approval_bps,
         current_approvals: body.current_approvals || [],
         status: 'pending',
         management_hat_id: body.management_hat_id || null,

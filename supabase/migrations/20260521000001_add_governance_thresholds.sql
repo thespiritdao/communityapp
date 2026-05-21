@@ -68,12 +68,16 @@ COMMENT ON COLUMN pod_level_proposals.quorum_threshold_bps IS
 COMMENT ON COLUMN pod_level_proposals.eligible_voter_count IS
   'Snapshot of eligible voter count at proposal creation, used as quorum denominator. NULL = pre-PR row.';
 
-ALTER TABLE pod_governance_proposals
+-- pod_deletion_proposals is the real leader-multisig table used by the
+-- pod-deletion API (src/app/api/pod-deletion/create-proposal/route.ts).
+-- Adding the same approval_threshold_bps column so deletion proposals
+-- snapshot the effective threshold they were created under.
+ALTER TABLE pod_deletion_proposals
   ADD COLUMN IF NOT EXISTS approval_threshold_bps INTEGER;
 
-ALTER TABLE pod_governance_proposals
-  ADD CONSTRAINT pod_governance_proposals_approval_range
+ALTER TABLE pod_deletion_proposals
+  ADD CONSTRAINT pod_deletion_proposals_approval_range
     CHECK (approval_threshold_bps IS NULL OR (approval_threshold_bps BETWEEN 5001 AND 10000));
 
-COMMENT ON COLUMN pod_governance_proposals.approval_threshold_bps IS
-  'Effective approval threshold in basis points used to derive required_approvals at proposal creation.';
+COMMENT ON COLUMN pod_deletion_proposals.approval_threshold_bps IS
+  'Effective approval threshold in basis points used to derive required_approvals at proposal creation. NULL on pre-PR rows.';

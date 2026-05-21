@@ -115,10 +115,10 @@ FOR EACH ROW
 EXECUTE FUNCTION freeze_pod_level_proposal_thresholds();
 
 -- ---------------------------------------------------------------------
--- pod_governance_proposals.approval_threshold_bps — immutable after INSERT
+-- pod_deletion_proposals.approval_threshold_bps — immutable after INSERT
 -- ---------------------------------------------------------------------
 
-CREATE OR REPLACE FUNCTION freeze_pod_governance_proposal_threshold()
+CREATE OR REPLACE FUNCTION freeze_pod_deletion_proposal_threshold()
 RETURNS TRIGGER
 LANGUAGE plpgsql
 AS $$
@@ -130,16 +130,16 @@ BEGIN
 END;
 $$;
 
-DROP TRIGGER IF EXISTS pod_governance_proposals_freeze_threshold ON pod_governance_proposals;
-CREATE TRIGGER pod_governance_proposals_freeze_threshold
+DROP TRIGGER IF EXISTS pod_deletion_proposals_freeze_threshold ON pod_deletion_proposals;
+CREATE TRIGGER pod_deletion_proposals_freeze_threshold
 BEFORE UPDATE OF approval_threshold_bps
-ON pod_governance_proposals
+ON pod_deletion_proposals
 FOR EACH ROW
-EXECUTE FUNCTION freeze_pod_governance_proposal_threshold();
+EXECUTE FUNCTION freeze_pod_deletion_proposal_threshold();
 
 COMMENT ON FUNCTION enforce_pod_governance_config_authority IS
   'Pod gov_* columns: writable only by listed pod leaders (or service role).';
 COMMENT ON FUNCTION freeze_pod_level_proposal_thresholds IS
   'pod_level_proposals threshold/quorum/eligible columns: immutable after insert.';
-COMMENT ON FUNCTION freeze_pod_governance_proposal_threshold IS
-  'pod_governance_proposals.approval_threshold_bps: immutable after insert.';
+COMMENT ON FUNCTION freeze_pod_deletion_proposal_threshold IS
+  'pod_deletion_proposals.approval_threshold_bps: immutable after insert.';
