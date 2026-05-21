@@ -96,30 +96,37 @@ Should return `false`. If any of the five DB checks fail, fix the data before th
 
 ---
 
-## 4. Governance Quorum + Voting Flexibility *(medium lift)*
+## 4. Governance Quorum + Voting Flexibility — Layer A ✅ DONE 2026-05-21 | Layer B ⏳ PENDING
 
-**Status:** Not started
+**Status:** Layer A shipped in commit `c3a8ac7f`. Layer B (on-chain DAO Governor) deferred.
 
-**Current state:**
-- `DAOGovernor.sol` uses `GovernorVotesQuorumFraction` — set in constructor, immutable post-deployment
-- Voting delay/period: constructor params, no setters
-- Pod-level: `podMultiManagerGovernance.ts:107` hardcodes 67% majority; `ipfsAggregationService.ts:82` uses simple majority
+**Layer A outcome (done 2026-05-21):**
+- Schema: `pods` gets 6 new columns (quorum_bps / approval_bps / voting_hours for each of POD_OPERATIONAL and POD_TREASURY_BINDING tiers). `pod_level_proposals` gets `approval_threshold_bps`, `quorum_threshold_bps`, `eligible_voter_count` (snapshotted at creation). `pod_governance_proposals` gets `approval_threshold_bps`. All with CHECK constraints; NULL = "use platform default."
+- New service: `podGovernanceConfigService.ts` — read/write per-pod config with null-coalescing against platform defaults, eligible-voter counting (managers-only for operational, all active members for treasury).
+- New pure helper: `proposalResultEngine.ts` — `determineProposalResult(tally, podConfig, override, tier, eligible)` used by both server-side aggregation and client-side live tally display. Abstentions excluded from approval denominator.
+- Hardcoded `0.67` in `podMultiManagerGovernance.ts:107` replaced with config-driven value. Hardcoded 72h duration also config-driven.
+- Hardcoded simple-majority in `ipfsAggregationService.ts:82` replaced with quorum + approval engine. **Pre-PR rows grandfathered** via sentinel branch (NULL eligible + NULL quorum_threshold → simple majority).
+- New leader-gated `GovernanceSettingsCard` on `/pods/[id]` — collapsible card with two tier sections, 3 controls each (quorum/approval/voting period), platform-default reset per tier.
+- New per-proposal stricter-override picker in `CreateProposalForm` — pod-level proposals only, validates `override >= pod default` client-side and server-side.
+- Live quorum + approval status displayed in `ProposalModal` for pod-level proposals (green check / red X with required-count math).
+- `TreasuryThresholdPicker` refactored to wrap a new generic `ThresholdPicker`; PR 2 V3 treasury deploy flow unaffected.
 
-**Plan — two layers:**
+**Per-tier platform defaults shipped:**
+- POD_OPERATIONAL: 30% quorum, 50.01% approval, 72h voting period. Quorum base: managers only.
+- POD_TREASURY_BINDING: 50% quorum, 66% approval, 72h voting period. Quorum base: all active pod members.
 
-**Layer A — Pod-level (easy, DB-only):**
-1. New `pod_governance_config` table: `pod_id, quorum_percentage, approval_threshold, voting_period_hours`
-2. Per-proposal override: add `approval_threshold` column to `pod_level_proposals`
-3. Replace hardcoded `0.67` and majority checks with config lookups in `podMultiManagerGovernance.ts:107` and `ipfsAggregationService.ts:82`
-4. UI: governance settings panel in pod admin
+**Bounds:** approval ∈ [50.01%, 100%], quorum ∈ [20%, 100%], voting period ∈ [12h, 720h].
+
+**Layer A carryover items:**
+- RLS lockdown on threshold columns after proposal creation (currently relies on app-layer integrity).
+- `eligible_voter_count` is snapshotted, not live. Documented behaviour; surface clearly in UI when revisited.
+- `MINIMUM_MANAGERS_REQUIRED = 3` constant in podMultiManagerGovernance still hardcoded — incompatible with 2-manager pods setting 100% threshold. Worth revisiting.
 
 **Layer B — DAO-level (harder, on-chain):**
-1. Cannot modify current DAOGovernor without redeploy
+1. Cannot modify current DAOGovernor without redeploy.
 2. Two options:
-   - Replace with `GovernorSettings`-extended governor that allows DAO-vote-gated parameter updates
-   - Per-proposal supermajority: custom governor overriding `quorum(blockNumber)` with per-proposal mapping
-
-**Recommended:** Layer A only initially. Layer B as a follow-up.
+   - Replace with `GovernorSettings`-extended governor that allows DAO-vote-gated parameter updates.
+   - Per-proposal supermajority: custom governor overriding `quorum(blockNumber)` with per-proposal mapping.
 
 ---
 
@@ -268,7 +275,8 @@ Should return `false`. If any of the five DB checks fail, fix the data before th
 | 2 | Notification bug fixes | S | ✅ Done 2026-05-19 |
 | 3 | Treasury quorum config — contracts + on-chain wiring (PR 1) | M | ✅ Done 2026-05-20 |
 | 3 | Treasury quorum config — app UI + activation flow (PR 2) | S–M | ✅ Done 2026-05-21 |
-| 4 | Governance flexibility (Layer A only) | M | Up next |
+| 4 | Governance flexibility (Layer A) | M | ✅ Done 2026-05-21 |
+| 4b | Governance flexibility (Layer B — DAO on-chain) | L | Pending |
 | 5 | 3rd-party DB (export model) | M | Talk to community first |
 | 6 | Password manager module | M–L | Pending |
 | 7 | $SELF issuance overhaul | L | Pending |
