@@ -169,16 +169,41 @@ Plus 13 wiring-state checks via `scripts/audit-contract-ownership.mjs` — all p
 
 ---
 
-## 6. App-side integration (PR 2 — pending)
+## 6. App-side integration (PR 2 — shipped 2026-05-21, commit `8ebea237`)
 
-The on-chain infrastructure is ready but not yet exposed to users. PR 2 will deliver:
+PR 2 wired the V3 contracts into the app. New files: `TreasuryThresholdPicker.tsx`, `TreasuryActivationCard.tsx`, three V3 ABIs under `src/abis/`. Modified files: `treasuryAddressUtils.ts`, `HatsModulePodCreationForm.tsx`, `PodService.ts`, `pods/[id]/page.tsx`, `api/paymaster/route.ts`, the `Pod` type.
 
-1. **Threshold picker UI** on the pod creation form — presets (Simple / Strict / Unanimous) + Custom slider, saved to `pods.treasury_threshold_bps` (column added via migration `20260519000001_add_treasury_threshold.sql`)
-2. **Activation flow** — after pod becomes active, auto-prompt the pod leader to deploy the V3 treasury via `PodTreasuryDeployerV3.deployTreasury(...)` from their CDP wallet, gas-sponsored
-3. **Pod page treasury status** — show "treasury deployed yes/no", current threshold, link to change
-4. **Threshold change UI** — pod leaders can propose threshold changes via the new `ThresholdChange` proposal type
+### What shipped
 
-Until PR 2 ships, no user behavior changes. Existing pods continue using their V2 treasuries; new pods will still get V2 treasuries (because the app code hasn't been updated to use the V3 path).
+1. **Threshold picker** (`TreasuryThresholdPicker.tsx`) — three preset chips (Simple 50.01% / Strict 66.67% / Unanimous 100%) plus a 1%-step Custom slider. Lives in the existing pod creation form's Treasury Settings section. Persists to `pods.treasury_threshold_bps`.
+2. **Activation card** (`TreasuryActivationCard.tsx`) — renders on `/pods/[id]` for any V3-eligible pod (`treasury_threshold_bps IS NOT NULL`). Pre-deploy mode shows a leader-gated "Deploy Treasury" CTA that calls `PodTreasuryDeployerV3.deployTreasury(podId, managementHatId, [SYSTEM, SELF], thresholdBps)` from the leader's CDP smart wallet via `useSendUserOperationWithAttribution`, polls receipt via `useWaitForUserOperation`, parses the factory's `TreasuryDeployed` event, and writes `treasury_contract_address`. Post-deploy mode shows short address + copy + Basescan link, live-read threshold percent badge, supported-tokens count badge.
+3. **V2 fallback preserved** — pods with `treasury_threshold_bps IS NULL` continue rendering the existing FundButton/warning. Zero behavior change for legacy pods.
+4. **Page-load backfill** — if a V3 treasury exists on-chain but the DB write was missed (tab closed mid-deploy), the load block queries the V3 factory and persists the address idempotently on first visit.
+5. **Self-heal on "already deployed"** — if the deploy reverts because the treasury exists, the card queries the factory, writes the existing address, and switches to status mode.
+
+### Paymaster wiring
+
+The deploy itself targets the statically-whitelisted `PodTreasuryDeployerV3`, so `useCdpPaymaster: true` is sufficient.
+
+For **subsequent** treasury operations (proposal create / approve, not in PR 2 scope), the existing ERC-7677 proxy at `src/app/api/paymaster/route.ts` was extended to match `treasury_contract_address` in addition to `creation_manager_address`. New per-pod treasuries auto-qualify for gas sponsorship without any Coinbase whitelist update — the address is recorded on the pod row, so the proxy's DB lookup will allow it. The match is case-insensitive (`.ilike`) so checksummed-vs-lowercase mismatches can't silently deny sponsorship.
+
+### Key contract addresses (Base mainnet — required env vars)
+
+```
+NEXT_PUBLIC_POD_TREASURY_FACTORY_V3=0x6CeD549C1f08690e435007E661552f4F76229a9B
+NEXT_PUBLIC_POD_TREASURY_DEPLOYER_V3=0x1c7b54794d2DF824e4E77D50e27f01A0D5736A2A
+NEXT_PUBLIC_SYSTEM_TOKEN=0x00f75717Ab019DE0e452605098cFDc4FccEbc701
+NEXT_PUBLIC_SELF_TOKEN=0x2d9e8A4DdED7438C2D4C8050Ed58B9F4Bc0c8298
+```
+
+V2 vars (`NEXT_PUBLIC_POD_TREASURY_FACTORY`, `NEXT_PUBLIC_TREASURY_PROXY`) remain in use for legacy pods and must stay set.
+
+### Deferred to a follow-up PR
+
+- **Threshold change UI** — proposing a new threshold via the on-chain `ThresholdChange` proposal type. PR 2 lets pods *set* a threshold at creation; *changing* it post-deploy is a separate UI.
+- **Paymaster route TS fix** — pre-existing `extractTargets` type errors in `paymaster/route.ts` lines 112/118 are out of scope.
+- **Treasury proposal/approval UI for V3** — V2 had a proposal flow at `TreasuryManagement.tsx`; a V3-aware equivalent needs to be built next.
+- **V2→V3 migration for existing pods** — explicitly out of scope per architecture decision; V3 is new-pods-only.
 
 ---
 

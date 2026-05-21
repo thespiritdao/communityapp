@@ -251,8 +251,8 @@ This doc captures 8 high-level action items, each researched against the current
 | 1 | LiveKit self-host | XS | ✅ Done 2026-05-19 |
 | 2 | Notification bug fixes | S | ✅ Done 2026-05-19 |
 | 3 | Treasury quorum config — contracts + on-chain wiring (PR 1) | M | ✅ Done 2026-05-20 |
-| 3 | Treasury quorum config — app UI + activation flow (PR 2) | S–M | Up next |
-| 4 | Governance flexibility (Layer A only) | M | Pending |
+| 3 | Treasury quorum config — app UI + activation flow (PR 2) | S–M | ✅ Done 2026-05-21 |
+| 4 | Governance flexibility (Layer A only) | M | Up next |
 | 5 | 3rd-party DB (export model) | M | Talk to community first |
 | 6 | Password manager module | M–L | Pending |
 | 7 | $SELF issuance overhaul | L | Pending |
