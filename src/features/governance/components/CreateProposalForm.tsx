@@ -2096,7 +2096,6 @@ export function CreateProposalForm({
                     { key: 'o-70', label: '70%', bps: 7000, description: 'Higher consensus' },
                     { key: 'o-80', label: '80%', bps: 8000, description: 'Strong supermajority' },
                     { key: 'o-90', label: '90%', bps: 9000, description: 'Near-unanimous' },
-                    { key: 'o-100', label: 'Unanimous', bps: 10000, description: '100% — every vote must align' },
                   ].filter((p) => p.bps > tierDefaults.approval_bps);
                   return (
                     <div className="mt-4 p-4 rounded-lg border border-[#E8E4DC] bg-[#F5F4ED]">

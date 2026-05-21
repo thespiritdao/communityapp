@@ -84,7 +84,12 @@ export function ThresholdPicker({
               className="flex flex-col items-start h-auto py-2 px-3"
             >
               <span className="font-medium">
-                {preset.label} · {formatPercent(preset.bps)}%
+                {/* Skip the redundant percent suffix when the label is
+                    already itself a percent (e.g. "70%"). Named presets
+                    like "Strict" still get the suffix appended. */}
+                {/%\s*$/.test(preset.label)
+                  ? preset.label
+                  : `${preset.label} · ${formatPercent(preset.bps)}%`}
               </span>
               <span
                 className={`text-xs ${
