@@ -131,6 +131,7 @@ export default function ProposalDetailPage() {
   // Fetch on‑chain user vote receipt
   useEffect(() => {
     if (!id || !address || !publicClient) return;
+    if (isUuidProposalId(id)) return; // pod-level proposals; redirect effect handles them
 
     (async () => {
       try {
