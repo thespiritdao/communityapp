@@ -44,23 +44,34 @@ This doc captures 8 high-level action items, each researched against the current
 
 ---
 
-## 3. Treasury Quorum Customization *(low-medium lift — already partly there)*
+## 3. Treasury Quorum Customization — PR 1 ✅ DONE 2026-05-20 | PR 2 ⏳ PENDING
 
-**Status:** Not started
+**Status:** On-chain infrastructure complete and verified. App-side UI integration not yet started.
 
-**Current state:**
-- `PodTreasuryV2WithVoting.sol:264-269` hardcodes 50%+1 of management hat holders
-- Donation approval (`/api/donations/approve/route.ts:289,353`) hardcodes `requiredApprovals: 1`
-- `PodTreasuryV2.sol:36-38` has a TODO acknowledging single-signer is unsafe for production
+**Full audit + deployment record:** [treasury-v3-audit-and-deployment-2026-05.md](treasury-v3-audit-and-deployment-2026-05.md)
 
-**Plan:**
-1. Add `treasury_config` row to `pods` (or new table): `quorum_percentage`, `min_approvals`
-2. Modify `PodTreasuryV2WithVoting.getRequiredApprovals()` to take a configurable threshold via constructor param or setter (governance-gated)
-3. Migrate existing pods to default 50%+1, allow exec-pod-approved overrides
-4. Update donation approve route to read from config
-5. Redeploy new treasury contracts for pods that opt in (existing immutable instances stay as-is)
+**PR 1 outcome (done):**
+- New contracts deployed on Base: `PodTreasuryFactoryV3` (`0x6CeD549C...`), `PodTreasuryDeployerV3` (`0x1c7b5479...`), redeployed `PodCreationManagerFactory` (`0x18B947c7...`)
+- Configurable threshold (50.01%-100%) per pod, settable at creation, changeable via on-chain vote, floor of 50%+1 enforced
+- Wrapper architecture (`PodTreasuryDeployerV3`) enforces caller holds the management hat AND hat is in the canonical SpiritDAO Hats tree (`0x00000749`) — closes front-run squat attack while preserving pod self-sovereignty
+- 3 rounds of agent-driven security audit; 1 Critical + 5 High + 6 Medium findings remediated
+- 5 downstream contracts repointed to V3 factory via setter calls
+- Coinbase Paymaster whitelist updated (4 entries: 2 replaced, 2 added)
+- All 5 final smoke tests pass; 13/13 wiring-state checks pass
+- Schema migration `20260519000001_add_treasury_threshold.sql` adds `pods.treasury_threshold_bps`
 
-**Risk:** Existing deployed treasuries are immutable — only new ones can opt in unless a proxy upgrade pattern is added.
+**PR 2 pending (app-side UI):**
+1. Treasury threshold picker on pod creation form (Simple 50%+1 / Strict 66% / Unanimous / Custom)
+2. Activation flow auto-prompts pod leader to deploy V3 treasury via CDP wallet (gas-sponsored)
+3. Pod page surfaces treasury status + current threshold + change UI
+4. Threshold change proposals visible in governance UI
+5. Donation approval route reads Exec Pod treasury threshold (when Exec Pod migrates to V3)
+
+**Carryover items:**
+- Existing V2 pods stay on V2 treasuries; V3 is new-pods-only per earlier decision
+- Old orphaned contracts (`0x99A291f4...`, `0xBA56...1Dbc`) still deployed but unused; optional cleanup via transferOwnership to burn address
+- Per-pod `PodTreasuryV3` Paymaster whitelisting will need a workflow as pods come online (each new treasury is a new address)
+- Env hygiene: `NEXT_PUBLIC_POD_CREATION_MANAGER` was stale; cleaned during deploy. `POD_CREATION_MANAGER_FACTORY_NEW` is misnamed — flag for rename in PR 2
 
 ---
 
@@ -234,12 +245,13 @@ This doc captures 8 high-level action items, each researched against the current
 |---|------|------|--------|
 | 1 | LiveKit self-host | XS | ✅ Done 2026-05-19 |
 | 2 | Notification bug fixes | S | ✅ Done 2026-05-19 |
-| 3 | Treasury quorum config | S–M | Up next |
+| 3 | Treasury quorum config — contracts + on-chain wiring (PR 1) | M | ✅ Done 2026-05-20 |
+| 3 | Treasury quorum config — app UI + activation flow (PR 2) | S–M | Up next |
 | 4 | Governance flexibility (Layer A only) | M | Pending |
 | 5 | 3rd-party DB (export model) | M | Talk to community first |
 | 6 | Password manager module | M–L | Pending |
 | 7 | $SELF issuance overhaul | L | Pending |
-| 8 | Smart contract audit | XL | Pending (good background workstream) |
+| 8 | Smart contract audit | XL | Partially started (V3 treasury done — see [audit doc](treasury-v3-audit-and-deployment-2026-05.md)) |
 
 **Suggested parallelism:** #8 (audit) can run as a background workstream while #1–#4 execute sequentially. #5 starts with a conversation, not code.
 
