@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { UserProfileDisplay } from '@/components/UserProfileDisplay';
+import { buildProposalUrl } from '@/features/governance/utils/proposalUrl';
 import type {
   UnifiedNotification,
   NotificationCategory,
@@ -111,7 +112,18 @@ function NotificationCard({
   };
 
   const getContextLink = () => {
+    // Self-heal stale governance context_urls written before the URL
+    // builder learned to branch on UUID vs numeric proposal id. Old rows
+    // point at /governance/<uuid>, which renders "Proposal not found"
+    // because the detail page only handles on-chain numeric ids.
     if (notification.context_url) {
+      if (
+        notification.context_type === 'governance' &&
+        notification.context_id &&
+        notification.context_url.startsWith('/governance/')
+      ) {
+        return buildProposalUrl(notification.context_id);
+      }
       return notification.context_url;
     }
 
@@ -130,7 +142,7 @@ function NotificationCard({
           : '/bounty';
       case 'governance':
         return notification.context_id
-          ? `/governance/${notification.context_id}`
+          ? buildProposalUrl(notification.context_id)
           : '/governance';
       case 'marketplace':
         return notification.context_id

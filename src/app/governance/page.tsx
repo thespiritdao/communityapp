@@ -1,5 +1,6 @@
 'use client';
 import { useCallback, useState, useEffect } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { useCDPStatus } from '@/hooks/useCDPStatus';
 import CreateProposalForm from '@/features/governance/components/CreateProposalForm';
 import VoteButton from '@/features/governance/components/VoteButton';
@@ -29,6 +30,14 @@ export default function GovernancePage() {
     refetch: refetchProposals,
   } = useEnhancedProposals();
 
+  // Deep-link support: if /governance?proposal=<id> is present, open the
+  // matching proposal in the modal once proposals have loaded. Used by
+  // notifications for pod-level proposals (which have no dedicated detail
+  // page, only the modal).
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const deepLinkProposalId = searchParams?.get('proposal') ?? null;
+
   // Handle opening proposal modal
   const openProposalModal = (proposal: EnhancedProposal) => {
     setSelectedProposal(proposal);
@@ -38,7 +47,29 @@ export default function GovernancePage() {
   const closeProposalModal = () => {
     setIsModalOpen(false);
     setSelectedProposal(null);
+    // Clear ?proposal= from URL so refresh doesn't re-open the modal.
+    const next = new URLSearchParams(searchParams?.toString() ?? '');
+    if (next.has('proposal')) {
+      next.delete('proposal');
+      const qs = next.toString();
+      router.replace(qs ? `/governance?${qs}` : '/governance', { scroll: false });
+    }
   };
+
+  useEffect(() => {
+    if (!deepLinkProposalId) return;
+    if (proposalsLoading) return;
+    if (selectedProposal?.id === deepLinkProposalId) return;
+    const match = enhancedProposals.find(
+      (p) => String(p.id) === String(deepLinkProposalId),
+    );
+    if (match) {
+      setSelectedProposal(match);
+      setIsModalOpen(true);
+    }
+    // If no match: leave modal closed. The user lands on the index, can see
+    // the proposal list, and is not stuck on a broken detail page.
+  }, [deepLinkProposalId, proposalsLoading, enhancedProposals, selectedProposal?.id]);
 
   // 2) Forum posts: dynamic based on dropdown selection
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>('');

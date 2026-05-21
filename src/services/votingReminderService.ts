@@ -2,6 +2,7 @@
 
 import { supabase } from '@/utils/supabaseClient';
 import { unifiedNotificationService } from './unifiedNotificationService';
+import { buildProposalUrl } from '@/features/governance/utils/proposalUrl';
 
 export interface TokenHolder {
   address: string;
@@ -264,7 +265,7 @@ class VotingReminderService {
             message: `⏰ ${Math.ceil(hoursRemaining)} hours remaining to vote on this proposal. Your ${voter.tokenType} token gives you voting power!`,
             context_type: 'governance',
             context_id: proposalId,
-            context_url: `/governance/${proposalId}`,
+            context_url: buildProposalUrl(proposalId),
             proposal_id: proposalId,
             priority: hoursRemaining <= 6 ? 'urgent' : 'high',
             metadata: {
@@ -369,7 +370,7 @@ class VotingReminderService {
           message: `A new governance proposal has been created. As an Advocate Member, you can participate in voting!`,
           context_type: 'governance',
           context_id: proposalId,
-          context_url: `/governance/${proposalId}`,
+          context_url: buildProposalUrl(proposalId),
           proposal_id: proposalId,
           priority: 'medium',
           metadata: {

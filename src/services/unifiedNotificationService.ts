@@ -2,6 +2,7 @@
 
 import { supabase } from '@/utils/supabaseClient';
 import { notificationPreferencesService } from './notificationPreferencesService';
+import { buildProposalUrl } from '@/features/governance/utils/proposalUrl';
 
 // Type definitions for database records
 interface GeneralNotification {
@@ -536,7 +537,7 @@ class UnifiedNotificationService {
         message: `You have ${deadlineHours} hours left to vote on this proposal. Your vote matters!`,
         context_type: 'governance',
         context_id: proposalId,
-        context_url: `/governance/${proposalId}`,
+        context_url: buildProposalUrl(proposalId),
         proposal_id: proposalId,
         priority: 'high',
       }),
