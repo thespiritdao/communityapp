@@ -11,17 +11,6 @@ import VoteButton from '@/features/governance/components/VoteButton';
 import { useForumPostTitle } from '@/features/governance/hooks/useForumPostTitle';
 import { isUuidProposalId } from '@/features/governance/utils/proposalUrl';
 
-interface OnChainProposal {
-  proposer: `0x${string}`;
-  startBlock: bigint;
-  endBlock: bigint;
-  forVotes: bigint;
-  againstVotes: bigint;
-  abstainVotes: bigint;
-  canceled: boolean;
-  executed: boolean;
-}
-
 interface ProposalDetail {
   id: string;
   title: string;
@@ -95,26 +84,44 @@ export default function ProposalDetailPage() {
         const forumPostIdMatch = description.match(/Forum Discussion:\s*(\S+)/);
         const forumPostId = forumPostIdMatch ? forumPostIdMatch[1] : null;
 
-        // 3) Read core proposal struct
-        const core = (await publicClient.readContract({
-          address: GOVERNOR_ADDRESS,
-          abi: DAOGovernorABI,
-          functionName: 'proposals',
-          args: [BigInt(id)],
-        })) as OnChainProposal;
+        // 3) Read proposal data via OpenZeppelin v5 Governor methods.
+        // The legacy `proposals(uint256)` aggregate getter was removed in
+        // OZ v5 — vote counts come from `proposalVotes`, timing from
+        // `proposalSnapshot`/`proposalDeadline`.
+        const [votes, snapshot, deadline] = await Promise.all([
+          publicClient.readContract({
+            address: GOVERNOR_ADDRESS,
+            abi: DAOGovernorABI,
+            functionName: 'proposalVotes',
+            args: [BigInt(id)],
+          }) as Promise<readonly [bigint, bigint, bigint]>,
+          publicClient.readContract({
+            address: GOVERNOR_ADDRESS,
+            abi: DAOGovernorABI,
+            functionName: 'proposalSnapshot',
+            args: [BigInt(id)],
+          }) as Promise<bigint>,
+          publicClient.readContract({
+            address: GOVERNOR_ADDRESS,
+            abi: DAOGovernorABI,
+            functionName: 'proposalDeadline',
+            args: [BigInt(id)],
+          }) as Promise<bigint>,
+        ]);
 
-        // 4) Build our ProposalDetail
+        // proposalVotes returns [againstVotes, forVotes, abstainVotes]
+        const [againstVotes, forVotes, abstainVotes] = votes;
         const scores = [
-          Number(core.againstVotes),
-          Number(core.forVotes),
-          Number(core.abstainVotes),
+          Number(againstVotes),
+          Number(forVotes),
+          Number(abstainVotes),
         ];
         setProposal({
           id,
           title,
           body,
-          start: Number(core.startBlock),
-          end: Number(core.endBlock),
+          start: Number(snapshot),
+          end: Number(deadline),
           choices: ['Against', 'For', 'Abstain'],
           scores,
           scores_total: scores.reduce((a, b) => a + b, 0),
@@ -128,22 +135,46 @@ export default function ProposalDetailPage() {
     })();
   }, [id, publicClient]);
 
-  // Fetch on‑chain user vote receipt
+  // Fetch on‑chain user vote via VoteCast events.
+  // OZ v5 dropped the legacy getReceipt(uint256, address) aggregate
+  // accessor. `hasVoted` returns only a bool; to learn which choice the
+  // user picked we scan VoteCast events filtered to this voter and this
+  // proposal.
   useEffect(() => {
     if (!id || !address || !publicClient) return;
     if (isUuidProposalId(id)) return; // pod-level proposals; redirect effect handles them
 
+    const voteCastAbi = DAOGovernorABI.find(
+      (item) => item.type === 'event' && item.name === 'VoteCast',
+    ) as AbiEvent | undefined;
+    if (!voteCastAbi) return;
+
     (async () => {
       try {
-        const receipt = (await publicClient.readContract({
+        const logs = await publicClient.getLogs({
           address: GOVERNOR_ADDRESS,
-          abi: DAOGovernorABI,
-          functionName: 'getReceipt',
-          args: [BigInt(id), address as `0x${string}`],
-        })) as { hasVoted: boolean; support: number; votes: bigint };
-
-        if (receipt.hasVoted) {
-          setUserVote(receipt.support);
+          event: voteCastAbi,
+          args: { voter: address as `0x${string}` },
+        });
+        for (const log of logs) {
+          try {
+            const decoded = decodeEventLog({
+              abi: [voteCastAbi],
+              data: log.data,
+              topics: log.topics,
+            });
+            const args = decoded.args as any;
+            if (String(args.proposalId) === String(id)) {
+              // Map Governor support (0=Against, 1=For, 2=Abstain) onto the
+              // 1-indexed choice the existing UI compares against (1=Against,
+              // 2=For, 3=Abstain — matches choices array order).
+              const support = Number(args.support);
+              setUserVote(support + 1);
+              break;
+            }
+          } catch {
+            /* skip undecodable log */
+          }
         }
       } catch (err) {
         console.error('Error fetching user vote on‑chain:', err);
