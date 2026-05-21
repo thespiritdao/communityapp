@@ -70,7 +70,23 @@ This doc captures 8 high-level action items, each researched against the current
 **PR 2 carryover (deferred to a follow-up):**
 - Threshold change proposals in governance UI (item 4 from the original list)
 - Donation approval route migration when the Exec Pod moves to V3
-- Per-pod Paymaster whitelisting automation — each `PodTreasuryV3` instance is a fresh address that needs Paymaster sponsorship for its proposal/approval functions. Optional roadmap item.
+- Per-pod Paymaster whitelisting automation — superseded by the paymaster route extension landed in PR 2 (`treasury_contract_address` now matched by the dynamic check); the original per-pod Coinbase whitelist concern no longer applies.
+
+**Standing obligation for new pod onboarding (added 2026-05-21):**
+Before any new pod leader sees the "Deploy Treasury" CTA for the first time, run a pre-flight check on their pod row:
+1. `status = 'active'`
+2. `management_hat_id` is non-null (long hex string, hat ID in canonical `0x00000749` tree)
+3. `treasury_threshold_bps` is between 5001 and 10000
+4. `treasury_contract_address` is NULL or `'pending'`
+5. `pod_leads` includes the wallet address of the leader who will click the button
+
+Verify factory has no existing treasury for the pod UUID:
+```bash
+cast call 0x6CeD549C1f08690e435007E661552f4F76229a9B \
+  "hasTreasury(string)(bool)" "<pod-uuid>" \
+  --rpc-url https://mainnet.base.org
+```
+Should return `false`. If any of the five DB checks fail, fix the data before the leader interacts with the CTA — first-deploy experience should be a working deploy, not an error toast.
 
 **Carryover items:**
 - Existing V2 pods stay on V2 treasuries; V3 is new-pods-only per earlier decision
