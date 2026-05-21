@@ -6,6 +6,15 @@
  */
 
 import { supabase } from '@/utils/supabaseClient';
+import {
+  determineProposalResult,
+  type GovernanceTier,
+} from '@/features/governance/services/proposalResultEngine';
+import {
+  getPodGovernanceConfig,
+  getEligibleVoterCount,
+  getThresholdsForTier,
+} from '@/features/pods/services/podGovernanceConfigService';
 
 interface VoteManifest {
   proposalId: string;
@@ -29,6 +38,17 @@ interface VoteManifest {
     total: number;
   };
   result: string; // 'approved' | 'rejected'
+  /** New: thresholds that decided this result. Absent on grandfathered rows. */
+  thresholds?: {
+    approval_bps: number;
+    quorum_bps: number;
+    requiredQuorum: number;
+    requiredApproval: number;
+    eligibleVoters: number;
+    quorumMet: boolean;
+    approvalMet: boolean;
+    grandfathered: boolean;
+  };
   metadata: {
     forumThreadId?: string;
     onchainProposalId?: string;
@@ -78,8 +98,51 @@ export class IPFSAggregationService {
       total: votes?.length || 0,
     };
 
-    // Determine result (simple majority)
-    const result = tally.for > tally.against ? 'approved' : 'rejected';
+    // Decide the result. Pre-PR rows (NULL eligible_voter_count AND NULL
+    // quorum_threshold_bps) are grandfathered to the simple-majority
+    // behaviour they were created under, so anything voted under the old
+    // rules closes under the old rules.
+    const grandfathered =
+      proposal.eligible_voter_count == null &&
+      proposal.quorum_threshold_bps == null;
+
+    let result: 'approved' | 'rejected';
+    let thresholdsBlock: VoteManifest['thresholds'];
+
+    if (grandfathered) {
+      result = tally.for > tally.against ? 'approved' : 'rejected';
+      thresholdsBlock = undefined;
+    } else {
+      const tier =
+        (proposal.governance_tier as GovernanceTier) ?? 'POD_OPERATIONAL';
+      const podConfig = await getPodGovernanceConfig(proposal.pod_id);
+      const resolvedDefaults = getThresholdsForTier(podConfig, tier);
+      const eligibleVoters: number =
+        proposal.eligible_voter_count ??
+        (await getEligibleVoterCount(proposal.pod_id, tier));
+
+      const decision = determineProposalResult(
+        tally,
+        resolvedDefaults,
+        {
+          approval_bps: proposal.approval_threshold_bps ?? null,
+          quorum_bps: proposal.quorum_threshold_bps ?? null,
+        },
+        tier,
+        eligibleVoters,
+      );
+      result = decision.result;
+      thresholdsBlock = {
+        approval_bps: decision.effectiveApprovalBps,
+        quorum_bps: decision.effectiveQuorumBps,
+        requiredQuorum: decision.requiredQuorum,
+        requiredApproval: decision.requiredApproval,
+        eligibleVoters,
+        quorumMet: decision.quorumMet,
+        approvalMet: decision.approvalMet,
+        grandfathered: false,
+      };
+    }
 
     const manifest: VoteManifest = {
       proposalId: proposal.id,
@@ -98,6 +161,7 @@ export class IPFSAggregationService {
       })),
       tally,
       result,
+      thresholds: thresholdsBlock,
       metadata: {
         forumThreadId: proposal.metadata?.forum_thread_id,
         onchainProposalId: proposal.onchain_proposal_id,

@@ -1,9 +1,11 @@
 'use client';
 
 import React from 'react';
-import { X } from 'lucide-react';
+import { X, CheckCircle2, XCircle } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import type { EnhancedProposal } from '../hooks/useEnhancedProposals';
+import { determineProposalResult } from '@/features/governance/services/proposalResultEngine';
+import { PLATFORM_DEFAULTS } from '@/features/pods/services/podGovernanceConfigService';
 
 interface ProposalModalProps {
   proposal: EnhancedProposal;
@@ -153,6 +155,8 @@ export const ProposalModal: React.FC<ProposalModalProps> = ({
                   </div>
                 ))}
               </div>
+
+              <PodLevelThresholdStatus proposal={proposal} />
             </div>
           )}
 
@@ -173,3 +177,88 @@ export const ProposalModal: React.FC<ProposalModalProps> = ({
     </div>
   );
 };
+
+/**
+ * Live quorum + approval status for pod-level proposals. Computes against
+ * the per-proposal thresholds stored at creation time. Skipped for on-chain
+ * proposals and for grandfathered rows (where thresholds are NULL).
+ */
+function PodLevelThresholdStatus({ proposal }: { proposal: EnhancedProposal }) {
+  if (proposal.type !== 'pod_level') return null;
+
+  const tally = proposal.vote_counts;
+  const approvalBps = proposal.approval_threshold_bps;
+  const quorumBps = proposal.quorum_threshold_bps;
+  const eligible = proposal.eligible_voter_count;
+
+  // Grandfathered rows: no thresholds stored. Show nothing (the old
+  // simple-majority rule still applies at close-out via the aggregation
+  // service's sentinel branch, but there's no quorum bar to display).
+  if (approvalBps == null || quorumBps == null || eligible == null || !tally) {
+    return null;
+  }
+
+  const tier =
+    proposal.governance_tier === 'POD_TREASURY_BINDING'
+      ? 'POD_TREASURY_BINDING'
+      : 'POD_OPERATIONAL';
+  const defaults =
+    tier === 'POD_TREASURY_BINDING'
+      ? PLATFORM_DEFAULTS.POD_TREASURY_BINDING
+      : PLATFORM_DEFAULTS.POD_OPERATIONAL;
+
+  const result = determineProposalResult(
+    tally,
+    {
+      approval_bps: defaults.approval_bps,
+      quorum_bps: defaults.quorum_bps,
+      voting_hours: defaults.voting_hours,
+    },
+    { approval_bps: approvalBps, quorum_bps: quorumBps },
+    tier,
+    eligible,
+  );
+
+  const approvalPct = (result.effectiveApprovalBps / 100).toFixed(
+    result.effectiveApprovalBps % 100 === 0 ? 0 : 2,
+  );
+  const quorumPct = (result.effectiveQuorumBps / 100).toFixed(
+    result.effectiveQuorumBps % 100 === 0 ? 0 : 2,
+  );
+  const forPlusAgainst = tally.for + tally.against;
+
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-3">
+      <div className="p-3 rounded-lg border border-[#D1C4A9] bg-white flex items-start gap-3">
+        {result.quorumMet ? (
+          <CheckCircle2 className="h-5 w-5 text-[#3F7A5A] mt-0.5" />
+        ) : (
+          <XCircle className="h-5 w-5 text-[#8B3A3A] mt-0.5" />
+        )}
+        <div className="text-sm">
+          <div className="font-semibold text-[#1F453A]">
+            Quorum: {tally.total}/{eligible}
+          </div>
+          <div className="text-xs text-gray-600">
+            {result.requiredQuorum} of {eligible} eligible voters needed ({quorumPct}%)
+          </div>
+        </div>
+      </div>
+      <div className="p-3 rounded-lg border border-[#D1C4A9] bg-white flex items-start gap-3">
+        {result.approvalMet ? (
+          <CheckCircle2 className="h-5 w-5 text-[#3F7A5A] mt-0.5" />
+        ) : (
+          <XCircle className="h-5 w-5 text-[#8B3A3A] mt-0.5" />
+        )}
+        <div className="text-sm">
+          <div className="font-semibold text-[#1F453A]">
+            Approval: {tally.for}/{forPlusAgainst || 0}
+          </div>
+          <div className="text-xs text-gray-600">
+            {result.requiredApproval} For votes needed ({approvalPct}% of non-abstain)
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

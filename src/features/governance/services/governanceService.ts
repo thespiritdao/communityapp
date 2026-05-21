@@ -1,4 +1,10 @@
 import { supabase } from '@/utils/supabaseClient';
+import {
+  getEligibleVoterCount,
+  getPodGovernanceConfig,
+  getThresholdsForTier,
+} from '@/features/pods/services/podGovernanceConfigService';
+import type { GovernanceTier } from '@/features/governance/services/proposalResultEngine';
 
 export interface GovernanceVote {
   id?: string;
@@ -405,8 +411,50 @@ export class GovernanceService {
     metadata?: Record<string, any>;
     onchain_proposal_id?: string;
     transaction_hash?: string;
+    /** Optional stricter-only overrides; must be >= pod default for the tier. */
+    approval_threshold_override_bps?: number | null;
+    quorum_threshold_override_bps?: number | null;
   }): Promise<string> {
     try {
+      const tier: GovernanceTier = data.governance_tier ?? 'POD_OPERATIONAL';
+
+      // Resolve pod config + snapshot eligible voter count so quorum is
+      // computed against membership-at-creation.
+      const podConfig = await getPodGovernanceConfig(data.pod_id);
+      const defaults = getThresholdsForTier(podConfig, tier);
+      const eligibleVoterCount = await getEligibleVoterCount(data.pod_id, tier);
+
+      // Validate overrides are stricter-only.
+      if (
+        data.approval_threshold_override_bps != null &&
+        data.approval_threshold_override_bps < defaults.approval_bps
+      ) {
+        throw new Error(
+          `approval_threshold_override_bps (${data.approval_threshold_override_bps}) cannot be below pod default (${defaults.approval_bps})`,
+        );
+      }
+      if (
+        data.quorum_threshold_override_bps != null &&
+        data.quorum_threshold_override_bps < defaults.quorum_bps
+      ) {
+        throw new Error(
+          `quorum_threshold_override_bps (${data.quorum_threshold_override_bps}) cannot be below pod default (${defaults.quorum_bps})`,
+        );
+      }
+
+      const effectiveApprovalBps = Math.max(
+        defaults.approval_bps,
+        data.approval_threshold_override_bps ?? 0,
+      );
+      const effectiveQuorumBps = Math.max(
+        defaults.quorum_bps,
+        data.quorum_threshold_override_bps ?? 0,
+      );
+
+      const votingDeadline = new Date(
+        Date.now() + defaults.voting_hours * 60 * 60 * 1000,
+      ).toISOString();
+
       const { data: proposal, error } = await supabase
         .from('pod_level_proposals')
         .insert({
@@ -415,8 +463,11 @@ export class GovernanceService {
           pod_id: data.pod_id,
           created_by: data.created_by.toLowerCase(),
           status: 'proposed',
-          governance_tier: data.governance_tier ?? 'POD_OPERATIONAL',
-          voting_deadline: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(), // 7 days
+          governance_tier: tier,
+          voting_deadline: votingDeadline,
+          approval_threshold_bps: effectiveApprovalBps,
+          quorum_threshold_bps: effectiveQuorumBps,
+          eligible_voter_count: eligibleVoterCount,
           metadata: data.metadata || {},
           onchain_proposal_id: data.onchain_proposal_id,
           transaction_hash: data.transaction_hash,

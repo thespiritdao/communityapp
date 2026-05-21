@@ -5,6 +5,7 @@
  */
 
 import { supabase } from '../../../utils/supabaseClient';
+import { getPodGovernanceConfig } from './podGovernanceConfigService';
 
 export interface GovernanceProposal {
   id: string;
@@ -83,6 +84,7 @@ export class PodMultiManagerGovernance {
     proposalType: GovernanceProposal['proposal_type'],
     proposalData: any,
     proposedBy: string,
+    approvalOverrideBps?: number,
   ): Promise<{ success: boolean; proposalId?: string; error?: string }> {
     try {
       // Check if user can propose
@@ -104,10 +106,21 @@ export class PodMultiManagerGovernance {
       }
 
       const managers = await this.getPodManagers(podId);
-      const requiredApprovals = Math.ceil(managers.length * 0.67); // 67% majority
+
+      // Resolve approval threshold from pod governance config (operational tier).
+      // Per-proposal override can only push the bar UP, never down.
+      const cfg = await getPodGovernanceConfig(podId);
+      const baseApprovalBps = cfg.operational.approval_bps;
+      const effectiveApprovalBps = Math.max(
+        baseApprovalBps,
+        approvalOverrideBps ?? 0,
+      );
+      const requiredApprovals = Math.ceil(
+        (managers.length * effectiveApprovalBps) / 10000,
+      );
 
       const expiresAt = new Date();
-      expiresAt.setHours(expiresAt.getHours() + this.PROPOSAL_DURATION_HOURS);
+      expiresAt.setHours(expiresAt.getHours() + cfg.operational.voting_hours);
 
       const { data, error } = await supabase
         .from('pod_governance_proposals')
@@ -117,6 +130,7 @@ export class PodMultiManagerGovernance {
           proposal_data: proposalData,
           proposed_by: proposedBy,
           required_approvals: requiredApprovals,
+          approval_threshold_bps: effectiveApprovalBps,
           current_approvals: [proposedBy], // Proposer automatically approves
           status: 'pending',
           expires_at: expiresAt.toISOString(),

@@ -15,6 +15,8 @@ import { encodeFunctionData, type Abi } from 'viem';
 import MembershipTokenV2ABIJson from '@/abis/MembershipTokenV2ABI.json';
 import DAOGovernorABIJson from '@/abis/DAO_GovernorABI.json';
 import { ProposalThreadSelector } from './ProposalThreadSelector';
+import { ThresholdPicker, type ThresholdPreset } from '@/features/pods/components/ThresholdPicker';
+import { getPodGovernanceConfig, type PodGovernanceConfig } from '@/features/pods/services/podGovernanceConfigService';
 
 const AdvocateMembershipABI = MembershipTokenV2ABIJson as Abi;
 const DAOGovernorABI = DAOGovernorABIJson as Abi;
@@ -50,6 +52,8 @@ interface ProposalFormData {
   forumThreadId: string;
   selectedToken: string; // token gating
   governanceTier: GovernanceTier;
+  /** Optional per-proposal stricter approval threshold (basis points). Null = use pod default. */
+  approvalOverrideBps: number | null;
 }
 
 interface CreateProposalFormProps {
@@ -309,10 +313,41 @@ export function CreateProposalForm({
     forumThreadId: '',
     selectedToken: '',
     governanceTier: 'POD_OPERATIONAL',
+    approvalOverrideBps: null,
   });
   const [userTokens, setUserTokens] = useState<{ id: string; label: string }[]>(
     [],
   );
+
+  // Pod governance config for the currently-selected pod, so the per-proposal
+  // stricter override picker knows the floor it cannot drop below.
+  const [podGovConfig, setPodGovConfig] = useState<PodGovernanceConfig | null>(null);
+  const [showOverridePicker, setShowOverridePicker] = useState(false);
+
+  useEffect(() => {
+    const selected = formData.selectedToken;
+    if (!selected || selected === 'dao-wide') {
+      setPodGovConfig(null);
+      return;
+    }
+    let cancelled = false;
+    getPodGovernanceConfig(selected)
+      .then((cfg) => {
+        if (!cancelled) setPodGovConfig(cfg);
+      })
+      .catch((e) => console.error('Failed to load pod gov config', e));
+    return () => {
+      cancelled = true;
+    };
+  }, [formData.selectedToken]);
+
+  // Reset the override + collapse the picker whenever the pod or tier changes.
+  useEffect(() => {
+    setShowOverridePicker(false);
+    setFormData((prev) =>
+      prev.approvalOverrideBps == null ? prev : { ...prev, approvalOverrideBps: null },
+    );
+  }, [formData.selectedToken, formData.governanceTier]);
   const { loadPosts } = useForum();
   const { refreshNotifications } = useUnifiedNotifications();
 
@@ -1265,7 +1300,7 @@ export function CreateProposalForm({
         const proposalTokenId = formData.selectedToken;
         const proposalForumThreadId = formData.forumThreadId;
 
-        setFormData({ title: '', body: '', forumThreadId: '', selectedToken: '', governanceTier: 'POD_OPERATIONAL' });
+        setFormData({ title: '', body: '', forumThreadId: '', selectedToken: '', governanceTier: 'POD_OPERATIONAL', approvalOverrideBps: null });
         setHasInteracted(false);
 
         try {
@@ -1275,6 +1310,7 @@ export function CreateProposalForm({
             pod_id: (proposalTokenId && proposalTokenId !== 'dao-wide') ? proposalTokenId : null,
             created_by: address!,
             governance_tier: 'POD_OPERATIONAL',
+            approval_threshold_override_bps: formData.approvalOverrideBps,
             metadata: {
               forum_thread_id: proposalForumThreadId,
               choices: ['For', 'Against', 'Abstain'],
@@ -1416,6 +1452,7 @@ export function CreateProposalForm({
         forumThreadId: '',
         selectedToken: '',
         governanceTier: 'POD_OPERATIONAL',
+        approvalOverrideBps: null,
       });
 
       // Use a temporary ID based on the user operation hash
@@ -2042,6 +2079,72 @@ export function CreateProposalForm({
                   </p>
                 </div>
               )}
+
+              {/* Per-proposal stricter approval override (pod-level only) */}
+              {formData.selectedToken &&
+                formData.selectedToken !== 'dao-wide' &&
+                formData.governanceTier !== 'DAO_CONSTITUTIONAL' &&
+                podGovConfig && (() => {
+                  const tierDefaults =
+                    formData.governanceTier === 'POD_TREASURY_BINDING'
+                      ? podGovConfig.treasury
+                      : podGovConfig.operational;
+                  const defaultPct = (tierDefaults.approval_bps / 100).toFixed(
+                    tierDefaults.approval_bps % 100 === 0 ? 0 : 2,
+                  );
+                  const overridePresets: ThresholdPreset[] = [
+                    { key: 'o-70', label: '70%', bps: 7000, description: 'Higher consensus' },
+                    { key: 'o-80', label: '80%', bps: 8000, description: 'Strong supermajority' },
+                    { key: 'o-90', label: '90%', bps: 9000, description: 'Near-unanimous' },
+                    { key: 'o-100', label: 'Unanimous', bps: 10000, description: '100% — every vote must align' },
+                  ].filter((p) => p.bps > tierDefaults.approval_bps);
+                  return (
+                    <div className="mt-4 p-4 rounded-lg border border-[#E8E4DC] bg-[#F5F4ED]">
+                      <button
+                        type="button"
+                        onClick={() => setShowOverridePicker((v) => !v)}
+                        className="text-sm font-medium text-[#1F453A] hover:underline"
+                      >
+                        {showOverridePicker ? '−' : '+'} Require a stricter approval threshold for this proposal?
+                      </button>
+                      <p className="text-xs text-gray-600 mt-1">
+                        Pod default is {defaultPct}%. You can opt UP to a stricter bar for this proposal only; you cannot go below the default.
+                      </p>
+                      {showOverridePicker && overridePresets.length > 0 && (
+                        <div className="mt-3">
+                          <ThresholdPicker
+                            label="Stricter approval (this proposal only)"
+                            value={
+                              formData.approvalOverrideBps ?? tierDefaults.approval_bps
+                            }
+                            onChange={(bps) =>
+                              handleFormChange('approvalOverrideBps', bps)
+                            }
+                            presets={overridePresets}
+                            min={Math.max(tierDefaults.approval_bps, 5001)}
+                            max={10000}
+                            step={100}
+                            customChipDescription={`Pick any value ${defaultPct}–100%`}
+                          />
+                          {formData.approvalOverrideBps != null && (
+                            <button
+                              type="button"
+                              className="mt-2 text-xs text-[#2F5D50] hover:underline"
+                              onClick={() => handleFormChange('approvalOverrideBps', null as any)}
+                            >
+                              Clear override (use pod default)
+                            </button>
+                          )}
+                        </div>
+                      )}
+                      {showOverridePicker && overridePresets.length === 0 && (
+                        <p className="text-xs text-gray-600 mt-2">
+                          Pod default is already at the maximum ({defaultPct}%) — no stricter option available.
+                        </p>
+                      )}
+                    </div>
+                  );
+                })()}
             </div>
 
 

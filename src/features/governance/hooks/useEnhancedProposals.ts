@@ -42,6 +42,16 @@ export interface EnhancedProposal {
   governance_tier?: 'DAO_CONSTITUTIONAL' | 'POD_TREASURY_BINDING' | 'POD_OPERATIONAL';
   // ✅ Advocate token gating: DAO_CONSTITUTIONAL proposals require Advocate ERC-721
   is_advocate_gated?: boolean;
+  // Layer A: per-proposal effective thresholds (NULL on grandfathered rows)
+  approval_threshold_bps?: number | null;
+  quorum_threshold_bps?: number | null;
+  eligible_voter_count?: number | null;
+  vote_counts?: {
+    for: number;
+    against: number;
+    abstain: number;
+    total: number;
+  };
 }
 
 // Minimal HATS ABI for checking balances
@@ -373,8 +383,11 @@ export const useEnhancedProposals = () => {
             approving_pod_id: proposal.pod_id, // Same pod votes
             governance_context: 'pod-level',
             governance_tier: proposal.governance_tier ?? 'POD_OPERATIONAL',
+            approval_threshold_bps: proposal.approval_threshold_bps ?? null,
+            quorum_threshold_bps: proposal.quorum_threshold_bps ?? null,
+            eligible_voter_count: proposal.eligible_voter_count ?? null,
             vote_counts: proposal.vote_counts,
-          } as EnhancedProposal & { vote_counts: typeof proposal.vote_counts };
+          };
 
           allProposals.push(enhancedProposal);
         }
