@@ -202,83 +202,6 @@ export class GovernanceService {
         `📊 Proposal ${proposalId}: ${approvalCount} for, ${rejectionCount} against, ${totalVotes} total votes`
       );
       console.log('✅ Vote counted successfully. Status remains "proposed" for continued voting.');
-
-      // Don't change status automatically - return early
-      return;
-
-      // Validate the new status is allowed
-      const allowedStatuses = [
-        'draft',
-        'proposed',
-        'active',
-        'approved',
-        'rejected',
-        'executed',
-        'archived',
-      ];
-      if (!allowedStatuses.includes(newStatus)) {
-        console.warn(
-          `⚠️ Invalid status '${newStatus}' - falling back to 'proposed'`,
-        );
-        newStatus = 'proposed';
-      }
-
-      console.log(
-        `📝 Attempting to update pod ${proposalId} to status: ${newStatus}`,
-      );
-
-      // Update the pod status - use maybeSingle() instead of single() to handle no results
-      const updateData: any = {
-        status: newStatus,
-        updated_at: new Date().toISOString(),
-      };
-
-      // Set is_active based on status
-      if (newStatus === 'active') {
-        updateData.is_active = true;
-      } else if (newStatus === 'rejected') {
-        updateData.is_active = false;
-      }
-
-      const { data: updatedPod, error: updateError } = await supabase
-        .from('pods')
-        .update(updateData)
-        .eq('id', proposalId)
-        .select()
-        .maybeSingle();
-
-      if (updateError) {
-        console.error('❌ Failed to update pod status:', updateError);
-
-        // If it's a constraint violation, provide helpful context
-        if (updateError.code === '23514') {
-          console.error(
-            '💡 Database constraint violation - the status value may not be allowed by the pods_status_check constraint',
-          );
-          console.error('   Current attempt to set status to:', newStatus);
-          console.error(
-            '   Allowed values should include: draft, proposed, active, approved, rejected, executed, archived',
-          );
-        }
-
-        throw updateError;
-      }
-
-      if (updatedPod) {
-        console.log(
-          `✅ Pod "${updatedPod.name}" (${proposalId}) status successfully updated to: ${newStatus}`,
-        );
-
-        // If approved, we could trigger additional actions here
-        if (newStatus === 'approved') {
-          console.log('🎉 Pod approved! Ready for activation.');
-          // TODO: Could trigger Hat minting, treasury deployment, etc.
-        } else if (newStatus === 'rejected') {
-          console.log('❌ Pod rejected by governance.');
-        }
-      } else {
-        console.warn('⚠️ No pod found with ID:', proposalId);
-      }
     } catch (error) {
       console.error('Failed to update proposal approval count:', error);
     }
@@ -405,7 +328,8 @@ export class GovernanceService {
   static async createPodLevelProposal(data: {
     title: string;
     description: string;
-    pod_id: string;
+    /** Pod UUID for pod-scoped proposals; null when the proposal is DAO-wide. */
+    pod_id: string | null;
     created_by: string;
     governance_tier?: 'DAO_CONSTITUTIONAL' | 'POD_TREASURY_BINDING' | 'POD_OPERATIONAL';
     metadata?: Record<string, any>;
@@ -419,10 +343,17 @@ export class GovernanceService {
       const tier: GovernanceTier = data.governance_tier ?? 'POD_OPERATIONAL';
 
       // Resolve pod config + snapshot eligible voter count so quorum is
-      // computed against membership-at-creation.
-      const podConfig = await getPodGovernanceConfig(data.pod_id);
-      const defaults = getThresholdsForTier(podConfig, tier);
-      const eligibleVoterCount = await getEligibleVoterCount(data.pod_id, tier);
+      // computed against membership-at-creation. DAO-wide proposals
+      // (pod_id null) skip this step and rely on platform defaults.
+      const podConfig = data.pod_id
+        ? await getPodGovernanceConfig(data.pod_id)
+        : null;
+      const defaults = podConfig
+        ? getThresholdsForTier(podConfig, tier)
+        : { approval_bps: 5001, quorum_bps: 3000, voting_hours: 72 };
+      const eligibleVoterCount = data.pod_id
+        ? await getEligibleVoterCount(data.pod_id, tier)
+        : 0;
 
       // Validate overrides are stricter-only.
       if (

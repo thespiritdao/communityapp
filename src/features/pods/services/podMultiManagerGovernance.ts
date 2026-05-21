@@ -34,8 +34,12 @@ export interface ProposalVote {
 }
 
 export class PodMultiManagerGovernance {
-  private static readonly MINIMUM_MANAGERS_REQUIRED = 3;
-  private static readonly PROPOSAL_DURATION_HOURS = 72; // 3 days
+  // Governance only requires at least one active manager (the proposer
+  // themselves). The previous hard floor of 3 ruled out small pods that
+  // legitimately operate with 1-2 leaders. Approval threshold + voting
+  // mechanics still scale to the actual manager count.
+  private static readonly MINIMUM_MANAGERS_REQUIRED = 1;
+  private static readonly PROPOSAL_DURATION_HOURS = 72; // legacy fallback
 
   /**
    * Get all active managers for a pod
@@ -96,16 +100,13 @@ export class PodMultiManagerGovernance {
         };
       }
 
-      // Check if pod has enough managers
-      const hasEnoughManagers = await this.hasEnoughManagers(podId);
-      if (!hasEnoughManagers) {
+      const managers = await this.getPodManagers(podId);
+      if (managers.length < this.MINIMUM_MANAGERS_REQUIRED) {
         return {
           success: false,
-          error: `Minimum ${this.MINIMUM_MANAGERS_REQUIRED} managers required for governance`,
+          error: 'Pod has no active managers — cannot create governance proposals',
         };
       }
-
-      const managers = await this.getPodManagers(podId);
 
       // Resolve approval threshold from pod governance config (operational tier).
       // Per-proposal override can only push the bar UP, never down.
