@@ -42,6 +42,7 @@ import { HatsModuleSyncService } from '../services/HatsModuleSyncService';
 import { TimeBasedToggleService } from '../services/TimeBasedToggleService';
 import { HatVerificationService } from '../services/HatVerificationService';
 import { getClientHatId } from '@/lib/hatRegistryClient';
+import { TreasuryThresholdPicker } from './TreasuryThresholdPicker';
 
 interface HatsModulePodCreationFormProps {
   onSuccess?: (result: any) => void;
@@ -56,7 +57,7 @@ interface FormData {
   podLeaders: string[];
   eligibilityRules: EligibilityCriteria[]; // ✅ Unified: Now uses EligibilityCriteria (includes agreements, tokens, credentials, time-based)
   enableTreasury: boolean;
-  treasuryThreshold: number;
+  treasuryThresholdBps: number;
   autoMemberApproval: boolean;
   podImage?: File | null;
   podImageUrl?: string;
@@ -203,7 +204,7 @@ export const HatsModulePodCreationForm: React.FC<
     podLeaders: testingMode ? [address || ''] : [address || '', '', ''], // ✅ FIX: Default first leader to connected address (smart wallet)
     eligibilityRules: [], // ✅ Unified: All criteria managed via EligibilityCriteriaBuilder
     enableTreasury: true,
-    treasuryThreshold: 1, // TODO: Change to 3 for production - using 1 for testing
+    treasuryThresholdBps: 6667, // Strict (66.67%) preset — V3 treasury approval threshold
     autoMemberApproval: false,
   });
 
@@ -819,7 +820,11 @@ export const HatsModulePodCreationForm: React.FC<
         eligibilityRules: eligibilityRules as any,
         treasuryConfig: formData.enableTreasury
           ? {
-              threshold: formData.treasuryThreshold,
+              // V3 threshold (basis points) is persisted to the DB column
+              // treasury_threshold_bps and consumed at activation time, not
+              // here. This `threshold` field is the legacy V2 N-of-M shape
+              // and is currently dead (see PodOperationsService:159).
+              threshold: validation.validLeads.length,
               signers: validation.validLeads,
             }
           : undefined,
@@ -1634,6 +1639,9 @@ export const HatsModulePodCreationForm: React.FC<
               treasury_contract_address: formData.enableTreasury
                 ? 'pending'
                 : null,
+              treasury_threshold_bps: formData.enableTreasury
+                ? formData.treasuryThresholdBps
+                : null,
               proxy_contract_address: proxyAddress || null,
               blockchain_pod_id: blockchainPodId,
               status: 'pending_review',
@@ -1723,6 +1731,9 @@ export const HatsModulePodCreationForm: React.FC<
             treasuryContractAddress: formData.enableTreasury
               ? 'pending'
               : undefined,
+            treasuryThresholdBps: formData.enableTreasury
+              ? formData.treasuryThresholdBps
+              : null,
             proxyContractAddress: proxyAddress || undefined,
             blockchainPodId: blockchainPodId,
           });
@@ -4059,29 +4070,12 @@ export const HatsModulePodCreationForm: React.FC<
                 </div>
 
                 {formData.enableTreasury && (
-                  <div>
-                    <Label htmlFor="treasuryThreshold">
-                      Required Signatures
-                    </Label>
-                    <Input
-                      id="treasuryThreshold"
-                      type="number"
-                      min="1"
-                      max={Math.max(1, validation.validLeads.length)}
-                      value={formData.treasuryThreshold || 1}
-                      onChange={(e) => {
-                        const value = Number.parseInt(e.target.value);
-                        updateFormData(
-                          'treasuryThreshold',
-                          isNaN(value) ? 1 : value,
-                        );
-                      }}
-                    />
-                    <p className="text-xs text-gray-600 mt-1">
-                      Number of leader signatures required for treasury
-                      transactions
-                    </p>
-                  </div>
+                  <TreasuryThresholdPicker
+                    value={formData.treasuryThresholdBps}
+                    onChange={(bps) =>
+                      updateFormData('treasuryThresholdBps', bps)
+                    }
+                  />
                 )}
               </div>
             </div>

@@ -217,6 +217,7 @@ export interface Pod {
   pod_leads?: string[];
   accountability_signatures?: string;
   treasury_contract_address?: string | null;
+  treasury_threshold_bps?: number | null;
   management_hat_id?: string | null;
   membership_hat_id?: string | null;
   governance_proposal_id?: string | null;

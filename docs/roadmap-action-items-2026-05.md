@@ -44,7 +44,7 @@ This doc captures 8 high-level action items, each researched against the current
 
 ---
 
-## 3. Treasury Quorum Customization — PR 1 ✅ DONE 2026-05-20 | PR 2 ⏳ PENDING
+## 3. Treasury Quorum Customization — PR 1 ✅ DONE 2026-05-20 | PR 2 ✅ DONE 2026-05-21
 
 **Status:** On-chain infrastructure complete and verified. App-side UI integration not yet started.
 
@@ -60,12 +60,17 @@ This doc captures 8 high-level action items, each researched against the current
 - All 5 final smoke tests pass; 13/13 wiring-state checks pass
 - Schema migration `20260519000001_add_treasury_threshold.sql` adds `pods.treasury_threshold_bps`
 
-**PR 2 pending (app-side UI):**
-1. Treasury threshold picker on pod creation form (Simple 50%+1 / Strict 66% / Unanimous / Custom)
-2. Activation flow auto-prompts pod leader to deploy V3 treasury via CDP wallet (gas-sponsored)
-3. Pod page surfaces treasury status + current threshold + change UI
-4. Threshold change proposals visible in governance UI
-5. Donation approval route reads Exec Pod treasury threshold (when Exec Pod migrates to V3)
+**PR 2 outcome (done 2026-05-21):**
+1. ✅ Threshold picker on pod creation form — Simple (50%+1), Strict (66%), Unanimous (100%) presets + 1%-step Custom slider; saves `pods.treasury_threshold_bps`
+2. ✅ Activation card on pod page (`TreasuryActivationCard`) — leader-only "Deploy Treasury" CTA that calls `PodTreasuryDeployerV3.deployTreasury` from the leader's CDP smart wallet, parses the `TreasuryDeployed` event, and persists the new address to `pods.treasury_contract_address`. Self-heals if the treasury was already deployed on-chain.
+3. ✅ Post-deploy status card — short address with copy + Basescan link, live-read threshold percent, supported-token count
+4. ✅ Page-load backfill — if a V3 treasury exists on-chain but the DB wasn't updated, the load block syncs it on first view
+5. ✅ V2 pods unchanged — fallback to existing FundButton/warning UI for any pod with `treasury_threshold_bps IS NULL`
+
+**PR 2 carryover (deferred to a follow-up):**
+- Threshold change proposals in governance UI (item 4 from the original list)
+- Donation approval route migration when the Exec Pod moves to V3
+- Per-pod Paymaster whitelisting automation — each `PodTreasuryV3` instance is a fresh address that needs Paymaster sponsorship for its proposal/approval functions. Optional roadmap item.
 
 **Carryover items:**
 - Existing V2 pods stay on V2 treasuries; V3 is new-pods-only per earlier decision

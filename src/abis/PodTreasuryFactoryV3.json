@@ -1,0 +1,29 @@
+[
+  {
+    "type": "function",
+    "name": "getTreasuryForPod",
+    "stateMutability": "view",
+    "inputs": [{ "name": "podId", "type": "string" }],
+    "outputs": [{ "name": "", "type": "address" }]
+  },
+  {
+    "type": "function",
+    "name": "hasTreasury",
+    "stateMutability": "view",
+    "inputs": [{ "name": "podId", "type": "string" }],
+    "outputs": [{ "name": "", "type": "bool" }]
+  },
+  {
+    "type": "event",
+    "name": "TreasuryDeployed",
+    "anonymous": false,
+    "inputs": [
+      { "indexed": true, "name": "podId", "type": "string" },
+      { "indexed": true, "name": "treasuryAddress", "type": "address" },
+      { "indexed": true, "name": "managementHatId", "type": "uint256" },
+      { "indexed": false, "name": "initialThresholdBps", "type": "uint256" },
+      { "indexed": false, "name": "supportedTokens", "type": "address[]" },
+      { "indexed": false, "name": "deployer", "type": "address" }
+    ]
+  }
+]

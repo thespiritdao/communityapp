@@ -28,7 +28,9 @@ import { ProfileModal } from '@/features/identity';
 import {
   getTreasuryAddress,
   getTreasuryAddressSync,
+  getV3TreasuryAddress,
 } from '@/features/pods/utils/treasuryAddressUtils';
+import { TreasuryActivationCard } from '@/features/pods/components/TreasuryActivationCard';
 import { supabase } from '@/utils/supabaseClient';
 import dynamic from 'next/dynamic';
 import { PersonalCalendar } from '@/features/events/components/PersonalCalendar';
@@ -133,15 +135,36 @@ export default function PodDetailPage() {
         if (podData?.id) {
           setTreasuryLoading(true);
           try {
-            const factoryTreasuryAddress = await getTreasuryAddress(
-              podData.id,
-              podData.treasury_contract_address,
-            );
-            setTreasuryAddress(factoryTreasuryAddress);
-            console.log(
-              '✅ Treasury address resolved:',
-              factoryTreasuryAddress,
-            );
+            const isV3Eligible = podData.treasury_threshold_bps != null;
+            const dbAddress = podData.treasury_contract_address;
+            const dbAddressIsRealAddress =
+              dbAddress &&
+              dbAddress !== 'pending' &&
+              dbAddress !== '0x0000000000000000000000000000000000000000';
+
+            if (isV3Eligible && !dbAddressIsRealAddress) {
+              // V3 pod awaiting (or just past) deploy — query V3 factory.
+              const v3Address = await getV3TreasuryAddress(podData.id);
+              if (v3Address) {
+                // Idempotent backfill: persist the factory-resolved address
+                // (lowercased so paymaster .eq lookups match) so subsequent
+                // loads skip the lookup.
+                const normalized = v3Address.toLowerCase();
+                await supabase
+                  .from('pods')
+                  .update({ treasury_contract_address: normalized })
+                  .eq('id', podData.id);
+                setTreasuryAddress(normalized);
+              } else {
+                setTreasuryAddress(null);
+              }
+            } else {
+              const factoryTreasuryAddress = await getTreasuryAddress(
+                podData.id,
+                dbAddress,
+              );
+              setTreasuryAddress(factoryTreasuryAddress);
+            }
           } catch (error) {
             console.error('❌ Treasury address lookup failed:', error);
             // Fallback to sync method with database value
@@ -381,8 +404,7 @@ export default function PodDetailPage() {
 
             {/* Action Buttons */}
             <div className="flex items-center gap-2 flex-wrap">
-              {/* Fund Pod Button */}
-              {treasuryAddress ? (
+              {treasuryAddress && (
                 <FundButton
                   recipientType="pod"
                   variant="default"
@@ -397,14 +419,17 @@ export default function PodDetailPage() {
                   }
                   disabled={!address || treasuryLoading}
                 />
-              ) : (
-                <div className="flex items-center gap-2 px-3 py-2 bg-yellow-50 border border-yellow-200 rounded-md">
-                  <AlertCircle className="h-4 w-4 text-yellow-600" />
-                  <span className="text-sm text-yellow-800">
-                    Treasury not deployed - donations unavailable
-                  </span>
-                </div>
               )}
+              {!treasuryAddress &&
+                pod.treasury_threshold_bps == null &&
+                !treasuryLoading && (
+                  <div className="flex items-center gap-2 px-3 py-2 bg-yellow-50 border border-yellow-200 rounded-md">
+                    <AlertCircle className="h-4 w-4 text-yellow-600" />
+                    <span className="text-sm text-yellow-800">
+                      Treasury not deployed - donations unavailable
+                    </span>
+                  </div>
+                )}
               {treasuryLoading && (
                 <div className="text-xs text-gray-500">Loading treasury...</div>
               )}
@@ -432,6 +457,22 @@ export default function PodDetailPage() {
           <div>
             <p className="text-gray-700">{pod.description}</p>
           </div>
+
+          {/* Treasury V3 — activation CTA or post-deploy status */}
+          {pod.treasury_threshold_bps != null && (
+            <TreasuryActivationCard
+              pod={{
+                id: pod.id,
+                name: pod.name,
+                management_hat_id: pod.management_hat_id,
+                treasury_threshold_bps: pod.treasury_threshold_bps,
+                treasury_contract_address: pod.treasury_contract_address,
+              }}
+              isLeader={isLeader}
+              treasuryAddress={treasuryAddress}
+              onDeployed={(addr) => setTreasuryAddress(addr)}
+            />
+          )}
 
           {/* Active Surveys Banner */}
           {id && address && (

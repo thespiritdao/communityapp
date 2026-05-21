@@ -259,6 +259,7 @@ export class PodService {
     managementHatId?: string; // Optional HAT ID if known at creation
     membershipHatId?: string; // Optional HAT ID if known at creation
     treasuryContractAddress?: string; // Treasury contract address or 'pending'
+    treasuryThresholdBps?: number | null; // V3 approval threshold (5001-10000)
     proxyContractAddress?: string; // Proxy contract address
     blockchainPodId?: string; // Blockchain pod ID
   }): Promise<{ podId: string; proposalId?: string }> {
@@ -287,6 +288,7 @@ export class PodService {
           management_hat_id: podData.managementHatId || null,
           membership_hat_id: podData.membershipHatId || null,
           treasury_contract_address: podData.treasuryContractAddress || null,
+          treasury_threshold_bps: podData.treasuryThresholdBps ?? null,
           proxy_contract_address: podData.proxyContractAddress || null,
           blockchain_pod_id: podData.blockchainPodId || null,
         })

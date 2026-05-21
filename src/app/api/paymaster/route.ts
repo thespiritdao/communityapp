@@ -7,8 +7,9 @@
 //
 // This proxy intercepts pm_getPaymasterStubData / pm_getPaymasterData requests,
 // inspects the callData to find the actual target contract, checks whether that
-// contract is allowed (static whitelist OR stored in pods.creation_manager_address),
-// then forwards approved requests to Coinbase's paymaster.
+// contract is allowed (static whitelist OR stored on a pod row — either as
+// creation_manager_address or treasury_contract_address), then forwards
+// approved requests to Coinbase's paymaster.
 //
 // Usage: set paymasterUrl="/api/paymaster" in sendUserOperation calls that target
 // dynamic pod manager contracts. Statically-whitelisted contracts can continue
@@ -137,11 +138,17 @@ async function willSponsor(userOp: Record<string, unknown>): Promise<boolean> {
   for (const target of targets) {
     if (STATIC_WHITELIST.has(target)) continue;
 
-    // Dynamic check — is this a known per-pod creation manager?
+    // Dynamic check — is this a known per-pod contract? Match on either
+    // creation_manager_address (V2 per-pod manager) or
+    // treasury_contract_address (V3 per-pod treasury, deployed via
+    // PodTreasuryDeployerV3). Case-insensitive: viem returns checksummed
+    // addresses from decoded events while `target` here is lowercased.
     const { data } = await supabaseAdmin
       .from('pods')
       .select('id')
-      .eq('creation_manager_address', target)
+      .or(
+        `creation_manager_address.ilike.${target},treasury_contract_address.ilike.${target}`,
+      )
       .limit(1)
       .maybeSingle();
 
