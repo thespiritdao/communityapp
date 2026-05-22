@@ -96,37 +96,62 @@ Should return `false`. If any of the five DB checks fail, fix the data before th
 
 ---
 
-## 4. Governance Quorum + Voting Flexibility — Layer A ✅ DONE 2026-05-21 | Layer B ⏳ PENDING
+## 4. Governance Quorum + Voting Flexibility — Layer A ✅ DONE (revised 2026-05-22) | Layer B ⏳ PENDING
 
-**Status:** Layer A shipped in commit `c3a8ac7f`. Layer B (on-chain DAO Governor) deferred.
+**Status:** Layer A complete and revised through four iterations between 2026-05-21 and 2026-05-22. Layer B (on-chain DAO Governor) deferred.
 
-**Layer A outcome (done 2026-05-21):**
-- Schema: `pods` gets 6 new columns (quorum_bps / approval_bps / voting_hours for each of POD_OPERATIONAL and POD_TREASURY_BINDING tiers). `pod_level_proposals` gets `approval_threshold_bps`, `quorum_threshold_bps`, `eligible_voter_count` (snapshotted at creation). `pod_governance_proposals` gets `approval_threshold_bps`. All with CHECK constraints; NULL = "use platform default."
-- New service: `podGovernanceConfigService.ts` — read/write per-pod config with null-coalescing against platform defaults, eligible-voter counting (managers-only for operational, all active members for treasury).
-- New pure helper: `proposalResultEngine.ts` — `determineProposalResult(tally, podConfig, override, tier, eligible)` used by both server-side aggregation and client-side live tally display. Abstentions excluded from approval denominator.
-- Hardcoded `0.67` in `podMultiManagerGovernance.ts:107` replaced with config-driven value. Hardcoded 72h duration also config-driven.
-- Hardcoded simple-majority in `ipfsAggregationService.ts:82` replaced with quorum + approval engine. **Pre-PR rows grandfathered** via sentinel branch (NULL eligible + NULL quorum_threshold → simple majority).
-- New leader-gated `GovernanceSettingsCard` on `/pods/[id]` — collapsible card with two tier sections, 3 controls each (quorum/approval/voting period), platform-default reset per tier.
-- New per-proposal stricter-override picker in `CreateProposalForm` — pod-level proposals only, validates `override >= pod default` client-side and server-side.
-- Live quorum + approval status displayed in `ProposalModal` for pod-level proposals (green check / red X with required-count math).
-- `TreasuryThresholdPicker` refactored to wrap a new generic `ThresholdPicker`; PR 2 V3 treasury deploy flow unaffected.
+**Full technical doc:** [`governance-flexibility-layer-a-2026-05.md`](governance-flexibility-layer-a-2026-05.md)
 
-**Per-tier platform defaults shipped:**
-- POD_OPERATIONAL: 30% quorum, 50.01% approval, 72h voting period. Quorum base: managers only.
-- POD_TREASURY_BINDING: 50% quorum, 66% approval, 72h voting period. Quorum base: all active pod members.
+**What shipped (all in production):**
 
-**Bounds:** approval ∈ [50.01%, 100%], quorum ∈ [20%, 100%], voting period ∈ [12h, 720h].
+1. **Per-pod governance configuration** — pods now configure four knobs per tier (POD_OPERATIONAL, POD_TREASURY_BINDING):
+   - **Voter base** — all pod members (default) or pod leaders only
+   - **Quorum %** — bounded 20%–100%
+   - **Approval %** — bounded 50.01%–100%
+   - **Voting period** — bounded 12h–720h (30 days)
 
-**Layer A carryover items:**
-- RLS lockdown on threshold columns after proposal creation (currently relies on app-layer integrity).
-- `eligible_voter_count` is snapshotted, not live. Documented behaviour; surface clearly in UI when revisited.
-- `MINIMUM_MANAGERS_REQUIRED = 3` constant in podMultiManagerGovernance still hardcoded — incompatible with 2-manager pods setting 100% threshold. Worth revisiting.
+2. **Platform defaults**, applied when a pod hasn't customized:
+   - POD_OPERATIONAL: 30% quorum, 50.01% approval, 72h, all_members
+   - POD_TREASURY_BINDING: 50% quorum, 66% approval, 72h, all_members
 
-**Layer B — DAO-level (harder, on-chain):**
-1. Cannot modify current DAOGovernor without redeploy.
+3. **Permission hierarchy** — three independent AND-gates determine whether a member can vote:
+   - `pod_modules.governance_enabled` (module gate)
+   - voter_base audience match (audience gate)
+   - role-level `governanceParticipation` permission (highest-order signal)
+
+4. **Per-proposal stricter override** — proposal authors can opt UP to a stricter approval bar for high-stakes proposals; cannot drop below the pod default. Validated client-side and server-side.
+
+5. **Governance as a toggleable module** — `pod_modules.governance_enabled` BOOLEAN, default TRUE. Pods that delegate decisions to a parent (or simply don't run proposals) can disable governance without affecting other capabilities. Enforced at two server-side gates via `GovernanceService.isPodGovernanceEnabled()`.
+
+6. **UI surfaces:**
+   - Settings card lives inside the leader-only Modules panel (`PodModulesManager`) as the Governance module's config component. Earlier placement on the public pod page was removed.
+   - `CreateProposalForm` filters its pod-selection dropdown by `governance_enabled`. Stricter-override picker uses preset chips (`High consensus 70%` / `Supermajority 80%` / `Near-unanimous 90%` / Custom).
+   - `ProposalModal` shows live quorum + approval status (green check / red X with required-count math).
+
+7. **Grandfathering** — proposals created before each iteration close under the rules they were created with. No retroactive re-scoring.
+
+**Revision history within Layer A:**
+
+| Date | Iteration | What |
+|---|---|---|
+| 2026-05-21 | Initial Layer A | Three knobs per tier; OPERATIONAL hardcoded leaders-only |
+| 2026-05-22 | Path B | Voter base became per-pod configurable; defaults flipped to `all_members` |
+| 2026-05-22 | Module toggle | Governance became a toggleable module; settings card moved to leader panel |
+| 2026-05-22 | Enforcement audit | `createPodLevelProposal` + `notifyEligibleVoters` gated server-side via `isPodGovernanceEnabled` |
+
+**Carryover from Layer A:**
+- `eligible_voter_count` is snapshotted at creation, not live. Documented behaviour.
+- `'admin'` membership_type is recognized as leader-equivalent across the codebase but never actively used. Worth a future cleanup to either drop the value or define it explicitly.
+- `pod_governance_proposals` table referenced in `podMultiManagerGovernance.ts` doesn't exist in production; that service is effectively dead code. Either wire up or delete in a future cleanup.
+- Live schema dump checked into the repo would catch column-drift bugs cheaply (we hit this twice during Layer A).
+
+**Layer B — DAO-level (deferred, on-chain):**
+1. Cannot modify current `DAOGovernor` without redeploy.
 2. Two options:
    - Replace with `GovernorSettings`-extended governor that allows DAO-vote-gated parameter updates.
    - Per-proposal supermajority: custom governor overriding `quorum(blockNumber)` with per-proposal mapping.
+
+Warrants its own planning session before any code — touches live governance.
 
 ---
 
@@ -275,13 +300,16 @@ Should return `false`. If any of the five DB checks fail, fix the data before th
 | 2 | Notification bug fixes | S | ✅ Done 2026-05-19 |
 | 3 | Treasury quorum config — contracts + on-chain wiring (PR 1) | M | ✅ Done 2026-05-20 |
 | 3 | Treasury quorum config — app UI + activation flow (PR 2) | S–M | ✅ Done 2026-05-21 |
-| 4 | Governance flexibility (Layer A) | M | ✅ Done 2026-05-21 |
+| 4 | Governance flexibility (Layer A) | M | ✅ Done 2026-05-21, revised 2026-05-22 |
+| 4a | Path B — per-pod voter base toggle | S | ✅ Done 2026-05-22 |
+| 4a | Governance as a toggleable module | S | ✅ Done 2026-05-22 |
+| 4a | Server-side `governance_enabled` enforcement audit | S | ✅ Done 2026-05-22 |
 | 4b | Governance flexibility (Layer B — DAO on-chain) | L | Pending |
 | 5 | 3rd-party DB (export model) | M | Talk to community first |
-| 6 | Password manager module | M–L | Pending |
+| 6 | Password manager module | M–L | **Up next** |
 | 7 | $SELF issuance overhaul | L | Pending |
 | 8 | Smart contract audit | XL | Partially started (V3 treasury done — see [audit doc](treasury-v3-audit-and-deployment-2026-05.md)) |
 
-**Suggested parallelism:** #8 (audit) can run as a background workstream while #1–#4 execute sequentially. #5 starts with a conversation, not code.
+**Suggested parallelism:** #8 (audit) can run as a background workstream while #6 → #7 execute. #5 starts with a conversation, not code.
 
 **Flag for review:** #4 Layer B (DAO Governor replacement) and #7 ($SELF issuance) both require contract migrations that touch live funds/governance — warrant separate planning sessions before any code.
