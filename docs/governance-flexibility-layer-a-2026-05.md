@@ -180,15 +180,19 @@ Pod page → GovernanceSettingsCard (leader-gated)
 
 The split between OPERATIONAL and TREASURY_BINDING matches the existing `governance_tier` enum already used by `pod_level_proposals` and `CreateProposalForm`.
 
+> **Path B update (2026-05-22):** voter base is now per-pod-configurable per tier via `pods.gov_op_voter_base` / `pods.gov_treasury_voter_base` (migration `20260522000001`). Platform defaults are **`all_members` for both tiers**. Leaders-only is an opt-in narrowing surfaced in `GovernanceSettingsCard` via a "Who votes?" toggle. The per-role `governanceParticipation` permission remains the highest-order signal — a user with that permission OFF cannot vote regardless of the pod's voter_base setting. The voter_base setting widens or narrows the audience; the role permission is the per-user gate into it.
+
 **POD_OPERATIONAL**
-- Voter base: pod leaders only (managers in `pod_members`)
+- Voter base (default): all active pod members with `governanceParticipation = true`
+- Voter base (opt-in narrowing): pod leaders only (`pod_members.membership_type IN ('leader','admin')` AND `governanceParticipation = true`)
 - Default quorum: 30% — keeps routine coordination moving
 - Default approval: 50.01% — simple majority of cast votes
 - Default voting period: 72h
-- Use case: status changes, role approvals, meeting agendas
+- Use case: status changes, role approvals, meeting agendas. Pods that prefer leader-coordinated operational decisions can flip the toggle to leaders-only.
 
 **POD_TREASURY_BINDING**
-- Voter base: all active pod members
+- Voter base (default): all active pod members with `governanceParticipation = true`
+- Voter base (opt-in narrowing): pod leaders only — available via the same toggle, though rarely the right choice for funds-binding decisions
 - Default quorum: 50% — meaningful participation required for funds to move
 - Default approval: 66% — supermajority of cast votes
 - Default voting period: 72h

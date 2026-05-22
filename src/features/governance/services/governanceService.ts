@@ -395,25 +395,13 @@ export class GovernanceService {
 
       if (error) throw error;
 
-      // Diagnostic: console.error survives Next.js production strip.
-      console.error(
-        '✅ [createPodLevelProposal] proposal created:',
-        proposal.id,
-        'pod_id:',
-        data.pod_id,
-        'tier:',
-        tier,
-      );
+      console.log('✅ Pod-level proposal created:', proposal.id);
 
       // Fire-and-forget: notify everyone eligible to vote on this
-      // proposal. Recipient set mirrors the quorum denominator exactly
-      // (OPERATIONAL → managers only, TREASURY_BINDING → all active
-      // members) so the people who can vote are the people who hear
-      // about it. Failures here must not block proposal creation.
+      // proposal. Recipient set is governed by the pod's voter_base
+      // setting and per-role governanceParticipation. Failures here
+      // must not block proposal creation.
       if (data.pod_id) {
-        console.error(
-          '➡️ [createPodLevelProposal] invoking notifyEligibleVoters',
-        );
         this.notifyEligibleVoters({
           podId: data.pod_id,
           tier,
@@ -421,15 +409,10 @@ export class GovernanceService {
           proposalTitle: data.title,
           proposerAddress: data.created_by.toLowerCase(),
         }).catch((err) =>
-          console.error(
+          console.warn(
             '⚠️ [createPodLevelProposal] notification fan-out failed:',
             err,
           ),
-        );
-      } else {
-        console.error(
-          '⚠️ [createPodLevelProposal] data.pod_id is falsy; skipping notifyEligibleVoters',
-          data,
         );
       }
 
@@ -453,36 +436,11 @@ export class GovernanceService {
     proposerAddress: string;
   }): Promise<void> {
     const { podId, tier, proposalId, proposalTitle, proposerAddress } = args;
-
-    // NOTE: Next.js production build strips console.log / console.warn
-    // (see next.config.mjs removeConsole). Using console.error here so
-    // diagnostic output survives the strip while we hunt the missing-
-    // notification bug. Revert these to console.log once root cause
-    // is confirmed.
-    console.error(
-      `📢 [notifyEligibleVoters] start: pod=${podId} tier=${tier} proposal=${proposalId}`,
-    );
-
     const wallets = await getEligibleVoterWallets(podId, tier);
-    console.error(
-      `📢 [notifyEligibleVoters] getEligibleVoterWallets returned ${wallets.length} wallet(s):`,
-      wallets,
-    );
-
     const recipients = wallets.filter(
       (w) => w.toLowerCase() !== proposerAddress.toLowerCase(),
     );
-    console.error(
-      `📢 [notifyEligibleVoters] after self-exclusion (proposer=${proposerAddress}): ${recipients.length} recipient(s)`,
-      recipients,
-    );
-
-    if (recipients.length === 0) {
-      console.error(
-        '📢 [notifyEligibleVoters] no recipients (proposer is the only eligible voter or pod has no members); skipping fan-out',
-      );
-      return;
-    }
+    if (recipients.length === 0) return;
 
     // Look up pod name for the message body
     const { data: pod } = await supabase
@@ -511,12 +469,12 @@ export class GovernanceService {
 
     const succeeded = results.filter((r) => r.status === 'fulfilled').length;
     const failed = results.filter((r) => r.status === 'rejected');
-    console.error(
-      `📢 [notifyEligibleVoters] fan-out complete: ${succeeded}/${recipients.length} succeeded`,
+    console.log(
+      `✅ [createPodLevelProposal] notified ${succeeded}/${recipients.length} eligible voters`,
     );
     if (failed.length > 0) {
-      console.error(
-        `📢 [notifyEligibleVoters] ${failed.length} notification(s) failed:`,
+      console.warn(
+        `⚠️ [createPodLevelProposal] ${failed.length} notification(s) failed:`,
         failed.map((r) => (r as PromiseRejectedResult).reason),
       );
     }

@@ -74,6 +74,7 @@ interface TierFormState {
   quorum_bps: number;
   approval_bps: number;
   voting_hours: number;
+  voter_base: 'leaders' | 'all_members';
 }
 
 function tierSection(
@@ -85,6 +86,7 @@ function tierSection(
     quorum_bps: src.quorum_bps,
     approval_bps: src.approval_bps,
     voting_hours: src.voting_hours,
+    voter_base: src.voter_base,
   };
 }
 
@@ -243,7 +245,8 @@ function TierBlock({
   const isDefault =
     state.quorum_bps === defaultState.quorum_bps &&
     state.approval_bps === defaultState.approval_bps &&
-    state.voting_hours === defaultState.voting_hours;
+    state.voting_hours === defaultState.voting_hours &&
+    state.voter_base === defaultState.voter_base;
 
   return (
     <div className="space-y-4 p-4 bg-white rounded-md border border-[#E8E4DC]">
@@ -263,6 +266,35 @@ function TierBlock({
           <RotateCcw className="h-3 w-3 mr-1" />
           Reset to default
         </Button>
+      </div>
+
+      <div className="space-y-2">
+        <Label className="text-sm font-medium">Who votes?</Label>
+        <p className="text-xs text-gray-600 -mt-1">
+          Members must also have the governanceParticipation permission on
+          their role to vote. This setting narrows the audience; permissions
+          gate individuals.
+        </p>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button
+            type="button"
+            variant={state.voter_base === 'all_members' ? 'default' : 'outline'}
+            size="sm"
+            disabled={disabled}
+            onClick={() => onChange({ ...state, voter_base: 'all_members' })}
+          >
+            All pod members
+          </Button>
+          <Button
+            type="button"
+            variant={state.voter_base === 'leaders' ? 'default' : 'outline'}
+            size="sm"
+            disabled={disabled}
+            onClick={() => onChange({ ...state, voter_base: 'leaders' })}
+          >
+            Pod leaders only
+          </Button>
+        </div>
       </div>
 
       <ThresholdPicker
