@@ -1,10 +1,13 @@
 import { supabase } from '@/utils/supabaseClient';
 import {
   getEligibleVoterCount,
+  getEligibleVoterWallets,
   getPodGovernanceConfig,
   getThresholdsForTier,
 } from '@/features/pods/services/podGovernanceConfigService';
 import type { GovernanceTier } from '@/features/governance/services/proposalResultEngine';
+import { unifiedNotificationService } from '@/services/unifiedNotificationService';
+import { buildProposalUrl } from '@/features/governance/utils/proposalUrl';
 
 export interface GovernanceVote {
   id?: string;
@@ -409,11 +412,80 @@ export class GovernanceService {
       if (error) throw error;
 
       console.log('✅ Pod-level proposal created:', proposal.id);
+
+      // Fire-and-forget: notify everyone eligible to vote on this
+      // proposal. Recipient set mirrors the quorum denominator exactly
+      // (OPERATIONAL → managers only, TREASURY_BINDING → all active
+      // members) so the people who can vote are the people who hear
+      // about it. Failures here must not block proposal creation.
+      if (data.pod_id) {
+        this.notifyEligibleVoters({
+          podId: data.pod_id,
+          tier,
+          proposalId: proposal.id,
+          proposalTitle: data.title,
+          proposerAddress: data.created_by.toLowerCase(),
+        }).catch((err) =>
+          console.warn(
+            '⚠️ [createPodLevelProposal] notification fan-out failed:',
+            err,
+          ),
+        );
+      }
+
       return proposal.id;
     } catch (error) {
       console.error('Failed to create pod-level proposal:', error);
       throw error;
     }
+  }
+
+  /**
+   * Send "new proposal" notifications to every wallet eligible to vote
+   * on a pod-level proposal. Skips the proposer themselves to avoid
+   * self-notification. Used only by createPodLevelProposal.
+   */
+  private static async notifyEligibleVoters(args: {
+    podId: string;
+    tier: GovernanceTier;
+    proposalId: string;
+    proposalTitle: string;
+    proposerAddress: string;
+  }): Promise<void> {
+    const { podId, tier, proposalId, proposalTitle, proposerAddress } = args;
+    const wallets = await getEligibleVoterWallets(podId, tier);
+    const recipients = wallets.filter(
+      (w) => w.toLowerCase() !== proposerAddress,
+    );
+    if (recipients.length === 0) return;
+
+    // Look up pod name for the message body
+    const { data: pod } = await supabase
+      .from('pods')
+      .select('name')
+      .eq('id', podId)
+      .maybeSingle();
+    const podName = pod?.name ?? 'a pod';
+
+    await Promise.all(
+      recipients.map((recipient) =>
+        unifiedNotificationService.createNotification({
+          recipient_address: recipient,
+          sender_address: proposerAddress,
+          notification_type: 'proposal_created' as any,
+          title: `New proposal in ${podName}`,
+          message: `"${proposalTitle}" is open for voting.`,
+          context_type: 'governance',
+          context_id: proposalId,
+          context_url: buildProposalUrl(proposalId),
+          proposal_id: proposalId,
+          priority: 'medium',
+        }),
+      ),
+    );
+    console.log(
+      `✅ [createPodLevelProposal] notified ${recipients.length} eligible voters`,
+    );
   }
 
   /**

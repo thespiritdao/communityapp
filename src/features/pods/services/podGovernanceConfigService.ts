@@ -178,6 +178,37 @@ export async function updatePodGovernanceConfig(
  * OPERATIONAL: managers only (pod_members.role='manager', status='active').
  * TREASURY_BINDING: all active pod members.
  */
+/**
+ * Return the wallet addresses of eligible voters for a tier. Mirrors
+ * `getEligibleVoterCount` exactly so the recipient set of new-proposal
+ * notifications matches the set of people who can actually vote.
+ */
+export async function getEligibleVoterWallets(
+  podId: string,
+  tier: GovernanceTier,
+): Promise<string[]> {
+  if (tier === 'DAO_CONSTITUTIONAL') return [];
+
+  let query = supabase
+    .from('pod_members')
+    .select('wallet_address')
+    .eq('pod_id', podId)
+    .eq('status', 'active');
+
+  if (tier === 'POD_OPERATIONAL') {
+    query = query.eq('role', 'manager');
+  }
+
+  const { data, error } = await query;
+  if (error) {
+    console.error('getEligibleVoterWallets failed', error);
+    return [];
+  }
+  return (data ?? [])
+    .map((row: any) => row.wallet_address)
+    .filter(Boolean);
+}
+
 export async function getEligibleVoterCount(
   podId: string,
   tier: GovernanceTier,
