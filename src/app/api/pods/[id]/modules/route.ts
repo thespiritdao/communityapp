@@ -22,6 +22,7 @@ const ALLOWED_KEYS = [
   'sub_pods_enabled',
   'community_agent_enabled',
   'surveys_enabled',
+  'governance_enabled',
 ] as const;
 
 function getWalletFromToken(token: string): string | null {

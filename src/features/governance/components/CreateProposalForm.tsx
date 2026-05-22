@@ -594,7 +594,9 @@ export function CreateProposalForm({
               .single();
 
             if (pod && !addedPodIds.has(role.podId)) {
-              // ✅ If this is Executive Pod, add "SpiritDAO (All)" option for DAO-wide proposals
+              // ✅ If this is Executive Pod, add "SpiritDAO (All)" option for DAO-wide proposals.
+              // DAO-wide proposals go through the on-chain Governor, independent of any pod's
+              // governance_enabled flag, so this option is always available to exec members.
               if (role.podId === EXEC_POD_ID) {
                 tokens.push({
                   id: 'dao-wide',
@@ -603,13 +605,29 @@ export function CreateProposalForm({
                 console.log(`  ✅ Added DAO-wide proposal option (Executive Pod member)`);
               }
 
-              // Add the pod itself for pod-level proposals
-              tokens.push({
-                id: role.podId,
-                label: pod.name,
-              });
-              addedPodIds.add(role.podId);
-              console.log(`  ✅ Added pod with governance permission: ${pod.name}`);
+              // Check pod-level governance module flag. If governance_enabled
+              // is false on this pod, hide the pod itself from the dropdown —
+              // existing proposals remain viewable on the governance page,
+              // but no new pod-level proposals can be filed.
+              const { data: mod } = await supabase
+                .from('pod_modules')
+                .select('governance_enabled')
+                .eq('pod_id', role.podId)
+                .maybeSingle();
+              const govEnabled = mod?.governance_enabled ?? true; // backward compat
+
+              if (govEnabled) {
+                // Add the pod itself for pod-level proposals
+                tokens.push({
+                  id: role.podId,
+                  label: pod.name,
+                });
+                addedPodIds.add(role.podId);
+                console.log(`  ✅ Added pod with governance permission: ${pod.name}`);
+              } else {
+                console.log(`  🔒 Skipped pod (governance module disabled): ${pod.name}`);
+                addedPodIds.add(role.podId);
+              }
             }
           } else if (role.podId) {
             // Log pods where user does NOT have governance permission
@@ -2107,8 +2125,8 @@ export function CreateProposalForm({
                     tierDefaults.approval_bps % 100 === 0 ? 0 : 2,
                   );
                   const overridePresets: ThresholdPreset[] = [
-                    { key: 'o-70', label: '70%', bps: 7000, description: 'Higher consensus' },
-                    { key: 'o-80', label: '80%', bps: 8000, description: 'Strong supermajority' },
+                    { key: 'o-70', label: '70%', bps: 7000, description: 'High consensus' },
+                    { key: 'o-80', label: '80%', bps: 8000, description: 'Supermajority' },
                     { key: 'o-90', label: '90%', bps: 9000, description: 'Near-unanimous' },
                   ].filter((p) => p.bps > tierDefaults.approval_bps);
                   return (
@@ -2137,7 +2155,7 @@ export function CreateProposalForm({
                             min={Math.max(tierDefaults.approval_bps, 5001)}
                             max={10000}
                             step={100}
-                            customChipDescription={`Pick any value ${defaultPct}–100%`}
+                            customChipDescription={`Any value ${defaultPct}%+`}
                           />
                           {formData.approvalOverrideBps != null && (
                             <button

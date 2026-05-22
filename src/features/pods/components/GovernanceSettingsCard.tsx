@@ -101,27 +101,36 @@ export function GovernanceSettingsCard({ podId }: Props) {
     null,
   );
 
-  const load = React.useCallback(async () => {
-    setLoading(true);
-    try {
-      const cfg = await getPodGovernanceConfig(podId);
-      setOpState(tierSection(cfg, 'operational'));
-      setTreasuryState(tierSection(cfg, 'treasury'));
-    } catch (error) {
-      console.error('Failed to load governance config', error);
-      toast({
-        title: 'Could not load governance settings',
-        description: 'Try refreshing the page.',
-        variant: 'destructive',
-      });
-    } finally {
-      setLoading(false);
-    }
-  }, [podId, toast]);
-
+  // Load once per podId. `toast` is intentionally NOT in the dep array:
+  // its identity is not stable across renders in all toast
+  // implementations, which would cause this effect to re-fire on every
+  // render, leading to an unbounded fetch loop (ERR_INSUFFICIENT_RESOURCES).
   React.useEffect(() => {
-    load();
-  }, [load]);
+    let cancelled = false;
+    setLoading(true);
+    getPodGovernanceConfig(podId)
+      .then((cfg) => {
+        if (cancelled) return;
+        setOpState(tierSection(cfg, 'operational'));
+        setTreasuryState(tierSection(cfg, 'treasury'));
+      })
+      .catch((error) => {
+        if (cancelled) return;
+        console.error('Failed to load governance config', error);
+        toast({
+          title: 'Could not load governance settings',
+          description: 'Try refreshing the page.',
+          variant: 'destructive',
+        });
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [podId]);
 
   async function handleSave() {
     if (!opState || !treasuryState) return;

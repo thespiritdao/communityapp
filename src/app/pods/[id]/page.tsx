@@ -31,7 +31,6 @@ import {
   getV3TreasuryAddress,
 } from '@/features/pods/utils/treasuryAddressUtils';
 import { TreasuryActivationCard } from '@/features/pods/components/TreasuryActivationCard';
-import { GovernanceSettingsCard } from '@/features/pods/components/GovernanceSettingsCard';
 import { supabase } from '@/utils/supabaseClient';
 import dynamic from 'next/dynamic';
 import { PersonalCalendar } from '@/features/events/components/PersonalCalendar';
@@ -474,9 +473,6 @@ export default function PodDetailPage() {
               onDeployed={(addr) => setTreasuryAddress(addr)}
             />
           )}
-
-          {/* Governance settings (leader-only) */}
-          {isLeader && id && <GovernanceSettingsCard podId={String(id)} />}
 
           {/* Active Surveys Banner */}
           {id && address && (

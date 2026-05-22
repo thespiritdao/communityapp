@@ -28,10 +28,12 @@ import {
   ChevronUp,
   ClipboardCheck,
   Bot,
+  Vote,
 } from 'lucide-react';
 import PodChatManager from './PodChatManager';
 import PodForumManager from './PodForumManager';
 import PodKnowledgeManager from './PodKnowledgeManager';
+import { GovernanceSettingsCard } from './GovernanceSettingsCard';
 
 interface PodModulesManagerProps {
   podId: string;
@@ -54,6 +56,7 @@ interface PodModules {
   sub_pods_enabled: boolean;
   surveys_enabled: boolean;
   community_agent_enabled: boolean;
+  governance_enabled: boolean;
   chat_config?: any;
   forum_config?: any;
   treasury_config?: any;
@@ -105,6 +108,15 @@ const CORE_MODULES: ModuleInfo[] = [
     color: '#3F7A5A',
     bgColor: '#D1E6DC',
     configComponent: null,
+  },
+  {
+    key: 'governance_enabled',
+    label: 'Governance',
+    description: 'Pod-level proposals and voting. Configure quorum, approval threshold, voting period, and voter base per tier.',
+    icon: Vote,
+    color: '#2F5D50',
+    bgColor: '#E8F1EE',
+    configComponent: 'governance',
   },
   {
     key: 'events_enabled',
@@ -198,6 +210,7 @@ export default function PodModulesManager({
     sub_pods_enabled: false,
     surveys_enabled: false,
     community_agent_enabled: false,
+    governance_enabled: true,
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -235,6 +248,7 @@ export default function PodModulesManager({
           sub_pods_enabled: data.sub_pods_enabled ?? false,
           surveys_enabled: data.surveys_enabled ?? false,
           community_agent_enabled: data.community_agent_enabled ?? false,
+          governance_enabled: data.governance_enabled ?? true,
           chat_config: data.chat_config,
           forum_config: data.forum_config,
           treasury_config: data.treasury_config,
@@ -292,6 +306,8 @@ export default function PodModulesManager({
         setExpandedModule('forum');
       } else if (moduleKey === 'knowledge_base_enabled' && enabled) {
         setExpandedModule('knowledge');
+      } else if (moduleKey === 'governance_enabled' && enabled) {
+        setExpandedModule('governance');
       }
 
       // Notify parent when a tab-creating module is toggled
@@ -425,6 +441,15 @@ export default function PodModulesManager({
                 membershipHatId={membershipHatId}
                 isManager={isManager}
               />
+            </div>
+          )}
+
+        {/* Governance configuration panel */}
+        {isExpanded &&
+          module.configComponent === 'governance' &&
+          modules.governance_enabled && (
+            <div className="mt-4">
+              <GovernanceSettingsCard podId={podId} />
             </div>
           )}
 
