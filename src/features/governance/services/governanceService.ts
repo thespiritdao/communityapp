@@ -122,38 +122,22 @@ export class GovernanceService {
     userAddress: string,
   ): Promise<GovernanceVote | null> {
     try {
+      // maybeSingle() returns null instead of a 406 when the row doesn't
+      // exist — the common "user hasn't voted yet" case. Previous
+      // .single() worked semantically (the catch swallowed the error)
+      // but flooded the browser Network panel with red 406 entries
+      // for every proposal × every page load.
       const { data, error } = await supabase
         .from('governance_votes')
         .select('*')
         .eq('proposal_id', proposalId)
-        .eq('voter_address', userAddress.toLowerCase())  // ✅ Match lowercase storage
-        .single();
+        .eq('voter_address', userAddress.toLowerCase())
+        .maybeSingle();
 
-      if (error) {
-        // Handle different error codes gracefully - don't log 406 errors repeatedly
-        if (error.code === 'PGRST116') {
-          // No rows found - user hasn't voted yet
-          return null;
-        } else if (
-          error.code === 'PGRST301' ||
-          error.message?.includes('No acceptable') ||
-          error.message?.includes('Not Acceptable')
-        ) {
-          // 406 Not Acceptable - silently return null, user hasn't voted
-          return null;
-        } else {
-          throw error;
-        }
-      }
+      if (error) throw error;
       return data || null;
     } catch (error) {
-      // Only log unexpected errors, not the common 406 ones
-      if (
-        !(error as any).message?.includes('Not Acceptable') &&
-        !(error as any).message?.includes('No acceptable')
-      ) {
-        console.error('Failed to get user vote:', error);
-      }
+      console.error('Failed to get user vote:', error);
       return null;
     }
   }
@@ -453,11 +437,30 @@ export class GovernanceService {
     proposerAddress: string;
   }): Promise<void> {
     const { podId, tier, proposalId, proposalTitle, proposerAddress } = args;
-    const wallets = await getEligibleVoterWallets(podId, tier);
-    const recipients = wallets.filter(
-      (w) => w.toLowerCase() !== proposerAddress,
+    console.log(
+      `📢 [notifyEligibleVoters] start: pod=${podId} tier=${tier} proposal=${proposalId}`,
     );
-    if (recipients.length === 0) return;
+
+    const wallets = await getEligibleVoterWallets(podId, tier);
+    console.log(
+      `📢 [notifyEligibleVoters] getEligibleVoterWallets returned ${wallets.length} wallet(s):`,
+      wallets,
+    );
+
+    const recipients = wallets.filter(
+      (w) => w.toLowerCase() !== proposerAddress.toLowerCase(),
+    );
+    console.log(
+      `📢 [notifyEligibleVoters] after self-exclusion (proposer=${proposerAddress}): ${recipients.length} recipient(s)`,
+      recipients,
+    );
+
+    if (recipients.length === 0) {
+      console.log(
+        '📢 [notifyEligibleVoters] no recipients (proposer is the only eligible voter or pod has no members); skipping fan-out',
+      );
+      return;
+    }
 
     // Look up pod name for the message body
     const { data: pod } = await supabase
@@ -467,7 +470,7 @@ export class GovernanceService {
       .maybeSingle();
     const podName = pod?.name ?? 'a pod';
 
-    await Promise.all(
+    const results = await Promise.allSettled(
       recipients.map((recipient) =>
         unifiedNotificationService.createNotification({
           recipient_address: recipient,
@@ -483,9 +486,18 @@ export class GovernanceService {
         }),
       ),
     );
+
+    const succeeded = results.filter((r) => r.status === 'fulfilled').length;
+    const failed = results.filter((r) => r.status === 'rejected');
     console.log(
-      `✅ [createPodLevelProposal] notified ${recipients.length} eligible voters`,
+      `📢 [notifyEligibleVoters] fan-out complete: ${succeeded}/${recipients.length} succeeded`,
     );
+    if (failed.length > 0) {
+      console.warn(
+        `📢 [notifyEligibleVoters] ${failed.length} notification(s) failed:`,
+        failed.map((r) => (r as PromiseRejectedResult).reason),
+      );
+    }
   }
 
   /**
