@@ -24,6 +24,7 @@ The feature shipped iteratively as design assumptions surfaced during testing:
 | Module toggle (2026-05-22) | Governance became a toggleable module (`pod_modules.governance_enabled`). Settings card moved from public pod page to the leader-only Modules panel. | Pod settings shouldn't live on member-facing surfaces, even gated. Sub-pods may delegate governance; the toggle makes that explicit. |
 | Server-side enforcement (2026-05-22) | `createPodLevelProposal` and `notifyEligibleVoters` both check `isPodGovernanceEnabled` server-side. | Defense in depth: the UI dropdown filter was the only enforcement before this. |
 | Layer B (2026-05-22) | DAO-wide Governor params tunable via proposal. New `DAOGovernanceSettingsCard` lives inside the Exec Pod's Governance module config. No contract redeploy — used the deployed Governor's pre-existing `GovernorSettings` setters. | Doing this before any community formally onboards avoids the migration headache that would come later. |
+| Layer B UX clarification (2026-05-22) | Renamed card "DAO-wide governance settings" → "DAO-wide Governance". Added helper text explaining the title/rationale fields define a DAO proposal voted on by all Advocate members (Exec drafts, DAO ratifies). | The card is a drafting surface for a constitutional proposal, not a settings page — language matters. |
 
 ---
 
@@ -363,6 +364,20 @@ The deployed `DAOGovernor.sol` (OZ v5) already inherits `GovernorSettings` and `
 - `updateQuorumNumerator(uint256 newQuorumNumerator)` — quorum %, with denominator=100
 
 All three are gated by `onlyGovernance` — the Governor itself, via a passing DAO proposal, is the only caller. So Layer B's only requirement is a UI that helps Exec Pod leaders construct such a proposal.
+
+### Constitutional pattern: Exec drafts, DAO ratifies
+
+The DAO-wide Governance card is **not a settings page that "saves"** — it's a drafting surface for a DAO proposal. Every change a user makes there becomes an on-chain proposal that the full Advocate membership votes on. This matches the standard constitutional pattern of governance systems: leaders propose, the membership ratifies.
+
+| Action | Surface | Who can do it |
+|---|---|---|
+| Draft a DAO governance-param change | `DAOGovernanceSettingsCard` (this card) | Exec Pod members with `governanceParticipation` |
+| Vote on the proposal | `/governance` (standard DAO-wide proposal flow) | All Advocate NFT holders |
+| Execute after passing | On-chain Timelock → Governor (`onlyGovernance` calls itself) | Anyone, after queue delay elapses |
+
+The UI's title and rationale fields exist because **every DAO proposal needs them** — the title appears in the governance list and notifications; the rationale is the body Advocate members read when deciding how to vote. The card's "Propose change" button does the draft step; the rest happens at `/governance` exactly like any other DAO-wide proposal.
+
+This is the deepest reason no contract redeploy was needed: the constitutional safety isn't enforced by a new contract we built — it's enforced by the existing Governor's `onlyGovernance` modifier plus the existing Advocate-NFT-gated voting on the regular DAO proposal pipeline. Layer B is the UI that makes that pre-existing capability accessible.
 
 ### Scope decision: three knobs, not four
 
