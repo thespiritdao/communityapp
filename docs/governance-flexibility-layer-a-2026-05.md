@@ -1,19 +1,17 @@
-# Pod Governance Flexibility — Layer A Technical Documentation
+# Pod Governance Flexibility — Layer A + B Technical Documentation
 
 **Originally shipped:** 2026-05-21
-**Last revised:** 2026-05-22 (Path B + governance as a toggleable module + server-side enforcement)
+**Last revised:** 2026-05-22 (Layer B shipped — DAO Governor parameters tunable via proposal)
 **Status:** Production
 **Roadmap item:** [#4 — Governance Quorum + Voting Flexibility](roadmap-action-items-2026-05.md)
-
-**Commits (chronological):** `c3a8ac7f`, `3c84db3d`, `4b1620c7`, `2a451c9b`, `b2e12a12`, `e420e96e`
 
 ---
 
 ## 1. What this is
 
-Layer A makes pod-level governance configurable per pod. **Four knobs per tier** (voter base, quorum %, approval %, voting period), with platform-set defaults and bounded floors. Per-proposal stricter overrides allowed; weakening below the pod default is not. Governance itself is a toggleable module — pods that delegate decisions to a parent (or simply don't run their own proposals) can turn it off without affecting any other capability.
+**Layer A** makes pod-level governance configurable per pod. Four knobs per tier (voter base, quorum %, approval %, voting period), with platform-set defaults and bounded floors. Per-proposal stricter overrides allowed; weakening below the pod default is not. Governance itself is a toggleable module — pods that delegate decisions to a parent (or simply don't run their own proposals) can turn it off without affecting any other capability.
 
-Layer B (on-chain DAO Governor changes for `DAO_CONSTITUTIONAL` tier) is deferred — current Governor contract is immutable post-deployment, and replacing it is a separate workstream.
+**Layer B** makes the DAO-wide on-chain Governor's parameters (voting delay, voting period, quorum %) tunable via DAO proposal. No contract redeploy required — the deployed Governor already inherits OZ's `GovernorSettings` and `GovernorVotesQuorumFraction`, exposing the necessary setters guarded by `onlyGovernance`. Layer B is a UI surface that helps Exec Pod leaders construct a DAO proposal whose calldata invokes those setters.
 
 ### Revision history
 
@@ -21,10 +19,11 @@ The feature shipped iteratively as design assumptions surfaced during testing:
 
 | Revision | What changed | Why |
 |---|---|---|
-| Initial (2026-05-21) | Three knobs per tier (quorum/approval/voting period). OPERATIONAL hardcoded leaders-only; TREASURY_BINDING all members. | Recommended default: routine ops handled by leaders to avoid governance fatigue. |
+| Initial Layer A (2026-05-21) | Three knobs per tier (quorum/approval/voting period). OPERATIONAL hardcoded leaders-only; TREASURY_BINDING all members. | Recommended default: routine ops handled by leaders to avoid governance fatigue. |
 | Path B (2026-05-22) | Voter base became per-pod-configurable, defaulting to all_members for both tiers. Leaders-only is opt-in. | Surfaced during a missing-notification investigation: hardcoding the audience broke the principle "pods are self-governing." |
 | Module toggle (2026-05-22) | Governance became a toggleable module (`pod_modules.governance_enabled`). Settings card moved from public pod page to the leader-only Modules panel. | Pod settings shouldn't live on member-facing surfaces, even gated. Sub-pods may delegate governance; the toggle makes that explicit. |
 | Server-side enforcement (2026-05-22) | `createPodLevelProposal` and `notifyEligibleVoters` both check `isPodGovernanceEnabled` server-side. | Defense in depth: the UI dropdown filter was the only enforcement before this. |
+| Layer B (2026-05-22) | DAO-wide Governor params tunable via proposal. New `DAOGovernanceSettingsCard` lives inside the Exec Pod's Governance module config. No contract redeploy — used the deployed Governor's pre-existing `GovernorSettings` setters. | Doing this before any community formally onboards avoids the migration headache that would come later. |
 
 ---
 
@@ -353,19 +352,110 @@ This pattern (one accessor, called from every write gate, with documented fail-o
 
 ---
 
-## 9. What this does NOT do
+## 9. Layer B: DAO Governor parameters via proposal (2026-05-22)
 
-Explicit scope boundaries:
+### Why no redeploy
 
-- **DAO_CONSTITUTIONAL governance is unchanged.** The on-chain Governor contract is immutable and Layer A only addresses pod-scoped governance.
-- **No on-chain enforcement.** All Layer A configuration is off-chain. The on-chain effect (e.g., a treasury V3 proposal hitting `approveProposal`) is governed by the on-chain treasury contract's own threshold, set at deploy time.
-- **No retroactive re-scoring.** Pre-PR proposals close under pre-PR rules.
-- **No per-tier voting-base override.** OPERATIONAL is always leaders-only; TREASURY_BINDING is always all active members. Pods configure thresholds, not the denominator.
-- **No threshold-change governance flow.** Pod leaders can change the config directly via the settings card — there's no "propose a new threshold, vote on it, then apply" cycle. The trigger restricts writes to leaders, which is the access control. A future PR could add a propose-then-vote pattern if pods want that level of self-binding.
+The deployed `DAOGovernor.sol` (OZ v5) already inherits `GovernorSettings` and `GovernorVotesQuorumFraction`. It already exposes:
+
+- `setVotingDelay(uint48 newVotingDelay)` — voting delay in blocks
+- `setVotingPeriod(uint32 newVotingPeriod)` — voting period in blocks
+- `updateQuorumNumerator(uint256 newQuorumNumerator)` — quorum %, with denominator=100
+
+All three are gated by `onlyGovernance` — the Governor itself, via a passing DAO proposal, is the only caller. So Layer B's only requirement is a UI that helps Exec Pod leaders construct such a proposal.
+
+### Scope decision: three knobs, not four
+
+- **Voting delay**, **voting period**, **quorum %** are all tunable via DAO proposal.
+- **Approval threshold** stays at simple majority of cast votes (`GovernorCountingSimple`). Treasury V3 contracts already provide per-pod supermajority for fund-moving decisions, which is where the supermajority requirement actually matters.
+- **Proposal threshold** stays at 0. Permission to propose is gated in-app via the `governanceParticipation` role permission (per the existing permission hierarchy).
+
+### Architecture
+
+```
+Exec Pod leader opens pods/<exec-pod-id>/manage → Modules → Governance config
+    │
+    ├──► pod-level GovernanceSettingsCard (always visible)
+    │
+    └──► DAOGovernanceSettingsCard (NEW — visible only when isExecPod && isManager)
+            │
+            ├──► On mount: readContract for votingDelay / votingPeriod / quorumNumerator / quorumDenominator
+            │      (publicClient from viem against base mainnet)
+            │
+            ├──► User adjusts knobs (only changed knobs are included in the proposal)
+            │
+            └──► Click "Propose change"
+                    │
+                    ├──► buildDaoParamProposal(GOV, changes, title, rationale, threadId)
+                    │       → encodes one or more setter calldatas
+                    │
+                    ├──► encodeFunctionData(proposeWithMetadata, [targets, values, calldatas, ...])
+                    │
+                    ├──► sendUserOperation({ to: GOV, data, useCdpPaymaster: true })
+                    │       — gas-sponsored; Governor address is whitelisted in Coinbase's
+                    │         hosted paymaster policy (proven by existing DAO-wide proposal flow)
+                    │
+                    └──► insertProposalMetadata({ tempProposalId, title, body, ... })
+                            — writes proposal_metadata row with temp_<hash> id;
+                              cron resolves real onchain_proposal_id later
+```
+
+The on-chain enforcement is the Governor's `onlyGovernance` modifier. The UI gating is `isExecPod && isManager`. Server-side enforcement: nothing extra needed — the contract is the gate.
+
+### Policy bounds
+
+Narrower than the contract permits:
+
+| Knob | Floor | Ceiling | Step |
+|---|---|---|---|
+| Voting delay | 1 hour | 72 hours | 1 hour |
+| Voting period | 12 hours | 336 hours (14 days) | 1 hour |
+| Quorum % | 4% | 20% | 1% |
+
+Enforced both in the UI (clamped inputs) and in `buildDaoParamProposal` (throws on out-of-bounds).
+
+### Sanity check on mount
+
+The card reads `quorumDenominator()` and refuses to render controls if it isn't `100`. The percent→arg conversion assumes denominator=100; a different value would cause silent off-by-100 mis-proposals. This should never trip in practice (OZ default is 100), but the failure mode is bad enough to warrant a guard.
+
+### Refactor: `insertProposalMetadata`
+
+Both `CreateProposalForm` (general DAO-wide proposals) and `DAOGovernanceSettingsCard` (parameter-change proposals) need to insert a `proposal_metadata` row after submitting on-chain. Extracted into `src/features/governance/services/proposalMetadataService.ts` to avoid drift. The mention-extraction regex and dedup-on-temp-id behavior are preserved 1:1.
+
+### Files added/modified
+
+**New:**
+- `src/features/governance/services/daoGovernorParamProposal.ts` — pure helper (no React, no wallet). Exports `buildDaoParamProposal`, `blocksToHours`, `hoursToBlocks`, bounds constants.
+- `src/features/governance/services/proposalMetadataService.ts` — extracted from CreateProposalForm. Exports `insertProposalMetadata`.
+- `src/features/governance/components/DAOGovernanceSettingsCard.tsx` — the new card.
+
+**Modified:**
+- `src/features/pods/components/PodManagementContainer.tsx` — pass `isExecPod` to `PodModulesManager`.
+- `src/features/pods/components/PodModulesManager.tsx` — accept `isExecPod`, render `DAOGovernanceSettingsCard` inside the Governance module config when `isExecPod && isManager`.
+- `src/features/governance/components/CreateProposalForm.tsx` — refactored the 40-line metadata-insert block to call `insertProposalMetadata`. Behaviour identical.
+
+### What's still NOT done (and on purpose)
+
+- **Approval threshold tunability** — would require redeploy with a custom counting module. The Treasury V3 contracts hold the supermajority knob where it matters.
+- **Per-proposal supermajority overrides at the DAO tier** — same reason.
+- **DAO Timelock parameter changes** — the execution delay is in the Timelock, not the Governor. Tunable separately if ever needed.
+- **Concurrent-proposal race UI hint** — if two governance-param proposals are in flight simultaneously, the one that executes second overwrites the first. Allowed by OZ. Worth a UI warning in a follow-up if it becomes a real concern.
 
 ---
 
-## 10. Lessons learned
+## 10. What this does NOT do
+
+Explicit scope boundaries (revised after Layer B):
+
+- **No on-chain enforcement of pod-level rules.** Pod-level configuration (Layer A) is off-chain. The on-chain effect (e.g., a treasury V3 proposal hitting `approveProposal`) is governed by the on-chain treasury contract's own threshold, set at deploy time.
+- **No retroactive re-scoring.** Pre-PR proposals close under the rules they were created under.
+- **No threshold-change governance flow at the pod tier.** Pod leaders can change their pod's config directly via the settings card. DAO-tier changes DO go through a proposal-vote-execute cycle (Layer B).
+- **No DAO approval-threshold tunability.** See Layer B "What's still NOT done."
+- **No DAO Timelock parameter changes.** See Layer B.
+
+---
+
+## 11. Lessons learned
 
 Things that made this implementation noisier than it needed to be:
 
@@ -379,7 +469,7 @@ Things that made this implementation noisier than it needed to be:
 
 ---
 
-## 11. Open follow-ups
+## 12. Open follow-ups
 
 - **DAO_CONSTITUTIONAL Layer B** — on-chain Governor replacement or `GovernorSettings` extension. Required for DAO-wide vote flexibility. Separate workstream.
 - **Threshold change via vote** — currently pod leaders edit the config directly. A future iteration could require a leader vote to change governance config (vote on the new config, apply after passing). Not implemented; arguably a natural extension once pods stress-test the direct-edit model.
@@ -389,7 +479,7 @@ Things that made this implementation noisier than it needed to be:
 
 ---
 
-## 12. References
+## 13. References
 
 **Migrations** (apply in chronological order via Supabase SQL editor):
 - [`20260521000001_add_governance_thresholds.sql`](../supabase/migrations/20260521000001_add_governance_thresholds.sql) — initial threshold + quorum columns on pods, pod_level_proposals, pod_governance_proposals
@@ -399,15 +489,21 @@ Things that made this implementation noisier than it needed to be:
 - [`20260522000001_add_governance_voter_base.sql`](../supabase/migrations/20260522000001_add_governance_voter_base.sql) — Path B per-pod voter_base columns
 - [`20260522000002_add_governance_module.sql`](../supabase/migrations/20260522000002_add_governance_module.sql) — Governance as a toggleable module (`pod_modules.governance_enabled`)
 
-**Code:**
+**Code (Layer A):**
 - Resolution engine: [`src/features/governance/services/proposalResultEngine.ts`](../src/features/governance/services/proposalResultEngine.ts)
 - Config service: [`src/features/pods/services/podGovernanceConfigService.ts`](../src/features/pods/services/podGovernanceConfigService.ts) — config CRUD, voter base resolution, eligible-voter queries
 - Governance service: [`src/features/governance/services/governanceService.ts`](../src/features/governance/services/governanceService.ts) — `createPodLevelProposal`, `notifyEligibleVoters`, `isPodGovernanceEnabled`
 - Aggregation: [`src/services/ipfsAggregationService.ts`](../src/services/ipfsAggregationService.ts)
-- Settings UI (inside Modules panel): [`src/features/pods/components/GovernanceSettingsCard.tsx`](../src/features/pods/components/GovernanceSettingsCard.tsx)
+- Pod-level settings UI (inside Modules panel): [`src/features/pods/components/GovernanceSettingsCard.tsx`](../src/features/pods/components/GovernanceSettingsCard.tsx)
 - Modules manager: [`src/features/pods/components/PodModulesManager.tsx`](../src/features/pods/components/PodModulesManager.tsx)
 - Proposal creation form: [`src/features/governance/components/CreateProposalForm.tsx`](../src/features/governance/components/CreateProposalForm.tsx)
 - Proposal display: [`src/features/governance/components/ProposalModal.tsx`](../src/features/governance/components/ProposalModal.tsx)
 - Modules API: [`src/app/api/pods/[id]/modules/route.ts`](../src/app/api/pods/[id]/modules/route.ts)
+
+**Code (Layer B):**
+- DAO param proposal helper: [`src/features/governance/services/daoGovernorParamProposal.ts`](../src/features/governance/services/daoGovernorParamProposal.ts) — pure helper; bounds + block/hour conversion + `buildDaoParamProposal`
+- Proposal metadata service: [`src/features/governance/services/proposalMetadataService.ts`](../src/features/governance/services/proposalMetadataService.ts) — extracted from CreateProposalForm; used by both DAO-wide and DAO-param proposals
+- DAO settings card: [`src/features/governance/components/DAOGovernanceSettingsCard.tsx`](../src/features/governance/components/DAOGovernanceSettingsCard.tsx) — Exec-only, lives inside Governance module config
+- Pod management container (wiring): [`src/features/pods/components/PodManagementContainer.tsx`](../src/features/pods/components/PodManagementContainer.tsx)
 
 **Roadmap:** [`roadmap-action-items-2026-05.md`](roadmap-action-items-2026-05.md)

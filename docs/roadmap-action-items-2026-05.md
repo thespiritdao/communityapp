@@ -96,7 +96,7 @@ Should return `false`. If any of the five DB checks fail, fix the data before th
 
 ---
 
-## 4. Governance Quorum + Voting Flexibility — Layer A ✅ DONE (revised 2026-05-22) | Layer B ⏳ PENDING
+## 4. Governance Quorum + Voting Flexibility — Layer A ✅ DONE (revised 2026-05-22) | Layer B ✅ DONE 2026-05-22
 
 **Status:** Layer A complete and revised through four iterations between 2026-05-21 and 2026-05-22. Layer B (on-chain DAO Governor) deferred.
 
@@ -145,13 +145,21 @@ Should return `false`. If any of the five DB checks fail, fix the data before th
 - `pod_governance_proposals` table referenced in `podMultiManagerGovernance.ts` doesn't exist in production; that service is effectively dead code. Either wire up or delete in a future cleanup.
 - Live schema dump checked into the repo would catch column-drift bugs cheaply (we hit this twice during Layer A).
 
-**Layer B — DAO-level (deferred, on-chain):**
-1. Cannot modify current `DAOGovernor` without redeploy.
-2. Two options:
-   - Replace with `GovernorSettings`-extended governor that allows DAO-vote-gated parameter updates.
-   - Per-proposal supermajority: custom governor overriding `quorum(blockNumber)` with per-proposal mapping.
+**Layer B — DAO-level (shipped 2026-05-22, no redeploy required):**
 
-Warrants its own planning session before any code — touches live governance.
+Initial planning assumed Layer B would require a new Governor contract. Discovery during the planning session: **the deployed `DAOGovernor` already inherits OZ's `GovernorSettings` and `GovernorVotesQuorumFraction`**, so `setVotingDelay`, `setVotingPeriod`, and `updateQuorumNumerator` are already callable — guarded by `onlyGovernance` (only a passing DAO proposal can invoke them). Layer B was a UI surface, not a contract migration.
+
+What shipped:
+- `DAOGovernanceSettingsCard` — new card inside the Exec Pod's Governance module config. Only renders for Exec Pod managers. Reads current values from chain, lets the user adjust voting delay / voting period / quorum %, and submits a `proposeWithMetadata` proposal whose calldatas[] invokes the relevant setter(s).
+- `daoGovernorParamProposal.ts` — pure helper that encodes the calldata. Bounds: voting delay 1–72h, voting period 12–336h, quorum 4–20%.
+- `proposalMetadataService.insertProposalMetadata` — extracted from `CreateProposalForm` so both DAO-wide and DAO-param proposals share one path.
+
+What's intentionally NOT in Layer B:
+- Approval threshold remains simple majority of cast votes (`GovernorCountingSimple`). Per-pod supermajority lives in Treasury V3 contracts where fund-moving decisions actually need it.
+- Proposal threshold stays at 0; permission to propose is gated in-app via `governanceParticipation`.
+- DAO Timelock parameters are tunable separately if ever needed.
+
+See [`governance-flexibility-layer-a-2026-05.md`](governance-flexibility-layer-a-2026-05.md) §9 for the architecture detail.
 
 ---
 
@@ -304,7 +312,7 @@ Warrants its own planning session before any code — touches live governance.
 | 4a | Path B — per-pod voter base toggle | S | ✅ Done 2026-05-22 |
 | 4a | Governance as a toggleable module | S | ✅ Done 2026-05-22 |
 | 4a | Server-side `governance_enabled` enforcement audit | S | ✅ Done 2026-05-22 |
-| 4b | Governance flexibility (Layer B — DAO on-chain) | L | Pending |
+| 4b | Governance flexibility (Layer B — DAO Governor params) | S (no redeploy needed) | ✅ Done 2026-05-22 |
 | 5 | 3rd-party DB (export model) | M | Talk to community first |
 | 6 | Password manager module | M–L | **Up next** |
 | 7 | $SELF issuance overhaul | L | Pending |
@@ -312,4 +320,4 @@ Warrants its own planning session before any code — touches live governance.
 
 **Suggested parallelism:** #8 (audit) can run as a background workstream while #6 → #7 execute. #5 starts with a conversation, not code.
 
-**Flag for review:** #4 Layer B (DAO Governor replacement) and #7 ($SELF issuance) both require contract migrations that touch live funds/governance — warrant separate planning sessions before any code.
+**Flag for review:** #7 ($SELF issuance) requires contract migrations that touch live funds — warrants a separate planning session before any code. (Layer B turned out not to require a redeploy; see §4 above.)
