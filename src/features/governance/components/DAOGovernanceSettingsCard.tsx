@@ -327,7 +327,7 @@ export function DAOGovernanceSettingsCard({ canPropose }: Props) {
         <CardTitle className="flex items-center justify-between gap-2 text-base text-[#1F453A]">
           <span className="flex items-center gap-2">
             <Landmark className="h-4 w-4" />
-            DAO-wide governance settings
+            DAO-wide Governance
           </span>
           {expanded ? (
             <ChevronDown className="h-4 w-4" />
@@ -339,9 +339,11 @@ export function DAOGovernanceSettingsCard({ canPropose }: Props) {
       {expanded && (
         <CardContent className="space-y-6">
           <p className="text-sm text-gray-700">
-            Propose changes to the DAO Governor's voting parameters. Changes
-            only take effect after a DAO-wide vote passes and the proposal is
-            executed; applies to future proposals, not those already in
+            Propose changes to the DAO Governor's voting parameters. Every
+            change here becomes a DAO proposal voted on by all Advocate
+            members — Exec Pod leaders draft it, the membership ratifies it.
+            Changes only take effect after the proposal passes and is
+            executed; they apply to future proposals, not those already in
             flight.
           </p>
 
