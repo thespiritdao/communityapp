@@ -1,16 +1,30 @@
 # Pod Governance Flexibility — Layer A Technical Documentation
 
-**Date:** 2026-05-21
-**Status:** Shipped in commits `c3a8ac7f`, `3c84db3d`, `4b1620c7`
+**Originally shipped:** 2026-05-21
+**Last revised:** 2026-05-22 (Path B + governance as a toggleable module + server-side enforcement)
+**Status:** Production
 **Roadmap item:** [#4 — Governance Quorum + Voting Flexibility](roadmap-action-items-2026-05.md)
+
+**Commits (chronological):** `c3a8ac7f`, `3c84db3d`, `4b1620c7`, `2a451c9b`, `b2e12a12`, `e420e96e`
 
 ---
 
 ## 1. What this is
 
-Layer A makes pod-level governance configurable per pod. Three knobs per tier (quorum %, approval %, voting period), with platform-set defaults and bounded floors. Per-proposal stricter overrides allowed; weakening below the pod default is not.
+Layer A makes pod-level governance configurable per pod. **Four knobs per tier** (voter base, quorum %, approval %, voting period), with platform-set defaults and bounded floors. Per-proposal stricter overrides allowed; weakening below the pod default is not. Governance itself is a toggleable module — pods that delegate decisions to a parent (or simply don't run their own proposals) can turn it off without affecting any other capability.
 
 Layer B (on-chain DAO Governor changes for `DAO_CONSTITUTIONAL` tier) is deferred — current Governor contract is immutable post-deployment, and replacing it is a separate workstream.
+
+### Revision history
+
+The feature shipped iteratively as design assumptions surfaced during testing:
+
+| Revision | What changed | Why |
+|---|---|---|
+| Initial (2026-05-21) | Three knobs per tier (quorum/approval/voting period). OPERATIONAL hardcoded leaders-only; TREASURY_BINDING all members. | Recommended default: routine ops handled by leaders to avoid governance fatigue. |
+| Path B (2026-05-22) | Voter base became per-pod-configurable, defaulting to all_members for both tiers. Leaders-only is opt-in. | Surfaced during a missing-notification investigation: hardcoding the audience broke the principle "pods are self-governing." |
+| Module toggle (2026-05-22) | Governance became a toggleable module (`pod_modules.governance_enabled`). Settings card moved from public pod page to the leader-only Modules panel. | Pod settings shouldn't live on member-facing surfaces, even gated. Sub-pods may delegate governance; the toggle makes that explicit. |
+| Server-side enforcement (2026-05-22) | `createPodLevelProposal` and `notifyEligibleVoters` both check `isPodGovernanceEnabled` server-side. | Defense in depth: the UI dropdown filter was the only enforcement before this. |
 
 ---
 
@@ -18,20 +32,30 @@ Layer B (on-chain DAO Governor changes for `DAO_CONSTITUTIONAL` tier) is deferre
 
 ### Data model
 
-Three tables touched, plus a new pure helper module.
+Four tables touched, plus a new pure helper module.
 
-**`pods`** — six new columns, one per (tier × knob):
+**`pods`** — eight new columns, two per (tier × knob group):
 
-| Column | Type | Range | NULL = |
+| Column | Type | Range / Values | NULL = |
 |---|---|---|---|
 | `gov_op_quorum_bps` | INTEGER | 2000–10000 | platform default (30%) |
 | `gov_op_approval_bps` | INTEGER | 5001–10000 | platform default (50.01%) |
 | `gov_op_voting_hours` | INTEGER | 12–720 | platform default (72h) |
+| `gov_op_voter_base` | TEXT | `'leaders'` \| `'all_members'` | platform default (`all_members`) |
 | `gov_treasury_quorum_bps` | INTEGER | 2000–10000 | platform default (50%) |
 | `gov_treasury_approval_bps` | INTEGER | 5001–10000 | platform default (66%) |
 | `gov_treasury_voting_hours` | INTEGER | 12–720 | platform default (72h) |
+| `gov_treasury_voter_base` | TEXT | `'leaders'` \| `'all_members'` | platform default (`all_members`) |
 
 NULL distinguishes "never configured" from "explicitly chose the default value." The service layer null-coalesces at read time.
+
+**`pod_modules`** — one new column:
+
+| Column | Type | Default | Purpose |
+|---|---|---|---|
+| `governance_enabled` | BOOLEAN | TRUE | Module toggle: when false, pod-level proposal creation is blocked server-side; existing proposals continue to display and close cleanly. |
+
+Default TRUE preserves backward compatibility — every existing pod retains governance enabled.
 
 **`pod_level_proposals`** — three new columns for member-vote proposals:
 
@@ -95,19 +119,35 @@ Used in two places: server-side at proposal close-out (`ipfsAggregationService`)
 
 `src/features/pods/services/podGovernanceConfigService.ts` — wraps the new pod columns:
 
-- **`getPodGovernanceConfig(podId)`** — reads the 6 columns, null-coalesces against `PLATFORM_DEFAULTS`, returns a fully resolved `{ operational, treasury }` object.
-- **`updatePodGovernanceConfig(podId, tier, partial)`** — validates ranges before write; throws on out-of-range values.
-- **`getEligibleVoterCount(podId, tier)`** — queries `pod_members`:
-  - `POD_OPERATIONAL` → `role='manager' AND status='active'`
-  - `POD_TREASURY_BINDING` → `status='active'` (all active members)
-  - `DAO_CONSTITUTIONAL` → returns 0 (on-chain tier; off-chain count irrelevant)
+- **`getPodGovernanceConfig(podId)`** — reads the 8 columns, null-coalesces against `PLATFORM_DEFAULTS`, returns a fully resolved `{ operational: TierConfig, treasury: TierConfig }` object where each `TierConfig` includes `voter_base`.
+- **`getVoterBaseForTier(config, tier)`** — convenience accessor for the per-tier voter_base setting.
+- **`updatePodGovernanceConfig(podId, tier, partial)`** — validates ranges and voter_base enum values before write; throws on out-of-range values.
+- **`getEligibleVoterWallets(podId, tier)`** — the canonical "who can vote" query. Two joins:
+  - `active_pod_members` filtered by `pod_id` (and `membership_type IN ('leader','admin')` if `voter_base = 'leaders'`).
+  - `pod_role_permissions` filtered by `is_active = true` AND `permissions->>'governanceParticipation' = 'true'`.
+  - Returns the intersection — every wallet that is BOTH in the audience AND has the role permission.
+- **`getEligibleVoterCount(podId, tier)`** — delegates to `getEligibleVoterWallets` so denominator and recipient set stay in lockstep.
 
-`PLATFORM_DEFAULTS` constants:
+`PLATFORM_DEFAULTS` constants (Path B, 2026-05-22):
 
 ```
-POD_OPERATIONAL:       quorum=3000 (30%), approval=5001 (50.01%), voting=72h
-POD_TREASURY_BINDING:  quorum=5000 (50%), approval=6600 (66%),    voting=72h
+POD_OPERATIONAL:       quorum=3000 (30%), approval=5001 (50.01%), voting=72h, voter_base=all_members
+POD_TREASURY_BINDING:  quorum=5000 (50%), approval=6600 (66%),    voting=72h, voter_base=all_members
 ```
+
+### Permission hierarchy
+
+Three independent gates form an AND-chain. A user can vote on a pod-level proposal only if all three are true:
+
+```
+1. pod_modules.governance_enabled = TRUE         (module gate)
+2. user is in the voter_base audience            (audience gate)
+   ├─ voter_base = 'all_members': active pod_member of any membership_type
+   └─ voter_base = 'leaders':     active pod_member with membership_type IN ('leader','admin')
+3. user's role has governanceParticipation = TRUE (permission gate, highest order)
+```
+
+Gate 1 is set in the leader Modules panel. Gate 2 is set in the same Governance settings card (per tier). Gate 3 is set per-role in `pod_role_permissions` and represents the "individual key" that lets a specific role into the audience defined by gates 1+2.
 
 ### Flow: creating a member-vote proposal
 
@@ -250,16 +290,24 @@ This prevents two failure modes: (a) a malicious or buggy server route mutating 
 
 ## 7. UI surfaces
 
-### `GovernanceSettingsCard`
-Leader-gated card on `/pods/[id]`. Collapsible by default. Two tier sections (Operational, Treasury) each with three controls:
+### `GovernanceSettingsCard` (lives inside the Governance module config)
+Settings card was originally rendered on the public pod page (`/pods/[id]`) gated on `isLeader`. As of 2026-05-22 it lives inside `PodModulesManager` as the Governance module's `configComponent` — that is, it appears in the leader-only Modules panel and is shown when the leader expands "Configure Governance". This separates **public pod content** (member-facing) from **pod settings** (leader-facing), matching the pattern of every other module (chat, forum, knowledge base).
+
+Four controls per tier (Operational, Treasury):
+- **Voter base** — two-button selector: All pod members / Pod leaders only. Default all_members.
 - Quorum picker (preset chips 25/33/50/66 + custom slider)
 - Approval picker (preset chips Simple/Strict/Strong/Unanimous + custom slider)
 - Voting period (quick-pick chips 24h/72h/7d/14d/30d + custom number input)
 
-"Reset to platform default" link per tier. Save button writes all values via `updatePodGovernanceConfig`. Toast on success/failure.
+"Reset to platform default" link per tier. Save button writes all four knobs via `updatePodGovernanceConfig`. Toast on success/failure. Loads via a single `useEffect([podId])` — earlier render-loop bug where `toast` in the dep array caused unbounded re-fetches (`ERR_INSUFFICIENT_RESOURCES`) was fixed by removing the dep.
+
+### `PodModulesManager` — Governance toggle
+Added 2026-05-22. The Governance entry appears under Core Modules between Treasury and Events (Vote icon, sage palette). Toggling ON expands the settings card inline. Toggling OFF blocks new proposal creation server-side (see § 8) but preserves existing proposals' visibility and ability to close cleanly.
 
 ### `CreateProposalForm` — stricter override
 Loads pod gov config on selected-token change. Shows a collapsible "Require a stricter approval threshold for this proposal?" section below the tier selector. Uses the generic `ThresholdPicker` with min = pod's resolved default for that tier. Client-side blocks submit if override is below the pod default (server-side blocks too — defense in depth).
+
+The pod-selection dropdown filters out pods where `pod_modules.governance_enabled = false`, so a member can't even see those pods as proposal targets. DAO-wide option for Executive Pod members remains available regardless of any single pod's setting (DAO-wide goes through the on-chain Governor, independent of pod-level modules).
 
 ### `ProposalModal` — live status
 For pod-level proposals only, surfaces below the raw vote tally:
@@ -272,7 +320,40 @@ Extracted from PR 2's `TreasuryThresholdPicker`. Props-driven label, helper text
 
 ---
 
-## 8. What this does NOT do
+## 8. Module gate enforcement (audit, 2026-05-22)
+
+Adding the `governance_enabled` module toggle required checking every governance touchpoint to decide whether it should be gated. The audit found 11 touchpoints; gating decisions follow the principle **"block new activity, preserve in-flight"**:
+
+| Touchpoint | Gated? | Reason |
+|---|---|---|
+| `CreateProposalForm` dropdown | YES — client-side | Hides disabled pods so members can't select them |
+| `GovernanceService.createPodLevelProposal` | YES — server-side | Defense in depth; refuses inserts even from direct API callers |
+| `GovernanceService.notifyEligibleVoters` | YES — server-side | Skips fan-out if module disabled (defensive; moot via the upstream gate) |
+| `GovernanceService.castVote` (vote upsert) | NO | Preserves in-flight votes on existing proposals |
+| `useEnhancedProposals` (visibility) | NO | Existing proposals stay visible |
+| `ProposalModal` (display) | NO | Existing proposals stay viewable |
+| `ipfsAggregationService.aggregateProposalVotes` | NO | Existing proposals must close cleanly at deadline |
+| `votingReminderService` 48/24/6/1h cron | NO | Existing proposals still notify per their schedule |
+| `pod_level_proposals_pulse_trigger` | Indirectly | No new proposals can INSERT, so trigger doesn't fire — moot |
+| `governanceParticipation` permission check (6 sites) | Independent | Per-role permission is the highest-order signal across all sites |
+| DAO-wide Governor proposals | Untouched | On-chain; not under pod module control |
+
+### Single source of truth
+
+```ts
+GovernanceService.isPodGovernanceEnabled(podId: string): Promise<boolean>
+```
+
+- Direct read of `pod_modules.governance_enabled` for the pod.
+- Fails open on read errors (returns true) so a transient lookup glitch doesn't block all governance writes.
+- NULL → true (backward compatibility).
+- Called from `createPodLevelProposal` and `notifyEligibleVoters`.
+
+This pattern (one accessor, called from every write gate, with documented fail-open semantics) is what I'd reach for next time a similar module toggle gets added.
+
+---
+
+## 9. What this does NOT do
 
 Explicit scope boundaries:
 
@@ -284,32 +365,49 @@ Explicit scope boundaries:
 
 ---
 
-## 9. Lessons learned
+## 10. Lessons learned
 
-Three things that made this implementation noisier than it needed to be:
+Things that made this implementation noisier than it needed to be:
 
 - **Audit drift.** Initial audit asserted `pod_governance_proposals` existed in the live DB. It doesn't — the CREATE TABLE lives in a repo SQL file that was never applied. First migration attempt failed on the live DB. Lesson: when planning migrations, ask the user for a real list of live tables before writing ALTER statements. I cannot see live Supabase state from this environment.
 - **"Two parallel systems" was misleading framing.** The audit described `pod_governance_proposals` (multisig) and `pod_level_proposals` (member-vote) as peer governance systems. In reality, the multisig flow in production is *only* used for pod deletion, via `pod_deletion_proposals`. The generic multisig service exists in code but no UI reaches it. Lesson: trace UI callsites, not just service definitions.
 - **`MINIMUM_MANAGERS_REQUIRED = 3` was a hidden floor.** That constant in `podMultiManagerGovernance.ts` would have silently blocked governance for any pod with 1–2 leaders — a likely real configuration for new communities. Removed to 1, which is the actual minimum (the proposer themselves must be a manager).
+- **`pod_members` column name drift.** Initial helpers queried `wallet_address` / `status='active'` / `role='manager'` — none of which exist on the live `pod_members` schema. Canonical columns are `wallet` / `is_active` / `membership_type`. The `getEligibleVoterCount` and `getEligibleVoterWallets` helpers returned empty result sets silently for every pod for the entire week between Layer A and the Path B revision. Lesson: when adding a query against a table I haven't worked with recently, do `SELECT *` and confirm the actual column list before writing the WHERE clause.
+- **`removeConsole` in `next.config.mjs` strips all `console.log`/`console.warn` in production.** Diagnostic logs added during the missing-notification investigation were invisible until temporarily swapped to `console.error`. Lesson: any future debugging that needs runtime visibility should use `console.error` from the start, or build a small `logger.info` wrapper that calls `console.error` internally.
+- **Architectural assumptions imported from other DAO platforms didn't match the SpiritDAO model.** I shipped Layer A with "operational decisions = leaders only" as the hardcoded default because that's how most DAO platforms work. But SpiritDAO's principle is pod self-governance — members govern their pod. The user-facing test that surfaced this was a notification gap (a single-member pod had no recipients after self-exclusion), but the real bug was the design assumption. Path B (voter base as per-pod, default `all_members`) is the right shape. Lesson: explicitly distinguish "platform convention" from "user-stated principle" in design choices and default toward the latter when they conflict.
+- **`useCallback` with non-stable hook returns causes render loops.** `toast` from shadcn's `useToast()` does not have a stable identity across renders; including it in a `useCallback` dep array caused the load effect to re-fire on every render and exhaust the browser's resource budget. Lesson: side-effect dispatchers (toast, router) generally don't belong in `useCallback`/`useEffect` deps even when the linter complains.
 
 ---
 
-## 10. Open follow-ups
+## 11. Open follow-ups
 
 - **DAO_CONSTITUTIONAL Layer B** — on-chain Governor replacement or `GovernorSettings` extension. Required for DAO-wide vote flexibility. Separate workstream.
 - **Threshold change via vote** — currently pod leaders edit the config directly. A future iteration could require a leader vote to change governance config (vote on the new config, apply after passing). Not implemented; arguably a natural extension once pods stress-test the direct-edit model.
-- **Voter-base flexibility** — current Layer A hardcodes OPERATIONAL = leaders, TREASURY_BINDING = all members. Could be made configurable, but adds substantial cognitive load on proposal authors. Wait for a real ask.
-- **`pod_governance_proposals` table reconciliation** — the schema file at `src/features/pods/sql/pod-governance-schema.sql` is dead code. Either delete the file or wire up the generic multisig flow. Today's PR doesn't touch this.
+- **`pod_governance_proposals` table reconciliation** — the schema file at `src/features/pods/sql/pod-governance-schema.sql` is dead code. Either delete the file or wire up the generic multisig flow.
+- **Live schema dump checked into the repo.** Twice we've hit "code queried a column that doesn't exist in the live DB" because the canonical schema files in the repo don't match production. A periodic `pg_dump --schema-only` committed to the repo would catch drift cheaply.
+- **`'admin'` membership_type** — never actively used in practice but recognized as a leader-equivalent across the codebase. Worth a future cleanup to either drop the value or define its meaning explicitly.
 
 ---
 
-## 11. References
+## 12. References
 
-- Schema migration: [`supabase/migrations/20260521000001_add_governance_thresholds.sql`](../supabase/migrations/20260521000001_add_governance_thresholds.sql)
-- Lockdown migration: [`supabase/migrations/20260521000002_lockdown_governance_thresholds.sql`](../supabase/migrations/20260521000002_lockdown_governance_thresholds.sql)
+**Migrations** (apply in chronological order via Supabase SQL editor):
+- [`20260521000001_add_governance_thresholds.sql`](../supabase/migrations/20260521000001_add_governance_thresholds.sql) — initial threshold + quorum columns on pods, pod_level_proposals, pod_governance_proposals
+- [`20260521000002_lockdown_governance_thresholds.sql`](../supabase/migrations/20260521000002_lockdown_governance_thresholds.sql) — RLS triggers freezing snapshotted thresholds; leader-only `gov_*` writes
+- [`20260521000003_lockdown_active_pod_members_view.sql`](../supabase/migrations/20260521000003_lockdown_active_pod_members_view.sql) — `security_invoker = true` on the membership view
+- [`20260521000004_pulse_proposal_triggers.sql`](../supabase/migrations/20260521000004_pulse_proposal_triggers.sql) — `proposal_created` events written to `explorer_events` on insert
+- [`20260522000001_add_governance_voter_base.sql`](../supabase/migrations/20260522000001_add_governance_voter_base.sql) — Path B per-pod voter_base columns
+- [`20260522000002_add_governance_module.sql`](../supabase/migrations/20260522000002_add_governance_module.sql) — Governance as a toggleable module (`pod_modules.governance_enabled`)
+
+**Code:**
 - Resolution engine: [`src/features/governance/services/proposalResultEngine.ts`](../src/features/governance/services/proposalResultEngine.ts)
-- Config service: [`src/features/pods/services/podGovernanceConfigService.ts`](../src/features/pods/services/podGovernanceConfigService.ts)
-- Settings UI: [`src/features/pods/components/GovernanceSettingsCard.tsx`](../src/features/pods/components/GovernanceSettingsCard.tsx)
+- Config service: [`src/features/pods/services/podGovernanceConfigService.ts`](../src/features/pods/services/podGovernanceConfigService.ts) — config CRUD, voter base resolution, eligible-voter queries
+- Governance service: [`src/features/governance/services/governanceService.ts`](../src/features/governance/services/governanceService.ts) — `createPodLevelProposal`, `notifyEligibleVoters`, `isPodGovernanceEnabled`
 - Aggregation: [`src/services/ipfsAggregationService.ts`](../src/services/ipfsAggregationService.ts)
-- Proposal creation: [`src/features/governance/services/governanceService.ts`](../src/features/governance/services/governanceService.ts) (`createPodLevelProposal`)
-- Roadmap: [`roadmap-action-items-2026-05.md`](roadmap-action-items-2026-05.md)
+- Settings UI (inside Modules panel): [`src/features/pods/components/GovernanceSettingsCard.tsx`](../src/features/pods/components/GovernanceSettingsCard.tsx)
+- Modules manager: [`src/features/pods/components/PodModulesManager.tsx`](../src/features/pods/components/PodModulesManager.tsx)
+- Proposal creation form: [`src/features/governance/components/CreateProposalForm.tsx`](../src/features/governance/components/CreateProposalForm.tsx)
+- Proposal display: [`src/features/governance/components/ProposalModal.tsx`](../src/features/governance/components/ProposalModal.tsx)
+- Modules API: [`src/app/api/pods/[id]/modules/route.ts`](../src/app/api/pods/[id]/modules/route.ts)
+
+**Roadmap:** [`roadmap-action-items-2026-05.md`](roadmap-action-items-2026-05.md)
