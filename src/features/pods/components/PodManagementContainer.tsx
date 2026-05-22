@@ -148,6 +148,7 @@ const TabContent = React.memo<{
               podId={podId}
               podName={pod?.name || 'Unknown Pod'}
               isManager={canManageMembers}
+              isExecPod={isExecPod}
               managementHatId={pod?.management_hat_id}
               membershipHatId={pod?.membership_hat_id}
               onModuleToggle={onModuleToggle}

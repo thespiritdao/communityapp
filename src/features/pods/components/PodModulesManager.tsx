@@ -34,11 +34,15 @@ import PodChatManager from './PodChatManager';
 import PodForumManager from './PodForumManager';
 import PodKnowledgeManager from './PodKnowledgeManager';
 import { GovernanceSettingsCard } from './GovernanceSettingsCard';
+import { DAOGovernanceSettingsCard } from '@/features/governance/components/DAOGovernanceSettingsCard';
 
 interface PodModulesManagerProps {
   podId: string;
   podName: string;
   isManager: boolean;
+  /** When true, this is the Executive Pod's manage panel. Surfaces
+   *  DAO-wide governance settings inside the Governance module config. */
+  isExecPod?: boolean;
   managementHatId?: string;
   membershipHatId?: string;
   /** Called when a module that creates a dedicated tab is toggled */
@@ -195,6 +199,7 @@ export default function PodModulesManager({
   podId,
   podName,
   isManager,
+  isExecPod = false,
   managementHatId,
   membershipHatId,
   onModuleToggle,
@@ -448,8 +453,16 @@ export default function PodModulesManager({
         {isExpanded &&
           module.configComponent === 'governance' &&
           modules.governance_enabled && (
-            <div className="mt-4">
+            <div className="mt-4 space-y-4">
               <GovernanceSettingsCard podId={podId} />
+              {/* DAO-wide settings only render on the Executive Pod's
+                  manage page, and only for managers there. The on-chain
+                  Governor's onlyGovernance modifier is the actual gate;
+                  this UI check just prevents non-exec pods from seeing
+                  controls that would never take effect for them. */}
+              {isExecPod && isManager && (
+                <DAOGovernanceSettingsCard canPropose={isManager} />
+              )}
             </div>
           )}
 

@@ -17,6 +17,7 @@ import DAOGovernorABIJson from '@/abis/DAO_GovernorABI.json';
 import { ProposalThreadSelector } from './ProposalThreadSelector';
 import { ThresholdPicker, type ThresholdPreset } from '@/features/pods/components/ThresholdPicker';
 import { getPodGovernanceConfig, type PodGovernanceConfig } from '@/features/pods/services/podGovernanceConfigService';
+import { insertProposalMetadata } from '@/features/governance/services/proposalMetadataService';
 
 const AdvocateMembershipABI = MembershipTokenV2ABIJson as Abi;
 const DAOGovernorABI = DAOGovernorABIJson as Abi;
@@ -1493,49 +1494,20 @@ export function CreateProposalForm({
 
       if (tempProposalId && txHash) {
         try {
-          // Check if proposal metadata already exists
-          const { data: existingMetadata, error: checkError } = await supabase
-            .from('proposal_metadata')
-            .select('id')
-            .eq('onchain_proposal_id', tempProposalId)
-            .maybeSingle();
-
-          // Only insert if no existing metadata found
-          if (!existingMetadata && !checkError) {
-            // Extract mentions from the proposal body
-            const mentionRegex = /@\[([^\]]+)\]\(([^)]+)\)/g;
-            const mentions: string[] = [];
-            let match;
-            while ((match = mentionRegex.exec(proposalBody)) !== null) {
-              mentions.push(match[2]);
-            }
-
-            // Insert proposal metadata with temporary ID
-            const { error: metadataError } = await supabase
-              .from('proposal_metadata')
-              .insert([{
-                onchain_proposal_id: tempProposalId, // Temporary ID
-                title: proposalTitle,
-                description: proposalBody,
-                proposer_address: address,
-                forum_thread_id: proposalForumThreadId,
-                token_id: proposalTokenId,
-                created_at: new Date().toISOString(),
-                transaction_hash: txHash,
-                mentions: mentions,
-                status: 'active',
-              }]);
-
-            if (metadataError) {
-              console.error('❌ Error inserting proposal metadata:', metadataError);
-            } else {
-              console.log('✅ Proposal metadata created with temporary ID:', tempProposalId);
-            }
-
-            // On-chain proposals (DAO_CONSTITUTIONAL / POD_TREASURY_BINDING) are tracked
-            // exclusively via proposal_metadata. Writing to pod_level_proposals here would
-            // cause the proposal to appear twice in the governance list.
-          }
+          // On-chain proposals (DAO_CONSTITUTIONAL / POD_TREASURY_BINDING) are tracked
+          // exclusively via proposal_metadata. Writing to pod_level_proposals here would
+          // cause the proposal to appear twice in the governance list.
+          await insertProposalMetadata({
+            tempProposalId,
+            title: proposalTitle,
+            description: proposalBody,
+            proposerAddress: address!,
+            forumThreadId: proposalForumThreadId,
+            tokenId: proposalTokenId,
+            transactionHash: txHash,
+          }).catch((e) =>
+            console.error('❌ Error inserting proposal metadata:', e),
+          );
 
           setSubmissionStatus('⏳ Waiting for blockchain confirmation (this may take 30-60 seconds)...');
 
