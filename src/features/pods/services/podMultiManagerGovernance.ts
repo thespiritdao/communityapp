@@ -42,19 +42,21 @@ export class PodMultiManagerGovernance {
   private static readonly PROPOSAL_DURATION_HOURS = 72; // legacy fallback
 
   /**
-   * Get all active managers for a pod
+   * Get all active managers for a pod. Routed through the
+   * active_pod_members view (which already filters is_active = TRUE) and
+   * filtered by membership_type='leader' — pod leaders are the actors who
+   * can create governance proposals.
    */
   static async getPodManagers(podId: string): Promise<string[]> {
     try {
       const { data, error } = await supabase
-        .from('pod_members')
-        .select('wallet_address')
+        .from('active_pod_members')
+        .select('wallet')
         .eq('pod_id', podId)
-        .eq('role', 'manager')
-        .eq('status', 'active');
+        .eq('membership_type', 'leader');
 
       if (error) throw error;
-      return data?.map((member) => member.wallet_address) || [];
+      return data?.map((member) => member.wallet) || [];
     } catch (error) {
       console.error('Error fetching pod managers:', error);
       return [];

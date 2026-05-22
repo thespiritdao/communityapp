@@ -175,13 +175,18 @@ export async function updatePodGovernanceConfig(
  * quorum denominator. Snapshotted onto the proposal row so that mid-vote
  * membership churn does not move the bar.
  *
- * OPERATIONAL: managers only (pod_members.role='manager', status='active').
+ * OPERATIONAL: pod leaders only (active_pod_members.membership_type='leader').
  * TREASURY_BINDING: all active pod members.
  */
 /**
  * Return the wallet addresses of eligible voters for a tier. Mirrors
  * `getEligibleVoterCount` exactly so the recipient set of new-proposal
  * notifications matches the set of people who can actually vote.
+ *
+ * Schema notes:
+ *   pod_members canonical columns are `wallet` (not wallet_address),
+ *   `is_active` boolean, and `membership_type` ('leader'/'member'/'admin').
+ *   `active_pod_members` is a view that filters is_active = TRUE.
  */
 export async function getEligibleVoterWallets(
   podId: string,
@@ -190,13 +195,12 @@ export async function getEligibleVoterWallets(
   if (tier === 'DAO_CONSTITUTIONAL') return [];
 
   let query = supabase
-    .from('pod_members')
-    .select('wallet_address')
-    .eq('pod_id', podId)
-    .eq('status', 'active');
+    .from('active_pod_members')
+    .select('wallet')
+    .eq('pod_id', podId);
 
   if (tier === 'POD_OPERATIONAL') {
-    query = query.eq('role', 'manager');
+    query = query.eq('membership_type', 'leader');
   }
 
   const { data, error } = await query;
@@ -205,7 +209,7 @@ export async function getEligibleVoterWallets(
     return [];
   }
   return (data ?? [])
-    .map((row: any) => row.wallet_address)
+    .map((row: any) => row.wallet)
     .filter(Boolean);
 }
 
@@ -216,13 +220,12 @@ export async function getEligibleVoterCount(
   if (tier === 'DAO_CONSTITUTIONAL') return 0;
 
   let query = supabase
-    .from('pod_members')
-    .select('wallet_address', { count: 'exact', head: true })
-    .eq('pod_id', podId)
-    .eq('status', 'active');
+    .from('active_pod_members')
+    .select('wallet', { count: 'exact', head: true })
+    .eq('pod_id', podId);
 
   if (tier === 'POD_OPERATIONAL') {
-    query = query.eq('role', 'manager');
+    query = query.eq('membership_type', 'leader');
   }
 
   const { count, error } = await query;
