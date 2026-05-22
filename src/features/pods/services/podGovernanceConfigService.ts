@@ -199,8 +199,10 @@ export async function getEligibleVoterWallets(
     .select('wallet')
     .eq('pod_id', podId);
 
+  // POD_OPERATIONAL: leader-level decisions, so leaders + admins.
+  // Matches the recipient set in notify-leaders/route.ts.
   if (tier === 'POD_OPERATIONAL') {
-    query = query.eq('membership_type', 'leader');
+    query = query.in('membership_type', ['leader', 'admin']);
   }
 
   const { data, error } = await query;
@@ -225,7 +227,7 @@ export async function getEligibleVoterCount(
     .eq('pod_id', podId);
 
   if (tier === 'POD_OPERATIONAL') {
-    query = query.eq('membership_type', 'leader');
+    query = query.in('membership_type', ['leader', 'admin']);
   }
 
   const { count, error } = await query;
