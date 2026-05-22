@@ -312,6 +312,26 @@ export class GovernanceService {
    * These are governance proposals specific to a pod (not DAO-wide)
    * Only members of the specified pod with governanceParticipation can vote
    */
+  /**
+   * Returns true if the pod's governance module is enabled (the default
+   * for any pod, backward-compatible NULL → true). Used as a single
+   * source of truth by every server-side governance write/notification
+   * gate. Direct table read — small, no caching; called once per gate.
+   */
+  static async isPodGovernanceEnabled(podId: string): Promise<boolean> {
+    if (!podId) return false;
+    const { data, error } = await supabase
+      .from('pod_modules')
+      .select('governance_enabled')
+      .eq('pod_id', podId)
+      .maybeSingle();
+    if (error) {
+      console.warn('isPodGovernanceEnabled: lookup failed; defaulting to enabled', error);
+      return true; // fail-open for read errors; write path will still hit the DB constraint if needed
+    }
+    return data?.governance_enabled ?? true; // NULL → enabled (backward compat)
+  }
+
   static async createPodLevelProposal(data: {
     title: string;
     description: string;
@@ -328,6 +348,20 @@ export class GovernanceService {
   }): Promise<string> {
     try {
       const tier: GovernanceTier = data.governance_tier ?? 'POD_OPERATIONAL';
+
+      // Server-side defense in depth: refuse to create a pod-level
+      // proposal if the pod's governance module is disabled. The UI
+      // already hides such pods from the dropdown, but a direct API
+      // call could still reach this method. In-flight proposals are
+      // unaffected — only new creation is blocked.
+      if (data.pod_id) {
+        const enabled = await this.isPodGovernanceEnabled(data.pod_id);
+        if (!enabled) {
+          throw new Error(
+            'Governance is disabled for this pod; cannot create new proposals',
+          );
+        }
+      }
 
       // Resolve pod config + snapshot eligible voter count so quorum is
       // computed against membership-at-creation. DAO-wide proposals
@@ -436,6 +470,17 @@ export class GovernanceService {
     proposerAddress: string;
   }): Promise<void> {
     const { podId, tier, proposalId, proposalTitle, proposerAddress } = args;
+
+    // Defensive: if the pod's governance module is disabled, skip the
+    // fan-out entirely. createPodLevelProposal already blocks new
+    // creation when this is the case, so this guard exists for
+    // future code paths that might call notifyEligibleVoters directly
+    // (e.g., a backfill or replay tool).
+    const enabled = await this.isPodGovernanceEnabled(podId);
+    if (!enabled) {
+      return;
+    }
+
     const wallets = await getEligibleVoterWallets(podId, tier);
     const recipients = wallets.filter(
       (w) => w.toLowerCase() !== proposerAddress.toLowerCase(),
