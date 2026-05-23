@@ -96,8 +96,13 @@ export interface HatPermissions {
   marketplaceManage: boolean;
   knowledgeBaseAccess: boolean; // 🆕 View knowledge base items
   knowledgeBaseManage: boolean; // 🆕 Create/edit categories and upload content
-  surveyManage: boolean; // Create/edit/close surveys
-  surveyRespond: boolean; // Respond to surveys
+  // Optional flags (default to false if absent). Marked optional so older
+  // permission literals scattered across the codebase don't have to be
+  // back-filled when new module flags are added.
+  surveyManage?: boolean; // Create/edit/close surveys
+  surveyRespond?: boolean; // Respond to surveys
+  passwordsAccess?: boolean; // 🆕 View/decrypt entries in the pod's E2EE password vault
+  passwordsManage?: boolean; // 🆕 Create/edit/delete vault entries, grant access to newcomers
 }
 
 export interface HatRole {
@@ -134,6 +139,8 @@ export const HAT_ROLES: Record<string, HatRole> = {
       knowledgeBaseManage: true,
       surveyManage: true,
       surveyRespond: true,
+      passwordsAccess: true,
+      passwordsManage: true,
     },
   },
   // Legacy management roles (maintained for compatibility)
@@ -160,6 +167,8 @@ export const HAT_ROLES: Record<string, HatRole> = {
       knowledgeBaseManage: false,
       surveyManage: false,
       surveyRespond: true,
+      passwordsAccess: false,
+      passwordsManage: false,
     },
   },
   BOUNTY_MANAGER: {
@@ -185,6 +194,8 @@ export const HAT_ROLES: Record<string, HatRole> = {
       knowledgeBaseManage: false,
       surveyManage: false,
       surveyRespond: true,
+      passwordsAccess: false,
+      passwordsManage: false,
     },
   },
   FORUM_MANAGER: {
@@ -210,6 +221,8 @@ export const HAT_ROLES: Record<string, HatRole> = {
       knowledgeBaseManage: false,
       surveyManage: false,
       surveyRespond: true,
+      passwordsAccess: false,
+      passwordsManage: false,
     },
   },
   CHAT_MANAGER: {
@@ -235,6 +248,8 @@ export const HAT_ROLES: Record<string, HatRole> = {
       knowledgeBaseManage: false,
       surveyManage: false,
       surveyRespond: true,
+      passwordsAccess: false,
+      passwordsManage: false,
     },
   },
   EVENT_MANAGER: {
@@ -260,6 +275,8 @@ export const HAT_ROLES: Record<string, HatRole> = {
       knowledgeBaseManage: false,
       surveyManage: false,
       surveyRespond: true,
+      passwordsAccess: false,
+      passwordsManage: false,
     },
   },
 };
@@ -396,6 +413,8 @@ export class HatPermissionsService {
       knowledgeBaseManage: false,
       surveyManage: false,
       surveyRespond: false,
+      passwordsAccess: false,
+      passwordsManage: false,
     };
 
     // Combine permissions from all roles (OR operation)

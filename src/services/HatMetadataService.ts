@@ -824,7 +824,7 @@ export class HatMetadataService {
     ipfsHash: string,
     userAddress: string,
   ): Promise<{
-    hasPermission: Record<keyof HatPermissions, boolean>;
+    hasPermission: HatPermissions;
     metadata: HatMetadata | null;
   }> {
     const metadata = await this.getFromIPFS(ipfsHash);
@@ -849,6 +849,10 @@ export class HatMetadataService {
           marketplaceManage: false,
           knowledgeBaseAccess: false,
           knowledgeBaseManage: false,
+          surveyManage: false,
+          surveyRespond: false,
+          passwordsAccess: false,
+          passwordsManage: false,
         },
         metadata: null,
       };

@@ -23,6 +23,7 @@ const ALLOWED_KEYS = [
   'community_agent_enabled',
   'surveys_enabled',
   'governance_enabled',
+  'passwords_enabled',
 ] as const;
 
 function getWalletFromToken(token: string): string | null {
@@ -265,6 +266,37 @@ export async function PUT(req: NextRequest): Promise<NextResponse> {
       }
     } catch (permErr) {
       console.warn('Could not sync subPodCreation permission:', permErr);
+    }
+  }
+
+  // When passwords_enabled changes, sync passwordsAccess on all role permissions
+  // for this pod. Leader roles also get passwordsManage; member roles only get
+  // passwordsAccess. Module toggle off → both flags off for everyone.
+  if ('passwords_enabled' in updates) {
+    try {
+      const { data: roles } = await supabaseAdmin
+        .from('pod_role_permissions')
+        .select('id, permissions, role_type, role_name')
+        .eq('pod_id', podId);
+
+      if (roles) {
+        for (const role of roles) {
+          const perms = typeof role.permissions === 'string'
+            ? JSON.parse(role.permissions)
+            : { ...(role.permissions || {}) };
+          const isLeaderRole =
+            role.role_type === 'leader' ||
+            /leader/i.test(role.role_name ?? '');
+          perms.passwordsAccess = updates.passwords_enabled;
+          perms.passwordsManage = updates.passwords_enabled && isLeaderRole;
+          await supabaseAdmin
+            .from('pod_role_permissions')
+            .update({ permissions: perms })
+            .eq('id', role.id);
+        }
+      }
+    } catch (permErr) {
+      console.warn('Could not sync passwords permissions:', permErr);
     }
   }
 

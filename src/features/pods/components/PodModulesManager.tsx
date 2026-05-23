@@ -29,12 +29,14 @@ import {
   ClipboardCheck,
   Bot,
   Vote,
+  KeyRound,
 } from 'lucide-react';
 import PodChatManager from './PodChatManager';
 import PodForumManager from './PodForumManager';
 import PodKnowledgeManager from './PodKnowledgeManager';
 import { GovernanceSettingsCard } from './GovernanceSettingsCard';
 import { DAOGovernanceSettingsCard } from '@/features/governance/components/DAOGovernanceSettingsCard';
+import { PasswordVaultPanel } from '@/features/passwords/components/PasswordVaultPanel';
 
 interface PodModulesManagerProps {
   podId: string;
@@ -61,6 +63,7 @@ interface PodModules {
   surveys_enabled: boolean;
   community_agent_enabled: boolean;
   governance_enabled: boolean;
+  passwords_enabled: boolean;
   chat_config?: any;
   forum_config?: any;
   treasury_config?: any;
@@ -71,6 +74,7 @@ interface PodModules {
   sub_pods_config?: any;
   surveys_config?: any;
   community_agent_config?: any;
+  passwords_config?: any;
 }
 
 interface ModuleInfo {
@@ -180,6 +184,17 @@ const ADDON_MODULES: ModuleInfo[] = [
     configComponent: null,
     createsTab: true,
   },
+  {
+    key: 'passwords_enabled',
+    label: 'Password Vault',
+    description:
+      'End-to-end encrypted credential storage for the pod. Only members with passwordsAccess can decrypt — server never sees plaintext.',
+    icon: KeyRound,
+    color: '#1F453A',
+    bgColor: '#E8F1EE',
+    configComponent: 'passwords',
+    createsTab: false,
+  },
 ];
 
 const PAID_MODULES: ModuleInfo[] = [
@@ -216,6 +231,7 @@ export default function PodModulesManager({
     surveys_enabled: false,
     community_agent_enabled: false,
     governance_enabled: true,
+    passwords_enabled: false,
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -254,6 +270,7 @@ export default function PodModulesManager({
           surveys_enabled: data.surveys_enabled ?? false,
           community_agent_enabled: data.community_agent_enabled ?? false,
           governance_enabled: data.governance_enabled ?? true,
+          passwords_enabled: data.passwords_enabled ?? false,
           chat_config: data.chat_config,
           forum_config: data.forum_config,
           treasury_config: data.treasury_config,
@@ -264,6 +281,7 @@ export default function PodModulesManager({
           sub_pods_config: data.sub_pods_config,
           surveys_config: data.surveys_config,
           community_agent_config: data.community_agent_config,
+          passwords_config: data.passwords_config,
         });
       }
     } catch (error) {
@@ -463,6 +481,15 @@ export default function PodModulesManager({
               {isExecPod && isManager && (
                 <DAOGovernanceSettingsCard canPropose={isManager} />
               )}
+            </div>
+          )}
+
+        {/* Password Vault panel */}
+        {isExpanded &&
+          module.configComponent === 'passwords' &&
+          modules.passwords_enabled && (
+            <div className="mt-4">
+              <PasswordVaultPanel podId={podId} isManager={isManager} />
             </div>
           )}
 

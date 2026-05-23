@@ -503,6 +503,13 @@ export class PodRolePermissionsService {
           marketplaceManage: true,
           knowledgeBaseAccess: true,
           knowledgeBaseManage: true,
+          surveyManage: true,
+          surveyRespond: true,
+          // Password Vault (off by default at pod creation — the vault
+          // module is opt-in. When a pod enables the module, these flags
+          // get auto-set to true via the modules toggle sync block.)
+          passwordsAccess: false,
+          passwordsManage: false,
         },
         max_holders: 5,
         created_by: createdBy,
@@ -530,6 +537,13 @@ export class PodRolePermissionsService {
           marketplaceManage: false,
           knowledgeBaseAccess: false,
           knowledgeBaseManage: false,
+          surveyManage: false,
+          surveyRespond: true,
+          // Members get passwordsAccess when the module turns on; never
+          // get passwordsManage by default (only leaders can grant /
+          // rotate).
+          passwordsAccess: false,
+          passwordsManage: false,
         },
         max_holders: 100,
         created_by: createdBy,
