@@ -33,6 +33,8 @@ import {
   KeyRound,
   Bot,
   GitBranch,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -116,6 +118,13 @@ export const UnifiedMembershipManager: React.FC<
     passwords_enabled: false,
     community_agent_enabled: false,
   });
+
+  // Permission section collapse state — mirrors the Modules tab UX
+  // (PodModulesManager.tsx Core/Add-Ons/Paid expanders) so the
+  // permissions list stays manageable as more flags ship over time.
+  const [permsCoreExpanded, setPermsCoreExpanded] = useState(false);
+  const [permsAddonsExpanded, setPermsAddonsExpanded] = useState(false);
+  const [permsPaidExpanded, setPermsPaidExpanded] = useState(false);
   useEffect(() => {
     if (!podId) return;
     let cancelled = false;
@@ -649,44 +658,113 @@ export const UnifiedMembershipManager: React.FC<
             const visiblePaid = PAID_GROUPS.filter((g) => g.show);
 
             return (
-              <Card className="p-6 space-y-6">
+              <Card className="p-6 space-y-4">
                 <h4 className="text-lg font-semibold">Role Permissions</h4>
 
-                {/* Core — always shown */}
-                <div className="space-y-2">
-                  <h5 className="text-sm font-semibold uppercase tracking-wide" style={{ color: '#5F5A54' }}>
-                    Core
-                  </h5>
-                  {CORE.map(renderRow)}
+                {/* Core section (collapsible) */}
+                <div>
+                  <button
+                    type="button"
+                    onClick={() => setPermsCoreExpanded((v) => !v)}
+                    className="flex items-center justify-between w-full py-2 px-1 text-left rounded-md hover:bg-gray-50 transition-colors"
+                  >
+                    <span
+                      className="text-xs font-semibold uppercase tracking-wider"
+                      style={{ color: '#5F5A54' }}
+                    >
+                      Core ({CORE.length})
+                    </span>
+                    {permsCoreExpanded ? (
+                      <ChevronUp className="h-4 w-4" style={{ color: '#5F5A54' }} />
+                    ) : (
+                      <ChevronDown className="h-4 w-4" style={{ color: '#5F5A54' }} />
+                    )}
+                  </button>
+                  {permsCoreExpanded && (
+                    <div className="space-y-2 mt-2">
+                      {CORE.map(renderRow)}
+                    </div>
+                  )}
                 </div>
 
-                {/* Add-ons — only if at least one add-on module is enabled */}
-                {visibleAddOns.length > 0 && (
-                  <div className="space-y-4 pt-2 border-t">
-                    <p className="text-xs italic" style={{ color: '#9B948D' }}>
-                      Add-on permissions appear here when the matching module is enabled in Pod Modules.
-                    </p>
-                    {visibleAddOns.map(renderGroup)}
-                  </div>
-                )}
+                {/* Divider */}
+                <div className="border-t" style={{ borderColor: '#E8E4DC' }} />
 
-                {/* Paid — only if at least one paid module is enabled */}
-                {visiblePaid.length > 0 && (
-                  <div className="space-y-4 pt-2 border-t">
-                    <p className="text-xs italic" style={{ color: '#9B948D' }}>
-                      Paid module permissions. Billing actions remain leader-only.
-                    </p>
-                    {visiblePaid.map(renderGroup)}
-                  </div>
-                )}
+                {/* Add-Ons section (collapsible). Only renders groups
+                    whose module is on; if none are on, shows a hint. */}
+                <div>
+                  <button
+                    type="button"
+                    onClick={() => setPermsAddonsExpanded((v) => !v)}
+                    className="flex items-center justify-between w-full py-2 px-1 text-left rounded-md hover:bg-gray-50 transition-colors"
+                  >
+                    <span
+                      className="text-xs font-semibold uppercase tracking-wider"
+                      style={{ color: '#5F5A54' }}
+                    >
+                      Add-Ons{visibleAddOns.length > 0 ? ` (${visibleAddOns.reduce((n, g) => n + g.perms.length, 0)})` : ''}
+                    </span>
+                    {permsAddonsExpanded ? (
+                      <ChevronUp className="h-4 w-4" style={{ color: '#5F5A54' }} />
+                    ) : (
+                      <ChevronDown className="h-4 w-4" style={{ color: '#5F5A54' }} />
+                    )}
+                  </button>
+                  {permsAddonsExpanded && (
+                    <div className="space-y-4 mt-2">
+                      {visibleAddOns.length === 0 ? (
+                        <p className="text-xs italic px-1" style={{ color: '#9B948D' }}>
+                          No add-on modules enabled. Turn one on in Pod
+                          Modules to expose its permissions here.
+                        </p>
+                      ) : (
+                        visibleAddOns.map(renderGroup)
+                      )}
+                    </div>
+                  )}
+                </div>
 
-                {/* Helpful hint when nothing extra is on */}
-                {visibleAddOns.length === 0 && visiblePaid.length === 0 && (
-                  <p className="text-xs italic pt-2 border-t" style={{ color: '#9B948D' }}>
-                    Enable add-on or paid modules in Pod Modules to expose
-                    additional permission categories here.
-                  </p>
-                )}
+                {/* Divider */}
+                <div className="border-t" style={{ borderColor: '#E8E4DC' }} />
+
+                {/* Paid section (collapsible). Same pattern. */}
+                <div>
+                  <button
+                    type="button"
+                    onClick={() => setPermsPaidExpanded((v) => !v)}
+                    className="flex items-center justify-between w-full py-2 px-1 text-left rounded-md hover:bg-gray-50 transition-colors"
+                  >
+                    <span
+                      className="text-xs font-semibold uppercase tracking-wider"
+                      style={{ color: '#5F5A54' }}
+                    >
+                      Paid{visiblePaid.length > 0 ? ` (${visiblePaid.reduce((n, g) => n + g.perms.length, 0)})` : ''}
+                    </span>
+                    {permsPaidExpanded ? (
+                      <ChevronUp className="h-4 w-4" style={{ color: '#5F5A54' }} />
+                    ) : (
+                      <ChevronDown className="h-4 w-4" style={{ color: '#5F5A54' }} />
+                    )}
+                  </button>
+                  {permsPaidExpanded && (
+                    <div className="space-y-4 mt-2">
+                      {visiblePaid.length === 0 ? (
+                        <p className="text-xs italic px-1" style={{ color: '#9B948D' }}>
+                          No paid modules enabled. Billing actions for
+                          paid modules always remain leader-only.
+                        </p>
+                      ) : (
+                        <>
+                          <p className="text-xs italic px-1" style={{ color: '#9B948D' }}>
+                            Billing actions remain leader-only regardless
+                            of these flags.
+                          </p>
+                          {visiblePaid.map(renderGroup)}
+                        </>
+                      )}
+                    </div>
+                  )}
+                </div>
               </Card>
             );
           })()}
