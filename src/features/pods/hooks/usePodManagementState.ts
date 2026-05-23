@@ -43,6 +43,7 @@ interface PodManagementState {
   canManagePasswords: boolean;
   canViewTreasury: boolean;
   canManageAgent: boolean;
+  canManageSurveys: boolean;
 
   // UI state
   selectedTab: string;
@@ -157,6 +158,10 @@ export function usePodManagementState({
     hasPermission: canManageAgent,
   } = useHybridPodPermission(podId, 'agentManage');
 
+  const {
+    hasPermission: canManageSurveys,
+  } = useHybridPodPermission(podId, 'surveyManage');
+
   // Show treasury tab if user has treasuryManagement permission
   // Users need to see the tab to CREATE a treasury (don't require it to exist first)
   const canManageTreasury = useMemo(() => {
@@ -210,6 +215,7 @@ export function usePodManagementState({
       canManagePasswords,
       canViewTreasury,
       canManageAgent,
+      canManageSurveys,
 
       // UI state
       selectedTab,
@@ -235,6 +241,7 @@ export function usePodManagementState({
       canManagePasswords,
       canViewTreasury,
       canManageAgent,
+      canManageSurveys,
       selectedTab,
       memoizedSetSelectedTab,
       refetchPod,

@@ -298,6 +298,11 @@ export const useHatPermissions = (): UseHatPermissionsReturn => {
         marketplaceManage: roles.some((r) => r.permissions?.marketplaceManage),
         knowledgeBaseAccess: roles.some((r) => r.permissions?.knowledgeBaseAccess),
         knowledgeBaseManage: roles.some((r) => r.permissions?.knowledgeBaseManage),
+        surveyRespond: roles.some((r) => r.permissions?.surveyRespond),
+        surveyManage: roles.some((r) => r.permissions?.surveyManage),
+        passwordsAccess: roles.some((r) => r.permissions?.passwordsAccess),
+        passwordsManage: roles.some((r) => r.permissions?.passwordsManage),
+        agentManage: roles.some((r) => r.permissions?.agentManage),
       };
 
       setUserRoles(roles);

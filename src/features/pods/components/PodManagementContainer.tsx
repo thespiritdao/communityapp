@@ -72,6 +72,7 @@ const TabContent = React.memo<{
   canViewTreasury: boolean;
   canManageAgent: boolean;
   canManagePasswords: boolean;
+  canManageSurveys: boolean;
   isExecPod: boolean;
   onRemoveMember?: (address: string, requiresVote: boolean) => void;
   onPodDeleted?: () => void;
@@ -92,6 +93,7 @@ const TabContent = React.memo<{
     canViewTreasury,
     canManageAgent,
     canManagePasswords,
+    canManageSurveys,
     isExecPod,
     onRemoveMember,
     onPodDeleted,
@@ -221,7 +223,7 @@ const TabContent = React.memo<{
               podName={pod?.name || 'Unknown Pod'}
               managementHatId={pod?.management_hat_id || ''}
               membershipHatId={pod?.membership_hat_id}
-              isManager={canManageMembers}
+              isManager={canManageSurveys || canManageMembers}
             />
           </div>
         );
@@ -268,6 +270,7 @@ const TabNavigation = React.memo<{
   canViewTreasury: boolean;
   canManageAgent: boolean;
   canManagePasswords: boolean;
+  canManageSurveys: boolean;
   subPodsEnabled?: boolean;
   isExecPod?: boolean;
   surveysEnabled?: boolean;
@@ -284,6 +287,7 @@ const TabNavigation = React.memo<{
     canViewTreasury,
     canManageAgent,
     canManagePasswords,
+    canManageSurveys,
     subPodsEnabled = false,
     isExecPod = false,
     surveysEnabled = false,
@@ -372,7 +376,7 @@ const TabNavigation = React.memo<{
           mobileLabel: 'Surveys',
           icon: ClipboardCheck,
           badge: null,
-          enabled: canManageMembers && surveysEnabled,
+          enabled: surveysEnabled && (canManageSurveys || canManageMembers),
         },
         {
           id: 'agents',
@@ -411,7 +415,7 @@ const TabNavigation = React.memo<{
           enabled: canManageMembers,
         },
       ],
-      [memberCount, leaderCount, canManageMembers, canManageTreasury, canViewTreasury, canManageAgent, canManagePasswords, subPodsEnabled, isExecPod, surveysEnabled, agentEnabled, passwordsEnabled],
+      [memberCount, leaderCount, canManageMembers, canManageTreasury, canViewTreasury, canManageAgent, canManagePasswords, canManageSurveys, subPodsEnabled, isExecPod, surveysEnabled, agentEnabled, passwordsEnabled],
     );
 
     // Add a small loading state to prevent layout shift
@@ -603,6 +607,7 @@ export const PodManagementContainer = React.memo<PodManagementContainerProps>(
       canManagePasswords,
       canViewTreasury,
       canManageAgent,
+      canManageSurveys,
       selectedTab,
       setSelectedTab,
     } = usePodManagementState({ podId, userAddress, initialTab });
@@ -699,6 +704,7 @@ export const PodManagementContainer = React.memo<PodManagementContainerProps>(
             canViewTreasury={canViewTreasury}
             canManageAgent={canManageAgent}
             canManagePasswords={canManagePasswords}
+            canManageSurveys={canManageSurveys}
             subPodsEnabled={subPodsEnabled}
             isExecPod={isExecPod}
             surveysEnabled={surveysEnabled}
@@ -721,6 +727,7 @@ export const PodManagementContainer = React.memo<PodManagementContainerProps>(
             canViewTreasury={canViewTreasury}
             canManageAgent={canManageAgent}
             canManagePasswords={canManagePasswords}
+            canManageSurveys={canManageSurveys}
             isExecPod={isExecPod}
             onRemoveMember={handleRemoveMember}
             onPodDeleted={handlePodDeleted}
