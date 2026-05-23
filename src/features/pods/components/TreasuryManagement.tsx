@@ -50,6 +50,10 @@ interface TreasuryManagementProps {
   podId: string;
   treasuryAddress?: string;
   podName: string;
+  /** When true, render read-only views (balances + history) even if the
+   *  caller doesn't have treasuryManagement. Defaults to false, which
+   *  keeps the legacy "access restricted" behavior for non-managers. */
+  allowReadOnly?: boolean;
 }
 
 /**
@@ -67,6 +71,7 @@ export function TreasuryManagement({
   podId,
   treasuryAddress: fallbackTreasuryAddress,
   podName,
+  allowReadOnly = false,
 }: TreasuryManagementProps) {
   // CDP Smart Account hooks - EXACT FAUCET PATTERN
   const { evmAddress } = useEvmAddress();
@@ -720,8 +725,10 @@ export function TreasuryManagement({
     );
   }
 
-  // Show access denied if user doesn't have permissions (only checked if treasury exists)
-  if (!canManageTreasury) {
+  // Access denial only when caller has neither manage NOR view permission.
+  // View-only callers get the panel but the Distribute tab is hidden and
+  // write actions are gated below.
+  if (!canManageTreasury && !allowReadOnly) {
     return (
       <Card>
         <CardContent className="pt-6">
@@ -756,9 +763,15 @@ export function TreasuryManagement({
           <div className="grid grid-cols-2 gap-2 rounded-lg bg-gray-100 p-2">
             {[
               { id: 'overview', label: 'Overview', icon: TrendingUp },
-              { id: 'distribute', label: 'Distribute', icon: Send },
+              // Distribute is a write action — hide for read-only viewers.
+              ...(canManageTreasury
+                ? [{ id: 'distribute', label: 'Distribute', icon: Send }]
+                : []),
               { id: 'history', label: 'History', icon: History },
-              { id: 'settings', label: 'Settings', icon: Shield },
+              // Settings panel is manager-only too.
+              ...(canManageTreasury
+                ? [{ id: 'settings', label: 'Settings', icon: Shield }]
+                : []),
             ].map((tab) => (
               <Button
                 key={tab.id}

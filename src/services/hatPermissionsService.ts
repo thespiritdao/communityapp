@@ -103,6 +103,7 @@ export interface HatPermissions {
   surveyRespond?: boolean; // Respond to surveys
   passwordsAccess?: boolean; // 🆕 View/decrypt entries in the pod's E2EE password vault
   passwordsManage?: boolean; // 🆕 Create/edit/delete vault entries, grant access to newcomers
+  agentManage?: boolean; // 🆕 Configure pod's AI agent (persona, channels, posting cadence). Subscription billing stays leader-only.
 }
 
 export interface HatRole {
@@ -421,8 +422,9 @@ export class HatPermissionsService {
     for (const role of userRoles) {
       Object.keys(permissions).forEach((key) => {
         const permKey = key as keyof HatPermissions;
-        permissions[permKey] =
-          permissions[permKey] || role.permissions[permKey];
+        permissions[permKey] = Boolean(
+          permissions[permKey] || role.permissions[permKey],
+        );
       });
     }
 
@@ -437,7 +439,7 @@ export class HatPermissionsService {
     permission: keyof HatPermissions,
   ): Promise<boolean> {
     const permissions = await this.getUserPermissions(userAddress);
-    return permissions[permission];
+    return Boolean(permissions[permission]);
   }
 
   /**

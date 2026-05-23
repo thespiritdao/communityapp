@@ -70,6 +70,11 @@ interface Pod {
 interface PodSpecificTreasuryManagerProps {
   pod: Pod;
   canManageTreasury: boolean;
+  /** Treasury viewers (treasuryViewing perm) see balances + history
+   *  but no Send / Approve / deploy controls. canManageTreasury holders
+   *  always also view. Defaults to canManageTreasury for compatibility
+   *  with existing call sites. */
+  canViewTreasury?: boolean;
 }
 
 /**
@@ -79,6 +84,7 @@ interface PodSpecificTreasuryManagerProps {
 export function PodSpecificTreasuryManager({
   pod,
   canManageTreasury,
+  canViewTreasury = canManageTreasury,
 }: PodSpecificTreasuryManagerProps) {
   // CDP Smart Account hooks - EXACT FAUCET PATTERN
   const { evmAddress } = useEvmAddress();
@@ -594,6 +600,7 @@ export function PodSpecificTreasuryManager({
           podId={localPod.id}
           treasuryAddress={localPod.treasury_contract_address}
           podName={localPod.name}
+          allowReadOnly={canViewTreasury && !canManageTreasury}
         />
       </div>
     );

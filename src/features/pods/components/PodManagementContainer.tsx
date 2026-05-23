@@ -69,6 +69,8 @@ const TabContent = React.memo<{
   pod: any;
   canManageMembers: boolean;
   canManageTreasury: boolean;
+  canViewTreasury: boolean;
+  canManageAgent: boolean;
   canManagePasswords: boolean;
   isExecPod: boolean;
   onRemoveMember?: (address: string, requiresVote: boolean) => void;
@@ -87,6 +89,8 @@ const TabContent = React.memo<{
     pod,
     canManageMembers,
     canManageTreasury,
+    canViewTreasury,
+    canManageAgent,
     canManagePasswords,
     isExecPod,
     onRemoveMember,
@@ -141,6 +145,7 @@ const TabContent = React.memo<{
             <PodSpecificTreasuryManager
               pod={pod}
               canManageTreasury={canManageTreasury}
+              canViewTreasury={canViewTreasury || canManageTreasury}
             />
           </div>
         );
@@ -227,7 +232,7 @@ const TabContent = React.memo<{
             <PodAgentsPanel
               podId={podId}
               podName={pod?.name || 'Unknown Pod'}
-              isManager={canManageMembers}
+              isManager={canManageAgent || canManageMembers}
             />
           </div>
         );
@@ -260,6 +265,8 @@ const TabNavigation = React.memo<{
   leaderCount: number;
   canManageMembers: boolean;
   canManageTreasury: boolean;
+  canViewTreasury: boolean;
+  canManageAgent: boolean;
   canManagePasswords: boolean;
   subPodsEnabled?: boolean;
   isExecPod?: boolean;
@@ -274,6 +281,8 @@ const TabNavigation = React.memo<{
     leaderCount,
     canManageMembers,
     canManageTreasury,
+    canViewTreasury,
+    canManageAgent,
     canManagePasswords,
     subPodsEnabled = false,
     isExecPod = false,
@@ -329,7 +338,9 @@ const TabNavigation = React.memo<{
           mobileLabel: 'Treasury',
           icon: DollarSign,
           badge: null,
-          enabled: canManageTreasury, // Only show if user has treasury management access
+          // Visible to view-only treasury readers AND managers; the
+          // panel itself hides write controls when only viewing.
+          enabled: canManageTreasury || canViewTreasury,
         },
         {
           id: 'sub_pod_review',
@@ -369,7 +380,7 @@ const TabNavigation = React.memo<{
           mobileLabel: 'Agent',
           icon: Bot,
           badge: null,
-          enabled: canManageMembers && agentEnabled,
+          enabled: agentEnabled && (canManageAgent || canManageMembers),
         },
         {
           id: 'passwords',
@@ -400,7 +411,7 @@ const TabNavigation = React.memo<{
           enabled: canManageMembers,
         },
       ],
-      [memberCount, leaderCount, canManageMembers, canManageTreasury, canManagePasswords, subPodsEnabled, isExecPod, surveysEnabled, agentEnabled, passwordsEnabled],
+      [memberCount, leaderCount, canManageMembers, canManageTreasury, canViewTreasury, canManageAgent, canManagePasswords, subPodsEnabled, isExecPod, surveysEnabled, agentEnabled, passwordsEnabled],
     );
 
     // Add a small loading state to prevent layout shift
@@ -590,6 +601,8 @@ export const PodManagementContainer = React.memo<PodManagementContainerProps>(
       canManageMembers,
       canManageTreasury,
       canManagePasswords,
+      canViewTreasury,
+      canManageAgent,
       selectedTab,
       setSelectedTab,
     } = usePodManagementState({ podId, userAddress, initialTab });
@@ -683,6 +696,8 @@ export const PodManagementContainer = React.memo<PodManagementContainerProps>(
             leaderCount={leaderCount}
             canManageMembers={canManageMembers}
             canManageTreasury={canManageTreasury}
+            canViewTreasury={canViewTreasury}
+            canManageAgent={canManageAgent}
             canManagePasswords={canManagePasswords}
             subPodsEnabled={subPodsEnabled}
             isExecPod={isExecPod}
@@ -703,6 +718,8 @@ export const PodManagementContainer = React.memo<PodManagementContainerProps>(
             pod={pod}
             canManageMembers={canManageMembers}
             canManageTreasury={canManageTreasury}
+            canViewTreasury={canViewTreasury}
+            canManageAgent={canManageAgent}
             canManagePasswords={canManagePasswords}
             isExecPod={isExecPod}
             onRemoveMember={handleRemoveMember}

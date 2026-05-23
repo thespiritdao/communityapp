@@ -28,6 +28,11 @@ import {
   Loader2,
   BookOpen,
   BookMarked,
+  ClipboardCheck,
+  ClipboardList,
+  KeyRound,
+  Bot,
+  GitBranch,
 } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -96,7 +101,50 @@ export const UnifiedMembershipManager: React.FC<
     knowledgeBaseManage: false,
     marketplaceAccess: false,
     marketplaceManage: false,
+    surveyRespond: false,
+    surveyManage: false,
+    passwordsAccess: false,
+    passwordsManage: false,
+    agentManage: false,
   });
+
+  // Pod module state — drives which add-on / paid permission groups
+  // are shown. A permission group only appears if the corresponding
+  // module is enabled on this pod.
+  const [moduleFlags, setModuleFlags] = useState({
+    surveys_enabled: false,
+    passwords_enabled: false,
+    community_agent_enabled: false,
+  });
+  useEffect(() => {
+    if (!podId) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const { supabase } = await import('@/utils/supabaseClient');
+        const { data: session } = await supabase.auth.getSession();
+        const token = session.session?.access_token;
+        if (!token) return;
+        const res = await fetch(`/api/pods/${podId}/modules`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!res.ok) return;
+        const json = await res.json();
+        if (cancelled) return;
+        setModuleFlags({
+          surveys_enabled: json.modules?.surveys_enabled ?? false,
+          passwords_enabled: json.modules?.passwords_enabled ?? false,
+          community_agent_enabled:
+            json.modules?.community_agent_enabled ?? false,
+        });
+      } catch {
+        /* non-fatal */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [podId]);
 
   const [eligibilityCriteria, setEligibilityCriteria] = useState<
     EligibilityCriteria[]
@@ -145,6 +193,11 @@ export const UnifiedMembershipManager: React.FC<
       marketplaceManage: perms.marketplaceManage ?? false,
       knowledgeBaseAccess: perms.knowledgeBaseAccess ?? false,
       knowledgeBaseManage: perms.knowledgeBaseManage ?? false,
+      surveyRespond: perms.surveyRespond ?? false,
+      surveyManage: perms.surveyManage ?? false,
+      passwordsAccess: perms.passwordsAccess ?? false,
+      passwordsManage: perms.passwordsManage ?? false,
+      agentManage: perms.agentManage ?? false,
     };
   };
 
@@ -474,191 +527,169 @@ export const UnifiedMembershipManager: React.FC<
           <TabsTrigger value="requirements">Requirements</TabsTrigger>
         </TabsList>
 
-        {/* Permissions Tab - inline permissions grid */}
+        {/* Permissions Tab — Core / Add-ons / Paid grouped UI.
+            Add-on and Paid sections only render when the corresponding
+            pod module is enabled; module-off path zeroes the flags
+            server-side via the modules/route.ts sync blocks. */}
         <TabsContent value="permissions">
-          <Card className="p-6">
-            <h4 className="text-lg font-semibold mb-4">Role Permissions</h4>
-            <div className="space-y-4">
-              {/* Render permissions in alphabetical order */}
-              {(
-                [
-                  'bountyManagement',
-                  'chatAccess',
-                  'chatModeration',
-                  'eventCreation',
-                  'forumAccess',
-                  'forumModeration',
-                  'governanceParticipation',
-                  'knowledgeBaseAccess',
-                  'knowledgeBaseManage',
-                  'marketplaceAccess',
-                  'marketplaceManage',
-                  'memberManagement',
-                  'roleAssignment',
-                  'subPodCreation',
-                  'treasuryManagement',
-                  'treasuryViewing',
-                ] as Array<keyof HatPermissions>
-              ).map((permissionKey) => {
-                const value = permissions[permissionKey];
-                return (
-                  <div
-                    key={permissionKey}
-                    className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50"
-                  >
-                    <div className="flex items-center gap-3">
-                      {permissionKey === 'chatAccess' && (
-                        <MessageCircle
-                          className="h-5 w-5"
-                          style={{ color: '#2F5D50' }}
-                        />
-                      )}
-                      {permissionKey === 'chatModeration' && (
-                        <ShieldCheck
-                          className="h-5 w-5"
-                          style={{ color: '#3F7A5A' }}
-                        />
-                      )}
-                      {permissionKey === 'forumAccess' && (
-                        <MessageSquare
-                          className="h-5 w-5"
-                          style={{ color: '#2F5D50' }}
-                        />
-                      )}
-                      {permissionKey === 'governanceParticipation' && (
-                        <Vote
-                          className="h-5 w-5"
-                          style={{ color: '#3F7A5A' }}
-                        />
-                      )}
-                      {permissionKey === 'eventCreation' && (
-                        <Calendar
-                          className="h-5 w-5"
-                          style={{ color: '#6A5F7A' }}
-                        />
-                      )}
-                      {permissionKey === 'treasuryViewing' && (
-                        <CircleDollarSign
-                          className="h-5 w-5"
-                          style={{ color: '#C6933F' }}
-                        />
-                      )}
-                      {permissionKey === 'treasuryManagement' && (
-                        <HandCoins
-                          className="h-5 w-5"
-                          style={{ color: '#C6933F' }}
-                        />
-                      )}
-                      {permissionKey === 'memberManagement' && (
-                        <Users
-                          className="h-5 w-5"
-                          style={{ color: '#8B3A3A' }}
-                        />
-                      )}
-                      {permissionKey === 'subPodCreation' && (
-                        <Plus
-                          className="h-5 w-5"
-                          style={{ color: '#6A5F7A' }}
-                        />
-                      )}
-                      {permissionKey === 'roleAssignment' && (
-                        <Crown
-                          className="h-5 w-5"
-                          style={{ color: '#C6933F' }}
-                        />
-                      )}
-                      {permissionKey === 'forumModeration' && (
-                        <Landmark
-                          className="h-5 w-5"
-                          style={{ color: '#3F7A5A' }}
-                        />
-                      )}
-                      {permissionKey === 'bountyManagement' && (
-                        <Target
-                          className="h-5 w-5"
-                          style={{ color: '#6A5F7A' }}
-                        />
-                      )}
-                      {permissionKey === 'knowledgeBaseAccess' && (
-                        <BookOpen
-                          className="h-5 w-5"
-                          style={{ color: '#2F5D50' }}
-                        />
-                      )}
-                      {permissionKey === 'knowledgeBaseManage' && (
-                        <BookMarked
-                          className="h-5 w-5"
-                          style={{ color: '#6A5F7A' }}
-                        />
-                      )}
-                      {permissionKey === 'marketplaceAccess' && (
-                        <ArrowRightLeft
-                          className="h-5 w-5"
-                          style={{ color: '#2F5D50' }}
-                        />
-                      )}
-                      {permissionKey === 'marketplaceManage' && (
-                        <Store
-                          className="h-5 w-5"
-                          style={{ color: '#6A5F7A' }}
-                        />
-                      )}
-                      <div>
-                        <span className="font-medium capitalize">
-                          {permissionKey
-                            .replace(/([A-Z])/g, ' $1')
-                            .replace(/^./, (str) => str.toUpperCase())}
-                        </span>
-                        <p className="text-sm text-gray-500">
-                          {permissionKey === 'chatAccess' &&
-                            'Access to community chat and messaging'}
-                          {permissionKey === 'chatModeration' &&
-                            'Moderate chat messages (delete, mute, pin)'}
-                          {permissionKey === 'forumAccess' &&
-                            'View and post in community forum discussions'}
-                          {permissionKey === 'governanceParticipation' &&
-                            'Participate in community governance'}
-                          {permissionKey === 'eventCreation' &&
-                            'Create and manage community events'}
-                          {permissionKey === 'treasuryViewing' &&
-                            'View pod treasury and transactions'}
-                          {permissionKey === 'treasuryManagement' &&
-                            'Manage fund distribution'}
-                          {permissionKey === 'memberManagement' &&
-                            'Manage pod members and roles'}
-                          {permissionKey === 'subPodCreation' &&
-                            'Create and manage sub-pods'}
-                          {permissionKey === 'roleAssignment' &&
-                            'Assign roles to other members'}
-                          {permissionKey === 'forumModeration' &&
-                            'Moderate forum posts and discussions'}
-                          {permissionKey === 'bountyManagement' &&
-                            'Create and manage bounties'}
-                          {permissionKey === 'knowledgeBaseAccess' &&
-                            'View pod knowledge base content'}
-                          {permissionKey === 'knowledgeBaseManage' &&
-                            'Create and manage knowledge base content'}
-                          {permissionKey === 'marketplaceAccess' &&
-                            'View and purchase marketplace products'}
-                          {permissionKey === 'marketplaceManage' &&
-                            'Create, edit, and delete marketplace products'}
-                        </p>
-                      </div>
+          {(() => {
+            // Permission catalog. The bag of all permissions is kept
+            // here so we can render them in semantic groups without a
+            // sprawling switch.
+            type PermissionDef = {
+              key: keyof HatPermissions;
+              label: string;
+              description: string;
+              icon: React.ComponentType<{ className?: string; style?: any }>;
+              color: string;
+            };
+
+            const CORE: PermissionDef[] = [
+              { key: 'chatAccess', label: 'Chat Access', description: 'Read and post in pod chat channels', icon: MessageCircle, color: '#2F5D50' },
+              { key: 'chatModeration', label: 'Chat Moderation', description: 'Delete, mute, pin chat messages', icon: ShieldCheck, color: '#3F7A5A' },
+              { key: 'forumAccess', label: 'Forum Access', description: 'View and post in pod forum', icon: MessageSquare, color: '#2F5D50' },
+              { key: 'forumModeration', label: 'Forum Moderation', description: 'Moderate forum posts and discussions', icon: Landmark, color: '#3F7A5A' },
+              { key: 'governanceParticipation', label: 'Governance Participation', description: 'Vote on pod proposals', icon: Vote, color: '#3F7A5A' },
+              { key: 'memberManagement', label: 'Member Management', description: 'Add/remove members; broad leader access', icon: Users, color: '#8B3A3A' },
+              { key: 'roleAssignment', label: 'Role Assignment', description: 'Assign roles to other members', icon: Crown, color: '#C6933F' },
+              { key: 'subPodCreation', label: 'Sub-Pod Creation', description: 'Create and manage sub-pods', icon: GitBranch, color: '#6A5F7A' },
+              { key: 'eventCreation', label: 'Event Creation', description: 'Create and manage pod events', icon: Calendar, color: '#6A5F7A' },
+              { key: 'bountyManagement', label: 'Bounty Management', description: 'Create and manage bounties', icon: Target, color: '#6A5F7A' },
+              { key: 'marketplaceAccess', label: 'Marketplace Access', description: 'View and purchase marketplace products', icon: ArrowRightLeft, color: '#2F5D50' },
+              { key: 'marketplaceManage', label: 'Marketplace Manage', description: 'Create, edit, delete marketplace products', icon: Store, color: '#6A5F7A' },
+              { key: 'knowledgeBaseAccess', label: 'Knowledge Base Access', description: 'View pod knowledge base content', icon: BookOpen, color: '#2F5D50' },
+              { key: 'knowledgeBaseManage', label: 'Knowledge Base Manage', description: 'Create and manage knowledge base content', icon: BookMarked, color: '#6A5F7A' },
+              { key: 'treasuryViewing', label: 'Treasury Viewing', description: 'View pod treasury balances and history', icon: CircleDollarSign, color: '#C6933F' },
+              { key: 'treasuryManagement', label: 'Treasury Management', description: 'Distribute funds, deploy treasury', icon: HandCoins, color: '#C6933F' },
+            ];
+
+            type GroupDef = {
+              title: string;
+              show: boolean;
+              perms: PermissionDef[];
+              note?: string;
+            };
+            const ADD_ON_GROUPS: GroupDef[] = [
+              {
+                title: 'Surveys',
+                show: moduleFlags.surveys_enabled,
+                perms: [
+                  { key: 'surveyRespond', label: 'Survey Respond', description: 'Respond to surveys distributed in this pod', icon: ClipboardList, color: '#6A5F7A' },
+                  { key: 'surveyManage', label: 'Survey Manage', description: 'Create, edit, and close surveys', icon: ClipboardCheck, color: '#6A5F7A' },
+                ],
+              },
+              {
+                title: 'Password Vault',
+                show: moduleFlags.passwords_enabled,
+                perms: [
+                  { key: 'passwordsAccess', label: 'Passwords Access', description: 'View / decrypt entries shared with this role', icon: KeyRound, color: '#1F453A' },
+                  { key: 'passwordsManage', label: 'Passwords Manage', description: 'Add, edit, delete entries; grant access to newcomers', icon: KeyRound, color: '#C6933F' },
+                ],
+              },
+            ];
+            const PAID_GROUPS: GroupDef[] = [
+              {
+                title: 'Community AI Agent',
+                show: moduleFlags.community_agent_enabled,
+                note: 'Subscription billing stays leader-only regardless of this flag.',
+                perms: [
+                  { key: 'agentManage', label: 'Agent Manage', description: 'Configure the AI agent (persona, channels, posting cadence)', icon: Bot, color: '#7A6E8F' },
+                ],
+              },
+            ];
+
+            const renderRow = (def: PermissionDef) => {
+              const Icon = def.icon;
+              const value = !!permissions[def.key];
+              return (
+                <div
+                  key={def.key}
+                  className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50"
+                >
+                  <div className="flex items-center gap-3">
+                    <Icon className="h-5 w-5" style={{ color: def.color }} />
+                    <div>
+                      <span className="font-medium">{def.label}</span>
+                      <p className="text-sm text-gray-500">{def.description}</p>
                     </div>
-                    <Switch
-                      checked={value}
-                      onCheckedChange={(checked) => {
-                        setPermissions((prev) => ({
-                          ...prev,
-                          [permissionKey]: checked,
-                        }));
-                      }}
-                    />
                   </div>
-                );
-              })}
-            </div>
-          </Card>
+                  <Switch
+                    checked={value}
+                    onCheckedChange={(checked) => {
+                      setPermissions((prev) => ({
+                        ...prev,
+                        [def.key]: checked,
+                      }));
+                    }}
+                  />
+                </div>
+              );
+            };
+
+            const renderGroup = (g: GroupDef) => {
+              if (!g.show) return null;
+              return (
+                <div key={g.title} className="space-y-2">
+                  <div className="flex items-baseline gap-2">
+                    <h5 className="text-sm font-semibold uppercase tracking-wide" style={{ color: '#5F5A54' }}>
+                      {g.title}
+                    </h5>
+                    {g.note && (
+                      <span className="text-xs" style={{ color: '#9B948D' }}>
+                        {g.note}
+                      </span>
+                    )}
+                  </div>
+                  {g.perms.map(renderRow)}
+                </div>
+              );
+            };
+
+            const visibleAddOns = ADD_ON_GROUPS.filter((g) => g.show);
+            const visiblePaid = PAID_GROUPS.filter((g) => g.show);
+
+            return (
+              <Card className="p-6 space-y-6">
+                <h4 className="text-lg font-semibold">Role Permissions</h4>
+
+                {/* Core — always shown */}
+                <div className="space-y-2">
+                  <h5 className="text-sm font-semibold uppercase tracking-wide" style={{ color: '#5F5A54' }}>
+                    Core
+                  </h5>
+                  {CORE.map(renderRow)}
+                </div>
+
+                {/* Add-ons — only if at least one add-on module is enabled */}
+                {visibleAddOns.length > 0 && (
+                  <div className="space-y-4 pt-2 border-t">
+                    <p className="text-xs italic" style={{ color: '#9B948D' }}>
+                      Add-on permissions appear here when the matching module is enabled in Pod Modules.
+                    </p>
+                    {visibleAddOns.map(renderGroup)}
+                  </div>
+                )}
+
+                {/* Paid — only if at least one paid module is enabled */}
+                {visiblePaid.length > 0 && (
+                  <div className="space-y-4 pt-2 border-t">
+                    <p className="text-xs italic" style={{ color: '#9B948D' }}>
+                      Paid module permissions. Billing actions remain leader-only.
+                    </p>
+                    {visiblePaid.map(renderGroup)}
+                  </div>
+                )}
+
+                {/* Helpful hint when nothing extra is on */}
+                {visibleAddOns.length === 0 && visiblePaid.length === 0 && (
+                  <p className="text-xs italic pt-2 border-t" style={{ color: '#9B948D' }}>
+                    Enable add-on or paid modules in Pod Modules to expose
+                    additional permission categories here.
+                  </p>
+                )}
+              </Card>
+            );
+          })()}
         </TabsContent>
 
         {/* Access Requirements Tab */}
