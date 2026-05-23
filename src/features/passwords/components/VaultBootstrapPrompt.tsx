@@ -51,8 +51,8 @@ export function VaultBootstrapPrompt({
           <p className="text-sm mt-1" style={{ color: '#5F5A54' }}>
             To read or store credentials in this pod's vault, your wallet
             needs to derive an encryption key. You'll sign a single
-            message — no transaction, no gas. The signature stays in your
-            browser and is used to derive a key that only you hold.
+            message and the signature stays in your browser and is used
+            to derive a key that only you hold.
           </p>
         </div>
       </div>
@@ -63,11 +63,10 @@ export function VaultBootstrapPrompt({
       >
         <ShieldCheck className="h-4 w-4 mt-0.5 flex-shrink-0" />
         <p>
-          The server stores encrypted blobs only. SpiritDAO operators
-          cannot decrypt your pod's passwords even with database access.
-          End-to-end encryption depends on the integrity of the wallet
-          provider (Coinbase) — your wallet's signature is the root of
-          trust.
+          The server stores encrypted blobs. SpiritDAO operators
+          (Executive Pod / other pods) cannot decrypt your pod's
+          passwords even with database access. Learn more about the
+          end-to-end encryption in our Knowledge Base.
         </p>
       </div>
 

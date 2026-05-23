@@ -484,13 +484,26 @@ export default function PodModulesManager({
             </div>
           )}
 
-        {/* Password Vault panel */}
+        {/* Password Vault — full UI lives in the Passwords tab. The
+            module config shows a summary + link so leaders still have
+            a clear entry point from the Modules surface. */}
         {isExpanded &&
           module.configComponent === 'passwords' &&
           modules.passwords_enabled && (
-            <div className="mt-4">
-              <PasswordVaultPanel podId={podId} isManager={isManager} />
-            </div>
+            <Card className="mt-4 p-4">
+              <p className="text-sm" style={{ color: '#1F1F1F' }}>
+                Password Vault is enabled. Open the{' '}
+                <a
+                  href={`/pods/${podId}/manage?tab=passwords`}
+                  className="underline font-medium"
+                  style={{ color: '#1F453A' }}
+                >
+                  Passwords tab
+                </a>{' '}
+                to add credentials, manage audience, or grant access to
+                new members.
+              </p>
+            </Card>
           )}
 
       </div>

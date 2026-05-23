@@ -37,6 +37,10 @@ interface PodManagementState {
   canManageMembers: boolean;
   canManageTreasury: boolean;
   canEditPod: boolean;
+  // Granular per-feature permissions — surface tabs to non-leader role
+  // holders. canManageMembers is "is leader-ish"; these are the
+  // capability-specific flags.
+  canManagePasswords: boolean;
 
   // UI state
   selectedTab: string;
@@ -139,6 +143,10 @@ export function usePodManagementState({
     error: manageTreasuryError,
   } = useHybridPodPermission(podId, 'treasuryManagement');
 
+  const {
+    hasPermission: canManagePasswords,
+  } = useHybridPodPermission(podId, 'passwordsManage');
+
   // Show treasury tab if user has treasuryManagement permission
   // Users need to see the tab to CREATE a treasury (don't require it to exist first)
   const canManageTreasury = useMemo(() => {
@@ -189,6 +197,7 @@ export function usePodManagementState({
       canManageMembers,
       canManageTreasury,
       canEditPod,
+      canManagePasswords,
 
       // UI state
       selectedTab,
@@ -211,6 +220,7 @@ export function usePodManagementState({
       canManageMembers,
       canManageTreasury,
       canEditPod,
+      canManagePasswords,
       selectedTab,
       memoizedSetSelectedTab,
       refetchPod,

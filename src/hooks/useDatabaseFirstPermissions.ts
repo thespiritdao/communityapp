@@ -134,9 +134,31 @@ export const useDatabaseFirstPermissions =
         // Executive leaders can manage all pods
         if (isExecutiveLeader) return true;
 
-        // Check if user is a leader of this specific pod
         const podMembership = memberships.find((m) => m.podId === podId);
-        return podMembership?.membershipType === 'leader';
+        if (!podMembership) return false;
+
+        // Pod leaders see Manage.
+        if (podMembership.membershipType === 'leader') return true;
+
+        // Non-leader role holders see Manage too if their role grants
+        // any feature-specific *Manage permission. They'll only see the
+        // tabs they can actually use; the gear icon is the entry point.
+        const perms = podMembership.rolePermissions ?? {};
+        const MANAGE_KEYS = [
+          'memberManagement',
+          'treasuryManagement',
+          'bountyManagement',
+          'marketplaceManage',
+          'knowledgeBaseManage',
+          'surveyManage',
+          'passwordsManage',
+          'chatModeration',
+          'forumModeration',
+          'subPodCreation',
+          'roleAssignment',
+          'eventCreation',
+        ];
+        return MANAGE_KEYS.some((k) => perms[k] === true);
       },
       [address, memberships, isExecutiveLeader],
     );

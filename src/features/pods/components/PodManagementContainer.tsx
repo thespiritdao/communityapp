@@ -25,6 +25,7 @@ import {
   Coins,
   ClipboardCheck,
   Bot,
+  KeyRound,
 } from 'lucide-react';
 import { MembersPanel } from './MembersPanel/MembersPanel';
 import { PodManagerControlPanel } from './PodManagerControlPanel';
@@ -39,6 +40,7 @@ import { ClaimsManagementPanel } from './ClaimsManagementPanel';
 import { DonationsManagementPanel } from './DonationsManagementPanel';
 import PodSurveyManager from './PodSurveyManager';
 import PodAgentsPanel from './PodAgentsPanel';
+import { PasswordVaultPanel } from '@/features/passwords/components/PasswordVaultPanel';
 
 import { usePodManagementState } from '../hooks/usePodManagementState';
 import { usePodManagementHandlers } from '../hooks/usePodManagementHandlers';
@@ -67,6 +69,7 @@ const TabContent = React.memo<{
   pod: any;
   canManageMembers: boolean;
   canManageTreasury: boolean;
+  canManagePasswords: boolean;
   isExecPod: boolean;
   onRemoveMember?: (address: string, requiresVote: boolean) => void;
   onPodDeleted?: () => void;
@@ -84,6 +87,7 @@ const TabContent = React.memo<{
     pod,
     canManageMembers,
     canManageTreasury,
+    canManagePasswords,
     isExecPod,
     onRemoveMember,
     onPodDeleted,
@@ -228,6 +232,16 @@ const TabContent = React.memo<{
           </div>
         );
 
+      case 'passwords':
+        return (
+          <div className="p-6">
+            <PasswordVaultPanel
+              podId={podId}
+              isManager={canManagePasswords}
+            />
+          </div>
+        );
+
       default:
         return null;
     }
@@ -246,10 +260,12 @@ const TabNavigation = React.memo<{
   leaderCount: number;
   canManageMembers: boolean;
   canManageTreasury: boolean;
+  canManagePasswords: boolean;
   subPodsEnabled?: boolean;
   isExecPod?: boolean;
   surveysEnabled?: boolean;
   agentEnabled?: boolean;
+  passwordsEnabled?: boolean;
 }>(
   ({
     activeTab,
@@ -258,10 +274,12 @@ const TabNavigation = React.memo<{
     leaderCount,
     canManageMembers,
     canManageTreasury,
+    canManagePasswords,
     subPodsEnabled = false,
     isExecPod = false,
     surveysEnabled = false,
     agentEnabled = false,
+    passwordsEnabled = false,
   }) => {
     const tabs = React.useMemo(
       () => [
@@ -354,6 +372,18 @@ const TabNavigation = React.memo<{
           enabled: canManageMembers && agentEnabled,
         },
         {
+          id: 'passwords',
+          label: 'Passwords',
+          mobileLabel: 'Vault',
+          icon: KeyRound,
+          badge: null,
+          // Visible when the module is on AND the caller has either
+          // passwordsManage (non-leader managers) or general leader
+          // access. Read-only members still reach the vault via the
+          // module's own permission checks inside the panel.
+          enabled: passwordsEnabled && (canManagePasswords || canManageMembers),
+        },
+        {
           id: 'pod_settings',
           label: 'Pod Settings',
           mobileLabel: 'Settings',
@@ -370,7 +400,7 @@ const TabNavigation = React.memo<{
           enabled: canManageMembers,
         },
       ],
-      [memberCount, leaderCount, canManageMembers, canManageTreasury, subPodsEnabled, isExecPod, surveysEnabled, agentEnabled],
+      [memberCount, leaderCount, canManageMembers, canManageTreasury, canManagePasswords, subPodsEnabled, isExecPod, surveysEnabled, agentEnabled, passwordsEnabled],
     );
 
     // Add a small loading state to prevent layout shift
@@ -559,6 +589,7 @@ export const PodManagementContainer = React.memo<PodManagementContainerProps>(
       isLoadingMembers,
       canManageMembers,
       canManageTreasury,
+      canManagePasswords,
       selectedTab,
       setSelectedTab,
     } = usePodManagementState({ podId, userAddress, initialTab });
@@ -609,6 +640,7 @@ export const PodManagementContainer = React.memo<PodManagementContainerProps>(
     const [subPodsEnabled, setSubPodsEnabled] = React.useState(false);
     const [surveysEnabled, setSurveysEnabled] = React.useState(false);
     const [agentEnabled, setAgentEnabled] = React.useState(false);
+    const [passwordsEnabled, setPasswordsEnabled] = React.useState(false);
 
     React.useEffect(() => {
       if (!podId) return;
@@ -623,6 +655,7 @@ export const PodManagementContainer = React.memo<PodManagementContainerProps>(
               setSubPodsEnabled(json.modules?.sub_pods_enabled ?? false);
               setSurveysEnabled(json.modules?.surveys_enabled ?? false);
               setAgentEnabled(json.modules?.community_agent_enabled ?? false);
+              setPasswordsEnabled(json.modules?.passwords_enabled ?? false);
             })
             .catch(() => {});
         });
@@ -634,6 +667,7 @@ export const PodManagementContainer = React.memo<PodManagementContainerProps>(
       if (moduleKey === 'surveys_enabled') setSurveysEnabled(enabled);
       if (moduleKey === 'community_agent_enabled') setAgentEnabled(enabled);
       if (moduleKey === 'sub_pods_enabled') setSubPodsEnabled(enabled);
+      if (moduleKey === 'passwords_enabled') setPasswordsEnabled(enabled);
     }, []);
 
     return (
@@ -649,10 +683,12 @@ export const PodManagementContainer = React.memo<PodManagementContainerProps>(
             leaderCount={leaderCount}
             canManageMembers={canManageMembers}
             canManageTreasury={canManageTreasury}
+            canManagePasswords={canManagePasswords}
             subPodsEnabled={subPodsEnabled}
             isExecPod={isExecPod}
             surveysEnabled={surveysEnabled}
             agentEnabled={agentEnabled}
+            passwordsEnabled={passwordsEnabled}
           />
 
           <TabContent
@@ -667,6 +703,7 @@ export const PodManagementContainer = React.memo<PodManagementContainerProps>(
             pod={pod}
             canManageMembers={canManageMembers}
             canManageTreasury={canManageTreasury}
+            canManagePasswords={canManagePasswords}
             isExecPod={isExecPod}
             onRemoveMember={handleRemoveMember}
             onPodDeleted={handlePodDeleted}

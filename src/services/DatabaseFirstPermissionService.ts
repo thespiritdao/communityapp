@@ -39,6 +39,10 @@ export interface PodMembership {
   hatId: string;
   isActive: boolean;
   joinedAt: string;
+  /** Per-feature permission flags for this membership's role. Optional
+   *  because not every caller loads them. Populated by
+   *  getUserPodMemberships via the pod_role_permissions join. */
+  rolePermissions?: Record<string, boolean>;
 }
 
 export interface PermissionCheckResult {
@@ -81,6 +85,33 @@ export class DatabaseFirstPermissionService {
         return [];
       }
 
+      // Pull per-hat permission flags so callers can answer "does this
+      // user have any *Manage capability in pod X?" without an extra
+      // round-trip. Permissions are keyed by (pod_id, token_address)
+      // where token_address = the hat_id on the membership.
+      const podIds = Array.from(
+        new Set((data || []).map((r) => r.pod_id).filter(Boolean)),
+      );
+      const hatIds = Array.from(
+        new Set((data || []).map((r) => r.hat_id).filter(Boolean)),
+      );
+      let permissionsByKey = new Map<string, Record<string, boolean>>();
+      if (podIds.length > 0 && hatIds.length > 0) {
+        const { data: roleRows } = await supabase
+          .from('pod_role_permissions')
+          .select('pod_id, token_address, permissions')
+          .in('pod_id', podIds)
+          .in('token_address', hatIds);
+        for (const r of roleRows ?? []) {
+          if (r.pod_id && r.token_address) {
+            permissionsByKey.set(
+              `${r.pod_id}::${r.token_address}`,
+              (r.permissions as Record<string, boolean>) ?? {},
+            );
+          }
+        }
+      }
+
       const memberships: PodMembership[] = (data || []).map((record) => ({
         podId: record.pod_id,
         podName: record.pod_name,
@@ -88,6 +119,8 @@ export class DatabaseFirstPermissionService {
         hatId: record.hat_id,
         isActive: record.is_active,
         joinedAt: record.joined_at,
+        rolePermissions:
+          permissionsByKey.get(`${record.pod_id}::${record.hat_id}`) ?? {},
       }));
 
       const loadTime = Date.now() - startTime;
