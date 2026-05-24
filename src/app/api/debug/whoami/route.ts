@@ -122,6 +122,61 @@ export async function GET(req: NextRequest) {
     vaultHasPubkeyForCdpWallet = vaultHasPubkeyForJwtWallet;
   }
 
+  // Optional ?probe=0x... — for an arbitrary address (e.g. the CDP
+  // wallet showing on a device), check whether it appears anywhere in
+  // tables that store wallet addresses. Lets us answer empirically:
+  // "has this rogue CDP wallet ever written anything to our DB?"
+  const probeAddress = (url.searchParams.get('probe') ?? '').toLowerCase();
+  let probeResults: Array<{
+    table: string;
+    column: string;
+    count: number;
+    error?: string;
+  }> | null = null;
+
+  if (probeAddress && /^0x[a-f0-9]{40}$/.test(probeAddress)) {
+    const tablesToProbe: Array<{ table: string; column: string }> = [
+      { table: 'user_profiles', column: 'wallet_address' },
+      { table: 'pod_members', column: 'wallet' },
+      { table: 'pod_leads', column: 'wallet' }, // pod_leads stored on pods row, but try as table too
+      { table: 'governance_user_votes', column: 'voter_address' },
+      { table: 'governance_votes', column: 'voter_address' },
+      { table: 'event_registrations', column: 'wallet_address' },
+      { table: 'event_check_ins', column: 'wallet_address' },
+      { table: 'pod_applications', column: 'applicant_wallet' },
+      { table: 'pod_application_votes', column: 'voter_wallet' },
+      { table: 'forum_posts', column: 'author_wallet' },
+      { table: 'forum_threads', column: 'author_wallet' },
+      { table: 'chat_messages', column: 'sender_wallet_id' },
+      { table: 'bounty_bids', column: 'bidder_wallet' },
+      { table: 'notifications', column: 'recipient_wallet' },
+      { table: 'explorer_events', column: 'actor' },
+      { table: 'vault_user_keys', column: 'eoa_address' },
+      { table: 'vault_wrapped_keys', column: 'recipient_eoa' },
+    ];
+    probeResults = [];
+    for (const { table, column } of tablesToProbe) {
+      try {
+        const { count, error } = await supabaseAdmin
+          .from(table)
+          .select('*', { count: 'exact', head: true })
+          .eq(column, probeAddress);
+        if (error) {
+          probeResults.push({ table, column, count: 0, error: error.message });
+        } else {
+          probeResults.push({ table, column, count: count ?? 0 });
+        }
+      } catch (e: any) {
+        probeResults.push({
+          table,
+          column,
+          count: 0,
+          error: e?.message ?? 'unknown',
+        });
+      }
+    }
+  }
+
   return NextResponse.json({
     userId,
     jwtWallet: jwtLc,
@@ -135,6 +190,8 @@ export async function GET(req: NextRequest) {
       hasPubkeyForJwtWallet: vaultHasPubkeyForJwtWallet,
       hasPubkeyForCdpWallet: vaultHasPubkeyForCdpWallet,
     },
+    probeAddress: probeAddress || null,
+    probeResults,
     diagnosis: diagnose(jwtLc, profileLc, cdpWallet, mismatches),
   });
 }

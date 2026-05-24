@@ -16,6 +16,13 @@ import { useEffect, useState } from 'react';
 import { useCurrentUser } from '@coinbase/cdp-hooks';
 import { supabase } from '@/utils/supabaseClient';
 
+interface ProbeResult {
+  table: string;
+  column: string;
+  count: number;
+  error?: string;
+}
+
 interface WhoamiResponse {
   userId: string | null;
   jwtWallet: string | null;
@@ -32,6 +39,8 @@ interface WhoamiResponse {
     hasPubkeyForJwtWallet: boolean;
     hasPubkeyForCdpWallet: boolean;
   };
+  probeAddress: string | null;
+  probeResults: ProbeResult[] | null;
   diagnosis: string;
 }
 
@@ -40,35 +49,39 @@ export default function WhoamiPage() {
   const [result, setResult] = useState<WhoamiResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [probing, setProbing] = useState(false);
 
   // CDP wallet (raw, lowercase for comparison)
   const cdpWallet = currentUser?.evmAccounts?.[0]?.toLowerCase() ?? null;
   const cdpWalletOriginal = currentUser?.evmAccounts?.[0] ?? null;
 
+  const callWhoami = async (probe?: string): Promise<void> => {
+    const { data: sessionData } = await supabase.auth.getSession();
+    const accessToken = sessionData.session?.access_token;
+    if (!accessToken) {
+      throw new Error(
+        'No Supabase session. Sign in to the app first, then reload this page.',
+      );
+    }
+    const params = new URLSearchParams();
+    if (cdpWallet) params.set('cdpWallet', cdpWallet);
+    if (probe) params.set('probe', probe);
+    const url = `/api/debug/whoami${params.toString() ? `?${params}` : ''}`;
+    const res = await fetch(url, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+    const json = await res.json();
+    if (!res.ok) {
+      throw new Error(json?.error ?? `Request failed (${res.status})`);
+    }
+    setResult(json);
+  };
+
   useEffect(() => {
     let cancelled = false;
     (async () => {
       try {
-        const { data: sessionData } = await supabase.auth.getSession();
-        const accessToken = sessionData.session?.access_token;
-        if (!accessToken) {
-          throw new Error(
-            'No Supabase session. Sign in to the app first, then reload this page.',
-          );
-        }
-
-        const url = cdpWallet
-          ? `/api/debug/whoami?cdpWallet=${encodeURIComponent(cdpWallet)}`
-          : '/api/debug/whoami';
-
-        const res = await fetch(url, {
-          headers: { Authorization: `Bearer ${accessToken}` },
-        });
-        const json = await res.json();
-        if (!res.ok) {
-          throw new Error(json?.error ?? `Request failed (${res.status})`);
-        }
-        if (!cancelled) setResult(json);
+        if (!cancelled) await callWhoami();
       } catch (e: any) {
         if (!cancelled) setError(e?.message || 'Unknown error');
       } finally {
@@ -78,7 +91,21 @@ export default function WhoamiPage() {
     return () => {
       cancelled = true;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cdpWallet]);
+
+  const probeCdpWallet = async () => {
+    if (!cdpWallet) return;
+    setProbing(true);
+    setError(null);
+    try {
+      await callWhoami(cdpWallet);
+    } catch (e: any) {
+      setError(e?.message || 'Probe failed');
+    } finally {
+      setProbing(false);
+    }
+  };
 
   return (
     <div style={{ padding: 24, maxWidth: 720, margin: '0 auto', fontFamily: 'system-ui, sans-serif' }}>
@@ -168,6 +195,67 @@ export default function WhoamiPage() {
               value={result.profileCreatedAt}
               subtle
             />
+          </Section>
+
+          <Section title="Probe the CDP wallet across the DB">
+            <p style={{ fontSize: 13, color: '#5F5A54', marginBottom: 8 }}>
+              Check whether <code>{result.cdpWallet}</code> has ever
+              written anything to any wallet-bearing table. If every
+              count is 0, this CDP wallet has never been used for any
+              on-chain attribution in the app.
+            </p>
+            <button
+              onClick={probeCdpWallet}
+              disabled={probing || !result.cdpWallet}
+              style={{
+                padding: '8px 12px',
+                borderRadius: 6,
+                background: '#1F453A',
+                color: '#fff',
+                border: 'none',
+                cursor: probing ? 'not-allowed' : 'pointer',
+                fontSize: 13,
+                marginBottom: 12,
+              }}
+            >
+              {probing ? 'Probing…' : 'Probe this CDP wallet'}
+            </button>
+
+            {result.probeResults && (
+              <div style={{ marginTop: 8 }}>
+                <p style={{ fontSize: 12, color: '#5F5A54', marginBottom: 6 }}>
+                  Probing: <code>{result.probeAddress}</code>
+                </p>
+                {result.probeResults.map((p) => (
+                  <div
+                    key={`${p.table}-${p.column}`}
+                    style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      padding: '4px 0',
+                      borderBottom: '1px solid #eee',
+                      fontSize: 12,
+                    }}
+                  >
+                    <span style={{ color: '#444' }}>
+                      {p.table}.{p.column}
+                    </span>
+                    <code
+                      style={{
+                        color: p.error
+                          ? '#9B948D'
+                          : p.count > 0
+                            ? '#7A2E2E'
+                            : '#3F7A5A',
+                        fontWeight: p.count > 0 ? 600 : 400,
+                      }}
+                    >
+                      {p.error ? `(${p.error})` : p.count}
+                    </code>
+                  </div>
+                ))}
+              </div>
+            )}
           </Section>
 
           <details style={{ marginTop: 24 }}>
