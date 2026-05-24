@@ -15,6 +15,9 @@
 import { useEffect, useState } from 'react';
 import { useCurrentUser } from '@coinbase/cdp-hooks';
 import { supabase } from '@/utils/supabaseClient';
+import { useHybridPodPermission } from '@/hooks/useHybridPodPermission';
+
+const EXEC_POD_ID = 'e35c9e25-d29f-4988-b1e8-2902e960b94c';
 
 interface ProbeResult {
   table: string;
@@ -76,6 +79,20 @@ export default function WhoamiPage() {
   // CDP wallet (raw, lowercase for comparison)
   const cdpWallet = currentUser?.evmAccounts?.[0]?.toLowerCase() ?? null;
   const cdpWalletOriginal = currentUser?.evmAccounts?.[0] ?? null;
+  // Show all evmAccounts so we can detect when CDP exposes multiple
+  const cdpAllAccounts = (currentUser?.evmAccounts ?? []) as string[];
+
+  // Run the actual permission hook so we can see exactly what it
+  // resolves on this device. Hardcoded to passwordsManage on the Exec
+  // Pod for now — the case we're debugging.
+  const passwordsManageCheck = useHybridPodPermission(
+    EXEC_POD_ID,
+    'passwordsManage',
+  );
+  const passwordsAccessCheck = useHybridPodPermission(
+    EXEC_POD_ID,
+    'passwordsAccess',
+  );
 
   const callWhoami = async (probe?: string): Promise<void> => {
     const { data: sessionData } = await supabase.auth.getSession();
@@ -334,6 +351,65 @@ export default function WhoamiPage() {
                 ))}
               </div>
             )}
+          </Section>
+
+          <Section title="CDP wallets exposed on this device">
+            <p style={{ fontSize: 12, color: '#5F5A54', marginBottom: 6 }}>
+              CDP can expose more than one wallet per user. Index [0]
+              is what most app code reads, but it's worth knowing the
+              full list.
+            </p>
+            {cdpAllAccounts.length === 0 && (
+              <p style={{ fontSize: 12, color: '#9B948D' }}>None</p>
+            )}
+            {cdpAllAccounts.map((a, i) => (
+              <div
+                key={a}
+                style={{
+                  padding: '4px 0',
+                  fontSize: 12,
+                  fontFamily: 'monospace',
+                  color: '#1F1F1F',
+                }}
+              >
+                [{i}] {a}
+              </div>
+            ))}
+          </Section>
+
+          <Section title="useHybridPodPermission resolution (Exec Pod)">
+            <p style={{ fontSize: 12, color: '#5F5A54', marginBottom: 6 }}>
+              This is exactly what gates the &quot;Add password&quot;
+              button. If any line returns false, the manage UI hides.
+            </p>
+            <Row
+              label="passwordsAccess (loading)"
+              value={passwordsAccessCheck.isLoading ? 'yes' : 'no'}
+            />
+            <Row
+              label="passwordsAccess (hasPermission)"
+              value={passwordsAccessCheck.hasPermission ? 'YES ✓' : 'NO'}
+              bad={!passwordsAccessCheck.hasPermission && !passwordsAccessCheck.isLoading}
+            />
+            <Row
+              label="passwordsAccess (error)"
+              value={passwordsAccessCheck.error ?? 'none'}
+              subtle={!passwordsAccessCheck.error}
+            />
+            <Row
+              label="passwordsManage (loading)"
+              value={passwordsManageCheck.isLoading ? 'yes' : 'no'}
+            />
+            <Row
+              label="passwordsManage (hasPermission)"
+              value={passwordsManageCheck.hasPermission ? 'YES ✓' : 'NO'}
+              bad={!passwordsManageCheck.hasPermission && !passwordsManageCheck.isLoading}
+            />
+            <Row
+              label="passwordsManage (error)"
+              value={passwordsManageCheck.error ?? 'none'}
+              subtle={!passwordsManageCheck.error}
+            />
           </Section>
 
           <Section title="Vault state">
