@@ -89,9 +89,19 @@ export function useVaultIdentity(): UseVaultIdentityResult {
   const { currentUser } = useCurrentUser();
   const { signEvmMessage } = useSignEvmMessage();
 
-  const eoaAddress = useMemo<string | null>(
-    () => currentUser?.evmAccounts?.[0]?.toLowerCase() ?? null,
+  // CDP returns checksummed addresses on currentUser.evmAccounts. We keep
+  // BOTH forms: the lowercase one is canonical for caching keys, server
+  // pubkey lookups, and AAD binding; the original checksummed form is
+  // required when calling signEvmMessage (CDP does an exact-match lookup
+  // against its account list and throws "EVM account not found" on a
+  // case mismatch).
+  const eoaAddressOriginal = useMemo<string | null>(
+    () => currentUser?.evmAccounts?.[0] ?? null,
     [currentUser],
+  );
+  const eoaAddress = useMemo<string | null>(
+    () => eoaAddressOriginal?.toLowerCase() ?? null,
+    [eoaAddressOriginal],
   );
 
   const [identity, setIdentity] = useState<IdentityKeypair | null>(null);
@@ -174,8 +184,10 @@ export function useVaultIdentity(): UseVaultIdentityResult {
 
   // 2) Bootstrap = sign canonical message, derive keypair, publish pubkey.
   const bootstrap = useCallback(async () => {
-    if (!eoaAddress) {
-      setError('No EVM account available on the connected CDP user.');
+    if (!eoaAddress || !eoaAddressOriginal) {
+      setError(
+        'Wallet account not ready. If you just signed in on this device, give it a few seconds and try again.',
+      );
       setStatus('error');
       return;
     }
@@ -187,9 +199,12 @@ export function useVaultIdentity(): UseVaultIdentityResult {
       if (cached) {
         kp = cached;
       } else {
+        // Canonical message uses the lowercase address (deterministic across
+        // case variations). Signing uses the checksummed original because
+        // CDP's account lookup is case-sensitive.
         const message = buildCanonicalIdentityMessage(eoaAddress);
         const { signature } = await signEvmMessage({
-          evmAccount: eoaAddress as `0x${string}`,
+          evmAccount: eoaAddressOriginal as `0x${string}`,
           message,
         });
         kp = deriveIdentityKeypair(signature);
@@ -228,7 +243,7 @@ export function useVaultIdentity(): UseVaultIdentityResult {
       setError(e?.message || 'Bootstrap failed');
       setStatus('error');
     }
-  }, [eoaAddress, signEvmMessage]);
+  }, [eoaAddress, eoaAddressOriginal, signEvmMessage]);
 
   const clear = useCallback(() => {
     if (eoaAddress) clearCachedIdentity(eoaAddress);
