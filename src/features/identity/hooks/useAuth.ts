@@ -5,17 +5,34 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 import { supabase } from '@/utils/supabaseClient';
 import type { Session } from '@supabase/supabase-js';
 
+/**
+ * Set when /api/auth/onchainkit responds with requiresLinking: true,
+ * meaning the current CDP wallet is unrecognized but the user's email
+ * matches an existing account. UI should prompt the user to enter a
+ * one-time code from a known device. See docs/spec-platform-identity-multi-wallet.md.
+ */
+export interface LinkingRequired {
+  userId: string;
+  existingEmail: string | null;
+  unrecognizedWallet: string;
+  message: string;
+}
+
 interface AuthState {
   session: Session | null;
   loading: boolean;
   error: Error | null;
   isAuthenticated: boolean;
+  /** Non-null when the current CDP wallet must be linked before sign-in completes. */
+  linkingRequired: LinkingRequired | null;
 }
 
 interface UseAuthReturn extends AuthState {
   signIn: (walletAddress: string, email?: string) => Promise<void>;
   signOut: () => Promise<void>;
   refreshSession: () => Promise<void>;
+  /** Called after a successful link-confirm; clears the linkingRequired state. */
+  clearLinkingRequired: () => void;
 }
 
 // Singleton pattern to ensure only one auth state across the app
@@ -35,6 +52,7 @@ export function useAuth(): UseAuthReturn {
         loading: true,
         error: null,
         isAuthenticated: false,
+        linkingRequired: null,
       },
   );
 
@@ -87,6 +105,7 @@ export function useAuth(): UseAuthReturn {
           loading: false,
           error: null,
           isAuthenticated: !!session,
+          linkingRequired: null,
         };
 
         notifyAuthStateListeners(newState);
@@ -96,6 +115,7 @@ export function useAuth(): UseAuthReturn {
           loading: false,
           error: error as Error,
           isAuthenticated: false,
+          linkingRequired: null,
         };
 
         notifyAuthStateListeners(newState);
@@ -113,6 +133,7 @@ export function useAuth(): UseAuthReturn {
         loading: false,
         error: null,
         isAuthenticated: !!session,
+        linkingRequired: null,
       };
 
       notifyAuthStateListeners(newState);
@@ -197,7 +218,32 @@ export function useAuth(): UseAuthReturn {
           throw lastError || new Error('Authentication failed after retries');
         }
 
-        const { supabaseToken, supabaseRefreshToken } = await response.json();
+        const body = await response.json();
+
+        // Multi-wallet linking required: server recognized the email
+        // but not the CDP wallet. Surface this to the UI; the user must
+        // enter a code from an already-linked device before sign-in
+        // can complete. See docs/spec-platform-identity-multi-wallet.md.
+        if (body?.requiresLinking) {
+          console.warn('🔗 Auth: requiresLinking response received', body);
+          notifyAuthStateListeners({
+            session: null,
+            loading: false,
+            error: null,
+            isAuthenticated: false,
+            linkingRequired: {
+              userId: body.userId,
+              existingEmail: body.existingEmail ?? null,
+              unrecognizedWallet: body.unrecognizedWallet,
+              message:
+                body.message ??
+                'This device isn\'t linked to your account yet.',
+            },
+          });
+          return;
+        }
+
+        const { supabaseToken, supabaseRefreshToken } = body;
 
         console.log('✅ Auth: Received tokens, setting session...');
 
@@ -217,6 +263,7 @@ export function useAuth(): UseAuthReturn {
           loading: false,
           error: null,
           isAuthenticated: true,
+          linkingRequired: null,
         };
 
         console.log('✅ Auth: Session created successfully');
@@ -229,6 +276,7 @@ export function useAuth(): UseAuthReturn {
           loading: false,
           error: error as Error,
           isAuthenticated: false,
+          linkingRequired: null,
         };
 
         notifyAuthStateListeners(newState);
@@ -251,6 +299,7 @@ export function useAuth(): UseAuthReturn {
         loading: false,
         error: null,
         isAuthenticated: false,
+        linkingRequired: null,
       };
 
       console.log('✅ Auth: Signed out successfully');
@@ -286,6 +335,7 @@ export function useAuth(): UseAuthReturn {
         loading: false,
         error: null,
         isAuthenticated: !!session,
+        linkingRequired: null,
       };
 
       notifyAuthStateListeners(newState);
@@ -295,16 +345,25 @@ export function useAuth(): UseAuthReturn {
         loading: false,
         error: error as Error,
         isAuthenticated: false,
+        linkingRequired: null,
       };
 
       notifyAuthStateListeners(newState);
     }
   }, []); // stable reference — reads authState via authStateRef
 
+  const clearLinkingRequired = useCallback(() => {
+    notifyAuthStateListeners({
+      ...authStateRef.current,
+      linkingRequired: null,
+    });
+  }, []);
+
   return {
     ...authState,
     signIn,
     signOut,
     refreshSession,
+    clearLinkingRequired,
   };
 }

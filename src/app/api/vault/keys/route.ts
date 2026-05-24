@@ -15,6 +15,7 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/utils/supabaseAdminClient';
 import jwt from 'jsonwebtoken';
+import { authorizeOwnedWallet } from '@/services/walletAuthService';
 
 export const runtime = 'nodejs';
 
@@ -83,15 +84,6 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  const authHeader = req.headers.get('authorization');
-  const callerWallet = getWalletFromAuthHeader(authHeader);
-  if (!callerWallet) {
-    return NextResponse.json(
-      { error: 'authentication required' },
-      { status: 401 },
-    );
-  }
-
   let body: { eoaAddress?: string; publicKey?: string };
   try {
     body = await req.json();
@@ -113,12 +105,12 @@ export async function POST(req: NextRequest) {
       { status: 400 },
     );
   }
-  if (eoa !== callerWallet) {
-    return NextResponse.json(
-      { error: 'can only publish your own vault key' },
-      { status: 403 },
-    );
-  }
+
+  // Multi-wallet aware: caller can publish a vault pubkey for ANY of
+  // their linked wallets, not just the JWT's canonical one. Mobile
+  // users with a linked non-canonical CDP wallet need this.
+  const auth = await authorizeOwnedWallet(req, eoa);
+  if (!auth.ok) return auth.response;
 
   // Upsert — same user may republish if they re-bootstrap.
   const { error } = await supabaseAdmin.from('vault_user_keys').upsert(
