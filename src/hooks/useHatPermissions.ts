@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useEvmAddress } from '@coinbase/cdp-hooks';
 import { usePublicClient } from 'wagmi';
 import { useTokenBalances } from '../context/TokenBalancesContext';
+import { useAuthContext } from '@/features/identity/components/AuthProvider';
 import {
   type HatPermissions,
   type HatRole,
@@ -49,7 +50,20 @@ interface UseHatPermissionsReturn {
  * Replaces database-driven permission checking with on-chain verification
  */
 export const useHatPermissions = (): UseHatPermissionsReturn => {
-  const { evmAddress: address } = useEvmAddress();
+  const { evmAddress: cdpAddress } = useEvmAddress();
+  const { session } = useAuthContext();
+  // Prefer the canonical wallet (from the Supabase JWT) for pod
+  // membership lookups. CDP creates per-device wallets that don't own
+  // the user's hats — those are held by the canonical wallet
+  // established at signup. active_pod_members is keyed on the
+  // canonical address, so reading evmAccounts[0] directly returns 0
+  // memberships on any non-canonical device.
+  // See docs/spec-platform-identity-multi-wallet.md.
+  const canonicalWallet = (
+    session?.user?.user_metadata?.wallet_address as string | undefined
+  )?.toLowerCase();
+  const address = canonicalWallet ?? cdpAddress;
+
   const publicClient = usePublicClient();
   const {
     balances,
