@@ -58,21 +58,29 @@ export async function GET(req: NextRequest) {
     null;
   const userId = payload?.sub ?? null;
 
-  // Look up the canonical profile row
+  // Look up the canonical profile row. Use SELECT * and pluck so a
+  // missing/renamed column doesn't silently zero out the result.
   let profileWallet: string | null = null;
   let profileEmail: string | null = null;
   let profileCreatedAt: string | null = null;
+  let profileLookupError: string | null = null;
 
   if (userId) {
     const { data, error } = await supabaseAdmin
       .from('user_profiles')
-      .select('wallet_address, email, created_at')
+      .select('*')
       .eq('user_id', userId)
       .maybeSingle();
-    if (!error && data) {
-      profileWallet = data.wallet_address ?? null;
-      profileEmail = data.email ?? null;
-      profileCreatedAt = data.created_at ?? null;
+    if (error) {
+      profileLookupError = error.message;
+    } else if (data) {
+      profileWallet = (data as any).wallet_address ?? null;
+      profileEmail = (data as any).email ?? null;
+      profileCreatedAt =
+        (data as any).created_at ??
+        (data as any).onboarded_at ??
+        (data as any).tos_signed_at ??
+        null;
     }
   }
 
@@ -120,6 +128,7 @@ export async function GET(req: NextRequest) {
     profileWallet: profileLc,
     profileEmail,
     profileCreatedAt,
+    profileLookupError,
     cdpWallet,
     mismatches,
     vault: {
