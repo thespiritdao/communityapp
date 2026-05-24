@@ -99,6 +99,36 @@ export async function GET(req: NextRequest) {
     profileVsCdp: !!profileLc && !!cdpWallet && profileLc !== cdpWallet,
   };
 
+  // Look up the user's linked wallets — the post-Phase-1 source of
+  // truth for "is this caller the same user as this address?"
+  let linkedWallets: Array<{
+    walletAddress: string;
+    isCanonical: boolean;
+    nickname: string | null;
+    linkedAt: string;
+  }> = [];
+  let cdpWalletIsLinked = false;
+  if (userId) {
+    const { data, error: linkedError } = await supabaseAdmin
+      .from('user_wallets')
+      .select('wallet_address, is_canonical, nickname, linked_at')
+      .eq('user_id', userId)
+      .order('is_canonical', { ascending: false });
+    if (!linkedError && data) {
+      linkedWallets = data.map((w: any) => ({
+        walletAddress: w.wallet_address,
+        isCanonical: w.is_canonical === true,
+        nickname: w.nickname ?? null,
+        linkedAt: w.linked_at,
+      }));
+      if (cdpWallet) {
+        cdpWalletIsLinked = linkedWallets.some(
+          (w) => w.walletAddress === cdpWallet,
+        );
+      }
+    }
+  }
+
   // Look up the user's vault_user_keys row to show whether the JWT
   // wallet has already published a vault pubkey.
   let vaultHasPubkeyForJwtWallet = false;
@@ -186,13 +216,15 @@ export async function GET(req: NextRequest) {
     profileLookupError,
     cdpWallet,
     mismatches,
+    linkedWallets,
+    cdpWalletIsLinked,
     vault: {
       hasPubkeyForJwtWallet: vaultHasPubkeyForJwtWallet,
       hasPubkeyForCdpWallet: vaultHasPubkeyForCdpWallet,
     },
     probeAddress: probeAddress || null,
     probeResults,
-    diagnosis: diagnose(jwtLc, profileLc, cdpWallet, mismatches),
+    diagnosis: diagnose(jwtLc, profileLc, cdpWallet, mismatches, cdpWalletIsLinked, linkedWallets.length),
   });
 }
 
@@ -201,6 +233,8 @@ function diagnose(
   profileWallet: string | null,
   cdpWallet: string | null,
   mismatches: { jwtVsProfile: boolean; jwtVsCdp: boolean; profileVsCdp: boolean },
+  cdpWalletIsLinked: boolean,
+  linkedWalletsCount: number,
 ): string {
   if (!jwtWallet) {
     return 'JWT has no wallet_address claim — auth token may be malformed.';
@@ -214,8 +248,11 @@ function diagnose(
   if (mismatches.jwtVsProfile) {
     return 'JWT wallet differs from profile wallet — auth/onchainkit returned a non-canonical wallet in the JWT. This is a server-side bug.';
   }
-  if (mismatches.jwtVsCdp) {
-    return 'JWT wallet (canonical) differs from CDP wallet (current session). This is the cross-device identity-mismatch case. Vault bootstrap will 403 because the request body uses the CDP wallet but the JWT carries the canonical wallet. See spec-vault-multi-wallet-identity.md.';
+  if (cdpWalletIsLinked) {
+    return `Healthy. The CDP wallet on this device is linked to your account (you have ${linkedWalletsCount} linked wallet${linkedWalletsCount === 1 ? '' : 's'}). JWT carries the canonical wallet for backwards compat — that ≠ CDP-on-this-device is expected and not a bug post-Phase-1.`;
   }
-  return 'All three identities match. No mismatch detected.';
+  if (mismatches.jwtVsCdp) {
+    return `CDP wallet (${cdpWallet}) is NOT in your user_wallets. The link either hasn't happened or didn't persist. Issue a code on a linked device and confirm it here. You currently have ${linkedWalletsCount} linked wallet${linkedWalletsCount === 1 ? '' : 's'}.`;
+  }
+  return 'All identities match. No mismatch detected.';
 }

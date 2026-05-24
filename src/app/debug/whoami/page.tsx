@@ -23,6 +23,13 @@ interface ProbeResult {
   error?: string;
 }
 
+interface LinkedWallet {
+  walletAddress: string;
+  isCanonical: boolean;
+  nickname: string | null;
+  linkedAt: string;
+}
+
 interface WhoamiResponse {
   userId: string | null;
   jwtWallet: string | null;
@@ -35,6 +42,8 @@ interface WhoamiResponse {
     jwtVsCdp: boolean;
     profileVsCdp: boolean;
   };
+  linkedWallets: LinkedWallet[];
+  cdpWalletIsLinked: boolean;
   vault: {
     hasPubkeyForJwtWallet: boolean;
     hasPubkeyForCdpWallet: boolean;
@@ -260,6 +269,71 @@ export default function WhoamiPage() {
               value={result.mismatches.profileVsCdp ? 'MISMATCH' : 'match'}
               bad={result.mismatches.profileVsCdp}
             />
+          </Section>
+
+          <Section title="Linked wallets (user_wallets table)" highlight={!result.cdpWalletIsLinked && (result.linkedWallets?.length ?? 0) > 0}>
+            <p style={{ fontSize: 13, color: '#5F5A54', marginBottom: 8 }}>
+              CDP wallet on this device:{' '}
+              <code>{result.cdpWallet ?? 'none'}</code> —{' '}
+              <strong
+                style={{
+                  color: result.cdpWalletIsLinked ? '#3F7A5A' : '#7A2E2E',
+                }}
+              >
+                {result.cdpWalletIsLinked ? 'LINKED ✓' : 'NOT LINKED'}
+              </strong>
+            </p>
+            {(result.linkedWallets ?? []).length === 0 ? (
+              <p style={{ fontSize: 12, color: '#9B948D' }}>
+                No linked wallets found. Either the migration hasn't run,
+                or this user_id has no rows in user_wallets.
+              </p>
+            ) : (
+              <div>
+                {result.linkedWallets.map((w) => (
+                  <div
+                    key={w.walletAddress}
+                    style={{
+                      padding: '6px 0',
+                      borderBottom: '1px solid #eee',
+                      fontSize: 12,
+                    }}
+                  >
+                    <code style={{ color: '#1F1F1F' }}>
+                      {w.walletAddress}
+                    </code>
+                    {w.isCanonical && (
+                      <span
+                        style={{
+                          marginLeft: 8,
+                          background: '#E8F1EE',
+                          color: '#1F453A',
+                          padding: '2px 6px',
+                          borderRadius: 4,
+                          fontSize: 10,
+                        }}
+                      >
+                        CANONICAL
+                      </span>
+                    )}
+                    {w.nickname && (
+                      <span style={{ marginLeft: 8, color: '#5F5A54' }}>
+                        ({w.nickname})
+                      </span>
+                    )}
+                    <span
+                      style={{
+                        marginLeft: 8,
+                        color: '#9B948D',
+                        fontSize: 11,
+                      }}
+                    >
+                      linked {new Date(w.linkedAt).toLocaleDateString()}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
           </Section>
 
           <Section title="Vault state">
