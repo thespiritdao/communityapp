@@ -1,9 +1,29 @@
 // src/app/api/auth/onchainkit/route.ts
-// Authentication endpoint for Coinbase Embedded Wallets
+// Authentication endpoint for Coinbase Embedded Wallets.
+//
+// Multi-wallet identity (Phase 1, 2026-05-24):
+//   CDP creates a new EVM wallet per device by architectural design.
+//   This endpoint must recognize the same user across their multiple
+//   CDP wallets. The resolution order:
+//     1. user_wallets lookup by incoming address — exact match means
+//        same user on a known device. Issue JWT.
+//     2. user_profiles lookup by email — existing user signing in
+//        from an unrecognized device. Return requiresLinking.
+//     3. user_profiles lookup by wallet — legacy path, existing user
+//        whose canonical wallet hasn't been backfilled into
+//        user_wallets yet. Backfill and issue JWT.
+//     4. Otherwise: new user. Create everything, including the
+//        canonical user_wallets row.
+//   See docs/spec-platform-identity-multi-wallet.md.
 
 import { type NextRequest, NextResponse } from 'next/server';
 import jwt from 'jsonwebtoken';
 import { supabaseAdmin } from '@/utils/supabaseAdminClient';
+import {
+  findUserByWallet,
+  insertCanonicalWallet,
+  touchWalletSeen,
+} from '@/services/userWalletsService';
 
 // IMPORTANT: Must use Node.js runtime (not Edge) because jsonwebtoken requires crypto module
 export const runtime = 'nodejs';
@@ -41,43 +61,87 @@ export async function POST(req: NextRequest) {
     console.log(`🔍 Auth API: Processing auth for ${normalizedAddress}`);
     console.log(`   Type: ${isEmbedded ? 'Embedded Wallet' : 'External Wallet'}`);
 
-    // For embedded wallets, we trust the address from Coinbase SDK
-    // No signature verification needed
-
-    // Check if user exists in user_profiles.
-    // IMPORTANT: Multiple accounts can share the same CDP embedded wallet address
-    // (e.g. family members on the same device). Email is the reliable unique
-    // identifier from Coinbase — look up by email first, fall back to wallet.
-    console.log('🔍 Auth API: Checking for existing user...');
+    // ── Resolution step 1: known CDP wallet → known user ──────────
+    // The fastest, most reliable path: if the incoming CDP wallet is
+    // already linked, treat this as a returning user on a known device.
+    const walletMatch = await findUserByWallet(normalizedAddress);
+    if (walletMatch) {
+      console.log(
+        `✅ Auth API: Recognized wallet ${normalizedAddress} for user ${walletMatch.userId} (canonical=${walletMatch.isCanonical})`,
+      );
+      // Touch last-seen and proceed straight to JWT issuance below.
+      touchWalletSeen(walletMatch.userId, normalizedAddress).catch(() => {});
+    }
 
     let existingUserProfile: { user_id: string; email: string | null; wallet_address: string } | null = null;
     let profileCheckError: any = null;
 
-    // 1. Try email lookup first (most reliable — email is unique per Coinbase account)
-    if (email) {
+    if (walletMatch) {
+      // Hydrate the profile for downstream code paths (canonical wallet,
+      // email update logic).
+      const { data, error } = await supabaseAdmin
+        .from('user_profiles')
+        .select('user_id, email, wallet_address')
+        .eq('user_id', walletMatch.userId)
+        .maybeSingle();
+      if (error && error.code !== 'PGRST116') {
+        profileCheckError = error;
+      } else if (data) {
+        existingUserProfile = data;
+      }
+    }
+
+    // ── Resolution step 2: existing user, unknown device ─────────
+    // If wallet lookup found nothing but the email matches an existing
+    // user, this is the cross-device-wallet case — same user, new CDP
+    // wallet on this device. We refuse to silently link; the client
+    // must go through the one-time-code linking flow.
+    if (!walletMatch && email) {
       const { data, error } = await supabaseAdmin
         .from('user_profiles')
         .select('user_id, email, wallet_address')
         .eq('email', email)
         .maybeSingle();
-      if (error && error.code !== 'PGRST116') { profileCheckError = error; }
-      else if (data) {
-        existingUserProfile = data;
-        console.log(`✅ Auth API: Found existing user by email: ${data.user_id} (wallet: ${data.wallet_address})`);
+      if (error && error.code !== 'PGRST116') {
+        profileCheckError = error;
+      } else if (data) {
+        console.warn(
+          `🔗 Auth API: Existing user (${data.user_id}) signing in from unrecognized CDP wallet (${normalizedAddress}). Returning requiresLinking.`,
+        );
+        return NextResponse.json(
+          {
+            requiresLinking: true,
+            userId: data.user_id,
+            existingEmail: data.email,
+            unrecognizedWallet: normalizedAddress,
+            message:
+              'This device hasn\'t been linked to your account yet. Enter a one-time code from a device you\'re already signed in on, or create a new account.',
+          },
+          { status: 200 },
+        );
       }
     }
 
-    // 2. Fall back to wallet address lookup only if email lookup found nothing
-    if (!existingUserProfile) {
+    // ── Resolution step 3: legacy wallet match (backfill) ────────
+    // If wallet lookup found nothing in user_wallets but user_profiles
+    // does have this address, we have a legacy user whose canonical
+    // wallet hasn't been added to user_wallets yet. (Should only happen
+    // for users who signed up before the migration was applied or for
+    // any backfill that missed.) Recover by inserting the canonical row.
+    if (!existingUserProfile && !walletMatch) {
       const { data, error } = await supabaseAdmin
         .from('user_profiles')
         .select('user_id, email, wallet_address')
         .eq('wallet_address', normalizedAddress)
         .maybeSingle();
-      if (error && error.code !== 'PGRST116') { profileCheckError = error; }
-      else if (data) {
+      if (error && error.code !== 'PGRST116') {
+        profileCheckError = error;
+      } else if (data) {
         existingUserProfile = data;
-        console.log(`✅ Auth API: Found existing user by wallet: ${data.user_id}`);
+        console.log(
+          `🩹 Auth API: Legacy user_profiles match for ${normalizedAddress} — backfilling user_wallets canonical row`,
+        );
+        await insertCanonicalWallet(data.user_id, normalizedAddress);
       }
     }
 
@@ -179,6 +243,21 @@ export async function POST(req: NextRequest) {
 
       if (email) {
         console.log(`✅ Auth API: Profile created with email: ${email}`);
+      }
+
+      // Insert the canonical user_wallets row. This is the user's
+      // first linked wallet and becomes their default identity for
+      // multi-wallet resolution.
+      try {
+        await insertCanonicalWallet(userId, normalizedAddress);
+        console.log(
+          `✅ Auth API: Canonical user_wallets row created for ${normalizedAddress}`,
+        );
+      } catch (walletErr) {
+        console.error(
+          '⚠️ Auth API: Failed to insert canonical user_wallets row (non-fatal — auth.onchainkit will backfill on next sign-in):',
+          walletErr,
+        );
       }
 
       // Assign invite code immediately for new users
