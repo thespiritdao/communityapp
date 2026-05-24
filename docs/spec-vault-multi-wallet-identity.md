@@ -1,7 +1,23 @@
 # Spec: Vault Multi-Wallet Identity
 
-*Status: Draft / Not Yet Implemented*
+*Status: SUPERSEDED 2026-05-24 by [spec-platform-identity-multi-wallet.md](spec-platform-identity-multi-wallet.md)*
 *Created: 2026-05-24*
+
+> **This spec is no longer the authoritative path forward.** After
+> diagnosing the issue end-to-end, we confirmed the problem is not
+> vault-specific — it's a platform-wide assumption (one user ↔ one
+> EVM address) that CDP embedded wallets violate by design. The fix
+> belongs at the platform identity layer, not inside the vault.
+>
+> See [spec-platform-identity-multi-wallet.md](spec-platform-identity-multi-wallet.md)
+> for the active design. The vault becomes a consumer of that layer
+> rather than implementing its own linking flow.
+>
+> The crypto mechanics below (seed wrapping, recovery codes, AAD
+> binding) remain valid and will inform the vault's post-platform
+> rebuild — but the linking infrastructure (one-time codes, device
+> management) now lives at the platform level for all features to
+> share.
 
 This spec describes the long-horizon redesign of the password vault's
 identity model. The current implementation (shipped 2026-05-22) binds
