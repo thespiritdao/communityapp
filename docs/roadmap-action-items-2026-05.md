@@ -181,32 +181,46 @@ See [`governance-flexibility-layer-a-2026-05.md`](governance-flexibility-layer-a
 
 ---
 
-## 6. Password Manager Module *(medium-high lift — encryption gap is real)*
+## 6. Password Manager Module — ✅ DONE 2026-05-22 (shipped as E2EE, not server-side encryption)
 
-**Status:** Not started
+**Status:** Complete. Final architecture diverged significantly from the original plan.
 
-**Pattern is clear, but encryption infrastructure is missing.**
+**Full technical doc:** [`password-vault-architecture.md`](password-vault-architecture.md)
 
-**Pod module pattern:** Well-established (`src/app/api/pods/[id]/modules/route.ts:14-25`, 10 existing modules). Following it for "passwords" is straightforward.
+**Original plan** proposed server-side encryption (pgcrypto / Supabase Vault / app-level AES with KMS). **What actually shipped** is end-to-end encryption — the server never sees plaintext or content keys.
 
-**Blocker:** No encryption-at-rest exists anywhere in the codebase. Storing passwords in Supabase plaintext is non-negotiable risk.
+**What shipped:**
 
-**Plan:**
-1. **Encryption layer first** (the real work):
-   - Option A: Supabase Vault (native, simplest, but newer)
-   - Option B: pgcrypto with master key in env var (simple, key rotation painful)
-   - Option C: App-level AES-256-GCM with KMS-stored keys (most secure, most work)
-   - **Recommended:** pgcrypto + per-pod key derived from a master key
-2. Schema:
-   - `pod_passwords` (id, pod_id, category_id, label, encrypted_value, tags[], created_by, updated_at)
-   - `pod_password_categories` (id, pod_id, name)
-   - `pod_password_permissions` (password_id, role_id, can_read, can_edit, can_delete) — finer than pod-level
-3. Add `passwords_enabled` to `ALLOWED_KEYS` + `pod_modules` migration
-4. Add `passwordsAccess`, `passwordsManage` to `HatPermissions` type and `PodRolePermissionsService:486-509`
-5. Build CRUD UI mirroring knowledge-base module layout
-6. Audit log: every read of a decrypted password gets logged to `pod_password_access_log` (visible to pod leaders)
+1. **End-to-end encryption** — content keys generated client-side, wrapped per recipient. Server stores only ciphertext blobs and wrapped keys. SpiritDAO operators cannot decrypt pod vault contents even with database access.
 
-**Risk:** Key management is the hard part. If the master key leaks, every password leaks. Document key rotation procedure.
+2. **Identity model** — each user derives an X25519 keypair from a deterministic CDP wallet signature over a canonical message. Public key published once; private key reconstructed client-side via re-signing.
+
+3. **Per-entry role assignment** — leaders explicitly check which pod roles can read each entry. Crypto enforces (only checked recipients get a wrap); RLS enforces (entry SELECT requires role overlap); API enforces (server filters response).
+
+4. **Two deferred-action queues:**
+   - `vault_pending_grants` — newcomer joins → existing managers re-wrap content keys for them
+   - `vault_rotation_jobs` — member loses access → next active reader rotates the vault
+
+5. **Schema:** 6 new tables (`vault_user_keys`, `vault_entries`, `vault_wrapped_keys`, `vault_pending_grants`, `vault_rotation_jobs`, `vault_access_log`) + `pod_modules.passwords_enabled` toggle.
+
+6. **Module-toggle permission sync** — turning the Password Vault module on auto-grants `passwordsAccess` to all roles + `passwordsManage` to leader roles. Off → both zeroed across all roles.
+
+7. **Passwords tab in pod management** — visible to anyone with `passwordsManage` (not just pod leaders). This was the trigger for the broader role-permissions refactor (see emergent infrastructure section at the bottom).
+
+8. **Crypto unit tests** — 18 tests covering canonical message, derivation determinism, AES-GCM round-trip, AAD binding, multi-recipient wrap, rotation correctness.
+
+**Why E2EE instead of server-side encryption:** in conversation with the user, "we want secure and we want to convey that to our users" pushed toward the 1Password-style trust model. The original plan's risk note ("if the master key leaks, every password leaks") was structural — eliminating server-held keys eliminated the risk entirely.
+
+**Residual risks documented in user-facing copy:**
+- CDP coercion (Coinbase technically could be coerced into producing a signature on a CDP wallet user's behalf)
+- Compromised member device with cached identity
+- Member who reads then leaves the pod (past values are irrecoverable; rotation prevents future damage)
+
+**Carryover:**
+- No version history UI yet — `vault_entries.version` column reserved.
+- No password generator in the modal.
+- No cross-pod sharing.
+- No 2FA secret storage with TOTP codegen.
 
 ---
 
@@ -314,10 +328,51 @@ See [`governance-flexibility-layer-a-2026-05.md`](governance-flexibility-layer-a
 | 4a | Server-side `governance_enabled` enforcement audit | S | ✅ Done 2026-05-22 |
 | 4b | Governance flexibility (Layer B — DAO Governor params) | S (no redeploy needed) | ✅ Done 2026-05-22 |
 | 5 | 3rd-party DB (export model) | M | Talk to community first |
-| 6 | Password manager module | M–L | **Up next** |
+| 6 | Password manager module | M–L | ✅ Done 2026-05-22 (shipped as E2EE, see §6 + [tech doc](password-vault-architecture.md)) |
 | 7 | $SELF issuance overhaul | L | Pending |
 | 8 | Smart contract audit | XL | Partially started (V3 treasury done — see [audit doc](treasury-v3-audit-and-deployment-2026-05.md)) |
 
-**Suggested parallelism:** #8 (audit) can run as a background workstream while #6 → #7 execute. #5 starts with a conversation, not code.
+**Suggested parallelism:** #8 (audit) can run as a background workstream while #7 executes. #5 starts with a conversation, not code.
 
 **Flag for review:** #7 ($SELF issuance) requires contract migrations that touch live funds — warrants a separate planning session before any code. (Layer B turned out not to require a redeploy; see §4 above.)
+
+---
+
+# Emergent Infrastructure (Unplanned, Shipped 2026-05-22 → 2026-05-23)
+
+These weren't on the original roadmap. They emerged from doing the
+Password Vault work and recognizing that the platform's permission
+and management surfaces couldn't support the feature cleanly. Listed
+here so future contributors can see the work and find the docs.
+
+## Role permissions — Core / Add-Ons / Paid architecture — ✅ DONE 2026-05-22
+
+**Full technical doc:** [`role-permissions-design-philosophy.md`](role-permissions-design-philosophy.md)
+
+The role permissions editor used to be a flat list gated entirely by `canManageMembers`. A non-leader role holding `passwordsManage` (or any other specialist flag) couldn't actually use the permission. Fixed by:
+
+1. **Categorization** — Core / Add-Ons / Paid groups in `UnifiedMembershipManager`. Add-on and Paid groups only render when their module is enabled. Collapsible matching the Modules tab.
+2. **Granular permission threading** — `usePodManagementState` exposes `canManagePasswords`, `canViewTreasury`, `canManageAgent`, `canManageSurveys`. Each tab in `PodManagementContainer` is gated by its specific flag OR `canManageMembers`.
+3. **Gear icon broadened** — `canManagePodSync` now OR's leader status with any `*Manage`-class flag, so non-leader role holders can reach the manage page.
+4. **Auto-zero on module-off** — module toggle sync blocks for `surveys_enabled`, `community_agent_enabled`, `passwords_enabled` zero the corresponding flags across all roles when turned off, set defaults when turned on.
+5. **`agentManage` permission** added — non-leaders can now configure the AI agent without holding billing authority.
+6. **Treasury read-only access** — `treasuryViewing` holders now see the Treasury tab; `TreasuryManagement` hides Distribute/Settings tabs for read-only viewers.
+
+## Collapsible categories UX pattern — ✅ DONE 2026-05-23
+
+**Full pattern doc:** [`collapsible-categories-pattern.md`](collapsible-categories-pattern.md)
+
+Recognized that flat lists of toggles don't scale. Adopted the same Core / Add-Ons / Paid collapsible affordance in both Pod Modules and the Role Permissions editor. Future admin surfaces should use this pattern by default.
+
+## Tech doc consolidation — ✅ DONE 2026-05-23
+
+Added six new architecture docs covering cross-cutting subsystems that previously only existed in code:
+
+- [`pods-architecture-overview.md`](pods-architecture-overview.md)
+- [`authentication-and-session-model.md`](authentication-and-session-model.md)
+- [`paymaster-gas-sponsorship.md`](paymaster-gas-sponsorship.md)
+- [`cron-jobs-catalog.md`](cron-jobs-catalog.md)
+- [`rag-stack-overview.md`](rag-stack-overview.md)
+- [`README.md`](README.md) — index for the docs directory
+
+Three feature areas still have gaps worth filling when those features are next touched: Forum, Events, Marketplace + Cart + Settlement, Donations/Claims bridge, Bounty system end-to-end.
