@@ -9,6 +9,7 @@ import { usePodEligibilityAgreements } from '@/features/pods/hooks/usePodEligibi
 import { HATS_PROTOCOL_ADDRESS } from '@/constants/hatsProtocol';
 import HatsProtocolABI from '@/abis/HatsProtocol.json';
 import type { HatPermissions } from '@/services/hatPermissionsService';
+import { useAuthContext } from '@/features/identity/components/AuthProvider';
 
 /**
  * Hybrid Permission Hook - Security Model for Fund-Related Features
@@ -39,7 +40,21 @@ export function useHybridPodPermission(
   podId: string | null | undefined,
   permissionKey: keyof HatPermissions,
 ): { hasPermission: boolean; isLoading: boolean; error: string | null } {
-  const { evmAddress: address } = useEvmAddress();
+  const { evmAddress: cdpAddress } = useEvmAddress();
+  const { session } = useAuthContext();
+
+  // Use the canonical wallet (from the Supabase JWT) for on-chain hat
+  // balance checks. CDP creates a different EVM wallet per device, so
+  // a mobile session's evmAccounts[0] won't hold the user's hats —
+  // those are held by the canonical wallet established at signup.
+  // Falls back to the CDP address if no session yet (during bootstrap).
+  // See docs/spec-platform-identity-multi-wallet.md.
+  const canonicalWallet = (
+    session?.user?.user_metadata?.wallet_address as string | undefined
+  )?.toLowerCase();
+  const address = (canonicalWallet ?? cdpAddress) as
+    | `0x${string}`
+    | undefined;
 
   // Step 1: Get user's roles and HAT IDs from database
   const { userRoles, isLoading: rolesLoading } = useHatPermissions();
