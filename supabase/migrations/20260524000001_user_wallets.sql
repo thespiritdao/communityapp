@@ -67,6 +67,7 @@ COMMENT ON TABLE user_wallet_link_codes IS
 ALTER TABLE user_wallets ENABLE ROW LEVEL SECURITY;
 ALTER TABLE user_wallet_link_codes ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Users can read their own wallets" ON user_wallets;
 CREATE POLICY "Users can read their own wallets"
   ON user_wallets FOR SELECT
   TO authenticated
@@ -76,14 +77,19 @@ CREATE POLICY "Users can read their own wallets"
 -- No client-side write policies.
 
 -- ── Backfill: existing user_profiles.wallet_address → canonical row ─
+-- Only backfill for user_ids that still exist in auth.users. Some
+-- legacy user_profiles rows reference auth users that have since been
+-- deleted (orphaned profiles); skipping them keeps the FK happy and
+-- those orphan rows aren't useful anyway.
 INSERT INTO user_wallets (user_id, wallet_address, is_canonical, linked_at, last_seen_at)
 SELECT
-  user_id,
-  LOWER(wallet_address) AS wallet_address,
-  true                  AS is_canonical,
-  COALESCE(onboarded_at, NOW()) AS linked_at,
-  NOW()                 AS last_seen_at
-FROM user_profiles
-WHERE wallet_address IS NOT NULL
-  AND wallet_address ~* '^0x[a-f0-9]{40}$'
+  up.user_id,
+  LOWER(up.wallet_address) AS wallet_address,
+  true                     AS is_canonical,
+  COALESCE(up.onboarded_at, NOW()) AS linked_at,
+  NOW()                    AS last_seen_at
+FROM user_profiles up
+WHERE up.wallet_address IS NOT NULL
+  AND up.wallet_address ~* '^0x[a-f0-9]{40}$'
+  AND EXISTS (SELECT 1 FROM auth.users au WHERE au.id = up.user_id)
 ON CONFLICT (wallet_address) DO NOTHING;
