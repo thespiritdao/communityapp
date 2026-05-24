@@ -51,6 +51,19 @@ export default function WhoamiPage() {
   const [loading, setLoading] = useState(true);
   const [probing, setProbing] = useState(false);
 
+  // Linking flow state
+  const [linkCode, setLinkCode] = useState<string | null>(null);
+  const [linkCodeExpiresAt, setLinkCodeExpiresAt] = useState<string | null>(
+    null,
+  );
+  const [linkCodeError, setLinkCodeError] = useState<string | null>(null);
+  const [linkCodeBusy, setLinkCodeBusy] = useState(false);
+
+  const [enterCode, setEnterCode] = useState('');
+  const [enterCodeBusy, setEnterCodeBusy] = useState(false);
+  const [enterCodeError, setEnterCodeError] = useState<string | null>(null);
+  const [enterCodeSuccess, setEnterCodeSuccess] = useState<string | null>(null);
+
   // CDP wallet (raw, lowercase for comparison)
   const cdpWallet = currentUser?.evmAccounts?.[0]?.toLowerCase() ?? null;
   const cdpWalletOriginal = currentUser?.evmAccounts?.[0] ?? null;
@@ -104,6 +117,79 @@ export default function WhoamiPage() {
       setError(e?.message || 'Probe failed');
     } finally {
       setProbing(false);
+    }
+  };
+
+  // ── Linking: issue a code on this (authenticated) device ────────
+  const issueLinkCode = async () => {
+    setLinkCodeBusy(true);
+    setLinkCodeError(null);
+    setLinkCode(null);
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const accessToken = sessionData.session?.access_token;
+      if (!accessToken) throw new Error('No Supabase session');
+      const res = await fetch('/api/auth/link-code', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({}),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json?.error ?? `HTTP ${res.status}`);
+      setLinkCode(json.code);
+      setLinkCodeExpiresAt(json.expiresAt);
+    } catch (e: any) {
+      setLinkCodeError(e?.message || 'Failed to issue code');
+    } finally {
+      setLinkCodeBusy(false);
+    }
+  };
+
+  // ── Linking: consume a code on this (new) device ────────────────
+  const confirmLinkCode = async () => {
+    if (!cdpWallet) {
+      setEnterCodeError('No CDP wallet detected on this device.');
+      return;
+    }
+    setEnterCodeBusy(true);
+    setEnterCodeError(null);
+    setEnterCodeSuccess(null);
+    try {
+      const res = await fetch('/api/auth/link-confirm', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          code: enterCode.trim().toUpperCase(),
+          newWallet: cdpWallet,
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json?.error ?? `HTTP ${res.status}`);
+
+      // Apply the new JWT to the active Supabase session so subsequent
+      // requests (including the auto-rerun of /api/debug/whoami) see it.
+      const { error: setErr } = await supabase.auth.setSession({
+        access_token: json.supabaseToken,
+        refresh_token: json.supabaseRefreshToken,
+      });
+      if (setErr) {
+        throw new Error(`Linked but setSession failed: ${setErr.message}`);
+      }
+
+      setEnterCodeSuccess(
+        `Linked ${json.linkedWallet.walletAddress} to user ${json.userId}. Session updated. Reloading diagnostic…`,
+      );
+      // Re-run the diagnostic so the new state is visible immediately
+      setTimeout(() => {
+        callWhoami().catch(() => {});
+      }, 800);
+    } catch (e: any) {
+      setEnterCodeError(e?.message || 'Failed to confirm code');
+    } finally {
+      setEnterCodeBusy(false);
     }
   };
 
@@ -255,6 +341,146 @@ export default function WhoamiPage() {
                   </div>
                 ))}
               </div>
+            )}
+          </Section>
+
+          <Section title="Link a new device — Issue a code (from this device)">
+            <p style={{ fontSize: 13, color: '#5F5A54', marginBottom: 8 }}>
+              Use this if THIS device is already authenticated and you
+              want to link a NEW device (mobile / incognito) to the same
+              user. Issue a code here, then enter it on the new device.
+            </p>
+            <button
+              onClick={issueLinkCode}
+              disabled={linkCodeBusy}
+              style={{
+                padding: '8px 12px',
+                borderRadius: 6,
+                background: '#1F453A',
+                color: '#fff',
+                border: 'none',
+                cursor: linkCodeBusy ? 'not-allowed' : 'pointer',
+                fontSize: 13,
+              }}
+            >
+              {linkCodeBusy ? 'Issuing…' : 'Issue link code'}
+            </button>
+            {linkCodeError && (
+              <p style={{ fontSize: 12, color: '#7A2E2E', marginTop: 8 }}>
+                {linkCodeError}
+              </p>
+            )}
+            {linkCode && (
+              <div
+                style={{
+                  marginTop: 12,
+                  padding: 12,
+                  background: '#F5EDD7',
+                  borderRadius: 6,
+                  textAlign: 'center',
+                }}
+              >
+                <p
+                  style={{
+                    fontSize: 11,
+                    color: '#5F5A54',
+                    marginBottom: 4,
+                    textTransform: 'uppercase',
+                    letterSpacing: 1,
+                  }}
+                >
+                  Enter this code on the new device
+                </p>
+                <p
+                  style={{
+                    fontSize: 28,
+                    fontFamily: 'monospace',
+                    letterSpacing: 4,
+                    fontWeight: 600,
+                    color: '#1F453A',
+                    margin: '4px 0',
+                  }}
+                >
+                  {linkCode}
+                </p>
+                <p style={{ fontSize: 11, color: '#9B948D' }}>
+                  Expires at{' '}
+                  {linkCodeExpiresAt
+                    ? new Date(linkCodeExpiresAt).toLocaleTimeString()
+                    : '?'}
+                </p>
+              </div>
+            )}
+          </Section>
+
+          <Section title="Link this device — Enter a code (from another device)">
+            <p style={{ fontSize: 13, color: '#5F5A54', marginBottom: 8 }}>
+              Use this if THIS device's CDP wallet (
+              <code>{cdpWallet ?? 'none'}</code>) is not yet linked to
+              your account. Issue a code on an already-linked device
+              and enter it here.
+            </p>
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+              <input
+                value={enterCode}
+                onChange={(e) =>
+                  setEnterCode(e.target.value.toUpperCase().slice(0, 6))
+                }
+                placeholder="ABC123"
+                maxLength={6}
+                style={{
+                  padding: 8,
+                  fontSize: 18,
+                  fontFamily: 'monospace',
+                  textAlign: 'center',
+                  letterSpacing: 4,
+                  width: 140,
+                  border: '1px solid #ccc',
+                  borderRadius: 6,
+                  textTransform: 'uppercase',
+                }}
+              />
+              <button
+                onClick={confirmLinkCode}
+                disabled={
+                  enterCodeBusy ||
+                  enterCode.length !== 6 ||
+                  !cdpWallet
+                }
+                style={{
+                  padding: '8px 12px',
+                  borderRadius: 6,
+                  background: '#1F453A',
+                  color: '#fff',
+                  border: 'none',
+                  cursor:
+                    enterCodeBusy || enterCode.length !== 6
+                      ? 'not-allowed'
+                      : 'pointer',
+                  fontSize: 13,
+                }}
+              >
+                {enterCodeBusy ? 'Linking…' : 'Confirm link'}
+              </button>
+            </div>
+            {enterCodeError && (
+              <p style={{ fontSize: 12, color: '#7A2E2E', marginTop: 8 }}>
+                {enterCodeError}
+              </p>
+            )}
+            {enterCodeSuccess && (
+              <p
+                style={{
+                  fontSize: 12,
+                  color: '#1F453A',
+                  marginTop: 8,
+                  background: '#E8F1EE',
+                  padding: 8,
+                  borderRadius: 6,
+                }}
+              >
+                {enterCodeSuccess}
+              </p>
             )}
           </Section>
 
