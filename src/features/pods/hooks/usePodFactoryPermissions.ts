@@ -4,7 +4,7 @@
  */
 
 import { useState, useEffect } from 'react';
-import { useEvmAddress } from '@coinbase/cdp-hooks';
+import { useUserWallet } from '@/hooks/useUserWallet';
 import { PodFactorySyncService } from '../services/PodFactorySyncService';
 
 interface PodFactoryPermissions {
@@ -17,7 +17,7 @@ interface PodFactoryPermissions {
 export function usePodFactoryPermissions(
   podId: string | null,
 ): PodFactoryPermissions {
-  const { evmAddress: address } = useEvmAddress();
+  const address = useUserWallet();
   const [permissions, setPermissions] = useState<PodFactoryPermissions>({
     canManageBounties: false,
     canUseTreasury: false,

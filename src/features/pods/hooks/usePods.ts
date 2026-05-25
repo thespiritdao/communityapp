@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useEvmAddress } from '@coinbase/cdp-hooks';
+import { useUserWallet } from '@/hooks/useUserWallet';
 import { PodCoreService } from '../services/PodCoreService';
 import { getClientHatId } from '@/lib/hatRegistryClient';
 import { HatsMigrationService } from '../services/hatsMigrationService';
@@ -32,7 +32,7 @@ export interface UsePodsReturn {
  * Consolidates logic from main pods page for better reusability
  */
 export function usePods(config: UsePodsConfig = {}): UsePodsReturn {
-  const { evmAddress: address } = useEvmAddress();
+  const address = useUserWallet();
   const { userHats, userRoles } = useHatPermissions();
   const {
     canManagePodSync,

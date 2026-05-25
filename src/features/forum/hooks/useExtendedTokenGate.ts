@@ -1,6 +1,6 @@
 // src/app/features/forum/hooks/useExtendedTokenGate.ts  ERC-1155
 import { useState, useEffect } from 'react';
-import { useEvmAddress } from '@coinbase/cdp-hooks';
+import { useUserWallet } from '@/hooks/useUserWallet';
 import { fetchExtendedTokenBalances } from '@/utils/fetchTokenBalances';
 
 interface ExtendedTokenGateResult {
@@ -21,7 +21,7 @@ export function useExtendedTokenGate(
   erc1155Address?: `0x${string}`,
   tokenId?: number,
 ): ExtendedTokenGateResult {
-  const { evmAddress: address } = useEvmAddress();
+  const address = useUserWallet();
   const isConnected = !!address;
   const [hasAccess, setHasAccess] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(true);
