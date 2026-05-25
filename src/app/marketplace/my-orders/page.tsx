@@ -3,7 +3,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useEvmAddress } from '@coinbase/cdp-hooks';
+import { useUserWallet, useSigningWallet } from '@/hooks/useUserWallet';
 import { supabase } from '@/lib/supabase';
 import { createSupabaseSession } from '@/utils/createSupabaseSession';
 import styled from 'styled-components';
@@ -252,7 +252,11 @@ const TransactionLink = styled.a`
 
 export default function MyOrdersPage() {
   const router = useRouter();
-  const { evmAddress: address } = useEvmAddress();
+  // Identity wallet — used to filter "my" orders and as the connectivity gate.
+  const address = useUserWallet();
+  // Device signing wallet — used only to (re)establish the Supabase session
+  // via /api/auth/onchainkit, which authenticates the wallet being held.
+  const { address: signingAddress } = useSigningWallet();
 
   const [orders, setOrders] = useState<Order[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -279,13 +283,15 @@ export default function MyOrdersPage() {
       setIsLoading(true);
       setError('');
 
-      // Ensure user is authenticated with Supabase
+      // Ensure user is authenticated with Supabase. Authenticate the wallet
+      // held on this device (signing wallet), not the canonical identity —
+      // /api/auth/onchainkit issues the session for the device's CDP wallet.
       console.log('🔐 Ensuring Supabase authentication for my orders...');
       try {
         const authResponse = await fetch('/api/auth/onchainkit', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ address: address.toLowerCase() }),
+          body: JSON.stringify({ address: (signingAddress ?? address).toLowerCase() }),
         });
 
         if (!authResponse.ok) {
