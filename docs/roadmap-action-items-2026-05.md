@@ -314,6 +314,24 @@ See [`governance-flexibility-layer-a-2026-05.md`](governance-flexibility-layer-a
 
 ---
 
+## 9. Identity-Comparison Audit *(medium lift — proactive cleanup)*
+
+**Status:** Open / Not Yet Started — created 2026-05-25
+
+**Full spec:** [`spec-identity-comparison-audit.md`](spec-identity-comparison-audit.md)
+
+**Why:** The platform multi-wallet identity layer shipped 2026-05-24. The foundation is correct, but the rest of the codebase was built assuming one user = one wallet. During the vault rollout we hit the same root cause (`useEvmAddress()` returns a per-device CDP wallet, not the user's canonical) eleven times in different files. Rather than chase failures feature-by-feature as more users sign in from second devices, we do a proactive sweep.
+
+**Scope:** Three surfaces — client hooks (~50 callsites), server routes (~30), RLS policies (~20). Most are 1–2 line patches. The work is in finding them, classifying signing-context vs identity-read, and applying the right pattern.
+
+**Estimated:** 2–3 focused days across four phases (client → server → RLS → standards/lint).
+
+**Trigger:** Vault validated as of 2026-05-24. No further blockers to starting.
+
+**Not in scope:** Redesigning identity, rewriting features, adding a comprehensive multi-wallet test suite.
+
+---
+
 # Recommended Sequence
 
 | # | Item | Lift | Status |
@@ -331,6 +349,7 @@ See [`governance-flexibility-layer-a-2026-05.md`](governance-flexibility-layer-a
 | 6 | Password manager module | M–L | ✅ Done 2026-05-22 (shipped as E2EE, see §6 + [tech doc](password-vault-architecture.md)) |
 | 7 | $SELF issuance overhaul | L | Pending |
 | 8 | Smart contract audit | XL | Partially started (V3 treasury done — see [audit doc](treasury-v3-audit-and-deployment-2026-05.md)) |
+| 9 | Identity-comparison audit | M | Open 2026-05-25 — proactive cleanup, see [spec](spec-identity-comparison-audit.md) |
 
 **Suggested parallelism:** #8 (audit) can run as a background workstream while #7 executes. #5 starts with a conversation, not code.
 

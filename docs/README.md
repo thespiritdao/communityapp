@@ -42,6 +42,7 @@ the SpiritDAO Community App. New contributors should start here.
 | [roadmap-action-items-2026-05](roadmap-action-items-2026-05.md) | May 2026 prioritized roadmap |
 | [competitive-analysis-feature-roadmap](competitive-analysis-feature-roadmap.md) | Feature ideas from competitive analysis |
 | [spec-platform-identity-multi-wallet](spec-platform-identity-multi-wallet.md) | **Active spec** — Platform multi-wallet identity layer (CDP per-device wallets) |
+| [spec-identity-comparison-audit](spec-identity-comparison-audit.md) | **Active spec** — Proactive audit of identity-comparison patterns across the codebase |
 | [spec-vault-multi-wallet-identity](spec-vault-multi-wallet-identity.md) | Superseded — folded into platform identity spec |
 | [spec-inter-pod-agreements](spec-inter-pod-agreements.md) | Future: formal agreements between pods |
 | [spec-contributor-compensation](spec-contributor-compensation.md) | Future: role archetypes + $SELF payroll |
