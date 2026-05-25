@@ -30,6 +30,31 @@ function getCallerWallet(req: NextRequest): string | null {
   }
 }
 
+/** All wallets linked to the user who owns the canonical wallet. */
+async function getCallerLinkedWallets(canonical: string): Promise<string[]> {
+  const target = canonical.toLowerCase();
+  try {
+    const { data: ownerRow } = await supabaseAdmin
+      .from('user_wallets')
+      .select('user_id')
+      .eq('wallet_address', target)
+      .eq('is_canonical', true)
+      .maybeSingle();
+    if (!ownerRow?.user_id) return [target];
+    const { data: linked } = await supabaseAdmin
+      .from('user_wallets')
+      .select('wallet_address')
+      .eq('user_id', ownerRow.user_id);
+    const addresses = new Set<string>([target]);
+    for (const r of linked ?? []) {
+      if (r.wallet_address) addresses.add(r.wallet_address.toLowerCase());
+    }
+    return [...addresses];
+  } catch {
+    return [target];
+  }
+}
+
 async function callerHasPermission(
   podId: string,
   wallet: string,
@@ -108,12 +133,16 @@ export async function GET(
     return NextResponse.json({ error: 'not found' }, { status: 404 });
   }
 
-  const { data: wrap } = await supabaseAdmin
+  // Multi-wallet aware: wrap may have been published under any of the
+  // caller's linked wallets.
+  const callerLinkedWallets = await getCallerLinkedWallets(caller);
+  const { data: wraps } = await supabaseAdmin
     .from('vault_wrapped_keys')
     .select('wrapped_key, sender_pubkey')
     .eq('entry_id', entryId)
-    .eq('recipient_eoa', caller)
-    .maybeSingle();
+    .in('recipient_eoa', callerLinkedWallets)
+    .limit(1);
+  const wrap = wraps?.[0];
 
   await logAccess({
     podId,

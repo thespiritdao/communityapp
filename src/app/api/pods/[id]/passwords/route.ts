@@ -36,6 +36,39 @@ function getCallerWallet(req: NextRequest): string | null {
   }
 }
 
+/**
+ * Return every wallet address linked to the user who owns the given
+ * canonical wallet. Used for wrap lookups — the caller's wrap may
+ * have been published under any of their linked wallets (e.g. the
+ * device-specific CDP wallet they bootstrapped on).
+ *
+ * Always includes the canonical wallet itself so the result is safe
+ * to use even when user_wallets has no extra rows for this user.
+ */
+async function getCallerLinkedWallets(canonical: string): Promise<string[]> {
+  const target = canonical.toLowerCase();
+  try {
+    const { data: ownerRow } = await supabaseAdmin
+      .from('user_wallets')
+      .select('user_id')
+      .eq('wallet_address', target)
+      .eq('is_canonical', true)
+      .maybeSingle();
+    if (!ownerRow?.user_id) return [target];
+    const { data: linked } = await supabaseAdmin
+      .from('user_wallets')
+      .select('wallet_address')
+      .eq('user_id', ownerRow.user_id);
+    const addresses = new Set<string>([target]);
+    for (const r of linked ?? []) {
+      if (r.wallet_address) addresses.add(r.wallet_address.toLowerCase());
+    }
+    return [...addresses];
+  } catch {
+    return [target];
+  }
+}
+
 async function callerHasPermission(
   podId: string,
   wallet: string,
@@ -131,25 +164,37 @@ export async function GET(
   // wrap_sender_pubkey is per-wrap: the pubkey of whoever wrapped this
   // particular content key for the caller. May differ from the entry's
   // sender_pubkey when the wrap came from a regrant.
+  //
+  // Multi-wallet aware: the wrap might have been published under any
+  // of the caller's linked wallets (e.g. the device-specific CDP wallet
+  // they bootstrapped on, not their canonical wallet). Look up wraps
+  // against the caller's entire linked-wallet set.
   let wrapsByEntry: Record<
     string,
     { wrapped_key: string; sender_pubkey: string } | null
   > = {};
   if (entryIds.length > 0) {
+    const callerLinkedWallets = await getCallerLinkedWallets(caller);
     const { data: wraps, error: wrapsError } = await supabaseAdmin
       .from('vault_wrapped_keys')
       .select('entry_id, wrapped_key, sender_pubkey')
       .in('entry_id', entryIds)
-      .eq('recipient_eoa', caller);
+      .in('recipient_eoa', callerLinkedWallets);
     if (wrapsError) {
       console.error('[vault][GET list] wraps error', wrapsError);
       return NextResponse.json({ error: wrapsError.message }, { status: 500 });
     }
     for (const w of wraps ?? []) {
-      wrapsByEntry[w.entry_id] = {
-        wrapped_key: w.wrapped_key,
-        sender_pubkey: w.sender_pubkey,
-      };
+      // If the caller has multiple linked wallets and somehow more than
+      // one has a wrap for the same entry, the first wins (it's the
+      // same content key either way; sender_pubkey may vary, but only
+      // one of them will be the right counterparty for that wrap).
+      if (!wrapsByEntry[w.entry_id]) {
+        wrapsByEntry[w.entry_id] = {
+          wrapped_key: w.wrapped_key,
+          sender_pubkey: w.sender_pubkey,
+        };
+      }
     }
   }
 
