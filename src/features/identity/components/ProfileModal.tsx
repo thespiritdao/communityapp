@@ -1,7 +1,7 @@
 import type React from 'react';
 import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { useEvmAddress } from '@coinbase/cdp-hooks';
+import { useUserWallet } from '@/hooks/useUserWallet';
 import type { UserProfile } from '@/features/identity/types';
 import { DatabaseTokenGallery } from '@/features/identity/components/DatabaseTokenGallery';
 import { mapStoredValuesToLabels } from '@/features/identity/utils/formatProfileValues';
@@ -71,7 +71,7 @@ const getProfilePictureUrl = (walletAddress: string, users: UserProfile[]) => {
 };
 
 export const ProfileModal: React.FC<ProfileModalProps> = ({ user, users, onClose, pods }) => {
-  const { evmAddress: address } = useEvmAddress();
+  const address = useUserWallet();
   const profilePictureUrl = getProfilePictureUrl(user.wallet_address, users);
   const [showDMModal, setShowDMModal] = useState(false);
   const [showGiftModal, setShowGiftModal] = useState(false);

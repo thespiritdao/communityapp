@@ -3,7 +3,7 @@
 
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { useEvmAddress } from '@coinbase/cdp-hooks';
+import { useUserWallet, useSigningWallet } from '@/hooks/useUserWallet';
 import { supabase } from '@/lib/supabase';
 import { fetchTokenBalances } from '@/utils/fetchTokenBalances';
 import { createSupabaseSession } from '@/utils/createSupabaseSession';
@@ -265,7 +265,11 @@ const TransactionLink = styled.a`
 export default function OrderDetailPage() {
   const params = useParams();
   const router = useRouter();
-  const { evmAddress: address } = useEvmAddress();
+  // Identity wallet — buyer check, token-balance permissions, and actor
+  // attribution (fulfillment manager / status-history / notification sender).
+  const address = useUserWallet();
+  // Device signing wallet — used only to (re)establish the Supabase session.
+  const { address: signingAddress } = useSigningWallet();
   const orderId = typeof params.id === 'string' ? params.id : '';
 
   const [order, setOrder] = useState<Order | null>(null);
@@ -298,7 +302,7 @@ export default function OrderDetailPage() {
         const authResponse = await fetch('/api/auth/onchainkit', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ address: address?.toLowerCase() }),
+          body: JSON.stringify({ address: (signingAddress ?? address)?.toLowerCase() }),
         });
 
         if (!authResponse.ok) {
