@@ -10,7 +10,7 @@
  */
 
 import { useState, useEffect } from 'react';
-import { useEvmAddress } from '@coinbase/cdp-hooks';
+import { useUserWallet } from '@/hooks/useUserWallet';
 import { everyoneTagService, type EveryoneTagContext } from '@/services/everyoneTagService';
 
 interface UseEveryonePermissionOptions {
@@ -24,7 +24,8 @@ export function useEveryonePermission({
   podId,
   contextType,
 }: UseEveryonePermissionOptions) {
-  const { evmAddress } = useEvmAddress();
+  // Identity wallet (canonical) — used to resolve the user's @everyone permission.
+  const evmAddress = useUserWallet();
   const [canUseEveryone, setCanUseEveryone] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [permissionReason, setPermissionReason] = useState<string | undefined>();

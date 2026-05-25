@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useMemo } from 'react';
-import { useEvmAddress } from '@coinbase/cdp-hooks';
+import { useUserWallet } from '@/hooks/useUserWallet';
 import { useHatPermissions } from '@/hooks/useHatPermissions';
 import { usePodModules } from '@/features/pods/hooks/usePodModules';
 import { supabase } from '@/lib/supabase';
@@ -62,7 +62,7 @@ export interface UseMarketplaceManagementAccessReturn {
  * Both conditions must be satisfied for a user to manage marketplace in a pod.
  */
 export function useMarketplaceManagementAccess(): UseMarketplaceManagementAccessReturn {
-  const { evmAddress: address } = useEvmAddress();
+  const address = useUserWallet();
   const { userRoles, isLoading: hatPermissionsLoading } = useHatPermissions();
   const { modules, loading: modulesLoading } = usePodModules();
 

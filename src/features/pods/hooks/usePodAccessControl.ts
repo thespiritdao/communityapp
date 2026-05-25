@@ -1,7 +1,7 @@
 // src/features/pods/hooks/usePodAccessControl.ts
 
 import { useEffect, useState } from 'react';
-import { useEvmAddress } from '@coinbase/cdp-hooks';
+import { useUserWallet } from '@/hooks/useUserWallet';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/utils/supabaseClient';
 import { HatCreationService } from '../services/HatCreationService';
@@ -29,7 +29,7 @@ interface AccessControlOptions {
 export function usePodAccessControl(
   options: AccessControlOptions = {},
 ): AccessControlResult {
-  const { evmAddress: address } = useEvmAddress();
+  const address = useUserWallet();
   const router = useRouter();
 
   const [accessState, setAccessState] = useState<AccessControlResult>({
