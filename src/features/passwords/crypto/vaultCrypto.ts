@@ -171,6 +171,11 @@ export interface EncryptedBlob {
 
 /**
  * AES-GCM encrypt with optional AAD. Returns base64url-encoded IV + ciphertext.
+ *
+ * NOTE: SubtleCrypto in some browsers (recent Chrome/Safari) rejects
+ * `additionalData: undefined` even though it's "optional." We omit the
+ * key entirely when no AAD is provided. Node's webcrypto is more
+ * permissive, which is why this bug only surfaced in the browser.
  */
 export async function aesGcmEncrypt(
   contentKeyB64: string,
@@ -179,8 +184,10 @@ export async function aesGcmEncrypt(
 ): Promise<EncryptedBlob> {
   const key = await importAesGcmKey(base64urlToBytes(contentKeyB64));
   const iv = randomIv();
+  const params: AesGcmParams = { name: 'AES-GCM', iv: iv as BufferSource };
+  if (aad) params.additionalData = aad as BufferSource;
   const ctBuf = await crypto.subtle.encrypt(
-    { name: 'AES-GCM', iv: iv as BufferSource, additionalData: aad as BufferSource | undefined },
+    params,
     key,
     utf8ToBytes(plaintext) as BufferSource,
   );
@@ -201,11 +208,9 @@ export async function aesGcmDecrypt(
   const key = await importAesGcmKey(base64urlToBytes(contentKeyB64));
   const iv = base64urlToBytes(blob.iv);
   const ct = base64urlToBytes(blob.ciphertext);
-  const ptBuf = await crypto.subtle.decrypt(
-    { name: 'AES-GCM', iv: iv as BufferSource, additionalData: aad as BufferSource | undefined },
-    key,
-    ct as BufferSource,
-  );
+  const params: AesGcmParams = { name: 'AES-GCM', iv: iv as BufferSource };
+  if (aad) params.additionalData = aad as BufferSource;
+  const ptBuf = await crypto.subtle.decrypt(params, key, ct as BufferSource);
   return bytesToUtf8(new Uint8Array(ptBuf));
 }
 
