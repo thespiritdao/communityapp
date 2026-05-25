@@ -101,7 +101,9 @@ export async function GET(
 
   const { data: rolesRows, error: rErr } = await supabaseAdmin
     .from('pod_role_permissions')
-    .select('id, role_name, role_type, token_address, permissions')
+    // No role_type column on pod_role_permissions; derive from
+    // role_name ("Leader" → leader).
+    .select('id, role_name, token_address, permissions')
     .eq('pod_id', podId);
 
   if (rErr) {
@@ -118,7 +120,7 @@ export async function GET(
       rolesByHat.set(r.token_address, {
         id: r.id,
         name: r.role_name ?? '',
-        type: r.role_type ?? null,
+        type: /leader/i.test(r.role_name ?? '') ? 'leader' : 'member',
         permissions: r.permissions ?? {},
       });
     }

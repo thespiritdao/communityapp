@@ -72,7 +72,10 @@ export async function GET(
 
   const { data, error } = await supabaseAdmin
     .from('pod_role_permissions')
-    .select('id, role_name, role_type, permissions')
+    // No role_type column on pod_role_permissions; "type" is derived
+    // from role_name (e.g. "Pod Leader" → leader). Matches the
+    // convention used in PodManagerControlPanel + UnifiedMembershipManager.
+    .select('id, role_name, permissions')
     .eq('pod_id', podId);
 
   if (error) {
@@ -82,7 +85,7 @@ export async function GET(
   const roles = (data ?? []).map((r: any) => ({
     id: r.id,
     name: r.role_name,
-    type: r.role_type,
+    type: /leader/i.test(r.role_name ?? '') ? 'leader' : 'member',
     hasPasswordsAccess: r.permissions?.passwordsAccess === true,
     hasPasswordsManage: r.permissions?.passwordsManage === true,
   }));

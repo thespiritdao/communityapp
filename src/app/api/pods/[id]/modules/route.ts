@@ -275,7 +275,7 @@ export async function PUT(req: NextRequest): Promise<NextResponse> {
     try {
       const { data: roles } = await supabaseAdmin
         .from('pod_role_permissions')
-        .select('id, permissions, role_type, role_name')
+        .select('id, permissions, role_name')
         .eq('pod_id', podId);
 
       if (roles) {
@@ -283,9 +283,7 @@ export async function PUT(req: NextRequest): Promise<NextResponse> {
           const perms = typeof role.permissions === 'string'
             ? JSON.parse(role.permissions)
             : { ...(role.permissions || {}) };
-          const isLeaderRole =
-            role.role_type === 'leader' ||
-            /leader/i.test(role.role_name ?? '');
+          const isLeaderRole = /leader/i.test(role.role_name ?? '');
           perms.surveyRespond = updates.surveys_enabled;
           perms.surveyManage = updates.surveys_enabled && isLeaderRole;
           await supabaseAdmin
@@ -307,7 +305,7 @@ export async function PUT(req: NextRequest): Promise<NextResponse> {
     try {
       const { data: roles } = await supabaseAdmin
         .from('pod_role_permissions')
-        .select('id, permissions, role_type, role_name')
+        .select('id, permissions, role_name')
         .eq('pod_id', podId);
 
       if (roles) {
@@ -315,9 +313,7 @@ export async function PUT(req: NextRequest): Promise<NextResponse> {
           const perms = typeof role.permissions === 'string'
             ? JSON.parse(role.permissions)
             : { ...(role.permissions || {}) };
-          const isLeaderRole =
-            role.role_type === 'leader' ||
-            /leader/i.test(role.role_name ?? '');
+          const isLeaderRole = /leader/i.test(role.role_name ?? '');
           perms.agentManage = updates.community_agent_enabled && isLeaderRole;
           await supabaseAdmin
             .from('pod_role_permissions')
@@ -337,7 +333,7 @@ export async function PUT(req: NextRequest): Promise<NextResponse> {
     try {
       const { data: roles } = await supabaseAdmin
         .from('pod_role_permissions')
-        .select('id, permissions, role_type, role_name')
+        .select('id, permissions, role_name')
         .eq('pod_id', podId);
 
       if (roles) {
@@ -345,9 +341,7 @@ export async function PUT(req: NextRequest): Promise<NextResponse> {
           const perms = typeof role.permissions === 'string'
             ? JSON.parse(role.permissions)
             : { ...(role.permissions || {}) };
-          const isLeaderRole =
-            role.role_type === 'leader' ||
-            /leader/i.test(role.role_name ?? '');
+          const isLeaderRole = /leader/i.test(role.role_name ?? '');
           perms.passwordsAccess = updates.passwords_enabled;
           perms.passwordsManage = updates.passwords_enabled && isLeaderRole;
           await supabaseAdmin
