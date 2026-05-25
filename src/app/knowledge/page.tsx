@@ -2,7 +2,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useEvmAddress } from '@coinbase/cdp-hooks';
+import { useUserWallet } from '@/hooks/useUserWallet';
 import { useTour } from '@/context/TourContext';
 import { KnowledgeGrid } from '@/features/knowledge/components/KnowledgeGrid';
 import { KnowledgeSearch } from '@/features/knowledge/components/KnowledgeSearch';
@@ -16,7 +16,7 @@ interface Pod {
 }
 
 export default function KnowledgePage() {
-  const { evmAddress: address } = useEvmAddress();
+  const address = useUserWallet();
   const { startTour } = useTour();
   const { userRoles, isLoading: hatLoading } = useHatPermissions();
   const [categories, setCategories] = useState<KnowledgeCategory[]>([]);

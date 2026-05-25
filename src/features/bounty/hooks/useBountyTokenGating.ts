@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useMemo } from 'react';
-import { useEvmAddress } from '@coinbase/cdp-hooks';
+import { useUserWallet } from '@/hooks/useUserWallet';
 import {
   fetchTokenBalances,
   type BountyTokenBalances,
@@ -35,7 +35,7 @@ const BATCH_SIZE = 10; // Process bounties in batches
  * Hook for managing bounty token gating and access control
  */
 export const useBountyTokenGating = (): UseBountyTokenGatingReturn => {
-  const { evmAddress: address } = useEvmAddress();
+  const address = useUserWallet();
   const [accessCache, setAccessCache] = useState<Map<string, TokenGateCheck>>(
     new Map(),
   );
@@ -361,7 +361,7 @@ export const useBountyTokenGating = (): UseBountyTokenGatingReturn => {
  * Hook to get bounties with token gating from Supabase
  */
 export const useBountiesWithTokenGating = () => {
-  const { evmAddress: address } = useEvmAddress();
+  const address = useUserWallet();
   const [bounties, setBounties] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const { checkMultipleBountyAccess } = useBountyTokenGating();

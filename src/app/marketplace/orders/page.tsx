@@ -3,7 +3,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useEvmAddress } from '@coinbase/cdp-hooks';
+import { useUserWallet } from '@/hooks/useUserWallet';
 import { supabase } from '@/lib/supabase';
 import { fetchTokenBalances } from '@/utils/fetchTokenBalances';
 import { Card, CardContent } from '@/components/ui/card';
@@ -49,7 +49,7 @@ interface Order {
 
 export default function OrderManagementPage() {
   const router = useRouter();
-  const { evmAddress: address } = useEvmAddress();
+  const address = useUserWallet();
 
   const [orders, setOrders] = useState<Order[]>([]);
   const [filteredOrders, setFilteredOrders] = useState<Order[]>([]);
