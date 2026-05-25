@@ -16,6 +16,10 @@ import { useEffect, useState } from 'react';
 import { useCurrentUser } from '@coinbase/cdp-hooks';
 import { supabase } from '@/utils/supabaseClient';
 import { useHybridPodPermission } from '@/hooks/useHybridPodPermission';
+import { useHatPermissions } from '@/hooks/useHatPermissions';
+import { usePodPermission } from '@/hooks/usePodPermission';
+import { useUserWallet } from '@/hooks/useUserWallet';
+import { usePodEligibilityAgreements } from '@/features/pods/hooks/usePodEligibilityAgreements';
 
 const EXEC_POD_ID = 'e35c9e25-d29f-4988-b1e8-2902e960b94c';
 
@@ -92,6 +96,17 @@ export default function WhoamiPage() {
   const passwordsAccessCheck = useHybridPodPermission(
     EXEC_POD_ID,
     'passwordsAccess',
+  );
+
+  // Drill into the intermediate state used by useHybridPodPermission
+  // so we can see which factor is returning false.
+  const userWalletForHooks = useUserWallet();
+  const hatPerms = useHatPermissions();
+  const dbPermAccess = usePodPermission(EXEC_POD_ID, 'passwordsAccess');
+  const dbPermManage = usePodPermission(EXEC_POD_ID, 'passwordsManage');
+  const agreements = usePodEligibilityAgreements(EXEC_POD_ID);
+  const execPodRole = hatPerms.userRoles?.find(
+    (r) => r.podId === EXEC_POD_ID,
   );
 
   const callWhoami = async (probe?: string): Promise<void> => {
@@ -375,6 +390,84 @@ export default function WhoamiPage() {
                 [{i}] {a}
               </div>
             ))}
+          </Section>
+
+          <Section title="Permission chain — intermediate state (Exec Pod)" highlight>
+            <Row
+              label="useUserWallet() returns"
+              value={userWalletForHooks ?? '(none)'}
+              bad={!userWalletForHooks}
+            />
+            <Row
+              label="useHatPermissions.isLoading"
+              value={hatPerms.isLoading ? 'yes' : 'no'}
+            />
+            <Row
+              label="useHatPermissions.userRoles count"
+              value={String(hatPerms.userRoles?.length ?? 0)}
+              bad={(hatPerms.userRoles?.length ?? 0) === 0}
+            />
+            <Row
+              label="useHatPermissions.error"
+              value={hatPerms.error ?? 'none'}
+              subtle={!hatPerms.error}
+            />
+            <Row
+              label="Exec Pod role found"
+              value={execPodRole ? 'yes' : 'NO'}
+              bad={!execPodRole}
+            />
+            <Row
+              label="Exec Pod role.name"
+              value={execPodRole?.name ?? '(none)'}
+              subtle={!execPodRole}
+            />
+            <Row
+              label="Exec Pod role.hatId"
+              value={execPodRole?.hatId ?? '(none)'}
+              subtle={!execPodRole}
+            />
+            <Row
+              label="Exec Pod role.permissions.passwordsAccess"
+              value={
+                execPodRole?.permissions?.passwordsAccess === true
+                  ? 'true'
+                  : execPodRole?.permissions?.passwordsAccess === false
+                    ? 'false'
+                    : '(undefined)'
+              }
+              bad={execPodRole?.permissions?.passwordsAccess !== true}
+            />
+            <Row
+              label="Exec Pod role.permissions.passwordsManage"
+              value={
+                execPodRole?.permissions?.passwordsManage === true
+                  ? 'true'
+                  : execPodRole?.permissions?.passwordsManage === false
+                    ? 'false'
+                    : '(undefined)'
+              }
+              bad={execPodRole?.permissions?.passwordsManage !== true}
+            />
+            <Row
+              label="usePodPermission(passwordsAccess) DB-only"
+              value={dbPermAccess ? 'true' : 'false'}
+              bad={!dbPermAccess}
+            />
+            <Row
+              label="usePodPermission(passwordsManage) DB-only"
+              value={dbPermManage ? 'true' : 'false'}
+              bad={!dbPermManage}
+            />
+            <Row
+              label="usePodEligibilityAgreements.loading"
+              value={agreements.loading ? 'yes' : 'no'}
+            />
+            <Row
+              label="usePodEligibilityAgreements.hasUnsignedAgreements"
+              value={agreements.hasUnsignedAgreements ? 'YES (blocks)' : 'no'}
+              bad={agreements.hasUnsignedAgreements}
+            />
           </Section>
 
           <Section title="useHybridPodPermission resolution (Exec Pod)">
