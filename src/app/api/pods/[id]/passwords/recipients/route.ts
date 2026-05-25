@@ -160,26 +160,92 @@ export async function GET(
     }
   }
 
-  const wallets = [...byWallet.keys()];
-  let pubkeys: Record<string, string> = {};
-  if (wallets.length > 0) {
-    const { data: keys } = await supabaseAdmin
-      .from('vault_user_keys')
-      .select('eoa_address, public_key')
-      .in('eoa_address', wallets);
-    for (const k of keys ?? []) {
-      pubkeys[k.eoa_address] = k.public_key;
+  // Multi-wallet aware vault key lookup.
+  //
+  // active_pod_members.wallet is the user's canonical wallet, but
+  // users may have bootstrapped their vault under a non-canonical
+  // linked wallet (e.g. mobile's per-device CDP wallet). Walk
+  // user_wallets to find ALL linked addresses for these canonical
+  // wallets, then look up vault_user_keys against the full set. If
+  // any linked wallet has a published pubkey, the recipient is
+  // ready to receive a wrap. We return that linked wallet's address
+  // + pubkey as the recipient — the wrap binds to the pubkey, not
+  // the canonical address, so on decrypt the user re-derives the
+  // same keypair from the same signature regardless of which
+  // device they're on.
+  const canonicalWallets = [...byWallet.keys()];
+  let canonicalToLinked: Record<string, string[]> = {};
+  let allLinkedAddresses: string[] = [];
+  if (canonicalWallets.length > 0) {
+    // Find every linked wallet for any user whose canonical wallet
+    // is in our recipient set.
+    const { data: ownerRows } = await supabaseAdmin
+      .from('user_wallets')
+      .select('user_id, wallet_address, is_canonical')
+      .in('wallet_address', canonicalWallets)
+      .eq('is_canonical', true);
+    const userIdToCanonical: Record<string, string> = {};
+    for (const r of ownerRows ?? []) {
+      userIdToCanonical[r.user_id] = r.wallet_address;
+    }
+    const userIds = Object.keys(userIdToCanonical);
+    if (userIds.length > 0) {
+      const { data: linkedRows } = await supabaseAdmin
+        .from('user_wallets')
+        .select('user_id, wallet_address')
+        .in('user_id', userIds);
+      for (const r of linkedRows ?? []) {
+        const canonical = userIdToCanonical[r.user_id];
+        if (!canonical) continue;
+        if (!canonicalToLinked[canonical]) canonicalToLinked[canonical] = [];
+        canonicalToLinked[canonical].push(r.wallet_address);
+        allLinkedAddresses.push(r.wallet_address);
+      }
     }
   }
 
-  const recipients = wallets.map((w) => ({
-    eoaAddress: w,
-    publicKey: pubkeys[w] ?? null,
-    roles: byWallet.get(w)!.roles,
-    roleIds: byWallet.get(w)!.roleIds,
-    isManager: byWallet.get(w)!.isManager,
-    hasPublishedKey: !!pubkeys[w],
-  }));
+  // Lookup vault pubkeys across the full linked-wallet set.
+  let pubkeyByWallet: Record<string, string> = {};
+  if (allLinkedAddresses.length > 0) {
+    const { data: keys } = await supabaseAdmin
+      .from('vault_user_keys')
+      .select('eoa_address, public_key')
+      .in('eoa_address', allLinkedAddresses);
+    for (const k of keys ?? []) {
+      pubkeyByWallet[k.eoa_address] = k.public_key;
+    }
+  }
+
+  // For each canonical recipient, pick a linked wallet that has a
+  // published pubkey. Prefer the canonical wallet itself, then any
+  // other linked wallet that's bootstrapped.
+  const recipients = canonicalWallets.map((canonical) => {
+    const linked = canonicalToLinked[canonical] ?? [canonical];
+    const preferredOrder = [
+      canonical,
+      ...linked.filter((w) => w !== canonical),
+    ];
+    let chosenAddress: string | null = null;
+    let chosenPubkey: string | null = null;
+    for (const addr of preferredOrder) {
+      if (pubkeyByWallet[addr]) {
+        chosenAddress = addr;
+        chosenPubkey = pubkeyByWallet[addr];
+        break;
+      }
+    }
+    return {
+      // The recipient address we'll wrap to: the linked wallet that
+      // actually holds a vault pubkey. Falls back to canonical if no
+      // linked wallet has bootstrapped (UI shows as pending).
+      eoaAddress: chosenAddress ?? canonical,
+      publicKey: chosenPubkey,
+      roles: byWallet.get(canonical)!.roles,
+      roleIds: byWallet.get(canonical)!.roleIds,
+      isManager: byWallet.get(canonical)!.isManager,
+      hasPublishedKey: !!chosenPubkey,
+    };
+  });
 
   return NextResponse.json({ recipients });
 }
