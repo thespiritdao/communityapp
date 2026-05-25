@@ -1,6 +1,24 @@
 # Password Vault — Architecture & Operational Guide
 
-*Last updated: 2026-05-22*
+*Last updated: 2026-05-24*
+
+## Recent changes (2026-05-24)
+
+- **Login field** added as a first-class encrypted field alongside the
+  password. Schema migration `20260524000002_add_vault_login.sql`.
+  Decrypted login renders in plaintext (no show/hide toggle) with its
+  own copy button.
+- **Multi-wallet aware throughout.** The vault now consumes the
+  platform identity layer (`user_wallets`) for both recipient
+  resolution and wrap lookups. A user can bootstrap their vault on
+  any device's CDP wallet, then access entries from any of their
+  linked devices regardless of which CDP wallet that device exposes.
+  This was a significant refactor; see "Multi-wallet integration"
+  section below.
+- **`AeadParams` browser-strictness fix:** SubtleCrypto in recent
+  Chrome / Safari rejects `additionalData: undefined`. The encrypt /
+  decrypt helpers now build the params object conditionally. Tests
+  didn't catch this because Node's webcrypto is more permissive.
 
 ## What this is
 
@@ -45,13 +63,19 @@ ethers, wagmi, and similar.
 
 ```
 vault_user_keys        eoa_address PK, public_key, algorithm, ...
+                       (keyed on whichever EOA bootstrapped — usually
+                       the per-device CDP wallet, not the canonical)
 vault_entries          id PK, pod_id FK, label, tags[], allowed_role_ids UUID[],
                        password_ciphertext, password_iv,
+                       login_ciphertext?, login_iv?,
                        notes_ciphertext?, notes_iv?,
                        sender_pubkey, created_by, updated_by, version
 vault_wrapped_keys     id PK, entry_id FK, recipient_eoa,
                        sender_pubkey, wrapped_key
                        UNIQUE(entry_id, recipient_eoa)
+                       (recipient_eoa is the EOA that holds the matching
+                        vault_user_keys row — not necessarily the
+                        canonical wallet)
 vault_pending_grants   id PK, pod_id FK, entry_id FK, newcomer_eoa
 vault_rotation_jobs    id PK, pod_id FK, evicted_eoa, status, ...
 vault_access_log       id PK, pod_id, entry_id?, accessor_eoa, action,
@@ -123,25 +147,35 @@ This is the canonical join used everywhere in the app — there is no
 1. Leader opens the AddPasswordModal; checks which roles can see this
    entry.
 2. Client fetches eligible recipients via
-   `GET /api/pods/:id/passwords/recipients?roleIds=...`.
+   `GET /api/pods/:id/passwords/recipients?roleIds=...`. Server returns
+   recipients with `eoaAddress` / `publicKey` pointing at whichever
+   linked wallet has a published vault pubkey (often the per-device
+   CDP wallet, not the canonical — see Multi-wallet integration).
 3. Client generates a random 32-byte AES-GCM content key.
-4. Client encrypts `password` and optional `notes` under the content
-   key (fresh IV per blob).
+4. Client encrypts `password`, optional `login`, and optional `notes`
+   under the content key (fresh IV per blob; AAD intentionally omitted
+   on entry content — AAD is reserved for wrap-side binding).
 5. For each recipient with a published pubkey, client:
    - Performs X25519 ECDH(my_secret, recipient_pubkey) → shared secret
    - HKDF → wrapping KEK
    - AES-GCM-encrypts the content key under the KEK, with
      `senderPubkey || recipientPubkey` as AAD
-6. Client POSTs `{label, tags, allowedRoleIds, ciphertext, iv,
+6. Client POSTs `{label, tags, allowedRoleIds,
+   passwordCiphertext, passwordIv,
+   loginCiphertext, loginIv,
+   notesCiphertext, notesIv,
    senderPubkey, wraps[]}` to the server.
 7. Server inserts the entry + the wrap rows. Never sees the content
    key or plaintext.
 
 ### Reading an entry
 
-1. Client fetches the entry's ciphertext + its own wrap row.
+1. Client fetches the entry's ciphertext + its own wrap row. Server
+   looks up the wrap against the caller's **entire linked-wallet set**
+   (not just the JWT's canonical), so a wrap published under a
+   non-canonical CDP wallet is still found.
 2. ECDH(my_secret, wrap_sender_pubkey) → KEK → unwrap content key.
-3. Decrypt password + optional notes locally.
+3. Decrypt password, optional login, and optional notes locally.
 4. Render in a hidden input with copy-to-clipboard. Best-effort
    clipboard clear after 30s.
 
@@ -197,6 +231,127 @@ wrap-presence gate.
 
 Empty `allowed_role_ids` = "any wallet with `passwordsAccess`"
 (backwards-compatible legacy behavior).
+
+## Multi-wallet integration (added 2026-05-24)
+
+The vault was originally built assuming one user has one wallet. The
+platform shipped a multi-wallet identity layer
+(`spec-platform-identity-multi-wallet.md`) because CDP creates a
+different EVM wallet per device for the same user. The vault now has
+to play with that reality.
+
+### The mismatch
+
+- **`vault_user_keys`** is keyed on the EOA that bootstrapped — which
+  is usually whichever per-device CDP wallet was active when the user
+  first signed the canonical message.
+- **Pod membership** (`active_pod_members.wallet`) is keyed on the
+  user's **canonical** wallet (the one in `user_profiles.wallet_address`).
+- These are usually different addresses for the same user.
+
+### Three places this matters
+
+**1. Recipient resolution** (`/api/pods/:id/passwords/recipients`)
+
+Lists who can receive a wrap for new entries. The route returns one
+recipient per canonical member, but the `eoaAddress` / `publicKey`
+fields point at whichever **linked wallet** actually has a vault
+pubkey published. If the user bootstrapped under their mobile CDP
+wallet, that's what we wrap to.
+
+The wrap binds to the pubkey via AAD, not the EOA — so the recipient
+can later decrypt on any device by re-deriving their X25519 keypair
+from the bootstrapping signature.
+
+**2. Wrap creation** (`POST /api/vault/keys`)
+
+Uses `authorizeOwnedWallet` from `walletAuthService` — accepts any of
+the caller's linked wallets, not just the JWT's canonical one. Lets
+a mobile session publish a vault pubkey for the CDP wallet that's
+actually doing the signing on that device.
+
+**3. Wrap lookup** (`GET /api/pods/:id/passwords` and
+`/api/pods/:id/passwords/:entryId`)
+
+When fetching the caller's wraps for entry decryption, looks up
+`vault_wrapped_keys.recipient_eoa IN (caller's linked wallets)`
+instead of just the canonical. Without this, the caller would see
+their own entries as "Pending grant" because the wrap was published
+under their CDP wallet, not their canonical.
+
+### Helper: getCallerLinkedWallets
+
+Both vault routes that do wrap lookups have an inline
+`getCallerLinkedWallets(canonical: string)` helper:
+
+```typescript
+async function getCallerLinkedWallets(canonical: string): Promise<string[]> {
+  // Find the user_id who owns this canonical wallet
+  const { data: ownerRow } = await supabaseAdmin
+    .from('user_wallets')
+    .select('user_id')
+    .eq('wallet_address', canonical)
+    .eq('is_canonical', true)
+    .maybeSingle();
+  if (!ownerRow?.user_id) return [canonical];
+
+  // Return every wallet linked to that user_id
+  const { data: linked } = await supabaseAdmin
+    .from('user_wallets')
+    .select('wallet_address')
+    .eq('user_id', ownerRow.user_id);
+  // ... dedupe + always include canonical for safety
+}
+```
+
+This is exactly the same pattern the platform's `walletAuthService`
+uses for `authorizeOwnedWallet`. Future code that needs "any of the
+caller's wallets" should use that helper rather than the inline copy.
+
+### Why the wrap binding still works across devices
+
+A wrap is `AES-GCM-encrypt(content_key, kek, aad=(sender_pubkey || recipient_pubkey))`.
+
+The `recipient_pubkey` is the user's X25519 pubkey, which is
+deterministic from `HKDF(EIP-191 signature over canonical message)`.
+The signature is deterministic per (wallet, message). So:
+
+- User signs canonical message on Mobile (CDP wallet A) → derives
+  keypair `K`, publishes `K.pub` to `vault_user_keys[recipient_eoa=A]`
+- Wraps get stored with `recipient_eoa = A` and AAD bound to `K.pub`
+- User later signs canonical message on Desktop (CDP wallet B) →
+  derives keypair `K'`, publishes `K'.pub` to
+  `vault_user_keys[recipient_eoa=B]`
+- Wraps for `recipient_eoa = A` are still bound to `K.pub`. Desktop's
+  `K'` can't unwrap them.
+
+The current design avoids this because we wrap to **whichever pubkey
+the user has already published.** We don't re-bootstrap on Desktop;
+we look up Mobile's pubkey via `getCallerLinkedWallets` → find the
+existing `vault_user_keys` row → use that pubkey as the recipient.
+
+This means: **the vault works as long as at least one of the user's
+linked wallets has bootstrapped.** If they sign in on a third device
+that has yet a different CDP wallet AND for some reason wants to
+bootstrap fresh, they'd publish a NEW pubkey that has no existing
+wraps. They'd need a manager re-grant. We don't auto-bootstrap on new
+devices for this reason.
+
+### What still needs work
+
+- The bootstrap hook (`useVaultIdentity`) currently signs with the
+  active CDP wallet on this device. If the user opens the vault on a
+  brand-new device for the first time, they bootstrap fresh — which
+  creates a new `vault_user_keys` row but doesn't auto-grant access to
+  existing entries. The full fix is `spec-vault-multi-wallet-identity.md`
+  (currently superseded but still relevant): a wrapped-seed model where
+  the user has one X25519 identity, and that identity's seed is
+  encrypted under each device's CDP signature. On a new device, you
+  unwrap the seed using your signature and recover the same keypair.
+- A small UX prompt: if the user opens the vault on a new device, we
+  should ideally detect "you already have a vault identity on another
+  device" and prompt them to either sign in on that device first or
+  start a re-grant flow.
 
 ## RLS overview
 
@@ -341,9 +496,12 @@ forces a re-bootstrap rather than silently proceeding.
 - `supabase/migrations/20260523000001_add_password_vault.sql` —
   schema + indexes + `pod_modules.passwords_enabled`
 - `supabase/migrations/20260523000002_vault_rls.sql` — RLS policies
+- `supabase/migrations/20260524000002_add_vault_login.sql` —
+  adds `login_ciphertext` + `login_iv` columns to `vault_entries`
+  (nullable; legacy entries keep working)
 
-Both are idempotent (CREATE TABLE IF NOT EXISTS, ADD COLUMN IF NOT
-EXISTS).
+All idempotent (CREATE TABLE IF NOT EXISTS, ADD COLUMN IF NOT EXISTS,
+DROP POLICY IF EXISTS before CREATE POLICY).
 
 ## Verification
 
