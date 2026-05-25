@@ -19,7 +19,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { useEvmAddress } from '@coinbase/cdp-hooks';
+import { useUserWallet } from './useUserWallet';
 import {
   DatabaseFirstPermissionService,
   type PodMembership,
@@ -51,7 +51,9 @@ interface UseDatabaseFirstPermissionsReturn {
  */
 export const useDatabaseFirstPermissions =
   (): UseDatabaseFirstPermissionsReturn => {
-    const { evmAddress: address } = useEvmAddress();
+    // Use the canonical wallet for membership lookups, not the per-device
+    // CDP wallet. See docs/spec-platform-identity-multi-wallet.md.
+    const address = useUserWallet();
     const [memberships, setMemberships] = useState<PodMembership[]>([]);
     const [isExecutiveLeader, setIsExecutiveLeader] = useState(false);
     const [managedPods, setManagedPods] = useState<string[]>([]);
