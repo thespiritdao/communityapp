@@ -9,7 +9,7 @@
  */
 
 import { useMemo } from 'react';
-import { useEvmAddress } from '@coinbase/cdp-hooks';
+import { useUserWallet } from '@/hooks/useUserWallet';
 import { useHatPermissions } from '@/hooks/useHatPermissions';
 
 interface BountyPermissions {
@@ -19,7 +19,7 @@ interface BountyPermissions {
 }
 
 export function useBountyPermissions(podId: string | null): BountyPermissions {
-  const { evmAddress: address } = useEvmAddress();
+  const address = useUserWallet();
   const { userRoles, isLoading } = useHatPermissions();
 
   const permissions = useMemo(() => {

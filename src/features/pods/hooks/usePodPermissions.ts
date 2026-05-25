@@ -1,5 +1,5 @@
 import { useMemo, useState, useEffect } from 'react';
-import { useEvmAddress } from '@coinbase/cdp-hooks';
+import { useUserWallet } from '@/hooks/useUserWallet';
 import { PodCoreService } from '../services/PodCoreService';
 import type { Pod } from '../types';
 import { supabase } from '@/utils/supabaseClient';
@@ -33,7 +33,7 @@ export function usePodPermissions({
   pod,
   userAddress,
 }: UsePodPermissionsConfig): UsePodPermissionsReturn {
-  const { evmAddress: address } = useEvmAddress();
+  const address = useUserWallet();
 
   // Use provided address or connected wallet address
   const effectiveAddress = userAddress || address;

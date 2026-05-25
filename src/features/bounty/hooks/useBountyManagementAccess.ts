@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useMemo } from 'react';
-import { useEvmAddress } from '@coinbase/cdp-hooks';
+import { useUserWallet } from '@/hooks/useUserWallet';
 import { useHatPermissions } from '@/hooks/useHatPermissions';
 import { usePodModules } from '@/features/pods/hooks/usePodModules';
 import { supabase } from '@/lib/supabase';
@@ -61,7 +61,7 @@ export interface UseBountyManagementAccessReturn {
  * Both conditions must be satisfied for a user to manage bounties in a pod.
  */
 export function useBountyManagementAccess(): UseBountyManagementAccessReturn {
-  const { evmAddress: address } = useEvmAddress();
+  const address = useUserWallet();
   const { userRoles, userHats, isLoading: hatPermissionsLoading } = useHatPermissions();
   const { modules, loading: modulesLoading } = usePodModules();
 

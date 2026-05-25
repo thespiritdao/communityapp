@@ -1,6 +1,6 @@
 // src/app/features/forum/hooks/useTokenGate.ts
 import { useState, useEffect } from 'react';
-import { useEvmAddress } from '@coinbase/cdp-hooks';
+import { useUserWallet } from '@/hooks/useUserWallet';
 import { fetchTokenBalances, type TokenBalance } from '@/utils/fetchTokenBalances';
 import { useEligibility } from '../../pods/hooks/useEligibility';
 import type { EligibilityCriteria } from '../../pods/services/EligibilityService';
@@ -22,7 +22,7 @@ interface TokenGateOptions {
 }
 
 export function useTokenGate(options: TokenGateOptions = {}): TokenGateResult {
-  const { evmAddress: address } = useEvmAddress();
+  const address = useUserWallet();
   const isConnected = !!address;
   const [hasAccess, setHasAccess] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(true);
