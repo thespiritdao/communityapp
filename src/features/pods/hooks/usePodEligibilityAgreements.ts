@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useEvmAddress } from '@coinbase/cdp-hooks';
+import { useUserWallet } from '@/hooks/useUserWallet';
 import { usePublicClient } from 'wagmi';
 import {
   EligibilityService,
@@ -41,7 +41,7 @@ export function usePodEligibilityAgreements(
   const [error, setError] = useState<string | null>(null);
   const [hasUnsignedAgreements, setHasUnsignedAgreements] = useState(false);
 
-  const { evmAddress: address } = useEvmAddress();
+  const address = useUserWallet();
   const publicClient = usePublicClient();
 
   const ELIGIBILITY_MODULE_ABI = [
@@ -218,7 +218,7 @@ export function usePodEligibilityAgreements(
                     address: agreement.eligibilityModuleAddress,
                     abi: ELIGIBILITY_MODULE_ABI,
                     functionName: 'hasSignedAgreement',
-                    args: [address, agreement.hatId],
+                    args: [address as `0x${string}`, agreement.hatId],
                   });
                   return hasSigned as boolean;
                 } catch (error) {
@@ -294,7 +294,7 @@ export function usePodEligibilityAgreements(
         address: eligibilityModuleAddress,
         abi: ELIGIBILITY_MODULE_ABI,
         functionName: 'hasSignedAgreement',
-        args: [address, hatId],
+        args: [address as `0x${string}`, hatId],
       });
       return hasSigned as boolean;
     } catch (error) {

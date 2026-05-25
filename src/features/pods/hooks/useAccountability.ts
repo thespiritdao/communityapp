@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useEvmAddress, useSignEvmMessage, useCurrentUser } from '@coinbase/cdp-hooks';
+import { useSignEvmMessage, useCurrentUser } from '@coinbase/cdp-hooks';
+import { useUserWallet } from '@/hooks/useUserWallet';
 import {
   PodCoreService,
   type AccountabilitySignature,
@@ -31,7 +32,12 @@ export function useAccountability({
   podId,
   podName,
 }: UseAccountabilityConfig): UseAccountabilityReturn {
-  const { evmAddress: address } = useEvmAddress();
+  // Identity wallet (canonical) — who is signing of record. The actual
+  // signature is produced by the device's CDP account (currentUser) below;
+  // the stored signer_address must be the canonical identity so the
+  // "has signed" read (usePodEligibilityAgreements / pod display) matches
+  // regardless of which device the user is on.
+  const address = useUserWallet();
   const { currentUser } = useCurrentUser();
   const { signEvmMessage } = useSignEvmMessage();
 

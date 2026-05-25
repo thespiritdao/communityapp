@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useEvmAddress } from '@coinbase/cdp-hooks';
+import { useUserWallet } from '@/hooks/useUserWallet';
 import { useWalletClient } from 'wagmi';
 import { HatEligibilityIntegration } from '../../../services/hatEligibilityIntegration';
 
@@ -28,7 +28,7 @@ interface UseTimeBoundMembershipOptions {
 export function useTimeBoundMembership(
   options: UseTimeBoundMembershipOptions = {},
 ) {
-  const { evmAddress: address } = useEvmAddress();
+  const address = useUserWallet();
   const { data: walletClient } = useWalletClient();
 
   const {
@@ -265,7 +265,7 @@ export function useTimeBoundMembership(
  * Hook for monitoring multiple HATs with time-bound memberships
  */
 export function useMultipleTimeBoundMemberships(hatIds: bigint[]) {
-  const { evmAddress: address } = useEvmAddress();
+  const address = useUserWallet();
   const [memberships, setMemberships] = useState<
     Map<string, TimeBoundMembership>
   >(new Map());

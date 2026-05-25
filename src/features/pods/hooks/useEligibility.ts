@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback } from 'react';
-import { useEvmAddress } from '@coinbase/cdp-hooks';
+import { useUserWallet } from '@/hooks/useUserWallet';
 import { useToast } from '@/components/ui/use-toast';
 import { EligibilityApiClient } from '../services/EligibilityApiClient';
 import type {
@@ -21,7 +21,7 @@ interface UseEligibilityState {
 }
 
 export function useEligibility() {
-  const { evmAddress: address } = useEvmAddress();
+  const address = useUserWallet();
   const { toast } = useToast();
 
   const [state, setState] = useState<UseEligibilityState>({
