@@ -130,40 +130,15 @@ export const useHatPermissions = (): UseHatPermissionsReturn => {
               continue;
             }
 
-            // CRITICAL FIX: Executive Pod Leaders get full permissions without database query
-            const EXEC_POD_ID = 'e35c9e25-d29f-4988-b1e8-2902e960b94c';
-            if (podId === EXEC_POD_ID && isLeader) {
-              // console.log('👑 Executive Pod Leader detected - granting full permissions');
-
-              const execRole: HatRole = {
-                hatId: hatId,
-                name: 'Executive Pod Leader',
-                podId: podId,
-                isLeaderRole: true,
-                permissions: {
-                  chatAccess: true,
-                  chatModeration: true,
-                  forumAccess: true,
-                  governanceParticipation: true,
-                  eventCreation: true,
-                  treasuryViewing: true,
-                  treasuryManagement: true,
-                  memberManagement: true,
-                  subPodCreation: true,
-                  roleAssignment: true,
-                  forumModeration: true,
-                  bountyManagement: true,
-                  marketplaceAccess: true,
-                  marketplaceManage: true,
-                  knowledgeBaseAccess: true,
-                  knowledgeBaseManage: true,
-                },
-              };
-
-              roles.push(execRole);
-              hats.push(hatId);
-              continue; // Skip pod_role_permissions query for Executive Pod
-            }
+            // NOTE: Executive Pod Leader used to have a hardcoded
+            // fast-path here that bypassed the DB query. It got out of
+            // sync every time a new permission flag was added (the
+            // hardcoded list missed surveyManage, surveyRespond,
+            // passwordsAccess, passwordsManage, agentManage as those
+            // shipped through 2026). Removed 2026-05-24 — Exec Pod
+            // Leaders now read the same pod_role_permissions row as
+            // every other role, single source of truth for what
+            // permissions a role actually has.
 
             // Get role permissions from pod_role_permissions
             const { data: roleData, error: roleError } = await supabase
