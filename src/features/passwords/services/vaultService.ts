@@ -18,6 +18,8 @@ export interface VaultEntry {
   tags: string[];
   /** pod_role_permissions IDs allowed to read. Empty = any reader. */
   allowedRoleIds: string[];
+  loginCiphertext: string | null;
+  loginIv: string | null;
   notesCiphertext: string | null;
   notesIv: string | null;
   passwordCiphertext: string;
@@ -75,6 +77,8 @@ export interface CreateEntryInput {
   allowedRoleIds?: string[];
   passwordCiphertext: string;
   passwordIv: string;
+  loginCiphertext?: string | null;
+  loginIv?: string | null;
   notesCiphertext?: string | null;
   notesIv?: string | null;
   senderPubkey: string;
@@ -101,6 +105,8 @@ export interface SubmitRotationInput {
     entryId: string;
     passwordCiphertext: string;
     passwordIv: string;
+    loginCiphertext?: string | null;
+    loginIv?: string | null;
     notesCiphertext?: string | null;
     notesIv?: string | null;
     senderPubkey: string;

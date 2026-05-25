@@ -130,6 +130,7 @@ export function PasswordVaultPanel({
         const decryptedEntries: Array<{
           entry: VaultEntry;
           password: string;
+          login: string | null;
           notes: string | null;
         }> = [];
         for (const e of entries) {
@@ -137,6 +138,8 @@ export function PasswordVaultPanel({
           const opened = await openEntry({
             passwordCiphertext: e.passwordCiphertext,
             passwordIv: e.passwordIv,
+            loginCiphertext: e.loginCiphertext,
+            loginIv: e.loginIv,
             notesCiphertext: e.notesCiphertext,
             notesIv: e.notesIv,
             senderPubkey: e.senderPubkey,
@@ -146,12 +149,13 @@ export function PasswordVaultPanel({
           decryptedEntries.push({
             entry: e,
             password: opened.password,
+            login: opened.login,
             notes: opened.notes,
           });
         }
 
         const rotated = await Promise.all(
-          decryptedEntries.map(async ({ entry, password, notes }) => {
+          decryptedEntries.map(async ({ entry, password, login, notes }) => {
             // Respect the per-entry audience. Empty allowedRoleIds means
             // "any reader" — use everyone with passwordsAccess.
             const audience =
@@ -172,6 +176,7 @@ export function PasswordVaultPanel({
             }
             const payload = await createEntryPayload({
               passwordPlaintext: password,
+              loginPlaintext: login ?? undefined,
               notesPlaintext: notes ?? undefined,
               sender: identity,
               recipients: eligible.map((r) => ({
@@ -183,6 +188,8 @@ export function PasswordVaultPanel({
               entryId: entry.id,
               passwordCiphertext: payload.passwordCiphertext,
               passwordIv: payload.passwordIv,
+              loginCiphertext: payload.loginCiphertext,
+              loginIv: payload.loginIv,
               notesCiphertext: payload.notesCiphertext,
               notesIv: payload.notesIv,
               senderPubkey: payload.senderPubkey,

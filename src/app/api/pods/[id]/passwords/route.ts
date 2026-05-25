@@ -117,7 +117,7 @@ export async function GET(
   const { data: entries, error: entriesError } = await supabaseAdmin
     .from('vault_entries')
     .select(
-      'id, pod_id, label, tags, allowed_role_ids, notes_ciphertext, notes_iv, password_ciphertext, password_iv, sender_pubkey, created_by, created_at, updated_at, updated_by, version',
+      'id, pod_id, label, tags, allowed_role_ids, login_ciphertext, login_iv, notes_ciphertext, notes_iv, password_ciphertext, password_iv, sender_pubkey, created_by, created_at, updated_at, updated_by, version',
     )
     .eq('pod_id', podId)
     .order('updated_at', { ascending: false });
@@ -161,6 +161,8 @@ export async function GET(
       label: e.label,
       tags: e.tags ?? [],
       allowedRoleIds: e.allowed_role_ids ?? [],
+      loginCiphertext: e.login_ciphertext,
+      loginIv: e.login_iv,
       notesCiphertext: e.notes_ciphertext,
       notesIv: e.notes_iv,
       passwordCiphertext: e.password_ciphertext,
@@ -189,6 +191,8 @@ interface CreateBody {
   allowedRoleIds?: string[];
   passwordCiphertext: string;
   passwordIv: string;
+  loginCiphertext?: string | null;
+  loginIv?: string | null;
   notesCiphertext?: string | null;
   notesIv?: string | null;
   senderPubkey: string;
@@ -245,6 +249,8 @@ export async function POST(
       label: body.label,
       tags: body.tags ?? [],
       allowed_role_ids: body.allowedRoleIds ?? [],
+      login_ciphertext: body.loginCiphertext ?? null,
+      login_iv: body.loginIv ?? null,
       notes_ciphertext: body.notesCiphertext ?? null,
       notes_iv: body.notesIv ?? null,
       password_ciphertext: body.passwordCiphertext,

@@ -325,6 +325,8 @@ export interface VaultEntryRecipient {
 export interface CreatedEntry {
   passwordCiphertext: string;
   passwordIv: string;
+  loginCiphertext: string | null;
+  loginIv: string | null;
   notesCiphertext: string | null;
   notesIv: string | null;
   senderPubkey: string;
@@ -343,6 +345,7 @@ export interface CreatedEntry {
  */
 export async function createEntryPayload(args: {
   passwordPlaintext: string;
+  loginPlaintext?: string;
   notesPlaintext?: string;
   sender: IdentityKeypair;
   recipients: VaultEntryRecipient[];
@@ -356,6 +359,9 @@ export async function createEntryPayload(args: {
     contentKeyB64,
     args.passwordPlaintext,
   );
+  const loginBlob = args.loginPlaintext
+    ? await aesGcmEncrypt(contentKeyB64, args.loginPlaintext)
+    : null;
   const notesBlob = args.notesPlaintext
     ? await aesGcmEncrypt(contentKeyB64, args.notesPlaintext)
     : null;
@@ -375,6 +381,8 @@ export async function createEntryPayload(args: {
   return {
     passwordCiphertext: passwordBlob.ciphertext,
     passwordIv: passwordBlob.iv,
+    loginCiphertext: loginBlob?.ciphertext ?? null,
+    loginIv: loginBlob?.iv ?? null,
     notesCiphertext: notesBlob?.ciphertext ?? null,
     notesIv: notesBlob?.iv ?? null,
     senderPubkey: args.sender.publicKey,
@@ -388,12 +396,14 @@ export async function createEntryPayload(args: {
 export async function openEntry(args: {
   passwordCiphertext: string;
   passwordIv: string;
+  loginCiphertext: string | null;
+  loginIv: string | null;
   notesCiphertext: string | null;
   notesIv: string | null;
   senderPubkey: string;
   myWrappedKey: string;
   myIdentity: IdentityKeypair;
-}): Promise<{ password: string; notes: string | null }> {
+}): Promise<{ password: string; login: string | null; notes: string | null }> {
   const contentKeyB64 = await unwrapContentKey({
     wrappedB64: args.myWrappedKey,
     recipientSecretKeyB64: args.myIdentity.secretKey,
@@ -406,6 +416,14 @@ export async function openEntry(args: {
     iv: args.passwordIv,
   });
 
+  const login =
+    args.loginCiphertext && args.loginIv
+      ? await aesGcmDecrypt(contentKeyB64, {
+          ciphertext: args.loginCiphertext,
+          iv: args.loginIv,
+        })
+      : null;
+
   const notes =
     args.notesCiphertext && args.notesIv
       ? await aesGcmDecrypt(contentKeyB64, {
@@ -414,5 +432,5 @@ export async function openEntry(args: {
         })
       : null;
 
-  return { password, notes };
+  return { password, login, notes };
 }

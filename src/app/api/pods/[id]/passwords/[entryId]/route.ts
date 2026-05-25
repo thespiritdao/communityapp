@@ -94,7 +94,7 @@ export async function GET(
   const { data: entry, error: entryError } = await supabaseAdmin
     .from('vault_entries')
     .select(
-      'id, pod_id, label, tags, allowed_role_ids, notes_ciphertext, notes_iv, password_ciphertext, password_iv, sender_pubkey, created_by, created_at, updated_at, updated_by, version',
+      'id, pod_id, label, tags, allowed_role_ids, login_ciphertext, login_iv, notes_ciphertext, notes_iv, password_ciphertext, password_iv, sender_pubkey, created_by, created_at, updated_at, updated_by, version',
     )
     .eq('id', entryId)
     .eq('pod_id', podId)
@@ -129,6 +129,8 @@ export async function GET(
       label: entry.label,
       tags: entry.tags ?? [],
       allowedRoleIds: entry.allowed_role_ids ?? [],
+      loginCiphertext: entry.login_ciphertext,
+      loginIv: entry.login_iv,
       notesCiphertext: entry.notes_ciphertext,
       notesIv: entry.notes_iv,
       passwordCiphertext: entry.password_ciphertext,
@@ -153,6 +155,8 @@ interface UpdateBody {
   allowedRoleIds?: string[];
   passwordCiphertext: string;
   passwordIv: string;
+  loginCiphertext?: string | null;
+  loginIv?: string | null;
   notesCiphertext?: string | null;
   notesIv?: string | null;
   senderPubkey: string;
@@ -198,6 +202,8 @@ export async function PUT(
   const updateRow: Record<string, unknown> = {
     password_ciphertext: body.passwordCiphertext,
     password_iv: body.passwordIv,
+    login_ciphertext: body.loginCiphertext ?? null,
+    login_iv: body.loginIv ?? null,
     notes_ciphertext: body.notesCiphertext ?? null,
     notes_iv: body.notesIv ?? null,
     sender_pubkey: body.senderPubkey,

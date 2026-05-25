@@ -104,6 +104,8 @@ interface RotationSubmissionBody {
     entryId: string;
     passwordCiphertext: string;
     passwordIv: string;
+    loginCiphertext?: string | null;
+    loginIv?: string | null;
     notesCiphertext?: string | null;
     notesIv?: string | null;
     senderPubkey: string;
@@ -178,6 +180,8 @@ export async function POST(
       .update({
         password_ciphertext: e.passwordCiphertext,
         password_iv: e.passwordIv,
+        login_ciphertext: e.loginCiphertext ?? null,
+        login_iv: e.loginIv ?? null,
         notes_ciphertext: e.notesCiphertext ?? null,
         notes_iv: e.notesIv ?? null,
         sender_pubkey: e.senderPubkey,

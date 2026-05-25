@@ -56,6 +56,7 @@ export function AddPasswordModal({
   const [label, setLabel] = useState(existing?.label ?? '');
   const [tagInput, setTagInput] = useState('');
   const [tags, setTags] = useState<string[]>(existing?.tags ?? []);
+  const [login, setLogin] = useState('');
   const [password, setPassword] = useState('');
   const [notes, setNotes] = useState('');
   const [recipients, setRecipients] = useState<VaultRecipient[]>([]);
@@ -87,6 +88,8 @@ export function AddPasswordModal({
         const opened = await openEntry({
           passwordCiphertext: existing.passwordCiphertext,
           passwordIv: existing.passwordIv,
+          loginCiphertext: existing.loginCiphertext,
+          loginIv: existing.loginIv,
           notesCiphertext: existing.notesCiphertext,
           notesIv: existing.notesIv,
           senderPubkey: existing.senderPubkey,
@@ -95,6 +98,7 @@ export function AddPasswordModal({
         });
         if (cancelled) return;
         setPassword(opened.password);
+        setLogin(opened.login ?? '');
         setNotes(opened.notes ?? '');
       } catch (e: any) {
         if (cancelled) return;
@@ -230,6 +234,7 @@ export function AddPasswordModal({
 
       const payload = await createEntryPayload({
         passwordPlaintext: password,
+        loginPlaintext: login || undefined,
         notesPlaintext: notes || undefined,
         sender: identity,
         recipients: eligibleRecipients.map((r) => ({
@@ -244,6 +249,8 @@ export function AddPasswordModal({
         allowedRoleIds: [...finalRoleIds],
         passwordCiphertext: payload.passwordCiphertext,
         passwordIv: payload.passwordIv,
+        loginCiphertext: payload.loginCiphertext,
+        loginIv: payload.loginIv,
         notesCiphertext: payload.notesCiphertext,
         notesIv: payload.notesIv,
         senderPubkey: payload.senderPubkey,
@@ -390,6 +397,24 @@ export function AddPasswordModal({
             <p className="text-xs mt-1" style={{ color: '#9B948D' }}>
               Only members holding a checked role get a wrapped copy of
               this entry. Managers are always included.
+            </p>
+          </div>
+
+          <div>
+            <Label htmlFor="vault-login">Login (optional)</Label>
+            <Input
+              id="vault-login"
+              type="text"
+              value={login}
+              onChange={(e) => setLogin(e.target.value)}
+              placeholder={
+                loadingExisting ? 'Decrypting…' : 'username, email, or account ID'
+              }
+              disabled={submitting || loadingExisting}
+              autoComplete="off"
+            />
+            <p className="text-xs mt-1" style={{ color: '#9B948D' }}>
+              Encrypted alongside the password. Server never sees it.
             </p>
           </div>
 

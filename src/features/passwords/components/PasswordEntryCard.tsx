@@ -45,11 +45,12 @@ export function PasswordEntryCard({
 }: PasswordEntryCardProps) {
   const [revealed, setRevealed] = useState<{
     password: string;
+    login: string | null;
     notes: string | null;
   } | null>(null);
   const [decrypting, setDecrypting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [copied, setCopied] = useState(false);
+  const [copied, setCopied] = useState<'password' | 'login' | null>(null);
 
   const hasWrap = !!entry.myWrappedKey;
 
@@ -68,6 +69,8 @@ export function PasswordEntryCard({
       const opened = await openEntry({
         passwordCiphertext: entry.passwordCiphertext,
         passwordIv: entry.passwordIv,
+        loginCiphertext: entry.loginCiphertext,
+        loginIv: entry.loginIv,
         notesCiphertext: entry.notesCiphertext,
         notesIv: entry.notesIv,
         senderPubkey: entry.senderPubkey,
@@ -82,18 +85,22 @@ export function PasswordEntryCard({
     }
   };
 
-  const handleCopy = async () => {
+  const handleCopy = async (field: 'password' | 'login') => {
     if (!revealed) return;
+    const value = field === 'password' ? revealed.password : revealed.login;
+    if (!value) return;
     try {
-      await navigator.clipboard.writeText(revealed.password);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-      // Best-effort clipboard clear after 30s.
-      setTimeout(() => {
-        navigator.clipboard.writeText('').catch(() => {
-          /* user moved focus — ignore */
-        });
-      }, 30_000);
+      await navigator.clipboard.writeText(value);
+      setCopied(field);
+      setTimeout(() => setCopied(null), 2000);
+      // Best-effort clipboard clear after 30s (only for password).
+      if (field === 'password') {
+        setTimeout(() => {
+          navigator.clipboard.writeText('').catch(() => {
+            /* user moved focus — ignore */
+          });
+        }, 30_000);
+      }
     } catch (e) {
       setError('Failed to copy to clipboard');
     }
@@ -163,6 +170,33 @@ export function PasswordEntryCard({
         </div>
       ) : (
         <div className="space-y-2">
+          {/* Login row — only renders after decrypt + only if a login
+              was saved. Logins are decrypted to plaintext (no toggle)
+              since they're usually not the secret part. */}
+          {revealed?.login && (
+            <div className="flex gap-2">
+              <input
+                type="text"
+                readOnly
+                value={revealed.login}
+                className="flex-1 px-3 py-2 text-sm border rounded bg-white"
+                onClick={(e) => (e.target as HTMLInputElement).select()}
+              />
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => handleCopy('login')}
+                aria-label="Copy login"
+              >
+                {copied === 'login' ? (
+                  <Check className="h-4 w-4" />
+                ) : (
+                  <Copy className="h-4 w-4" />
+                )}
+              </Button>
+            </div>
+          )}
+
           <div className="flex gap-2">
             <input
               type={revealed ? 'text' : 'password'}
@@ -187,11 +221,11 @@ export function PasswordEntryCard({
             <Button
               size="sm"
               variant="outline"
-              onClick={handleCopy}
+              onClick={() => handleCopy('password')}
               disabled={!revealed}
               aria-label="Copy password"
             >
-              {copied ? (
+              {copied === 'password' ? (
                 <Check className="h-4 w-4" />
               ) : (
                 <Copy className="h-4 w-4" />
