@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import { useEvmAddress } from '@coinbase/cdp-hooks';
+import { useUserWallet } from '@/hooks/useUserWallet';
 import { supabase } from '@/utils/supabaseClient';
 import { User, Search } from 'lucide-react';
 import type { UserProfile } from '@/features/identity/types';
@@ -26,7 +26,7 @@ const CONNECT_COLORS: Record<string, string> = {
 const ONLINE_WINDOW_MS = 5 * 60 * 1000; // 5 minutes
 
 export default function MembersPage() {
-  const { evmAddress: address } = useEvmAddress();
+  const address = useUserWallet();
   const [members, setMembers] = useState<MemberWithPods[]>([]);
   const [pods, setPods] = useState<{ id: string; name: string }[]>([]);
   const [onlineWallets, setOnlineWallets] = useState<Set<string>>(new Set());

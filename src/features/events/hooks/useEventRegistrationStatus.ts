@@ -1,10 +1,10 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { useEvmAddress } from '@coinbase/cdp-hooks';
+import { useUserWallet } from '@/hooks/useUserWallet';
 import { EventService } from '../lib/supabase';
 import type { EventRegistration } from '../types/event';
 
 export function useEventRegistrationStatus(eventId: string | null) {
-  const { evmAddress: address } = useEvmAddress();
+  const address = useUserWallet();
   const [registration, setRegistration] = useState<EventRegistration | null>(
     null,
   );
@@ -56,7 +56,7 @@ export function useBatchEventRegistrationStatus(
   eventIds: string[],
   refreshKey = 0,
 ) {
-  const { evmAddress: address } = useEvmAddress();
+  const address = useUserWallet();
   const [registrations, setRegistrations] = useState<
     Record<string, EventRegistration>
   >({});

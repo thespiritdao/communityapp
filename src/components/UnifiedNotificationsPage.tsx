@@ -2,7 +2,7 @@
 
 'use client';
 
-import { useEvmAddress } from '@coinbase/cdp-hooks';
+import { useUserWallet } from '@/hooks/useUserWallet';
 import { useUnifiedNotifications } from '@/context/UnifiedNotificationContext';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -259,7 +259,7 @@ function NotificationCard({
 }
 
 export default function UnifiedNotificationsPage() {
-  const { evmAddress: address } = useEvmAddress();
+  const address = useUserWallet();
   const {
     notifications,
     unreadCounts,

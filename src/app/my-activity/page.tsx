@@ -3,7 +3,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useEvmAddress } from '@coinbase/cdp-hooks';
+import { useUserWallet } from '@/hooks/useUserWallet';
 import { supabase } from '@/lib/supabase';
 import styled from 'styled-components';
 
@@ -255,7 +255,7 @@ const LoadingMessage = styled.div`
 
 export default function MyActivityPage() {
   const router = useRouter();
-  const { evmAddress: address } = useEvmAddress();
+  const address = useUserWallet();
 
   const [activeTab, setActiveTab] = useState<
     'all' | 'purchases' | 'governance' | 'events' | 'forum'

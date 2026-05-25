@@ -1,17 +1,21 @@
 'use client';
 
 import { useEffect } from 'react';
-import { useEvmAddress } from '@coinbase/cdp-hooks';
+import { useUserWallet } from '@/hooks/useUserWallet';
 import { supabase } from '@/utils/supabaseClient';
 
 const HEARTBEAT_MS = 60_000; // 1 minute
 
 /**
- * Silently upserts the connected wallet's presence every 60 seconds.
+ * Silently upserts the connected user's presence every 60 seconds.
  * Renders nothing — drop it anywhere in the provider tree.
+ *
+ * Keys presence on the canonical user wallet (identity), not the
+ * per-device CDP signing wallet — otherwise a non-canonical device
+ * would record presence under an orphan address.
  */
 export function PresenceTracker() {
-  const { evmAddress: address } = useEvmAddress();
+  const address = useUserWallet();
 
   useEffect(() => {
     if (!address) return;

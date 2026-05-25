@@ -3,14 +3,15 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { useEvmAddress, useCurrentUser } from '@coinbase/cdp-hooks';
+import { useCurrentUser } from '@coinbase/cdp-hooks';
+import { useUserWallet } from '@/hooks/useUserWallet';
 import { useUserProfile } from '@/features/identity/hooks/useUserProfile';
 import { TosModal } from '@/components/TosModal';
 import { supabase } from '@/utils/supabaseClient';
 import '../../features/home/styles/HomePage.css';
 
 export default function HomePage() {
-  const { evmAddress: address } = useEvmAddress();
+  const address = useUserWallet();
   const { currentUser } = useCurrentUser();
   const { profile, loading } = useUserProfile(address || undefined);
   const [showTos, setShowTos] = useState(false);
