@@ -1,7 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { useEvmAddress, useCurrentUser } from '@coinbase/cdp-hooks';
+import { useCurrentUser } from '@coinbase/cdp-hooks';
+import { useUserWallet, useSigningWallet } from '@/hooks/useUserWallet';
 import { useSendUserOperationWithAttribution as useSendUserOperation } from '@/wallet/hooks/useSendUserOperationWithAttribution';
 import { useToast } from '@/components/ui/use-toast';
 import { Button } from '@/components/ui/button';
@@ -53,7 +54,11 @@ export const VoteOnApplicationButton: React.FC<
   onSuccess,
 }) => {
   // CDP Smart Account hooks - EXACT FAUCET PATTERN
-  const { evmAddress } = useEvmAddress();
+  // Device signing wallet — gates the on-chain castVote transaction.
+  const { address: evmAddress } = useSigningWallet();
+  // Identity wallet (canonical) — DB vote attribution (voter_address +
+  // voting_leaders), so it matches the parent's hasVoted check across devices.
+  const userWallet = useUserWallet();
   const { sendUserOperation } = useSendUserOperation();
   const { currentUser } = useCurrentUser();
   const { toast } = useToast();
@@ -153,7 +158,7 @@ export const VoteOnApplicationButton: React.FC<
         // For reject votes, mark application as rejected
         if (voteType === 'approve') {
           const newVoteCount = currentVotes + 1;
-          const newVotingLeaders = [...votingLeaders, evmAddress.toLowerCase()];
+          const newVotingLeaders = [...votingLeaders, (userWallet ?? evmAddress).toLowerCase()];
 
           await supabase
             .from('pod_membership_applications')
@@ -175,7 +180,7 @@ export const VoteOnApplicationButton: React.FC<
         // Record the vote with transaction hash
         await supabase.from('pod_application_votes').insert({
           application_id: applicationId,
-          voter_address: evmAddress.toLowerCase(),
+          voter_address: (userWallet ?? evmAddress).toLowerCase(),
           vote_type: voteType,
           transaction_hash: txHash,
           block_number: blockNumber ? Number(blockNumber) : null,

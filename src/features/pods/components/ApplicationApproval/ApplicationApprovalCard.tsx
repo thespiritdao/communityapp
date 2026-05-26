@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useEvmAddress } from '@coinbase/cdp-hooks';
+import { useUserWallet } from '@/hooks/useUserWallet';
 import { Card } from '@/components/ui/card';
 import { supabase } from '@/utils/supabaseClient';
 import { ApproveApplicationButton } from './ApproveApplicationButton';
@@ -44,7 +44,9 @@ interface MemberRole {
 export const ApplicationApprovalCard: React.FC<
   ApplicationApprovalCardProps
 > = ({ applicationId, onApproved }) => {
-  const { evmAddress: address } = useEvmAddress();
+  // Identity wallet (canonical) — the hasVoted check compares against
+  // voting_leaders, which VoteOnApplicationButton now writes as canonical.
+  const address = useUserWallet();
   const [application, setApplication] = useState<Application | null>(null);
   const [pod, setPod] = useState<Pod | null>(null);
   const [memberRoles, setMemberRoles] = useState<MemberRole[]>([]);

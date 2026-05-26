@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useEvmAddress, useCurrentUser } from '@coinbase/cdp-hooks';
+import { useUserWallet } from '@/hooks/useUserWallet';
 import { useSendUserOperationWithAttribution as useSendUserOperation } from '@/wallet/hooks/useSendUserOperationWithAttribution';
 import {
   encodeFunctionData,
@@ -109,7 +110,12 @@ export const ApproveApplicationButton: React.FC<
   onSuccess,
 }) => {
   // CDP Smart Account hooks - EXACT FAUCET PATTERN
+  // evmAddress (device EOA) gates the on-chain mint + drives the self-approval
+  // guard and management-hat permission read — all tied to the signing model,
+  // left as-is. userWallet (canonical) is used only for notification actor
+  // attribution so the recipient sees the approver's stable identity.
   const { evmAddress } = useEvmAddress();
+  const userWallet = useUserWallet();
   const { sendUserOperation } = useSendUserOperation();
   const { currentUser } = useCurrentUser();
   const { data: walletClient } = useWalletClient();
@@ -766,7 +772,7 @@ export const ApproveApplicationButton: React.FC<
           .from('general_notifications')
           .insert({
             recipient_address: applicantAddress.toLowerCase(),
-            sender_address: evmAddress?.toLowerCase() || '',
+            sender_address: (userWallet ?? evmAddress)?.toLowerCase() || '',
             notification_type: 'pod_application_status',
             title: `Leadership Application Approved!`,
             message: `Your application to ${pod?.name || 'the pod'} has been approved. Visit the pod page to claim your management role.`,
@@ -1378,7 +1384,7 @@ export const ApproveApplicationButton: React.FC<
       // Notify applicant
       await supabase.from('general_notifications').insert({
         recipient_address: applicantAddress.toLowerCase(),
-        sender_address: evmAddress.toLowerCase(),
+        sender_address: (userWallet ?? evmAddress).toLowerCase(),
         notification_type: 'pod_application_status',
         title: `Welcome to ${pod?.name || 'the pod'}!`,
         message: `Your application has been approved and your ${roleLabel} role has been minted.`,
