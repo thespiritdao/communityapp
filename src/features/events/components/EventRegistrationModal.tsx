@@ -4,6 +4,7 @@ import { useAuthContext } from '@/features/identity';
 import type React from 'react';
 import { useState, useEffect, useRef } from 'react';
 import { useEvmAddress, useCurrentUser, useSignEvmMessage } from '@coinbase/cdp-hooks';
+import { useUserWallet } from '@/hooks/useUserWallet';
 import { useSendUserOperationWithAttribution as useSendUserOperation } from '@/wallet/hooks/useSendUserOperationWithAttribution';
 import { useRouter } from 'next/navigation';
 import { EventTokenDisplay } from './EventTokenDisplay';
@@ -67,7 +68,13 @@ export const EventRegistrationModal: React.FC<EventRegistrationModalProps> = ({
   onSuccess,
   currentRegistrationCount = 0,
 }) => {
+  // Device wallet — signs the /api/auth/verify nonce and is the wallet the
+  // registration is authenticated + written under (event_registrations.user_address
+  // is RLS-bound to the authenticated wallet). Left on the device wallet; aligning
+  // the registration write + verify JWT + RLS to canonical is a Phase B/C concern.
   const { evmAddress: address } = useEvmAddress();
+  // Canonical identity — used only for notification actor attribution.
+  const userWallet = useUserWallet();
   const { currentUser } = useCurrentUser();
   const { sendUserOperation } = useSendUserOperation();
   const { signEvmMessage } = useSignEvmMessage();
@@ -467,11 +474,13 @@ export const EventRegistrationModal: React.FC<EventRegistrationModalProps> = ({
               '@/services/unifiedNotificationService'
             );
 
-            // Notify organizer of new registration
-            if (event.creator_address && address && event.creator_address.toLowerCase() !== address.toLowerCase()) {
+            // Notify organizer of new registration. Attribute to the canonical
+            // identity so the organizer sees the registrant's stable namecard.
+            const registrantIdentity = userWallet ?? address;
+            if (event.creator_address && registrantIdentity && event.creator_address.toLowerCase() !== registrantIdentity.toLowerCase()) {
               await unifiedNotificationService.createNotification({
                 recipient_address: event.creator_address,
-                sender_address: address,
+                sender_address: registrantIdentity,
                 notification_type: 'event_registration',
                 title: 'New Event Registration',
                 message: `Someone has registered for your event "${event.title}".`,
@@ -482,10 +491,11 @@ export const EventRegistrationModal: React.FC<EventRegistrationModalProps> = ({
               });
             }
 
-            // Confirm registration to attendee
-            if (address) {
+            // Confirm registration to attendee (deliver to canonical identity so
+            // it appears in their notifications regardless of device).
+            if (registrantIdentity) {
               await unifiedNotificationService.createNotification({
-                recipient_address: address,
+                recipient_address: registrantIdentity,
                 sender_address: event.creator_address || 'system',
                 notification_type: 'event_registration',
                 title: 'Event Registration Confirmed',
