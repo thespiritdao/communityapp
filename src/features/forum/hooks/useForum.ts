@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/utils/supabaseClient';
-import { useEvmAddress } from '@coinbase/cdp-hooks';
+import { useUserWallet, useSigningWallet } from '@/hooks/useUserWallet';
 import { useToast } from '@/components/ui/use-toast';
 import { useTokenGate } from '@/features/forum/hooks/useTokenGate';
 import { useAuthContext } from '@/features/identity/components/AuthProvider';
@@ -70,7 +70,13 @@ export function useForum() {
   const [userWalletAddress, setUserWalletAddress] = useState<string | null>(
     null,
   );
-  const { evmAddress: wagmiAddress } = useEvmAddress();
+  // Identity wallet (canonical) — seeds userWalletAddress, which is used for
+  // all identity reads/writes below (author_address, notification sender,
+  // load gates, returned address).
+  const identityAddress = useUserWallet();
+  // Device signing wallet — used only to bootstrap the Supabase session via
+  // signIn() when the user isn't authenticated yet.
+  const { address: signingAddress } = useSigningWallet();
   const { toast } = useToast();
   const { session, isAuthenticated, signIn } = useAuthContext();
 
@@ -87,15 +93,17 @@ export function useForum() {
     });
   }, []);
 
-  // Ensure we only set a valid 0x wallet address
+  // Ensure we only set a valid 0x wallet address. Seeds from the canonical
+  // identity wallet so forum identity (authoring, notifications, load gates)
+  // is consistent across devices, not tied to the per-device CDP wallet.
   useEffect(() => {
-    if (wagmiAddress?.startsWith('0x')) {
-      debug('Using wagmi address:', wagmiAddress);
-      setUserWalletAddress(wagmiAddress.toLowerCase());
-    } else if (wagmiAddress) {
-      console.error('Invalid wallet address format:', wagmiAddress);
+    if (identityAddress?.startsWith('0x')) {
+      debug('Using identity address:', identityAddress);
+      setUserWalletAddress(identityAddress.toLowerCase());
+    } else if (identityAddress) {
+      console.error('Invalid wallet address format:', identityAddress);
     }
-  }, [wagmiAddress]);
+  }, [identityAddress]);
 
   // Log when tokenBalances updates
   useEffect(() => {
@@ -437,8 +445,8 @@ export function useForum() {
     try {
       // Step 1: Ensure user is authenticated
       if (!isAuthenticated) {
-        if (wagmiAddress) {
-          await signIn(wagmiAddress);
+        if (signingAddress) {
+          await signIn(signingAddress);
         } else {
           toast({
             title: 'Authentication required',
