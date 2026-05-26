@@ -1,4 +1,5 @@
 import { type NextRequest, NextResponse } from 'next/server';
+import { createClient } from '@supabase/supabase-js';
 import { PodAccessControlService } from '../services/PodAccessControlService';
 import type { HatPermissions } from '@/services/hatPermissionsService';
 
@@ -7,6 +8,9 @@ import type { HatPermissions } from '@/services/hatPermissionsService';
  *
  * Provides middleware functions for Next.js API routes to integrate
  * real-time HAT-based permission checking.
+ *
+ * Authentication: Validates Supabase JWT from Authorization header,
+ * then resolves the authenticated user's wallet from user_profiles.
  */
 
 export interface PodAuthContext {
@@ -18,30 +22,81 @@ export interface PodAuthContext {
 }
 
 /**
- * Extract user wallet from request headers or auth context
+ * Extract and verify user wallet from Supabase JWT session.
+ *
+ * Flow:
+ * 1. Extract Bearer token from Authorization header
+ * 2. Create Supabase client authenticated with that token
+ * 3. Call supabase.auth.getUser() to cryptographically verify the JWT
+ * 4. Look up the verified user's wallet address from user_profiles
+ *
+ * This prevents spoofing — the wallet address comes from the DB
+ * after JWT verification, not from a client-supplied header.
  */
-function getUserWallet(request: NextRequest): string | null {
-  // Try different auth methods
-
-  // 1. Custom header (most common for frontend requests)
-  const walletHeader = request.headers.get('x-wallet-address');
-  if (walletHeader) return walletHeader;
-
-  // 2. Authorization header (Bearer token format)
+async function getUserWallet(request: NextRequest): Promise<string | null> {
   const authHeader = request.headers.get('authorization');
-  if (authHeader?.startsWith('Bearer ')) {
-    const token = authHeader.slice(7);
-    // TODO: Implement JWT token validation to extract wallet
-    // For now, assume token IS the wallet address for testing
-    if (token.startsWith('0x')) return token;
+  if (!authHeader?.startsWith('Bearer ')) {
+    return null;
   }
 
-  // 3. Query parameter (for GET requests)
-  const url = new URL(request.url);
-  const walletParam = url.searchParams.get('wallet');
-  if (walletParam) return walletParam;
+  const accessToken = authHeader.slice(7);
+  if (!accessToken) {
+    return null;
+  }
 
-  return null;
+  try {
+    // Create Supabase client authenticated with the user's JWT
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        global: {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        },
+      },
+    );
+
+    // Cryptographically verify the JWT and get the authenticated user
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser();
+
+    if (userError || !user) {
+      console.warn('Pod auth: JWT verification failed:', userError?.message);
+      return null;
+    }
+
+    // Look up the verified user's canonical wallet address
+    const supabaseAdmin = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!,
+      {
+        auth: {
+          autoRefreshToken: false,
+          persistSession: false,
+        },
+      },
+    );
+
+    const { data: userProfile } = await supabaseAdmin
+      .from('user_profiles')
+      .select('wallet_address')
+      .eq('user_id', user.id)
+      .single();
+
+    if (!userProfile?.wallet_address) {
+      console.warn('Pod auth: No wallet found for user:', user.id);
+      return null;
+    }
+
+    return userProfile.wallet_address;
+  } catch (error) {
+    console.error('Pod auth: Wallet extraction failed:', error);
+    return null;
+  }
 }
 
 /**
@@ -83,10 +138,10 @@ export async function withPodAuth(
   requiredPermission?: keyof HatPermissions,
 ): Promise<NextResponse> {
   try {
-    const userWallet = getUserWallet(request);
+    const userWallet = await getUserWallet(request);
     if (!userWallet) {
       return NextResponse.json(
-        { error: 'Authentication required: No wallet address found' },
+        { error: 'Authentication required: Valid session with linked wallet needed' },
         { status: 401 },
       );
     }
