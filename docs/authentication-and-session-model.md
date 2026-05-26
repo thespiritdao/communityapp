@@ -130,6 +130,44 @@ same `user_profiles` row by email. Both get a JWT with the canonical
 wallet — not their session's CDP wallet — so RLS sees consistent
 identity.
 
+## Which wallet hook to use (READ BEFORE writing client code)
+
+CDP creates a **different wallet per device**. So `useEvmAddress()`
+returns *this device's* wallet, which for any user on a second device
+(mobile, incognito, cleared storage) is **not** the wallet that owns
+their hats, pod memberships, profile, or DB rows. Reading it for an
+identity question silently breaks on every non-canonical device. This
+was the root cause behind the May 2026 identity audit
+([spec-identity-comparison-audit](spec-identity-comparison-audit.md)).
+
+Three hooks, three jobs — pick by intent, not habit:
+
+| Hook | Returns | Use for |
+|---|---|---|
+| `useUserWallet()` | canonical identity wallet (from JWT) | **All identity reads/writes**: "is this me", permissions, memberships, DB filters, author/sender attribution. **Default choice.** |
+| `useSigningWallet()` | this device's CDP wallet | **Only** when you need a signature: passing `evmAccount`/`account` to `signEvmMessage`, `sendUserOperation`, `walletClient.signMessage`. |
+| `useEvmAddress()` (raw CDP) | this device's CDP wallet | Avoid in new code. Legitimate only inside signing files and the pre-session auth bootstrap (`app/page.tsx`). |
+
+Rule of thumb: **if the address is compared to a DB row, used as a
+filter/attribution key, or asks "is this the user" → `useUserWallet()`.
+If it's handed to something that signs → `useSigningWallet()`.** When a
+component does both (a "hybrid"), use both: `useUserWallet()` for the
+identity parts, `useSigningWallet()` for the signature. Never reach for
+`useEvmAddress()` to answer an identity question.
+
+Server side, the equivalent is `getAuthContext(req)` /
+`getUserWallets(userId)` in `walletAuthService.ts` (reads the JWT + the
+`user_wallets` linked-wallet set). See
+[spec-platform-identity-multi-wallet](spec-platform-identity-multi-wallet.md)
+for the full model.
+
+> A repo-wide lint ban on `useEvmAddress` was considered but deferred:
+> ~145 files still import it (a mix of legitimate signing use and
+> not-yet-audited callsites), so an automated rule today is all noise.
+> Once the remaining callsites are classified, a Biome
+> `noRestrictedImports` (error, with signing-dir overrides) can lock
+> this in. Until then, this section is the guard.
+
 ## Side effects on first login
 
 Creating a new user triggers a chain of side effects (lines 184-228

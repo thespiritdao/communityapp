@@ -42,6 +42,10 @@
 // Reading useUserWallet() makes the intent ("I want identity") explicit.
 // Reading useSigningWallet() makes the intent ("I want a signer")
 // explicit. The two should never be confused.
+//
+// Contributor rule + decision table: docs/authentication-and-session-model.md
+// ("Which wallet hook to use"). Server-side equivalent: getAuthContext /
+// getUserWallets in src/services/walletAuthService.ts.
 
 import { useEvmAddress } from '@coinbase/cdp-hooks';
 import { useAuthContext } from '@/features/identity/components/AuthProvider';

@@ -8,7 +8,7 @@ the SpiritDAO Community App. New contributors should start here.
 | Doc | Topic |
 |---|---|
 | [pods-architecture-overview](pods-architecture-overview.md) | Pods feature — the central organizing unit. Layer cake, services map, creation flow, footguns |
-| [authentication-and-session-model](authentication-and-session-model.md) | How CDP wallet identity becomes a Supabase JWT, what RLS sees |
+| [authentication-and-session-model](authentication-and-session-model.md) | How CDP wallet identity becomes a Supabase JWT, what RLS sees. **Includes the wallet-hook rule: `useUserWallet` for identity, `useSigningWallet` for signing — never `useEvmAddress` for identity** |
 | [role-permissions-design-philosophy](role-permissions-design-philosophy.md) | Three principles behind the permission model (module ↔ permission coupling, Core/Add-Ons/Paid, capability-exposing UI) |
 | [paymaster-gas-sponsorship](paymaster-gas-sponsorship.md) | ERC-7677 proxy that sponsors gas for per-pod contracts |
 | [rag-stack-overview](rag-stack-overview.md) | Community Agent (per-pod) vs Sensemaker (DAO-wide) |
