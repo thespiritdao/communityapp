@@ -27,7 +27,7 @@ import toast from 'react-hot-toast';
 import type { EventWithStats } from '../types/event';
 import type { UserProfile } from '../types/qr-types';
 import { useEventRegistration } from '../hooks/useEvents';
-import { useEvmAddress } from '@coinbase/cdp-hooks';
+import { useUserWallet } from '@/hooks/useUserWallet';
 import { QRCodeService } from '../services/QRCodeService';
 
 interface EnhancedAttendeeCheckInProps {
@@ -37,7 +37,7 @@ interface EnhancedAttendeeCheckInProps {
 export const EnhancedAttendeeCheckIn: React.FC<
   EnhancedAttendeeCheckInProps
 > = ({ event }) => {
-  const { evmAddress: address } = useEvmAddress();
+  const address = useUserWallet();
   const { registration, loading } = useEventRegistration(event.id);
 
   const [userQRCode, setUserQRCode] = useState<string>('');
