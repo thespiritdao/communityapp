@@ -1,7 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { useEvmAddress, useCurrentUser } from '@coinbase/cdp-hooks';
+import { useCurrentUser } from '@coinbase/cdp-hooks';
+import { useUserWallet, useSigningWallet } from '@/hooks/useUserWallet';
 import { useSendUserOperationWithAttribution as useSendUserOperation } from '@/wallet/hooks/useSendUserOperationWithAttribution';
 import { encodeFunctionData } from 'viem';
 import { useToast } from '@/components/ui/use-toast';
@@ -54,7 +55,11 @@ export const RemoveMemberButton: React.FC<RemoveMemberButtonProps> = ({
   onSuccess,
 }) => {
   // CDP Smart Account hooks - EXACT FAUCET PATTERN
-  const { evmAddress } = useEvmAddress();
+  // Device signing wallet — gates the on-chain HAT-transfer transaction
+  // (paired with the smart account below).
+  const { address: evmAddress } = useSigningWallet();
+  // Identity wallet (canonical) — actor attribution on the removal notification.
+  const userWallet = useUserWallet();
   const { sendUserOperation } = useSendUserOperation();
   const { currentUser } = useCurrentUser();
   const { toast } = useToast();
@@ -192,7 +197,7 @@ export const RemoveMemberButton: React.FC<RemoveMemberButtonProps> = ({
         // Send notification to removed member
         await supabase.from('general_notifications').insert({
           recipient_address: memberAddress.toLowerCase(),
-          sender_address: evmAddress.toLowerCase(),
+          sender_address: (userWallet ?? evmAddress).toLowerCase(),
           notification_type: 'pod_member_removed',
           title: `Removed from ${podName}`,
           message: `You have been removed from ${podName}. Your ${membershipType} role has been revoked.`,

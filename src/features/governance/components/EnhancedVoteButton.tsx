@@ -2,7 +2,8 @@
 
 import type React from 'react';
 import { useState } from 'react';
-import { useEvmAddress, useCurrentUser } from '@coinbase/cdp-hooks';
+import { useCurrentUser } from '@coinbase/cdp-hooks';
+import { useUserWallet, useSigningWallet } from '@/hooks/useUserWallet';
 import { useSendUserOperationWithAttribution as useSendUserOperation } from '@/wallet/hooks/useSendUserOperationWithAttribution';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -42,7 +43,11 @@ export const EnhancedVoteButton: React.FC<EnhancedVoteButtonProps> = ({
   choice,
   onVoteSuccess,
 }) => {
-  const { evmAddress: address } = useEvmAddress();
+  // Identity wallet (canonical) — gate + DB vote attribution (voter_address),
+  // so the vote and the "already voted" check resolve to the user across devices.
+  const address = useUserWallet();
+  // Device signing wallet — only for the /api/auth/onchainkit session bootstrap.
+  const { address: signingAddress } = useSigningWallet();
   const { currentUser } = useCurrentUser();
   const { toast } = useToast();
   const [isVoting, setIsVoting] = useState(false);
@@ -139,7 +144,7 @@ export const EnhancedVoteButton: React.FC<EnhancedVoteButtonProps> = ({
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            address: address,
+            address: signingAddress ?? address,
             isEmbedded: true,
           }),
         });
