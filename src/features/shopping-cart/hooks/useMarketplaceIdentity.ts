@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { useEvmAddress } from '@coinbase/cdp-hooks';
+import { useUserWallet } from '@/hooks/useUserWallet';
 import { useTokenBalances } from '@/context/TokenBalancesContext';
 import { getUserIdentity, type UserIdentity } from '@/utils/accessControlUtils';
 import { canUserAccessProductAsync } from '../services/accessControl';
@@ -32,7 +32,7 @@ interface CachedIdentity {
  * - Memoized access check functions
  */
 export function useMarketplaceIdentity(): MarketplaceIdentity {
-  const { evmAddress: address } = useEvmAddress();
+  const address = useUserWallet();
   const { balances: tokenBalances, isLoading: tokenLoading } =
     useTokenBalances();
 

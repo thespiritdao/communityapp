@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { useEvmAddress } from '@coinbase/cdp-hooks';
+import { useUserWallet } from '@/hooks/useUserWallet';
 import { supabase } from '@/lib/supabase';
 import { unifiedNotificationService } from '@/services/unifiedNotificationService';
 import { UserProfileDisplay } from '@/components/UserProfileDisplay';
@@ -31,7 +31,7 @@ export function DirectMessageModal({
   recipientImage,
   onClose,
 }: DirectMessageModalProps) {
-  const { evmAddress: address } = useEvmAddress();
+  const address = useUserWallet();
   const [messages, setMessages] = useState<DirectMessage[]>([]);
   const [newMessage, setNewMessage] = useState('');
   const [isLoading, setIsLoading] = useState(true);

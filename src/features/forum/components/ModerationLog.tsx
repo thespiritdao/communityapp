@@ -3,7 +3,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useEvmAddress } from '@coinbase/cdp-hooks';
+import { useUserWallet } from '@/hooks/useUserWallet';
 import { useModerationPermissions } from '../hooks/useModerationPermissions';
 import {
   getModeratorActions,
@@ -14,7 +14,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 
 export function ModerationLog() {
-  const { evmAddress: address } = useEvmAddress();
+  const address = useUserWallet();
   const { canModerate } = useModerationPermissions();
   const [actions, setActions] = useState<ModerationAction[]>([]);
   const [stats, setStats] = useState({

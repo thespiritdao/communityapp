@@ -3,7 +3,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useEvmAddress } from '@coinbase/cdp-hooks';
+import { useUserWallet } from '@/hooks/useUserWallet';
 import { createPoll } from '../services/PollService';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -28,7 +28,7 @@ export function PollCreationForm({
   onPollCreated,
   onCancel,
 }: PollCreationFormProps) {
-  const { evmAddress: address } = useEvmAddress();
+  const address = useUserWallet();
   const [question, setQuestion] = useState('');
   const [options, setOptions] = useState<string[]>(['', '']);
   const [allowMultiple, setAllowMultiple] = useState(false);

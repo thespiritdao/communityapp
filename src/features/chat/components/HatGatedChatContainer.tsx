@@ -4,7 +4,7 @@ import { useAuthContext } from '@/features/identity';
 import type React from 'react';
 import { useEffect, useState } from 'react';
 import '@/features/chat/styles/Chat.css';
-import { useEvmAddress } from '@coinbase/cdp-hooks';
+import { useUserWallet } from '@/hooks/useUserWallet';
 import { supabase } from '@/utils/supabaseClient';
 import { useHatPermissions } from '@/hooks/useHatPermissions';
 import type { Message, UserProfile, ChatGroup } from '../types';
@@ -30,7 +30,7 @@ export const HatGatedChatContainer: React.FC<HatGatedChatContainerProps> = ({
   podId,
   eligibilityRoleId,
 }) => {
-  const { evmAddress: address } = useEvmAddress();
+  const address = useUserWallet();
   const { session, isAuthenticated, signIn } = useAuthContext();
   const { createNotification } = useUnifiedNotifications();
 
