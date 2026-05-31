@@ -38,14 +38,17 @@ interface GovToken {
 interface PodGovernanceTokenBalanceProps {
   /** The current member's wallet address. */
   walletAddress?: string;
+  /** The pod this chip is shown in. Scopes the token to this community's token
+   *  (owner_pod_id) plus any platform-wide token, so $TGN only shows for TreeGens. */
+  podId?: string;
   /** Optional: restrict to a specific token contract; otherwise shows the first
-   *  gating_enabled governance token in the registry. */
+   *  gating_enabled governance token scoped to this pod. */
   contractAddress?: string;
 }
 
 export const PodGovernanceTokenBalance: React.FC<
   PodGovernanceTokenBalanceProps
-> = ({ walletAddress, contractAddress }) => {
+> = ({ walletAddress, podId, contractAddress }) => {
   const publicClient = usePublicClient();
   const [token, setToken] = useState<GovToken | null>(null);
   const [balance, setBalance] = useState<string | null>(null);
@@ -56,10 +59,15 @@ export const PodGovernanceTokenBalance: React.FC<
     (async () => {
       let query = supabase
         .from('tokens')
-        .select('name, contract_address, decimals')
+        .select('name, contract_address, decimals, owner_pod_id')
         .eq('is_active', true)
         .eq('gating_enabled', true)
-        .eq('token_type', 'erc20');
+        .eq('token_type', 'erc20')
+        .or(
+          podId
+            ? `owner_pod_id.is.null,owner_pod_id.eq.${podId}`
+            : 'owner_pod_id.is.null',
+        );
 
       if (contractAddress) {
         query = query.ilike('contract_address', contractAddress);

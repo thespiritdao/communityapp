@@ -87,6 +87,13 @@ async function registerTgnToken() {
   // NOTE: the live `tokens` table has no `symbol` column — the display name IS
   // the `name` field (e.g. "$SYSTEM", "$SELF"). We follow that convention.
   void symbol;
+
+  // Optional community scope. Set OWNER_POD_ID to the TreeGens pod UUID so $TGN
+  // is offered ONLY inside that community. If unset, the token is registered
+  // platform-wide (owner_pod_id NULL) and you can scope it later by setting the
+  // column once the pod exists.
+  const ownerPodId = process.env.OWNER_POD_ID || null;
+
   const tgnToken = {
     id: 'tgn',
     name: '$TGN',
@@ -97,6 +104,7 @@ async function registerTgnToken() {
     // Governance guardrail: blessed for role/vote gating only. $TGN is a
     // governance signal — never issued, held, or exchanged by the platform.
     gating_enabled: true,
+    owner_pod_id: ownerPodId,
     description: 'TreeGens community token ($TGN) on Base — governance signal only',
   };
 
@@ -117,6 +125,9 @@ async function registerTgnToken() {
         decimals,
         is_active: true,
         gating_enabled: true,
+        // Only overwrite scope when explicitly provided, so a re-run without
+        // OWNER_POD_ID doesn't wipe a scope you set earlier.
+        ...(ownerPodId ? { owner_pod_id: ownerPodId } : {}),
         description: tgnToken.description,
       })
       .eq('id', existing.id)

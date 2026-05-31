@@ -28,6 +28,11 @@ swapped, or custodied by the platform.
 - **`tokens.gating_enabled` flag (default FALSE):** a token can gate a role/vote
   ONLY when an admin explicitly blesses it. A newly registered token gates nothing
   until deliberately enabled.
+- **`tokens.owner_pod_id` (community scope):** a community token is offered ONLY
+  inside its owning pod. `owner_pod_id = <pod>` → selectable only in that pod (e.g.
+  $TGN for TreeGens); `NULL` → platform-wide. So $TGN never appears in another
+  community's governance settings. The criteria builder filters to
+  `owner_pod_id IS NULL OR owner_pod_id = <this pod>`.
 - **No free-text address entry in the leader UI:** the criteria builder's
   "community governance token" selector lists ONLY `gating_enabled` ERC-20s from
   the registry. A leader cannot paste an arbitrary/speculative token.
@@ -82,7 +87,10 @@ Verifier → one vote" actually enforced, not merely suggested. Voting remains s
    TGN_TOKEN_ADDRESS=0x<tgn_on_base> node src/scripts/registerTgnToken.mjs
    ```
    The script reads `decimals()` on-chain and sets `gating_enabled: true`.
-3. **Create the TreeGens pod** via the existing Option-D flow.
+3. **Create the TreeGens pod** via the existing Option-D flow. Then scope $TGN to
+   it: set `tokens.owner_pod_id = <treegens pod uuid>` (UPDATE in Supabase, or re-run
+   the register script with `OWNER_POD_ID=<uuid>`). Until scoped, $TGN is platform-
+   wide (owner_pod_id NULL).
 4. **Create the Verifier role** in `UnifiedMembershipManager`; set
    `governanceParticipation: true`.
 5. **Add the eligibility criterion** in `EligibilityCriteriaBuilder` → Currency:

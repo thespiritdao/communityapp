@@ -312,12 +312,20 @@ export const EligibilityCriteriaBuilder: React.FC<
         setAvailableTokens(filteredTokens);
 
         // Load community governance tokens: ERC-20s blessed for gating only.
+        // Community scoping: a token gates roles only in its owning pod
+        // (owner_pod_id), plus platform-wide tokens (owner_pod_id IS NULL).
+        // This keeps e.g. $TGN out of every other community's settings.
         const { data: govTokens } = await supabase
           .from('tokens')
-          .select('name, contract_address, decimals')
+          .select('name, contract_address, decimals, owner_pod_id')
           .eq('is_active', true)
           .eq('gating_enabled', true)
-          .eq('token_type', 'erc20');
+          .eq('token_type', 'erc20')
+          .or(
+            podId
+              ? `owner_pod_id.is.null,owner_pod_id.eq.${podId}`
+              : 'owner_pod_id.is.null',
+          );
 
         setGovernanceTokens(
           (govTokens || [])
