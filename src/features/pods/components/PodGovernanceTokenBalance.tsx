@@ -31,7 +31,6 @@ const ERC20_BALANCE_ABI = [
 
 interface GovToken {
   name: string;
-  symbol?: string;
   address: string;
   decimals: number;
 }
@@ -57,7 +56,7 @@ export const PodGovernanceTokenBalance: React.FC<
     (async () => {
       let query = supabase
         .from('tokens')
-        .select('name, symbol, contract_address, decimals')
+        .select('name, contract_address, decimals')
         .eq('is_active', true)
         .eq('gating_enabled', true)
         .eq('token_type', 'erc20');
@@ -71,7 +70,6 @@ export const PodGovernanceTokenBalance: React.FC<
       if (!cancelled && row?.contract_address) {
         setToken({
           name: row.name,
-          symbol: row.symbol || undefined,
           address: row.contract_address,
           decimals: typeof row.decimals === 'number' ? row.decimals : 18,
         });
@@ -119,7 +117,7 @@ export const PodGovernanceTokenBalance: React.FC<
     >
       <Coins className="h-4 w-4" />
       <span className="font-medium">
-        ${token.symbol || token.name}: {balance}
+        {token.name}: {balance}
       </span>
       <span className="text-xs opacity-70">governance eligibility</span>
     </div>

@@ -17,7 +17,9 @@ import { createPublicClient, http } from 'viem';
 import { base } from 'viem/chains';
 import dotenv from 'dotenv';
 
-dotenv.config({ path: '.env.local' });
+// Load .env first, then let .env.local override if present.
+dotenv.config({ path: '.env' });
+dotenv.config({ path: '.env.local', override: true });
 
 const TGN_ADDRESS = process.env.TGN_TOKEN_ADDRESS;
 
@@ -82,10 +84,12 @@ async function registerTgnToken() {
     /* keep default */
   }
 
+  // NOTE: the live `tokens` table has no `symbol` column — the display name IS
+  // the `name` field (e.g. "$SYSTEM", "$SELF"). We follow that convention.
+  void symbol;
   const tgnToken = {
     id: 'tgn',
-    name: 'TreeGens',
-    symbol,
+    name: '$TGN',
     contract_address: TGN_ADDRESS,
     token_type: 'erc20',
     decimals,
@@ -109,7 +113,6 @@ async function registerTgnToken() {
       .from('tokens')
       .update({
         name: tgnToken.name,
-        symbol: tgnToken.symbol,
         token_type: 'erc20',
         decimals,
         is_active: true,

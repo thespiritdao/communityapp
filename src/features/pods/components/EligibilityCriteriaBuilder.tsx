@@ -119,7 +119,7 @@ export const EligibilityCriteriaBuilder: React.FC<
   // gate a role on. No free-text address entry — selection only. Third-party
   // tokens are governance signals, never issued/held/exchanged by the platform.
   const [governanceTokens, setGovernanceTokens] = useState<
-    Array<{ name: string; symbol?: string; address: string; decimals: number }>
+    Array<{ name: string; address: string; decimals: number }>
   >([]);
   const [loadingTokens, setLoadingTokens] = useState(false);
   const [userTokenBalances, setUserTokenBalances] = useState<
@@ -314,7 +314,7 @@ export const EligibilityCriteriaBuilder: React.FC<
         // Load community governance tokens: ERC-20s blessed for gating only.
         const { data: govTokens } = await supabase
           .from('tokens')
-          .select('name, symbol, contract_address, decimals')
+          .select('name, contract_address, decimals')
           .eq('is_active', true)
           .eq('gating_enabled', true)
           .eq('token_type', 'erc20');
@@ -324,7 +324,6 @@ export const EligibilityCriteriaBuilder: React.FC<
             .filter((t) => t.contract_address)
             .map((t) => ({
               name: t.name,
-              symbol: t.symbol || undefined,
               address: t.contract_address,
               decimals: typeof t.decimals === 'number' ? t.decimals : 18,
             })),
@@ -816,7 +815,7 @@ export const EligibilityCriteriaBuilder: React.FC<
                         const patch = {
                           contract_address: selected?.address,
                           token_name: selected?.name,
-                          token_symbol: selected?.symbol,
+                          token_symbol: selected?.name,
                         };
                         if (isNew) {
                           setNewCriterion((prev) => ({ ...prev, ...patch }));
@@ -829,7 +828,7 @@ export const EligibilityCriteriaBuilder: React.FC<
                       <option value="">None</option>
                       {governanceTokens.map((t) => (
                         <option key={t.address} value={t.address}>
-                          {t.symbol ? `$${t.symbol} — ${t.name}` : t.name}
+                          {t.name}
                         </option>
                       ))}
                     </select>
