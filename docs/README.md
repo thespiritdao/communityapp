@@ -20,6 +20,7 @@ the SpiritDAO Community App. New contributors should start here.
 | [password-vault-architecture](password-vault-architecture.md) | E2EE pod password vault |
 | [treasury-v3-audit-and-deployment-2026-05](treasury-v3-audit-and-deployment-2026-05.md) | Treasury V3 contracts + migration path |
 | [governance-flexibility-layer-a-2026-05](governance-flexibility-layer-a-2026-05.md) | Per-pod configurable governance parameters |
+| [treegens-integration](treegens-integration.md) | Generic per-pod token eligibility gate ($TGN); 501(c)(3) governance-only guardrails |
 | [builder-codes-integration-scope](builder-codes-integration-scope.md) | ERC-8021 transaction attribution |
 
 ## UX patterns
@@ -44,6 +45,7 @@ the SpiritDAO Community App. New contributors should start here.
 | [spec-platform-identity-multi-wallet](spec-platform-identity-multi-wallet.md) | **Active spec** — Platform multi-wallet identity layer (CDP per-device wallets) |
 | [spec-identity-comparison-audit](spec-identity-comparison-audit.md) | **Active spec** — Proactive audit of identity-comparison patterns across the codebase |
 | [spec-vault-multi-wallet-identity](spec-vault-multi-wallet-identity.md) | Superseded — folded into platform identity spec |
+| [spec-treegens-planting-verification](spec-treegens-planting-verification.md) | Future (Phase 2): MGRO planting verification — photo → verify → mint |
 | [spec-inter-pod-agreements](spec-inter-pod-agreements.md) | Future: formal agreements between pods |
 | [spec-contributor-compensation](spec-contributor-compensation.md) | Future: role archetypes + $SELF payroll |
 | [spec-automated-blog-digest](spec-automated-blog-digest.md) | Future: AI-generated weekly community digest |

@@ -114,6 +114,13 @@ export const EligibilityCriteriaBuilder: React.FC<
     required: true, // Always true since all criteria being added are requirements
   });
   const [availableTokens, setAvailableTokens] = useState<AvailableToken[]>([]);
+  // Community governance tokens: registry tokens explicitly blessed for gating
+  // (gating_enabled = true). These are the ONLY third-party ERC-20s a leader may
+  // gate a role on. No free-text address entry — selection only. Third-party
+  // tokens are governance signals, never issued/held/exchanged by the platform.
+  const [governanceTokens, setGovernanceTokens] = useState<
+    Array<{ name: string; symbol?: string; address: string; decimals: number }>
+  >([]);
   const [loadingTokens, setLoadingTokens] = useState(false);
   const [userTokenBalances, setUserTokenBalances] = useState<
     Record<string, string>
@@ -303,6 +310,25 @@ export const EligibilityCriteriaBuilder: React.FC<
         );
 
         setAvailableTokens(filteredTokens);
+
+        // Load community governance tokens: ERC-20s blessed for gating only.
+        const { data: govTokens } = await supabase
+          .from('tokens')
+          .select('name, symbol, contract_address, decimals')
+          .eq('is_active', true)
+          .eq('gating_enabled', true)
+          .eq('token_type', 'erc20');
+
+        setGovernanceTokens(
+          (govTokens || [])
+            .filter((t) => t.contract_address)
+            .map((t) => ({
+              name: t.name,
+              symbol: t.symbol || undefined,
+              address: t.contract_address,
+              decimals: typeof t.decimals === 'number' ? t.decimals : 18,
+            })),
+        );
 
         // Check user balances for these tokens
         if (address) {
@@ -766,6 +792,83 @@ export const EligibilityCriteriaBuilder: React.FC<
                     />
                   </div>
                 </div>
+                {governanceTokens.length > 0 && (
+                  <div className="mt-4 pt-4 border-t border-gray-200">
+                    <Label className="flex items-center gap-2 mb-1">
+                      <Coins className="h-4 w-4" />
+                      Community governance token
+                    </Label>
+                    <select
+                      className="w-full border rounded-md p-2 text-sm"
+                      value={
+                        governanceTokens.some(
+                          (t) =>
+                            t.address.toLowerCase() ===
+                            criterion.contract_address?.toLowerCase(),
+                        )
+                          ? criterion.contract_address
+                          : ''
+                      }
+                      onChange={(e) => {
+                        const selected = governanceTokens.find(
+                          (t) => t.address === e.target.value,
+                        );
+                        const patch = {
+                          contract_address: selected?.address,
+                          token_name: selected?.name,
+                          token_symbol: selected?.symbol,
+                        };
+                        if (isNew) {
+                          setNewCriterion((prev) => ({ ...prev, ...patch }));
+                        } else if (index !== undefined) {
+                          updateExistingCriterion(index, patch);
+                        }
+                      }}
+                      disabled={readonly}
+                    >
+                      <option value="">None</option>
+                      {governanceTokens.map((t) => (
+                        <option key={t.address} value={t.address}>
+                          {t.symbol ? `$${t.symbol} — ${t.name}` : t.name}
+                        </option>
+                      ))}
+                    </select>
+                    {governanceTokens.some(
+                      (t) =>
+                        t.address.toLowerCase() ===
+                        criterion.contract_address?.toLowerCase(),
+                    ) && (
+                      <div className="mt-2">
+                        <Label className="mb-1 block">Minimum amount</Label>
+                        <Input
+                          type="number"
+                          min="0"
+                          step="0.001"
+                          value={criterion.minimum_amount || ''}
+                          onChange={(e) => {
+                            if (isNew) {
+                              setNewCriterion((prev) => ({
+                                ...prev,
+                                minimum_amount: e.target.value,
+                              }));
+                            } else if (index !== undefined) {
+                              updateExistingCriterion(index, {
+                                minimum_amount: e.target.value,
+                              });
+                            }
+                          }}
+                          placeholder="e.g. 2000"
+                          disabled={readonly}
+                        />
+                      </div>
+                    )}
+                    <p className="mt-2 text-xs text-gray-500">
+                      Community governance tokens must be registered by SpiritDAO.
+                      They gate roles and voting eligibility only — they are not
+                      issued, held, or exchanged by the platform.
+                    </p>
+                  </div>
+                )}
                 <div
                   className="mt-3 text-sm text-gray-600 p-3 rounded"
                   style={{ backgroundColor: '#E8F1EE' }}

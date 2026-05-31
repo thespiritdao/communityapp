@@ -101,10 +101,12 @@ export const EnhancedVoteButton: React.FC<EnhancedVoteButtonProps> = ({
     // Only show message once (for the first choice), hide other buttons
     if (choice === 1) {
       return (
-        <div className="flex items-center gap-2 px-4 py-3 bg-gray-50 rounded-lg border border-gray-200">
-          <Shield className="h-4 w-4 text-gray-500" />
+        <div className="flex items-start gap-2 px-4 py-3 bg-gray-50 rounded-lg border border-gray-200">
+          <Shield className="h-4 w-4 text-gray-500 mt-0.5 shrink-0" />
           <span className="text-sm text-gray-600">
-            You do not have governance participation permission in this pod
+            Voting here requires a governance-participating role in this pod. If
+            this pod gates a role on holding a community token, you'll qualify
+            once you meet that requirement and are approved into the role.
           </span>
         </div>
       );
@@ -313,10 +315,12 @@ export const EnhancedVoteButton: React.FC<EnhancedVoteButtonProps> = ({
     // Only show message once (for the first choice), hide other buttons
     if (choice === 1) {
       return (
-        <div className="flex items-center gap-2 px-4 py-3 bg-gray-50 rounded-lg border border-gray-200">
-          <Shield className="h-4 w-4 text-gray-500" />
+        <div className="flex items-start gap-2 px-4 py-3 bg-gray-50 rounded-lg border border-gray-200">
+          <Shield className="h-4 w-4 text-gray-500 mt-0.5 shrink-0" />
           <span className="text-sm text-gray-600">
-            You do not have governance participation permission in this pod
+            Voting here requires a governance-participating role in this pod. If
+            this pod gates a role on holding a community token, you'll qualify
+            once you meet that requirement and are approved into the role.
           </span>
         </div>
       );

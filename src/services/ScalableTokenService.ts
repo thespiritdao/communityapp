@@ -43,8 +43,9 @@ export interface TokenInfo {
   name: string;
   symbol?: string;
   contract_address?: string;
-  token_type: 'erc721' | 'erc1155' | 'hat' | 'system';
+  token_type: 'erc20' | 'erc721' | 'erc1155' | 'hat' | 'system';
   token_id?: string;
+  decimals?: number;
   is_active: boolean;
   description?: string;
 }
@@ -175,6 +176,24 @@ export class ScalableTokenService {
         result.hasToken = Number(balance) > 0;
         console.log(
           `🎩 HAT token ${tokenInfo.name}: ${result.hasToken ? 'HELD' : 'NOT HELD'} (balance: ${balance})`,
+        );
+        return result;
+      }
+
+      // Handle ERC20 tokens (fungible, decimal-aware threshold gating).
+      // Returns raw wei (bigint); callers normalize by tokenInfo.decimals.
+      if (tokenInfo.token_type === 'erc20' && tokenInfo.contract_address) {
+        const balance = await publicClient.readContract({
+          address: tokenInfo.contract_address as `0x${string}`,
+          abi: TOKEN_ABI,
+          functionName: 'balanceOf',
+          args: [userAddress as `0x${string}`],
+        });
+
+        result.balance = balance as bigint;
+        result.hasToken = Number(balance) > 0;
+        console.log(
+          `🪙 ERC20 token ${tokenInfo.name}: raw balance ${balance} (decimals: ${tokenInfo.decimals ?? 18})`,
         );
         return result;
       }

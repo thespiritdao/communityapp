@@ -64,6 +64,33 @@ export class GovernanceService {
         throw new Error(`Wallet mismatch: voting as ${votingWallet} but authenticated as ${jwtWallet}`);
       }
 
+      // Server-side eligibility re-check for pod-level votes. The UI hides the
+      // vote control for ineligible users, but that is not an enforcement
+      // boundary — without this, a direct API call could persist a vote from a
+      // wallet that does not hold a governance-permissioned role. This makes the
+      // role-eligibility model (e.g. "hold >=2K $TGN -> Verifier -> one vote")
+      // actually enforced, not merely suggested.
+      const votePodId = (vote as any).pod_id ?? null;
+      if (votePodId) {
+        const { data: proposalRow } = await supabase
+          .from('pod_level_proposals')
+          .select('governance_tier')
+          .eq('id', vote.proposal_id)
+          .maybeSingle();
+
+        const tier: GovernanceTier =
+          (proposalRow?.governance_tier as GovernanceTier) ?? 'POD_OPERATIONAL';
+        const eligible = await getEligibleVoterWallets(votePodId, tier);
+        const isEligible = eligible.some(
+          (w) => w.toLowerCase() === votingWallet,
+        );
+        if (!isEligible) {
+          throw new Error(
+            'Not eligible to vote on this proposal: a governance-participating role in this pod is required.',
+          );
+        }
+      }
+
       const rowToInsert = {
         proposal_id: vote.proposal_id,
         voter_address: votingWallet, // Use lowercase for consistency
@@ -359,6 +386,21 @@ export class GovernanceService {
         if (!enabled) {
           throw new Error(
             'Governance is disabled for this pod; cannot create new proposals',
+          );
+        }
+
+        // Server-side defense in depth: the creator must hold a
+        // governance-participating role in this pod. The UI hides the
+        // "Create Proposal" control otherwise, but that is not an
+        // enforcement boundary — a direct API call must be rejected too.
+        const eligibleCreators = await getEligibleVoterWallets(
+          data.pod_id,
+          tier,
+        );
+        const creator = data.created_by?.toLowerCase();
+        if (!eligibleCreators.some((w) => w.toLowerCase() === creator)) {
+          throw new Error(
+            'Not authorized to create proposals in this pod: a governance-participating role is required.',
           );
         }
       }

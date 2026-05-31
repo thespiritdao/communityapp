@@ -3,6 +3,10 @@ import { fetchTokenBalances } from '@/utils/fetchTokenBalances';
 import { ScalableTokenService } from '@/services/ScalableTokenService';
 import { EligibilityModuleService } from '@/services/eligibilityModuleService';
 import { getClientHatId } from '@/lib/hatRegistryClient';
+import {
+  HYDREX_STAKING_ENABLED,
+  fetchQualifyingStakedTgn,
+} from '@/features/pods/services/hydrexStakingService';
 
 // Enhanced eligibility criteria types
 export interface EligibilityCriteria {
@@ -459,11 +463,20 @@ export class EligibilityService {
         };
       }
 
-      // Unknown contract - provide helpful feedback
-      console.warn('⚠️ Unknown contract address:', targetContract);
-
-      // Check if it looks like a real contract address
+      // Not a hardcoded platform token. Fall back to the database-driven token
+      // registry (tokens table) so any registered community ERC-20 (e.g. $TGN)
+      // can gate a role on a decimal-aware balance threshold.
       if (targetContract.startsWith('0x') && targetContract.length === 42) {
+        const dbResult = await this.evaluateRegisteredErc20Balance(
+          userAddress,
+          targetContract,
+          minimumAmountNum,
+        );
+        if (dbResult) {
+          return dbResult;
+        }
+
+        console.warn('⚠️ Unknown contract address:', targetContract);
         return {
           passed: false,
           details: `Token contract ${criterion.contract_address.slice(0, 10)}... is not configured in the system. Please contact an administrator to add support for this token.`,
@@ -480,6 +493,76 @@ export class EligibilityService {
         passed: false,
         details:
           error instanceof Error ? error.message : 'Token balance check failed',
+      };
+    }
+  }
+
+  /**
+   * Evaluate a decimal-aware ERC-20 balance threshold for a token registered in
+   * the `tokens` table (the database-driven registry). This is the generic path
+   * that lets any community ERC-20 (e.g. $TGN) gate a pod role without being
+   * hardcoded into fetchTokenBalances.
+   *
+   * Returns null when the contract is not a registered active ERC-20, so the
+   * caller can preserve the existing "not configured" rejection.
+   */
+  private static async evaluateRegisteredErc20Balance(
+    userAddress: string,
+    contractAddress: string,
+    minimumAmount: number,
+  ): Promise<{ passed: boolean; value?: any; details?: string } | null> {
+    try {
+      const { data: token, error } = await supabase
+        .from('tokens')
+        .select('*')
+        .ilike('contract_address', contractAddress)
+        .eq('is_active', true)
+        .maybeSingle();
+
+      if (error || !token || token.token_type !== 'erc20') {
+        return null;
+      }
+
+      const { createPublicClient, http } = await import('viem');
+      const { base } = await import('viem/chains');
+      const publicClient = createPublicClient({ chain: base, transport: http() });
+
+      const result = await ScalableTokenService.checkTokenBalance(
+        userAddress,
+        token,
+        publicClient,
+      );
+
+      if (result.error) {
+        return {
+          passed: false,
+          details: `${token.symbol || token.name} balance check failed: ${result.error}`,
+        };
+      }
+
+      const decimals = typeof token.decimals === 'number' ? token.decimals : 18;
+      const humanBalance = Number(result.balance) / 10 ** decimals;
+      const passed = humanBalance >= minimumAmount;
+      const label = token.symbol || token.name;
+
+      console.log('✅ Registered ERC-20 check:', {
+        token: label,
+        humanBalance,
+        minimumAmount,
+        passed,
+      });
+
+      return {
+        passed,
+        value: humanBalance.toString(),
+        details: `Required: ${minimumAmount} ${label}, Available: ${humanBalance}`,
+      };
+    } catch (err) {
+      console.error('Registered ERC-20 balance evaluation failed:', err);
+      return {
+        passed: false,
+        details:
+          err instanceof Error ? err.message : 'Registered token check failed',
       };
     }
   }
@@ -635,8 +718,23 @@ export class EligibilityService {
     userAddress: string,
     criterion: EligibilityCriteria,
   ): Promise<{ passed: boolean; value?: any; details?: string }> {
-    // Placeholder for staking system integration
-    // This would check staking pools and locked amounts
+    // Staking source seam. Only consulted when the criterion explicitly opts in
+    // via `staking_pool` AND the source is enabled. Otherwise preserve the
+    // original "not yet implemented" behaviour (returns passed: false) so no
+    // role is accidentally gated on an unconfirmed/disabled source.
+    if (criterion.staking_pool === 'hydrex' && HYDREX_STAKING_ENABLED) {
+      const minimum = Number.parseFloat(criterion.minimum_staked || '0');
+      const stake = await fetchQualifyingStakedTgn(userAddress);
+      if (!stake.resolved) {
+        return { passed: false, details: stake.details };
+      }
+      const passed = stake.qualifyingTgn >= minimum;
+      return {
+        passed,
+        value: stake.qualifyingTgn.toString(),
+        details: `Required: ${minimum} staked $TGN, Available: ${stake.qualifyingTgn}`,
+      };
+    }
 
     return {
       passed: false,
