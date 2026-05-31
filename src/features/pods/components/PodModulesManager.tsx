@@ -36,6 +36,7 @@ import PodForumManager from './PodForumManager';
 import PodKnowledgeManager from './PodKnowledgeManager';
 import { GovernanceSettingsCard } from './GovernanceSettingsCard';
 import { DAOGovernanceSettingsCard } from '@/features/governance/components/DAOGovernanceSettingsCard';
+import { CommunityTokensAdminCard } from '@/features/pods/components/CommunityTokensAdminCard';
 import { PasswordVaultPanel } from '@/features/passwords/components/PasswordVaultPanel';
 
 interface PodModulesManagerProps {
@@ -479,7 +480,10 @@ export default function PodModulesManager({
                   this UI check just prevents non-exec pods from seeing
                   controls that would never take effect for them. */}
               {isExecPod && isManager && (
-                <DAOGovernanceSettingsCard canPropose={isManager} />
+                <>
+                  <DAOGovernanceSettingsCard canPropose={isManager} />
+                  <CommunityTokensAdminCard />
+                </>
               )}
             </div>
           )}
