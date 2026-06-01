@@ -138,7 +138,28 @@ export async function GET(req: NextRequest) {
       .order('name', { ascending: true }),
   ]);
 
-  return NextResponse.json({ tokens: tokens ?? [], pods: pods ?? [] });
+  // The platform's own tokens ($SYSTEM/$SELF) share token_type='erc20' with
+  // community tokens. They are not community governance signals and must never
+  // appear in this card (toggling their gating_enabled is meaningless/harmful).
+  // Exclude them two ways so the filter holds regardless of how the row was
+  // seeded: (1) by the canonical env-configured addresses — the same source of
+  // truth the marketplace trusts — and (2) by their stable token id slugs.
+  // Both compared case-insensitively (DB casing isn't guaranteed).
+  const PLATFORM_TOKEN_ADDRESSES = [
+    process.env.NEXT_PUBLIC_SYSTEM_TOKEN,
+    process.env.NEXT_PUBLIC_SELF_TOKEN,
+  ]
+    .filter(Boolean)
+    .map((a) => (a as string).toLowerCase());
+  const PLATFORM_TOKEN_IDS = ['$system', '$self', 'system', 'self'];
+
+  const communityTokens = (tokens ?? []).filter((t) => {
+    const addr = t.contract_address?.toLowerCase();
+    const id = t.id?.toLowerCase();
+    return !PLATFORM_TOKEN_ADDRESSES.includes(addr) && !PLATFORM_TOKEN_IDS.includes(id);
+  });
+
+  return NextResponse.json({ tokens: communityTokens, pods: pods ?? [] });
 }
 
 export async function POST(req: NextRequest) {

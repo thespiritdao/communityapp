@@ -14,7 +14,7 @@
  * appears in the TreeGens pod's settings).
  */
 
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -53,6 +53,11 @@ async function authedFetch(url: string, init?: RequestInit) {
 
 export const CommunityTokensAdminCard: React.FC = () => {
   const { toast } = useToast();
+  // useToast() returns a fresh `toast` fn each render; stash it in a ref so the
+  // load effect doesn't re-fire on its identity (which caused the list to
+  // flicker in a reload loop). Mirrors ExecPodReviewPanel's pattern.
+  const toastRef = useRef(toast);
+  useEffect(() => { toastRef.current = toast; }, [toast]);
   const [tokens, setTokens] = useState<AdminToken[]>([]);
   const [pods, setPods] = useState<PodRef[]>([]);
   const [loading, setLoading] = useState(false);
@@ -69,11 +74,11 @@ export const CommunityTokensAdminCard: React.FC = () => {
       setTokens(data.tokens || []);
       setPods(data.pods || []);
     } catch (e: any) {
-      toast({ title: 'Could not load tokens', description: e.message, variant: 'destructive' });
+      toastRef.current({ title: 'Could not load tokens', description: e.message, variant: 'destructive' });
     } finally {
       setLoading(false);
     }
-  }, [toast]);
+  }, []);
 
   useEffect(() => {
     load();
