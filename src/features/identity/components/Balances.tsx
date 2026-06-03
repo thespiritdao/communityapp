@@ -69,6 +69,18 @@ export function Balances() {
         </label>
         <span>{balances?.systemBalance || '0'}</span>
       </div>
+      {/* Custom community tokens the wallet holds (>0). Plain text, no badge —
+          $SELF/$SYSTEM above always stay pinned on top. */}
+      {balances?.customTokens?.map((t) => (
+        <div key={t.address} style={{ marginTop: '10px' }}>
+          <label
+            style={{ fontWeight: 'bold', marginRight: '8px', color: '#6b7280' }}
+          >
+            {t.symbol}:
+          </label>
+          <span>{t.balance}</span>
+        </div>
+      ))}
     </div>
   );
 }

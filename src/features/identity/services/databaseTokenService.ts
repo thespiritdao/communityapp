@@ -34,18 +34,23 @@ export class DatabaseTokenService {
         return [];
       }
 
-      return (data || []).map((token) => ({
-        id: token.id,
-        name: token.name,
-        description: token.description,
-        contract_address: token.contract_address,
-        token_type: token.token_type as 'erc20' | 'erc721' | 'erc1155',
-        token_image: token.token_image,
-        category: token.token_type === 'erc20' ? 'credential' : 'membership',
-        token_address: token.token_id, // Use token_id from database as token_address for contract calls
-        is_active: token.is_active,
-        source: 'tokens',
-      }));
+      return (data || [])
+        // erc20s (e.g. $SELF/$SYSTEM and community tokens like $TGN) are fungible
+        // balances, not credentials — they render in the Balances section, not the
+        // credential gallery. Only NFT/hat-style tokens belong here.
+        .filter((token) => token.token_type !== 'erc20')
+        .map((token) => ({
+          id: token.id,
+          name: token.name,
+          description: token.description,
+          contract_address: token.contract_address,
+          token_type: token.token_type as 'erc20' | 'erc721' | 'erc1155',
+          token_image: token.token_image,
+          category: 'membership' as const,
+          token_address: token.token_id, // Use token_id from database as token_address for contract calls
+          is_active: token.is_active,
+          source: 'tokens',
+        }));
     } catch (error) {
       return [];
     }

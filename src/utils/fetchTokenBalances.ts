@@ -1,5 +1,6 @@
 // src/utils/fetchTokenBalances.ts
 import Web3 from 'web3';
+import { supabase } from '@/utils/supabaseClient';
 
 // Minimal JSON ABIs for ERC20 and ERC721
 const erc20Abi = [
@@ -96,6 +97,15 @@ const web3 = new Web3(provider);
 // Add type for contract result
 type ContractResult = [bigint, string[]];
 
+// A community/custom governance token the wallet holds (balance > 0).
+// Plain-text balance only — never a credential. Self/System are NOT included
+// here; they render as their own pinned rows.
+export interface CustomTokenBalance {
+  symbol: string; // display name, e.g. "$TGN"
+  balance: string; // human-readable, decimals-adjusted
+  address: string;
+}
+
 // Add type for token balance
 export interface TokenBalance {
   hasProofOfCuriosity: boolean;
@@ -109,6 +119,7 @@ export interface TokenBalance {
   hasAdvocate: boolean; // Advocate NFT for universal bounty access
   systemBalance: string;
   selfBalance: string;
+  customTokens: CustomTokenBalance[]; // registered community tokens held (>0)
 }
 
 // Add type for cache entry
@@ -198,6 +209,45 @@ function isValidAddress(addr: string | undefined): boolean {
   );
 }
 
+// Registered community/custom governance tokens to show as balance rows.
+// Source of truth is the `tokens` registry (gating_enabled erc20s), minus the
+// platform's own $SYSTEM/$SELF, which already render as pinned rows.
+interface CustomTokenMeta {
+  symbol: string;
+  address: string;
+  decimals: number;
+}
+async function fetchCustomTokenRegistry(): Promise<CustomTokenMeta[]> {
+  try {
+    const { data, error } = await supabase
+      .from('tokens')
+      .select('name, contract_address, decimals')
+      .eq('is_active', true)
+      .eq('gating_enabled', true)
+      .eq('token_type', 'erc20')
+      .order('name', { ascending: true });
+    if (error || !data) return [];
+
+    const platform = [SYSTEM_TOKEN_CONTRACT, SELF_TOKEN_CONTRACT]
+      .filter(Boolean)
+      .map((a) => (a as string).toLowerCase());
+
+    return data
+      .filter(
+        (t) =>
+          isValidAddress(t.contract_address) &&
+          !platform.includes((t.contract_address ?? '').toLowerCase()),
+      )
+      .map((t) => ({
+        symbol: t.name,
+        address: t.contract_address as string,
+        decimals: typeof t.decimals === 'number' ? t.decimals : 18,
+      }));
+  } catch {
+    return [];
+  }
+}
+
 // --- Enhanced In-Memory Cache Setup ---
 const tokenBalancesCache: Record<string, CacheEntry> = {};
 const CACHE_TTL = 5 * 60 * 1000; // 5 minutes (increased from 30 seconds)
@@ -247,6 +297,11 @@ export async function fetchTokenBalances(
       let selfIndex = -1;
       let executivePodLeaderIndex = -1;
       let advocateIndex = -1;
+
+      // Custom community tokens (registry-driven). Loaded up front so their
+      // balanceOf calls join the same multicall round-trip.
+      const customRegistry = await fetchCustomTokenRegistry();
+      const customIndexes: number[] = new Array(customRegistry.length).fill(-1);
 
       // --- Proof of Curiosity (ERC721) ---
       if (isValidAddress((PROOF_OF_CURIOSITY_CONTRACT ?? '') as string)) {
@@ -322,6 +377,20 @@ export async function fetchTokenBalances(
       } else {
         console.error('[DEBUG] ⚠️ Self Token contract address is invalid/placeholder. Using balance 0.');
       }
+
+      // --- Custom community tokens (ERC20) ---
+      customRegistry.forEach((ct, i) => {
+        try {
+          const c = new web3.eth.Contract(erc20Abi as any, ct.address);
+          customIndexes[i] = calls.length;
+          calls.push({
+            target: ct.address,
+            callData: c.methods.balanceOf(walletAddress).encodeABI(),
+          });
+        } catch (error) {
+          console.error(`Error setting up custom token ${ct.symbol} call:`, error);
+        }
+      });
 
       // --- Advocate NFT (ERC721) ---
       if (isValidAddress(ADVOCATE_TOKEN_CONTRACT)) {
@@ -512,7 +581,28 @@ export async function fetchTokenBalances(
         hasAdvocate: false,
         systemBalance: '0',
         selfBalance: '0',
+        customTokens: [],
       };
+
+      // --- Custom community token balances (only include > 0) ---
+      try {
+        customRegistry.forEach((ct, i) => {
+          const idx = customIndexes[i];
+          if (idx < 0 || !returnData[idx]) return;
+          const raw = web3.utils.hexToNumberString(
+            (returnData[idx] ?? '0') as string,
+          );
+          if (raw === '0') return;
+          const human = Number(raw) / 10 ** ct.decimals;
+          balances.customTokens.push({
+            symbol: ct.symbol,
+            address: ct.address,
+            balance: human.toLocaleString(undefined, { maximumFractionDigits: 2 }),
+          });
+        });
+      } catch (error) {
+        console.error('Error processing custom token balances:', error);
+      }
 
       try {
         if (proofIndex >= 0 && returnData[proofIndex]) {
@@ -677,6 +767,7 @@ export async function fetchTokenBalances(
         hasAdvocate: false,
         systemBalance: '0',
         selfBalance: '0',
+        customTokens: [],
       };
     }
   };
