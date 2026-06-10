@@ -27,6 +27,7 @@ import { supabase } from '@/utils/supabaseClient';
 import { fetchTokenBalances } from '@/utils/fetchTokenBalances';
 import { useEvmAddress } from '@coinbase/cdp-hooks';
 import type { EligibilityCriteria } from '../services/EligibilityService';
+import { HYDREX_STAKING_ENABLED } from '../services/hydrexStakingService';
 import { UnifiedAgreementService } from '../services/UnifiedAgreementService';
 import { AgreementIPFSService } from '../services/AgreementIPFSService';
 
@@ -82,15 +83,20 @@ const CRITERION_TYPES = [
     description: 'Time-based Access',
     color: 'bg-[#FAF4EC] text-[#7A5F3F]',
   },
-  // COMING SOON: Staking Requirements
-  // {
-  //   type: 'staking' as const,
-  //   label: 'Staking Requirements (Coming Soon)',
-  //   icon: Lock,
-  //   description: 'Require staked tokens in specific pools',
-  //   color: 'bg-red-100 text-red-700',
-  //   disabled: true
-  // }
+  // Staking source is exposed only while the Hydrex integration is enabled
+  // (same kill switch as evaluation) — leaders can never configure a
+  // criterion the evaluator would reject.
+  ...(HYDREX_STAKING_ENABLED
+    ? [
+        {
+          type: 'staking' as const,
+          label: 'Staking (Hydrex)',
+          icon: Lock,
+          description: 'Require $TGN staked in Hydrex liquidity pools',
+          color: 'bg-[#EDEAF0] text-[#3A2F47]',
+        },
+      ]
+    : []),
 ];
 
 export const EligibilityCriteriaBuilder: React.FC<
@@ -1384,40 +1390,53 @@ export const EligibilityCriteriaBuilder: React.FC<
           )}
 
           {criterion.type === 'staking' && (
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label>Staking Pool Address</Label>
-                <Input
-                  value={criterion.staking_pool || ''}
-                  onChange={(e) => {
-                    if (isNew) {
-                      setNewCriterion((prev) => ({
-                        ...prev,
-                        staking_pool: e.target.value,
-                      }));
-                    }
-                  }}
-                  placeholder="0x..."
-                  className="font-mono text-sm"
-                  disabled={readonly}
-                />
+            <div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label>Staking Source</Label>
+                  {/* Constrained selection only — no free-text pool/contract
+                      entry, mirroring the community-governance-token rule. */}
+                  <select
+                    className="w-full border rounded-md p-2 text-sm"
+                    value={criterion.staking_pool || ''}
+                    onChange={(e) => {
+                      if (isNew) {
+                        setNewCriterion((prev) => ({
+                          ...prev,
+                          staking_pool: e.target.value,
+                        }));
+                      }
+                    }}
+                    disabled={readonly}
+                  >
+                    <option value="">Select a staking source…</option>
+                    <option value="hydrex">Hydrex — $TGN pools (Base)</option>
+                  </select>
+                </div>
+                <div>
+                  <Label>Minimum $TGN (held + staked)</Label>
+                  <Input
+                    value={criterion.minimum_staked || ''}
+                    onChange={(e) => {
+                      if (isNew) {
+                        setNewCriterion((prev) => ({
+                          ...prev,
+                          minimum_staked: e.target.value,
+                        }));
+                      }
+                    }}
+                    placeholder="2000"
+                    disabled={readonly}
+                  />
+                </div>
               </div>
-              <div>
-                <Label>Minimum Staked Amount</Label>
-                <Input
-                  value={criterion.minimum_staked || ''}
-                  onChange={(e) => {
-                    if (isNew) {
-                      setNewCriterion((prev) => ({
-                        ...prev,
-                        minimum_staked: e.target.value,
-                      }));
-                    }
-                  }}
-                  placeholder="1000000000000000000"
-                  disabled={readonly}
-                />
-              </div>
+              <p className="mt-2 text-xs text-gray-500">
+                Sums $TGN held in the member&apos;s wallet with $TGN committed
+                to Hydrex liquidity pools (including single-sided/vault
+                deposits) — members qualify without unstaking. A governance
+                eligibility signal only; tokens are never held or exchanged by
+                the platform.
+              </p>
             </div>
           )}
         </CardContent>

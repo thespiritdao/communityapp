@@ -5,6 +5,7 @@ import { EligibilityModuleService } from '@/services/eligibilityModuleService';
 import { getClientHatId } from '@/lib/hatRegistryClient';
 import {
   HYDREX_STAKING_ENABLED,
+  TGN_TOKEN_ADDRESS,
   fetchQualifyingStakedTgn,
 } from '@/features/pods/services/hydrexStakingService';
 
@@ -728,11 +729,23 @@ export class EligibilityService {
       if (!stake.resolved) {
         return { passed: false, details: stake.details };
       }
-      const passed = stake.qualifyingTgn >= minimum;
+      // Held wallet balance SUMS with Hydrex-staked toward the threshold
+      // (TreeGens rule: "2K $TGN held or staked"). This must live in ONE
+      // criterion because criteria combine with AND — a separate Currency
+      // criterion cannot express the OR. Mirrors the snapshot layer's
+      // held+staked sum.
+      const heldResult = await this.evaluateRegisteredErc20Balance(
+        userAddress,
+        TGN_TOKEN_ADDRESS,
+        0,
+      );
+      const held = heldResult ? Number(heldResult.value) || 0 : 0;
+      const total = held + stake.qualifyingTgn;
+      const passed = total >= minimum;
       return {
         passed,
-        value: stake.qualifyingTgn.toString(),
-        details: `Required: ${minimum} staked $TGN, Available: ${stake.qualifyingTgn}`,
+        value: total.toString(),
+        details: `Required: ${minimum} $TGN (held + staked), Available: ${held.toFixed(2)} held + ${stake.qualifyingTgn.toFixed(2)} staked = ${total.toFixed(2)}`,
       };
     }
 

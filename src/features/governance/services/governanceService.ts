@@ -6,6 +6,13 @@ import {
   getThresholdsForTier,
 } from '@/features/pods/services/podGovernanceConfigService';
 import type { GovernanceTier } from '@/features/governance/services/proposalResultEngine';
+import {
+  getPodSnapshotConfig,
+  computeEligibilitySnapshot,
+  persistSnapshot,
+  checkSnapshotEligibility,
+  type SnapshotRow,
+} from '@/features/governance/services/proposalSnapshotService';
 import { unifiedNotificationService } from '@/services/unifiedNotificationService';
 import { buildProposalUrl } from '@/features/governance/utils/proposalUrl';
 
@@ -87,6 +94,19 @@ export class GovernanceService {
         if (!isEligible) {
           throw new Error(
             'Not eligible to vote on this proposal: a governance-participating role in this pod is required.',
+          );
+        }
+
+        // Snapshot rule (token-gated pods): if this proposal captured a
+        // per-publication eligibility snapshot, the voter must also have a
+        // passing row. Proposals without snapshot rows are unaffected.
+        const snapshot = await checkSnapshotEligibility(
+          vote.proposal_id,
+          votingWallet,
+        );
+        if (snapshot.enforced && !snapshot.passed) {
+          throw new Error(
+            `Not eligible to vote on this proposal: ${snapshot.details}`,
           );
         }
       }
@@ -414,9 +434,27 @@ export class GovernanceService {
       const defaults = podConfig
         ? getThresholdsForTier(podConfig, tier)
         : { approval_bps: 5001, quorum_bps: 3000, voting_hours: 72 };
-      const eligibleVoterCount = data.pod_id
+      let eligibleVoterCount = data.pod_id
         ? await getEligibleVoterCount(data.pod_id, tier)
         : 0;
+
+      // Per-publication token eligibility snapshot (token-gated pods).
+      // Computed BEFORE the proposal insert so a Hydrex/RPC failure aborts
+      // creation instead of leaving a published proposal without its
+      // snapshot. When active, quorum is computed against snapshot-passing
+      // voters, not all role holders — otherwise quorum could be unreachable.
+      const snapshotConfig = data.pod_id
+        ? await getPodSnapshotConfig(data.pod_id)
+        : null;
+      let snapshotRows: SnapshotRow[] | null = null;
+      if (data.pod_id && snapshotConfig) {
+        snapshotRows = await computeEligibilitySnapshot(
+          data.pod_id,
+          tier,
+          snapshotConfig,
+        );
+        eligibleVoterCount = snapshotRows.filter((r) => r.passed).length;
+      }
 
       // Validate overrides are stricter-only.
       if (
@@ -470,6 +508,26 @@ export class GovernanceService {
         .single();
 
       if (error) throw error;
+
+      // Persist the snapshot now that the proposal id exists. If this write
+      // fails, delete the proposal rather than leave it live without the
+      // snapshot its pod's config promises (orphan-write guard).
+      if (data.pod_id && snapshotConfig && snapshotRows) {
+        try {
+          await persistSnapshot(
+            proposal.id,
+            data.pod_id,
+            snapshotConfig,
+            snapshotRows,
+          );
+        } catch (snapshotError) {
+          await supabase
+            .from('pod_level_proposals')
+            .delete()
+            .eq('id', proposal.id);
+          throw snapshotError;
+        }
+      }
 
       console.log('✅ Pod-level proposal created:', proposal.id);
 
