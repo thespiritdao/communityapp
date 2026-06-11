@@ -48,7 +48,21 @@ export function PWAManager() {
   }
 
   function listenForUpdates() {
+    // controllerchange also fires when a first-time visitor's page is claimed
+    // by the newly installed SW (clients.claim) — that is not an update, and
+    // reloading there sends every new visitor through a surprise refresh
+    // mid-boot. Only treat it as an update if a controller already existed.
+    let hadController = !!navigator.serviceWorker.controller;
     navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (!hadController) {
+        hadController = true;
+        return;
+      }
+      // Loop breaker: at most one automatic reload per tab session. If the
+      // SW keeps churning (e.g. a misconfigured version stamp), we stay on
+      // the page instead of reload-looping the user.
+      if (sessionStorage.getItem('sw-auto-reloaded') === '1') return;
+      sessionStorage.setItem('sw-auto-reloaded', '1');
       setUpdateAvailable(true);
     });
   }
