@@ -61,7 +61,18 @@ function PageContent() {
   const [validatedInviteCode, setValidatedInviteCode] = useState<string | null>(null);
   const [oauthInProgress, setOauthInProgress] = useState<boolean>(() => {
     if (typeof window === 'undefined') return false;
-    return localStorage.getItem('oauth_in_progress') === 'true';
+    if (localStorage.getItem('oauth_in_progress') !== 'true') return false;
+    // Stale-flag guard: an interrupted OAuth (tab closed, crash, reload)
+    // strands this flag, which suppresses the invite/login UI and leaves the
+    // page on "Preparing..." forever. Expire it after 10 minutes; a missing
+    // timestamp means it was set by an older app version — treat as stale.
+    const at = Number(localStorage.getItem('oauth_in_progress_at') || 0);
+    if (!at || Date.now() - at > 10 * 60 * 1000) {
+      localStorage.removeItem('oauth_in_progress');
+      localStorage.removeItem('oauth_in_progress_at');
+      return false;
+    }
+    return true;
   });
   // True if localStorage has a prior Supabase session (returning user, even with expired token).
   // Initialized synchronously (lazy useState) so STEP 1 effect sees the correct value on the
@@ -551,6 +562,7 @@ function PageContent() {
         authenticationAttemptedRef.current = false;
         if (oauthInProgress) {
           localStorage.removeItem('oauth_in_progress');
+          localStorage.removeItem('oauth_in_progress_at');
           setOauthInProgress(false);
         }
         // CDP resolved a wallet address — this device is registered.

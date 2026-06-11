@@ -24,7 +24,17 @@ self.addEventListener('install', (event) => {
     caches.open(CACHE_NAME)
       .then((cache) => {
         console.log('[SW] Caching critical assets');
-        return cache.addAll(PRECACHE_URLS);
+        // Cache each URL independently. addAll() rejects wholesale when any
+        // single request fails (e.g. a redirect on an auth-gated route),
+        // which also skipped skipWaiting and stalled SW updates until every
+        // tab was closed.
+        return Promise.allSettled(
+          PRECACHE_URLS.map((url) =>
+            cache.add(url).catch((error) => {
+              console.warn('[SW] Precache skipped:', url, error);
+            })
+          )
+        );
       })
       .then(() => {
         console.log('[SW] Installation complete');

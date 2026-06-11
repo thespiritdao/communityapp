@@ -151,6 +151,7 @@ export function EmbeddedWalletAuth({ isLoading, onEmailCaptured, onAuthReady }: 
       // post-redirect page load can suppress the invite modal
       if (typeof window !== 'undefined') {
         localStorage.setItem('oauth_in_progress', 'true');
+        localStorage.setItem('oauth_in_progress_at', String(Date.now()));
       }
       console.log('🔐 Signing in with Google...');
       const result = await signInWithOAuth('google');
@@ -168,6 +169,7 @@ export function EmbeddedWalletAuth({ isLoading, onEmailCaptured, onAuthReady }: 
           // OAuth is in progress and suppresses the invite modal
           if (typeof window !== 'undefined') {
             localStorage.setItem('oauth_in_progress', 'true');
+            localStorage.setItem('oauth_in_progress_at', String(Date.now()));
           }
           await cdpSignOut();
           console.log('✅ CDP sign-out complete, retrying Google sign-in...');
