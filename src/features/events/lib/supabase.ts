@@ -565,7 +565,34 @@ export class EventService {
     return this.updateEvent(eventId, { status: 'published' });
   }
 
-  static async cancelEvent(eventId: string): Promise<Event> {
+  /**
+   * Cancel an event and sync the DB to a completed on-chain cancellation.
+   *
+   * IMPORTANT — refund truthfulness:
+   *   The on-chain refund is performed by EventManager.cancelEvent(), which the
+   *   caller (EventManagementDashboard) executes as a gasless userOp BEFORE
+   *   calling this method, for events that have a blockchain_event_id. That
+   *   single contract call refunds every paid attendee (SYSTEM + SELF) in one
+   *   loop, so this method must NOT additionally "process" refunds — it only
+   *   reflects state in the DB.
+   *
+   *   The bug this guards against: previously this method flipped paid
+   *   registrations to payment_status='refunded' UNCONDITIONALLY — including
+   *   for events with no blockchain_event_id (legacy / desynced), where NO
+   *   on-chain refund ever runs. That told attendees "refunded" while their
+   *   escrowed tokens stayed locked. We now only mark 'refunded' when we can
+   *   attribute it to an executed on-chain cancellation; otherwise we mark a
+   *   distinct 'refund_pending' status so the false claim is never emitted.
+   *
+   * @param onChainCancelled  true when the caller has already executed the
+   *   on-chain EventManager.cancelEvent() userOp (i.e. the contract refunded
+   *   attendees). Defaults to false so legacy/DB-only callers cannot silently
+   *   assert refunds that did not happen.
+   */
+  static async cancelEvent(
+    eventId: string,
+    onChainCancelled: boolean = false,
+  ): Promise<Event> {
     try {
       // 1. Get event details for notifications
       const event = await this.getEvent(eventId);
@@ -579,7 +606,12 @@ export class EventService {
       // 3. Update event status to cancelled
       const cancelledEvent = await this.updateEvent(eventId, { status: 'cancelled' });
 
-      // 4. Process refunds for paid registrations
+      // 4. Reflect refund state for paid registrations. The on-chain refund (if
+      //    any) already happened in EventManager.cancelEvent() before this call.
+      //    Mark 'refunded' ONLY when that on-chain cancellation actually ran;
+      //    otherwise mark 'refund_pending' so we never falsely claim a refund
+      //    while escrowed funds are still locked.
+      const refundStatus = onChainCancelled ? 'refunded' : 'refund_pending';
       const refundPromises = registrations
         .filter((reg) =>
           reg.payment_status === 'completed' &&
@@ -588,15 +620,22 @@ export class EventService {
         )
         .map(async (reg) => {
           try {
-            // Update payment status to refunded
             await supabase
               .from('event_registrations')
-              .update({ payment_status: 'refunded' })
+              .update({ payment_status: refundStatus })
               .eq('id', reg.id);
 
-            console.log(`✅ Refund processed for registration ${reg.id}`);
+            if (onChainCancelled) {
+              console.log(`✅ Refund reflected (on-chain) for registration ${reg.id}`);
+            } else {
+              console.warn(
+                `⚠️ Refund PENDING for registration ${reg.id}: event cancelled in DB ` +
+                `without a confirmed on-chain refund. Escrowed funds (if any) require ` +
+                `a manual EventManager.cancelEvent() before they are returned.`,
+              );
+            }
           } catch (error) {
-            console.error(`❌ Failed to process refund for registration ${reg.id}:`, error);
+            console.error(`❌ Failed to update refund status for registration ${reg.id}:`, error);
           }
         });
 
@@ -612,7 +651,13 @@ export class EventService {
               sender_address: event.creator_address,
               notification_type: 'event_cancellation',
               title: 'Event Cancelled',
-              message: `The event "${event.title}" has been cancelled. ${reg.payment_amount !== '0' ? 'Your payment has been refunded automatically.' : ''}`,
+              message: `The event "${event.title}" has been cancelled. ${
+                reg.payment_amount !== '0'
+                  ? onChainCancelled
+                    ? 'Your payment has been refunded automatically.'
+                    : 'Any payment will be refunded; processing may take a short while.'
+                  : ''
+              }`,
               context_type: 'events',
               context_id: eventId,
               context_url: `/events/${eventId}`,

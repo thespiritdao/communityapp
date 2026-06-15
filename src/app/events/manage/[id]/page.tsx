@@ -363,7 +363,7 @@ export default function EventManagePage({ params }: EventManagePageProps) {
                       `Are you sure you want to cancel "${event.title}"?\n\n` +
                       `This will:\n` +
                       `• Notify all ${event.registration_count} registered attendees\n` +
-                      `• Process automatic refunds for paid registrations\n` +
+                      `• Mark paid registrations as refund-pending (on-chain refunds for escrowed events are processed from the event manager view)\n` +
                       `• Update the event status to "cancelled"\n\n` +
                       `This action cannot be undone.`
                     );
@@ -372,7 +372,7 @@ export default function EventManagePage({ params }: EventManagePageProps) {
 
                     const success = await cancelEvent();
                     if (success) {
-                      alert('✅ Event cancelled successfully!\n\nAttendees have been notified and refunds will be processed automatically.');
+                      alert('✅ Event cancelled.\n\nAttendees have been notified. Paid registrations are marked refund-pending; on-chain escrow refunds are processed from the event manager view.');
                       router.push('/events/manage');
                     } else {
                       alert('❌ Failed to cancel event. Please check the console for errors and try again.');
