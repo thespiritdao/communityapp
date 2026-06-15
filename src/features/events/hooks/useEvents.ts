@@ -449,7 +449,12 @@ export function useEventActions(eventId: string | null) {
     }
   }, [eventId, ensureAuthenticated]);
 
-  const cancelEvent = useCallback(async (): Promise<boolean> => {
+  // onChainCancelled MUST be true only when the caller has already executed the
+  // on-chain EventManager.cancelEvent() (which refunds attendees). Passing it
+  // when no on-chain refund ran would falsely mark attendees 'refunded'.
+  const cancelEvent = useCallback(async (
+    onChainCancelled: boolean = false,
+  ): Promise<boolean> => {
     if (!eventId) {
       setError('Event ID missing');
       return false;
@@ -462,7 +467,7 @@ export function useEventActions(eventId: string | null) {
       // Ensure user is authenticated before making the request
       await ensureAuthenticated();
 
-      await EventService.cancelEvent(eventId);
+      await EventService.cancelEvent(eventId, onChainCancelled);
       return true;
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to cancel event');

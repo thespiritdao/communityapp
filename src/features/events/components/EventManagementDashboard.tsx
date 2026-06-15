@@ -669,13 +669,14 @@ const EventManagementRow: React.FC<EventManagementRowProps> = ({
       if (onChainEvent.status === 3 && event.status !== 'cancelled') {
         console.warn('⚠️ Database/blockchain sync issue detected. Event already cancelled on-chain but database shows:', event.status);
 
-        // Sync database to match blockchain
+        // Sync database to match blockchain. The event is already Cancelled
+        // on-chain (status 3), so the contract already refunded attendees —
+        // mark refunds truthfully.
         console.log('🔄 Syncing database status to "cancelled"...');
-        const success = await cancelEvent();
+        const success = await cancelEvent(true);
 
         setCancellingEvent(false);
         setShowCancelDialog(false);
-        setShowSmartContractCancel(false);
 
         if (success) {
           toast({
