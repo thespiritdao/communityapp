@@ -2,6 +2,7 @@
 
 import { useEffect } from 'react';
 import { useEvmAddress } from '@coinbase/cdp-hooks';
+import { getCurrentSession } from '@/features/identity/utils/serverAuth';
 
 const VAPID_PUBLIC_KEY = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!;
 
@@ -45,9 +46,14 @@ async function subscribeToPush(userAddress: string) {
         applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
       }));
 
+    const session = await getCurrentSession();
+    const authToken = session?.access_token;
     await fetch('/api/push/subscribe', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        ...(authToken ? { 'Authorization': `Bearer ${authToken}` } : {}),
+      },
       body: JSON.stringify({ subscription, user_address: userAddress }),
     });
 

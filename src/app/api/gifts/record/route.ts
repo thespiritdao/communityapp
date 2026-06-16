@@ -1,10 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import jwt from 'jsonwebtoken';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!,
 );
+
+function getWalletFromToken(token: string): string | null {
+  try {
+    const JWT_SECRET = process.env.SUPABASE_JWT_SECRET;
+    if (!JWT_SECRET) return null;
+    const payload = jwt.verify(token, JWT_SECRET) as any;
+    return payload.wallet_address || payload.user_metadata?.wallet_address || null;
+  } catch {
+    return null;
+  }
+}
 
 /**
  * POST /api/gifts/record
@@ -13,10 +25,25 @@ const supabase = createClient(
  */
 export async function POST(request: NextRequest) {
   try {
+    // Authenticate caller via JWT
+    const authToken = request.headers.get('Authorization')?.replace('Bearer ', '');
+    if (!authToken) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+    const callerAddress = getWalletFromToken(authToken);
+    if (!callerAddress) {
+      return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
+    }
+
     const { sender_id, recipient_id, token, amount, message, transaction_hash } = await request.json();
 
     if (!sender_id || !recipient_id || !token || !amount) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+    }
+
+    // Verify the caller matches the claimed sender
+    if (sender_id.toLowerCase() !== callerAddress.toLowerCase()) {
+      return NextResponse.json({ error: 'Forbidden: caller does not match sender' }, { status: 403 });
     }
 
     const { data, error } = await supabase.from('gifts').insert({

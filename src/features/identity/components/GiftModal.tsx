@@ -7,6 +7,7 @@ import { useSendUserOperationWithAttribution as useSendUserOperation } from '@/w
 import { useBalance } from 'wagmi';
 import { parseUnits, encodeFunctionData } from 'viem';
 import { Gift, X, DollarSign, Loader2 } from 'lucide-react';
+import { getCurrentSession } from '@/features/identity/utils/serverAuth';
 
 interface GiftModalProps {
   recipientAddress: string;
@@ -154,9 +155,14 @@ export function GiftModal({
 
       // Save gift to database via server-side API (bypasses RLS)
       try {
+        const session = await getCurrentSession();
+        const authToken = session?.access_token;
         const recordRes = await fetch('/api/gifts/record', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            ...(authToken ? { 'Authorization': `Bearer ${authToken}` } : {}),
+          },
           body: JSON.stringify({
             sender_id: address,
             recipient_id: recipientAddress,

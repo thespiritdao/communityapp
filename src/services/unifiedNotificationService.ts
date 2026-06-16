@@ -3,6 +3,7 @@
 import { supabase } from '@/utils/supabaseClient';
 import { notificationPreferencesService } from './notificationPreferencesService';
 import { buildProposalUrl } from '@/features/governance/utils/proposalUrl';
+import { getCurrentSession } from '@/features/identity/utils/serverAuth';
 
 // Type definitions for database records
 interface GeneralNotification {
@@ -153,10 +154,13 @@ class UnifiedNotificationService {
     try {
       // 🔧 FIX: Use server-side API route to create notifications
       // This ensures the admin client (with service role key) is only used server-side
+      const session = await getCurrentSession();
+      const authToken = session?.access_token;
       const response = await fetch('/api/notifications/send', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          ...(authToken ? { 'Authorization': `Bearer ${authToken}` } : {}),
         },
         body: JSON.stringify({
           recipient_address: data.recipient_address,

@@ -48,27 +48,54 @@ export default async function createPost(
     );
     console.log(`🔍 Received required_token from frontend: ${required_token}`);
 
-    // If required_token is missing, fetch it from the thread
+    // Fetch thread details including category -> pod_id chain
+    const { data: threadData, error: threadError } = await supabase
+      .from('forum_threads')
+      .select('required_token, category_id')
+      .eq('id', threadId)
+      .single();
+
+    if (threadError) {
+      console.error(
+        '❌ Error fetching thread data:',
+        threadError,
+      );
+      return res
+        .status(500)
+        .json({ error: 'Failed to retrieve thread data' });
+    }
+
+    // Inherit required_token from thread if not provided
     if (!required_token) {
-      console.log('🔄 Fetching required_token from forum_threads...');
-      const { data: threadData, error: threadError } = await supabase
-        .from('forum_threads')
-        .select('required_token')
-        .eq('id', threadId)
-        .single();
-
-      if (threadError) {
-        console.error(
-          '❌ Error fetching required_token from forum_threads:',
-          threadError,
-        );
-        return res
-          .status(500)
-          .json({ error: 'Failed to retrieve thread token requirement' });
-      }
-
       required_token = threadData?.required_token || null;
       console.log(`✅ Inherited required_token from thread: ${required_token}`);
+    }
+
+    // Verify pod membership if thread belongs to a pod-gated category
+    if (threadData?.category_id) {
+      const { data: category } = await supabase
+        .from('forum_categories')
+        .select('pod_id')
+        .eq('id', threadData.category_id)
+        .single();
+
+      if (category?.pod_id) {
+        const { data: membership } = await supabase
+          .from('active_pod_members')
+          .select('id')
+          .eq('pod_id', category.pod_id)
+          .eq('wallet', profile.wallet_address.toLowerCase())
+          .eq('is_active', true)
+          .maybeSingle();
+
+        if (!membership) {
+          console.error('❌ Pod membership check failed for post creation');
+          return res
+            .status(403)
+            .json({ error: 'Access denied: You are not a member of this pod.' });
+        }
+        console.log('✅ Pod membership verified for post creation');
+      }
     }
 
     // Insert post into the database

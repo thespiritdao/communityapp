@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useEvmAddress, useCurrentUser } from '@coinbase/cdp-hooks';
 import { useSendUserOperationWithAttribution as useSendUserOperation } from '@/wallet/hooks/useSendUserOperationWithAttribution';
+import { getCurrentSession } from '@/features/identity/utils/serverAuth';
 import { parseEther, encodeFunctionData, createPublicClient, http } from 'viem';
 import { base } from 'viem/chains';
 import { useRouter } from 'next/navigation';
@@ -533,9 +534,14 @@ export const BountyFormV2: React.FC<BountyFormV2Props> = ({
           }
 
           console.log('💾 Initiating database save...');
+          const session = await getCurrentSession();
+          const authToken = session?.access_token;
           fetch('/api/bounty/create', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {
+              'Content-Type': 'application/json',
+              ...(authToken ? { 'Authorization': `Bearer ${authToken}` } : {}),
+            },
             body: JSON.stringify({
               bountyId,
               transactionHash: receipt.transactionHash,

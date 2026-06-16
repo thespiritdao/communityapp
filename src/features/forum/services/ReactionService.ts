@@ -1,6 +1,7 @@
 // src/features/forum/services/ReactionService.ts
 
 import { supabase } from '@/utils/supabaseClient';
+import { verifyPodMembershipForThread } from './forumAuthHelper';
 
 /**
  * Forum Reaction Service
@@ -58,6 +59,16 @@ export async function addReaction(
         success: false,
         error: 'Must specify either postId or threadId',
       };
+    }
+
+    // Verify pod membership if thread/post belongs to a pod-gated category
+    const membershipCheck = await verifyPodMembershipForThread(
+      userAddress,
+      threadId,
+      postId,
+    );
+    if (!membershipCheck.allowed) {
+      return { success: false, error: membershipCheck.error || 'Access denied' };
     }
 
     // Check if user already reacted with this emoji

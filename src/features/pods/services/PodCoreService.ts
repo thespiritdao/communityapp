@@ -702,7 +702,7 @@ export class PodCoreService {
         forumAccess: true,
         forumModeration: false,
         governanceParticipation: true,
-        eventCreation: false,
+        eventCreation: true,
         treasuryViewing: false,
         treasuryManagement: false,
         memberManagement: false,

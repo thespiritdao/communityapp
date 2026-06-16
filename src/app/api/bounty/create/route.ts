@@ -1,13 +1,35 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import jwt from 'jsonwebtoken';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!,
 );
 
+function getWalletFromToken(token: string): string | null {
+  try {
+    const JWT_SECRET = process.env.SUPABASE_JWT_SECRET;
+    if (!JWT_SECRET) return null;
+    const payload = jwt.verify(token, JWT_SECRET) as any;
+    return payload.wallet_address || payload.user_metadata?.wallet_address || null;
+  } catch {
+    return null;
+  }
+}
+
 export async function POST(request: NextRequest) {
   try {
+    // Authenticate caller via JWT
+    const authToken = request.headers.get('Authorization')?.replace('Bearer ', '');
+    if (!authToken) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+    const callerAddress = getWalletFromToken(authToken);
+    if (!callerAddress) {
+      return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
+    }
+
     const body = await request.json();
 
     const {
@@ -28,6 +50,14 @@ export async function POST(request: NextRequest) {
       questions,
       status, // Accept status from request body
     } = body;
+
+    // Verify the caller matches the claimed creator
+    if (creator.toLowerCase() !== callerAddress.toLowerCase()) {
+      return NextResponse.json(
+        { error: 'Forbidden: caller does not match creator' },
+        { status: 403 },
+      );
+    }
 
     console.log('📝 Saving bounty to database:', {
       bountyId,

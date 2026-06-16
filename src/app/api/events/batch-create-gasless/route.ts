@@ -68,6 +68,17 @@ function stringToBytes32(str: string): `0x${string}` {
 
 export async function POST(request: NextRequest) {
   try {
+    // Authenticate: this is an admin-only endpoint, require internal API key
+    const internalKey = request.headers.get('X-Internal-Key');
+    const INTERNAL_API_KEY = process.env.INTERNAL_API_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+    if (!internalKey || internalKey !== INTERNAL_API_KEY) {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized: admin access required' },
+        { status: 401 }
+      );
+    }
+
     const body: BatchCreateRequest = await request.json();
     const { events, usePaymaster = false } = body;
 

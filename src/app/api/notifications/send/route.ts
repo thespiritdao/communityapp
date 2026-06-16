@@ -4,11 +4,17 @@
  * Handles creating notifications using admin client to bypass RLS.
  * This is necessary because notifications are system-level operations
  * where one user (sender) creates notifications FOR other users (recipients).
+ *
+ * Authentication:
+ * - Client calls: JWT Bearer token (sender_address verified against token)
+ * - Server-to-server calls: Internal API key via X-Internal-Key header
+ *   (used by cron jobs, webhooks, and other API routes)
  */
 
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/utils/supabaseAdminClient';
 import webpush from 'web-push';
+import jwt from 'jsonwebtoken';
 
 webpush.setVapidDetails(
   process.env.VAPID_SUBJECT!,
@@ -16,8 +22,40 @@ webpush.setVapidDetails(
   process.env.VAPID_PRIVATE_KEY!,
 );
 
+function getWalletFromToken(token: string): string | null {
+  try {
+    const JWT_SECRET = process.env.SUPABASE_JWT_SECRET;
+    if (!JWT_SECRET) return null;
+    const payload = jwt.verify(token, JWT_SECRET) as any;
+    return payload.wallet_address || payload.user_metadata?.wallet_address || null;
+  } catch {
+    return null;
+  }
+}
+
 export async function POST(request: NextRequest) {
   try {
+    // Authenticate: accept either JWT Bearer token or internal API key
+    const authToken = request.headers.get('Authorization')?.replace('Bearer ', '');
+    const internalKey = request.headers.get('X-Internal-Key');
+    const INTERNAL_API_KEY = process.env.INTERNAL_API_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+    let callerAddress: string | null = null;
+    let isInternalCall = false;
+
+    if (internalKey && internalKey === INTERNAL_API_KEY) {
+      // Server-to-server call (cron jobs, webhooks, other API routes)
+      isInternalCall = true;
+    } else if (authToken) {
+      // Client call — verify JWT
+      callerAddress = getWalletFromToken(authToken);
+      if (!callerAddress) {
+        return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
+      }
+    } else {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const data = await request.json();
 
     console.log('📨 [/api/notifications/send] Received request:', {
@@ -25,6 +63,7 @@ export async function POST(request: NextRequest) {
       recipient: data.recipient_address,
       sender: data.sender_address,
       title: data.title,
+      isInternalCall,
     });
 
     const {
@@ -54,6 +93,16 @@ export async function POST(request: NextRequest) {
         { error: 'Missing required fields' },
         { status: 400 },
       );
+    }
+
+    // For client calls, verify sender_address matches the authenticated caller
+    if (!isInternalCall && callerAddress) {
+      if (sender_address.toLowerCase() !== callerAddress.toLowerCase() && sender_address !== 'system') {
+        return NextResponse.json(
+          { error: 'Forbidden: caller does not match sender_address' },
+          { status: 403 },
+        );
+      }
     }
 
     // Determine category if not provided

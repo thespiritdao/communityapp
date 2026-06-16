@@ -34,10 +34,16 @@ console.log('');
 
 async function main() {
   try {
+    const INTERNAL_KEY = process.env.INTERNAL_API_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
+    if (!INTERNAL_KEY) {
+      console.error('❌ Missing INTERNAL_API_KEY or SUPABASE_SERVICE_ROLE_KEY in environment');
+      process.exit(1);
+    }
     const response = await fetch(endpoint, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'X-Internal-Key': INTERNAL_KEY,
       },
       body: JSON.stringify({
         events: events,

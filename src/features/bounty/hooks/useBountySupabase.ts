@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import { useUserWallet } from '@/hooks/useUserWallet';
 import { useBountyContractEnhanced } from './useBountyContractEnhanced';
+import { getCurrentSession } from '@/features/identity/utils/serverAuth';
 import {
   bountyApi,
   bidApi,
@@ -140,10 +141,16 @@ export const useBountySupabase = () => {
             .single();
 
           if (bounty) {
+            // Get auth token for notification API
+            const notifSession = await getCurrentSession();
+            const notifAuthToken = notifSession?.access_token;
+            const notifHeaders: Record<string, string> = { 'Content-Type': 'application/json' };
+            if (notifAuthToken) notifHeaders['Authorization'] = `Bearer ${notifAuthToken}`;
+
             // Notify bounty creator
             await fetch('/api/notifications/send', {
               method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
+              headers: notifHeaders,
               body: JSON.stringify({
                 recipient_address: bounty.creator_address,
                 sender_address: normalizedAddress,
@@ -174,7 +181,7 @@ export const useBountySupabase = () => {
                   if (leader.toLowerCase() !== bounty.creator_address.toLowerCase()) {
                     await fetch('/api/notifications/send', {
                       method: 'POST',
-                      headers: { 'Content-Type': 'application/json' },
+                      headers: notifHeaders,
                       body: JSON.stringify({
                         recipient_address: leader,
                         sender_address: normalizedAddress,

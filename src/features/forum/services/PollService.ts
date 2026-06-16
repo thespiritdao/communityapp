@@ -1,6 +1,7 @@
 // src/features/forum/services/PollService.ts
 
 import { supabase } from '@/utils/supabaseClient';
+import { verifyPodMembershipForThread } from './forumAuthHelper';
 
 /**
  * Forum Poll Service
@@ -66,6 +67,12 @@ export async function createPoll(
 
     if (options.length > 10) {
       return { success: false, error: 'Poll cannot have more than 10 options' };
+    }
+
+    // Verify pod membership
+    const membershipCheck = await verifyPodMembershipForThread(creatorAddress, threadId);
+    if (!membershipCheck.allowed) {
+      return { success: false, error: membershipCheck.error || 'Access denied' };
     }
 
     // Calculate expiration
@@ -136,7 +143,7 @@ export async function votePoll(
     // Check if poll exists and is not expired
     const { data: poll, error: pollError } = await supabase
       .from('forum_polls')
-      .select('*, forum_poll_options(*)')
+      .select('*, forum_poll_options(*), thread_id')
       .eq('id', pollId)
       .single();
 
@@ -144,6 +151,12 @@ export async function votePoll(
 
     if (poll.expires_at && new Date(poll.expires_at) < new Date()) {
       return { success: false, error: 'Poll has expired' };
+    }
+
+    // Verify pod membership for the poll's thread
+    const membershipCheck = await verifyPodMembershipForThread(voterAddress, poll.thread_id);
+    if (!membershipCheck.allowed) {
+      return { success: false, error: membershipCheck.error || 'Access denied' };
     }
 
     // Check if user already voted

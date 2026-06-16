@@ -524,7 +524,7 @@ export class PodRolePermissionsService {
           chatAccess: true,
           chatModeration: false,
           governanceParticipation: true,
-          eventCreation: false,
+          eventCreation: true,
           treasuryViewing: false,
           treasuryManagement: false,
           memberManagement: false,

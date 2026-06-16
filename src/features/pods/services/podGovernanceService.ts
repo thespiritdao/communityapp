@@ -297,7 +297,7 @@ This pod requests permission to:
             forumAccess: true,
             forumModeration: false,
             governanceParticipation: true,
-            eventCreation: false,
+            eventCreation: true,
             treasuryViewing: false,
             treasuryManagement: false,
             memberManagement: false,

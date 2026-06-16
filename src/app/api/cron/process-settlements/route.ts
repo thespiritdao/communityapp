@@ -35,7 +35,10 @@ async function notifyExecutivePod(donations: any[]) {
       members.map(({ wallet_address }: { wallet_address: string }) =>
         fetch(`${BASE_URL}/api/notifications/send`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Internal-Key': process.env.INTERNAL_API_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || '',
+          },
           body: JSON.stringify({
             recipient_address: wallet_address,
             sender_address: '0x0000000000000000000000000000000000000000',
