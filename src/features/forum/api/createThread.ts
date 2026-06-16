@@ -48,6 +48,32 @@ export const createThread = async ({
       throw new Error('Category ID is required');
     }
 
+    // Verify user has access to this category's pod
+    const { data: category, error: catError } = await supabase
+      .from('forum_categories')
+      .select('id, name, required_token, pod_id')
+      .eq('id', categoryId)
+      .single();
+
+    if (catError || !category) {
+      throw new Error('Invalid forum category.');
+    }
+
+    // If category is pod-gated, verify user is a member of that pod
+    if (category.pod_id) {
+      const { data: membership } = await supabase
+        .from('active_pod_members')
+        .select('id')
+        .eq('pod_id', category.pod_id)
+        .eq('wallet', authorWallet.toLowerCase())
+        .eq('is_active', true)
+        .maybeSingle();
+
+      if (!membership) {
+        throw new Error('Access denied: You are not a member of this pod.');
+      }
+    }
+
     // Ensure the user profile exists before inserting the thread
     await ensureUserProfile(authorWallet);
 

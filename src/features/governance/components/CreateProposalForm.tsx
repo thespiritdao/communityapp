@@ -797,8 +797,8 @@ export function CreateProposalForm({
     setFormData((prev) => ({ ...prev, forumThreadId: threadId }));
     if (threadId) {
       const result = await loadPosts(threadId, 0, 1);
-      if (result.success && result.posts && result.posts.length > 0) {
-        setFormData((prev) => ({ ...prev, body: result.posts[0].content }));
+      if (result.success && result.thread?.content) {
+        setFormData((prev) => ({ ...prev, body: result.thread.content }));
       }
     }
   };

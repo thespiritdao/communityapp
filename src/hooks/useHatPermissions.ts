@@ -156,6 +156,8 @@ export const useHatPermissions = (): UseHatPermissionsReturn => {
               );
 
               // Add role with default permissions
+              // Members get basic participation rights (governance, events, forum)
+              // Leaders get management rights (moderation, treasury, member mgmt)
               const dynamicRole: HatRole = {
                 hatId: hatId,
                 name: isLeader ? `${podName} Leader` : `${podName} Member`,
@@ -165,8 +167,8 @@ export const useHatPermissions = (): UseHatPermissionsReturn => {
                   chatAccess: true,
                   chatModeration: isLeader,
                   forumAccess: true,
-                  governanceParticipation: isLeader,
-                  eventCreation: isLeader,
+                  governanceParticipation: true,
+                  eventCreation: true,
                   treasuryViewing: isLeader,
                   treasuryManagement: isLeader,
                   memberManagement: isLeader,

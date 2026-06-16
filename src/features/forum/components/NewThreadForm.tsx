@@ -268,6 +268,13 @@ export function NewThreadForm({
       return;
     }
 
+    // Verify user has permission to post in this category
+    if (permissions && !permissions.canPostInCategory(selectedCategoryId)) {
+      setError('You do not have permission to post in this category.');
+      console.error('Permission denied for category:', selectedCategoryId);
+      return;
+    }
+
     console.log('Submitting thread with categoryId:', selectedCategoryId);
 
     // Process final title and content using either the selected template or manual inputs
