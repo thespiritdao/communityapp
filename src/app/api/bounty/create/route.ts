@@ -49,6 +49,7 @@ export async function POST(request: NextRequest) {
       tasks,
       questions,
       status, // Accept status from request body
+      estimatedHours, // $SELF: poster's estimate of hours this bounty represents
     } = body;
 
     // Verify the caller matches the claimed creator
@@ -93,6 +94,10 @@ export async function POST(request: NextRequest) {
       questions: questions || [],
       status: status || 'open', // Use status from request, default to 'open' for backwards compatibility
       creator_address: creator,
+      // $SELF earn anchor: hours this bounty represents, credited to the
+      // completer on approval. Coerced to a non-negative number; 0/absent ⇒ no
+      // $SELF credit (bounty still works, just earns nothing).
+      estimated_hours: Math.max(0, Number(estimatedHours) || 0),
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     };

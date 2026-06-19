@@ -36,6 +36,13 @@ const STATIC_WHITELIST = new Set<string>(
     // Pod treasury contracts — needed for setAuthorizedProxy during proxy migration
     '0x0b76fdf7afa6c38ba0a99aa95b8899631335e70b', // Exec Pod treasury
     '0xf2d28ba2c110c415cd75824f1e390ea807793bac', // TN Pod treasury
+    // $SELF soulbound system (Phase 0). Backend mint/prestige/receipt ops + the
+    // user-facing burn-to-pay all sponsored. SelfEpochs is NOT listed — it is
+    // only called internally by Minter/Payment, never as a top-level userOp.
+    process.env.NEXT_PUBLIC_SELF_MINTER,
+    process.env.NEXT_PUBLIC_SELF_PAYMENT,
+    process.env.NEXT_PUBLIC_SELF_PRESTIGE,
+    process.env.NEXT_PUBLIC_SELF_RECEIPT,
   ]
     .filter(Boolean)
     .map((a) => a!.toLowerCase()),

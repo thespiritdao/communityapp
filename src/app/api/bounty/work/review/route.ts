@@ -2,6 +2,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { unifiedNotificationService } from '@/services/unifiedNotificationService';
 import { recordExplorerEvent, type ExplorerEventType } from '@/lib/explorerEvents';
+import {
+  getCurrentEpoch,
+  queueBountyCompletion,
+} from '@/features/self/services/selfEarnTriggers';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -51,7 +55,7 @@ export async function POST(request: NextRequest) {
       .from('work_submissions')
       .select(`
         *,
-        bounties!inner(id, creator_address, pod_id, title, value_amount, value_token, onchain_id),
+        bounties!inner(id, creator_address, pod_id, title, value_amount, value_token, onchain_id, estimated_hours),
         bids!inner(id, bidder_address, proposed_amount)
       `)
       .eq('id', submissionId)
@@ -180,6 +184,27 @@ export async function POST(request: NextRequest) {
         console.log('✅ Approval notification sent to bidder');
       } catch (notifError) {
         console.error('⚠️  Failed to send approval notification:', notifError);
+      }
+
+      // $SELF earn: credit the completer the bounty's estimated hours. Approval
+      // is the attestation that the work was accepted (what $SELF rewards).
+      // Fire-and-forget + idempotent on bounty id — never blocks the review.
+      try {
+        const estHours = Number(bounty.estimated_hours) || 0;
+        if (estHours > 0 && bounty.pod_id) {
+          const epoch = await getCurrentEpoch();
+          if (epoch !== null) {
+            await queueBountyCompletion({
+              wallet: bid.bidder_address,
+              podId: bounty.pod_id,
+              bountyId: String(bounty.id),
+              estimatedHoursWei: BigInt(Math.round(estHours)) * 10n ** 18n,
+              epoch,
+            });
+          }
+        }
+      } catch (earnError) {
+        console.warn('⚠️  $SELF bounty credit failed (non-blocking):', earnError);
       }
     } else if (status === 'rejected') {
       // Send rejection notification (non-blocking)

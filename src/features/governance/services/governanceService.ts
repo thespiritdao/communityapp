@@ -136,6 +136,25 @@ export class GovernanceService {
 
       // Update proposal approval count
       await this.updateProposalApprovalCount(vote.proposal_id);
+
+      // Trace-level $SELF participation credit (D-11), fire-and-forget. MUST NOT
+      // affect the vote: any failure is swallowed. Only fires for pod-scoped
+      // votes (needs a pod budget); no-ops if $SELF isn't configured.
+      if (votePodId) {
+        const accessToken = sessionCheck.session?.access_token;
+        if (accessToken) {
+          fetch('/api/self/earn/vote', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${accessToken}`,
+            },
+            body: JSON.stringify({ podId: votePodId, proposalId: vote.proposal_id }),
+          }).catch(() => {
+            /* vote already succeeded; earn credit is best-effort */
+          });
+        }
+      }
     } catch (error) {
       console.error('Failed to submit governance vote:', error);
       throw error;
