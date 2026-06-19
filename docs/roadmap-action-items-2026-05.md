@@ -226,16 +226,36 @@ See [`governance-flexibility-layer-a-2026-05.md`](governance-flexibility-layer-a
 
 ## 7. $SELF Token Issuance Architecture *(high lift — design problem first)*
 
-**Status:** Not started
+**Status:** SUPERSEDED & REBUILT — contracts deployed 2026-06-17. The
+"monthly-cap + petition ERC-20" plan below is the ORIGINAL thinking; it was
+replaced by a **soulbound ERC-1155 redesign** during deep ideation. See the
+authoritative specs:
+- `docs/spec-self-soulbound-redesign.md` — full design + decision log (D-1…D-21)
+- `docs/spec-self-phase0-deploy.md` — deploy + role wiring (DONE, verified)
+- `docs/ideation-self-tokenomics.md`, `docs/self-tokenomics-followup-answers.md`
 
-**Current state is permissive:**
+**What actually shipped (Phase 0, 2026-06-17):** 5 soulbound contracts deployed
+on Base + role-wired + verified (`scripts/verify-self-roles.mjs`, 14/14 pass):
+- `SelfEpochs` `0xe9e9d5E3ACd9F738B58ffe82f974abd34766a7Bb` — soulbound $SELF, (community,epoch) ids, expiry
+- `SelfMinter` `0x265dd81EC19Ef936206d6e0f6B3E910877aE70B6` — sole minter, attestation-gated
+- `SelfPayment` `0x438a8Ce7F03b6dCFf140bFFB5818323aCd7bC20e` — shared burn-to-pay
+- `SelfReceipt` `0x2aeB8C2C9b473DcFCD789c90E8502AD26FE37099` — soulbound redemption proof
+- `SelfPrestige` `0x133dB72eB94dD5aF9E5bB148a9656752E57aa103` — ecosystem Tenure bands (Curious→Elder)
+The scam-prevention is structural now: soulbound (no resale value to fake mints)
++ hour-anchor + per-pod budget ledger + diminishing returns + Exec review queue.
+
+**Remaining (Phase 1/2):** env vars + paymaster whitelist (in progress
+2026-06-17), attestation triggers (queueEarning on check-in/bounty/vote),
+burn-to-pay UI, then retire the old ERC-20 + redeploy its dependents (Phase 2).
+
+<details><summary>ORIGINAL plan (superseded — kept for history)</summary>
+
+**Old current-state (the permissive ERC-20 problem this solved):**
 - `SelfToken.sol` allows unlimited mint by anyone with `MINTER_ROLE`, no caps anywhere
 - `PodSELFDistributor.sol` tracks distributions but doesn't gate quantities
 - Only existing cap: faucet's 10 $SELF / 24h per wallet
 
-**Scam fear is justified.** Current system has zero structural prevention.
-
-**Plan — "Exec Pod monthly cap + petition" model:**
+**Old plan — "Exec Pod monthly cap + petition" model:**
 
 1. **Centralize minting:**
    - Revoke `MINTER_ROLE` from all addresses except a new `SELFAllocationManager.sol` contract
@@ -266,6 +286,43 @@ See [`governance-flexibility-layer-a-2026-05.md`](governance-flexibility-layer-a
    - Optionally: tag `metadata` on each mint indicating issuing pod for provenance display
 
 **Risk:** Migration of existing $SELF balances and MINTER_ROLE revocation needs coordinated deploy. Existing held tokens are unaffected; only new issuance changes.
+
+</details>
+
+---
+
+## 10. Paymaster whitelist by SELECTOR, not signature *(low lift — ops hygiene)*
+
+**Status:** Backlog (raised 2026-06-17 during $SELF paymaster setup)
+
+**The finding:** The Coinbase paymaster dashboard **rejects tuple-bearing
+function signatures** (e.g. `SelfMinter.mintBatch(bytes32,(address,uint224,
+uint32,uint256,bytes32)[])` would not save — the parser chokes on the inner
+`(...)` tuple). It accepts either signatures OR 4-byte selectors; selectors
+always save and are unambiguous.
+
+**Standard going forward:** whitelist ALL contract functions on the paymaster
+by **4-byte selector**, not written signature. Reasons:
+- Tuple/struct params are unrepresentable as signatures in their UI; selectors
+  sidestep it entirely.
+- Selectors are exact — no whitespace/format ambiguity, no risk of a typo
+  producing a *different valid-looking* signature that fails to match at runtime
+  (which fails CLOSED / silently — the worst failure mode for gasless UX).
+- One consistent format across every contract.
+
+**Compute selectors with viem:** `toFunctionSelector('fnName(types...)')`.
+
+**Action items:**
+- [ ] Document the current platform paymaster whitelist as selectors (audit what's
+      there now — some entries are signatures).
+- [ ] Adopt "selectors only" as the convention in the deploy runbook / any future
+      contract-deploy checklist.
+- [ ] $SELF selectors already computed (2026-06-17): SelfMinter
+      `0x9642474c,0x601a2896` · SelfPayment `0x5fad93d9` · SelfPrestige
+      `0x7c648618,0xa343862a` · SelfReceipt `0x2639f481,0x942c5875`.
+
+**Risk:** None — selectors and signatures are equivalent on-chain; this is
+purely how entries are recorded in the paymaster config.
 
 ---
 
