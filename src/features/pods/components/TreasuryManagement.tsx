@@ -13,6 +13,7 @@ import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/components/ui/use-toast';
 import { usePodTreasury } from '../hooks/usePodTreasury';
+import { PodSelfEpochSummary } from './PodSelfEpochSummary';
 import { useProfileModal } from '@/features/identity/hooks/useProfileModal';
 import { ProfileModal } from '@/features/identity/components/ProfileModal';
 import {
@@ -790,6 +791,10 @@ export function TreasuryManagement({
           {/* Overview Tab */}
           {activeTab === 'overview' && (
             <div className="space-y-4">
+              {/* $SELF is not a held treasury asset (soulbound) — shown as a
+                  per-epoch participation budget/distribution view instead.
+                  Self-hides if $SELF unconfigured or no budget history. */}
+              <PodSelfEpochSummary podId={podId} />
               <div className="flex items-center justify-between">
                 <h3 className="text-lg font-semibold">Token Balances</h3>
                 <Button

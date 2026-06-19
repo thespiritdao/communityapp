@@ -19,7 +19,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/components/ui/use-toast';
 import { supabase } from '@/utils/supabaseClient';
-import { Sparkles } from 'lucide-react';
 
 const HOUR = 10n ** 18n;
 const fmtHours = (wei: string): string => {
@@ -184,9 +183,7 @@ export const SelfAdminCard: React.FC = () => {
   return (
     <Card>
       <CardHeader>
-        <CardTitle style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#2F5D50' }}>
-          <Sparkles className="h-5 w-5" /> $SELF Administration
-        </CardTitle>
+        <CardTitle style={{ color: '#2F5D50' }}>$SELF Epochs</CardTitle>
         <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
           {tabBtn('budgets', 'Budgets')}
           {tabBtn('review', `Review${reviewQueue.length ? ` (${reviewQueue.length})` : ''}`)}
@@ -199,14 +196,23 @@ export const SelfAdminCard: React.FC = () => {
         {/* ── Budgets ── */}
         {tab === 'budgets' && !loading && (
           <div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr auto', gap: '8px', alignItems: 'end', marginBottom: '1rem' }}>
-              <div>
-                <Label>Pod</Label>
-                <select value={bPod} onChange={(e) => setBPod(e.target.value)} className="w-full border rounded-md p-2 text-sm">
-                  <option value="">Select pod…</option>
-                  {pods.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
-                </select>
-              </div>
+            {/* Pod selector on its own full-width row (easier to interact with). */}
+            <div style={{ marginBottom: '0.75rem' }}>
+              <Label>Pod</Label>
+              <select
+                value={bPod}
+                onChange={(e) => setBPod(e.target.value)}
+                className="w-full border rounded-md p-2 text-sm"
+              >
+                <option value="">Select pod…</option>
+                {pods.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+              </select>
+            </div>
+
+            <hr style={{ border: 'none', borderTop: '1px solid #E8F1EE', margin: '0 0 0.75rem' }} />
+
+            {/* Epoch / Hours / Set row. */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr auto', gap: '8px', alignItems: 'end', marginBottom: '1rem' }}>
               <div>
                 <Label>Epoch</Label>
                 <Input type="number" value={bEpoch} onChange={(e) => setBEpoch(e.target.value)} placeholder={epoch ? String(epoch.current) : '0'} />
@@ -237,7 +243,15 @@ export const SelfAdminCard: React.FC = () => {
         {tab === 'review' && !loading && (
           <div>
             {reviewQueue.length === 0 ? (
-              <p style={{ color: '#8FA09A' }}>No mints awaiting review. 🎉</p>
+              <div style={{ color: '#8FA09A', fontSize: '0.85rem' }}>
+                <p style={{ margin: '0 0 4px' }}>Nothing awaiting review.</p>
+                <p style={{ margin: 0 }}>
+                  High-value or anomalous $SELF earnings (e.g. a single award
+                  above the review threshold) appear here for an Executive to
+                  approve or reject before they’re minted. An empty queue means
+                  all earnings cleared the automatic checks.
+                </p>
+              </div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 {reviewQueue.map((r) => (

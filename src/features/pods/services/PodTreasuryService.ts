@@ -180,11 +180,14 @@ export class PodTreasuryService {
       console.log('🏦 Loading token balances for treasury:', treasuryAddress);
 
       // Use standard tokens from environment (CDP-compatible approach)
-      // This replaces the old getSupportedTokens() pattern from Wagmi
+      // This replaces the old getSupportedTokens() pattern from Wagmi.
+      // $SELF is NO LONGER a treasury asset: under the soulbound redesign pods
+      // do not hold $SELF (it's individual + a per-epoch mint budget). Only
+      // $SYSTEM is a real treasury balance. $SELF capacity/distribution is shown
+      // separately via the per-epoch budget view (PodSelfEpochSummary).
       const SYSTEM_TOKEN = process.env.NEXT_PUBLIC_SYSTEM_TOKEN as string;
-      const SELF_TOKEN = process.env.NEXT_PUBLIC_SELF_TOKEN as string;
 
-      const standardTokens = [SYSTEM_TOKEN, SELF_TOKEN].filter(
+      const standardTokens = [SYSTEM_TOKEN].filter(
         (addr) => addr && addr !== '0x0000000000000000000000000000000000000000',
       );
 
