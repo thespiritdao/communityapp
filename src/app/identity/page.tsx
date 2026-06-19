@@ -6,6 +6,7 @@ import { useCDPStatus } from '@/hooks/useCDPStatus';
 import Link from 'next/link';
 import { useIdentityPage } from '@/features/identity/hooks/useIdentityPage';
 import { DatabaseTokenGallery } from '@/features/identity/components/DatabaseTokenGallery';
+import { TenureBand } from '@/features/identity/components/TenureBand';
 import { InviteCodeDisplay } from '@/features/identity/components/InviteCodeDisplay';
 import '@/features/identity/styles/identityStyles.css';
 import '@/features/identity/styles/TokenGallery.css';
@@ -140,7 +141,7 @@ function IdentityPageContent() {
         saveError={saveError}
       />
 
-      {/* Memberships / Credentials / Accreditations */}
+      {/* Tenure / Credentials / Accreditations */}
       <div style={{ marginTop: '20px', marginBottom: '8px' }}>
         <h3 style={{
           fontSize: '0.8rem',
@@ -149,9 +150,9 @@ function IdentityPageContent() {
           textTransform: 'uppercase',
           letterSpacing: '0.05em',
           marginBottom: '0.5rem',
-        }}>Memberships</h3>
+        }}>Tenure</h3>
         <div className="token-gallery-modal">
-          <DatabaseTokenGallery walletAddress={address} category="membership" />
+          <TenureBand walletAddress={address} />
         </div>
 
         <h3 style={{

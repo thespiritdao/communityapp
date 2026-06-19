@@ -37,6 +37,8 @@ export interface BountyFormV2Data {
     amount: string;
     token: 'SYSTEM' | 'SELF';
   };
+  /** $SELF: hours this bounty represents; credited to completer on approval. */
+  estimatedHours?: string;
   deadline?: string;
   requirements: string[];
   tasks: string[];
@@ -82,6 +84,7 @@ export const BountyFormV2: React.FC<BountyFormV2Props> = ({
     description: '',
     category: '',
     value: { amount: '', token: 'SYSTEM' },
+    estimatedHours: '',
     deadline: '',
     requirements: [''],
     tasks: [''],
@@ -172,6 +175,7 @@ export const BountyFormV2: React.FC<BountyFormV2Props> = ({
           description: '',
           category: '',
           value: { amount: '', token: 'SYSTEM' },
+          estimatedHours: '',
           deadline: '',
           requirements: [''],
           tasks: [''],
@@ -547,6 +551,7 @@ export const BountyFormV2: React.FC<BountyFormV2Props> = ({
               transactionHash: receipt.transactionHash,
               creator: evmAddress,
               value: currentFormData.value.amount,
+              estimatedHours: currentFormData.estimatedHours,
               token: tokenAddress,
               podId: currentFormData.podId,
               required_pod_id: currentFormData.eligibility === 'dao_wide' ? null : currentFormData.podId,
@@ -620,6 +625,7 @@ export const BountyFormV2: React.FC<BountyFormV2Props> = ({
             transactionHash: userOpHash, // User operation hash
             creator: evmAddress,
             value: currentFormData.value.amount,
+            estimatedHours: currentFormData.estimatedHours,
             token: tokenAddress,
             podId: currentFormData.podId,
             ipfsHash,
@@ -910,6 +916,28 @@ export const BountyFormV2: React.FC<BountyFormV2Props> = ({
                 {errors.amount}
               </p>
             )}
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="estimatedHours">Estimated hours (optional)</Label>
+            <Input
+              id="estimatedHours"
+              type="number"
+              min="0"
+              step="1"
+              value={formData.estimatedHours || ''}
+              onChange={(e) =>
+                setFormData((prev) => ({
+                  ...prev,
+                  estimatedHours: e.target.value,
+                }))
+              }
+              placeholder="e.g. 6"
+            />
+            <p className="text-xs" style={{ color: '#8FA09A' }}>
+              Participation hours this bounty represents. The completer earns this
+              much $SELF when their work is approved. Leave blank for none.
+            </p>
           </div>
 
           <div className="space-y-2">

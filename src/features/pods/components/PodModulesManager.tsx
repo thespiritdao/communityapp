@@ -37,6 +37,7 @@ import PodKnowledgeManager from './PodKnowledgeManager';
 import { GovernanceSettingsCard } from './GovernanceSettingsCard';
 import { DAOGovernanceSettingsCard } from '@/features/governance/components/DAOGovernanceSettingsCard';
 import { CommunityTokensAdminCard } from '@/features/pods/components/CommunityTokensAdminCard';
+import { SelfAdminCard } from '@/features/pods/components/SelfAdminCard';
 import { PasswordVaultPanel } from '@/features/passwords/components/PasswordVaultPanel';
 
 interface PodModulesManagerProps {
@@ -483,6 +484,7 @@ export default function PodModulesManager({
                 <>
                   <DAOGovernanceSettingsCard canPropose={isManager} />
                   <CommunityTokensAdminCard />
+                  <SelfAdminCard />
                 </>
               )}
             </div>

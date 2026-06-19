@@ -46,7 +46,14 @@ export class DatabaseTokenService {
           contract_address: token.contract_address,
           token_type: token.token_type as 'erc20' | 'erc721' | 'erc1155',
           token_image: token.token_image,
-          category: 'membership' as const,
+          // Respect a per-token `category` column when present; default to
+          // 'membership' for backward-compat. Lets specific tokens (e.g.
+          // Advocate) be re-homed to 'accreditation' via a DB update with no
+          // code change. Tenure (the $SELF prestige band) is computed on-chain
+          // and is NOT a tokens-table row, so it never appears here.
+          category:
+            (token.category as 'membership' | 'credential' | 'accreditation') ||
+            'membership',
           token_address: token.token_id, // Use token_id from database as token_address for contract calls
           is_active: token.is_active,
           source: 'tokens',

@@ -4,6 +4,7 @@ import { createPortal } from 'react-dom';
 import { useUserWallet } from '@/hooks/useUserWallet';
 import type { UserProfile } from '@/features/identity/types';
 import { DatabaseTokenGallery } from '@/features/identity/components/DatabaseTokenGallery';
+import { TenureBand } from '@/features/identity/components/TenureBand';
 import { mapStoredValuesToLabels } from '@/features/identity/utils/formatProfileValues';
 import {
   interestsOptions,
@@ -276,9 +277,9 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ user, users, onClose
 
         {/* Tokens */}
         <div style={{ marginBottom: '1.25rem' }}>
-          <h3 style={sectionLabel}>Memberships</h3>
+          <h3 style={sectionLabel}>Tenure</h3>
           <div className="token-gallery-modal">
-            <DatabaseTokenGallery walletAddress={user.wallet_address} category="membership" />
+            <TenureBand walletAddress={user.wallet_address} />
           </div>
           <h3 style={{ ...sectionLabel, marginTop: '1rem' }}>Credentials</h3>
           <div className="token-gallery-modal">
