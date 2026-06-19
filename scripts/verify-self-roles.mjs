@@ -59,7 +59,8 @@ const CHECKS = [
   [A.PRESTIGE, 'DEFAULT_ADMIN_ROLE', A.ADMIN, true, 'SelfPrestige admin → 0xd481'],
   [A.MINTER, 'DEFAULT_ADMIN_ROLE', A.ADMIN, true, 'SelfMinter admin → 0xd481'],
   [A.PAYMENT, 'DEFAULT_ADMIN_ROLE', A.ADMIN, true, 'SelfPayment admin → 0xd481'],
-  [A.EPOCHS, 'EPOCH_ADMIN_ROLE', A.ADMIN, true, 'SelfEpochs EPOCH_ADMIN → 0xd481'],
+  [A.EPOCHS, 'EPOCH_ADMIN_ROLE', A.ADMIN, true, 'SelfEpochs EPOCH_ADMIN → 0xd481 (backup)'],
+  [A.EPOCHS, 'EPOCH_ADMIN_ROLE', A.SMART, true, 'SelfEpochs EPOCH_ADMIN → backend SMART wallet (in-app advance)'],
   // Stray/wrong grants that must NOT be present
   [A.RECEIPT, 'MINTER_ROLE', A.MINTER, false, 'SelfReceipt MINTER must NOT be SelfMinter (the slip)'],
   [A.EPOCHS, 'LOCKER_ROLE', A.POD_ADMIN, false, 'SelfEpochs LOCKER unset (staking seam)'],

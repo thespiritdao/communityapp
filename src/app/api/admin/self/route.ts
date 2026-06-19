@@ -14,13 +14,19 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import {
   createPublicClient,
-  createWalletClient,
   http,
   getAddress,
   parseAbi,
+  encodeFunctionData,
 } from 'viem';
 import { base } from 'viem/chains';
 import { privateKeyToAccount } from 'viem/accounts';
+import {
+  Coinbase,
+  toSmartWallet,
+  sendUserOperation,
+  waitForUserOperation,
+} from '@coinbase/coinbase-sdk';
 import jwt from 'jsonwebtoken';
 import { getHatId } from '@/lib/hatRegistry';
 
@@ -34,6 +40,11 @@ const supabaseAdmin = createClient(
 const HATS_PROTOCOL_ADDRESS = '0x3bc1A0Ad72417f2d411118085256fC53CBdDd137';
 const SELF_EPOCHS = process.env.NEXT_PUBLIC_SELF_EPOCHS as `0x${string}` | undefined;
 const publicClient = createPublicClient({ chain: base, transport: http() });
+
+// Backend smart wallet (POD_ADMIN's sponsored account) — the on-chain caller
+// for advanceEpoch. It must hold EPOCH_ADMIN_ROLE on SelfEpochs. The web wallet
+// 0xd481 key is NEVER used by the app.
+const BACKEND_SMART_WALLET = '0x05c06af9fe1a996144902D9571d1d2783866cF63' as const;
 
 const HATS_ABI = [
   {
@@ -177,31 +188,50 @@ export async function POST(req: NextRequest) {
   }
 
   // ── Advance the global epoch (IRREVERSIBLE) ────────────────────────────────
+  // Gasless, in-app, Exec-gated. Signed via the backend SMART WALLET (0x05c06,
+  // POD_ADMIN's sponsored account) which holds EPOCH_ADMIN_ROLE — the web wallet
+  // 0xd481 key is NEVER used by the app. Same sponsored pattern as mint-batch.
   if (action === 'advanceEpoch') {
     if (!SELF_EPOCHS) {
       return NextResponse.json({ error: 'SelfEpochs not configured' }, { status: 500 });
     }
-    const key = process.env.ADMIN_EPOCH_PRIVATE_KEY || process.env.POD_ADMIN_PRIVATE_KEY;
-    if (!key) return NextResponse.json({ error: 'Epoch admin key missing' }, { status: 500 });
-    const account = privateKeyToAccount((key.startsWith('0x') ? key : `0x${key}`) as `0x${string}`);
-    const rpc = process.env.NEXT_PUBLIC_RPC_URL || 'https://mainnet.base.org';
-    const walletClient = createWalletClient({ account, chain: base, transport: http(rpc) });
+    const signerKey =
+      process.env.SELF_ATTESTOR_PRIVATE_KEY || process.env.POD_ADMIN_PRIVATE_KEY;
+    const paymasterUrl = process.env.NEXT_PUBLIC_PAYMASTER;
+    const cdpApiKey = process.env.CDP_API_KEY;
+    let cdpPrivateKey = process.env.EXECUTIVE_MINTING_PRIVATE_KEY;
+    if (!signerKey || !paymasterUrl || !cdpApiKey || !cdpPrivateKey) {
+      return NextResponse.json(
+        { error: 'Server misconfigured: signer/paymaster/CDP creds missing' },
+        { status: 500 },
+      );
+    }
+    if (cdpPrivateKey.includes('\\n')) cdpPrivateKey = cdpPrivateKey.replace(/\\n/g, '\n');
+
     try {
-      const hash = await walletClient.writeContract({
-        address: SELF_EPOCHS,
-        abi: EPOCHS_ABI,
-        functionName: 'advanceEpoch',
+      Coinbase.configure({ apiKeyName: cdpApiKey, privateKey: cdpPrivateKey });
+      const signer = privateKeyToAccount(
+        (signerKey.startsWith('0x') ? signerKey : `0x${signerKey}`) as `0x${string}`,
+      );
+      const wallet = toSmartWallet({ smartWalletAddress: BACKEND_SMART_WALLET, signer });
+      const callData = encodeFunctionData({ abi: EPOCHS_ABI, functionName: 'advanceEpoch' });
+
+      const result = await sendUserOperation(wallet, {
+        calls: [{ to: SELF_EPOCHS, data: callData, value: 0n }],
+        chainId: 8453,
+        paymasterUrl,
       });
-      const receipt = await publicClient.waitForTransactionReceipt({ hash });
-      if (receipt.status !== 'success') {
-        return NextResponse.json({ error: 'advanceEpoch reverted', hash }, { status: 500 });
-      }
+      await waitForUserOperation({
+        userOpHash: result.userOpHash,
+        smartWalletAddress: wallet.address,
+      });
+
       const current = await publicClient.readContract({
         address: SELF_EPOCHS,
         abi: EPOCHS_ABI,
         functionName: 'currentEpoch',
       });
-      return NextResponse.json({ success: true, hash, epoch: Number(current) });
+      return NextResponse.json({ success: true, userOpHash: result.userOpHash, epoch: Number(current) });
     } catch (e) {
       return NextResponse.json(
         { error: e instanceof Error ? e.message : 'advanceEpoch failed' },
