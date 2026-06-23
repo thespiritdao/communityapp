@@ -50,6 +50,13 @@ const MINTER_ABI = parseAbi([
   'function mintBatch(bytes32 batchId, MintItem[] items) external',
 ]);
 
+// SelfPrestige — Tenure (ecosystem-wide lifetime hours). Recorded alongside the
+// mint so earning $SELF also raises the earner's permanent Tenure standing.
+const SELF_PRESTIGE = process.env.NEXT_PUBLIC_SELF_PRESTIGE as `0x${string}` | undefined;
+const PRESTIGE_ABI = parseAbi([
+  'function batchAddLifetimeHours(address[] wallets, uint256[] hoursToAdd) external',
+]);
+
 const MAX_BATCH = 100; // bound the on-chain call size
 
 function authorized(req: NextRequest): boolean {
@@ -124,6 +131,17 @@ export async function POST(req: NextRequest) {
     const batchId = keccak256(toBytes(`${podId}:${epoch}:${idConcat}`)) as `0x${string}`;
     const totalHours = rows.reduce((acc, r) => acc + BigInt(r.hours), 0n);
 
+    // Prestige (Tenure) is ecosystem-wide PER WALLET — aggregate this batch's
+    // hours per recipient so a wallet earning from multiple rows gets one
+    // lifetime-hours bump. Recorded in the SAME user op as the mint (atomic).
+    const prestigeByWallet = new Map<string, bigint>();
+    for (const r of rows) {
+      const w = (r.wallet as string).toLowerCase();
+      prestigeByWallet.set(w, (prestigeByWallet.get(w) ?? 0n) + BigInt(r.hours));
+    }
+    const prestigeWallets = [...prestigeByWallet.keys()] as `0x${string}`[];
+    const prestigeHours = [...prestigeByWallet.values()];
+
     // Submit as a GASLESS user operation via the backend smart wallet + paymaster
     // (same pattern as mint-poc). The smart wallet is the on-chain caller and
     // must hold ATTESTOR_ROLE on SelfMinter.
@@ -138,14 +156,34 @@ export async function POST(req: NextRequest) {
       signer,
     });
 
-    const callData = encodeFunctionData({
-      abi: MINTER_ABI,
-      functionName: 'mintBatch',
-      args: [batchId, items],
-    });
+    const mintCall = {
+      to: SELF_MINTER,
+      data: encodeFunctionData({
+        abi: MINTER_ABI,
+        functionName: 'mintBatch',
+        args: [batchId, items],
+      }),
+      value: 0n,
+    };
+
+    // Both calls go in ONE user op → mint $SELF AND raise Tenure atomically.
+    // (The backend smart wallet holds JANITOR_ROLE on SelfPrestige.) If
+    // SelfPrestige isn't configured, mint still proceeds without prestige.
+    const calls = [mintCall];
+    if (SELF_PRESTIGE && prestigeWallets.length > 0) {
+      calls.push({
+        to: SELF_PRESTIGE,
+        data: encodeFunctionData({
+          abi: PRESTIGE_ABI,
+          functionName: 'batchAddLifetimeHours',
+          args: [prestigeWallets, prestigeHours],
+        }),
+        value: 0n,
+      });
+    }
 
     const result = await sendUserOperation(wallet, {
-      calls: [{ to: SELF_MINTER, data: callData, value: 0n }],
+      calls,
       chainId: 8453,
       paymasterUrl,
     });
