@@ -28,7 +28,9 @@ export async function GET(req: NextRequest) {
     // Budgets (allocated vs minted) per epoch.
     const { data: budgets, error: bErr } = await supabase
       .from('pod_self_budgets')
-      .select('epoch, allocated_hours, minted_hours, source')
+      // ::text — preserve full NUMERIC precision (bare NUMERIC → JS float
+      // truncates values ≥ 2^53, e.g. 500e18 budgets). BigInt parses the string.
+      .select('epoch, allocated_hours::text, minted_hours::text, source')
       .eq('pod_id', podId)
       .order('epoch', { ascending: false });
     if (bErr) throw bErr;

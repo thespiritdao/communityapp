@@ -112,11 +112,11 @@ export async function GET(req: NextRequest) {
   const [{ data: budgets }, { data: reviewQueue }, { data: pods }] = await Promise.all([
     supabaseAdmin
       .from('pod_self_budgets')
-      .select('id, pod_id, epoch, allocated_hours, minted_hours, source')
+      .select('id, pod_id, epoch, allocated_hours::text, minted_hours::text, source')
       .order('epoch', { ascending: false }),
     supabaseAdmin
       .from('self_mint_queue')
-      .select('id, wallet, pod_id, epoch, hours, source_type, source_ref, anomaly_flags, created_at')
+      .select('id, wallet, pod_id, epoch, hours::text, source_type, source_ref, anomaly_flags, created_at')
       .eq('status', 'exec_review')
       .order('created_at', { ascending: true }),
     supabaseAdmin.from('pods').select('id, name').eq('is_active', true),

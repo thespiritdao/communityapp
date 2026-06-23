@@ -101,7 +101,9 @@ async function getMemberEarned(
 ): Promise<bigint> {
   const { data } = await supabase
     .from('self_member_epoch_earned')
-    .select('hours')
+    // ::text preserves full NUMERIC precision (bare NUMERIC arrives as a JS
+    // float and truncates wei-scale values ≥ 2^53).
+    .select('hours::text')
     .eq('wallet', wallet.toLowerCase())
     .eq('pod_id', podId)
     .eq('epoch', epoch)
@@ -116,7 +118,7 @@ async function getBudgetRemaining(
 ): Promise<{ remaining: bigint; exists: boolean }> {
   const { data } = await supabase
     .from('pod_self_budgets')
-    .select('allocated_hours, minted_hours')
+    .select('allocated_hours::text, minted_hours::text')
     .eq('pod_id', podId)
     .eq('epoch', epoch)
     .maybeSingle();

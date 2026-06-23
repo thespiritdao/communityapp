@@ -94,9 +94,13 @@ export async function POST(req: NextRequest) {
     }
 
     // Pull mintable rows (status 'pending' or Exec-'approved'; NOT exec_review).
+    // CRITICAL: cast the big NUMERIC columns to text. PostgREST returns bare
+    // NUMERIC as JSON numbers, and the supabase client parses them as JS floats
+    // — which silently truncates 67-digit communityId / 1e18 hours precision
+    // BEFORE BigInt() can see them. Casting to ::text preserves full precision.
     const { data: rows, error: rowsErr } = await supabase
       .from('self_mint_queue')
-      .select('id, wallet, community_id, epoch, hours')
+      .select('id, wallet, community_id::text, epoch, hours::text')
       .eq('pod_id', podId)
       .eq('epoch', epoch)
       .in('status', ['pending', 'approved'])
@@ -173,7 +177,7 @@ export async function POST(req: NextRequest) {
     // single writer per pod/epoch so no concurrent-batch race in practice).
     const { data: budget } = await supabase
       .from('pod_self_budgets')
-      .select('minted_hours')
+      .select('minted_hours::text') // full precision for the read-modify-write
       .eq('pod_id', podId)
       .eq('epoch', epoch)
       .maybeSingle();
