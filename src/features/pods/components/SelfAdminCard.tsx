@@ -102,6 +102,10 @@ export const SelfAdminCard: React.FC = () => {
       setReviewQueue(data.reviewQueue || []);
       setPods(data.pods || []);
       setEpoch(data.epoch || null);
+      // Default the budget-epoch field to the CURRENT epoch. Budgets only apply
+      // to the live epoch; pre-filling prevents the common mistake of setting a
+      // budget for a future/past epoch that the earn-loop silently ignores.
+      if (data.epoch && bEpoch === '') setBEpoch(String(data.epoch.current));
     } catch (e) {
       toastRef.current({ title: 'Failed to load $SELF admin', description: String(e), variant: 'destructive' });
     } finally {
@@ -115,6 +119,16 @@ export const SelfAdminCard: React.FC = () => {
     if (!bPod || bEpoch === '' || bHours === '') {
       toastRef.current({ title: 'Pod, epoch, and hours are required', variant: 'destructive' });
       return;
+    }
+    // Guard: a budget set for a non-current epoch is silently ignored by the
+    // earn-loop (earnings only check the live epoch's budget). Confirm intent.
+    if (epoch && Number(bEpoch) !== epoch.current) {
+      const ok = window.confirm(
+        `You're setting a budget for epoch ${bEpoch}, but the current epoch is ${epoch.current}. ` +
+        `Budgets only apply to the CURRENT epoch — this one won't take effect until the epoch advances to ${bEpoch}. ` +
+        `Set it for the current epoch (${epoch.current}) instead? Click Cancel to keep ${bEpoch}.`,
+      );
+      if (ok) { setBEpoch(String(epoch.current)); return; } // let them re-Set with the corrected value
     }
     const res = await authedFetch('/api/admin/self', {
       method: 'POST',
@@ -212,9 +226,9 @@ export const SelfAdminCard: React.FC = () => {
             <hr style={{ border: 'none', borderTop: '1px solid #E8F1EE', margin: '0 0 0.75rem' }} />
 
             {/* Epoch / Hours / Set row. */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr auto', gap: '8px', alignItems: 'end', marginBottom: '1rem' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr auto', gap: '8px', alignItems: 'end', marginBottom: '0.25rem' }}>
               <div>
-                <Label>Epoch</Label>
+                <Label>Epoch{epoch ? ` (current: ${epoch.current})` : ''}</Label>
                 <Input type="number" value={bEpoch} onChange={(e) => setBEpoch(e.target.value)} placeholder={epoch ? String(epoch.current) : '0'} />
               </div>
               <div>
@@ -223,6 +237,12 @@ export const SelfAdminCard: React.FC = () => {
               </div>
               <Button onClick={setBudget}>Set</Button>
             </div>
+            <p style={{ fontSize: '0.75rem', color: '#8FA09A', marginBottom: '1rem' }}>
+              A budget is this pod&apos;s minting cap for one epoch (season). All
+              pods use the SAME current epoch — set different hours per pod, same
+              epoch number. Only the current epoch&apos;s budget is spendable;
+              advancing the epoch is a separate quarterly action.
+            </p>
 
             {budgets.length === 0 ? (
               <p style={{ color: '#8FA09A' }}>No budgets set yet.</p>
