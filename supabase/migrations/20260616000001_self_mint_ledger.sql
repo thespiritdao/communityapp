@@ -40,7 +40,7 @@ CREATE TABLE IF NOT EXISTS self_mint_queue (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   wallet TEXT NOT NULL,                          -- recipient (lowercased)
   pod_id UUID NOT NULL REFERENCES pods(id) ON DELETE CASCADE,
-  community_id BIGINT NOT NULL,                  -- on-chain communityId for this pod (uint224 fits in numeric; bigint ok for our id space)
+  community_id NUMERIC(78,0) NOT NULL,           -- on-chain communityId (uint224 from keccak256 — MUST be numeric, overflows bigint; see migration 20260622000001)
   epoch INTEGER NOT NULL,                        -- epoch the earning belongs to
   hours NUMERIC(78,0) NOT NULL,                  -- credited hours AFTER caps (wei, 1e18=1h)
   raw_hours NUMERIC(78,0) NOT NULL,              -- pre-cap hours (for audit/anomaly math)
