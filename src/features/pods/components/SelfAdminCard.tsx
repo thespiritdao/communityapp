@@ -120,16 +120,9 @@ export const SelfAdminCard: React.FC = () => {
       toastRef.current({ title: 'Pod, epoch, and hours are required', variant: 'destructive' });
       return;
     }
-    // Guard: a budget set for a non-current epoch is silently ignored by the
-    // earn-loop (earnings only check the live epoch's budget). Confirm intent.
-    if (epoch && Number(bEpoch) !== epoch.current) {
-      const ok = window.confirm(
-        `You're setting a budget for epoch ${bEpoch}, but the current epoch is ${epoch.current}. ` +
-        `Budgets only apply to the CURRENT epoch — this one won't take effect until the epoch advances to ${bEpoch}. ` +
-        `Set it for the current epoch (${epoch.current}) instead? Click Cancel to keep ${bEpoch}.`,
-      );
-      if (ok) { setBEpoch(String(epoch.current)); return; } // let them re-Set with the corrected value
-    }
+    // Future-epoch budgets are ALLOWED (pre-fund a coming season) but inert until
+    // the epoch advances. We don't block — the budget list badges them as
+    // "Scheduled" so it's never confusing which budgets are active.
     const res = await authedFetch('/api/admin/self', {
       method: 'POST',
       body: JSON.stringify({ action: 'setBudget', podId: bPod, epoch: Number(bEpoch), hours: Number(bHours) }),
@@ -238,22 +231,53 @@ export const SelfAdminCard: React.FC = () => {
               <Button onClick={setBudget}>Set</Button>
             </div>
             <p style={{ fontSize: '0.75rem', color: '#8FA09A', marginBottom: '1rem' }}>
-              A budget is this pod&apos;s minting cap for one epoch (season). All
-              pods use the SAME current epoch — set different hours per pod, same
-              epoch number. Only the current epoch&apos;s budget is spendable;
-              advancing the epoch is a separate quarterly action.
+              A budget is a pod&apos;s minting cap for one epoch (season). The
+              field defaults to the current epoch ({epoch ? epoch.current : '0'}).
+              You may pre-fund a FUTURE epoch — it shows as “Scheduled” and only
+              becomes active when the epoch advances to it. Only the current
+              epoch&apos;s budget can be earned against today.
             </p>
 
             {budgets.length === 0 ? (
               <p style={{ color: '#8FA09A' }}>No budgets set yet.</p>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                {budgets.map((b) => (
-                  <div key={b.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 12px', borderRadius: '8px', background: '#f9fafb', fontSize: '0.85rem' }}>
-                    <span><strong>{podName(b.pod_id)}</strong> · epoch {b.epoch} · <span style={{ color: '#8FA09A' }}>{b.source}</span></span>
-                    <span>{fmtHours(b.minted_hours)} / {fmtHours(b.allocated_hours)}</span>
-                  </div>
-                ))}
+                {budgets.map((b) => {
+                  // Active = current epoch (spendable now). Scheduled = future
+                  // (inert until the epoch advances). Past = expired season.
+                  const state = !epoch
+                    ? null
+                    : b.epoch === epoch.current
+                      ? { label: 'Active', bg: '#2F5D50', fg: '#fff' }
+                      : b.epoch > epoch.current
+                        ? { label: 'Scheduled', bg: '#FAF4EC', fg: '#8A6D3B' }
+                        : { label: 'Past', bg: '#eee', fg: '#888' };
+                  return (
+                    <div
+                      key={b.id}
+                      style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        padding: '8px 12px',
+                        borderRadius: '8px',
+                        background: '#f9fafb',
+                        fontSize: '0.85rem',
+                        opacity: state && state.label !== 'Active' ? 0.7 : 1,
+                      }}
+                    >
+                      <span>
+                        <strong>{podName(b.pod_id)}</strong> · epoch {b.epoch}
+                        {state && (
+                          <span style={{ marginLeft: 8, fontSize: '0.7rem', background: state.bg, color: state.fg, padding: '2px 8px', borderRadius: '999px' }}>
+                            {state.label}
+                          </span>
+                        )}
+                      </span>
+                      <span>{fmtHours(b.minted_hours)} / {fmtHours(b.allocated_hours)}</span>
+                    </div>
+                  );
+                })}
               </div>
             )}
           </div>
