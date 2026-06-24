@@ -1,0 +1,38 @@
+[
+  {
+    "type": "function",
+    "name": "payWithSelf",
+    "stateMutability": "nonpayable",
+    "inputs": [
+      { "name": "listingCommunity", "type": "uint224" },
+      { "name": "productId", "type": "string" },
+      { "name": "requiredHours", "type": "uint256" },
+      { "name": "ids", "type": "uint256[]" },
+      { "name": "amounts", "type": "uint256[]" }
+    ],
+    "outputs": [{ "name": "receiptId", "type": "uint256" }]
+  },
+  {
+    "type": "function",
+    "name": "effectiveWeightBps",
+    "stateMutability": "view",
+    "inputs": [
+      { "name": "listingCommunity", "type": "uint224" },
+      { "name": "sourceCommunity", "type": "uint224" }
+    ],
+    "outputs": [{ "name": "", "type": "uint256" }]
+  },
+  {
+    "type": "event",
+    "name": "PaidWithSelf",
+    "anonymous": false,
+    "inputs": [
+      { "name": "payer", "type": "address", "indexed": true },
+      { "name": "listingCommunity", "type": "uint224", "indexed": true },
+      { "name": "productId", "type": "string", "indexed": false },
+      { "name": "weightedHours", "type": "uint256", "indexed": false },
+      { "name": "rawHours", "type": "uint256", "indexed": false },
+      { "name": "receiptId", "type": "uint256", "indexed": false }
+    ]
+  }
+]

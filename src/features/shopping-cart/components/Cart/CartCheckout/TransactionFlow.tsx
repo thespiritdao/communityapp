@@ -1,6 +1,7 @@
 'use client';
 
 import { memo, useState, useCallback, useEffect } from 'react';
+import { encodeFunctionData } from 'viem';
 import { usePublicClient } from 'wagmi';
 import { useCurrentUser, useEvmAddress } from '@coinbase/cdp-hooks';
 import { useSendUserOperationWithAttribution as useSendUserOperation } from '@/wallet/hooks/useSendUserOperationWithAttribution';
@@ -37,6 +38,12 @@ import {
   formatTokenAmount,
   logTransactionError,
 } from '../../../services/transaction/transactionStatus';
+
+import {
+  useSelfPaymentFlow,
+  isSelfPayment,
+} from '../../../hooks/useSelfPaymentFlow';
+import { SelfPaymentConfirmModal } from './SelfPaymentConfirmModal';
 
 const TransactionContainer = styled.div`
   padding: 1rem;
@@ -144,6 +151,10 @@ const TransactionFlow = memo(
     const { sendUserOperation } = useSendUserOperation();
     const { currentUser } = useCurrentUser();
 
+    // $SELF burn-to-pay (soulbound ERC-1155 via SelfPaymentV2). Shared with
+    // Cart.tsx — same hook + confirmation modal.
+    const selfPay = useSelfPaymentFlow();
+
     const [allowances, setAllowances] = useState<TokenAllowances>({
       systemAllowance: 0n,
       selfAllowance: 0n,
@@ -249,88 +260,94 @@ const TransactionFlow = memo(
       userAddress,
     ]);
 
-    // Handle purchase transaction via CDP
-    const handlePurchaseTransaction = useCallback(async () => {
-      if (!evmAddress || !currentUser?.evmSmartAccounts?.[0]) {
-        console.error('❌ Missing CDP requirements:', {
-          hasEvmAddress: !!evmAddress,
-          hasCurrentUser: !!currentUser,
-          hasSmartAccount: !!currentUser?.evmSmartAccounts?.[0],
-          evmAddress,
-          smartAccount: currentUser?.evmSmartAccounts?.[0],
-        });
-        setTransactionState('error');
-        return;
-      }
-
-      const smartAccount = currentUser.evmSmartAccounts[0];
-
-      setIsTransactionPending(true);
-      setTransactionState('processing');
-
-      try {
-        console.log('🚀 Initiating shopping cart purchase via CDP Smart Account');
-
-        const calls = buildTransactionCalls();
-        if (calls.length === 0) {
-          throw new Error('Failed to build transaction calls');
+    // Send a set of CDP calls ({to, data, value}) as one sponsored userOp and
+    // run post-purchase order processing. Reused by the router path and $SELF.
+    const sendCalls = useCallback(
+      async (cdpCalls: { to: string; data: string; value: bigint }[]) => {
+        if (!evmAddress || !currentUser?.evmSmartAccounts?.[0]) {
+          setTransactionState('error');
+          return;
         }
+        const smartAccount = currentUser.evmSmartAccounts[0];
 
-        console.log(`📦 Processing ${calls.length} transaction calls (approvals + purchase)`);
+        setIsTransactionPending(true);
+        setTransactionState('processing');
 
-        const response = await sendUserOperation({
-          evmSmartAccount: smartAccount,
-          network: 'base',
-          calls: calls.map((call: any) => ({
-            to: call.address,
-            data: call.data,
-            value: call.value || 0n,
-          })),
-          useCdpPaymaster: true,
-        });
-
-        console.log('✅ User operation sent successfully!', response);
-
-        // CDP SDK returns userOperationHash, not immediate receipt
-        const resultWithHash = response as any;
-        const txHash = resultWithHash?.userOperationHash;
-
-        if (!txHash) {
-          console.warn('⚠️ No userOperationHash found in result');
-          throw new Error('Transaction submitted but no hash found');
-        }
-
-        console.log('✅ Purchase transaction submitted, userOperationHash:', txHash);
-        setTransactionState('success');
-
-        // ✅ Show success modal
-        setShowSuccessModal(true);
-
-        // Process orders in database
-        // Note: For CDP, we use userOperationHash as the transaction identifier
         try {
-          await processAllOrders({
-            products,
-            address: userAddress,
-            selectedToken,
-            transactionHash: txHash,
-            receipt: null, // CDP doesn't provide immediate receipt
+          if (cdpCalls.length === 0) {
+            throw new Error('Failed to build transaction calls');
+          }
+
+          const response = await sendUserOperation({
+            evmSmartAccount: smartAccount,
+            network: 'base',
+            calls: cdpCalls.map((call) => ({
+              to: call.to as `0x${string}`,
+              data: call.data as `0x${string}`,
+              value: call.value || 0n,
+            })),
+            useCdpPaymaster: true,
           });
 
-          console.log('✅ Order processing complete - notifications sent to product owners');
-        } catch (error) {
-          console.error('❌ Error processing orders after transaction:', error);
-          // Transaction succeeded but order processing failed
-        }
+          const txHash = (response as any)?.userOperationHash;
+          if (!txHash) {
+            throw new Error('Transaction submitted but no hash found');
+          }
 
-      } catch (error) {
-        console.error('❌ Purchase transaction failed:', error);
-        logTransactionError(error);
-        setTransactionState('error');
-      } finally {
-        setIsTransactionPending(false);
+          setTransactionState('success');
+          setShowSuccessModal(true);
+
+          try {
+            await processAllOrders({
+              products,
+              address: userAddress,
+              selectedToken,
+              transactionHash: txHash,
+              receipt: null,
+            });
+          } catch (error) {
+            console.error('❌ Error processing orders after transaction:', error);
+          }
+        } catch (error) {
+          console.error('❌ Purchase transaction failed:', error);
+          logTransactionError(error);
+          setTransactionState('error');
+        } finally {
+          setIsTransactionPending(false);
+        }
+      },
+      [evmAddress, currentUser, sendUserOperation, products, userAddress, selectedToken],
+    );
+
+    // Entry point. $SELF → prepare burn + open confirmation modal; otherwise →
+    // the existing router calls.
+    const handlePurchaseTransaction = useCallback(async () => {
+      if (isSelfPayment(selectedToken.symbol)) {
+        await selfPay.prepare(products, userAddress);
+        return;
       }
-    }, [evmAddress, currentUser, sendUserOperation, buildTransactionCalls, products, userAddress, selectedToken]);
+      const calls = buildTransactionCalls();
+      await sendCalls(
+        calls.map((call: any) => ({
+          to: call.address,
+          data: call.data,
+          value: call.value || 0n,
+        })),
+      );
+    }, [selectedToken, selfPay, products, userAddress, buildTransactionCalls, sendCalls]);
+
+    // Confirm handler for the $SELF modal — encodes + sends payWithSelf.
+    const handleConfirmSelfPayment = useCallback(async () => {
+      if (!selfPay.prepared) return;
+      const { call } = selfPay.prepared;
+      selfPay.clear();
+      const data = encodeFunctionData({
+        abi: call.abi,
+        functionName: call.functionName,
+        args: call.args,
+      });
+      await sendCalls([{ to: call.address, data, value: 0n }]);
+    }, [selfPay, sendCalls]);
 
     if (isLoadingAllowances) {
       return <LoadingSkeleton />;
@@ -405,6 +422,22 @@ const TransactionFlow = memo(
           <div className="mt-2 text-sm text-red-600">
             ❌ Transaction failed. Please try again.
           </div>
+        )}
+
+        {selfPay.preparing && (
+          <div className="mt-2 text-sm text-gray-600">Checking your $SELF…</div>
+        )}
+        {selfPay.error && (
+          <div className="mt-2 text-sm text-red-600">{selfPay.error}</div>
+        )}
+        {selfPay.prepared && (
+          <SelfPaymentConfirmModal
+            selection={selfPay.prepared.selection}
+            priceHours={selfPay.prepared.priceSelfHours}
+            onConfirm={handleConfirmSelfPayment}
+            onCancel={selfPay.clear}
+            isProcessing={isTransactionPending}
+          />
         )}
 
         {/* ✅ Success Modal */}
