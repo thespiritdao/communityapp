@@ -4,6 +4,9 @@ import { useEffect } from 'react';
 export function Balances() {
   console.error('[DEBUG] 🔵 [Balances] Component MOUNTING');
 
+  // `balances.selfBalance` is now the V2 decayed (spendable) $SELF — resolved
+  // at the source in fetchTokenBalances via /api/self/holdings, so every
+  // consumer (this, the market top bar, cart, eligibility) is consistent.
   const { balances, isLoading, error } = useTokenBalances();
 
   console.error('[DEBUG] 🔵 [Balances] Hook returned:', {

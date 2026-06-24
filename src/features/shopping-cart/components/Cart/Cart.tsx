@@ -30,6 +30,12 @@ import {
   getDefaultToken,
 } from '../../utils/tokenConfig';
 import { prepareTransactionData } from '../../services/transactionService';
+import {
+  useSelfPaymentFlow,
+  isSelfPayment,
+  type PreparedSelfPayment,
+} from '../../hooks/useSelfPaymentFlow';
+import { SelfPaymentConfirmModal } from './CartCheckout/SelfPaymentConfirmModal';
 import debounce from 'lodash.debounce';
 import { BaseError } from 'viem';
 import { getPublicClient } from '@wagmi/core';
@@ -944,15 +950,20 @@ export default function Cart({
   // Extract calls from prepared transaction data
   const { approveCalls, purchaseCalls, totalCalls } = transactionData;
 
-  // CDP transaction handler (replaces OnchainKit Transaction component)
-  const handleCDPTransaction = useCallback(async () => {
+  // $SELF burn-to-pay flow (soulbound ERC-1155 via SelfPaymentV2.payWithSelf,
+  // not the ERC-20 PurchaseRouter). Shared with TransactionFlow.tsx.
+  const selfPay = useSelfPaymentFlow();
+
+  // Encode + send a set of {address, abi, functionName, args} calls as one
+  // sponsored userOp. Reused by both the router path and the $SELF path.
+  const executeCalls = useCallback(async (callsToRun: any[]) => {
     if (!currentUser?.evmSmartAccounts?.[0]) {
       console.error('âŒ No Smart Account found');
       setIsLoading(false);
       return;
     }
 
-    if (!totalCalls || totalCalls.length === 0) {
+    if (!callsToRun || callsToRun.length === 0) {
       console.error('âŒ No transaction calls to execute');
       setIsLoading(false);
       return;
@@ -970,7 +981,7 @@ export default function Cart({
       console.log('ðŸ“‹ Calls to execute:', totalCalls);
 
       // Encode all transaction calls
-      const cdpCalls = totalCalls.map((call: any) => {
+      const cdpCalls = callsToRun.map((call: any) => {
         const encodedData = encodeFunctionData({
           abi: call.abi,
           functionName: call.functionName,
@@ -1011,7 +1022,27 @@ export default function Cart({
       console.error('âŒ Transaction failed:', error);
       await handleTransactionFailure(error);
     }
-  }, [currentUser, totalCalls, sendUserOperation, products, address, useFallbackRouting]);
+  }, [currentUser, sendUserOperation, products, address, useFallbackRouting]);
+
+  // Entry point for the Purchase button. $SELF routes through SelfPaymentV2
+  // (with a confirmation modal showing what gets burned); every other token
+  // uses the existing router calls.
+  const handleCDPTransaction = useCallback(async () => {
+    if (isSelfPayment(selectedToken?.symbol)) {
+      // Prepare the burn (fetch holdings + select ids); modal opens on success.
+      await selfPay.prepare(products, address as string);
+      return;
+    }
+    await executeCalls(totalCalls);
+  }, [selectedToken, selfPay, products, address, executeCalls, totalCalls]);
+
+  // Confirm handler for the $SELF modal — sends the prepared payWithSelf call.
+  const handleConfirmSelfPayment = useCallback(async () => {
+    if (!selfPay.prepared) return;
+    const call = selfPay.prepared.call;
+    selfPay.clear();
+    await executeCalls([call]);
+  }, [selfPay, executeCalls]);
 
   // Success handler (extracted from OnchainKit onSuccess callback)
   const handleTransactionSuccess = useCallback(async (response: any) => {
@@ -1426,11 +1457,30 @@ export default function Cart({
                       Transaction successful! Orders created.
                     </div>
                   )}
+                  {selfPay.preparing && (
+                    <div style={{ textAlign: 'center', marginTop: '0.5rem', fontSize: '0.875rem', color: '#666' }}>
+                      Checking your $SELF…
+                    </div>
+                  )}
+                  {selfPay.error && (
+                    <div style={{ textAlign: 'center', marginTop: '0.5rem', fontSize: '0.875rem', color: '#dc2626' }}>
+                      {selfPay.error}
+                    </div>
+                  )}
                 </div>
               ) : (
                 <div className="text-center py-4 text-gray-500">
                   Preparing transaction...
                 </div>
+              )}
+              {selfPay.prepared && (
+                <SelfPaymentConfirmModal
+                  selection={selfPay.prepared.selection}
+                  priceHours={selfPay.prepared.priceSelfHours}
+                  onConfirm={handleConfirmSelfPayment}
+                  onCancel={selfPay.clear}
+                  isProcessing={isLoading}
+                />
               )}
             </>
           )}

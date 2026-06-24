@@ -23,8 +23,9 @@ Three ideas that are easy to conflate:
    the budget down.
 
 3. **Advancing the epoch** is a **boundary** event, not a release trigger. It
-   closes the season, moves the clock forward, and **expires** $SELF older than
-   the lifetime window (K epochs). It does NOT distribute anything.
+   closes the season, moves the clock forward, and **ages** every holding by one
+   step — each token loses `1/H` of its value (linear decay over `H` epochs,
+   default 8). It does NOT distribute anything.
 
 So the common misconception — "set budgets, then advance to release them" — is
 backwards. Budgets are caps consumed *within* an epoch; advancing *ends* one.
@@ -40,7 +41,7 @@ backwards. Budgets are caps consumed *within* an epoch; advancing *ends* one.
                                        │
                                        ▼
                           (end of quarter) advance epoch
-                          (Exec) → clock +1, old $SELF expires
+                          (Exec) → clock +1, all $SELF decays 1/H
                                        │
                                        ▼
                           set budgets for the new epoch …
@@ -72,8 +73,9 @@ automatic checks.)
 
 ### 4. Advancing the epoch (quarterly)
 **$SELF Epochs → Epoch tab → Advance** (Exec, gasless, irreversible). Closes the
-season; $SELF earned in epoch `(current − K)` and earlier expires. See
-`runbook-self-epoch-advance.md`.
+season; every holding ages one step, losing `1/H` of its value (and anything
+now `H` epochs old reaches zero value). See `runbook-self-epoch-advance.md` and
+`self-epochs-reference.md` §3 for the decay math.
 
 ---
 
@@ -121,8 +123,9 @@ hours.
 ---
 
 ## Key invariants
-- **Soulbound:** $SELF can be minted (earned) and burned (redeemed/expired),
-  never transferred. No resale market → faked issuance has no value.
+- **Soulbound:** $SELF can be minted (earned) and burned (redeemed), never
+  transferred. Value also fades over time via linear decay (it is not destroyed
+  — only its spendable value drops). No resale market → faked issuance has no value.
 - **Pods never hold $SELF** — they have a mint *budget* (capacity), not a balance.
 - **The app never uses the web admin wallet** (`0xd481…`). All on-chain writes
   go through POD_ADMIN's sponsored smart wallet (`0x05c06…`), gaslessly.

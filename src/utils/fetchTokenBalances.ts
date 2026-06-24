@@ -633,22 +633,32 @@ export async function fetchTokenBalances(
         console.error('[ERROR] ❌ Error processing System Token balance:', error);
       }
 
-      console.error('[DEBUG] 💰 Processing Self Token balance:');
-      console.error('  selfIndex:', selfIndex);
-      console.error('  returnData.length:', returnData.length);
-      console.error('  returnData[selfIndex]:', selfIndex >= 0 ? returnData[selfIndex] : 'N/A');
-
+      // $SELF is now soulbound ERC-1155 with per-epoch ids + decay, NOT the old
+      // ERC-20 (NEXT_PUBLIC_SELF_TOKEN). The multicall above still pinged the
+      // dead ERC-20; ignore that result and read the wallet's current SPENDABLE
+      // (decay-adjusted) $SELF from the V2-aware holdings endpoint. This is the
+      // single source of truth for every consumer (top bar, identity, cart,
+      // eligibility gating).
       try {
-        if (selfIndex >= 0 && returnData[selfIndex]) {
-          const selfBalance = (returnData[selfIndex] ?? '0') as string;
-          console.error('[DEBUG]   Raw hex balance:', selfBalance);
-          balances.selfBalance = web3.utils.fromWei(selfBalance, 'ether');
-          console.error('[DEBUG]   Converted balance:', balances.selfBalance);
+        // Absolute URL so this works both client-side and in server contexts
+        // (fetchTokenBalances is also called from API routes, where a relative
+        // URL has no base).
+        const base =
+          process.env.NEXT_PUBLIC_APP_URL || 'https://app.spiritdao.org';
+        const holdingsRes = await fetch(
+          `${base}/api/self/holdings?wallet=${walletAddress}`,
+        );
+        if (holdingsRes.ok) {
+          const h = await holdingsRes.json();
+          if (h && !h.error && h.spendableHours !== undefined) {
+            balances.selfBalance = String(h.spendableHours);
+          }
         } else {
-          console.error('[DEBUG] ⚠️ selfIndex invalid or no return data');
+          console.error('[DEBUG] ⚠️ self/holdings fetch failed:', holdingsRes.status);
         }
       } catch (error) {
-        console.error('[ERROR] ❌ Error processing Self Token balance:', error);
+        console.error('[ERROR] ❌ Error fetching V2 $SELF holdings:', error);
+        // Leave selfBalance at its default ('0') on failure.
       }
 
       // Market Admin balance processing removed - replaced by Market Management Hat processing

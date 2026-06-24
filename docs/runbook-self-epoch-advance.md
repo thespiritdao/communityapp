@@ -69,4 +69,4 @@ SelfEpochs.grantRole(EPOCH_ADMIN_ROLE, 0x05c06af9fe1a996144902D9571d1d2783866cF6
 ```
 - role hash: `0xa8254feae331b360dda9558bd798ab27bf43a131cb76e076a396102d8769e0ac`
 - granted from `0xd481…` (current EPOCH_ADMIN)
-- `0xd481…` keeps the role too (backup). Verify with `node scripts/verify-self-roles.mjs`.
+- `0xd481…` keeps the role too (backup). Verify with `node scripts/verify-self-roles-v2.mjs`.

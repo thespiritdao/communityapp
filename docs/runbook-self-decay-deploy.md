@@ -121,9 +121,11 @@ mint-batch user op, see app changes below.)
 
 ## Step 6 — Verify
 
-- [ ] Update `scripts/verify-self-roles.mjs` addresses to the V2 set, run it →
-      all green (MINTER/BURNER on EpochsV2, ATTESTOR on MinterV2→smart wallet,
-      EPOCH_ADMIN on EpochsV2→0xd481 + 0x05c06, MINTER on Receipt→PaymentV2).
+- [x] Run `node scripts/verify-self-roles-v2.mjs` (env-driven; reads the V2
+      addresses from `.env`) → all green (MINTER/BURNER on EpochsV2, ATTESTOR on
+      MinterV2→smart wallet, EPOCH_ADMIN on EpochsV2→0xd481 + 0x05c06, MINTER on
+      Receipt→PaymentV2, immutable pointers → EpochsV2, decayHorizon=8). The old
+      `verify-self-roles.mjs` (hardcoded V1 set) was removed. ✅ 18/18 pass.
 - [ ] Redeploy the app (Vercel) so env vars bake in.
 - [ ] Smoke test: seed a budget → mint a test earning → confirm on-chain
       `decayedBalanceOf` = full at current epoch; advance a (test) epoch and
@@ -142,5 +144,5 @@ behavior. No data loss (old tokens untouched). Decide before re-attempting.
 ## Post-deploy note
 Once V2 is live, update `self-epochs-reference.md` and
 `self-system-operations-guide.md` to replace cliff-expiry language with the decay
-model (link `self-decay-calibration.md`), and update `verify-self-roles.mjs` /
-deploy doc with the V2 addresses as the canonical set.
+model (link `self-decay-calibration.md`). The canonical role-check script is now
+`verify-self-roles-v2.mjs` (env-driven — no hardcoded addresses to maintain).
