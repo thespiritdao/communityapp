@@ -1,10 +1,35 @@
 import { useTokenBalances } from '@/context/TokenBalancesContext';
-import { useEffect } from 'react';
+import { useCDPStatus } from '@/hooks/useCDPStatus';
+import { useEffect, useState } from 'react';
 
 export function Balances() {
   console.error('[DEBUG] 🔵 [Balances] Component MOUNTING');
 
   const { balances, isLoading, error } = useTokenBalances();
+  const { address } = useCDPStatus();
+
+  // $SELF is now soulbound ERC-1155 with per-epoch ids + decay, NOT the old
+  // ERC-20 balanceOf that `balances.selfBalance` reads. Pull the current
+  // spendable (decay-adjusted) total from the V2-aware holdings endpoint.
+  const [selfSpendable, setSelfSpendable] = useState<string | null>(null);
+  useEffect(() => {
+    if (!address) return;
+    let cancelled = false;
+    fetch(`/api/self/holdings?wallet=${address}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        if (cancelled || !d || d.error) return;
+        const h = Number(d.spendableHours ?? 0);
+        // Trim trailing zeros; show up to 2 decimals.
+        setSelfSpendable(Number.isFinite(h) ? String(Math.round(h * 100) / 100) : '0');
+      })
+      .catch(() => {
+        if (!cancelled) setSelfSpendable(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [address]);
 
   console.error('[DEBUG] 🔵 [Balances] Hook returned:', {
     hasBalances: !!balances,
@@ -59,7 +84,7 @@ export function Balances() {
         >
           $SELF:
         </label>
-        <span>{balances?.selfBalance || '0'}</span>
+        <span>{selfSpendable ?? '…'}</span>
       </div>
       <div>
         <label
