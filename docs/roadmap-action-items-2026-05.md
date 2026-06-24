@@ -234,8 +234,17 @@ authoritative specs:
 - `docs/spec-self-phase0-deploy.md` — deploy + role wiring (DONE, verified)
 - `docs/ideation-self-tokenomics.md`, `docs/self-tokenomics-followup-answers.md`
 
+> **⚠️ Superseded 2026-06-24 by the decay cutover (V2).** The cliff-expiry
+> `SelfEpochs`/`SelfMinter`/`SelfPayment` below were redeployed for linear slow
+> decay. Current canonical addresses: EpochsV2 `0x169760C0F633dd68D31973b5CFce1133833d28e5`,
+> MinterV2 `0xDcD71ceC0509aF355b4B85E71c9087fe54Bcff83`, PaymentV2
+> `0x3eac92eA5eBC17Af9419cDb03961247EC9d31001` (Receipt/Prestige unchanged).
+> Verified with `scripts/verify-self-roles-v2.mjs` (18/18). See
+> `runbook-self-decay-deploy.md` + `self-epochs-reference.md`. The V1 facts below
+> are kept as the Phase 0 historical record.
+
 **What actually shipped (Phase 0, 2026-06-17):** 5 soulbound contracts deployed
-on Base + role-wired + verified (`scripts/verify-self-roles.mjs`, 14/14 pass):
+on Base + role-wired + verified (14/14 pass):
 - `SelfEpochs` `0xe9e9d5E3ACd9F738B58ffe82f974abd34766a7Bb` — soulbound $SELF, (community,epoch) ids, expiry
 - `SelfMinter` `0x265dd81EC19Ef936206d6e0f6B3E910877aE70B6` — sole minter, attestation-gated
 - `SelfPayment` `0x438a8Ce7F03b6dCFf140bFFB5818323aCd7bC20e` — shared burn-to-pay

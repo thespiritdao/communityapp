@@ -4,6 +4,15 @@
 five new contracts, their cross-contract role wiring, the redeploy dependency
 chain, Remix instructions, and paymaster registration.*
 
+> **⚠️ Historical — superseded 2026-06-24 by the decay cutover (V2).** The
+> SelfEpochs/SelfMinter/SelfPayment addresses below are the original cliff-expiry
+> V1 set and have been retired. The wiring *pattern* here is still accurate, but
+> the canonical contract addresses + the linear-decay model are in
+> `runbook-self-decay-deploy.md` and `self-epochs-reference.md`. Current set:
+> EpochsV2 `0x169760C0F633dd68D31973b5CFce1133833d28e5`, MinterV2
+> `0xDcD71ceC0509aF355b4B85E71c9087fe54Bcff83`, PaymentV2
+> `0x3eac92eA5eBC17Af9419cDb03961247EC9d31001` (Receipt/Prestige unchanged).
+
 ---
 
 ## TL;DR answers to Ron's questions
