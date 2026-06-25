@@ -955,8 +955,11 @@ export const BountyFormV2: React.FC<BountyFormV2Props> = ({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
+                {/* $SELF is soulbound (non-transferable) — it cannot be escrowed
+                    or paid out as a bounty reward. Contributors instead earn
+                    $SELF automatically for hours worked (see "Estimated hours"
+                    above), minted on approval. So rewards are $SYSTEM only. */}
                 <SelectItem value="SYSTEM">SYSTEM</SelectItem>
-                <SelectItem value="SELF">SELF</SelectItem>
               </SelectContent>
             </Select>
           </div>
