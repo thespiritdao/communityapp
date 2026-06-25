@@ -4,8 +4,8 @@
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useUserWallet, useSigningWallet } from '@/hooks/useUserWallet';
+import { useHatPermissions } from '@/hooks/useHatPermissions';
 import { supabase } from '@/lib/supabase';
-import { fetchTokenBalances } from '@/utils/fetchTokenBalances';
 import { createSupabaseSession } from '@/utils/createSupabaseSession';
 import styled from 'styled-components';
 import { UserProfileDisplay } from '@/components/UserProfileDisplay';
@@ -270,6 +270,9 @@ export default function OrderDetailPage() {
   const address = useUserWallet();
   // Device signing wallet — used only to (re)establish the Supabase session.
   const { address: signingAddress } = useSigningWallet();
+  // Order management is gated by the pod `marketplaceManage` permission (same
+  // as product management), not hardcoded Exec/Market hat balances.
+  const { permissions } = useHatPermissions();
   const orderId = typeof params.id === 'string' ? params.id : '';
 
   const [order, setOrder] = useState<Order | null>(null);
@@ -378,8 +381,8 @@ export default function OrderDetailPage() {
         setBuyerProfile(profileData);
       }
 
-      // Check if user can manage this order
-      await checkManagementPermission(orderData);
+      // Management access is derived reactively from hat permissions (effect
+      // below) — no per-order token check needed here.
     } catch (error) {
       console.error('Error loading order data:', error);
       setError('Failed to load order information');
@@ -388,69 +391,12 @@ export default function OrderDetailPage() {
     }
   };
 
-  const checkManagementPermission = async (orderData: Order) => {
-    if (!address) return;
-
-    try {
-      // User can manage if they are:
-      // 1. The buyer (can view but not update status)
-      // 2. Executive pod member (can manage all orders)
-      // 3. Pod manager for the product's required token
-
-      const isBuyer =
-        address.toLowerCase() === orderData.buyer_address.toLowerCase();
-
-      // Get user's token balances to check permissions
-      const tokenBalances = await fetchTokenBalances(address);
-      const hasExecutivePod = tokenBalances.hasExecutivePod;
-
-      if (hasExecutivePod) {
-        setCanManage(true);
-        return;
-      }
-
-      // Get product to check required token
-      const { data: productData } = await supabase
-        .from('products')
-        .select('required_token')
-        .eq('id', orderData.product_id)
-        .single();
-
-      if (productData?.required_token) {
-        // Check if user has management permissions for this pod
-        const hasManagementToken = tokenBalances.hasMarketManagement;
-        let hasPodToken = false;
-
-        switch (productData.required_token) {
-          case 'exec':
-            hasPodToken = tokenBalances.hasExecutivePod;
-            break;
-          case 'dev':
-            hasPodToken = tokenBalances.hasDevPod;
-            break;
-          case 'bounty':
-            hasPodToken = tokenBalances.hasBountyHat;
-            break;
-          case 'curiosity':
-            hasPodToken = tokenBalances.hasProofOfCuriosity;
-            break;
-          case 'market_admin':
-            hasPodToken = tokenBalances.hasMarketManagement;
-            break;
-          default:
-            hasPodToken = false;
-        }
-
-        setCanManage(hasManagementToken && hasPodToken);
-      } else {
-        // Products with no token requirement can only be managed by executive pod
-        setCanManage(false);
-      }
-    } catch (error) {
-      console.error('Error checking management permission:', error);
-      setCanManage(false);
-    }
-  };
+  // Management access is the pod `marketplaceManage` role permission. Kept as a
+  // small effect (rather than inline) so canManage stays reactive as the hat
+  // permissions resolve after mount.
+  useEffect(() => {
+    setCanManage(!!permissions?.marketplaceManage);
+  }, [permissions?.marketplaceManage]);
 
   const handleStatusUpdate = async () => {
     if (!order || !address || !canManage) return;

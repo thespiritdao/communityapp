@@ -4,8 +4,8 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useUserWallet } from '@/hooks/useUserWallet';
+import { useHatPermissions } from '@/hooks/useHatPermissions';
 import { supabase } from '@/lib/supabase';
-import { fetchTokenBalances } from '@/utils/fetchTokenBalances';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -51,11 +51,15 @@ export default function OrderManagementPage() {
   const router = useRouter();
   const address = useUserWallet();
 
+  // Order management is gated by the pod `marketplaceManage` permission (same
+  // as product management), not hardcoded Exec/Market hat balances.
+  const { permissions, isLoading: permsLoading } = useHatPermissions();
+  const canManageOrders = !!permissions?.marketplaceManage;
+
   const [orders, setOrders] = useState<Order[]>([]);
   const [filteredOrders, setFilteredOrders] = useState<Order[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string>('');
-  const [canManageOrders, setCanManageOrders] = useState(false);
 
   // Filter states
   const [statusFilter, setStatusFilter] = useState('');
@@ -72,9 +76,9 @@ export default function OrderManagementPage() {
   });
 
   useEffect(() => {
-    if (!address) return;
+    if (!address || permsLoading) return;
     checkPermissionsAndLoadOrders();
-  }, [address]);
+  }, [address, permsLoading, canManageOrders]);
 
   useEffect(() => {
     applyFilters();
@@ -87,20 +91,12 @@ export default function OrderManagementPage() {
       setIsLoading(true);
       setError('');
 
-      // Check if user has management permissions
-      const tokenBalances = await fetchTokenBalances(address);
-      const hasExecutivePod = tokenBalances.hasExecutivePod;
-      const hasMarketManagement = tokenBalances.hasMarketManagement;
-
-      if (!hasExecutivePod && !hasMarketManagement) {
+      if (!canManageOrders) {
         setError(
-          'You do not have permission to manage orders. You need Executive Pod membership or Market Management tokens.',
+          'You do not have permission to manage orders. You need the Marketplace Manage role in a pod.',
         );
-        setCanManageOrders(false);
         return;
       }
-
-      setCanManageOrders(true);
 
       // Load orders
       const { data: ordersData, error: ordersError } = await supabase

@@ -2,9 +2,8 @@
 'use client';
 
 import type React from 'react';
-import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { fetchTokenBalances } from '@/utils/fetchTokenBalances';
+import { useHatPermissions } from '@/hooks/useHatPermissions';
 import { Package, Settings, Loader2 } from 'lucide-react';
 import styled from 'styled-components';
 
@@ -67,42 +66,12 @@ export const OrderManagementBar: React.FC<OrderManagementBarProps> = ({
   address,
 }) => {
   const router = useRouter();
-  const [canManageOrders, setCanManageOrders] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    checkManagementPermissions();
-  }, [address]);
-
-  const checkManagementPermissions = async () => {
-    if (!address) {
-      setCanManageOrders(false);
-      setIsLoading(false);
-      return;
-    }
-
-    try {
-      setIsLoading(true);
-      const tokenBalances = await fetchTokenBalances(address);
-
-      // User can manage orders if they have Executive Pod OR Market Management tokens
-      const hasPermissions =
-        tokenBalances.hasExecutivePod || tokenBalances.hasMarketManagement;
-      setCanManageOrders(hasPermissions);
-
-      console.log('Order management permissions:', {
-        address,
-        hasExecutivePod: tokenBalances.hasExecutivePod,
-        hasMarketManagement: tokenBalances.hasMarketManagement,
-        canManageOrders: hasPermissions,
-      });
-    } catch (error) {
-      console.error('Error checking order management permissions:', error);
-      setCanManageOrders(false);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  // Order management is gated by the pod role-permission system (the same
+  // `marketplaceManage` permission that grants product management), NOT by
+  // hardcoded Exec/Market hat balances.
+  const { permissions, isLoading } = useHatPermissions();
+  const canManageOrders = !!permissions?.marketplaceManage;
 
   const handleMyOrders = () => {
     router.push('/marketplace/my-orders');
