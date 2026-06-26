@@ -5,8 +5,13 @@ import { useState, useCallback } from 'react';
 import { useCurrentUser } from '@coinbase/cdp-hooks';
 import { useSendUserOperationWithAttribution as useSendUserOperation } from '@/wallet/hooks/useSendUserOperationWithAttribution';
 import { encodeFunctionData } from 'viem';
+import { usePublicClient } from 'wagmi';
 
 import { useSimplifiedEventTransactions } from '../hooks/useSimplifiedEventTransactions';
+import {
+  buildEventSelfBurn,
+  extractReceiptId,
+} from '../services/eventSelfPayment';
 import { TokenApprovalFlow } from './TokenApprovalFlow';
 import type { EventWithStats } from '../types/event';
 import { Button } from '@/components/ui/button';
@@ -31,6 +36,7 @@ export const EventRegistrationButton: React.FC<
   const { currentUser } = useCurrentUser();
   const { sendUserOperation } = useSendUserOperation();
   const { getRegisterEventCall } = useSimplifiedEventTransactions();
+  const publicClient = usePublicClient();
 
   const [isTransactionPending, setIsTransactionPending] = useState(false);
   const [showApprovalDialog, setShowApprovalDialog] = useState(false);
@@ -87,33 +93,27 @@ export const EventRegistrationButton: React.FC<
   // All events in a DAO should support blockchain registration
   const blockchainEventId = event.blockchain_event_id || event.id;
 
-  // Prepare registration transaction
-  const prepareRegistration = () => {
-    try {
-      if (!blockchainEventId) {
-        console.error('Event missing both blockchain_event_id and id:', event);
-        return null;
-      }
+  const encodeCall = (call: any) => ({
+    to: call.address as `0x${string}`,
+    value: 0n,
+    data: encodeFunctionData({
+      abi: call.abi,
+      functionName: call.functionName,
+      args: call.args,
+    }),
+  });
 
-      return getRegisterEventCall({
-        eventId: blockchainEventId,
-      });
-    } catch (error) {
-      console.error('Error preparing registration:', error);
-      return null;
-    }
-  };
-
-  // CDP transaction handler for event registration
+  // CDP transaction handler for event registration.
+  // $SELF events: burn $SELF via SelfPaymentV2.payWithSelf FIRST (mints a
+  // SelfReceipt), read the receiptId, then registerForEvent(eventId, receiptId).
+  // $SYSTEM/free: register directly with receiptId 0 (SYSTEM handled by approval).
   const handleCDPRegistration = useCallback(async () => {
     if (!currentUser?.evmSmartAccounts?.[0]) {
       console.error('Smart Account not found');
       return;
     }
-
-    const calls = prepareRegistration();
-    if (!calls || calls.length === 0) {
-      console.error('Unable to prepare registration calls');
+    if (!blockchainEventId) {
+      console.error('Event missing both blockchain_event_id and id:', event);
       return;
     }
 
@@ -121,28 +121,56 @@ export const EventRegistrationButton: React.FC<
 
     try {
       const smartAccount = currentUser.evmSmartAccounts[0];
+      let selfReceiptId = 0n;
 
-      // Encode all calls
-      const cdpCalls = calls.map((call: any) => ({
-        to: call.address as `0x${string}`,
-        value: 0n,
-        data: encodeFunctionData({
-          abi: call.abi,
-          functionName: call.functionName,
-          args: call.args,
-        }),
-      }));
+      // --- Step 1: burn $SELF (only for $SELF-priced events) ---
+      const priceSelfHours = Number.parseFloat(selfTokenAmount || '0');
+      if (priceSelfHours > 0) {
+        if (!address) throw new Error('No wallet address');
+        const podId =
+          event.fund_recipient_pod_id || event.organizing_pod_id || '';
+        const burn = await buildEventSelfBurn({
+          walletAddress: address,
+          podId,
+          eventId: blockchainEventId,
+          priceSelfHours,
+        });
+        if (!burn) {
+          throw new Error('Insufficient $SELF for this event, or $SELF not configured');
+        }
 
-      console.log('🚀 CDP Event Registration:', {
-        smartAccount,
+        const burnRes = await sendUserOperation({
+          evmSmartAccount: smartAccount,
+          network: 'base',
+          calls: [encodeCall(burn.call)],
+          useCdpPaymaster: true,
+        });
+
+        // Need the receiptId from the burn before we can register — read logs.
+        const burnHash = (burnRes as any)?.userOperationHash;
+        if (!burnHash || !publicClient) {
+          throw new Error('Could not confirm $SELF burn');
+        }
+        const burnReceipt = await publicClient.waitForTransactionReceipt({
+          hash: burnHash as `0x${string}`,
+        });
+        const receiptId = extractReceiptId(burnReceipt.logs);
+        if (!receiptId) {
+          throw new Error('Could not read $SELF payment receipt');
+        }
+        selfReceiptId = receiptId;
+      }
+
+      // --- Step 2: register (with the burn receipt id, or 0) ---
+      const calls = getRegisterEventCall({
         eventId: blockchainEventId,
-        callsCount: cdpCalls.length,
+        selfReceiptId,
       });
 
       const result = await sendUserOperation({
         evmSmartAccount: smartAccount,
         network: 'base',
-        calls: cdpCalls,
+        calls: calls.map(encodeCall),
         useCdpPaymaster: true,
       });
 
@@ -156,7 +184,17 @@ export const EventRegistrationButton: React.FC<
       console.error('❌ Event registration failed:', error);
       setIsTransactionPending(false);
     }
-  }, [currentUser, blockchainEventId, prepareRegistration, sendUserOperation, onSuccess]);
+  }, [
+    currentUser,
+    blockchainEventId,
+    event,
+    address,
+    selfTokenAmount,
+    getRegisterEventCall,
+    sendUserOperation,
+    publicClient,
+    onSuccess,
+  ]);
 
   return (
     <>
@@ -204,9 +242,7 @@ export const EventRegistrationButton: React.FC<
         </Button>
       ) : (
         (() => {
-          const calls = prepareRegistration();
-
-          if (!calls) {
+          if (!blockchainEventId) {
             return (
               <Button disabled={true} className={className}>
                 Unable to Register

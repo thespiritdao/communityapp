@@ -135,9 +135,11 @@ export const TokenApprovalFlow: React.FC<TokenApprovalFlowProps> = ({
   const needsSystemApproval =
     systemAmountWei > 0n &&
     (systemAllowance ? (systemAllowance as bigint) : 0n) < systemAmountWei;
-  const needsSelfApproval =
-    selfAmountWei > 0n &&
-    (selfAllowance ? (selfAllowance as bigint) : 0n) < selfAmountWei;
+  // $SELF is soulbound (V2): it's paid by BURNING via SelfPaymentV2.payWithSelf
+  // during registration, NOT by ERC-20 approve. So there is no $SELF approval
+  // step here, and the $SELF sufficiency check happens in the burn flow
+  // (buildEventSelfBurn) instead of this dead-ERC-20 balance read.
+  const needsSelfApproval = false;
 
   // Only show insufficient balance if we have loaded the balance data
   // If balance is undefined, we're still loading - don't show error yet
@@ -145,10 +147,7 @@ export const TokenApprovalFlow: React.FC<TokenApprovalFlowProps> = ({
     systemAmountWei > 0n &&
     systemBalance !== undefined &&
     (systemBalance as bigint) < systemAmountWei;
-  const hasInsufficientSelfBalance =
-    selfAmountWei > 0n &&
-    selfBalance !== undefined &&
-    (selfBalance as bigint) < selfAmountWei;
+  const hasInsufficientSelfBalance = false;
 
   // Log balance checks for debugging
   useEffect(() => {

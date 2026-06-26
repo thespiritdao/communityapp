@@ -26,6 +26,11 @@ export interface CreateSimplifiedEventParams {
 
 export interface RegisterEventParams {
   eventId: string;
+  /**
+   * EventManagerV2: the SelfReceipt id from a prior SelfPaymentV2.payWithSelf
+   * burn for a $SELF-priced event. 0 for $SYSTEM-only / free events.
+   */
+  selfReceiptId?: bigint;
 }
 
 export interface MintCertificateParams {
@@ -118,8 +123,9 @@ export function useSimplifiedEventTransactions() {
           address: EVENT_MANAGER_CONTRACT,
           abi: EventManagerABI,
           functionName: 'registerForEvent',
-          args: [params.eventId],
-          // No value field - ERC20 tokens handled via allowance
+          // EventManagerV2: (eventId, selfReceiptId). 0 for $SYSTEM/free; the
+          // $SELF burn happens in a separate payWithSelf call beforehand.
+          args: [params.eventId, params.selfReceiptId ?? 0n],
         },
       ];
     },
