@@ -565,18 +565,21 @@ export const SimplifiedEventCreationForm: React.FC<
   const handleTransactionError = useCallback((error: any) => {
     console.error('❌ Event creation failed:', error);
 
-    // Provide helpful error messages based on error type
+    // Report the ACTUAL EventManager address from env (not a hardcoded one) and
+    // surface the raw error so paymaster issues are diagnosable.
+    const emAddr = process.env.NEXT_PUBLIC_EVENT_MANAGER || '(unset)';
     const errorMessage = error?.message || String(error);
-    let userMessage = 'Transaction failed. Please try again.';
+    let userMessage = `Transaction failed. ${errorMessage}`;
 
     if (errorMessage.includes('Service unavailable') || errorMessage.includes('503')) {
       userMessage = '⚠️ Coinbase service temporarily unavailable. The transaction will retry automatically.';
-    } else if (errorMessage.includes('Internal server error') || errorMessage.includes('500')) {
-      userMessage = `⚠️ Transaction failed after retries. This usually means the EventManager contract (0x5e77aD7dD2C93E19aad6ab3c0a8829b729fEA3F9) is not whitelisted in your CDP Dashboard. Please check your CDP project's paymaster settings on Base mainnet (Chain ID 8453).`;
-    } else if (errorMessage.includes('not whitelisted') || errorMessage.includes('not allowed')) {
-      userMessage = `⚠️ Contract not whitelisted for gas sponsorship. Please add EventManager (0x5e77aD7dD2C93E19aad6ab3c0a8829b729fEA3F9) to your CDP Dashboard paymaster whitelist.`;
-    } else if (errorMessage.includes('Insufficient balance')) {
-      userMessage = '⚠️ Gas sponsorship failed. Ensure EventManager contract is whitelisted in CDP Dashboard.';
+    } else if (
+      errorMessage.includes('not whitelisted') ||
+      errorMessage.includes('not allowed') ||
+      errorMessage.includes('insufficient balance') ||
+      errorMessage.includes('precheck failed')
+    ) {
+      userMessage = `⚠️ Gas sponsorship failed for EventManager (${emAddr}) on Base mainnet. Confirm this exact address + the createEvent function are whitelisted in the CDP paymaster. Raw: ${errorMessage}`;
     }
 
     setDbError(userMessage);
