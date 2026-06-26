@@ -35,8 +35,12 @@ import { useEventAccess } from '../hooks/useEventTokenGating';
 import { useRegistrationStatus } from '../hooks/useRegistrationStatus';
 import { TokenApprovalFlow } from './TokenApprovalFlow';
 import { supabase } from '@/lib/supabase';
-import { useReadContract } from 'wagmi';
+import { useReadContract, usePublicClient } from 'wagmi';
 import { CONTRACT_ADDRESSES } from '@/config/contracts';
+import {
+  buildEventSelfBurn,
+  extractReceiptId,
+} from '../services/eventSelfPayment';
 import type { Event } from '../types/event';
 
 // Import the contract ABI and address
@@ -77,6 +81,7 @@ export const EventRegistrationModal: React.FC<EventRegistrationModalProps> = ({
   const userWallet = useUserWallet();
   const { currentUser } = useCurrentUser();
   const { sendUserOperation } = useSendUserOperation();
+  const publicClient = usePublicClient();
   const { signEvmMessage } = useSignEvmMessage();
   const router = useRouter();
   const { toast } = useToast();
@@ -310,10 +315,62 @@ export const EventRegistrationModal: React.FC<EventRegistrationModalProps> = ({
 
         const smartAccount = currentUser.evmSmartAccounts[0];
 
+        // $SELF events (V2): burn $SELF via SelfPaymentV2.payWithSelf FIRST, read
+        // the SelfReceipt id, then register with it. $SELF is soulbound so it
+        // cannot be transferred into EventManager — only burned by its holder.
+        let selfReceiptId = 0n;
+        const priceSelfHours = Number.parseFloat(
+          (event as any).price_self_amount || '0',
+        );
+        if (priceSelfHours > 0) {
+          if (!address) throw new Error('No wallet address for $SELF payment');
+          const podId =
+            (event as any).fund_recipient_pod_id ||
+            (event as any).organizing_pod_id ||
+            '';
+          const burn = await buildEventSelfBurn({
+            walletAddress: address,
+            podId,
+            eventId: event.blockchain_event_id,
+            priceSelfHours,
+          });
+          if (!burn) {
+            throw new Error(
+              'Insufficient $SELF for this event, or $SELF not configured',
+            );
+          }
+          const burnRes = await sendUserOperation({
+            evmSmartAccount: smartAccount,
+            network: 'base',
+            calls: [
+              {
+                to: burn.call.address,
+                value: 0n,
+                data: encodeFunctionData({
+                  abi: burn.call.abi,
+                  functionName: burn.call.functionName,
+                  args: burn.call.args,
+                }),
+              },
+            ],
+            useCdpPaymaster: true,
+          });
+          const burnHash = (burnRes as any)?.userOperationHash;
+          if (!burnHash || !publicClient) {
+            throw new Error('Could not confirm $SELF burn');
+          }
+          const burnReceipt = await publicClient.waitForTransactionReceipt({
+            hash: burnHash as `0x${string}`,
+          });
+          const receiptId = extractReceiptId(burnReceipt.logs);
+          if (!receiptId) throw new Error('Could not read $SELF payment receipt');
+          selfReceiptId = receiptId;
+        }
+
         const callData = encodeFunctionData({
           abi: EventManagerABI,
           functionName: 'registerForEvent',
-          args: [event.blockchain_event_id],
+          args: [event.blockchain_event_id, selfReceiptId],
         });
 
         const result = await sendUserOperation({

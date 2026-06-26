@@ -397,7 +397,11 @@ export const EventCheckInSystem: React.FC<EventCheckInSystemProps> = ({
                   token_type: 'completion',
                   contract_address: event.completion_contract_address || '',
                   token_id: tokenId,
-                  owner_address: nftMintingData.recipients[i],
+                  // Lowercase to match the identity Accreditations read, which
+                  // filters owner_address by userAddress.toLowerCase(). CDP
+                  // recipient addresses are checksummed; storing as-is would make
+                  // the accreditation invisible on the identity page.
+                  owner_address: nftMintingData.recipients[i].toLowerCase(),
                   token_metadata: {
                     transaction_hash: txHash || '',
                     metadata_uri: nftMintingData.metadataURIs[i],

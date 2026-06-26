@@ -1031,6 +1031,11 @@
         "internalType": "string",
         "name": "eventId",
         "type": "string"
+      },
+      {
+        "internalType": "uint256",
+        "name": "selfReceiptId",
+        "type": "uint256"
       }
     ],
     "name": "registerForEvent",
