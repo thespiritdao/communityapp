@@ -988,6 +988,12 @@ export const SimplifiedEventCreationForm: React.FC<
                     placeholder="5"
                     className="max-w-xs"
                   />
+                  <p className="mt-1 text-xs text-amber-700">
+                    $SELF is <strong>burned</strong> when attendees register — it
+                    is not routed to a pod and is non-refundable (it&apos;s
+                    soulbound participation, not a transferable balance). The
+                    fund recipient below applies only to $SYSTEM payments.
+                  </p>
                 </div>
               )}
 

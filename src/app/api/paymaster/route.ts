@@ -33,6 +33,10 @@ const STATIC_WHITELIST = new Set<string>(
     process.env.NEXT_PUBLIC_HAT_MINTER,
     process.env.NEXT_PUBLIC_BOUNTY_MANAGER_ADDRESS,
     process.env.NEXT_PUBLIC_TREASURY_PROXY,
+    // EventManagerV2 — createEvent / registerForEvent / completeEvent /
+    // cancelEvent / certificate mints are all sponsored. ($SELF event payment
+    // burns via SELF_PAYMENT, listed below, in a separate userOp.)
+    process.env.NEXT_PUBLIC_EVENT_MANAGER,
     // Pod treasury contracts — needed for setAuthorizedProxy during proxy migration
     '0x0b76fdf7afa6c38ba0a99aa95b8899631335e70b', // Exec Pod treasury
     '0xf2d28ba2c110c415cd75824f1e390ea807793bac', // TN Pod treasury
