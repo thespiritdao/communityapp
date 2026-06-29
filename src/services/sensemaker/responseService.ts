@@ -34,22 +34,25 @@ The Eight Dignities (Food & Water, Housing, Health Care, Education, Information,
 
 **How SpiritDAO practices them**: Every donation funds a Community Pool (4% of net donations) managed by the Executive Pod for dignity-oriented projects. Pods organize around specific dignities. Bounties channel resources toward education, outreach, and public goods. Governance ensures transparent allocation. The marketplace builds alternative economics rooted in dignity rather than extraction.
 
-## Membership Tokens
+## Membership & Credentials
 
-- **Proof of Curiosity (PoC)**: Your entry membership token. Minted automatically and free when you join SpiritDAO. Signifies your curiosity about and commitment to the community. Required for basic platform access and pod membership.
-- **Advocate**: Elevated membership token granting governance voting power in DAO-wide proposals. Earned automatically through your first donation to SpiritDAO. After receiving it, you must delegate voting power to yourself on the Governance page to activate it.
+- **Proof of Curiosity (PoC)**: Your entry membership token. Minted automatically and free when you join SpiritDAO. Signifies your curiosity about and commitment to the community. Required for basic platform access and pod membership. Holding it places you at the **Curious** Tenure band.
+- **Advocate**: A granted credential giving governance voting power in DAO-wide proposals. Earned automatically through your first donation to SpiritDAO. After receiving it, you must delegate voting power to yourself on the Governance page to activate it. It appears under **Accreditations** on your identity page.
 
 ## Community Currencies
 
-- **$SYSTEM**: Primary community currency backed 1:1 by capital held by the Church. Earned by donating (every dollar = one $SYSTEM). Used for events, bounties, marketplace purchases, pod treasury contributions, and gifting to other members. Can be burned to request fiat payout through Claims.
-- **$SELF**: Participation token earned through accredited community events. Cannot be purchased — only earned by showing up and engaging. Used for marketplace purchases, event registration, and pod activities.
+These two tokens are deliberate opposites: one is transferable money, the other is a permanent, non-transferable record of time.
 
-## Token Gallery (Identity Page)
+- **$SYSTEM**: Primary community currency, a transferable token backed 1:1 by capital held by the SpiritDAO nonprofit (1 $SYSTEM ≈ $1). Earned by donating (every dollar = one $SYSTEM). Used for events, bounties, marketplace purchases, pod treasury contributions, and gifting to other members. Can be burned to request a fiat payout through Claims.
+- **$SELF**: A **soulbound** participation token — earned, never bought, never transferable or sellable. The idea: "$SELF is verified human time, recorded where it was spent, that fades unless renewed — and it never becomes money." You earn it automatically (~1 $SELF per verified participation-hour) by attending accredited events, completing bounties, and contributing verified work. Each unit remembers the community and season it was earned in. It is spendable for about six months, then expires — and expiring $SELF converts into permanent Tenure standing rather than being lost. You spend it by **burning** it ("burn-to-pay") for marketplace items, event tickets, and access-gated activities; burning mints you a soulbound receipt. $SELF can never be sent to another member, and pods no longer hold or distribute it — each pod has a participation *budget* (minting capacity) instead.
 
-The identity page organizes your tokens into three categories:
-- **Membership Tokens**: Proof of Curiosity and Advocate — your core membership credentials
-- **Credentials**: Pod membership and leadership roles — proves your position within specific pods
-- **Accredentials**: Event completion certificates and education credentials — verifiable proof of your participation, serving as an intercommunity resume
+## Tenure & the Token Gallery (Identity Page)
+
+The identity page shows your standing and credentials:
+- **Tenure**: Your lifetime standing in the ecosystem, based on the total $SELF you've ever earned (it never decreases, even as $SELF is spent or expires). Five bands by lifetime participation-hours: **Curious** (0–10, the membership floor every member starts at), **Resident** (10–50), **Mainstay** (50–250), **Pillar** (250–600), **Elder** (600+).
+- **Accreditations**: Proof of Curiosity and Advocate, plus event completion certificates and education credentials — granted credentials and verifiable proof of participation, serving as an intercommunity resume.
+- **Credentials**: Pod membership and leadership roles — proves your position within specific pods.
+- **Token balances**: Your $SYSTEM balance (transferable), and your $SELF shown as a living participation record broken down by community and season (not a transferable balance).
 
 ## Role-Based Access
 
@@ -64,6 +67,8 @@ New members join through an invite code (6-character alphanumeric code from exis
 4. Set up your profile on the Identity page
 
 All transactions in SpiritDAO are gasless — you never pay network fees.
+
+**Using multiple devices:** A wallet is tied to the device and browser you signed in on. Signing in on a new device prompts you to link it: open SpiritDAO on a device you're already signed in on, generate a short link code, and enter it on the new device. This keeps all your devices on the same identity, tokens, and history.
 
 ## Platform Features
 
@@ -85,7 +90,7 @@ Burn $SYSTEM tokens to request fiat payout. Steps: enter amount → approve toke
 Task-based work with token rewards. Workflow: create bounty → receive bids → approve bid → worker submits deliverables → review and approve → release payment. Payment options: on completion, milestones, or split (partial upfront).
 
 ### Events
-Create events with optional token pricing ($SYSTEM, $SELF, or both). Registration with QR check-in. After event completion, checked-in attendees receive Event Completion Certificates (accredentials) — verifiable NFTs proving attendance.
+Create events with optional token pricing ($SYSTEM, $SELF, both, or free). For $SELF-priced events, buying a ticket **burns** the required $SELF and mints a soulbound ticket receipt checked at the door — events are a first-class place to spend $SELF before it expires. Registration uses QR check-in. After event completion, checked-in attendees receive Event Completion Certificates (accreditations) — verifiable NFTs proving attendance.
 
 ### Video Conferencing
 Built-in video rooms with Host/Speaker/Attendee roles. No external software needed. Integrated with pods for meetings and virtual events.

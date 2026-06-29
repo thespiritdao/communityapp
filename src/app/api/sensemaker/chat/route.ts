@@ -12,6 +12,34 @@ import {
 } from '@/lib/ratelimit';
 
 /**
+ * CORS — the public Sensemaker widget is embedded on the marketing site
+ * (spiritdao.org), a different origin from the app (app.spiritdao.org), so
+ * cross-origin requests to this endpoint must be allowed for known origins.
+ */
+const ALLOWED_ORIGINS = new Set([
+  'https://spiritdao.org',
+  'https://www.spiritdao.org',
+  'https://app.spiritdao.org',
+  'http://localhost:3000',
+]);
+
+function corsHeaders(req: NextRequest): Record<string, string> {
+  const origin = req.headers.get('origin') || '';
+  if (!ALLOWED_ORIGINS.has(origin)) return {};
+  return {
+    'Access-Control-Allow-Origin': origin,
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type',
+    'Access-Control-Max-Age': '86400',
+    Vary: 'Origin',
+  };
+}
+
+export async function OPTIONS(req: NextRequest) {
+  return new NextResponse(null, { status: 204, headers: corsHeaders(req) });
+}
+
+/**
  * Sensemaker AI Chat API
  *
  * Unified chat endpoint that routes queries to appropriate knowledge bases:
@@ -47,6 +75,7 @@ export async function POST(req: NextRequest) {
         return NextResponse.json(rateLimitErrorResponse(reset), {
           status: 429,
           headers: {
+            ...corsHeaders(req),
             'X-RateLimit-Limit': limit.toString(),
             'X-RateLimit-Remaining': remaining.toString(),
             'X-RateLimit-Reset': reset.toString(),
@@ -136,6 +165,7 @@ export async function POST(req: NextRequest) {
       },
       {
         headers: {
+          ...corsHeaders(req),
           'X-RateLimit-Limit': limit.toString(),
           'X-RateLimit-Remaining': remaining.toString(),
           'X-RateLimit-Reset': reset.toString(),
@@ -151,7 +181,7 @@ export async function POST(req: NextRequest) {
         errorType: error.constructor?.name,
         cause: error.cause ? String(error.cause) : undefined,
       },
-      { status: 500 },
+      { status: 500, headers: corsHeaders(req) },
     );
   }
 }
