@@ -67,21 +67,26 @@ export function InstallPrompt() {
     window.addEventListener('beforeinstallprompt', handler);
 
     // Listen for successful installation
-    window.addEventListener('appinstalled', () => {
+    const installedHandler = () => {
       console.log('✅ [PWA] App installed successfully');
       setIsInstalled(true);
       setShowPrompt(false);
       setDeferredPrompt(null);
-    });
+    };
+    window.addEventListener('appinstalled', installedHandler);
 
     return () => {
       window.removeEventListener('beforeinstallprompt', handler);
+      window.removeEventListener('appinstalled', installedHandler);
     };
   }, []);
 
   const handleInstall = async () => {
     if (!deferredPrompt) {
-      console.log('[PWA] No install prompt available');
+      // The native prompt hasn't been captured yet (beforeinstallprompt is
+      // asynchronous). Don't silently no-op — keep the banner up; the button is
+      // disabled until the prompt is ready, so this is just a safety guard.
+      console.log('[PWA] Install prompt not ready yet');
       return;
     }
 
@@ -95,10 +100,14 @@ export function InstallPrompt() {
       if (outcome === 'accepted') {
         console.log('✅ [PWA] User accepted install');
       } else {
+        // User dismissed the native sheet — suppress re-prompting (same as the
+        // X / "Not now" buttons) so the banner doesn't immediately reappear.
         console.log('⏭️ [PWA] User dismissed install');
+        localStorage.setItem('pwa-install-dismissed', new Date().toISOString());
       }
 
-      // Clear prompt
+      // A beforeinstallprompt event can only be used once. Clear it; Chrome will
+      // re-fire the event later and re-arm deferredPrompt if still installable.
       setDeferredPrompt(null);
       setShowPrompt(false);
     } catch (error) {
@@ -256,10 +265,11 @@ export function InstallPrompt() {
         <div className="flex gap-2">
           <button
             onClick={handleInstall}
-            className="flex-1 flex items-center justify-center gap-2 bg-primary hover:bg-primary/90 text-white px-4 py-2.5 rounded-lg font-medium transition-colors"
+            disabled={!deferredPrompt}
+            className="flex-1 flex items-center justify-center gap-2 bg-primary hover:bg-primary/90 disabled:opacity-60 disabled:cursor-wait text-white px-4 py-2.5 rounded-lg font-medium transition-colors"
           >
             <Download size={18} />
-            Install App
+            {deferredPrompt ? 'Install App' : 'Preparing…'}
           </button>
           <button
             onClick={handleDismiss}

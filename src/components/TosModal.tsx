@@ -52,8 +52,8 @@ export function TosModal({ walletAddress, onAccepted }: TosModalProps) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg flex flex-col max-h-[90vh]">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4 py-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg flex flex-col max-h-[90dvh]">
         {/* Header */}
         <div className="px-6 pt-6 pb-4 border-b border-gray-100">
           <h2 className="text-xl font-bold text-gray-900">

@@ -36,28 +36,46 @@ async function generateIcons() {
     const metadata = await sharp(sourceBuffer).metadata();
     console.log(`✓ Source image: ${metadata.width}x${metadata.height}`);
 
-    // Generate each icon size
+    // Generate each icon size.
+    // .flatten() composites the (transparent) line-art onto an OPAQUE white
+    // background. Without it, transparent pixels render as BLACK on Android
+    // home screens. We also inset the artwork to ~82% (an ~9% margin) so the
+    // icon has a safe zone for rounded/masked launcher shapes.
+    const WHITE = { r: 255, g: 255, b: 255 };
     for (const { size, name } of ICON_SIZES) {
       const outputPath = join(OUTPUT_DIR, name);
+      const inner = Math.round(size * 0.82);
+      const pad = Math.round((size - inner) / 2);
 
       await sharp(sourceBuffer)
-        .resize(size, size, {
+        .resize(inner, inner, {
           fit: 'contain',
-          background: { r: 255, g: 255, b: 255, alpha: 1 }
+          background: { ...WHITE, alpha: 1 },
         })
+        .extend({ top: pad, bottom: pad, left: pad, right: pad, background: WHITE })
+        .flatten({ background: WHITE })
         .png()
         .toFile(outputPath);
 
       console.log(`✓ Generated: ${name} (${size}x${size})`);
     }
 
-    // Also create apple-touch-icon.png (180x180 for iOS)
+    // Also create apple-touch-icon.png (180x180 for iOS) — flattened opaque
+    // white (iOS also renders transparency as black on the home screen).
     const appleTouchIcon = join(rootDir, 'public', 'apple-touch-icon.png');
     await sharp(sourceBuffer)
-      .resize(180, 180, {
+      .resize(Math.round(180 * 0.82), Math.round(180 * 0.82), {
         fit: 'contain',
-        background: { r: 255, g: 255, b: 255, alpha: 1 }
+        background: { ...WHITE, alpha: 1 },
       })
+      .extend({
+        top: Math.round((180 - Math.round(180 * 0.82)) / 2),
+        bottom: Math.round((180 - Math.round(180 * 0.82)) / 2),
+        left: Math.round((180 - Math.round(180 * 0.82)) / 2),
+        right: Math.round((180 - Math.round(180 * 0.82)) / 2),
+        background: WHITE,
+      })
+      .flatten({ background: WHITE })
       .png()
       .toFile(appleTouchIcon);
     console.log(`✓ Generated: apple-touch-icon.png (180x180)`);
@@ -67,8 +85,9 @@ async function generateIcons() {
     await sharp(sourceBuffer)
       .resize(32, 32, {
         fit: 'contain',
-        background: { r: 255, g: 255, b: 255, alpha: 1 }
+        background: { ...WHITE, alpha: 1 },
       })
+      .flatten({ background: WHITE })
       .png()
       .toFile(favicon);
     console.log(`✓ Generated: favicon.ico (32x32)`);

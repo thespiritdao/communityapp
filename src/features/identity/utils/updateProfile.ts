@@ -54,6 +54,12 @@ export async function updateProfile(
     throw fetchError;
   }
 
+  // Coerce empty optional date strings to null — Postgres `date` columns reject
+  // "" (they accept only a valid date or null). date_of_birth is optional.
+  if ((updates as any).date_of_birth === '') {
+    (updates as any).date_of_birth = null;
+  }
+
   let payload;
   if (existingProfile) {
     // Remove wallet_address from the incoming updates to ignore any changes,

@@ -107,6 +107,13 @@ const InlineSwitch: React.FC<{
   />
 );
 
+// Minimum required pod leaders. Configurable via NEXT_PUBLIC_MIN_POD_LEADERS
+// (build-time inlined — a Vercel change requires a redeploy). Defaults to 1.
+const MIN_POD_LEADERS = Math.max(
+  1,
+  parseInt(process.env.NEXT_PUBLIC_MIN_POD_LEADERS || '1', 10) || 1,
+);
+
 export const HatsModulePodCreationForm: React.FC<
   HatsModulePodCreationFormProps
 > = ({ onSuccess, onCancel, testingMode = false }) => {
@@ -201,7 +208,9 @@ export const HatsModulePodCreationForm: React.FC<
     name: '',
     description: '',
     parentPodId: '', // Will be set to Community Pods UUID once dropdown loads
-    podLeaders: testingMode ? [address || ''] : [address || '', '', ''], // ✅ FIX: Default first leader to connected address (smart wallet)
+    podLeaders: testingMode
+      ? [address || '']
+      : [address || '', ...Array(Math.max(0, MIN_POD_LEADERS - 1)).fill('')], // first leader defaults to connected address (smart wallet); pad to the configured minimum
     eligibilityRules: [], // ✅ Unified: All criteria managed via EligibilityCriteriaBuilder
     enableTreasury: true,
     treasuryThresholdBps: 6667, // Strict (66.67%) preset — V3 treasury approval threshold
@@ -500,7 +509,7 @@ export const HatsModulePodCreationForm: React.FC<
     const validLeads = formData.podLeaders.filter(
       (lead) => lead && lead.trim(),
     );
-    const requiredLeads = testingMode ? 1 : 3;
+    const requiredLeads = testingMode ? 1 : MIN_POD_LEADERS;
 
     if (validLeads.length < requiredLeads) {
       errors.push(
@@ -567,7 +576,7 @@ export const HatsModulePodCreationForm: React.FC<
 
   // Remove leader field
   const removeLeaderField = (index: number) => {
-    if (formData.podLeaders.length > (testingMode ? 1 : 3)) {
+    if (formData.podLeaders.length > (testingMode ? 1 : MIN_POD_LEADERS)) {
       const newLeaders = formData.podLeaders.filter((_, i) => i !== index);
       updateFormData('podLeaders', newLeaders);
     }
@@ -4010,7 +4019,7 @@ export const HatsModulePodCreationForm: React.FC<
                       )}
                     />
                   </div>
-                  {formData.podLeaders.length > (testingMode ? 1 : 3) && (
+                  {formData.podLeaders.length > (testingMode ? 1 : MIN_POD_LEADERS) && (
                     <Button
                       type="button"
                       variant="outline"
