@@ -33,6 +33,7 @@ import { useHatPermissions } from '../hooks/useHatPermissions';
 import { PodGovernanceService } from '../services/podGovernanceService';
 import { HatsDetailsService } from '../services/HatsDetailsService';
 import { EligibilityModuleService } from '@/services/eligibilityModuleService';
+import type { PodCreationConfig } from '@/services/hatsModulesService';
 import { predictAdminHatId } from '@/utils/hatIdPrediction';
 import { PodImageUpload } from './PodImageUpload';
 import { UserSelector } from './UserSelector';
