@@ -146,6 +146,10 @@ export const useDatabaseFirstPermissions =
         // any feature-specific *Manage permission. They'll only see the
         // tabs they can actually use; the gear icon is the entry point.
         const perms = podMembership.rolePermissions ?? {};
+        // Genuine *management* permissions only. NOTE: participation perms such
+        // as eventCreation are deliberately excluded — being able to create an
+        // event is not "managing the pod" and must not open the management
+        // surface (which exposes destructive actions like Delete Pod).
         const MANAGE_KEYS = [
           'memberManagement',
           'treasuryManagement',
@@ -158,7 +162,6 @@ export const useDatabaseFirstPermissions =
           'forumModeration',
           'subPodCreation',
           'roleAssignment',
-          'eventCreation',
         ];
         return MANAGE_KEYS.some((k) => perms[k] === true);
       },

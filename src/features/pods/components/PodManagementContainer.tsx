@@ -44,6 +44,8 @@ import { PasswordVaultPanel } from '@/features/passwords/components/PasswordVaul
 
 import { usePodManagementState } from '../hooks/usePodManagementState';
 import { usePodManagementHandlers } from '../hooks/usePodManagementHandlers';
+import { useIsPodLeader } from '@/hooks/usePodPermission';
+import { useDatabaseFirstPermissions } from '@/hooks/useDatabaseFirstPermissions';
 import '../styles/tab-navigation.css';
 
 interface PodManagementContainerProps {
@@ -99,6 +101,12 @@ const TabContent = React.memo<{
     onPodDeleted,
     onModuleToggle,
   }) => {
+    // Deleting a pod is destructive and leader-only — it must NOT be gated on
+    // feature permissions like memberManagement/eventCreation (an ordinary
+    // member can hold those). Require pod leadership or executive leadership.
+    const isPodLeader = useIsPodLeader(podId);
+    const { isExecutiveLeader } = useDatabaseFirstPermissions();
+    const canDeletePod = isPodLeader || isExecutiveLeader;
     switch (activeTab) {
       case 'members':
         return (
@@ -183,7 +191,7 @@ const TabContent = React.memo<{
           <div className="p-6">
             <PodDeletionButtonV2
               pod={pod}
-              canManage={canManageMembers}
+              canManage={canDeletePod}
               onDeleteComplete={onPodDeleted}
             />
           </div>
