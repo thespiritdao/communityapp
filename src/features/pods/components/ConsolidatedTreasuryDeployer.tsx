@@ -406,9 +406,16 @@ export default function ConsolidatedTreasuryDeployer({
   ) => {
     try {
       // Update database to mark pod as having treasury
+      // (auth: /api/pods/activate requires a pod-leader session)
+      const { data: { session } } = await supabase.auth.getSession();
       await fetch('/api/pods/activate', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(session?.access_token
+            ? { Authorization: `Bearer ${session.access_token}` }
+            : {}),
+        },
         body: JSON.stringify({
           podId: pod.id,
           treasuryAddress: treasuryAddress,

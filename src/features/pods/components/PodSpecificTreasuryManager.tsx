@@ -5,6 +5,18 @@ import { useEvmAddress, useCurrentUser } from '@coinbase/cdp-hooks';
 import { useSendUserOperationWithAttribution as useSendUserOperation } from '@/wallet/hooks/useSendUserOperationWithAttribution';
 import { encodeFunctionData, createPublicClient, http } from 'viem';
 import { base } from 'viem/chains';
+import { supabase } from '@/utils/supabaseClient';
+
+// /api/pods/activate requires a pod-leader session — build auth headers for it.
+async function activateHeaders(): Promise<Record<string, string>> {
+  const { data: { session } } = await supabase.auth.getSession();
+  return {
+    'Content-Type': 'application/json',
+    ...(session?.access_token
+      ? { Authorization: `Bearer ${session.access_token}` }
+      : {}),
+  };
+}
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -162,7 +174,7 @@ export function PodSpecificTreasuryManager({
       // Update database
       const updateResponse = await fetch('/api/pods/activate', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: await activateHeaders(),
         body: JSON.stringify({
           podId: localPod.id,
           treasuryAddress: treasuryAddress,
@@ -340,7 +352,7 @@ export function PodSpecificTreasuryManager({
                 // Update database
                 const updateResponse = await fetch('/api/pods/activate', {
                   method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
+                  headers: await activateHeaders(),
                   body: JSON.stringify({
                     podId: localPod.id,
                     treasuryAddress: treasuryAddress,
@@ -437,7 +449,7 @@ export function PodSpecificTreasuryManager({
       console.log('📝 Updating pod with treasury address:', treasuryAddress);
       const updateResponse = await fetch('/api/pods/activate', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: await activateHeaders(),
         body: JSON.stringify({
           podId: localPod.id,
           treasuryAddress: treasuryAddress,
@@ -508,7 +520,7 @@ export function PodSpecificTreasuryManager({
             // Update database with existing treasury
             const updateResponse = await fetch('/api/pods/activate', {
               method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
+              headers: await activateHeaders(),
               body: JSON.stringify({
                 podId: localPod.id,
                 treasuryAddress: existingTreasury,

@@ -393,25 +393,34 @@ async function checkUserHatOwnership(
       args: [userAddress as `0x${string}`, BigInt(hatId)],
     }));
 
-    // Use wagmi's useReadContracts for batch reading
-    // Note: In a hook context, this should use useReadContracts hook
-    // For now, we'll do individual checks (can optimize later with wagmi multicall)
+    // Verify HAT ownership on-chain via multicall balanceOf.
+    const { createPublicClient, http } = await import('viem');
+    const { base } = await import('viem/chains');
+    const RPC_URL =
+      process.env.NEXT_PUBLIC_RPC_URL || 'https://mainnet.base.org';
+    const publicClient = createPublicClient({
+      chain: base,
+      transport: http(RPC_URL),
+    });
 
-    // TODO: Implement proper on-chain HAT ownership verification
-    // For now, we use pod_role_permissions as source of truth since it's already verified
-    // The user has these HATs because they have active pod roles
+    const results = await publicClient.multicall({ contracts });
+
+    // Keep only HATs the wallet actually holds on-chain (balance > 0).
+    const ownedHatIds = hatIds.filter((_, i) => {
+      const r = results[i];
+      return r.status === 'success' && (r.result as bigint) > 0n;
+    });
+
     console.log(
-      '🎩 [ForumAccess] Using pod role permissions as HAT ownership proof',
+      `🎩 [ForumAccess] On-chain HAT check: ${ownedHatIds.length}/${hatIds.length} owned`,
     );
 
-    return hatIds;
+    return ownedHatIds;
   } catch (error) {
     console.error('Failed to check HAT ownership:', error);
-    // Fallback: Return all HAT IDs (permissive for testing)
-    console.log(
-      '⚠️ [ForumAccess] Using permissive HAT check (all HATs assumed owned)',
-    );
-    return hatIds;
+    // Fail closed: on verification failure, grant no HAT-gated access rather
+    // than assuming ownership.
+    return [];
   }
 }
 

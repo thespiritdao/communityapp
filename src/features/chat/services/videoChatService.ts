@@ -36,10 +36,26 @@ export interface SignalingMessage {
   created_at: string;
 }
 
-// Public STUN servers — no credentials needed for basic P2P
+// STUN finds the peers' public addresses; TURN relays media when a direct path
+// is impossible (symmetric NAT, restrictive corporate/mobile networks — ~10-20%
+// of connections). Without TURN those 1:1 calls silently fail to connect.
+//
+// TURN is added only when configured via env. NOTE: these must be a TURN
+// server's OWN long-term credentials (e.g. coturn, or LiveKit's embedded TURN
+// with its turn: block enabled on the host) — NOT the LiveKit API key/secret.
+// Provide NEXT_PUBLIC_TURN_URL plus username/credential to activate it.
 const ICE_SERVERS: RTCIceServer[] = [
   { urls: 'stun:stun.l.google.com:19302' },
   { urls: 'stun:stun1.l.google.com:19302' },
+  ...(process.env.NEXT_PUBLIC_TURN_URL
+    ? [
+        {
+          urls: process.env.NEXT_PUBLIC_TURN_URL.split(',').map((u) => u.trim()),
+          username: process.env.NEXT_PUBLIC_TURN_USERNAME,
+          credential: process.env.NEXT_PUBLIC_TURN_CREDENTIAL,
+        } as RTCIceServer,
+      ]
+    : []),
 ];
 
 export class VideoChatService {

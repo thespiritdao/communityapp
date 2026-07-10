@@ -63,11 +63,24 @@ export interface SelfPaymentSelection {
  * $SELF before discounted cross-community $SELF. Returns null if the wallet's
  * accepted $SELF is insufficient.
  */
+// Over-select margin (basis points) to absorb decay drift between the holdings
+// snapshot and on-chain inclusion. The buyer reads a confirmation modal and the
+// tx takes a block to land, during which decay keeps dropping; selecting amounts
+// that exactly cover requiredHours leaves zero slack and the contract reverts
+// ("underpaid"). ~1% headroom eliminates the vast majority of failed burns at
+// the cost of a marginally larger burn only when drift actually occurs.
+const SELECTION_MARGIN_BPS = 100n; // 1%
+
 export function selectSelfIds(
   holdings: SelfHolding[],
   requiredHoursWei: bigint,
 ): SelfPaymentSelection | null {
   if (requiredHoursWei <= 0n) return null;
+
+  // Select against a slightly inflated target so the burn has headroom against
+  // decay drift. The true requiredHours is still what the contract enforces.
+  const selectionTarget =
+    (requiredHoursWei * (BPS + SELECTION_MARGIN_BPS)) / BPS;
 
   // Best-first: full-weight & freshest spent before discounted/older.
   const sorted = [...holdings].sort(
@@ -82,13 +95,13 @@ export function selectSelfIds(
   let usesCrossCommunity = false;
 
   for (const h of sorted) {
-    if (credited >= requiredHoursWei) break;
+    if (credited >= selectionTarget) break;
     const decay = BigInt(h.decayBps);
     const weight = BigInt(h.weightBps);
     const rawBal = BigInt(h.rawWei);
     if (decay <= 0n || weight <= 0n || rawBal <= 0n) continue;
 
-    const remaining = requiredHoursWei - credited;
+    const remaining = selectionTarget - credited;
 
     // credited(raw) = raw × weight × decay / BPS². To contribute `remaining`
     // we need raw = ceil(remaining × BPS² / (weight × decay)). Cap at balance;
@@ -115,6 +128,9 @@ export function selectSelfIds(
     });
   }
 
+  // Fail only if we can't cover the TRUE requirement. The margin is best-effort
+  // headroom: if the wallet has enough for requiredHours but not the full +1%,
+  // still proceed (better to attempt than to block a payable purchase).
   if (credited < requiredHoursWei) return null; // insufficient accepted $SELF
   return { ids, amounts, creditedWei: credited, rawBurnedWei: rawBurned, legs, usesCrossCommunity };
 }

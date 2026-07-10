@@ -107,9 +107,24 @@ async function loadFromDb(): Promise<HatIds> {
           ids[key] = hatId as `0x${string}`;
         }
       }
-    } catch {
-      // Non-fatal — key will be undefined, callers handle gracefully
+    } catch (err) {
+      // Non-fatal — key will be undefined, callers handle gracefully — but log
+      // it so a misconfigured/recreated pod doesn't fail silently.
+      console.error(`[hatRegistry] lookup failed for "${key}":`, err);
     }
+  }
+
+  // Surface any required hats that did not resolve. A missing key here means a
+  // pod UUID in POD_ROLE_LOOKUPS no longer matches a row (pod recreated/renamed,
+  // role renamed, or NULL management_hat_id) — which silently breaks governance
+  // and onboarding. Make it loud rather than failing open without a trace.
+  const unresolved = (Object.keys(POD_ROLE_LOOKUPS) as HatKey[]).filter(
+    (k) => !ids[k],
+  );
+  if (unresolved.length > 0) {
+    console.error(
+      `[hatRegistry] UNRESOLVED hat keys (governance/onboarding may break): ${unresolved.join(', ')}`,
+    );
   }
 
   return ids as HatIds;

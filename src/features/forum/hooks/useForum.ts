@@ -515,9 +515,11 @@ export function useForum() {
       const mentionedWallets =
         await extractMentionedWalletsEnhanced(initialPostContent);
       for (const wallet of mentionedWallets) {
-        if (wallet) {
-          // TODO: Re-enable self-mention rejection before launch
-          // if (wallet !== profileData.wallet_address) {
+        // Skip self-mentions — don't notify a user for mentioning themselves.
+        if (
+          wallet &&
+          wallet.toLowerCase() !== profileData.wallet_address.toLowerCase()
+        ) {
           console.log(
             'Creating forum mention notification for:',
             wallet.toLowerCase(),
@@ -535,7 +537,6 @@ export function useForum() {
             context_url: `/forum/thread/${newThread.id}`,
             priority: 'medium',
           });
-          // }
         }
       }
       // --- End mention notification logic ---
@@ -618,9 +619,11 @@ export function useForum() {
       const mentionedWalletsPost =
         await extractMentionedWalletsEnhanced(content);
       for (const wallet of mentionedWalletsPost) {
-        if (wallet) {
-          // TODO: Re-enable self-mention rejection before launch
-          // if (wallet !== userWalletAddress) {
+        // Skip self-mentions — don't notify a user for mentioning themselves.
+        if (
+          wallet &&
+          wallet.toLowerCase() !== userWalletAddress.toLowerCase()
+        ) {
           console.log(
             'Creating forum reply mention notification for:',
             wallet.toLowerCase(),
@@ -636,7 +639,6 @@ export function useForum() {
             context_url: `/forum/thread/${threadId}`,
             priority: 'medium',
           });
-          // }
         }
       }
       // --- End mention notification logic ---

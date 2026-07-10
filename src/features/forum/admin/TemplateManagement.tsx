@@ -1,5 +1,6 @@
 // src/features/forum/components/admin/TemplateManagement.tsx
 import { useState, useEffect } from 'react';
+import { useEvmAddress } from '@coinbase/cdp-hooks';
 import styles from '../../styles/Forum.module.css';
 import { supabase } from '@/lib/supabase';
 
@@ -26,12 +27,62 @@ export function TemplateManagement() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [newPlaceholder, setNewPlaceholder] = useState('');
-  const [hasAccess, setHasAccess] = useState(true); // TODO: Implement proper admin token check
+  // Fail closed: assume no access until the admin ERC-1155 balance is verified.
+  const [hasAccess, setHasAccess] = useState(false);
+  const [accessChecked, setAccessChecked] = useState(false);
+  const { evmAddress: address } = useEvmAddress();
   const erc1155AdminAddress = process.env
     .NEXT_PUBLIC_FORUM_ADMIN_ERC1155 as `0x${string}`;
   const adminTokenId = 1;
 
-  if (isLoading) {
+  // Verify the connected wallet holds the forum-admin ERC-1155 token on-chain.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        if (!address || !erc1155AdminAddress) {
+          if (!cancelled) {
+            setHasAccess(false);
+            setAccessChecked(true);
+          }
+          return;
+        }
+        const { createPublicClient, http, parseAbiItem } = await import('viem');
+        const { base } = await import('viem/chains');
+        const RPC_URL =
+          process.env.NEXT_PUBLIC_RPC_URL || 'https://mainnet.base.org';
+        const client = createPublicClient({
+          chain: base,
+          transport: http(RPC_URL),
+        });
+        const balance = (await client.readContract({
+          address: erc1155AdminAddress,
+          abi: [
+            parseAbiItem(
+              'function balanceOf(address account, uint256 id) view returns (uint256)',
+            ),
+          ],
+          functionName: 'balanceOf',
+          args: [address as `0x${string}`, BigInt(adminTokenId)],
+        })) as bigint;
+        if (!cancelled) {
+          setHasAccess(balance > 0n);
+          setAccessChecked(true);
+        }
+      } catch (err) {
+        console.error('[TemplateManagement] admin token check failed:', err);
+        if (!cancelled) {
+          setHasAccess(false);
+          setAccessChecked(true);
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [address, erc1155AdminAddress]);
+
+  if (isLoading || !accessChecked) {
     return <div className={styles.loading}>Checking admin token access...</div>;
   }
 

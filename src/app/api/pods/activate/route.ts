@@ -1,10 +1,39 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import jwt from 'jsonwebtoken';
+import { createPublicClient, http } from 'viem';
+import { base } from 'viem/chains';
 import { recordExplorerEvent } from '@/lib/explorerEvents';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+const RPC_URL = process.env.NEXT_PUBLIC_RPC_URL || 'https://mainnet.base.org';
+const HATS_CONTRACT = process.env.NEXT_PUBLIC_HATS_CONTRACT as `0x${string}`;
+const HATS_BALANCE_ABI = [
+  {
+    name: 'balanceOf',
+    type: 'function',
+    stateMutability: 'view',
+    inputs: [
+      { name: 'account', type: 'address' },
+      { name: 'hatId', type: 'uint256' },
+    ],
+    outputs: [{ name: '', type: 'uint256' }],
+  },
+] as const;
+
+function getWalletFromToken(token: string | undefined): string | null {
+  try {
+    const JWT_SECRET = process.env.SUPABASE_JWT_SECRET;
+    if (!token || !JWT_SECRET) return null;
+    const payload = jwt.verify(token, JWT_SECRET) as any;
+    return payload.wallet_address || payload.user_metadata?.wallet_address || null;
+  } catch {
+    return null;
+  }
+}
 
 export async function POST(request: Request) {
   try {
@@ -15,6 +44,59 @@ export async function POST(request: Request) {
 
     if (!podId) {
       return NextResponse.json({ error: 'Missing podId' }, { status: 400 });
+    }
+
+    // ── Auth: require a valid session and pod leadership ──────────────────────
+    // This route flips is_active / registers a treasury; it must not be callable
+    // anonymously. Verify the caller, then confirm they lead this pod (wears the
+    // management hat on-chain, or is listed in pod_leads as a fallback).
+    const token = request.headers.get('Authorization')?.replace('Bearer ', '');
+    const callerAddress = getWalletFromToken(token);
+    if (!callerAddress) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const { data: podRow, error: podLookupError } = await supabase
+      .from('pods')
+      .select('management_hat_id, pod_leads')
+      .eq('id', podId)
+      .single();
+    if (podLookupError || !podRow) {
+      return NextResponse.json({ error: 'Pod not found' }, { status: 404 });
+    }
+
+    let isLeader =
+      Array.isArray(podRow.pod_leads) &&
+      podRow.pod_leads.some(
+        (l: string) => l?.toLowerCase() === callerAddress.toLowerCase(),
+      );
+
+    if (!isLeader && podRow.management_hat_id && HATS_CONTRACT) {
+      try {
+        const publicClient = createPublicClient({
+          chain: base,
+          transport: http(RPC_URL),
+        });
+        const balance = (await publicClient.readContract({
+          address: HATS_CONTRACT,
+          abi: HATS_BALANCE_ABI,
+          functionName: 'balanceOf',
+          args: [
+            callerAddress as `0x${string}`,
+            BigInt(podRow.management_hat_id),
+          ],
+        })) as bigint;
+        isLeader = balance > 0n;
+      } catch (e) {
+        console.warn('🏦 management hat check failed:', e);
+      }
+    }
+
+    if (!isLeader) {
+      return NextResponse.json(
+        { error: 'Forbidden: only a pod leader can activate this pod' },
+        { status: 403 },
+      );
     }
 
     // Update pod with treasury information
