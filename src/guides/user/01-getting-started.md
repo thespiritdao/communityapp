@@ -2,7 +2,7 @@
 
 ## What is SpiritDAO?
 
-SpiritDAO is a decentralized community platform built on Base (Ethereum Layer 2). It allows communities to organize into "Pods" (working groups) with transparent governance, bounty systems, and event coordination.
+SpiritDAO is federated infrastructure for self-sovereign communities: a 501(c)(3) nonprofit that lets communities own their data, governance, and treasury. Built on Base (Ethereum Layer 2), it allows communities to organize into "Pods" (working groups) with transparent governance, bounty systems, and event coordination. SpiritDAO is open to new communities and members, so you can join a community or organize your own.
 
 ## Core Concepts
 
@@ -15,6 +15,8 @@ SpiritDAO is a decentralized community platform built on Base (Ethereum Layer 2)
 ---
 
 ## First Time Setup
+
+SpiritDAO is open enrollment: download the app, connect with a community, or organize your own. There is no invitation gate.
 
 ### Step 1: Connect Your Wallet
 
@@ -29,6 +31,8 @@ SpiritDAO is a decentralized community platform built on Base (Ethereum Layer 2)
 **What you need:**
 - A wallet with some ETH on Base network
 - Or use Smart Wallet for gasless transactions
+
+**Embedded wallet:** The built-in embedded wallet gives you added security and lets you get started without external tools. You can link multiple devices to your account; a polished settings screen for managing linked devices is on the way.
 
 ### Step 2: Set Up Your Identity
 
@@ -48,9 +52,9 @@ SpiritDAO is a decentralized community platform built on Base (Ethereum Layer 2)
 - Builds trust in community
 - Required for some pod applications
 
-### Step 3: Get Advocate NFT (Optional)
+### Step 3: Get Advocate (Optional)
 
-The Advocate NFT is SpiritDAO's membership token.
+Advocate is a DAO-wide membership accreditation. It appears under **Accreditations** on your identity page.
 
 **Benefits:**
 - Create governance proposals
@@ -59,9 +63,11 @@ The Advocate NFT is SpiritDAO's membership token.
 
 **How to get:**
 1. Go to **Mint** page
-2. Click "Mint Advocate NFT"
+2. Click "Mint Advocate"
 3. Approve transaction (gasless if using Smart Wallet)
-4. NFT appears in your wallet
+4. Advocate appears in your wallet
+
+**Voting is active immediately.** Advocate is auto-delegated when it is minted, so your voting power is live right away. There is no manual "delegate to yourself" step.
 
 ---
 
@@ -106,10 +112,9 @@ SpiritDAO uses role-based permissions:
 - Enable/disable modules (Forum, Events, Bounties, Treasury)
 
 ### Governance
-- Create proposals (requires Advocate NFT)
-- Vote on-chain
+- Create proposals (requires Advocate)
+- Vote on-chain (active immediately after minting Advocate)
 - Track proposal status
-- Delegate voting power
 
 ### Bounties
 - Post tasks with rewards
@@ -130,14 +135,15 @@ SpiritDAO uses role-based permissions:
 - Markdown support
 
 ### Marketplace (Artifacts)
-- Buy/sell community artifacts with $SELF or $SYSTEM tokens
+- Buy/sell community artifacts with $SYSTEM, or burn $SELF to pay
+- $SYSTEM can route to a creator wallet or pod treasury; $SELF is always burned (it can't be transferred)
 - Shopping cart system
 - Gasless checkout option
 
 ### Video Chat & Conferencing
 - Real-time video calls between pod members
 - Multi-participant conference rooms for meetings and governance calls
-- Integrated with pod membership — access governed by your roles
+- Integrated with pod membership (access governed by your roles)
 
 ### Knowledge Base
 - Video tutorials for every platform feature
@@ -192,7 +198,7 @@ SpiritDAO uses role-based permissions:
 ### "No Permission" Message
 - **Check role**: May need specific Hat role
 - **Apply to pod**: Join relevant pod first
-- **Mint Advocate**: Some features require this
+- **Mint Advocate**: Some features require Advocate
 - **Ask leader**: Pod leaders can grant access
 
 ### "Wallet Not Connected"
@@ -224,7 +230,6 @@ SpiritDAO uses role-based permissions:
 ### Governance
 - Read full proposals before voting
 - Participate in discussions
-- Delegate if you won't vote regularly
 - Vote before deadline
 
 ---
@@ -264,7 +269,7 @@ SpiritDAO uses role-based permissions:
 1. ✅ Set up your identity profile
 2. ✅ Join your first pod
 3. ✅ Participate in forum discussion
-4. ✅ Vote on a proposal (if you have Advocate NFT)
+4. ✅ Vote on a proposal (if you have Advocate)
 5. ✅ Apply for a bounty
 6. ✅ Register for an event
 

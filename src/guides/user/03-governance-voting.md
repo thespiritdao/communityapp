@@ -2,7 +2,7 @@
 
 ## What is DAO Governance?
 
-SpiritDAO uses on-chain governance - all proposals and votes are recorded on the blockchain. This creates:
+SpiritDAO uses on-chain governance: all proposals and votes are recorded on the blockchain. This creates:
 - **Transparency**: Everyone can see all proposals and votes
 - **Permanence**: Decisions can't be changed or hidden
 - **Enforceability**: Approved proposals execute automatically
@@ -14,42 +14,31 @@ SpiritDAO uses on-chain governance - all proposals and votes are recorded on the
 
 ### To Vote on Proposals
 **Required:**
-- Advocate NFT (DAO membership token)
-- Voting power delegated to yourself or someone else
+- Advocate (DAO membership accreditation)
+
+Advocate is **auto-delegated when it is minted**, so your voting power is active immediately. There is no manual delegation step.
 
 **How to Check:**
 1. Go to **Governance** page
 2. See "Voting Power" in top section
-3. If 0, you need to delegate
+3. It reflects your Advocate holdings automatically
 
 ### To Create Proposals
 **Required:**
-- Advocate NFT
-- Voting power (at least 1)
+- Advocate
+- Voting power (active automatically once you hold Advocate)
 - Wallet connected to Base network
 
 ---
 
-## Voting Power & Delegation
+## Voting Power
 
 ### What is Voting Power?
 - Represents your weight in votes
-- Based on number of Advocate NFTs you hold
-- Must be "delegated" to be active
-- Can delegate to yourself or someone else
+- Based on number of Advocate tokens you hold
+- Active immediately: Advocate is auto-delegated on mint, so you never have to delegate to yourself
 
-### Delegate to Yourself
-**When:** You want to vote directly on proposals
-
-**Steps:**
-1. Go to **Governance** page
-2. See yellow "Delegation Required" box
-3. Click "Delegate Voting Power to Myself"
-4. Sign transaction (gasless if Smart Wallet)
-5. Wait for confirmation
-6. Your voting power becomes active
-
-### Delegate to Someone Else
+### Delegate to Someone Else (Optional)
 **When:** You trust someone to vote on your behalf
 
 **Steps:**
@@ -60,15 +49,14 @@ SpiritDAO uses on-chain governance - all proposals and votes are recorded on the
 5. Delegate can now vote with your power
 
 **Important:**
-- You can change delegate anytime
+- You can change your delegate anytime, or delegate back to yourself
 - Only one delegate at a time
-- Delegation doesn't transfer NFT ownership
+- Delegation doesn't transfer token ownership
 
 ### Check Your Delegation
 1. Go to **Governance** page
 2. See "Delegated To" field
-3. Shows current delegate address
-4. If it's your address, you're self-delegated
+3. By default it is your own address (auto-delegated), meaning you vote with your own power
 
 ---
 
@@ -187,10 +175,9 @@ SpiritDAO uses on-chain governance - all proposals and votes are recorded on the
 ### Cast Your Vote
 
 **Requirements Check:**
-1. Must hold Advocate NFT
-2. Must have voting power
-3. Proposal must be Active (State 1)
-4. You haven't voted on this proposal yet
+1. Must hold Advocate (voting power is active automatically)
+2. Proposal must be Active (State 1)
+3. You haven't voted on this proposal yet
 
 **Steps:**
 1. Go to **Vote** page or **Governance** page
@@ -220,10 +207,9 @@ SpiritDAO uses on-chain governance - all proposals and votes are recorded on the
 - Part of transparent governance
 
 ### Vote Weight
-- Your vote weight = your Advocate NFT count
-- If you delegated, delegate votes with your weight
-- More NFTs = more voting power
-- Encourages token holding
+- Your vote weight = your Advocate count
+- If you delegated, your delegate votes with your weight
+- More Advocate = more voting power
 
 ---
 
@@ -279,15 +265,15 @@ SpiritDAO uses on-chain governance - all proposals and votes are recorded on the
 **Token Gating (Optional):**
 - Require voters to hold specific token
 - Restricts who can vote
-- Usually left as "Advocate NFT"
+- Usually left as "Advocate"
 
 ### Step 4: Review Requirements
 Before submitting, system checks:
 - ✅ Wallet connected
-- ✅ Hold at least 1 Advocate NFT
+- ✅ Hold at least 1 Advocate
 - ✅ Title is 10+ characters
 - ✅ Description is 50+ characters
-- ✅ Voting power exists
+- ✅ Voting power exists (active automatically with Advocate)
 
 ### Step 5: Submit Proposal
 1. Review all information
@@ -463,13 +449,15 @@ After creating:
 
 ### Delegation Strategy
 
-**When to Self-Delegate:**
+By default you vote with your own power (Advocate is auto-delegated on mint). Delegating to someone else is optional.
+
+**When to Keep Voting Yourself:**
 - You follow proposals actively
 - You have time to research
 - You enjoy governance
 - You want direct control
 
-**When to Delegate:**
+**When to Delegate to Someone Else:**
 - Too busy to track proposals
 - Trust someone more knowledgeable
 - Want to support aligned voter
@@ -485,7 +473,7 @@ After creating:
 - Review their votes periodically
 - Check if they're still active
 - Revoke if misaligned
-- Self-delegate if they stop voting
+- Delegate back to yourself if they stop voting
 
 ---
 
@@ -514,8 +502,7 @@ After creating:
 
 ### "Can't Create Proposal"
 **Common Issues:**
-- Don't have Advocate NFT → Mint one
-- No voting power → Delegate to yourself
+- Don't have Advocate → Mint one (voting power activates automatically)
 - Title too short → Min 10 characters
 - Description too short → Min 50 characters
 - Network issues → Try refresh

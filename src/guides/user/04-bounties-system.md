@@ -84,16 +84,16 @@ Bounties are task-based rewards in SpiritDAO. They allow:
 - Single task
 - One payment
 - Complete and deliver
-- Example: "Write blog post - 50 USDC"
+- Example: "Write blog post - 50 $SYSTEM"
 
 ### Milestone Bounty
 - Multiple phases
 - Payment per milestone
 - Phased delivery
 - Example:
-  - Milestone 1: Design (20 USDC)
-  - Milestone 2: Development (50 USDC)
-  - Milestone 3: Testing (30 USDC)
+  - Milestone 1: Design (20 $SYSTEM)
+  - Milestone 2: Development (50 $SYSTEM)
+  - Milestone 3: Testing (30 $SYSTEM)
 
 ### Recurring Bounty
 - Repeatable task
@@ -381,16 +381,14 @@ Create 3 tutorial videos for SpiritDAO:
 
 **Reward Amount:**
 - How much you'll pay
-- In USDC, ETH, or other token
+- In $SYSTEM or $SELF
 - Be competitive
-- Research market rates
+- Research comparable bounties
 - Factor in complexity
 
 **Payment Token:**
-- Select from available tokens
-- Usually USDC (stablecoin)
-- Or DAO token
-- Ensure you have balance
+- **$SYSTEM**: a transferable reward, paid to the worker from the bounty's escrow/treasury on approval. The funding source needs a sufficient $SYSTEM balance.
+- **$SELF**: a participation reward, **minted** to the worker on approval (soulbound, so it's created for them, not transferred; no pre-existing balance is moved). Recognizes verified contribution rather than paying out capital.
 
 **Timeline/Deadline:**
 - Expected completion date

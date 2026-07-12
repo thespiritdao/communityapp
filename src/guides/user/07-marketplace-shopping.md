@@ -2,11 +2,12 @@
 
 ## What is the Marketplace?
 
-SpiritDAO's marketplace is a community store where members can buy and sell products using cryptocurrency:
-- **Crypto Payments**: Pay with $SELF or $SYSTEM tokens
+SpiritDAO's marketplace is a community store where members can buy and sell products:
+- **Crypto Payments**: Pay with $SYSTEM, or burn $SELF to pay
+- **Burn-to-Pay**: Paying with $SELF burns it and mints you a soulbound receipt as proof (no $SELF flows to anyone)
 - **Token-Gated Products**: Some items require specific tokens/NFTs to purchase
 - **Gasless Checkout**: Use Smart Wallet for fee-free transactions
-- **Pod Treasuries**: Funds can route to pod treasuries
+- **Fund Routing**: The $SYSTEM portion of a sale can route to a creator wallet or pod treasury; the $SELF portion is always burned
 - **Order Tracking**: View your purchase history and order status
 - **Fulfillment System**: Automated notifications for order processing
 
@@ -24,9 +25,9 @@ SpiritDAO's marketplace is a community store where members can buy and sell prod
 ### Product Creator
 - Pod members with marketplace access
 - Create product listings
-- Set prices in $SELF and/or $SYSTEM
+- Set prices in $SYSTEM and/or $SELF
 - Configure token gating
-- Route funds to pod treasury or personal wallet
+- Route the $SYSTEM portion to a pod treasury or personal wallet ($SELF is always burned)
 
 ### Order Manager
 - Executive Pod members OR Market Management token holders
@@ -91,7 +92,7 @@ Click any product to see:
 ### What is Token Gating?
 Some products require you to hold specific tokens or NFTs to purchase:
 - **Pod Membership**: Must be member of specific pod
-- **NFT Holdings**: Must hold specific NFT (e.g., Advocate NFT)
+- **NFT Holdings**: Must hold specific NFT (e.g., Advocate)
 - **Token Balance**: Must hold minimum amount of specific token
 - **Combination**: May require multiple tokens
 
@@ -168,8 +169,8 @@ Some products require you to hold specific tokens or NFTs to purchase:
 
 ### Step 2: Select Payment Token
 **Choose Token:**
-- $SELF - Community token
-- $SYSTEM - Governance token
+- $SYSTEM: capital-backed utility token (≈ $1 each); routes to creator or pod treasury
+- $SELF: soulbound participation token; paying with it **burns** it and mints you a receipt
 
 **Check Your Balance:**
 - Balance shown at top
@@ -376,7 +377,7 @@ After successful purchase:
 
 **Specific Token:**
 - Require NFT ownership
-- Example: "Advocate NFT required"
+- Example: "Advocate required"
 - Buyer must hold at time of purchase
 
 **Pod Membership:**
@@ -402,6 +403,8 @@ After successful purchase:
 - Helps with inventory management
 
 ### Step 8: Set Fund Destination
+
+This controls where the **$SYSTEM** portion of a sale goes. Any $SELF a buyer pays is always burned; it can't be routed anywhere.
 
 **Creator Wallet:**
 - Funds go directly to you
@@ -522,38 +525,38 @@ After successful purchase:
 
 ### $SELF Token
 **Purpose:**
-- Community token
-- Earned through participation
-- Used for community marketplace
+- Soulbound participation token: verified human time, recorded where it was spent, that fades unless renewed and never becomes money
+- Earned only, never bought, sold, or transferred (it can only be minted to you or burned by you)
+- Fades roughly 6 months after earning, then converts to permanent Tenure standing
+- Used to pay for community marketplace items by burning
 
 **How to Get:**
+- Attend accredited events
 - Complete bounties
-- Attend events
-- Participate in governance
-- Community contributions
+- Contribute verified work
+- Earned automatically, roughly 1 $SELF per verified participation-hour
 
 **Using $SELF:**
 - Select in payment dropdown
-- Must have sufficient balance
-- Approve spending first time
-- Instant transfer on purchase
+- Must have enough unexpired $SELF
+- Paying **burns** the $SELF and mints you a soulbound receipt as proof
+- No $SELF flows to the seller, only your burn
 
 ### $SYSTEM Token
 **Purpose:**
-- Governance token
-- Higher value
-- More exclusive products
+- Capital-backed utility token, held 1:1 against funds in the SpiritDAO 501(c)(3) nonprofit (1 $SYSTEM ≈ $1 USD)
+- Transferable ERC-20
+- Used for events, bounties, marketplace, gifting, and pod treasuries
 
 **How to Get:**
-- Purchase on DEX
-- Governance rewards
+- Earned by exchanging dollars for $SYSTEM (backed 1:1). On exchange, 8% is a donation: 4% to operations and 4% to the Community Pool
 - Special distributions
 
 **Using $SYSTEM:**
 - Select in payment dropdown
 - Check balance before checkout
 - Approve spending first time
-- Instant transfer on purchase
+- Routes to the creator wallet or pod treasury on purchase
 
 ### Token Approvals
 

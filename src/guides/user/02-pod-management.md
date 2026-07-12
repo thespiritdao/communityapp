@@ -6,8 +6,10 @@ Pods are working groups or teams within Spirit DAO. Each pod has:
 - **Unique purpose**: Specific mission or focus area
 - **Members**: Contributors with membership Hat tokens
 - **Leaders**: Manage pod and approve members
-- **Modules**: Optional features (Forum, Events, Bounties, Treasury)
+- **Modules**: Optional features (Forum, Events, Bounties, Treasury, and more)
 - **Permissions**: Control who can access what
+
+Pods can be **time-restricted or eternal**: some are created for a fixed span, and others run indefinitely.
 
 ---
 
@@ -135,7 +137,7 @@ Control who can join:
 
 **NFT Ownership:**
 - Require specific NFT
-- Example: "Must hold Advocate NFT"
+- Example: "Must hold Advocate"
 
 **Other Pod Membership:**
 - Must be member of another pod first
@@ -143,6 +145,11 @@ Control who can join:
 
 ### Step 5: Enable Modules (Optional)
 **Available Modules:**
+
+Pod modules come in three kinds:
+- **Core** (included): Chat, Forum, Treasury, Governance, Events, Bounties, Marketplace, Knowledge Base, Sub-Pods
+- **Add-ons**: Surveys, Password Vault
+- **Paid**: Community AI Agent (a monthly $SYSTEM subscription)
 
 **Forum Module:**
 - Pod-specific discussion board

@@ -33,9 +33,15 @@ Events are community gatherings with blockchain-based registration:
 
 ### Paid Events
 - Registration fee required
-- Paid in crypto (USDC/ETH)
-- Covers event costs
-- Refundable if canceled
+- Priced in **$SYSTEM**, **$SELF**, both, or free
+- $SYSTEM covers event costs (refundable if canceled)
+- $SELF tickets are paid by **burning $SELF** (see below)
+
+### $SELF-Priced Events
+- Pay by **burning** your $SELF participation token
+- $SELF is soulbound: it can only be earned and burned, never transferred
+- A great way to **spend $SELF before it fades** (~6 months after earning)
+- Burning mints you a soulbound ticket/receipt, checked at the door
 
 ---
 
@@ -97,16 +103,16 @@ Click any event to see:
 - Note any special instructions
 
 **Step 3: Pay Fee (if required)**
-- Approve token spending
-- Transfer payment
-- May have gas cost
-- Or use gasless Smart Wallet
+- **$SYSTEM events:** approve token spending, then register
+- **$SELF events:** confirm the **burn**; the required $SELF is burned from your balance (never transferred)
+- Registration is always **gasless** via your Smart Wallet, so you only pay the event's token fee, if any
 
 **Step 4: Mint Registration NFT**
 - Transaction creates your ticket NFT
+- For $SELF events, this is a **soulbound ticket/receipt** minted from your burn
 - Unique token for this event
 - Stored in your wallet
-- Proof of registration
+- Proof of registration, scanned at door via QR check-in
 
 **Step 5: Confirmation**
 - Receive notification
@@ -167,9 +173,9 @@ Click any event to see:
 ### After Event
 
 **If Attended:**
-- Completion NFT minted (if configured)
-- Added to your collection
-- Proof of attendance
+- **Event Completion Certificate** minted: a soulbound token (accreditation)
+- Earned by checked-in attendees after the event completes
+- Added to your collection as permanent proof of attendance
 - May unlock rewards
 
 **If Missed:**
@@ -234,8 +240,9 @@ Click any event to see:
 
 **Registration Fee:**
 - Free (no cost)
-- Or set amount in USDC/ETH
-- Covers event costs
+- Or price in **$SYSTEM**, **$SELF**, or both
+- $SYSTEM covers event costs; $SELF tickets are paid by **burning** the attendee's $SELF
+- Pricing in $SELF gives members a place to spend participation before it fades
 - Encourage commitment
 
 **Token Gating:**
@@ -245,7 +252,7 @@ Click any event to see:
 
 **NFT Gating:**
 - Require specific NFT
-- Example: "Advocate NFT required"
+- Example: "Advocate required"
 
 **Pod Restriction:**
 - Limit to pod members

@@ -2,7 +2,7 @@
 
 ## What is Video Chat in SpiritDAO?
 
-SpiritDAO includes real-time video communication directly within the app — no external tools required. There are two modes:
+SpiritDAO includes real-time video communication directly within the app, no external tools required. There are two modes:
 
 - **Video Chat**: Direct video calls between members, accessible through pods
 - **Conferencing**: Larger multi-participant video sessions for pod meetings, governance calls, community events, and retreats
@@ -92,7 +92,7 @@ Conferencing supports larger group sessions:
 **As a Participant:**
 - Mute yourself when not speaking
 - Use a stable internet connection
-- Have your camera on when possible — presence builds community
+- Have your camera on when possible, since presence builds community
 - Use the raise-hand feature or text chat to ask questions
 
 ---
@@ -116,7 +116,7 @@ To find the next governance call:
 ## Troubleshooting
 
 ### "Camera/Microphone Not Working"
-- Check browser permissions — allow camera and microphone for this site
+- Check browser permissions: allow camera and microphone for this site
 - Try a different browser (Chrome or Firefox recommended)
 - Ensure no other app is using your camera
 - Refresh the page and rejoin
@@ -140,4 +140,4 @@ To find the next governance call:
 
 ---
 
-**Real presence builds real community. Show up — on video when you can. 📹**
+**Real presence builds real community. Show up, on video when you can. 📹**

@@ -10,7 +10,7 @@ This document provides quick lookup for common questions and features across Spi
 
 ### Available Guides
 1. **Getting Started** (`01-getting-started.md`)
-   - Onboarding, wallet setup, Advocate NFT, basic navigation
+   - Onboarding, wallet setup, Advocate, basic navigation
 2. **Pod Management** (`02-pod-management.md`)
    - Creating pods, joining pods, pod roles, modules, applications
 3. **Governance & Voting** (`03-governance-voting.md`)
@@ -30,9 +30,9 @@ This document provides quick lookup for common questions and features across Spi
 
 ### Core Concepts
 
-**SpiritDAO** = Decentralized autonomous organization on Base blockchain
+**SpiritDAO** = Federated infrastructure for self-sovereign communities: a 501(c)(3) nonprofit (on Base blockchain) that lets communities own their data, governance, and treasury. Open to new communities and members: join one or organize your own.
 
-**Advocate NFT** = DAO membership token (required for most features)
+**Advocate** = DAO membership accreditation (required for most features); shown under Accreditations on the identity page
 
 **Hats Protocol** = Role-based access control using Hat tokens (NFTs)
 
@@ -49,7 +49,7 @@ This document provides quick lookup for common questions and features across Spi
 ### "How do I get started?"
 → See: `01-getting-started.md`
 - Connect wallet
-- Mint Advocate NFT
+- Mint Advocate (voting active immediately)
 - Set up identity profile
 - Join your first pod
 
@@ -63,15 +63,14 @@ This document provides quick lookup for common questions and features across Spi
 
 ### "How do I vote on proposals?"
 → See: `03-governance-voting.md` > Voting on Proposals
-- Must have Advocate NFT
-- Delegate voting power to yourself
+- Must have Advocate (voting power is active immediately, auto-delegated on mint)
 - Find active proposals
 - Cast vote (For/Against/Abstain)
 - Sign transaction
 
 ### "How do I create a proposal?"
 → See: `03-governance-voting.md` > Creating Proposals
-- Must have Advocate NFT and voting power
+- Must have Advocate (voting power active automatically)
 - Discuss in forum first
 - Navigate to governance page
 - Fill proposal form (title, description, forum link)
@@ -121,10 +120,10 @@ This document provides quick lookup for common questions and features across Spi
 - Executive Pod membership
 
 **Create Proposals:**
-- Advocate NFT + Voting power
+- Advocate (voting power active automatically)
 
 **Vote on Proposals:**
-- Advocate NFT + Voting power (delegated)
+- Advocate (voting power active automatically, auto-delegated on mint)
 
 **Apply for Bounties:**
 - Wallet connected + meet bounty eligibility
@@ -159,9 +158,9 @@ This document provides quick lookup for common questions and features across Spi
 
 ### DAO-Wide Roles
 
-**Advocate NFT Holder:**
+**Advocate Holder:**
 - Basic DAO membership
-- Can vote (if delegated)
+- Can vote (voting power active immediately)
 - Can create proposals
 - Access to public features
 
@@ -190,7 +189,12 @@ This document provides quick lookup for common questions and features across Spi
 
 ## Module Reference
 
-### Pod Modules (Optional Features)
+### Pod Modules
+
+Pod modules come in three kinds:
+- **Core**: Chat, Forum, Treasury, Governance, Events, Bounties, Marketplace, Knowledge Base, Sub-Pods
+- **Add-ons**: Surveys, Password Vault
+- **Paid**: Community AI Agent (monthly $SYSTEM subscription)
 
 **Forum Module:**
 - Pod-specific discussion board
@@ -222,22 +226,24 @@ This document provides quick lookup for common questions and features across Spi
 
 ### DAO Tokens
 
-**$SELF (Community Token):**
-- Earned through participation
-- Used for marketplace purchases
-- Lower value, more accessible
-- Contract: `NEXT_PUBLIC_SELF_TOKEN`
+**$SELF (Participation Token):**
+- Soulbound: earned only, never transferable or sellable
+- Earned via participation: accredited events, bounties, verified work (~1 $SELF ≈ 1 verified hour)
+- Spent only by burning ("burn-to-pay") for marketplace items, event tickets, access-gated activities (mints a soulbound receipt)
+- Carries its origin (community + season); fades ~6 months after earning, then converts to permanent Tenure standing
+- Pods hold a minting *budget*, not a balance
+- Contract: `NEXT_PUBLIC_SELF_EPOCHS` (soulbound ERC-1155; legacy `NEXT_PUBLIC_SELF_TOKEN` ERC-20 retired)
 
-**$SYSTEM (Governance Token):**
-- Governance purposes
-- Marketplace purchases
-- Higher value
+**$SYSTEM (Utility Token):**
+- Transferable ERC-20, backed 1:1 by capital held by the SpiritDAO nonprofit (1 $SYSTEM ≈ $1)
+- Earned by exchanging dollars for $SYSTEM; on exchange, 8% is a donation (4% operations + 4% Community Pool)
+- Used for events, bounties, marketplace, gifting, pod treasuries
+- Burnable for fiat payout via Claims
 - Contract: `NEXT_PUBLIC_SYSTEM_TOKEN`
 
-**Advocate NFT:**
-- DAO membership token
-- Required for governance
-- Required for most features
+**Advocate:**
+- Governance membership accreditation; grants DAO-wide voting power (auto-delegated on mint, active immediately)
+- Earned via first donation; shown under Accreditations on the identity page
 - Free to mint
 
 **Hat Tokens:**
@@ -298,10 +304,10 @@ This document provides quick lookup for common questions and features across Spi
 - Minted after check-in
 - Collectible achievement
 
-**Advocate NFT:**
-- DAO membership
-- Required for governance
-- One per member
+**Advocate:**
+- DAO membership accreditation
+- Required for governance (voting active immediately, auto-delegated on mint)
+- Shown under Accreditations on the identity page
 
 **Hat Token:**
 - Pod role representation
@@ -322,8 +328,7 @@ This document provides quick lookup for common questions and features across Spi
 
 ### "Can't Vote"
 → Check:
-- Have Advocate NFT?
-- Voting power delegated?
+- Have Advocate? (voting power is active automatically)
 - Proposal is Active?
 - Haven't voted already?
 
@@ -368,10 +373,9 @@ This document provides quick lookup for common questions and features across Spi
 
 ### First-Time User Onboarding
 1. Connect wallet → `01-getting-started.md`
-2. Mint Advocate NFT → `01-getting-started.md`
+2. Mint Advocate → `01-getting-started.md`
 3. Set up identity → `01-getting-started.md`
-4. Delegate voting power → `03-governance-voting.md`
-5. Join first pod → `02-pod-management.md`
+4. Join first pod → `02-pod-management.md`
 
 ### Creating and Voting on Proposal
 1. Discuss idea in forum → `06-forum-discussions.md`
@@ -541,7 +545,7 @@ When users ask for help, direct them to appropriate sections:
 ### For All Users
 - Read relevant guides before attempting actions
 - Ensure wallet connected and on Base network
-- Have Advocate NFT for core features
+- Have Advocate for core features
 - Wait 60 seconds after transactions for sync
 - Use Smart Wallet for gasless experience
 - Save transaction hashes
