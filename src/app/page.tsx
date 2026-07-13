@@ -54,6 +54,7 @@ function PageContent() {
   // Tracks whether the initial auth call included an email (for post-auth backfill)
   const authEmailSentRef = useRef<string | undefined>(undefined);
   const emailBackfillAttemptedRef = useRef(false);
+  const emailBackfillInFlightRef = useRef(false);
   const [isClient, setIsClient] = useState(false);
 
   // Pre-auth invite code state
@@ -648,6 +649,10 @@ function PageContent() {
   // Runs separately from the auth effect so it doesn't cause flickering or re-auth.
   useEffect(() => {
     if (!isAuthenticated || !walletAddress || emailBackfillAttemptedRef.current) return;
+    // Avoid firing a flurry of overlapping backfills before the first resolves
+    // (the effect's deps change across renders). Idempotent server-side, but no
+    // need to spam it.
+    if (emailBackfillInFlightRef.current) return;
 
     // If auth already had an email, nothing to backfill
     if (authEmailSentRef.current) return;
@@ -663,9 +668,9 @@ function PageContent() {
 
     if (!resolvedEmail) return;
 
-    // Email is now available but wasn't sent during auth — backfill it
-    emailBackfillAttemptedRef.current = true;
+    // Email is now available but wasn't sent during auth — backfill it.
     console.log(`📧 Post-auth email backfill: ${resolvedEmail} (was missing at auth time)`);
+    emailBackfillInFlightRef.current = true;
 
     fetch('/api/auth/backfill-email', {
       method: 'POST',
@@ -675,9 +680,19 @@ function PageContent() {
       .then((res) => res.json())
       .then((data) => {
         console.log('✅ Email backfill result:', data);
+        // Only latch once the newsletter subscribe actually succeeded, so a
+        // transient failure (or email that wasn't ready) can retry on a later
+        // render instead of being permanently skipped.
+        if (data?.subscribed) {
+          emailBackfillAttemptedRef.current = true;
+        }
       })
       .catch((err) => {
         console.error('⚠️ Email backfill failed (non-critical):', err);
+        // Leave the attempt ref unset so the effect retries.
+      })
+      .finally(() => {
+        emailBackfillInFlightRef.current = false;
       });
   }, [isAuthenticated, walletAddress, currentUser, capturedEmail]);
 

@@ -281,8 +281,15 @@ export async function POST(req: NextRequest) {
         console.error('⚠️ Auth API: Failed to send new account notifications (non-critical):', notificationError);
       }
 
-      // Subscribe new user to Paragraph mailing list
-      if (email) {
+      // Subscribe new user to Paragraph mailing list.
+      // Use the RESOLVED userEmail, not the request-body `email`. For OAuth /
+      // embedded-wallet signups the email is frequently absent from the auth
+      // request and arrives later, so gating on `email` here silently skips
+      // exactly those users. Only skip the wallet placeholder (no real email
+      // yet — the backfill route subscribes them once a real email lands).
+      const isRealEmail =
+        !!userEmail && !userEmail.endsWith('@wallet.spiritdao');
+      if (isRealEmail) {
         try {
           const paragraphApiKey = process.env.PARAGRAPH_API;
           if (paragraphApiKey) {
@@ -292,13 +299,13 @@ export async function POST(req: NextRequest) {
                 'Authorization': `Bearer ${paragraphApiKey}`,
                 'Content-Type': 'application/json',
               },
-              body: JSON.stringify({ email }),
+              body: JSON.stringify({ email: userEmail }),
             });
             if (!paragraphRes.ok) {
               const errBody = await paragraphRes.text();
               console.error(`⚠️ Auth API: Paragraph subscription failed (${paragraphRes.status}): ${errBody}`);
             } else {
-              console.log(`✅ Auth API: Subscribed ${email} to Paragraph`);
+              console.log(`✅ Auth API: Subscribed ${userEmail} to Paragraph`);
             }
           }
         } catch (paragraphError) {
