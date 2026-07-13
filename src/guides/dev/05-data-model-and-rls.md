@@ -48,7 +48,7 @@ One line each: enough to orient, not an exhaustive column list.
 
 ### Identity
 - `user_wallets`: wallet records linked to a member identity (multi-device).
-- `user_profiles`: display name, avatar, bio, preferences.
+- `user_profiles`: display name, avatar, bio, preferences. **`email` is a private column:** client- and peer-facing queries must omit it and select explicit public columns instead. The eventual boundary is a DB-level `public_profiles` view (see `docs/spec-member-email-privacy.md`); email is for the member's own login and notifications, not shared with other members.
 - `user_wallet_link_codes`: short-lived codes for linking a new device/wallet.
 
 ### Pods

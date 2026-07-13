@@ -635,9 +635,23 @@ export function ProfileEditForm({
 
               {/* Openness */}
               <div className="form-group">
-                <label style={{ fontWeight: 'bold', marginBottom: '0.5rem' }}>
+                <label style={{ fontWeight: 'bold', marginBottom: '0.25rem' }}>
                   Openness to Connect
                 </label>
+                <p
+                  style={{
+                    fontSize: '0.8rem',
+                    color: '#6b7280',
+                    marginTop: 0,
+                    marginBottom: '0.5rem',
+                    lineHeight: 1.4,
+                  }}
+                >
+                  Sets the availability badge on your profile and how you sort in
+                  the Members directory (members who are actively collaborating
+                  appear first). It does not restrict who can reach you: any
+                  member can still message you directly in the app.
+                </p>
                 <div
                   style={{
                     display: 'flex',

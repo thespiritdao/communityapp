@@ -110,6 +110,20 @@ The user-facing surface for this is
 
 ---
 
+## Email privacy
+
+A member's email is **private**: it is used for that member's own sign-in (email
+OTP) and notifications, and is **not** exposed to other members in the directory
+or on profiles. Peer contact happens through **in-app Direct Messages** (the
+Message button on a profile), never email.
+
+Current state is enforced at the **query layer**: client- and peer-facing reads
+select explicit public columns and omit email. A DB-level `public_profiles` view
+is planned as the eventual boundary (see
+`docs/spec-member-email-privacy.md`).
+
+---
+
 ## Design rule: when to use the device wallet, not the canonical one
 
 The canonical wallet is the right answer for **identity** reads ("who is this

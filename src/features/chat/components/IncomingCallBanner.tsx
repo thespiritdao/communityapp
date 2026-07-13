@@ -32,7 +32,7 @@ export const IncomingCallBanner: React.FC = () => {
     }
     supabase
       .from('user_profiles')
-      .select('*')
+      .select('wallet_address, first_name, last_name, profile_picture')
       .eq('wallet_address', incomingCall.initiator_wallet)
       .single()
       .then(({ data }) => {

@@ -60,7 +60,8 @@ const SOCIAL_PLATFORMS = [
   { key: 'twitch', label: 'Twitch', Icon: Video },
   { key: 'github', label: 'GitHub', Icon: Github },
   { key: 'linkedin', label: 'LinkedIn', Icon: Linkedin },
-  { key: 'email', label: 'Email', Icon: Mail },
+  // Email is intentionally omitted: member email is private, and the in-app
+  // Message button (Direct Messages) is the way to contact a member.
 ];
 
 const getProfilePictureUrl = (walletAddress: string, users: UserProfile[]) => {

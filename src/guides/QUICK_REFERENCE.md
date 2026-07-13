@@ -53,6 +53,9 @@ This document provides quick lookup for common questions and features across Spi
 - Set up identity profile
 - Join your first pod
 
+### "How do I contact another member?"
+→ Open their profile (from the Members directory) and use the **Message** button to start an in-app Direct Message. Member emails are not shown or clickable; email is private (used only for your own login and notifications, never shared with other members).
+
 ### "How do I join a pod?"
 → See: `02-pod-management.md` > Finding & Joining Pods
 - Browse pods page

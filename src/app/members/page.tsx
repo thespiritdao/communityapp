@@ -47,10 +47,14 @@ export default function MembersPage() {
 
       if (podData) setPods(podData);
 
-      // Load all TOS-signed user profiles (primary source — not limited to pod members)
+      // Load all TOS-signed user profiles (primary source, not limited to pod
+      // members). Select explicit public columns only: email is private and
+      // must not be exposed to other members. Contact happens via in-app DM.
       const { data: profiles } = await supabase
         .from('user_profiles')
-        .select('*')
+        .select(
+          'user_id, wallet_address, first_name, last_name, profile_picture, bio, website, twitter, discord, github, linkedin, tiktok, instagram, facebook, youtube, twitch, interests, seeking, open_to_connect, tos_signed_at',
+        )
         .not('tos_signed_at', 'is', null);
 
       if (!profiles || profiles.length === 0) {

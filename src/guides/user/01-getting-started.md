@@ -45,7 +45,12 @@ SpiritDAO is open enrollment: download the app, connect with a community, or org
    - Bio (optional)
    - Interests (select from chips)
    - What you're seeking (select from chips)
+   - Openness to Connect (Low/Limited, Open/Available, or Actively Collaborating)
 4. Click "Save Changes"
+
+**Openness to Connect:** This setting controls the availability badge on your profile and how you sort in the Members directory (actively-collaborating members appear first). It does not restrict who can message you; any member can still send you a Direct Message regardless of the setting.
+
+**Contacting members:** Members reach each other through in-app Direct Messages. To contact someone, open their profile and use the Message button. Your email address stays private (it is used for your own login and notifications, not shown to other members or used for member-to-member contact).
 
 **Why this matters:**
 - Other members can find you

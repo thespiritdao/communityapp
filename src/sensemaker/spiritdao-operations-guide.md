@@ -168,7 +168,7 @@ Visit the Identity page to complete your profile:
 - Add your interests and what you are seeking from the community.
 - Connect social accounts (Twitter, Discord, GitHub, LinkedIn, and others).
 
-Your profile is visible to all community members in the Members directory.
+Your profile is visible to all community members in the Members directory. Other members contact you via in-app Direct Messages (the Message button on your profile); your email stays private and is used only for your own login and notifications.
 
 Some features rely on detailed profile information. For example, if you use the marketplace to buy or sell physical goods, you need an accurate shipping address on file. Because the app's infrastructure is intimately linked, you do not re-enter your address at checkout. The marketplace pulls it from your profile for you.
 
@@ -514,7 +514,7 @@ Each pod can have chat channels for real-time communication:
 
 ### Direct Messages (DMs)
 
-Send private messages to any community member:
+Send private messages to any community member. DMs are how members contact each other (not email). To start one, open a member's profile and click the **Message** button:
 - One-on-one conversations
 - Message history preserved
 - Block/unblock users
@@ -565,6 +565,10 @@ The Members page shows all active community members:
 - **Member Cards**: Show name, avatar, bio, collaboration status, and pod memberships
 - **Profile Modal**: Click any member to see their full profile, social links, and community involvement
 
+**Contacting members:** To reach another member, open their profile and use the **Message** button, which starts an in-app Direct Message. Member emails are never shown or clickable in profiles or the directory. A member's email is private: it is used only for that member's own login and notifications, and is never shared with or shown to other members.
+
+**Openness to Connect:** Each member sets an availability level (Low/Limited, Open/Available, or Actively Collaborating). This controls the availability badge on their profile and how they sort in the directory (actively-collaborating members appear first). It does not restrict who can message them: any member can still send a Direct Message regardless of the setting.
+
 ---
 
 ## Identity & Profile
@@ -573,9 +577,11 @@ Your Identity page is your community home base:
 
 ### Profile Information
 - Name, bio, website, and profile picture
-- Collaboration availability status
+- Collaboration availability status (Openness to Connect: sets your availability badge and directory sort order; it does not restrict who can message you)
 - Interests and what you're seeking
 - Connected social accounts
+
+Your email is private. It is used for your own login and notifications, and is never shown to other members. Members contact you through in-app Direct Messages (the Message button on your profile), not by email.
 
 ### Tenure
 Your lifetime standing in the ecosystem, based on total $SELF ever earned:

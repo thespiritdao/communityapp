@@ -333,9 +333,13 @@ export const HatGatedChatContainer: React.FC<HatGatedChatContainerProps> = ({
           ];
 
           if (userIds.length > 0) {
+            // Public display columns only — email is private, not exposed to
+            // other members' clients.
             const { data: usersData, error: usersError } = await supabase
               .from('user_profiles')
-              .select('*')
+              .select(
+                'user_id, wallet_address, first_name, last_name, profile_picture, bio, website, twitter, discord, github, linkedin, tiktok, instagram, facebook, youtube, twitch, interests, seeking, open_to_connect',
+              )
               .in('user_id', userIds);
 
             if (usersError) throw usersError;
@@ -393,7 +397,9 @@ export const HatGatedChatContainer: React.FC<HatGatedChatContainerProps> = ({
             ) {
               const { data: userData } = await supabase
                 .from('user_profiles')
-                .select('*')
+                .select(
+                  'user_id, wallet_address, first_name, last_name, profile_picture, bio, website, twitter, discord, github, linkedin, tiktok, instagram, facebook, youtube, twitch, interests, seeking, open_to_connect',
+                )
                 .eq('wallet_address', newMessage.sender_wallet_id)
                 .single();
 

@@ -403,9 +403,13 @@ export default function ChatContainer({ chatGroupId, dmAddress }: ChatContainerP
         console.error('Error loading messages:', msgErr);
       }
 
+      // Public display columns only. Email is private and must not be pulled
+      // into other members' clients (contact happens via in-app DM).
       const { data: usersData, error: usersErr } = await supabase
         .from('user_profiles')
-        .select('*');
+        .select(
+          'user_id, wallet_address, first_name, last_name, profile_picture, bio, website, twitter, discord, github, linkedin, tiktok, instagram, facebook, youtube, twitch, interests, seeking, open_to_connect',
+        );
       if (usersErr) {
         console.error('Error loading user_profiles:', usersErr);
       }
