@@ -156,35 +156,45 @@ export async function GET(req: NextRequest) {
         .gte('created_at', oneWeekAgo),
     ]);
 
-    // ── Token supply (on-chain totalSupply) ───────────────────────────────────
+    // ── Token totals ───────────────────────────────────────────────────────────
+    // $SYSTEM: on-chain ERC-20 totalSupply (still a normal transferable token).
+    // $SELF: the OLD ERC-20 totalSupply is meaningless now — $SELF is a soulbound
+    // ERC-1155 (SelfEpochs) that is minted per participation-hour and decays, with
+    // no global on-chain supply read. The honest aggregate is total participation-
+    // hours ever minted, from the mint ledger (self_mint_queue, status='minted').
     const SYSTEM_TOKEN = process.env.NEXT_PUBLIC_SYSTEM_TOKEN as `0x${string}` | undefined;
-    const SELF_TOKEN = process.env.NEXT_PUBLIC_SELF_TOKEN as `0x${string}` | undefined;
     const erc20Abi = parseAbi(['function totalSupply() view returns (uint256)']);
 
     let systemTotal: string | null = null;
-    let selfTotal: string | null = null;
+    let selfTotal: string | null = null; // total $SELF hours minted (not a supply)
+
     try {
       const publicClient = createConfiguredPublicClient();
-      const calls: Promise<any>[] = [];
       if (SYSTEM_TOKEN) {
-        calls.push(
-          publicClient
-            .readContract({ address: SYSTEM_TOKEN, abi: erc20Abi, functionName: 'totalSupply' })
-            .then((v) => { systemTotal = formatUnits(v as bigint, 18); })
-            .catch((e) => console.warn('[explorer] $SYSTEM totalSupply failed:', e.message)),
-        );
+        await publicClient
+          .readContract({ address: SYSTEM_TOKEN, abi: erc20Abi, functionName: 'totalSupply' })
+          .then((v) => { systemTotal = formatUnits(v as bigint, 18); })
+          .catch((e) => console.warn('[explorer] $SYSTEM totalSupply failed:', e.message));
       }
-      if (SELF_TOKEN) {
-        calls.push(
-          publicClient
-            .readContract({ address: SELF_TOKEN, abi: erc20Abi, functionName: 'totalSupply' })
-            .then((v) => { selfTotal = formatUnits(v as bigint, 18); })
-            .catch((e) => console.warn('[explorer] $SELF totalSupply failed:', e.message)),
-        );
-      }
-      await Promise.all(calls);
     } catch (e) {
-      console.warn('[explorer] Token supply query failed:', e);
+      console.warn('[explorer] $SYSTEM supply query failed:', e);
+    }
+
+    try {
+      // Sum minted hours from the ledger (1e18 wei = 1 hour). NUMERIC(78,0) comes
+      // back as a string; sum with BigInt to avoid float drift, then format.
+      const { data: mintedRows, error: mintedErr } = await supabaseAdmin
+        .from('self_mint_queue')
+        .select('hours')
+        .eq('status', 'minted');
+      if (mintedErr) throw mintedErr;
+      const totalWei = (mintedRows ?? []).reduce(
+        (acc, r) => acc + BigInt((r as any).hours ?? '0'),
+        0n,
+      );
+      selfTotal = formatUnits(totalWei, 18);
+    } catch (e) {
+      console.warn('[explorer] $SELF minted-hours total failed:', e);
     }
 
     return NextResponse.json({

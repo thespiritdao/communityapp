@@ -32,15 +32,14 @@ const POD_TREASURY_FACTORY_ADDRESS = (process.env
   .NEXT_PUBLIC_POD_TREASURY_FACTORY ||
   '0x0000000000000000000000000000000000000000') as `0x${string}`;
 
-// Default supported tokens from environment (Your community currencies)
+// Default supported tokens for a pod treasury. Only $SYSTEM: $SELF is now a
+// soulbound token that pods never hold (it is a per-epoch minting budget, not a
+// treasury balance), so it must not be a supported treasury token.
 const SYSTEM_TOKEN_ADDRESS = (process.env.NEXT_PUBLIC_SYSTEM_TOKEN ||
-  '0x0000000000000000000000000000000000000000') as `0x${string}`;
-const SELF_TOKEN_ADDRESS = (process.env.NEXT_PUBLIC_SELF_TOKEN ||
   '0x0000000000000000000000000000000000000000') as `0x${string}`;
 
 const DEFAULT_SUPPORTED_TOKENS = [
   SYSTEM_TOKEN_ADDRESS, // $SYSTEM from .env
-  SELF_TOKEN_ADDRESS,   // $SELF from .env
 ] as `0x${string}`[];
 
 // Public client for fetching transaction receipts
@@ -681,19 +680,6 @@ export function PodSpecificTreasuryManager({
                 </div>
                 <Badge variant="secondary">
                   {SYSTEM_TOKEN_ADDRESS.slice(0, 6)}...{SYSTEM_TOKEN_ADDRESS.slice(-4)}
-                </Badge>
-              </div>
-              <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                <div className="flex items-center space-x-3">
-                  <img
-                    src="/images/erc20tokens/SelfToken.png"
-                    alt="$SELF"
-                    className="w-6 h-6 rounded"
-                  />
-                  <span className="font-medium">$SELF</span>
-                </div>
-                <Badge variant="secondary">
-                  {SELF_TOKEN_ADDRESS.slice(0, 6)}...{SELF_TOKEN_ADDRESS.slice(-4)}
                 </Badge>
               </div>
             </div>

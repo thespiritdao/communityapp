@@ -38,15 +38,14 @@ const POD_BOUNTY_SERVICE_ADDRESS = (process.env
   .NEXT_PUBLIC_POD_BOUNTY_SERVICE ||
   '0xeCdDB060cD38439E0aC8874f159E961eB856407D') as `0x${string}`;
 
-// Default supported tokens from environment (Your community currencies)
+// Default supported tokens for a pod treasury. Only $SYSTEM: $SELF is now a
+// soulbound token that pods never hold (it is a per-epoch minting budget, not a
+// treasury balance), so it must not be a supported treasury token.
 const SYSTEM_TOKEN_ADDRESS = (process.env.NEXT_PUBLIC_SYSTEM_TOKEN ||
-  '0x0000000000000000000000000000000000000000') as `0x${string}`;
-const SELF_TOKEN_ADDRESS = (process.env.NEXT_PUBLIC_SELF_TOKEN ||
   '0x0000000000000000000000000000000000000000') as `0x${string}`;
 
 const DEFAULT_SUPPORTED_TOKENS = [
   SYSTEM_TOKEN_ADDRESS, // $SYSTEM from .env
-  SELF_TOKEN_ADDRESS,   // $SELF from .env
 ] as `0x${string}`[];
 
 interface Pod {

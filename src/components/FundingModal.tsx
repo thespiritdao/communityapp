@@ -18,7 +18,6 @@ import { DollarSign, User, Users, AlertCircle, Loader2 } from 'lucide-react';
 
 // Token addresses from environment
 const SYSTEM_TOKEN = process.env.NEXT_PUBLIC_SYSTEM_TOKEN as `0x${string}`;
-const SELF_TOKEN = process.env.NEXT_PUBLIC_SELF_TOKEN as `0x${string}`;
 const TREASURY_PROXY_ADDRESS = process.env
   .NEXT_PUBLIC_TREASURY_PROXY as `0x${string}`;
 
@@ -86,7 +85,8 @@ export default function FundingModal({
   const { evmAddress: address } = useEvmAddress();
   const { currentUser } = useCurrentUser();
   const { sendUserOperation } = useSendUserOperation();
-  const [selectedToken, setSelectedToken] = useState<'SYSTEM' | 'SELF'>('SYSTEM');
+  // $SELF is soulbound and earned through participation, so funding is $SYSTEM only.
+  const selectedToken = 'SYSTEM' as const;
   const [amount, setAmount] = useState('');
   const [message, setMessage] = useState('');
   const [isSending, setIsSending] = useState(false);
@@ -100,11 +100,6 @@ export default function FundingModal({
   const { data: systemBalance, error: systemError } = useBalance({
     address: address || undefined,
     token: SYSTEM_TOKEN,
-  });
-
-  const { data: selfBalance, error: selfError } = useBalance({
-    address: address || undefined,
-    token: SELF_TOKEN,
   });
 
   // Quick amount buttons
@@ -121,7 +116,7 @@ export default function FundingModal({
 
     try {
       const smartAccount = currentUser.evmSmartAccounts[0];
-      const tokenAddress = selectedToken === 'SYSTEM' ? SYSTEM_TOKEN : SELF_TOKEN;
+      const tokenAddress = SYSTEM_TOKEN;
       const amountWei = parseUnits(amount, 18);
 
       // If funding a treasury contract, use proxy for sponsored transactions
@@ -197,7 +192,6 @@ export default function FundingModal({
       // Reset form
       setAmount('');
       setMessage('');
-      setSelectedToken('SYSTEM');
       onClose();
     } catch (error: any) {
       console.error('❌ Funding failed:', error);
@@ -207,11 +201,7 @@ export default function FundingModal({
   };
 
   const getBalance = () => {
-    return selectedToken === 'SYSTEM' ? systemBalance : selfBalance;
-  };
-
-  const getBalanceError = () => {
-    return selectedToken === 'SYSTEM' ? systemError : selfError;
+    return systemBalance;
   };
 
   const canTransfer = () => {
@@ -292,17 +282,16 @@ export default function FundingModal({
 
           {/* Token Selection */}
           <div>
-            <Label style={{ display: 'block', marginBottom: '8px' }}>Select Token</Label>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+            <Label style={{ display: 'block', marginBottom: '8px' }}>Token</Label>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '10px' }}>
               <button
                 type="button"
-                onClick={() => setSelectedToken('SYSTEM')}
                 style={{
                   padding: '12px',
-                  border: selectedToken === 'SYSTEM' ? '2px solid #2F5D50' : '2px solid #D1C4A9',
+                  border: '2px solid #2F5D50',
                   borderRadius: '12px',
-                  background: selectedToken === 'SYSTEM' ? '#E8F1EE' : 'white',
-                  cursor: 'pointer',
+                  background: '#E8F1EE',
+                  cursor: 'default',
                   textAlign: 'left',
                   transition: 'all 0.2s',
                 }}
@@ -317,29 +306,9 @@ export default function FundingModal({
                   )}
                 </div>
               </button>
-              <button
-                type="button"
-                onClick={() => setSelectedToken('SELF')}
-                style={{
-                  padding: '12px',
-                  border: selectedToken === 'SELF' ? '2px solid #2F5D50' : '2px solid #D1C4A9',
-                  borderRadius: '12px',
-                  background: selectedToken === 'SELF' ? '#E8F1EE' : 'white',
-                  cursor: 'pointer',
-                  textAlign: 'left',
-                  transition: 'all 0.2s',
-                }}
-              >
-                <div style={{ fontWeight: 600, fontSize: '14px', marginBottom: '4px' }}>$SELF</div>
-                <div style={{ fontSize: '12px', color: '#5F5A54' }}>Governance token</div>
-                <div style={{ fontSize: '12px', color: '#8FAAA1', marginTop: '4px' }}>
-                  {selfError ? (
-                    <span style={{ color: '#8B3A3A' }}>Error</span>
-                  ) : (
-                    `Bal: ${formatBalance(selfBalance)}`
-                  )}
-                </div>
-              </button>
+            </div>
+            <div style={{ fontSize: '12px', color: '#8FAAA1', marginTop: '8px' }}>
+              $SELF is soulbound and earned through participation, so it can't be used for funding.
             </div>
           </div>
 

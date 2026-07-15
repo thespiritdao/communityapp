@@ -18,7 +18,6 @@ interface GiftModalProps {
 
 // Token addresses from environment
 const SYSTEM_TOKEN = process.env.NEXT_PUBLIC_SYSTEM_TOKEN as `0x${string}`;
-const SELF_TOKEN = process.env.NEXT_PUBLIC_SELF_TOKEN as `0x${string}`;
 
 // Standard ERC20 ABI for transfer
 const ERC20_ABI = [
@@ -43,9 +42,8 @@ export function GiftModal({
   const { evmAddress: address } = useEvmAddress();
   const { currentUser } = useCurrentUser();
   const { sendUserOperation } = useSendUserOperation();
-  const [selectedToken, setSelectedToken] = useState<'SYSTEM' | 'SELF'>(
-    'SYSTEM',
-  );
+  // $SELF is soulbound and earned through participation, so gifting is $SYSTEM only.
+  const selectedToken = 'SYSTEM' as const;
   const [amount, setAmount] = useState('');
   const [message, setMessage] = useState('');
   const [isSending, setIsSending] = useState(false);
@@ -79,16 +77,11 @@ export function GiftModal({
     token: SYSTEM_TOKEN,
   });
 
-  const { data: selfBalance } = useBalance({
-    address: address || undefined,
-    token: SELF_TOKEN,
-  });
-
   // Quick amount buttons
   const quickAmounts = ['10', '25', '50', '100'];
 
   const getBalance = () => {
-    return selectedToken === 'SYSTEM' ? systemBalance : selfBalance;
+    return systemBalance;
   };
 
   const canTransfer = () => {
@@ -121,7 +114,7 @@ export function GiftModal({
 
     try {
       const smartAccount = currentUser.evmSmartAccounts[0];
-      const tokenAddress = selectedToken === 'SYSTEM' ? SYSTEM_TOKEN : SELF_TOKEN;
+      const tokenAddress = SYSTEM_TOKEN;
       const amountWei = parseUnits(amount, 18);
 
       console.log('🎁 Sending gift via CDP:', {
@@ -196,7 +189,6 @@ export function GiftModal({
       setTimeout(() => {
         setAmount('');
         setMessage('');
-        setSelectedToken('SYSTEM');
         setTxStatus('idle');
         setStatusMessage('');
         onClose();
@@ -245,11 +237,11 @@ export function GiftModal({
 
         {/* Token Selection */}
         <div className="gift-section">
-          <label className="gift-label">Select Token</label>
-          <div className="gift-token-options">
+          <label className="gift-label">Token</label>
+          <div className="gift-token-options gift-token-options-single">
             <button
-              onClick={() => setSelectedToken('SYSTEM')}
-              className={`gift-token-option ${selectedToken === 'SYSTEM' ? 'active' : ''}`}
+              className="gift-token-option active"
+              type="button"
             >
               <div>
                 <div className="gift-token-name">SYSTEM Token</div>
@@ -258,17 +250,9 @@ export function GiftModal({
                 </div>
               </div>
             </button>
-            <button
-              onClick={() => setSelectedToken('SELF')}
-              className={`gift-token-option ${selectedToken === 'SELF' ? 'active' : ''}`}
-            >
-              <div>
-                <div className="gift-token-name">SELF Token</div>
-                <div className="gift-token-balance">
-                  Balance: {formatBalance(selfBalance)}
-                </div>
-              </div>
-            </button>
+          </div>
+          <div className="gift-token-note">
+            $SELF is soulbound and earned through participation, so it can't be gifted.
           </div>
         </div>
 
@@ -474,6 +458,16 @@ export function GiftModal({
           display: grid;
           grid-template-columns: 1fr 1fr;
           gap: 10px;
+        }
+
+        .gift-token-options-single {
+          grid-template-columns: 1fr;
+        }
+
+        .gift-token-note {
+          margin-top: 8px;
+          font-size: 0.75rem;
+          color: #666;
         }
 
         .gift-token-option {

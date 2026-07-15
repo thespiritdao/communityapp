@@ -546,9 +546,9 @@ export default function ExplorerPage() {
                 style={{ borderRadius: '50%' }}
               />
               <div style={{ fontSize: 12 }}>
-                <div style={{ color: '#5F5A54', fontWeight: 500, lineHeight: 1.2 }}>$SELF Total</div>
+                <div style={{ color: '#5F5A54', fontWeight: 500, lineHeight: 1.2 }}>$SELF Minted</div>
                 <div style={{ color: '#1a1a1a', fontWeight: 600, fontSize: 14 }}>
-                  {Number(tokenSupply.selfTotal).toLocaleString('en-US', { maximumFractionDigits: 2 })}
+                  {Number(tokenSupply.selfTotal).toLocaleString('en-US', { maximumFractionDigits: 2 })} hrs
                 </div>
               </div>
             </div>

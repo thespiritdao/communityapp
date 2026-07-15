@@ -18,7 +18,11 @@ export const DEFAULT_TOKEN_OPTIONS: Token[] = [
   },
   {
     name: '$SELF',
-    address: process.env.NEXT_PUBLIC_SELF_TOKEN as string,
+    // Soulbound ERC-1155 SelfEpochs (not the retired ERC-20). Used here as the
+    // token identifier for selection/display; $SELF is spent via burn-to-pay
+    // (SELF_PAYMENT) and its balance is the decay-aware value from
+    // /api/self/holdings, never a plain balanceOf on this address.
+    address: process.env.NEXT_PUBLIC_SELF_EPOCHS as string,
     symbol: '$SELF',
     decimals: 18,
     image: '/images/erc20tokens/SelfToken.png',
