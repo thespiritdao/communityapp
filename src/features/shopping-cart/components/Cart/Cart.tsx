@@ -730,8 +730,10 @@ export default function Cart({
       try {
         const systemToken = process.env
           .NEXT_PUBLIC_SYSTEM_TOKEN as `0x${string}`;
-        const selfToken = process.env.NEXT_PUBLIC_SELF_TOKEN as `0x${string}`;
 
+        // $SELF is a soulbound ERC-1155 (SelfEpochs) with no ERC-20 balanceOf;
+        // its balance comes from /api/self/holdings (decay-aware), not a read
+        // here. Only $SYSTEM has a meaningful ERC-20 balance to debug-log.
         const systemBalance = (await publicClient.readContract({
           address: systemToken,
           abi: parsedErc20ABI,
@@ -739,16 +741,8 @@ export default function Cart({
           args: [address as `0x${string}`],
         })) as bigint;
 
-        const selfBalance = (await publicClient.readContract({
-          address: selfToken,
-          abi: parsedErc20ABI,
-          functionName: 'balanceOf',
-          args: [address as `0x${string}`],
-        })) as bigint;
-
         console.log('Token balances:', {
           system: systemBalance.toString(),
-          self: selfBalance.toString(),
           requiredSystem: systemApprovalAmount.toString(),
           requiredSelf: selfApprovalAmount.toString(),
         });
