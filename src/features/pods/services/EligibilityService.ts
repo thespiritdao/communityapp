@@ -1,5 +1,9 @@
 import { supabase } from '@/utils/supabaseClient';
-import { walletsForBalanceCheck } from '@/services/userWalletsService';
+// NOTE: userWalletsService imports the SERVICE-ROLE admin client (server-only).
+// EligibilityService is imported by client components, so we must NOT statically
+// import it here or the service-role key gets pulled into the client bundle
+// (crashes with "Service Role Key is missing"). Load it dynamically inside the
+// server-only code path instead.
 import { fetchTokenBalances } from '@/utils/fetchTokenBalances';
 import { ScalableTokenService } from '@/services/ScalableTokenService';
 import { EligibilityModuleService } from '@/services/eligibilityModuleService';
@@ -731,9 +735,13 @@ export class EligibilityService {
       // If this pod counts verified linked wallets, sum held + staked across
       // the member's SpiritDAO wallet + linked external wallets. Otherwise just
       // the given wallet (safe default).
-      const addresses = (await this.podCountsLinkedWallets(podId))
-        ? await walletsForBalanceCheck(userAddress)
-        : [userAddress.toLowerCase()];
+      let addresses = [userAddress.toLowerCase()];
+      if (await this.podCountsLinkedWallets(podId)) {
+        const { walletsForBalanceCheck } = await import(
+          '@/services/userWalletsService'
+        );
+        addresses = await walletsForBalanceCheck(userAddress);
+      }
 
       let held = 0;
       let staked = 0;

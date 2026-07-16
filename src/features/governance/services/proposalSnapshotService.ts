@@ -23,7 +23,11 @@
 
 import { supabase } from '@/utils/supabaseClient';
 import { getEligibleVoterWallets } from '@/features/pods/services/podGovernanceConfigService';
-import { walletsForBalanceCheck } from '@/services/userWalletsService';
+// walletsForBalanceCheck lives in userWalletsService, which imports the
+// service-role admin client (server-only). Import it dynamically inside the
+// server-only snapshot path so the service-role key never reaches a client
+// bundle. (This service is server-only today, but the dynamic import keeps it
+// safe if that ever changes.)
 import {
   HYDREX_STAKING_ENABLED,
   TGN_TOKEN_ADDRESS,
@@ -173,9 +177,13 @@ export async function computeEligibilitySnapshot(
     const batch = wallets.slice(i, i + BALANCE_BATCH_SIZE);
     const batchRows = await Promise.all(
       batch.map(async (wallet): Promise<SnapshotRow> => {
-        const addresses = countLinkedWallets
-          ? await walletsForBalanceCheck(wallet)
-          : [wallet.toLowerCase()];
+        let addresses = [wallet.toLowerCase()];
+        if (countLinkedWallets) {
+          const { walletsForBalanceCheck } = await import(
+            '@/services/userWalletsService'
+          );
+          addresses = await walletsForBalanceCheck(wallet);
+        }
 
         let held = 0;
         let staked = 0;
