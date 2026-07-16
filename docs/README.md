@@ -53,13 +53,24 @@ the SpiritDAO Community App. New contributors should start here.
 ## Newsletter drafts
 
 Community-facing announcements written alongside engineering work. Not
-authoritative — they document intent, not state.
+authoritative — they document intent, not state. Published drafts are archived
+in [`archive/newsletters/`](archive/newsletters/).
 
-| Doc | What it announces |
+## Archive
+
+Historical, superseded, and one-off docs live in [`archive/`](archive/) to keep
+the active surface clean. Nothing is deleted — kept for record/reasoning, but NOT
+current reference:
+
+| Subfolder | Contents |
 |---|---|
-| [newsletter-password-vault](newsletter-password-vault.md) | Password Vault launch |
-| [newsletter-permissions-update](newsletter-permissions-update.md) | Per-role permissions surface |
-| [newsletter-permissions-collapsible](newsletter-permissions-collapsible.md) | Collapsible permission editor |
+| `archive/newsletters/` | Published member-facing newsletter drafts (point-in-time). |
+| `archive/outreach/` | Outreach drafts, the investor/partner memo, the TreeGens ask. |
+| `archive/self-redesign-specs/` | Working notes + intermediate specs from the $SELF redesign. Canonical shipped spec stays active: `spec-self-soulbound-redesign.md`. |
+| `archive/audits/` | Dated point-in-time audits (snapshots, not living docs). |
+| `archive/research/` | Ecosystem/competitive research + conversation notes. |
+
+To resurrect something as living reference, move it back and index it above.
 
 ## What's NOT in here
 
