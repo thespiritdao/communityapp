@@ -911,11 +911,15 @@ export function TreasuryManagement({
                   disabled={isLoadingBalances}
                 >
                   <option value="">Select token...</option>
-                  {balances.map((token) => (
-                    <option key={token.address} value={token.address}>
-                      {token.symbol} - {token.balance} available
-                    </option>
-                  ))}
+                  {/* Display-only community tokens (e.g. $TGN) are shown as
+                      balances but can never be distributed from the treasury */}
+                  {balances
+                    .filter((token) => !token.displayOnly)
+                    .map((token) => (
+                      <option key={token.address} value={token.address}>
+                        {token.symbol} - {token.balance} available
+                      </option>
+                    ))}
                 </select>
                 {isLoadingBalances && (
                   <p className="text-sm text-gray-500">
@@ -1370,7 +1374,9 @@ export function TreasuryManagement({
                 <div className="p-4 border rounded-lg">
                   <h4 className="font-semibold mb-2">Supported Tokens</h4>
                   <div className="space-y-2 mb-4">
-                    {balances.map((token) => (
+                    {balances
+                      .filter((token) => !token.displayOnly)
+                      .map((token) => (
                       <div
                         key={token.address}
                         className="flex items-center justify-between p-2 bg-gray-50 rounded"

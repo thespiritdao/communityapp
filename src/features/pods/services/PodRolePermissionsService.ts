@@ -545,7 +545,7 @@ export class PodRolePermissionsService {
           passwordsAccess: false,
           passwordsManage: false,
         },
-        max_holders: 100,
+        max_holders: 10000,
         created_by: createdBy,
       });
     } catch (error) {

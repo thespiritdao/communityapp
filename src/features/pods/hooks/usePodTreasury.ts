@@ -124,8 +124,10 @@ export function usePodTreasury(
 
     try {
       console.log('🏦 Loading balances for treasury:', treasuryAddress);
-      const newBalances =
-        await PodTreasuryService.getTokenBalances(treasuryAddress);
+      const newBalances = await PodTreasuryService.getTokenBalances(
+        treasuryAddress,
+        podId,
+      );
       setBalances(newBalances);
       console.log('🏦 Balances loaded:', newBalances.length, 'tokens');
     } catch (err) {
@@ -134,7 +136,7 @@ export function usePodTreasury(
     } finally {
       setIsLoadingBalances(false);
     }
-  }, [treasuryAddress]);
+  }, [treasuryAddress, podId]);
 
   /**
    * Load transaction history

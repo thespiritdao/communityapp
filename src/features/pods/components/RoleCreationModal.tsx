@@ -150,7 +150,7 @@ export function RoleCreationModal({
                 id="max-supply"
                 type="number"
                 min="1"
-                max="100"
+                max="10000"
                 value={maxSupply}
                 onChange={(e) => setMaxSupply(e.target.value)}
                 placeholder="5"

@@ -310,7 +310,7 @@ This pod requests permission to:
             knowledgeBaseManage: false,
           },
           eligibility_criteria: podData.memberEligibilityCriteria || [],
-          max_holders: 100,
+          max_holders: 10000,
           created_by: podData.created_by_address,
         });
 

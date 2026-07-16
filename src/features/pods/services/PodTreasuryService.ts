@@ -145,6 +145,9 @@ export interface TokenBalance {
   balance: string;
   decimals: number;
   valueUSD?: number;
+  /** Registry-sourced community token (e.g. $TGN): shown as a balance, but not
+   *  a supported treasury token — excluded from distributions and actions. */
+  displayOnly?: boolean;
 }
 
 export interface TreasuryTransaction {
@@ -175,6 +178,7 @@ export class PodTreasuryService {
    */
   static async getTokenBalances(
     treasuryAddress: string,
+    podId?: string,
   ): Promise<TokenBalance[]> {
     try {
       console.log('🏦 Loading token balances for treasury:', treasuryAddress);
@@ -190,6 +194,34 @@ export class PodTreasuryService {
       const standardTokens = [SYSTEM_TOKEN].filter(
         (addr) => addr && addr !== '0x0000000000000000000000000000000000000000',
       );
+
+      // Community tokens (e.g. $TGN for TreeGens): any active ERC-20 in the
+      // tokens registry OWNED by this pod is shown as a display-only treasury
+      // balance. Governance-only by design — these never join distributions,
+      // bounties, or the marketplace; the registry row is the single opt-in.
+      const displayOnlyAddresses = new Set<string>();
+      if (podId) {
+        try {
+          const { data: registryTokens } = await supabase
+            .from('tokens')
+            .select('contract_address')
+            .eq('owner_pod_id', podId)
+            .eq('is_active', true)
+            .eq('token_type', 'erc20');
+          for (const t of registryTokens ?? []) {
+            const addr = (t.contract_address as string)?.toLowerCase();
+            if (
+              addr &&
+              !standardTokens.some((s) => s.toLowerCase() === addr)
+            ) {
+              displayOnlyAddresses.add(addr);
+              standardTokens.push(t.contract_address as string);
+            }
+          }
+        } catch (registryErr) {
+          console.warn('🏦 Registry token lookup failed (non-fatal):', registryErr);
+        }
+      }
 
       console.log('🏦 Standard tokens to check:', standardTokens);
 
@@ -225,8 +257,15 @@ export class PodTreasuryService {
               decimals,
             });
 
-            // Also check the treasury's internal accounting
+            const isDisplayOnly = displayOnlyAddresses.has(
+              tokenAddress.toLowerCase(),
+            );
+
+            // Also check the treasury's internal accounting (skip for
+            // display-only registry tokens: they're never registered via
+            // receiveTokens(), so a mismatch there is expected, not an error)
             let internalBalance;
+            if (!isDisplayOnly)
             try {
               const treasuryContract = getContract({
                 address: treasuryAddress as `0x${string}`,
@@ -268,6 +307,7 @@ export class PodTreasuryService {
               name,
               balance: formattedBalance,
               decimals,
+              ...(isDisplayOnly ? { displayOnly: true } : {}),
               // TODO: Add price oracle integration for valueUSD
             };
           } catch (error) {
