@@ -9,6 +9,7 @@ import { HATS_PROTOCOL_ADDRESS } from '@/constants/hatsProtocol';
 import HatsProtocolABI from '@/abis/HatsProtocol.json';
 import type { HatPermissions } from '@/services/hatPermissionsService';
 import { useUserWallet } from './useUserWallet';
+import { useDatabaseFirstPermissions } from './useDatabaseFirstPermissions';
 
 /**
  * Hybrid Permission Hook - Security Model for Fund-Related Features
@@ -45,6 +46,13 @@ export function useHybridPodPermission(
   // See docs/spec-platform-identity-multi-wallet.md.
   const userWallet = useUserWallet();
   const address = (userWallet ?? undefined) as `0x${string}` | undefined;
+
+  // Executive Pod Leaders have unfettered access to every pod's management,
+  // consistent with useDatabaseFirstPermissions.canManagePodSync (which already
+  // grants execs access and is what lets them REACH a pod's manage page). An
+  // exec by definition won't hold the target pod's hat, so this override must
+  // bypass the per-pod hat/role check below.
+  const { isExecutiveLeader } = useDatabaseFirstPermissions();
 
   // Step 1: Get user's roles and HAT IDs from database
   const { userRoles, isLoading: rolesLoading } = useHatPermissions();
@@ -105,6 +113,17 @@ export function useHybridPodPermission(
     if (!podId) {
       return {
         hasPermission: false,
+        isLoading: false,
+        error: null,
+      };
+    }
+
+    // Executive Pod Leaders get full access to every pod, even pods where they
+    // hold no role/hat. This mirrors canManagePodSync's exec override and
+    // bypasses the per-pod hat + DB + agreement checks below.
+    if (isExecutiveLeader) {
+      return {
+        hasPermission: true,
         isLoading: false,
         error: null,
       };
@@ -176,6 +195,7 @@ export function useHybridPodPermission(
     rolesLoading,
     agreementsLoading,
     hatError,
+    isExecutiveLeader,
   ]);
 
   return result;
