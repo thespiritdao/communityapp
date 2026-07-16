@@ -84,8 +84,15 @@ Recent examples, all the same root cause:
    REACH a pod's manage page, but System B (which gates the tabs) had NO exec
    override, so every leader tab was hidden. (Fixed 2026-07-16 by adding the exec
    override to System B.)
+4. **Server module route rejected execs** — `PUT /api/pods/[id]/modules` gated on
+   `isPodLeader` FIRST and 403'd ("not a pod leader") before the exec-only-keys
+   check ran. The client hooks let an exec click the toggle, but the server —
+   which had no exec override — denied it. (Fixed 2026-07-16: base gate now allows
+   this pod's leader OR an Executive Pod Leader, mirroring the hooks.)
 
-The pattern: a rule lived in one system and not the other. Three bugs, one cause.
+The pattern: a rule lived in one system and not the other. Four bugs, one cause.
+The server is a THIRD copy of "who may manage this pod" — include it in the
+"check every layer" invariant below, not just the two client hooks.
 
 ## The current invariant (until consolidation)
 

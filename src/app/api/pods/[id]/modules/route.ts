@@ -142,8 +142,18 @@ export async function PUT(req: NextRequest): Promise<NextResponse> {
   const podId = podIdFromRequest(req);
   if (!podId) return NextResponse.json({ error: 'Missing pod ID' }, { status: 400 });
 
-  const isLeader = await isPodLeader(podId, wallet);
-  if (!isLeader) return NextResponse.json({ error: 'Forbidden: not a pod leader' }, { status: 403 });
+  // Base authorization: this pod's leader OR an Executive Pod Leader (execs have
+  // full access to every pod's management, consistent with the client hooks).
+  const [isLeader, isExec] = await Promise.all([
+    isPodLeader(podId, wallet),
+    isExecutiveLeader(wallet),
+  ]);
+  if (!isLeader && !isExec) {
+    return NextResponse.json(
+      { error: 'Forbidden: not a pod leader or executive' },
+      { status: 403 },
+    );
+  }
 
   const body = await req.json();
 
@@ -162,7 +172,7 @@ export async function PUT(req: NextRequest): Promise<NextResponse> {
   // wearer of the Executive Pod Leader hat, even though ordinary pod leaders
   // can toggle everything else. Enforce before writing.
   const touchesExecOnly = Object.keys(updates).some((k) => EXEC_ONLY_KEYS.has(k));
-  if (touchesExecOnly && !(await isExecutiveLeader(wallet))) {
+  if (touchesExecOnly && !isExec) {
     return NextResponse.json(
       {
         error:
