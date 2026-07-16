@@ -13,6 +13,7 @@ import {
 import { EnhancedToggle } from '@/components/ui/enhanced-toggle';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
+import { useDatabaseFirstPermissions } from '@/hooks/useDatabaseFirstPermissions';
 import {
   MessageCircle,
   Users,
@@ -237,6 +238,10 @@ export default function PodModulesManager({
   membershipHatId,
   onModuleToggle,
 }: PodModulesManagerProps) {
+  // Exec-only module toggles (e.g. external wallet linking) gate on whether the
+  // CURRENT USER is an Executive Pod Leader, not on which pod's page this is.
+  // So an exec can enable such a module on ANY pod they're managing.
+  const { isExecutiveLeader } = useDatabaseFirstPermissions();
   const [modules, setModules] = useState<PodModules>({
     chat_enabled: false,
     forum_enabled: false,
@@ -420,7 +425,9 @@ export default function PodModulesManager({
                 toggleModule(module.key, checked)
               }
               disabled={
-                !isManager || saving || (module.execOnly && !isExecPod)
+                !isManager ||
+                saving ||
+                (module.execOnly && !isExecutiveLeader)
               }
               size="md"
               variant="button"
