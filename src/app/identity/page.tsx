@@ -8,6 +8,7 @@ import { useIdentityPage } from '@/features/identity/hooks/useIdentityPage';
 import { DatabaseTokenGallery } from '@/features/identity/components/DatabaseTokenGallery';
 import { TenureBand } from '@/features/identity/components/TenureBand';
 import { InviteCodeDisplay } from '@/features/identity/components/InviteCodeDisplay';
+import { LinkedWalletsSection } from '@/features/identity/components/LinkedWalletsSection';
 import '@/features/identity/styles/identityStyles.css';
 import '@/features/identity/styles/TokenGallery.css';
 import '@/features/identity/styles/ProfileModal.css';
@@ -181,6 +182,9 @@ function IdentityPageContent() {
           <DatabaseTokenGallery walletAddress={address} category="accreditation" />
         </div>
       </div>
+
+      {/* Linked Wallets - external wallet identity */}
+      <LinkedWalletsSection walletAddress={address} />
 
       {/* Invite Code Display - Only visible to account owner */}
       <InviteCodeDisplay walletAddress={address} />

@@ -1,4 +1,5 @@
 import { supabase } from '@/utils/supabaseClient';
+import { walletsForBalanceCheck } from '@/services/userWalletsService';
 import { fetchTokenBalances } from '@/utils/fetchTokenBalances';
 import { ScalableTokenService } from '@/services/ScalableTokenService';
 import { EligibilityModuleService } from '@/services/eligibilityModuleService';
@@ -270,7 +271,7 @@ export class EligibilityService {
       //   return await this.evaluateReputationScore(userAddress, criterion);
 
       case 'staking':
-        return await this.evaluateStaking(userAddress, criterion);
+        return await this.evaluateStaking(userAddress, criterion, podId);
 
       case 'credential_ownership':
         return await this.evaluateCredentialOwnership(userAddress, criterion);
@@ -718,6 +719,7 @@ export class EligibilityService {
   private static async evaluateStaking(
     userAddress: string,
     criterion: EligibilityCriteria,
+    podId?: string,
   ): Promise<{ passed: boolean; value?: any; details?: string }> {
     // Staking source seam. Only consulted when the criterion explicitly opts in
     // via `staking_pool` AND the source is enabled. Otherwise preserve the
@@ -725,27 +727,39 @@ export class EligibilityService {
     // role is accidentally gated on an unconfirmed/disabled source.
     if (criterion.staking_pool === 'hydrex' && HYDREX_STAKING_ENABLED) {
       const minimum = Number.parseFloat(criterion.minimum_staked || '0');
-      const stake = await fetchQualifyingStakedTgn(userAddress);
-      if (!stake.resolved) {
-        return { passed: false, details: stake.details };
+
+      // If this pod counts verified linked wallets, sum held + staked across
+      // the member's SpiritDAO wallet + linked external wallets. Otherwise just
+      // the given wallet (safe default).
+      const addresses = (await this.podCountsLinkedWallets(podId))
+        ? await walletsForBalanceCheck(userAddress)
+        : [userAddress.toLowerCase()];
+
+      let held = 0;
+      let staked = 0;
+      for (const addr of addresses) {
+        const stake = await fetchQualifyingStakedTgn(addr);
+        if (!stake.resolved) {
+          return { passed: false, details: stake.details };
+        }
+        staked += stake.qualifyingTgn;
+        // Held wallet balance SUMS with Hydrex-staked toward the threshold
+        // (TreeGens rule: "2K $TGN held or staked"). Mirrors the snapshot
+        // layer's held+staked sum.
+        const heldResult = await this.evaluateRegisteredErc20Balance(
+          addr,
+          TGN_TOKEN_ADDRESS,
+          0,
+        );
+        held += heldResult ? Number(heldResult.value) || 0 : 0;
       }
-      // Held wallet balance SUMS with Hydrex-staked toward the threshold
-      // (TreeGens rule: "2K $TGN held or staked"). This must live in ONE
-      // criterion because criteria combine with AND — a separate Currency
-      // criterion cannot express the OR. Mirrors the snapshot layer's
-      // held+staked sum.
-      const heldResult = await this.evaluateRegisteredErc20Balance(
-        userAddress,
-        TGN_TOKEN_ADDRESS,
-        0,
-      );
-      const held = heldResult ? Number(heldResult.value) || 0 : 0;
-      const total = held + stake.qualifyingTgn;
+
+      const total = held + staked;
       const passed = total >= minimum;
       return {
         passed,
         value: total.toString(),
-        details: `Required: ${minimum} $TGN (held + staked), Available: ${held.toFixed(2)} held + ${stake.qualifyingTgn.toFixed(2)} staked = ${total.toFixed(2)}`,
+        details: `Required: ${minimum} $TGN (held + staked), Available: ${held.toFixed(2)} held + ${staked.toFixed(2)} staked = ${total.toFixed(2)}`,
       };
     }
 
@@ -753,6 +767,32 @@ export class EligibilityService {
       passed: false,
       details: 'Staking verification system not yet implemented',
     };
+  }
+
+  /** Whether a pod counts a member's verified linked-wallet balances. Cached
+   *  briefly per pod. Off (single-wallet) unless the pod's module flag is on. */
+  private static linkedWalletFlagCache = new Map<
+    string,
+    { value: boolean; at: number }
+  >();
+  private static async podCountsLinkedWallets(
+    podId?: string,
+  ): Promise<boolean> {
+    if (!podId) return false;
+    const cached = this.linkedWalletFlagCache.get(podId);
+    if (cached && Date.now() - cached.at < 60_000) return cached.value;
+    try {
+      const { data } = await supabase
+        .from('pod_modules')
+        .select('external_wallet_linking_enabled')
+        .eq('pod_id', podId)
+        .maybeSingle();
+      const value = data?.external_wallet_linking_enabled === true;
+      this.linkedWalletFlagCache.set(podId, { value, at: Date.now() });
+      return value;
+    } catch {
+      return false;
+    }
   }
 
   /**

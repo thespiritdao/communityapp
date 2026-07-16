@@ -26,6 +26,7 @@ export interface UserWallet {
   linkedAt: string;
   linkedViaWallet: string | null;
   lastSeenAt: string | null;
+  walletType: 'device' | 'external';
 }
 
 // ── small in-memory cache (per server instance) ────────────────────
@@ -70,6 +71,7 @@ function toUserWallet(row: any): UserWallet {
     linkedAt: row.linked_at,
     linkedViaWallet: row.linked_via_wallet ?? null,
     lastSeenAt: row.last_seen_at ?? null,
+    walletType: row.wallet_type === 'external' ? 'external' : 'device',
   };
 }
 
@@ -128,6 +130,32 @@ export async function findUserByWallet(
     .maybeSingle();
   if (error || !data) return null;
   return { userId: data.user_id, isCanonical: !!data.is_canonical };
+}
+
+/**
+ * Given a member's wallet, return EVERY wallet address whose balances should
+ * count for that member: their own plus any verified linked wallets. Used to
+ * sum token balances across a member's SpiritDAO + external wallets for
+ * eligibility and voting snapshots.
+ *
+ * If the wallet resolves to no user (or lookups fail), returns just the input
+ * wallet, so behavior is identical to the single-wallet path (safe default).
+ */
+export async function walletsForBalanceCheck(
+  memberWallet: string,
+): Promise<string[]> {
+  const self = memberWallet.toLowerCase();
+  try {
+    const user = await findUserByWallet(self);
+    if (!user) return [self];
+    const wallets = await getUserWallets(user.userId);
+    const all = new Set<string>([self]);
+    for (const w of wallets) all.add(w.walletAddress.toLowerCase());
+    return Array.from(all);
+  } catch (e) {
+    console.warn('[userWallets] walletsForBalanceCheck fallback:', e);
+    return [self];
+  }
 }
 
 /**
@@ -192,6 +220,8 @@ export async function insertLinkedWallet(args: {
   walletAddress: string;
   issuedByWallet: string;
   nickname?: string;
+  /** 'device' (CDP pairing, default) or 'external' (verified MetaMask etc.) */
+  walletType?: 'device' | 'external';
 }): Promise<UserWallet | null> {
   const target = args.walletAddress.toLowerCase();
 
@@ -220,6 +250,7 @@ export async function insertLinkedWallet(args: {
       nickname: args.nickname ?? null,
       linked_via_wallet: args.issuedByWallet.toLowerCase(),
       last_seen_at: new Date().toISOString(),
+      wallet_type: args.walletType ?? 'device',
     })
     .select('*')
     .single();

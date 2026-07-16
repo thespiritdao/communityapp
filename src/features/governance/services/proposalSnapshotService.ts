@@ -23,6 +23,7 @@
 
 import { supabase } from '@/utils/supabaseClient';
 import { getEligibleVoterWallets } from '@/features/pods/services/podGovernanceConfigService';
+import { walletsForBalanceCheck } from '@/services/userWalletsService';
 import {
   HYDREX_STAKING_ENABLED,
   TGN_TOKEN_ADDRESS,
@@ -123,6 +124,16 @@ export async function computeEligibilitySnapshot(
   const wallets = await getEligibleVoterWallets(podId, tier);
   if (wallets.length === 0) return [];
 
+  // If this pod counts verified linked wallets, each member's snapshot row sums
+  // their SpiritDAO wallet + linked external wallets (still ONE row per member,
+  // keyed by their eligible-voter wallet). Otherwise, read the single wallet.
+  const { data: mod } = await supabase
+    .from('pod_modules')
+    .select('external_wallet_linking_enabled')
+    .eq('pod_id', podId)
+    .maybeSingle();
+  const countLinkedWallets = mod?.external_wallet_linking_enabled === true;
+
   const { createPublicClient, http } = await import('viem');
   const { base } = await import('viem/chains');
   const publicClient = createPublicClient({ chain: base, transport: http() });
@@ -133,28 +144,45 @@ export async function computeEligibilitySnapshot(
     String(token.contract_address).toLowerCase() ===
       TGN_TOKEN_ADDRESS.toLowerCase();
 
+  // Read held + staked for ONE address.
+  const readOne = async (
+    addr: string,
+  ): Promise<{ held: number; staked: number }> => {
+    const rawHeld = await publicClient.readContract({
+      address: token.contract_address as `0x${string}`,
+      abi: ERC20_BALANCE_ABI,
+      functionName: 'balanceOf',
+      args: [addr as `0x${string}`],
+    });
+    const held = Number(rawHeld) / 10 ** decimals;
+    let staked = 0;
+    if (includeStaked) {
+      const stake = await fetchQualifyingStakedTgn(addr);
+      if (!stake.resolved) {
+        throw new Error(
+          `Hydrex staked balance unavailable for ${addr}: ${stake.details}`,
+        );
+      }
+      staked = stake.qualifyingTgn;
+    }
+    return { held, staked };
+  };
+
   const rows: SnapshotRow[] = [];
   for (let i = 0; i < wallets.length; i += BALANCE_BATCH_SIZE) {
     const batch = wallets.slice(i, i + BALANCE_BATCH_SIZE);
     const batchRows = await Promise.all(
       batch.map(async (wallet): Promise<SnapshotRow> => {
-        const rawHeld = await publicClient.readContract({
-          address: token.contract_address as `0x${string}`,
-          abi: ERC20_BALANCE_ABI,
-          functionName: 'balanceOf',
-          args: [wallet as `0x${string}`],
-        });
-        const held = Number(rawHeld) / 10 ** decimals;
+        const addresses = countLinkedWallets
+          ? await walletsForBalanceCheck(wallet)
+          : [wallet.toLowerCase()];
 
+        let held = 0;
         let staked = 0;
-        if (includeStaked) {
-          const stake = await fetchQualifyingStakedTgn(wallet);
-          if (!stake.resolved) {
-            throw new Error(
-              `Hydrex staked balance unavailable for ${wallet}: ${stake.details}`,
-            );
-          }
-          staked = stake.qualifyingTgn;
+        for (const addr of addresses) {
+          const r = await readOne(addr);
+          held += r.held;
+          staked += r.staked;
         }
 
         const total = held + staked;

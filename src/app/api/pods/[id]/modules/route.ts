@@ -24,7 +24,13 @@ const ALLOWED_KEYS = [
   'surveys_enabled',
   'governance_enabled',
   'passwords_enabled',
+  'external_wallet_linking_enabled',
 ] as const;
+
+// Keys that only the Executive Pod may toggle (not ordinary pod leaders).
+// External-wallet linking changes how a pod's eligibility/voting is counted,
+// so it's a DAO-level exception granted per pod by the Exec Pod.
+const EXEC_ONLY_KEYS = new Set<string>(['external_wallet_linking_enabled']);
 
 function getWalletFromToken(token: string): string | null {
   try {
@@ -58,6 +64,44 @@ async function isPodLeader(podId: string, wallet: string): Promise<boolean> {
     .single();
 
   return !!member;
+}
+
+// Does this wallet wear the Executive Pod Leader hat on-chain?
+async function isExecutiveLeader(wallet: string): Promise<boolean> {
+  try {
+    const { getHatId } = await import('@/lib/hatRegistry');
+    const execHatId = await getHatId('EXECUTIVE_POD_LEADER');
+    if (!execHatId) return false;
+    const { createPublicClient, http } = await import('viem');
+    const { base } = await import('viem/chains');
+    const HATS = process.env.NEXT_PUBLIC_HATS_CONTRACT as `0x${string}`;
+    if (!HATS) return false;
+    const client = createPublicClient({
+      chain: base,
+      transport: http(process.env.NEXT_PUBLIC_RPC_URL || 'https://mainnet.base.org'),
+    });
+    const balance = (await client.readContract({
+      address: HATS,
+      abi: [
+        {
+          name: 'balanceOf',
+          type: 'function',
+          stateMutability: 'view',
+          inputs: [
+            { name: 'wearer', type: 'address' },
+            { name: 'hatId', type: 'uint256' },
+          ],
+          outputs: [{ name: '', type: 'uint256' }],
+        },
+      ],
+      functionName: 'balanceOf',
+      args: [wallet as `0x${string}`, BigInt(execHatId)],
+    })) as bigint;
+    return balance > 0n;
+  } catch (e) {
+    console.warn('[modules] exec leader check failed:', e);
+    return false;
+  }
 }
 
 function podIdFromRequest(req: NextRequest): string {
@@ -112,6 +156,20 @@ export async function PUT(req: NextRequest): Promise<NextResponse> {
 
   if (Object.keys(updates).length === 0) {
     return NextResponse.json({ error: 'No valid module keys provided' }, { status: 400 });
+  }
+
+  // Exec-only keys (e.g. external wallet linking) may be toggled ONLY by a
+  // wearer of the Executive Pod Leader hat, even though ordinary pod leaders
+  // can toggle everything else. Enforce before writing.
+  const touchesExecOnly = Object.keys(updates).some((k) => EXEC_ONLY_KEYS.has(k));
+  if (touchesExecOnly && !(await isExecutiveLeader(wallet))) {
+    return NextResponse.json(
+      {
+        error:
+          'Forbidden: this setting can only be changed by the Executive Pod.',
+      },
+      { status: 403 },
+    );
   }
 
   // Snapshot prior state so we can fire Pulse events only on actual transitions.

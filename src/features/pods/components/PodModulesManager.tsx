@@ -30,6 +30,7 @@ import {
   Bot,
   Vote,
   KeyRound,
+  Wallet,
 } from 'lucide-react';
 import PodChatManager from './PodChatManager';
 import PodForumManager from './PodForumManager';
@@ -66,6 +67,7 @@ interface PodModules {
   community_agent_enabled: boolean;
   governance_enabled: boolean;
   passwords_enabled: boolean;
+  external_wallet_linking_enabled: boolean;
   chat_config?: any;
   forum_config?: any;
   treasury_config?: any;
@@ -89,6 +91,8 @@ interface ModuleInfo {
   configComponent: string | null;
   /** When true, enabling this module creates a dedicated tab in the pod management menu */
   createsTab?: boolean;
+  /** When true, only the Executive Pod may toggle this (pod leaders see it read-only) */
+  execOnly?: boolean;
 }
 
 const CORE_MODULES: ModuleInfo[] = [
@@ -197,6 +201,18 @@ const ADDON_MODULES: ModuleInfo[] = [
     configComponent: 'passwords',
     createsTab: false,
   },
+  {
+    key: 'external_wallet_linking_enabled',
+    label: 'External Wallet Linking',
+    description:
+      "Count members' verified external wallets (e.g. MetaMask) toward this pod's eligibility and voting. Members link and prove ownership by signing; balances are read-only. Enabled by the Executive Pod.",
+    icon: Wallet,
+    color: '#8F6B2F',
+    bgColor: '#FAF4EC',
+    configComponent: null,
+    createsTab: false,
+    execOnly: true,
+  },
 ];
 
 const PAID_MODULES: ModuleInfo[] = [
@@ -234,6 +250,7 @@ export default function PodModulesManager({
     community_agent_enabled: false,
     governance_enabled: true,
     passwords_enabled: false,
+    external_wallet_linking_enabled: false,
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -273,6 +290,8 @@ export default function PodModulesManager({
           community_agent_enabled: data.community_agent_enabled ?? false,
           governance_enabled: data.governance_enabled ?? true,
           passwords_enabled: data.passwords_enabled ?? false,
+          external_wallet_linking_enabled:
+            data.external_wallet_linking_enabled ?? false,
           chat_config: data.chat_config,
           forum_config: data.forum_config,
           treasury_config: data.treasury_config,
@@ -380,6 +399,14 @@ export default function PodModulesManager({
                   className="text-base font-medium cursor-pointer"
                 >
                   {module.label}
+                  {module.execOnly && (
+                    <Badge
+                      variant="secondary"
+                      className="ml-2 align-middle text-[10px]"
+                    >
+                      Exec only
+                    </Badge>
+                  )}
                 </Label>
                 <p className="text-sm text-muted-foreground">
                   {module.description}
@@ -392,7 +419,9 @@ export default function PodModulesManager({
               onCheckedChange={(checked) =>
                 toggleModule(module.key, checked)
               }
-              disabled={!isManager || saving}
+              disabled={
+                !isManager || saving || (module.execOnly && !isExecPod)
+              }
               size="md"
               variant="button"
             />
