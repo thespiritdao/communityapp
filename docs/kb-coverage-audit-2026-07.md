@@ -42,15 +42,15 @@ can likely be deleted).
 
 ## Cheapest wins
 
-1. **Mirror the 10 user guides** (`src/guides/user/*.md` — already Sensemaker's
-   corpus) into the KB as global markdown items, one per category. Text costs
-   nothing to update, unlike video, and the KB now proves markdown rendering
-   works. This alone closes Governance depth, wallet linking (global), and
-   onboarding gaps.
+1. ✅ **DONE 2026-07-16 — Mirrored the 10 user guides** into the KB as global
+   markdown items via `scripts/kb-mirror-guides.mjs`. **Re-run that script
+   whenever the guides change** (same cadence as `npm run embed:spiritdao`) —
+   it updates existing items in place. This closed the Governance-depth,
+   wallet-linking (global), and onboarding-text gaps.
 2. Write short markdown items for the zero-coverage features (Surveys, Vault,
    Community Agent, Chat, $SELF/Tenure, Agreements) — the guides corpus doesn't
-   cover most of these either, so writing them also enriches Sensemaker on the
-   next `npm run embed:spiritdao`.
+   cover most of these either, so writing them as guides 11+ enriches Sensemaker
+   AND the KB (embed + mirror both sweep the directory/manifest).
 3. Delete the 0-view duplicate "Profile Setup" video (needs a human check of
    which copy is current first).
 
