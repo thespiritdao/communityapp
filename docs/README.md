@@ -21,6 +21,7 @@ the SpiritDAO Community App. New contributors should start here.
 | [treasury-v3-audit-and-deployment-2026-05](treasury-v3-audit-and-deployment-2026-05.md) | Treasury V3 contracts + migration path |
 | [governance-flexibility-layer-a-2026-05](governance-flexibility-layer-a-2026-05.md) | Per-pod configurable governance parameters |
 | [treegens-integration](treegens-integration.md) | Generic per-pod token eligibility gate ($TGN); 501(c)(3) governance-only guardrails |
+| [guide-treegens-external-wallet-linking](guide-treegens-external-wallet-linking.md) | Member-facing step-by-step: link an external wallet so its $TGN counts (for the TreeGens knowledge base) |
 | [builder-codes-integration-scope](builder-codes-integration-scope.md) | ERC-8021 transaction attribution |
 
 ## UX patterns

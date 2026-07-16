@@ -31,6 +31,7 @@ import {
   getV3TreasuryAddress,
 } from '@/features/pods/utils/treasuryAddressUtils';
 import { TreasuryActivationCard } from '@/features/pods/components/TreasuryActivationCard';
+import PodGovernanceTokenBalance from '@/features/pods/components/PodGovernanceTokenBalance';
 import { supabase } from '@/utils/supabaseClient';
 import dynamic from 'next/dynamic';
 import { PersonalCalendar } from '@/features/events/components/PersonalCalendar';
@@ -457,6 +458,16 @@ export default function PodDetailPage() {
           <div>
             <p className="text-gray-700">{pod.description}</p>
           </div>
+
+          {/* Community governance token — read-only eligibility signal.
+              Renders only for pods with a gating-enabled registry token
+              (e.g. $TGN for TreeGens); null for everyone else. */}
+          {id && address && (
+            <PodGovernanceTokenBalance
+              walletAddress={address}
+              podId={String(id)}
+            />
+          )}
 
           {/* Treasury V3 — activation CTA or post-deploy status */}
           {pod.treasury_threshold_bps != null && (

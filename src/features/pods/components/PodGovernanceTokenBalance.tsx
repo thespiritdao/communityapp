@@ -11,7 +11,11 @@
  *     deliberately no buy / swap / transfer affordance. The platform never issues,
  *     holds, or exchanges third-party community tokens.
  *
- * Single on-chain read for the current wallet (not a per-member-list read).
+ * Reads only the current user's wallet(s), never the member list. When the pod
+ * has External Wallet Linking enabled (pod_modules.external_wallet_linking_enabled),
+ * the balance sums the user's SpiritDAO wallet + verified linked wallets —
+ * mirroring walletsForBalanceCheck() so the number shown matches what
+ * eligibility checks and vote snapshots actually count.
  */
 
 import React, { useEffect, useState } from 'react';
@@ -52,6 +56,7 @@ export const PodGovernanceTokenBalance: React.FC<
   const publicClient = usePublicClient();
   const [token, setToken] = useState<GovToken | null>(null);
   const [balance, setBalance] = useState<string | null>(null);
+  const [includesLinked, setIncludesLinked] = useState(false);
 
   // Load the governance token metadata from the registry (gating_enabled only).
   useEffect(() => {
@@ -86,22 +91,63 @@ export const PodGovernanceTokenBalance: React.FC<
     return () => {
       cancelled = true;
     };
-  }, [contractAddress]);
+  }, [contractAddress, podId]);
 
-  // Read the on-chain balance once for the current wallet.
+  // Read the on-chain balance for the current user's wallet(s). When the pod
+  // counts linked wallets, sum across them (self ∪ the user's user_wallets rows
+  // via /api/auth/linked-wallets — the client-side mirror of
+  // walletsForBalanceCheck). Any failure falls back to the single wallet.
   useEffect(() => {
     let cancelled = false;
     (async () => {
       if (!token || !walletAddress || !publicClient) return;
+
+      const addresses = new Set<string>([walletAddress.toLowerCase()]);
+      let linked = false;
       try {
-        const raw = (await publicClient.readContract({
-          address: token.address as `0x${string}`,
-          abi: ERC20_BALANCE_ABI,
-          functionName: 'balanceOf',
-          args: [walletAddress as `0x${string}`],
-        })) as bigint;
+        if (podId) {
+          const { data: mod } = await supabase
+            .from('pod_modules')
+            .select('external_wallet_linking_enabled')
+            .eq('pod_id', podId)
+            .maybeSingle();
+          if (mod?.external_wallet_linking_enabled === true) {
+            const {
+              data: { session },
+            } = await supabase.auth.getSession();
+            if (session?.access_token) {
+              const res = await fetch('/api/auth/linked-wallets', {
+                headers: { Authorization: `Bearer ${session.access_token}` },
+              });
+              if (res.ok) {
+                const body = await res.json();
+                for (const w of body.wallets ?? []) {
+                  if (w?.walletAddress) {
+                    addresses.add(String(w.walletAddress).toLowerCase());
+                  }
+                }
+                linked = addresses.size > 1;
+              }
+            }
+          }
+        }
+      } catch {
+        // Fall back to the single wallet — never block the chip on this.
+      }
+
+      try {
+        let raw = 0n;
+        for (const addr of addresses) {
+          raw += (await publicClient.readContract({
+            address: token.address as `0x${string}`,
+            abi: ERC20_BALANCE_ABI,
+            functionName: 'balanceOf',
+            args: [addr as `0x${string}`],
+          })) as bigint;
+        }
         const human = Number(raw) / 10 ** token.decimals;
         if (!cancelled) {
+          setIncludesLinked(linked);
           setBalance(
             human.toLocaleString(undefined, { maximumFractionDigits: 2 }),
           );
@@ -113,7 +159,7 @@ export const PodGovernanceTokenBalance: React.FC<
     return () => {
       cancelled = true;
     };
-  }, [token, walletAddress, publicClient]);
+  }, [token, walletAddress, publicClient, podId]);
 
   if (!token || balance === null) return null;
 
@@ -127,7 +173,11 @@ export const PodGovernanceTokenBalance: React.FC<
       <span className="font-medium">
         {token.name}: {balance}
       </span>
-      <span className="text-xs opacity-70">governance eligibility</span>
+      <span className="text-xs opacity-70">
+        {includesLinked
+          ? 'governance eligibility · incl. linked wallets'
+          : 'governance eligibility'}
+      </span>
     </div>
   );
 };
