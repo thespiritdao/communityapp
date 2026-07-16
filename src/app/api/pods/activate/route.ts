@@ -71,30 +71,37 @@ export async function POST(request: Request) {
         (l: string) => l?.toLowerCase() === callerAddress.toLowerCase(),
       );
 
-    if (!isLeader && podRow.management_hat_id && HATS_CONTRACT) {
+    if (!isLeader && HATS_CONTRACT) {
       try {
         const publicClient = createPublicClient({
           chain: base,
           transport: http(RPC_URL),
         });
-        const balance = (await publicClient.readContract({
-          address: HATS_CONTRACT,
-          abi: HATS_BALANCE_ABI,
-          functionName: 'balanceOf',
-          args: [
-            callerAddress as `0x${string}`,
-            BigInt(podRow.management_hat_id),
-          ],
-        })) as bigint;
-        isLeader = balance > 0n;
+        // Pod management hat, OR the Executive Pod Leader hat: execs
+        // legitimately deploy/register treasuries on behalf of pods.
+        const { getHatId } = await import('@/lib/hatRegistry');
+        const execHatId = await getHatId('EXECUTIVE_POD_LEADER');
+        const hatIds = [podRow.management_hat_id, execHatId].filter(Boolean);
+        for (const hatId of hatIds) {
+          const balance = (await publicClient.readContract({
+            address: HATS_CONTRACT,
+            abi: HATS_BALANCE_ABI,
+            functionName: 'balanceOf',
+            args: [callerAddress as `0x${string}`, BigInt(hatId as string)],
+          })) as bigint;
+          if (balance > 0n) {
+            isLeader = true;
+            break;
+          }
+        }
       } catch (e) {
-        console.warn('🏦 management hat check failed:', e);
+        console.warn('🏦 hat authorization check failed:', e);
       }
     }
 
     if (!isLeader) {
       return NextResponse.json(
-        { error: 'Forbidden: only a pod leader can activate this pod' },
+        { error: 'Forbidden: only a pod leader or executive can activate this pod' },
         { status: 403 },
       );
     }

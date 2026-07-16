@@ -29,15 +29,36 @@ For each TreeGens member, we look at two numbers and add them together:
 
 **Your total = held + staked.** That total is what eligibility and voting use.
 
+## Which wallet we look at (important)
+
+Every SpiritDAO member gets a built-in wallet when they join, created
+automatically inside the app. **All $TGN checks look at that SpiritDAO wallet,
+and only that wallet.**
+
+This matters because many TreeGens members hold their $TGN in a separate,
+personal wallet (like MetaMask). Today, $TGN in an outside wallet is invisible
+to SpiritDAO. For $TGN to count toward eligibility or voting, it needs to be:
+
+- **held in your SpiritDAO wallet** (transferred in from your personal wallet), or
+- **staked on Hydrex from your SpiritDAO wallet** (positions opened by that
+  wallet are the ones we can see).
+
+This is also what keeps the check trustworthy. Because your SpiritDAO wallet is
+created by and bound to your account, there is no question of whose tokens we
+are counting: the wallet is you. We never have to guess whether an outside
+wallet belongs to the member claiming it, because today we do not count outside
+wallets at all. (A verified way to link a personal wallet, by signing a message
+that proves you own it, is a natural future addition, but it is not built yet.)
+
 ## How we track it
 
-- **Held tokens:** we read your wallet's $TGN balance directly from the
-  blockchain, the same public record anyone can check.
+- **Held tokens:** we read your SpiritDAO wallet's $TGN balance directly from
+  the blockchain, the same public record anyone can check.
 
 - **Staked tokens:** there is no separate "staking contract" to read, because on
   Hydrex your liquidity position *is* your stake. So we ask Hydrex's official
-  service, "what positions does this wallet have?", and count the $TGN in the
-  TreeGens pools.
+  service, "what positions does this wallet have?", using your SpiritDAO wallet
+  address, and count the $TGN in the TreeGens pools.
 
 Both checks are **read-only**. We are looking at public information about your
 holdings, never taking custody of anything.
