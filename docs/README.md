@@ -36,6 +36,7 @@ the SpiritDAO Community App. New contributors should start here.
 |---|---|
 | [cron-jobs-catalog](cron-jobs-catalog.md) | Every scheduled job, its purpose, idempotency notes |
 | [VIDEO_CONTENT_GUIDE](VIDEO_CONTENT_GUIDE.md) | Knowledge base videos — inventory + hosting |
+| [kb-coverage-audit-2026-07](kb-coverage-audit-2026-07.md) | Knowledge base coverage vs app features — gaps, staleness, content pipelines (Sensemaker/KB/docs site) |
 
 ## Roadmap & specs
 
