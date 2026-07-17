@@ -183,6 +183,19 @@ export function InviteCodeModal({
                   textAlign: 'center',
                 }}
               >
+                {/* Sacred key emblem */}
+                <img
+                  src="/images/sensemakeraikey.png"
+                  alt=""
+                  aria-hidden="true"
+                  style={{
+                    width: '96px',
+                    height: 'auto',
+                    margin: '0 auto 20px',
+                    display: 'block',
+                  }}
+                />
+
                 {/* Welcome Message */}
                 <h2
                   style={{
