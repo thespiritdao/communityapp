@@ -47,10 +47,12 @@ can likely be deleted).
    whenever the guides change** (same cadence as `npm run embed:spiritdao`) —
    it updates existing items in place. This closed the Governance-depth,
    wallet-linking (global), and onboarding-text gaps.
-2. Write short markdown items for the zero-coverage features (Surveys, Vault,
-   Community Agent, Chat, $SELF/Tenure, Agreements) — the guides corpus doesn't
-   cover most of these either, so writing them as guides 11+ enriches Sensemaker
-   AND the KB (embed + mirror both sweep the directory/manifest).
+2. ✅ **DONE 2026-07-17 — Wrote guides 11–16** (Surveys, Password Vault,
+   Community Agent, Chat & DMs, $SELF & Tenure, Pod Agreements) in
+   `src/guides/user/`, embedded to Sensemaker (209 chunks total) and mirrored
+   into the KB (two new global categories created: Chat 🗨️, Tokens 🪙).
+   Every zero-coverage feature from the table above now has at least a written
+   guide. Remaining gap is video-only: no videos exist for these six.
 3. Delete the 0-view duplicate "Profile Setup" video (needs a human check of
    which copy is current first).
 
