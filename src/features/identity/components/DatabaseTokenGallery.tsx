@@ -189,9 +189,19 @@ export const DatabaseTokenGallery: React.FC<DatabaseTokenGalleryProps> =
     if (contractError) {
     }
 
-    // Accreditations come from event_tokens (written after tx confirmation) — no on-chain check needed
+    // Accreditations are a mix of sources with different ownership semantics:
+    //  - event_tokens rows are per-user (written after tx confirmation) —
+    //    their presence IS ownership, no on-chain check needed.
+    //  - tokens-table rows (e.g. Advocate, re-homed to 'accreditation') are
+    //    global definitions shown to every user — they MUST pass the on-chain
+    //    balance check or every profile shows badges the member doesn't hold.
     if (category === 'accreditation') {
-      if (tokens.length === 0) {
+      const visibleAccreditations = tokens.filter((token) => {
+        if (token.source === 'event_tokens') return true;
+        const withBalance = tokenBalances.find((t) => t.id === token.id);
+        return withBalance?.owned === true;
+      });
+      if (visibleAccreditations.length === 0) {
         return (
           <div className="no-tokens">
             <p>No accreditations yet</p>
@@ -200,7 +210,7 @@ export const DatabaseTokenGallery: React.FC<DatabaseTokenGalleryProps> =
       }
       return (
         <div className="token-gallery">
-          {tokens.map((token) => (
+          {visibleAccreditations.map((token) => (
             <div key={token.id} className="token-card">
               <div
                 className="token-image"

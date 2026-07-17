@@ -45,6 +45,9 @@ export function InviteCodeModal({
   const [isValidating, setIsValidating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [currentStep, setCurrentStep] = useState<OnboardingStep>('invite');
+  // Referral code entry is OPTIONAL and collapsed by default — most members
+  // join without one, so the default path is a single "Enter" button.
+  const [showCodeInput, setShowCodeInput] = useState(false);
 
   // Auto-bypass to minting in certain cases:
   // 1. First user in post-auth mode
@@ -149,7 +152,7 @@ export function InviteCodeModal({
       >
         {/* Accessible title for screen readers */}
         <DialogTitle className="sr-only">
-          {currentStep === 'invite' && 'Enter Invite Code'}
+          {currentStep === 'invite' && 'Welcome to SpiritDAO'}
           {currentStep === 'minting' && (isFirstUser ? 'Founding Member Access' : 'Community Member Access')}
           {currentStep === 'complete' && 'Access Granted'}
         </DialogTitle>
@@ -201,172 +204,187 @@ export function InviteCodeModal({
                     lineHeight: '1.6',
                   }}
                 >
-                  Has a key found you yet?
-                  <br />
-                  If so, share its code:
+                  The path opens before you.
                 </p>
 
-                {/* Input Field */}
-                <div className="mb-4">
-                  <input
-                    type="text"
-                    value={inviteCode}
-                    onChange={handleInputChange}
-                    onKeyPress={handleKeyPress}
-                    placeholder="ABC123"
-                    maxLength={6}
-                    disabled={isValidating}
-                    autoFocus
-                    style={{
-                      width: '100%',
-                      textAlign: 'center',
-                      fontSize: '28px',
-                      fontFamily: 'monospace',
-                      fontWeight: '600',
-                      letterSpacing: '8px',
-                      color: '#3A3A3A',
-                      background: 'rgba(255, 255, 255, 0.85)',
-                      border: error ? '2px solid #8B3A3A' : '2px solid #D8D2C8',
-                      borderRadius: '12px',
-                      padding: '12px 16px',
-                      textTransform: 'uppercase',
-                      outline: 'none',
-                      transition: 'all 0.2s ease',
-                    }}
-                    onFocus={(e) => {
-                      e.target.style.border = '2px solid #2F5D50';
-                    }}
-                    onBlur={(e) => {
-                      e.target.style.border = error
-                        ? '2px solid #8B3A3A'
-                        : '2px solid #D8D2C8';
-                    }}
-                  />
-                  <p
-                    style={{
-                      fontSize: '12px',
-                      color: '#8FAAA1',
-                      marginTop: '8px',
-                    }}
-                  >
-                    {inviteCode.length}/6 characters
-                  </p>
-                </div>
-
-                {/* Error Message */}
-                {error && (
-                  <div
-                    style={{
-                      marginBottom: '16px',
-                      padding: '12px',
-                      background: 'rgba(139, 58, 58, 0.1)',
-                      border: '1px solid #8B3A3A',
-                      borderRadius: '8px',
-                    }}
-                  >
-                    <p
-                      style={{
-                        fontSize: '14px',
-                        color: '#8B3A3A',
-                        textAlign: 'center',
-                      }}
-                    >
-                      {error}
-                    </p>
-                  </div>
-                )}
-
-                {/* Submit Button */}
+                {/* Primary path: enter without a code */}
                 <button
-                  onClick={handleSubmit}
-                  disabled={inviteCode.length !== 6 || isValidating}
+                  onClick={handleJoinWithoutCode}
+                  disabled={isValidating}
                   style={{
                     width: '100%',
-                    background:
-                      inviteCode.length === 6 && !isValidating
-                        ? '#2F5D50'
-                        : '#8FAAA1',
+                    background: '#2F5D50',
                     color: '#FFFFFF',
                     border: 'none',
                     borderRadius: '12px',
-                    padding: '12px 18px',
+                    padding: '14px 18px',
                     fontSize: '16px',
                     fontWeight: '500',
                     letterSpacing: '0.02em',
-                    cursor:
-                      inviteCode.length === 6 && !isValidating
-                        ? 'pointer'
-                        : 'not-allowed',
-                    opacity: inviteCode.length === 6 && !isValidating ? 1 : 0.6,
+                    cursor: isValidating ? 'not-allowed' : 'pointer',
+                    opacity: isValidating ? 0.6 : 1,
                     transition: 'all 0.2s ease',
                   }}
                   onMouseEnter={(e) => {
-                    if (inviteCode.length === 6 && !isValidating) {
-                      e.currentTarget.style.background = '#254A40';
-                    }
+                    if (!isValidating) e.currentTarget.style.background = '#254A40';
                   }}
                   onMouseLeave={(e) => {
-                    if (inviteCode.length === 6 && !isValidating) {
-                      e.currentTarget.style.background = '#2F5D50';
-                    }
+                    if (!isValidating) e.currentTarget.style.background = '#2F5D50';
                   }}
                 >
-                  {isValidating ? (
-                    <span
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: '8px',
-                      }}
-                    >
-                      <svg
-                        className="animate-spin"
-                        width="16"
-                        height="16"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="3"
-                      >
-                        <circle cx="12" cy="12" r="10" opacity="0.25" />
-                        <path
-                          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-                          opacity="0.75"
-                          fill="currentColor"
-                        />
-                      </svg>
-                      Seeking...
-                    </span>
-                  ) : (
-                    'Enter'
-                  )}
+                  Enter SpiritDAO
                 </button>
 
-                {/* No-code fallback */}
-                <p
-                  style={{
-                    marginTop: '16px',
-                    fontSize: '12px',
-                    color: '#8FAAA1',
-                  }}
-                >
-                  Don&apos;t have a code?{' '}
-                  <button
-                    onClick={handleJoinWithoutCode}
+                {/* Optional referral code — collapsed by default */}
+                {!showCodeInput ? (
+                  <p
                     style={{
-                      background: 'none',
-                      border: 'none',
-                      color: '#2F5D50',
-                      cursor: 'pointer',
-                      fontSize: '12px',
-                      textDecoration: 'underline',
-                      padding: 0,
+                      marginTop: '16px',
+                      fontSize: '13px',
+                      color: '#8FAAA1',
                     }}
                   >
-                    Join without one
-                  </button>
-                </p>
+                    <button
+                      onClick={() => setShowCodeInput(true)}
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        color: '#2F5D50',
+                        cursor: 'pointer',
+                        fontSize: '13px',
+                        textDecoration: 'underline',
+                        padding: 0,
+                      }}
+                    >
+                      Have a referral code?
+                    </button>
+                  </p>
+                ) : (
+                  <div style={{ marginTop: '20px' }}>
+                    <p
+                      style={{
+                        fontSize: '13px',
+                        color: '#5F5A54',
+                        marginBottom: '10px',
+                      }}
+                    >
+                      Enter your referral code:
+                    </p>
+                    <input
+                      type="text"
+                      value={inviteCode}
+                      onChange={handleInputChange}
+                      onKeyPress={handleKeyPress}
+                      placeholder="ABC123"
+                      maxLength={6}
+                      disabled={isValidating}
+                      autoFocus
+                      style={{
+                        width: '100%',
+                        textAlign: 'center',
+                        fontSize: '24px',
+                        fontFamily: 'monospace',
+                        fontWeight: '600',
+                        letterSpacing: '8px',
+                        color: '#3A3A3A',
+                        background: 'rgba(255, 255, 255, 0.85)',
+                        border: error ? '2px solid #8B3A3A' : '2px solid #D8D2C8',
+                        borderRadius: '12px',
+                        padding: '10px 16px',
+                        textTransform: 'uppercase',
+                        outline: 'none',
+                        transition: 'all 0.2s ease',
+                      }}
+                      onFocus={(e) => {
+                        e.target.style.border = '2px solid #2F5D50';
+                      }}
+                      onBlur={(e) => {
+                        e.target.style.border = error
+                          ? '2px solid #8B3A3A'
+                          : '2px solid #D8D2C8';
+                      }}
+                    />
+
+                    {/* Error Message */}
+                    {error && (
+                      <div
+                        style={{
+                          marginTop: '12px',
+                          padding: '12px',
+                          background: 'rgba(139, 58, 58, 0.1)',
+                          border: '1px solid #8B3A3A',
+                          borderRadius: '8px',
+                        }}
+                      >
+                        <p
+                          style={{
+                            fontSize: '14px',
+                            color: '#8B3A3A',
+                            textAlign: 'center',
+                          }}
+                        >
+                          {error}
+                        </p>
+                      </div>
+                    )}
+
+                    <button
+                      onClick={handleSubmit}
+                      disabled={inviteCode.length !== 6 || isValidating}
+                      style={{
+                        width: '100%',
+                        marginTop: '12px',
+                        background:
+                          inviteCode.length === 6 && !isValidating
+                            ? '#2F5D50'
+                            : '#8FAAA1',
+                        color: '#FFFFFF',
+                        border: 'none',
+                        borderRadius: '12px',
+                        padding: '12px 18px',
+                        fontSize: '15px',
+                        fontWeight: '500',
+                        letterSpacing: '0.02em',
+                        cursor:
+                          inviteCode.length === 6 && !isValidating
+                            ? 'pointer'
+                            : 'not-allowed',
+                        opacity:
+                          inviteCode.length === 6 && !isValidating ? 1 : 0.6,
+                        transition: 'all 0.2s ease',
+                      }}
+                    >
+                      {isValidating ? 'Verifying...' : 'Enter with code'}
+                    </button>
+
+                    <p
+                      style={{
+                        marginTop: '12px',
+                        fontSize: '12px',
+                        color: '#8FAAA1',
+                      }}
+                    >
+                      <button
+                        onClick={() => {
+                          setShowCodeInput(false);
+                          setInviteCode('');
+                          setError(null);
+                        }}
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          color: '#8FAAA1',
+                          cursor: 'pointer',
+                          fontSize: '12px',
+                          textDecoration: 'underline',
+                          padding: 0,
+                        }}
+                      >
+                        Never mind — I don&apos;t have one
+                      </button>
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
           </div>
