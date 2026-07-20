@@ -191,6 +191,34 @@ function PageContent() {
         setValidatedInviteCode(savedInviteCode);
       }
 
+      // INVITE LINKS: ?invite=CODE pre-validates so invited visitors never
+      // see the referral question. Referral codes (6 chars) feed the existing
+      // validated_invite_code path; pod links (POD-XXXXXXXX) additionally
+      // stash pod_invite_code for redemption on /home after auth.
+      const inviteParam = new URLSearchParams(window.location.search).get('invite');
+      if (inviteParam && !savedInviteCode) {
+        fetch(`/api/invites/resolve?code=${encodeURIComponent(inviteParam)}`)
+          .then((res) => res.json())
+          .then((body) => {
+            if (!body?.valid) return;
+            if (body.type === 'pod') {
+              sessionStorage.setItem('pod_invite_code', inviteParam.toUpperCase());
+              // A pod link satisfies the platform referral gate.
+              sessionStorage.setItem('validated_invite_code', 'NO_CODE');
+              setValidatedInviteCode('NO_CODE');
+            } else {
+              const code = inviteParam.toUpperCase();
+              sessionStorage.setItem('validated_invite_code', code);
+              setValidatedInviteCode(code);
+            }
+            setShowPreAuthInvite(false);
+            console.log(`🔗 Invite link pre-validated (${body.type})`);
+          })
+          .catch(() => {
+            // Invalid/unreachable — visitor proceeds through the normal modal.
+          });
+      }
+
       // Expose debug state on window for production diagnostics
       (window as any).__spiritDebug = {
         hasKnownUser,

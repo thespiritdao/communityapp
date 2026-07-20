@@ -7,6 +7,7 @@ import { useCurrentUser } from '@coinbase/cdp-hooks';
 import { useUserWallet } from '@/hooks/useUserWallet';
 import { useUserProfile } from '@/features/identity/hooks/useUserProfile';
 import { TosModal } from '@/components/TosModal';
+import { PodInviteRedeemer } from '@/components/PodInviteRedeemer';
 import { supabase } from '@/utils/supabaseClient';
 import '../../features/home/styles/HomePage.css';
 
@@ -51,6 +52,9 @@ export default function HomePage() {
 
   return (
     <div className="home-container">
+      {/* Redeems a pending pod invite link (?invite=POD-…) after auth */}
+      <PodInviteRedeemer />
+
       {showTos && address && (
         <TosModal
           walletAddress={address}

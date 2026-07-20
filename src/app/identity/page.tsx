@@ -9,6 +9,7 @@ import { DatabaseTokenGallery } from '@/features/identity/components/DatabaseTok
 import { TenureBand } from '@/features/identity/components/TenureBand';
 import { InviteCodeDisplay } from '@/features/identity/components/InviteCodeDisplay';
 import { LinkedWalletsSection } from '@/features/identity/components/LinkedWalletsSection';
+import { InviteFriendsSection } from '@/features/identity/components/InviteFriendsSection';
 import '@/features/identity/styles/identityStyles.css';
 import '@/features/identity/styles/TokenGallery.css';
 import '@/features/identity/styles/ProfileModal.css';
@@ -188,6 +189,9 @@ function IdentityPageContent() {
 
       {/* Invite Code Display - Only visible to account owner */}
       <InviteCodeDisplay walletAddress={address} />
+
+      {/* Invite Friends - email invites using the member's referral code */}
+      <InviteFriendsSection walletAddress={address} />
 
       <div
         className="form-buttons"

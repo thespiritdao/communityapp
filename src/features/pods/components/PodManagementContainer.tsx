@@ -39,6 +39,7 @@ import { SubPodReviewPanel } from './SubPodReviewPanel';
 import { ClaimsManagementPanel } from './ClaimsManagementPanel';
 import { DonationsManagementPanel } from './DonationsManagementPanel';
 import PodSurveyManager from './PodSurveyManager';
+import PodInviteLinksManager from './PodInviteLinksManager';
 import PodAgentsPanel from './PodAgentsPanel';
 import { PasswordVaultPanel } from '@/features/passwords/components/PasswordVaultPanel';
 
@@ -110,18 +111,24 @@ const TabContent = React.memo<{
     switch (activeTab) {
       case 'members':
         return (
-          <MembersPanel
-            leaders={leaders}
-            members={members}
-            memberRefs={memberRefs}
-            loading={isLoadingMembers}
-            onClickName={onClickName}
-            podId={podId}
-            userAddress={userAddress}
-            onRemoveMember={onRemoveMember}
-            canManageMembers={canManageMembers}
-            podName={pod?.name}
-          />
+          <>
+            <MembersPanel
+              leaders={leaders}
+              members={members}
+              memberRefs={memberRefs}
+              loading={isLoadingMembers}
+              onClickName={onClickName}
+              podId={podId}
+              userAddress={userAddress}
+              onRemoveMember={onRemoveMember}
+              canManageMembers={canManageMembers}
+              podName={pod?.name}
+            />
+            <PodInviteLinksManager
+              podId={podId}
+              canManage={canManageMembers || canDeletePod}
+            />
+          </>
         );
 
       case 'settings':
