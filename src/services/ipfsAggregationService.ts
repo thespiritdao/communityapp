@@ -1,8 +1,10 @@
 /**
  * IPFS Aggregation Service
  *
- * When a proposal closes, aggregates all votes and uploads to IPFS via Pinata
- * Then posts the IPFS hash to the PodGovernance contract
+ * DEPRECATED — never wired to any caller. Proposal close-out now runs in
+ * /api/cron/close-proposals (admin client, metadata-preserving update).
+ * Do not wire this up: it writes with the anon client and its status update
+ * replaces the metadata jsonb instead of merging it.
  */
 
 import { supabase } from '@/utils/supabaseClient';
