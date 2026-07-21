@@ -2,10 +2,50 @@
 // Server-side forum moderation — uses service role to bypass RLS
 
 import { type NextRequest, NextResponse } from 'next/server';
+import { createPublicClient, http } from 'viem';
+import { base } from 'viem/chains';
 import { supabaseAdmin } from '@/utils/supabaseAdminClient';
+import { getHatId } from '@/lib/hatRegistry';
 import jwt from 'jsonwebtoken';
 
 export const runtime = 'nodejs';
+
+const RPC_URL = process.env.NEXT_PUBLIC_RPC_URL || 'https://mainnet.base.org';
+const HATS_CONTRACT = (process.env.NEXT_PUBLIC_HATS_CONTRACT ||
+  '0x3bc1A0Ad72417f2d411118085256fC53CBdDd137') as `0x${string}`;
+
+const HATS_ABI = [
+  {
+    name: 'balanceOf',
+    type: 'function',
+    inputs: [
+      { name: 'wearer', type: 'address' },
+      { name: 'hatId', type: 'uint256' },
+    ],
+    outputs: [{ name: '', type: 'uint256' }],
+    stateMutability: 'view',
+  },
+] as const;
+
+// True if the caller wears ANY of the given hats on-chain. Fails closed:
+// an RPC error counts as "does not wear it".
+async function wearsAnyHat(caller: string, hatIds: string[]): Promise<boolean> {
+  const publicClient = createPublicClient({ chain: base, transport: http(RPC_URL) });
+  for (const hatId of hatIds) {
+    try {
+      const balance = await publicClient.readContract({
+        address: HATS_CONTRACT,
+        abi: HATS_ABI,
+        functionName: 'balanceOf',
+        args: [caller as `0x${string}`, BigInt(hatId)],
+      });
+      if ((balance as bigint) > 0n) return true;
+    } catch (e) {
+      console.error(`Forum moderation: hat check failed for ${hatId}:`, e);
+    }
+  }
+  return false;
+}
 
 function getWalletFromToken(token: string): string | null {
   try {
@@ -52,32 +92,49 @@ export async function POST(req: NextRequest) {
       ? (thread as any)?.category_id
       : (thread as any)?.forum_threads?.category_id;
 
-    if (categoryId) {
-      const { data: category } = await supabaseAdmin
-        .from('forum_categories')
-        .select('pod_id')
-        .eq('id', categoryId)
-        .single();
+    const { data: category } = categoryId
+      ? await supabaseAdmin
+          .from('forum_categories')
+          .select('pod_id')
+          .eq('id', categoryId)
+          .single()
+      : { data: null };
 
-      if (category?.pod_id) {
-        // Verify at least one forumModeration role exists for this pod
-        const { data: roles } = await supabaseAdmin
-          .from('pod_role_permissions')
-          .select('permissions')
-          .eq('pod_id', category.pod_id)
-          .eq('is_active', true);
+    // The exec hat moderates everything, including global (pod-less) categories
+    const execHatId = await getHatId('EXECUTIVE_POD_LEADER');
+    const candidateHatIds: string[] = [];
 
-        const hasModerationRole = (roles || []).some(
-          (r: any) => r.permissions?.forumModeration === true,
-        );
+    if (category?.pod_id) {
+      // Hats of this pod's roles that carry forumModeration
+      const { data: roles } = await supabaseAdmin
+        .from('pod_role_permissions')
+        .select('token_address, permissions')
+        .eq('pod_id', category.pod_id)
+        .eq('is_active', true);
 
-        if (!hasModerationRole) {
-          return NextResponse.json({ error: 'No moderation roles configured for this pod' }, { status: 403 });
+      for (const r of roles || []) {
+        if ((r as any).permissions?.forumModeration === true && (r as any).token_address) {
+          candidateHatIds.push((r as any).token_address);
         }
-
-        // TODO: add on-chain hat balance check here once hat_holders table exists
-        // For now: JWT validity + pod having a moderation role is the gate.
       }
+    }
+    if (execHatId) candidateHatIds.push(execHatId);
+
+    if (candidateHatIds.length === 0) {
+      return NextResponse.json(
+        { error: 'No moderation roles configured for this pod' },
+        { status: 403 },
+      );
+    }
+
+    // On-chain verification: the caller must actually wear a moderation hat
+    // (or the exec hat) right now. Fails closed on RPC errors.
+    const isModerator = await wearsAnyHat(moderatorAddress, candidateHatIds);
+    if (!isModerator) {
+      return NextResponse.json(
+        { error: 'Forbidden: caller does not hold a moderation role for this pod' },
+        { status: 403 },
+      );
     }
 
     // Execute the action using service role (bypasses all RLS)
