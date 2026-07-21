@@ -125,10 +125,9 @@ export async function queryPinecone(
       namespace: useNamespace ? namespace : '(default namespace)',
     });
 
-    // Return empty array on error instead of throwing
-    // This allows the chat to continue with no context rather than failing
-    console.warn('[Pinecone] Returning empty context due to error');
-    return [];
+    // Fail loudly: answering with zero context silently degrades every reply.
+    // The chat route's step-tagged catch turns this into a visible error.
+    throw new Error(`Pinecone retrieval failed: ${error.message}`);
   }
 }
 

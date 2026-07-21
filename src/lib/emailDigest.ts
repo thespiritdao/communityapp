@@ -123,23 +123,30 @@ export async function runDigest(period: DigestPeriod): Promise<{
     const timeLabel = period === 'daily' ? 'today' : 'this week';
     const html = renderDigestHtml(profile.name, grouped, allNotifications.length, periodLabel, timeLabel);
 
-    try {
-      const { error: sendError } = await resend.emails.send({
-        from: FROM_ADDRESS,
-        to: profile.email,
-        subject: `Your SpiritDAO ${periodLabel} Digest — ${allNotifications.length} update${allNotifications.length !== 1 ? 's' : ''}`,
-        html,
-      });
-
-      if (sendError) {
-        console.error(`[email-digest-${period}] Resend error for ${addr}:`, sendError);
-        skipped++;
-      } else {
-        sent++;
+    // Up to 3 attempts with backoff — Resend hiccups shouldn't silently drop
+    // a member's digest until the next period.
+    let sendError: unknown = null;
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      try {
+        const { error } = await resend.emails.send({
+          from: FROM_ADDRESS,
+          to: profile.email,
+          subject: `Your SpiritDAO ${periodLabel} Digest — ${allNotifications.length} update${allNotifications.length !== 1 ? 's' : ''}`,
+          html,
+        });
+        sendError = error ?? null;
+        if (!sendError) break;
+      } catch (err) {
+        sendError = err;
       }
-    } catch (err) {
-      console.error(`[email-digest-${period}] Failed to send to ${addr}:`, err);
+      if (attempt < 3) await new Promise((r) => setTimeout(r, attempt * 2000));
+    }
+
+    if (sendError) {
+      console.error(`[email-digest-${period}] Failed to send to ${addr} after 3 attempts:`, sendError);
       skipped++;
+    } else {
+      sent++;
     }
   }
 

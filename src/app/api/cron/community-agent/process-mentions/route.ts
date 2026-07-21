@@ -14,6 +14,23 @@ export const runtime = 'nodejs';
 export const maxDuration = 60;
 
 const MAX_REPLIES_PER_POD_PER_DAY = 10;
+const MAX_ATTEMPTS = 3;
+
+// Transient failure: requeue with attempts+1, fail permanently after MAX_ATTEMPTS.
+// Requires the community_agent_queue.attempts column
+// (migration 20260721000001_community_agent_queue_attempts.sql).
+async function requeueOrFail(item: any) {
+  const attempts = (item.attempts ?? 0) + 1;
+  await supabaseAdmin
+    .from('community_agent_queue')
+    .update(
+      attempts >= MAX_ATTEMPTS
+        ? { status: 'failed', attempts }
+        : { status: 'pending', attempts },
+    )
+    .eq('id', item.id);
+  return attempts >= MAX_ATTEMPTS;
+}
 
 export async function GET(req: NextRequest) {
   const authHeader = req.headers.get('authorization');
@@ -116,10 +133,7 @@ export async function GET(req: NextRequest) {
 
         if (postError) {
           console.error(`[ProcessMentions] Post insert failed:`, postError);
-          await supabaseAdmin
-            .from('community_agent_queue')
-            .update({ status: 'failed' })
-            .eq('id', item.id);
+          await requeueOrFail(item);
           errored++;
           continue;
         }
@@ -155,10 +169,10 @@ export async function GET(req: NextRequest) {
         processed++;
       } catch (itemErr: any) {
         console.error(`[ProcessMentions] Error processing item ${item.id}:`, itemErr.message);
-        await supabaseAdmin
-          .from('community_agent_queue')
-          .update({ status: 'failed' })
-          .eq('id', item.id);
+        const gaveUp = await requeueOrFail(item);
+        if (gaveUp) {
+          console.error(`[ProcessMentions] Item ${item.id} failed permanently after ${MAX_ATTEMPTS} attempts`);
+        }
         errored++;
       }
     }

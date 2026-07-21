@@ -9,6 +9,7 @@ import {
   rateLimiters,
   getClientIp,
   rateLimitErrorResponse,
+  isRateLimitingEnabled,
 } from '@/lib/ratelimit';
 
 /**
@@ -84,7 +85,17 @@ export async function POST(req: NextRequest) {
         });
       }
     } catch (rlError) {
-      console.error('[Sensemaker Chat] Rate limiter unavailable, allowing request:', rlError);
+      // Fail CLOSED when rate limiting is configured but Redis is unreachable —
+      // this endpoint spends real LLM tokens per request. The no-op path (Redis
+      // not configured, i.e. local dev) never throws and stays open.
+      if (isRateLimitingEnabled()) {
+        console.error('[Sensemaker Chat] Rate limiter unreachable — failing closed:', rlError);
+        return NextResponse.json(
+          { error: 'Service temporarily unavailable. Please try again shortly.' },
+          { status: 503, headers: corsHeaders(req) },
+        );
+      }
+      console.error('[Sensemaker Chat] Rate limiter error (not configured), allowing request:', rlError);
     }
 
     step = 'parse';
