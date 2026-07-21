@@ -78,8 +78,12 @@ async function verifyExecutiveRole(walletAddress: string): Promise<boolean> {
   }
 }
 
+// Single source of truth for the approval policy: one EP member approves.
+// If the DAO moves to multi-sig approvals, change only this constant.
+const REQUIRED_APPROVALS = 1;
+
 /**
- * Check if donation has reached 1-of-1 approval threshold (single EP member)
+ * Check if donation has reached the required approval threshold
  */
 async function checkApprovalThreshold(donationId: string): Promise<boolean> {
   const { data: approvals } = await supabase
@@ -88,9 +92,9 @@ async function checkApprovalThreshold(donationId: string): Promise<boolean> {
     .eq('donation_id', donationId);
 
   const approvalCount = approvals?.length || 0;
-  console.log(`📊 Donation ${donationId}: ${approvalCount}/1 approvals`);
+  console.log(`📊 Donation ${donationId}: ${approvalCount}/${REQUIRED_APPROVALS} approvals`);
 
-  return approvalCount >= 1;
+  return approvalCount >= REQUIRED_APPROVALS;
 }
 
 /**
@@ -108,7 +112,7 @@ async function checkApprovalThreshold(donationId: string): Promise<boolean> {
  * 2. Check donation is in 'awaiting_executive_approval' status
  * 3. Check executive hasn't already approved this donation
  * 4. Record approval
- * 5. If 2-of-3 threshold met, trigger minting service
+ * 5. If approval threshold met (REQUIRED_APPROVALS), mark ready to mint
  */
 export async function POST(request: NextRequest) {
   try {
@@ -229,13 +233,13 @@ export async function POST(request: NextRequest) {
     console.log('✅ Approval recorded:', approval.id);
 
     // =====================================================
-    // 6. CHECK APPROVAL THRESHOLD (2-of-3)
+    // 6. CHECK APPROVAL THRESHOLD
     // =====================================================
 
     const thresholdMet = await checkApprovalThreshold(donationId);
 
     if (thresholdMet) {
-      console.log('🎉 2-of-3 approval threshold met! Triggering minting service...');
+      console.log('🎉 Approval threshold met! Donation ready to mint.');
 
       // Update donation status to 'pending_mint'
       const { error: statusUpdateError } = await supabase
@@ -286,7 +290,7 @@ export async function POST(request: NextRequest) {
       },
       thresholdMet: false,
       currentApprovals: currentApprovals?.length || 0,
-      requiredApprovals: 1
+      requiredApprovals: REQUIRED_APPROVALS
     });
 
   } catch (error: any) {
@@ -336,7 +340,7 @@ export async function GET(request: NextRequest) {
       .eq('donation_id', donationId)
       .order('approved_at', { ascending: true });
 
-    const thresholdMet = (approvals?.length || 0) >= 2;
+    const thresholdMet = (approvals?.length || 0) >= REQUIRED_APPROVALS;
 
     return NextResponse.json({
       donation: {
@@ -350,7 +354,7 @@ export async function GET(request: NextRequest) {
       },
       approvals: approvals || [],
       currentApprovals: approvals?.length || 0,
-      requiredApprovals: 1,
+      requiredApprovals: REQUIRED_APPROVALS,
       thresholdMet
     });
 
