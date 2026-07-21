@@ -8,6 +8,7 @@ import { EnhancedVoteButton } from '@/features/governance/components/EnhancedVot
 import { ProposalModal } from '@/features/governance/components/ProposalModal';
 import { useEnhancedProposals } from '@/features/governance/hooks/useEnhancedProposals';
 import { useGovernanceForumPosts } from '@/features/governance/hooks/useGovernanceForumPosts';
+import { proposalExcerpt } from '@/features/governance/utils/proposalContent';
 import type { EnhancedProposal } from '@/features/governance/hooks/useEnhancedProposals';
 import { Badge } from '@/components/ui/badge';
 import { Shield, FileText, Loader2, Clock } from 'lucide-react';
@@ -331,7 +332,7 @@ export default function GovernancePage() {
                       </div>
 
                       <p className="mb-4 text-gray-700 line-clamp-3">
-                        {truncateText(proposal.body, 200)}
+                        {proposalExcerpt(proposal.body, 200)}
                       </p>
 
                       {proposal.body.length > 200 && (

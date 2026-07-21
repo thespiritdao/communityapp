@@ -24,6 +24,7 @@ const DAOGovernorABI = DAOGovernorABIJson as Abi;
 import { useToast } from '@/components/ui/use-toast';
 import { createPublicClient, http } from 'viem';
 import { useForum } from '@/features/forum/hooks/useForum';
+import { htmlToMarkdown } from '@/features/governance/utils/proposalContent';
 import { supabase } from '@/utils/supabaseClient';
 import { fetchTokenBalances } from '@/utils/fetchTokenBalances';
 import {
@@ -798,7 +799,12 @@ export function CreateProposalForm({
     if (threadId) {
       const result = await loadPosts(threadId, 0, 1);
       if (result.success && result.thread?.content) {
-        setFormData((prev) => ({ ...prev, body: result.thread.content }));
+        // Forum posts are TipTap HTML; proposals speak markdown. Convert so
+        // the textarea shows clean editable text and displays render rich.
+        setFormData((prev) => ({
+          ...prev,
+          body: htmlToMarkdown(result.thread.content),
+        }));
       }
     }
   };

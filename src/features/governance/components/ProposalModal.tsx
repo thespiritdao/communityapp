@@ -3,6 +3,7 @@
 import React from 'react';
 import { X, CheckCircle2, XCircle } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
+import { normalizeProposalBody } from '../utils/proposalContent';
 import type { EnhancedProposal } from '../hooks/useEnhancedProposals';
 import { determineProposalResult } from '@/features/governance/services/proposalResultEngine';
 import { PLATFORM_DEFAULTS } from '@/features/pods/services/podGovernanceConfigService';
@@ -130,7 +131,7 @@ export const ProposalModal: React.FC<ProposalModalProps> = ({
                 ),
               }}
             >
-              {proposal.body}
+              {normalizeProposalBody(proposal.body)}
             </ReactMarkdown>
           </div>
 
