@@ -172,6 +172,8 @@ export async function POST(req: NextRequest) {
         status: 'pending_review',
         is_active: false,
         management_hat_id: managementHatId,
+        // The contract keys pods by this same string — required by the review route
+        blockchain_pod_id: podId,
       })
       .select()
       .single();
