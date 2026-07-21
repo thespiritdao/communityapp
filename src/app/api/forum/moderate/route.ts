@@ -154,7 +154,7 @@ export async function POST(req: NextRequest) {
         target_id: targetId,
         reason: reason || null,
         metadata: {},
-      }).then(() => {}).catch(() => {});
+      }).then(() => {}, () => {});
 
       return NextResponse.json({ success: true });
     }
@@ -178,7 +178,7 @@ export async function POST(req: NextRequest) {
         target_id: targetId,
         reason: reason || null,
         metadata: {},
-      }).then(() => {}).catch(() => {});
+      }).then(() => {}, () => {});
 
       return NextResponse.json({ success: true });
     }

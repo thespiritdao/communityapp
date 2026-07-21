@@ -43,6 +43,17 @@ export async function GET(req: NextRequest) {
   let errored = 0;
 
   try {
+    // Sweep items orphaned in 'processing' by a crashed run. Safe because
+    // maxDuration is 60s and runs are >=2min apart — nothing can still be
+    // legitimately processing when a new run starts.
+    const { data: orphaned } = await supabaseAdmin
+      .from('community_agent_queue')
+      .select('*')
+      .eq('status', 'processing');
+    for (const item of orphaned || []) {
+      await requeueOrFail(item);
+    }
+
     // Fetch pending items from the queue
     const { data: queue } = await supabaseAdmin
       .from('community_agent_queue')
