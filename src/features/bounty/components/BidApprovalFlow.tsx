@@ -48,7 +48,8 @@ import {
 import { Button } from '@/components/ui/button';
 import { Loader2 } from 'lucide-react';
 import type { TransactionReceipt } from 'viem';
-import BountyManagerABI from '@/abis/BountyManagerV2.json';
+import BountyManagerV5Artifact from '@/abis/BountyManagerV5.json';
+const BountyManagerABI = BountyManagerV5Artifact.abi;
 import BidApprovalDialog from './BidApprovalDialog';
 import BountyAssignmentTransaction from './BountyAssignmentTransaction';
 import type { FrontendBid } from '../types/bounty';
@@ -658,7 +659,9 @@ export const BidApprovalFlow: React.FC<BidApprovalFlowProps> = ({
         args: [contractAddress, amountWei],
       });
 
-      // Call 2: Create bounty
+      // Call 2: Create bounty (V5 signature). This approval flow funds the
+      // bounty from the caller's own wallet (approve above), so
+      // useTreasuryFunding=false and funderHatId=0.
       const createBountyCallData = encodeFunctionData({
         abi: BountyManagerABI,
         functionName: 'createBounty',
@@ -668,6 +671,8 @@ export const BidApprovalFlow: React.FC<BidApprovalFlowProps> = ({
           paymentType, // uint8 paymentType
           bounty.podId, // string podId
           ipfsHash, // string ipfsHash
+          0n, // uint256 funderHatId (unused for wallet funding)
+          false, // bool useTreasuryFunding (wallet-funded)
         ],
       });
 

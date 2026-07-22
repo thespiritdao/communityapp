@@ -3,19 +3,20 @@
 import { useState, useCallback } from 'react';
 import { useEvmAddress } from '@coinbase/cdp-hooks';
 import { useReadContract } from 'wagmi';
-import { parseEther, formatEther } from 'viem';
+import { parseEther, formatEther, createPublicClient, http } from 'viem';
+import { base } from 'viem/chains';
 import type { BountyFormV2Data } from '../components/BountyFormV2';
 
 // Import the contract ABI
-import BountyManagerV4Artifact from '@/abis/BountyManagerV4.json';
+import BountyManagerV5Artifact from '@/abis/BountyManagerV5.json';
 import PodBountyServiceABI from '@/abis/PodBountyService.json';
 
-const BountyManagerV4ABI = BountyManagerV4Artifact.abi;
+const BountyManagerV5ABI = BountyManagerV5Artifact.abi;
 
 const BOUNTY_MANAGER_ADDRESS = (process.env.NEXT_PUBLIC_BOUNTY_MANAGER_ADDRESS ||
   '0x8Af29E57A962216C4661c36737CbF33510356DAD') as `0x${string}`;
 
-const BOUNTY_MANAGER_ABI = BountyManagerV4ABI;
+const BOUNTY_MANAGER_ABI = BountyManagerV5ABI;
 
 const SYSTEM_TOKEN_ADDRESS = (process.env.NEXT_PUBLIC_SYSTEM_TOKEN ||
   '0xd67e460ce56be18b573aB434b3DC962c657D8Bb5') as `0x${string}`;
@@ -57,7 +58,9 @@ export interface Bid {
 
 export interface UseBountyV2Return {
   // Transaction call generators for OnchainKit
-  createBountyCall: (data: BountyFormV2Data) => any;
+  registerPodCall: (podId: string, leaderHatId: string, treasuryAddress: string) => any;
+  isPodRegistered: (podId: string) => Promise<boolean>;
+  createBountyCall: (data: BountyFormV2Data, funderHatId?: string) => any;
   placeBidCall: (bountyId: string, proposalIpfsHash: string) => any;
   assignBountyCall: (
     bountyId: string,
@@ -106,22 +109,72 @@ export const useBountyV2 = (): UseBountyV2Return => {
   };
 
   /**
+   * V5: Generate the one-time registerPodMetadata call. Must run (once per pod)
+   * before the pod's first treasury-funded bounty — V5 no longer auto-registers.
+   * The caller must wear leaderHatId on-chain.
+   */
+  const registerPodCall = useCallback(
+    (podId: string, leaderHatId: string, treasuryAddress: string) => {
+      if (!BOUNTY_MANAGER_ADDRESS) {
+        throw new Error('Bounty Manager address not configured');
+      }
+      return {
+        address: BOUNTY_MANAGER_ADDRESS,
+        abi: BOUNTY_MANAGER_ABI,
+        functionName: 'registerPodMetadata' as const,
+        args: [podId, BigInt(leaderHatId), treasuryAddress as `0x${string}`],
+      };
+    },
+    [],
+  );
+
+  /**
+   * V5: read whether a pod is already registered with BountyManager on-chain.
+   */
+  const isPodRegistered = useCallback(async (podId: string): Promise<boolean> => {
+    try {
+      const client = createPublicClient({
+        chain: base,
+        transport: http(process.env.NEXT_PUBLIC_RPC_URL || 'https://mainnet.base.org'),
+      });
+      const result = await client.readContract({
+        address: BOUNTY_MANAGER_ADDRESS,
+        abi: BOUNTY_MANAGER_ABI,
+        functionName: 'isValidPod',
+        args: [podId],
+      });
+      return result as boolean;
+    } catch (e) {
+      console.error('isPodRegistered read failed:', e);
+      return false;
+    }
+  }, []);
+
+  /**
    * Generate createBounty transaction call for OnchainKit
    * @param data Bounty form data
-   * @param leaderHatId Optional leader HAT ID (required for V3 if pod not registered)
-   * @param treasuryAddress Optional treasury address (required for V3 if pod not registered)
+   * @param funderHatId Hat the caller funds under (leader hat, or a hat
+   *   authorized via setAuthorizedFunderHat). Ignored for wallet funding.
    */
   const createBountyCall = useCallback(
     (
       data: BountyFormV2Data,
-      leaderHatId?: string,
-      treasuryAddress?: string
+      funderHatId?: string,
     ) => {
       if (!BOUNTY_MANAGER_ADDRESS) {
         throw new Error('Bounty Manager address not configured');
       }
 
-      const baseArgs = [
+      const useTreasuryFunding = data.funding_source === 'pod_treasury';
+
+      // V5: createBounty no longer accepts a caller-supplied treasury address —
+      // treasury funds are always pulled from the pod's REGISTERED treasury
+      // (podMetadata[podId].treasuryAddress), which fixes BM-001. The pod must
+      // be registered first via registerPodMetadata. For treasury funding the
+      // caller must wear the pod leader hat OR a hat authorized via
+      // setAuthorizedFunderHat; funderHatId is the hat they claim authority
+      // under (ignored for wallet-funded bounties).
+      const v5Args = [
         parseEther(data.value.amount), // value (uint128)
         data.value.token === 'SYSTEM'
           ? SYSTEM_TOKEN_ADDRESS
@@ -129,27 +182,15 @@ export const useBountyV2 = (): UseBountyV2Return => {
         0, // paymentType (0=Completion)
         data.podId, // podId
         `temp_${Date.now()}`, // ipfsHash (temporary, will be updated)
-      ];
-
-      // V4 contract REQUIRES a valid treasury address (cannot be zero address)
-      if (!treasuryAddress || treasuryAddress === '0x0000000000000000000000000000000000000000') {
-        throw new Error('Treasury address is required for V4 bounty creation. Please deploy a treasury first.');
-      }
-
-      const useTreasuryFunding = data.funding_source === 'pod_treasury';
-
-      const v4Args = [
-        ...baseArgs,
-        BigInt(leaderHatId || '0'), // leaderHatId (0 if pod already registered)
-        treasuryAddress as `0x${string}`, // treasuryAddress (REQUIRED, cannot be zero)
-        useTreasuryFunding,              // pull from treasury vs caller wallet
+        BigInt(funderHatId || '0'), // funderHatId (the hat the caller funds under)
+        useTreasuryFunding,          // pull from registered treasury vs caller wallet
       ];
 
       return {
         address: BOUNTY_MANAGER_ADDRESS,
         abi: BOUNTY_MANAGER_ABI,
         functionName: 'createBounty' as const,
-        args: v4Args,
+        args: v5Args,
       };
     },
     [address],
@@ -401,6 +442,8 @@ export const useBountyV2 = (): UseBountyV2Return => {
 
   return {
     // Transaction calls for OnchainKit
+    registerPodCall,
+    isPodRegistered,
     createBountyCall,
     placeBidCall,
     assignBountyCall,
@@ -431,7 +474,7 @@ export const useBountyReader = (bountyId?: string) => {
   // Read bounty core data
   const { data: bountyData } = useReadContract({
     address: BOUNTY_MANAGER_ADDRESS,
-    abi: BountyManagerV2ABI,
+    abi: BOUNTY_MANAGER_ABI,
     functionName: 'getBounty',
     args: bountyId ? [BigInt(bountyId)] : undefined,
     query: {
@@ -442,7 +485,7 @@ export const useBountyReader = (bountyId?: string) => {
   // Read bounty metadata
   const { data: bountyMetadata } = useReadContract({
     address: BOUNTY_MANAGER_ADDRESS,
-    abi: BountyManagerV2ABI,
+    abi: BOUNTY_MANAGER_ABI,
     functionName: 'getBountyMetadata',
     args: bountyId ? [BigInt(bountyId)] : undefined,
     query: {
@@ -453,7 +496,7 @@ export const useBountyReader = (bountyId?: string) => {
   // Read assignment data
   const { data: assignmentData } = useReadContract({
     address: BOUNTY_MANAGER_ADDRESS,
-    abi: BountyManagerV2ABI,
+    abi: BOUNTY_MANAGER_ABI,
     functionName: 'getAssignment',
     args: bountyId ? [BigInt(bountyId)] : undefined,
     query: {

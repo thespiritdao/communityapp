@@ -75,7 +75,7 @@ export const BountyFormV2: React.FC<BountyFormV2Props> = ({
   const { sendUserOperation } = useSendUserOperation();
   const { currentUser } = useCurrentUser();
 
-  const { createBountyCall } = useBountyV2();
+  const { createBountyCall, registerPodCall, isPodRegistered } = useBountyV2();
   const { managedPods: managablePods, isLoading: podsLoading } =
     useBountyManagementAccess();
 
@@ -362,26 +362,28 @@ export const BountyFormV2: React.FC<BountyFormV2Props> = ({
         hasTreasury: !!treasuryAddress,
       });
 
-      // Build base bounty call with V3/V4 parameters
-      const baseCall = createBountyCall(formData, leaderHatId, treasuryAddress);
+      // Build base bounty call. V5: the caller funds under their pod hat
+      // (leader hat here); treasury address is NOT passed — V5 pulls from the
+      // pod's registered treasury. The pod must be registered on-chain first
+      // (registerPodMetadata); for treasury funding the leader hat must be worn.
+      const baseCall = createBountyCall(formData, leaderHatId);
 
-      // Replace temporary IPFS hash with real one
-      // V4 args: [value, token, paymentType, podId, tempIpfs, leaderHatId, treasuryAddress]
-      // We need: [value, token, paymentType, podId, realIpfs, leaderHatId, treasuryAddress]
+      // Replace temporary IPFS hash with real one.
+      // V5 args: [value, token, paymentType, podId, tempIpfs, funderHatId, useTreasuryFunding]
       const bountyCall = {
         ...baseCall,
         args: [
           ...baseCall.args.slice(0, 4), // Keep: value, token, paymentType, podId
           ipfsHash, // Replace temp IPFS hash with real one
-          ...baseCall.args.slice(5), // Keep: leaderHatId, treasuryAddress (if V4)
+          ...baseCall.args.slice(5), // Keep: funderHatId, useTreasuryFunding
         ],
       };
 
       console.log('📦 Final bountyCall args:', {
         paramCount: bountyCall.args.length,
         ipfsHash: bountyCall.args[4],
-        leaderHatId: bountyCall.args[5]?.toString(),
-        treasuryAddress: bountyCall.args[6],
+        funderHatId: bountyCall.args[5]?.toString(),
+        useTreasuryFunding: bountyCall.args[6],
         fundingSource: formData.funding_source,
       });
 
@@ -440,7 +442,27 @@ export const BountyFormV2: React.FC<BountyFormV2Props> = ({
         call1_args: transactionCalls[1]?.args,
       });
 
-      const encodedCalls = transactionCalls.map((call) => ({
+      // V5: a treasury-funded bounty requires the pod to be registered with
+      // BountyManager first (auto-register was removed to fix BM-001). Prepend a
+      // one-time registerPodMetadata call if the pod isn't registered yet. The
+      // caller must wear the leader hat for this to succeed on-chain.
+      let callsToSend = transactionCalls;
+      if (formData.funding_source === 'pod_treasury') {
+        const selectedPod = managablePods.find((p) => p.id === formData.podId);
+        const leaderHatId = selectedPod?.management_hat_id;
+        const treasuryAddress = selectedPod?.treasury_contract_address;
+        if (leaderHatId && treasuryAddress) {
+          const alreadyRegistered = await isPodRegistered(formData.podId);
+          if (!alreadyRegistered) {
+            callsToSend = [
+              registerPodCall(formData.podId, leaderHatId, treasuryAddress),
+              ...transactionCalls,
+            ];
+          }
+        }
+      }
+
+      const encodedCalls = callsToSend.map((call) => ({
         to: call.address as `0x${string}`,
         value: 0n,
         data: encodeFunctionData({
