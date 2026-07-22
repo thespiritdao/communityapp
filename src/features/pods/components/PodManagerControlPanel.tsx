@@ -615,6 +615,63 @@ export const PodManagerControlPanel: React.FC<PodManagerControlPanelProps> = ({
     console.log('🔐 Permissions updated locally:', { roleId, permissions });
   };
 
+  // Keep BountyManagerV5's on-chain funder-hat authorization in sync with a
+  // role's bountyManagement permission. V5 only lets a hat fund treasury
+  // bounties if it is the pod leader hat OR a hat authorized here. This runs
+  // gaslessly as part of saving role permissions — no separate user step.
+  const syncBountyFunderHat = async (
+    roleHatId: string,
+    bountyEnabled: boolean,
+  ): Promise<void> => {
+    const BOUNTY_MANAGER = process.env.NEXT_PUBLIC_BOUNTY_MANAGER_ADDRESS as
+      | `0x${string}`
+      | undefined;
+    const smartAccount = currentUser?.evmSmartAccounts?.[0];
+    if (!BOUNTY_MANAGER || !smartAccount || !roleHatId) return;
+
+    try {
+      const data = encodeFunctionData({
+        abi: [
+          {
+            name: 'setAuthorizedFunderHat',
+            type: 'function',
+            inputs: [
+              { name: 'podId', type: 'string' },
+              { name: 'hatId', type: 'uint256' },
+              { name: 'allowed', type: 'bool' },
+            ],
+            outputs: [],
+            stateMutability: 'nonpayable',
+          },
+        ],
+        functionName: 'setAuthorizedFunderHat',
+        args: [podId, BigInt(roleHatId), bountyEnabled],
+      });
+
+      await sendUserOperation({
+        evmSmartAccount: smartAccount,
+        network: 'base',
+        calls: [{ to: BOUNTY_MANAGER, value: 0n, data }],
+        useCdpPaymaster: true,
+      });
+
+      console.log(
+        `🎯 setAuthorizedFunderHat(${roleHatId}, ${bountyEnabled}) sent for pod ${podId}`,
+      );
+    } catch (e) {
+      // Non-fatal: the DB permission is saved regardless. The pod leader
+      // (whose own hat is always authorized) can still fund bounties; only
+      // this custom role's treasury-funding authorization failed to sync.
+      console.error('⚠️ Failed to sync bounty funder hat on-chain:', e);
+      toast({
+        title: 'Bounty authorization not synced',
+        description:
+          'Permissions saved, but authorizing this role to fund treasury bounties on-chain failed. Re-save to retry.',
+        variant: 'destructive',
+      });
+    }
+  };
+
   const savePermissionsToBlockchain = async () => {
     try {
       setIsSaving(true);
@@ -624,6 +681,11 @@ export const PodManagerControlPanel: React.FC<PodManagerControlPanelProps> = ({
 
       const currentPermissions =
         pendingChanges[selectedRole.id] || selectedRole.permissions;
+
+      // Detect whether bountyManagement changed so we only fire the on-chain
+      // authorization when it actually flips (avoids a userOp on every save).
+      const prevBounty = !!selectedRole.permissions?.bountyManagement;
+      const nextBounty = !!currentPermissions?.bountyManagement;
 
       toast({
         title: 'Saving Permissions',
@@ -672,12 +734,13 @@ export const PodManagerControlPanel: React.FC<PodManagerControlPanelProps> = ({
         description: `${selectedRole.role_name} permissions updated in database. Blockchain sync pending.`,
       });
 
-      // TODO: Phase 2 - Sync with HAT protocol
-      console.log('🎩 Future HAT Protocol sync:', {
-        hatId: selectedRole.token_address,
-        permissions: currentPermissions,
-        action: 'This will sync with HATS Protocol in Phase 2',
-      });
+      // If bountyManagement flipped, sync BountyManagerV5's on-chain funder-hat
+      // authorization so this role's holders can (or can no longer) fund
+      // treasury bounties. The leader hat is always authorized by the contract,
+      // so this only matters for custom, non-leader roles.
+      if (nextBounty !== prevBounty && selectedRole.token_address) {
+        await syncBountyFunderHat(selectedRole.token_address, nextBounty);
+      }
     } catch (error) {
       console.error('Failed to save permissions:', error);
       toast({
