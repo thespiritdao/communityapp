@@ -31,7 +31,10 @@ type DonationStatus =
   | 'minting'
   | 'minted'
   | 'failed'
-  | 'disputed';
+  | 'disputed'
+  // Direct donations (donor pays fiat directly; no $SYSTEM minting).
+  | 'direct_donation_pending'
+  | 'direct_donation_completed';
 
 interface Donation {
   id: string;
@@ -58,7 +61,11 @@ const STATUS_LABEL: Record<DonationStatus, string> = {
   minted: 'Minted',
   failed: 'Failed',
   disputed: 'Disputed',
+  direct_donation_pending: 'Direct — Pending',
+  direct_donation_completed: 'Direct — Completed',
 };
+
+const FALLBACK_COLOR = { bg: '#F3F4F6', text: '#6B7280', border: '#E5E7EB' };
 
 const STATUS_COLOR: Record<DonationStatus, { bg: string; text: string; border: string }> = {
   payment_pending:              { bg: '#F3F4F6', text: '#6B7280', border: '#E5E7EB' },
@@ -69,6 +76,8 @@ const STATUS_COLOR: Record<DonationStatus, { bg: string; text: string; border: s
   minted:                       { bg: '#D1FAE5', text: '#065F46', border: '#6EE7B7' },
   failed:                       { bg: '#FEE2E2', text: '#991B1B', border: '#FECACA' },
   disputed:                     { bg: '#FEE2E2', text: '#991B1B', border: '#FECACA' },
+  direct_donation_pending:      { bg: '#F3F4F6', text: '#6B7280', border: '#E5E7EB' },
+  direct_donation_completed:    { bg: '#D1FAE5', text: '#065F46', border: '#6EE7B7' },
 };
 
 interface DonationsManagementPanelProps {
@@ -283,7 +292,8 @@ export function DonationsManagementPanel({ canManage }: DonationsManagementPanel
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
           {displayDonations.map(donation => {
-            const sc = STATUS_COLOR[donation.status];
+            // Fall back for any status not in the map — never crash the panel.
+            const sc = STATUS_COLOR[donation.status] ?? FALLBACK_COLOR;
             const isActioning = actionLoading === donation.id;
             const communityTokens = Number(donation.community_tokens_to_mint || 0);
             const opsCash = donation.org_fee - communityTokens;
@@ -309,7 +319,7 @@ export function DonationsManagementPanel({ canManage }: DonationsManagementPanel
                     </p>
                   </div>
                   <span style={{ padding: '3px 9px', borderRadius: '20px', fontSize: '11px', fontWeight: 600, backgroundColor: sc.bg, color: sc.text, border: `1px solid ${sc.border}`, flexShrink: 0 }}>
-                    {STATUS_LABEL[donation.status]}
+                    {STATUS_LABEL[donation.status] ?? donation.status}
                   </span>
                 </div>
 
@@ -363,7 +373,7 @@ export function DonationsManagementPanel({ canManage }: DonationsManagementPanel
                   {/* Reject clears donations that were never paid or should not mint
                       (e.g. these payment_pending test rows). Not shown once tokens
                       are out or the row is already resolved. */}
-                  {!['minted', 'minting', 'disputed', 'failed'].includes(donation.status) && (
+                  {!['minted', 'minting', 'disputed', 'failed', 'direct_donation_pending', 'direct_donation_completed'].includes(donation.status) && (
                     <button onClick={() => handleReject(donation.id)} disabled={isActioning}
                       style={{ display: 'flex', alignItems: 'center', gap: '5px', padding: '7px 14px', borderRadius: '7px', border: '1px solid #FCA5A5', background: 'white', color: '#991B1B', fontWeight: 600, fontSize: '12px', cursor: isActioning ? 'not-allowed' : 'pointer' }}>
                       {isActioning ? 'Rejecting…' : 'Reject'}
