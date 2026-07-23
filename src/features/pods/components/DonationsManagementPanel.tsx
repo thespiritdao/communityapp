@@ -125,6 +125,32 @@ export function DonationsManagementPanel({ canManage }: DonationsManagementPanel
     }
   };
 
+  const handleReject = async (donationId: string) => {
+    if (!address) return;
+    if (!confirm('Reject this donation? It will be marked failed and removed from the active list.')) return;
+    setActionLoading(donationId);
+    setError(null);
+    try {
+      const session = await getCurrentSession();
+      if (!session?.access_token) throw new Error('Not authenticated');
+      const res = await fetch('/api/donations/reject', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ donationId }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Reject failed');
+      await fetchDonations();
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
   const handleMint = async (donation: Donation) => {
     if (!address || !currentUser?.evmSmartAccounts?.[0]) return;
     setActionLoading(donation.id);
@@ -185,12 +211,14 @@ export function DonationsManagementPanel({ canManage }: DonationsManagementPanel
     );
   }
 
+  // 'payment_pending' = Stripe intent created but never paid — excluded from the
+  // active view (and stats). Still visible under "All" for auditing.
   const activeDonations = allDonations.filter(d =>
-    ['payment_pending', 'awaiting_settlement', 'awaiting_executive_approval', 'pending_mint', 'minting'].includes(d.status)
+    ['awaiting_settlement', 'awaiting_executive_approval', 'pending_mint', 'minting'].includes(d.status)
   );
   const displayDonations = filter === 'active' ? activeDonations : allDonations;
 
-  const needsAction  = allDonations.filter(d => ['payment_pending', 'awaiting_settlement', 'awaiting_executive_approval'].includes(d.status)).length;
+  const needsAction  = allDonations.filter(d => ['awaiting_settlement', 'awaiting_executive_approval'].includes(d.status)).length;
   const readyToMint  = allDonations.filter(d => d.status === 'pending_mint').length;
   const totalMinted  = allDonations.filter(d => d.status === 'minted').length;
 
@@ -314,9 +342,11 @@ export function DonationsManagementPanel({ canManage }: DonationsManagementPanel
                   </a>
                 )}
 
-                {/* Actions */}
+                {/* Actions. Approve is only offered once payment actually
+                    completed — never on 'payment_pending' (unpaid intent), so
+                    $SYSTEM can't be minted against a donation that was never paid. */}
                 <div style={{ display: 'flex', gap: '8px' }}>
-                  {['payment_pending', 'awaiting_settlement', 'awaiting_executive_approval'].includes(donation.status) && (
+                  {['awaiting_settlement', 'awaiting_executive_approval'].includes(donation.status) && (
                     <button onClick={() => handleApprove(donation.id)} disabled={isActioning}
                       style={{ display: 'flex', alignItems: 'center', gap: '5px', padding: '7px 14px', borderRadius: '7px', border: 'none', background: isActioning ? '#D1D5DB' : '#3F7A5A', color: 'white', fontWeight: 600, fontSize: '12px', cursor: isActioning ? 'not-allowed' : 'pointer' }}>
                       <CheckCircle size={13} />
@@ -328,6 +358,15 @@ export function DonationsManagementPanel({ canManage }: DonationsManagementPanel
                       style={{ display: 'flex', alignItems: 'center', gap: '5px', padding: '7px 14px', borderRadius: '7px', border: 'none', background: isActioning ? '#D1D5DB' : '#2F5D50', color: 'white', fontWeight: 600, fontSize: '12px', cursor: isActioning ? 'not-allowed' : 'pointer' }}>
                       <Coins size={13} />
                       {isActioning ? 'Minting…' : 'Mint Tokens'}
+                    </button>
+                  )}
+                  {/* Reject clears donations that were never paid or should not mint
+                      (e.g. these payment_pending test rows). Not shown once tokens
+                      are out or the row is already resolved. */}
+                  {!['minted', 'minting', 'disputed', 'failed'].includes(donation.status) && (
+                    <button onClick={() => handleReject(donation.id)} disabled={isActioning}
+                      style={{ display: 'flex', alignItems: 'center', gap: '5px', padding: '7px 14px', borderRadius: '7px', border: '1px solid #FCA5A5', background: 'white', color: '#991B1B', fontWeight: 600, fontSize: '12px', cursor: isActioning ? 'not-allowed' : 'pointer' }}>
+                      {isActioning ? 'Rejecting…' : 'Reject'}
                     </button>
                   )}
                 </div>

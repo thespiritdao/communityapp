@@ -21,7 +21,10 @@ export async function GET(request: NextRequest) {
     .order('created_at', { ascending: false });
 
   if (!all) {
-    query = query.in('status', ['payment_pending', 'awaiting_settlement', 'awaiting_executive_approval', 'pending_mint', 'minting']);
+    // Only donations whose payment actually completed. 'payment_pending' means a
+    // Stripe intent was created but never paid — never surface those on the
+    // exec dashboard (they're still queryable via ?all=true for auditing).
+    query = query.in('status', ['awaiting_settlement', 'awaiting_executive_approval', 'pending_mint', 'minting']);
   }
 
   const { data, error } = await query;
