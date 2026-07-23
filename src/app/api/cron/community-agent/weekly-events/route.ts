@@ -8,15 +8,14 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/utils/supabaseAdminClient';
 import { getActiveAgentPods } from '@/services/communityAgent/configService';
 import { generateAgentContent } from '@/services/communityAgent/agentService';
+import { requireCron } from '@/lib/cronAuth';
 
 export const runtime = 'nodejs';
 export const maxDuration = 120;
 
 export async function GET(req: NextRequest) {
-  const authHeader = req.headers.get('authorization');
-  if (process.env.CRON_SECRET && authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  const denied = requireCron(req);
+  if (denied) return denied;
 
   const today = new Date();
   const results: Array<{ podId: string; status: string; eventsCreated: number }> = [];

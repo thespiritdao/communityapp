@@ -14,6 +14,7 @@ import { createPublicClient, http } from 'viem';
 import { base } from 'viem/chains';
 import { supabaseAdmin } from '@/utils/supabaseAdminClient';
 import { finalizePodActivation } from '@/lib/podFinalize';
+import { requireCronAllowingDev } from '@/lib/cronAuth';
 
 export const runtime = 'nodejs';
 export const maxDuration = 300;
@@ -104,14 +105,8 @@ async function notifyExecutivePod(title: string, message: string, contextUrl: st
 }
 
 async function handleReconcile(request: NextRequest) {
-  const authHeader = request.headers.get('authorization');
-  const cronSecret = process.env.CRON_SECRET;
-  if (process.env.NODE_ENV === 'production' && cronSecret) {
-    if (authHeader !== `Bearer ${cronSecret}`) {
-      console.error('reconcile-pods: unauthorized cron attempt');
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-  }
+  const denied = requireCronAllowingDev(request);
+  if (denied) return denied;
 
   const results = {
     activated: [] as string[],

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { createPublicClient, http, decodeEventLog } from 'viem';
 import { base } from 'viem/chains';
+import { requireCron } from '@/lib/cronAuth';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -43,12 +44,8 @@ const BOUNTY_MANAGER_ADDRESS = (process.env.NEXT_PUBLIC_BOUNTY_MANAGER_ADDRESS |
  */
 export async function GET(request: NextRequest) {
   try {
-    // Verify cron secret (Vercel automatically adds this header)
-    const authHeader = request.headers.get('authorization');
-    if (process.env.CRON_SECRET && authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
-      console.error('❌ [Cron] Unauthorized request');
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const denied = requireCron(request);
+    if (denied) return denied;
 
     console.log('🔄 [Cron] Starting pending bounties update...');
 

@@ -15,6 +15,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/utils/supabaseAdminClient';
 import { sendServerNotificationBatch } from '@/lib/serverNotifications';
 import type { ServerNotificationPayload } from '@/lib/serverNotifications';
+import { requireCron } from '@/lib/cronAuth';
 
 const REMINDER_WINDOWS = [
   { key: '48h', ms: 48 * 60 * 60 * 1000, prefKey: 'governance_voting_reminder_48h', label: '48 hours' },
@@ -28,13 +29,8 @@ const REMINDER_WINDOWS = [
 const BUFFER_MS = 20 * 60 * 1000;
 
 export async function GET(req: NextRequest) {
-  const authHeader = req.headers.get('authorization');
-  if (
-    process.env.CRON_SECRET &&
-    authHeader !== `Bearer ${process.env.CRON_SECRET}`
-  ) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  const denied = requireCron(req);
+  if (denied) return denied;
 
   try {
     const now = Date.now();

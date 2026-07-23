@@ -5,6 +5,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/utils/supabaseAdminClient';
+import { requireCron } from '@/lib/cronAuth';
 
 export const runtime = 'nodejs';
 
@@ -33,10 +34,8 @@ async function notifyLeader(
 }
 
 export async function GET(req: NextRequest) {
-  const authHeader = req.headers.get('authorization');
-  if (process.env.CRON_SECRET && authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  const denied = requireCron(req);
+  if (denied) return denied;
 
   let expired = 0;
   let warned = 0;

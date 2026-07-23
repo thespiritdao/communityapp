@@ -15,6 +15,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/utils/supabaseAdminClient';
 import webpush from 'web-push';
+import { requireCron } from '@/lib/cronAuth';
 
 webpush.setVapidDetails(
   process.env.VAPID_SUBJECT!,
@@ -40,13 +41,8 @@ const REMINDER_WINDOWS = [
 ];
 
 export async function GET(req: NextRequest) {
-  const authHeader = req.headers.get('authorization');
-  if (
-    process.env.CRON_SECRET &&
-    authHeader !== `Bearer ${process.env.CRON_SECRET}`
-  ) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  const denied = requireCron(req);
+  if (denied) return denied;
 
   try {
     const now = Date.now();

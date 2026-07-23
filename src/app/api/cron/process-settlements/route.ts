@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { requireCronAllowingDev } from '@/lib/cronAuth';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -93,23 +94,9 @@ async function handleProcessSettlements(request: NextRequest) {
   const startTime = Date.now();
 
   try {
-    // =====================================================
-    // 1. VERIFY CRON SECRET (Production Security)
-    // =====================================================
-
-    const authHeader = request.headers.get('authorization');
-    const cronSecret = process.env.CRON_SECRET;
-
-    // In production, verify cron secret from Vercel
-    if (process.env.NODE_ENV === 'production' && cronSecret) {
-      if (authHeader !== `Bearer ${cronSecret}`) {
-        console.error('❌ Unauthorized cron job attempt');
-        return NextResponse.json(
-          { error: 'Unauthorized' },
-          { status: 401 }
-        );
-      }
-    }
+    // Fail closed in production (allow local dev without a secret).
+    const denied = requireCronAllowingDev(request);
+    if (denied) return denied;
 
     console.log('🔄 Starting settlement processing cron job...');
 

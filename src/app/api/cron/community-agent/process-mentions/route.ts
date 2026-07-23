@@ -9,6 +9,7 @@ import { isAgentActive, getAgentConfig } from '@/services/communityAgent/configS
 import { generateAgentContent } from '@/services/communityAgent/agentService';
 import { extractForumContext } from '@/services/communityAgent/mentionService';
 import { recordExplorerEvent } from '@/lib/explorerEvents';
+import { requireCron } from '@/lib/cronAuth';
 
 export const runtime = 'nodejs';
 export const maxDuration = 60;
@@ -33,10 +34,8 @@ async function requeueOrFail(item: any) {
 }
 
 export async function GET(req: NextRequest) {
-  const authHeader = req.headers.get('authorization');
-  if (process.env.CRON_SECRET && authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  const denied = requireCron(req);
+  if (denied) return denied;
 
   let processed = 0;
   let skipped = 0;

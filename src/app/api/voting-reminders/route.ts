@@ -2,14 +2,12 @@
 
 import { type NextRequest, NextResponse } from 'next/server';
 import { votingReminderService } from '@/services/votingReminderService';
+import { requireCron } from '@/lib/cronAuth';
 
 export async function POST(request: NextRequest) {
   try {
-    // Verify this is a legitimate cron request (add your authentication here)
-    const authHeader = request.headers.get('authorization');
-    if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const denied = requireCron(request);
+    if (denied) return denied;
 
     console.log('🕐 Processing voting reminders via cron job...');
 

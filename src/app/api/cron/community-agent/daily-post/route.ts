@@ -9,15 +9,14 @@ import { getActiveAgentPods } from '@/services/communityAgent/configService';
 import { generateAgentContent } from '@/services/communityAgent/agentService';
 import { recordExplorerEvent } from '@/lib/explorerEvents';
 import { AGENT_PSEUDO_WALLET } from '@/services/communityAgent/types';
+import { requireCron } from '@/lib/cronAuth';
 
 export const runtime = 'nodejs';
 export const maxDuration = 60;
 
 export async function GET(req: NextRequest) {
-  const authHeader = req.headers.get('authorization');
-  if (process.env.CRON_SECRET && authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  const denied = requireCron(req);
+  if (denied) return denied;
 
   const today = new Date().toISOString().split('T')[0];
   const results: Array<{ podId: string; status: string; threadId?: string }> = [];

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { requireCron } from '@/lib/cronAuth';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -52,12 +53,8 @@ async function getUserOpReceipt(userOpHash: string) {
  */
 export async function GET(request: NextRequest) {
   try {
-    // Verify cron secret
-    const authHeader = request.headers.get('authorization');
-    if (process.env.CRON_SECRET && authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
-      console.error('❌ [Cron Bids] Unauthorized request');
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const denied = requireCron(request);
+    if (denied) return denied;
 
     console.log('🔄 [Cron Bids] Starting pending bids update (bundler API)...');
 

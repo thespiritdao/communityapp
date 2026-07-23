@@ -7,15 +7,11 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { runDigest } from '@/lib/emailDigest';
+import { requireCron } from '@/lib/cronAuth';
 
 export async function GET(req: NextRequest) {
-  const authHeader = req.headers.get('authorization');
-  if (
-    process.env.CRON_SECRET &&
-    authHeader !== `Bearer ${process.env.CRON_SECRET}`
-  ) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  const denied = requireCron(req);
+  if (denied) return denied;
 
   try {
     const result = await runDigest('daily');
