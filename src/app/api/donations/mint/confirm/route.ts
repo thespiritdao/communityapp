@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { sendDonationReceiptEmail } from '@/lib/donationReceipt';
+import { recordExplorerEvent } from '@/lib/explorerEvents';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -101,6 +102,24 @@ export async function POST(request: NextRequest) {
     }
 
     console.log('✅ Mint transaction recorded');
+
+    // Pulse: surface the minted donation in /explorer (treasury category).
+    // Fire-and-forget — never block the mint confirmation on the feed write.
+    recordExplorerEvent({
+      type: 'donation',
+      title: `Donation of $${Number(data.fiat_amount).toFixed(2)} — ${Number(data.system_tokens_to_mint).toFixed(2)} $SYSTEM minted`,
+      actor: data.user_wallet || null,
+      amount_value: Number(data.system_tokens_to_mint),
+      amount_token: 'SYSTEM',
+      url: `https://basescan.org/tx/${userOpHash}`,
+      metadata: {
+        donation_type: 'system_mint',
+        donation_id: donationId,
+        fiat_amount: Number(data.fiat_amount),
+        tx_hash: userOpHash,
+      },
+      dedupe_key: `donation:mint:${donationId}`,
+    }).catch((e) => console.error('[mint/confirm] explorer event failed (non-critical):', e));
 
     // Fire-and-forget: airdrop Advocate NFT on first donation
     maybeAirdropAdvocate(data.user_wallet, donationId);
