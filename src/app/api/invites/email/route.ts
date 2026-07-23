@@ -9,7 +9,12 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { Resend } from 'resend';
 import { supabaseAdmin } from '@/utils/supabaseAdminClient';
-import { getWalletFromRequest } from '@/lib/serverPodAuth';
+import {
+  getWalletFromRequest,
+  isPodLeader,
+  isExecutiveLeader,
+} from '@/lib/serverPodAuth';
+import { getOrCreatePodInviteUrl } from '@/lib/podInviteLink';
 
 export const runtime = 'nodejs';
 export const maxDuration = 60;
@@ -59,24 +64,39 @@ export async function POST(req: NextRequest) {
     [sender.first_name, sender.last_name].filter(Boolean).join(' ') ||
     'A SpiritDAO member';
 
-  // Optional pod attribution — only if the sender actually belongs to it.
+  // Optional pod enrollment. If the sender is a LEADER/EXEC of the selected pod,
+  // the email carries a pod-enroll link (invitee auto-joins that pod on signup).
+  // Otherwise the pod is used for attribution only ("from {podName}") and the
+  // plain referral link is sent — regular members can't enroll people into a pod.
   let podName: string | null = null;
+  let podEnrollCode: string | null = null;
   if (podId) {
     const { data: pod } = await supabaseAdmin
       .from('pods')
       .select('name, pod_leads')
       .eq('id', podId)
       .maybeSingle();
-    const { data: membership } = await supabaseAdmin
-      .from('pod_members')
-      .select('id')
-      .eq('pod_id', podId)
-      .eq('wallet', wallet.toLowerCase())
-      .eq('is_active', true)
-      .maybeSingle();
-    const isLead = pod?.pod_leads?.includes(wallet.toLowerCase());
-    if (pod && (membership || isLead)) {
-      podName = pod.name;
+    if (pod) {
+      const { data: membership } = await supabaseAdmin
+        .from('pod_members')
+        .select('id')
+        .eq('pod_id', podId)
+        .eq('wallet', wallet.toLowerCase())
+        .eq('is_active', true)
+        .maybeSingle();
+      const isLead = pod.pod_leads?.includes(wallet.toLowerCase());
+      if (membership || isLead) {
+        podName = pod.name;
+        // Leader/exec of this pod? → generate a real pod-enroll link.
+        const [leader, exec] = await Promise.all([
+          isPodLeader(podId, wallet),
+          isExecutiveLeader(wallet),
+        ]);
+        if (leader || exec) {
+          const podLink = await getOrCreatePodInviteUrl(podId, wallet);
+          if (podLink) podEnrollCode = podLink.code;
+        }
+      }
     }
   }
 
@@ -95,7 +115,10 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const inviteUrl = `${APP_URL}/?invite=${sender.referral_key}`;
+  // Pod-enroll link if the sender leads/execs the selected pod; otherwise the
+  // personal referral link (app access only).
+  const inviteCode = podEnrollCode || sender.referral_key;
+  const inviteUrl = `${APP_URL}/?invite=${inviteCode}`;
   const results: Array<{ email: string; status: 'sent' | 'skipped'; reason?: string }> = [];
   let sentCount = 0;
 
@@ -141,11 +164,15 @@ export async function POST(req: NextRequest) {
       const { error: sendError } = await resend.emails.send({
         from: 'SpiritDAO <community@spiritdao.org>',
         to: email,
-        subject: `${senderName} invited you to join SpiritDAO`,
+        subject: podEnrollCode
+          ? `${senderName} invited you to join ${podName} on SpiritDAO`
+          : `${senderName} invited you to join SpiritDAO`,
         text: [
           'Hello,',
           '',
-          `${fromLine} is inviting you to join SpiritDAO — a community of communities building better ways to live and decide together.`,
+          podEnrollCode
+            ? `${fromLine} is inviting you to join ${podName} on SpiritDAO — a community of communities building better ways to live and decide together. This link will add you to ${podName} when you sign up.`
+            : `${fromLine} is inviting you to join SpiritDAO — a community of communities building better ways to live and decide together.`,
           '',
           'Get started here:',
           inviteUrl,
@@ -173,7 +200,7 @@ export async function POST(req: NextRequest) {
       sender_wallet: wallet.toLowerCase(),
       email,
       pod_id: podName ? podId : null,
-      invite_code: sender.referral_key,
+      invite_code: inviteCode,
     });
     sentCount++;
     results.push({ email, status: 'sent' });

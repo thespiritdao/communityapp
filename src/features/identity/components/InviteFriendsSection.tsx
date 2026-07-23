@@ -1,10 +1,16 @@
 'use client';
 
 /**
- * InviteFriendsSection — /identity/: invite outsiders by email.
- * One or many addresses (comma/newline separated), optional "from pod"
- * attribution. Sends a fixed boilerplate email via /api/invites/email with a
- * personal /?invite=CODE link (the sender's referral key).
+ * InviteFriendsSection — /identity/: unified invite panel.
+ *
+ * One card that merges the personal invite key + email invites:
+ *   - "Just me (app access)" → the member's personal referral link. Anyone can
+ *     copy it or email it; it gets the invitee into the app (no pod).
+ *   - A pod the member LEADS/EXECS → a pod-enroll link. Copying/emailing it
+ *     auto-joins the invitee to that pod's member role on signup.
+ * The pod selector only lists pods the member can enroll people into (leader or
+ * pod_leads). The server (/api/invites/link, /api/invites/email) is the real
+ * authorization gate.
  */
 
 import { useCallback, useEffect, useState } from 'react';
@@ -40,8 +46,11 @@ export function InviteFriendsSection({
   walletAddress,
 }: InviteFriendsSectionProps) {
   const [emailsText, setEmailsText] = useState('');
-  const [pods, setPods] = useState<PodOption[]>([]);
+  const [leaderPods, setLeaderPods] = useState<PodOption[]>([]);
   const [selectedPod, setSelectedPod] = useState<string>('');
+  const [inviteUrl, setInviteUrl] = useState<string>('');
+  const [linkLoading, setLinkLoading] = useState(false);
+  const [copied, setCopied] = useState(false);
   const [sending, setSending] = useState(false);
   const [summary, setSummary] = useState<string | null>(null);
   const [details, setDetails] = useState<
@@ -49,31 +58,86 @@ export function InviteFriendsSection({
   >([]);
   const [error, setError] = useState<string | null>(null);
 
-  // Pods the member belongs to (for optional attribution).
+  // Pods the member can ENROLL people into: those they lead (membership_type
+  // 'leader' / role 'leader') or where they're listed in pods.pod_leads.
   useEffect(() => {
     if (!walletAddress) return;
     let cancelled = false;
     (async () => {
-      const { data: memberships } = await supabase
+      const w = walletAddress.toLowerCase();
+      const podIds = new Set<string>();
+
+      const { data: leadRows } = await supabase
         .from('pod_members')
-        .select('pod_id')
-        .eq('wallet', walletAddress.toLowerCase())
+        .select('pod_id, membership_type, role')
+        .eq('wallet', w)
         .eq('is_active', true);
-      const ids = [...new Set((memberships || []).map((m) => m.pod_id))];
-      if (ids.length === 0) return;
+      for (const r of leadRows || []) {
+        if (r.membership_type === 'leader' || r.role === 'leader') podIds.add(r.pod_id);
+      }
+
+      const { data: leadPods } = await supabase
+        .from('pods')
+        .select('id, name, pod_leads')
+        .eq('is_active', true);
+      for (const p of leadPods || []) {
+        if ((p.pod_leads || []).map((a: string) => a.toLowerCase()).includes(w)) {
+          podIds.add(p.id);
+        }
+      }
+
+      if (podIds.size === 0) return;
       const { data: podRows } = await supabase
         .from('pods')
         .select('id, name')
-        .in('id', ids)
+        .in('id', [...podIds])
         .eq('is_active', true);
       if (!cancelled && podRows) {
-        setPods(podRows.filter((p) => !p.name?.startsWith('ipfs://')));
+        setLeaderPods(
+          podRows.filter((p) => p.name && !p.name.startsWith('ipfs://')),
+        );
       }
     })();
     return () => {
       cancelled = true;
     };
   }, [walletAddress]);
+
+  // Fetch the copyable link for the current selection (personal or pod-enroll).
+  useEffect(() => {
+    if (!walletAddress) return;
+    let cancelled = false;
+    (async () => {
+      setLinkLoading(true);
+      setInviteUrl('');
+      try {
+        const token = await getAuthToken();
+        if (!token) return;
+        const qs = selectedPod ? `?podId=${selectedPod}` : '';
+        const res = await fetch(`/api/invites/link${qs}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const body = await res.json().catch(() => ({}));
+        if (!cancelled && res.ok && body.url) setInviteUrl(body.url);
+      } finally {
+        if (!cancelled) setLinkLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [walletAddress, selectedPod]);
+
+  const handleCopy = useCallback(async () => {
+    if (!inviteUrl) return;
+    try {
+      await navigator.clipboard.writeText(inviteUrl);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      /* clipboard blocked — user can select the field manually */
+    }
+  }, [inviteUrl]);
 
   const handleSend = useCallback(async () => {
     setError(null);
@@ -122,6 +186,9 @@ export function InviteFriendsSection({
     }
   }, [emailsText, selectedPod]);
 
+  const isPodInvite = !!selectedPod;
+  const selectedPodName = leaderPods.find((p) => p.id === selectedPod)?.name;
+
   return (
     <div style={{ marginTop: '20px', marginBottom: '8px' }}>
       <h3 style={headerStyle}>Invite Friends</h3>
@@ -135,11 +202,103 @@ export function InviteFriendsSection({
             marginBottom: '0.75rem',
           }}
         >
-          Invite people to join SpiritDAO by email. They&apos;ll get a personal
-          link — no code to type. Enter one or more addresses, separated by
-          commas or new lines.
+          Share your invite link or send it by email. Invitees get a personal
+          link — no code to type.
         </p>
 
+        {/* Enroll target (only shows pods you can enroll people into) */}
+        {leaderPods.length > 0 && (
+          <div style={{ marginBottom: '0.75rem' }}>
+            <label
+              style={{
+                fontSize: '0.8rem',
+                color: '#6B7A74',
+                marginRight: 8,
+                display: 'block',
+                marginBottom: 4,
+              }}
+            >
+              Invite them to:
+            </label>
+            <select
+              value={selectedPod}
+              onChange={(e) => setSelectedPod(e.target.value)}
+              disabled={sending}
+              style={{
+                fontSize: '0.85rem',
+                padding: '6px 8px',
+                borderRadius: '6px',
+                border: '1px solid #D8D2C8',
+                background: '#FFFFFF',
+                width: '100%',
+              }}
+            >
+              <option value="">SpiritDAO (app access only)</option>
+              {leaderPods.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name} (auto-join)
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+
+        {/* Copyable link for the current selection */}
+        <div style={{ marginBottom: '0.5rem' }}>
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <input
+              type="text"
+              readOnly
+              value={linkLoading ? 'Loading link…' : inviteUrl}
+              onFocus={(e) => e.currentTarget.select()}
+              style={{
+                flex: 1,
+                padding: '10px 12px',
+                fontSize: '0.8rem',
+                borderRadius: '8px',
+                border: '1px solid #D8D2C8',
+                background: '#FAF7F2',
+                color: '#3A3A3A',
+                fontFamily: 'monospace',
+              }}
+            />
+            <button
+              type="button"
+              onClick={handleCopy}
+              disabled={!inviteUrl}
+              style={{
+                background: copied ? '#3F7A5A' : '#2F5D50',
+                color: '#FFFFFF',
+                padding: '10px 16px',
+                borderRadius: '8px',
+                border: 'none',
+                fontWeight: 600,
+                fontSize: '13px',
+                cursor: inviteUrl ? 'pointer' : 'default',
+                opacity: inviteUrl ? 1 : 0.6,
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {copied ? 'Copied!' : 'Copy link'}
+            </button>
+          </div>
+          {isPodInvite && selectedPodName && (
+            <p style={{ fontSize: '0.72rem', color: '#3F7A5A', marginTop: 4 }}>
+              This link auto-joins invitees to {selectedPodName}.
+            </p>
+          )}
+        </div>
+
+        {/* Optional email send of the same link */}
+        <p
+          style={{
+            fontSize: '0.75rem',
+            color: '#8FA09A',
+            margin: '0.9rem 0 0.4rem',
+          }}
+        >
+          Or email it directly:
+        </p>
         <textarea
           value={emailsText}
           onChange={(e) => setEmailsText(e.target.value)}
@@ -156,35 +315,6 @@ export function InviteFriendsSection({
             fontFamily: 'inherit',
           }}
         />
-
-        {pods.length > 0 && (
-          <div style={{ marginTop: '0.6rem' }}>
-            <label
-              style={{ fontSize: '0.8rem', color: '#6B7A74', marginRight: 8 }}
-            >
-              Invite as a member of:
-            </label>
-            <select
-              value={selectedPod}
-              onChange={(e) => setSelectedPod(e.target.value)}
-              disabled={sending}
-              style={{
-                fontSize: '0.85rem',
-                padding: '6px 8px',
-                borderRadius: '6px',
-                border: '1px solid #D8D2C8',
-                background: '#FFFFFF',
-              }}
-            >
-              <option value="">Just me (no pod)</option>
-              {pods.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.name}
-                </option>
-              ))}
-            </select>
-          </div>
-        )}
 
         {error && (
           <p style={{ fontSize: '0.8rem', color: '#B0453C', marginTop: '0.6rem' }}>
