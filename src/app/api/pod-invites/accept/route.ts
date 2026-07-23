@@ -11,6 +11,53 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/utils/supabaseAdminClient';
 import { getWalletFromRequest } from '@/lib/serverPodAuth';
+import { sendServerNotificationBatch } from '@/lib/serverNotifications';
+import type { ServerNotificationPayload } from '@/lib/serverNotifications';
+
+/**
+ * Notify pod leaders that a new member joined via a link and their on-chain role
+ * is queued for minting (the mint queue lives on the pod Members tab). Fire-and-
+ * forget — never blocks the join.
+ */
+async function notifyLeadersOfPendingMint(
+  podId: string,
+  podName: string,
+  joinerWallet: string,
+) {
+  try {
+    // Leaders = pods.pod_leads ∪ active pod_members with a leader role.
+    const [{ data: pod }, { data: leaderRows }] = await Promise.all([
+      supabaseAdmin.from('pods').select('pod_leads').eq('id', podId).maybeSingle(),
+      supabaseAdmin
+        .from('pod_members')
+        .select('wallet')
+        .eq('pod_id', podId)
+        .eq('is_active', true)
+        .or('membership_type.eq.leader,role.eq.leader'),
+    ]);
+    const leaders = new Set<string>();
+    for (const a of pod?.pod_leads || []) leaders.add(String(a).toLowerCase());
+    for (const r of leaderRows || []) if (r.wallet) leaders.add(r.wallet.toLowerCase());
+    leaders.delete(joinerWallet.toLowerCase()); // don't notify the joiner
+    if (leaders.size === 0) return;
+
+    const payloads: ServerNotificationPayload[] = [...leaders].map((wallet) => ({
+      recipient_address: wallet,
+      sender_address: 'system',
+      notification_type: 'pod_member_pending_mint',
+      title: `New member joined ${podName}`,
+      message: `Someone joined ${podName} via an invite link. Mint their on-chain member role from the Members tab.`,
+      context_url: `/pods/${podId}/manage?tab=members`,
+      context_type: 'pod',
+      context_id: podId,
+      priority: 'high' as const,
+      category: 'pods',
+    }));
+    await sendServerNotificationBatch(payloads);
+  } catch (e) {
+    console.error('[pod-invites/accept] leader notify failed (non-critical):', e);
+  }
+}
 
 export const runtime = 'nodejs';
 export const maxDuration = 60;
@@ -158,6 +205,9 @@ export async function POST(req: NextRequest) {
     .update({ invited_by: link.created_by })
     .eq('wallet_address', walletLc)
     .is('invited_by', null);
+
+  // Pull leaders to the Members-tab mint queue (fire-and-forget).
+  notifyLeadersOfPendingMint(pod.id, pod.name, walletLc);
 
   return NextResponse.json({ joined: true, podName: pod.name, podId: pod.id });
 }

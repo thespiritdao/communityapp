@@ -15,6 +15,7 @@ import { encodeFunctionData, parseAbi } from 'viem';
 import { useSendUserOperationWithAttribution as useSendUserOperation } from '@/wallet/hooks/useSendUserOperationWithAttribution';
 import { supabase } from '@/lib/supabase';
 import { Link2, Copy, Check, XCircle, Users } from 'lucide-react';
+import { UserProfileDisplay } from '@/components/UserProfileDisplay';
 
 interface PodInviteLinksManagerProps {
   podId: string;
@@ -51,10 +52,6 @@ async function getAuthToken(): Promise<string | null> {
     data: { session },
   } = await supabase.auth.getSession();
   return session?.access_token ?? null;
-}
-
-function truncate(addr: string): string {
-  return addr.length > 10 ? `${addr.slice(0, 6)}…${addr.slice(-4)}` : addr;
 }
 
 export function PodInviteLinksManager({
@@ -249,14 +246,18 @@ export function PodInviteLinksManager({
               className="px-4 py-2 rounded-md text-sm font-medium text-white"
               style={{ background: '#2F5D50', opacity: minting ? 0.7 : 1 }}
             >
-              {minting ? 'Minting…' : 'Mint all (gasless)'}
+              {minting ? 'Minting…' : 'Mint Roles'}
             </button>
           </div>
-          <ul className="mt-2 text-xs text-amber-800">
+          <ul className="mt-2 space-y-1.5">
             {pending.map((p) => (
-              <li key={p.id}>
-                {truncate(p.wallet)} — accepted{' '}
-                {new Date(p.accepted_at).toLocaleDateString()}
+              <li key={p.id} className="flex items-center gap-2 text-xs text-amber-800">
+                {/* Name card when the joiner has a profile; falls back to the
+                    formatted address automatically. */}
+                <UserProfileDisplay walletAddress={p.wallet} size="sm" showModal={true} />
+                <span className="text-amber-700">
+                  — accepted {new Date(p.accepted_at).toLocaleDateString()}
+                </span>
               </li>
             ))}
           </ul>
