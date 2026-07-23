@@ -105,6 +105,14 @@ export async function POST(request: NextRequest) {
 
     // Pulse: surface the minted donation in /explorer (treasury category).
     // Fire-and-forget — never block the mint confirmation on the feed write.
+    // The /explorer donation card renders a fee breakdown from these camelCase
+    // metadata fields (fiatAmount/stripeFee/operationsFee/dignitiesFee/
+    // systemTokens). Fee model: 8% of net is split 4% Operations (cash) + 4%
+    // Eight Dignities community pool (minted to treasury). org_fee is the total
+    // 8%; community_tokens_to_mint is the 4% dignities portion.
+    const communityTokens = Number(data.community_tokens_to_mint || 0);
+    const orgFee = Number(data.org_fee || 0);
+    const operationsFee = Math.max(0, orgFee - communityTokens);
     recordExplorerEvent({
       type: 'donation',
       title: `Donation of $${Number(data.fiat_amount).toFixed(2)} — ${Number(data.system_tokens_to_mint).toFixed(2)} $SYSTEM minted`,
@@ -115,8 +123,13 @@ export async function POST(request: NextRequest) {
       metadata: {
         donation_type: 'system_mint',
         donation_id: donationId,
-        fiat_amount: Number(data.fiat_amount),
         tx_hash: userOpHash,
+        // Fields consumed by the /explorer donation card:
+        fiatAmount: Number(data.fiat_amount),
+        stripeFee: Number(data.stripe_fee || 0),
+        operationsFee: operationsFee.toFixed(2),
+        dignitiesFee: communityTokens.toFixed(2),
+        systemTokens: Number(data.system_tokens_to_mint),
       },
       dedupe_key: `donation:mint:${donationId}`,
     }).catch((e) => console.error('[mint/confirm] explorer event failed (non-critical):', e));

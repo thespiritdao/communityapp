@@ -591,7 +591,12 @@ export default function ExplorerPage() {
                     {item.amount && <AmountBadge>{item.amount}</AmountBadge>}
                     <span>{formatDate(item.timestamp)}</span>
                   </CardMeta>
-                  {item.type === 'donation' && item.metadata && (
+                  {/* Fee breakdown — only for minted donations that carry the
+                      full breakdown metadata. Direct donations (no fee split /
+                      no $SYSTEM) skip it, so no $NaN rows are ever shown. */}
+                  {item.type === 'donation' && item.metadata &&
+                    item.metadata.fiatAmount != null &&
+                    !Number.isNaN(Number(item.metadata.fiatAmount)) && (
                     <div style={{
                       marginTop: 10,
                       padding: '10px 12px',
@@ -608,15 +613,15 @@ export default function ExplorerPage() {
                       <span style={{ textAlign: 'right', fontWeight: 500 }}>${Number(item.metadata.fiatAmount).toFixed(2)}</span>
                       <span style={{ fontWeight: 600, gridColumn: '1 / -1', marginTop: 4, color: '#2F5D50' }}>Fees</span>
                       <span style={{ paddingLeft: 8 }}>Stripe processing</span>
-                      <span style={{ textAlign: 'right', color: '#5F5A54' }}>-${Number(item.metadata.stripeFee).toFixed(2)}</span>
+                      <span style={{ textAlign: 'right', color: '#5F5A54' }}>-${Number(item.metadata.stripeFee || 0).toFixed(2)}</span>
                       <span style={{ paddingLeft: 8 }}>Operations (4%)</span>
-                      <span style={{ textAlign: 'right', color: '#5F5A54' }}>-${item.metadata.operationsFee}</span>
+                      <span style={{ textAlign: 'right', color: '#5F5A54' }}>-${Number(item.metadata.operationsFee || 0).toFixed(2)}</span>
                       <span style={{ paddingLeft: 8 }}>Eight Dignities (4%)</span>
-                      <span style={{ textAlign: 'right', color: '#5F5A54' }}>-${item.metadata.dignitiesFee}</span>
+                      <span style={{ textAlign: 'right', color: '#5F5A54' }}>-${Number(item.metadata.dignitiesFee || 0).toFixed(2)} $SYSTEM</span>
                       <div style={{ gridColumn: '1 / -1', borderTop: '1px solid #D8D2C8', margin: '4px 0' }} />
                       <span style={{ fontWeight: 600, color: '#2F5D50' }}>$SYSTEM Generated</span>
                       <span style={{ textAlign: 'right', fontWeight: 600, color: '#3F7A5A' }}>
-                        {Number(item.metadata.systemTokens).toLocaleString('en-US', { maximumFractionDigits: 2 })} $SYSTEM
+                        {Number(item.metadata.systemTokens || 0).toLocaleString('en-US', { maximumFractionDigits: 2 })} $SYSTEM
                       </span>
                     </div>
                   )}
