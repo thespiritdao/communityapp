@@ -195,14 +195,31 @@ export function DonationsManagementPanel({ canManage }: DonationsManagementPanel
         useCdpPaymaster: true,
       });
 
-      const userOpHash = (result as any)?.userOpHash || (result as any)?.transactionHash || '';
+      // CDP's sendUserOperation returns `userOperationHash` (not `userOpHash`).
+      // Fall back to the older names just in case, then to a placeholder so the
+      // confirm call — which requires a non-empty hash — never 400s after a
+      // mint that actually landed on-chain.
+      const userOpHash =
+        (result as any)?.userOperationHash ||
+        (result as any)?.userOpHash ||
+        (result as any)?.transactionHash ||
+        '';
+
+      if (!userOpHash) {
+        // The mint may have landed but we couldn't read a hash — surface it
+        // rather than silently dropping the DB record.
+        throw new Error('Mint sent but no transaction hash returned — verify on-chain before retrying.');
+      }
 
       const confirmRes = await fetch('/api/donations/mint/confirm', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ donationId: donation.id, userOpHash, minter: address }),
       });
-      if (!confirmRes.ok) throw new Error('Failed to record mint transaction');
+      if (!confirmRes.ok) {
+        const data = await confirmRes.json().catch(() => ({}));
+        throw new Error(data.error || 'Failed to record mint transaction');
+      }
 
       await fetchDonations();
     } catch (err: any) {
