@@ -6,6 +6,7 @@ import { useCDPStatus } from '@/hooks/useCDPStatus';
 import { useWalletClient, usePublicClient } from 'wagmi';
 import { parseUnits } from 'viem';
 import { Info, Flame, CheckCircle, Loader2 } from 'lucide-react';
+import { getCurrentSession } from '@/features/identity/utils/serverAuth';
 
 /**
  * ClaimTab — Burn $SYSTEM tokens to request a fiat payout.
@@ -141,10 +142,16 @@ export default function ClaimTab() {
 
       // ── Step 4: Confirm burn with server ───────────────────────────────────
       setStep('confirming');
+      const session = await getCurrentSession();
       const confirmRes = await fetch('/api/claims/confirm', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ payoutRef, burnTxHash: burnHash, walletAddress }),
+        headers: {
+          'Content-Type': 'application/json',
+          ...(session?.access_token
+            ? { Authorization: `Bearer ${session.access_token}` }
+            : {}),
+        },
+        body: JSON.stringify({ payoutRef, burnTxHash: burnHash }),
       });
 
       const confirmData = await confirmRes.json();

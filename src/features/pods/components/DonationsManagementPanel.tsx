@@ -6,6 +6,7 @@ import { useSendUserOperationWithAttribution as useSendUserOperation } from '@/w
 import { encodeFunctionData, parseUnits, getAddress } from 'viem';
 import { CheckCircle, Clock, RefreshCw, Coins, ExternalLink } from 'lucide-react';
 import { UserProfileDisplay } from '@/components/UserProfileDisplay';
+import { getCurrentSession } from '@/features/identity/utils/serverAuth';
 
 const SYSTEM_TOKEN_ADDRESS = process.env.NEXT_PUBLIC_SYSTEM_TOKEN as `0x${string}`;
 
@@ -104,10 +105,15 @@ export function DonationsManagementPanel({ canManage }: DonationsManagementPanel
     setActionLoading(donationId);
     setError(null);
     try {
+      const session = await getCurrentSession();
+      if (!session?.access_token) throw new Error('Not authenticated');
       const res = await fetch('/api/donations/approve', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ donationId, executiveWallet: address }),
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ donationId }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Approval failed');

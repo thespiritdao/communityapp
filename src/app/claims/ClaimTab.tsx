@@ -8,6 +8,7 @@ import { usePublicClient } from 'wagmi';
 import { parseUnits, encodeFunctionData } from 'viem';
 import { Info, Flame, CheckCircle, Loader2, ArrowRight } from 'lucide-react';
 import Link from 'next/link';
+import { getCurrentSession } from '@/features/identity/utils/serverAuth';
 
 /**
  * ClaimTab — Burn $SYSTEM tokens to request a fiat payout.
@@ -171,10 +172,16 @@ export default function ClaimTab() {
 
       // ── Step 4: Confirm with server ────────────────────────────────────────
       setFlowStep('confirming');
+      const session = await getCurrentSession();
       const confirmRes = await fetch('/api/claims/confirm', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ payoutRef, burnTxHash: txHash, walletAddress }),
+        headers: {
+          'Content-Type': 'application/json',
+          ...(session?.access_token
+            ? { Authorization: `Bearer ${session.access_token}` }
+            : {}),
+        },
+        body: JSON.stringify({ payoutRef, burnTxHash: txHash }),
       });
       const confirmData = await confirmRes.json();
       if (!confirmRes.ok) throw new Error(confirmData.error || 'Failed to confirm burn');

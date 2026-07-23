@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js';
 import { createPublicClient, http, getAddress } from 'viem';
 import { base } from 'viem/chains';
 import { getHatId } from '@/lib/hatRegistry';
+import { getWalletFromRequest } from '@/lib/serverPodAuth';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -102,10 +103,11 @@ async function checkApprovalThreshold(donationId: string): Promise<boolean> {
  *
  * Executive Pod member approves a donation for minting
  *
+ * Auth: Authorization: Bearer <supabase JWT>. The approving executive is the
+ * verified JWT wallet — NOT a request-body field.
+ *
  * Request Body:
  * - donationId: UUID of pending donation
- * - executiveWallet: Wallet address of approving executive
- * - signature: (Optional) Signature for additional verification
  *
  * Flow:
  * 1. Verify executive has Executive Pod Leader HAT
@@ -116,22 +118,33 @@ async function checkApprovalThreshold(donationId: string): Promise<boolean> {
  */
 export async function POST(request: NextRequest) {
   try {
+    // =====================================================
+    // 0. AUTHENTICATE CALLER (bind approval to the JWT wallet)
+    // =====================================================
+    // The approving executive is the VERIFIED caller — never a body field.
+    // Previously executiveWallet was taken from the body and only checked for
+    // the hat, letting anyone forge an approval attributed to a real exec.
+    const callerAddress = getWalletFromRequest(request);
+    if (!callerAddress) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const body = await request.json();
-    const { donationId, executiveWallet } = body;
+    const { donationId } = body;
 
     // =====================================================
     // 1. VALIDATION
     // =====================================================
 
-    if (!donationId || !executiveWallet) {
+    if (!donationId) {
       return NextResponse.json(
-        { error: 'donationId and executiveWallet required' },
+        { error: 'donationId required' },
         { status: 400 }
       );
     }
 
-    // Normalize wallet address
-    const normalizedWallet = executiveWallet.toLowerCase();
+    // The approver is the authenticated caller.
+    const normalizedWallet = callerAddress.toLowerCase();
 
     // =====================================================
     // 2. VERIFY EXECUTIVE ROLE

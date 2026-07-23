@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { sendServerNotificationBatch } from '@/lib/serverNotifications';
+import { getWalletFromRequest } from '@/lib/serverPodAuth';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -69,17 +70,28 @@ async function resolvePodMembers(podId: string): Promise<string[]> {
  */
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
-    const { payoutRef, burnTxHash, walletAddress } = body;
+    // Bind the caller to the wallet via verified JWT — never trust a body field.
+    // Previously walletAddress came from the body and the claim was matched
+    // against that same body value (circular), letting anyone confirm a burn on
+    // another member's claim.
+    const callerAddress = getWalletFromRequest(request);
+    if (!callerAddress) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
 
-    if (!payoutRef || !burnTxHash || !walletAddress) {
+    const body = await request.json();
+    const { payoutRef, burnTxHash } = body;
+
+    if (!payoutRef || !burnTxHash) {
       return NextResponse.json(
-        { error: 'payoutRef, burnTxHash, and walletAddress required' },
+        { error: 'payoutRef and burnTxHash required' },
         { status: 400 },
       );
     }
 
-    // Verify the claim belongs to this wallet
+    const walletAddress = callerAddress;
+
+    // Verify the claim belongs to the authenticated caller
     const { data: claim, error: fetchError } = await supabase
       .from('token_claims')
       .select('*')
