@@ -86,7 +86,24 @@ export const ApplicationsPanel: React.FC<ApplicationsPanelProps> = ({
       if (appsResult.error) throw appsResult.error;
 
       setApplications(appsResult.data || []);
-      setMembershipHatId(podResult.data?.membership_hat_id || null);
+
+      // Prefer pods.membership_hat_id, but fall back to the Member role's hat in
+      // pod_role_permissions when the column mirror is missing (some pods were
+      // created without it populated). This prevents a false "no member role"
+      // banner when a Member role genuinely exists.
+      let hatId: string | null = podResult.data?.membership_hat_id || null;
+      if (!hatId) {
+        const { data: roles } = await supabase
+          .from('pod_role_permissions')
+          .select('role_name, token_address')
+          .eq('pod_id', podId)
+          .eq('is_active', true);
+        const memberRole = (roles || []).find(
+          (r) => /member/i.test(r.role_name || '') && !/leader/i.test(r.role_name || ''),
+        );
+        hatId = memberRole?.token_address || null;
+      }
+      setMembershipHatId(hatId);
     } catch (error) {
       console.error('Failed to load applications:', error);
     } finally {

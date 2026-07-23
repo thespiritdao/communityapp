@@ -178,12 +178,19 @@ export class DatabaseTokenService {
           ? 'Community Pod' // Default name for IPFS-named pods
           : pod?.name || 'Unknown Pod';
 
-        const displayName = rolePermission.role_name || `${podName} Member`;
+        // Qualify generic role names with the pod. Some pods store bare roles
+        // ("Member", "Pod Leader") while others store prefixed ones
+        // ("Temporal Naturalism Member"). Prefix the pod name only when it isn't
+        // already present, so we never double-prefix.
+        const rawRole = rolePermission.role_name || 'Member';
+        const qualifiedRole = rawRole.toLowerCase().includes(podName.toLowerCase())
+          ? rawRole
+          : `${podName} ${rawRole.replace(/^pod\s+/i, '')}`;
 
         return {
           id: `role_${rolePermission.id}`,
-          name: displayName,
-          description: `${rolePermission.role_name || 'Member'} role in ${podName}`,
+          name: qualifiedRole,
+          description: `${qualifiedRole} role in ${podName}`,
           contract_address:
             rolePermission.contract_address ||
             '0x3bc1A0Ad72417f2d411118085256fC53CBdDd137',
@@ -193,7 +200,7 @@ export class DatabaseTokenService {
           token_address: rolePermission.token_address,
           is_active: rolePermission.is_active,
           source: 'pod_roles',
-          role_name: rolePermission.role_name, // Add role_name as separate field
+          role_name: qualifiedRole, // Displayed by DatabaseTokenGallery
         };
       });
     } catch (error) {
