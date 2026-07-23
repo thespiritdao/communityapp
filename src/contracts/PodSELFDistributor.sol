@@ -1,6 +1,13 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
+// ⚠️ DEPRECATED / RETIRED (2026-07-22) — DO NOT USE OR REDEPLOY.
+// Superseded by SelfMinter.mintBatch for all live $SELF issuance. This contract
+// has ZERO app callsites, is NOT on the Coinbase paymaster whitelist, and its
+// proxy branch uses tx.origin (audit SELF-V2-001 / H-1 — a phishing anti-pattern,
+// harmless here only because it is dead). Kept for on-chain reference of the
+// already-deployed 0x8a80eC4e... address; no new integration should target it.
+
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 

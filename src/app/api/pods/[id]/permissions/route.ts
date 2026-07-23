@@ -105,59 +105,20 @@ export async function PUT(request: NextRequest): Promise<Response> {
 }
 
 /**
- * POST /api/pods/[id]/permissions/sync
- * Manually trigger sync with blockchain (for testing)
+ * POST /api/pods/[id]/permissions/sync — RETIRED (2026-07-22).
+ *
+ * This was a stub that only marked a DB row 'synced' without touching Hats
+ * Protocol (a "Phase 2 TODO" that never shipped). It has no callers. Real
+ * on-chain role work happens where the transactions are actually sent:
+ *   - role-hat minting: PodManagerControlPanel.createHat
+ *   - bounty funder-hat authorization: syncBountyFunderHat (same component)
+ * Returning 410 Gone rather than falsely reporting success, so nothing can rely
+ * on this endpoint as if it enforced or synced anything.
  */
 export async function POST(request: NextRequest): Promise<Response> {
-  return withPodManagement(request, async (req, context: PodAuthContext) => {
-    try {
-      const body = await request.json();
-      const { roleId } = body;
-
-      if (!roleId) {
-        return PodAuthResponse.error('Role ID is required');
-      }
-
-      console.log(
-        `🔄 Syncing role permissions with blockchain for pod ${context.podId}`,
-      );
-
-      // Get the role permission
-      const role = await PodRolePermissionsService.getRolePermissionByHatId(
-        context.podId,
-        roleId,
-      );
-
-      if (!role) {
-        return PodAuthResponse.notFound('Role not found');
-      }
-
-      // TODO: Phase 2 - Implement actual HAT Protocol sync
-      console.log('🎩 Future blockchain sync:', {
-        podId: context.podId,
-        roleId: roleId,
-        hatId: role.token_address,
-        permissions: role.permissions,
-        action: 'This will sync with HATs Protocol smart contract',
-      });
-
-      // For now, just mark as synced
-      await PodRolePermissionsService.updateSyncStatus(role.id, 'synced');
-
-      return PodAuthResponse.success({
-        message: 'Role permissions sync initiated',
-        roleId: roleId,
-        hatId: role.token_address,
-        syncStatus: 'synced',
-      });
-    } catch (error) {
-      console.error(
-        `Failed to sync permissions for pod ${context.podId}:`,
-        error,
-      );
-      return PodAuthResponse.error(
-        error instanceof Error ? error.message : 'Failed to sync permissions',
-      );
-    }
+  return withPodManagement(request, async () => {
+    return PodAuthResponse.error(
+      'Endpoint retired: role permissions are synced on-chain at mint/authorization time, not here.',
+    );
   });
 }
