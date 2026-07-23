@@ -50,15 +50,17 @@ export async function getOrCreatePodInviteUrl(
     return { code: reusable.code, url: `https://app.spiritdao.org/?invite=${reusable.code}` };
   }
 
-  // Resolve the pod's default (first active non-leader) member role.
+  // Resolve the pod's default member role. Leader vs member is distinguished by
+  // role_name (…Leader / …Member) — there is no role_type column. Invite links
+  // may only grant member (non-leader) roles.
   const { data: roles } = await supabaseAdmin
     .from('pod_role_permissions')
-    .select('id, role_name, role_type')
+    .select('id, role_name')
     .eq('pod_id', podId)
     .eq('is_active', true);
-  const role = (roles || []).find(
-    (r) => r.role_type !== 'leader' && !/leader/i.test(r.role_name || ''),
-  );
+  const role =
+    (roles || []).find((r) => /member/i.test(r.role_name || '')) ||
+    (roles || []).find((r) => !/leader/i.test(r.role_name || ''));
   if (!role) return null;
 
   // Unique code (retry on the vanishingly rare collision).

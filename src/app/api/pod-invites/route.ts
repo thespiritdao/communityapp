@@ -54,14 +54,15 @@ export async function POST(req: NextRequest) {
   const auth = await authorize(req, podId);
   if (auth instanceof NextResponse) return auth;
 
-  // Resolve the member role to grant. Explicit roleId must be a non-leader
-  // role of this pod; default = the pod's first active non-leader role.
+  // Resolve the member role to grant. Leader vs member is distinguished by
+  // role_name (…Leader / …Member) — there is no role_type column. Invite links
+  // may only grant member (non-leader) roles.
   let role: { id: string; role_name: string; token_address: string } | null =
     null;
   if (roleId) {
     const { data } = await supabaseAdmin
       .from('pod_role_permissions')
-      .select('id, role_name, token_address, role_type')
+      .select('id, role_name, token_address')
       .eq('id', roleId)
       .eq('pod_id', podId)
       .eq('is_active', true)
@@ -69,7 +70,7 @@ export async function POST(req: NextRequest) {
     if (!data) {
       return NextResponse.json({ error: 'Role not found for this pod' }, { status: 400 });
     }
-    if (data.role_type === 'leader' || /leader/i.test(data.role_name || '')) {
+    if (/leader/i.test(data.role_name || '')) {
       return NextResponse.json(
         { error: 'Invite links may only grant member roles' },
         { status: 400 },
@@ -79,13 +80,13 @@ export async function POST(req: NextRequest) {
   } else {
     const { data: roles } = await supabaseAdmin
       .from('pod_role_permissions')
-      .select('id, role_name, token_address, role_type')
+      .select('id, role_name, token_address')
       .eq('pod_id', podId)
       .eq('is_active', true);
     role =
-      (roles || []).find(
-        (r) => r.role_type !== 'leader' && !/leader/i.test(r.role_name || ''),
-      ) || null;
+      (roles || []).find((r) => /member/i.test(r.role_name || '')) ||
+      (roles || []).find((r) => !/leader/i.test(r.role_name || '')) ||
+      null;
     if (!role) {
       return NextResponse.json(
         { error: 'This pod has no member role to grant' },
