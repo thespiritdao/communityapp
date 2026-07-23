@@ -68,6 +68,16 @@ SpiritDAO is presently in open enrollment, so anyone can join. It is as simple a
 
 All transactions in SpiritDAO are gasless, so you never pay network fees.
 
+## Inviting people
+
+Invitations live in one **Invite Friends** panel on your Identity page. A dropdown lets you choose who you're inviting them to:
+- **SpiritDAO (app access only):** your personal invite link — anyone can copy it or email it to bring a friend into the ecosystem. It gets them into the app but does not join them to any pod.
+- **A pod you lead:** turns the link into a pod-enroll link. When the invitee signs up, they join that pod automatically — no application and no approval step. Only pods you *lead* offer this; regular members can invite people to SpiritDAO but enrolling someone into a pod is a leader action.
+
+You can copy the link with one button or email it to one or more addresses directly; the email carries whichever link matches your selection. There is a limit of about 20 emailed invitations per member per day, and people already invited in the last 30 days (or already members) are skipped.
+
+When someone joins a pod through a link they become a working member immediately (chat, forum, events, knowledge base unlock at once). Their on-chain member role is finalized in a quick second step: the pod's leaders are notified, and a leader clicks **Mint Roles** in the pod's Manage → Members → Invite Links section to issue the queued role tokens in one free transaction. Invitations still respect eligibility — if a pod's member role has requirements (for example a community-token minimum), the link checks them; an invitation is a welcome, not a bypass. Links grant member roles only; leadership always goes through explicit approval.
+
 **Using multiple devices:** a wallet is tied to the device and browser you signed in on. Signing in on a new device prompts you to link it, so all your devices stay on the same identity, tokens, and history. (A more polished linked-devices settings screen is on the way.)
 
 ## Platform Features
