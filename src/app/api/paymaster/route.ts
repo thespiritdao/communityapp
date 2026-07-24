@@ -104,29 +104,44 @@ const EXECUTE_BATCH_ALT_ABI = [
   },
 ] as const;
 
+// Sentinel returned when a batch decodes but contains a target we cannot fully
+// validate (missing or non-address element). We must NOT silently drop such a
+// target — that would let an unvalidated call ride along on a batch whose other
+// targets are whitelisted. Its presence forces denial in willSponsor.
+const UNDECODABLE = '__undecodable__';
+
 /**
- * Extract the actual contract address(es) the user is trying to call from
- * the smart-account-encoded callData.
+ * Extract every contract address the UserOperation will call from the
+ * smart-account-encoded callData. Returns one lowercased address per call.
+ *
+ * FAIL CLOSED: if any batch element is malformed (not a valid address), the
+ * result includes the UNDECODABLE sentinel so the whole op is denied rather
+ * than partially validated. An empty result means "could not decode at all".
  */
 function extractTargets(callData: string): string[] {
   if (!callData || callData === '0x' || callData.length < 10) return [];
 
+  // Map a raw element to a lowercased address, or UNDECODABLE if invalid.
+  const norm = (v: unknown): string =>
+    typeof v === 'string' && isAddress(v) ? v.toLowerCase() : UNDECODABLE;
+
   try {
     const { args } = decodeFunctionData({ abi: EXECUTE_ABI, data: callData as `0x${string}` });
-    const target = args[0] as string;
-    if (isAddress(target)) return [target.toLowerCase()];
+    return [norm(args[0])];
   } catch {}
 
   try {
     const { args } = decodeFunctionData({ abi: EXECUTE_BATCH_ABI, data: callData as `0x${string}` });
     const calls = args[0] as unknown as { target: string }[];
-    return calls.map((c) => c.target.toLowerCase()).filter(isAddress);
+    if (!Array.isArray(calls) || calls.length === 0) return [];
+    return calls.map((c) => norm(c?.target));
   } catch {}
 
   try {
     const { args } = decodeFunctionData({ abi: EXECUTE_BATCH_ALT_ABI, data: callData as `0x${string}` });
     const targets = args[0] as unknown as string[];
-    return targets.map((t) => t.toLowerCase()).filter(isAddress);
+    if (!Array.isArray(targets) || targets.length === 0) return [];
+    return targets.map((t) => norm(t));
   } catch {}
 
   return [];
@@ -142,6 +157,12 @@ async function willSponsor(userOp: Record<string, unknown>): Promise<boolean> {
   if (targets.length === 0) {
     // Can't determine target — deny to be safe
     console.warn('[paymaster] Could not decode callData targets, denying sponsorship');
+    return false;
+  }
+
+  // Any target we couldn't validate as an address → deny the whole op.
+  if (targets.includes(UNDECODABLE)) {
+    console.warn('[paymaster] Batch contains an undecodable target, denying sponsorship');
     return false;
   }
 
