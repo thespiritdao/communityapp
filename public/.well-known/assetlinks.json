@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "org.spiritdao.app",
+      "sha256_cert_fingerprints": [
+        "3F:6D:A3:1E:20:4E:6F:9A:D2:DA:9D:77:DE:7A:AF:64:02:54:59:54:D3:6B:1C:70:FD:0D:E9:74:33:7E:C0:6B"
+      ]
+    }
+  }
+]
