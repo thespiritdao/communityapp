@@ -89,10 +89,10 @@ Collected data — declare YES for:
 
 Security section:
 - Data encrypted in transit: YES (HTTPS/WSS everywhere).
-- Deletion mechanism: verify — if there's no self-serve account deletion flow,
-  the answer is "request via tech@spiritdao.org" and Play ALSO requires a
-  **data deletion URL** for apps with account creation. TODO: confirm what
-  exists; a simple /account-deletion page may need to be added.
+- Deletion mechanism: **data deletion URL =
+  https://app.spiritdao.org/identity/account-deletion** (live, public,
+  email-based request with 30-day completion; deployed 2026-07-27). A
+  self-serve in-app delete button is a fast-follow if review pushes back.
 - No data sold. No third-party ad SDKs. Analytics: declare if any (check
   whether PostHog/GA/etc. is in the app).
 
