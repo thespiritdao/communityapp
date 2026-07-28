@@ -407,7 +407,14 @@ export default function PrivacyPolicyPage() {
           </h3>
           <p className="text-gray-700 mb-4">
             You may request deletion of off-chain data (profile info, chat
-            messages) by contacting us. Please note:
+            messages) by contacting us — see our{' '}
+            <a
+              href="/identity/account-deletion"
+              className="text-green-800 underline"
+            >
+              Account Deletion page
+            </a>{' '}
+            for the full process. Please note:
           </p>
           <ul className="list-disc pl-6 mb-4 text-gray-700">
             <li>Blockchain data cannot be deleted (permanent public record)</li>
