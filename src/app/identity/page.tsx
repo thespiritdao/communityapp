@@ -9,6 +9,7 @@ import { DatabaseTokenGallery } from '@/features/identity/components/DatabaseTok
 import { TenureBand } from '@/features/identity/components/TenureBand';
 import { LinkedWalletsSection } from '@/features/identity/components/LinkedWalletsSection';
 import { InviteFriendsSection } from '@/features/identity/components/InviteFriendsSection';
+import { DeleteAccountSection } from '@/features/identity/components/DeleteAccountSection';
 import '@/features/identity/styles/identityStyles.css';
 import '@/features/identity/styles/TokenGallery.css';
 import '@/features/identity/styles/ProfileModal.css';
@@ -239,6 +240,9 @@ function IdentityPageContent() {
           Terms of Service
         </Link>
       </div>
+
+      {/* Danger zone — in-app account deletion (Google Play data policy) */}
+      <DeleteAccountSection />
     </div>
   );
 }

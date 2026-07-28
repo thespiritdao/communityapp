@@ -26,8 +26,16 @@ export default function AccountDeletionPage() {
             How to Request Deletion
           </h2>
           <p className="text-gray-700 mb-4">
-            To delete your SpiritDAO Community account, email us from the
-            address associated with your account:
+            The fastest way: while signed in, open your{' '}
+            <Link href="/identity" className="text-green-800 underline">
+              Identity page
+            </Link>{' '}
+            in the app and use the <strong>Delete Account</strong> button at
+            the bottom of the page.
+          </p>
+          <p className="text-gray-700 mb-4">
+            Alternatively, email us from the address associated with your
+            account:
           </p>
           <p className="mb-4">
             <a

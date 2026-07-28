@@ -91,8 +91,11 @@ Security section:
 - Data encrypted in transit: YES (HTTPS/WSS everywhere).
 - Deletion mechanism: **data deletion URL =
   https://app.spiritdao.org/identity/account-deletion** (live, public,
-  email-based request with 30-day completion; deployed 2026-07-27). A
-  self-serve in-app delete button is a fast-follow if review pushes back.
+  30-day completion; deployed 2026-07-27). In-app deletion: Delete Account
+  button at the bottom of /identity (POST /api/account/delete → records in
+  account_deletion_requests + notifies tech@spiritdao.org + signs out).
+  REQUIRES: apply scripts/db-migrations/007_account_deletion_requests.sql
+  to prod Supabase (route degrades to email-only until applied).
 - No data sold. No third-party ad SDKs. Analytics: declare if any (check
   whether PostHog/GA/etc. is in the app).
 
