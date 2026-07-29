@@ -1,13 +1,13 @@
 /**
  * Rate Limiting Utility
  *
- * Uses Upstash Redis for distributed rate limiting across serverless functions.
+ * Uses Supabase Postgres for distributed rate limiting across serverless
+ * functions (fixed-window counters via the `rate_limit_hit` RPC — see
+ * scripts/db-migrations/015_rate_limits.sql). Replaced Upstash Redis, whose
+ * free-tier database was reclaimed for inactivity and took the endpoint down.
  *
- * Setup:
- * 1. Create Upstash Redis database at https://console.upstash.com
- * 2. Add environment variables:
- *    UPSTASH_REDIS_REST_URL=https://xxx.upstash.io
- *    UPSTASH_REDIS_REST_TOKEN=your_token_here
+ * Server-side ONLY — requires SUPABASE_SERVICE_ROLE_KEY; the RPC is not
+ * executable by anon/authenticated roles.
  *
  * Usage:
  * import { rateLimiters } from '@/lib/ratelimit';
@@ -18,38 +18,48 @@
  * }
  */
 
-import { Ratelimit } from '@upstash/ratelimit';
-import { Redis } from '@upstash/redis';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
 /**
- * Initialize Redis client
- * Falls back to no-op implementation if env vars are missing
+ * Service-role client for the rate-limit RPC.
+ * Falls back to null (no-op limiting) if env vars are missing (local dev).
  */
-function createRedisClient() {
-  const url = process.env.UPSTASH_REDIS_REST_URL;
-  const token = process.env.UPSTASH_REDIS_REST_TOKEN;
+function createAdminClient(): SupabaseClient | null {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-  if (!url || !token) {
+  if (!url || !key) {
     console.warn(
-      '⚠️ UPSTASH_REDIS env vars not configured. Rate limiting disabled.',
+      '⚠️ Supabase service-role env vars not configured. Rate limiting disabled.',
     );
     return null;
   }
 
-  return new Redis({
-    url,
-    token,
+  return createClient(url, key, {
+    auth: { persistSession: false, autoRefreshToken: false },
   });
 }
 
-const redis = createRedisClient();
+const admin = createAdminClient();
+
+export interface RateLimitResult {
+  success: boolean;
+  limit: number;
+  remaining: number;
+  reset: number; // epoch ms when the current window resets
+  pending: Promise<void>;
+}
+
+interface RateLimiter {
+  limit: (identifier: string) => Promise<RateLimitResult>;
+}
 
 /**
- * No-op rate limiter for when Redis is not configured
+ * No-op rate limiter for when Supabase is not configured
  * Always returns success to prevent breaking the app
  */
-const noOpLimiter = {
-  limit: async (identifier: string) => ({
+const noOpLimiter: RateLimiter = {
+  limit: async (_identifier: string) => ({
     success: true,
     limit: 0,
     remaining: 0,
@@ -57,6 +67,42 @@ const noOpLimiter = {
     pending: Promise.resolve(),
   }),
 };
+
+/**
+ * Fixed-window limiter backed by the rate_limit_hit RPC.
+ * Throws when the database call fails — callers decide fail-open vs
+ * fail-closed (the Sensemaker route fails closed because requests cost
+ * real LLM tokens).
+ */
+function makeLimiter(
+  prefix: string,
+  maxRequests: number,
+  windowSeconds: number,
+): RateLimiter {
+  if (!admin) return noOpLimiter;
+
+  return {
+    limit: async (identifier: string): Promise<RateLimitResult> => {
+      const { data, error } = await admin.rpc('rate_limit_hit', {
+        p_key: `${prefix}:${identifier}`,
+        p_limit: maxRequests,
+        p_window_seconds: windowSeconds,
+      });
+
+      if (error) {
+        throw new Error(`rate_limit_hit RPC failed: ${error.message}`);
+      }
+
+      return {
+        success: data.allowed === true,
+        limit: maxRequests,
+        remaining: data.remaining ?? 0,
+        reset: new Date(data.reset_at).getTime(),
+        pending: Promise.resolve(),
+      };
+    },
+  };
+}
 
 /**
  * Rate limiters for different endpoints
@@ -68,73 +114,32 @@ export const rateLimiters = {
    * Limit: 10 requests per minute per IP
    * Why: Prevents abuse of expensive AI API calls (OpenAI + Anthropic)
    * Cost per request: ~$0.0012 - $0.015
-   *
-   * Usage:
-   * const ip = req.ip ?? req.headers.get("x-forwarded-for") ?? "127.0.0.1";
-   * const { success } = await rateLimiters.sensemaker.limit(ip);
    */
-  sensemaker: redis
-    ? new Ratelimit({
-        redis,
-        limiter: Ratelimit.slidingWindow(10, '1 m'), // 10 requests per minute
-        analytics: true,
-        prefix: 'ratelimit:sensemaker',
-      })
-    : noOpLimiter,
+  sensemaker: makeLimiter('sensemaker', 10, 60),
 
   /**
    * Airdrop Endpoint
    *
    * Limit: 3 requests per hour per wallet address
    * Why: Prevents blockchain spam and abuse of gas-sponsored airdrops
-   *
-   * Usage:
-   * const { success } = await rateLimiters.airdrop.limit(walletAddress.toLowerCase());
    */
-  airdrop: redis
-    ? new Ratelimit({
-        redis,
-        limiter: Ratelimit.slidingWindow(3, '1 h'), // 3 requests per hour
-        analytics: true,
-        prefix: 'ratelimit:airdrop',
-      })
-    : noOpLimiter,
+  airdrop: makeLimiter('airdrop', 3, 3600),
 
   /**
    * Notification Send
    *
    * Limit: 100 requests per hour per user
    * Why: Prevents notification spam to users
-   *
-   * Usage:
-   * const { success } = await rateLimiters.notifications.limit(senderAddress.toLowerCase());
    */
-  notifications: redis
-    ? new Ratelimit({
-        redis,
-        limiter: Ratelimit.slidingWindow(100, '1 h'), // 100 requests per hour
-        analytics: true,
-        prefix: 'ratelimit:notifications',
-      })
-    : noOpLimiter,
+  notifications: makeLimiter('notifications', 100, 3600),
 
   /**
    * Bounty Creation
    *
    * Limit: 10 requests per hour per user
    * Why: Prevents bounty spam
-   *
-   * Usage:
-   * const { success } = await rateLimiters.bountyCreate.limit(creatorAddress.toLowerCase());
    */
-  bountyCreate: redis
-    ? new Ratelimit({
-        redis,
-        limiter: Ratelimit.slidingWindow(10, '1 h'), // 10 requests per hour
-        analytics: true,
-        prefix: 'ratelimit:bounty:create',
-      })
-    : noOpLimiter,
+  bountyCreate: makeLimiter('bounty:create', 10, 3600),
 };
 
 /**
@@ -176,5 +181,5 @@ export function rateLimitErrorResponse(reset: number) {
  * Type guard to check if rate limiting is enabled
  */
 export function isRateLimitingEnabled(): boolean {
-  return redis !== null;
+  return admin !== null;
 }

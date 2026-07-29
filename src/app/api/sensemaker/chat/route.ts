@@ -61,7 +61,7 @@ export async function POST(req: NextRequest) {
 
   try {
     // Step 0: Rate limiting (CRITICAL - prevents expensive AI API abuse)
-    // Gracefully degrade if Upstash Redis is unreachable — allow request through
+    // Backed by Supabase Postgres (rate_limit_hit RPC)
     step = 'ratelimit';
     const clientIp = getClientIp(req);
     let limit = 0, remaining = 0, reset = 0;
@@ -85,9 +85,10 @@ export async function POST(req: NextRequest) {
         });
       }
     } catch (rlError) {
-      // Fail CLOSED when rate limiting is configured but Redis is unreachable —
-      // this endpoint spends real LLM tokens per request. The no-op path (Redis
-      // not configured, i.e. local dev) never throws and stays open.
+      // Fail CLOSED when rate limiting is configured but the database call
+      // fails — this endpoint spends real LLM tokens per request. The no-op
+      // path (service key not configured, i.e. local dev) never throws and
+      // stays open.
       if (isRateLimitingEnabled()) {
         console.error('[Sensemaker Chat] Rate limiter unreachable — failing closed:', rlError);
         return NextResponse.json(

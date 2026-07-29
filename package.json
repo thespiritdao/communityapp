@@ -105,8 +105,6 @@
     "@tiptap/react": "^3.7.2",
     "@tiptap/starter-kit": "^3.7.2",
     "@unlock-protocol/contracts": "^0.0.33",
-    "@upstash/ratelimit": "^2.0.7",
-    "@upstash/redis": "^1.35.6",
     "@wagmi/core": "^2.17.3",
     "axios": "^1.13.6",
     "bn.js": "^5.2.1",
