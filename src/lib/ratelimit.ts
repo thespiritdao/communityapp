@@ -146,6 +146,14 @@ export const rateLimiters = {
  * Helper function to get client IP from Next.js request
  */
 export function getClientIp(req: Request): string {
+  // Cloudflare proxies in front of Vercel, so x-forwarded-for holds the CF
+  // edge IP (Vercel overwrites it with the connecting IP). cf-connecting-ip
+  // carries the real client through the proxy.
+  const cfIp = req.headers.get('cf-connecting-ip');
+  if (cfIp) {
+    return cfIp;
+  }
+
   // Try x-forwarded-for (Vercel, proxies)
   const forwarded = req.headers.get('x-forwarded-for');
   if (forwarded) {
