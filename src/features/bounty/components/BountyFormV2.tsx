@@ -26,7 +26,6 @@ import { useBountyV2 } from '../hooks/useBountyV2';
 // import { usePodFactoryPermissions } from '@/features/pods/hooks/usePodFactoryPermissions'; // OLD: On-chain factory check
 import { useBountyPermissions } from '@/features/bounty/hooks/useBountyPermissions'; // NEW: Database permission check
 import { useBountyManagementAccess } from '../hooks/useBountyManagementAccess';
-import { BountyTreasuryFundingTransaction } from './BountyTreasuryFundingTransaction';
 import { RegisterPodButton } from '@/features/pods/components/RegisterPodButton';
 
 export interface BountyFormV2Data {
@@ -308,7 +307,7 @@ export const BountyFormV2: React.FC<BountyFormV2Props> = ({
               '0x1b8d424695E63ABca04E94bA46c03f1D83e14020') as `0x${string}`);
 
       const BOUNTY_MANAGER_ADDRESS = (process.env.NEXT_PUBLIC_BOUNTY_MANAGER_ADDRESS ||
-        '0x8Af29E57A962216C4661c36737CbF33510356DAD') as `0x${string}`;
+        '0x01906d30f5cc34b5c445e0dcbf2934f4b9407048') as `0x${string}`;
 
       const amount = parseEther(formData.value.amount);
 
@@ -526,7 +525,7 @@ export const BountyFormV2: React.FC<BountyFormV2Props> = ({
 
         // Find BountyCreated event
         const BOUNTY_MANAGER = (process.env.NEXT_PUBLIC_BOUNTY_MANAGER_ADDRESS ||
-          '0x8Af29E57A962216C4661c36737CbF33510356DAD') as `0x${string}`;
+          '0x01906d30f5cc34b5c445e0dcbf2934f4b9407048') as `0x${string}`;
 
         const bountyCreatedLog = logs?.find(
           (log: any) =>

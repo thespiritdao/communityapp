@@ -16,7 +16,7 @@ const publicClient = createPublicClient({
 });
 
 const BOUNTY_MANAGER_ADDRESS = (process.env.NEXT_PUBLIC_BOUNTY_MANAGER_ADDRESS ||
-  '0x8Af29E57A962216C4661c36737CbF33510356DAD') as `0x${string}`;
+  '0x01906d30f5cc34b5c445e0dcbf2934f4b9407048') as `0x${string}`;
 
 const BOUNTY_CREATED_TOPIC = '0x53902e1474335a04152927f2e2b4e98a09b6a6f269fbab584d6ec3b22176995c';
 

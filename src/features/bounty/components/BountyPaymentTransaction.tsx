@@ -25,10 +25,10 @@ import { encodeFunctionData, parseEther, type Abi, type TransactionReceipt } fro
 import { Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
-import BountyManagerABIJson from '@/abis/BountyManagerV2.json';
+import BountyManagerV5Artifact from '@/abis/BountyManagerV5.json';
 import { unifiedNotificationService } from '@/services/unifiedNotificationService';
 
-const BountyManagerABI = BountyManagerABIJson as Abi;
+const BountyManagerABI = BountyManagerV5Artifact.abi as Abi;
 import { UserProfileDisplay } from '@/components/UserProfileDisplay';
 import {
   logTransactionLifecycle,

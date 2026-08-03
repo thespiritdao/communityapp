@@ -18,10 +18,10 @@ import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AlertTriangle, XCircle, ArrowLeft } from 'lucide-react';
 import type { FrontendBounty } from '../types/bounty';
-import BountyManagerABIJson from '@/abis/BountyManagerV2.json';
+import BountyManagerV5Artifact from '@/abis/BountyManagerV5.json';
 import { UserProfileDisplay } from '@/components/UserProfileDisplay';
 
-const BountyManagerABI = BountyManagerABIJson as Abi;
+const BountyManagerABI = BountyManagerV5Artifact.abi as Abi;
 
 interface BountyCancellationDialogProps {
   bounty: FrontendBounty;
@@ -102,6 +102,15 @@ export const BountyCancellationDialog: React.FC<
       return;
     }
 
+    // Bounty IDs start at 1 on-chain; a missing onchain_id means the bounty was
+    // never confirmed on this contract and cancelBounty(0) would always revert.
+    if (!bounty.onchain_id) {
+      setError(
+        'This bounty has no on-chain ID recorded, so it cannot be cancelled on-chain. It may still be pending confirmation, or it exists on a previous contract deployment. Contact an administrator to remove it from the database.',
+      );
+      return;
+    }
+
     const smartAccount = currentUser.evmSmartAccounts[0]; // EXACT FAUCET PATTERN
 
     setIsTransactionPending(true); // EXACT FAUCET PATTERN
@@ -117,7 +126,7 @@ export const BountyCancellationDialog: React.FC<
       const callData = encodeFunctionData({
         abi: BountyManagerABI,
         functionName: 'cancelBounty',
-        args: [BigInt(bounty.onchain_id || 0)],
+        args: [BigInt(bounty.onchain_id)],
       });
 
       console.log('📝 Encoded call data for cancelBounty');

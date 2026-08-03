@@ -23,9 +23,9 @@ import { encodeFunctionData, type Abi, type TransactionReceipt } from 'viem';
 import { parseEther } from 'viem';
 import { Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import BountyManagerABIJson from '@/abis/BountyManagerV2.json';
+import BountyManagerV5Artifact from '@/abis/BountyManagerV5.json';
 
-const BountyManagerABI = BountyManagerABIJson as Abi;
+const BountyManagerABI = BountyManagerV5Artifact.abi as Abi;
 import { unifiedNotificationService } from '@/services/unifiedNotificationService';
 import { UserProfileDisplay } from '@/components/UserProfileDisplay';
 import {
@@ -260,12 +260,11 @@ export const MilestonePaymentTransaction: React.FC<
           address: process.env
             .NEXT_PUBLIC_BOUNTY_MANAGER_ADDRESS as `0x${string}`,
           abi: BountyManagerABI,
-          functionName: 'releaseMilestonePayment',
-          args: [
-            BigInt(onchainBountyId),
-            BigInt(onchainMilestoneId),
-            parseEther(paymentAmount),
-          ],
+          // V5 removed per-milestone on-chain accounting; partial releases go
+          // through releasePayment(bountyId, amount). Which milestone this pays
+          // is tracked in the database (syncMilestonePaymentState).
+          functionName: 'releasePayment',
+          args: [BigInt(onchainBountyId), parseEther(paymentAmount)],
         },
       ];
 
@@ -307,23 +306,21 @@ export const MilestonePaymentTransaction: React.FC<
     try {
       console.log('🚀 Building Smart Account User Operation for milestone payment...');
       console.log('💼 Smart Account:', smartAccount);
-      console.log('🎯 Contract: BountyManager - releaseMilestonePayment');
+      console.log('🎯 Contract: BountyManager - releasePayment (milestone portion)');
       console.log('⛽ Paymaster: ENABLED (gasless transaction)');
 
       const contractAddress = process.env.NEXT_PUBLIC_BOUNTY_MANAGER_ADDRESS as `0x${string}`;
 
-      // EXACT FAUCET PATTERN: Encode call data
+      // V5 removed per-milestone on-chain accounting; partial releases go
+      // through releasePayment(bountyId, amount). Which milestone this pays
+      // is tracked in the database (syncMilestonePaymentState).
       const callData = encodeFunctionData({
         abi: BountyManagerABI,
-        functionName: 'releaseMilestonePayment',
-        args: [
-          BigInt(onchainBountyId),
-          BigInt(onchainMilestoneId),
-          parseEther(paymentAmount),
-        ],
+        functionName: 'releasePayment',
+        args: [BigInt(onchainBountyId), parseEther(paymentAmount)],
       });
 
-      console.log('📝 Encoded call data for releaseMilestonePayment');
+      console.log('📝 Encoded call data for releasePayment');
 
       // EXACT FAUCET PATTERN: Send user operation
       const result = await sendUserOperation({

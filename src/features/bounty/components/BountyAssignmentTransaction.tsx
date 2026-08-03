@@ -26,9 +26,9 @@ import { usePublicClient } from 'wagmi';
 import { encodeFunctionData, type Abi, type TransactionReceipt } from 'viem';
 import { Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import BountyManagerABIJson from '@/abis/BountyManagerV2.json';
+import BountyManagerV5Artifact from '@/abis/BountyManagerV5.json';
 
-const BountyManagerABI = BountyManagerABIJson as Abi;
+const BountyManagerABI = BountyManagerV5Artifact.abi as Abi;
 import { unifiedNotificationService } from '@/services/unifiedNotificationService';
 import { UserProfileDisplay } from '@/components/UserProfileDisplay';
 import {

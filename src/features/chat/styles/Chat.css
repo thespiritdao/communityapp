@@ -30,7 +30,8 @@ body {
 /* Chat container layout */
 .chat-container {
   background-color: #f5f4ed; /* Matches your desired background color */
-  min-height: calc(100vh - 60px); /* Minimum height, allows content to expand */
+  min-height: calc(100vh - 60px); /* Fallback for browsers without dvh */
+  min-height: calc(100dvh - var(--bottom-nav-height, 60px)); /* dvh shrinks with the keyboard */
   height: 100%; /* Fill available space */
   width: 100%;
   max-width: 100%;
@@ -250,7 +251,9 @@ body {
   background-color: transparent; /* Transparent to avoid visual bulk */
   padding: 0.25rem 0.5rem; /* Minimal padding for just the input bubble */
   position: fixed; /* Fixed to bottom of screen */
-  bottom: 60px; /* Above BottomNav */
+  /* Tracks the real nav height; collapses to 0 when the nav hides for the
+     soft keyboard, dropping the input to sit directly above the keyboard */
+  bottom: var(--bottom-nav-height, 60px);
   left: 0;
   right: 0;
   z-index: 100; /* Above chat messages but below BottomNav */
@@ -801,7 +804,8 @@ body {
   margin-bottom: calc(var(--bottom-nav-height, 60px) + 0.5rem); /* Space for bottom nav + margin */
   padding: 0.5rem;
   height: auto;
-  min-height: calc(100vh - var(--bottom-nav-height, 60px) - 1rem); /* Account for nav height and margins */
+  min-height: calc(100vh - var(--bottom-nav-height, 60px) - 1rem); /* Fallback for browsers without dvh */
+  min-height: calc(100dvh - var(--bottom-nav-height, 60px) - 1rem); /* dvh shrinks with the keyboard */
 
   background: #fff;
   border: 1px solid rgba(0,0,0,0.08);
@@ -892,7 +896,8 @@ img.pod-avatar--sm {
 
   /* Chat container mobile adjustments */
   .chat-container {
-    height: calc(100vh - 60px);
+    height: calc(100vh - 60px); /* Fallback for browsers without dvh */
+    height: calc(100dvh - var(--bottom-nav-height, 60px)); /* dvh shrinks with the keyboard */
     width: 100%;
     margin: 0;
     padding: 0;

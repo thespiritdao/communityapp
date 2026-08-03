@@ -12,7 +12,9 @@
 
 import { supabase } from '@/lib/supabase';
 import type { PublicClient } from 'viem';
-import BountyManagerABI from '@/abis/BountyManagerV2.json';
+import BountyManagerV5Artifact from '@/abis/BountyManagerV5.json';
+
+const BountyManagerABI = BountyManagerV5Artifact.abi;
 
 // ============================================================================
 // TYPE DEFINITIONS

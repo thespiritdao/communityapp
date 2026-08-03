@@ -1,8 +1,10 @@
 import { useEvmAddress } from '@coinbase/cdp-hooks';
 import { usePublicClient } from 'wagmi';
 import { parseUnits, parseEther } from 'viem';
-import BountyManagerABI from '@/abis/BountyManagerV2.json';
+import BountyManagerV5Artifact from '@/abis/BountyManagerV5.json';
 import { CreateBountyParams, PaymentStructure } from '@/types/bounty';
+
+const BountyManagerABI = BountyManagerV5Artifact.abi;
 import { CONTRACT_ADDRESSES, CHAIN_CONFIG } from '@/config/contracts';
 
 const BASE_CHAIN_ID = CHAIN_CONFIG.CHAIN_ID;

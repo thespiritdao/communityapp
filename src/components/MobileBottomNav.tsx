@@ -44,10 +44,37 @@ const NAV_ITEMS: Item[] = [
 function MobileBottomNavContent() {
   const pathname = usePathname() || '/';
   const [mounted, setMounted] = useState(false);
+  const [keyboardOpen, setKeyboardOpen] = useState(false);
   const navRef = useRef<HTMLElement | null>(null);
   const { unreadCounts } = useUnifiedNotifications();
 
   useEffect(() => setMounted(true), []);
+
+  // Hide the nav while a text field is focused on small screens: the soft
+  // keyboard already claims the bottom of the screen, and with the nav gone
+  // --bottom-nav-height collapses to 0 so fixed inputs (chat composer) sit
+  // directly above the keyboard instead of behind the nav.
+  useEffect(() => {
+    const isTextField = (el: EventTarget | null): boolean => {
+      const t = el as HTMLElement | null;
+      if (!t || !t.tagName) return false;
+      if (t.tagName === 'TEXTAREA' || t.isContentEditable) return true;
+      if (t.tagName !== 'INPUT') return false;
+      const type = (t as HTMLInputElement).type;
+      return !['checkbox', 'radio', 'button', 'submit', 'range', 'file', 'color'].includes(type);
+    };
+    const mq = window.matchMedia('(max-width: 768px)');
+    const onFocusIn = (e: FocusEvent) => {
+      if (mq.matches && isTextField(e.target)) setKeyboardOpen(true);
+    };
+    const onFocusOut = () => setKeyboardOpen(false);
+    document.addEventListener('focusin', onFocusIn);
+    document.addEventListener('focusout', onFocusOut);
+    return () => {
+      document.removeEventListener('focusin', onFocusIn);
+      document.removeEventListener('focusout', onFocusOut);
+    };
+  }, []);
 
   // publish exact nav height → body padding uses it so content isn't hidden
   const syncHeightVar = () => {
@@ -55,6 +82,10 @@ function MobileBottomNavContent() {
     document.documentElement.style.setProperty('--bottom-nav-height', `${h}px`);
   };
   useLayoutEffect(() => {
+    if (keyboardOpen) {
+      document.documentElement.style.setProperty('--bottom-nav-height', '0px');
+      return;
+    }
     syncHeightVar();
     const onResize = () => syncHeightVar();
     const ro = new ResizeObserver(onResize);
@@ -66,7 +97,7 @@ function MobileBottomNavContent() {
       window.removeEventListener('resize', onResize);
       window.removeEventListener('orientationchange', onResize);
     };
-  }, []);
+  }, [keyboardOpen]);
 
   const isActive = (href: string, match: Item['match'] = 'exact') => {
     if (!mounted) return false;
@@ -74,6 +105,10 @@ function MobileBottomNavContent() {
       ? pathname === href || pathname.startsWith(href + '/')
       : pathname === href;
   };
+
+  // Unmounting (rather than display:none) is required: index.css forces the
+  // nav visible with !important rules that inline styles cannot override.
+  if (keyboardOpen) return null;
 
   return (
     <nav

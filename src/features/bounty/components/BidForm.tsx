@@ -28,11 +28,11 @@ import { useSendUserOperationWithAttribution as useSendUserOperation } from '@/w
 import { usePublicClient } from 'wagmi';
 import { encodeFunctionData } from 'viem';
 import { Loader2 } from 'lucide-react';
-import BountyManagerABIJson from '@/abis/BountyManagerV2.json';
+import BountyManagerV5Artifact from '@/abis/BountyManagerV5.json';
 import { uploadBidToIPFS, type BidMetadata } from '../services/bidIpfsService';
 import type { Abi, TransactionReceipt } from 'viem';
 
-const BountyManagerABI = BountyManagerABIJson as Abi;
+const BountyManagerABI = BountyManagerV5Artifact.abi as Abi;
 
 interface Deliverable {
   id: string;

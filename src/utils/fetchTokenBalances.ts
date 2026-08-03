@@ -87,8 +87,10 @@ const MARKET_MANAGEMENT_HAT_ID = process.env.NEXT_PUBLIC_MARKET_MANAGEMENT;
 // Add event management hat ID
 const EVENT_MANAGEMENT_HAT_ID = process.env.NEXT_PUBLIC_EVENT_MANAGEMENT;
 
-// Add Advocate NFT contract
-const ADVOCATE_TOKEN_CONTRACT = '0x592E560171D2a882474cdfc3BbeeDb21cEB4015d';
+// Advocate NFT contract — donor accreditation token (historically a
+// member-level token). Fallback matches the live .env value.
+const ADVOCATE_TOKEN_CONTRACT =
+  process.env.NEXT_PUBLIC_ADVOCATE || '0x3f0A79ff40D8e15933f24A9F7D0baAdCD7577759';
 
 // Create a Web3 provider and instance.
 const provider = new Web3.providers.HttpProvider(RPC_URL!);

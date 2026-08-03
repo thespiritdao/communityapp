@@ -45,6 +45,11 @@ export const viewport: Viewport = {
   maximumScale: 5,
   userScalable: true,
   viewportFit: 'cover',
+  // Android Chrome 108+ defaults to resizes-visual: the layout viewport keeps
+  // its height when the soft keyboard opens, so position:fixed bottom elements
+  // (bottom nav, chat input) stay hidden behind the keyboard. resizes-content
+  // shrinks the layout viewport instead, lifting fixed elements above it.
+  interactiveWidget: 'resizes-content',
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {

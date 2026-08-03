@@ -1,12 +1,8 @@
-import { readContract } from 'wagmi/actions';
 import { createConfig, http } from 'wagmi';
 import { base } from 'wagmi/chains';
-import BountyManagerABI from '@/abis/BountyManagerV2.json';
 import PodAuthorizationFactoryABI from '@/abis/PodAuthorizationFactory.json';
 
 // Get contract addresses from environment
-const BOUNTY_MANAGER_ADDRESS = process.env
-  .NEXT_PUBLIC_BOUNTY_MANAGER_ADDRESS as `0x${string}`;
 const POD_AUTHORIZATION_FACTORY_ADDRESS =
   (process.env.NEXT_PUBLIC_POD_AUTH_FACTORY as `0x${string}`) ||
   ('0xeCdDB060cD38439E0aC8874f159E961eB856407D' as `0x${string}`);
@@ -46,26 +42,6 @@ export class PodValidationService {
       );
     }
     lastCallTime = Date.now();
-  }
-
-  /**
-   * Get the pod service contract address from BountyManager
-   */
-  static async getPodServiceContract(): Promise<`0x${string}` | null> {
-    try {
-      await this.rateLimit();
-      const podServiceAddress = (await readContract(config, {
-        address: BOUNTY_MANAGER_ADDRESS,
-        abi: BountyManagerABI,
-        functionName: 'podServiceContract',
-      })) as `0x${string}`;
-
-      console.log('🏢 Pod service contract address:', podServiceAddress);
-      return podServiceAddress;
-    } catch (error) {
-      console.error('❌ Failed to get pod service contract:', error);
-      return null;
-    }
   }
 
   /**

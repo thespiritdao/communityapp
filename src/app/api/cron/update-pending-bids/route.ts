@@ -8,7 +8,7 @@ const supabase = createClient(
 );
 
 const BOUNTY_MANAGER_ADDRESS = (process.env.NEXT_PUBLIC_BOUNTY_MANAGER_ADDRESS ||
-  '0x8Af29E57A962216C4661c36737CbF33510356DAD') as `0x${string}`;
+  '0x01906d30f5cc34b5c445e0dcbf2934f4b9407048') as `0x${string}`;
 
 // BidPlaced event signature:
 // event BidPlaced(uint256 indexed bountyId, address indexed bidder, uint256 bidIndex)

@@ -407,7 +407,12 @@ export function DirectMessageModal({
           display: flex;
           align-items: center;
           justify-content: center;
-          z-index: 1001;
+          /* Matches the bottom nav's z-index; the portal mounts after the nav
+             in the DOM, so at equal z-index the modal paints above it — the
+             nav can no longer cover the modal's input row */
+          z-index: 2147483647;
+          padding: 8px 0;
+          box-sizing: border-box;
         }
 
         .dm-modal {
@@ -415,7 +420,10 @@ export function DirectMessageModal({
           border-radius: 12px;
           width: 90%;
           max-width: 600px;
-          max-height: 80vh;
+          /* 100% of the overlay, which tracks visualViewport.height — the
+             modal (and its input row) always fits above the soft keyboard.
+             80vh alone measures the layout viewport and overflows on Android. */
+          max-height: min(80vh, 100%);
           display: flex;
           flex-direction: column;
           box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);

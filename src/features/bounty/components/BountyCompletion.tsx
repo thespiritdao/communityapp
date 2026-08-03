@@ -22,10 +22,10 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { usePublicClient } from 'wagmi';
 import BountyPaymentTransaction from './BountyPaymentTransaction';
-import BountyManagerABIJson from '@/abis/BountyManagerV2.json';
+import BountyManagerV5Artifact from '@/abis/BountyManagerV5.json';
 import { CheckCircle2 } from 'lucide-react';
 
-const BountyManagerABI = BountyManagerABIJson as any;
+const BountyManagerABI = BountyManagerV5Artifact.abi as any;
 
 // ============================================================================
 // TYPE DEFINITIONS
