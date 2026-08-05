@@ -52,6 +52,7 @@
       "purpose": "any maskable"
     }
   ],
+  "id": "/",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

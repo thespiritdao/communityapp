@@ -1,0 +1,43 @@
+# Codemagic CI — builds the iOS app on cloud macOS (no local Mac needed).
+# See src/guides/deployment/APPLE_APP_STORE_READINESS.md for the full plan.
+#
+# Before the first build works you must (in the Codemagic UI, after Apple
+# Developer enrollment):
+#   1. Connect this repo.
+#   2. Add an App Store Connect API key (Teams > integrations) — enables
+#      automatic code signing and TestFlight upload.
+#   3. Create the bundle id org.spiritdao.app + Push Notifications capability
+#      in the Apple Developer portal.
+workflows:
+  ios-capacitor:
+    name: iOS App Store build (Capacitor)
+    instance_type: mac_mini_m2
+    max_build_duration: 60
+    environment:
+      xcode: latest
+      cocoapods: default
+      node: 20
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: org.spiritdao.app
+    triggering:
+      events: []            # manual builds only for now
+    scripts:
+      - name: Install JS dependencies
+        script: npm ci --legacy-peer-deps
+      - name: Sync Capacitor iOS platform
+        script: npx cap sync ios
+      - name: Install CocoaPods dependencies
+        script: cd ios/App && pod install
+      - name: Set up signing and build IPA
+        script: |
+          xcode-project use-profiles
+          xcode-project build-ipa \
+            --workspace ios/App/App.xcworkspace \
+            --scheme App
+    artifacts:
+      - build/ios/ipa/*.ipa
+    publishing:
+      app_store_connect:
+        auth: integration
+        submit_to_testflight: true
