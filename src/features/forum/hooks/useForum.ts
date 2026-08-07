@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { sanitizeSearchTerms } from '@/lib/sanitizeSearch';
 import { supabase } from '@/utils/supabaseClient';
 import { useUserWallet, useSigningWallet } from '@/hooks/useUserWallet';
 import { useToast } from '@/components/ui/use-toast';
@@ -51,13 +52,16 @@ function extractMentions(text: string): string[] {
 
 // Helper to look up wallet addresses by first/last name (for now, as username is not present)
 async function lookupWalletsByNames(names: string[]): Promise<string[]> {
-  if (!names.length) return [];
+  // Sanitize @mention names before building the PostgREST filter string —
+  // raw quotes/commas/parens here would break out of the .or() expression.
+  const safeNames = sanitizeSearchTerms(names);
+  if (!safeNames.length) return [];
   // Try to match first_name or last_name (case-insensitive)
   const { data, error } = await supabase
     .from('user_profiles')
     .select('wallet_address, first_name, last_name')
-    .in('first_name', names)
-    .or(`last_name.in.(${names.map((n) => `'${n}'`).join(',')})`);
+    .in('first_name', safeNames)
+    .or(`last_name.in.(${safeNames.map((n) => `"${n}"`).join(',')})`);
   if (error) {
     console.error('Error looking up mentioned users:', error);
     return [];

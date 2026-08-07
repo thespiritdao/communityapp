@@ -19,6 +19,7 @@ import { base } from 'viem/chains';
 import { privateKeyToAccount } from 'viem/accounts';
 import { createConfiguredPublicClient, getWriteTransport } from '@/utils/rpcClient';
 import { recordExplorerEvent } from '@/lib/explorerEvents';
+import { requireInternalSecret } from '@/lib/mintAuth';
 
 export const runtime = 'nodejs';
 export const maxDuration = 60;
@@ -33,6 +34,12 @@ const ADVOCATE_ADDRESS = process.env.NEXT_PUBLIC_ADVOCATE as `0x${string}` | und
 
 export async function POST(request: NextRequest) {
   try {
+    // Server-to-server only: this route mints voting-power NFTs. The sole
+    // legitimate caller is the donation-confirm flow (first donation) which
+    // sends the internal secret. Fails closed. Checked before reading the body.
+    const denied = requireInternalSecret(request);
+    if (denied) return denied;
+
     const { walletAddress } = await request.json();
 
     // Validate required parameters

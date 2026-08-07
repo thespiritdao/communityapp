@@ -1,4 +1,5 @@
 import { getCurrentSession } from '@/features/identity/utils/serverAuth';
+import { sanitizeSearchTerm } from '@/lib/sanitizeSearch';
 import { supabase } from '@/utils/supabaseClient';
 import { unifiedNotificationService } from '@/services/unifiedNotificationService';
 import type {
@@ -367,57 +368,66 @@ export class EventService {
         : null,
     });
 
-    // Calculate registration counts for each event
-    const eventsWithStats = await Promise.all(
-      (data || []).map(async (event: any) => {
-        try {
-          // Get registration count for this event
-          const { count: registrationCount } = await supabase
-            .from('event_registrations')
-            .select('*', { count: 'exact', head: true })
-            .eq('event_id', event.id)
-            .in('registration_status', [
-              'registered',
-              'checked_in',
-              'completed',
-            ]);
+    // Calculate registration counts for all events in ONE query, then tally
+    // in memory. Previously this fired 3 count queries PER event (3N round
+    // trips); now it's a single fetch over the fetched event IDs.
+    const eventIds = (data || []).map((e: any) => e.id);
+    const countsByEvent = new Map<
+      string,
+      { registration: number; checkedIn: number; completed: number }
+    >();
 
-          // Get checked-in count
-          const { count: checkedInCount } = await supabase
-            .from('event_registrations')
-            .select('*', { count: 'exact', head: true })
-            .eq('event_id', event.id)
-            .in('registration_status', ['checked_in', 'completed']);
+    if (eventIds.length > 0) {
+      try {
+        const { data: regs, error: regError } = await supabase
+          .from('event_registrations')
+          .select('event_id, registration_status')
+          .in('event_id', eventIds)
+          .in('registration_status', ['registered', 'checked_in', 'completed']);
 
-          // Get completed count
-          const { count: completedCount } = await supabase
-            .from('event_registrations')
-            .select('*', { count: 'exact', head: true })
-            .eq('event_id', event.id)
-            .eq('registration_status', 'completed');
+        if (regError) throw regError;
 
-          return {
-            ...event,
-            registration_count: registrationCount || 0,
-            checked_in_count: checkedInCount || 0,
-            completed_count: completedCount || 0,
-            pod_name: null,
-          };
-        } catch (countError) {
-          console.error(
-            `Failed to get counts for event ${event.id}:`,
-            countError,
-          );
-          return {
-            ...event,
-            registration_count: 0,
-            checked_in_count: 0,
-            completed_count: 0,
-            pod_name: null,
-          };
+        for (const row of regs || []) {
+          const c =
+            countsByEvent.get(row.event_id) || {
+              registration: 0,
+              checkedIn: 0,
+              completed: 0,
+            };
+          // "registration_count" = registered OR checked_in OR completed
+          c.registration += 1;
+          if (
+            row.registration_status === 'checked_in' ||
+            row.registration_status === 'completed'
+          ) {
+            c.checkedIn += 1;
+          }
+          if (row.registration_status === 'completed') {
+            c.completed += 1;
+          }
+          countsByEvent.set(row.event_id, c);
         }
-      }),
-    );
+      } catch (countError) {
+        console.error('Failed to batch-load event registration counts:', countError);
+        // Leave countsByEvent empty → all events report 0, same as the old
+        // per-event catch fallback.
+      }
+    }
+
+    const eventsWithStats = (data || []).map((event: any) => {
+      const c = countsByEvent.get(event.id) || {
+        registration: 0,
+        checkedIn: 0,
+        completed: 0,
+      };
+      return {
+        ...event,
+        registration_count: c.registration,
+        checked_in_count: c.checkedIn,
+        completed_count: c.completed,
+        pod_name: null,
+      };
+    });
 
     return eventsWithStats;
   }
@@ -1421,10 +1431,11 @@ export class EventService {
       organizing_pod_id?: string;
     },
   ): Promise<EventWithStats[]> {
+    const safeTerm = sanitizeSearchTerm(searchTerm);
     let query = supabase
       .from('events_with_stats')
       .select('*')
-      .or(`title.ilike.%${searchTerm}%,description.ilike.%${searchTerm}%`);
+      .or(`title.ilike.%${safeTerm}%,description.ilike.%${safeTerm}%`);
 
     if (filters?.status) {
       query = query.eq('status', filters.status);

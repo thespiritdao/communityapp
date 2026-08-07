@@ -125,6 +125,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'Invalid wallet address' }, { status: 400 });
     }
 
+    // NOTE: Intentionally NOT auth-gated. Self-serve membership (including
+    // "join without an invite code") is a supported signup path, so PoC minting
+    // is open by design. Abuse is bounded by the balance dedupe below (a wallet
+    // that already holds a PoC token is skipped).
+
     const contractAddress = process.env.NEXT_PUBLIC_PROOF_OF_CURIOSITY as `0x${string}` | undefined;
     const privateKey = process.env.POD_ADMIN_PRIVATE_KEY;
     const paymasterUrl = process.env.NEXT_PUBLIC_PAYMASTER;

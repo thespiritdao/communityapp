@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import { useUserWallet } from '@/hooks/useUserWallet';
-import { useBountyContractEnhanced } from './useBountyContractEnhanced';
 import { getCurrentSession } from '@/features/identity/utils/serverAuth';
+import { supabase } from '@/lib/supabase';
 import {
   bountyApi,
   bidApi,
@@ -22,7 +22,6 @@ import type {
 
 export const useBountySupabase = () => {
   const address = useUserWallet();
-  const { createBountyOnChain } = useBountyContractEnhanced();
 
   const [bounties, setBounties] = useState<FrontendBounty[]>([]);
   const [bids, setBids] = useState<FrontendBid[]>([]);

@@ -51,6 +51,11 @@ export function OnboardingHatMinting({
 
       if (isFirstUser) {
         // ── First user: mint Executive Leader HAT + Advocate NFT + delegate ──
+        // NOTE: This founding-user bootstrap has already run in production. The
+        // mint-hat / mint-advocate routes are now server-to-server only
+        // (internal secret), so this browser branch would 401. It is retained
+        // only for a fresh-environment bootstrap; if ever needed again, run the
+        // bootstrap server-side with INTERNAL_API_SECRET rather than here.
 
         setTxStatus('minting-hat');
         setCurrentStep('Granting platform access...');

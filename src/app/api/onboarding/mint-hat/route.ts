@@ -14,6 +14,7 @@
  * - Validates wallet address format before minting
  */
 
+import { requireInternalSecret } from '@/lib/mintAuth';
 import { NextRequest, NextResponse } from 'next/server';
 import {
   createWalletClient,
@@ -142,6 +143,11 @@ const HATS_MINT_ABI = [
 
 export async function POST(request: NextRequest) {
   try {
+    // Server-to-server only: mints the Executive Pod Leader hat (founding-user
+    // bootstrap, a one-time event). Fails closed. Checked before reading body.
+    const denied = requireInternalSecret(request);
+    if (denied) return denied;
+
     const { walletAddress, isFirstUser } = await request.json();
 
     // Validate required parameters

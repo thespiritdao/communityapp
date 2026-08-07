@@ -1,4 +1,5 @@
 import { supabase } from '@/utils/supabaseClient';
+import { sanitizeSearchTerm } from '@/lib/sanitizeSearch';
 import type { Pod, MemberRef, PodServiceConfig } from '../types';
 import { PodRolePermissionsService } from './PodRolePermissionsService';
 import { getCurrentSession } from '@/features/identity/utils/serverAuth';
@@ -625,6 +626,8 @@ export class PodService {
    */
   static async searchPods(searchTerm: string, limit = 10): Promise<Pod[]> {
     try {
+      const safeTerm = sanitizeSearchTerm(searchTerm);
+      if (!safeTerm) return [];
       const { data, error } = await supabase
         .from('pods')
         .select(`
@@ -634,7 +637,7 @@ export class PodService {
           treasury_contract_address,
           pod_image_url
         `)
-        .or(`name.ilike.%${searchTerm}%,description.ilike.%${searchTerm}%`)
+        .or(`name.ilike.%${safeTerm}%,description.ilike.%${safeTerm}%`)
         .neq('status', 'inactive')
         .limit(limit)
         .order('name', { ascending: true });

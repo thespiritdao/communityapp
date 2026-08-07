@@ -1,4 +1,5 @@
 import { type NextRequest, NextResponse } from 'next/server';
+import { sanitizeSearchTerm } from '@/lib/sanitizeSearch';
 import { supabase } from '@/lib/supabase';
 import { getUserIdentity } from '@/utils/accessControlUtils';
 import { filterAccessibleProductsAsync } from '@/features/shopping-cart/services/accessControl';
@@ -241,10 +242,12 @@ export async function GET(request: NextRequest) {
 async function generateSearchSuggestions(query: string): Promise<string[]> {
   try {
     // Get similar product names for autocomplete
+    const safeQuery = sanitizeSearchTerm(query);
+    if (!safeQuery) return [];
     const { data } = await supabase
       .from('products')
       .select('name, title')
-      .or(`name.ilike.%${query}%,title.ilike.%${query}%`)
+      .or(`name.ilike.%${safeQuery}%,title.ilike.%${safeQuery}%`)
       .limit(5);
 
     const suggestions: string[] = [];

@@ -1,4 +1,5 @@
 import { supabase } from '@/utils/supabaseClient';
+import { sanitizeSearchTerm } from '@/lib/sanitizeSearch';
 import type { UserProfile } from '../types';
 
 /**
@@ -131,10 +132,12 @@ export class ProfileService {
     limit = 10,
   ): Promise<UserProfile[]> {
     try {
+      const safeTerm = sanitizeSearchTerm(searchTerm);
+      if (!safeTerm) return [];
       const { data, error } = await supabase
         .from('user_profiles')
         .select('*') // Select all fields to match ProfileDisplay requirements
-        .or(`first_name.ilike.%${searchTerm}%,last_name.ilike.%${searchTerm}%`)
+        .or(`first_name.ilike.%${safeTerm}%,last_name.ilike.%${safeTerm}%`)
         .limit(limit);
 
       if (error) {

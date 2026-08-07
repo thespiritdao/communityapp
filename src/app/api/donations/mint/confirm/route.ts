@@ -33,7 +33,12 @@ async function maybeAirdropAdvocate(userWallet: string, currentDonationId: strin
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXTAUTH_URL || 'http://localhost:3000';
     const mintResponse = await fetch(`${baseUrl}/api/onboarding/mint-advocate`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        // Server-to-server: authenticate with the internal secret so the mint
+        // route (which fails closed) accepts this trusted donation-triggered call.
+        'x-internal-secret': process.env.INTERNAL_API_SECRET || '',
+      },
       body: JSON.stringify({ walletAddress: userWallet }),
     });
 

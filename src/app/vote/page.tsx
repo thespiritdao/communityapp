@@ -88,14 +88,14 @@ export default function VotePage() {
   const userProfileCache: Record<string, any> = {};
 
   const fetchProposalStates = async (userAddress: string, force = false) => {
-    if (!userAddress) return;
+    if (!userAddress) return null;
     const url = force
       ? `/api/proposalStates?user=${userAddress}&force=true`
       : `/api/proposalStates?user=${userAddress}`;
     const res = await fetch(url);
     const data = await res.json();
-    console.log('API /api/proposalStates response:', data); // <-- Add this line
     setProposalStates(data);
+    return data; // returned so the burst poll can decide when to stop
   };
 
   useEffect(() => {
@@ -209,32 +209,36 @@ export default function VotePage() {
 
     fetchProposals();
 
-    // Set up periodic refresh every 5 minutes
+    // Baseline refresh: slow poll so idle tabs don't hammer the RPC. Fast
+    // near-real-time updates are handled by the burst poll below (and by
+    // pollAfterVote(), triggered when the user actually casts a vote).
     if (refreshInterval.current) clearInterval(refreshInterval.current);
     refreshInterval.current = setInterval(() => {
       fetchProposalStates(address);
-    }, 15 * 1000); // 15 seconds
+    }, 60 * 1000); // 60s baseline
 
-    // --- Patch: Poll for pending proposals every 2s ---
-    let pendingInterval: NodeJS.Timeout | null = null;
-    const pollPending = () => {
-      const hasPending = Object.values(proposalStates).some(
-        (v) => v && v.state === 0,
-      );
-      if (hasPending) {
-        pendingInterval = setInterval(() => {
-          fetchProposalStates(address);
-        }, 2000);
+    // Burst poll for PENDING proposals (state === 0): a self-terminating 2s
+    // loop that re-evaluates each tick and STOPS once nothing is pending. The
+    // previous version captured a stale snapshot and never stopped once started.
+    let pendingInterval: ReturnType<typeof setInterval> | null = null;
+    const stopPending = () => {
+      if (pendingInterval) {
+        clearInterval(pendingInterval);
+        pendingInterval = null;
       }
     };
-    // Start polling if there are pending proposals
-    setTimeout(pollPending, 1000);
-    // Clear on unmount or when no pending
+    pendingInterval = setInterval(async () => {
+      const states = await fetchProposalStates(address);
+      const stillPending =
+        states &&
+        Object.values(states).some((v: any) => v && v.state === 0);
+      if (!stillPending) stopPending();
+    }, 2000);
+
     return () => {
       if (refreshInterval.current) clearInterval(refreshInterval.current);
-      if (pendingInterval) clearInterval(pendingInterval);
+      stopPending();
     };
-    // --- End patch ---
   }, [isConnected, address]);
 
   const handleProposalClick = async (proposalId: string) => {
