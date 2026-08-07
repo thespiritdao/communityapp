@@ -21,8 +21,10 @@ import { useSendUserOperationWithAttribution as useSendUserOperation } from '@/w
 import { createPublicClient, http, parseAbi, encodeFunctionData } from 'viem';
 import { base } from 'viem/chains';
 
-const NEW_PROXY = (process.env.NEXT_PUBLIC_TREASURY_PROXY ||
-  '0x2015f0a8f809e21664c36d98005fcfca49ebd904') as `0x${string}`;
+// HARDCODED on purpose: this is a one-time migration tool targeting exactly
+// one contract. Reading the env here made the page show the OLD proxy as the
+// target when a build ran before the Vercel env update — hiding the buttons.
+const NEW_PROXY = '0x2015f0a8f809e21664c36d98005fcfca49ebd904' as `0x${string}`;
 const HATS = '0x3bc1a0ad72417f2d411118085256fc53cbddd137' as `0x${string}`;
 
 const TREASURIES: {
