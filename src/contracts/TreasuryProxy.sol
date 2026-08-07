@@ -133,6 +133,36 @@ contract TreasuryProxy is Ownable, ReentrancyGuard {
         require(treasury != address(0), "Treasury not found for pod");
         _;
     }
+
+    /**
+     * @dev Authorizes the ORIGINAL caller as a pod manager before forwarding a
+     *      value-moving / config call to the treasury.
+     *
+     * SECURITY (fixes the drain vector): the treasury only checks that its
+     * caller is this proxy (onlyAuthorizedProxy). Without this modifier the
+     * proxy forwarded value-moving calls from ANY msg.sender, so anyone could
+     * craft a raw call and drain a treasury. We now require msg.sender to wear
+     * the pod's management hat — read live from the treasury itself, so no
+     * config drift. Legit app calls are signed by the manager's CDP smart
+     * account (which wears the hat), so they pass; a random EOA is rejected.
+     *
+     * Read-only/deposit paths (proxyReceiveTokens) and the proposal paths
+     * (proxyProposeDistribution/proxyApproveProposal) are intentionally NOT
+     * gated here — deposits are harmless and proposals enforce hat + threshold
+     * inside the treasury.
+     */
+    modifier onlyPodManager(string memory podId) {
+        address treasury = treasuryFactory.getTreasuryForPod(podId);
+        require(treasury != address(0), "Treasury not found for pod");
+        uint256 hatId = IPodTreasury(treasury).managementHatId();
+        address hatsAddr = IPodTreasury(treasury).hatsContract();
+        require(hatsAddr != address(0), "Treasury hats contract unset");
+        require(
+            IHats(hatsAddr).balanceOf(msg.sender, hatId) > 0,
+            "Not a pod manager"
+        );
+        _;
+    }
     
     /**
      * @dev Proxy function for treasury token distribution
@@ -144,7 +174,7 @@ contract TreasuryProxy is Ownable, ReentrancyGuard {
         address[] memory recipients,
         uint256[] memory amounts,
         string memory reason
-    ) external nonReentrant validPodTreasury(podId) {
+    ) external nonReentrant onlyPodManager(podId) {
         address treasury = treasuryFactory.getTreasuryForPod(podId);
         
         // Forward the call to the actual treasury
@@ -163,7 +193,7 @@ contract TreasuryProxy is Ownable, ReentrancyGuard {
         address[] memory recipients,
         uint256 totalAmount,
         string memory reason
-    ) external nonReentrant validPodTreasury(podId) {
+    ) external nonReentrant onlyPodManager(podId) {
         address treasury = treasuryFactory.getTreasuryForPod(podId);
         
         // Forward the call to the actual treasury
@@ -204,7 +234,7 @@ contract TreasuryProxy is Ownable, ReentrancyGuard {
         address token,
         address recipient,
         uint256 amount
-    ) external nonReentrant validPodTreasury(podId) {
+    ) external nonReentrant onlyPodManager(podId) {
         address treasury = treasuryFactory.getTreasuryForPod(podId);
         
         // Forward the call to the actual treasury
@@ -249,7 +279,7 @@ contract TreasuryProxy is Ownable, ReentrancyGuard {
     function proxySetAuthorizedProxy(
         string memory podId,
         address proxyAddress
-    ) external nonReentrant validPodTreasury(podId) {
+    ) external nonReentrant onlyPodManager(podId) {
         address treasury = treasuryFactory.getTreasuryForPod(podId);
         
         // Forward the call to the actual treasury
@@ -267,7 +297,7 @@ contract TreasuryProxy is Ownable, ReentrancyGuard {
         address recipient,
         uint256 amount,
         string memory reason
-    ) external nonReentrant validPodTreasury(podId) {
+    ) external nonReentrant onlyPodManager(podId) {
         address treasury = treasuryFactory.getTreasuryForPod(podId);
         
         // Create arrays for the existing distributeTokens function

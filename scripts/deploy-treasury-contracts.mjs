@@ -66,7 +66,7 @@ const walletClient = createWalletClient({ account, chain: base, transport: http(
 const publicClient = createPublicClient({ chain: base, transport: http(RPC_URL) });
 
 const HATS_CONTRACT = '0x3bc1a0ad72417f2d411118085256fc53cbddd137';
-const PROXY = '0x02110b4bBFA3BeeDbBd854b01683F9D9DB3aDeae';
+const PROXY = '0x2015f0a8f809e21664c36d98005fcfca49ebd904'; // hat-gated TreasuryProxy (2026-08-07)
 const SYSTEM_TOKEN = '0x00f75717Ab019DE0e452605098cFDc4FccEbc701';
 const SELF_TOKEN = '0x2d9e8A4DdED7438C2D4C8050Ed58B9F4Bc0c8298';
 const SUPPORTED_TOKENS = [SYSTEM_TOKEN, SELF_TOKEN];
