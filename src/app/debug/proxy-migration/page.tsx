@@ -127,12 +127,28 @@ export default function ProxyMigrationPage() {
         functionName: fn,
         args: [arg] as any,
       });
-      await sendUserOperation({
-        evmSmartAccount: smartAccount,
-        network: 'base',
-        calls: [{ to: t.address, value: 0n, data }],
-        useCdpPaymaster: true,
-      });
+      const call = { to: t.address, value: 0n, data };
+      try {
+        // First try CDP's built-in paymaster (works if the treasury addresses
+        // are in the portal policy).
+        await sendUserOperation({
+          evmSmartAccount: smartAccount,
+          network: 'base',
+          calls: [call],
+          useCdpPaymaster: true,
+        });
+      } catch (cdpErr: any) {
+        // Fall back to the app's own ERC-7677 paymaster proxy, which
+        // dynamically approves registered pod treasuries from the DB
+        // (src/app/api/paymaster/route.ts) — no portal edits needed.
+        say(`ℹ️ ${t.name}: CDP policy rejected (${cdpErr?.shortMessage || cdpErr?.message || 'no detail'}) — retrying via /api/paymaster`);
+        await sendUserOperation({
+          evmSmartAccount: smartAccount,
+          network: 'base',
+          calls: [call],
+          paymasterUrl: `${window.location.origin}/api/paymaster`,
+        } as any);
+      }
       say(`✅ ${t.name}: ${fn} submitted`);
       setTimeout(refresh, 4000);
     } catch (e: any) {
