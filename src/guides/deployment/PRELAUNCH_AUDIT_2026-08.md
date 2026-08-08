@@ -228,6 +228,34 @@ bytecode. Verification against live contracts on Base:
 
 ---
 
+## Addendum 2026-08-07 — TreasuryProxy fix DEPLOYED + a governance finding
+
+**P0 #1 (TreasuryProxy drain): CLOSED for all funded treasuries.** New hat-gated
+proxy live at `0x2015f0a8f809e21664c36d98005fcfca49ebd904`. Exec + TN treasuries
+re-pointed via SetProxy proposals; drain simulation from a non-manager address
+reverts "Not a pod manager" (verified on-chain). Treegens (empty treasury, zero
+exposure) still pending its leader's one-tap flip — must happen before that
+treasury is ever funded. Old proxy `0x02110b4b…` stays in the paymaster until
+Treegens flips, then remove it + the 3 temporary treasury policy entries +
+delete `/debug/proxy-migration`.
+
+**New finding (governance): treasury thresholds count contract hat-wearers.**
+`PodTreasuryV3._computeRequiredApprovals` uses raw `hatSupply(managementHatId)`.
+The HatMinter contract wears the TN and Exec management hats (legacy wiring so
+it can mint member hats), inflating those pods' vote denominators. TN had
+1 human + 1 contract → threshold 2 → **permanent deadlock** (no proposal could
+ever pass). Resolved 2026-08-07 by minting the TN management hat to the backend
+EOA as a standing co-signer (supply 3, threshold 2, two human-controlled
+votes — mirroring Exec's existing setup). NOT systemic: the standard pod
+creation flow mints management hats to human leaders only (Treegens is clean).
+
+**Standing design rules:**
+1. Management hats are for voting humans only. Contracts needing mint authority
+   in a pod's tree get a different admin-capable hat — the treasury only counts
+   `managementHatId` wearers.
+2. Next treasury revision: exclude wearers with deployed code from the
+   threshold denominator (or use an explicit voter registry).
+
 ## Suggested order of work
 
 1. **App-side P0s (no redeploy):** #2 auth the mint routes, #3 one-line bid fix,
