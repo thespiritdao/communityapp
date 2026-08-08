@@ -74,14 +74,35 @@ export async function PUT(
     // Next.js 15: params is now async
     const { roleId } = await params;
     const body = await request.json();
-    const { eligibilityCriteria, updatedBy } = body;
+    const { eligibilityCriteria } = body;
 
-    if (!roleId || !updatedBy) {
+    if (!roleId) {
       return NextResponse.json(
-        { error: 'Role ID and updatedBy are required' },
+        { error: 'Role ID is required' },
         { status: 400 },
       );
     }
+
+    // G2 guard: editing a role's eligibility criteria is a roleAssignment
+    // action. Resolve the role's pod, enforce the granular permission, and
+    // take updatedBy from the verified session (never the body). Fails closed.
+    const { requirePodPermission } = await import('@/lib/apiPodGuard');
+    const { supabaseAdmin } = await import('@/utils/supabaseAdminClient');
+    const { data: roleRow } = await supabaseAdmin
+      .from('pod_role_permissions')
+      .select('pod_id')
+      .eq('id', roleId)
+      .maybeSingle();
+    if (!roleRow?.pod_id) {
+      return NextResponse.json({ error: 'Role not found' }, { status: 404 });
+    }
+    const walletOrDenied = await requirePodPermission(
+      request,
+      roleRow.pod_id,
+      'roleAssignment',
+    );
+    if (walletOrDenied instanceof Response) return walletOrDenied;
+    const updatedBy = walletOrDenied;
 
     if (!Array.isArray(eligibilityCriteria)) {
       return NextResponse.json(

@@ -21,7 +21,18 @@ const supabaseAdmin = createClient(
 
 export async function POST(request: Request) {
   try {
+    // G2 guard: pod deletion proposals may only be created by an
+    // authenticated pod leader, and proposed_by is taken from the verified
+    // session — never from the request body. Fails closed.
+    const { requireWallet } = await import('@/lib/apiPodGuard');
+    const { isPodLeader } = await import('@/lib/serverPodAuth');
+    const walletOrDenied = requireWallet(request);
+    if (walletOrDenied instanceof Response) return walletOrDenied;
+    const wallet = walletOrDenied;
+
     const body = await request.json();
+    // Force the proposer identity to the verified caller.
+    body.proposed_by = wallet;
 
     console.log('📝 API: Creating pod deletion proposal:', {
       pod_id: body.pod_id,
@@ -37,19 +48,12 @@ export async function POST(request: Request) {
       );
     }
 
-    // Optional: Add validation to check if proposed_by is actually a pod leader
-    // const { data: pod } = await supabaseAdmin
-    //   .from('pods')
-    //   .select('pod_leads')
-    //   .eq('id', body.pod_id)
-    //   .single();
-    //
-    // if (!pod || !pod.pod_leads.includes(body.proposed_by.toLowerCase())) {
-    //   return NextResponse.json(
-    //     { error: 'Only pod leaders can propose deletion' },
-    //     { status: 403 }
-    //   );
-    // }
+    if (!(await isPodLeader(body.pod_id, wallet))) {
+      return NextResponse.json(
+        { error: 'Only pod leaders can propose deletion' },
+        { status: 403 },
+      );
+    }
 
     // Resolve required_approvals from the pod's operational governance
     // config (or platform default if none is set). Caller's body.required_approvals

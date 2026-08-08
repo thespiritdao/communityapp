@@ -13,6 +13,7 @@ import { useSendUserOperationWithAttribution as useSendUserOperation } from '@/w
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { encodeFunctionData } from 'viem';
+import { getAuthHeaders } from '@/lib/authHeaders';
 
 const EVENT_MANAGER_ADDRESS = process.env.NEXT_PUBLIC_EVENT_MANAGER as `0x${string}`;
 
@@ -157,7 +158,10 @@ export default function BulkEventsPage() {
         // Update database
         await fetch('/api/events/update-contract', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            ...(await getAuthHeaders()),
+          },
           body: JSON.stringify({
             blockchain_event_id: event.blockchain_event_id,
             contract_address: EVENT_MANAGER_ADDRESS,

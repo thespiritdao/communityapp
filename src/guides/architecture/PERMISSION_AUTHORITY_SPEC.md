@@ -137,6 +137,33 @@ Rows marked (a) come from the 2026-08-07 automated sweep and were not all
 line-verified. Before building on any single row, spot-check it. The G2 list
 should be re-verified route-by-route as the first step of its fix.
 
+## G2 status update (2026-08-08) — API-route pass COMPLETE
+
+Verified route-by-route (the original G2 list was partly speculative; several
+suspected routes turned out to already have auth — surveys, modules, agent
+config/corpus, forum tags — or to be read-only despite POST). Real gaps found
+and fixed:
+
+| Route | Was | Now |
+|---|---|---|
+| `events/update-contract` POST | unauthenticated — anyone could re-point an event's payment contract | JWT + must be event creator or Executive leader |
+| `events/batch-create-gasless` POST | unauthenticated, signed with backend admin key, ZERO callers | **deleted** (dead + dangerous) |
+| `pod-deletion/create-proposal` POST | leader check literally commented out | JWT + `isPodLeader`; `proposed_by` forced to verified caller |
+| `pods/roles/[roleId]/eligibility` PUT | unauthenticated role-criteria editing | JWT + granular `roleAssignment` permission; `updatedBy` forced to caller |
+| `pods/sync-members` POST | anonymous | JWT session required (anti-spam; writes chain-derived data only) |
+
+New shared plumbing: `src/lib/apiPodGuard.ts` (`requireWallet`,
+`requirePodPermission` — the universal authority rule, server-side) and
+`src/lib/authHeaders.ts` (client helper to attach the session JWT). All five
+live callers updated to send the header.
+
+**Remaining (G2b): RLS audit.** Several capabilities' writes never touch an API
+route — they go client → Supabase directly (knowledge base CRUD, marketplace
+product management, chat moderation actions, role creation). Their server-side
+enforcement is Supabase RLS policies, whose quality is UNAUDITED. Next pass:
+enumerate the RLS policies per table and verify they encode the authority rule
+(or route those writes through guarded API endpoints).
+
 ## Remediation order
 
 1. **G1**: proxy v2.1 registry (in progress) → re-flip Exec/TN → Treegens lands

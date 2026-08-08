@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { useEvmAddress } from '@coinbase/cdp-hooks';
+import { getAuthHeaders } from '@/lib/authHeaders';
 
 /**
  * Admin Utility: Sync Pod Members
@@ -40,6 +41,7 @@ export default function SyncPodMembersPage() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          ...(await getAuthHeaders()),
         },
         body: JSON.stringify({ podId }),
       });

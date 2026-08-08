@@ -8,8 +8,11 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
+import { requireWallet } from '@/lib/apiPodGuard';
+import { isExecutiveLeader } from '@/lib/serverPodAuth';
 
-export const runtime = 'edge';
+// Node runtime required: the auth guard verifies JWTs with jsonwebtoken.
+export const runtime = 'nodejs';
 
 interface UpdateContractRequest {
   blockchain_event_id: string;
@@ -18,6 +21,13 @@ interface UpdateContractRequest {
 
 export async function POST(request: NextRequest) {
   try {
+    // G2 guard: re-pointing an event's payment/registration contract is an
+    // integrity-critical mutation. Only the event's creator or an Executive
+    // leader may do it. Fails closed.
+    const walletOrDenied = requireWallet(request);
+    if (walletOrDenied instanceof Response) return walletOrDenied;
+    const wallet = walletOrDenied;
+
     const body: UpdateContractRequest = await request.json();
     const { blockchain_event_id, contract_address } = body;
 
@@ -28,6 +38,24 @@ export async function POST(request: NextRequest) {
           error: 'Missing blockchain_event_id or contract_address',
         },
         { status: 400 }
+      );
+    }
+
+    const { data: eventRow } = await supabase
+      .from('events')
+      .select('creator_address, created_by')
+      .eq('blockchain_event_id', blockchain_event_id)
+      .maybeSingle();
+
+    const creator = (
+      eventRow?.creator_address ||
+      eventRow?.created_by ||
+      ''
+    ).toLowerCase();
+    if (creator !== wallet && !(await isExecutiveLeader(wallet))) {
+      return NextResponse.json(
+        { success: false, error: 'Only the event creator or an Executive leader may update the event contract' },
+        { status: 403 },
       );
     }
 

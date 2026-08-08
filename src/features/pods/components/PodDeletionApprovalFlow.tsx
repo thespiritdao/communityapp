@@ -18,6 +18,7 @@ import { PodDeletionDebugger } from './PodDeletionDebugger';
 import { MemberCard } from './MembersPanel/MemberCard';
 import { EventService } from '../../events/lib/supabase';
 import { encodeFunctionData } from 'viem';
+import { getAuthHeaders } from '@/lib/authHeaders';
 import { publicClient } from '@/config/wagmi.client';
 import type { Pod } from '../types';
 import type { UserProfile } from '../../identity/types';
@@ -295,7 +296,10 @@ export const PodDeletionApprovalFlow: React.FC<
 
       const response = await fetch('/api/pod-deletion/create-proposal', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(await getAuthHeaders()),
+        },
         body: JSON.stringify({
           pod_id: pod.id,
           pod_name: pod.name,

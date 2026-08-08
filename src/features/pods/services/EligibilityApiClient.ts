@@ -2,6 +2,7 @@ import type {
   EligibilityCriteria,
   EligibilityEvaluation,
 } from './EligibilityService';
+import { getAuthHeaders } from '@/lib/authHeaders';
 
 export interface EligibilityCheckResponse {
   podId: string;
@@ -172,6 +173,7 @@ export class EligibilityApiClient {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
+        ...(await getAuthHeaders()),
       },
       body: JSON.stringify({
         eligibilityCriteria,
