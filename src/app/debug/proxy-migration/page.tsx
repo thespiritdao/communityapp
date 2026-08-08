@@ -22,9 +22,9 @@ import { createPublicClient, http, parseAbi, encodeFunctionData } from 'viem';
 import { base } from 'viem/chains';
 
 // HARDCODED on purpose: this is a one-time migration tool targeting exactly
-// one contract. Reading the env here made the page show the OLD proxy as the
-// target when a build ran before the Vercel env update — hiding the buttons.
-const NEW_PROXY = '0x2015f0a8f809e21664c36d98005fcfca49ebd904' as `0x${string}`;
+// one contract. v2.1 adds the granular role-hat registry (leaders can register
+// custom treasury-manager role hats on-chain) — see PERMISSION_AUTHORITY_SPEC.
+const NEW_PROXY = '0x19d7056794b984b5ec99e8b9532cdb15d6a455e0' as `0x${string}`;
 const HATS = '0x3bc1a0ad72417f2d411118085256fc53cbddd137' as `0x${string}`;
 
 const TREASURIES: {
@@ -243,9 +243,10 @@ export default function ProxyMigrationPage() {
       </div>
 
       <p className="text-xs text-[#5F5A54] mt-6">
-        Known pending: Executive proposal <strong>#0</strong> is already proposed
-        (by the backend) and needs one approval from an Exec manager — enter 0
-        and press Approve.
+        Known pending (v2.1 upgrade): Executive proposal <strong>#2</strong> and
+        Temporal Naturalism proposal <strong>#1</strong> are proposed by the
+        backend — enter those ids and press Approve. Treegens: just press
+        Propose (auto-executes).
       </p>
     </div>
   );

@@ -74,8 +74,25 @@ interface IPodTreasuryFactory {
  */
 contract TreasuryProxy is Ownable, ReentrancyGuard {
     using SafeERC20 for IERC20;
-    
+
     IPodTreasuryFactory public treasuryFactory; // Now mutable
+
+    // ── Granular role-hat registry (v2.1) ────────────────────────────────────
+    // Mirrors BountyManagerV5.authorizedFunderHat: pod leaders register custom
+    // role hats (created via the app's role system) whose wearers may manage
+    // the pod's treasury through this proxy. The management hat itself is
+    // always authorized and never needs registering. Bounded array so the
+    // authorization check can iterate without the caller naming their hat.
+    uint256 public constant MAX_ROLE_HATS_PER_POD = 16;
+    mapping(string => uint256[]) private _treasuryRoleHats;
+    mapping(string => mapping(uint256 => bool)) public isAuthorizedTreasuryHat;
+
+    event TreasuryHatAuthorized(
+        string indexed podId,
+        uint256 indexed hatId,
+        bool allowed,
+        address updatedBy
+    );
     
     event ProxyDistributeTokens(
         string indexed podId,
@@ -152,16 +169,96 @@ contract TreasuryProxy is Ownable, ReentrancyGuard {
      * inside the treasury.
      */
     modifier onlyPodManager(string memory podId) {
+        require(_isPodTreasuryManager(podId, msg.sender), "Not a pod manager");
+        _;
+    }
+
+    /**
+     * @dev v2.1 authorization: wears the pod's MANAGEMENT hat, OR wears any
+     *      role hat the pod's leadership registered via
+     *      setAuthorizedTreasuryHat. This is the on-chain mirror of the app's
+     *      granular `treasuryManagement` role permission — see
+     *      src/guides/architecture/PERMISSION_AUTHORITY_SPEC.md.
+     */
+    function _isPodTreasuryManager(string memory podId, address user)
+        internal
+        view
+        returns (bool)
+    {
         address treasury = treasuryFactory.getTreasuryForPod(podId);
         require(treasury != address(0), "Treasury not found for pod");
-        uint256 hatId = IPodTreasury(treasury).managementHatId();
         address hatsAddr = IPodTreasury(treasury).hatsContract();
         require(hatsAddr != address(0), "Treasury hats contract unset");
+
+        // Leaders always pass.
+        uint256 mgmtHat = IPodTreasury(treasury).managementHatId();
+        if (IHats(hatsAddr).balanceOf(user, mgmtHat) > 0) return true;
+
+        // Registered role hats (granular permissions).
+        uint256[] storage roleHats = _treasuryRoleHats[podId];
+        for (uint256 i = 0; i < roleHats.length; i++) {
+            if (IHats(hatsAddr).balanceOf(user, roleHats[i]) > 0) return true;
+        }
+        return false;
+    }
+
+    /** Public view for the app / diagnostics. */
+    function isPodTreasuryManager(string memory podId, address user)
+        external
+        view
+        returns (bool)
+    {
+        return _isPodTreasuryManager(podId, user);
+    }
+
+    /**
+     * @notice Register (or revoke) a custom role hat as treasury-authorized
+     *         for a pod. Only a management-hat wearer may change the set; the
+     *         management hat itself is always authorized and cannot be added.
+     */
+    function setAuthorizedTreasuryHat(
+        string memory podId,
+        uint256 hatId,
+        bool allowed
+    ) external nonReentrant {
+        address treasury = treasuryFactory.getTreasuryForPod(podId);
+        require(treasury != address(0), "Treasury not found for pod");
+        address hatsAddr = IPodTreasury(treasury).hatsContract();
+        uint256 mgmtHat = IPodTreasury(treasury).managementHatId();
         require(
-            IHats(hatsAddr).balanceOf(msg.sender, hatId) > 0,
-            "Not a pod manager"
+            IHats(hatsAddr).balanceOf(msg.sender, mgmtHat) > 0,
+            "Only pod leader can set treasury hats"
         );
-        _;
+        require(hatId != 0 && hatId != mgmtHat, "Invalid hat");
+
+        if (allowed && !isAuthorizedTreasuryHat[podId][hatId]) {
+            require(
+                _treasuryRoleHats[podId].length < MAX_ROLE_HATS_PER_POD,
+                "Role hat limit reached"
+            );
+            isAuthorizedTreasuryHat[podId][hatId] = true;
+            _treasuryRoleHats[podId].push(hatId);
+        } else if (!allowed && isAuthorizedTreasuryHat[podId][hatId]) {
+            isAuthorizedTreasuryHat[podId][hatId] = false;
+            uint256[] storage hats = _treasuryRoleHats[podId];
+            for (uint256 i = 0; i < hats.length; i++) {
+                if (hats[i] == hatId) {
+                    hats[i] = hats[hats.length - 1];
+                    hats.pop();
+                    break;
+                }
+            }
+        }
+        emit TreasuryHatAuthorized(podId, hatId, allowed, msg.sender);
+    }
+
+    /** All registered role hats for a pod (management hat implied, not listed). */
+    function getAuthorizedTreasuryHats(string memory podId)
+        external
+        view
+        returns (uint256[] memory)
+    {
+        return _treasuryRoleHats[podId];
     }
     
     /**
