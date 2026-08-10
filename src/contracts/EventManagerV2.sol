@@ -94,6 +94,10 @@ contract EventManagerV2 is ERC721, ReentrancyGuard {
     mapping(string => Event) public events;
     mapping(string => Payment[]) public eventPayments;
     mapping(string => address[]) public eventAttendees;
+    // O(1) registration check (CR-2 fix): replaces O(n) scans over
+    // eventAttendees[] in registerForEvent and certificate minting, so gas
+    // stays constant regardless of attendee count.
+    mapping(string => mapping(address => bool)) public isRegistered;
     mapping(address => string[]) public userEvents;
     mapping(uint256 => CompletionCertificate) public certificates;
 
@@ -227,11 +231,8 @@ contract EventManagerV2 is ERC721, ReentrancyGuard {
         require(eventData.status == EventStatus.Created, "Event not available");
         require(block.timestamp < eventData.eventDate, "Event has started");
 
-        // Not already registered
-        address[] memory attendees = eventAttendees[eventId];
-        for (uint i = 0; i < attendees.length; i++) {
-            require(attendees[i] != msg.sender, "Already registered");
-        }
+        // Not already registered (CR-2: O(1) check, was an O(n) scan)
+        require(!isRegistered[eventId][msg.sender], "Already registered");
 
         // Capacity
         if (eventData.maxAttendees > 0) {
@@ -293,6 +294,7 @@ contract EventManagerV2 is ERC721, ReentrancyGuard {
         }
 
         eventAttendees[eventId].push(msg.sender);
+        isRegistered[eventId][msg.sender] = true;
         eventData.currentAttendees++;
         userEvents[msg.sender].push(eventId);
 
@@ -396,15 +398,8 @@ contract EventManagerV2 is ERC721, ReentrancyGuard {
         );
         require(eventData.status == EventStatus.Completed, "Event not completed");
 
-        bool attended = false;
-        address[] memory attendees = eventAttendees[eventId];
-        for (uint i = 0; i < attendees.length; i++) {
-            if (attendees[i] == recipient) {
-                attended = true;
-                break;
-            }
-        }
-        require(attended, "Recipient did not attend");
+        // CR-2: O(1) attendance check, was an O(n) scan over attendees.
+        require(isRegistered[eventId][recipient], "Recipient did not attend");
 
         _certificateCounter++;
         uint256 certificateId = _certificateCounter;
@@ -443,15 +438,9 @@ contract EventManagerV2 is ERC721, ReentrancyGuard {
         require(eventData.status == EventStatus.Completed, "Event not completed");
 
         for (uint i = 0; i < recipients.length; i++) {
-            bool attended = false;
-            address[] memory attendees = eventAttendees[eventId];
-            for (uint j = 0; j < attendees.length; j++) {
-                if (attendees[j] == recipients[i]) {
-                    attended = true;
-                    break;
-                }
-            }
-            require(attended, "Recipient did not attend");
+            // CR-2: O(1) attendance check — was a nested O(n) scan per recipient
+            // (overall O(n*m)), the worst quadratic case in this contract.
+            require(isRegistered[eventId][recipients[i]], "Recipient did not attend");
 
             _certificateCounter++;
             uint256 certificateId = _certificateCounter;

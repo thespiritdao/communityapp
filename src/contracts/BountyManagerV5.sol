@@ -90,6 +90,9 @@ contract BountyManagerV5 is ReentrancyGuard, Pausable {
     mapping(uint256 => string) public bountyMetadata; // IPFS hashes
     mapping(uint256 => Bid[]) public bids;
     mapping(uint256 => address[]) public bidders;
+    // O(1) duplicate-bid check (CR-3 fix): replaces the O(n) scan over bidders[]
+    // so gas per bid stays constant regardless of how many have already bid.
+    mapping(uint256 => mapping(address => bool)) public hasBid;
 
     uint256 public nextBountyId = 1;
     address public immutable admin;
@@ -402,6 +405,7 @@ contract BountyManagerV5 is ReentrancyGuard, Pausable {
         }));
 
         bidders[bountyId].push(msg.sender);
+        hasBid[bountyId][msg.sender] = true;
         emit BidPlaced(bountyId, msg.sender, bids[bountyId].length - 1);
     }
 
@@ -412,12 +416,9 @@ contract BountyManagerV5 is ReentrancyGuard, Pausable {
             return false;
         }
 
-        address[] storage _bidders = bidders[bountyId];
-        uint256 bidderCount = _bidders.length;
-        for (uint i = 0; i < bidderCount; i++) {
-            if (_bidders[i] == msg.sender) {
-                return false;
-            }
+        // O(1) duplicate check (CR-3): was a linear scan over bidders[].
+        if (hasBid[bountyId][msg.sender]) {
+            return false;
         }
 
         return true;

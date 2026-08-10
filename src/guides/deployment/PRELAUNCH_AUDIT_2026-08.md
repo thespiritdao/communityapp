@@ -256,6 +256,33 @@ creation flow mints management hats to human leaders only (Treegens is clean).
 2. Next treasury revision: exclude wearers with deployed code from the
    threshold denominator (or use an explicit voter registry).
 
+## Contract backlog — SOURCE FIXED, NOT DEPLOYED (2026-08-10)
+
+All three backlog items fixed in source and compiled clean (0 warnings). These
+are **NOT deployed** — deliberately. None is a live exploitable hole at current
+scale, and redeploying live contracts is our highest-risk operation. They ride
+along with the next natural deployment of each contract rather than triggering
+redeploys just to clear the backlog.
+
+- **H-3 (PurchaseRouter approval-on-success):** now revokes the treasury
+  approval unconditionally after `receiveTokens` (was: only on failure). One
+  line; zero behavior change. `src/contracts/PurchaseRouter.sol`.
+- **CR-3 (BountyManagerV5 O(n) bidder scan):** added
+  `mapping(uint256=>mapping(address=>bool)) hasBid`; `_canPlaceBid` is now O(1).
+- **CR-2 (EventManagerV2 O(n)/O(n·m) attendee scans):** added
+  `mapping(string=>mapping(address=>bool)) isRegistered`; registration and
+  single + **batch** certificate minting are now O(1) (the batch path was the
+  worst case — a nested per-recipient scan).
+
+⚠️ **DEPLOYMENT CAVEAT (must read before ever redeploying these):** the new
+`hasBid` / `isRegistered` mappings start EMPTY on a fresh deploy. If
+BountyManagerV5 or EventManagerV2 is redeployed, existing bids/registrations on
+the OLD contract are NOT reflected in the new mapping. For a clean redeploy
+this is fine (new contract, new state). For an in-place upgrade preserving
+history, the mappings would need backfilling from the `bidders[]` /
+`eventAttendees[]` arrays (which are still populated). Simplest path: only ship
+these with a fresh deployment, as we did for BountyManagerV4→V5.
+
 ## Suggested order of work
 
 1. **App-side P0s (no redeploy):** #2 auth the mint routes, #3 one-line bid fix,

@@ -193,13 +193,16 @@ contract PurchaseRouter is Ownable, ReentrancyGuard {
                 abi.encodeWithSignature("receiveTokens(address,uint256)", token, amount)
             );
 
-            // Step 3: Fallback to direct transfer if receiveTokens() not available
-            // This maintains backwards compatibility with older treasury contracts
-            if (!success) {
-                // Revoke approval first (security best practice)
-                require(IERC20(token).approve(destination.destinationAddress, 0), "Approval revoke failed");
+            // Step 3 (H-3 fix): ALWAYS revoke the approval afterward — on success as
+            // well as failure. Previously the success path left a standing approval;
+            // if a treasury ever pulled less than `amount`, the residual approval
+            // could be drained later if that treasury were compromised. Revoking
+            // unconditionally leaves zero standing approval.
+            require(IERC20(token).approve(destination.destinationAddress, 0), "Approval revoke failed");
 
-                // Fall back to direct transfer for older treasuries
+            // Fallback: if receiveTokens() wasn't available, transfer directly
+            // (backwards compatibility with older treasury contracts).
+            if (!success) {
                 require(IERC20(token).transfer(destination.destinationAddress, amount), "Transfer to treasury failed");
             }
         }
