@@ -1,5 +1,6 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/utils/supabaseAdminClient';
+import { requirePodPermissionOrLeader } from '@/lib/apiPodGuard';
 import jwt from 'jsonwebtoken';
 
 export const runtime = 'nodejs';
@@ -84,17 +85,13 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
 
 // POST /api/pods/[id]/surveys — Create a new survey
 export async function POST(req: NextRequest): Promise<NextResponse> {
-  const token = req.headers.get('Authorization')?.replace('Bearer ', '');
-  if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-
-  const wallet = getWalletFromToken(token);
-  if (!wallet) return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
-
   const podId = podIdFromRequest(req);
   if (!podId) return NextResponse.json({ error: 'Missing pod ID' }, { status: 400 });
 
-  const isLeader = await isPodLeader(podId, wallet);
-  if (!isLeader) return NextResponse.json({ error: 'Forbidden: not a pod leader' }, { status: 403 });
+  // Granular gate: a pod leader OR any member whose role grants surveyManage.
+  const walletOrDenied = await requirePodPermissionOrLeader(req, podId, 'surveyManage');
+  if (walletOrDenied instanceof NextResponse) return walletOrDenied;
+  const wallet = walletOrDenied;
 
   // Verify surveys module is enabled
   const { data: modules } = await supabaseAdmin

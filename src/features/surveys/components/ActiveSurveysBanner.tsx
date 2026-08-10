@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/utils/supabaseClient';
-import { ClipboardCheck, ChevronDown, ChevronUp } from 'lucide-react';
+import { ClipboardCheck, ChevronDown, ChevronUp, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import SurveyResponseForm from './SurveyResponseForm';
 import type { Survey } from '../types';

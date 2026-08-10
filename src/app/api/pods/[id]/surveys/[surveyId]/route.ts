@@ -1,5 +1,6 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/utils/supabaseAdminClient';
+import { requirePodPermissionOrLeader } from '@/lib/apiPodGuard';
 import jwt from 'jsonwebtoken';
 import { recordExplorerEvent } from '@/lib/explorerEvents';
 import { sendServerNotificationBatch, type ServerNotificationPayload } from '@/lib/serverNotifications';
@@ -86,17 +87,13 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
 
 // PUT /api/pods/[id]/surveys/[surveyId]
 export async function PUT(req: NextRequest): Promise<NextResponse> {
-  const token = req.headers.get('Authorization')?.replace('Bearer ', '');
-  if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-
-  const wallet = getWalletFromToken(token);
-  if (!wallet) return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
-
   const { podId, surveyId } = extractIds(req);
   if (!podId || !surveyId) return NextResponse.json({ error: 'Missing IDs' }, { status: 400 });
 
-  const isLeader = await isPodLeader(podId, wallet);
-  if (!isLeader) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  // Granular gate: pod leader OR a role granting surveyManage.
+  const walletOrDenied = await requirePodPermissionOrLeader(req, podId, 'surveyManage');
+  if (walletOrDenied instanceof NextResponse) return walletOrDenied;
+  const wallet = walletOrDenied;
 
   // Snapshot prior status for detecting transitions
   const { data: priorSurvey } = await supabaseAdmin
@@ -255,17 +252,12 @@ async function notifySurveyAudience(
 
 // DELETE /api/pods/[id]/surveys/[surveyId]
 export async function DELETE(req: NextRequest): Promise<NextResponse> {
-  const token = req.headers.get('Authorization')?.replace('Bearer ', '');
-  if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-
-  const wallet = getWalletFromToken(token);
-  if (!wallet) return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
-
   const { podId, surveyId } = extractIds(req);
   if (!podId || !surveyId) return NextResponse.json({ error: 'Missing IDs' }, { status: 400 });
 
-  const isLeader = await isPodLeader(podId, wallet);
-  if (!isLeader) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  // Granular gate: pod leader OR a role granting surveyManage.
+  const walletOrDenied = await requirePodPermissionOrLeader(req, podId, 'surveyManage');
+  if (walletOrDenied instanceof NextResponse) return walletOrDenied;
 
   const { error } = await supabaseAdmin
     .from('surveys')

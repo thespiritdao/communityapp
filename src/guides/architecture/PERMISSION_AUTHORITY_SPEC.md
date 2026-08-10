@@ -104,7 +104,7 @@ verified this session · (a) agent-reported, spot-check before relying on it
 | marketplaceManage | T2 | ✅ | ❌(a) | — | **GAP G2** |
 | roleAssignment | T2 | ✅ | ❌(a) | — | **GAP G2** |
 | subPodCreation | T2 | ✅ | ❌(a) | — | **GAP G2** |
-| surveyManage/Respond | T2/T3 | ? | ❌(a) not located | — | **GAP G3** — enforcement not found at all; map it |
+| surveyManage/Respond | T2/T3 | ✅ | ✅(v) | — | **G3 RESOLVED (2026-08-10)** — see below |
 | agentManage | T2 | ✅ | ❌(a) | — | **GAP G2** |
 | governanceParticipation | T3 | ✅ | — | — (Advocate gating separate) | Compliant pending † confirmation |
 | treasuryViewing / forumAccess / kbAccess / marketplaceAccess | T3 | ✅ | — | — | Compliant |
@@ -125,7 +125,22 @@ directly. Same *class* of flaw as the proxy bug, at the API layer. Fix pattern
 already exists in-repo: the passwords routes' `callerHasPermission` /
 `podAuthMiddleware`. Apply uniformly. (Pre-launch priority right after G1.)
 
-**G3 — surveys**: enforcement not located anywhere; map then fix.
+**G3 — surveys: RESOLVED (2026-08-10).** The "not located" flag was a coverage
+gap in the automated sweep, not an absent enforcement. All survey writes go
+through 5 API routes (zero direct client→DB writes — the ideal pattern), each
+cryptographically verifies the JWT (`jwt.verify`, not just decode), and gates
+before writing. Survey tables also have live RLS as a backstop. **One real gap
+found and fixed:** the create/edit/delete routes checked `isPodLeader` instead
+of the `surveyManage` permission — so the role editor's "Survey Manage" toggle
+(exposed in the controls tab, understood by the whole permission stack) was
+silently unenforced: a leader could grant a custom "Survey Manager" role and it
+wouldn't actually work at the API. Fixed by gating POST/PUT/DELETE on the new
+`requirePodPermissionOrLeader(podId, 'surveyManage')` guard (granular role OR
+pod leader — preserves existing leader access, adds role delegation). The
+`respond` route is correctly gated on survey *audience* membership (better than
+a flat surveyRespond check) and left as-is. NOTE: `check_pod_permission` DB fn
+does NOT grant leaders implicitly, which is why the guard ORs leadership in —
+important for any future route reusing it.
 
 **G4 — unlisted capabilities**: pod-modules config (and possibly others) mutate
 pod state but have no permission key. Extend the vocabulary or fold under an
