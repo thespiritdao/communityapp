@@ -108,7 +108,7 @@ verified this session · (a) agent-reported, spot-check before relying on it
 | agentManage | T2 | ✅ | ❌(a) | — | **GAP G2** |
 | governanceParticipation | T3 | ✅ | — | — (Advocate gating separate) | Compliant pending † confirmation |
 | treasuryViewing / forumAccess / kbAccess / marketplaceAccess | T3 | ✅ | — | — | Compliant |
-| (pod modules config) | T2 (unlisted!) | ✅ | ❌(a) `pods/[id]/modules` route unchecked | — | **GAP G4** — capability isn't even in the permission vocabulary |
+| (pod modules config) | T2 | ✅ | ✅(v) leader/Exec only | — | **G4 RESOLVED (2026-08-10)** — false positive; see below |
 
 ## Gaps, ranked
 
@@ -142,9 +142,19 @@ a flat surveyRespond check) and left as-is. NOTE: `check_pod_permission` DB fn
 does NOT grant leaders implicitly, which is why the guard ORs leadership in —
 important for any future route reusing it.
 
-**G4 — unlisted capabilities**: pod-modules config (and possibly others) mutate
-pod state but have no permission key. Extend the vocabulary or fold under an
-existing key.
+**G4 — RESOLVED (2026-08-10): false positive.** The `pods/[id]/modules` PUT was
+NOT unchecked — it's one of the most carefully-authorized routes in the app:
+JWT cryptographically verified, gated on pod-leader OR Executive-leader, with
+exec-only keys (external wallet linking) further restricted to Exec-hat wearers,
+whitelisted boolean keys only. It's also the *source of truth* that propagates
+module state into role permissions (syncs subPodCreation/surveyManage+Respond/
+agentManage/passwordsAccess+Manage when modules toggle). Toggling a pod's
+features on/off is a core leadership action, intentionally NOT a delegatable
+role permission — so the "missing capability key" was by design, not a gap. No
+`moduleManage` key is referenced anywhere (verified). Change made: refactored
+the route to use the shared serverPodAuth helpers (getWalletFromRequest /
+isPodLeader / isExecutiveLeader) instead of local duplicates — cleanliness only,
+behavior identical.
 
 ## Confidence & follow-up
 

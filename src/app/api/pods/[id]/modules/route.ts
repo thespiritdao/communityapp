@@ -1,10 +1,14 @@
 // src/app/api/pods/[id]/modules/route.ts
 // GET/PUT pod_modules — uses supabaseAdmin to bypass RLS.
-// Auth: caller must be a pod leader (pod_leads array or pod_members with role=leader).
+// Auth: caller must be a pod leader (pod_leads array or pod_members with
+// role=leader) OR an Executive Pod leader. Toggling a pod's modules on/off is
+// a core leadership action — intentionally NOT a delegatable role permission,
+// so there is no `moduleManage` capability key (a G4 audit note confirmed this
+// is by design, not a gap). Wallet auth uses the shared serverPodAuth helpers.
 
 import { type NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/utils/supabaseAdminClient';
-import jwt from 'jsonwebtoken';
+import { getWalletFromRequest, isPodLeader, isExecutiveLeader } from '@/lib/serverPodAuth';
 import { recordExplorerEvent } from '@/lib/explorerEvents';
 import { ensureAgentProfile } from '@/services/communityAgent/configService';
 import { deriveAgentWallet } from '@/services/communityAgent/types';
@@ -32,89 +36,14 @@ const ALLOWED_KEYS = [
 // so it's a DAO-level exception granted per pod by the Exec Pod.
 const EXEC_ONLY_KEYS = new Set<string>(['external_wallet_linking_enabled']);
 
-function getWalletFromToken(token: string): string | null {
-  try {
-    const JWT_SECRET = process.env.SUPABASE_JWT_SECRET;
-    if (!JWT_SECRET) return null;
-    const payload = jwt.verify(token, JWT_SECRET) as any;
-    return payload.wallet_address || payload.user_metadata?.wallet_address || null;
-  } catch {
-    return null;
-  }
-}
-
-async function isPodLeader(podId: string, wallet: string): Promise<boolean> {
-  // Check pod_leads array
-  const { data: pod } = await supabaseAdmin
-    .from('pods')
-    .select('pod_leads')
-    .eq('id', podId)
-    .single();
-
-  if (pod?.pod_leads?.includes(wallet.toLowerCase())) return true;
-
-  // Check pod_members table
-  const { data: member } = await supabaseAdmin
-    .from('pod_members')
-    .select('id')
-    .eq('pod_id', podId)
-    .eq('wallet', wallet.toLowerCase())
-    .eq('role', 'leader')
-    .eq('is_active', true)
-    .single();
-
-  return !!member;
-}
-
-// Does this wallet wear the Executive Pod Leader hat on-chain?
-async function isExecutiveLeader(wallet: string): Promise<boolean> {
-  try {
-    const { getHatId } = await import('@/lib/hatRegistry');
-    const execHatId = await getHatId('EXECUTIVE_POD_LEADER');
-    if (!execHatId) return false;
-    const { createPublicClient, http } = await import('viem');
-    const { base } = await import('viem/chains');
-    const HATS = process.env.NEXT_PUBLIC_HATS_CONTRACT as `0x${string}`;
-    if (!HATS) return false;
-    const client = createPublicClient({
-      chain: base,
-      transport: http(process.env.NEXT_PUBLIC_RPC_URL || 'https://mainnet.base.org'),
-    });
-    const balance = (await client.readContract({
-      address: HATS,
-      abi: [
-        {
-          name: 'balanceOf',
-          type: 'function',
-          stateMutability: 'view',
-          inputs: [
-            { name: 'wearer', type: 'address' },
-            { name: 'hatId', type: 'uint256' },
-          ],
-          outputs: [{ name: '', type: 'uint256' }],
-        },
-      ],
-      functionName: 'balanceOf',
-      args: [wallet as `0x${string}`, BigInt(execHatId)],
-    })) as bigint;
-    return balance > 0n;
-  } catch (e) {
-    console.warn('[modules] exec leader check failed:', e);
-    return false;
-  }
-}
-
 function podIdFromRequest(req: NextRequest): string {
   const match = req.nextUrl.pathname.match(/\/api\/pods\/([^/]+)\/modules/);
   return match?.[1] ?? '';
 }
 
 export async function GET(req: NextRequest): Promise<NextResponse> {
-  const token = req.headers.get('Authorization')?.replace('Bearer ', '');
-  if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-
-  const wallet = getWalletFromToken(token);
-  if (!wallet) return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
+  const wallet = getWalletFromRequest(req);
+  if (!wallet) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const podId = podIdFromRequest(req);
   if (!podId) return NextResponse.json({ error: 'Missing pod ID' }, { status: 400 });
@@ -133,11 +62,8 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
 }
 
 export async function PUT(req: NextRequest): Promise<NextResponse> {
-  const token = req.headers.get('Authorization')?.replace('Bearer ', '');
-  if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-
-  const wallet = getWalletFromToken(token);
-  if (!wallet) return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
+  const wallet = getWalletFromRequest(req);
+  if (!wallet) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const podId = podIdFromRequest(req);
   if (!podId) return NextResponse.json({ error: 'Missing pod ID' }, { status: 400 });
