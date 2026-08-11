@@ -5,6 +5,28 @@ recent first.
 
 ---
 
+## August 2026 — Pod Faces: your community, your look
+
+### Communities can now skin the app
+Pods can design a **custom appearance** — a color scheme and icon style — and
+publish it as their pod's **face**. Members choose whether to wear it; nothing
+is ever forced. Highlights:
+
+- **Leaders design** in the pod's Manage → Modules → **Custom Appearance**
+  editor: five starter palettes, per-color fine-tuning, two curated icon sets,
+  and a live preview.
+- **Members choose** from **Identity → Appearance** or the **"Wear this
+  look"** chip on the pod's page. One tap applies it app-wide; one tap
+  reverts to the classic SpiritDAO look.
+- **Readability is guaranteed** — every face must pass WCAG AA contrast
+  checks before it can publish.
+- **Same permissioning as everything else** — face design is a delegable role
+  permission (**Appearance Manage**), leader-granted by default.
+
+See the new [Pod Faces guide](18-pod-faces.md) for the full walkthrough.
+
+---
+
 ## June 2026 — New documentation, a smarter assistant, and the current $SELF model
 
 ### Documentation rebuilt
